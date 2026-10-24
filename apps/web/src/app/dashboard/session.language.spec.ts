@@ -1,29 +1,7 @@
 import { TestBed } from '@angular/core/testing';
-import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
-import { I18n, LanguageChoice } from '@motor-fix/i18n';
+import { type MeDto, MeService } from '@motor-fix/data-access';
 
-import { Session } from './session';
-
-function account(language: 'ro' | 'en'): MeDto {
-  return {
-    capabilities: [],
-    city: null,
-    email: 'andrei@example.ro',
-    emailConfirmed: true,
-    garageAccess: [],
-    garageId: null,
-    hasPassword: true,
-    id: 'account-1',
-    landing: '/app/driver',
-    language,
-    name: 'Andrei',
-    pendingEmail: null,
-    phone: null,
-    phoneConfirmed: false,
-    role: 'driver',
-    roles: ['driver'],
-  } as MeDto;
-}
+import { account, settle, setup } from './signed-in.testing';
 
 interface Pending {
   language: string;
@@ -32,7 +10,7 @@ interface Pending {
 }
 
 // Each save waits until the test answers it, so its order can be checked.
-function setup(signedIn: MeDto | null) {
+function savingSetup(signedIn: MeDto | null) {
   const pending: Pending[] = [];
   const meControllerUpdate = jest.fn(
     ({ body }: { body: { language: string } }) =>
@@ -40,37 +18,25 @@ function setup(signedIn: MeDto | null) {
         pending.push({ language: body.language, reject, resolve }),
       ),
   );
-  const meControllerMe = jest.fn(() =>
-    signedIn ? Promise.resolve(signedIn) : Promise.reject(new Error('401')),
-  );
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: MeService, useValue: { meControllerMe, meControllerUpdate } },
-      {
-        provide: AuthService,
-        useValue: {
-          authControllerRefresh: () =>
-            signedIn
-              ? Promise.resolve({ accessToken: 'renewed' })
-              : Promise.reject(new Error('401')),
-          authControllerSignOut: () => Promise.resolve(),
-        },
-      },
-    ],
+  const parts = setup({
+    auth: {
+      authControllerRefresh: () =>
+        signedIn
+          ? Promise.resolve({ accessToken: 'renewed' })
+          : Promise.reject(new Error('401')),
+    },
+    me: {
+      meControllerMe: jest.fn(() =>
+        signedIn ? Promise.resolve(signedIn) : Promise.reject(new Error('401')),
+      ),
+      meControllerUpdate,
+    },
   });
-  return {
-    choice: TestBed.inject(LanguageChoice),
-    i18n: TestBed.inject(I18n),
-    meControllerUpdate,
-    pending,
-    session: TestBed.inject(Session),
-  };
+  return { ...parts, meControllerUpdate, pending };
 }
 
-const settle = () => new Promise((resolve) => setTimeout(resolve));
-
-async function signedIn(language: 'ro' | 'en' = 'ro') {
-  const parts = setup(account(language));
+async function signedInAs(language: 'ro' | 'en' = 'ro') {
+  const parts = savingSetup(account({ language }));
   await parts.session.load();
   await settle();
   return parts;
@@ -81,7 +47,7 @@ beforeEach(() => localStorage.clear());
 describe('saving the language on the account', () => {
   it('sends a tap made while signed in, and holds the saved account', async () => {
     const { choice, i18n, meControllerUpdate, pending, session } =
-      await signedIn('ro');
+      await signedInAs('ro');
 
     await choice.pick('en');
 
@@ -90,13 +56,13 @@ describe('saving the language on the account', () => {
     expect(meControllerUpdate).toHaveBeenCalledWith({
       body: { language: 'en' },
     });
-    pending[0].resolve(account('en'));
+    pending[0].resolve(account({ language: 'en' }));
     await settle();
     expect(session.current()?.language).toBe('en');
   });
 
   it("sends nothing for a tap on the account's own language", async () => {
-    const { choice, meControllerUpdate } = await signedIn('en');
+    const { choice, meControllerUpdate } = await signedInAs('en');
 
     await choice.pick('en');
     await settle();
@@ -105,7 +71,7 @@ describe('saving the language on the account', () => {
   });
 
   it('sends nothing when nobody is signed in, and keeps the choice on the device', async () => {
-    const { choice, i18n, meControllerUpdate, session } = setup(null);
+    const { choice, i18n, meControllerUpdate, session } = savingSetup(null);
     await session.load();
 
     await choice.pick('en');
@@ -118,14 +84,14 @@ describe('saving the language on the account', () => {
 
   it('sends nothing for the language the account brings at sign-in', async () => {
     localStorage.setItem('mf.lang', 'en');
-    const { i18n, meControllerUpdate } = await signedIn('ro');
+    const { i18n, meControllerUpdate } = await signedInAs('ro');
 
     expect(i18n.language()).toBe('ro');
     expect(meControllerUpdate).not.toHaveBeenCalled();
   });
 
   it('sends nothing for a language chosen without the switch', async () => {
-    const { choice, meControllerUpdate } = await signedIn('ro');
+    const { choice, meControllerUpdate } = await signedInAs('ro');
 
     await choice.choose('en');
     await settle();
@@ -135,7 +101,7 @@ describe('saving the language on the account', () => {
 
   it('keeps the interface switched after a failed save, and sends again at the next tap', async () => {
     const { choice, i18n, meControllerUpdate, pending, session } =
-      await signedIn('ro');
+      await signedInAs('ro');
 
     await choice.pick('en');
     pending[0].reject(new Error('offline'));
@@ -152,7 +118,7 @@ describe('saving the language on the account', () => {
 
   it('sends one save at a time and ends on the last language tapped', async () => {
     const { choice, i18n, meControllerUpdate, pending, session } =
-      await signedIn('ro');
+      await signedInAs('ro');
 
     await choice.pick('en');
     await choice.pick('ro');
@@ -160,12 +126,12 @@ describe('saving the language on the account', () => {
     await choice.pick('ro');
 
     expect(meControllerUpdate).toHaveBeenCalledTimes(1);
-    pending[0].resolve(account('en'));
+    pending[0].resolve(account({ language: 'en' }));
     await settle();
 
     expect(meControllerUpdate).toHaveBeenCalledTimes(2);
     expect(pending[1].language).toBe('ro');
-    pending[1].resolve(account('ro'));
+    pending[1].resolve(account({ language: 'ro' }));
     await settle();
 
     expect(meControllerUpdate).toHaveBeenCalledTimes(2);
@@ -174,21 +140,21 @@ describe('saving the language on the account', () => {
   });
 
   it('sends a tap once even when the answer still says the old language', async () => {
-    const { choice, meControllerUpdate, pending } = await signedIn('ro');
+    const { choice, meControllerUpdate, pending } = await signedInAs('ro');
 
     await choice.pick('en');
-    pending[0].resolve(account('ro'));
+    pending[0].resolve(account({ language: 'ro' }));
     await settle();
 
     expect(meControllerUpdate).toHaveBeenCalledTimes(1);
   });
 
   it('drops an answer that arrives after signing out', async () => {
-    const { choice, pending, session } = await signedIn('ro');
+    const { choice, pending, session } = await signedInAs('ro');
 
     await choice.pick('en');
     session.current.set(null);
-    pending[0].resolve(account('en'));
+    pending[0].resolve(account({ language: 'en' }));
     await settle();
 
     expect(session.current()).toBeNull();
@@ -196,24 +162,24 @@ describe('saving the language on the account', () => {
 
   it('saves the last language tapped before signing out with the button', async () => {
     const { choice, meControllerUpdate, pending, session } =
-      await signedIn('ro');
+      await signedInAs('ro');
 
     await choice.pick('en');
     await choice.pick('ro');
     const signingOut = session.signOut();
-    pending[0].resolve(account('en'));
+    pending[0].resolve(account({ language: 'en' }));
     await settle();
 
     expect(meControllerUpdate).toHaveBeenCalledTimes(2);
     expect(pending[1].language).toBe('ro');
-    pending[1].resolve(account('ro'));
+    pending[1].resolve(account({ language: 'ro' }));
     await signingOut;
     expect(session.current()).toBeNull();
   });
 
   it('signs out with the button even when the save in flight fails', async () => {
     const { choice, meControllerUpdate, pending, session } =
-      await signedIn('ro');
+      await signedInAs('ro');
 
     await choice.pick('en');
     const signingOut = session.signOut();
@@ -225,7 +191,7 @@ describe('saving the language on the account', () => {
   });
 
   it('signs out with the button within three seconds when the save in flight never answers', async () => {
-    const { choice, session } = await signedIn('ro');
+    const { choice, session } = await signedInAs('ro');
 
     await choice.pick('en');
     jest.useFakeTimers();
@@ -246,12 +212,16 @@ describe('saving the language on the account', () => {
 
   it('drops an answer that arrives after another account signed in', async () => {
     const { choice, meControllerUpdate, pending, session } =
-      await signedIn('ro');
-    const other = { ...account('ro'), id: 'account-2', name: 'Elena' };
+      await signedInAs('ro');
+    const other = {
+      ...account({ language: 'ro' }),
+      id: 'account-2',
+      name: 'Elena',
+    };
 
     await choice.pick('en');
     session.current.set(other);
-    pending[0].resolve(account('en'));
+    pending[0].resolve(account({ language: 'en' }));
     await settle();
 
     expect(session.current()).toBe(other);
@@ -260,17 +230,17 @@ describe('saving the language on the account', () => {
 
   it('keeps a save that lands after the same account signed in again', async () => {
     const { choice, i18n, meControllerUpdate, pending, session } =
-      await signedIn('ro');
+      await signedInAs('ro');
 
     await choice.pick('en');
     session.current.set(null);
     jest
       .mocked(TestBed.inject(MeService).meControllerMe)
-      .mockResolvedValueOnce(account('ro'));
+      .mockResolvedValueOnce(account({ language: 'ro' }));
     await session.load();
     await settle();
     expect(i18n.language()).toBe('ro');
-    pending[0].resolve(account('en'));
+    pending[0].resolve(account({ language: 'en' }));
     await settle();
 
     expect(session.current()?.language).toBe('en');

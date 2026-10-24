@@ -729,11 +729,11 @@ async function open(
 describe('the dashboard view routes', () => {
   // @traces 097-FR-004
   it('opens an allowed view at its own address, with the empty state of that view', async () => {
-    const { element } = await open('/app/garage/team', OWNER);
+    const { element } = await open('/app/garage/schedule', OWNER);
 
-    expect(TestBed.inject(Router).url).toBe('/app/garage/team');
+    expect(TestBed.inject(Router).url).toBe('/app/garage/schedule');
     expect(element.textContent).toContain(
-      'Aici vei vedea mecanicii service‑ului și ce poate face fiecare.',
+      'Aici vei vedea programările pe zile, pe mecanici și pe elevatoare.',
     );
     expect(element.textContent).not.toContain('Nimic aici încă.');
   });

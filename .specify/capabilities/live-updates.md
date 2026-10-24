@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 253-live-connection
   - 254-live-audience
@@ -25,6 +25,7 @@ features:
   - 398-garage-feature-switches
   - 025-review-mechanic
   - 067-restore-suspended-garage
+  - 532-lost-session-home
 ---
 
 # Capability: Live updates
@@ -415,6 +416,18 @@ _From 1190-live-reconnects._
 ### 1190-FR-015 — Tests MUST cover: in Jest on real PostgreSQL and Redis, a stream dropped, five notifications created, a reconnect with the last position receiving all five in order with the right count, a foreign and a missing position replaying nothing, the 200 cap, the count kept across create, read and read-all in one transaction, the `retry` line, the heartbeat and the planned `reconnect` close with a shortened interval, and the headers and no-compression rule for both streams; in web unit tests, the lock holder and follower roles, the position kept and sent, the reopen on `reconnect` without backoff, `pagehide`/`pageshow`, and the fallback without the primitives; in Playwright, two tabs of one browser holding one stream and both showing a test update within 2 seconds, and the stream moving when the holder closes.
 
 _From 1190-live-reconnects._
+
+### 532-FR-004 — After a lapse, a sign-in as the same account MUST send the kept actions in order; a sign-in as another account MUST NOT send them and drops them.
+
+_From 532-lost-session-home._
+
+### 532-FR-003 — A refused renewal (a lapse) MUST NOT drop the account's waiting actions; only a real sign-out (this tab's sign-out, sign-out on all devices, a `session.revoked` message, a sign-out in another tab) drops them (refines 255-FR-008: a lapse is not a sign-out).
+
+_From 532-lost-session-home._
+
+### 532-FR-005 — Each send of the waiting queue MUST be bounded at 30 seconds; a send that has no answer by then is treated as a send with no answer under 255-FR-009: the action is kept first in line as `waiting`, the request is aborted, and the line stops until the next sending moment (60 s after the attempt ends, an `online` event, a live stream opening).
+
+_From 532-lost-session-home._
 
 ## Retired
 

@@ -273,10 +273,10 @@ describe('Frame', () => {
     expect(title(element)).toBe('Mecanici');
     expect(url()).toBe('/app/garage/team');
 
-    // The gate closed without a sign-in: nothing is kept.
+    // The gate closed without a sign-in: nothing is kept, and Home opens.
     kept.set(null);
     await settle(harness);
-    expect(name()).toBe('');
+    expect(url()).toBe('/');
   });
 
   it('hides team, prices and the garage profile from a receptionist', async () => {

@@ -136,8 +136,11 @@ export class Frame implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
+  // A lost session keeps the frame's own dashboard until Home opens.
+  private readonly opened =
+    untracked(() => this.session.shown()?.landing) ?? '/app/driver';
   protected readonly base = computed(
-    () => this.session.shown()?.landing ?? '/app/driver',
+    () => this.session.shown()?.landing ?? this.opened,
   );
   // The area guard admits only a landing of one of the three dashboards.
   private readonly area = computed(
@@ -202,6 +205,7 @@ export class Frame implements OnInit {
   private reviewing = false;
   // Signing out can wait up to 3 s for a language save in flight.
   protected readonly signingOut = signal(false);
+  private leaving = false;
   protected readonly letters = computed(() =>
     initials(this.session.shown()?.name ?? ''),
   );
@@ -278,6 +282,13 @@ export class Frame implements OnInit {
         `/app/${area}` !== this.base() ||
         (view !== undefined && !this.entries().some((v) => v.path === view));
       if (off) untracked(() => void this.router.navigateByUrl(this.base()));
+    });
+    // A session lost mid-flight (a refused renewal) with no sign-in dialog
+    // keeping its account on screen: Home, as after a sign-out.
+    effect(() => {
+      // Signed back in before Home opened: a later loss goes Home again.
+      if (this.session.shown()) this.leaving = false;
+      else untracked(() => void this.home());
     });
     // The approval swaps the verification page for the dashboard: the focus
     // follows to its title instead of staying on a control that is gone.
@@ -412,7 +423,7 @@ export class Frame implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.live.close();
-        void this.router.navigateByUrl('/');
+        void this.home();
       });
     // A browser with push on saves its device again.
     void this.push.refresh();
@@ -459,6 +470,13 @@ export class Frame implements OnInit {
     });
   }
 
+  // Every way out of the session ends here, once.
+  private home() {
+    if (this.leaving) return Promise.resolve(true);
+    this.leaving = true;
+    return this.router.navigateByUrl('/');
+  }
+
   protected async signOut() {
     if (this.signingOut()) return;
     this.signingOut.set(true);
@@ -466,7 +484,7 @@ export class Frame implements OnInit {
       await this.push.forget();
       this.live.close();
       await this.session.signOut();
-      await this.router.navigateByUrl('/');
+      await this.home();
     } finally {
       this.signingOut.set(false);
     }
@@ -485,7 +503,7 @@ export class Frame implements OnInit {
   private async revoked() {
     this.live.close();
     this.session.revoked();
-    await this.router.navigateByUrl('/');
+    await this.home();
   }
 
   protected async signOutEverywhere() {
@@ -500,7 +518,7 @@ export class Frame implements OnInit {
       await this.push.forget();
       this.live.close();
       await this.session.signOutEverywhere();
-      await this.router.navigateByUrl('/');
+      await this.home();
     } finally {
       this.signingOut.set(false);
     }

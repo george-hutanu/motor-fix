@@ -1,29 +1,6 @@
-import { TestBed } from '@angular/core/testing';
-import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
-import { I18n, LanguageChoice } from '@motor-fix/i18n';
+import type { MeDto } from '@motor-fix/data-access';
 
-import { Session } from './session';
-
-function account(language: 'ro' | 'en', id = 'account-1'): MeDto {
-  return {
-    capabilities: [],
-    city: null,
-    email: 'andrei@example.ro',
-    emailConfirmed: true,
-    garageAccess: [],
-    garageId: null,
-    hasPassword: true,
-    id,
-    landing: '/app/driver',
-    language,
-    name: 'Andrei',
-    pendingEmail: null,
-    phone: null,
-    phoneConfirmed: false,
-    role: 'driver',
-    roles: ['driver'],
-  } as MeDto;
-}
+import { account, settle, setup } from './signed-in.testing';
 
 interface Pending {
   language: string;
@@ -31,7 +8,7 @@ interface Pending {
   reject(error: Error): void;
 }
 
-function setup(signedIn: MeDto | null, update?: () => Promise<MeDto>) {
+function savingSetup(signedIn: MeDto | null, update?: () => Promise<MeDto>) {
   const pending: Pending[] = [];
   const meControllerUpdate = jest.fn(
     ({ body }: { body: { language: string } }) =>
@@ -44,35 +21,20 @@ function setup(signedIn: MeDto | null, update?: () => Promise<MeDto>) {
   const meControllerMe = jest.fn(() =>
     signedIn ? Promise.resolve(signedIn) : Promise.reject(new Error('401')),
   );
-  TestBed.configureTestingModule({
-    providers: [
-      { provide: MeService, useValue: { meControllerMe, meControllerUpdate } },
-      {
-        provide: AuthService,
-        useValue: {
-          authControllerRefresh: () =>
-            signedIn
-              ? Promise.resolve({ accessToken: 'renewed' })
-              : Promise.reject(new Error('401')),
-          authControllerSignOut: () => Promise.resolve(),
-        },
-      },
-    ],
+  const parts = setup({
+    auth: {
+      authControllerRefresh: () =>
+        signedIn
+          ? Promise.resolve({ accessToken: 'renewed' })
+          : Promise.reject(new Error('401')),
+    },
+    me: { meControllerMe, meControllerUpdate },
   });
-  return {
-    choice: TestBed.inject(LanguageChoice),
-    i18n: TestBed.inject(I18n),
-    meControllerMe,
-    meControllerUpdate,
-    pending,
-    session: TestBed.inject(Session),
-  };
+  return { ...parts, meControllerMe, meControllerUpdate, pending };
 }
 
-const settle = () => new Promise((resolve) => setTimeout(resolve));
-
-async function signedIn(language: 'ro' | 'en' = 'ro') {
-  const parts = setup(account(language));
+async function signedInAs(language: 'ro' | 'en' = 'ro') {
+  const parts = savingSetup(account({ language }));
   await parts.session.load();
   await settle();
   return parts;
@@ -83,12 +45,12 @@ beforeEach(() => localStorage.clear());
 describe('saving the language under hostile conditions', () => {
   it('does not send the queued choice once the person has signed out', async () => {
     const { choice, i18n, meControllerUpdate, pending, session } =
-      await signedIn('ro');
+      await signedInAs('ro');
 
     await choice.pick('en');
     await choice.pick('ro');
     session.current.set(null);
-    pending[0].resolve(account('en'));
+    pending[0].resolve(account({ language: 'en' }));
     await settle();
 
     expect(meControllerUpdate).toHaveBeenCalledTimes(1);
@@ -98,14 +60,14 @@ describe('saving the language under hostile conditions', () => {
 
   it('does not send the queued choice to another account that signed in meanwhile', async () => {
     const { choice, meControllerUpdate, pending, session } =
-      await signedIn('ro');
-    const other = account('ro', 'account-2');
+      await signedInAs('ro');
+    const other = account({ id: 'account-2', language: 'ro' });
 
     await choice.pick('en');
     await choice.pick('ro');
     await choice.pick('en');
     session.current.set(other);
-    pending[0].resolve(account('en'));
+    pending[0].resolve(account({ language: 'en' }));
     await settle();
 
     expect(meControllerUpdate).toHaveBeenCalledTimes(1);
@@ -114,12 +76,12 @@ describe('saving the language under hostile conditions', () => {
 
   it('sends nothing when the last tap returns to the language the saved account now has', async () => {
     const { choice, meControllerUpdate, pending, session } =
-      await signedIn('ro');
+      await signedInAs('ro');
 
     await choice.pick('en');
     await choice.pick('ro');
     await choice.pick('en');
-    pending[0].resolve(account('en'));
+    pending[0].resolve(account({ language: 'en' }));
     await settle();
 
     expect(meControllerUpdate).toHaveBeenCalledTimes(1);
@@ -127,8 +89,8 @@ describe('saving the language under hostile conditions', () => {
   });
 
   it('shows no error and keeps the choice when the call throws instead of rejecting', async () => {
-    const { choice, i18n, meControllerUpdate, session } = setup(
-      account('ro'),
+    const { choice, i18n, meControllerUpdate, session } = savingSetup(
+      account({ language: 'ro' }),
       () => {
         throw new Error('sync failure');
       },
@@ -147,7 +109,7 @@ describe('saving the language under hostile conditions', () => {
   });
 
   it('keeps sending after repeated failed saves', async () => {
-    const { choice, pending, meControllerUpdate } = await signedIn('ro');
+    const { choice, pending, meControllerUpdate } = await signedInAs('ro');
 
     await choice.pick('en');
     pending[0].reject(new Error('offline'));
@@ -161,7 +123,9 @@ describe('saving the language under hostile conditions', () => {
   });
 
   it('does not save when loading the account changes the interface language', async () => {
-    const { i18n, meControllerUpdate, session } = setup(account('en'));
+    const { i18n, meControllerUpdate, session } = savingSetup(
+      account({ language: 'en' }),
+    );
     localStorage.setItem('mf.lang', 'ro');
 
     await session.load();
@@ -172,7 +136,7 @@ describe('saving the language under hostile conditions', () => {
   });
 
   it('does not save a tap made after signing out', async () => {
-    const { choice, meControllerUpdate, session } = await signedIn('ro');
+    const { choice, meControllerUpdate, session } = await signedInAs('ro');
     session.current.set(null);
 
     await choice.pick('en');
@@ -183,7 +147,9 @@ describe('saving the language under hostile conditions', () => {
   });
 
   it('does not load the session when a signed-out visitor taps', async () => {
-    const { choice, meControllerMe, session } = setup(account('ro'));
+    const { choice, meControllerMe, session } = savingSetup(
+      account({ language: 'ro' }),
+    );
 
     await choice.pick('en');
     await settle();
@@ -193,7 +159,7 @@ describe('saving the language under hostile conditions', () => {
   });
 
   it('ignores a tap on a value that is not a language', async () => {
-    const { choice, meControllerUpdate, i18n } = await signedIn('ro');
+    const { choice, meControllerUpdate, i18n } = await signedInAs('ro');
 
     await choice.pick('fr');
     await choice.pick('EN');
@@ -204,8 +170,8 @@ describe('saving the language under hostile conditions', () => {
   });
 
   it('holds the account the server answered with', async () => {
-    const { choice, pending, session } = await signedIn('ro');
-    const answered = { ...account('en'), name: 'Andrei Popescu' };
+    const { choice, pending, session } = await signedInAs('ro');
+    const answered = { ...account({ language: 'en' }), name: 'Andrei Popescu' };
 
     await choice.pick('en');
     pending[0].resolve(answered);
@@ -215,10 +181,10 @@ describe('saving the language under hostile conditions', () => {
   });
 
   it('sends exactly one save for a hundred taps on the same new language', async () => {
-    const { choice, meControllerUpdate, pending } = await signedIn('ro');
+    const { choice, meControllerUpdate, pending } = await signedInAs('ro');
 
     for (let i = 0; i < 100; i++) await choice.pick('en');
-    pending[0].resolve(account('en'));
+    pending[0].resolve(account({ language: 'en' }));
     await settle();
 
     expect(meControllerUpdate).toHaveBeenCalledTimes(1);

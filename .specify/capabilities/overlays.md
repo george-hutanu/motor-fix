@@ -1,6 +1,6 @@
 ---
 capability: overlays
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 157-dialog-drawer
   - 159-form-saving
@@ -11,6 +11,7 @@ features:
   - 496-task-done-close-name
   - 1181-rate-limits
   - 495-hlm-input-aria-reveal
+  - 532-lost-session-home
 ---
 
 # Capability: overlays
@@ -254,6 +255,14 @@ _From 495-hlm-input-aria-reveal._
 ### 495-FR-005 — Tests MUST come first (Constitution II): a ui-cockpit spec (the library that imports both `taskSave` and `HlmInput`; `libs/overlays` imports nothing from `libs/ui-cockpit`) opens a form with an empty required field under `taskSave` and asserts no `aria-invalid` before the press and `"true"` after it, and one with a server field error; a colocated ui-cockpit spec renders a kit input whose template sets `aria-invalid="true"` on the first render and asserts it is kept; both fail on today's code. The end-to-end suite's accessibility check of a form dialog on open MUST assert no violation and no field with `aria-invalid="true"` in the dialog.
 
 _From 495-hlm-input-aria-reveal._
+
+### 532-FR-008 — A task that closes before its deferred entry was pushed MUST remove no history entry and MUST cancel the pending push (a first interaction that itself closes the task pushes first, in the capture phase, and the close steps back over it); a task whose deferred entry was pushed behaves under Back and on every other close exactly as 491-FR-002 to FR-007 say.
+
+_From 532-lost-session-home._
+
+### 532-FR-007 — When a task opens on a page that has had no user activation (the browser reports `navigator.userActivation.hasBeenActive === false`), the task's history entry MUST be pushed at the first user interaction (`pointerdown` or `keydown`) instead of at once; when the page has had activation, or the browser does not report user activation, it MUST be pushed at once as today (refines when 491-FR-001's one entry is added).
+
+_From 532-lost-session-home._
 
 ## Retired
 

@@ -92,4 +92,14 @@ describe('the feature files in the specs repository', () => {
     buildPacket({ out, pr: 137, repo: REPO, gh: g.fn });
     assert.ok(g.calls.some((c) => c.includes('contents/001-thing/pr-review/lap1/report.json')));
   });
+  // @traces 1018-FR-005
+  it('reads the zero-padded folder a branch with a short number names', () => {
+    const out = artifact();
+    const g = gh({
+      branch: '55-team-list',
+      contents: { 'specs/055-team-list/tasks.md': '- [x] T1 a.mjs (FR-001)\n', 'specs/055-team-list/spec.md': '- **FR-001**: Must read the padded folder.\n' },
+    });
+    buildPacket({ out, pr: 137, repo: REPO, gh: g.fn });
+    assert.match(packet(out), /FR-001: Must read the padded folder/);
+  });
 });

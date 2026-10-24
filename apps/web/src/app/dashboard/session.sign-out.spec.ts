@@ -1,8 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
+import type { MeDto } from '@motor-fix/data-access';
 
 import { Session } from './session';
+import { setup } from './signed-in.testing';
 
 const ME = {
   capabilities: [],
@@ -42,34 +43,23 @@ const offline = () =>
 const answered = (status: number) =>
   Promise.reject(new HttpErrorResponse({ status }));
 
-function setup({ tabs = 1 } = {}) {
-  const api = {
-    authControllerRefresh: jest.fn(() =>
-      Promise.resolve({ accessToken: 'renewed' }),
-    ),
-    authControllerSignIn: jest.fn(() =>
-      Promise.resolve({ accessToken: 'signed-in' }),
-    ),
-    authControllerSignOut: jest.fn(() => Promise.resolve()),
-    authControllerSignOutEverywhere: jest.fn(() => Promise.resolve()),
-    authControllerSignUp: jest.fn(() =>
-      Promise.resolve({ accessToken: 'signed-up' }),
-    ),
-  };
-  TestBed.configureTestingModule({
-    providers: [
-      {
-        provide: MeService,
-        useValue: { meControllerMe: jest.fn(() => Promise.resolve(ME)) },
-      },
-      { provide: AuthService, useValue: api },
-    ],
+function tabsSetup({ tabs = 1 } = {}) {
+  const { auth, session } = setup({
+    auth: {
+      authControllerSignIn: jest.fn(() =>
+        Promise.resolve({ accessToken: 'signed-in' }),
+      ),
+      authControllerSignOutEverywhere: jest.fn(() => Promise.resolve()),
+      authControllerSignUp: jest.fn(() =>
+        Promise.resolve({ accessToken: 'signed-up' }),
+      ),
+    },
+    me: { meControllerMe: jest.fn(() => Promise.resolve(ME)) },
   });
-  const session = TestBed.inject(Session);
   // A second tab of the same browser: its own Session, the same cookie.
   const other =
     tabs > 1 ? TestBed.runInInjectionContext(() => new Session()) : session;
-  return { api, other, session };
+  return { api: auth, other, session };
 }
 
 const flush = () => new Promise((resolve) => setTimeout(resolve));
@@ -87,7 +77,7 @@ afterEach(() => {
 
 describe('signing out on all devices', () => {
   it('forgets the session and asks the server to end every session', async () => {
-    const { api, session } = setup();
+    const { api, session } = tabsSetup();
     await session.load();
 
     await session.signOutEverywhere();
@@ -99,7 +89,7 @@ describe('signing out on all devices', () => {
   });
 
   it('forgets the session even when the call fails', async () => {
-    const { api, session } = setup();
+    const { api, session } = tabsSetup();
     await session.load();
     api.authControllerSignOutEverywhere.mockImplementationOnce(() =>
       answered(500),
@@ -117,7 +107,7 @@ describe('the other tabs of this browser', () => {
     ['on this device', 'signOut'],
     ['on all devices', 'signOutEverywhere'],
   ] as const)('sign out when one tab signs out %s', async (_, how) => {
-    const { other, session } = setup({ tabs: 2 });
+    const { other, session } = tabsSetup({ tabs: 2 });
     await session.load();
     await other.load();
     const ended = jest.fn();
@@ -131,7 +121,7 @@ describe('the other tabs of this browser', () => {
   });
 
   it('are not told when a tab forgets a session the server already revoked', async () => {
-    const { api, other, session } = setup({ tabs: 2 });
+    const { api, other, session } = tabsSetup({ tabs: 2 });
     await session.load();
     await other.load();
     const ended = jest.fn();
@@ -149,7 +139,7 @@ describe('the other tabs of this browser', () => {
   });
 
   it('do not ask the server again: the tab that signed out did', async () => {
-    const { api, other, session } = setup({ tabs: 2 });
+    const { api, other, session } = tabsSetup({ tabs: 2 });
     await session.load();
     await other.load();
 
@@ -160,7 +150,7 @@ describe('the other tabs of this browser', () => {
   });
 
   it('does not tell the tab that signed out that it ended', async () => {
-    const { session } = setup();
+    const { session } = tabsSetup();
     await session.load();
     const ended = jest.fn();
     session.ended.subscribe(ended);
@@ -171,7 +161,7 @@ describe('the other tabs of this browser', () => {
   });
 
   it('let a renewal answered after the other tab signed out restore nothing', async () => {
-    const { api, other, session } = setup({ tabs: 2 });
+    const { api, other, session } = tabsSetup({ tabs: 2 });
     let answerLate: (value: { accessToken: string }) => void = () => undefined;
     api.authControllerRefresh.mockImplementationOnce(
       () =>
@@ -190,7 +180,7 @@ describe('the other tabs of this browser', () => {
 
   it('works without BroadcastChannel, signing only this tab out', async () => {
     delete (globalThis as { BroadcastChannel?: unknown }).BroadcastChannel;
-    const { other, session } = setup({ tabs: 2 });
+    const { other, session } = tabsSetup({ tabs: 2 });
     await session.load();
     await other.load();
 
@@ -206,7 +196,7 @@ describe('a sign-out that gets no answer', () => {
     ['offline', offline],
     ['a 503', () => answered(503)],
   ])('is kept pending when %s', async (_, failure) => {
-    const { api, session } = setup();
+    const { api, session } = tabsSetup();
     await session.load();
     api.authControllerSignOut.mockImplementationOnce(failure);
 
@@ -219,7 +209,7 @@ describe('a sign-out that gets no answer', () => {
     ['204', () => Promise.resolve()],
     ['401', () => answered(401)],
   ])('is not kept after a %s answer', async (_, answer) => {
-    const { api, session } = setup();
+    const { api, session } = tabsSetup();
     await session.load();
     api.authControllerSignOutEverywhere.mockImplementationOnce(answer);
 
@@ -229,7 +219,7 @@ describe('a sign-out that gets no answer', () => {
   });
 
   it('is sent again when the connection returns, then dropped', async () => {
-    const { api, session } = setup();
+    const { api, session } = tabsSetup();
     await session.load();
     api.authControllerSignOutEverywhere.mockImplementationOnce(offline);
     await session.signOutEverywhere();
@@ -243,7 +233,7 @@ describe('a sign-out that gets no answer', () => {
   });
 
   it('stays pending when the retry gets no answer either', async () => {
-    const { api, session } = setup();
+    const { api, session } = tabsSetup();
     await session.load();
     api.authControllerSignOut
       .mockImplementationOnce(offline)
@@ -258,7 +248,7 @@ describe('a sign-out that gets no answer', () => {
 
   it('is sent before the next session renews from the cookie', async () => {
     localStorage.setItem(PENDING, 'device');
-    const { api, session } = setup();
+    const { api, session } = tabsSetup();
     const order: string[] = [];
     api.authControllerSignOut.mockImplementationOnce(async () => {
       order.push('sign-out');
@@ -285,7 +275,7 @@ describe('a sign-out that gets no answer', () => {
     'is sent before a %s, so it never ends the new session',
     async (_, start) => {
       localStorage.setItem(PENDING, 'everywhere');
-      const { api, session } = setup();
+      const { api, session } = tabsSetup();
       const order: string[] = [];
       api.authControllerSignOutEverywhere.mockImplementationOnce(async () => {
         order.push('sign-out-everywhere');
@@ -317,7 +307,7 @@ describe('a sign-out that gets no answer', () => {
     'is dropped once a %s succeeds, even when its retry got no answer, so it never ends the new session',
     async (_, start) => {
       localStorage.setItem(PENDING, 'everywhere');
-      const { api, session } = setup();
+      const { api, session } = tabsSetup();
       api.authControllerSignOutEverywhere.mockImplementationOnce(() =>
         answered(503),
       );
@@ -332,7 +322,7 @@ describe('a sign-out that gets no answer', () => {
   );
 
   it('is not kept by a retry that was on its way while a sign-in started a new session', async () => {
-    const { api, session } = setup();
+    const { api, session } = tabsSetup();
     let answerSignIn: (value: { accessToken: string }) => void = () =>
       undefined;
     api.authControllerSignIn.mockImplementationOnce(
@@ -362,5 +352,72 @@ describe('a sign-out that gets no answer', () => {
 
     expect(api.authControllerSignOutEverywhere).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(PENDING)).toBeNull();
+  });
+});
+
+// @traces 532-FR-003
+// @traces 532-FR-004
+describe('the account a sign-out ends', () => {
+  const watch = (session: Session) => {
+    const ended: string[] = [];
+    session.signedOut.subscribe((id) => ended.push(id));
+    return ended;
+  };
+
+  it('is told when this tab signs out', async () => {
+    const { session } = tabsSetup();
+    await session.load();
+    const ended = watch(session);
+
+    await session.signOut();
+
+    expect(ended).toEqual(['account-1']);
+  });
+
+  it('is told when the server revoked the session', async () => {
+    const { session } = tabsSetup();
+    await session.load();
+    const ended = watch(session);
+
+    session.revoked();
+    await flush();
+
+    expect(ended).toEqual(['account-1']);
+  });
+
+  it('is told in the other tab when one tab signs out', async () => {
+    const { other, session } = tabsSetup({ tabs: 2 });
+    await session.load();
+    await other.load();
+    const ended = watch(other);
+
+    await session.signOut();
+
+    expect(ended).toEqual(['account-1']);
+  });
+
+  it('is not told when a renewal is refused', async () => {
+    const { api, session } = tabsSetup();
+    await session.load();
+    const ended = watch(session);
+    api.authControllerRefresh.mockRejectedValueOnce(new Error('expired'));
+
+    await session.renew();
+    await flush();
+
+    expect(session.current()).toBeNull();
+    expect(ended).toEqual([]);
+  });
+
+  it('is told when the account signs out after its renewal was refused', async () => {
+    const { api, session } = tabsSetup();
+    await session.load();
+    const ended = watch(session);
+    api.authControllerRefresh.mockRejectedValueOnce(new Error('expired'));
+    await session.renew();
+
+    await session.signOut();
+
+    expect(ended).toEqual(['account-1']);
   });
 });
