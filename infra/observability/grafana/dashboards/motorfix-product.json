@@ -4593,7 +4593,7 @@
     {
       "id": 157,
       "type": "row",
-      "title": "Data exports",
+      "title": "Admin account actions",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -4606,7 +4606,7 @@
     {
       "id": 158,
       "type": "stat",
-      "title": "Data exports, last hour",
+      "title": "Admin account actions, last hour",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -4616,6 +4616,113 @@
         "w": 6,
         "x": 0,
         "y": 207
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_admin_account_actions_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 159,
+      "type": "stat",
+      "title": "Admin account actions, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 207
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_admin_account_actions_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 160,
+      "type": "timeseries",
+      "title": "Admin account actions per hour, by action and outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 207
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (action, outcome) (increase(motorfix_admin_account_actions_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{action}} {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 161,
+      "type": "row",
+      "title": "Data exports",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 211
+      },
+      "panels": []
+    },
+    {
+      "id": 162,
+      "type": "stat",
+      "title": "Data exports, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 212
       },
       "targets": [
         {
@@ -4636,7 +4743,7 @@
       }
     },
     {
-      "id": 159,
+      "id": 163,
       "type": "stat",
       "title": "Data exports, last 24 hours",
       "datasource": {
@@ -4647,7 +4754,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 207
+        "y": 212
       },
       "targets": [
         {
@@ -4668,7 +4775,7 @@
       }
     },
     {
-      "id": 160,
+      "id": 164,
       "type": "timeseries",
       "title": "Data exports per hour, by outcome",
       "datasource": {
@@ -4679,7 +4786,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 207
+        "y": 212
       },
       "targets": [
         {

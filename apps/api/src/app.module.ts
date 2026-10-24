@@ -5,6 +5,7 @@ import {
   type StorageEnv,
 } from '@motor-fix/contracts';
 import {
+  AdminAccountModule,
   AdminAccountsModule,
   AuthModule,
   assistantBroker,
@@ -107,6 +108,10 @@ export class AppModule {
           phone: phoneConfig(env.APP_ENV, process.env),
         }),
         AdminAccountsModule,
+        AdminAccountModule.register(
+          { support: email.replyTo?.email, webUrl: email.webUrl },
+          notifications,
+        ),
         CarsModule,
         SavedGaragesModule,
         CatalogueModule,

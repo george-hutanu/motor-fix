@@ -329,12 +329,23 @@ export function templateName(kind: string, params: Params): string {
     const value = params[byParam[0]];
     return byParam[1].has(value) ? `${kind}.${value}` : kind;
   }
-  if (kind !== 'ACCOUNT_EMAIL') return kind;
+  return kind === 'ACCOUNT_EMAIL' ? accountEmailName(params) : kind;
+}
+
+const ACCOUNT_PURPOSES = new Set([
+  'password_reset',
+  'password_changed',
+  'email_change_notice',
+  'account_deleted',
+  'account_suspended',
+]);
+
+// A suspension with no support address set names none (FR-022).
+function accountEmailName(params: Params): string {
   const purpose = params['purpose'];
-  return purpose === 'password_reset' ||
-    purpose === 'password_changed' ||
-    purpose === 'email_change_notice' ||
-    purpose === 'account_deleted'
+  if (purpose === 'account_suspended' && typeof params['support'] !== 'string')
+    return 'ACCOUNT_EMAIL.account_suspended_contact';
+  return typeof purpose === 'string' && ACCOUNT_PURPOSES.has(purpose)
     ? `ACCOUNT_EMAIL.${purpose}`
     : 'ACCOUNT_EMAIL.email_check';
 }

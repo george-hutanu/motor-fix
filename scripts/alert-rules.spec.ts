@@ -96,6 +96,7 @@ const MEMORY = (service: string) => ({
 const ZERO_WAIT = new Set([
   'api-down',
   'api-account-deletion-failed',
+  'api-admin-account-action-failed',
   'web-down',
   'worker-down',
   'mcp-down',
@@ -131,6 +132,15 @@ const EXPECTED: Record<
   'api-account-deletion-failed': {
     expr: [
       'sum by (deployment_environment) (increase(motorfix_account_deletions_total{service_name="api", outcome="failed"}[15m]))',
+    ],
+    for: '0m',
+    from: 900,
+    type: 'gt',
+    value: 0,
+  },
+  'api-admin-account-action-failed': {
+    expr: [
+      'sum by (deployment_environment) (increase(motorfix_admin_account_actions_total{service_name="api", outcome="failed"}[15m]))',
     ],
     for: '0m',
     from: 900,

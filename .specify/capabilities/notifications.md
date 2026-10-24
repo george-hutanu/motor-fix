@@ -48,6 +48,7 @@ features:
   - 525-bounce-domain-event
   - 140-account-delete-export
   - 1370-release-seed-no-ssh
+  - 003-admin-account-actions
 ---
 
 # Capability: Notifications
@@ -868,6 +869,9 @@ _From 525-bounce-domain-event._
 ### 140-FR-006 — When the file is ready, the system MUST queue one DATA_EXPORT_READY e-mail (a new notification type in the catalogue with ACCOUNT_EMAIL's shape: direct to the account itself, e-mail only, transactional so it cannot be muted, in the account's language, subject "Fișierul tău cu date e gata" / "Your data file is ready") linking to Setări of the driver's dashboard; an account without a usable e-mail skips it and the skip is logged.
 
 _From 140-account-delete-export._
+### 003-FR-022 — The system MUST carry an ACCOUNT_EMAIL purpose `account_suspended` with a Romanian and an English template: subject "Contul tău a fost suspendat" / "Your account was suspended", a body that gives the reason as escaped plain text, the support address when one is configured (279-FR-003) and a button linking to the contact page `/{lang}/contact`, and a footer saying why the person gets it; it is transactional (no preference switches it off), follows the sender's bounce rule, passes the template check and joins the inbox-test matrix (279-FR-007) by being registered.
+
+_From 003-admin-account-actions._
 
 ## Retired
 

@@ -652,6 +652,16 @@
             }
           },
           {
+            "name": "accountId",
+            "required": false,
+            "in": "query",
+            "description": "Admin only: the entries the account made or that are about the account",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "jobId",
             "required": false,
             "in": "query",
@@ -709,6 +719,18 @@
             "schema": {
               "format": "uuid",
               "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Entries per page",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "integer"
             }
           }
         ],
@@ -1911,6 +1933,240 @@
           },
           "404": {
             "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/{id}": {
+      "get": {
+        "operationId": "AccountController_read",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountPageDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such account (unknown, malformed or deleted id)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/{id}/reset-access": {
+      "post": {
+        "operationId": "AccountController_resetAccess",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessResetDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such account (unknown, malformed or deleted id)"
+          },
+          "409": {
+            "description": "admin_account: the account holds admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/{id}/suspend": {
+      "post": {
+        "operationId": "AccountController_suspend",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a reason under 10 or over 500 characters"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such account (unknown, malformed or deleted id)"
+          },
+          "409": {
+            "description": "admin_account: the account holds admin; account_already_suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/{id}/restore": {
+      "post": {
+        "operationId": "AccountController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a note over 500 characters"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such account (unknown, malformed or deleted id)"
+          },
+          "409": {
+            "description": "admin_account: the account holds admin; account_not_suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/{id}/delete-on-request": {
+      "post": {
+        "operationId": "AccountController_deleteOnRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountOnRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "400": {
+            "description": "validation_failed: a reference not like DR-2026-0001, a date after today, or identity not checked"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such account (unknown, malformed or deleted id)"
+          },
+          "409": {
+            "description": "admin_account: the account holds admin; deletion_not_allowed: the account owns a garage"
           }
         },
         "security": [
@@ -9052,7 +9308,7 @@
         "type": "object",
         "properties": {
           "items": {
-            "description": "Newest first, 20 at most",
+            "description": "Newest first; as many as limit asks, 20 when it is not given",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AuditEntryDto"
@@ -10247,6 +10503,278 @@
           "activeDrivers",
           "garagesListed",
           "mechanics"
+        ]
+      },
+      "AdminAccountGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "approved",
+              "suspended"
+            ]
+          },
+          "relation": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "receptionist",
+              "mechanic"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "relation"
+        ]
+      },
+      "AdminAccountCountsDto": {
+        "type": "object",
+        "properties": {
+          "cars": {
+            "type": "integer",
+            "description": "Cars not removed",
+            "minimum": 0
+          },
+          "requests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reviews": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "cars",
+          "requests",
+          "reviews"
+        ]
+      },
+      "AdminAccountDocumentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "The document kind, as the legal panel names it"
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "verificationFileId": {
+            "type": "string",
+            "description": "Opened through the verification file page download route",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "pages",
+          "verificationFileId"
+        ]
+      },
+      "AdminAccountPageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "roles": {
+            "type": "array",
+            "description": "In the order driver, garage, receptionist, mechanic, admin",
+            "items": {
+              "type": "string",
+              "enum": [
+                "driver",
+                "garage",
+                "receptionist",
+                "mechanic",
+                "admin"
+              ]
+            }
+          },
+          "garage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AdminAccountGarageDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastActiveAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended"
+            ]
+          },
+          "suspendedReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "counts": {
+            "$ref": "#/components/schemas/AdminAccountCountsDto"
+          },
+          "signInMethods": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "password",
+                "google",
+                "apple",
+                "whatsapp_phone"
+              ]
+            }
+          },
+          "isAdmin": {
+            "type": "boolean",
+            "description": "Holds admin: no action is offered or taken"
+          },
+          "isOwner": {
+            "type": "boolean",
+            "description": "Holds an owner membership: deletion on request is refused"
+          },
+          "documents": {
+            "description": "The owned garage's current legal documents; empty for a non-owner",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAccountDocumentDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "phone",
+          "language",
+          "roles",
+          "garage",
+          "createdAt",
+          "lastActiveAt",
+          "status",
+          "suspendedReason",
+          "counts",
+          "signInMethods",
+          "isAdmin",
+          "isOwner",
+          "documents"
+        ]
+      },
+      "AccessResetDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "sent: the reset e-mail went out; none: no password or no e-mail; failed: the send was refused, the sessions still ended",
+            "enum": [
+              "sent",
+              "none",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "SuspendAccountDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Trimmed; shown to the person in the e-mail",
+            "maxLength": 500,
+            "minLength": 10
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "RestoreAccountDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 500
+          }
+        }
+      },
+      "DeleteAccountOnRequestDto": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "The data request reference",
+            "example": "DR-2026-0001",
+            "pattern": "^DR-\\d{4}-\\d{4,}$"
+          },
+          "receivedOn": {
+            "type": "string",
+            "description": "The day the request arrived, not after today in Bucharest",
+            "format": "date"
+          },
+          "identityChecked": {
+            "type": "boolean",
+            "description": "Must be true",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "reference",
+          "receivedOn",
+          "identityChecked"
         ]
       },
       "CreateCarDto": {

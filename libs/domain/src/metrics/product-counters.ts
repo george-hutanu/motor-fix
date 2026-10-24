@@ -79,6 +79,18 @@ export type DataExportOutcome =
   | 'failed'
   | 'expired'
   | 'downloaded';
+// Not started at 0 either, for the same cap.
+export type AdminAccountAction =
+  | 'reset_access'
+  | 'suspend'
+  | 'restore'
+  | 'delete_on_request';
+export type AdminAccountOutcome =
+  | 'done'
+  | 'refused'
+  | 'conflict'
+  | 'email_failed'
+  | 'failed';
 export type NotificationChannel = 'push' | 'in-app';
 const STEP_ACTIONS = [
   'added',
@@ -175,6 +187,11 @@ const dataExports = () =>
   counter(
     'motorfix_data_exports_total',
     'Copies of their data people asked for, by outcome',
+  );
+const adminAccountActions = () =>
+  counter(
+    'motorfix_admin_account_actions_total',
+    'Admin actions on one account, by action and outcome',
   );
 const approvals = () =>
   counter(
@@ -345,6 +362,13 @@ export function countAccountDeletion(outcome: AccountDeletionOutcome) {
 
 export function countDataExport(outcome: DataExportOutcome, by = 1) {
   dataExports().add(by, { outcome });
+}
+
+export function countAdminAccountAction(
+  action: AdminAccountAction,
+  outcome: AdminAccountOutcome,
+) {
+  adminAccountActions().add(1, { action, outcome });
 }
 
 export function countApproval(outcome: (typeof APPROVAL_OUTCOMES)[number]) {
