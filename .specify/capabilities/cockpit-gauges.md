@@ -1,10 +1,11 @@
 ---
 capability: cockpit-gauges
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 051-cockpit-gauges
   - 053-motion
   - 466-odometer-digit-wrap
+  - 451-gauges-axe
 ---
 
 # Capability: cockpit-gauges
@@ -80,6 +81,22 @@ _From 466-odometer-digit-wrap._
 ### 466-FR-005 — A colocated spec in `libs/ui-cockpit/src/lib/odometer.spec.ts` MUST assert the grouping — a range renders exactly two amount groups and a single price exactly one, each digit inside its group — and MUST fail on today's one-item-per-character markup.
 
 _From 466-odometer-digit-wrap._
+
+### 451-FR-001 — The end-to-end suite MUST include a scan of the gauges catalogue page (`/cockpit`) that runs the suite's one shared accessibility-scanner helper over the whole page and fails when the scanner reports any violation.
+
+_From 451-gauges-axe._
+
+### 451-FR-002 — The scan MUST run once in the light theme and once in the dark theme, each as a test of its own, so a violation present in one theme only is reported with that theme's name.
+
+_From 451-gauges-axe._
+
+### 451-FR-003 — The scan MUST run the scanner with its default rules, no rule disabled and no element excluded; a violation it finds is fixed in the product in this story, with a failing test written first, never filtered out of the scan.
+
+_From 451-gauges-axe._
+
+### 451-FR-004 — The story MUST add no dependency to the repository and commit no image: the scanner already present is reused through the existing helper, and visual comparison of the catalogue stays with the PR QA screenshots (owner decision of 2026-10-16 on #373).
+
+_From 451-gauges-axe._
 
 ## Retired
 
