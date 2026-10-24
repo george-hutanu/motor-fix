@@ -40,6 +40,7 @@ const ROW: PriceRangeEditorData = {
   garageId: GARAGE,
   item: BRAKES,
   kind: 'row',
+  shown: signal(BRAKES),
 };
 const BRAND: PriceRangeEditorData = {
   brand: BRAKES.brandRanges[0],
@@ -915,8 +916,32 @@ describe('the range editor: the row changed meanwhile', () => {
     expect(line()).toBeNull();
   });
 
-  it('shows no line for a brand range or the labour rate', async () => {
-    await open(BRAND, { title: 'BMW' });
+  it('says nothing when only the row’s brand ranges changed', async () => {
+    const show = await openLive();
+
+    await show({ ...BRAKES, brandRanges: [], updatedAt: NEWER });
+
+    expect(line()).toBeNull();
+  });
+
+  it('names no older range when the list has not caught up with a refused save', async () => {
+    // The list still shows the row as it opened; the re-read stores 950–1.450.
+    await openLive();
+    setRange.mockRejectedValueOnce(refusal(409, { code: 'stale' }));
+
+    await press();
+
+    expect(field('De la').value).toBe('950');
+    expect(line()).toBeNull();
+  });
+
+  it.each([
+    ['a brand range', BRAND],
+    ['the labour rate', LABOUR],
+    ['a new job', NEW],
+    ['a proposal', PROPOSE],
+  ])('shows no line for %s', async (_, data) => {
+    await open(data, { title: 'x' });
     expect(line()).toBeNull();
   });
 });

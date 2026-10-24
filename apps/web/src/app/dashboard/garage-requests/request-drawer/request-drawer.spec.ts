@@ -540,23 +540,35 @@ describe('the drawer once the request is gone', () => {
     expect(text(banner(element))).toBe('Nu mai este disponibil');
   });
 
-  it('keeps the refusal when the very first read is gone', async () => {
-    const { element } = await render(httpError(404));
+  it.each([
+    ['ro', 'Cererea nu mai este disponibilă'],
+    ['en', 'The request is no longer available'],
+  ] as const)(
+    'keeps the refusal when the very first read is gone (%s)',
+    async (language, said) => {
+      const { element } = await render(httpError(404), language);
 
-    expect(text(element)).toContain('Cererea nu mai este disponibilă');
-    expect(text(element)).not.toContain('Nu mai este disponibil ');
-    expect(element.querySelector('button')).toBeNull();
-  });
+      expect(text(element)).toContain(said);
+      expect(banner(element)).toBeNull();
+      expect(element.querySelector('button')).toBeNull();
+    },
+  );
 
-  it('drops the banner when a later read answers the request again', async () => {
-    const { element, settle } = await goneOnNextRead();
-    read.mockResolvedValueOnce(detail());
+  it.each([
+    ['ro', 'Trimite oferta'],
+    ['en', 'Send a quote'],
+  ] as const)(
+    'drops the banner when a later read answers the request again (%s)',
+    async (language, send) => {
+      const { element, settle } = await goneOnNextRead(detail(), language);
+      read.mockResolvedValueOnce(detail());
 
-    live.emit('request.cancelled', 'req-1');
-    await wait(350);
-    await settle();
+      live.emit('request.cancelled', 'req-1');
+      await wait(350);
+      await settle();
 
-    expect(banner(element)).toBeNull();
-    expect(button(element, 'Trimite oferta')?.disabled).toBe(false);
-  });
+      expect(banner(element)).toBeNull();
+      expect(button(element, send)?.disabled).toBe(false);
+    },
+  );
 });

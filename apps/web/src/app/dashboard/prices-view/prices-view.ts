@@ -233,13 +233,13 @@ export class PricesView {
         kind: 'row',
         // The row as the live list re-reads it, so the editor can say when
         // another session changed its range meanwhile.
-        shown: computed(
-          () =>
-            this.view
-              .value()
-              ?.items.find((item) => item.priceId === row.priceId) as
-              | EditableRow
-              | undefined,
+        shown: computed(() =>
+          this.view
+            .value()
+            ?.items.find(
+              (item): item is EditableRow =>
+                this.editable(item) && item.priceId === row.priceId,
+            ),
         ),
       },
       this.name(row),

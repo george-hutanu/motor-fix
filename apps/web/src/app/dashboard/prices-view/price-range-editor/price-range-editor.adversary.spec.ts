@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { GaragesService, type PriceListDto } from '@motor-fix/data-access';
 import { formatDuration, I18n } from '@motor-fix/i18n';
@@ -40,6 +40,7 @@ const ROW: PriceRangeEditorData = {
   garageId: GARAGE,
   item: BRAKES,
   kind: 'row',
+  shown: signal(BRAKES),
 };
 const BRAND: PriceRangeEditorData = {
   brand: BRAKES.brandRanges[0],
@@ -205,6 +206,7 @@ describe('the range editor under rapid and hostile use', () => {
       garageId: GARAGE,
       item: { ...BRAKES, priceId: undefined, updatedAt: undefined },
       kind: 'row',
+      shown: signal(undefined),
     } as unknown as PriceRangeEditorData);
 
     await press();
@@ -414,6 +416,7 @@ describe('the range editor: boundaries typed by hand', () => {
       garageId: GARAGE,
       item: { ...BRAKES, durationMinutes: undefined, toBani: undefined },
       kind: 'row',
+      shown: signal(undefined),
     });
 
     expect(field('Până la').value).toBe('');

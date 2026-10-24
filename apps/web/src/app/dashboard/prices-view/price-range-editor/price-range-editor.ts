@@ -52,7 +52,7 @@ export type PriceRangeEditorData =
       garageId: string;
       item: EditableRow;
       // The row as the live list shows it while the editor is open.
-      shown?: Signal<EditableRow | undefined>;
+      shown: Signal<EditableRow | undefined>;
     }
   | {
       kind: 'new';
@@ -171,13 +171,16 @@ export class PriceRangeEditor {
   // The row's range saved meanwhile in another session, said under the
   // fields; what was typed stays.
   private readonly draft = liveDraft(
-    (this.data.kind === 'row' && this.data.shown) ||
-      signal<EditableRow | undefined>(undefined),
+    this.data.kind === 'row'
+      ? this.data.shown
+      : signal<EditableRow | undefined>(undefined),
     sameRange,
   );
   protected readonly changedMeanwhile = computed(() => {
     const row = this.draft.changed();
-    if (!row) return '';
+    // A list that has not caught up with the stored row a refused save read
+    // shows an older range, which is no change made meanwhile.
+    if (!row || Date.parse(row.updatedAt) < Date.parse(this.stamp())) return '';
     const value = [
       priceText(row, this.i18n),
       formatDuration(row.durationMinutes, this.i18n.language()),

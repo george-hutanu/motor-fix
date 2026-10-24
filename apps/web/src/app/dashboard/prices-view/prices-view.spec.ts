@@ -708,6 +708,35 @@ describe('Prețuri: opening an editor', () => {
     expect(cell(rows(element)[2], 'price')).toBe(cell(brakes, 'price'));
   });
 
+  // @traces 588-FR-001
+  // @traces 588-FR-005
+  it("hands the open editor its row as each re-read shows it, and no other row's change", async () => {
+    const { element, settle } = await editing();
+    const [first, second, brakes, ...rest] = SEEDED;
+    let items = SEEDED;
+    read.mockImplementation(async () => ({ items, labour: LABOUR }));
+    open.mockReturnValueOnce(new Promise(() => undefined));
+    (rows(element)[2].querySelector('button') as HTMLButtonElement).click();
+    await settle();
+    const [, { data }] = open.mock.calls[0] as unknown as [
+      unknown,
+      { data: { shown: () => unknown } },
+    ];
+    const reread = async (next: PriceListItemDto[]) => {
+      items = next;
+      events.next(message('price_list.updated', GARAGE));
+      await wait(350);
+      await settle();
+    };
+
+    await reread([{ ...first, fromBani: 1_000 }, second, brakes, ...rest]);
+    expect(data.shown()).toBe(brakes);
+
+    const moved = { ...brakes, fromBani: 99_000 };
+    await reread([first, second, moved, ...rest]);
+    expect(data.shown()).toEqual(moved);
+  });
+
   it('reads nothing again when the editor is cancelled', async () => {
     const { element, settle } = await editing();
     open.mockResolvedValueOnce('cancelled');
