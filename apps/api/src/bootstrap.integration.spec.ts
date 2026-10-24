@@ -208,6 +208,32 @@ describe('api conventions', () => {
     expect(await ip('1.2.3.4, 198.51.100.4')).toBe('198.51.100.4');
   });
 
+  // @traces 500-FR-006
+  it('logs the caller of a refused sign-in as the trusted chain names it, not as the visitor wrote it', async () => {
+    app = await start();
+    const callers: string[] = [];
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation((...args: unknown[]) => {
+        const line = String(args[0]);
+        if (line.startsWith('sign-in refused')) callers.push(line);
+      });
+    const refused = (forwarded: string) =>
+      request(app.getHttpServer())
+        .post('/api/v1/auth/sign-in')
+        .set('X-Forwarded-For', forwarded)
+        .send({ email: 'nobody@example.test', password: 'x' });
+
+    await refused('203.0.113.9, 10.0.0.5');
+    await refused('1.2.3.4, 198.51.100.4');
+    warn.mockRestore();
+
+    expect(callers).toEqual([
+      'sign-in refused: invalid_credentials caller=203.0.x.x',
+      'sign-in refused: invalid_credentials caller=198.51.x.x',
+    ]);
+  });
+
   it('serves sign-in under the prefix with problem details', async () => {
     app = await start();
 
