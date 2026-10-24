@@ -104,3 +104,39 @@ describe('a refused sign-in names its caller masked', () => {
     },
   );
 });
+
+// @traces 500-FR-005
+describe('a successful sign-in', () => {
+  it('logs no line that names its caller', async () => {
+    const lines: string[] = [];
+    for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
+      jest
+        .spyOn(Logger.prototype, level)
+        .mockImplementation((...args: unknown[]) => {
+          lines.push(JSON.stringify(args));
+        });
+    }
+    const { attempts, signIns } = service(false);
+    const inner = signIns as unknown as {
+      credentials: () => Promise<unknown>;
+    };
+    jest.spyOn(inner, 'credentials').mockResolvedValue({
+      account: { id: 'acc-1', roles: [], status: 'active' },
+      role: 'driver',
+    } as never);
+    jest
+      .spyOn(signIns, 'openSession')
+      .mockResolvedValue({ accessToken: 't', remember: true } as never);
+
+    const issued = await signIns.signIn(
+      { email: EMAIL, password: PASSWORD },
+      '203.0.113.9',
+    );
+
+    expect(issued.accessToken).toBe('t');
+    expect(attempts.clear).toHaveBeenCalledWith(EMAIL);
+    const all = lines.join('\n');
+    expect(all).not.toContain('203.0');
+    expect(all).not.toContain('caller=');
+  });
+});
