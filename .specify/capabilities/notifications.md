@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 194-email-sending
   - 195-message-templates
@@ -44,6 +44,7 @@ features:
   - 414-approve-catalogue-job
   - 067-restore-suspended-garage
   - 520-brevo-key-check-retry
+  - 525-bounce-domain-event
 ---
 
 # Capability: Notifications
@@ -809,6 +810,14 @@ _From 520-brevo-key-check-retry._
 ### 520-FR-005 — Each failed unreachable attempt MUST log one warning naming the attempt number, the reason (network error, timeout or the status) and the delay before the next attempt, never the key; no new metric or alert is added and `infra/observability/inventory.json` is unchanged, because the health check (Railway's and ST-294's `api` probe path) and the existing `motorfix_queue_waiting` and `motorfix_queue_oldest_waiting_seconds` gauges for the `notifications` queue already surface a worker that is not consuming.
 
 _From 520-brevo-key-check-retry._
+
+### 525-FR-001 — Recording a hard bounce for a message that belongs to an account MUST write one `account.updated` domain event through the outbox — subject the account, audience that account, payload `{ accountId, fields: ['emailBouncedAt'] }` — in the same transaction that sets the account's `email_bounced_at` and audits the change, so that none of the three exists without the other two.
+
+_From 525-bounce-domain-event._
+
+### 525-FR-002 — The bounce MUST be recorded at most once per provider message id: the transaction MUST claim the message's not-yet-failed notification rows with a conditional write, and when it claims none (a repeated or concurrent report of the same message, an unknown id, or rows already failed) it MUST write no account change, no audit entry and no event. A bounce of a message with no account (a draft's address) MUST fail its rows as today and record no event. A later bounce of a different message to the same account MUST record a new event. The push fallback rows of the claimed rows MUST be written in that same transaction (their send jobs queued after it commits; a lost job is handed over by the stranded-row sweep), so a crash after the commit cannot lose the fallback that a retry would no longer write (decision taken for the owner by Chief 1 on the code review, 2026-10-24).
+
+_From 525-bounce-domain-event._
 
 ## Retired
 
