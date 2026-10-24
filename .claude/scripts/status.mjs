@@ -28,6 +28,7 @@ import { coveredTokens } from "./lib/tests.mjs";
 import { loadCapabilities, parseDelta, retiredTokens } from "./capabilities.mjs";
 import { parseDeferred } from "./retro-evidence.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
+import { declaredFrs } from "./lib/traces.mjs";
 
 export const DEFAULT_STALE_DAYS = 14;
 
@@ -71,7 +72,7 @@ export function featureStatus(repo, dir, { covered, retired, capabilities, stale
   const open = taskLines.filter((l) => /^\s*- \[ \]/.test(l)).length;
   const done = taskLines.filter((l) => /^\s*- \[[Xx]\]/.test(l)).length;
 
-  const declared = [...new Set([...(spec ?? "").matchAll(/^\s*-\s+\*{0,2}(FR-\d{3})\*{0,2}\s*[:.]/gm)].map((m) => m[1]))];
+  const declared = declaredFrs(spec);
   const live = declared.filter((fr) => !retired.has(`${num}-${fr}`));
   const untested = live.filter((fr) => !covered.has(`${num}-${fr}`));
 

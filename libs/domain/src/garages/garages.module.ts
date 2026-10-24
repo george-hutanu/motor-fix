@@ -61,6 +61,7 @@ import {
   VERIFICATION_CONFIG,
   type VerificationConfig,
 } from './verification/verification-config';
+import { PresenceService } from './verification/verification-file/presence/presence.service';
 import { VerificationFileController } from './verification/verification-file/verification-file.controller';
 import { VerificationFileService } from './verification/verification-file/verification-file.service';
 import { VerificationStatusController } from './verification/verification-status/verification-status.controller';
@@ -158,6 +159,7 @@ export class GaragesModule {
         VerificationService,
         VerificationChecksService,
         VerificationFileService,
+        PresenceService,
         { provide: VERIFICATION_CONFIG, useValue: verification },
         ...(observabilityUrl
           ? [{ provide: OBSERVABILITY_URL, useValue: observabilityUrl }]

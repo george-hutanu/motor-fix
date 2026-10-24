@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 import { SEEDED } from './endpoints.mjs';
 import * as helpers from './flow-helpers.mjs';
-import { appLaunchEnv, collectRejections, filesBetween, flowArgs, flowThrewFinding, loadFlows, parseArgs, runFlows, strayRejection, testsCommand } from './run.mjs';
+import { appLaunchEnv, collectRejections, filesBetween, flowArgs, flowThrewFinding, loadFlows, parseArgs, prepareOut, runFlows, strayRejection, testsCommand } from './run.mjs';
 import { EXTERNAL_PORTS, appEnv, externalPlan } from './services.mjs';
 
 describe('run: arguments', () => {
@@ -131,6 +131,18 @@ describe('the pr-tester agent', () => {
     for (const axis of [/type hierarchy/, /spacing/, /alignment/, /colou?r/, /component/, /states/]) assert.match(fidelity, axis);
     assert.match(fidelity, /no board/i);
     assert.match(fidelity, /diff\/<shot>\.png/);
+  });
+});
+
+describe('run: the lap folder', () => {
+  // @traces 447-FR-002
+  it('removes a ci-run.json an earlier dispatched lap left, so post.mjs names no run for a local lap', () => {
+    const out = mkdtempSync(join(tmpdir(), 'run-out-'));
+    writeFileSync(join(out, 'ci-run.json'), JSON.stringify({ url: 'https://github.com/george-hutanu/motor-fix/actions/runs/9' }));
+    const { shots, logs } = prepareOut(out);
+    assert.ok(!existsSync(join(out, 'ci-run.json')));
+    assert.ok(existsSync(shots) && existsSync(logs));
+    rmSync(out, { recursive: true, force: true });
   });
 });
 

@@ -155,6 +155,10 @@ export type { VerificationFileControllerRead$Params as VerificationFileControlle
 export { verificationFileControllerRead as verificationFileControllerRead } from './fn/admin/verification-file-controller-read';
 export type { VerificationFileControllerChanges$Params as VerificationFileControllerChanges$Params } from './fn/admin/verification-file-controller-changes';
 export { verificationFileControllerChanges as verificationFileControllerChanges } from './fn/admin/verification-file-controller-changes';
+export type { VerificationFileControllerPresence$Params as VerificationFileControllerPresence$Params } from './fn/admin/verification-file-controller-presence';
+export { verificationFileControllerPresence as verificationFileControllerPresence } from './fn/admin/verification-file-controller-presence';
+export type { VerificationFileControllerLeave$Params as VerificationFileControllerLeave$Params } from './fn/admin/verification-file-controller-leave';
+export { verificationFileControllerLeave as verificationFileControllerLeave } from './fn/admin/verification-file-controller-leave';
 export type { VerificationFileControllerOpen$Params as VerificationFileControllerOpen$Params } from './fn/admin/verification-file-controller-open';
 export { verificationFileControllerOpen as verificationFileControllerOpen } from './fn/admin/verification-file-controller-open';
 export type { VerificationFileControllerDecision$Params as VerificationFileControllerDecision$Params } from './fn/admin/verification-file-controller-decision';

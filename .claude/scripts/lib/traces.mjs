@@ -10,3 +10,12 @@ export const traceTokens = (text) => {
   for (const [, list] of text.matchAll(LINE)) for (const id of list.trim().split(" ")) ids.add(id);
   return ids;
 };
+
+// A spec declares a requirement on its own list line: `- **FR-001**: …`
+// (bold optional, `:` or `.`). An FR named in prose or in a Spec Delta is not
+// a declaration. trace-matrix, status, impact and retro-evidence all count
+// through this one anchor, so their totals agree.
+const DECLARED = /^\s*-\s+\*{0,2}(FR-\d{3})\*{0,2}\s*[:.]/gm;
+
+/** The FR ids a spec.md declares, deduplicated, in order of appearance. */
+export const declaredFrs = (spec) => [...new Set([...(spec ?? "").matchAll(DECLARED)].map((m) => m[1]))];

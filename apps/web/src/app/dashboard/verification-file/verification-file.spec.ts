@@ -20,11 +20,13 @@ import { VerificationFile } from './verification-file';
 import { AdminRestoreGarage } from '../admin-restore-garage/admin-restore-garage';
 import { Live } from '../live';
 import { ReportDecision } from '../report-decision/report-decision';
+import { Session } from '../session';
 
 // @traces 203-FR-006 203-FR-008
 // @traces 204-FR-007 204-FR-009
 // @traces 067-FR-007 067-FR-009 067-FR-010 067-FR-012
 // @traces 302-FR-003 302-FR-004 302-FR-005 302-FR-006 302-FR-007 302-FR-008 302-FR-009 302-FR-010 302-FR-011
+// @traces 413-FR-011
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -199,6 +201,7 @@ let api: {
   verificationFileControllerCorrect: jest.Mock;
   verificationFileControllerDecision: jest.Mock;
   verificationFileControllerOpen: jest.Mock;
+  verificationFileControllerPresence: jest.Mock;
   verificationFileControllerReopen: jest.Mock;
   verificationFileControllerRead: jest.Mock;
   verificationChecksControllerRecord: jest.Mock;
@@ -229,6 +232,7 @@ async function open(
     verificationFileControllerCorrect: jest.fn(),
     verificationFileControllerDecision: jest.fn(),
     verificationFileControllerOpen: jest.fn(() => answer()),
+    verificationFileControllerPresence: jest.fn(async () => ({ others: [] })),
     verificationFileControllerRead: jest.fn(() => answer()),
     verificationFileControllerReopen: jest.fn(),
   };
@@ -259,6 +263,7 @@ async function open(
       {
         provide: Live,
         useValue: {
+          events,
           on: (kinds: readonly EventKind[]) =>
             events.pipe(
               filter((m) => (kinds as readonly string[]).includes(m.kind)),
@@ -266,6 +271,7 @@ async function open(
           resync,
         },
       },
+      { provide: Session, useValue: { token: () => null } },
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -348,6 +354,23 @@ describe('opening the file', () => {
     expect(api.verificationFileControllerOpen).toHaveBeenCalledTimes(1);
     expect(api.verificationFileControllerRead).toHaveBeenCalledTimes(1);
     expect(text(host.querySelector('h3'))).toBe('Atelier Dinamo');
+  });
+
+  it('shows who else has the file open above the header, without changing it', async () => {
+    const host = await open();
+
+    const presence = host.querySelector('mf-verification-presence');
+    const header = section(host, 'header');
+    expect(presence).not.toBeNull();
+    expect(
+      presence && header
+        ? presence.compareDocumentPosition(header) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+        : 0,
+    ).toBeTruthy();
+    expect(api.verificationFileControllerPresence).toHaveBeenCalledWith({
+      id: FILE,
+    });
   });
 
   it('shows skeleton sections marked busy while the file is on its way', async () => {

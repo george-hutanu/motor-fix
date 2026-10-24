@@ -9,6 +9,7 @@ features:
   - 317-handoff-whole
   - 961-require-agent-review
   - 448-merge-gate-graphql
+  - 471-crlf-harness-tidy
 ---
 
 # Capability: Spec-kit harness
@@ -175,6 +176,26 @@ _From 448-merge-gate-graphql._
 ### 448-FR-009 — `node .claude/scripts/harness-eval.mjs --check` and `npm run test:harness` MUST be green; `pass_rate` in `.claude/evals/baseline.json` MUST not go down; no file under `apps/` or `libs/` changes, and there is no UI.
 
 _From 448-merge-gate-graphql._
+
+### 471-FR-001 — The repo root has a `.gitattributes` holding `* text=auto eol=lf`, so a checkout on any platform writes LF.
+
+_From 471-crlf-harness-tidy._
+
+### 471-FR-002 — The frontmatter reader in `.claude/scripts/doctor.mjs` reads a SKILL.md or agent file whose lines end in CRLF as it reads one ending in LF.
+
+_From 471-crlf-harness-tidy._
+
+### 471-FR-003 — The frontmatter reader in `.claude/skills/skill-models.spec.mjs` reads a CRLF `model:` line as it reads an LF one.
+
+_From 471-crlf-harness-tidy._
+
+### 471-FR-004 — `trace-matrix.mjs` sets `process.exitCode` and returns instead of calling `process.exit()`, so `--json` over a pipe is never cut short (a report over 64 KB parses), and `--check` still exits 1 on gaps.
+
+_From 471-crlf-harness-tidy._
+
+### 471-FR-006 — `diff-audit.spec.mjs` covers a tsconfig that sets only `rewriteRelativeImportExtensions: true`, expecting `.ts` specifiers accepted; reverting that half of `lib/tsconfig.mjs` fails it.
+
+_From 471-crlf-harness-tidy._
 
 ## Retired
 

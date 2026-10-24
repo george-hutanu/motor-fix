@@ -371,12 +371,7 @@ describe('telemetry — by level', () => {
       { tokens: tokens(0, 0), buckets: {}, too_heavy: [mark('t1')] },
       { tokens: tokens(0, 0), buckets: {}, too_heavy: [mark('t2'), { ...mark('t3'), file: 'y.mjs' }] },
     ]);
-    assert.deepEqual(report.too_heavy.map((m) => m.file), ['x.mjs', 'y.mjs']);
-  });
-
-  it('lists the too-heavy marks', () => {
-    const mark = { feature: 'specs/002-b', level: 2, file: 'x.mjs', at: 't' };
-    assert.deepEqual(byLevel([{ tokens: tokens(0, 0), buckets: {}, too_heavy: [mark] }]).too_heavy, [mark]);
+    assert.deepEqual(report.too_heavy, [mark('t1'), { ...mark('t3'), file: 'y.mjs' }]);
   });
 
   it('prints the report and exits 0 with no ledgers at all', () => {
