@@ -48,10 +48,16 @@ async function sendRequest(request: APIRequestContext, own: OwnDriver) {
 // Tomorrow's date in Bucharest, as a date field takes it, and an instant's
 // Bucharest wall time.
 const BUCHAREST = { timeZone: 'Europe/Bucharest' } as const;
-const tomorrow = () =>
-  new Intl.DateTimeFormat('en-CA', BUCHAREST).format(
-    new Date(Date.now() + 24 * 60 * 60 * 1000),
-  );
+// The next calendar day, not 24 hours on: the night clocks go back has 25.
+const tomorrow = () => {
+  const [year, month, date] = new Intl.DateTimeFormat('en-CA', BUCHAREST)
+    .format(new Date())
+    .split('-')
+    .map(Number);
+  return new Date(Date.UTC(year, month - 1, date + 1))
+    .toISOString()
+    .slice(0, 10);
+};
 const wallTime = (instant: string) =>
   new Intl.DateTimeFormat('sv-SE', {
     ...BUCHAREST,

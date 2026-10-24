@@ -41,10 +41,16 @@ const BUCHAREST = { timeZone: 'Europe/Bucharest' } as const;
 const DAY = 24 * 60 * 60 * 1000;
 const day = (at: Date) =>
   new Intl.DateTimeFormat('en-CA', BUCHAREST).format(at);
-const tomorrow = () =>
-  new Intl.DateTimeFormat('en-CA', BUCHAREST).format(
-    new Date(Date.now() + 24 * 60 * 60 * 1000),
-  );
+// The next calendar day, not 24 hours on: the night clocks go back has 25.
+const tomorrow = () => {
+  const [year, month, date] = new Intl.DateTimeFormat('en-CA', BUCHAREST)
+    .format(new Date())
+    .split('-')
+    .map(Number);
+  return new Date(Date.UTC(year, month - 1, date + 1))
+    .toISOString()
+    .slice(0, 10);
+};
 
 async function signedIn(page: Page) {
   await keepSeededLanguage(page);
