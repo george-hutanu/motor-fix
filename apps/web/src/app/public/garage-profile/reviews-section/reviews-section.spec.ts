@@ -765,4 +765,8 @@ describe('the reviews section’s styles', () => {
   it('keeps the author, the dot and the month a word apart', () => {
     expect(css).toMatch(/\.by\s*{[^}]*gap:\s*var\(--mf-space-1\);/);
   });
+
+  it('caps the breakdown rows at the board’s 420 px', () => {
+    expect(css).toMatch(/\.breakdown\s*{[^}]*max-width:\s*420px;/);
+  });
 });
