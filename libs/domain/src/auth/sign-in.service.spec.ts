@@ -2,6 +2,7 @@ import { HttpException, Logger } from '@nestjs/common';
 
 import type { AuthOptions } from './actor.guard';
 import type { Attempts } from './attempts';
+import type { Forwarding } from './forwarding';
 import type { Maintenance } from './maintenance';
 import { SignInService } from './sign-in.service';
 import type { AuditPort } from '../audit/audit.port';
@@ -11,6 +12,8 @@ import type { PrismaClient } from '../generated/prisma/client';
 
 const EMAIL = 'andrei@example.test';
 const PASSWORD = 'secret-typo';
+// A request that said nothing of how it came.
+const DIRECT: Forwarding = { headers: {}, socket: undefined };
 
 function service(blocked: boolean) {
   const attempts = {
@@ -31,7 +34,11 @@ function service(blocked: boolean) {
   return { attempts, signIns };
 }
 
-async function refusal(blocked: boolean, address: string) {
+async function refusal(
+  blocked: boolean,
+  address: string,
+  forwarding: Forwarding = DIRECT,
+) {
   const lines: string[] = [];
   for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
     jest
@@ -42,7 +49,7 @@ async function refusal(blocked: boolean, address: string) {
   }
   const { attempts, signIns } = service(blocked);
   const error = await signIns
-    .signIn({ email: EMAIL, password: PASSWORD }, address)
+    .signIn({ email: EMAIL, password: PASSWORD }, address, forwarding)
     .catch((e: unknown) => e);
   return { attempts, code: codeOf(error), lines };
 }
@@ -62,7 +69,9 @@ describe('a refused sign-in names its caller masked', () => {
 
     expect(code).toBe('invalid_credentials');
     expect(lines).toEqual([
-      JSON.stringify(['sign-in refused: invalid_credentials caller=203.0.x.x']),
+      JSON.stringify([
+        'sign-in refused: invalid_credentials caller=203.0.x.x hops=unknown headers=none',
+      ]),
     ]);
     expect(attempts.fail).toHaveBeenCalledWith(EMAIL, '203.0.113.9');
   });
@@ -72,7 +81,9 @@ describe('a refused sign-in names its caller masked', () => {
 
     expect(code).toBe('too_many_attempts');
     expect(lines).toEqual([
-      JSON.stringify(['sign-in refused: too_many_attempts caller=203.0.x.x']),
+      JSON.stringify([
+        'sign-in refused: too_many_attempts caller=203.0.x.x hops=unknown headers=none',
+      ]),
     ]);
   });
 
@@ -105,6 +116,82 @@ describe('a refused sign-in names its caller masked', () => {
   );
 });
 
+// @traces 500-FR-011
+describe('a refused sign-in also names the forwarding facts, masked', () => {
+  const VISITOR = '86.125.92.213';
+  const EDGE = '95.173.10.20';
+  const SOCKET = 'fd12:3456::1';
+  const chain = {
+    headers: { 'x-forwarded-for': `${VISITOR}, ${EDGE}` },
+    socket: SOCKET,
+  };
+
+  it.each([
+    [false, 'invalid_credentials'],
+    [true, 'too_many_attempts'],
+  ])(
+    'on the same line as the caller (blocked: %s)',
+    async (blocked, reason) => {
+      const { lines } = await refusal(blocked, VISITOR, chain);
+
+      expect(lines).toEqual([
+        JSON.stringify([
+          `sign-in refused: ${reason} caller=86.125.x.x hops=86.125.x.x,95.173.x.x,fd12:3456:x:x:x:x:x:x headers=x-forwarded-for`,
+        ]),
+      ]);
+    },
+  );
+
+  it('with x-real-ip, Forwarded and the other forwarding header names', async () => {
+    const { lines } = await refusal(false, EDGE, {
+      headers: {
+        forwarded: 'for="[2a02:2f0c::1]:4711"',
+        'x-forwarded-for': `${VISITOR}, ${EDGE}`,
+        'x-forwarded-proto': 'https',
+        'x-railway-edge': 'europe-west4',
+        'x-real-ip': VISITOR,
+      },
+      socket: SOCKET,
+    });
+
+    expect(lines).toEqual([
+      JSON.stringify([
+        'sign-in refused: invalid_credentials caller=95.173.x.x hops=86.125.x.x,95.173.x.x,fd12:3456:x:x:x:x:x:x headers=forwarded,x-forwarded-for,x-forwarded-proto,x-railway-edge,x-real-ip real-ip=86.125.x.x forwarded=2a02:2f0c:x:x:x:x:x:x',
+      ]),
+    ]);
+  });
+
+  it('shows a forged chain masked and leaves the caller as resolved', async () => {
+    const { lines } = await refusal(false, VISITOR, {
+      headers: { 'x-forwarded-for': `spoof, 1.2.3.4, ${VISITOR}, ${EDGE}` },
+      socket: SOCKET,
+    });
+
+    expect(lines.join('\n')).toContain(
+      'caller=86.125.x.x hops=unknown,1.2.x.x,86.125.x.x,95.173.x.x,fd12:3456:x:x:x:x:x:x',
+    );
+  });
+
+  it.each([false, true])(
+    'never writes a full address, the e-mail or the password (blocked: %s)',
+    async (blocked) => {
+      const { lines } = await refusal(blocked, VISITOR, {
+        headers: {
+          forwarded: `for=${VISITOR}`,
+          'x-forwarded-for': `1.2.3.4, ${VISITOR}, ${EDGE}`,
+          'x-real-ip': VISITOR,
+        },
+        socket: SOCKET,
+      });
+
+      const all = lines.join('\n');
+      for (const address of [VISITOR, EDGE, SOCKET, '1.2.3.4'])
+        expect(all).not.toContain(address);
+      expect(all).not.toMatch(/92\.213|10\.20|3456::1|andrei|secret-typo/);
+    },
+  );
+});
+
 // @traces 500-FR-005
 describe('a successful sign-in', () => {
   it('logs no line that names its caller', async () => {
@@ -131,6 +218,7 @@ describe('a successful sign-in', () => {
     const issued = await signIns.signIn(
       { email: EMAIL, password: PASSWORD },
       '203.0.113.9',
+      DIRECT,
     );
 
     expect(issued.accessToken).toBe('t');
