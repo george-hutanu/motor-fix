@@ -52,6 +52,7 @@ export * from './me.dto';
 export * from './near.dto';
 export * from './notification-preferences.dto';
 export * from './notifications.dto';
+export * from './open-status';
 export * from './password-reset.dto';
 export * from './phone';
 export * from './place-section';
