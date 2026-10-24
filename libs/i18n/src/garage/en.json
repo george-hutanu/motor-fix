@@ -428,6 +428,28 @@
     },
     "text": "Profile suspended · {reason}. The profile is off the map until this is fixed."
   },
+  "team": {
+    "add": "Add a mechanic",
+    "count": {
+      "one": "{count} mechanic on the profile",
+      "other": "{count} mechanics on the profile"
+    },
+    "countNone": "The team is not on the profile",
+    "empty": "You have not added any mechanics yet.",
+    "failed": "We could not load the team. Try again.",
+    "noReviews": "no reviews",
+    "retry": "Try again",
+    "reviews": {
+      "one": "{rating} · {count} review",
+      "other": "{rating} · {count} reviews"
+    },
+    "state": {
+      "noAccount": "no account",
+      "off": "not on the profile",
+      "on": "on the profile"
+    },
+    "title": "Team"
+  },
   "verification": {
     "checkIn": "We check it within 1–2 working days.",
     "contact": "Contact MotorFix",
