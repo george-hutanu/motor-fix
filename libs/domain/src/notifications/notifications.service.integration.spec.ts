@@ -372,6 +372,97 @@ describe('the position and the unread count a bell row writes', () => {
   });
 });
 
+const bounceEvents = (accountId: string) =>
+  prisma.outboxEvent.findMany({
+    select: { audience: true, kind: true, payload: true, subjectId: true },
+    where: { subjectId: accountId },
+  });
+
+const sentEmail = async (accountId: string, eventId: string, id: string) => {
+  await quote(accountId, eventId);
+  const email = (await rows(accountId)).find(
+    (r) => r.channel === 'email' && r.status !== 'failed',
+  );
+  await prisma.notification.update({
+    data: { providerMessageId: id, status: 'sent' },
+    where: { id: email?.id },
+  });
+};
+
+describe('the event a hard bounce records', () => {
+  // @traces 525-bounce-domain-event-FR-001
+  // @traces 525-bounce-domain-event-FR-003
+  it('writes one account change to the outbox with the bounce', async () => {
+    const andrei = await account('andrei');
+    await sentEmail(andrei, 'evt-e', '<e@relay>');
+
+    await service.recordBounce('<e@relay>');
+
+    expect(await bounceEvents(andrei)).toEqual([
+      {
+        audience: [`account:${andrei}`],
+        kind: 'account.updated',
+        payload: { accountId: andrei, fields: ['emailBouncedAt'] },
+        subjectId: andrei,
+      },
+    ]);
+  });
+
+  // @traces 525-bounce-domain-event-FR-002
+  // @traces 525-bounce-domain-event-FR-003
+  it('writes nothing more when the same message is reported again', async () => {
+    const andrei = await account('andrei');
+    await sentEmail(andrei, 'evt-e', '<e@relay>');
+
+    await service.recordBounce('<e@relay>');
+    await service.recordBounce('<e@relay>');
+
+    expect(await bounceEvents(andrei)).toHaveLength(1);
+  });
+
+  // @traces 525-bounce-domain-event-FR-002
+  it('writes the change once when two reports of a message arrive together', async () => {
+    const andrei = await account('andrei');
+    await sentEmail(andrei, 'evt-e', '<e@relay>');
+
+    await Promise.all([
+      service.recordBounce('<e@relay>'),
+      service.recordBounce('<e@relay>'),
+    ]);
+
+    expect(await bounceEvents(andrei)).toHaveLength(1);
+    expect(
+      await prisma.activityLog.count({
+        where: { field: 'emailBouncedAt', subjectId: andrei },
+      }),
+    ).toBe(1);
+    expect(
+      await prisma.account.findUnique({ where: { id: andrei } }),
+    ).toMatchObject({ emailBouncedAt: new Date(DAY) });
+  });
+
+  // @traces 525-bounce-domain-event-FR-002
+  it('writes a new event for a bounce of a later message', async () => {
+    const andrei = await account('andrei');
+    await sentEmail(andrei, 'evt-e', '<e@relay>');
+    await service.recordBounce('<e@relay>');
+    await sentEmail(andrei, 'evt-f', '<f@relay>');
+
+    await service.recordBounce('<f@relay>');
+
+    expect(await bounceEvents(andrei)).toHaveLength(2);
+  });
+
+  // @traces 525-bounce-domain-event-FR-002
+  it('writes nothing for a message id it never sent', async () => {
+    const before = await prisma.outboxEvent.count();
+
+    await service.recordBounce('<unknown@relay>');
+
+    expect(await prisma.outboxEvent.count()).toBe(before);
+  });
+});
+
 describe('a hard bounce', () => {
   it('fails the e-mail row, marks the address and falls back to push', async () => {
     const andrei = await account('andrei');
@@ -797,12 +888,15 @@ describe('e-mails to a listing draft', () => {
       data: { providerMessageId: '<draft@mock>', status: 'sent' },
       where: { id: row.id },
     });
+    const events = await prisma.outboxEvent.count();
 
     await service.recordBounce('<draft@mock>');
 
     expect(await draftRows(id)).toEqual([
       expect.objectContaining({ failure: 'bounced', status: 'failed' }),
     ]);
+    // @traces 525-bounce-domain-event-FR-002
+    expect(await prisma.outboxEvent.count()).toBe(events);
   });
 
   it('refuses any other kind of message', async () => {

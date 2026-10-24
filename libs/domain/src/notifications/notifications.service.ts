@@ -20,6 +20,7 @@ import { locked, STAFF_TYPES } from './staff-lists';
 import { farewell } from './templates';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import type { Actor } from '../auth/policy';
+import { outbox } from '../events/event.port';
 import { publishLive } from '../events/live/live.hub';
 import type {
   Notification,
@@ -507,8 +508,9 @@ export class NotificationsService {
     return (await db.pushSubscription.count({ where: { accountId } })) > 0;
   }
 
-  // Brevo may report a bounce twice; a grouped e-mail carries one message id
-  // on every row it sent.
+  // Brevo may report a bounce twice, even at once: only the report that claims
+  // the rows marks the account. A grouped e-mail carries one message id on
+  // every row it sent.
   async recordBounce(messageId: string): Promise<void> {
     const rows = await this.prisma.notification.findMany({
       where: {
@@ -523,7 +525,12 @@ export class NotificationsService {
     // A draft's address belongs to no account to mark.
     if (!accountId) return this.fail(rows, 'bounced', false);
     const at = this.now();
-    await this.prisma.$transaction(async (tx) => {
+    const claimed = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.notification.updateMany({
+        data: { failure: 'bounced', status: 'failed' },
+        where: { id: { in: rows.map((r) => r.id) }, status: { not: 'failed' } },
+      });
+      if (count === 0) return false;
       const before = await tx.account.findUniqueOrThrow({
         select: { emailBouncedAt: true },
         where: { id: accountId },
@@ -543,8 +550,15 @@ export class NotificationsService {
         before,
         { emailBouncedAt: at },
       );
+      await outbox.record(tx, {
+        audience: { accountId, type: 'account' },
+        kind: 'account.updated',
+        payload: { accountId, fields: ['emailBouncedAt'] },
+        subjectId: accountId,
+      });
+      return true;
     });
-    await this.fail(rows, 'bounced', true);
+    if (claimed) await this.fail(rows, 'bounced', true);
   }
 
   // The garage whose choices a recipient's message goes by: the message's,
