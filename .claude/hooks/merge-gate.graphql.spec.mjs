@@ -65,6 +65,66 @@ describe('merge gate — a merge through gh api graphql', () => {
   });
 });
 
+// Second review of ST-448: each of these still merged a PR the gate never judged, or judged the wrong one.
+describe('merge gate — merges hidden by quoting, a pipe or another repository', () => {
+  const cli = ['gh', 'pr', 'merge'].join(' ');
+  const R = 'george-hutanu/motor-fix';
+
+  it('finds a merge whose words are quoted or escaped, in the command word or inside a word', () => {
+    assert.deepEqual(mergeTarget(`"gh" pr merge 5`), { pr: '5' });
+    assert.deepEqual(mergeTarget(`'gh' pr merge 5`), { pr: '5' });
+    assert.deepEqual(mergeTarget(`\\gh pr merge 5`), { pr: '5' });
+    assert.deepEqual(mergeTarget(`gh pr me""rge 5`), { pr: '5' });
+    assert.deepEqual(mergeTarget(`gh p'r' merge 5`), { pr: '5' });
+    assert.deepEqual(mergeTarget(`GH_TOKEN=x env "gh" pr merge 5`), { pr: '5' });
+    assert.equal(mergeTarget(`echo "${cli}" is documented`), null);
+    assert.equal(mergeTarget(`grep -n '${cli}' AGENTS.md`), null);
+  });
+
+  it('refuses a graphql query it cannot read, however the query field is written', () => {
+    const q = 'mutation { mergePullRequest(input: {pullRequestId: \\"PR_x\\"}) { clientMutationId } }';
+    for (const cmd of [
+      'gh api graphql -fquery=@q.graphql',
+      'gh api graphql -f "query"=@q.graphql',
+      'gh api graphql --field=query=@q.graphql',
+      'gh api graphql -f query="$(cat q.graphql)"',
+      'gh api graphql -f query="$Q"',
+      'gh api graphql -f query=$Q',
+      'gh api graphql -f query=`cat q.graphql`',
+      `gh api graphql -f query='{ viewer { login } }'"$MORE"`,
+      'gh api graphql',
+      `bash -c "gh api graphql -f query='$(cat q.graphql)'"`,
+      `eval "gh api graphql -f query='\`cat q\`'"`,
+    ])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot read the query/, cmd);
+    assert.deepEqual(mergeTarget(`gh api graphql -f query="${q}"`), { pr: null, nodeId: 'PR_x' });
+  });
+
+  it('judges --input only on the graphql call that takes it', () => {
+    assert.equal(mergeTarget(`gh api graphql -f query='{ viewer { login } }' && gh api repos/a/b/issues -X POST --input body.json`), null);
+    assert.match(mergeTarget('gh api graphql --input body.json').unresolved, /cannot read the query/);
+  });
+
+  it('refuses a merge whose PR comes from its input or a placeholder, never the current branch', () => {
+    assert.match(mergeTarget(`echo 6 | xargs ${cli}`).unresolved, /input/);
+    assert.match(mergeTarget(`echo 6 | xargs -n1 ${cli} --merge`).unresolved, /input/);
+    assert.match(mergeTarget('gh api -X PUT repos/{owner}/{repo}/pulls/$N/merge').unresolved, /number/);
+    assert.match(mergeTarget('gh api -X PUT "repos/{owner}/{repo}/pulls/{}/merge"').unresolved, /number/);
+    assert.deepEqual(mergeTarget('gh api -X PUT "repos/{owner}/{repo}/pulls/141/merge"'), { pr: '141' });
+  });
+
+  it('returns the repository a merge names, from -R, --repo, GH_REPO, a URL or a REST path', () => {
+    assert.deepEqual(mergeTarget(`${cli} 5 -R other/repo`), { pr: '5', repo: 'other/repo' });
+    assert.deepEqual(mergeTarget(`${cli} 5 --repo=other/repo`), { pr: '5', repo: 'other/repo' });
+    assert.deepEqual(mergeTarget(`GH_REPO=other/repo ${cli} 5`), { pr: '5', repo: 'other/repo' });
+    assert.deepEqual(mergeTarget(`${cli} https://github.com/other/repo/pull/5`), { pr: 'https://github.com/other/repo/pull/5', repo: 'other/repo' });
+    assert.deepEqual(mergeTarget('gh api -X PUT repos/other/repo/pulls/5/merge'), { pr: '5', repo: 'other/repo' });
+    assert.deepEqual(mergeTarget(`${cli} 5 -R ${R}`), { pr: '5', repo: R });
+    assert.match(mergeTarget(`${cli} feature -R other/repo`).unresolved, /number/);
+    assert.match(mergeTarget(`${cli} 5 -R other/repo && ${cli} 5`).unresolved, /more than one/);
+  });
+});
+
 describe('merge gate — the PR behind a node id', () => {
   const ghAnswering = (out) => {
     const calls = [];
@@ -135,6 +195,20 @@ describe('merge gate — a graphql merge is judged like gh pr merge', () => {
       assert.equal(out.status, 2, String(id));
       assert.match(out.stderr, /not this repository's PR #21/);
     }
+  });
+
+  it('refuses a merge naming another repository, which this repository\'s PR of that number would stand in for', () => {
+    const passing = [...green, { __typename: 'StatusContext', context: 'agent-review', state: 'SUCCESS' }];
+    const provenance = '{"status":{"creator":{"login":"george-hutanu","type":"User"}}}';
+    const cli = ['gh', 'pr', 'merge'].join(' ');
+    const ours = (repo) => JSON.stringify({ ...JSON.parse(state(passing)), ...(repo ? { repo } : {}) });
+    for (const cmd of [`${cli} 21 -R other/repo`, 'gh api -X PUT repos/other/repo/pulls/21/merge', `${cli} https://github.com/other/repo/pull/21`]) {
+      const out = gate(cmd, { SPECKIT_PR_STATE: ours('george-hutanu/motor-fix'), SPECKIT_PROVENANCE_STATE: provenance });
+      assert.equal(out.status, 2, cmd);
+      assert.match(out.stderr, /other\/repo is not this repository/, cmd);
+    }
+    assert.equal(gate(`${cli} 21 -R george-hutanu/motor-fix`, { SPECKIT_PR_STATE: ours('George-Hutanu/motor-fix'), SPECKIT_PROVENANCE_STATE: provenance }).status, 0);
+    assert.equal(gate(`${cli} 21 -R george-hutanu/motor-fix`, { SPECKIT_PR_STATE: ours(null), SPECKIT_PROVENANCE_STATE: provenance }).status, 2, 'a repository the read does not report is refused');
   });
 
   it('lets a graphql merge through with agent-review success and every check green', () => {

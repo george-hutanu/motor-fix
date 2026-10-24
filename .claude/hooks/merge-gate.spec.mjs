@@ -17,19 +17,19 @@ describe('merge gate — which commands are merges', () => {
   it('finds gh pr merge with a number, a branch, a URL or nothing', () => {
     assert.deepEqual(mergeTarget('gh pr merge 21 --merge'), { pr: '21' });
     assert.deepEqual(mergeTarget('GH_TOKEN=$(gh auth token -u george-hutanu) gh pr merge feature-branch --merge'), { pr: 'feature-branch' });
-    assert.deepEqual(mergeTarget('gh pr merge https://github.com/george-hutanu/motor-fix/pull/21 --squash'), { pr: 'https://github.com/george-hutanu/motor-fix/pull/21' });
+    assert.deepEqual(mergeTarget('gh pr merge https://github.com/george-hutanu/motor-fix/pull/21 --squash'), { pr: 'https://github.com/george-hutanu/motor-fix/pull/21', repo: 'george-hutanu/motor-fix' });
     assert.deepEqual(mergeTarget('git push && gh pr merge --merge'), { pr: null });
   });
 
   it('finds a merge with the repository flag anywhere, or gh called by its path', () => {
-    assert.deepEqual(mergeTarget('gh -R george-hutanu/motor-fix pr merge 21 --merge'), { pr: '21' });
-    assert.deepEqual(mergeTarget('gh pr merge --repo george-hutanu/motor-fix 21 --merge'), { pr: '21' });
-    assert.deepEqual(mergeTarget('gh pr merge -R george-hutanu/motor-fix --squash 21'), { pr: '21' });
+    assert.deepEqual(mergeTarget('gh -R george-hutanu/motor-fix pr merge 21 --merge'), { pr: '21', repo: 'george-hutanu/motor-fix' });
+    assert.deepEqual(mergeTarget('gh pr merge --repo george-hutanu/motor-fix 21 --merge'), { pr: '21', repo: 'george-hutanu/motor-fix' });
+    assert.deepEqual(mergeTarget('gh pr merge -R george-hutanu/motor-fix --squash 21'), { pr: '21', repo: 'george-hutanu/motor-fix' });
     assert.deepEqual(mergeTarget('/opt/homebrew/bin/gh pr merge 21'), { pr: '21' });
   });
 
   it('finds the REST merge call', () => {
-    assert.deepEqual(mergeTarget('gh api -X PUT repos/george-hutanu/motor-fix/pulls/21/merge'), { pr: '21' });
+    assert.deepEqual(mergeTarget('gh api -X PUT repos/george-hutanu/motor-fix/pulls/21/merge'), { pr: '21', repo: 'george-hutanu/motor-fix' });
   });
 
   it('leaves everything else alone', () => {
@@ -657,7 +657,7 @@ describe('merge gate — a Mutation run on the head is no part of the PR', () =>
 describe('merge gate — a cloud session reads the PR over REST', () => {
   const HEAD = 'abc1234def5678';
   const answers = {
-    'repos/{owner}/{repo}/pulls/21': { number: 21, node_id: 'PR_kwDOMotorFix21', state: 'open', head: { sha: HEAD }, user: { login: 'george-hutanu' } },
+    'repos/{owner}/{repo}/pulls/21': { number: 21, node_id: 'PR_kwDOMotorFix21', state: 'open', head: { sha: HEAD }, base: { repo: { full_name: 'george-hutanu/motor-fix' } }, user: { login: 'george-hutanu' } },
     'repos/{owner}/{repo}/pulls/21/commits?per_page=100': [{ sha: HEAD, author: 'george-hutanu', login: 'web-flow', verified: true }],
     [`repos/{owner}/{repo}/commits/${HEAD}/status?per_page=100`]: { statuses: [{ context: 'agent-review', state: 'success', description: 'PR QA lap 1 passed' }] },
     [`repos/{owner}/{repo}/commits/${HEAD}/check-runs?per_page=100&filter=all`]: [
@@ -700,6 +700,7 @@ describe('merge gate — a cloud session reads the PR over REST', () => {
     assert.equal(got.number, 21);
     assert.equal(got.state, 'OPEN');
     assert.equal(got.id, 'PR_kwDOMotorFix21', 'the node id, which a GraphQL merge is checked against');
+    assert.equal(got.repo, 'george-hutanu/motor-fix', 'the base repository, which a merge naming a repository is checked against');
     assert.equal(got.headRefOid, HEAD);
     assert.deepEqual(got.author, { login: 'george-hutanu' });
     assert.deepEqual(got.commits, [{ oid: HEAD, authors: [{ login: 'george-hutanu' }], committer: { login: 'web-flow' }, verified: true }]);

@@ -4,10 +4,15 @@
 // mutation while the PR's head commit has no `agent-review` success status.
 // A GraphQL merge is tied to its PR through the pull request id it names
 // (inline, or a -f/-F field), which must be this repository's PR of that
-// number, and judged the same way. Refused unread: a command merging more
-// than one PR, a GraphQL merge naming no id the gate can read, or more than
-// one, or repeating a field, and any `gh api graphql` whose query the gate
-// cannot see (a file, stdin, --input). A merge made outside gh is out of reach.
+// number, and judged the same way. A merge naming a repository (-R, --repo,
+// GH_REPO, a PR URL, a REST owner/repo) must name this one. Refused unread: a
+// command merging more than one PR, a CLI merge taking its PR from xargs, a
+// REST merge with no literal number, a GraphQL merge naming no id the gate can
+// read, or more than one, or repeating a field, and any `gh api graphql` whose
+// query the gate cannot see (none, a file, stdin, --input, a shell expansion).
+// Quotes and escapes in a word are read as the shell reads them. The gate reads
+// command text only: a merge made outside gh, or a command the shell builds
+// (a variable holding gh, an alias, a computed string), is out of its reach.
 //
 // A PR opened by Dependabot (its author, read from gh) whose every commit
 // Dependabot wrote, and GitHub or Dependabot committed under a verified
@@ -136,78 +141,143 @@ const REQUIRED_CHECKS = ["CI OK", "PR title"];
 /** The workflow (.github/workflows/pr-qa.yml) whose verdict is agent-review. */
 const QA_WORKFLOW = "PR QA";
 
-// Flags of `gh` and `gh pr merge` that take a value, so the value is not read as the PR.
-const VALUED = new Set(["-R", "--repo", "-t", "--subject", "-b", "--body", "-F", "--body-file", "--match-head-commit", "-A", "--author-email"]);
+// Flags of `gh` and `gh pr merge` that take a value, so the value is not read as the PR (-R and --repo are read apart).
+const VALUED = new Set(["-t", "--subject", "-b", "--body", "-F", "--body-file", "--match-head-commit", "-A", "--author-email"]);
+/** Words that run the next word as the command, so a quoted gh after them is still gh. */
+const WRAPPERS = new Set(["env", "command", "exec", "xargs", "sudo", "time", "nohup", "nice", "builtin"]);
 
 /** The GraphQL mutations that merge a PR, or arm it to merge once green. */
 const MERGE_MUTATION = /\b(?:mergePullRequest|enablePullRequestAutoMerge)\b/;
 /** A GraphQL node id as GitHub writes one; anything else (a shell variable, a substitution) is unreadable. */
 const NODE_ID = /^[A-Za-z0-9_=+/-]+$/;
+/** A PR the gate can read in a named repository: a number, or a PR URL. */
+const NUMBERED = /^(?:\d+|https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+)$/;
+
+/** A word as the shell passes it on: quotes and escapes removed (`"gh"`, `me""rge`, `\gh`). */
+const unquote = (w) => w.replace(/["'\\]/g, "");
+const unresolved = (why) => ({ pr: null, unresolved: why });
 
 /**
  * The PR a command merges, or null for any other command: { pr } from
- * `gh pr merge` (null for the current branch) or the REST merge call;
+ * `gh pr merge` (null for the current branch) or the REST merge call, with
+ * `repo` when the command names a repository (-R, --repo, GH_REPO, a PR URL, a
+ * REST owner/repo), which the entry point compares with the PR it read;
  * { pr: null, nodeId } from a `gh api graphql` merge mutation, whose PR
- * prOfNode reads; { pr: null, unresolved } for a GraphQL merge naming no
- * single pull request id the gate can read, which is refused, never guessed.
+ * prOfNode reads; { pr: null, unresolved } for a merge the gate cannot tie to
+ * one PR, which is refused, never guessed. The gate reads command text: what
+ * the shell computes (a variable, an alias, a built string) is out of its sight.
  */
 export function mergeTarget(command) {
   let graphql = false;
   const targets = [];
+  const others = [];
   // A quoted multi-line query is split here too, so the mutation is looked for in the whole command. A
   // substitution, a subshell, or a string a shell runs (`bash -c "…"`, `eval "…"`) is split off like a chained
-  // command; after gh, quotes around a word (`gh "pr" merge`, `gh api "graphql"`) are dropped.
+  // command. A bare gh word counts anywhere, as before; one that is gh only once unquoted (`"gh"`, `\gh`) counts
+  // as the command word, so `echo "gh pr merge"` stays text.
   for (const part of command.split(/&&|\|\||[;|\n`()]|(?:^|\s)(?:-c|eval)\s+["']/)) {
-    const words = part.trim().split(/\s+/);
-    const gh = words.findIndex((w) => w === "gh" || w.endsWith("/gh"));
+    const raw = part.trim().split(/\s+/);
+    const words = raw.map(unquote);
+    const commandWord = (i) => raw.slice(0, i).every((p) => /^\w+=/.test(p) || p.startsWith("-") || WRAPPERS.has(unquote(p)));
+    const gh = words.findIndex((w, i) => (w === "gh" || w.endsWith("/gh")) && (raw[i] === w || commandWord(i)));
     if (gh === -1) continue;
+    const before = words.slice(0, gh);
+    const rest = words.slice(gh + 1);
+    let repo = before.map((w) => /^GH_REPO=(.*)$/.exec(w)?.[1]).find((r) => r != null) ?? null;
     const positional = [];
-    const rest = words.slice(gh + 1).map((w) => w.replace(/^["']+|["']+$/g, ""));
     for (let i = 0; i < rest.length; i++) {
-      if (VALUED.has(rest[i])) i++;
-      else if (!rest[i].startsWith("-")) positional.push(rest[i]);
+      const w = rest[i];
+      if (w === "-R" || w === "--repo") repo = rest[++i] ?? "";
+      else if (w.startsWith("--repo=")) repo = w.slice("--repo=".length);
+      else if (/^-R./.test(w)) repo = w.slice(2);
+      else if (VALUED.has(w)) i++;
+      else if (!w.startsWith("-")) positional.push(w);
     }
     const [sub, verb, arg] = positional;
-    if (sub === "pr" && verb === "merge") targets.push(arg ?? null);
-    if (sub === "api") {
-      const m = part.match(/repos\/[^/\s]+\/[^/\s]+\/pulls\/(\d+)\/merge\b/);
-      if (m) targets.push(m[1]);
-      else if (rest.some((w) => w === "graphql" || w.endsWith("/graphql"))) graphql = true;
-    }
+    if (sub === "pr" && verb === "merge") {
+      if (arg == null && before.includes("xargs")) return unresolved("it takes the pull request from its input (xargs), which the gate cannot see");
+      const url = /^https:\/\/github\.com\/([^/]+\/[^/]+)\/pull\/\d+$/.exec(arg ?? "");
+      targets.push({ pr: arg ?? null, repo: url ? url[1] : repo });
+    } else if (sub === "api") {
+      const m = words.join(" ").match(/repos\/([^/\s]+)\/([^/\s]+)\/pulls\/([^/\s]+)\/merge\b/);
+      if (m) {
+        if (!/^\d+$/.test(m[3])) return unresolved("its REST merge names no pull request number the gate can read");
+        const named = `${m[1]}/${m[2]}`;
+        targets.push({ pr: m[3], repo: named === "{owner}/{repo}" ? repo : named });
+      } else if (rest.some((w) => w === "graphql" || w.endsWith("/graphql"))) graphql = true;
+      else others.push(part);
+    } else others.push(part);
   }
-  const merge = graphql ? graphqlTarget(command) : null;
-  const distinct = [...new Set(targets)];
-  if (distinct.length + (merge ? 1 : 0) > 1) return { pr: null, unresolved: "it merges more than one pull request, or names one in more than one way" };
+  if (targets.some((t) => t.repo != null && !NUMBERED.test(t.pr ?? ""))) return unresolved("it names a repository but no pull request number");
+  // Another gh call's --input (a REST body) is no query; every other one may be.
+  const merge = graphql ? graphqlTarget(command, others.reduce((text, p) => text.replace(p, ""), command)) : null;
+  const distinct = [...new Map(targets.map((t) => [`${t.repo ?? ""}#${t.pr}`, t])).values()];
+  if (distinct.length + (merge ? 1 : 0) > 1) return unresolved("it merges more than one pull request, or names one in more than one way");
   if (merge) return merge;
-  return distinct.length ? { pr: distinct[0] } : null;
+  if (!distinct.length) return null;
+  const [{ pr, repo }] = distinct;
+  return repo != null ? { pr, repo } : { pr };
 }
 
-/** A `gh api` field flag before `name=`, as a pattern source. */
-const fieldFlag = (name) => `(?:^|\\s)(?:-f|-F|--field|--raw-field)[\\s=]+["']?${name}=`;
+/** A `gh api` field flag before `name=`, however it is written (`-f name=`, `-fname=`, `--field=name=`, `-f "name"=`), as a pattern source. */
+const fieldFlag = (name) => `(?:^|\\s)(?:--raw-field|--field|-f|-F)(?:\\s+|=)?["']?${name}["']?=`;
+
+/**
+ * Whether a query field's value (the command text after `query=`) is not the
+ * literal the gate reads: a file or stdin (`@`), or anything the shell
+ * expands (`$`, a backtick) outside single quotes. A quote left open is the
+ * end of a string the command is wrapped in (`bash -c "…"`), which the caller
+ * judges.
+ */
+function unreadableQuery(value) {
+  if (/^["']?@/.test(value)) return true;
+  for (let i = 0; i < value.length; i++) {
+    const c = value[i];
+    if (/\s/.test(c)) return false;
+    if (c === "'") {
+      i = value.indexOf("'", i + 1);
+      if (i === -1) return false;
+    } else if (c === '"') {
+      let j = i + 1;
+      for (; j < value.length && value[j] !== '"'; j++) {
+        if (value[j] === "\\") j++;
+        else if (value[j] === "$" || value[j] === "`") return true;
+      }
+      i = j;
+    } else if (c === "\\") i++;
+    else if (c === "$" || c === "`") return true;
+  }
+  return false;
+}
 
 /**
  * For a `gh api graphql` call: { pr: null, nodeId } for the one pullRequestId
  * a merge mutation names (inline, or a variable's field), { pr: null,
  * unresolved } when it cannot be told, null when the call merges nothing. A
- * query the gate cannot read (from a file, stdin or --input) may hold a merge,
- * so it is refused too; gh sends the last of a repeated field, so a repeated
- * query or id field is refused rather than read.
+ * query the gate cannot read (none given, a file, stdin, --input, a shell
+ * expansion) may hold a merge, so it is refused too; gh sends the last of a
+ * repeated field, so a repeated query or id field is refused rather than read.
+ * `inputs` is the command less the other gh calls, whose --input is no query.
  */
-function graphqlTarget(command) {
-  if (new RegExp(`${fieldFlag("query")}@`).test(command) || /(?:^|\s)--input\b/.test(command))
-    return { pr: null, unresolved: "the gate cannot read the query it sends (a file, stdin or --input), which may merge a pull request" };
+function graphqlTarget(command, inputs) {
+  const queries = [...command.matchAll(new RegExp(fieldFlag("query"), "g"))].map((m) => command.slice(m.index + m[0].length));
+  // Inside a double-quoted shell string (`bash -c "…"`, `eval "…"`) single quotes protect nothing: the outer shell expands first.
+  const wrapped = /(?:^|\s)(?:-c|eval)\s+"/.exec(command);
+  const expands = wrapped != null && /(?<!\\)[$`]/.test(command.slice(wrapped.index));
+  if (!queries.length || expands || queries.some(unreadableQuery) || /(?:^|\s)--input\b/.test(inputs))
+    return unresolved("the gate cannot read the query it sends (none given, a file, stdin, --input or a shell expansion), which may merge a pull request");
   if (!MERGE_MUTATION.test(command)) return null;
-  if ((command.match(new RegExp(fieldFlag("query"), "g")) ?? []).length > 1) return { pr: null, unresolved: "it gives the query field more than once" };
+  if (queries.length > 1) return unresolved("it gives the query field more than once");
   const ids = [];
   for (const m of command.matchAll(/pullRequestId\s*:\s*\\?"([^"\\\s]+)\\?"/g)) ids.push(m[1]);
   for (const m of command.matchAll(/pullRequestId\s*:\s*\$(\w+)/g)) {
     const values = [...command.matchAll(new RegExp(`${fieldFlag(m[1])}["']?([^\\s"']*)`, "g"))].map((v) => v[1]);
-    if (new Set(values).size === 1 && values.length > 1) return { pr: null, unresolved: `it gives the ${m[1]} field more than once` };
+    if (new Set(values).size === 1 && values.length > 1) return unresolved(`it gives the ${m[1]} field more than once`);
     ids.push(...(values.length ? values : [""]));
   }
   const distinct = [...new Set(ids)];
-  if (distinct.length > 1) return { pr: null, unresolved: `it names more than one pull request (${distinct.map((id) => id || "an unset variable").join(", ")})` };
-  if (distinct.length === 0 || !NODE_ID.test(distinct[0])) return { pr: null, unresolved: "it names no pull request id the gate can read: a literal id, inline or as a -f/-F field" };
+  if (distinct.length > 1) return unresolved(`it names more than one pull request (${distinct.map((id) => id || "an unset variable").join(", ")})`);
+  if (distinct.length === 0 || !NODE_ID.test(distinct[0])) return unresolved("it names no pull request id the gate can read: a literal id, inline or as a -f/-F field");
   return { pr: null, nodeId: distinct[0] };
 }
 
@@ -401,6 +471,7 @@ async function readPrRest(target, gh) {
   };
   return {
     id: p.node_id,
+    repo: p.base?.repo?.full_name ?? null,
     number: p.number,
     state: upper(p.state),
     headRefOid: sha,
@@ -551,6 +622,9 @@ if (isEntryPoint(import.meta.url)) {
       // The number alone would judge this repository's PR of that number in place of another repository's node.
       if (target.nodeId && pr.id !== target.nodeId)
         refuse(`${target.nodeId} is not this repository's PR #${pr.number} (its node id is ${pr.id ?? "unknown"}), so the merge is not approved. ${byNumber}`);
+      // Likewise a repository the command names (-R, GH_REPO, a URL, a REST path): the read is always this one's.
+      if (target.repo != null && String(pr.repo ?? "").toLowerCase() !== target.repo.toLowerCase())
+        refuse(`${target.repo || "an empty repository"} is not this repository (${pr.repo ?? "unknown"}), whose PR #${pr.number} the gate read, so the merge is not approved. ${byNumber}`);
       const carry = await prefetchCarry(pr, carryReader(gh));
       let from = null;
       try {

@@ -43,7 +43,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}], \"repo\": \"george-hutanu/motor-fix\"}"
     },
     "expect": {
       "exit": 2,
@@ -61,7 +61,7 @@
     },
     "env": {
       "CLAUDE_CODE_REMOTE": "true",
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"Unit tests\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"PR title\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}], \"repo\": \"george-hutanu/motor-fix\"}"
     },
     "expect": {
       "exit": 2,
@@ -79,7 +79,7 @@
     },
     "env": {
       "CLAUDE_CODE_REMOTE": "true",
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"PENDING\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"Unit tests\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"PR title\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"PENDING\"}], \"repo\": \"george-hutanu/motor-fix\"}"
     },
     "expect": {
       "exit": 2,
@@ -97,11 +97,30 @@
     },
     "env": {
       "CLAUDE_CODE_REMOTE": "true",
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"Unit tests\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"PR title\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"SUCCESS\"}], \"repo\": \"george-hutanu/motor-fix\"}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
       "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-merge-of-another-repository",
+    "hook": "pre:bash:merge-gate",
+    "why": "A REST merge naming another repository's PR is refused: the gate reads this repository's PR of that number, which would pass in its place.",
+    "payload": {
+      "tool_input": {
+        "command": "gh api -X PUT repos/someone-else/fork/pulls/21/merge -f merge_method=merge"
+      }
+    },
+    "env": {
+      "CLAUDE_CODE_REMOTE": "true",
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"Unit tests\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"PR title\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"SUCCESS\"}], \"repo\": \"george-hutanu/motor-fix\"}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "is not this repository"
     }
   },
   {
@@ -115,7 +134,7 @@
     },
     "env": {
       "CLAUDE_CODE_REMOTE": "true",
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR QA\",\"workflowName\":\"PR QA\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"Unit tests\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"PR title\", \"status\": \"COMPLETED\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"PR QA\", \"workflowName\": \"PR QA\", \"status\": \"COMPLETED\", \"conclusion\": \"CANCELLED\"}, {\"__typename\": \"StatusContext\", \"context\": \"agent-review\", \"state\": \"SUCCESS\"}], \"repo\": \"george-hutanu/motor-fix\"}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
@@ -132,7 +151,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\": 21, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"checks\", \"conclusion\": \"SUCCESS\"}], \"repo\": \"george-hutanu/motor-fix\"}"
     },
     "expect": {
       "exit": 2,
