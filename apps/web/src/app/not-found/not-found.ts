@@ -1,6 +1,7 @@
 import {
   afterNextRender,
   Component,
+  DestroyRef,
   inject,
   RESPONSE_INIT,
 } from '@angular/core';
@@ -8,6 +9,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   I18n,
   isLanguage,
+  LanguageChoice,
   LanguageSwitch,
   TranslatePipe,
 } from '@motor-fix/i18n';
@@ -31,5 +33,7 @@ export class NotFound {
     if (first && isLanguage(first.path)) return;
     const i18n = inject(I18n);
     afterNextRender(() => void i18n.use('ro'));
+    // Nor does another tab's choice move it, until the page is left.
+    inject(DestroyRef).onDestroy(inject(LanguageChoice).hold());
   }
 }

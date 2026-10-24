@@ -94,6 +94,9 @@ export const assistantTexts: CanMatchFn = async () => {
 // browser goes on to the address of the remembered or current language. The
 // first page is the server's `/`: it hydrates where it is, so a tap made before
 // the app loaded is replayed onto it, and moves once the replay has run.
+// A page that never settles (a stream, a poll) must not keep a first visit on /.
+export const FIRST_VISIT_BOUND = 2_000;
+
 export const toLanguageAddress: CanMatchFn = () => {
   if (isPlatformServer(inject(PLATFORM_ID))) return true;
   const router = inject(Router);
@@ -106,8 +109,10 @@ export const toLanguageAddress: CanMatchFn = () => {
   const taps = inject(LanguageChoice).taps.subscribe((language) => {
     tapped = language;
   });
-  void inject(ApplicationRef)
-    .whenStable()
+  void Promise.race([
+    inject(ApplicationRef).whenStable(),
+    new Promise((resolve) => setTimeout(resolve, FIRST_VISIT_BOUND)),
+  ])
     // The replay runs in its own whenStable callback; a task later, it is done.
     .then(() => new Promise((resolve) => setTimeout(resolve)))
     .then(() => {

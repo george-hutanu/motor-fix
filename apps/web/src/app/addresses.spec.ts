@@ -1,10 +1,11 @@
-import { PLATFORM_ID } from '@angular/core';
+import { PendingTasks, PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   type PartialMatchRouteSnapshot,
   provideRouter,
   type Route,
   Router,
+  RoutesRecognized,
   UrlSegment,
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -325,6 +326,86 @@ describe('language addresses', () => {
     expect(text(harness)).toContain('Pagina nu există');
   });
 
+  describe('with another tab choosing a language', () => {
+    beforeEach(() =>
+      TestBed.configureTestingModule({
+        providers: [provideRememberedLanguage()],
+      }),
+    );
+
+    const otherTab = async (harness: RouterTestingHarness, value: string) => {
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: 'mf.lang', newValue: value }),
+      );
+      await settle(harness);
+    };
+    const pressed = (harness: RouterTestingHarness) =>
+      [
+        ...(harness.routeNativeElement?.querySelectorAll(
+          '[aria-pressed="true"]',
+        ) ?? []),
+      ].map((button) => button.textContent?.trim());
+
+    // @traces 468-FR-001
+    it('keeps the not-found page of an unknown prefix Romanian, and the next page follows again', async () => {
+      const harness = await open('/de');
+
+      await otherTab(harness, 'en');
+
+      expect(lang()).toBe('ro');
+      expect(text(harness)).toContain('Pagina nu există');
+      expect(pressed(harness)).toEqual(['RO']);
+      expect(url()).toBe('/de');
+
+      await harness.navigateByUrl('/ro');
+      await settle(harness);
+      await otherTab(harness, 'en');
+
+      expect(url()).toBe('/en');
+      expect(lang()).toBe('en');
+    });
+
+    // @traces 468-FR-001
+    it('keeps English on the not-found page of an unknown prefix after a tap there, whatever another tab chooses', async () => {
+      const harness = await open('/de');
+      await TestBed.inject(LanguageChoice).pick('en');
+      await settle(harness);
+
+      await otherTab(harness, 'ro');
+
+      expect(lang()).toBe('en');
+      expect(text(harness)).toContain('Page not found');
+      expect(url()).toBe('/de');
+    });
+
+    // @traces 468-FR-001
+    it('moves a not-found page under a known prefix with another tab', async () => {
+      const harness = await open('/en/no-such-page');
+
+      await otherTab(harness, 'ro');
+
+      expect(url()).toBe('/ro/no-such-page');
+      expect(lang()).toBe('ro');
+    });
+  });
+
+  // @traces 468-FR-002
+  it('moves a first visit off / within two seconds even while the app never becomes stable', async () => {
+    await RouterTestingHarness.create();
+    const release = TestBed.inject(PendingTasks).add();
+    try {
+      await TestBed.inject(Router).navigateByUrl('/');
+
+      expect(url()).toBe('/');
+
+      await new Promise((resolve) => setTimeout(resolve, 2_100));
+
+      expect(url()).toBe('/ro');
+    } finally {
+      release();
+    }
+  });
+
   it('shows the not-found page in the language of a known prefix', async () => {
     const harness = await open('/en/no-such-page');
 
@@ -393,5 +474,33 @@ describe('public frame', () => {
 
     expect(route?.loadComponent).toBeDefined();
     expect(route?.component).toBeUndefined();
+  });
+});
+
+describe('cockpitTexts', () => {
+  beforeEach(setUp);
+
+  // @traces 468-FR-003
+  it('holds the cockpit route until its texts have loaded, without waiting for the app to settle', async () => {
+    await RouterTestingHarness.create();
+    const i18n = TestBed.inject(I18n);
+    const router = TestBed.inject(Router);
+    const enter = i18n.enter.bind(i18n);
+    // A task later than anything the router does before it matches a route.
+    jest
+      .spyOn(i18n, 'enter')
+      .mockImplementation((area) =>
+        new Promise((resolve) => setTimeout(resolve)).then(() => enter(area)),
+      );
+    const atMatch: string[] = [];
+    router.events.subscribe((event) => {
+      if (event instanceof RoutesRecognized)
+        atMatch.push(i18n.t('cockpit.dialogTitle'));
+    });
+
+    expect(await router.navigateByUrl('/cockpit')).toBe(true);
+
+    expect(i18n.enter).toHaveBeenCalledWith('cockpit');
+    expect(atMatch).toEqual(['Programare confirmată']);
   });
 });
