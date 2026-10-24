@@ -6,6 +6,7 @@ features:
   - 053-motion
   - 466-odometer-digit-wrap
   - 453-odometer-captions
+  - 451-gauges-axe
 ---
 
 # Capability: cockpit-gauges
@@ -97,6 +98,21 @@ _From 453-odometer-captions._
 ### 453-FR-004 — At 320 px and 390 px wide, in light and dark, the page MUST NOT scroll sideways and every odometer sample with its caption MUST sit inside the gauges panel, unclipped.
 
 _From 453-odometer-captions._
+### 451-FR-001 — The end-to-end suite MUST include a scan of the gauges catalogue page (`/cockpit`) that runs the suite's one shared accessibility-scanner helper over the whole page and fails when the scanner reports any violation.
+
+_From 451-gauges-axe._
+
+### 451-FR-002 — The scan MUST run once in the light theme and once in the dark theme, each as a test of its own, so a violation present in one theme only is reported with that theme's name.
+
+_From 451-gauges-axe._
+
+### 451-FR-003 — The scan MUST run the scanner with its default rules, no rule disabled and no element excluded; a violation it finds is fixed in the product in this story, with a failing test written first, never filtered out of the scan.
+
+_From 451-gauges-axe._
+
+### 451-FR-004 — The story MUST add no dependency to the repository and commit no image: the scanner already present is reused through the existing helper, and visual comparison of the catalogue stays with the PR QA screenshots (owner decision of 2026-10-16 on #373).
+
+_From 451-gauges-axe._
 
 ## Retired
 
