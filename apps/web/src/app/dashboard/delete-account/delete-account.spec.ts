@@ -1,13 +1,21 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { type MeDto, SupportService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import { toast } from '@motor-fix/ui-cockpit';
 
 import { DeleteAccount } from './delete-account';
 import { DeleteAccountDialog } from '../delete-account-dialog/delete-account-dialog';
+import { Live } from '../live';
+import { PushDevice } from '../push-device';
 import { Session } from '../session';
+
+jest.mock('@motor-fix/ui-cockpit', () => ({
+  ...jest.requireActual('@motor-fix/ui-cockpit'),
+  toast: jest.fn(),
+}));
 
 const DRIVER = {
   email: 'andrei@example.ro',
@@ -23,6 +31,10 @@ const OWNER = {
 } as unknown as MeDto;
 
 let open: jest.Mock;
+let close: jest.Mock;
+let dropped: jest.Mock;
+let revoked: jest.Mock;
+let navigate: jest.SpyInstance;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -35,12 +47,19 @@ async function render(
   me: MeDto,
   language: 'ro' | 'en' = 'ro',
   email: string | null = 'ajutor@example.ro',
+  answer: true | 'cancelled' = 'cancelled',
 ) {
-  open = jest.fn(async () => 'cancelled');
+  open = jest.fn(async () => answer);
+  close = jest.fn();
+  dropped = jest.fn(async () => undefined);
+  revoked = jest.fn();
+  jest.mocked(toast).mockClear();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
-      { provide: Session, useValue: { current: signal(me) } },
+      { provide: Session, useValue: { current: signal(me), revoked } },
+      { provide: Live, useValue: { close } },
+      { provide: PushDevice, useValue: { dropped } },
       { provide: Overlays, useValue: { open } },
       {
         provide: SupportService,
@@ -48,6 +67,9 @@ async function render(
       },
     ],
   });
+  navigate = jest
+    .spyOn(TestBed.inject(Router), 'navigateByUrl')
+    .mockResolvedValue(true);
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const fixture = TestBed.createComponent(DeleteAccount);
   fixture.autoDetectChanges();
@@ -78,6 +100,70 @@ describe('the delete-account row in Setări', () => {
       shape: 'dialog',
       title: 'shell.deleteAccount.dialogTitle',
     });
+  });
+
+  // @traces 129-FR-008
+  it('signs the tab out to Home with a toast once the dialog is gone, the account deleted', async () => {
+    const element = await render(DRIVER, 'ro', 'ajutor@example.ro', true);
+
+    button(element).click();
+    await settle();
+
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(dropped).toHaveBeenCalledTimes(1);
+    expect(revoked).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith('/');
+    expect(toast).toHaveBeenCalledWith('Contul tău a fost șters');
+    // Nothing is asked of the server any more, and the way Home starts only
+    // after the dialog has stepped back, so its step back cannot undo it.
+    expect(open.mock.invocationCallOrder[0]).toBeLessThan(
+      navigate.mock.invocationCallOrder[0],
+    );
+    expect(close.mock.invocationCallOrder[0]).toBeLessThan(
+      navigate.mock.invocationCallOrder[0],
+    );
+    expect(dropped.mock.invocationCallOrder[0]).toBeLessThan(
+      navigate.mock.invocationCallOrder[0],
+    );
+  });
+
+  // @traces 129-FR-008
+  it('forgets the session only once Home has opened, so the dashboard sends no second way Home that would drop the toast', async () => {
+    const element = await render(DRIVER, 'ro', 'ajutor@example.ro', true);
+    let arrive: (arrived: boolean) => void = () => undefined;
+    navigate.mockReturnValue(
+      new Promise<boolean>((resolve) => {
+        arrive = resolve;
+      }),
+    );
+
+    button(element).click();
+    await settle();
+
+    expect(navigate).toHaveBeenCalledWith('/');
+    expect(revoked).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
+
+    arrive(true);
+    await settle();
+
+    expect(revoked).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith('Contul tău a fost șters');
+    expect(revoked.mock.invocationCallOrder[0]).toBeLessThan(
+      jest.mocked(toast).mock.invocationCallOrder[0],
+    );
+  });
+
+  it('keeps the tab signed in when the dialog is closed without deleting', async () => {
+    const element = await render(DRIVER);
+
+    button(element).click();
+    await settle();
+
+    expect(revoked).not.toHaveBeenCalled();
+    expect(dropped).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it('disables the button for a garage owner and shows the way to close the garage', async () => {

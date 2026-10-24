@@ -43,6 +43,24 @@ type Outcome =
   | 'stop'
   | 'wake';
 
+// One connection's run: a stream was open, when a planned close last
+// reopened at once, and whether the last try renewed the session.
+interface Tab {
+  opened: boolean;
+  reconnectedAt: number | null;
+  renewed: boolean;
+}
+
+// A planned close reopens at once, once a minute at most: a server that ends
+// every stream so is waited for as a failure would be.
+function reopenNow(tab: Tab): boolean {
+  const now = Date.now();
+  if (tab.reconnectedAt !== null && now - tab.reconnectedAt < SILENT_FOR)
+    return false;
+  tab.reconnectedAt = now;
+  return true;
+}
+
 // What follows a stream the server ended, by the reason it gave.
 function outcomeOf(reason: LiveCloseReason | null): Outcome {
   if (reason === 'evicted') return 'stop';
@@ -282,7 +300,11 @@ export class Live {
   // Tries, waits and renews until close(), an eviction, a refused renewal or
   // a stream let go to another tab.
   private async run(wanted: AbortSignal): Promise<Outcome> {
-    const tab = { opened: this.streamed, renewed: false };
+    const tab: Tab = {
+      opened: this.streamed,
+      reconnectedAt: null,
+      renewed: false,
+    };
     let outcome: Outcome = 'stop';
     while (!wanted.aborted) {
       outcome = await this.step(wanted, tab);
@@ -295,17 +317,15 @@ export class Live {
   }
 
   // One try and what follows it; `stop` ends the connection.
-  private async step(
-    wanted: AbortSignal,
-    tab: { opened: boolean; renewed: boolean },
-  ): Promise<Outcome> {
+  private async step(wanted: AbortSignal, tab: Tab): Promise<Outcome> {
     const outcome = await this.attemptOnce(wanted, () => {
       if (tab.opened) this.catchUpAll();
       tab.opened = true;
       tab.renewed = false;
     }).catch((): Outcome => 'stop');
     if (outcome === 'stop' || outcome === 'release') return outcome;
-    if (outcome === 'wake' || outcome === 'reconnect') return 'wake';
+    if (outcome === 'wake' || (outcome === 'reconnect' && reopenNow(tab)))
+      return 'wake';
     // A second 401 straight after a renewal is a failure, not another renewal.
     const renew =
       outcome === 'renew' || (outcome === 'unauthorized' && !tab.renewed);
