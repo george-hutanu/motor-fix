@@ -42,7 +42,7 @@ describe('reset-staging workflow', () => {
     expect(setting('cancel-in-progress')).toBe('false');
   });
 
-  // @traces 421-FR-031 1371-workflows-no-ssh-FR-006
+  // @traces 421-FR-031 1371-FR-006
   it("runs the reset script in a staging sandbox, in the api's current image", () => {
     expect(setting('RAILWAY_API_TOKEN')).toBe(gh('secrets.RAILWAY_API_TOKEN'));
     expect(setting('RAILWAY_ENVIRONMENT_ID')).toBe(
@@ -68,7 +68,7 @@ describe('reset-staging workflow', () => {
     );
   });
 
-  // @traces 1371-workflows-no-ssh-FR-001
+  // @traces 1371-FR-001
   it('closes its sandbox even when the reset fails', () => {
     const at = workflow.indexOf('node scripts/railway-sandbox.ts close');
     expect(at).toBeGreaterThan(0);
@@ -100,7 +100,7 @@ describe('api image', () => {
   });
 
   // The staging pre-deploy step runs it from the image's scripts folder.
-  // @traces 1370-release-seed-no-ssh-FR-001
+  // @traces 1370-FR-001
   it('carries the reset script beside the monitor password script, only in the api', () => {
     expect(dockerfile).toMatch(
       /if \[ "\$\{APP\}" = api \]; then[\s\S]*cp scripts\/monitor-password\.ts scripts\/reset-staging\.sh dist\/apps\/api\/scripts\//,
@@ -184,7 +184,7 @@ describe('reset-staging.sh', () => {
 
   // In the staging pre-deploy step a failed seed fails the api deployment;
   // its log names the step.
-  // @traces 1370-release-seed-no-ssh-FR-004
+  // @traces 1370-FR-004
   it('with SEED_ONLY=1, names the seed and exits non-zero when the seed fails', () => {
     const { calls, result } = run({ ...staging, SEED_ONLY: '1' }, 3);
 

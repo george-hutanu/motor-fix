@@ -1,6 +1,12 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import {
+  close,
   createInput,
   maskLines,
+  open,
   prelude,
   type Run,
   railwayApi,
@@ -15,7 +21,7 @@ import {
 // A Railway reference variable, resolved by Railway when the sandbox starts.
 const ref = (service: string, name: string) => `\${{${service}.${name}}}`;
 
-// @traces 1371-workflows-no-ssh-FR-003
+// @traces 1371-FR-003
 describe('references', () => {
   it('gives a PostgreSQL sandbox the connection and environment name of the named service, as references only', () => {
     expect(references('postgres', 'Postgres')).toEqual({
@@ -38,11 +44,12 @@ describe('references', () => {
 
   it('refuses a service name a reference cannot hold', () => {
     expect(() => references('postgres', 'Post}}gres')).toThrow(/service name/);
+    expect(() => references('postgres', 'my.db')).toThrow(/service name/);
     expect(() => references('postgres', '')).toThrow(/service name/);
   });
 });
 
-// @traces 1371-workflows-no-ssh-FR-003
+// @traces 1371-FR-003
 describe('createInput', () => {
   const input = createInput('env-1', 'postgres', 'Postgres');
 
@@ -63,7 +70,7 @@ describe('createInput', () => {
   });
 });
 
-// @traces 1371-workflows-no-ssh-FR-002
+// @traces 1371-FR-002
 describe('refusal', () => {
   it('lets a sandbox open in the environment the job names', () => {
     expect(refusal('staging', 'postgres', 'staging')).toBeUndefined();
@@ -84,11 +91,13 @@ describe('refusal', () => {
 
   it('refuses an unknown kind or environment', () => {
     expect(refusal('staging', 'redis', 'staging')).toMatch(/kind/);
+    expect(refusal('staging', 'constructor', 'staging')).toMatch(/kind/);
+    expect(refusal('staging', 'toString', 'staging')).toMatch(/kind/);
     expect(refusal('', 'postgres', '')).toBeDefined();
   });
 });
 
-// @traces 1371-workflows-no-ssh-FR-004
+// @traces 1371-FR-004
 describe('prelude', () => {
   const env = {
     PASS: 'it\'s $(rm -rf /) "quoted"\nsecond line',
@@ -103,9 +112,17 @@ describe('prelude', () => {
     for (const [name, value] of Object.entries(env)) {
       const encoded = Buffer.from(value).toString('base64');
       expect(text).toContain(
-        `${name}=$(printf %s '${encoded}' | base64 -d); export ${name}\n`,
+        `${name}=$(printf %s '${encoded}' | base64 -d; printf x); ${name}=\${${name}%x}; export ${name}\n`,
       );
     }
+  });
+
+  it('rebuilds a value ending in newlines byte for byte, as a passphrase must be', () => {
+    const text = prelude({ PASS: 'secret\n\n' }, ['PASS']);
+    const encoded = Buffer.from('secret\n\n').toString('base64');
+    expect(text).toBe(
+      `PASS=$(printf %s '${encoded}' | base64 -d; printf x); PASS=\${PASS%x}; export PASS\n`,
+    );
   });
 
   it('refuses a name that is unset or empty, naming it', () => {
@@ -118,7 +135,7 @@ describe('prelude', () => {
   });
 });
 
-// @traces 1371-workflows-no-ssh-FR-004
+// @traces 1371-FR-004
 describe('maskLines', () => {
   it('masks the raw value, its base64 form and every line of a multi-line value', () => {
     const lines = maskLines({ KEY: 'one\ntwo' }, ['KEY']);
@@ -132,12 +149,18 @@ describe('maskLines', () => {
     );
   });
 
+  it('never emits a mask command that spans lines, which GitHub would cut at the first', () => {
+    for (const line of maskLines({ KEY: 'one\ntwo\r\nthree' }, ['KEY'])) {
+      expect(line).not.toMatch(/[\r\n]/);
+    }
+  });
+
   it('skips a name with no value, so an unset optional secret prints nothing', () => {
     expect(maskLines({ A: '' }, ['A', 'B'])).toEqual([]);
   });
 });
 
-// @traces 1371-workflows-no-ssh-FR-002
+// @traces 1371-FR-002
 describe('railwayApi', () => {
   const refused = JSON.stringify({
     data: null,
@@ -206,6 +229,17 @@ describe('railwayApi', () => {
     }
   });
 
+  it('fails on errors even when Railway also sends data', () => {
+    const partial = JSON.stringify({
+      data: { environment: null },
+      errors: [{ message: 'Environment not found' }],
+    });
+    const { run } = fake([partial]);
+    expect(() =>
+      railwayApi('query { x }', {}, { env: { RAILWAY_API_TOKEN: 't' }, run }),
+    ).toThrow(/Environment not found/);
+  });
+
   it('does not retry an error that is not a refusal', () => {
     const { calls, run } = fake([
       JSON.stringify({
@@ -242,7 +276,7 @@ describe('railwayApi', () => {
   });
 });
 
-// @traces 1371-workflows-no-ssh-FR-002
+// @traces 1371-FR-002
 describe('waitRunning', () => {
   function clock(states: string[]) {
     let t = 0;
@@ -280,6 +314,21 @@ describe('waitRunning', () => {
     ).rejects.toThrow(/FAILED/);
   });
 
+  it('fails at once on any state other than CREATING, without spending the bound', async () => {
+    for (const state of ['DESTROYING', 'STOPPED', 'ERROR']) {
+      const c = clock([state]);
+      await expect(
+        waitRunning(c.read, {
+          limitMs: 60_000,
+          now: c.now,
+          pollMs: 5_000,
+          sleep: c.sleep,
+        }),
+      ).rejects.toThrow(state);
+      expect(c.now()).toBe(0);
+    }
+  });
+
   it('fails past the bound with the state it last saw', async () => {
     const c = clock([]);
     await expect(
@@ -290,5 +339,157 @@ describe('waitRunning', () => {
         sleep: c.sleep,
       }),
     ).rejects.toThrow(/CREATING.*20 s|20 s.*CREATING/);
+  });
+});
+
+// A fake Railway answering the queries open and close send, by their text.
+function railway(
+  options: {
+    environment?: string;
+    statuses?: string[];
+    destroyError?: string;
+  } = {},
+) {
+  const sent: { query: string; variables: Record<string, unknown> }[] = [];
+  const statuses = [...(options.statuses ?? ['RUNNING'])];
+  const destroyed = (variables: Record<string, unknown>) =>
+    options.destroyError
+      ? { errors: [{ message: options.destroyError }] }
+      : { data: { sandboxDestroy: { id: variables.i } } };
+  // The first entry whose word the query holds answers it.
+  const answers: [string, (v: Record<string, unknown>) => unknown][] = [
+    ['sandboxDestroy', destroyed],
+    ['sandboxCreate', () => ({ data: { sandboxCreate: { id: 'sb-1' } } })],
+    [
+      'sandbox(',
+      () => ({ data: { sandbox: { status: statuses.shift() ?? 'CREATING' } } }),
+    ],
+    [
+      'environment(',
+      () => ({
+        data: { environment: { name: options.environment ?? 'staging' } },
+      }),
+    ],
+    ['service(', () => ({ data: { service: { name: 'Postgres' } } })],
+  ];
+  const run: Run = (args) => {
+    const query = args[1] ?? '';
+    const variables = JSON.parse(args[3] ?? '{}') as Record<string, unknown>;
+    sent.push({ query, variables });
+    const answer = answers.find(([word]) => query.includes(word));
+    const body = (answer?.[1](variables) ?? {}) as { errors?: unknown };
+    return {
+      status: body.errors || !answer ? 1 : 0,
+      stderr: '',
+      stdout: JSON.stringify(body),
+    };
+  };
+  const did = (word: string) => sent.filter((c) => c.query.includes(word));
+  return { did, run, sent };
+}
+
+const instant = (limitMs = 20_000) => {
+  let t = 0;
+  return {
+    limitMs,
+    now: () => t,
+    pollMs: 5_000,
+    sleep: async (ms: number) => {
+      t += ms;
+    },
+  };
+};
+
+// @traces 1371-FR-002 1371-FR-003 1371-FR-008
+describe('open', () => {
+  let dir: string;
+  let output: string;
+  const env = () => ({
+    GITHUB_OUTPUT: output,
+    RAILWAY_ENVIRONMENT_ID: 'env-1',
+    RAILWAY_SERVICE_POSTGRES: 'svc-1',
+  });
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'sandbox-open-'));
+    output = join(dir, 'output');
+  });
+  afterEach(() => rmSync(dir, { force: true, recursive: true }));
+
+  it('creates a private sandbox, records its id, and leaves it running', async () => {
+    const r = railway({ statuses: ['CREATING', 'RUNNING'] });
+
+    await expect(
+      open({ env: env(), run: r.run }, 'staging', 'postgres', instant()),
+    ).resolves.toBe('sb-1');
+    expect(readFileSync(output, 'utf8')).toBe('id=sb-1\n');
+    expect(r.did('sandboxCreate')[0]?.variables).toMatchObject({
+      input: { environmentId: 'env-1', networkIsolation: 'PRIVATE' },
+    });
+    expect(r.did('sandboxDestroy')).toHaveLength(0);
+  });
+
+  it('destroys the sandbox when it fails to start, after recording its id', async () => {
+    const r = railway({ statuses: ['CREATING', 'FAILED'] });
+
+    await expect(
+      open({ env: env(), run: r.run }, 'staging', 'postgres', instant()),
+    ).rejects.toThrow(/FAILED/);
+    expect(readFileSync(output, 'utf8')).toBe('id=sb-1\n');
+    expect(r.did('sandboxDestroy').map((c) => c.variables)).toEqual([
+      { e: 'env-1', i: 'sb-1' },
+    ]);
+  });
+
+  it('destroys the sandbox when it is still not running past the bound', async () => {
+    const r = railway({ statuses: [] });
+
+    await expect(
+      open({ env: env(), run: r.run }, 'staging', 'postgres', instant(10_000)),
+    ).rejects.toThrow(/CREATING/);
+    expect(r.did('sandboxDestroy')).toHaveLength(1);
+  });
+
+  it('creates nothing when the environment id is not the named environment', async () => {
+    const r = railway({ environment: 'production' });
+
+    await expect(
+      open({ env: env(), run: r.run }, 'staging', 'postgres', instant()),
+    ).rejects.toThrow(/refused/);
+    expect(r.did('sandboxCreate')).toHaveLength(0);
+  });
+
+  it('creates nothing when the service id is unset', async () => {
+    const r = railway();
+    const { RAILWAY_SERVICE_POSTGRES: _s, ...rest } = env();
+
+    await expect(
+      open({ env: rest, run: r.run }, 'staging', 'postgres', instant()),
+    ).rejects.toThrow(/RAILWAY_SERVICE_POSTGRES/);
+    expect(r.did('sandboxCreate')).toHaveLength(0);
+  });
+});
+
+// @traces 1371-FR-002 1371-FR-008
+describe('close', () => {
+  const env = { RAILWAY_ENVIRONMENT_ID: 'env-1' };
+
+  it('destroys the sandbox it is given', () => {
+    const r = railway();
+    expect(close({ env, run: r.run }, 'sb-1')).toBe('closed');
+    expect(r.did('sandboxDestroy')[0]?.variables).toEqual({
+      e: 'env-1',
+      i: 'sb-1',
+    });
+  });
+
+  it('accepts a sandbox open already destroyed', () => {
+    const r = railway({ destroyError: 'Sandbox not found' });
+    expect(close({ env, run: r.run }, 'sb-1')).toBe('gone');
+  });
+
+  it('fails on any other refusal, so the run does not pass with a sandbox left open', () => {
+    const r = railway({ destroyError: 'Not Authorized' });
+    expect(() => close({ env, run: r.run }, 'sb-1')).toThrow(/Not Authorized/);
   });
 });

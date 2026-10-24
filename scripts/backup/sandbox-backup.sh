@@ -2,7 +2,7 @@
 # stdin to `sh -s` by backup.sh, which puts a prelude in front of it
 # (scripts/railway-sandbox.ts prelude): EXPECTED_ENV, IMAGE (the PostgreSQL
 # service's own image), OBJECT (the copy's key in the bucket), DUMP_SH
-# (dump.sh, base64), BACKUP_GPG_PASSPHRASE and the BACKUP_S3_* settings. The
+# (dump.sh), BACKUP_GPG_PASSPHRASE and the BACKUP_S3_* settings. The
 # sandbox already holds the service's PG* variables and Railway environment
 # name, as references Railway resolved.
 #
@@ -18,7 +18,7 @@ umask 077
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-printf %s "$DUMP_SH" | base64 -d >"$work/dump.sh"
+printf %s "$DUMP_SH" >"$work/dump.sh"
 printf %s "$BACKUP_GPG_PASSPHRASE" >"$work/passphrase"
 docker pull -q "$IMAGE" >&2
 docker pull -q amazon/aws-cli:2.22.0 >&2

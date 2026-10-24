@@ -83,7 +83,7 @@ describe('the nightly backup workflow', () => {
     expect(notice).toMatch(/::notice[^\n]*\$ENVIRONMENT/);
   });
 
-  // @traces 1371-workflows-no-ssh-FR-001
+  // @traces 1371-FR-001
   it('pins the Railway CLI and closes its sandbox even on failure', () => {
     expect(backup).toMatch(/npm install --global @railway\/cli@\d+\.\d+\.\d+/);
     const at = backup.indexOf('node scripts/railway-sandbox.ts close');
@@ -98,7 +98,7 @@ describe('the nightly backup workflow', () => {
   });
 });
 
-// @traces 251-FR-013 1371-workflows-no-ssh-FR-005
+// @traces 251-FR-013 1371-FR-005
 describe('the dump', () => {
   const runner = read('scripts', 'backup', 'backup.sh');
   const inside = read('scripts', 'backup', 'sandbox-backup.sh');

@@ -148,7 +148,7 @@ describe('the point-in-time drill workflow', () => {
       ).toBe(true);
     });
 
-    // @traces 1371-workflows-no-ssh-FR-007
+    // @traces 1371-FR-007
     it('closes its sandbox however the drill ends', () => {
       const close = after.find((s) => s.includes('railway-sandbox.ts close'));
 
@@ -157,7 +157,7 @@ describe('the point-in-time drill workflow', () => {
       );
     });
 
-    // @traces 1371-workflows-no-ssh-FR-007
+    // @traces 1371-FR-007
     it('writes its markers as psql inside the sandbox, in the PostgreSQL image', () => {
       const body = script.slice(script.indexOf('source_sql() {'));
       expect(body).toMatch(/railway-sandbox\.ts exec "\$SANDBOX_ID"/);

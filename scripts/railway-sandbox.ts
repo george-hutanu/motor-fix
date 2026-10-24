@@ -37,7 +37,7 @@ export type Kind = 'postgres' | 'api';
 type TokenKind = 'bearer' | 'project';
 type Env = Record<string, string | undefined>;
 
-export const REGION = 'europe-west4-drams3a';
+const REGION = 'europe-west4-drams3a';
 const IDLE_MINUTES = 30;
 const READY_LIMIT_MS = 5 * 60_000;
 const POLL_MS = 5_000;
@@ -62,11 +62,12 @@ const SERVICE_VARIABLE: Record<Kind, string> = {
 };
 const ENVIRONMENTS = ['staging', 'production'];
 
-const isKind = (kind: string): kind is Kind => kind in VARIABLES;
+const isKind = (kind: string): kind is Kind => Object.hasOwn(VARIABLES, kind);
 
 // Railway reference variables naming the service's own variables.
 export function references(kind: Kind, service: string) {
-  if (!/^[\w][\w .-]*$/.test(service)) {
+  // No dot: `${{my.db.PGHOST}}` would not say which part is the service.
+  if (!/^\w[\w -]*$/.test(service)) {
     throw new Error(`a reference cannot hold the service name '${service}'`);
   }
   return Object.fromEntries(
@@ -107,31 +108,31 @@ const NAME = /^[A-Z_][A-Z0-9_]*$/;
 
 function value(env: Env, name: string) {
   if (!NAME.test(name)) throw new Error(`'${name}' is not a variable name`);
-  const found = env[name];
-  if (!found) throw new Error(`${name} is not set`);
-  return found;
+  return required(env, name);
 }
 
 const base64 = (text: string) => Buffer.from(text).toString('base64');
 
 // Shell lines that set and export each named value, base64 so no quoting can
-// break them. Fed on stdin in front of a script; never printed to a log.
+// break them. Fed on stdin in front of a script; never printed to a log. The
+// trailing x keeps the value's own trailing newlines, which `$(...)` drops.
 export function prelude(env: Env, names: string[]) {
   return names
     .map((name) => {
       const encoded = base64(value(env, name));
-      return `${name}=$(printf %s '${encoded}' | base64 -d); export ${name}\n`;
+      return `${name}=$(printf %s '${encoded}' | base64 -d; printf x); ${name}=\${${name}%x}; export ${name}\n`;
     })
     .join('');
 }
 
-// GitHub hides a masked value only line by line, so each line is masked too.
+// GitHub reads one mask command per line, so a multi-line value is masked
+// line by line, never as one command that would end at its first line.
 export function maskLines(env: Env, names: string[]) {
   const lines = new Set<string>();
   for (const name of names) {
     const found = env[name];
     if (!found) continue;
-    for (const part of [found, ...found.split(/\r?\n/), base64(found)]) {
+    for (const part of [...found.split(/\r?\n/), base64(found)]) {
       if (part.trim()) lines.add(`::add-mask::${part}`);
     }
   }
@@ -143,7 +144,7 @@ export type Run = (
   env: Env,
 ) => { status: number | null; stdout: string; stderr: string };
 
-export interface Context {
+interface Context {
   env: Env;
   run: Run;
   kind?: TokenKind;
@@ -211,7 +212,7 @@ export function railwayApi<T>(
     (out) => refused(parse(out)),
   );
   const answer = parse(result.stdout);
-  if (result.status !== 0 || !answer.data) {
+  if (result.status !== 0 || !answer.data || answer.errors?.length) {
     const why =
       answer.errors?.map((e) => e.message).join('; ') ||
       result.stderr.trim().split('\n').pop() ||
@@ -233,9 +234,8 @@ export async function waitRunning(
   const deadline = options.now() + options.limitMs;
   let status = read();
   while (status !== 'RUNNING') {
-    if (['FAILED', 'DESTROYED', 'DESTROYING'].includes(status)) {
-      throw new Error(`sandbox is ${status}`);
-    }
+    // Only CREATING still leads to RUNNING.
+    if (status !== 'CREATING') throw new Error(`sandbox is ${status}`);
     if (options.now() >= deadline) {
       throw new Error(
         `sandbox still ${status} after ${options.limitMs / 1000} s`,
@@ -288,37 +288,65 @@ function destroy(ctx: Context, environmentId: string, id: string) {
 
 // open destroys a sandbox that never ran, so the closing step may find it
 // already gone.
-function close(env: Env, id: string) {
+export function close(ctx: Context, id: string): 'closed' | 'gone' {
   try {
-    destroy(context(env), required(env, 'RAILWAY_ENVIRONMENT_ID'), id);
+    destroy(ctx, required(ctx.env, 'RAILWAY_ENVIRONMENT_ID'), id);
+    return 'closed';
   } catch (error) {
     if (!/not found/i.test(String(error))) throw error;
-    process.stdout.write('sandbox already gone\n');
+    return 'gone';
   }
 }
 
-async function open(env: Env, environment: string, kind: string) {
-  const ctx = context(env);
-  const environmentId = required(env, 'RAILWAY_ENVIRONMENT_ID');
-  const named = railwayApi<{ environment: { name: string } }>(
+type Timing = Parameters<typeof waitRunning>[1];
+
+const TIMING: Timing = {
+  limitMs: READY_LIMIT_MS,
+  now: Date.now,
+  pollMs: POLL_MS,
+  sleep: (ms) => new Promise((done) => setTimeout(done, ms)),
+};
+
+const found = <T>(value: T | null | undefined, what: string): T => {
+  if (value == null) throw new Error(`Railway returned no ${what}`);
+  return value;
+};
+
+export async function open(
+  ctx: Context,
+  environment: string,
+  kind: string,
+  timing: Timing = TIMING,
+) {
+  const environmentId = required(ctx.env, 'RAILWAY_ENVIRONMENT_ID');
+  const named = railwayApi<{ environment: { name: string } | null }>(
     'query($e:String!){ environment(id:$e){ name } }',
     { e: environmentId },
     ctx,
   );
-  const why = refusal(environment, kind, named.environment.name);
+  const actual = found(named.environment, 'environment').name;
+  const why = refusal(environment, kind, actual);
   if (why || !isKind(kind)) throw new Error(`sandbox refused: ${why}`);
-  const service = railwayApi<{ service: { name: string } }>(
+  const service = railwayApi<{ service: { name: string } | null }>(
     'query($s:String!){ service(id:$s){ name } }',
-    { s: required(env, SERVICE_VARIABLE[kind]) },
-    ctx,
-  ).service.name;
-  const { sandboxCreate } = railwayApi<{ sandboxCreate: { id: string } }>(
-    'mutation($input:SandboxCreateInput!){ sandboxCreate(input:$input){ id } }',
-    { input: createInput(environmentId, kind, service) },
+    { s: required(ctx.env, SERVICE_VARIABLE[kind]) },
     ctx,
   );
-  const id = sandboxCreate.id;
-  if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, `id=${id}\n`);
+  const created = railwayApi<{ sandboxCreate: { id: string } | null }>(
+    'mutation($input:SandboxCreateInput!){ sandboxCreate(input:$input){ id } }',
+    {
+      input: createInput(
+        environmentId,
+        kind,
+        found(service.service, 'service').name,
+      ),
+    },
+    ctx,
+  );
+  const id = found(created.sandboxCreate, 'sandbox').id;
+  if (ctx.env.GITHUB_OUTPUT) {
+    appendFileSync(ctx.env.GITHUB_OUTPUT, `id=${id}\n`);
+  }
   const stop = () => {
     try {
       destroy(ctx, environmentId, id);
@@ -328,17 +356,14 @@ async function open(env: Env, environment: string, kind: string) {
   };
   process.once('SIGTERM', stop).once('SIGINT', stop);
   try {
-    await waitRunning(() => status(ctx, environmentId, id), {
-      limitMs: READY_LIMIT_MS,
-      now: Date.now,
-      pollMs: POLL_MS,
-      sleep: (ms) => new Promise((done) => setTimeout(done, ms)),
-    });
+    await waitRunning(() => status(ctx, environmentId, id), timing);
   } catch (error) {
     destroy(ctx, environmentId, id);
     throw error;
+  } finally {
+    process.off('SIGTERM', stop).off('SIGINT', stop);
   }
-  process.stdout.write(`${id}\n`);
+  return id;
 }
 
 function image(env: Env, serviceId: string) {
@@ -355,6 +380,7 @@ function image(env: Env, serviceId: string) {
 }
 
 function exec(env: Env, id: string, command: string[]) {
+  if (!id) throw new Error('exec needs a sandbox id');
   const ctx = context(env);
   const environmentId = required(env, 'RAILWAY_ENVIRONMENT_ID');
   // Also settles which kind the token is before stdin is consumed.
@@ -385,11 +411,13 @@ function exec(env: Env, id: string, command: string[]) {
   return r.status ?? 1;
 }
 
-export async function main(argv: string[], env: Env = process.env) {
+async function main(argv: string[], env: Env = process.env) {
   const [command = '', ...args] = argv;
   switch (command) {
     case 'open':
-      await open(env, args[0] ?? '', args[1] ?? '');
+      process.stdout.write(
+        `${await open(context(env), args[0] ?? '', args[1] ?? '')}\n`,
+      );
       return 0;
     case 'image':
       image(env, args[0] ?? '');
@@ -398,7 +426,9 @@ export async function main(argv: string[], env: Env = process.env) {
       return exec(env, args[0] ?? '', args.slice(1));
     case 'close':
       // Nothing to close when open never got as far as creating one.
-      if (args[0]) close(env, args[0]);
+      if (args[0] && close(context(env), args[0]) === 'gone') {
+        process.stdout.write('sandbox already gone\n');
+      }
       return 0;
     case 'mask':
       for (const line of maskLines(env, args))

@@ -26,7 +26,7 @@ started=$(date +%s)
 {
   # Secrets and settings alike go base64 on stdin, never as an argument.
   EXPECTED_ENV=$ENVIRONMENT IMAGE=$image OBJECT=$key.dump.gpg \
-    DUMP_SH=$(base64 <scripts/backup/dump.sh | tr -d '\n') \
+    DUMP_SH=$(cat scripts/backup/dump.sh) \
     node scripts/railway-sandbox.ts prelude EXPECTED_ENV IMAGE OBJECT DUMP_SH \
     BACKUP_GPG_PASSPHRASE BACKUP_S3_ACCESS_KEY_ID BACKUP_S3_SECRET_ACCESS_KEY \
     BACKUP_S3_ENDPOINT BACKUP_S3_REGION BACKUP_S3_BUCKET

@@ -27,7 +27,7 @@ const sandboxed = [
   ['pitr-drill.yml', 'staging', 'postgres'],
 ] as const;
 
-// @traces 1371-workflows-no-ssh-FR-001
+// @traces 1371-FR-001
 describe('no workflow reaches Railway over SSH', () => {
   it.each(workflows)('%s registers no key and runs no railway ssh', (name) => {
     const text = read(name);
@@ -40,7 +40,7 @@ describe('no workflow reaches Railway over SSH', () => {
   });
 });
 
-// @traces 1371-workflows-no-ssh-FR-001, 1371-workflows-no-ssh-FR-002
+// @traces 1371-FR-001 1371-FR-002
 describe.each(sandboxed)('%s, job %s', (name, job, kind) => {
   const text = read(name);
   const all = steps(text, job);
@@ -87,7 +87,7 @@ describe.each(sandboxed)('%s, job %s', (name, job, kind) => {
   });
 });
 
-// @traces 1371-workflows-no-ssh-FR-006
+// @traces 1371-FR-006
 describe('reset-staging.yml', () => {
   const text = read('reset-staging.yml');
 
@@ -96,5 +96,40 @@ describe('reset-staging.yml', () => {
     expect(text).toMatch(/^ {4}environment: staging$/m);
     expect(text).not.toMatch(/inputs:/);
     expect(text).not.toMatch(/production/i);
+  });
+});
+
+// The service ids and plain settings are GitHub variables an agent may set
+// from Railway; the keys are secrets only the owner sets.
+const SECRETS = new Set([
+  'BACKUP_GPG_PASSPHRASE',
+  'BACKUP_S3_ACCESS_KEY_ID',
+  'BACKUP_S3_SECRET_ACCESS_KEY',
+  'RAILWAY_API_TOKEN',
+  'SEED_PASSWORD',
+  'WAL_ARCHIVE_KEY',
+  'WAL_ARCHIVE_SECRET',
+]);
+
+// @traces 1371-FR-009
+describe.each(sandboxed)('%s settings', (name, _job, kind) => {
+  const text = read(name);
+  const reads = [
+    ...text.matchAll(/\$\{\{ (vars|secrets)\.([A-Z][A-Z0-9_]*) \}\}/g),
+  ].map(([, from, key]) => ({ from, key }));
+
+  it('reads every key as a secret and nothing else', () => {
+    expect(reads.length).toBeGreaterThan(0);
+    for (const { from, key } of reads) {
+      expect(`${key} from ${from}`).toBe(
+        `${key} from ${SECRETS.has(key as string) ? 'secrets' : 'vars'}`,
+      );
+    }
+  });
+
+  it('reads the service id from a variable', () => {
+    const service =
+      kind === 'api' ? 'RAILWAY_SERVICE_API' : 'RAILWAY_SERVICE_POSTGRES';
+    expect(reads).toContainEqual({ from: 'vars', key: service });
   });
 });

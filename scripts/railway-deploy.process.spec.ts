@@ -245,8 +245,8 @@ describe('the deploy script as a process, with the staging seed password', () =>
             .preDeployCommand,
       )[0];
 
-  // @traces 1370-release-seed-no-ssh-FR-002
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-002
+  // @traces 1370-FR-003
   it('writes the password onto the api service before deploying anything, and never prints it', async () => {
     const { code, out } = await run('staging', { SEED_PASSWORD: PASSWORD });
 
@@ -267,7 +267,7 @@ describe('the deploy script as a process, with the staging seed password', () =>
     expect(out).not.toContain(PASSWORD);
   }, 15_000);
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('keeps the password out of stdout and stderr when Railway echoes it in an error, and deploys nothing', async () => {
     echo = true;
 
@@ -281,7 +281,7 @@ describe('the deploy script as a process, with the staging seed password', () =>
     );
   }, 15_000);
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('keeps the password out of stdout and stderr when a later deploy call echoes it', async () => {
     echoDeploy = PASSWORD;
 
@@ -292,7 +292,7 @@ describe('the deploy script as a process, with the staging seed password', () =>
     expect(out).not.toContain(PASSWORD);
   }, 15_000);
 
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it.each([
     ['unset', {}],
     ['empty', { SEED_PASSWORD: '' }],
@@ -310,8 +310,8 @@ describe('the deploy script as a process, with the staging seed password', () =>
     15_000,
   );
 
-  // @traces 1370-release-seed-no-ssh-FR-001
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-001
+  // @traces 1370-FR-002
   it('sends production neither the password nor the seed, even with the password set', async () => {
     const { code, out } = await run('production', { SEED_PASSWORD: PASSWORD });
 

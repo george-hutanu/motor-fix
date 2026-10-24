@@ -120,7 +120,7 @@ describe('the point-in-time drill workflow', () => {
     expect(outside).not.toMatch(/secrets\./);
   });
 
-  // @traces 1371-workflows-no-ssh-FR-001
+  // @traces 1371-FR-001
   it('registers no ssh key', () => {
     expect(staging).not.toMatch(/KEY_NAME|ssh/);
   });
