@@ -139,6 +139,19 @@ describe('a garage written with cedilla letters', () => {
     });
   });
 
+  // address and seat_address refuse '' (garage_address_length,
+  // garage_seat_address_length), so only these two can hold one.
+  it('keeps an empty value empty', async () => {
+    const garage = await create('blank', { cityName: '', name: '' });
+
+    expect(await stored(garage.id)).toEqual({
+      address: null,
+      cityName: '',
+      name: '',
+      seatAddress: null,
+    });
+  });
+
   it('converts a value written as plain SQL', async () => {
     await prisma.$executeRawUnsafe(
       `INSERT INTO garage (id, name, slug) VALUES (gen_random_uuid(), 'Ţarc', 'sql')`,
