@@ -5,10 +5,10 @@ import { AccountsService, signAccessToken } from '@motor-fix/domain';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
 
-const api = apiBoot();
+const api = fileApi();
 
 // @traces 365-FR-013
 // @traces 206-FR-005

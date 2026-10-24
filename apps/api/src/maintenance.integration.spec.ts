@@ -17,10 +17,10 @@ import { Redis } from 'ioredis';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
 
-const api = apiBoot();
+const api = fileApi();
 
 // Every route that answers as usual while the platform is in maintenance.
 // Sign-up and the password reset refuse a valid request from anyone but an

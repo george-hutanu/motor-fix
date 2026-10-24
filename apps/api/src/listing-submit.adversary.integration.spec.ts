@@ -4,10 +4,10 @@ import { PRISMA } from '@motor-fix/domain';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-import { apiBoot } from './api-boot.testing';
+import { fileApi } from './api-boot.testing';
 import { completeDraft, signedIn, submit } from './listing-submit.testing';
 
-const api = apiBoot();
+const api = fileApi();
 let app: INestApplication;
 
 beforeAll(async () => {

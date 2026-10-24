@@ -11,11 +11,11 @@ import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
 
 // @traces 066-FR-001 066-FR-002 066-FR-003 066-FR-005 066-FR-010
 
-const api = apiBoot();
+const api = fileApi();
 let app: INestApplication;
 let db: Client;
 let admin: string;

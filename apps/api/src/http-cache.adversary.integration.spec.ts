@@ -4,9 +4,9 @@ import { PRISMA } from '@motor-fix/domain';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-import { apiBoot } from './api-boot.testing';
+import { fileApi } from './api-boot.testing';
 
-const api = apiBoot();
+const api = fileApi();
 
 const PUBLIC_POLICY =
   'public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400';

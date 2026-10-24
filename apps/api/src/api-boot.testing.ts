@@ -79,5 +79,29 @@ export function apiBoot() {
       stopped = true;
       return giveBack();
     },
+    // Waits for the database turn alone; start() then only boots.
+    takeTurn: () => turn.take(),
   };
+}
+
+type TurnGlobal = {
+  releaseDatabaseTurnLast?: (release: () => Promise<void>) => void;
+};
+
+// The handle for a whole spec file. The turn is waited for in a hook of its
+// own, as long as the domain specs' longest holder takes, so a spec's own
+// beforeAll times only the boot. stop() runs again once every afterAll is
+// done, so an afterAll that throws before it never keeps the turn.
+export function fileApi() {
+  const releaseLast = (globalThis as TurnGlobal).releaseDatabaseTurnLast;
+  if (!releaseLast)
+    throw new Error(
+      'fileApi needs testEnvironment database-turn.environment.cjs',
+    );
+  const api = apiBoot();
+  beforeAll(api.takeTurn, 360_000);
+  releaseLast(async () => {
+    await api.stop();
+  });
+  return api;
 }

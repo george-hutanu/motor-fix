@@ -5,9 +5,9 @@ import { NotificationsService } from '@motor-fix/domain';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-import { apiBoot } from './api-boot.testing';
+import { fileApi } from './api-boot.testing';
 
-const api = apiBoot();
+const api = fileApi();
 const webUrl = process.env['PUBLIC_WEB_URL'];
 
 let app: INestApplication;

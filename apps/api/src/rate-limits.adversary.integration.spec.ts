@@ -10,9 +10,9 @@ import type { INestApplication } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
-import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
 
-const api = apiBoot();
+const api = fileApi();
 const store = new Redis(process.env['REDIS_URL'] ?? 'redis://localhost:6379');
 let app: INestApplication;
 

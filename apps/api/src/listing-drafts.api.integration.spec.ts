@@ -5,10 +5,10 @@ import type { INestApplication } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
-import { apiBoot } from './api-boot.testing';
+import { fileApi } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
 
-const api = apiBoot();
+const api = fileApi();
 const webUrl = process.env['PUBLIC_WEB_URL'];
 
 let app: INestApplication;

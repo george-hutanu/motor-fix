@@ -7,10 +7,10 @@ import { AccountsService, PRISMA, signAccessToken } from '@motor-fix/domain';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
 
-const api = apiBoot();
+const api = fileApi();
 
 const PUBLIC_POLICY =
   'public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400';

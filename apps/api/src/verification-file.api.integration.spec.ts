@@ -11,9 +11,9 @@ import { type INestApplication, Logger } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
 
-const api = apiBoot();
+const api = fileApi();
 let app: INestApplication;
 let db: Client;
 

@@ -2,9 +2,9 @@ import { PRISMA } from '@motor-fix/domain/testing';
 import { generateKeyPair, SignJWT } from 'jose';
 import request from 'supertest';
 
-import { apiBoot } from './api-boot.testing';
+import { fileApi } from './api-boot.testing';
 
-const api = apiBoot();
+const api = fileApi();
 
 afterAll(() => api.stop());
 

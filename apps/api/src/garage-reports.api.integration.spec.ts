@@ -6,9 +6,9 @@ import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request, { type Response } from 'supertest';
 
-import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
 
-const api = apiBoot();
+const api = fileApi();
 let app: INestApplication;
 let db: Client;
 

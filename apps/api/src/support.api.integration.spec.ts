@@ -13,7 +13,7 @@ import { Redis } from 'ioredis';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
 
 // @traces 280-FR-010 280-FR-011 280-FR-012 280-FR-013 280-FR-020 280-FR-022
 
@@ -22,7 +22,7 @@ const reader = countedMetrics();
 const outcome = (name: string) =>
   counterTotal(reader, 'motorfix_support_messages_total', { outcome: name });
 
-const api = apiBoot();
+const api = fileApi();
 let app: INestApplication;
 let db: Client;
 let saved: string | undefined;
