@@ -35,8 +35,11 @@ h2 {
   min-height: var(--mf-tap);
   white-space: normal;
 }
+/* On a phone the button takes its own full-width line under the title; a wrap splits it evenly, never one word alone. */
 .add {
-  white-space: nowrap;
+  flex: 1 1 100%;
+  max-width: 100%;
+  text-wrap: balance;
 }
 .count {
   color: var(--mf-text-secondary);
@@ -128,5 +131,8 @@ h2 {
   }
   .rating {
     text-align: end;
+  }
+  .add {
+    flex: 0 0 auto;
   }
 }
