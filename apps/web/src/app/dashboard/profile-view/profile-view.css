@@ -166,10 +166,18 @@ h3,
 }
 
 /* Phone: the complement of the tablet query in layout.ts. Running text,
-   the labels, the fuel lines and the phone tag, reads at body size. */
+   the labels, the fuel lines and the phone tag, reads at body size; the
+   panel title steps up and the group titles turn bold to stay above them. */
 @media not all and (min-width: 768px) {
   :host {
     --mf-size-small: var(--mf-size-body);
+  }
+  h2 {
+    font-size: var(--mf-size-subheading);
+  }
+  h3 {
+    font-size: var(--mf-size-body);
+    font-weight: 600;
   }
   .label {
     font-size: var(--mf-size-body);
