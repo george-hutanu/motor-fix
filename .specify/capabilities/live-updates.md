@@ -394,9 +394,9 @@ _From 1190-live-reconnects._
 
 _From 1190-live-reconnects._
 
-### 1190-FR-008 — Every tab MUST keep the latest position it has seen (its own or fanned out), and every stream the client opens after a first one MUST name it (`Last-Event-ID`); a `reconnect` message MUST be followed by a reopen at once, with no backoff and no token renewal, and every reconnect keeps re-reading the open views (255-FR-004 unchanged: replay covers the bell, not the screens).
+### 1190-FR-008 — Every tab MUST keep the latest position it has seen (its own or fanned out), and every stream the client opens after a first one MUST name it (`Last-Event-ID`); a `reconnect` message MUST be followed by a reopen at once, with no backoff and no token renewal, at most once a minute per connection (a second `reconnect` within a minute of the last reopen at once waits the backoff a failure would), and every reconnect keeps re-reading the open views (255-FR-004 unchanged: replay covers the bell, not the screens).
 
-_From 1190-live-reconnects._
+_From 1190-live-reconnects; modified by 1190-reopen-cap._
 
 ### 1190-FR-009 — On `pagehide` the tab MUST close its stream (releasing the browser's lock when it holds it) and keep no open request, so the page is eligible for the back/forward cache; on `pageshow` it MUST want the stream again, taking the lock if free, from its latest position.
 
@@ -414,9 +414,9 @@ _From 1190-live-reconnects._
 
 _From 1190-live-reconnects._
 
-### 1190-FR-015 — Tests MUST cover: in Jest on real PostgreSQL and Redis, a stream dropped, five notifications created, a reconnect with the last position receiving all five in order with the right count, a foreign and a missing position replaying nothing, the 200 cap, the count kept across create, read and read-all in one transaction, the `retry` line, the heartbeat and the planned `reconnect` close with a shortened interval, and the headers and no-compression rule for both streams; in web unit tests, the lock holder and follower roles, the position kept and sent, the reopen on `reconnect` without backoff, `pagehide`/`pageshow`, and the fallback without the primitives; in Playwright, two tabs of one browser holding one stream and both showing a test update within 2 seconds, and the stream moving when the holder closes.
+### 1190-FR-015 — Tests MUST cover: in Jest on real PostgreSQL and Redis, a stream dropped, five notifications created, a reconnect with the last position receiving all five in order with the right count, a foreign and a missing position replaying nothing, the 200 cap, the count kept across create, read and read-all in one transaction, the `retry` line, the heartbeat and the planned `reconnect` close with a shortened interval, and the headers and no-compression rule for both streams; in web unit tests, the lock holder and follower roles, the position kept and sent, the reopen on `reconnect` without backoff and the backoff on a second `reconnect` within a minute, `pagehide`/`pageshow`, and the fallback without the primitives; in Playwright, two tabs of one browser holding one stream and both showing a test update within 2 seconds, and the stream moving when the holder closes.
 
-_From 1190-live-reconnects._
+_From 1190-live-reconnects; modified by 1190-reopen-cap._
 
 ### 532-FR-004 — After a lapse, a sign-in as the same account MUST send the kept actions in order; a sign-in as another account MUST NOT send them and drops them.
 
