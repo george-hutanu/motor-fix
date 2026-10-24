@@ -36,6 +36,11 @@ const REPO = "{owner}/{repo}";
 const FILES_CAP = 3000;
 const short = (sha) => String(sha ?? "").slice(0, 7);
 const runId = (url) => /\/actions\/runs\/(\d+)/.exec(String(url ?? ""))?.[1] ?? null;
+/** The run id a status's target_url names, or null when it names none or a run of another repository than `repo`. */
+const ownRunId = (url, repo) => {
+  const m = /^https:\/\/github\.com\/([^/\s]+\/[^/\s]+)\/actions\/runs\/(\d+)/.exec(String(url ?? ""));
+  return m && repo && m[1].toLowerCase() === String(repo).toLowerCase() ? m[2] : null;
+};
 
 /** The commit a run tested: its head for pull_request, the sha in its run-name for a dispatched lap. */
 const testedSha = (run) => (run.event === "workflow_dispatch" ? (/\bat ([0-9a-f]{40})\b/.exec(run.display_title ?? "")?.[1] ?? "") : run.head_sha);
@@ -44,9 +49,10 @@ const testedSha = (run) => (run.event === "workflow_dispatch" ? (/\bat ([0-9a-f]
 export function judgeProvenance({ sha, pr, status, run, testerReview, qaWorkflowChanged, defaultBranch }) {
   if (testerReview === "failure") return `the PR tester's latest review of ${short(sha)} is a failure, which the agent-review status does not show`;
   const by = status?.creator ?? {};
-  if (by.type === "User" && !runId(status.target_url)) return null;
+  // A person's failure or pending status is the merge gate's own check; only a success is judged here.
+  if (by.type === "User" && (status.state !== "success" || !runId(status.target_url))) return null;
   if (by.type !== "User" && by.login !== ACTIONS) return `agent-review on ${short(sha)} was written by ${by.login || "an unknown account"}, neither the owner's tester nor the PR QA workflow`;
-  if (!runId(status.target_url) || !run) return `agent-review on ${short(sha)} was written by a workflow that names no run`;
+  if (!runId(status.target_url) || !run) return `agent-review on ${short(sha)} names no run of this repository's that could be read`;
   if (run.path !== QA_WORKFLOW_PATH) return `agent-review on ${short(sha)} was written by ${run.path}, not the PR QA workflow`;
   if (run.status !== "completed") return `the PR QA run that wrote agent-review on ${short(sha)} is still ${run.status}`;
   if (run.conclusion !== "success") return `the PR QA run that wrote agent-review on ${short(sha)} ended ${run.conclusion}`;
@@ -91,12 +97,12 @@ export async function readProvenance({ pr, shas, gh }) {
   const [files, reviews, [repo]] = await Promise.all([
     api(gh, ["--paginate", `repos/${REPO}/pulls/${pr}/files?per_page=100`, "--jq", ".[] | {filename, previous_filename}"]),
     api(gh, ["--paginate", `repos/${REPO}/pulls/${pr}/reviews?per_page=100`, "--jq", ".[] | {commit_id, body, type: .user.type, association: .author_association, submitted_at}"]),
-    api(gh, [`repos/${REPO}`, "--jq", "{branch: .default_branch}"]),
+    api(gh, [`repos/${REPO}`, "--jq", "{branch: .default_branch, name: .full_name}"]),
   ]);
   const one = async (sha) => {
     // Statuses come newest first, so the first agent-review entry is the one in force.
     const status = (await api(gh, [`repos/${REPO}/commits/${sha}/statuses?per_page=100`])).find((s) => s?.context === STATUS_CONTEXT) ?? null;
-    const id = runId(status?.target_url);
+    const id = ownRunId(status?.target_url, repo.name);
     const run = id ? (await api(gh, [`repos/${REPO}/actions/runs/${id}`, "--jq", "{path, event, head_branch, head_sha, display_title, status, conclusion}"]))[0] : null;
     return [sha, { status, run, testerReview: testerVerdict(reviews, sha) }];
   };

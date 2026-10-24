@@ -1,8 +1,10 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { missingReport, postVerdict, replaceSection, runUrlFor } from './post.mjs';
 
@@ -48,7 +50,7 @@ describe('posting the review', () => {
     assert.equal(out.review, 'COMMENT');
   });
 
-  // @traces 447-own-pr-refusal-FR-001
+  // @traces 447-FR-001
   it('falls back for either own-PR refusal GitHub sends, approve or request changes', () => {
     for (const [verdict, message] of [['success', 'Can not approve your own pull request'], ['failure', 'Can not request changes on your own pull request']]) {
       let first = true;
@@ -60,7 +62,7 @@ describe('posting the review', () => {
     }
   });
 
-  // @traces 447-own-pr-refusal-FR-001
+  // @traces 447-FR-001
   it('reports any other HTTP 422 as a failure and tries no COMMENT review, so the real error is not lost', () => {
     const stderr = 'gh: Validation Failed (HTTP 422)\n{"message":"Validation Failed","errors":["commit_id is not part of the pull request"]}';
     const { calls, gh } = fakeGh([[/\/reviews\b/, { code: 1, stdout: '', stderr }]]);
@@ -70,7 +72,7 @@ describe('posting the review', () => {
     assert.match(out.reviewError, /commit_id is not part of the pull request/);
   });
 
-  // @traces 447-own-pr-refusal-FR-002
+  // @traces 447-FR-002
   it('names the run the report came from as the status target, so the merge gate can judge it', () => {
     const url = 'https://github.com/george-hutanu/motor-fix/actions/runs/987';
     const a = fakeGh();
@@ -82,7 +84,7 @@ describe('posting the review', () => {
     assert.doesNotMatch(b.calls.find((c) => c.args.includes(`repos/${base.repo}/statuses/${base.sha}`)).args.join(' '), /target_url/);
   });
 
-  // @traces 447-own-pr-refusal-FR-002
+  // @traces 447-FR-002
   it("reads the run URL from the ci-run.json dispatch.mjs left beside the report, and none from anything else", () => {
     const dir = mkdtempSync(join(tmpdir(), 'post-run-'));
     const report = join(dir, 'report.json');
@@ -173,6 +175,28 @@ describe('posting from a cloud session, where the workflow owns the status and G
     const { calls, gh } = fakeGh();
     postVerdict({ ...base, verdict: 'success', gh, cloud: false });
     assert.equal(calls.filter((c) => c.args.some((a) => /statuses/.test(a))).length, 1);
+  });
+});
+
+describe('the post command', () => {
+  // @traces 447-FR-001
+  it('exits 1 naming the error when GitHub refuses the review for another reason, after the status is set', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'post-cli-'));
+    const log = join(dir, 'gh.log');
+    writeFileSync(
+      join(dir, 'gh'),
+      `#!/bin/sh\necho "$*" >> "${log}"\ncase "$*" in\n  */reviews*) echo 'gh: Validation Failed (HTTP 422)' >&2; exit 1 ;;\n  "pr view"*) echo '{"body":""}' ;;\n  *) echo '{}' ;;\nesac\n`,
+    );
+    chmodSync(join(dir, 'gh'), 0o755);
+    const report = join(dir, 'report.json');
+    writeFileSync(report, JSON.stringify({ pr: 21, repo: 'george-hutanu/motor-fix', sha: 'a'.repeat(40), verdict: 'success', summary: 'No blocking findings', markdown: 'x', lap: 1 }));
+    const script = join(dirname(fileURLToPath(import.meta.url)), 'post.mjs');
+    const run = spawnSync(process.execPath, [script, '--report', report], { encoding: 'utf8', env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, CLAUDE_CODE_REMOTE: '' } });
+    assert.equal(run.status, 1, run.stderr);
+    assert.match(run.stderr, /review was not posted: gh: Validation Failed/);
+    const calls = readFileSync(log, 'utf8');
+    assert.match(calls, /statuses\/a{40}.*state=success/);
+    assert.equal(calls.match(/\/reviews/g).length, 1);
   });
 });
 

@@ -197,6 +197,19 @@ export const testsCommand = ({ base, sha }) => ["nx", "affected", "-t", "test", 
  * The files between two commits of the tree under test (`cwd`: the workflow's checkout, with its full history,
  * never the tester's own sparse one), or null when either commit is not there.
  */
+/**
+ * The lap's folder, ready for a run on this machine: shots/ and logs/ made, and a ci-run.json
+ * an earlier dispatched lap left there removed, so post.mjs never names a run this lap did not use.
+ */
+export function prepareOut(out) {
+  const shots = join(out, "shots");
+  const logs = join(out, "logs");
+  mkdirSync(shots, { recursive: true });
+  mkdirSync(logs, { recursive: true });
+  rmSync(join(out, "ci-run.json"), { force: true });
+  return { shots, logs };
+}
+
 export function filesBetween(cwd, from, to) {
   const r = spawnSync("git", ["diff", "--name-only", from, to], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   return r.status === 0 ? r.stdout.split("\n").filter(Boolean) : null;
@@ -241,10 +254,7 @@ async function main(argv) {
   }
   const sha = info.headRefOid;
   const out = resolve(opt.out ?? join(tmpdir(), "mf-prtest", `${opt.pr}-${sha.slice(0, 7)}`));
-  const shots = join(out, "shots");
-  const logs = join(out, "logs");
-  mkdirSync(shots, { recursive: true });
-  mkdirSync(logs, { recursive: true });
+  const { shots, logs } = prepareOut(out);
   const findings = [];
   const notes = [];
   const booted = [];
