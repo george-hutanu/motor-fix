@@ -102,7 +102,9 @@ without a status, so the test runs again.
    findings; <N> in all`, N >= 1), fix each in this PR, a failing test first,
    then the fix, committed as `fix`, `test`, `docs`, `style` or `refactor`;
    list each under `## Fixed after QA` in `specs/<feature>/finish-comment.md`,
-   one line per finding with its severity and the fix commit's sha (the file
+   one line per finding with its severity and where its fix is, made after
+   the lap: the fix commit's sha, `specs@<sha>` for a specs-repo trunk
+   commit, or `qa-flows-<n>.mjs` for a QA-flows-only change (the file
    is git-ignored: it stays in the worktree, as `handoff.md` does); then
    `lifecycle.mjs check`, push, and
    `carry.mjs <n>`. No repair lap is counted and no run is dispatched. Then
