@@ -20,7 +20,8 @@ const turn = databaseTurn(databaseUrl);
 const grants = new AssistantGrants(prisma, new AuditService(), outbox);
 const actors = new McpActorService(new AccountLoader(prisma), grants);
 
-beforeAll(turn.take, 120_000);
+// Waits out the longest holder, as serialDatabase does.
+beforeAll(turn.take, 360_000);
 afterAll(async () => {
   await prisma.$disconnect();
   await turn.release();

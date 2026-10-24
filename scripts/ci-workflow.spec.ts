@@ -333,6 +333,18 @@ describe('ci workflow', () => {
     );
   });
 
+  // Every integration spec waits on one advisory lock in one database, so
+  // projects run side by side only queue behind each other: mcp's specs timed
+  // out waiting while domain and api held the turn (dispatch 40134884002).
+  it('runs the integration projects one at a time, within an hour and a quarter', () => {
+    const block = job('integration');
+
+    expect(block).toContain('timeout-minutes: 75\n');
+    expect(step(block, 'Integration tests')).toContain(
+      'npx nx $NX_SCOPE -t test --passWithNoTests --parallel=1',
+    );
+  });
+
   // The image preloads pg_stat_statements itself: no step restarts the
   // service container before the data-store specs read the view.
   // @traces 878-FR-013 1174-FR-003
@@ -424,7 +436,7 @@ describe('ci workflow', () => {
 
     it('runs every suite as before when no file is named', () => {
       expect(run('integration', 'Integration tests', {})).toEqual([
-        'nx run-many -t test --passWithNoTests',
+        'nx run-many -t test --passWithNoTests --parallel=1',
       ]);
       expect(run('e2e', 'E2E tests', {})).toEqual(['nx run-many -t e2e']);
     });

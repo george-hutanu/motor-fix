@@ -214,8 +214,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || inputs.integration
     runs-on: ubuntu-latest
     # The suite alone takes 27 to 29 minutes (domain's run takes 27), so 30
-    # cancelled it at the edge of a finished run.
-    timeout-minutes: 45
+    # cancelled it at the edge of a finished run; it has since grown past 45
+    # (dispatch 40134884002 was cancelled with api and domain still running).
+    timeout-minutes: 75
     services: &services
       # The repository's own image (infra/postgres), as compose and staging:
       # it preloads pg_stat_statements, which the data-store specs read.
@@ -250,7 +251,9 @@ jobs:
         run: docker compose up -d --wait storage
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
-      # Named spec files run alone, one Jest run after another.
+      # Every spec takes its turn on one advisory lock in one database, so
+      # projects run one at a time rather than queue behind each other's
+      # turns. Named spec files run alone, one Jest run after another.
       - name: Integration tests
         env:
           JEST_SUITE: integration
@@ -258,7 +261,7 @@ jobs:
           REPEAT: ${{ inputs.repeat }}
         run: |
           if [ -z "$SPECS" ]; then
-            npx nx $NX_SCOPE -t test --passWithNoTests
+            npx nx $NX_SCOPE -t test --passWithNoTests --parallel=1
             exit
           fi
           [ "$REPEAT" -ge 1 ] 2>/dev/null || { echo "::error::repeat must be 1 or more, got '$REPEAT'"; exit 1; }
