@@ -262,7 +262,7 @@ describe('handing an event to the notifications service', () => {
       {
         audience: [`account:${andrei}`],
         event: {
-          at: bell?.createdAt.toISOString(),
+          at: expect.any(String),
           id: bell?.id,
           kind: 'notification.created',
           unreadCount: 1,
@@ -270,6 +270,10 @@ describe('handing an event to the notifications service', () => {
         position: String(bell?.position),
       },
     ]);
+    // The count's time, taken once the account was locked: never before the row.
+    expect(Date.parse(toAndrei()[0].event.at)).toBeGreaterThanOrEqual(
+      bell?.createdAt.getTime() ?? Number.NaN,
+    );
   });
 
   it('keeps the rows when the live publish fails', async () => {
