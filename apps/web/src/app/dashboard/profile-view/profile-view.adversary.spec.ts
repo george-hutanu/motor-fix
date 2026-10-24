@@ -183,8 +183,6 @@ describe('Profilul service-ului under hostile data', () => {
     expect(text(line(element, 'area'))).toBe('Zonă de lucru: 100 km');
   });
 
-  // FR-006 reads hours as the public profile does: a week all closed is one
-  // "Închis" run there, so it is one here too.
   it('shows one closed run when every day is closed, as the public profile', async () => {
     const { element, settle } = await render(async () =>
       answer({
@@ -421,7 +419,7 @@ describe('Profilul service-ului failures at the edges', () => {
     expect(navigate).toHaveBeenCalledWith('/app/garage');
   });
 
-  it('shows the panels again when a suspended garage is approved back', async () => {
+  it('shows the panel again when a suspended garage is approved back', async () => {
     let suspended = true;
     const { element, settle } = await render(async () => {
       if (suspended) throw status(410);
