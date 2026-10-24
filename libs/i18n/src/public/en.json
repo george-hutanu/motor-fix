@@ -90,6 +90,16 @@
       "one": "{count} review",
       "other": "{count} reviews"
     },
+    "status": {
+      "break": "Break until {start}",
+      "closedDay": "Closed today · opens {when} at {start}",
+      "closedHoliday": "Closed today · public holiday · opens {when} at {start}",
+      "closedNow": "Closed now · opens {when} at {start}",
+      "onDate": "on {d} {month}",
+      "open": "Open today until {end}",
+      "today": "today",
+      "tomorrow": "tomorrow"
+    },
     "verified": "Active company and RAR technical authorisation, checked by MotorFix. Last check: {date}.",
     "where": {
       "mobile": "Comes to you within {km}",

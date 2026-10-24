@@ -16,6 +16,7 @@ import { PriceSelection } from '../price-selection/price-selection';
 
 const GARAGE = {
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},

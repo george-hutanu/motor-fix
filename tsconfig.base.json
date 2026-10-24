@@ -66,6 +66,9 @@
       "@motor-fix/contracts/notification-groups": [
         "./libs/contracts/src/notification-groups.ts"
       ],
+      "@motor-fix/contracts/open-status": [
+        "./libs/contracts/src/open-status.ts"
+      ],
       "@motor-fix/contracts/phone": ["./libs/contracts/src/phone.ts"],
       "@motor-fix/contracts/place-section": [
         "./libs/contracts/src/place-section.ts"

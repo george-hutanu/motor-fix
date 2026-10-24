@@ -28,6 +28,7 @@ const answer = (over: Partial<GarageProfileDto> = {}): GarageProfileDto => ({
   address: 'Str. Atelierului 14, Militari',
   brandNote: null,
   businessKind: 'company',
+  closedDays: [],
   courtesyCar: { paid: false },
   doesNotTake: [
     { id: 'dacia', name: 'Dacia', slug: 'dacia' },
