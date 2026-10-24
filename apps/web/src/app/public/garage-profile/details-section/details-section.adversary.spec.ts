@@ -21,6 +21,7 @@ const refused = (name: string) => ({
 
 const GARAGE: PublicGarageDto = {
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},
