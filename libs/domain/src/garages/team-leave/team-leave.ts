@@ -2,8 +2,8 @@ import type { EventPort } from '../../events/event.port';
 import type { Prisma } from '../../generated/prisma/client';
 
 // A deleted account leaves every team it works on. Its mechanic card stays,
-// detached and off the profile, so its reviews, rating and bookings keep a
-// name; its memberships go. An owner never reaches here: the deletion
+// detached, off the profile and marked removed (out of the team list), so its
+// reviews, rating and bookings keep a name; its memberships go. An owner never reaches here: the deletion
 // refuses an account that owns a garage.
 export async function leaveTeams(
   tx: Prisma.TransactionClient,
@@ -16,7 +16,7 @@ export async function leaveTeams(
   });
   if (mechanic) {
     await tx.mechanic.update({
-      data: { accountId: null, onProfile: false },
+      data: { accountId: null, onProfile: false, removedAt: new Date() },
       where: { id: mechanic.id },
     });
     await events.record(tx, {

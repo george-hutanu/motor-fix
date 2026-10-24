@@ -104,6 +104,8 @@ export type { GarageCarDto } from './models/garage-car-dto';
 export type { GarageDriverDto } from './models/garage-driver-dto';
 export type { GarageFeaturesDto } from './models/garage-features-dto';
 export type { GarageFeatureSwitchesDto } from './models/garage-feature-switches-dto';
+export type { GarageMechanicDto } from './models/garage-mechanic-dto';
+export type { GarageMechanicsDto } from './models/garage-mechanics-dto';
 export type { GaragePermissionsDto } from './models/garage-permissions-dto';
 export type { GaragePinDto } from './models/garage-pin-dto';
 export type { GaragePinsDto } from './models/garage-pins-dto';

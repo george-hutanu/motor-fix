@@ -411,3 +411,24 @@ describe("the mechanic's reviews read and the review-ratings queue", () => {
     );
   });
 });
+
+// @traces 055-FR-015
+describe("the garage's team read route", () => {
+  it('is an OpenAPI operation the inventory lists with its metric and alerts', () => {
+    const read = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/garages/{garageId}/mechanics'];
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: { name?: string; metric?: string; alerts?: string[] }[] =
+      Object.values(inventory).flatMap((each) =>
+        Array.isArray(each) ? each : [],
+      );
+    const team = entries.find((each) => each.name === 'garage-mechanics-list');
+
+    expect(Object.keys(read)).toEqual(['get']);
+    expect(team?.metric).toMatch(/\/api\/v1\/garages\/:garageId\/mechanics$/);
+    expect(team?.alerts).toEqual(['api-error-rate', 'api-latency']);
+  });
+});
