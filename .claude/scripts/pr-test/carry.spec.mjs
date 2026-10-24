@@ -1,7 +1,12 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { MAX_COMMITS, carriedFrom, carryDescription, carryKind, fetchCarryState, findCarry, findingCount, judgeCarry, latestReview, postCarry, readCarryState } from './carry.mjs';
+import { MAX_COMMITS, carriedFrom, carryDescription, carryKind, fetchCarryState, findCarry, findingCount, judgeCarry, latestReview, postCarry } from './carry.mjs';
 
 const FROM = 'a'.repeat(40);
 const MID = 'b'.repeat(40);
@@ -31,7 +36,7 @@ function fakeGh(rules) {
 }
 
 describe('the carry claim', () => {
-  it('names the commit the verdict was carried from, and nothing else reads as a carry', () => {
+  it('names the commit the verdict was carried from, and nothing else reads as a carry', async () => {
     assert.equal(carriedFrom(carryDescription(FROM)), FROM);
     assert.equal(carriedFrom('carried from abc1234: docs-only change'), 'abc1234');
     assert.equal(carriedFrom('No blocking findings; carried from abc1234: docs-only change'), null);
@@ -39,30 +44,30 @@ describe('the carry claim', () => {
     assert.ok(carryDescription(FROM).length <= 140);
   });
 
-  it('reads the newest agent-review status from the REST list, lowercased', () => {
+  it('reads the newest agent-review status from the REST list, lowercased', async () => {
     assert.deepEqual(latestReview([{ context: 'other', state: 'failure' }, status('success'), status('failure')]), { state: 'success', description: 'No blocking findings' });
     assert.equal(latestReview([{ context: 'other', state: 'success' }]), null);
   });
 });
 
 describe('judging a carry', () => {
-  it('accepts a success on an ancestor with a docs-only diff to head', () => {
+  it('accepts a success on an ancestor with a docs-only diff to head', async () => {
     assert.equal(judgeCarry(passing()), null);
   });
 
-  it('refuses a named commit whose agent review failed, is missing, or was itself carried', () => {
+  it('refuses a named commit whose agent review failed, is missing, or was itself carried', async () => {
     assert.match(judgeCarry(passing({ fromReview: { state: 'failure', description: 'x' } })), /no agent-review success/);
     assert.match(judgeCarry(passing({ fromReview: null })), /no agent-review success/);
     assert.match(judgeCarry(passing({ fromReview: { state: 'success', description: carryDescription(MID) } })), /itself carried/);
   });
 
-  it('refuses a named commit that is not an ancestor of head', () => {
+  it('refuses a named commit that is not an ancestor of head', async () => {
     assert.match(judgeCarry(passing({ compare: docsCompare({ status: 'diverged' }) })), /not an ancestor/);
     assert.match(judgeCarry(passing({ compare: docsCompare({ status: 'behind' }) })), /not an ancestor/);
     assert.match(judgeCarry(passing({ compare: docsCompare({ status: 'identical' }) })), /not an ancestor/);
   });
 
-  it('refuses a diff that is not documentation only, by the docs-only.ts definition', () => {
+  it('refuses a diff that is not documentation only, by the docs-only.ts definition', async () => {
     const code = docsCompare({ files: [{ filename: 'docs/x.md' }, { filename: 'apps/api/src/main.ts' }] });
     assert.match(judgeCarry(passing({ compare: code })), /apps\/api\/src\/main\.ts/);
     // Markdown the harness reads is not documentation (scripts/docs-only.ts).
@@ -73,26 +78,26 @@ describe('judging a carry', () => {
   });
 
   // @traces 1324-FR-007
-  it('refuses a range that touches a deferred.md, since tech-debt tickets are retired', () => {
+  it('refuses a range that touches a deferred.md, since tech-debt tickets are retired', async () => {
     assert.match(judgeCarry(passing({ compare: docsCompare({ files: [{ filename: 'specs/194-email-sending/deferred.md' }] }) })), /deferred\.md/);
     assert.match(judgeCarry(passing({ compare: docsCompare({ files: [{ filename: 'README.md' }, { filename: 'notes/deferred.md' }] }) })), /notes\/deferred\.md/);
   });
 
-  it('refuses a diff GitHub truncated, since the unseen files cannot be judged', () => {
+  it('refuses a diff GitHub truncated, since the unseen files cannot be judged', async () => {
     const files = Array.from({ length: 300 }, (_, i) => ({ filename: `docs/${i}.md` }));
     assert.match(judgeCarry(passing({ compare: docsCompare({ files }) })), /too large/);
     assert.match(judgeCarry(passing({ compare: docsCompare({ total_commits: 300 }) })), /too large/);
   });
 
-  it('refuses a docs-only tail longer than the commit cap, before reading a status per commit', () => {
+  it('refuses a docs-only tail longer than the commit cap, before reading a status per commit', async () => {
     const many = Array.from({ length: MAX_COMMITS + 1 }, (_, i) => ({ sha: String(i).padStart(40, '0') }));
     const { calls, gh } = fakeGh([[/compare\//, ok(docsCompare({ total_commits: many.length, commits: many }))]]);
-    const state = readCarryState({ from: FROM, head: HEAD, gh });
+    const state = await fetchCarryState({ from: FROM, head: HEAD, gh });
     assert.equal(calls.length, 1);
     assert.match(judgeCarry({ from: FROM, head: HEAD, ...state }), /too large/);
   });
 
-  it('refuses a carry past a real failing verdict, on a commit between or on head itself', () => {
+  it('refuses a carry past a real failing verdict, on a commit between or on head itself', async () => {
     assert.match(judgeCarry(passing({ between: [{ sha: MID, review: { state: 'failure', description: 'x' } }] })), /bbbbbbb.*failure/);
     assert.equal(judgeCarry(passing({ between: [{ sha: MID, review: { state: 'success', description: carryDescription(FROM) } }] })), null);
     assert.equal(judgeCarry(passing({ between: [{ sha: MID, review: null }] })), null);
@@ -103,23 +108,23 @@ describe('judging a carry', () => {
 const viewOf = (commits) => ok({ headRefOid: HEAD, commits: commits.map((oid) => ({ oid })) });
 
 describe('reading the state from GitHub', () => {
-  it('reads the compare, the named commit, the commits between and head', () => {
+  it('reads the compare, the named commit, the commits between and head', async () => {
     const { gh } = fakeGh([
       [/compare\/aaaaaaa\.\.\.c{40}/, ok(docsCompare({ total_commits: 2, commits: [{ sha: MID }, { sha: HEAD }] }))],
       [/commits\/a{40}\/statuses/, ok([status('success')])],
       [/commits\/b{40}\/statuses/, ok([])],
       [/commits\/c{40}\/statuses/, ok([status('success', carryDescription(FROM))])],
     ]);
-    const state = readCarryState({ from: 'aaaaaaa', head: HEAD, gh });
+    const state = await fetchCarryState({ from: 'aaaaaaa', head: HEAD, gh });
     assert.equal(state.fromReview.state, 'success');
     assert.deepEqual(state.between, [{ sha: MID, review: null }]);
     assert.equal(state.headReviews.length, 1);
     assert.equal(judgeCarry({ from: 'aaaaaaa', head: HEAD, ...state }), null);
   });
 
-  it('throws when gh fails, so the gate never reads silence as a pass', () => {
+  it('throws when gh fails, so the gate never reads silence as a pass', async () => {
     const { gh } = fakeGh([]);
-    assert.throws(() => readCarryState({ from: FROM, head: HEAD, gh }), /unexpected gh/);
+    await assert.rejects(fetchCarryState({ from: FROM, head: HEAD, gh }), /unexpected gh/);
   });
 
   // Inside the merge gate every statuses read waits on the compare
@@ -143,7 +148,7 @@ describe('reading the state from GitHub', () => {
     };
     const state = await fetchCarryState({ from: FROM, head: HEAD, gh });
     assert.equal(most, 3, 'the named commit, the commit between and head are read together');
-    assert.deepEqual(state, readCarryState({ from: FROM, head: HEAD, gh: sync }));
+    assert.deepEqual(state, await fetchCarryState({ from: FROM, head: HEAD, gh: sync }));
     assert.equal(judgeCarry({ from: FROM, head: HEAD, ...state }), null);
   });
 
@@ -160,47 +165,47 @@ describe('reading the state from GitHub', () => {
 describe('finding a carry for a PR', () => {
   const statuses = (map) => [/commits\/([0-9a-f]{40})\/statuses/, (args) => ok(map[args.join(' ').match(/commits\/([0-9a-f]{40})/)[1]] ?? [])];
 
-  it('carries from the newest real success when the rest is docs-only', () => {
+  it('carries from the newest real success when the rest is docs-only', async () => {
     const { gh } = fakeGh([
       [/pr view/, viewOf([FROM, MID, HEAD])],
       [/compare\//, ok(docsCompare({ total_commits: 2, commits: [{ sha: MID }, { sha: HEAD }] }))],
       statuses({ [FROM]: [status('success')] }),
     ]);
-    assert.deepEqual(findCarry({ pr: 21, gh }), { from: FROM, head: HEAD, kind: 'docs' });
+    assert.deepEqual(await findCarry({ pr: 21, gh }), { from: FROM, head: HEAD, kind: 'docs' });
   });
 
-  it('skips an earlier carried success and carries from the commit that was tested', () => {
+  it('skips an earlier carried success and carries from the commit that was tested', async () => {
     const { gh } = fakeGh([
       [/pr view/, viewOf([FROM, MID, HEAD])],
       [/compare\/a{40}/, ok(docsCompare({ total_commits: 2, commits: [{ sha: MID }, { sha: HEAD }] }))],
       statuses({ [FROM]: [status('success')], [MID]: [status('success', carryDescription(FROM))] }),
     ]);
-    assert.equal(findCarry({ pr: 21, gh }).from, FROM);
+    assert.equal((await findCarry({ pr: 21, gh })).from, FROM);
   });
 
-  it('does not carry past a failing verdict, onto a head that has one, or with no success at all', () => {
+  it('does not carry past a failing verdict, onto a head that has one, or with no success at all', async () => {
     const failing = fakeGh([[/pr view/, viewOf([FROM, MID, HEAD])], statuses({ [FROM]: [status('success')], [MID]: [status('failure')] })]);
-    assert.match(findCarry({ pr: 21, gh: failing.gh }).reason, /failure/);
+    assert.match((await findCarry({ pr: 21, gh: failing.gh })).reason, /failure/);
     const judged = fakeGh([[/pr view/, viewOf([FROM, HEAD])], statuses({ [FROM]: [status('success')], [HEAD]: [status('pending')] })]);
-    assert.match(findCarry({ pr: 21, gh: judged.gh }).reason, /already has/);
+    assert.match((await findCarry({ pr: 21, gh: judged.gh })).reason, /already has/);
     const none = fakeGh([[/pr view/, viewOf([FROM, HEAD])], statuses({})]);
-    assert.match(findCarry({ pr: 21, gh: none.gh }).reason, /no agent-review success/);
+    assert.match((await findCarry({ pr: 21, gh: none.gh })).reason, /no agent-review success/);
   });
 
-  it('does not carry over a code change', () => {
+  it('does not carry over a code change', async () => {
     const { gh } = fakeGh([
       [/pr view/, viewOf([FROM, HEAD])],
       [/compare\//, ok(docsCompare({ files: [{ filename: 'apps/web/src/app.ts' }] }))],
       statuses({ [FROM]: [status('success')] }),
     ]);
-    const out = findCarry({ pr: 21, gh });
+    const out = await findCarry({ pr: 21, gh });
     assert.equal(out.from, FROM);
     assert.match(out.reason, /apps\/web\/src\/app\.ts/);
   });
 });
 
 describe('posting a carry', () => {
-  it('sets agent-review success on head naming the commit, and notes it in the Agent review section', () => {
+  it('sets agent-review success on head naming the commit, and notes it in the Agent review section', async () => {
     const { calls, gh } = fakeGh([
       [/pr view/, ok({ body: '## Agent review\n\n<!-- agent-review: the automated reviewer replaces the line below -->\nVerdict: success (agent-review on aaaaaaa, lap 1)\n' })],
       [/statuses\//, ok({})],
@@ -217,14 +222,14 @@ describe('posting a carry', () => {
     assert.equal(out.section, 'description');
   });
 
-  it('posts nothing on a dry run', () => {
+  it('posts nothing on a dry run', async () => {
     const { calls, gh } = fakeGh([[/pr view/, ok({ body: '' })]]);
     const out = postCarry({ pr: 21, from: FROM, head: HEAD, gh, dryRun: true });
     assert.equal(out.dryRun, true);
     assert.ok(!calls.some((c) => c.args.some((a) => /statuses\//.test(a))));
   });
 
-  it('throws when the status cannot be set', () => {
+  it('throws when the status cannot be set', async () => {
     const { gh } = fakeGh([[/pr view/, ok({ body: '' })], [/statuses\//, { code: 1, stdout: '', stderr: 'HTTP 403' }]]);
     assert.throws(() => postCarry({ pr: 21, from: FROM, head: HEAD, gh }), /HTTP 403/);
   });
@@ -245,7 +250,7 @@ const fixes = (over = {}) => ({ from: FROM, head: HEAD, kind: 'fixes', fromRevie
 
 describe('the QA fixes carry', () => {
   // @traces 1362-FR-002
-  it('names the commit and its kind, apart from the docs-only carry', () => {
+  it('names the commit and its kind, apart from the docs-only carry', async () => {
     assert.equal(carryDescription(FROM, 'fixes'), `carried from ${FROM}: QA fixes`);
     assert.equal(carriedFrom(carryDescription(FROM, 'fixes')), FROM);
     assert.equal(carryKind(carryDescription(FROM, 'fixes')), 'fixes');
@@ -255,7 +260,7 @@ describe('the QA fixes carry', () => {
   });
 
   // @traces 1362-FR-003
-  it('reads the finding count only from the PR tester\'s own success description', () => {
+  it('reads the finding count only from the PR tester\'s own success description', async () => {
     assert.equal(findingCount(FINDINGS), 3);
     assert.equal(findingCount('No blocking findings; 0 in all. Booted 2/2.'), 0);
     assert.equal(findingCount('PR QA lap 2 passed'), null);
@@ -264,7 +269,7 @@ describe('the QA fixes carry', () => {
   });
 
   // @traces 1362-FR-003
-  it('accepts fix and test commits after a passing lap that reported findings, whatever paths they touch', () => {
+  it('accepts fix and test commits after a passing lap that reported findings, whatever paths they touch', async () => {
     assert.equal(judgeCarry(fixes()), null);
     const scoped = fixesCompare({ commits: [fix(MID, 'style: tidy'), fix(HEAD, 'refactor(web)!: rename'), ] });
     assert.equal(judgeCarry(fixes({ compare: { ...scoped, total_commits: 2 } })), null);
@@ -272,20 +277,20 @@ describe('the QA fixes carry', () => {
   });
 
   // @traces 1362-FR-003
-  it('refuses a fixes carry from a lap with no findings or no count', () => {
+  it('refuses a fixes carry from a lap with no findings or no count', async () => {
     assert.match(judgeCarry(fixes({ fromReview: { state: 'success', description: 'No blocking findings; 0 in all.' } })), /no medium or low finding/);
     assert.match(judgeCarry(fixes({ fromReview: { state: 'success', description: 'PR QA lap 2 passed' } })), /no medium or low finding/);
   });
 
   // @traces 1362-FR-003 1362-FR-006
-  it('refuses a failing lap, a carried success, or a commit that is not an ancestor', () => {
+  it('refuses a failing lap, a carried success, or a commit that is not an ancestor', async () => {
     assert.match(judgeCarry(fixes({ fromReview: { state: 'failure', description: '1 blocking finding; 3 in all' } })), /no agent-review success/);
     assert.match(judgeCarry(fixes({ fromReview: { state: 'success', description: carryDescription(MID, 'fixes') } })), /itself carried/);
     assert.match(judgeCarry(fixes({ compare: fixesCompare({ status: 'diverged' }) })), /not an ancestor/);
   });
 
   // @traces 1362-FR-003
-  it('refuses any commit that is not a fix, test, docs, style or refactor, and any merge commit', () => {
+  it('refuses any commit that is not a fix, test, docs, style or refactor, and any merge commit', async () => {
     for (const message of ['feat(api): ST-9 new route', 'chore: bump', 'ci: x', 'perf: y', 'Merge branch main', 'fixes things']) {
       const compare = fixesCompare({ commits: [fix(MID, 'test: a'), fix(HEAD, message)] });
       assert.match(judgeCarry(fixes({ compare })), /ccccccc is not a lap fix/, message);
@@ -297,7 +302,7 @@ describe('the QA fixes carry', () => {
   });
 
   // @traces 1362-FR-003
-  it('refuses a deferred.md, a long tail and a failing lap after the named commit, as the docs carry does', () => {
+  it('refuses a deferred.md, a long tail and a failing lap after the named commit, as the docs carry does', async () => {
     assert.match(judgeCarry(fixes({ compare: fixesCompare({ files: [{ filename: 'specs/9-x/deferred.md' }] }) })), /deferred\.md/);
     assert.match(judgeCarry(fixes({ compare: fixesCompare({ total_commits: MAX_COMMITS + 1 }) })), /too large/);
     assert.match(judgeCarry(fixes({ between: [{ sha: MID, review: { state: 'failure', description: 'x' } }] })), /bbbbbbb.*failure/);
@@ -305,7 +310,7 @@ describe('the QA fixes carry', () => {
   });
 
   // @traces 1362-FR-004
-  it('refuses a docs-only carry from a lap that reported findings: its fixes are owed', () => {
+  it('refuses a docs-only carry from a lap that reported findings: its fixes are owed', async () => {
     assert.match(judgeCarry(passing({ fromReview: { state: 'success', description: FINDINGS } })), /reported 3 findings/);
     assert.equal(judgeCarry(passing({ fromReview: { state: 'success', description: 'No blocking findings; 0 in all.' } })), null);
   });
@@ -313,18 +318,18 @@ describe('the QA fixes carry', () => {
   const statuses = (map) => [/commits\/([0-9a-f]{40})\/statuses/, (args) => ok(map[args.join(' ').match(/commits\/([0-9a-f]{40})/)[1]] ?? [])];
 
   // @traces 1362-FR-004
-  it('finds a fixes carry when the named lap reported findings, and says why not otherwise', () => {
+  it('finds a fixes carry when the named lap reported findings, and says why not otherwise', async () => {
     const rules = (compare) => [[/pr view/, viewOf([FROM, MID, HEAD])], [/compare\//, ok(compare)], statuses({ [FROM]: [status('success', FINDINGS)] })];
-    assert.deepEqual(findCarry({ pr: 21, gh: fakeGh(rules(fixesCompare())).gh }), { from: FROM, head: HEAD, kind: 'fixes' });
-    const feat = findCarry({ pr: 21, gh: fakeGh(rules(fixesCompare({ commits: [fix(MID, 'test: a'), fix(HEAD, 'feat: b')] }))).gh });
+    assert.deepEqual(await findCarry({ pr: 21, gh: fakeGh(rules(fixesCompare())).gh }), { from: FROM, head: HEAD, kind: 'fixes' });
+    const feat = await findCarry({ pr: 21, gh: fakeGh(rules(fixesCompare({ commits: [fix(MID, 'test: a'), fix(HEAD, 'feat: b')] }))).gh });
     assert.equal(feat.kind, 'fixes');
     assert.match(feat.reason, /not a lap fix/);
-    const docs = findCarry({ pr: 21, gh: fakeGh([[/pr view/, viewOf([FROM, MID, HEAD])], [/compare\//, ok(docsCompare({ total_commits: 2, commits: [fix(MID, 'chore: a'), fix(HEAD, 'chore: b')] }))], statuses({ [FROM]: [status('success', 'No blocking findings; 0 in all.')] })]).gh });
+    const docs = await findCarry({ pr: 21, gh: fakeGh([[/pr view/, viewOf([FROM, MID, HEAD])], [/compare\//, ok(docsCompare({ total_commits: 2, commits: [fix(MID, 'chore: a'), fix(HEAD, 'chore: b')] }))], statuses({ [FROM]: [status('success', 'No blocking findings; 0 in all.')] })]).gh });
     assert.deepEqual(docs, { from: FROM, head: HEAD, kind: 'docs' });
   });
 
   // @traces 1362-FR-002
-  it('posts the fixes description and says so in the Agent review section', () => {
+  it('posts the fixes description and says so in the Agent review section', async () => {
     const { calls, gh } = fakeGh([[/pr view/, ok({ body: '## Agent review\n\nVerdict: success\n' })], [/statuses\//, ok({})], [/pr edit/, ok({})]]);
     postCarry({ pr: 21, from: FROM, head: HEAD, kind: 'fixes', gh });
     const set = calls.find((c) => c.args.includes(`repos/{owner}/{repo}/statuses/${HEAD}`));
@@ -347,28 +352,28 @@ describe('the merge-of-main carry', () => {
   const sides = (over = {}) => ({ main: mainFiles.map((f) => f.filename), pr: ['apps/web/src/mine.ts', 'apps/web/src/mine.spec.ts'], ...over });
   const merged = (over = {}) => ({ from: FROM, head: HEAD, kind: 'merge', fromReview: { state: 'success', description: 'No blocking findings; 0 in all.' }, compare: mergeCompare(), merges: { [HEAD]: sides() }, between: [], headReviews: [], ...over });
 
-  it('names the commit and its kind, apart from the other two', () => {
+  it('names the commit and its kind, apart from the other two', async () => {
     assert.equal(carryDescription(FROM, 'merge'), `carried from ${FROM}: merge of main`);
     assert.equal(carriedFrom(carryDescription(FROM, 'merge')), FROM);
     assert.equal(carryKind(carryDescription(FROM, 'merge')), 'merge');
     assert.equal(carryKind(carryDescription(FROM, 'fixes')), 'fixes');
   });
 
-  it('carries a merge whose own diff touches none of the PR\'s files, however much main brought in', () => {
+  it('carries a merge whose own diff touches none of the PR\'s files, however much main brought in', async () => {
     assert.equal(judgeCarry(merged()), null);
   });
 
-  it('refuses a merge that changes a file the PR changes, naming it', () => {
+  it('refuses a merge that changes a file the PR changes, naming it', async () => {
     const why = judgeCarry(merged({ merges: { [HEAD]: sides({ main: ['apps/api/src/other-1.ts', 'apps/web/src/mine.ts'] }) } }));
     assert.match(why, /ccccccc is a merge commit that changes apps\/web\/src\/mine\.ts/);
   });
 
-  it('refuses a merge whose two sides were not read, or were too large to read whole', () => {
+  it('refuses a merge whose two sides were not read, or were too large to read whole', async () => {
     assert.match(judgeCarry(merged({ merges: {} })), /ccccccc is a merge commit/);
     assert.match(judgeCarry(merged({ merges: { [HEAD]: sides({ main: Array.from({ length: 300 }, (_, i) => `f${i}`) }) } })), /too large/);
   });
 
-  it('counts the caps over the PR\'s own first-parent commits only', () => {
+  it('counts the caps over the PR\'s own first-parent commits only', async () => {
     const many = [];
     let parent = FROM;
     for (let i = 0; i <= MAX_COMMITS; i++) {
@@ -380,13 +385,13 @@ describe('the merge-of-main carry', () => {
     assert.match(judgeCarry(merged({ compare: mergeCompare([...fromMain, ...many]), merges })), /too large/);
   });
 
-  it('rides on merges alone, and not over a lap whose fixes are owed', () => {
+  it('rides on merges alone, and not over a lap whose fixes are owed', async () => {
     const withFix = mergeCompare([...fromMain, { ...fix(MID, 'fix: a'), parents: [{ sha: FROM }] }, merge(HEAD, MID)]);
     assert.match(judgeCarry(merged({ compare: withFix })), /bbbbbbb is not a merge of main/);
     assert.match(judgeCarry(merged({ fromReview: { state: 'success', description: FINDINGS } })), /fixes are owed/);
   });
 
-  it('lets a QA-fixes carry ride over a disjoint merge of main, and still refuses an overlapping one or a feature commit', () => {
+  it('lets a QA-fixes carry ride over a disjoint merge of main, and still refuses an overlapping one or a feature commit', async () => {
     const compare = mergeCompare([...fromMain, { ...fix(MID, 'fix(api): a'), parents: [{ sha: FROM }] }, merge(HEAD, MID)]);
     const base = { ...merged({ compare }), kind: 'fixes', fromReview: { state: 'success', description: FINDINGS } };
     assert.equal(judgeCarry(base), null);
@@ -395,14 +400,14 @@ describe('the merge-of-main carry', () => {
     assert.match(judgeCarry({ ...base, compare: feat }), /bbbbbbb is not a lap fix/);
   });
 
-  it('reads both sides of each merge and the statuses of the PR\'s own commits only', () => {
+  it('reads both sides of each merge and the statuses of the PR\'s own commits only', async () => {
     const { calls, gh } = fakeGh([
       [/compare\/a{40}\.\.\.c{40}/, ok(mergeCompare())],
       [/compare\/d{40}\.\.\.c{40}/, ok({ status: 'ahead', files: sides().pr.map((filename) => ({ filename })) })],
       [/commits\/a{40}\/statuses/, ok([status('success', 'No blocking findings; 0 in all.')])],
       [/commits\/c{40}\/statuses/, ok([])],
     ]);
-    const state = readCarryState({ from: FROM, head: HEAD, gh });
+    const state = await fetchCarryState({ from: FROM, head: HEAD, gh });
     assert.deepEqual(state.merges[HEAD].pr, sides().pr);
     assert.equal(calls.filter((c) => /statuses/.test(c.args.join(' '))).length, 2);
     assert.equal(judgeCarry({ from: FROM, head: HEAD, kind: 'merge', ...state }), null);
@@ -416,10 +421,10 @@ describe('the merge-of-main carry', () => {
       [/commits\/c{40}\/statuses/, ok([])],
     ]);
     const state = await fetchCarryState({ from: FROM, head: HEAD, gh: async (a) => gh(a) });
-    assert.deepEqual(state, readCarryState({ from: FROM, head: HEAD, gh }));
+    assert.deepEqual(state, await fetchCarryState({ from: FROM, head: HEAD, gh }));
   });
 
-  it('finds a merge-of-main carry when the lap reported nothing and head merged main in', () => {
+  it('finds a merge-of-main carry when the lap reported nothing and head merged main in', async () => {
     const statuses = [/commits\/([0-9a-f]{40})\/statuses/, (args) => ok(args.join(' ').includes(FROM) ? [status('success', 'No blocking findings; 0 in all.')] : [])];
     const { gh } = fakeGh([
       [/pr view/, viewOf([FROM, HEAD])],
@@ -427,11 +432,62 @@ describe('the merge-of-main carry', () => {
       [/compare\/d{40}\.\.\.c{40}/, ok({ status: 'ahead', files: [{ filename: 'apps/web/src/mine.ts' }] })],
       statuses,
     ]);
-    assert.deepEqual(findCarry({ pr: 21, gh }), { from: FROM, head: HEAD, kind: 'merge' });
+    assert.deepEqual(await findCarry({ pr: 21, gh }), { from: FROM, head: HEAD, kind: 'merge' });
   });
 
-  it('keeps the single-parent rule for the fix commits themselves', () => {
+  it('keeps the single-parent rule for the fix commits themselves', async () => {
     const compare = fixesCompare({ commits: [fix(MID, 'test: a'), fix(HEAD, 'feat: b')] });
     assert.match(judgeCarry(fixes({ compare })), /ccccccc is not a lap fix/);
+  });
+});
+
+describe('one carry reader, for the watch and the gate alike', () => {
+  // @traces 448-FR-007
+  it('has fetchCarryState alone: readCarryState is gone, and findCarry answers with a promise', async () => {
+    const mod = await import('./carry.mjs');
+    assert.equal(mod.readCarryState, undefined);
+    const { gh } = fakeGh([[/pr view/, viewOf([FROM, HEAD])], [/compare\//, ok(docsCompare())], [/commits\/a{40}\/statuses/, ok([status('success')])], [/statuses/, ok([])]]);
+    const pending = findCarry({ pr: 21, gh });
+    assert.ok(pending instanceof Promise);
+    assert.deepEqual(await pending, { from: FROM, head: HEAD, kind: 'docs' });
+  });
+
+  // @traces 448-FR-008
+  describe('carry.mjs <pr> --find', () => {
+    const cli = fileURLToPath(new URL('./carry.mjs', import.meta.url));
+    /** Runs the CLI with a gh on PATH answering by `answers` (a regex source → JSON), exit 1 for anything else. */
+    const find = (answers) => {
+      const dir = mkdtempSync(join(tmpdir(), 'carry-find-'));
+      try {
+        writeFileSync(join(dir, 'answers.json'), JSON.stringify(answers));
+        writeFileSync(
+          join(dir, 'gh'),
+          `#!${process.execPath}\nconst a = require(${JSON.stringify(join(dir, 'answers.json'))});\nconst line = process.argv.slice(2).join(' ');\nfor (const [k, v] of Object.entries(a)) if (new RegExp(k).test(line)) { process.stdout.write(JSON.stringify(v)); process.exit(0); }\nprocess.stderr.write('HTTP 502 for ' + line); process.exit(1);\n`,
+          { mode: 0o755 },
+        );
+        return spawnSync(process.execPath, [cli, '21', '--find'], { encoding: 'utf8', timeout: 20000, env: { ...process.env, PATH: `${dir}:${process.env.PATH}` } });
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    };
+
+    it("prints findCarry's answer as one JSON object and exits 0", async () => {
+      const out = find({ 'pr view': { headRefOid: HEAD, commits: [{ oid: FROM }, { oid: HEAD }] }, 'compare/': docsCompare(), [`commits/${FROM}/statuses`]: [status('success')], statuses: [] });
+      assert.equal(out.status, 0, out.stderr);
+      assert.deepEqual(JSON.parse(out.stdout), { from: FROM, head: HEAD, kind: 'docs' });
+    });
+
+    it('prints a reason the head has no carry as JSON too', async () => {
+      const out = find({ 'pr view': { headRefOid: HEAD, commits: [{ oid: FROM }, { oid: HEAD }] }, statuses: [] });
+      assert.equal(out.status, 0, out.stderr);
+      assert.match(JSON.parse(out.stdout).reason, /no agent-review success/);
+    });
+
+    it('exits non-zero with the reason on stderr when gh fails', async () => {
+      const out = find({});
+      assert.notEqual(out.status, 0);
+      assert.equal(out.stdout, '');
+      assert.match(out.stderr, /HTTP 502/);
+    });
   });
 });

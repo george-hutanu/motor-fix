@@ -10,6 +10,7 @@ const GARAGE: PublicGarageDto = {
   address: 'Str. Atelierului 14, București',
   brandNote: null,
   businessKind: 'company',
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {

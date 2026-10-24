@@ -421,9 +421,13 @@ describe('the address field', () => {
   it('asks nothing once it is gone before the pause ends', async () => {
     await mount();
 
-    await type('Cluj', 100);
+    // Gone in the same tick as the key: a real-time pause before destroy() can
+    // outlast the 300 ms search pause on a loaded machine.
+    const input = field();
+    input.value = 'Cluj';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
     fixture.destroy();
-    await wait(300);
+    await wait(400);
 
     expect(search).not.toHaveBeenCalled();
   });

@@ -259,6 +259,9 @@ describe('the profile aggregates with ties and gaps', () => {
 
     expect(res.body).toEqual({
       brandNote: null,
+      // The next 14 days on the Bucharest calendar: holidays are seeded, so the
+      // window holds some on certain dates. closed-days.integration.spec.ts owns it.
+      closedDays: expect.any(Array),
       doesNotTake: [],
       facilities: [],
       hours: {},
