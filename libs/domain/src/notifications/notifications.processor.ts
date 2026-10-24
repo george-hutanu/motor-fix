@@ -242,21 +242,11 @@ export class NotificationsProcessor {
   // retries it after the claim has lapsed.
   private async flush(leaderId: string, attemptsMade: number) {
     const handled: string[] = [];
-    for (;;) {
-      const claimed = await this.prisma.$queryRaw<
-        { claimed_at: Date; id: string }[]
-      >`
-        UPDATE notification SET claimed_at = now()
-        WHERE group_leader_id = ${leaderId}::uuid AND status = 'held'
-          AND NOT (id = ANY(${handled}::uuid[])) AND ${UNCLAIMED}
-        RETURNING id, claimed_at`;
-      if (claimed.length === 0) {
-        if (handled.length === 0 && (await this.heldElsewhere(leaderId)))
-          throw new Error(
-            `notification ${leaderId} is being sent by another job`,
-          );
-        return;
-      }
+    // Every round claims rows no earlier round handled, so the rounds end.
+    let claimed = await this.claimWindow(leaderId, handled);
+    if (claimed.length === 0 && (await this.heldElsewhere(leaderId)))
+      throw new Error(`notification ${leaderId} is being sent by another job`);
+    while (claimed.length > 0) {
       const ids = claimed.map(({ id }) => id);
       handled.push(...ids);
       let recorded: boolean | undefined;
@@ -266,7 +256,16 @@ export class NotificationsProcessor {
         // As in a send job: an unrecorded send keeps its claim.
         if (recorded !== false) await this.release(ids, claimed[0].claimed_at);
       }
+      claimed = await this.claimWindow(leaderId, handled);
     }
+  }
+
+  private claimWindow(leaderId: string, handled: string[]) {
+    return this.prisma.$queryRaw<{ claimed_at: Date; id: string }[]>`
+      UPDATE notification SET claimed_at = now()
+      WHERE group_leader_id = ${leaderId}::uuid AND status = 'held'
+        AND NOT (id = ANY(${handled}::uuid[])) AND ${UNCLAIMED}
+      RETURNING id, claimed_at`;
   }
 
   private async heldElsewhere(leaderId: string) {
