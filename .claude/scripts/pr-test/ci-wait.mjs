@@ -17,7 +17,8 @@
 // finished, 1 a limit reached, 2 gh failed, 3 the PR conflicts with main.
 // gh failed means SPECKIT_CI_GH_TRIES (by default 3) unreadable answers in a
 // row (an error exit such as HTTP 502, or output that does not parse): each
-// earlier one is polled again, and a readable answer starts the count over.
+// earlier one is polled again unless the overall limit has passed, and a poll
+// whose every read answered starts the count over.
 //
 // GitHub runs no CI on a PR that conflicts with main, so the PR's mergeable
 // state is read before every poll: CONFLICTING ends the wait at once with
@@ -56,12 +57,23 @@ const unreadable = (what, out) => ({ code: 2, lines: [`${what}: ${String(out.std
 
 /**
  * Counts polls with an unreadable answer in a row: `miss` is true at the `tries`-th, when the wait ends with exit 2;
- * `hit`, a poll read whole, starts the count over.
+ * `hit`, a poll whose every read was readable, starts the count over. Counted by poll, not by read, so a read that
+ * stays broken beside one that answers still ends the wait after `tries` polls rather than at the overall limit.
  */
 function strikes(tries) {
   let row = 0;
   return { miss: () => ++row >= tries, hit: () => (row = 0) };
 }
+
+/**
+ * After an unreadable answer: true when the wait ends there (the `tries`-th in a row, or the overall limit
+ * passed), else it sleeps a poll and returns false so the caller polls again.
+ */
+const giveUp = async ({ strike, now, start, waitMs, sleep, pollMs }) => {
+  if (strike.miss() || now() - start >= waitMs) return true;
+  await sleep(pollMs);
+  return false;
+};
 
 /** The wait's ending when the PR conflicts with main or its state is unreadable (an exit-2 ending), else null. */
 async function conflictOrFailure(gh, pr) {
@@ -75,13 +87,13 @@ async function conflictOrFailure(gh, pr) {
 export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_000, waitMs = 120 * 60_000, pollMs = 60_000, ghTries = 3 }) {
   const start = now();
   const strike = strikes(ghTries);
-  if (run) return waitForRun({ pr, run, gh, sleep, now, start, waitMs, pollMs, strike });
+  const wait = { strike, now, start, waitMs, sleep, pollMs };
+  if (run) return waitForRun({ pr, run, gh, wait });
   let checks;
   for (;;) {
     const stop = await conflictOrFailure(gh, pr);
     if (stop?.code === 2) {
-      if (strike.miss()) return stop;
-      await sleep(pollMs);
+      if (await giveUp(wait)) return stop;
       continue;
     }
     if (stop) return stop;
@@ -91,8 +103,7 @@ export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_
     const out = await gh(["pr", "checks", String(pr), "--json", "name,bucket,link,workflow"]);
     checks = NO_CHECKS.test(out.stderr) ? [] : parsed(out.stdout);
     if (!Array.isArray(checks)) {
-      if (strike.miss()) return unreadable("CI", out);
-      await sleep(pollMs);
+      if (await giveUp(wait)) return unreadable("CI", out);
       continue;
     }
     strike.hit();
@@ -132,20 +143,19 @@ const pendingReviewRun = (checks) =>
   /\/actions\/runs\/(\d+)/.exec(checks.find((c) => c.name === "agent-review" && c.bucket === "pending")?.link ?? "")?.[1];
 
 /** The QA run's wait: until it has completed, whatever CI is doing. */
-async function waitForRun({ pr, run, gh, sleep, now, start, waitMs, pollMs, strike }) {
+async function waitForRun({ pr, run, gh, wait }) {
+  const { strike, now, start, waitMs, sleep, pollMs } = wait;
   for (;;) {
     const out = await gh(["run", "view", String(run), "--json", "status,conclusion"]);
     const state = out.code === 0 ? parsed(out.stdout) : undefined;
     if (!state) {
-      if (strike.miss()) return unreadable("QA run", out);
-      await sleep(pollMs);
+      if (await giveUp(wait)) return unreadable("QA run", out);
       continue;
     }
     if (state.status === "completed") return { code: 0, lines: [`QA run: ${state.conclusion}`] };
     const stop = await conflictOrFailure(gh, pr);
     if (stop?.code === 2) {
-      if (strike.miss()) return stop;
-      await sleep(pollMs);
+      if (await giveUp(wait)) return stop;
       continue;
     }
     if (stop) return stop;

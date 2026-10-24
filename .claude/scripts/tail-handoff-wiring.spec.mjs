@@ -37,6 +37,21 @@ describe('section()', () => {
   });
 });
 
+// @traces 317-FR-006
+describe('the repair count rides the note', () => {
+  it('shows the note\'s Repair iterations line and says handoff rewrites it from run state', () => {
+    const handoff = section(auto, '## Hand-off');
+    assert.match(handoff, /- Repair iterations: <n>/);
+    assert.match(handoff, /`handoff --pr <n>` rewrites it from run state/);
+  });
+
+  it('says the tail\'s restore puts the count back into run state from every page of comments', () => {
+    const tail = section(auto, '## The tail');
+    assert.match(tail, /every page of the PR's comments/);
+    assert.match(tail, /raises run\s+state's `repair_iterations` to the note's count/);
+  });
+});
+
 describe('the hand-off', () => {
 
   it('ends the story agent at ready with a hand-off note and NEXT: tail', () => {

@@ -473,14 +473,22 @@ function postHandoff(ctx, n) {
   ctx.did.push("handoff comment");
 }
 
-const REPAIR_LINE = /^- Repair iterations: (\d+)$/m;
+const REPAIR_LINES = /^- Repair iterations: (\d+)$/gm;
 const repairLine = (n) => `- Repair iterations: ${n}`;
 
-/** The repair laps a note records: the higher of its count line and its QA run's lap less one; null with neither. */
+/** The repair laps a note records: the highest of its count lines and its QA run's lap less one; null with none. */
 function notedRepairs(text) {
   const lap = Number(/^- QA run: .* · lap (\d+) /m.exec(text)?.[1]);
-  const found = [Number(REPAIR_LINE.exec(text)?.[1]), lap - 1].filter((n) => Number.isInteger(n) && n >= 0);
+  const counts = [...text.matchAll(REPAIR_LINES)].map((m) => Number(m[1]));
+  const found = [...counts, lap - 1].filter((n) => Number.isInteger(n) && n >= 0);
   return found.length ? Math.max(...found) : null;
+}
+
+/** The note with one count line holding `n`: the first rewritten in place, any later one dropped, else one appended. */
+function withRepairLine(text, n) {
+  let first = true;
+  const out = text.replace(/^- Repair iterations: \d+$\n?/gm, (line) => (first ? ((first = false), `${repairLine(n)}${line.endsWith("\n") ? "\n" : ""}`) : ""));
+  return first ? `${text.replace(/\n*$/, "\n")}${repairLine(n)}\n` : out;
 }
 
 /** Run state's repair count raised to what the note records; a count already higher is kept. */
@@ -499,8 +507,7 @@ function handoff(ctx, flags) {
     if (!existsSync(file)) throw new Stop("no handoff.md", `${ctx.rel}/handoff.md is missing: write the note first (or ${SELF} handoff --restore --pr ${n})`);
     const text = readFileSync(file, "utf8");
     // Run state lost on a fresh VM reads 0: the note's own count then stands.
-    const count = repairLine(Math.max(readState(ctx.repo).repair_iterations ?? 0, notedRepairs(text) ?? 0));
-    writeFileSync(file, REPAIR_LINE.test(text) ? text.replace(REPAIR_LINE, count) : `${text.replace(/\n*$/, "\n")}${count}\n`);
+    writeFileSync(file, withRepairLine(text, Math.max(readState(ctx.repo).repair_iterations ?? 0, notedRepairs(text) ?? 0)));
     postHandoff(ctx, n);
     return { pr: Number(n) };
   }
