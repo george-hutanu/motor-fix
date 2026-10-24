@@ -1,12 +1,28 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  Equals,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+  ValidateBy,
+} from 'class-validator';
 
+import {
+  ACCOUNT_NOTE_MAX,
+  DATA_REQUEST_REFERENCE,
+  SUSPEND_REASON_MIN,
+} from './account-action-limits';
 import {
   ACCOUNT_ROLES,
   ACCOUNT_STATES,
   type AccountRole,
   SEARCH_MAX,
 } from './account-search';
+import { calendarDay } from './cars.dto';
+import { NOTE_TEXT } from './note-text';
 
 const COUNT_KIND = ['requests', 'reviews', 'age'] as const;
 const STATUS = ['active', 'suspended'] as const;
@@ -156,4 +172,200 @@ export class AdminAccountsSummaryDto {
     type: 'integer',
   })
   mechanics!: number;
+}
+
+const SIGN_IN_METHODS = [
+  'password',
+  'google',
+  'apple',
+  'whatsapp_phone',
+] as const;
+const GARAGE_STATUS = ['draft', 'approved', 'suspended'] as const;
+const GARAGE_RELATION = ['owner', 'receptionist', 'mechanic'] as const;
+const EMAIL_OUTCOME = ['sent', 'none', 'failed'] as const;
+
+const trimmed = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() : value;
+
+// Today as Bucharest reads it, YYYY-MM-DD.
+const bucharestToday = (now = new Date()) =>
+  new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: 'Europe/Bucharest',
+    year: 'numeric',
+  }).format(now);
+
+const notAfterToday = () =>
+  ValidateBy({
+    name: 'notAfterToday',
+    validator: {
+      defaultMessage: (args) =>
+        `${args?.property} must not be after today in Bucharest`,
+      validate: (value) =>
+        typeof value === 'string' && value <= bucharestToday(),
+    },
+  });
+
+export class AdminAccountGarageDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty({ enum: GARAGE_STATUS })
+  status!: (typeof GARAGE_STATUS)[number];
+
+  @ApiProperty({ enum: GARAGE_RELATION })
+  relation!: (typeof GARAGE_RELATION)[number];
+}
+
+export class AdminAccountCountsDto {
+  @ApiProperty({ description: 'Cars not removed', minimum: 0, type: 'integer' })
+  cars!: number;
+
+  @ApiProperty({ minimum: 0, type: 'integer' })
+  requests!: number;
+
+  @ApiProperty({ minimum: 0, type: 'integer' })
+  reviews!: number;
+}
+
+export class AdminAccountDocumentDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({
+    description: 'The document kind, as the legal panel names it',
+  })
+  kind!: string;
+
+  @ApiProperty({ minimum: 0, type: 'integer' })
+  pages!: number;
+
+  @ApiProperty({
+    description: 'Opened through the verification file page download route',
+    format: 'uuid',
+  })
+  verificationFileId!: string;
+}
+
+// One account as the admin's page reads it: never a hash, a sign-in subject
+// or a token.
+export class AdminAccountPageDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty({ nullable: true, type: String })
+  email!: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  phone!: string | null;
+
+  @ApiProperty({ enum: ['ro', 'en'] })
+  language!: 'ro' | 'en';
+
+  @ApiProperty({
+    description: 'In the order driver, garage, receptionist, mechanic, admin',
+    enum: ACCOUNT_ROLES,
+    isArray: true,
+  })
+  roles!: AccountRole[];
+
+  @ApiProperty({ nullable: true, type: AdminAccountGarageDto })
+  garage!: AdminAccountGarageDto | null;
+
+  @ApiProperty({ format: 'date-time' })
+  createdAt!: string;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  lastActiveAt!: string | null;
+
+  @ApiProperty({ enum: STATUS })
+  status!: (typeof STATUS)[number];
+
+  @ApiProperty({ nullable: true, type: String })
+  suspendedReason!: string | null;
+
+  @ApiProperty({ type: AdminAccountCountsDto })
+  counts!: AdminAccountCountsDto;
+
+  @ApiProperty({ enum: SIGN_IN_METHODS, isArray: true })
+  signInMethods!: (typeof SIGN_IN_METHODS)[number][];
+
+  @ApiProperty({ description: 'Holds admin: no action is offered or taken' })
+  isAdmin!: boolean;
+
+  @ApiProperty({
+    description: 'Holds an owner membership: deletion on request is refused',
+  })
+  isOwner!: boolean;
+
+  @ApiProperty({
+    description:
+      "The owned garage's current legal documents; empty for a non-owner",
+    type: [AdminAccountDocumentDto],
+  })
+  documents!: AdminAccountDocumentDto[];
+}
+
+export class AccessResetDto {
+  @ApiProperty({
+    description:
+      'sent: the reset e-mail went out; none: no password or no e-mail; failed: the send was refused, the sessions still ended',
+    enum: EMAIL_OUTCOME,
+  })
+  email!: (typeof EMAIL_OUTCOME)[number];
+}
+
+export class SuspendAccountDto {
+  @ApiProperty({
+    description: 'Trimmed; shown to the person in the e-mail',
+    maxLength: ACCOUNT_NOTE_MAX,
+    minLength: SUSPEND_REASON_MIN,
+  })
+  @Transform(trimmed)
+  @IsString()
+  @Length(SUSPEND_REASON_MIN, ACCOUNT_NOTE_MAX)
+  @Matches(NOTE_TEXT, { message: 'reason must not hold control characters' })
+  reason!: string;
+}
+
+export class RestoreAccountDto {
+  @ApiPropertyOptional({ description: 'Trimmed', maxLength: ACCOUNT_NOTE_MAX })
+  @Transform(trimmed)
+  @IsOptional()
+  @IsString()
+  @MaxLength(ACCOUNT_NOTE_MAX)
+  @Matches(NOTE_TEXT, { message: 'note must not hold control characters' })
+  note?: string;
+}
+
+export class DeleteAccountOnRequestDto {
+  @ApiProperty({
+    description: 'The data request reference',
+    example: 'DR-2026-0001',
+    pattern: DATA_REQUEST_REFERENCE.source,
+  })
+  @IsString()
+  @Matches(DATA_REQUEST_REFERENCE, {
+    message: 'reference must look like DR-2026-0001',
+  })
+  reference!: string;
+
+  @ApiProperty({
+    description: 'The day the request arrived, not after today in Bucharest',
+    format: 'date',
+  })
+  @calendarDay()
+  @notAfterToday()
+  receivedOn!: string;
+
+  @ApiProperty({ description: 'Must be true', enum: [true], type: Boolean })
+  @Equals(true)
+  identityChecked!: true;
 }

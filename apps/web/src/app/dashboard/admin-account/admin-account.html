@@ -1,0 +1,155 @@
+<p class="said" aria-live="polite" data-part="said">{{ said() }}</p>
+<div class="body">
+@switch (state()) {
+  @case ('loading') {
+    <p class="loading" aria-busy="true">{{ 'admin.users.account.loading' | t }}</p>
+  }
+  @case ('gone') {
+    <p class="gone" role="alert">{{ 'admin.users.account.notFound' | t }}</p>
+  }
+  @case ('failed') {
+    <div class="failed" role="alert">
+      <p>{{ 'admin.users.account.failed' | t }}</p>
+      <button type="button" class="retry" (click)="load()">{{ 'admin.users.retry' | t }}</button>
+    </div>
+  }
+  @default {
+    @if (account(); as a) {
+      @if (details(); as d) {
+        <section class="details" aria-labelledby="mf-account-details">
+          <p class="name">{{ a.name }}</p>
+          <h3 id="mf-account-details">{{ 'admin.users.account.details' | t }}</h3>
+          <dl>
+            <dt>{{ 'admin.users.account.email' | t }}</dt>
+            <dd>{{ a.email ?? ('admin.users.account.none' | t) }}</dd>
+            <dt>{{ 'admin.users.account.phone' | t }}</dt>
+            <dd>{{ a.phone ?? ('admin.users.account.none' | t) }}</dd>
+            <dt>{{ 'admin.users.account.language' | t }}</dt>
+            <dd>{{ d.language }}</dd>
+            <dt>{{ 'admin.users.account.roles' | t }}</dt>
+            <dd>{{ d.roles }}</dd>
+            <dt>{{ 'admin.users.account.garage' | t }}</dt>
+            <dd>{{ d.garage }}</dd>
+            <dt>{{ 'admin.users.account.joined' | t }}</dt>
+            <dd>{{ d.joined }}</dd>
+            <dt>{{ 'admin.users.account.lastActive' | t }}</dt>
+            <dd>{{ d.lastActive }}</dd>
+            <dt>{{ 'admin.users.account.activity' | t }}</dt>
+            <dd>{{ d.activity }}</dd>
+            <dt>{{ 'admin.users.account.state' | t }}</dt>
+            <dd class="state">
+              <mf-lamp [state]="a.status === 'active' ? 'green' : 'red'" [label]="d.state" />
+            </dd>
+            @if (a.status === 'suspended' && a.suspendedReason) {
+              <dt>{{ 'admin.users.account.reason' | t }}</dt>
+              <dd class="reason">{{ a.suspendedReason }}</dd>
+            }
+            <dt>{{ 'admin.users.account.methods' | t }}</dt>
+            <dd>
+              @if (d.methods.length > 0) {
+                <ul class="methods" data-part="methods">
+                  @for (m of d.methods; track m) {
+                    <li>{{ m }}</li>
+                  }
+                </ul>
+              } @else {
+                {{ 'admin.users.account.none' | t }}
+              }
+            </dd>
+          </dl>
+
+          @if (a.garage?.status === 'suspended') {
+            <p class="note" data-part="garage-suspended">
+              {{ 'admin.users.account.garageSuspended' | t }}
+              @if (a.documents[0]; as doc) {
+                <a [routerLink]="['/app/admin/garages', doc.verificationFileId]">{{ 'admin.users.account.garagePage' | t }}</a>
+              } @else {
+                <a routerLink="/app/admin/garages">{{ 'admin.users.account.garagePage' | t }}</a>
+              }
+            </p>
+          }
+
+          @if (a.documents.length > 0) {
+            <h4>{{ 'admin.users.account.documents' | t }}</h4>
+            <ul class="documents">
+              @for (doc of a.documents; track doc.id) {
+                @for (n of pages(doc); track n) {
+                  <li>
+                    <button
+                      type="button"
+                      class="link"
+                      [attr.aria-label]="doc.pages > 1 ? ('admin.users.account.openPage' | t: { document: documentName(doc), n: n }) : null"
+                      (click)="openDocument(doc, n)"
+                    >{{ documentName(doc) }}@if (doc.pages > 1) { · {{ n }}}</button>
+                  </li>
+                }
+              }
+            </ul>
+            @if (documentFailed()) {
+              <p class="error" role="alert">{{ 'admin.users.account.documentFailed' | t }}</p>
+            }
+          }
+        </section>
+
+        <section class="actions" aria-labelledby="mf-account-actions">
+          <h3 id="mf-account-actions">{{ 'admin.users.actions.heading' | t }}</h3>
+          @if (a.isAdmin) {
+            <p class="note">{{ 'admin.users.account.adminAccount' | t }}</p>
+          } @else {
+            <div class="buttons">
+              <button hlmBtn variant="secondary" type="button" [disabled]="busy()" (click)="act('reset')">{{ 'admin.users.actions.reset' | t }}</button>
+              @if (a.status === 'active') {
+                <button hlmBtn variant="secondary" type="button" [disabled]="busy()" (click)="act('suspend')">{{ 'admin.users.actions.suspend' | t }}</button>
+              } @else {
+                <button hlmBtn variant="secondary" type="button" [disabled]="busy()" (click)="act('restore')">{{ 'admin.users.actions.restore' | t }}</button>
+              }
+              <button
+                hlmBtn
+                variant="secondary"
+                type="button"
+                [disabled]="busy() || a.isOwner"
+                [attr.aria-describedby]="a.isOwner ? 'mf-account-owner' : null"
+                (click)="act('delete')"
+              >{{ 'admin.users.actions.delete' | t }}</button>
+              @if (a.isOwner) {
+                <p class="note" id="mf-account-owner">{{ 'admin.users.account.ownerDelete' | t }}</p>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="history" aria-labelledby="mf-account-history" data-part="history">
+          <h3 id="mf-account-history">{{ 'admin.users.account.history' | t }}</h3>
+          @if (lines().length > 0) {
+            <ul>
+              @for (l of lines(); track l.id) {
+                <li>
+                  <span class="line">{{ l.line }}</span>
+                  @if (l.change) {
+                    <span class="change">{{ l.change }}</span>
+                  }
+                  @if (l.text) {
+                    <span class="text">{{ l.text }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          } @else if (historyState() === 'ready') {
+            <p class="empty">{{ 'admin.users.account.empty' | t }}</p>
+          }
+          @if (historyState() === 'loading') {
+            <p class="loading" aria-busy="true"><span class="skeleton"></span></p>
+          } @else if (historyState() === 'failed') {
+            <div class="failed" role="alert">
+              <p>{{ 'admin.users.account.historyFailed' | t }}</p>
+              <button type="button" class="retry" (click)="retryHistory()">{{ 'admin.users.retry' | t }}</button>
+            </div>
+          } @else if (cursor() !== null) {
+            <button hlmBtn variant="ghost" type="button" (click)="more()">{{ 'admin.users.account.more' | t }}</button>
+          }
+        </section>
+      }
+    }
+  }
+}
+</div>

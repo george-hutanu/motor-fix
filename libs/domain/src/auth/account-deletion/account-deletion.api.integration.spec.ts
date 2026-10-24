@@ -319,7 +319,7 @@ describe('deleting my account', () => {
     });
   });
 
-  it('removes the identities, sessions, tokens, devices, preferences, assistants and roles', async () => {
+  it('removes the identities, sessions, tokens, devices, preferences and roles, and keeps the assistants revoked', async () => {
     const id = await person();
     const other = await person(
       'ioana@example.test',
@@ -335,7 +335,7 @@ describe('deleting my account', () => {
     expect(await leftOf(id)).toEqual({
       accountRole: 0,
       accountToken: 0,
-      assistantGrant: 0,
+      assistantGrant: 1,
       assistantSignInCode: 0,
       identity: 0,
       notificationPreference: 0,
@@ -344,6 +344,20 @@ describe('deleting my account', () => {
       refreshToken: 0,
     });
     expect((await leftOf(other)).refreshToken).toBe(1);
+    // @traces 003-FR-015
+    expect(
+      await prisma.assistantGrant.findFirstOrThrow({
+        where: { accountId: id },
+      }),
+    ).toMatchObject({ revokedBy: id, revokeReason: 'account_deleted' });
+    expect(
+      await prisma.outboxEvent.count({
+        where: {
+          kind: 'assistant_grant.revoked',
+          payload: { equals: id, path: ['accountId'] },
+        },
+      }),
+    ).toBe(1);
   });
 
   it('frees the e-mail: it no longer signs in, and a new sign-up with it succeeds', async () => {

@@ -1,6 +1,6 @@
 ---
 capability: audit
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 390-audit-history
   - 391-audit-history-api
@@ -13,6 +13,7 @@ features:
   - 1352-catalogue-job-visibility
   - 129-delete-account
   - 469-activity-log-at-index
+  - 003-admin-account-actions
 ---
 
 # Capability: Audit history
@@ -101,19 +102,15 @@ _From 391-audit-history-api._
 
 _From 391-audit-history-api._
 
-### 391-FR-006 — The system MUST filter by `garageId`, `actorId`, `jobId`, `area`, `from` and `to` (both inclusive, ISO 8601 date-times with a zone), combined with AND.
+### 003-FR-004 — The audit history read (`GET /api/v1/audit-history`) MUST accept, for the admin only, an `accountId` filter answering the entries whose actor is that account or whose subject is that account (subject type `account`), combined with the other filters by AND, and a `limit` of 1 to 50 (default 20, the existing page size) so the page reads 50 at a time; a `limit` outside the range or an `accountId` given by a garage role answers 400 `validation_failed`. Order, cursor, total and the entry shape stay as 391-FR-009 and 391-FR-011 say; the page passes `from` = the account's joined time, so the seven-day default (391-FR-007) does not apply. (Modifies 391-FR-006, 391-FR-009.)
 
-_From 391-audit-history-api._
+_From 003-admin-account-actions._
 
 ### 391-FR-007 — When `from` is absent, the system MUST use 7 days before the time of the call; `to` has no default.
 
 _From 391-audit-history-api._
 
 ### 391-FR-008 — The `area` filter MUST be one of `requests`, `quotes`, `bookings`, `jobs`, `prices`, `repair_history`, `photos`, `garage_profile`, `team`, `settings`, `admin_actions`, each matching a fixed set of subject types (Data model table names), and `admin_actions` matching entries made by an admin.
-
-_From 391-audit-history-api._
-
-### 391-FR-009 — The system MUST order entries newest first, equal times by entry id (descending), and return 20 per page with `nextCursor` (null on the last page) and `total`, the number of entries matching the filters.
 
 _From 391-audit-history-api._
 
@@ -233,9 +230,15 @@ _From 469-activity-log-at-index._
 
 _From 469-activity-log-at-index._
 
+### 003-FR-005 — Reading the page or its history MUST write no audit entry. Opening a garage owner's legal document from the page MUST write one audit entry through the shared writer (action `open`, subject the document, actor the admin, garage id set, no personal value), through the same recording the garage's own legal panel uses where one exists.
+
+_From 003-admin-account-actions._
+
 ## Retired
 
 - `390-FR-009` — superseded by `220-FR-018` (2026-10-08)
 - `173-FR-008` — superseded by `176-FR-001` (2026-10-19)
 - `390-FR-015` — superseded by `469-FR-001` (2026-10-23)
 - `391-FR-010` — superseded by `469-FR-004` (2026-10-23)
+- `391-FR-006` — superseded by `003-FR-004` (2026-10-24)
+- `391-FR-009` — superseded by `003-FR-004` (2026-10-24)

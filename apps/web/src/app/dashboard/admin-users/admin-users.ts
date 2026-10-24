@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import {
   Component,
   computed,
@@ -9,7 +10,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, type Params, Router } from '@angular/router';
+import {
+  ActivatedRoute,
+  type Navigation,
+  type Params,
+  Router,
+} from '@angular/router';
 import {
   type AccountRole,
   type AccountState,
@@ -25,9 +31,15 @@ import {
   AdminService,
 } from '@motor-fix/data-access';
 import { formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { Lamp, Panel } from '@motor-fix/ui-cockpit';
 
 import { accountRow } from './account-row';
+import {
+  AdminAccount,
+  type AdminAccountData,
+  type AdminAccountResult,
+} from '../admin-account/admin-account';
 import { AdminGrowth } from '../admin-growth/admin-growth';
 import { AdminUsersFilters } from '../admin-users-filters/admin-users-filters';
 import type { UsersFilter } from '../admin-users-filters-sheet/admin-users-filters-sheet';
@@ -72,8 +84,13 @@ const narrowed = (n: Narrowing) =>
 
 const SKELETON_ROWS = [0, 1, 2, 3, 4];
 
+// The view's own address in views.ts, and an account's under it.
+const VIEW = '/app/admin/users';
+const ADDRESS = /^\/app\/admin\/users\/([^/?#]+)/;
+
 // The admin's Utilizatori view: the platform totals, the newest accounts
-// (more as the admin scrolls) and the growth charts beside them.
+// (more as the admin scrolls) and the growth charts beside them. An account's
+// own address, /app/admin/users/<id>, opens it in a drawer over the view.
 @Component({
   imports: [AdminGrowth, AdminUsersFilters, Lamp, Panel, TranslatePipe],
   selector: 'mf-admin-users',
@@ -85,6 +102,9 @@ export class AdminUsers {
   private readonly i18n = inject(I18n);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
+  private readonly overlays = inject(Overlays);
+  private shown: string | null = null;
   private readonly filters = viewChild(AdminUsersFilters);
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   private observer: IntersectionObserver | undefined;
@@ -118,6 +138,8 @@ export class AdminUsers {
   private readonly total = signal<number | undefined>(undefined);
   private readonly cursor = signal<string | null>(null);
   protected readonly listState = signal<Load>('loading');
+  // What the last account action that closed the drawer did, said politely.
+  protected readonly said = signal('');
   protected readonly moreState = signal<'idle' | 'loading' | 'failed'>('idle');
   protected readonly hasMore = computed(
     () => this.listState() === 'ready' && this.cursor() !== null,
@@ -165,6 +187,12 @@ export class AdminUsers {
   constructor() {
     void this.i18n.enter('admin');
     void this.readSummary();
+    effect(() => {
+      const navigation = this.router.lastSuccessfulNavigation();
+      untracked(() => {
+        if (navigation) void this.follow(navigation);
+      });
+    });
     // An unknown role or state is dropped from the address in place.
     effect(() => {
       const params = this.params();
@@ -191,6 +219,46 @@ export class AdminUsers {
         this.observer = undefined;
       });
     });
+  }
+
+  // The row's press: the account's address, remembering where it was opened.
+  protected openAccount(id: string) {
+    void this.router.navigateByUrl(`${VIEW}/${id}`, {
+      state: { origin: this.router.url },
+    });
+  }
+
+  private async follow(navigation: Navigation) {
+    const address = this.router.url;
+    const id = ADDRESS.exec(address)?.[1];
+    if (!id || this.shown) return;
+    this.shown = id;
+    const origin = navigation.extras.state?.['origin'];
+    const result = await this.overlays.open<
+      AdminAccountResult,
+      AdminAccountData
+    >(AdminAccount, {
+      data: { changed: () => void this.readFirst(), id },
+      shape: 'drawer',
+      title: 'admin.users.account.details',
+    });
+    this.shown = null;
+    this.said.set('');
+    if (result === 'deleted') {
+      this.said.set(this.i18n.t('admin.users.done.delete'));
+      void this.readFirst();
+    }
+    // Leaving the address some other way already took the admin elsewhere;
+    // another account's address reached while this one was open opens now.
+    if (this.router.url !== address) {
+      const next = this.router.lastSuccessfulNavigation();
+      if (next) void this.follow(next);
+      return;
+    }
+    // Opened in the app, the origin is the entry before: going back to it
+    // leaves no second one. Opened by its address, the view replaces it.
+    if (typeof origin === 'string') this.location.back();
+    else void this.router.navigateByUrl(VIEW, { replaceUrl: true });
   }
 
   private async readSummary() {
