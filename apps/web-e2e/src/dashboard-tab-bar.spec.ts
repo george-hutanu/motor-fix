@@ -217,6 +217,11 @@ test.describe('the bar on the smallest phones', () => {
       page,
     }) => {
       await signInAs(page, 'garage', '/app/garage', OWNER);
+      // The stubbed account has no garage, and the profile view leaves for the
+      // dashboard on a 404: an outage keeps it on Profil, the tab under test.
+      await page.route('**/api/v1/garages/*/profile', (route) =>
+        route.fulfill({ status: 503 }),
+      );
       await page.setViewportSize({ height: 640, width });
       await open(page, '/app/garage/profile');
       const bar = page.getByRole('navigation', { name: 'Panou service' });
