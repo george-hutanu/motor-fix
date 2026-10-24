@@ -73,7 +73,7 @@ them, logging to `specs/<feature>/tracker-sync.md`.
      them under "Fixed after QA"; no lap is counted. A merge of
      `origin/main` that changes none of the PR's files carries the verdict
      too (`merge of main`).
-  7. Merge at once on `agent-review` success, every other check green,
+  7. Merge on `agent-review` success at once, every other check green,
      never on a red, pending or missing one (`main` requires it and
      `CI OK`, admins too). Then Done
      (`speckit-tracker-sync finish`), and the orchestrating session

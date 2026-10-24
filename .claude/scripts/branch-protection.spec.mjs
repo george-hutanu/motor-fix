@@ -94,7 +94,7 @@ describe('the rule is written where agents read it', () => {
 
   // @traces 961-FR-008
   it('AGENTS.md step 7 and the lifecycle name the required checks and the Dependabot review workflow', () => {
-    assert.match(read('../../AGENTS.md'), /7\. Merge at once on `agent-review` success[^]*?`main` requires it and\s+`CI OK`, admins too/);
+    assert.match(read('../../AGENTS.md'), /7\. Merge on `agent-review` success at once[^]*?`main` requires it and\s+`CI OK`, admins too/);
     const lifecycle = read('../skills/speckit-auto/lifecycle.md');
     assert.match(lifecycle, /`agent-review` and `CI OK` are required status checks on `main`, for administrators too/);
     assert.match(lifecycle, /dependabot-review\.yml[^.]*writes its `agent-review` success/);
