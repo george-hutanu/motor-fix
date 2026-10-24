@@ -46,6 +46,7 @@ features:
   - 500-req-ip-behind-proxy
   - 500-trust-railway-edge
   - 1370-release-seed-no-ssh
+  - 1372-seed-restores-accounts
 ---
 
 # Capability: Accounts
@@ -206,9 +207,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 1370-FR-006 — The seed MUST stay idempotent now that it runs on every staging deploy: a second run on the same database MUST add no row to any table (its only writes are the missing seed accounts, which a seeded database has none of, and the existing removal of the seed accounts' quote requests of the last day) and MUST keep a seeded account's row that a user changed between the runs; an integration spec runs the seed twice and checks the row counts and the changed row.
+### 1372-FR-004 — The seed MUST stay idempotent on every staging deploy: a second run on the same database MUST add no row to any table (the existing removal of the seed accounts' last-day quote requests is the one exception) and MUST change no row, the password hash of every seeded identity included (replaces `1370-FR-006`: a seeded account's password identity, seeded roles and seeded garage link a user changed are restored, not kept); the integration spec MUST run the seed twice and compare the row counts and every seeded account's account, identity, role and link rows.
 
-_From 1370-release-seed-no-ssh._
+_From 1372-seed-restores-accounts._
 
 ### 080-FR-001 — `POST /api/v1/auth/sign-up` MUST take a name, an e-mail, a password and the interface language (`ro` or `en`); it MUST create, through the one `createAccount` use case, an account holding only the role `driver`, a `password` identity with the argon2id hash of the password, that language and the last role `driver`, with its audit entry and `account.created` event in the same transaction.
 
@@ -1203,6 +1204,30 @@ _From 500-trust-railway-edge._
 
 _From 500-trust-railway-edge._
 
+### 1372-FR-001 — For each account in its list (`PEOPLE`, matched by e-mail), the seed MUST restore the account's password identity to its seeded state: an identity with method `password` and subject equal to the e-mail whose hash verifies against the seed password; a missing identity is inserted, a hash that does not verify is rewritten with a new argon2id hash of the seed password, and a hash that verifies is left byte-for-byte unchanged (the stored hash is verified against the seed password, never compared to a fresh hash).
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-002 — For each account in its list, the seed MUST ensure every role in that account's seeded `roles` exists on it, inserting the missing ones; a role the account holds that the seed does not list for it MUST be left in place.
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-003 — For each account in its list with an `at`, the seed MUST ensure its seeded garage link exists with the seeded values: for `as: owner` or `receptionist`, a `garage_member` row at the seeded garage with that role; for `as: mechanic`, a `mechanic` row for the account at the seeded garage with `can_answer_quotes` equal to the seeded `answersQuotes` (false when absent). A missing link is inserted and a link at the seeded garage with other values is set to the seeded ones; a link at any other garage is left in place; when that link holds the seeded role (an account holds one role at one garage, `garage_member` unique on account and role; one `mechanic` row per account) the seeded link cannot be added, and the seed prints `seed: <e-mail> is <role> at another garage, so its link to <slug> is not added` on stderr and goes on.
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-005 — The seed MUST write nothing on an account whose e-mail is not in its list, whatever its hash, roles or links; and on a seeded account it MUST leave `name`, `phone`, `phone_verified_at`, `status`, `last_role` and every other column outside FR-001 to FR-003 as the user left them.
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-006 — The staging guard of `scripts/reset-staging.sh`, the staging-only seed in the api's Railway pre-deploy (1370-FR-001), the refusal on `APP_ENV=production` and the `SEED_PASSWORD` guard MUST be unchanged, and the seed password's value MUST never be printed to stdout, stderr, a log or an error message.
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-007 — Tests come first and live in `libs/domain/src/seed.integration.spec.ts` (PostgreSQL): a drifted-account test (a seeded account with a hash that does not verify, a missing seeded role and no garage link is restored; a renamed seeded account keeps its name; an account outside the list with a wrong hash, no roles and no link is unchanged) and a second-run test that proves FR-004, each carrying `// @traces 1372-FR-<n>` (the form `.claude/scripts/lib/traces.mjs` reads); the test of `1370-FR-006` that asserts a user-changed hash survives is replaced by these.
+
+_From 1372-seed-restores-accounts._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -1232,3 +1257,4 @@ _From 500-trust-railway-edge._
 - `500-FR-006` — superseded by `500-FR-008` (2026-10-24)
 - `500-FR-005` — superseded by `500-FR-011` (2026-10-24)
 - `082-FR-023` — superseded by `1370-FR-006` (2026-10-24)
+- `1370-FR-006` — superseded by `1372-FR-004` (2026-10-24)
