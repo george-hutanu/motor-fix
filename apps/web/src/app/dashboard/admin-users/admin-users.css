@@ -189,7 +189,7 @@ mf-lamp {
   outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
   outline-offset: var(--mf-focus-offset);
 }
-/* Running text on a phone reads at the body size; the small size from 768 px up. */
+/* What the drawer's last action did; empty, it takes no room. */
 .said:not(:empty) {
   margin: 0 0 var(--mf-space-2);
   font-size: var(--mf-size-body);
@@ -197,6 +197,7 @@ mf-lamp {
 .said:empty {
   margin: 0;
 }
+/* Running text on a phone reads at the body size; the small size from 768 px up. */
 .found {
   margin: 0 0 var(--mf-space-2);
   font-size: var(--mf-size-body);
