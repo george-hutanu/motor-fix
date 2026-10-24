@@ -278,6 +278,7 @@ export type { SessionDto } from './models/session-dto';
 export type { SetGarageFeatureDto } from './models/set-garage-feature-dto';
 export type { SignInDto } from './models/sign-in-dto';
 export type { SignUpDto } from './models/sign-up-dto';
+export type { SmsUsageDto } from './models/sms-usage-dto';
 export type { StaffChannelDto } from './models/staff-channel-dto';
 export type { StaffInviteDto } from './models/staff-invite-dto';
 export type { StaffInviteSentDto } from './models/staff-invite-sent-dto';

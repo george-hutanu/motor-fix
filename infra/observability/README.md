@@ -55,9 +55,15 @@ the server puts it in a `<meta name="mf-telemetry">` tag with the release,
 and the page loads the SDK once idle, as its own chunk. It sends errors (at
 most twenty per page load), Web Vitals labelled by route template and
 viewport class (phone, tablet, desktop), and traces of same-origin `/api`
-calls, which carry `traceparent` to the web server. No session id, no user,
-nothing stored on the device; e-mails, phones and plates become `***`, and
-URLs lose their query and fragment, before anything leaves the browser.
+calls, which carry `traceparent` to the web server. Without analytics
+consent: no session id, no user, nothing stored on the device. With
+it, every item carries one session id per tab, kept in session
+storage under Faro's key until the tab closes or consent is withdrawn, and
+the page sends `session_start` or `session_resume` and a `view_changed`
+event per change of route template, so Frontend Observability lists
+sessions and their route walks; no session replay is loaded. The user is
+never sent. E-mails, phones and plates become `***`, and URLs lose their
+query and fragment, before anything leaves the browser.
 
 Production builds emit hidden source maps; they stay out of the image, and
 the release uploads them to Faro for the commit when the secret
@@ -296,9 +302,9 @@ committed by the repo or its agents:
 1. `MONITOR_DATABASE_URL` (the monitoring role) on the staging worker, and
    on production's when it is back. Until then `postgres-unreachable` fires
    on no data, as it should.
-2. `FARO_URL` on the staging web, only once the analytics consent gate
-   ships (the owner's decision, 2026-10-17). Until then it stays unset: the
-   Web Vitals dashboard is empty, as expected, and the web warns once at
+2. `FARO_URL` on the staging web: the analytics consent gate the owner
+   asked for (2026-10-17) has shipped. Until it is set the Web
+   Vitals dashboard is empty, as expected, and the web warns once at
    start-up.
 3. `GEOAPIFY_API_KEY` on the staging worker (its `address search off`
    warning says so).

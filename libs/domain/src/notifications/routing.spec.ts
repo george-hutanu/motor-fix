@@ -2,7 +2,7 @@
 import type { OutsideChannel } from '@motor-fix/contracts';
 
 import { mutedChannels } from './preferences/preferences';
-import { outsideChannels } from './routing';
+import { outsideChannels, substitutions } from './routing';
 
 const everyone = { email: true, phone: true, push: false, whatsapp: true };
 const withDevice = { ...everyone, push: true };
@@ -229,6 +229,66 @@ describe('push for staff', () => {
         'ASSISTANT_APPROVAL_NEEDED',
         mutedChannels('ASSISTANT_APPROVAL_NEEDED', []),
         everyone,
+      ),
+    ).toEqual([]);
+  });
+});
+
+// @traces 142-FR-008
+describe('the channel a driver message changes to when it is built', () => {
+  it('names push without a device going by e-mail', () => {
+    expect(
+      substitutions('DUE_ITP', driverChose('DUE_ITP', 'push'), everyone),
+    ).toEqual([{ from: 'push', reason: 'no_device', to: 'email' }]);
+  });
+
+  it('names SMS and WhatsApp without a confirmed phone going by e-mail', () => {
+    const noPhone = { ...everyone, phone: false };
+    expect(
+      substitutions('DUE_ITP', driverChose('DUE_ITP', 'sms'), noPhone),
+    ).toEqual([{ from: 'sms', reason: 'phone_not_verified', to: 'email' }]);
+    expect(
+      substitutions('DUE_ITP', driverChose('DUE_ITP', 'whatsapp'), noPhone),
+    ).toEqual([
+      { from: 'whatsapp', reason: 'phone_not_verified', to: 'email' },
+    ]);
+  });
+
+  it('names nothing when the chosen channel can be used', () => {
+    expect(
+      substitutions('DUE_ITP', driverChose('DUE_ITP', 'push'), withDevice),
+    ).toEqual([]);
+    expect(
+      substitutions('DUE_ITP', driverChose('DUE_ITP', 'sms'), everyone),
+    ).toEqual([]);
+    expect(
+      substitutions('DUE_ITP', driverChose('DUE_ITP', 'email'), everyone),
+    ).toEqual([]);
+  });
+
+  it('names nothing when no e-mail can be written either', () => {
+    expect(
+      substitutions('DUE_ITP', driverChose('DUE_ITP', 'push'), {
+        ...everyone,
+        email: false,
+      }),
+    ).toEqual([]);
+  });
+
+  it('names nothing for a type switched off', () => {
+    const off = mutedChannels('DUE_ITP', [
+      { channel: 'push', enabled: false, garageId: null, type: 'DUE_ITP' },
+    ]);
+    expect(substitutions('DUE_ITP', off, everyone)).toEqual([]);
+  });
+
+  it('names nothing for a staff message', () => {
+    expect(
+      substitutions(
+        'REQUEST_RECEIVED',
+        new Set<OutsideChannel>(['whatsapp']),
+        { ...everyone, phone: false },
+        'garage-1',
       ),
     ).toEqual([]);
   });
