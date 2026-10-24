@@ -11,10 +11,14 @@ import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { toProblem } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
-// The name the server gives the file; the API is on the page's own origin,
-// so the header is always readable.
-const fileNameOf = (disposition: string | null) =>
-  /filename="([^"]+)"/.exec(disposition ?? '')?.[1] ?? '';
+// The name the server gives the file, when it is a plain ZIP name; anything
+// else (no header, a path) is saved under the same form, dated today.
+const fileNameOf = (disposition: string | null) => {
+  const named = /filename="([^"]+)"/.exec(disposition ?? '')?.[1] ?? '';
+  return /^[\w.-]+\.zip$/.test(named)
+    ? named
+    : `motorfix-date-${new Date().toISOString().slice(0, 10)}.zip`;
+};
 
 function saveFile(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
@@ -59,7 +63,8 @@ export class DataExport implements OnInit {
   protected readonly tooSoon = computed(
     () =>
       this.view() === 'request' &&
-      (this.refused() || !!this.latest()?.canRequestAt),
+      (this.refused() ||
+        (this.latest()?.status !== 'failed' && !!this.latest()?.canRequestAt)),
   );
   protected readonly expires = computed(() =>
     this.i18n.t('shell.dataExport.expires', {

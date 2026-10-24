@@ -46,6 +46,7 @@ features:
   - 523-flush-late-follower
   - 520-brevo-key-check-retry
   - 525-bounce-domain-event
+  - 140-account-delete-export
 ---
 
 # Capability: Notifications
@@ -862,6 +863,10 @@ _From 525-bounce-domain-event._
 ### 525-FR-002 — The bounce MUST be recorded at most once per provider message id: the transaction MUST claim the message's not-yet-failed notification rows with a conditional write, and when it claims none (a repeated or concurrent report of the same message, an unknown id, or rows already failed) it MUST write no account change, no audit entry and no event. A bounce of a message with no account (a draft's address) MUST fail its rows as today and record no event. A later bounce of a different message to the same account MUST record a new event. The push fallback rows of the claimed rows MUST be written in that same transaction (their send jobs queued after it commits; a lost job is handed over by the stranded-row sweep), so a crash after the commit cannot lose the fallback that a retry would no longer write (decision taken for the owner by Chief 1 on the code review, 2026-10-24).
 
 _From 525-bounce-domain-event._
+
+### 140-FR-006 — When the file is ready, the system MUST queue one DATA_EXPORT_READY e-mail (a new notification type in the catalogue with ACCOUNT_EMAIL's shape: direct to the account itself, e-mail only, transactional so it cannot be muted, in the account's language, subject "Fișierul tău cu date e gata" / "Your data file is ready") linking to Setări of the driver's dashboard; an account without a usable e-mail skips it and the skip is logged.
+
+_From 140-account-delete-export._
 
 ## Retired
 
