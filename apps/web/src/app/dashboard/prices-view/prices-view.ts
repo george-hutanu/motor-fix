@@ -32,6 +32,7 @@ import {
   PriceRangeEditor,
   type PriceRangeEditorData,
   type PriceRangeEditorResult,
+  priceText,
 } from './price-range-editor/price-range-editor';
 import {
   RemoveJob,
@@ -128,14 +129,8 @@ export class PricesView {
   }
 
   // Both ends as a range; the low end alone as a starting price.
-  protected price({ fromBani, toBani }: Range) {
-    const language = this.i18n.language();
-    if (fromBani !== undefined && toBani === undefined) {
-      return this.i18n.t('garage.prices.from', {
-        amount: formatWholeLeiRange(fromBani, fromBani, language),
-      });
-    }
-    return formatWholeLeiRange(fromBani, toBani, language);
+  protected price(range: Range) {
+    return priceText(range, this.i18n);
   }
 
   // Only a job with its own row has a range to change: one priced by brand
@@ -232,7 +227,21 @@ export class PricesView {
 
   protected editRow(row: EditableRow) {
     void this.edit(
-      { garageId: this.garageId(), item: row, kind: 'row' },
+      {
+        garageId: this.garageId(),
+        item: row,
+        kind: 'row',
+        // The row as the live list re-reads it, so the editor can say when
+        // another session changed its range meanwhile.
+        shown: computed(
+          () =>
+            this.view
+              .value()
+              ?.items.find((item) => item.priceId === row.priceId) as
+              | EditableRow
+              | undefined,
+        ),
+      },
       this.name(row),
     );
   }

@@ -78,8 +78,13 @@ export class RequestDrawer {
   );
   protected readonly request = computed(() => this.view.value());
 
+  // Gone after it showed: the last read stays on screen under the banner.
+  protected readonly gone = computed(
+    () => this.view.gone() && this.request() !== undefined,
+  );
+
   protected readonly refusal = computed(() => {
-    if (this.view.gone()) return `${DETAIL}.notFound`;
+    if (this.view.gone() && !this.gone()) return `${DETAIL}.notFound`;
     const error = this.view.error();
     if (!(error instanceof HttpErrorResponse) || !REFUSED.has(error.status))
       return null;
@@ -136,10 +141,16 @@ export class RequestDrawer {
     return `${DETAIL}.closed.${REASONS.has(reason) ? reason : 'unknown'}`;
   });
 
+  // One banner: gone wins over why it closed.
+  protected readonly banner = computed(() =>
+    this.gone() ? 'shell.live.gone' : this.closed(),
+  );
+
   protected readonly disabled = computed(() => {
     const request = this.request();
     return (
       !request ||
+      this.gone() ||
       this.offline() ||
       this.closed() !== null ||
       request.quote?.status === 'accepted'

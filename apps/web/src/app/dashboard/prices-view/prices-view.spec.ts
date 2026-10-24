@@ -688,10 +688,22 @@ describe('Prețuri: opening an editor', () => {
     await settle();
 
     expect(open).toHaveBeenCalledWith(PriceRangeEditor, {
-      data: { garageId: GARAGE, item: SEEDED[2], kind: 'row' },
+      data: {
+        garageId: GARAGE,
+        item: SEEDED[2],
+        kind: 'row',
+        shown: expect.any(Function),
+      },
       shape: 'dialog',
       title: 'Plăcuțe și discuri de frână față',
     });
+    // The editor follows the row as the live list re-reads it.
+    // @traces 588-FR-001
+    const [, { data }] = open.mock.calls[0] as unknown as [
+      unknown,
+      { data: { shown: () => unknown } },
+    ];
+    expect(data.shown()).toEqual(SEEDED[2]);
     expect(read).toHaveBeenCalledTimes(2);
     expect(cell(rows(element)[2], 'price')).toBe(cell(brakes, 'price'));
   });

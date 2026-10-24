@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { GaragesService, type PriceListDto } from '@motor-fix/data-access';
 import { formatDuration, I18n } from '@motor-fix/i18n';
@@ -795,5 +795,128 @@ describe('the range editor: a field the server named, then typed wrong', () => {
     await fill('Durată', '60');
     expect(said('Durată')).toBe('1 h');
     expect(field('Durată').getAttribute('aria-invalid')).toBeNull();
+  });
+});
+
+// @traces 588-FR-001
+// @traces 588-FR-002
+// @traces 588-FR-003
+// @traces 588-FR-004
+// @traces 588-FR-005
+// @traces 588-FR-009
+describe('the range editor: the row changed meanwhile', () => {
+  const CHANGED_RO = 'S‑a schimbat între timp: ';
+  const line = () => panel().querySelector('.live-changed');
+
+  async function openLive(language: 'ro' | 'en' = 'ro') {
+    const shown = signal<EditableRow | undefined>(BRAKES);
+    await open(
+      { garageId: GARAGE, item: BRAKES, kind: 'row', shown },
+      { language, title: language === 'en' ? BRAKES.nameEn : BRAKES.nameRo },
+    );
+    const show = async (row: EditableRow | undefined) => {
+      shown.set(row);
+      await settle();
+    };
+    return show;
+  }
+
+  it('says what the range is now under the fields, leaving what was typed', async () => {
+    const show = await openLive();
+    await fill('De la', '600');
+
+    await show({
+      ...BRAKES,
+      durationMinutes: 180,
+      fromBani: 80_000,
+      toBani: 120_000,
+      updatedAt: NEWER,
+    });
+
+    expect(line()?.getAttribute('role')).toBe('status');
+    expect(line()?.textContent?.trim()).toBe(
+      `${CHANGED_RO}800–1.200 lei · 3 h`,
+    );
+    expect(field('De la').value).toBe('600');
+    expect(field('Până la').value).toBe('1400');
+    expect(field('Durată').value).toBe('120');
+  });
+
+  it('says it in English', async () => {
+    const show = await openLive('en');
+
+    await show({
+      ...BRAKES,
+      durationMinutes: 180,
+      fromBani: 80_000,
+      toBani: 120_000,
+    });
+
+    expect(line()?.textContent?.trim()).toBe(
+      'This changed in the meantime: 800–1,200 lei · 3 h',
+    );
+  });
+
+  it('writes an open top as a starting price, and a range without a duration alone', async () => {
+    const show = await openLive();
+
+    await show({ ...BRAKES, fromBani: 80_000, toBani: undefined });
+    expect(line()?.textContent?.trim()).toBe(
+      `${CHANGED_RO}de la 800 lei · 2 h`,
+    );
+
+    await show({ ...BRAKES, durationMinutes: undefined });
+    expect(line()?.textContent?.trim()).toBe(`${CHANGED_RO}890–1.400 lei`);
+  });
+
+  it('says nothing when only the row’s visibility or stamp changed', async () => {
+    const show = await openLive();
+
+    await show({ ...BRAKES, public: false, updatedAt: NEWER, visible: false });
+
+    expect(line()).toBeNull();
+  });
+
+  it('drops the line when the range goes back to what the form was filled from', async () => {
+    const show = await openLive();
+    await show({ ...BRAKES, fromBani: 80_000 });
+    expect(line()).not.toBeNull();
+
+    await show({ ...BRAKES, updatedAt: NEWER });
+
+    expect(line()).toBeNull();
+  });
+
+  it('says nothing when the row left the list', async () => {
+    const show = await openLive();
+
+    await show(undefined);
+
+    expect(line()).toBeNull();
+    expect(field('De la').value).toBe('890');
+  });
+
+  it('builds on the stored range after a refused save, once the list shows it', async () => {
+    const show = await openLive();
+    const stored = {
+      ...BRAKES,
+      durationMinutes: 150,
+      fromBani: 95_000,
+      toBani: 145_000,
+      updatedAt: NEWER,
+    };
+    await show(stored);
+    expect(line()).not.toBeNull();
+    setRange.mockRejectedValueOnce(refusal(409, { code: 'stale' }));
+
+    await press();
+
+    expect(field('De la').value).toBe('950');
+    expect(line()).toBeNull();
+  });
+
+  it('shows no line for a brand range or the labour rate', async () => {
+    await open(BRAND, { title: 'BMW' });
+    expect(line()).toBeNull();
   });
 });
