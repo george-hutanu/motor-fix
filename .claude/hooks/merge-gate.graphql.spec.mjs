@@ -1,13 +1,14 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { mergeTarget, prOfNode } from './merge-gate.mjs';
 
-// @traces 448-merge-gate-graphql-FR-001
-// @traces 448-merge-gate-graphql-FR-002
+// @traces 448-FR-001
+// @traces 448-FR-002
 
 const ID = 'PR_kwDOMotorFix21';
 const inline = (mutation = 'mergePullRequest') => `gh api graphql -f query='mutation { ${mutation}(input: {pullRequestId: "${ID}"}) { clientMutationId } }'`;
@@ -109,5 +110,34 @@ describe('merge gate — a graphql merge is judged like gh pr merge', () => {
   it('lets a graphql merge through with agent-review success and every check green', () => {
     const out = gate(inline(), { SPECKIT_PR_STATE: state([...green, { __typename: 'StatusContext', context: 'agent-review', state: 'SUCCESS' }]), SPECKIT_PROVENANCE_STATE: '{"status":{"creator":{"login":"george-hutanu","type":"User"}}}' });
     assert.equal(out.status, 0, out.stderr);
+  });
+});
+
+// @traces 448-FR-003
+// @traces 448-FR-009
+describe('merge gate — the eval cases that hold the graphql path shut', () => {
+  const root = fileURLToPath(new URL('../..', import.meta.url));
+  const cases = JSON.parse(readFileSync(join(root, '.claude/evals/cases/merge-gate.json'), 'utf8'));
+  const runCase = (c) =>
+    spawnSync(process.execPath, [join(root, '.claude/hooks/merge-gate.mjs')], {
+      input: JSON.stringify(c.payload),
+      encoding: 'utf8',
+      timeout: 20000,
+      env: { ...process.env, SPECKIT_CARRY_STATE: '', SPECKIT_MERGE_GATE_DEADLINE_MS: '', SPECKIT_PROVENANCE_STATE: '', ...c.env },
+    });
+
+  it('has a graphql merge without agent-review refused for "no agent-review status"', () => {
+    const c = cases.find((x) => /graphql/.test(x.payload?.tool_input?.command ?? '') && x.expect.exit === 2 && x.expect.stderr === 'no agent-review status');
+    assert.ok(c, 'no such eval case in merge-gate.json');
+    const out = runCase(c);
+    assert.equal(out.status, 2, out.stderr);
+    assert.match(out.stderr, /no agent-review status/);
+  });
+
+  it('keeps every graphql and PR title eval case holding, and the eval floor at 1', () => {
+    const ours = cases.filter((x) => /graphql|pr-title/.test(x.id));
+    assert.ok(ours.length >= 4, ours.map((x) => x.id).join(', '));
+    for (const c of ours) assert.equal(runCase(c).status, c.expect.exit, c.id);
+    assert.ok(JSON.parse(readFileSync(join(root, '.claude/evals/baseline.json'), 'utf8')).pass_rate >= 1);
   });
 });

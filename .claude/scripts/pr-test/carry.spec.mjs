@@ -442,7 +442,7 @@ describe('the merge-of-main carry', () => {
 });
 
 describe('one carry reader, for the watch and the gate alike', () => {
-  // @traces 448-merge-gate-graphql-FR-007
+  // @traces 448-FR-007
   it('has fetchCarryState alone: readCarryState is gone, and findCarry answers with a promise', async () => {
     const mod = await import('./carry.mjs');
     assert.equal(mod.readCarryState, undefined);
@@ -452,7 +452,7 @@ describe('one carry reader, for the watch and the gate alike', () => {
     assert.deepEqual(await pending, { from: FROM, head: HEAD, kind: 'docs' });
   });
 
-  // @traces 448-merge-gate-graphql-FR-008
+  // @traces 448-FR-008
   describe('carry.mjs <pr> --find', () => {
     const cli = fileURLToPath(new URL('./carry.mjs', import.meta.url));
     /** Runs the CLI with a gh on PATH answering by `answers` (a regex source → JSON), exit 1 for anything else. */

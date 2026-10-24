@@ -952,8 +952,8 @@ describe('merge gate — a verdict carried over a merge of main is verified, not
 
 // CI OK no longer needs the PR title job (pr-title.yml runs apart), so the gate asks for both by name.
 describe('merge gate — the PR title check is required beside CI OK', () => {
-  // @traces 448-merge-gate-graphql-FR-004
-  // @traces 448-merge-gate-graphql-FR-006
+  // @traces 448-FR-004
+  // @traces 448-FR-006
   const ciOk = [run('Unit tests', 'SUCCESS'), run('CI OK', 'SUCCESS')];
   const bot = (rollup) => ({ ...pr(rollup), author: { login: 'app/dependabot', is_bot: true }, commits: [{ oid: 'abc1234def5678', authors: [{ login: 'dependabot[bot]' }], committer: { login: 'web-flow' }, verified: true }] });
 
@@ -972,7 +972,7 @@ describe('merge gate — the PR title check is required beside CI OK', () => {
     assert.equal(decideMerge(pr([...ciOk, run('PR title', 'SUCCESS'), review('SUCCESS')])), null);
   });
 
-  // @traces 448-merge-gate-graphql-FR-005
+  // @traces 448-FR-005
   it('judges a Dependabot PR by the same rule: no exemption from the PR title check', () => {
     assert.match(decideMerge(bot(ciOk)), /no PR title check/);
     assert.equal(decideMerge(bot([...ciOk, run('PR title', 'SUCCESS')])), null);

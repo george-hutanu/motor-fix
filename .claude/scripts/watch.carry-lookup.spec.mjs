@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { carryLookup } from './watch.mjs';
 
-// @traces 448-merge-gate-graphql-FR-008
+// @traces 448-FR-008
 // collect stays synchronous, and findCarry answers with a promise: the watch
 // reaches the one carry reader through `carry.mjs <pr> --find` in a child.
 describe('watch — the default carry lookup', () => {
