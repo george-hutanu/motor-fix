@@ -398,6 +398,62 @@
               }
             }
           ]
+        },
+        {
+          "uid": "retention-stale",
+          "title": "Retention job stale",
+          "condition": "B",
+          "for": "0s",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "worker"
+          },
+          "annotations": {
+            "summary": "The retention job has not completed in 48 hours, so data past its stated retention period is being kept ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-worker",
+            "runbook": "Open the Queues dashboard for the retention queue's failed jobs and the system log's job_failed entry for the retention-nightly job; fix the cause and restart the worker, which re-arms the nightly scheduler at boot. The next night's run catches up on everything due."
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 172800,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"retention\", job_name=\"retention-nightly\", outcome=\"completed\"}[48h]))",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "lt",
+                      "params": [
+                        1
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
         }
       ]
     }

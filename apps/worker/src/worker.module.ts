@@ -37,6 +37,7 @@ import {
   REQUEST_RECEIVED_CONSUMER,
   REVIEW_RATINGS_CONSUMER,
   RemindersModule,
+  RetentionModule,
   ReviewRatingsModule,
   reminderDayMs,
   StatusModule,
@@ -171,6 +172,11 @@ export function workerModule(
         databaseUrl: env.DATABASE_URL,
         redisUrl: env.REDIS_URL,
         version: env.RELEASE_SHA,
+      }),
+      // Nightly: removes and anonymises what is past the stated retention periods.
+      RetentionModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
+        redisUrl: env.REDIS_URL,
       }),
       StatusModule.registerWorker({
         appEnv: env.APP_ENV,
