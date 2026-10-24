@@ -4,8 +4,15 @@ import type { NextFunction, Request, Response } from 'express';
 // One structured line per failed request to the admin's accounts routes:
 // the route and the status, never the cursor or an account's name. A
 // middleware rather than an interceptor, so a refusal the guard answers
-// before the route runs (401, 403, 404) is logged too. Neither route has a
-// path parameter, so the path without its query is the route.
+// before the route runs (401, 403, 404) is logged too. The account's id in
+// the path is written as :id, so the line holds no id and the routes group.
+// Any segment after /admin/accounts/ other than the summary is an id.
+const routeOf = (url: string) =>
+  (url.split('?')[0] ?? '').replace(
+    /(\/admin\/accounts\/)(?!summary(?:\/|$))[^/]+/,
+    '$1:id',
+  );
+
 @Injectable()
 export class FailureLog implements NestMiddleware {
   private readonly logger = new Logger('AdminAccounts');
@@ -15,7 +22,7 @@ export class FailureLog implements NestMiddleware {
       if (res.statusCode < 400) return;
       const line = {
         message: 'admin accounts request failed',
-        route: `${req.method} ${req.originalUrl.split('?')[0]}`,
+        route: `${req.method} ${routeOf(req.originalUrl)}`,
         status: res.statusCode,
       };
       // A lapsed session is routine, not a fault worth a warning.

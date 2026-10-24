@@ -590,10 +590,10 @@ describe('invalid input', () => {
     const mine = await garage();
     const ion = await owner(mine.id);
 
-    const res = await get({ garageId: mine.id, limit: '5' }, ion.auth);
+    const res = await get({ garageId: mine.id, size: '5' }, ion.auth);
 
     expect(res.status).toBe(400);
-    expect(JSON.stringify(res.body.message)).toContain('limit');
+    expect(JSON.stringify(res.body.message)).toContain('size');
   });
 
   it('answers 400 invalid_cursor to the admin for an entry that does not exist', async () => {
