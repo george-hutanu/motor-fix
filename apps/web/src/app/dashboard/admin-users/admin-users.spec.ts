@@ -14,8 +14,10 @@ import {
   AdminService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 
 import { AdminUsers } from './admin-users';
+import { AdminAccount } from '../admin-account/admin-account';
 
 const VIEW = '/app/admin/users';
 
@@ -113,7 +115,13 @@ async function settle() {
 async function open(language: 'ro' | 'en' = 'ro', url = VIEW) {
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([{ component: AdminUsers, path: 'app/admin/users' }]),
+      // As views.ts does: the view owns every address under its own.
+      provideRouter([
+        {
+          children: [{ component: AdminUsers, path: '**' }],
+          path: 'app/admin/users',
+        },
+      ]),
       provideLocationMocks(),
       {
         provide: AdminService,
@@ -723,5 +731,146 @@ describe('the view on the page', () => {
     expect(stylesheet).toMatch(
       /@media \(min-width: 768px\) \{\s*\.found \{\s*font-size: var\(--mf-size-small\);/,
     );
+  });
+});
+
+// @traces 003-FR-017
+describe("opening an account's drawer", () => {
+  let drawer: jest.SpyInstance;
+  let close: (result: string) => void;
+  let opened: { data: { changed?: () => void; id: string }; shape: string }[];
+
+  beforeEach(() => {
+    opened = [];
+    drawer = jest
+      .spyOn(Overlays.prototype, 'open')
+      .mockImplementation((_component, options) => {
+        opened.push(options as (typeof opened)[number]);
+        return new Promise((resolve) => {
+          close = resolve as (result: string) => void;
+        });
+      });
+  });
+
+  afterEach(() => drawer.mockRestore());
+
+  // The button's name comes from its own content, so it holds the row's
+  // visible text (axe label-content-name-mismatch).
+  const accessibleName = (button: Element) =>
+    (button.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const opener = (el: HTMLElement, name: string) =>
+    Array.from(el.querySelectorAll<HTMLButtonElement>('li.row button')).find(
+      (button) =>
+        !button.hasAttribute('aria-label') &&
+        accessibleName(button).startsWith(name) &&
+        name.endsWith(text(button.querySelector('.name')) ?? '\0'),
+    ) as HTMLButtonElement;
+
+  it('makes each row a button named after the account', async () => {
+    const el = await open();
+
+    expect(opener(el, 'Deschide contul Cont 0')).toBeDefined();
+    expect(text(opener(el, 'Deschide contul Cont 0'))).toContain('Cont 0');
+  });
+
+  it("keeps the row's visible text inside the button's name", async () => {
+    const el = await open();
+    const button = el.querySelector('li.row button') as HTMLButtonElement;
+    const visible = button.querySelector('.who') as HTMLElement;
+
+    expect(button.getAttribute('aria-label')).toBeNull();
+    expect(accessibleName(button)).toContain(accessibleName(visible));
+  });
+
+  it('names the row in English', async () => {
+    const el = await open('en');
+
+    expect(opener(el, 'Open the account of Cont 1')).toBeDefined();
+  });
+
+  it("opens the drawer at the account's own address and goes back on close", async () => {
+    const el = await open();
+
+    opener(el, 'Deschide contul Cont 1').click();
+    await settle();
+
+    expect(url()).toBe(`${VIEW}/id-1`);
+    expect(drawer).toHaveBeenCalledWith(AdminAccount, expect.anything());
+    expect(opened[0]).toMatchObject({ data: { id: 'id-1' }, shape: 'drawer' });
+
+    close('cancelled');
+    await settle();
+
+    expect(url()).toBe(VIEW);
+  });
+
+  // Lap 3: the drawer's address kept no query, so the search fell away, the
+  // list read again and the row focus returns to was gone.
+  it('keeps the search under the drawer and the same row on close', async () => {
+    const el = await open('ro', `${VIEW}?q=cont`);
+    const before = reads.length;
+    const row = opener(el, 'Deschide contul Cont 1');
+
+    row.click();
+    await settle();
+
+    expect(url()).toBe(`${VIEW}/id-1?q=cont`);
+    expect(opened[0]).toMatchObject({ data: { id: 'id-1' } });
+
+    close('cancelled');
+    await settle();
+
+    expect(url()).toBe(`${VIEW}?q=cont`);
+    expect(reads.length).toBe(before);
+    expect(opener(el, 'Deschide contul Cont 1')).toBe(row);
+    expect(row.isConnected).toBe(true);
+  });
+
+  it('opens the drawer from its address with a search and lands on that search', async () => {
+    await open('ro', `${VIEW}/id-7?q=cont`);
+
+    close('cancelled');
+    await settle();
+
+    expect(url()).toBe(`${VIEW}?q=cont`);
+  });
+
+  it('opens the drawer from its address and lands on the list on close', async () => {
+    await open('ro', `${VIEW}/id-7`);
+
+    expect(opened[0]).toMatchObject({ data: { id: 'id-7' } });
+
+    close('cancelled');
+    await settle();
+
+    expect(url()).toBe(VIEW);
+    expect(
+      TestBed.inject(Router).lastSuccessfulNavigation()?.extras.replaceUrl,
+    ).toBe(true);
+  });
+
+  it('reads the list again when an action changed the account', async () => {
+    await open('ro', `${VIEW}/id-1`);
+    const before = reads.length;
+
+    opened[0].data.changed?.();
+    await settle();
+
+    expect(reads.length).toBe(before + 1);
+  });
+
+  it('reads the list again after a delete closes the drawer', async () => {
+    await open('ro', `${VIEW}/id-1`);
+    const before = reads.length;
+
+    close('deleted');
+    await settle();
+
+    expect(reads.length).toBe(before + 1);
+    expect(url()).toBe(VIEW);
+    // @traces 003-FR-018
+    expect(
+      document.querySelector('p.said[aria-live="polite"]')?.textContent?.trim(),
+    ).toBe('Contul a fost șters');
   });
 });
