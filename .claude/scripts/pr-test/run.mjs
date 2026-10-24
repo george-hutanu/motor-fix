@@ -194,10 +194,6 @@ export const appLaunchEnv = ({ apiPort, webPort, workerPort, apiURL, webURL }) =
 export const testsCommand = ({ base, sha }) => ["nx", "affected", "-t", "test", `--base=${base}`, `--head=${sha}`, "--parallel=1", "--skip-nx-cache"];
 
 /**
- * The files between two commits of the tree under test (`cwd`: the workflow's checkout, with its full history,
- * never the tester's own sparse one), or null when either commit is not there.
- */
-/**
  * The lap's folder, ready for a run on this machine: shots/ and logs/ made, and a ci-run.json
  * an earlier dispatched lap left there removed, so post.mjs never names a run this lap did not use.
  */
@@ -210,6 +206,10 @@ export function prepareOut(out) {
   return { shots, logs };
 }
 
+/**
+ * The files between two commits of the tree under test (`cwd`: the workflow's checkout, with its full history,
+ * never the tester's own sparse one), or null when either commit is not there.
+ */
 export function filesBetween(cwd, from, to) {
   const r = spawnSync("git", ["diff", "--name-only", from, to], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   return r.status === 0 ? r.stdout.split("\n").filter(Boolean) : null;

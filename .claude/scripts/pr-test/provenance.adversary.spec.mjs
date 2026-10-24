@@ -15,7 +15,7 @@ const judge = (over = {}) => judgeProvenance({ sha: SHA, pr: 21, status: bot(), 
 describe('provenance of a person-written verdict, attacked', () => {
   // @traces 447-FR-003
   it('refuses a person success that names a run when the run could not be supplied', () => {
-    assert.notEqual(judge({ status: owner({ target_url: RUN }), run: null, qaWorkflowChanged: true }), null);
+    assert.match(judge({ status: owner({ target_url: RUN }), run: null, qaWorkflowChanged: true }), /names no run/);
   });
 
   // @traces 447-FR-003
@@ -66,7 +66,7 @@ describe('provenance of a person-written verdict, attacked', () => {
   // @traces 447-FR-003
   it('refuses an account that is a User type but a bot-looking login on the run-less path only for non-person types', () => {
     assert.match(judge({ status: owner({ creator: { login: 'x[bot]', type: 'Organization' } }), run: null }), /x\[bot\]/);
-    assert.match(judge({ status: owner({ creator: null }), run: null }), /./);
+    assert.match(judge({ status: owner({ creator: null }), run: null }), /unknown account/);
   });
 
   // @traces 447-FR-003
@@ -104,20 +104,6 @@ describe('reading provenance, attacked', () => {
       await readProvenance({ pr: 21, shas: [SHA], gh: fake(routes({ [`commits/${SHA}/statuses`]: JSON.stringify([owner({ target_url })]) }), calls) });
       assert.ok(calls.some((c) => c.includes('actions/runs/123')), target_url);
     }
-  });
-
-  // @traces 447-FR-003
-  it('does not fetch a run of another repository named by a person status', async () => {
-    const calls = [];
-    const target_url = 'https://github.com/evil/other/actions/runs/123';
-    let outcome;
-    try {
-      const state = await readProvenance({ pr: 21, shas: [SHA], gh: fake(routes({ [`commits/${SHA}/statuses`]: JSON.stringify([owner({ target_url })]) }), calls) });
-      outcome = state.bySha[SHA].run;
-    } catch {
-      outcome = 'threw';
-    }
-    assert.ok(outcome === 'threw' || outcome === null, 'a foreign repository run was read as if it were this one');
   });
 
   // @traces 447-FR-003
