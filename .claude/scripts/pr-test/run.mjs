@@ -143,6 +143,9 @@ export async function runFlows(run, findings) {
 }
 
 /** The finding for flows that threw; what they pushed before it stays beside it. */
+/** A server that did not come up (FR-003): a blocker carrying the wait's error and the last lines of its log. */
+export const bootFailure = (h, log, what = h.server) => stepFinding(`${what} did not come up`, `${h.error}; last lines of ${log}:\n${h.tail}`);
+
 export const flowThrewFinding = (error) => stepFinding("A flow threw", String(error?.stack ?? error).split("\n").slice(0, 3).join(" / "), "high");
 
 const rejectionFinding = (title, reason) => stepFinding(title, String(reason?.stack ?? reason).split("\n").slice(0, 3).join(" / "), "high");
@@ -382,7 +385,7 @@ async function main(argv) {
         const h = await waitForServer(plan.store.health, { name: "storage", exited: storeExited, log: storeLog, timeoutMs: 30000, intervalMs: 250 });
         log(`health storage: ${h.ok ? `HTTP ${h.status}` : `${h.error}; last lines of ${storeLog}:\n${h.tail}`}`);
         if (!h.ok) {
-          findings.push(stepFinding("The object store did not come up", `${h.error}; last lines of ${storeLog}:\n${h.tail}`));
+          findings.push(bootFailure(h, storeLog, "The object store"));
           return finish();
         }
       }
@@ -453,7 +456,7 @@ async function main(argv) {
       }
       const at = h.server;
       log(`health ${name}: ${h.error}; last lines of ${appLog(at)}:\n${h.tail}`);
-      findings.push(stepFinding(`${at} did not come up`, `${h.error}; last lines of ${appLog(at)}:\n${h.tail}`));
+      findings.push(bootFailure(h, appLog(at)));
       return finish();
     }
 
