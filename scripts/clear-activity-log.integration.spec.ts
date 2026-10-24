@@ -86,17 +86,15 @@ describe('a role that is not superuser and holds DELETE and TRUNCATE', () => {
     );
   });
 
-  // SET ROLE is checked against the session's user, the superuser here, so
-  // the proof is membership: the cleaning role is granted to no role at all.
+  // SET ROLE is checked against the session's user, so the session becomes
+  // the plain role first: from there the cleaning role is out of reach.
   it('cannot become the cleaning role', async () => {
-    const { rows } = await db.query(
-      `SELECT pg_has_role($1, 'motorfix_migrator', 'MEMBER') AS member,
-              (SELECT count(*)::int FROM pg_auth_members m JOIN pg_roles r ON r.oid = m.roleid
-                WHERE r.rolname = 'motorfix_migrator') AS members`,
-      [plainRole],
-    );
-
-    expect(rows).toEqual([{ member: false, members: 0 }]);
+    await expect(
+      inTransaction(async () => {
+        await db.query(`SET LOCAL SESSION AUTHORIZATION ${plainRole}`);
+        await db.query('SET LOCAL ROLE motorfix_migrator');
+      }),
+    ).rejects.toThrow(/permission denied to set role "motorfix_migrator"/);
   });
 
   it('cannot switch the triggers off', async () => {
@@ -109,15 +107,17 @@ describe('a role that is not superuser and holds DELETE and TRUNCATE', () => {
 });
 
 describe('the cleaning role', () => {
-  it('empties the table, and the trigger refuses the next delete again', async () => {
+  it('empties the table, takes new entries, and the trigger refuses the next delete again', async () => {
     const left = await inTransaction(async () => {
       await addEntry();
       for (const sql of CLEAR_STATEMENTS.slice(1, -1)) await db.query(sql);
       await db.query('RESET ROLE');
-      return count();
+      const afterClear = await count();
+      await addEntry();
+      return [afterClear, await count()];
     });
 
-    expect(left).toBe(0);
+    expect(left).toEqual([0, 1]);
     await expect(
       inTransaction(async () => {
         const subjectId = await addEntry();

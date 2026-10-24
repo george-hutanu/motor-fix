@@ -116,6 +116,7 @@ features:
   - 438-test-suites-projects
   - 471-crlf-harness-tidy
   - 493-watcher-docs
+  - 456-activity-log-test-cleanup
 ---
 
 # Capability: Platform
@@ -2857,6 +2858,10 @@ _From 438-test-suites-projects._
 ### 493-FR-005 — `merge-main.mjs`'s capability resolution (`unionConflicts`) MUST keep one blank line between the last line of ours and a heading (`#`) of theirs that follows it in the same conflict hunk, so two features appended at the same place never glue a `_From …_` line to the next requirement's heading.
 
 _From 493-watcher-docs._
+
+### 456-FR-005 — The change MUST add no endpoint, queue, outside call, product action, schema migration or user-facing text; production and staging deploys keep their current role and connection string.
+
+_From 456-activity-log-test-cleanup._
 
 ## Retired
 

@@ -1,4 +1,5 @@
 // @traces 456-FR-001 456-FR-003 456-FR-005
+import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -90,12 +91,15 @@ describe('assertLoopback', () => {
       'a host parameter',
       'postgresql://u:p@localhost/motorfix?host=db.example.com',
     ],
+    ['a value that is not a URL', 'not a url'],
     [
       'a hostaddr parameter',
       'postgresql://u:p@localhost/motorfix?hostaddr=10.0.0.5',
     ],
   ])('refuses %s', (_, url) => {
-    expect(() => assertLoopback(url)).toThrow(/not a database on this machine/);
+    expect(() => assertLoopback(url)).toThrow(
+      /not a database on this machine|Invalid URL/,
+    );
   });
 
   it('refuses an unset DATABASE_URL', () => {
@@ -115,8 +119,29 @@ describe('assertLoopback', () => {
   });
 });
 
-// A deployed database never holds a role that may empty the audit history
-// (OD-34): only this script makes it, never a migration.
+describe('node scripts/clear-activity-log.ts', () => {
+  it('exits 1 with the reason when the database is not on this machine', () => {
+    const run = spawnSync(
+      process.execPath,
+      [join(__dirname, 'clear-activity-log.ts')],
+      {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          DATABASE_URL: 'postgresql://app:pw@db.example.com/motorfix',
+        },
+      },
+    );
+
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain(
+      'activity log: db.example.com is not a database on this machine',
+    );
+  });
+});
+
+// A deployed database never holds a role that may empty the audit history:
+// only this script makes it, never a migration.
 describe('the cleaning role in deployed databases', () => {
   it('is created by no migration', () => {
     const migrations = join(__dirname, '..', 'libs/domain/prisma/migrations');

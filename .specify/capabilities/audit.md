@@ -14,6 +14,7 @@ features:
   - 129-delete-account
   - 469-activity-log-at-index
   - 003-admin-account-actions
+  - 456-activity-log-test-cleanup
 ---
 
 # Capability: Audit history
@@ -62,9 +63,9 @@ _From 220-requests-quotes-bookings._
 
 _From 390-audit-history._
 
-### 390-FR-011 — The history MUST be append-only: the database refuses any update, delete or truncate of an entry, whoever asks.
+### 456-FR-002 — The append-only triggers and their function MUST stay as they are on `main` (390-FR-011): the application's role and every role other than the cleaning role MUST still be refused on update, delete and truncate of the audit history, with the existing error. The cleaning role empties the table inside one transaction whose role and trigger mode end with it, so the triggers fire again for the next statement on that connection.
 
-_From 390-audit-history._
+_From 456-activity-log-test-cleanup._
 
 ### 390-FR-012 — The history MUST be stored apart from the System status log; this writer never writes technical events or errors.
 
@@ -234,6 +235,18 @@ _From 469-activity-log-at-index._
 
 _From 003-admin-account-actions._
 
+### 456-FR-001 — Test tooling MUST create the cleaning role `motorfix_migrator`, separate from the application's role, idempotently and only in a test database: it cannot log in, has no password, and holds only TRUNCATE on the audit history and SET on `session_replication_role`. No schema migration creates it, so production and staging never hold it (OD-34).
+
+_From 456-activity-log-test-cleanup._
+
+### 456-FR-003 — One script, `node scripts/clear-activity-log.ts`, MUST empty the audit history of the database in `DATABASE_URL` as the cleaning role, and MUST run before each integration Jest invocation, never during one: in the CI integration job after the migrations (before the suite, and before each repeated run of named specs), and in `scripts/test-services.ts` after it migrates a worktree's database. It MUST refuse a `DATABASE_URL` whose host is not loopback or is missing, or that carries a `host=` or `hostaddr=` parameter, and any failure MUST exit non-zero with the database's error.
+
+_From 456-activity-log-test-cleanup._
+
+### 456-FR-004 — An integration spec on real PostgreSQL MUST prove, before the code (Principle II): the connection's own role and a non-superuser role holding DELETE and TRUNCATE are refused a delete and a truncate with the append-only error; the non-superuser role cannot assume the cleaning role or change `session_replication_role`; the cleaning role empties the table (inside a transaction the spec rolls back, so parallel specs keep their rows); and a delete on the same connection afterwards is refused again.
+
+_From 456-activity-log-test-cleanup._
+
 ## Retired
 
 - `390-FR-009` — superseded by `220-FR-018` (2026-10-08)
@@ -242,3 +255,4 @@ _From 003-admin-account-actions._
 - `391-FR-010` — superseded by `469-FR-004` (2026-10-23)
 - `391-FR-006` — superseded by `003-FR-004` (2026-10-24)
 - `391-FR-009` — superseded by `003-FR-004` (2026-10-24)
+- `390-FR-011` — superseded by `456-FR-002` (2026-10-24)

@@ -4,7 +4,7 @@
 // are: the TRUNCATE runs as motorfix_migrator, a role made here that cannot
 // sign in and may only truncate this table and switch the triggers off for its
 // own transaction. No migration creates it, so a deployed database never holds
-// it (OD-34), and the script refuses any database not on this machine.
+// it, and the script refuses any database not on this machine.
 //
 //   node scripts/clear-activity-log.ts      (reads DATABASE_URL)
 import { Client } from 'pg';
@@ -41,7 +41,7 @@ export function assertLoopback(url: string | undefined): string {
   if (!url) throw new Error('DATABASE_URL unset');
   const parsed = new URL(url);
   if (
-    !LOOPBACK.has(parsed.hostname) ||
+    !LOOPBACK.has(parsed.hostname.toLowerCase()) ||
     parsed.searchParams.has('host') ||
     parsed.searchParams.has('hostaddr')
   ) {
@@ -64,12 +64,15 @@ export async function clearActivityLog(
     try {
       for (const sql of CLEAR_STATEMENTS) await session.query(sql);
     } catch (error) {
-      await session.query('ROLLBACK');
+      // The database's own error is the one to report, not a failed cleanup.
+      await session.query('ROLLBACK').catch(() => undefined);
       throw error;
     }
-  } finally {
-    await session.end();
+  } catch (error) {
+    await session.end().catch(() => undefined);
+    throw error;
   }
+  await session.end();
   return 'activity log: cleared';
 }
 
