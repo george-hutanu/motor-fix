@@ -206,7 +206,7 @@ describe('GET /admin/brands', () => {
     expect(long.status).toBe(400);
   });
 
-  // @traces 105-FR-001
+  // @traces 105-FR-001 039-FR-001
   it.each(NON_ADMIN)('answers 404 to a %s', async (role) => {
     await loader.load(BRANDS);
 

@@ -75,6 +75,7 @@ const numbered = (count: number): BrandRecord[] =>
   }));
 
 describe('GET /brands', () => {
+  // @traces 039-FR-010
   it.each(['sko', 'Skoda', 'ŠKODA'])(
     'finds Škoda for a visitor typing %s',
     async (q) => {
@@ -107,6 +108,7 @@ describe('GET /brands', () => {
     ]);
   });
 
+  // @traces 039-FR-011
   it('lists every active brand by popularity, then unranked brands by name', async () => {
     await loader.load([
       { key: 'zeta', name: 'Zeta', popularity: 2 },
@@ -172,6 +174,7 @@ describe('GET /brands', () => {
     expect(names(res.body)[0]).toBe(name);
   });
 
+  // @traces 039-FR-012
   it('pages 20 brands at a time with a cursor to the next page', async () => {
     await loader.load(numbered(25));
 
@@ -263,6 +266,7 @@ describe('GET /brands', () => {
     ]);
   });
 
+  // @traces 039-FR-012
   it('keeps the cached list for an hour', async () => {
     await loader.load(BRANDS);
     await search();

@@ -114,6 +114,7 @@ describe('BrandLoader', () => {
     ]);
   });
 
+  // @traces 039-FR-008
   it('records each created brand in the history as the system', async () => {
     await loader.load(FILE);
 
@@ -362,6 +363,7 @@ describe('BrandLoader', () => {
     ).toMatchObject({ active: true, id: dacia.id });
   });
 
+  // @traces 039-FR-007
   it('fails the whole load on a duplicate in the file, naming it, and stores nothing', async () => {
     await loader.load(FILE);
     const before = await stored();

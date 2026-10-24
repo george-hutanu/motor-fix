@@ -45,6 +45,7 @@ features:
   - 532-lost-session-home
   - 500-req-ip-behind-proxy
   - 500-trust-railway-edge
+  - 105-brand-list-admin
 ---
 
 # Capability: Accounts
@@ -1185,6 +1186,10 @@ _From 500-trust-railway-edge._
 ### 500-FR-010 — A request arriving from a public socket address MUST resolve its caller to that socket address whatever forwarded-for header it carries.
 
 _From 500-trust-railway-edge._
+
+### 105-FR-016 — `refusal` MUST live in a shared module of the auth library (`libs/domain/src/auth/http-refusal.ts`), re-exported where the existing imports expect it or every import updated; after the change no file outside `libs/domain/src/auth/` imports `auth/sign-up.service` for it (`git grep` shows none). (#568)
+
+_From 105-brand-list-admin._
 
 ## Retired
 
