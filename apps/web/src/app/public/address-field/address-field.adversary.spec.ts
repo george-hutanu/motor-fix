@@ -1,10 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
-import { PlacesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import { type AddressChoice, AddressField } from './address-field';
+import { placesAnswered } from './address-field.testing';
 
 @Component({
   imports: [AddressField],
@@ -39,9 +39,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function mount() {
   TestBed.configureTestingModule({
-    providers: [
-      { provide: PlacesService, useValue: { placesControllerSearch: search } },
-    ],
+    providers: [placesAnswered((asked) => search(asked))],
   });
   await TestBed.inject(I18n).enter('public');
   fixture = TestBed.createComponent(Host);

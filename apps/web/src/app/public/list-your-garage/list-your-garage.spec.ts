@@ -27,6 +27,7 @@ import { Consent } from '../../consent/consent';
 import { Live } from '../../dashboard/live';
 import { Session } from '../../dashboard/session';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
+import { placesAnswered } from '../address-field/address-field.testing';
 import { type BrowserDraft, STORAGE_KEY } from '../draft/draft';
 import { PLACE_MAP, type PlaceMapEvents } from '../place-step/place-map';
 
@@ -166,6 +167,7 @@ async function open(path: string, reduced = false) {
       { provide: PublicHolidaysService, useValue: holidays },
       { provide: CatalogueService, useValue: jobs },
       { provide: PlacesService, useValue: places },
+      placesAnswered((asked) => places.placesControllerSearch(asked)),
       { provide: PLACE_MAP, useValue: placeMap },
     ],
   });

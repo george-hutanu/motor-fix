@@ -35,6 +35,7 @@ import { routes } from '../../app.routes';
 import { BrandSearch } from '../../home/brand-picker/brand-search/brand-search';
 import { PlaceDialog } from '../../home/place/place-dialog/place-dialog';
 import { type Place, PlaceStore } from '../../home/place/place-store';
+import { placesAnswered } from '../address-field/address-field.testing';
 import { PublicFrame } from '../frame/frame';
 import { PublicLive } from '../live';
 
@@ -197,6 +198,7 @@ async function configure(platform = 'browser', more: Route[] = []) {
       provideRouter([{ component: Results, path: ':lang/garages' }, ...more]),
       { provide: SearchService, useValue: searchApi },
       { provide: PlacesService, useValue: placesApi },
+      placesAnswered((asked) => placesApi.placesControllerSearch(asked)),
       { provide: Overlays, useValue: overlays },
       { provide: PLATFORM_ID, useValue: platform },
       { provide: PublicLive, useValue: live },
