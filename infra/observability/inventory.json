@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 181,
+    "count": 184,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -860,6 +860,45 @@
       ],
       "reason": "a read with no side effect, so nothing is audited; its request span and log line carry the route and status, and a 404 feature_off or not_found is the access rule working, not a failure",
       "story": "ST-55"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanics-add",
+      "source": "libs/domain/src/garages/mechanics/mechanics.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each card added is audited (create, the owner as actor) and recorded as mechanic.added in the outbox in the same transaction; a 403 mechanic_owned_field or a 422 validation_failed is the owner's input refused, not a failure",
+      "story": "ST-56"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanics-edit",
+      "source": "libs/domain/src/garages/mechanics/mechanics.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each changed field is audited (update, old and new value) and recorded as mechanic.updated with the fields; an unchanged save writes nothing; a 404 not_found is a card removed in another tab",
+      "story": "ST-56"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanics-remove",
+      "source": "libs/domain/src/garages/mechanics/mechanics.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each removal is audited (delete) and recorded as mechanic.removed in the same transaction; the STAFF_REMOVED e-mail and push go through the notifications pipeline, whose sends and failures its own entries count, and a failed send is logged as an error with the card id while the removal stays; a 409 owner_row is the rule working",
+      "story": "ST-56"
     },
     {
       "kind": "endpoint",

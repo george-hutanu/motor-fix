@@ -184,7 +184,7 @@
   {
     "id": "allows-specs-trunk-push",
     "hook": "pre:bash:guard",
-    "why": "815-FR-007: specs/ is the private motor-fix-specs clone, whose records branch is trunk; pushing it is how a feature's records are saved",
+    "why": "specs/ is the private motor-fix-specs clone, whose records branch is trunk; pushing it is how a feature's records are saved",
     "payload": {
       "tool_input": {
         "command": "git -C specs push -q origin HEAD:trunk"
@@ -197,7 +197,7 @@
   {
     "id": "blocks-main-push-beside-specs",
     "hook": "pre:bash:guard",
-    "why": "815-FR-007: the specs repository's trunk is allowed, motor-fix's main still is not",
+    "why": "the specs repository's trunk is allowed, motor-fix's main still is not",
     "payload": {
       "tool_input": {
         "command": "git -C specs push origin HEAD:trunk && git push origin HEAD:main"
