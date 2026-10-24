@@ -124,6 +124,35 @@ describe('the Documente row by the yearly cycle', () => {
     },
   );
 
+  // The day the documents fall due is still `due`: amber, with that day.
+  it('reads documents due today as due on today, amber, with the upload button', async () => {
+    jest.useFakeTimers({
+      doNotFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'setImmediate',
+        'queueMicrotask',
+        'nextTick',
+      ],
+      now: new Date('2026-10-24T09:00:00.000Z'),
+    });
+    try {
+      const element = (
+        await render(answer(cycle('due', { dueOn: '2026-10-24' })))
+      ).nativeElement;
+
+      expect(said(element)).toBe(
+        'Documente certificat constatator și autorizație RAR · scadent pe 24 oct. 2026 verificate pe 1 oct. 2026 atenție',
+      );
+      expect(documentsRow(element).getAttribute('data-lamp')).toBe('amber');
+      expect(uploadButton(element)).not.toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it.each([
     [
       'valid',

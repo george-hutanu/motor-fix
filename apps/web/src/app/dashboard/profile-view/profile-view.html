@@ -104,6 +104,6 @@
     }
   </section>
 }
-@if (profile() || suspended()) {
+@if (profile() || suspended() || view.error()) {
   <mf-garage-legal-check />
 }

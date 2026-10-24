@@ -4,6 +4,7 @@ import { Client } from 'pg';
 
 import { ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
+import { keepSeededLanguage } from './seeded-language.js';
 
 // A garage and owner of this file's own, written straight to PostgreSQL so no
 // seeded garage moves under a spec running beside this one. The @database tag
@@ -131,9 +132,12 @@ test.describe('the legal check on the garage profile view @seeded @database', ()
   });
 
   test.afterAll(async () => {
-    await db.query('DELETE FROM account WHERE email = ANY($1)', [emails]);
-    await db.query('DELETE FROM garage WHERE id = ANY($1)', [garageIds]);
-    await db.end();
+    try {
+      await db.query('DELETE FROM account WHERE email = ANY($1)', [emails]);
+      await db.query('DELETE FROM garage WHERE id = ANY($1)', [garageIds]);
+    } finally {
+      await db.end();
+    }
   });
 
   test('shows the owner the tag, four rows in order, the RAR day, the deadline and the note', async ({
@@ -197,5 +201,28 @@ test.describe('the legal check on the garage profile view @seeded @database', ()
       page.getByRole('region', { name: 'Profilul public' }),
     ).toHaveCount(0);
     expect(await sideways(page)).toBeLessThanOrEqual(0);
+  });
+});
+
+// @traces 136-FR-006
+test.describe('the legal check stays the owner’s on the profile view @seeded', () => {
+  test("keeps the view, and so the panel, from the garage's receptionist", async ({
+    page,
+  }) => {
+    await keepSeededLanguage(page);
+    await ready(page, '/ro');
+    await page
+      .getByRole('banner')
+      .getByRole('button', { exact: true, name: 'Autentificare' })
+      .click();
+    await signIn(page, 'receptie-militari@example.test');
+    await expect(page).toHaveURL('/app/garage');
+    const menu = page.getByRole('navigation', { name: 'Meniu' });
+
+    await expect(
+      menu.getByRole('link', { name: 'Profilul service‑ului' }),
+    ).toHaveCount(0);
+    await page.goto('/app/garage/profile');
+    await expect(page).toHaveURL('/app/garage');
   });
 });

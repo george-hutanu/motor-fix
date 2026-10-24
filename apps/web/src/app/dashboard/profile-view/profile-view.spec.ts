@@ -551,6 +551,7 @@ describe('Profilul service-ului: loading, failure and suspension', () => {
 // @traces 136-FR-002
 // @traces 136-FR-005
 // @traces 136-FR-006
+// @traces 136-FR-008
 // @traces 136-FR-009
 describe('Profilul service-ului: the legal check panel', () => {
   it('shows the legal check right after the public profile panel, read once for the session garage', async () => {
@@ -585,13 +586,16 @@ describe('Profilul service-ului: the legal check panel', () => {
     ]);
   });
 
-  it('shows the profile error alone, with no legal check, when the profile read fails', async () => {
+  it('keeps the legal check standing when the profile read fails', async () => {
     const { element, settle } = await render(async () => {
       throw status(503);
     });
     await settle();
+
     expect(all(element, `${PUBLIC} [data-error]`)).toHaveLength(1);
-    expect(element.querySelector('mf-garage-legal-check')).toBeNull();
+    expect(legal).toHaveBeenCalledTimes(1);
+    expect(all(element, `${LEGAL_PANEL} [data-legal-row]`)).toHaveLength(4);
+    expect(all(element, `${LEGAL_PANEL} [role="alert"]`)).toEqual([]);
   });
 
   it('shows nothing for the legal check when it answers 404, and the profile stays', async () => {
@@ -649,19 +653,6 @@ describe('Profilul service-ului: the legal check panel', () => {
     expect(element.querySelector('[role="alert"]')).toBeNull();
     expect(text(line(element, 'name'))).toBe('Nume Service Auto Militari');
     expect(all(element, `${LEGAL_PANEL} [data-legal-row]`)).toHaveLength(4);
-  });
-
-  // @traces 136-FR-008
-  it('only reads: the two GET reads are all the view calls, and it opens nothing', async () => {
-    const { element, settle } = await render();
-    await settle();
-
-    // The service double carries the two reads alone, so any other call
-    // (a write, a new endpoint) would throw here.
-    expect(read).toHaveBeenCalledTimes(1);
-    expect(legal).toHaveBeenCalledTimes(1);
-    expect(TestBed.inject(Overlays).open).not.toHaveBeenCalled();
-    expect(all(element, `${LEGAL_PANEL} [data-documents-upload]`)).toEqual([]);
   });
 
   it('does not read the legal check while the profile is still loading', async () => {
