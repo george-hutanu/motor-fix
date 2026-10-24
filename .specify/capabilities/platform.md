@@ -112,6 +112,7 @@ features:
   - 961-require-agent-review
   - 447-own-pr-refusal
   - 1376-pr-test-local-boot
+  - 1185-accent-search
 ---
 
 # Capability: Platform
@@ -2821,6 +2822,10 @@ _From 1376-pr-test-local-boot._
 ### 1376-FR-004 — The wait for a server MUST be bounded: at its deadline it ends with an error carrying the last lines of the server's log.
 
 _From 1376-pr-test-local-boot._
+
+### 1185-FR-003 — The database MUST offer one immutable function `f_unaccent(text)` that maps the Romanian diacritics ș ş ț ţ ă â î and their capitals Ș Ş Ț Ţ Ă Â Î to the base letters s t a i (and S T A I), NFC-composing the whole string first, leaving every other character and the case unchanged, with no dependency on a database extension; `account_fold` MUST become `lower(f_unaccent($1))`, so the map exists once and `account_fold`'s values (and its trigram index) do not change; `f_unaccent('ș ş ț ţ ă â î')` MUST equal `'s s t t a a i'` on the repository's own PostgreSQL image.
+
+_From 1185-accent-search._
 
 ## Retired
 
