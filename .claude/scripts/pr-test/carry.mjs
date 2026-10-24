@@ -209,7 +209,7 @@ const sidesOf = (reads, answers) => Object.fromEntries(reads.map((r, i) => [r.sh
  * carry costs two rounds, not one per commit (the merge gate runs under a
  * deadline). Rejects when gh fails.
  */
-export async function fetchCarryState({ from, head, gh = realGh }) {
+export async function fetchCarryState({ from, head, gh }) {
   const json = (args) => ghJson(gh, args);
   const compare = await json(compareArgs(from, head));
   const shas = statusShas(compare, from, head);

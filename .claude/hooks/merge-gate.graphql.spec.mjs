@@ -37,6 +37,27 @@ describe('merge gate — a merge through gh api graphql', () => {
     assert.match(mergeTarget(`gh api graphql -f query='mutation { a: mergePullRequest(input: {pullRequestId: "PR_a"}) { clientMutationId } b: mergePullRequest(input: {pullRequestId: "PR_b"}) { clientMutationId } }'`).unresolved, /more than one/);
   });
 
+  // Review of ST-448: each of these merged a PR the gate never judged.
+  it('refuses a command that merges more than one PR, whichever paths it mixes', () => {
+    const cli = ['gh', 'pr', 'merge'].join(' ');
+    assert.match(mergeTarget(`${cli} 5 && ${inline()}`).unresolved, /more than one/);
+    assert.match(mergeTarget(`gh api -X PUT repos/o/r/pulls/5/merge && ${inline()}`).unresolved, /more than one/);
+    assert.match(mergeTarget(`${cli} 5 && ${cli} 6`).unresolved, /more than one/);
+    assert.deepEqual(mergeTarget(`${cli} 5; ${cli} 5 --auto`), { pr: '5' });
+  });
+
+  it('refuses a repeated id or query field, since gh sends the last one', () => {
+    const query = `query='mutation($id: ID!) { mergePullRequest(input: {pullRequestId: $id}) { clientMutationId } }'`;
+    assert.match(mergeTarget(`gh api graphql -f ${query} -f id=PR_ok -f id=PR_other`).unresolved, /more than one/);
+    assert.match(mergeTarget(`gh api graphql -f ${query} -f id=${ID} -f id=${ID}`).unresolved, /more than once/);
+    assert.match(mergeTarget(`gh api graphql -f query='{ viewer { login } }' -f ${query} -f id=${ID}`).unresolved, /more than once/);
+  });
+
+  it('refuses a graphql call whose query it cannot read: from a file, stdin or --input', () => {
+    for (const cmd of ['gh api graphql -F query=@merge.graphql -f id=PR_x', 'gh api graphql -f query=@- < q.graphql', 'gh api graphql --input body.json'])
+      assert.match(mergeTarget(cmd).unresolved, /cannot read the query/, cmd);
+  });
+
   it('leaves a graphql call that merges nothing alone, and the mutation named outside gh api graphql', () => {
     assert.equal(mergeTarget(`gh api graphql -f query='{ viewer { login } }'`), null);
     assert.equal(mergeTarget(`gh api graphql -f query='mutation { addComment(input: {subjectId: "${ID}", body: "x"}) { clientMutationId } }'`), null);
@@ -77,7 +98,7 @@ describe('merge gate — a graphql merge is judged like gh pr merge', () => {
     { __typename: 'CheckRun', name: 'CI OK', conclusion: 'SUCCESS', status: 'COMPLETED' },
     { __typename: 'CheckRun', name: 'PR title', conclusion: 'SUCCESS', status: 'COMPLETED' },
   ];
-  const state = (rollup) => JSON.stringify({ number: 21, state: 'OPEN', headRefOid: 'abc1234def5678', statusCheckRollup: rollup });
+  const state = (rollup, id = ID) => JSON.stringify({ id, number: 21, state: 'OPEN', headRefOid: 'abc1234def5678', statusCheckRollup: rollup });
   const gate = (command, env) =>
     spawnSync(process.execPath, [join(hooks, 'merge-gate.mjs')], {
       input: JSON.stringify({ tool_input: { command } }),
@@ -105,6 +126,15 @@ describe('merge gate — a graphql merge is judged like gh pr merge', () => {
     const out = gate(`gh api graphql -f query='mutation($id: ID!) { mergePullRequest(input: {pullRequestId: $id}) { clientMutationId } }' -f id=$PR_ID`, { SPECKIT_PR_STATE: state(green) });
     assert.equal(out.status, 2);
     assert.match(out.stderr, /gh pr merge <n>/);
+  });
+
+  it('refuses a node of another repository, which the number alone would judge as this repo\'s PR', () => {
+    const passing = [...green, { __typename: 'StatusContext', context: 'agent-review', state: 'SUCCESS' }];
+    for (const id of ['PR_kwDOSomeoneElse21', null]) {
+      const out = gate(inline(), { SPECKIT_PR_STATE: state(passing, id), SPECKIT_PROVENANCE_STATE: '{"status":{"creator":{"login":"george-hutanu","type":"User"}}}' });
+      assert.equal(out.status, 2, String(id));
+      assert.match(out.stderr, /not this repository's PR #21/);
+    }
   });
 
   it('lets a graphql merge through with agent-review success and every check green', () => {

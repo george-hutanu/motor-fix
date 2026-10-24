@@ -603,7 +603,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"id\":\"PR_kwDOMotorFix21\",\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"}]}"
     },
     "expect": {
       "exit": 2,
@@ -620,7 +620,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PR_STATE": "{\"id\":\"PR_kwDOMotorFix21\",\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
@@ -638,7 +638,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PR_STATE": "{\"id\":\"PR_kwDOMotorFix21\",\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {

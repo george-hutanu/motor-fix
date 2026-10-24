@@ -3,9 +3,11 @@
 // and a `gh api graphql` mergePullRequest or enablePullRequestAutoMerge
 // mutation while the PR's head commit has no `agent-review` success status.
 // A GraphQL merge is tied to its PR through the pull request id it names
-// (inline, or a -f/-F field) and judged the same way; one naming no id the gate
-// can read, or more than one, is refused. A query read from a file, or a merge
-// made outside gh, is out of its reach.
+// (inline, or a -f/-F field), which must be this repository's PR of that
+// number, and judged the same way. Refused unread: a command merging more
+// than one PR, a GraphQL merge naming no id the gate can read, or more than
+// one, or repeating a field, and any `gh api graphql` whose query the gate
+// cannot see (a file, stdin, --input). A merge made outside gh is out of reach.
 //
 // A PR opened by Dependabot (its author, read from gh) whose every commit
 // Dependabot wrote, and GitHub or Dependabot committed under a verified
@@ -151,35 +153,57 @@ const NODE_ID = /^[A-Za-z0-9_=+/-]+$/;
  */
 export function mergeTarget(command) {
   let graphql = false;
-  // A quoted multi-line query is split here too, so the mutation is looked for in the whole command.
-  for (const part of command.split(/&&|\|\||;|\n/)) {
+  const targets = [];
+  // A quoted multi-line query is split here too, so the mutation is looked for in the whole command. A
+  // substitution, a subshell, or a string a shell runs (`bash -c "…"`, `eval "…"`) is split off like a chained
+  // command; after gh, quotes around a word (`gh "pr" merge`, `gh api "graphql"`) are dropped.
+  for (const part of command.split(/&&|\|\||[;|\n`()]|(?:^|\s)(?:-c|eval)\s+["']/)) {
     const words = part.trim().split(/\s+/);
     const gh = words.findIndex((w) => w === "gh" || w.endsWith("/gh"));
     if (gh === -1) continue;
     const positional = [];
-    const rest = words.slice(gh + 1);
+    const rest = words.slice(gh + 1).map((w) => w.replace(/^["']+|["']+$/g, ""));
     for (let i = 0; i < rest.length; i++) {
       if (VALUED.has(rest[i])) i++;
       else if (!rest[i].startsWith("-")) positional.push(rest[i]);
     }
     const [sub, verb, arg] = positional;
-    if (sub === "pr" && verb === "merge") return { pr: arg ?? null };
+    if (sub === "pr" && verb === "merge") targets.push(arg ?? null);
     if (sub === "api") {
       const m = part.match(/repos\/[^/\s]+\/[^/\s]+\/pulls\/(\d+)\/merge\b/);
-      if (m) return { pr: m[1] };
-      if (rest.some((w) => w === "graphql" || w.endsWith("/graphql"))) graphql = true;
+      if (m) targets.push(m[1]);
+      else if (rest.some((w) => w === "graphql" || w.endsWith("/graphql"))) graphql = true;
     }
   }
-  return graphql && MERGE_MUTATION.test(command) ? graphqlTarget(command) : null;
+  const merge = graphql ? graphqlTarget(command) : null;
+  const distinct = [...new Set(targets)];
+  if (distinct.length + (merge ? 1 : 0) > 1) return { pr: null, unresolved: "it merges more than one pull request, or names one in more than one way" };
+  if (merge) return merge;
+  return distinct.length ? { pr: distinct[0] } : null;
 }
 
-/** The one pullRequestId a GraphQL merge names: inline, or a variable's -f/-F/--field/--raw-field value. */
+/** A `gh api` field flag before `name=`, as a pattern source. */
+const fieldFlag = (name) => `(?:^|\\s)(?:-f|-F|--field|--raw-field)[\\s=]+["']?${name}=`;
+
+/**
+ * For a `gh api graphql` call: { pr: null, nodeId } for the one pullRequestId
+ * a merge mutation names (inline, or a variable's field), { pr: null,
+ * unresolved } when it cannot be told, null when the call merges nothing. A
+ * query the gate cannot read (from a file, stdin or --input) may hold a merge,
+ * so it is refused too; gh sends the last of a repeated field, so a repeated
+ * query or id field is refused rather than read.
+ */
 function graphqlTarget(command) {
+  if (new RegExp(`${fieldFlag("query")}@`).test(command) || /(?:^|\s)--input\b/.test(command))
+    return { pr: null, unresolved: "the gate cannot read the query it sends (a file, stdin or --input), which may merge a pull request" };
+  if (!MERGE_MUTATION.test(command)) return null;
+  if ((command.match(new RegExp(fieldFlag("query"), "g")) ?? []).length > 1) return { pr: null, unresolved: "it gives the query field more than once" };
   const ids = [];
   for (const m of command.matchAll(/pullRequestId\s*:\s*\\?"([^"\\\s]+)\\?"/g)) ids.push(m[1]);
   for (const m of command.matchAll(/pullRequestId\s*:\s*\$(\w+)/g)) {
-    const field = new RegExp(`(?:^|\\s)(?:-f|-F|--field|--raw-field)[\\s=]+["']?${m[1]}=["']?([^\\s"']+)`);
-    ids.push(command.match(field)?.[1] ?? "");
+    const values = [...command.matchAll(new RegExp(`${fieldFlag(m[1])}["']?([^\\s"']*)`, "g"))].map((v) => v[1]);
+    if (new Set(values).size === 1 && values.length > 1) return { pr: null, unresolved: `it gives the ${m[1]} field more than once` };
+    ids.push(...(values.length ? values : [""]));
   }
   const distinct = [...new Set(ids)];
   if (distinct.length > 1) return { pr: null, unresolved: `it names more than one pull request (${distinct.map((id) => id || "an unset variable").join(", ")})` };
@@ -198,7 +222,7 @@ export async function prOfNode(nodeId, gh, env = process.env) {
   const out = await gh(["api", "graphql", "-f", "query=query($id: ID!) { node(id: $id) { __typename ... on PullRequest { number } } }", "-f", `id=${nodeId}`, "--jq", ".data.node"]);
   if (out.code !== 0) throw new Error(String(out.stderr).trim());
   const node = JSON.parse(String(out.stdout).trim() || "null");
-  if (node?.__typename !== "PullRequest" || !Number.isInteger(node.number)) throw new Error(`${nodeId} is not a pull request`);
+  if (node?.__typename !== "PullRequest" || !Number.isInteger(node.number) || node.number < 1) throw new Error(`${nodeId} is not a pull request`);
   return String(node.number);
 }
 
@@ -294,7 +318,8 @@ function ciRefusal(pr, checks, sha, { dependabot = false } = {}) {
     return `PR #${pr.number} cannot merge: CI failed on ${sha} (${list(red)}). It is a Dependabot PR, which merges without an agent review only while Dependabot alone commits to it: a commit pushed to its branch takes the exemption away. Read gh pr checks ${pr.number}; for a flaky or outdated run, comment "@dependabot rebase" or "@dependabot recreate"; for a real break, close it and make the bump in a PR of your own.`;
   if (red.length) return `PR #${pr.number} cannot merge: CI failed on ${sha} (${list(red)}). Read gh pr checks ${pr.number}, fix it on the branch, and run the PR tester again on the new head.`;
   if (pending.length) return `PR #${pr.number} cannot merge yet: CI is still running on ${sha} (${list(pending)}). Wait for gh pr checks ${pr.number} --watch, in the background, and merge when it is green.`;
-  const missing = REQUIRED_CHECKS.find((name) => !ci.some((c) => checkName(c) === name));
+  // A required check is a check run: anyone with write access can post a commit status of the same name.
+  const missing = REQUIRED_CHECKS.find((name) => !ci.some((c) => c.context == null && c.name === name));
   if (missing) return `PR #${pr.number} cannot merge: there is no ${missing} check on ${sha}. Wait for CI (gh pr checks ${pr.number}) before merging.`;
   return null;
 }
@@ -375,6 +400,7 @@ async function readPrRest(target, gh) {
     return { ...(c.id != null ? { checkRunId: c.id } : {}), ...(runId ? { runId, runStatus: upper(runStatus.get(runId)) } : {}) };
   };
   return {
+    id: p.node_id,
     number: p.number,
     state: upper(p.state),
     headRefOid: sha,
@@ -501,7 +527,8 @@ if (isEntryPoint(import.meta.url)) {
       const payload = JSON.parse(raw || "{}");
       const target = mergeTarget(String(payload.tool_input?.command ?? ""));
       if (!target) process.exit(0);
-      if (target.unresolved) refuse(`cannot tell which PR this GraphQL merge merges, since ${target.unresolved}, so the merge is not approved. Merge with gh pr merge <n>, which the gate can judge.`);
+      const byNumber = "Merge with gh pr merge <n>, one PR per command, which the gate can judge.";
+      if (target.unresolved) refuse(`cannot tell which PR this command merges, since ${target.unresolved}, so the merge is not approved. ${byNumber}`);
       const which = target.pr ? `PR ${target.pr}` : target.nodeId ? `the PR ${target.nodeId}` : "this branch's PR";
       const limit = deadlineMs();
       const stop = new AbortController();
@@ -519,8 +546,11 @@ if (isEntryPoint(import.meta.url)) {
       try {
         pr = await readPr(target.nodeId ? await prOfNode(target.nodeId, gh) : target.pr, gh);
       } catch (e) {
-        refuse(`could not read ${which} from GitHub (${e.message}), so the merge is not approved. Check gh auth status and the PR, then try again.`);
+        refuse(`could not read ${which} from GitHub (${e.message}), so the merge is not approved. ${target.nodeId ? byNumber : "Check gh auth status and the PR, then try again."}`);
       }
+      // The number alone would judge this repository's PR of that number in place of another repository's node.
+      if (target.nodeId && pr.id !== target.nodeId)
+        refuse(`${target.nodeId} is not this repository's PR #${pr.number} (its node id is ${pr.id ?? "unknown"}), so the merge is not approved. ${byNumber}`);
       const carry = await prefetchCarry(pr, carryReader(gh));
       let from = null;
       try {
