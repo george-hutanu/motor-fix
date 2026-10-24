@@ -257,3 +257,36 @@ describe('checkLive', () => {
     assert.equal(process.listenerCount('unhandledRejection'), before);
   });
 });
+
+// @traces 988-FR-004
+// @traces 988-FR-005
+describe('checkLive: the same loader and findings as the run', () => {
+  it('runs a networkidle wait as load, with a note line naming it', async () => {
+    const s = await stack();
+    const file = flows(`export default async ({ waitForText }) => {\n  const how = 'networkidle';\n  return how === 'load' ? [] : [{ severity: 'high', title: 'ran as written' }];\n};\n`);
+    const lines = await checkLive({ flows: file, baseURL: s.webURL, apiURL: s.apiURL });
+    assert.equal(lines.length, 1, lines.join('\n'));
+    assert.match(lines[0], /^note: .*flows\.mjs:2: .*load/);
+  });
+
+  it('lists what a flow pushed before it threw, beside the thrown error', async () => {
+    const s = await stack();
+    const file = flows(`export default async ({ findings }) => {\n  findings.push({ severity: 'medium', title: 'seen first' });\n  throw new Error('then broke');\n};\n`);
+    const lines = await checkLive({ flows: file, baseURL: s.webURL, apiURL: s.apiURL });
+    assert.ok(lines.some((l) => /^flows threw: .*then broke/.test(l)), lines.join('\n'));
+    assert.ok(lines.some((l) => /^finding medium: seen first/.test(l)), lines.join('\n'));
+  });
+
+  it('counts a finding both pushed and returned once', async () => {
+    const s = await stack();
+    const file = flows(`export default async ({ findings }) => {\n  const f = { severity: 'low', title: 'once' };\n  findings.push(f);\n  return [f];\n};\n`);
+    assert.deepEqual(await checkLive({ flows: file, baseURL: s.webURL, apiURL: s.apiURL }), ['finding low: once']);
+  });
+
+  it('--check still lists the networkidle problem and exits 1', async () => {
+    const s = await stack();
+    const r = await cli(flows(`export default async () => {\n  const how = 'networkidle';\n  return [];\n};\n`), s);
+    assert.equal(r.code, 1);
+    assert.match(r.stdout, /flows\.mjs:2: waits for networkidle/);
+  });
+});
