@@ -1,6 +1,6 @@
 ---
 capability: phone-layout
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 286-phone-layout
   - 287-public-tab-bar
@@ -20,6 +20,7 @@ features:
   - 101-verification-progress
   - 208-resubmit-after-more
   - 1351-results-phone-layout
+  - 531-garage-feature-tabs
 ---
 
 # Capability: Phone layout and installable web app
@@ -120,9 +121,9 @@ _From 287-public-tab-bar._
 
 _From 287-public-tab-bar._
 
-### 288-FR-001 — Each dashboard (driver, garage, admin; the mechanic uses the garage dashboard in release 1) MUST have exactly one ordered list of views, each view with its menu label, its short tab label (the mock's: "Cereri" for "Cereri de ofertă") and, where it has one, the capability it requires.
+### 531-FR-001 — The garage dashboard's view list MUST declare `day_sheets` as the feature the schedule view ("Programări") requires, beside the team view's existing `team_mechanics`; with that switch off for the session's garage, the view MUST be absent from the side menu, the bottom bar and the routes (its address redirects to the dashboard view, 288-FR-003), and present with it on or unset. No other view gains a feature.
 
-_From 288-dashboard-tab-bar._
+_From 531-garage-feature-tabs._
 
 ### 288-FR-002 — Each view MUST have its own language-neutral address under its dashboard (the segments in Clarifications), covering its sub-paths, and the dashboard view MUST be the dashboard's own address.
 
@@ -327,3 +328,4 @@ _From 208-resubmit-after-more._
 - `343-FR-007` — superseded by `344-FR-014` (2026-10-09)
 - `097-FR-008` — superseded by `101-FR-001` (2026-10-21)
 - `228-FR-001` — superseded by `1351-FR-005` (2026-10-23)
+- `288-FR-001` — superseded by `531-FR-001` (2026-10-24)

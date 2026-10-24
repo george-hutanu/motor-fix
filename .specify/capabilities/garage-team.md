@@ -5,6 +5,7 @@ features:
   - 131-invite-garage-staff
   - 389-confirm-booking-lift-mechanic
   - 129-delete-account
+  - 531-garage-feature-tabs
   - 055-team-list
 ---
 
@@ -54,9 +55,9 @@ _From 131-invite-garage-staff._
 
 _From 131-invite-garage-staff._
 
-### 131-FR-011 — The garage dashboard frame MUST offer "Invită în echipă" to the owner only, opening a dialog with name, e-mail, kind (mechanic, offered only when `team_mechanics` is on; receptionist), the three permission ticks shown only for mechanic and unticked by default, and a send button; it MUST show the field problems before sending and the API's message after, including "Nu am putut trimite invitația" with "Copiază linkul".
+### 531-FR-003 — The invite dialog MUST read `team_mechanics` for its garage from the session's garage entry at open and follow it while open: off → "Mecanic" is not offered, "Recepționer" is preselected, the permission ticks are hidden and no invite of kind `mechanic` is sent; on or unset → unchanged. The server's 404 `feature_off` answer MUST still withdraw "Mecanic" as today, for a session that has not heard of the switch.
 
-_From 131-invite-garage-staff._
+_From 531-garage-feature-tabs._
 
 ### 131-FR-012 — The public acceptance screen at `/{lang}/invite/:token` MUST show "{garage} te invită să te alături echipei ca {rol}." and, for a mechanic, the line about appearing on the garage's public profile; signed out, it MUST offer sign-in and account creation (the existing dialogs, with the invited name and e-mail filled in) and, when the account is created from the link, accept in the same flow; signed in (including after signing in from the link), it MUST accept only on an explicit "Acceptă"; after acceptance it MUST open the garage dashboard in the account's language; an invalid or expired link MUST show "Invitația nu mai este valabilă. Cere service-ului una nouă."
 
@@ -141,3 +142,4 @@ _From 055-team-list._
 ## Retired
 
 - `129-FR-009` — superseded by `055-FR-004` (2026-10-24)
+- `131-FR-011` — superseded by `531-FR-003` (2026-10-24)
