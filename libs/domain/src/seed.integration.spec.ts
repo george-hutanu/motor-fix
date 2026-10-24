@@ -6,7 +6,7 @@ import { isValidCui, isWeeklyHours } from '@motor-fix/contracts';
 import { verifyPassword } from './auth/password/password';
 import { createPrisma } from './auth/prisma';
 import { serialDatabase } from './auth/serial-db.testing';
-import { addMonths, localDay } from './bucharest';
+import { addMonths, atLocal, localDay } from './bucharest';
 import { BRANDS } from './catalogue/brands';
 import { dayOf } from './garages/documents/document-cycle/document-cycle.service';
 
@@ -1512,7 +1512,8 @@ describe('seed of an account that drifted', () => {
     expect(await account(stranger.email ?? '')).toEqual(before);
     const after = await account('masina-noua@example.test');
     expect(after.roles.map((r) => r.role).sort()).toEqual(['driver', 'garage']);
-    expect([after.lastRole, after.status]).toEqual(['driver', 'suspended']);
+    // The status is the seed's now, the last role still the user's.
+    expect([after.lastRole, after.status]).toEqual(['driver', 'active']);
   });
 
   // @traces 1372-FR-006
@@ -1524,5 +1525,235 @@ describe('seed of an account that drifted', () => {
 
     expect(repair.status).toBe(0);
     expect(`${repair.stdout}${repair.stderr}`).not.toContain(PASSWORD);
+  });
+});
+
+// A deleted seeded account, or one with two password identities, still
+// refused the draft owner; and the seeded driver's day must start unused.
+// @traces 1373-FR-007
+describe('seed of a deleted or doubled account, and of the day', () => {
+  const PASSWORD = 'o-parola-din-secrete';
+  const run = () => seed('staging', { SEED_PASSWORD: PASSWORD });
+  const account = (email: string) =>
+    prisma.account.findUniqueOrThrow({
+      include: { identities: { orderBy: { subject: 'asc' } } },
+      where: { email },
+    });
+  const passwords = async (email: string) =>
+    (await account(email)).identities.filter((i) => i.method === 'password');
+  // What the sign-in reads (sign-in.service.ts credentials()): a deleted
+  // account has no password, and any password identity may be the one read.
+  const signsIn = async (email: string) => {
+    const found = await account(email);
+    const [identity, ...more] = found.identities.filter(
+      (i) => i.method === 'password',
+    );
+    return (
+      found.status !== 'deleted' &&
+      more.length === 0 &&
+      (await verifyPassword(PASSWORD, identity?.passwordHash ?? ''))
+    );
+  };
+  const summary = (stdout: string) =>
+    stdout.split('\n').filter((line) => line.startsWith('seed: restored'));
+  const sendNow = async (count: number) => {
+    const car = await prisma.car.findFirstOrThrow({
+      where: { owner: { email: 'cerere@example.test' } },
+    });
+    for (let n = 0; n < count; n++) {
+      await prisma.quoteRequest.create({
+        data: {
+          carBrand: 'Dacia',
+          carFuel: 'petrol',
+          carId: car.id,
+          carModel: car.model,
+          carYear: car.year,
+          driverId: car.ownerId,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          idempotencyKey: `e2e-now-${n}`,
+        },
+      });
+    }
+  };
+
+  // @traces 1373-FR-002
+  it('gives a deleted seeded account, and one suspended by hand, its seeded status back', async () => {
+    expect(run().status).toBe(0);
+    await prisma.account.update({
+      data: { status: 'deleted' },
+      where: { email: 'nou@example.test' },
+    });
+    await prisma.account.update({
+      data: { status: 'suspended' },
+      where: { email: 'sofer@example.test' },
+    });
+    await prisma.account.update({
+      data: { status: 'active' },
+      where: { email: 'suspendat@example.test' },
+    });
+
+    expect(run().status).toBe(0);
+
+    expect((await account('nou@example.test')).status).toBe('active');
+    expect((await account('sofer@example.test')).status).toBe('active');
+    expect((await account('suspendat@example.test')).status).toBe('suspended');
+    expect(await signsIn('nou@example.test')).toBe(true);
+  });
+
+  // @traces 1373-FR-003
+  it('leaves exactly one password identity on a seeded account that held two, the repaired one', async () => {
+    expect(run().status).toBe(0);
+    const nou = await account('nou@example.test');
+    // Sorted before the e-mail, so a read in subject order meets it first.
+    await prisma.accountIdentity.create({
+      data: {
+        accountId: nou.id,
+        method: 'password',
+        passwordHash: 'parola-veche',
+        subject: 'a-nou@example.test',
+      },
+    });
+    await prisma.accountIdentity.create({
+      data: { accountId: nou.id, method: 'google', subject: 'google-nou' },
+    });
+    const stranger = await prisma.account.create({
+      data: {
+        email: 'dublu@example.test',
+        identities: {
+          create: [
+            { method: 'password', passwordHash: 'unu', subject: 'dublu-1' },
+            { method: 'password', passwordHash: 'doi', subject: 'dublu-2' },
+          ],
+        },
+        lastRole: 'driver',
+        name: 'Dublu',
+      },
+    });
+
+    expect(run().status).toBe(0);
+
+    expect((await passwords('nou@example.test')).map((i) => i.subject)).toEqual(
+      ['nou@example.test'],
+    );
+    expect(await signsIn('nou@example.test')).toBe(true);
+    const google = (await account('nou@example.test')).identities.filter(
+      (i) => i.method === 'google',
+    );
+    expect(google.map((i) => i.subject)).toEqual(['google-nou']);
+    const theirs = await prisma.accountIdentity.findMany({
+      orderBy: { subject: 'asc' },
+      where: { accountId: stranger.id },
+    });
+    expect(theirs.map((i) => i.subject)).toEqual(['dublu-1', 'dublu-2']);
+  });
+
+  // @traces 1373-FR-003
+  it('keeps the first identity by subject, on its e-mail, when neither password identity is', async () => {
+    expect(run().status).toBe(0);
+    const nou = await account('nou@example.test');
+    await prisma.accountIdentity.updateMany({
+      data: { passwordHash: 'parola-veche', subject: 'b-nou@example.test' },
+      where: { accountId: nou.id, method: 'password' },
+    });
+    const first = await prisma.accountIdentity.create({
+      data: {
+        accountId: nou.id,
+        method: 'password',
+        passwordHash: 'alta-parola',
+        subject: 'a-nou@example.test',
+      },
+    });
+
+    expect(run().status).toBe(0);
+
+    const left = await passwords('nou@example.test');
+    expect(left.map((i) => [i.id, i.subject])).toEqual([
+      [first.id, 'nou@example.test'],
+    ]);
+    expect(await signsIn('nou@example.test')).toBe(true);
+  });
+
+  // @traces 1373-FR-002
+  // @traces 1373-FR-003
+  it('changes no row on the run after it restored a status and removed an identity', async () => {
+    expect(run().status).toBe(0);
+    const nou = await account('nou@example.test');
+    await prisma.account.update({
+      data: { status: 'deleted' },
+      where: { id: nou.id },
+    });
+    await prisma.accountIdentity.create({
+      data: {
+        accountId: nou.id,
+        method: 'password',
+        passwordHash: 'parola-veche',
+        subject: 'a-nou@example.test',
+      },
+    });
+    expect(run().status).toBe(0);
+    const repaired = await seeded();
+    const counts = await rowCounts();
+
+    expect(run().status).toBe(0);
+
+    expect(await rowCounts()).toEqual(counts);
+    expect(await seeded()).toEqual(repaired);
+  });
+
+  // @traces 1373-FR-004
+  it("starts every seeded account's day with no request counted, the seed's own included", async () => {
+    expect(run().status).toBe(0);
+    await sendNow(20);
+
+    expect(run().status).toBe(0);
+
+    // The count QuoteRequestsService.store() refuses the 21st on.
+    const today = await prisma.quoteRequest.count({
+      where: {
+        createdAt: { gte: atLocal(localDay(new Date()), 0) },
+        driver: { email: { endsWith: '@example.test' } },
+      },
+    });
+    expect(today).toBe(0);
+    const own = await prisma.quoteRequest.count({
+      where: { idempotencyKey: { startsWith: 'seed-' } },
+    });
+    expect(own).toBeGreaterThanOrEqual(2);
+  });
+
+  // @traces 1373-FR-005
+  it('prints one summary line, by field and what it cleared, and never the password', async () => {
+    const first = run();
+    expect(first.status).toBe(0);
+    expect(summary(first.stdout)).toHaveLength(1);
+    const nou = await account('nou@example.test');
+    await prisma.account.update({
+      data: { status: 'deleted' },
+      where: { id: nou.id },
+    });
+    await prisma.accountIdentity.updateMany({
+      data: { passwordHash: 'parola-veche' },
+      where: { accountId: nou.id, method: 'password' },
+    });
+    await prisma.accountIdentity.create({
+      data: {
+        accountId: nou.id,
+        method: 'password',
+        passwordHash: 'alta',
+        subject: 'a-nou@example.test',
+      },
+    });
+    await sendNow(3);
+
+    const repair = run();
+
+    expect(repair.status).toBe(0);
+    expect(summary(repair.stdout)).toEqual([
+      'seed: restored password 1, status 1, roles 0, link 0, extra password identities 1; cleared 3 quote requests',
+    ]);
+    expect(`${repair.stdout}${repair.stderr}`).not.toContain(PASSWORD);
+    expect(summary(run().stdout)).toEqual([
+      'seed: restored password 0, status 0, roles 0, link 0, extra password identities 0; cleared 0 quote requests',
+    ]);
   });
 });

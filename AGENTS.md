@@ -73,8 +73,8 @@ them, logging to `specs/<feature>/tracker-sync.md`.
      them under "Fixed after QA"; no lap is counted. A merge of
      `origin/main` that changes none of the PR's files carries the verdict
      too (`merge of main`).
-  7. Merge on `agent-review` success with every other check green, at once;
-     a failing, pending or missing check is never merged. Then Done
+  7. Merge on `agent-review` success at once, every other check green
+     (`main` requires it and `CI OK`, admins too). Then Done
      (`speckit-tracker-sync finish`), and the orchestrating session
      fast-forwards the main checkout (or `/speckit-watch`'s `ff-main`).
      Dependabot's own PRs skip step 6.
