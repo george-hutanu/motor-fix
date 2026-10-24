@@ -94,6 +94,42 @@ describe('the legal holiday calendar', () => {
     });
   });
 
+  // @traces 309-FR-008
+  it.each([
+    [2028, ['04-14', '04-16', '04-17', '06-04', '06-05']],
+    [2029, ['04-06', '04-08', '04-09', '05-27', '05-28']],
+    [2030, ['04-26', '04-28', '04-29', '06-16', '06-17']],
+  ])(
+    'holds the seventeen days of %i, with its Easter and Whitsun days',
+    async (year, moving) => {
+      const rows = await holidaysOf(year);
+
+      expect(rows).toHaveLength(17);
+      expect(new Set(days(rows)).size).toBe(17);
+      expect(days(rows)).toEqual(expect.arrayContaining(moving));
+      expect(days(rows)).toEqual(
+        expect.arrayContaining([
+          '01-01',
+          '01-02',
+          '01-06',
+          '01-07',
+          '01-24',
+          '05-01',
+          '06-01',
+          '08-15',
+          '11-30',
+          '12-01',
+          '12-25',
+          '12-26',
+        ]),
+      );
+      for (const row of rows) {
+        expect(row.nameRo.trim()).not.toBe('');
+        expect(row.nameEn.trim()).not.toBe('');
+      }
+    },
+  );
+
   it('gives every day a Romanian and an English name', async () => {
     const rows = [...(await holidaysOf(2026)), ...(await holidaysOf(2027))];
 
