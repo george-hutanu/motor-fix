@@ -105,10 +105,14 @@ export const authInterceptor: HttpInterceptorFn = (
   };
 
   // A refusal nothing renews away: sign in over the screen, then go on once.
-  // Not when the session this call went out under has since been ended (a
-  // sign-out, an account deleted): that screen is leaving on purpose.
+  // Not while this tab deletes its account (the refusal is the deletion's own),
+  // nor when the session this call went out under has since been ended (a
+  // sign-out, an account deleted elsewhere): that screen is leaving on purpose.
   const ask = (refusal: unknown) =>
-    mayAsk && signInRequired(refusal) && session.epoch() === epoch
+    mayAsk &&
+    signInRequired(refusal) &&
+    !session.deletingAccount() &&
+    session.epoch() === epoch
       ? from(dialog.gate().catch(() => false)).pipe(
           switchMap((signedIn) => repeat(signedIn, refusal)),
         )

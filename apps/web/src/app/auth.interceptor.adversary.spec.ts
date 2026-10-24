@@ -23,6 +23,7 @@ const tick = () => new Promise((resolve) => setTimeout(resolve));
 function fakeSession(token: string | null, renew: () => Promise<boolean>) {
   let current = token;
   const session = {
+    deletingAccount: () => false,
     epoch: () => 0,
     renew: jest.fn(async () => {
       const ok = await renew();

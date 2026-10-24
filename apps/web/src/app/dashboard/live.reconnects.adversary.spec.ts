@@ -190,11 +190,32 @@ describe('Live: the position it keeps, hostile input', () => {
   });
 
   it('reopens at once after each of several planned reconnects, keeping the position', async () => {
+    // Planned closes come 14 minutes apart.
+    let now = Date.parse('2026-10-19T12:00:00.000Z');
+    const clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
     const [{ live }] = setUp();
     live.open();
     await flush();
     bodies[0]?.send(created('5'));
     for (let i = 0; i < 3; i++) {
+      now += 14 * 60_000;
+      bodies[i]?.send(
+        `event: reconnect\ndata: ${JSON.stringify({ at: '2026-10-19T12:00:00.000Z', id: 'c', kind: 'reconnect' })}\n\n`,
+      );
+      bodies[i]?.end();
+      await flush();
+    }
+    clock.mockRestore();
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect([1, 2, 3].map(lastEventId)).toEqual(['5', '5', '5']);
+  });
+
+  it('waits before reopening when a server ends a second stream within a minute', async () => {
+    const [{ live }] = setUp();
+    live.open();
+    await flush();
+    for (let i = 0; i < 2; i++) {
       bodies[i]?.send(
         `event: reconnect\ndata: ${JSON.stringify({ at: '2026-10-19T12:00:00.000Z', id: 'c', kind: 'reconnect' })}\n\n`,
       );
@@ -202,8 +223,9 @@ describe('Live: the position it keeps, hostile input', () => {
       await flush();
     }
 
-    expect(fetchMock).toHaveBeenCalledTimes(4);
-    expect([1, 2, 3].map(lastEventId)).toEqual(['5', '5', '5']);
+    // The first planned close reopened at once; the second waits.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    live.close();
   });
 });
 

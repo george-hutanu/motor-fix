@@ -1,9 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { AuthService } from '@motor-fix/data-access';
-import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { TranslatePipe } from '@motor-fix/i18n';
 import {
   FieldError,
   injectOverlayTask,
@@ -12,11 +11,9 @@ import {
   taskSave,
   toProblem,
 } from '@motor-fix/overlays';
-import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
+import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
-import { Live } from '../live';
-import { PushDevice } from '../push-device';
 import { Session } from '../session';
 
 // "Ștergi contul?": confirmed by typing the account's e-mail or phone, or the
@@ -40,10 +37,6 @@ export class DeleteAccountDialog {
   private readonly auth = inject(AuthService);
   private readonly session = inject(Session);
   private readonly signIn = inject(SignInDialog);
-  private readonly live = inject(Live);
-  private readonly push = inject(PushDevice);
-  private readonly router = inject(Router);
-  private readonly i18n = inject(I18n);
   protected readonly task = injectOverlayTask<undefined, true | 'cancelled'>();
 
   private readonly me = this.session.current();
@@ -74,20 +67,19 @@ export class DeleteAccountDialog {
     messages: 'shell.deleteAccount',
     send: async ({ confirmation = '' }) => {
       const params = { body: { confirmation: confirmation.trim() } };
-      try {
-        await this.auth.accountDeletionControllerDeleteAccount(params);
-      } catch (error) {
-        if (toProblem(error).code !== 'reauth_required') throw error;
-        if (!(await this.signIn.gate())) throw error;
-        await this.auth.accountDeletionControllerDeleteAccount(params);
-      }
-      // The account and its sessions are gone: nothing is asked of the server
-      // any more, which would only answer with a sign-in.
-      this.live.close();
-      await this.push.dropped();
-      this.session.revoked();
-      await this.router.navigateByUrl('/');
-      toast(this.i18n.t('shell.deleteAccount.done'));
+      // The session's own: the "sessions ended" word the deletion sends this
+      // tab can reach it before the answer does.
+      await this.session.deleteAccount(async () => {
+        try {
+          await this.auth.accountDeletionControllerDeleteAccount(params);
+        } catch (error) {
+          if (toProblem(error).code !== 'reauth_required') throw error;
+          if (!(await this.signIn.gate())) throw error;
+          await this.auth.accountDeletionControllerDeleteAccount(params);
+        }
+      });
+      // Setări signs the tab out once this dialog is gone: a way Home started
+      // under it would be undone by its step back over its history entry.
     },
   });
 }
