@@ -81,8 +81,8 @@ describe('runRetention under hostile sweeps', () => {
     expect(lines).toContain('retention phone_change removed 4');
     expect(lines.at(-1)).toMatch(/^retention run took \d+ ms$/);
     expect(errors).toEqual([
-      'retention sign_in_code failed: Error: boom',
-      'retention account_token failed: plain string',
+      'retention sign_in_code failed: Error',
+      'retention account_token failed: string',
     ]);
   });
 
@@ -122,7 +122,8 @@ describe('runRetention under hostile sweeps', () => {
       ],
     ]).catch(() => undefined);
     expect(lines.slice(0, 1)).toEqual(['retention notification removed 2']);
-    expect(errors[0]).toMatch(/^retention legal_document failed: /);
+    expect(errors).toEqual(['retention legal_document failed: Error']);
+    expect(errors.join('\n')).not.toContain('legal/abc');
   });
 
   it('names exactly the configured kinds, in order, in the default sweeps', () => {

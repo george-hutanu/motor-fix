@@ -34,6 +34,12 @@ const VERB: Partial<Record<RetentionKind, string>> = {
   audit_entry: 'anonymised',
 };
 
+// The error's class only: its message can carry storage keys or row values.
+function errorKind(error: unknown): string {
+  if (error instanceof Error) return error.name;
+  return error === null ? 'null' : typeof error;
+}
+
 // Runs every sweep in turn; one that fails does not stop the others. Logs and
 // counts each kind's rows (kinds and counts only), then the run's duration,
 // and fails as one error after the last sweep when any failed.
@@ -56,7 +62,7 @@ export async function runRetention(
     } catch (error) {
       failed.push(kind);
       errors.push(error);
-      deps.logger.error(`retention ${kind} failed: ${String(error)}`);
+      deps.logger.error(`retention ${kind} failed: ${errorKind(error)}`);
     }
   }
   const ms = Math.round(performance.now() - started);
