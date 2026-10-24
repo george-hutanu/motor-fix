@@ -1331,6 +1331,39 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 37,
+      "type": "timeseries",
+      "title": "Verification presence by outcome",
+      "description": "Admins opening (created) and closing (removed) a verification file, a minute. A store_unavailable rise means admins see no banner of who else has the file open; the files still open and decide.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 92
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_verification_presence_total{service_name=\"api\", deployment_environment=\"$env\"}[1m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     }
   ]
 }
