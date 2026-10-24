@@ -836,7 +836,7 @@ describe('the range editor: the row changed meanwhile', () => {
 
     expect(line()?.getAttribute('role')).toBe('status');
     expect(line()?.textContent?.trim()).toBe(
-      `${CHANGED_RO}800–1.200 lei · 3 h`,
+      `${CHANGED_RO}800–1.200 lei\u00a0· 3\u00a0h`,
     );
     expect(field('De la').value).toBe('600');
     expect(field('Până la').value).toBe('1400');
@@ -854,7 +854,7 @@ describe('the range editor: the row changed meanwhile', () => {
     });
 
     expect(line()?.textContent?.trim()).toBe(
-      'This changed in the meantime: 800–1,200 lei · 3 h',
+      'This changed in the meantime: 800–1,200 lei\u00a0· 3\u00a0h',
     );
   });
 
@@ -863,11 +863,21 @@ describe('the range editor: the row changed meanwhile', () => {
 
     await show({ ...BRAKES, fromBani: 80_000, toBani: undefined });
     expect(line()?.textContent?.trim()).toBe(
-      `${CHANGED_RO}de la 800 lei · 2 h`,
+      `${CHANGED_RO}de la 800 lei\u00a0· 2\u00a0h`,
     );
 
     await show({ ...BRAKES, durationMinutes: undefined });
     expect(line()?.textContent?.trim()).toBe(`${CHANGED_RO}890–1.400 lei`);
+  });
+
+  it('keeps the separator and the duration from starting a line on a phone', async () => {
+    const show = await openLive();
+
+    await show({ ...BRAKES, durationMinutes: 90 });
+
+    expect(line()?.textContent?.trim()).toBe(
+      `${CHANGED_RO}890–1.400 lei\u00a0· 1\u00a0h\u00a030`,
+    );
   });
 
   it('says nothing when only the row’s visibility or stamp changed', async () => {

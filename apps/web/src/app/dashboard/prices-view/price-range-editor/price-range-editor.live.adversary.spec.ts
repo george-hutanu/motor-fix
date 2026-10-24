@@ -115,7 +115,7 @@ describe('the range editor against hostile live changes', () => {
 
     expect(lines()).toHaveLength(1);
     expect(lines()[0].textContent?.trim()).toBe(
-      'S‑a schimbat între timp: 900–950 lei · 2 h',
+      'S‑a schimbat între timp: 900–950 lei\u00a0· 2\u00a0h',
     );
   });
 
@@ -136,7 +136,7 @@ describe('the range editor against hostile live changes', () => {
     await show({ ...BRAKES, durationMinutes: 45 });
 
     expect(lines()[0].textContent?.trim()).toBe(
-      'This changed in the meantime: 500–700 lei · 45 min',
+      'This changed in the meantime: 500–700 lei\u00a0· 45\u00a0min',
     );
   });
 
@@ -147,7 +147,7 @@ describe('the range editor against hostile live changes', () => {
     await show({ ...BRAKES, fromBani: 80_000, toBani: 80_000 });
 
     expect(lines()[0].textContent?.trim()).toBe(
-      'S‑a schimbat între timp: 800 lei · 2 h',
+      'S‑a schimbat între timp: 800 lei\u00a0· 2\u00a0h',
     );
   });
 
@@ -191,7 +191,7 @@ describe('the range editor against hostile live changes', () => {
 
     await show({ ...BRAKES, fromBani: 99_000, toBani: 145_000 });
     expect(lines()[0].textContent?.trim()).toBe(
-      'S‑a schimbat între timp: 990–1.450 lei · 2 h',
+      'S‑a schimbat între timp: 990–1.450 lei\u00a0· 2\u00a0h',
     );
   });
 

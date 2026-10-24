@@ -181,12 +181,17 @@ export class PriceRangeEditor {
     // A list that has not caught up with the stored row a refused save read
     // shows an older range, which is no change made meanwhile.
     if (!row || Date.parse(row.updatedAt) < Date.parse(this.stamp())) return '';
+    // On a phone the line wraps before the price, never after the separator
+    // or inside the duration, so "1 h 30" never sits alone on a line.
     const value = [
       priceText(row, this.i18n),
-      formatDuration(row.durationMinutes, this.i18n.language()),
+      formatDuration(row.durationMinutes, this.i18n.language()).replace(
+        / /g,
+        '\u00a0',
+      ),
     ]
       .filter(Boolean)
-      .join(' · ');
+      .join('\u00a0· ');
     return this.i18n.t('shell.live.changed', { value });
   });
 
