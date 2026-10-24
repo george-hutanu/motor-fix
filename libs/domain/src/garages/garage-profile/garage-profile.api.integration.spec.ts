@@ -224,16 +224,25 @@ describe("the staff read of a garage's own public profile", () => {
     expect(res.body.code).toBe('sign_in_required');
   });
 
-  // @traces 133-FR-003
-  it("answers 403 forbidden to the garage's receptionist and mechanic", async () => {
+  // @traces 102-FR-006
+  it("answers the garage's receptionist as it answers the owner", async () => {
     const w = await world();
 
-    for (const as of [w.receptionist, w.mechanic]) {
-      const res = await staffRead(w.nord.id, as);
-      expect(res.status).toBe(403);
-      expect(res.body.code).toBe('forbidden');
-      expect(res.text).not.toContain('722123456');
-    }
+    const owner = await staffRead(w.nord.id, w.owner);
+    const receptionist = await staffRead(w.nord.id, w.receptionist);
+
+    expect(receptionist.status).toBe(200);
+    expect(receptionist.body).toEqual(owner.body);
+  });
+
+  // @traces 133-FR-003
+  it("answers 403 forbidden to the garage's mechanic", async () => {
+    const w = await world();
+
+    const res = await staffRead(w.nord.id, w.mechanic);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('forbidden');
+    expect(res.text).not.toContain('722123456');
   });
 
   it("answers 404 not_found to another garage's owner, a driver and an admin", async () => {

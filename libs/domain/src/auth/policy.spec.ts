@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { HttpException, NotFoundException } from '@nestjs/common';
 
 import {
   type Actor,
@@ -66,6 +66,18 @@ describe('landing', () => {
   });
 });
 
+// What a refusal answers: its status and the body's code.
+function refusalOf(call: () => void) {
+  try {
+    call();
+  } catch (error) {
+    const failure = error as HttpException;
+    const body = failure.getResponse() as { code?: string };
+    return [failure.getStatus(), body.code];
+  }
+  return null;
+}
+
 describe('requireCapability', () => {
   it('lets an owner use the team', () => {
     expect(() =>
@@ -76,17 +88,44 @@ describe('requireCapability', () => {
     ).not.toThrow();
   });
 
-  it('answers 404 when the role lacks the capability', () => {
-    expect(() =>
-      requireCapability(
-        actor({
-          garageId: 'g1',
-          role: 'receptionist',
-          roles: ['receptionist'],
-        }),
-        'garage.prices',
+  // @traces 102-FR-007
+  it("answers 403 forbidden to the garage's own staff whose role lacks the capability", () => {
+    expect(
+      refusalOf(() =>
+        requireCapability(
+          actor({
+            garageId: 'g1',
+            role: 'receptionist',
+            roles: ['receptionist'],
+          }),
+          'garage.prices',
+        ),
       ),
-    ).toThrow(NotFoundException);
+    ).toEqual([403, 'forbidden']);
+  });
+
+  // @traces 102-FR-007
+  it('answers 404 for a capability outside the table, even to garage staff', () => {
+    const owner = actor({ garageId: 'g1', role: 'garage', roles: ['garage'] });
+
+    for (const name of ['garage.everything', '__proto__', undefined]) {
+      expect(refusalOf(() => requireCapability(owner, name as never))).toEqual([
+        404,
+        undefined,
+      ]);
+    }
+  });
+
+  // @traces 102-FR-007
+  it('answers 404 to garage staff for a capability that is not a garage one', () => {
+    expect(
+      refusalOf(() =>
+        requireCapability(
+          actor({ garageId: 'g1', role: 'garage', roles: ['garage'] }),
+          'driver.cars',
+        ),
+      ),
+    ).toEqual([404, undefined]);
   });
 
   it('answers 404 for a garage capability when the actor has no garage', () => {
@@ -105,9 +144,10 @@ describe('requireCapability', () => {
       roles: ['mechanic'],
     });
 
-    expect(() => requireCapability(mechanic, 'garage.requests')).toThrow(
-      NotFoundException,
-    );
+    // @traces 102-FR-007
+    expect(
+      refusalOf(() => requireCapability(mechanic, 'garage.requests')),
+    ).toEqual([403, 'forbidden']);
     expect(() =>
       requireCapability(
         { ...mechanic, permissions: { ...none, canAnswerQuotes: true } },

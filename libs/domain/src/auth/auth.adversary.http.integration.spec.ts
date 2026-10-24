@@ -339,6 +339,7 @@ describe('who am I over HTTP and account writes under attack', () => {
       );
     });
 
+    // @traces 102-FR-002
     it('lists a mechanic capability once its permission is switched on, on the next call', async () => {
       const accountId = await make('elena', ['mechanic']);
       const garage = await prisma.garage.create({
@@ -351,6 +352,7 @@ describe('who am I over HTTP and account writes under attack', () => {
 
       expect((await me(token)).body.capabilities).toEqual([
         'garage.own_jobs',
+        'garage.schedule',
         'garage.audit_history',
       ]);
       await prisma.mechanic.update({
@@ -360,6 +362,7 @@ describe('who am I over HTTP and account writes under attack', () => {
 
       expect([...(await me(token)).body.capabilities].sort()).toEqual([
         'garage.audit_history',
+        'garage.move_bookings',
         'garage.own_jobs',
         'garage.schedule',
       ]);

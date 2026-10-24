@@ -226,6 +226,7 @@ describe('who am I', () => {
     expect(res.body).toMatchObject({ landing: '/app/driver', role: 'driver' });
   });
 
+  // @traces 102-FR-002
   it('sends a receptionist and a mechanic to the garage frame', async () => {
     const garage = await dinamo();
     const ioana = await account('ioana', ['receptionist']);
@@ -244,7 +245,11 @@ describe('who am I', () => {
       landing: '/app/garage',
     });
     expect((await get('/me', bearer(elena, 'mechanic'))).body).toMatchObject({
-      capabilities: ['garage.own_jobs', 'garage.audit_history'],
+      capabilities: [
+        'garage.own_jobs',
+        'garage.schedule',
+        'garage.audit_history',
+      ],
       garageId: garage.id,
       landing: '/app/garage',
     });
@@ -259,7 +264,7 @@ describe('who am I', () => {
   });
 });
 
-describe('rights answer 404, never 403', () => {
+describe("rights answer 403 within the actor's garage, 404 outside it", () => {
   it('lets the owner reach the team of their garage', async () => {
     const id = await account('mihai', ['garage']);
     const garage = await dinamo();
@@ -273,27 +278,30 @@ describe('rights answer 404, never 403', () => {
     expect(res.body).toEqual({ garageId: garage.id });
   });
 
-  it('closes team, prices, profile and switches to a receptionist', async () => {
+  // @traces 102-FR-007
+  // @traces 102-FR-006
+  it('answers a receptionist 403 forbidden on team, prices and switches, and opens quotes and the profile', async () => {
     const id = await account('ioana', ['receptionist']);
     const garage = await dinamo();
     await prisma.garageMember.create({
       data: { accountId: id, garageId: garage.id, role: 'receptionist' },
     });
 
-    for (const path of [
-      '/probe/team',
-      '/probe/prices',
-      '/probe/profile',
-      '/probe/switches',
-    ]) {
-      expect((await get(path, bearer(id, 'receptionist'))).status).toBe(404);
+    for (const path of ['/probe/team', '/probe/prices', '/probe/switches']) {
+      const res = await get(path, bearer(id, 'receptionist'));
+      expect([path, res.status, res.body.code]).toEqual([
+        path,
+        403,
+        'forbidden',
+      ]);
     }
-    expect(
-      (await get('/probe/quotes', bearer(id, 'receptionist'))).status,
-    ).toBe(200);
+    for (const path of ['/probe/quotes', '/probe/profile']) {
+      expect((await get(path, bearer(id, 'receptionist'))).status).toBe(200);
+    }
   });
 
-  it('closes team, prices, profile and switches to a mechanic, and quotes until permitted', async () => {
+  // @traces 102-FR-007
+  it('answers a mechanic 403 forbidden on team, prices, profile and switches, and on quotes until permitted', async () => {
     const id = await account('elena', ['mechanic']);
     const garage = await dinamo();
     await prisma.mechanic.create({
@@ -307,7 +315,12 @@ describe('rights answer 404, never 403', () => {
       '/probe/switches',
       '/probe/quotes',
     ]) {
-      expect((await get(path, bearer(id, 'mechanic'))).status).toBe(404);
+      const res = await get(path, bearer(id, 'mechanic'));
+      expect([path, res.status, res.body.code]).toEqual([
+        path,
+        403,
+        'forbidden',
+      ]);
     }
     expect((await get('/probe/own-jobs', bearer(id, 'mechanic'))).status).toBe(
       200,

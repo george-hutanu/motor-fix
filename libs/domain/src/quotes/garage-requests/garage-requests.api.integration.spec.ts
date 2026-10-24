@@ -105,13 +105,13 @@ describe('GET /garage/requests', () => {
     },
   );
 
-  it('answers 404 to a mechanic who may not answer quotes, and to a driver', async () => {
+  // @traces 102-FR-007
+  it('answers 403 forbidden to a mechanic who may not answer quotes, and 404 to a driver', async () => {
     const andrei = await driver();
     const t = await team('Atelier Dinamo');
 
-    expect(
-      (await get('/garage/requests', bearer(t.plain, 'mechanic'))).status,
-    ).toBe(404);
+    const plain = await get('/garage/requests', bearer(t.plain, 'mechanic'));
+    expect([plain.status, plain.body.code]).toEqual([403, 'forbidden']);
     expect(
       (await get('/garage/requests', bearer(andrei, 'driver'))).status,
     ).toBe(404);

@@ -236,16 +236,19 @@ describe('who reads the team', () => {
     expect(res.status).toBe(400);
   });
 
+  // @traces 102-FR-003
   it('answers the owner 404 feature_off with the team switched off, after the access check', async () => {
-    const { dinamo, ioana, mihai, radu } = await world();
+    const { dinamo, ioana, mihai, radu, vlad } = await world();
     await switchOff(dinamo.id);
 
     const owner = await team(dinamo.id, bearer(mihai, 'garage'));
     const staff = await team(dinamo.id, bearer(ioana, 'receptionist'));
+    const mechanic = await team(dinamo.id, bearer(vlad, 'mechanic'));
     const other = await team(dinamo.id, bearer(radu, 'garage'));
 
     expect([owner.status, owner.body.code]).toEqual([404, 'feature_off']);
     expect([staff.status, staff.body.code]).toEqual([403, 'forbidden']);
+    expect([mechanic.status, mechanic.body.code]).toEqual([403, 'forbidden']);
     expect([other.status, other.body.code]).toEqual([404, 'not_found']);
   });
 

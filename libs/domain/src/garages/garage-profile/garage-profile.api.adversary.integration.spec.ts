@@ -141,12 +141,14 @@ describe('the staff read of a garage profile under attack', () => {
     expect(res.status).toBe(404);
   });
 
-  it('answers 403 to the receptionist of a suspended garage', async () => {
+  // @traces 102-FR-006
+  it('answers the receptionist of a suspended garage 410 gone, as the owner', async () => {
     const w = await world({ status: 'suspended' });
 
     const res = await staffRead(w.nord.id, w.receptionist);
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(410);
+    expect(res.text).not.toContain('722123456');
   });
 
   it('answers 403 to the mechanic of a garage not yet approved', async () => {
