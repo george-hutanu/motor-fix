@@ -221,6 +221,9 @@ model Mechanic {
   // garage's rules (migration CHECKs).
   rating              Decimal?  @db.Decimal(2, 1)
   reviewCount         Int       @default(0) @map("review_count")
+  // Set when the account was deleted: the card stays for its reviews and
+  // bookings, and leaves the team list.
+  removedAt           DateTime? @map("removed_at") @db.Timestamptz(3)
   garage              Garage    @relation(fields: [garageId], references: [id], onDelete: Cascade)
   account             Account?  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   bookings            Booking[]

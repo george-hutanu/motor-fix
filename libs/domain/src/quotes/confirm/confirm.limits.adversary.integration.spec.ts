@@ -105,6 +105,29 @@ describe('a mechanic that is not the garage’s', () => {
   });
 });
 
+// @traces 055-FR-004
+describe('a mechanic whose account was deleted', () => {
+  it('answers 409 mechanic_unavailable, writing nothing', async () => {
+    const t = await team('Atelier Dinamo');
+    const { booking } = await accepted(t);
+    await prisma.mechanic.update({
+      data: { accountId: null, onProfile: false, removedAt: new Date() },
+      where: { id: t.plainMechanic.id },
+    });
+
+    const res = await confirm(booking.id, t, {
+      mechanicId: t.plainMechanic.id,
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({ code: 'mechanic_unavailable' });
+    const row = await prisma.booking.findUniqueOrThrow({
+      where: { id: booking.id },
+    });
+    expect(row.mechanicId).toBeNull();
+  });
+});
+
 // @traces 389-FR-007
 describe('what counts as an overlap', () => {
   it('lets the same lift number be taken at two garages at one time', async () => {

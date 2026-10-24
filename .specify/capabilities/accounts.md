@@ -45,6 +45,7 @@ features:
   - 532-lost-session-home
   - 500-req-ip-behind-proxy
   - 500-trust-railway-edge
+  - 1370-release-seed-no-ssh
 ---
 
 # Capability: Accounts
@@ -205,9 +206,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 082-FR-023 — The seed MUST add, outside production, one account per role (driver; garage owner of a seeded garage; receptionist and mechanic of that garage; admin), one driver-and-garage account whose last role is `garage`, and one suspended driver, all with e-mails under `example.test` and the password `parola-de-test` in development and test, which MUST come from `SEED_PASSWORD` in every other environment, an unset or unknown `APP_ENV` included (refused without it); an account whose e-mail exists is left as it is, so running it twice changes nothing.
+### 1370-FR-006 — The seed MUST stay idempotent now that it runs on every staging deploy: a second run on the same database MUST add no row to any table (its only writes are the missing seed accounts, which a seeded database has none of, and the existing removal of the seed accounts' quote requests of the last day) and MUST keep a seeded account's row that a user changed between the runs; an integration spec runs the seed twice and checks the row counts and the changed row.
 
-_From 082-sign-in._
+_From 1370-release-seed-no-ssh._
 
 ### 080-FR-001 — `POST /api/v1/auth/sign-up` MUST take a name, an e-mail, a password and the interface language (`ro` or `en`); it MUST create, through the one `createAccount` use case, an account holding only the role `driver`, a `password` identity with the argon2id hash of the password, that language and the last role `driver`, with its audit entry and `account.created` event in the same transaction.
 
@@ -1230,3 +1231,4 @@ _From 500-trust-railway-edge._
 - `082-FR-011` — superseded by `500-FR-005` (2026-10-24)
 - `500-FR-006` — superseded by `500-FR-008` (2026-10-24)
 - `500-FR-005` — superseded by `500-FR-011` (2026-10-24)
+- `082-FR-023` — superseded by `1370-FR-006` (2026-10-24)
