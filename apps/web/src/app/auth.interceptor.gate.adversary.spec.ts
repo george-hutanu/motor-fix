@@ -31,6 +31,7 @@ function setup(
 ) {
   let current = token;
   const session = {
+    deletingAccount: () => false,
     renew: jest.fn(async () => renew()),
     token: () => current,
   };
