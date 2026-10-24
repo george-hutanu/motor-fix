@@ -1,8 +1,9 @@
+import { Injector } from '@angular/core';
 import {
   type Event,
   NavigationEnd,
   NavigationStart,
-  type Router,
+  Router,
 } from '@angular/router';
 import { Subject } from 'rxjs';
 
@@ -13,6 +14,9 @@ jest.mock('../faro', () => ({ startFaro: jest.fn() }));
 
 // A page whose first navigation has finished.
 const router = { navigated: true } as Router;
+const injectorOf = (value: Router) =>
+  Injector.create({ providers: [{ provide: Router, useValue: value }] });
+const injector = injectorOf(router);
 
 function pageWith(meta?: string): Document {
   const doc = document.implementation.createHTMLDocument('MotorFix');
@@ -24,14 +28,15 @@ beforeEach(() => jest.mocked(startFaro).mockReset());
 
 describe('loadTelemetry', () => {
   it('loads nothing when the page carries no telemetry tag', async () => {
-    await loadTelemetry(router, pageWith());
+    await loadTelemetry(injector, pageWith());
 
     expect(startFaro).not.toHaveBeenCalled();
   });
 
+  // @traces 947-FR-012
   it('starts telemetry with the collector and release from the tag', async () => {
     await loadTelemetry(
-      router,
+      injector,
       pageWith(
         '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234" data-environment="staging">',
       ),
@@ -40,7 +45,7 @@ describe('loadTelemetry', () => {
     expect(startFaro).toHaveBeenCalledTimes(1);
     expect(startFaro).toHaveBeenCalledWith({
       environment: 'staging',
-      router,
+      injector,
       url: 'https://faro.example/collect/key',
       version: 'abc1234',
     });
@@ -49,7 +54,7 @@ describe('loadTelemetry', () => {
   // @traces 879-FR-002
   it('falls back to development when the tag names no environment', async () => {
     await loadTelemetry(
-      router,
+      injector,
       pageWith(
         '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">',
       ),
@@ -65,7 +70,7 @@ describe('loadTelemetry', () => {
     Object.assign(window, { requestIdleCallback: idle });
     try {
       void loadTelemetry(
-        router,
+        injector,
         pageWith(
           '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">',
         ),
@@ -84,7 +89,7 @@ describe('loadTelemetry', () => {
     const loading = { events, navigated: false } as unknown as Router;
 
     const done = loadTelemetry(
-      loading,
+      injectorOf(loading),
       pageWith(
         '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">',
       ),
@@ -106,7 +111,7 @@ describe('loadTelemetry', () => {
 
     await expect(
       loadTelemetry(
-        router,
+        injector,
         pageWith(
           '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234">',
         ),

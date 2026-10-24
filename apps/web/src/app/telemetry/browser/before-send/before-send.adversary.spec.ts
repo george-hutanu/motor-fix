@@ -2,6 +2,9 @@ import { type TransportItem, TransportItemType } from '@grafana/faro-web-sdk';
 
 import { createBeforeSend, viewportClass } from './before-send';
 
+// No analytics consent: the state ST-877 built for.
+const off = () => false;
+
 const exception = (value: string, extra: object = {}): TransportItem =>
   ({
     meta: {
@@ -38,7 +41,7 @@ describe('viewportClass at the edges', () => {
 
 describe('beforeSend under hostile payloads', () => {
   it('drops exactly the 21st exception and keeps the first 20', () => {
-    const hook = createBeforeSend('phone');
+    const hook = createBeforeSend('phone', off);
     const results = Array.from({ length: 22 }, (_, i) =>
       hook(exception(`e${i}`)),
     );
@@ -49,23 +52,24 @@ describe('beforeSend under hostile payloads', () => {
   });
 
   it('counts exceptions per hook instance, not globally', () => {
-    const a = createBeforeSend('phone');
+    const a = createBeforeSend('phone', off);
     for (let i = 0; i < 25; i++) a(exception('x'));
 
-    expect(createBeforeSend('phone')(exception('x'))).not.toBeNull();
+    expect(createBeforeSend('phone', off)(exception('x'))).not.toBeNull();
   });
 
   it('does not let measurements use up the exception cap', () => {
-    const hook = createBeforeSend('phone');
+    const hook = createBeforeSend('phone', off);
     for (let i = 0; i < 50; i++) hook(measurement());
 
     expect(hook(exception('x'))).not.toBeNull();
   });
 
   it('masks every contact detail when many sit in one string', () => {
-    const out = createBeforeSend('phone')(
-      exception('a@b.ro c@d.ro 0722123456 +40 722 123 456 B 12 ABC CJ 99 XYZ'),
-    );
+    const out = createBeforeSend(
+      'phone',
+      off,
+    )(exception('a@b.ro c@d.ro 0722123456 +40 722 123 456 B 12 ABC CJ 99 XYZ'));
 
     expect(text(out)).not.toMatch(
       /a@b\.ro|c@d\.ro|0722123456|722 123 456|B 12 ABC|CJ 99 XYZ/,
@@ -73,7 +77,10 @@ describe('beforeSend under hostile payloads', () => {
   });
 
   it('masks inside nested objects, arrays and non-message fields', () => {
-    const out = createBeforeSend('phone')(
+    const out = createBeforeSend(
+      'phone',
+      off,
+    )(
       exception('x', {
         context: {
           deep: { who: 'ana@example.com' },
@@ -89,7 +96,10 @@ describe('beforeSend under hostile payloads', () => {
   });
 
   it('strips query and fragment from every URL inside prose', () => {
-    const out = createBeforeSend('phone')(
+    const out = createBeforeSend(
+      'phone',
+      off,
+    )(
       exception(
         'failed https://motorfix.ro/a?token=SECRET#frag, retry http://x.io/b?q=1',
       ),
@@ -100,13 +110,13 @@ describe('beforeSend under hostile payloads', () => {
   });
 
   it('strips the page URL query and fragment', () => {
-    const out = createBeforeSend('desktop')(exception('x'));
+    const out = createBeforeSend('desktop', off)(exception('x'));
 
     expect(out?.meta.page?.url).toBe('https://motorfix.ro/ro/x');
   });
 
   it('removes session and user from every item type', () => {
-    const hook = createBeforeSend('phone');
+    const hook = createBeforeSend('phone', off);
     for (const item of [exception('x'), measurement()]) {
       const out = hook(item);
       expect(out?.meta).not.toHaveProperty('session');
@@ -115,7 +125,7 @@ describe('beforeSend under hostile payloads', () => {
   });
 
   it('adds the viewport to measurements', () => {
-    const out = createBeforeSend('tablet')(measurement());
+    const out = createBeforeSend('tablet', off)(measurement());
 
     expect(text(out)).toContain('"viewport":"tablet"');
   });
@@ -124,40 +134,43 @@ describe('beforeSend under hostile payloads', () => {
     const input = exception('ana@example.com https://a.io/x?y=1');
     const before = JSON.stringify(input);
 
-    createBeforeSend('phone')(input);
+    createBeforeSend('phone', off)(input);
 
     expect(JSON.stringify(input)).toBe(before);
   });
 
   it('is idempotent on its own output', () => {
-    const hook = createBeforeSend('phone');
+    const hook = createBeforeSend('phone', off);
     const once = hook(exception('ana@example.com https://a.io/x?y=1'));
-    const twice = createBeforeSend('phone')(once as TransportItem);
+    const twice = createBeforeSend('phone', off)(once as TransportItem);
 
     expect(text(twice)).toBe(text(once));
   });
 
   it('handles an empty message and a payload with null fields', () => {
-    const out = createBeforeSend('phone')(
-      exception('', { context: null, stacktrace: null }),
-    );
+    const out = createBeforeSend(
+      'phone',
+      off,
+    )(exception('', { context: null, stacktrace: null }));
 
     expect(out?.payload).toMatchObject({ value: '' });
   });
 
   it('masks unicode-adjacent contact details', () => {
-    const out = createBeforeSend('phone')(
-      exception('garaj ăâî ana@example.com ș'),
-    );
+    const out = createBeforeSend(
+      'phone',
+      off,
+    )(exception('garaj ăâî ana@example.com ș'));
 
     expect(text(out)).not.toContain('ana@example.com');
     expect(text(out)).toContain('ăâî');
   });
 
   it('handles a one megabyte string', () => {
-    const out = createBeforeSend('phone')(
-      exception(`${'x'.repeat(1_000_000)} ana@example.com`),
-    );
+    const out = createBeforeSend(
+      'phone',
+      off,
+    )(exception(`${'x'.repeat(1_000_000)} ana@example.com`));
 
     expect(text(out)).not.toContain('ana@example.com');
   });
