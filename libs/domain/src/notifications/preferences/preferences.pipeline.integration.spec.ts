@@ -4,12 +4,14 @@ import { Redis } from 'ioredis';
 import { AuditService } from '../../audit/audit.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type { PrismaClient } from '../../generated/prisma/client';
+import * as counters from '../../metrics/product-counters';
 import { NotificationsService } from '../notifications.service';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
   testConfig,
+  testPhone,
 } from '../notifications.testing';
 
 const redisUrl = redisUrlFor(10);
@@ -339,5 +341,183 @@ describe('when the preferences cannot be read', () => {
       'in_app',
       'email',
     ]);
+  });
+});
+
+let phones = 0;
+const confirmPhone = (id: string) =>
+  prisma.account.update({
+    data: { phone: testPhone(++phones), phoneVerifiedAt: new Date() },
+    where: { id },
+  });
+
+const addDevice = (accountId: string) =>
+  prisma.pushSubscription.create({
+    data: {
+      accountId,
+      auth: 'auth',
+      endpoint: `https://push.example.test/${accountId}`,
+      p256dh: 'key',
+    },
+  });
+
+// @traces 142-FR-002 142-FR-010
+describe('the next message of a type whose channel was picked', () => {
+  it('goes by the SMS a driver picked for ITP', async () => {
+    const driver = await account('andrei');
+    await confirmPhone(driver);
+    await prefer(driver, 'DUE_ITP', 'sms', true);
+    await hand('DUE_ITP', driver);
+    expect(await channelsOf(driver, 'DUE_ITP')).toEqual(['in_app', 'sms']);
+  });
+
+  it('goes by the WhatsApp a driver picked for a new offer', async () => {
+    const driver = await account('andrei');
+    await confirmPhone(driver);
+    await prefer(driver, 'QUOTE_RECEIVED', 'whatsapp', true);
+    await hand('QUOTE_RECEIVED', driver);
+    expect(await channelsOf(driver, 'QUOTE_RECEIVED')).toEqual([
+      'in_app',
+      'whatsapp',
+    ]);
+  });
+});
+
+// @traces 142-FR-005
+describe('a driver type with nothing saved', () => {
+  it('goes by push when the account has a device', async () => {
+    const driver = await account('andrei');
+    await addDevice(driver);
+    await hand('DUE_ITP', driver);
+    expect(await channelsOf(driver, 'DUE_ITP')).toEqual(['in_app', 'push']);
+  });
+
+  it('goes by e-mail without a device', async () => {
+    const driver = await account('andrei');
+    await hand('DUE_ITP', driver);
+    expect(await channelsOf(driver, 'DUE_ITP')).toEqual(['in_app', 'email']);
+  });
+
+  it('stays on e-mail for an always-sent type, device or not', async () => {
+    const driver = await account('andrei');
+    await addDevice(driver);
+    await hand('JOB_READY', driver);
+    expect(await channelsOf(driver, 'JOB_READY')).toEqual(['in_app', 'email']);
+  });
+});
+
+// @traces 142-FR-008
+describe('a message that goes by another channel than the one picked', () => {
+  let fallbacks: jest.SpyInstance;
+  beforeEach(() => {
+    fallbacks = jest.spyOn(counters, 'countChannelFallback');
+  });
+  afterEach(() => fallbacks.mockRestore());
+
+  it('is counted once when push has no device', async () => {
+    const driver = await account('andrei');
+    await prefer(driver, 'DUE_ITP', 'push', true);
+    await hand('DUE_ITP', driver);
+    expect(await channelsOf(driver, 'DUE_ITP')).toEqual(['in_app', 'email']);
+    expect(fallbacks.mock.calls).toEqual([['push', 'email', 'no_device']]);
+  });
+
+  it('is counted once when SMS or WhatsApp has no confirmed phone', async () => {
+    const driver = await account('andrei');
+    await prefer(driver, 'DUE_ITP', 'sms', true);
+    await prefer(driver, 'QUOTE_RECEIVED', 'whatsapp', true);
+    await hand('DUE_ITP', driver);
+    await hand('QUOTE_RECEIVED', driver);
+    expect(fallbacks.mock.calls).toEqual([
+      ['sms', 'email', 'phone_not_verified'],
+      ['whatsapp', 'email', 'phone_not_verified'],
+    ]);
+  });
+
+  it('is not counted when the picked channel is used', async () => {
+    const driver = await account('andrei');
+    await confirmPhone(driver);
+    await prefer(driver, 'DUE_ITP', 'sms', true);
+    await hand('DUE_ITP', driver);
+    expect(fallbacks).not.toHaveBeenCalled();
+  });
+
+  const sentRow = async (
+    driver: string,
+    kind: string,
+    channel: 'email' | 'push' | 'sms' | 'whatsapp',
+  ) =>
+    prisma.notification.findFirstOrThrow({
+      where: { accountId: driver, channel, kind },
+    });
+
+  it('counts the 6th SMS of the month going by WhatsApp', async () => {
+    const driver = await account('andrei');
+    await confirmPhone(driver);
+    await prefer(driver, 'DUE_ITP', 'sms', true);
+    await hand('DUE_ITP', driver);
+    await service.fail(
+      [await sentRow(driver, 'DUE_ITP', 'sms')],
+      'sms_cap_reached',
+      true,
+    );
+    expect(await channelsOf(driver, 'DUE_ITP')).toEqual([
+      'in_app',
+      'sms',
+      'whatsapp',
+    ]);
+    expect(fallbacks.mock.calls).toEqual([
+      ['sms', 'whatsapp', 'sms_cap_reached'],
+    ]);
+  });
+
+  it.each([
+    ['phone_not_verified', 'email', 'phone_not_verified'],
+    ['no_phone', 'email', 'phone_not_verified'],
+    ['not_allowed', 'email', 'phone_not_verified'],
+    ['sending_off', 'email', 'send_failed'],
+    ['template_not_approved', true, 'send_failed'],
+  ] as const)(
+    'counts a WhatsApp failed with %s as going by e-mail, %s',
+    async (failure, fallback, reason) => {
+      const driver = await account('andrei');
+      await confirmPhone(driver);
+      await prefer(driver, 'QUOTE_RECEIVED', 'whatsapp', true);
+      await hand('QUOTE_RECEIVED', driver);
+      await service.fail(
+        [await sentRow(driver, 'QUOTE_RECEIVED', 'whatsapp')],
+        failure,
+        fallback,
+      );
+      expect(fallbacks.mock.calls).toEqual([['whatsapp', 'email', reason]]);
+    },
+  );
+
+  it('counts a push without a device at send time as no_device', async () => {
+    const driver = await account('andrei');
+    const device = await addDevice(driver);
+    await prefer(driver, 'DUE_ITP', 'push', true);
+    await hand('DUE_ITP', driver);
+    await prisma.pushSubscription.delete({ where: { id: device.id } });
+    await service.fail(
+      [await sentRow(driver, 'DUE_ITP', 'push')],
+      'no_device',
+      true,
+    );
+    expect(fallbacks.mock.calls).toEqual([['push', 'email', 'no_device']]);
+  });
+
+  it('is not counted when no row is written on another channel', async () => {
+    const driver = await account('andrei', ['driver'], { email: null });
+    const device = await addDevice(driver);
+    await prefer(driver, 'DUE_ITP', 'push', true);
+    await hand('DUE_ITP', driver);
+    await prisma.pushSubscription.delete({ where: { id: device.id } });
+    await service.fail(
+      [await sentRow(driver, 'DUE_ITP', 'push')],
+      'no_device',
+      true,
+    );
+    expect(fallbacks).not.toHaveBeenCalled();
   });
 });

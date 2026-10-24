@@ -1076,6 +1076,9 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "phone_not_verified: SMS or WhatsApp without a confirmed phone; notification_type_always_sent, news_consent_required, channel_not_allowed"
           }
         },
         "security": [
@@ -9818,6 +9821,19 @@
           "alwaysSent": {
             "type": "boolean",
             "description": "Sent whatever the person chooses"
+          },
+          "channels": {
+            "type": "array",
+            "description": "The channels the type can be sent by, in order; a staff entry lists its own",
+            "items": {
+              "type": "string",
+              "enum": [
+                "email",
+                "push",
+                "sms",
+                "whatsapp"
+              ]
+            }
           }
         },
         "required": [
@@ -9825,7 +9841,8 @@
           "channel",
           "enabled",
           "garageId",
-          "alwaysSent"
+          "alwaysSent",
+          "channels"
         ]
       },
       "NewsConsentDto": {
@@ -9865,6 +9882,23 @@
           "textVersion",
           "withdrawnAt",
           "currentTextVersion"
+        ]
+      },
+      "SmsUsageDto": {
+        "type": "object",
+        "properties": {
+          "used": {
+            "type": "number",
+            "description": "SMS sent to the driver this month (Bucharest)"
+          },
+          "cap": {
+            "type": "number",
+            "description": "SMS a driver gets per month; then WhatsApp"
+          }
+        },
+        "required": [
+          "used",
+          "cap"
         ]
       },
       "StaffWhatsAppDto": {
@@ -10016,6 +10050,17 @@
           "newsConsent": {
             "$ref": "#/components/schemas/NewsConsentDto"
           },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "A phone is saved and confirmed: SMS and WhatsApp can be picked"
+          },
+          "pushDevice": {
+            "type": "boolean",
+            "description": "The account has at least one push device"
+          },
+          "sms": {
+            "$ref": "#/components/schemas/SmsUsageDto"
+          },
           "staff": {
             "description": "One list per garage the person is staff of, and one for an admin",
             "type": "array",
@@ -10028,6 +10073,9 @@
           "groups",
           "preferences",
           "newsConsent",
+          "phoneVerified",
+          "pushDevice",
+          "sms",
           "staff"
         ]
       },

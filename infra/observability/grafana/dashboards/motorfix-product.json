@@ -4281,7 +4281,7 @@
       }
     },
     {
-      "id": 166,
+      "id": 168,
       "type": "stat",
       "title": "Reviews posted, last 24 hours",
       "datasource": {
@@ -4313,7 +4313,7 @@
       }
     },
     {
-      "id": 167,
+      "id": 169,
       "type": "stat",
       "title": "Copy voice changes, last 24 hours",
       "datasource": {
@@ -4819,14 +4819,134 @@
       }
     },
     {
+      "id": 164,
+      "type": "timeseries",
+      "title": "Channel choices per hour, by channel",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 215
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (channel) (increase(motorfix_notification_channel_choices_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{channel}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 165,
+      "type": "timeseries",
+      "title": "Channel choices per day, by channel",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 215
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (channel) (increase(motorfix_notification_channel_choices_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{channel}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 166,
+      "type": "timeseries",
+      "title": "Channel fallbacks per hour, by reason",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 215
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (from, to, reason) (increase(motorfix_notification_channel_fallbacks_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{from}} → {{to}} {{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 167,
+      "type": "timeseries",
+      "title": "Channel fallbacks per day, by reason",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 215
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (from, to, reason) (increase(motorfix_notification_channel_fallbacks_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{from}} → {{to}} {{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 215
+        "y": 219
       },
-      "id": 164,
+      "id": 170,
       "panels": [],
       "title": "Similar garages",
       "type": "row"
@@ -4844,9 +4964,9 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 216
+        "y": 220
       },
-      "id": 165,
+      "id": 171,
       "targets": [
         {
           "datasource": {

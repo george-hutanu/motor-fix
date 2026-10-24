@@ -3,7 +3,12 @@ import {
   UpdateNotificationPreferencesDto,
 } from '@motor-fix/contracts';
 import { Body, Controller, Get, Put } from '@nestjs/common';
-import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnprocessableEntityResponse,
+} from '@nestjs/swagger';
 
 import { NotificationPreferencesService } from './preferences.service';
 import { CurrentActor } from '../../auth/actor.guard';
@@ -24,6 +29,10 @@ export class NotificationPreferencesController {
 
   @Put()
   @ApiOkResponse({ type: NotificationPreferencesDto })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'phone_not_verified: SMS or WhatsApp without a confirmed phone; notification_type_always_sent, news_consent_required, channel_not_allowed',
+  })
   save(
     @CurrentActor() actor: Actor,
     @Body() body: UpdateNotificationPreferencesDto,
