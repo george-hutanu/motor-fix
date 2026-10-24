@@ -1,4 +1,5 @@
-import { NavigationEnd, NavigationError, type Router } from '@angular/router';
+import type { Injector } from '@angular/core';
+import { NavigationEnd, NavigationError, Router } from '@angular/router';
 import { filter, firstValueFrom } from 'rxjs';
 
 const idle = () =>
@@ -29,18 +30,18 @@ const navigated = (router: Router) =>
 // http(s) collector, once the first navigation has ended and the page is
 // idle, as its own chunk so the first load does not carry it.
 export async function loadTelemetry(
-  router: Router,
+  injector: Injector,
   doc: Document = document,
 ): Promise<void> {
   const tag = doc.querySelector<HTMLMetaElement>('meta[name="mf-telemetry"]');
   if (!tag || !/^https?:\/\//.test(tag.content)) return;
   try {
-    await navigated(router);
+    await navigated(injector.get(Router));
     await idle();
     const { startFaro } = await import('../faro');
     startFaro({
       environment: tag.dataset['environment'] || 'development',
-      router,
+      injector,
       url: tag.content,
       version: tag.dataset['version'] || 'dev',
     });
