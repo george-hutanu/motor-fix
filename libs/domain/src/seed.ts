@@ -427,8 +427,12 @@ async function verifies(secret: string, stored: string | null) {
 // The seeded link, put back with its seeded values. A link at another garage
 // stays: the account may hold one role at one garage, and moving it would
 // rewrite that garage's staff, so the seed says why it could not link.
-async function link(db: Client, id: string, { at, email }: Person) {
-  if (!at) return;
+async function link(
+  db: Client,
+  id: string,
+  { at, email }: Person,
+): Promise<boolean> {
+  if (!at) return false;
   const garage = '(SELECT id FROM garage WHERE slug = $2)';
   const linked =
     at.as === 'mechanic'
@@ -452,7 +456,7 @@ async function link(db: Client, id: string, { at, email }: Person) {
            RETURNING 1`,
           [id, at.garage, at.as],
         );
-  if (linked.rowCount) return;
+  if (linked.rowCount) return true;
   const { rowCount } = await db.query(
     at.as === 'mechanic'
       ? `SELECT 1 FROM mechanic WHERE account_id = $1 AND garage_id = ${garage}`
@@ -465,12 +469,82 @@ async function link(db: Client, id: string, { at, email }: Person) {
       `seed: ${email} is ${at.as} at another garage, so its link to ${at.garage} is not added`,
     );
   }
+  return false;
 }
 
-// A seeded account is the seed's: each run gives it back its password, its
-// roles and its garage link, writing only what drifted. Its other columns
-// (name, phone, status, last role) are left as a user set them.
-async function add(db: Client, person: Person, secret: string) {
+// What one run put back on the accounts that were already there, per field,
+// for the summary line (no value, so no secret, is ever in it).
+type Restored = {
+  identities: number;
+  link: number;
+  password: number;
+  roles: number;
+  status: number;
+};
+
+// The account's password, held by exactly one password identity: the one on
+// its e-mail if any, its hash put back when it does not verify; every other
+// password identity of the account is deleted. Says what it wrote.
+async function onePassword(
+  db: Client,
+  id: string,
+  email: string,
+  secret: string,
+): Promise<{ extra: number; password: boolean }> {
+  const { rows } = await db.query<{
+    id: string;
+    password_hash: string | null;
+    subject: string;
+  }>(
+    `SELECT id, subject, password_hash FROM account_identity
+     WHERE account_id = $1 AND method = 'password'
+     ORDER BY subject = $2 DESC, subject, id LIMIT 1`,
+    [id, email],
+  );
+  const identity = rows[0];
+  let password = true;
+  if (!identity) {
+    await db.query(
+      `INSERT INTO account_identity (id, account_id, method, subject, password_hash)
+       VALUES (gen_random_uuid(), $1, 'password', $2, $3)`,
+      [id, email, await hash(secret)],
+    );
+  } else if (!(await verifies(secret, identity.password_hash))) {
+    await db.query(
+      'UPDATE account_identity SET subject = $2, password_hash = $3 WHERE id = $1',
+      [identity.id, email, await hash(secret)],
+    );
+  } else if (identity.subject !== email) {
+    await db.query('UPDATE account_identity SET subject = $2 WHERE id = $1', [
+      identity.id,
+      email,
+    ]);
+  } else {
+    password = false;
+  }
+  // The one kept above is this account's only password identity; another
+  // method's, and other accounts', are not touched.
+  const extra = identity
+    ? await db.query(
+        `DELETE FROM account_identity
+         WHERE account_id = $1 AND method = 'password' AND id <> $2`,
+        [id, identity.id],
+      )
+    : { rowCount: 0 };
+  return { extra: extra.rowCount ?? 0, password };
+}
+
+// A seeded account is the seed's: each run gives it back its password, held
+// by exactly one password identity (the sign-in reads any one of several, and
+// none of a deleted account), its status, its roles and its garage link,
+// writing only what drifted. Its other columns (name, phone, last role) are
+// left as a user set them.
+async function add(
+  db: Client,
+  person: Person,
+  secret: string,
+  restored: Restored,
+) {
   const created = await db.query<{ id: string }>(
     `INSERT INTO account (id, email, email_verified_at, name, last_role, status, phone, phone_verified_at)
      VALUES (gen_random_uuid(), $1, now(), $2, $3::role, $4::account_status, $5::text, CASE WHEN $5::text IS NULL THEN NULL ELSE now() END)
@@ -492,42 +566,29 @@ async function add(db: Client, person: Person, secret: string) {
       )
     ).rows[0]?.id;
   if (!id) return;
+  const existed = !created.rows[0];
+  const status = await db.query(
+    `UPDATE account SET status = $2::account_status
+     WHERE id = $1 AND status <> $2::account_status`,
+    [id, person.status ?? 'active'],
+  );
+  let roles = 0;
   for (const role of person.roles) {
-    await db.query(
+    const added = await db.query(
       `INSERT INTO account_role (account_id, role) VALUES ($1, $2::role)
        ON CONFLICT DO NOTHING`,
       [id, role],
     );
+    roles += added.rowCount ?? 0;
   }
-  const { rows } = await db.query<{
-    id: string;
-    password_hash: string | null;
-    subject: string;
-  }>(
-    `SELECT id, subject, password_hash FROM account_identity
-     WHERE account_id = $1 AND method = 'password'
-     ORDER BY subject = $2 DESC LIMIT 1`,
-    [id, person.email],
-  );
-  const identity = rows[0];
-  if (!identity) {
-    await db.query(
-      `INSERT INTO account_identity (id, account_id, method, subject, password_hash)
-       VALUES (gen_random_uuid(), $1, 'password', $2, $3)`,
-      [id, person.email, await hash(secret)],
-    );
-  } else if (!(await verifies(secret, identity.password_hash))) {
-    await db.query(
-      'UPDATE account_identity SET subject = $2, password_hash = $3 WHERE id = $1',
-      [identity.id, person.email, await hash(secret)],
-    );
-  } else if (identity.subject !== person.email) {
-    await db.query('UPDATE account_identity SET subject = $2 WHERE id = $1', [
-      identity.id,
-      person.email,
-    ]);
-  }
-  await link(db, id, person);
+  const { password, extra } = await onePassword(db, id, person.email, secret);
+  const linked = await link(db, id, person);
+  if (!existed) return;
+  restored.password += Number(password);
+  restored.status += status.rowCount ?? 0;
+  restored.roles += Number(roles > 0);
+  restored.link += Number(linked);
+  restored.identities += Number(extra > 0);
 }
 
 async function list(db: Client, garage: (typeof LISTED)[number]) {
@@ -658,7 +719,9 @@ async function send(
                                 description, status, created_at, expires_at, idempotency_key)
      VALUES (gen_random_uuid(), $1, $2, 'Dacia', 'Logan', 2018, 'petrol', '1.0 TCe',
              'Scârțâie la frânare', $3::quote_request_status,
-             now() - make_interval(hours => $4), now() + interval '7 days', $5 || gen_random_uuid()::text)
+             (date_trunc('day', now() AT TIME ZONE 'Europe/Bucharest') AT TIME ZONE 'Europe/Bucharest')
+               - make_interval(hours => $4),
+             now() + interval '7 days', $5 || gen_random_uuid()::text)
      RETURNING id`,
     [who.driverId, who.carId, booked ? 'booked' : 'sent', hours, OWN_KEY],
   );
@@ -827,14 +890,15 @@ async function garageFigures(db: Client) {
 // 25 hours (a Bucharest day, the API's, is never longer), so each run starts
 // with the day unused. Their quotes, bookings and jobs go with them; the
 // seed's own requests stay.
-async function clearDay(db: Client) {
-  await db.query(
+async function clearDay(db: Client): Promise<number> {
+  const { rowCount } = await db.query(
     `DELETE FROM quote_request r USING account a
      WHERE a.id = r.driver_id AND a.email LIKE '%@example.test'
        AND r.created_at > now() - interval '25 hours'
        AND r.idempotency_key NOT LIKE $1 || '%'`,
     [OWN_KEY],
   );
+  return rowCount ?? 0;
 }
 
 // A database seeded before book() started its job holds that job to do, never
@@ -1045,7 +1109,16 @@ async function priceList(db: Client) {
   );
 }
 
-async function seed(db: Client, secret: string) {
+// Runs the whole seed and returns its summary line, printed once committed:
+// the deploy log's evidence of what each run put back and cleared.
+async function seed(db: Client, secret: string): Promise<string> {
+  const restored: Restored = {
+    identities: 0,
+    link: 0,
+    password: 0,
+    roles: 0,
+    status: 0,
+  };
   for (const garage of GARAGES) {
     await db.query(
       `INSERT INTO garage (id, name, slug) VALUES (gen_random_uuid(), $1, $2)
@@ -1096,7 +1169,7 @@ async function seed(db: Client, secret: string) {
     );
   }
   for (const garage of LISTED) await list(db, garage);
-  for (const person of PEOPLE) await add(db, person, secret);
+  for (const person of PEOPLE) await add(db, person, secret, restored);
   // The day the suspended driver was suspended, as an admin's change records
   // it; added apart from the account so a database seeded before has it too.
   await db.query(
@@ -1180,7 +1253,7 @@ async function seed(db: Client, secret: string) {
      ON CONFLICT DO NOTHING`,
     [WAITING.map(({ garage }) => garage)],
   );
-  await clearDay(db);
+  const cleared = await clearDay(db);
   await requests(db);
   await reviewed(db);
   await startOlderJob(db);
@@ -1193,6 +1266,12 @@ async function seed(db: Client, secret: string) {
             (gen_random_uuid(), 'skip_rar_check', 'false', 'false')
      ON CONFLICT (key) DO NOTHING`,
   );
+  return (
+    `seed: restored password ${restored.password}, status ${restored.status}, ` +
+    `roles ${restored.roles}, link ${restored.link}, ` +
+    `extra password identities ${restored.identities}; ` +
+    `cleared ${cleared} quote requests`
+  );
 }
 
 async function main(secret: string) {
@@ -1200,8 +1279,9 @@ async function main(secret: string) {
   await db.connect();
   try {
     await db.query('BEGIN');
-    await seed(db, secret);
+    const summary = await seed(db, secret);
     await db.query('COMMIT');
+    console.log(summary);
   } catch (error) {
     await db.query('ROLLBACK');
     throw error;
