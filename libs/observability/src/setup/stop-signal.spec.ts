@@ -34,8 +34,8 @@ const listeners = addedListeners(() => {
   );
 });
 
-// Whatever else the worker listens with stays registered: the handler's view
-// of the listener count is the test's to set.
+// Stands for a listener the Jest worker may already hold: the handler's count
+// comes from the stub, so this one neither changes the outcome nor is detached.
 const unrelated = () => undefined;
 const signals: StopSignal[] = ['SIGINT', 'SIGTERM'];
 for (const signal of signals) process.on(signal, unrelated);
