@@ -4,7 +4,16 @@
 // GitHub refuses APPROVE and REQUEST_CHANGES on a PR its own author reviews,
 // and here the implementer and the tester are the same account. So the real
 // event is tried first and a COMMENT review that states the verdict is the
-// fallback; the commit status is what the gates read.
+// fallback; the commit status is what the gates read. Only GitHub's own
+// refusal ("Can not approve your own pull request", "... request changes on
+// your own pull request") falls back: any other failure, an HTTP 422 such as
+// a validation error included, is reported (`reviewError`, exit 1) once the
+// status and the description are written.
+//
+// The status names the run the report came from (`target_url`, from the
+// ci-run.json dispatch.mjs leaves beside report.json), so the merge gate can
+// refuse a verdict on a pull_request run that ran the PR's own pr-qa.yml
+// (provenance.mjs); a --local lap names none.
 //
 //   node .claude/scripts/pr-test/post.mjs --report <report.json> [--add <findings.json>] [--repo o/r] [--dry-run]
 //   node .claude/scripts/pr-test/post.mjs --missing "<reason>" --pr <n> --sha <sha> [--lap n] [--repo o/r] [--dry-run]
@@ -19,6 +28,7 @@
 // lands, and the merge gate reads it (provenance.mjs).
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 import { isBlocking, reportMarkdown, stepFinding, verdict } from "./findings.mjs";
 import { isEntryPoint } from "../lib/entry.mjs";
@@ -56,9 +66,22 @@ export function replaceSection(body, heading, content) {
   return [...lines.slice(0, keep), content, "", ...lines.slice(end)].join("\n");
 }
 
-const ownPrRefusal = (stderr) => /own pull request|HTTP 422/i.test(stderr);
+// GitHub's message for a review of the author's own PR; any other 422 is a real error.
+const ownPrRefusal = (stderr) => /\byour own pull request\b/i.test(stderr);
 
-export function postVerdict({ pr, repo, sha, verdict, summary, body, lap, gh = realGh, dryRun = false, cloud = process.env.CLAUDE_CODE_REMOTE === "true" }) {
+const RUN_URL = /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/actions\/runs\/\d+$/;
+
+/** The GitHub Actions run URL in the ci-run.json beside `reportFile`, or null when there is none. */
+export function runUrlFor(reportFile) {
+  try {
+    const url = JSON.parse(readFileSync(join(dirname(reportFile), "ci-run.json"), "utf8"))?.url;
+    return typeof url === "string" && RUN_URL.test(url) ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+export function postVerdict({ pr, repo, sha, verdict, summary, body, lap, runUrl = null, gh = realGh, dryRun = false, cloud = process.env.CLAUDE_CODE_REMOTE === "true" }) {
   const wanted = verdict === "failure" ? "REQUEST_CHANGES" : "APPROVE";
   const headline = `Verdict: ${verdict} (agent-review on ${String(sha).slice(0, 7)}${lap ? `, lap ${lap}` : ""})`;
   const reviewBody = `${headline}\n\n${summary}\n\n${body ?? ""}`.trimEnd();
@@ -67,6 +90,7 @@ export function postVerdict({ pr, repo, sha, verdict, summary, body, lap, gh = r
     : {
         state: verdict === "failure" ? "failure" : "success",
         description: summary.slice(0, 140),
+        ...(runUrl ? { targetUrl: runUrl } : {}),
       };
   const section = `${headline}\n\n${summary}`;
 
@@ -117,6 +141,7 @@ function setStatus(gh, repo, sha, status) {
     `context=${STATUS_CONTEXT}`,
     "-f",
     `description=${status.description}`,
+    ...(status.targetUrl ? ["-f", `target_url=${status.targetUrl}`] : []),
   ]);
   if (set.code !== 0) throw new Error(`could not set the ${STATUS_CONTEXT} status on ${sha}: ${set.stderr.trim()}`);
 }
@@ -182,9 +207,14 @@ if (isEntryPoint(import.meta.url)) {
       summary: report.summary,
       body: report.markdown,
       lap: report.lap,
+      runUrl: file ? runUrlFor(file) : null,
       dryRun: argv.includes("--dry-run"),
     });
     console.log(JSON.stringify(out, null, 2));
+    if (out.reviewError) {
+      console.error(`post: the review was not posted: ${out.reviewError}`);
+      process.exit(1);
+    }
   } catch (error) {
     console.error(`post: ${error.message}`);
     process.exit(1);
