@@ -37,3 +37,80 @@ describe('the account deleted e-mail', () => {
     expect(mail.subject).toBe('Your account was deleted');
   });
 });
+
+const suspended = {
+  app: 'https://motorfix.test',
+  link: 'https://motorfix.test/ro/contact',
+  purpose: 'account_suspended',
+  reason: 'Cereri false <b>repetate</b> către service-uri.',
+  support: 'suport@motorfix.test',
+};
+
+// @traces 003-FR-022 003-FR-007
+describe('the account suspended e-mail', () => {
+  it('is the template an account e-mail for a suspension picks', () => {
+    expect(templateName('ACCOUNT_EMAIL', suspended)).toBe(
+      'ACCOUNT_EMAIL.account_suspended',
+    );
+  });
+
+  it('passes the template check', () => {
+    const template = TEMPLATES['ACCOUNT_EMAIL.account_suspended'];
+
+    expect(template).toBeDefined();
+    expect(
+      checkTemplates({ 'ACCOUNT_EMAIL.account_suspended': template }),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ['ro', 'Contul tău a fost suspendat', 'Scrie-ne'],
+    ['en', 'Your account was suspended', 'Write to us'],
+  ])(
+    'says the account was suspended in %s, with the reason, the support address and the contact form',
+    (language, subject, button) => {
+      const mail = render(
+        'ACCOUNT_EMAIL.account_suspended',
+        'email',
+        language,
+        suspended,
+      );
+
+      expect(mail.subject).toBe(subject);
+      expect(mail.text).toContain(
+        'Cereri false <b>repetate</b> către service-uri.',
+      );
+      expect(mail.text).toContain('suport@motorfix.test');
+      expect(mail.text).toContain('https://motorfix.test/ro/contact');
+      expect(mail.html).toContain(button);
+      expect(mail.html).toContain('&lt;b&gt;repetate&lt;/b&gt;');
+      expect(mail.html).not.toContain('<b>repetate</b>');
+    },
+  );
+
+  // With no support address configured, the e-mail names none: the button to
+  // the contact page is the way to write.
+  it.each([
+    ['ro', 'Dacă crezi că e o greșeală, scrie-ne prin butonul de mai jos.'],
+    [
+      'en',
+      'If you think this is a mistake, write to us with the button below.',
+    ],
+  ])('names no support address in %s when none is set', (language, line) => {
+    const { support: _none, ...params } = suspended;
+    const name = templateName('ACCOUNT_EMAIL', params);
+    const mail = render(name, 'email', language, params);
+
+    expect(name).toBe('ACCOUNT_EMAIL.account_suspended_contact');
+    expect(mail.text).toContain(line);
+    expect(mail.text).toContain(params.reason);
+    expect(mail.text).not.toContain('{support}');
+    expect(mail.html).toContain(params.link);
+  });
+
+  it('keeps the support line when an address is set', () => {
+    expect(templateName('ACCOUNT_EMAIL', suspended)).toBe(
+      'ACCOUNT_EMAIL.account_suspended',
+    );
+  });
+});

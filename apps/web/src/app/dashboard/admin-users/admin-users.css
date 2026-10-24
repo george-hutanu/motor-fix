@@ -41,17 +41,32 @@
   list-style: none;
 }
 .row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--mf-space-1);
-  padding: var(--mf-space-3) 0;
   border-top: 1px solid var(--mf-line);
 }
 .row:first-child {
   border-top: 0;
 }
+/* The whole row is the button that opens the account. */
+.open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--mf-space-1);
+  width: 100%;
+  min-height: var(--mf-tap);
+  padding: var(--mf-space-3) 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.open:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
+  outline-offset: var(--mf-focus-offset);
+}
 @media (min-width: 900px) {
-  .row {
+  .open {
     grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.2fr) minmax(96px, auto);
     align-items: center;
     gap: var(--mf-space-3);
@@ -66,6 +81,9 @@
   font-weight: 700;
   color: var(--mf-text);
   overflow-wrap: anywhere;
+}
+.open:hover .name {
+  text-decoration: underline;
 }
 .detail,
 .count {
@@ -170,6 +188,14 @@ mf-lamp {
 .info:focus-visible {
   outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
   outline-offset: var(--mf-focus-offset);
+}
+/* What the drawer's last action did; empty, it takes no room. */
+.said:not(:empty) {
+  margin: 0 0 var(--mf-space-2);
+  font-size: var(--mf-size-body);
+}
+.said:empty {
+  margin: 0;
 }
 /* Running text on a phone reads at the body size; the small size from 768 px up. */
 .found {

@@ -145,3 +145,79 @@ export const ACCOUNT_DELETED: Template = {
   example: { link: 'https://motorfix.example/ro' },
   values,
 };
+
+// An admin suspended the account: the reason as they wrote it, and where to
+// write to have it looked at again.
+export const ACCOUNT_SUSPENDED: Template = {
+  audience: 'any',
+  bell: {
+    en: 'Your account was suspended.',
+    ro: 'Contul tău a fost suspendat.',
+  },
+  email: {
+    en: {
+      button: { label: 'Write to us', link: 'link' },
+      lines: [
+        'Your MotorFix account was suspended and you cannot sign in to it for now.',
+        'The reason: {reason}',
+        'If you think this is a mistake, write to us: {support}',
+      ],
+      reason:
+        'You get this e-mail because it is the address of this MotorFix account.',
+      subject: 'Your account was suspended',
+    },
+    ro: {
+      button: { label: 'Scrie-ne', link: 'link' },
+      lines: [
+        'Contul tău MotorFix a fost suspendat și deocamdată nu poți intra în el.',
+        'Motivul: {reason}',
+        'Dacă crezi că e o greșeală, scrie-ne: {support}',
+      ],
+      reason:
+        'Primești acest e-mail pentru că aceasta este adresa contului MotorFix.',
+      subject: 'Contul tău a fost suspendat',
+    },
+  },
+  example: {
+    link: 'https://motorfix.example/ro/contact',
+    reason: 'Cereri false repetate către service-uri.',
+    support: 'suport@example.test',
+  },
+  values: { link: 'link', reason: 'text', support: 'text' },
+};
+
+// The same e-mail when no support address is set: the button to the contact
+// page is the way to write, so no address is named.
+export const ACCOUNT_SUSPENDED_CONTACT: Template = {
+  audience: 'any',
+  bell: ACCOUNT_SUSPENDED.bell,
+  email: {
+    en: {
+      button: { label: 'Write to us', link: 'link' },
+      lines: [
+        'Your MotorFix account was suspended and you cannot sign in to it for now.',
+        'The reason: {reason}',
+        'If you think this is a mistake, write to us with the button below.',
+      ],
+      reason:
+        'You get this e-mail because it is the address of this MotorFix account.',
+      subject: 'Your account was suspended',
+    },
+    ro: {
+      button: { label: 'Scrie-ne', link: 'link' },
+      lines: [
+        'Contul tău MotorFix a fost suspendat și deocamdată nu poți intra în el.',
+        'Motivul: {reason}',
+        'Dacă crezi că e o greșeală, scrie-ne prin butonul de mai jos.',
+      ],
+      reason:
+        'Primești acest e-mail pentru că aceasta este adresa contului MotorFix.',
+      subject: 'Contul tău a fost suspendat',
+    },
+  },
+  example: {
+    link: 'https://motorfix.example/ro/contact',
+    reason: 'Cereri false repetate către service-uri.',
+  },
+  values: { link: 'link', reason: 'text' },
+};

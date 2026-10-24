@@ -1,0 +1,90 @@
+<form (submit)="submit($event)" novalidate>
+  @switch (data.action) {
+    @case ('reset') {
+      <p class="question" data-part="question">{{ 'admin.users.dialogs.reset.question' | t: { name: data.name } }}</p>
+      <p class="hint">{{ 'admin.users.dialogs.reset.hint' | t }}</p>
+    }
+    @case ('suspend') {
+      <div class="field">
+        <label for="mf-account-text">{{ 'admin.users.dialogs.suspend.reason' | t }}</label>
+        <textarea
+          hlmInput
+          id="mf-account-text"
+          rows="4"
+          required
+          [value]="text()"
+          [attr.aria-invalid]="short() || count() > max ? 'true' : null"
+          [attr.aria-describedby]="'mf-account-hint mf-account-count' + (short() ? ' mf-account-short' : '')"
+          (input)="typed($event, 'text')"
+        ></textarea>
+        <p class="count" id="mf-account-count" data-part="count">{{ 'admin.users.dialogs.count' | t: { n: count(), max: max } }}</p>
+        @if (short()) {
+          <p class="error" id="mf-account-short">{{ 'admin.users.dialogs.suspend.short' | t }}</p>
+        }
+        <p class="hint" id="mf-account-hint">{{ 'admin.users.dialogs.suspend.hint' | t }}</p>
+      </div>
+    }
+    @case ('restore') {
+      <div class="field">
+        <label for="mf-account-text">{{ 'admin.users.dialogs.restore.note' | t }}</label>
+        <textarea
+          hlmInput
+          id="mf-account-text"
+          rows="3"
+          [value]="text()"
+          [attr.aria-invalid]="count() > max ? 'true' : null"
+          aria-describedby="mf-account-count"
+          (input)="typed($event, 'text')"
+        ></textarea>
+        <p class="count" id="mf-account-count" data-part="count">{{ 'admin.users.dialogs.count' | t: { n: count(), max: max } }}</p>
+      </div>
+    }
+    @case ('delete') {
+      <p class="hint">{{ 'shell.deleteAccount.removed' | t }}</p>
+      <p class="hint">{{ 'shell.deleteAccount.kept' | t }}</p>
+      <div class="field">
+        <label for="mf-account-reference">{{ 'admin.users.dialogs.delete.reference' | t }}</label>
+        <input
+          hlmInput
+          id="mf-account-reference"
+          type="text"
+          autocomplete="off"
+          required
+          [placeholder]="example"
+          [value]="reference()"
+          (input)="typed($event, 'reference')"
+        />
+      </div>
+      <div class="field">
+        <label for="mf-account-date">{{ 'admin.users.dialogs.delete.date' | t }}</label>
+        <input
+          hlmInput
+          id="mf-account-date"
+          type="date"
+          required
+          [max]="data.today"
+          [value]="receivedOn()"
+          (input)="typed($event, 'receivedOn')"
+        />
+      </div>
+      <div class="tick">
+        <input id="mf-account-identity" type="checkbox" [checked]="identity()" (change)="ticked($event)" />
+        <label for="mf-account-identity">{{ 'admin.users.dialogs.delete.identity' | t }}</label>
+      </div>
+    }
+  }
+
+  @if (error(); as e) {
+    <p class="error" role="alert">{{ e }}</p>
+  }
+
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" (click)="cancel()">{{ 'admin.users.dialogs.cancel' | t }}</button>
+    <button
+      hlmBtn
+      type="submit"
+      [disabled]="!ready() || busy()"
+      [attr.aria-busy]="busy()"
+    >{{ confirm() }}</button>
+  </div>
+</form>

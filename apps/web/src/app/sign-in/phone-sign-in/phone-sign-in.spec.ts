@@ -603,7 +603,11 @@ describe('what the dialog says to each answer', () => {
 
   it.each([
     [503, 'maintenance', 'MotorFix este în mentenanță.'],
-    [403, 'account_suspended', 'Contul tău este suspendat.'],
+    [
+      403,
+      'account_suspended',
+      'Contul tău este suspendat. Scrie‑ne la suport.',
+    ],
     [409, 'phone_taken', 'Intră cu e‑mail și parolă'],
   ])('shows the message for %s %s', async (status, code, text) => {
     await open();

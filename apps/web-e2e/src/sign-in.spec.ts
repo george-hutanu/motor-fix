@@ -192,7 +192,7 @@ test.describe('signing in with something wrong @seeded', () => {
     await signIn(page, ACCOUNTS.suspended);
 
     await expect(dialog(page).getByRole('alert')).toHaveText(
-      'Contul tău este suspendat.',
+      'Contul tău este suspendat. Scrie‑ne la suport.',
     );
   });
 
