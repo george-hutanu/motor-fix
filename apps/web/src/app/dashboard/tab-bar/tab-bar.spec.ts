@@ -266,3 +266,50 @@ describe('DashboardTabBar spacing', () => {
     expect(tab).toContain('padding: 0 4px;');
   });
 });
+
+@Component({
+  imports: [DashboardTabBar],
+  template: `<mf-dashboard-tab-bar base="/app/garage" [views]="views()" name="shell.frame.bar.garage" />`,
+})
+class GrowingHost {
+  // A feature switch read after the first paint adds a tab before the open one.
+  static readonly views = signal(
+    DASHBOARDS.garage.views.slice(0, 5).filter((v) => v.path !== 'schedule'),
+  );
+  readonly views = GrowingHost.views;
+}
+
+describe('DashboardTabBar when a tab joins after the first paint', () => {
+  it('scrolls the current tab back into sight', async () => {
+    scrolled = jest.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          {
+            children: [{ component: Blank, path: '**' }],
+            component: GrowingHost,
+            path: 'app/garage',
+          },
+        ]),
+      ],
+    });
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/app/garage/team');
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    scrolled.mockClear();
+
+    GrowingHost.views.set(DASHBOARDS.garage.views.slice(0, 5));
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+
+    const element = harness.routeNativeElement as HTMLElement;
+    expect(tabs(element)).toHaveLength(5);
+    expect(scrolled).toHaveBeenCalledWith({
+      block: 'nearest',
+      inline: 'nearest',
+    });
+    expect(scrolled.mock.contexts.at(-1)).toBe(tabs(element)[4]);
+  });
+});
