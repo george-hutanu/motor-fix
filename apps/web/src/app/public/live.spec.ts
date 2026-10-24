@@ -577,3 +577,92 @@ describe('a results view naming its garages', () => {
     expect(TestBed.inject(PublicLive).state()).toBe('closed');
   });
 });
+
+// @traces 1193-FR-001
+describe('PublicLive and the back/forward cache', () => {
+  const pagehide = () => window.dispatchEvent(new Event('pagehide'));
+  const pageshow = (persisted: boolean) => {
+    const shown = new Event('pageshow');
+    Object.defineProperty(shown, 'persisted', { value: persisted });
+    window.dispatchEvent(shown);
+  };
+
+  it('drops its stream when the page is hidden, leaving no request open', async () => {
+    const live = setUp();
+    live.register({ garage: 'g-1' });
+    await settle();
+
+    pagehide();
+    await elapse(60_000);
+
+    expect(signalOf(0).aborted).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(live.state()).toBe('closed');
+  });
+
+  it('opens its stream again, for the same views, when the page is shown from the cache', async () => {
+    const live = setUp();
+    live.register({ garage: 'g-1' });
+    await settle();
+
+    pagehide();
+    await settle();
+    pageshow(true);
+    await settle();
+
+    expect(urls()).toEqual([
+      '/api/v1/live/public?garages=g-1',
+      '/api/v1/live/public?garages=g-1',
+    ]);
+    expect(live.state()).toBe('open');
+  });
+
+  it('has its views re-read their data when the page comes back from the cache', async () => {
+    setUp();
+    const load = jest.fn(async () => ({ name: 'Atelier' }));
+    runInInjectionContext(view(), () =>
+      publicLiveResource(
+        load,
+        ['garage.updated'],
+        () => ({ garage: 'g-1' }),
+        () => 'g-1',
+      ),
+    );
+    await settle();
+    load.mockClear();
+
+    pagehide();
+    await settle();
+    pageshow(true);
+    await settle();
+
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing on a page shown without having been hidden', async () => {
+    const live = setUp();
+    live.register({ garage: 'g-1' });
+    await settle();
+
+    pageshow(false);
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(signalOf(0).aborted).toBe(false);
+  });
+
+  it('opens nothing on a page shown again once its last view has gone', async () => {
+    const live = setUp();
+    const leave = live.register({ garage: 'g-1' });
+    await settle();
+
+    pagehide();
+    leave();
+    await settle();
+    pageshow(true);
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(live.state()).toBe('closed');
+  });
+});
