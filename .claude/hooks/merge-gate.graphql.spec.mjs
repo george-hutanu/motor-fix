@@ -77,8 +77,10 @@ describe('merge gate — merges hidden by quoting, a pipe or another repository'
     assert.deepEqual(mergeTarget(`gh pr me""rge 5`), { pr: '5' });
     assert.deepEqual(mergeTarget(`gh p'r' merge 5`), { pr: '5' });
     assert.deepEqual(mergeTarget(`GH_TOKEN=x env "gh" pr merge 5`), { pr: '5' });
-    assert.equal(mergeTarget(`echo "${cli}" is documented`), null);
-    assert.equal(mergeTarget(`grep -n '${cli}' AGENTS.md`), null);
+    // A mention is refused with the rest of what the gate cannot place: fail-closed.
+    assert.match(mergeTarget(`echo "${cli}" is documented`).unresolved, /cannot place/);
+    assert.match(mergeTarget(`grep -n '${cli}' AGENTS.md`).unresolved, /cannot place/);
+    assert.equal(mergeTarget(`grep -rn mergePullRequest .claude`), null);
   });
 
   it('refuses a graphql query it cannot read, however the query field is written', () => {
@@ -161,6 +163,38 @@ describe('merge gate — words read as the shell reads them, and what earlier co
     assert.equal(ghCwd('/w/repo', { pr: '5', cwd: '../other' }, '/home/me'), '/w/other');
     assert.equal(ghCwd('/w/repo', { pr: '5', cwd: '~/x' }, '/home/me'), '/home/me/x');
     assert.equal(ghCwd('/w/repo', { pr: '5', cwd: '~' }, '/home/me'), '/home/me');
+  });
+});
+
+// Fourth review of ST-448: shell spellings the parser misread, a cd it followed wrongly, and a backstop for the rest.
+describe('merge gate — the fourth review, and the backstop for a merge the parser cannot place', () => {
+  const cli = ['gh', 'pr', 'merge'].join(' ');
+
+  it('ends $\'…\' at its real closing quote, and takes gh followed by pr or api, not an option value', () => {
+    assert.deepEqual(mergeTarget(`echo $'\\'' ; ${cli} 5`), { pr: '5' });
+    assert.deepEqual(mergeTarget(`env -u gh ${cli} 5`), { pr: '5' });
+    assert.deepEqual(mergeTarget(`sudo -u gh ${cli} 5`), { pr: '5' });
+  });
+
+  it('reads a combined -c flag, and refuses a merge in a string some program runs', () => {
+    assert.deepEqual(mergeTarget(`bash -ec '${cli} 5'`), { pr: '5' });
+    assert.deepEqual(mergeTarget(`sh -lc "${cli} 5"`), { pr: '5' });
+    for (const cmd of [`bash <<< '${cli} 5'`, `echo '${cli} 5' | sh`, `node -e "require('child_process').execSync('${cli} 5')"`, `echo "${cli}" is documented`, `node -e "x('gh api -X PUT repos/o/r/pulls/5/merge')"`])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot place/, cmd);
+  });
+
+  it('follows a cd only at the top of an && chain up to the merge, composing each one', () => {
+    assert.deepEqual(mergeTarget(`cd a && cd b && ${cli} 5`), { pr: '5', cwd: 'a/b' });
+    assert.deepEqual(mergeTarget(`cd a && cd /x && ${cli} 5`), { pr: '5', cwd: '/x' });
+    for (const cmd of [`(cd ../other) && ${cli} 5`, `echo $(cd ../other); ${cli} 5`, `cd ../other || true; ${cli} 5`, `cd a; ${cli} 5`, `cd a && true; ${cli} 5`])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot follow/, cmd);
+  });
+
+  it('sees GH_REPO set by declare, and refuses GIT_DIR, GIT_WORK_TREE, GH_HOST and env -C before a merge', () => {
+    assert.deepEqual(mergeTarget(`declare -x GH_REPO=o/r; ${cli} 5`), { pr: '5', repo: 'o/r' });
+    for (const cmd of [`GIT_DIR=../other/.git ${cli} 5`, `export GIT_WORK_TREE=x; ${cli} 5`, `GH_HOST=ghe.example ${cli} 5`, `env -C ../other ${cli} 5`, `env --chdir=../other ${cli} 5`])
+      assert.match(mergeTarget(cmd)?.unresolved ?? 'allowed', /cannot follow/, cmd);
+    assert.match(mergeTarget('gh api --hostname ghe.example -X PUT repos/george-hutanu/motor-fix/pulls/5/merge').unresolved, /cannot follow/);
   });
 });
 

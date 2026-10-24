@@ -36,7 +36,8 @@ describe('merge gate — which commands are merges', () => {
     assert.equal(mergeTarget('gh pr view 21 --json mergeable'), null);
     assert.equal(mergeTarget('git merge --no-edit origin/main'), null);
     assert.equal(mergeTarget('gh pr checks 21 --watch'), null);
-    assert.equal(mergeTarget('echo "gh pr merge" is documented in AGENTS.md'), null);
+    // ST-448: a mention of the merge in a Bash command is refused, fail-closed, as a merge the gate cannot place.
+    assert.match(mergeTarget('echo "gh pr merge" is documented in AGENTS.md').unresolved, /cannot place/);
   });
 });
 
