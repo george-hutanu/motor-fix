@@ -748,3 +748,91 @@ describe('the live stream counts', () => {
     expect(await closes('reconnect')).toBe(before.reconnect);
   });
 });
+
+// @traces 056-FR-010
+describe('the mechanic card events', () => {
+  let load: jest.Mock;
+  let team: LiveHub;
+
+  beforeEach(() => {
+    load = jest.fn(async () => ({
+      mechanics: new Map(),
+      off: new Set(),
+      owners: new Set(['ion']),
+      receptionists: new Set(['maria']),
+    }));
+    team = new LiveHub(load);
+  });
+
+  afterEach(() => team.shutdown());
+
+  const staff = (accountId: string, role: 'garage' | 'receptionist') => {
+    const sink = new Sink();
+    team.open(sink, {
+      accountId,
+      channels: [`account:${accountId}`, 'garage:g1'],
+      expiresAt: NOW + 15 * MINUTE,
+      garageId: 'g1',
+      role,
+    });
+    return sink;
+  };
+
+  const visitor = (channels: string[]) => {
+    const sink = new Sink();
+    team.open(sink, { address: '10.0.0.9', channels, public: true });
+    return sink;
+  };
+
+  const send = (audience: string[], kind: string, id = 'e1') =>
+    team.deliver(
+      JSON.stringify({
+        audience,
+        event: { at: new Date(NOW).toISOString(), id, kind },
+      }),
+    );
+
+  const kinds = (sink: Sink) =>
+    sink
+      .messages()
+      .map((m) => m.event)
+      .filter((kind) => kind !== 'hello');
+
+  it('reads the garage access again at once after a card is removed', async () => {
+    staff('ion', 'garage');
+    await send(['garage:g1'], 'request.created');
+    expect(load).toHaveBeenCalledTimes(1);
+
+    await send(['garage:g1'], 'mechanic.removed', 'e2');
+    await send(['garage:g1'], 'request.updated', 'e3');
+
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['mechanic.added', 'mechanic.removed'])(
+    'gives %s to the owner by the team capability, never to a receptionist',
+    async (kind) => {
+      const owner = staff('ion', 'garage');
+      const receptionist = staff('maria', 'receptionist');
+
+      await send(['garage:g1'], kind);
+
+      expect(kinds(owner)).toEqual([kind]);
+      expect(kinds(receptionist)).toEqual([]);
+    },
+  );
+
+  it.each(['mechanic.added', 'mechanic.removed'])(
+    "lets the garage's and the mechanic's public pages hear %s",
+    async (kind) => {
+      const page = visitor(['public:garage:g1']);
+      const profile = visitor(['public:mechanic:m1']);
+
+      await send(['garage:g1', 'public:garage:g1'], kind);
+      await send(['garage:g1', 'public:mechanic:m1'], kind, 'e2');
+
+      expect(kinds(page)).toEqual([kind]);
+      expect(kinds(profile)).toEqual([kind]);
+    },
+  );
+});

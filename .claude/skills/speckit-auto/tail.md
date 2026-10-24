@@ -143,8 +143,13 @@ for by the tail itself before the merge.
      medium and low finding, tests first, committed as `fix`, `test`,
      `docs`, `style` or `refactor` (no merge commit, no `feat`); list each
      under `## Fixed after QA` in `specs/<feature>/finish-comment.md`, one
-     line per finding with its severity and the fix commit's sha (git-ignored,
-     it stays in the worktree as `handoff.md` does), and commit the lap's
+     line per finding with its severity and where its fix is: the fix
+     commit's sha; `specs@<sha>` for a fix on the specs repo's trunk (a
+     `tasks.md` line, pushed with `specs-repo.mjs commit`); or
+     `qa-flows-<n>.mjs` for a change to the QA flows file only, when the
+     finding's location is that file. Each is made after the lap's verdict
+     was posted, or the merge does not count it (git-ignored, the file
+     stays in the worktree as `handoff.md` does), and commit the lap's
      report with `node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`;
      run `node .claude/scripts/lifecycle.mjs check`,
      push, then `node .claude/scripts/pr-test/carry.mjs <n>`, which carries
@@ -174,7 +179,9 @@ for by the tail itself before the merge.
    green, or with a check still pending: write `specs/<feature>/finish-comment.md`
    (`speckit-tracker-sync` §4) when there is something to record, keeping a
    lap's `## Fixed after QA` list (`lifecycle.mjs merge` stops before the
-   merge while it names fewer findings than the lap reported), and commit
+   merge while it names fewer findings than the lap reported, under a
+   fixes carry counting only lines that name a PR commit, a `specs@<sha>`
+   trunk commit or a `qa-flows-<n>.mjs` change made after the lap), and commit
    the feature's records with
    `node .claude/scripts/specs-repo.mjs commit "<message>" -- <feature>`;
    `finish-comment.md` itself is git-ignored and stays in the worktree, as

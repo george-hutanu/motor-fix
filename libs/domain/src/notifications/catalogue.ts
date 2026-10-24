@@ -122,6 +122,8 @@ const ENTRIES: Record<string, Entry> = {
   SIGN_IN_CODE: ['direct', ['whatsapp'], null, 'transactional'],
   STAFF_INVITE: ['event', ['email', 'whatsapp'], null, 'transactional'],
   STAFF_JOINED: ['event', EPW, null],
+  // Never muted and never on WhatsApp, as an invite is not.
+  STAFF_REMOVED: ['event', ['email', 'push'], null, 'transactional'],
   SUPPORT_ACKNOWLEDGEMENT: ['event', ['email'], null, 'transactional'],
   SUPPORT_MESSAGE: ['direct', ['email'], null, 'transactional'],
   TEST_MESSAGE: ['direct', ['email', 'push'], null, 'transactional'],

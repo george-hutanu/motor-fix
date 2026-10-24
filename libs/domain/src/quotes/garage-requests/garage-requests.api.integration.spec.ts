@@ -1269,6 +1269,7 @@ describe('GET /garage/requests?status=quoted once the driver accepts', () => {
       mechanic: null,
       startsAt: accepted.booking.startsAt.toISOString(),
       status: 'awaiting_confirmation',
+      toReassign: false,
     });
     expect(res.body.items[0].booking).toBeNull();
   });
@@ -1336,6 +1337,7 @@ describe('GET /garage/requests?status=quoted once the driver accepts', () => {
       mechanic: { id: dinamo.plainMechanic.id, name: 'Hand' },
       startsAt: booking.startsAt.toISOString(),
       status: 'confirmed',
+      toReassign: false,
     });
     expect(row.driver).toEqual({ phone: PHONE, shortName: 'Andrei M.' });
     expect(row.car.plate).toBe('B123ABC');
