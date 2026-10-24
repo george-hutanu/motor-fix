@@ -45,6 +45,7 @@ const reviewsStub = {
 const MOBILE: PublicGarageDto = {
   brandNote: null,
   businessKind: 'mobile',
+  closedDays: [],
   description: 'Diagnoză și reparații la domiciliu',
   doesNotTake: [],
   facilities: [],
@@ -68,6 +69,7 @@ const MOBILE: PublicGarageDto = {
 const FIXED: PublicGarageDto = {
   address: 'Bulevardul Iuliu Maniu 100, București',
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},

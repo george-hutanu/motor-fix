@@ -32,6 +32,7 @@ const reviewsStub = {
 const FIXED: PublicGarageDto = {
   address: 'Bulevardul Iuliu Maniu 100, București',
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},

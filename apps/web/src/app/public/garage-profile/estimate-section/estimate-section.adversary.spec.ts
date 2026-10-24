@@ -29,6 +29,7 @@ const CHAIN = row('j-chain', 'Lanț', 'Chain', 4_200_000, 6_800_000);
 const base = (id: string, prices: PublicGarageDto['prices']) =>
   ({
     brandNote: null,
+    closedDays: [],
     doesNotTake: [],
     facilities: [],
     hours: {},

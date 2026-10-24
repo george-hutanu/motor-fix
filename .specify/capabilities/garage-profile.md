@@ -24,6 +24,7 @@ features:
   - 025-review-mechanic
   - 024-garage-reviews
   - 133-garage-public-profile
+  - 309-open-now-directions
 ---
 
 # Capability: Garage profile
@@ -44,9 +45,9 @@ _From 1353-verified-badge-last-check._
 
 _From 307-public-garage-profile._
 
-### 308-FR-002 — The answer's key allow-list test (307-FR-005) MUST gain `hours` and keep failing on `phone`, `cui`, `seatAddress` and a mobile mechanic's `latitude`/`longitude`; a mobile mechanic's answer MUST carry no `address`, the seat included, and a workshop's MUST carry its one `address` string as the garage wrote it. The `worksOn`, `doesNotTake`, `brandNote`, `refusalPhrase`, `paymentMethods`, `courtesyCar`, `facilities`, `facilitiesNote`, `businessKind` and `serviceRadiusKm` fields stay as they are (modifies 307-FR-005: one more allowed key).
+### 309-FR-006 — The public profile read (`GET /api/v1/garages/{slug}`, with its optional `brand`) MUST carry `closedDays`: every day from today (Bucharest) through today + 14 that is a legal holiday of the calendar or a closed day of the garage, each as `{ day, reason }` with `day` a Bucharest date ("YYYY-MM-DD") and `reason` `holiday` or `closed`, in date order, a day held once with `holiday` winning; empty when there is none. The closed day's note is not sent. The answer's key allow-list test MUST gain `closedDays` and keep failing on `phone`, `cui`, `seatAddress` and a mobile mechanic's `latitude`/`longitude`; `hours` and every other field stay as they are (modifies 308-FR-002: one more allowed key).
 
-_From 308-profile-details._
+_From 309-open-now-directions._
 
 ### 1182-FR-007 — The public garage profile read MUST go through the cache service in place of its own Redis hash, slug pointer and generation: one entry per garage and brand in context (and one for none), found from the slug, tagged with the garage, a soft lifetime of 10 minutes, keeping every rule of 307-FR-001 and 307-FR-006 that the reader sees (the one public scope, the 404/410 verdicts of garages that exist read fresh every time, the brand-in-context variants, the drop on every event relayed to `public:garage:{id}`, PostgreSQL the only truth). The old keys, generation and per-module fail-open wrapper are removed, not kept beside the new service.
 
@@ -475,9 +476,9 @@ _From 1192-photo-variants._
 
 _From 308-profile-details._
 
-### 308-FR-003 — The hours MUST be read in the profile's one PostgreSQL statement and served from the profile's existing cache per brand in context (307-FR-006, 1182-FR-007), dropped on the events already relayed to `public:garage:{garageId}`; the answer's shape version in the cache key MUST be bumped, so no older cached answer without hours is read back (as 355-FR-005 and 310-FR-013 did). The read performs no write, emits no event and records no audit history.
+### 309-FR-007 — The closed days MUST be read in the profile's existing read path and served from the profile's cache per brand in context (307-FR-006, 1182-FR-007): the cached answer carries the list, the answer's shape version in the cache key MUST be bumped so no older answer without it is read back, and the cache's own lifetime bounds how far "today" can drift inside a cached answer (the window of FR-006 starts at the day the answer was built; the browser evaluates on its own clock, so a day that slid out of the window is simply not consulted, and a day that slid in is at most the cache's lifetime away). The read performs no write, emits no event and records no audit history (modifies 308-FR-003: the shape version moves once more).
 
-_From 308-profile-details._
+_From 309-open-now-directions._
 
 ### 308-FR-004 — The profile page MUST fill its brands slot with "Lucrează pe" / "Works on": one chip per brand of `worksOn`, each a green lamp carrying the brand's name as text, and "Nu lucrează pe" / "Does not work on": one chip per brand of `doesNotTake`, each a red lamp carrying the name. A brand with no row (unstated) is in neither list. The stance is carried by the section heading, with the brand's name as the chip's visible text and the lamp `aria-hidden`, as the header lamp does (307-FR-016); no per-chip screen-reader string; never by colour alone.
 
@@ -566,6 +567,49 @@ _From 024-garage-reviews._
 ### 024-FR-015 — The mock's "Scrie o recenzie" button MUST NOT be added by this story (removed while `reviews_only_after_confirmed_job` is on; ST-22's button covers the off case).
 
 _From 024-garage-reviews._
+### 309-FR-001 — The status rule MUST be one pure, browser-safe function in the shared contracts library (beside the hours types; no server-framework, validator or database import), taking the garage's weekly hours, the list of closed days ahead (each a Bucharest date with its reason, `holiday` or `closed`) and the instant "now", and answering one of: no line; open until a time of today; on a break until a time of today; closed, with the reason for today (`hours`, `holiday` or `closed`) and the next opening (the day's offset from today, 0 to 14, and its start time), or closed with no opening in the window. It MUST be usable unchanged by #210's "open now" filter (decided in #864).
+
+_From 309-open-now-directions._
+
+### 309-FR-002 — Every time MUST be worked out on the Europe/Bucharest wall clock, including the nights of the March and October clock changes: "today" is the Bucharest date of now, a weekday is the Bucharest weekday, and the hours' "HH:MM" ends are read on that clock.
+
+_From 309-open-now-directions._
+
+### 309-FR-003 — The rule for a day MUST be, in this order: a legal holiday or a garage closed day closes the whole day; otherwise the day's intervals apply, and a day with no interval is closed. A garage whose hours table is empty, or fails the contracts library's existing weekly-hours guard (`isWeeklyHours`, the one check), gets no line.
+
+_From 309-open-now-directions._
+
+### 309-FR-004 — Intervals are half-open, [start, end): 08:00:00 is open, 19:00:00 is closed. Now inside an interval MUST answer open until that interval's end; now after one interval of today and before the next MUST answer a break until the next interval's start; otherwise the garage is closed and the next opening is the start of the first interval of the first day, today included, from now through today + 14 that is neither a holiday nor a closed day and has an interval starting after now (today) or at all (a later day). With no such day the rule answers closed with no opening, and the page shows no line. The rule trusts only the closed days it is given: a day past the answer's window (a cached answer, a tab left open for days) is not known to it, and that drift is accepted.
+
+_From 309-open-now-directions._
+
+### 309-FR-005 — The line's texts MUST be, Romanian / English, from the public texts of both languages: open "Deschis azi până la {end}" / "Open today until {end}"; break "Pauză până la {start}" / "Break until {start}"; closed by hours "Închis acum · deschide {when} la {start}" / "Closed now · opens {when} at {start}"; closed by a holiday "Închis azi · sărbătoare legală · deschide {when} la {start}" / "Closed today · public holiday · opens {when} at {start}"; closed by a garage closed day "Închis azi · deschide {when} la {start}" / "Closed today · opens {when} at {start}". `{when}` is "azi" / "today" for an opening later today, "mâine" / "tomorrow" for one day ahead, the weekday's name in the language's full form (Romanian lower case: "luni"; English capitalised: "Monday") for two to six days ahead, and from seven days ahead the date as "pe {d} {month}" / "on {d} {month}", the day unpadded and first, the month's full name (Romanian lower case): "pe 5 noiembrie" / "on 5 November". Times are 24-hour two-digit (019-FR-006). The middle dot is " · " (a middle dot between ordinary spaces), as the header's other lines use.
+
+_From 309-open-now-directions._
+
+### 309-FR-009 — The profile header MUST show the line as one short text in the header's text column, where the mock places "Deschis azi până la 19:00" (under the name and place line, before the verification line), for a workshop and for a mobile mechanic alike; the line MUST be absent, leaving no empty space, when the rule answers no line. The line is plain text with no control, so no touch-target rule applies; it is not announced on each change (no live region), the way the header's other lines are silent (307-FR-016).
+
+_From 309-open-now-directions._
+
+### 309-FR-010 — The server render MUST draw the line once on the server's clock; in the browser the page MUST evaluate it again at start and then once a minute, on the browser's clock, from the answer it already holds, with no request of its own; the timer stops when the page is left.
+
+_From 309-open-now-directions._
+
+### 309-FR-011 — When `garage.updated` arrives on the profile's `public:garage:{garageId}` subscription the line MUST re-read with the profile (the existing live re-read, 307-FR-018, 310-FR-010) and show the new state in place, with no reload and no polling of its own.
+
+_From 309-open-now-directions._
+
+### 309-FR-012 — The line MUST render at 320 px and 390 px (wrapping onto a second line when the text is long, no sideways scroll), tablet and desktop, light and dark, Romanian and English, switching with the language without a reload; every text of this story MUST live in the public texts of both languages.
+
+_From 309-open-now-directions._
+
+### 309-FR-013 — Tests MUST cover, in Jest, a table of cases for the status rule: open, before opening, after closing, a lunch break, Saturday with hours, Sunday closed, a legal holiday (1 December 2027), a garage closed day (27 December 2027), the exact start (08:00, open) and end (19:00, closed) of an interval, a date seven or more days ahead ("pe 5 noiembrie"), Orthodox Easter Monday 2027 (3 May 2027), the nights of the March and October 2027 clock changes, two closed days in a row, a next opening seven or more days ahead, fifteen closed days (no line) and no hours; the seeded holidays of 2028 to 2030 (17 rows each year, no shared day, the Easter-derived days); the public read's `closedDays` window (a holiday inside, a closed day inside, a closed day on day 15 left out, a holiday winning over a closed day on one day) with the key allow-list; the header line for each rule outcome, the absent line, the minute tick and the live re-read. End to end (Playwright): with the browser's clock fixed at a Tuesday 10:15 inside the answer's window, the open line shows on a garage with weekday hours; with the clock fixed at 10:15 on a day the profile answer carries as a holiday (the plan chooses the day, research R7), the holiday line shows. Every test file names its requirements in a `// @traces` line.
+
+_From 309-open-now-directions._
+
+### 309-FR-014 — The feature adds no service, queue, outside call, endpoint or product action and writes nothing but the seed migration: the observability inventory is unchanged, and this is recorded in the PR.
+
+_From 309-open-now-directions._
 ### 133-FR-001 — The API MUST expose `GET /api/v1/garages/{garageId}/profile` for the garage's own staff, answering 200 with the public profile read model of `GET /api/v1/garages/{slug}` — the same `PublicGarageDto` fields, field for field, built by the same read (one read model, no second query shape) — plus one field `phone` (the garage's stored `phone` column as saved, already normalised at save by 109-FR-001; `null` when the row has none). The read model part is served through the public read's own cache (1182-FR-007); `phone` is read apart from it and never written into that cache entry. It takes no `brand` or `near` parameter: the owner's view is brand-neutral and shows no distance.
 
 _From 133-garage-public-profile._
@@ -643,3 +687,5 @@ _From 133-garage-public-profile._
 - `310-FR-004` — superseded by `1192-FR-009` (2026-10-22)
 - `307-FR-005` — superseded by `308-FR-002` (2026-10-22)
 - `308-FR-006` — superseded by `025-FR-016` (2026-10-23)
+- `308-FR-002` — superseded by `309-FR-006` (2026-10-24)
+- `308-FR-003` — superseded by `309-FR-007` (2026-10-24)
