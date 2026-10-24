@@ -7,6 +7,11 @@
 //
 // - a person: the owner's tester on the laptop (post.mjs, carry.mjs). No
 //   workflow token writes as a person, and the repo holds no GitHub PAT secret.
+//   When the status names the run its report came from (post.mjs sets
+//   target_url from the lap's ci-run.json), that run is judged as below: a
+//   person's verdict on a pull_request run of the PR's own changed pr-qa.yml
+//   is refused like the workflow's. One that names no run (a --local lap, a
+//   carry) is accepted.
 // - GitHub Actions: only from a run of .github/workflows/pr-qa.yml (the
 //   status's target_url) that passed and tested this commit, and that ran the
 //   default branch's copy of the file. A pull_request run ran the PR's copy,
@@ -39,8 +44,8 @@ const testedSha = (run) => (run.event === "workflow_dispatch" ? (/\bat ([0-9a-f]
 export function judgeProvenance({ sha, pr, status, run, testerReview, qaWorkflowChanged, defaultBranch }) {
   if (testerReview === "failure") return `the PR tester's latest review of ${short(sha)} is a failure, which the agent-review status does not show`;
   const by = status?.creator ?? {};
-  if (by.type === "User") return null;
-  if (by.login !== ACTIONS) return `agent-review on ${short(sha)} was written by ${by.login || "an unknown account"}, neither the owner's tester nor the PR QA workflow`;
+  if (by.type === "User" && !runId(status.target_url)) return null;
+  if (by.type !== "User" && by.login !== ACTIONS) return `agent-review on ${short(sha)} was written by ${by.login || "an unknown account"}, neither the owner's tester nor the PR QA workflow`;
   if (!runId(status.target_url) || !run) return `agent-review on ${short(sha)} was written by a workflow that names no run`;
   if (run.path !== QA_WORKFLOW_PATH) return `agent-review on ${short(sha)} was written by ${run.path}, not the PR QA workflow`;
   if (run.status !== "completed") return `the PR QA run that wrote agent-review on ${short(sha)} is still ${run.status}`;
@@ -91,7 +96,7 @@ export async function readProvenance({ pr, shas, gh }) {
   const one = async (sha) => {
     // Statuses come newest first, so the first agent-review entry is the one in force.
     const status = (await api(gh, [`repos/${REPO}/commits/${sha}/statuses?per_page=100`])).find((s) => s?.context === STATUS_CONTEXT) ?? null;
-    const id = status?.creator?.type === "User" ? null : runId(status?.target_url);
+    const id = runId(status?.target_url);
     const run = id ? (await api(gh, [`repos/${REPO}/actions/runs/${id}`, "--jq", "{path, event, head_branch, head_sha, display_title, status, conclusion}"]))[0] : null;
     return [sha, { status, run, testerReview: testerVerdict(reviews, sha) }];
   };

@@ -33,6 +33,32 @@ describe('agent-review provenance — who may write the verdict the merge gate r
     assert.match(why, /dispatch\.mjs 21/);
   });
 
+  // @traces 447-own-pr-refusal-FR-003
+  it("refuses the owner's success when its report came from a pull_request run that ran the PR's own changed pr-qa.yml", () => {
+    const why = judge({ status: owner({ target_url: RUN }), run: prRun(), qaWorkflowChanged: true });
+    assert.match(why, /changes \.github\/workflows\/pr-qa\.yml/);
+    assert.match(why, /dispatch\.mjs 21/);
+  });
+
+  // @traces 447-own-pr-refusal-FR-003
+  it("accepts the owner's success when its report came from a lap dispatched on the default branch, or from a pull_request run of an unchanged pr-qa.yml", () => {
+    assert.equal(judge({ status: owner({ target_url: RUN }), run: dispatched(), qaWorkflowChanged: true }), null);
+    assert.equal(judge({ status: owner({ target_url: RUN }), run: prRun(), qaWorkflowChanged: false }), null);
+  });
+
+  // @traces 447-own-pr-refusal-FR-003
+  it("judges the run the owner's status names by the same rules as a workflow's: another workflow, another commit or a failed run is refused", () => {
+    assert.match(judge({ status: owner({ target_url: RUN }), run: prRun({ path: '.github/workflows/evil.yml' }) }), /not the PR QA workflow/);
+    assert.match(judge({ status: owner({ target_url: RUN }), run: prRun({ head_sha: 'c'.repeat(40) }) }), /tested ccccccc/);
+    assert.match(judge({ status: owner({ target_url: RUN }), run: prRun({ conclusion: 'failure' }) }), /ended failure/);
+  });
+
+  // @traces 447-own-pr-refusal-FR-003
+  it("accepts the owner's success that names no run (a --local lap or a carry), even when the PR changes pr-qa.yml", () => {
+    assert.equal(judge({ status: owner(), run: null, qaWorkflowChanged: true }), null);
+    assert.equal(judge({ status: owner({ target_url: 'https://example.com/report' }), run: null, qaWorkflowChanged: true }), null);
+  });
+
   it('refuses a status written by any other workflow, such as one the PR added', () => {
     assert.match(judge({ run: prRun({ path: '.github/workflows/evil.yml' }) }), /evil\.yml, not the PR QA workflow/);
   });
@@ -138,7 +164,14 @@ describe('agent-review provenance — reading it from GitHub', () => {
     assert.equal(state.qaWorkflowChanged, true);
   });
 
-  it('reads no run for a status written by a person', async () => {
+  // @traces 447-own-pr-refusal-FR-003
+  it('reads the run a status written by a person names', async () => {
+    const state = await readProvenance({ pr: 21, shas: [SHA], gh: fake(routes({ [`commits/${SHA}/statuses`]: JSON.stringify([owner({ target_url: RUN })]) })) });
+    assert.equal(state.bySha[SHA].status.creator.type, 'User');
+    assert.equal(state.bySha[SHA].run.event, 'pull_request');
+  });
+
+  it('reads no run for a status written by a person that names none', async () => {
     const calls = [];
     const state = await readProvenance({ pr: 21, shas: [SHA], gh: fake(routes({ [`commits/${SHA}/statuses`]: JSON.stringify([owner()]) }), calls) });
     assert.equal(state.bySha[SHA].run, null);

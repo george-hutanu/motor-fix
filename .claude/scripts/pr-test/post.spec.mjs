@@ -1,7 +1,10 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
-import { missingReport, postVerdict, replaceSection } from './post.mjs';
+import { missingReport, postVerdict, replaceSection, runUrlFor } from './post.mjs';
 
 const OWN = 'gh: Unprocessable Entity (HTTP 422)\nCan not request changes on your own pull request';
 
@@ -43,6 +46,53 @@ describe('posting the review', () => {
     assert.match(comment.body.split('\n')[0], /verdict: failure/i);
     assert.equal(comment.commit_id, base.sha);
     assert.equal(out.review, 'COMMENT');
+  });
+
+  // @traces 447-own-pr-refusal-FR-001
+  it('falls back for either own-PR refusal GitHub sends, approve or request changes', () => {
+    for (const [verdict, message] of [['success', 'Can not approve your own pull request'], ['failure', 'Can not request changes on your own pull request']]) {
+      let first = true;
+      const stderr = `gh: Unprocessable Entity (HTTP 422)\n{"message":"Unprocessable Entity","errors":["${message}"]}`;
+      const { calls, gh } = fakeGh([[/\/reviews\b/, () => (first ? ((first = false), { code: 1, stdout: '', stderr }) : { code: 0, stdout: '{}', stderr: '' })]]);
+      const out = postVerdict({ ...base, verdict, gh });
+      assert.equal(events(calls).at(-1), 'COMMENT');
+      assert.equal(out.reviewError, null);
+    }
+  });
+
+  // @traces 447-own-pr-refusal-FR-001
+  it('reports any other HTTP 422 as a failure and tries no COMMENT review, so the real error is not lost', () => {
+    const stderr = 'gh: Validation Failed (HTTP 422)\n{"message":"Validation Failed","errors":["commit_id is not part of the pull request"]}';
+    const { calls, gh } = fakeGh([[/\/reviews\b/, { code: 1, stdout: '', stderr }]]);
+    const out = postVerdict({ ...base, verdict: 'success', gh });
+    assert.deepEqual(events(calls), ['APPROVE']);
+    assert.match(out.reviewError, /Validation Failed/);
+    assert.match(out.reviewError, /commit_id is not part of the pull request/);
+  });
+
+  // @traces 447-own-pr-refusal-FR-002
+  it('names the run the report came from as the status target, so the merge gate can judge it', () => {
+    const url = 'https://github.com/george-hutanu/motor-fix/actions/runs/987';
+    const a = fakeGh();
+    postVerdict({ ...base, verdict: 'success', gh: a.gh, runUrl: url });
+    const line = a.calls.find((c) => c.args.includes(`repos/${base.repo}/statuses/${base.sha}`)).args.join(' ');
+    assert.match(line, new RegExp(`target_url=${url}`));
+    const b = fakeGh();
+    postVerdict({ ...base, verdict: 'success', gh: b.gh });
+    assert.doesNotMatch(b.calls.find((c) => c.args.includes(`repos/${base.repo}/statuses/${base.sha}`)).args.join(' '), /target_url/);
+  });
+
+  // @traces 447-own-pr-refusal-FR-002
+  it("reads the run URL from the ci-run.json dispatch.mjs left beside the report, and none from anything else", () => {
+    const dir = mkdtempSync(join(tmpdir(), 'post-run-'));
+    const report = join(dir, 'report.json');
+    assert.equal(runUrlFor(report), null);
+    writeFileSync(join(dir, 'ci-run.json'), JSON.stringify({ id: 987, url: 'https://github.com/george-hutanu/motor-fix/actions/runs/987', conclusion: 'success' }));
+    assert.equal(runUrlFor(report), 'https://github.com/george-hutanu/motor-fix/actions/runs/987');
+    writeFileSync(join(dir, 'ci-run.json'), JSON.stringify({ url: 'https://example.com/elsewhere' }));
+    assert.equal(runUrlFor(report), null);
+    writeFileSync(join(dir, 'ci-run.json'), 'not json');
+    assert.equal(runUrlFor(report), null);
   });
 
   it('sets agent-review on the tested commit, failure or success', () => {
