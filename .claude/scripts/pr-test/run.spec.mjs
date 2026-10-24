@@ -2,14 +2,15 @@
 import { afterAll, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { SEEDED } from './endpoints.mjs';
 import * as helpers from './flow-helpers.mjs';
-import { appLaunchEnv, collectRejections, filesBetween, flowArgs, parseArgs, strayRejection, testsCommand } from './run.mjs';
+import { appLaunchEnv, collectRejections, filesBetween, flowArgs, flowThrewFinding, loadFlows, parseArgs, runFlows, strayRejection, testsCommand } from './run.mjs';
 import { EXTERNAL_PORTS, appEnv, externalPlan } from './services.mjs';
 
 describe('run: arguments', () => {
@@ -309,5 +310,135 @@ describe('run: an unhandled rejection outside the flows step', () => {
     handler(new Error('after collectRejections returned'));
     assert.equal(findings.length, 1);
     assert.match(JSON.stringify(findings[0]), /after collectRejections returned/);
+  });
+});
+
+// @traces 988-FR-004
+describe('loadFlows: a networkidle wait runs as a wait for load', () => {
+  // A live page keeps its event stream open, so networkidle never comes and every such
+  // wait spent its whole timeout. The run loads the flows with each quoted
+  // networkidle turned into load, and says so in the report's notes.
+  const dirs = [];
+  afterAll(() => {
+    for (const d of dirs) rmSync(d, { recursive: true, force: true });
+  });
+  const flowsFile = (body, extra = {}) => {
+    const dir = mkdtempSync(join(tmpdir(), 'load-flows-'));
+    dirs.push(dir);
+    for (const [name, text] of Object.entries(extra)) writeFileSync(join(dir, name), text);
+    writeFileSync(join(dir, 'flows.mjs'), body);
+    return { dir, file: join(dir, 'flows.mjs') };
+  };
+
+  it('loads a file with no networkidle as it is, with no note', async () => {
+    const { file } = flowsFile(`export default async () => [{ severity: 'low', title: 'as written' }];\n`);
+    const { mod, notes } = await loadFlows(file);
+    assert.deepEqual(notes, []);
+    assert.deepEqual(await mod.default(), [{ severity: 'low', title: 'as written' }]);
+  });
+
+  it('turns each quoted networkidle into load, one note per line, and keeps relative imports working', async () => {
+    const body = [
+      "import { route } from './route.mjs';",
+      'export default async ({ page }) => {',
+      `  await page.goto(route, { waitUntil: 'networkidle' });`,
+      '  await page.click("#go");',
+      '  await page.waitForLoadState("networkidle");',
+      '  return [];',
+      '};',
+      '',
+    ].join('\n');
+    const { dir, file } = flowsFile(body, { 'route.mjs': "export const route = '/cockpit';\n" });
+    const { mod, notes } = await loadFlows(file);
+    assert.equal(notes.length, 2);
+    assert.match(notes[0], /flows\.mjs:3: .*networkidle.*load/);
+    assert.match(notes[1], /flows\.mjs:5: /);
+    const calls = [];
+    const page = { goto: async (...a) => calls.push(['goto', ...a]), click: async () => {}, waitForLoadState: async (s) => calls.push(['state', s]) };
+    await mod.default({ page });
+    assert.deepEqual(calls, [['goto', '/cockpit', { waitUntil: 'load' }], ['state', 'load']]);
+    assert.deepEqual(readdirSync(dir).sort(), ['flows.mjs', 'route.mjs'], 'the rewritten copy is removed');
+    assert.equal(readFileSync(file, 'utf8'), body, 'the file on disk is left as it was');
+  });
+
+  describe('on a page that keeps an event stream open', async () => {
+    let ready = true;
+    let chromium;
+    try {
+      ({ chromium } = await import('@playwright/test'));
+      await (await chromium.launch()).close();
+    } catch (error) {
+      if (process.env.CI) throw error;
+      ready = false;
+    }
+    const server = createServer((req, res) => {
+      if (req.url === '/stream') {
+        res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' });
+        res.write('data: hello\n\n');
+        return; // never ended, as the app's live updates
+      }
+      res.writeHead(200, { 'content-type': 'text/html' }).end('<p id="live">live</p><script>new EventSource("/stream")</script>');
+    });
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    const url = `http://127.0.0.1:${server.address().port}/`;
+    afterAll(() => {
+      server.closeAllConnections?.();
+      server.close();
+    });
+
+    it.skipIf(!ready)('finishes the flow inside its bound instead of timing out', async () => {
+      const { file } = flowsFile(`export default async ({ page, url }) => {\n  await page.goto(url, { waitUntil: 'networkidle', timeout: 4000 });\n  return [];\n};\n`);
+      const { mod } = await loadFlows(file);
+      const browser = await chromium.launch();
+      try {
+        const page = await browser.newPage();
+        const started = Date.now();
+        assert.deepEqual(await mod.default({ page, url }), []);
+        assert.ok(Date.now() - started < 4000, `${Date.now() - started} ms`);
+      } finally {
+        await browser.close();
+      }
+    });
+  });
+});
+
+// @traces 988-FR-005
+describe('runFlows: findings a flow pushes are kept', () => {
+  // A flow used to return its findings at the end, so one that threw half way lost
+  // everything it had found. Each flow gets the run's findings array.
+  const args = (findings) => flowArgs({ webURL: 'http://127.0.0.1:4100', apiURL: 'http://127.0.0.1:3100', outDir: '/o', repoRoot: '/r', worktree: '/w', session: async () => 'r', findings });
+
+  it("hands the flows the run's own findings array", () => {
+    const findings = [];
+    assert.equal(args(findings).findings, findings);
+  });
+
+  it('keeps what a flow pushed before it threw, and still throws', async () => {
+    const findings = [];
+    const flow = async ({ findings: f }) => {
+      f.push({ severity: 'medium', title: 'one' }, { severity: 'high', title: 'two' });
+      throw new Error('half way');
+    };
+    await runFlows(() => flow(args(findings)), findings).catch((error) => findings.push(flowThrewFinding(error)));
+    assert.deepEqual(findings.map((f) => f.title), ['one', 'two', 'A flow threw']);
+    assert.equal(findings[2].severity, 'high');
+    assert.match(findings[2].steps[0], /half way/);
+  });
+
+  it('counts a finding both pushed and returned once, and adds what was only returned', async () => {
+    const findings = [];
+    const flow = async ({ findings: f }) => {
+      const pushed = { severity: 'low', title: 'pushed' };
+      f.push(pushed);
+      return [pushed, { severity: 'low', title: 'returned' }];
+    };
+    await runFlows(() => flow(args(findings)), findings);
+    assert.deepEqual(findings.map((f) => f.title), ['pushed', 'returned']);
+  });
+
+  it('takes a flow that returns nothing', async () => {
+    const findings = [];
+    await runFlows(async () => undefined, findings);
+    assert.deepEqual(findings, []);
   });
 });

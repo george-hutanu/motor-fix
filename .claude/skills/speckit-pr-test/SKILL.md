@@ -145,6 +145,14 @@ without a status, so the test runs again.
   `ready`, the shared helpers `waitForText`, `openSheet`, `stepButton` and
   `accounts` (`.claude/scripts/pr-test/flow-helpers.mjs`); an unhandled
   rejection it leaves is a `high` finding.
+- It also gets `findings`, the run's own array: a flow pushes each finding
+  into it as it finds it, so what it found stays when it throws later. A
+  finding is pushed or returned, never both (one pushed and returned is
+  counted once).
+- A flow waits on a visible element, `waitForText`, or the stream's open
+  state on a live page, never `networkidle`: the event stream keeps a
+  connection open, so it never settles. The run and `--check` load each
+  quoted `networkidle` as `load`, with a note; the pre-check still refuses it.
 - When the story changed flows, prove them before dispatching with `--proof`:
   `node .claude/scripts/pr-test/precheck.mjs --flows <file> --check` against
   the app and API already serving (`--base-url`, default
