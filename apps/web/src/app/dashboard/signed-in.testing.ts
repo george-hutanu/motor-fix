@@ -43,10 +43,13 @@ const authStubs = () => ({
   authControllerSignOut: jest.fn(() => Promise.resolve()),
 });
 
+type NoOverrides = Record<never, never>;
 type Merged<D, O> = Omit<D, keyof O> & O;
 
-// biome-ignore lint/complexity/noBannedTypes: no overrides by default
-export function setup<M extends object = {}, A extends object = {}>({
+export function setup<
+  M extends object = NoOverrides,
+  A extends object = NoOverrides,
+>({
   auth: authOverrides = {} as A,
   me: meOverrides = {} as M,
   providers = [],
@@ -79,10 +82,10 @@ export function setup<M extends object = {}, A extends object = {}>({
   };
 }
 
-// biome-ignore lint/complexity/noBannedTypes: no overrides by default
-export async function signedIn<M extends object = {}, A extends object = {}>(
-  options: { auth?: A; me?: M } = {},
-) {
+export async function signedIn<
+  M extends object = NoOverrides,
+  A extends object = NoOverrides,
+>(options: { auth?: A; me?: M } = {}) {
   const parts = setup(options);
   await parts.session.load();
   await settle();

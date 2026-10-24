@@ -43,6 +43,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve));
 
 beforeEach(() => localStorage.clear());
 
+// @traces 532-FR-006
 describe('Session', () => {
   it("switches to the account's language when the session loads, and remembers it", async () => {
     localStorage.setItem('mf.lang', 'ro');
