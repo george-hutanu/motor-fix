@@ -17,8 +17,9 @@ COPY . .
 ARG APP
 RUN npx nx run ${APP}:build --configuration=production
 # The web server is fully bundled; the Node apps install the dependencies
-# their build listed in its own package.json and lockfile.
-RUN cd dist/apps/${APP} && if [ -f package-lock.json ]; then npm ci --omit=dev; fi
+# their build listed in its own package.json and lockfile, running no install
+# script but the Prisma engine's (the api migrates from its image) and sharp's.
+RUN cd dist/apps/${APP} && if [ -f package-lock.json ]; then npm ci --omit=dev --ignore-scripts && npm rebuild @prisma/engines sharp; fi
 # The web build's source maps never reach the image: the browser's go to the
 # web-maps stage, which the release uploads to the error collector; the web
 # server's are deleted. The Node apps keep theirs beside main.js, so a thrown

@@ -102,8 +102,11 @@ jobs:
         if: ${{ !cancelled() }}
         # npm ci installs the lockfile as is; the dry run re-resolves
         # package.json, so a peer conflict the lockfile hides (ERESOLVE) fails here.
+        # signatures fails on a package whose registry signature or provenance
+        # attestation does not verify.
         run: |
           npm audit --omit=dev --audit-level=high
+          npm audit signatures
           npm install --dry-run --ignore-scripts --no-audit --no-fund
       - name: Typecheck
         if: ${{ !cancelled() }}
@@ -197,6 +200,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+        with:
+          rebuild: sharp  # photo-processing loads it
       # JEST_SUITE is an input of the test target (nx.json), so the two
       # suites never answer each other from the Nx cache.
       - name: Unit tests
@@ -246,6 +251,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+        with:
+          rebuild: sharp  # photo-processing loads it
       - name: Object storage
         run: docker compose up -d --wait storage
       - name: Migrate the test database
@@ -329,6 +336,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+        with:
+          rebuild: sharp  # photo-processing loads it
       - name: Object storage
         run: docker compose up -d --wait storage
       - name: Identity server

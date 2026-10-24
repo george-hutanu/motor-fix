@@ -1,5 +1,12 @@
 name: Setup
-description: Node from .nvmrc with the npm cache, then npm ci (which also generates the Prisma client).
+description: >-
+  Node from .nvmrc with the npm cache, then npm ci without install scripts,
+  the Prisma client generated, and an explicit rebuild of the packages a job
+  names in `rebuild`.
+inputs:
+  rebuild:
+    description: Packages to `npm rebuild` after the install, space-separated; empty rebuilds nothing.
+    default: ''
 runs:
   using: composite
   steps:
@@ -7,5 +14,12 @@ runs:
       with:
         node-version-file: .nvmrc
         cache: npm
-    - run: npm ci
+    # No package's install script runs on the runner; the one output the jobs
+    # need from them, the Prisma client, is generated here instead.
+    - run: |
+        npm ci --ignore-scripts
+        npx prisma generate --config libs/domain/prisma.config.ts
+      shell: bash
+    - if: inputs.rebuild != ''
+      run: npm rebuild ${{ inputs.rebuild }}
       shell: bash

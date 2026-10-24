@@ -246,7 +246,8 @@ jobs:
           missing=$(for v in RAILWAY_SERVICE_MCP MCP_URL; do [ -n "${!v}" ] || printf '%s, ' "$v"; done)
           [ -z "$missing" ] || { echo "::notice::MCP sign-in check skipped (unset: ${missing%, })"; exit 0; }
           node scripts/mcp-smoke.ts "$MCP_URL"
-      - run: npm ci
+      # The core flows run against staging and boot nothing: no install script is needed.
+      - run: npm ci --ignore-scripts
       - timeout-minutes: 10
         # apt hangs at random: 180 s an attempt, three attempts. apt runs under sudo, out of
         # timeout's reach, so a failed attempt kills it as root and repairs dpkg before the next.

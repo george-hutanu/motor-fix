@@ -81,7 +81,11 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
+      # No install scripts; the domain project's photo specs load sharp.
+      - run: |
+          npm ci --ignore-scripts
+          npx prisma generate --config libs/domain/prisma.config.ts
+          npm rebuild sharp
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
       # Keys end in / so mcp's never restores mcp-tools' results.
