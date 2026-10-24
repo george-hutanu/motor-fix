@@ -103,17 +103,28 @@ describe('the database image across every file', () => {
 });
 
 describe('every workflow trigger', () => {
-  // pull_request_target runs with a token that can write, so a workflow on it
-  // must never check out or run the PR's own code.
-  it('is pull_request_target only where the PR code is never checked out', () => {
-    for (const text of Object.values(workflows)) {
-      if (!/^\s+pull_request_target:/m.test(text)) continue;
-      expect(text).not.toMatch(
-        /github\.event\.pull_request\.head\.(?:sha|ref)/,
-      );
-      expect(text).not.toMatch(/^\s+ref:/m);
+  // retired test: "is never pull_request_target" 961-FR-001 requires dependabot-review.yml on pull_request_target; the tests below keep 1174's point (no secret or PR code under it)
+  // pull_request_target runs with the base branch's token beside a PR's
+  // event: such a workflow reads no secret and never checks out the PR's code.
+  const prTarget = Object.entries(workflows).filter(([, text]) =>
+    /^\s*pull_request_target:/m.test(text),
+  );
+
+  it('is pull_request_target only for the Dependabot review', () => {
+    expect(prTarget.map(([name]) => name)).toEqual(['dependabot-review.yml']);
+  });
+
+  it('never reads a secret or checks out the PR under pull_request_target', () => {
+    for (const [, text] of prTarget) {
+      expect(text).not.toMatch(/\bsecrets\./);
+      expect(text).not.toMatch(/pull_request\.head|refs\/pull\//);
+      expect(text).not.toMatch(/^\s*ref:/m);
       expect(text).not.toMatch(/npm (?:ci|install)/);
     }
+  });
+
+  it('never runs the drill on pull_request_target', () => {
+    expect(drill).not.toContain('pull_request_target');
   });
 });
 

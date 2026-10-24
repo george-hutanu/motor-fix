@@ -520,7 +520,7 @@ describe('the staging seed password under hostile input', () => {
     );
 
     expect(message).toContain('api: deployment FAILED');
-    expect(message).toContain('reset-staging.sh');
+    expect(message).toContain('sh scripts/api-pre-deploy.sh staging');
     expect(message).not.toContain(PASSWORD);
     expect(calls.filter((c) => JSON.stringify(c).includes(PASSWORD))).toEqual(
       [],
@@ -593,9 +593,9 @@ describe('the staging seed password under hostile input', () => {
     expect(JSON.stringify(production)).not.toMatch(/seed|reset-staging/i);
     const staging = servicesFor('staging', env);
     expect(staging.filter((s) => s.preDeploy)).toHaveLength(1);
-    expect(staging.find((s) => s.name === 'api')?.preDeploy?.[0]).toMatch(
-      / && SEED_ONLY=1 sh scripts\/reset-staging\.sh$/,
-    );
+    expect(staging.find((s) => s.name === 'api')?.preDeploy).toEqual([
+      'sh scripts/api-pre-deploy.sh staging',
+    ]);
   });
 
   // @traces 1370-release-seed-no-ssh-FR-002
