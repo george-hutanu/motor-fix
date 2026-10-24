@@ -120,10 +120,9 @@ describe('the point-in-time drill workflow', () => {
     expect(outside).not.toMatch(/secrets\./);
   });
 
-  it('names the ssh key per run and attempt', () => {
-    expect(staging).toMatch(
-      /KEY_NAME: pitr-drill-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/,
-    );
+  // @traces 1371-FR-001
+  it('registers no ssh key', () => {
+    expect(staging).not.toMatch(/KEY_NAME|ssh/);
   });
 
   it('pins the Railway CLI to an exact version', () => {

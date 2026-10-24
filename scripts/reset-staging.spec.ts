@@ -4,8 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // Staging's Postgres has no public address, so the reset cannot run on a
-// GitHub runner: the workflow runs scripts/reset-staging.sh inside the staging
-// api service over `railway ssh`. Read as text, like release-workflow.spec.ts.
+// GitHub runner: the workflow runs scripts/reset-staging.sh in a sandbox on
+// staging's private network, in the staging api's own image. Read as text,
+// like release-workflow.spec.ts.
 const root = join(__dirname, '..');
 const workflow = readFileSync(
   join(root, '.github', 'workflows', 'reset-staging.yml'),
@@ -21,8 +22,12 @@ const setting = (key: string) =>
 const gh = (ref: string) => `\${{ ${ref} }}`;
 
 describe('reset-staging workflow', () => {
+  // The sandbox gets the api's address as a Railway reference; the runner
+  // only names it to docker, inside the sandbox, and never holds it.
   it('needs no DATABASE_URL: the runner cannot reach staging Postgres', () => {
-    expect(workflow).not.toContain('DATABASE_URL');
+    expect(workflow.replaceAll('-e DATABASE_URL ', '')).not.toContain(
+      'DATABASE_URL',
+    );
     expect(workflow).not.toMatch(/prisma|npm ci|nx run/);
   });
 
@@ -37,16 +42,24 @@ describe('reset-staging workflow', () => {
     expect(setting('cancel-in-progress')).toBe('false');
   });
 
-  it('runs the reset script inside the staging api service', () => {
+  // @traces 421-FR-031 1371-FR-006
+  it("runs the reset script in a staging sandbox, in the api's current image", () => {
     expect(setting('RAILWAY_API_TOKEN')).toBe(gh('secrets.RAILWAY_API_TOKEN'));
     expect(setting('RAILWAY_ENVIRONMENT_ID')).toBe(
       gh('vars.RAILWAY_ENVIRONMENT_ID'),
     );
     expect(setting('RAILWAY_SERVICE_API')).toBe(gh('vars.RAILWAY_SERVICE_API'));
+    expect(workflow).toContain(
+      'node scripts/railway-sandbox.ts open staging api',
+    );
+    expect(workflow).toContain(
+      'node scripts/railway-sandbox.ts image "$RAILWAY_SERVICE_API"',
+    );
     expect(workflow).toContain('cat scripts/reset-staging.sh');
     expect(workflow).toMatch(
-      /railway ssh --project "\$RAILWAY_PROJECT_ID" --environment "\$RAILWAY_ENVIRONMENT_ID" --service "\$RAILWAY_SERVICE_API" -- sh -s/,
+      /docker run --rm -i --network host --entrypoint sh -e DATABASE_URL -e APP_ENV -e RAILWAY_ENVIRONMENT_NAME -e SEED_PASSWORD [^\n]*-s/,
     );
+    expect(workflow).toMatch(/railway-sandbox\.ts exec "\$SANDBOX_ID"/);
   });
 
   it('pins the Railway CLI', () => {
@@ -55,34 +68,24 @@ describe('reset-staging workflow', () => {
     );
   });
 
-  it('removes its one-off SSH key even when the reset fails', () => {
-    expect(workflow).toContain(
-      'railway ssh keys add --key ~/.ssh/id_ed25519.pub --name "$KEY_NAME"',
-    );
-    expect(workflow).toContain('railway ssh keys remove "$KEY_NAME"');
-    const at = workflow.indexOf('railway ssh keys remove');
-    const step = workflow.slice(workflow.lastIndexOf('- name:', at), at);
-
+  // @traces 1371-FR-001
+  it('closes its sandbox even when the reset fails', () => {
+    const at = workflow.indexOf('node scripts/railway-sandbox.ts close');
     expect(at).toBeGreaterThan(0);
-    expect(step).toMatch(/^ +if: always\(\)$/m);
-  });
-
-  // A runner has no terminal to answer ssh's first-connection prompt, so the
-  // first dispatch failed with "Host key verification failed".
-  it("trusts the Railway ssh relay's host key on first use, before connecting", () => {
-    const trust = workflow.indexOf('Host ssh.railway.com');
-    const config = workflow.slice(trust, workflow.indexOf('- name:', trust));
-
-    expect(trust).toBeGreaterThan(0);
-    expect(config).toMatch(/StrictHostKeyChecking accept-new/);
-    expect(config).toContain('~/.ssh/config');
-    expect(trust).toBeLessThan(workflow.indexOf('railway ssh --project'));
-    expect(workflow).not.toMatch(/StrictHostKeyChecking[ =]no/);
+    expect(workflow.slice(workflow.lastIndexOf('- name:', at), at)).toMatch(
+      /if: always\(\) && steps\.sandbox\.outputs\.id != ''/,
+    );
+    expect(workflow).not.toMatch(/ssh/);
   });
 
   it('hands SEED_PASSWORD over stdin, masked, and never echoes it', () => {
     expect(setting('SEED_PASSWORD')).toBe(gh('secrets.SEED_PASSWORD'));
-    expect(workflow).toContain('::add-mask::');
+    expect(workflow).toContain(
+      'node scripts/railway-sandbox.ts mask SEED_PASSWORD',
+    );
+    expect(workflow).toContain(
+      'node scripts/railway-sandbox.ts prelude SEED_PASSWORD',
+    );
     expect(workflow).not.toMatch(/echo[^\n]*\$\{?SEED_PASSWORD/);
     expect(workflow).not.toMatch(/set -x|--debug/);
     expect(workflow).not.toMatch(/-- [^\n]*SEED_PASSWORD/);
@@ -97,7 +100,7 @@ describe('api image', () => {
   });
 
   // The staging pre-deploy step runs it from the image's scripts folder.
-  // @traces 1370-release-seed-no-ssh-FR-001
+  // @traces 1370-FR-001
   it('carries the reset script beside the monitor password script, only in the api', () => {
     expect(dockerfile).toMatch(
       /if \[ "\$\{APP\}" = api \]; then[\s\S]*cp scripts\/monitor-password\.ts scripts\/reset-staging\.sh dist\/apps\/api\/scripts\//,
@@ -181,7 +184,7 @@ describe('reset-staging.sh', () => {
 
   // In the staging pre-deploy step a failed seed fails the api deployment;
   // its log names the step.
-  // @traces 1370-release-seed-no-ssh-FR-004
+  // @traces 1370-FR-004
   it('with SEED_ONLY=1, names the seed and exits non-zero when the seed fails', () => {
     const { calls, result } = run({ ...staging, SEED_ONLY: '1' }, 3);
 
