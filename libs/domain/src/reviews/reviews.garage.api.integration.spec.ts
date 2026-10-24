@@ -23,6 +23,7 @@ async function dinamo() {
 // @traces 024-FR-003
 // @traces 024-FR-016
 // @traces 024-FR-019
+// @traces 024-FR-023
 describe('the figures of a garage’s reviews', () => {
   it('answers the garage’s stored rating and count with the breakdown of its published reviews', async () => {
     const { andrei, garage } = await dinamo();

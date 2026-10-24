@@ -39,13 +39,10 @@ test.describe('the reviews on a garage profile @seeded', () => {
 });
 
 // The seeded driver's review of Atelier Test, written straight to PostgreSQL
-// by the seed, and its edit announced on Redis as the API announces one.
+// by the seed, and its edit announced on Redis as the API announces one. It
+// needs DATABASE_URL and REDIS_URL, which CI's end-to-end job sets; release
+// runs only the @core flows against a deployed address.
 test.describe('a reviewed garage’s profile @seeded', () => {
-  test.skip(
-    !process.env['DATABASE_URL'] || !process.env['REDIS_URL'],
-    'reads and edits the seeded review in PostgreSQL and announces it on Redis, which need DATABASE_URL and REDIS_URL',
-  );
-
   const SEEDED = 'Schimb de ulei făcut repede, mașina predată la timp.';
   let db: Client;
   let garageId: string;
