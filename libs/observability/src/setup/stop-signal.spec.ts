@@ -1,3 +1,4 @@
+// @traces 1000-FR-001 1000-FR-005
 import { metrics, SpanKind, trace } from '@opentelemetry/api';
 import { logs } from '@opentelemetry/api-logs';
 import {
@@ -6,9 +7,9 @@ import {
   PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
 
-import { startTelemetry } from './start';
+import { startTelemetry, type Telemetry } from './start';
 import { inMemory } from '../testing/in-memory';
-import { addedListeners, aloneOn, type StopSignal } from '../testing/signals';
+import { addedListeners, type StopSignal } from '../testing/signals';
 
 const memory = inMemory();
 const metricExporter = new InMemoryMetricExporter(
@@ -21,21 +22,38 @@ const exporters = {
     exportIntervalMillis: 60_000,
   }),
 };
-const listeners = addedListeners(() =>
-  startTelemetry(
+let telemetry: Telemetry | undefined;
+const listeners = addedListeners(() => {
+  telemetry = startTelemetry(
     'api',
     {
       APP_ENV: 'staging',
       OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otlp.example.com/otlp',
     },
     exporters,
-  ),
-);
+  );
+});
+
+// Whatever else the worker listens with stays registered: the handler's view
+// of the listener count is the test's to set.
+const unrelated = () => undefined;
+const signals: StopSignal[] = ['SIGINT', 'SIGTERM'];
+for (const signal of signals) process.on(signal, unrelated);
 
 const kill = jest.spyOn(process, 'kill').mockImplementation(() => true);
 const spanExport = jest.spyOn(memory.spanExporter, 'export');
 const metricExport = jest.spyOn(metricExporter, 'export');
 const logExport = jest.spyOn(memory.logExporter, 'export');
+
+// The number of listeners the handler sees on the signal; every other event
+// keeps its real count.
+let listenerCount: jest.SpyInstance | undefined;
+function listenersSeen(signal: StopSignal, count: number) {
+  const real = process.listenerCount.bind(process);
+  listenerCount = jest
+    .spyOn(process, 'listenerCount')
+    .mockImplementation((event) => (event === signal ? count : real(event)));
+}
 
 function recordPending() {
   trace
@@ -46,43 +64,33 @@ function recordPending() {
   logs.getLogger('spec').emit({ body: 'last words' });
 }
 
-// Waits for `until`, by the clock rather than a count of turns: on a loaded CI
-// runner the exports outlast 200 turns, and the signal they then raise lands
-// in the next test. With no `until`, lets 200 turns pass.
-async function settle(until?: () => boolean, timeoutMs = 10_000) {
-  if (!until) {
-    for (let tick = 0; tick < 200; tick++) {
-      await new Promise((resolve) => setImmediate(resolve));
-    }
-    return;
+afterEach(() => {
+  listenerCount?.mockRestore();
+  jest.clearAllMocks();
+  for (const signal of signals) {
+    expect(process.listeners(signal)).toContain(unrelated);
   }
-  const deadline = Date.now() + timeoutMs;
-  while (!until() && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
-}
-
-afterEach(() => jest.clearAllMocks());
+});
 
 afterAll(() => {
   kill.mockRestore();
-  for (const signal of ['SIGINT', 'SIGTERM'] as StopSignal[]) {
+  for (const signal of signals) {
     process.removeListener(signal, listeners[signal]);
+    process.removeListener(signal, unrelated);
   }
 });
 
 describe('the stop signal with telemetry on', () => {
-  it.each(['SIGTERM', 'SIGINT'] as StopSignal[])(
+  // @traces 1000-FR-002 1000-FR-003
+  it.each(signals)(
     'leaves %s to the app when another listener handles it',
-    async (signal) => {
+    (signal) => {
       recordPending();
-      const app = () => undefined;
-      process.on(signal, app);
+      listenersSeen(signal, 2);
 
       listeners[signal](signal);
-      await settle();
 
-      process.removeListener(signal, app);
+      expect(process.listeners(signal)).toContain(listeners[signal]);
       expect(spanExport).not.toHaveBeenCalled();
       expect(metricExport).not.toHaveBeenCalled();
       expect(logExport).not.toHaveBeenCalled();
@@ -90,12 +98,13 @@ describe('the stop signal with telemetry on', () => {
     },
   );
 
+  // @traces 1000-FR-002 1000-FR-003 1000-FR-004
   it('exports the pending span, metric point and log record, then raises the signal again, when it is the last listener', async () => {
-    const restore = aloneOn('SIGTERM', listeners.SIGTERM);
+    recordPending();
+    listenersSeen('SIGTERM', 1);
 
     listeners.SIGTERM('SIGTERM');
-    await settle(() => kill.mock.calls.length > 0);
-    restore();
+    await telemetry?.shutdown();
 
     expect(kill).toHaveBeenCalledTimes(1);
     expect(kill).toHaveBeenCalledWith(process.pid, 'SIGTERM');
@@ -115,12 +124,12 @@ describe('the stop signal with telemetry on', () => {
     expect(process.listeners('SIGTERM')).not.toContain(listeners.SIGTERM);
   });
 
-  it('raises SIGINT again once, when it is the last listener', async () => {
-    const restore = aloneOn('SIGINT', listeners.SIGINT);
+  // @traces 1000-FR-002 1000-FR-003 1000-FR-004
+  it('raises SIGINT again once, when it is the last listener, after the shutdown has already run', async () => {
+    listenersSeen('SIGINT', 1);
 
     listeners.SIGINT('SIGINT');
-    await settle(() => kill.mock.calls.length > 0);
-    restore();
+    await telemetry?.shutdown();
 
     expect(kill).toHaveBeenCalledTimes(1);
     expect(kill).toHaveBeenCalledWith(process.pid, 'SIGINT');
