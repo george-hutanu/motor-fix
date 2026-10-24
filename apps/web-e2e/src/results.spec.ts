@@ -867,6 +867,9 @@ test.describe('the map beside the results @seeded', () => {
   test('never lets the sheet cover part of a zoom button, with the consent bar asking and after it is answered', async ({
     page,
   }) => {
+    // Three pages, each measured at two rests before and after the answer:
+    // past 30 s on CI.
+    test.slow();
     await ownMap(page);
     await asking(page);
     for (const [width, height] of PHONES) {
