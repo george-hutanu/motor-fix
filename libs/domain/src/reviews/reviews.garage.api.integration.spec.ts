@@ -279,17 +279,16 @@ describe('the pages of a garage’s reviews', () => {
     expect(read.body.total).toBe(1);
   });
 
+  // The code, validation_failed, is the API's ProblemFilter's, which this
+  // module's app leaves out: see apps/api/src/public-routes.integration.spec.ts.
   it.each([['0'], ['-1'], ['1.5'], ['x']])(
-    'refuses page %p with 400 validation_failed',
+    'refuses page %p with 400',
     async (page) => {
       const { garage } = await dinamo();
 
       const refused = await listOf(garage.id, `?page=${page}`);
 
-      expect([refused.status, refused.body.code]).toEqual([
-        400,
-        'validation_failed',
-      ]);
+      expect(refused.status).toBe(400);
     },
   );
 
