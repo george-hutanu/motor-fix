@@ -12,7 +12,7 @@ import {
 
 import { signAccessToken } from './access-token';
 import { AUTH_OPTIONS, type AuthOptions } from './actor.guard';
-import { Attempts } from './attempts';
+import { Attempts, maskCaller } from './attempts';
 import type { Role } from './capabilities';
 import { MAINTENANCE, type Maintenance } from './maintenance';
 import { DECOY_HASH, verifyPassword } from './password/password';
@@ -98,7 +98,9 @@ export class SignInService {
   ): Promise<Issued> {
     const email = input.email.trim().toLowerCase();
     if (await this.attempts.blocked(email, address)) {
-      this.logger.warn('sign-in refused: too_many_attempts');
+      this.logger.warn(
+        `sign-in refused: too_many_attempts caller=${maskCaller(address)}`,
+      );
       throw refusal(
         HttpStatus.TOO_MANY_REQUESTS,
         'too_many_attempts',
@@ -108,7 +110,9 @@ export class SignInService {
     const found = await this.credentials(email, input.password);
     if (!found) {
       await this.attempts.fail(email, address);
-      this.logger.warn('sign-in refused: invalid_credentials');
+      this.logger.warn(
+        `sign-in refused: invalid_credentials caller=${maskCaller(address)}`,
+      );
       throw invalidCredentials();
     }
     const { account, role } = found;

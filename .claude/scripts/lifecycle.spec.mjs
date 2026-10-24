@@ -266,6 +266,14 @@ describe('ready', () => {
     assert.ok(result.did.includes('handoff comment skipped (not a cloud session)'), JSON.stringify(result.did));
   });
 
+  // @traces 317-FR-001
+  it('writes the run\'s repair count into the note', () => {
+    writeFileSync(join(repo, '.specify', 'run-state.json'), JSON.stringify({ status: 'in-progress', repair_iterations: 2 }));
+    const h = harness({ answers: [staged([1, 1]), MERGE_BASE] });
+    assert.equal(step(['ready', '--body-file', body, '--decisions', 'none'], h.io).ok, true);
+    assert.match(readFileSync(join(featureDir, 'handoff.md'), 'utf8'), /^- Repair iterations: 2$/m);
+  });
+
   // @traces 1324-FR-006
   // @traces 1324-FR-012
   it('files no deferred.md bullet and writes no Deferred line, even with a deferred.md in the feature', () => {
@@ -582,7 +590,7 @@ describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
     const h = cloudGh(harness({ env: CLOUD }), (b) => (posted.push(b), {}));
     const result = step(['handoff', '--pr', '141'], h.io);
     assert.equal(result.ok, true, JSON.stringify(result));
-    assert.deepEqual(posted, [`${MARK}\n# Hand-off\n- QA run: 9 · head abc · lap 2 · url\n`]);
+    assert.deepEqual(posted, [`${MARK}\n# Hand-off\n- QA run: 9 · head abc · lap 2 · url\n- Repair iterations: 1\n`]);
   });
 
   it('posts nothing off the cloud: the worktree keeps the note', () => {
@@ -655,12 +663,99 @@ describe('handoff: the note survives a fresh VM as a marked PR comment', () => {
     assert.ok(!h.calls.some((c) => c.includes('/comments')));
   });
 
+  // @traces 317-FR-003
+  it('--restore pages through every comment and restores a note found on page 2', () => {
+    const noise = Array.from({ length: 100 }, (_, i) => ({ body: `comment ${i}`, created_at: '2026-10-06T09:00:00Z' }));
+    const h = harness({
+      answers: [[`${REST}issues/141/comments?per_page=100 -X GET`, { stdout: JSON.stringify([noise, [{ body: `${MARK}\npage two\n`, created_at: '2026-10-06T11:00:00Z' }]]) }]],
+    });
+    const result = step(['handoff', '--restore', '--pr', '141'], h.io);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(readFileSync(note(), 'utf8'), 'page two\n');
+    assert.ok(h.calls.some((c) => c.startsWith(`${REST}issues/141/comments?per_page=100 -X GET --paginate`)), h.calls.join('\n'));
+  });
+
   it('--restore with no marked comment stops, names the fix and writes nothing', () => {
     const h = harness({ answers: [comments('just a comment')] });
     const result = step(['handoff', '--restore', '--pr', '141'], h.io);
     assert.equal(result.ok, false);
     assert.match(result.fix, /no recorded QA run/);
     assert.equal(existsSync(note()), false);
+  });
+});
+
+// @traces 317-FR-001 317-FR-002
+describe('handoff: the repair count survives a fresh VM in the note', () => {
+  const MARK = '<!-- speckit-handoff -->';
+  const note = () => join(featureDir, 'handoff.md');
+  const stateFile = () => join(repo, '.specify', 'run-state.json');
+  const repairs = () => JSON.parse(readFileSync(stateFile(), 'utf8')).repair_iterations;
+  const setRepairs = (n) => writeFileSync(stateFile(), JSON.stringify({ status: 'in-progress', repair_iterations: n }));
+  const marked = (body) => restComments([{ user: { login: 'george-hutanu' }, body: `${MARK}\n${body}`, created_at: '2026-10-06T10:00:00Z' }]);
+  beforeEach(() => fixture());
+
+  it('rewrites the count line from run state before it posts', () => {
+    setRepairs(3);
+    writeFileSync(note(), '# Hand-off\n- QA run: 9 · head abc · lap 4 · url\n- Repair iterations: 2\n');
+    assert.equal(step(['handoff', '--pr', '141'], harness().io).ok, true);
+    assert.equal(readFileSync(note(), 'utf8'), '# Hand-off\n- QA run: 9 · head abc · lap 4 · url\n- Repair iterations: 3\n');
+  });
+
+  it('adds the count line to a note that has none, and posts it in a cloud session', () => {
+    setRepairs(5);
+    writeFileSync(note(), '# Hand-off\n- QA run: 9 · head abc · lap 6 · url\n');
+    const posted = [];
+    const h = harness({ env: { GH_TOKEN: 'proxy-injected', CLAUDE_CODE_REMOTE: 'true' } });
+    const run = h.io.run;
+    h.io.run = (file, args, opts = {}) => {
+      if ([file, ...args].join(' ').includes('issues/141/comments -X POST')) {
+        posted.push(JSON.parse(opts.input).body);
+        return { code: 0, stdout: '{}', stderr: '' };
+      }
+      return run(file, args, opts);
+    };
+    assert.equal(step(['handoff', '--pr', '141'], h.io).ok, true);
+    assert.equal(posted.length, 1);
+    assert.match(posted[0], /^- Repair iterations: 5$/m);
+  });
+
+  it('restores the count from the lap when run state is gone, so the next lap is 8 and the cap still blocks', async () => {
+    const h = harness({ answers: [marked('# Hand-off\n- QA run: 9 · head abc · lap 7 · url\n')] });
+    assert.equal(step(['handoff', '--restore', '--pr', '141'], h.io).ok, true);
+    assert.equal(repairs(), 6);
+    const { main } = await import('./run-state.mjs');
+    const env = { SPECKIT_MAX_REPAIR_ITERATIONS: '7' };
+    assert.equal(main(['repair'], repo, env), 0);
+    assert.equal(repairs() + 1, 8);
+    assert.equal(main(['repair'], repo, env), 1);
+    assert.equal(JSON.parse(readFileSync(stateFile(), 'utf8')).blocking_condition, 'repair-loop-exceeded');
+  });
+
+  it('takes the count line when it is higher than the lap says', () => {
+    const h = harness({ answers: [marked('# Hand-off\n- QA run: 9 · head abc · lap 3 · url\n- Repair iterations: 4\n')] });
+    step(['handoff', '--restore', '--pr', '141'], h.io);
+    assert.equal(repairs(), 4);
+  });
+
+  it('never lowers a run state that is already higher', () => {
+    setRepairs(8);
+    const h = harness({ answers: [marked('# Hand-off\n- QA run: 9 · head abc · lap 3 · url\n')] });
+    step(['handoff', '--restore', '--pr', '141'], h.io);
+    assert.equal(repairs(), 8);
+  });
+
+  it('restores the count from a note that is already there, fetching nothing', () => {
+    writeFileSync(note(), '# Hand-off\n- Repair iterations: 2\n');
+    const h = harness();
+    assert.equal(step(['handoff', '--restore', '--pr', '141'], h.io).ok, true);
+    assert.equal(repairs(), 2);
+    assert.ok(!h.calls.some((c) => c.includes('/comments')));
+  });
+
+  it('leaves run state alone for a note with neither a count nor a lap', () => {
+    const h = harness({ answers: [marked('# Hand-off\n- QA run: none\n')] });
+    step(['handoff', '--restore', '--pr', '141'], h.io);
+    assert.equal(existsSync(stateFile()), false);
   });
 });
 

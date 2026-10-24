@@ -15,6 +15,10 @@
 // the wait with exit 1 too. A pending agent-review whose run (its link) has
 // finished ends it at once, exit 1, naming the run: no one will replace it. Exit 0
 // finished, 1 a limit reached, 2 gh failed, 3 the PR conflicts with main.
+// gh failed means SPECKIT_CI_GH_TRIES (by default 3) unreadable answers in a
+// row (an error exit such as HTTP 502, or output that does not parse): each
+// earlier one is polled again unless the overall limit has passed, and a poll
+// whose every read answered starts the count over.
 //
 // GitHub runs no CI on a PR that conflicts with main, so the PR's mergeable
 // state is read before every poll: CONFLICTING ends the wait at once with
@@ -49,28 +53,60 @@ function parsed(stdout) {
   }
 }
 
-/** The wait's ending when the PR conflicts with main or its state is unreadable, else null. */
+const unreadable = (what, out) => ({ code: 2, lines: [`${what}: ${String(out.stderr).trim() || "unreadable gh output"}`] });
+
+/**
+ * Counts polls with an unreadable answer in a row: `miss` is true at the `tries`-th, when the wait ends with exit 2;
+ * `hit`, a poll whose every read was readable, starts the count over. Counted by poll, not by read, so a read that
+ * stays broken beside one that answers still ends the wait after `tries` polls rather than at the overall limit.
+ */
+function strikes(tries) {
+  let row = 0;
+  return { miss: () => ++row >= tries, hit: () => (row = 0) };
+}
+
+/**
+ * After an unreadable answer: true when the wait ends there (the `tries`-th in a row, or the overall limit
+ * passed), else it sleeps a poll and returns false so the caller polls again.
+ */
+const giveUp = async ({ strike, now, start, waitMs, sleep, pollMs }) => {
+  if (strike.miss() || now() - start >= waitMs) return true;
+  await sleep(pollMs);
+  return false;
+};
+
+/** The wait's ending when the PR conflicts with main or its state is unreadable (an exit-2 ending), else null. */
 async function conflictOrFailure(gh, pr) {
   const out = await gh(["pr", "view", String(pr), "--json", "mergeable"]);
   const mergeable = out.code === 0 ? parsed(out.stdout)?.mergeable : undefined;
-  if (mergeable === undefined) return { code: 2, lines: [`CI: ${String(out.stderr).trim() || "unreadable gh output"}`] };
+  if (mergeable === undefined) return unreadable("CI", out);
   return mergeable === "CONFLICTING" ? CONFLICT : null;
 }
 
 /** Polls `gh` until the run (when given) or else CI has finished, or a limit is reached; never throws. */
-export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_000, waitMs = 120 * 60_000, pollMs = 60_000 }) {
+export async function waitForCi({ pr, run, gh, sleep, now, noChecksMs = 10 * 60_000, waitMs = 120 * 60_000, pollMs = 60_000, ghTries = 3 }) {
   const start = now();
-  if (run) return waitForRun({ pr, run, gh, sleep, now, start, waitMs, pollMs });
+  const strike = strikes(ghTries);
+  const wait = { strike, now, start, waitMs, sleep, pollMs };
+  if (run) return waitForRun({ pr, run, gh, wait });
   let checks;
   for (;;) {
     const stop = await conflictOrFailure(gh, pr);
+    if (stop?.code === 2) {
+      if (await giveUp(wait)) return stop;
+      continue;
+    }
     if (stop) return stop;
     // The REST layer keeps gh's plain exit codes under --json (8 pending,
     // 1 failing), so its answer is read whatever the code; real gh exits 0.
     // A Mutation run on the head is no part of the PR: it neither holds the wait nor fails it.
     const out = await gh(["pr", "checks", String(pr), "--json", "name,bucket,link,workflow"]);
     checks = NO_CHECKS.test(out.stderr) ? [] : parsed(out.stdout);
-    if (!Array.isArray(checks)) return { code: 2, lines: [`CI: ${String(out.stderr).trim() || "unreadable gh output"}`] };
+    if (!Array.isArray(checks)) {
+      if (await giveUp(wait)) return unreadable("CI", out);
+      continue;
+    }
+    strike.hit();
     checks = checks.filter((c) => !isMutationCheck(c));
     const stale = await staleReview(gh, pr, checks);
     if (stale) return { code: 1, lines: [stale] };
@@ -107,14 +143,23 @@ const pendingReviewRun = (checks) =>
   /\/actions\/runs\/(\d+)/.exec(checks.find((c) => c.name === "agent-review" && c.bucket === "pending")?.link ?? "")?.[1];
 
 /** The QA run's wait: until it has completed, whatever CI is doing. */
-async function waitForRun({ pr, run, gh, sleep, now, start, waitMs, pollMs }) {
+async function waitForRun({ pr, run, gh, wait }) {
+  const { strike, now, start, waitMs, sleep, pollMs } = wait;
   for (;;) {
     const out = await gh(["run", "view", String(run), "--json", "status,conclusion"]);
     const state = out.code === 0 ? parsed(out.stdout) : undefined;
-    if (!state) return { code: 2, lines: [`QA run: ${String(out.stderr).trim() || "unreadable gh output"}`] };
+    if (!state) {
+      if (await giveUp(wait)) return unreadable("QA run", out);
+      continue;
+    }
     if (state.status === "completed") return { code: 0, lines: [`QA run: ${state.conclusion}`] };
     const stop = await conflictOrFailure(gh, pr);
+    if (stop?.code === 2) {
+      if (await giveUp(wait)) return stop;
+      continue;
+    }
     if (stop) return stop;
+    strike.hit();
     if (now() - start >= waitMs) return { code: 1, lines: [`QA run: still ${state.status} after ${minutes(waitMs)} min`] };
     await sleep(pollMs);
   }
@@ -138,6 +183,7 @@ if (isEntryPoint(import.meta.url)) {
     now: Date.now,
     noChecksMs: limit("SPECKIT_CI_NO_CHECKS_MIN", 10),
     waitMs: limit("SPECKIT_CI_WAIT_MIN", 120),
+    ghTries: Number(process.env.SPECKIT_CI_GH_TRIES) || 3,
   });
   for (const line of out.lines) console.log(line);
   process.exit(out.code);

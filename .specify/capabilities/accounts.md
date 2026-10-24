@@ -43,6 +43,7 @@ features:
   - 129-delete-account
   - 292-saved-garage-quote
   - 532-lost-session-home
+  - 500-req-ip-behind-proxy
 ---
 
 # Capability: Accounts
@@ -163,9 +164,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 082-FR-011 — A sign-in body without an e-mail or a password, with values that are not text, or with an e-mail holding control characters MUST answer 400 with the validation problem; a sign-in that is not sent as JSON MUST be refused (415 for a form post) without a cookie, so another site cannot sign the browser into an account it chose; the password MUST never be logged, and a failed attempt MUST be logged with its reason and no e-mail, password or address.
+### 500-FR-005 — Both refused-sign-in warning lines of the SignIn logger (`sign-in refused: invalid_credentials` and `sign-in refused: too_many_attempts`) MUST carry the masked caller as the field `caller`, taken from the request address passed to the sign-in service (the same value the per-address attempt counter receives, read with the counter's own parsing), written as a `caller=<masked>` token at the end of the message text, and MUST never carry the full address, the e-mail or the password. No other sign-in outcome logs an address. (Modifies 082-FR-011: "no address" becomes "no address beyond the caller masked by FR-001–FR-004".)
 
-_From 082-sign-in._
+_From 500-req-ip-behind-proxy._
 
 ### 393-FR-012 — The sign-in dialog MUST offer, under its main button and a "sau" divider, the button "Continuă cu telefonul" (English "Continue with phone"); tapping it MUST show the phone step inside the same dialog: the field "Număr de telefon" with "+40" filled in (`type=tel`, `autocomplete=tel`), "Ține‑mă autentificat" ticked by default, the main button "Trimite codul", and a link back to e-mail and password. Before sending, the dialog MUST check that the number is a possible phone number and show the problem under the field as 082-FR-014 does (modifies 080-FR-009, which lists the dialog's controls under its main button).
 
@@ -1151,6 +1152,25 @@ _From 292-saved-garage-quote._
 ### 532-FR-002 — A signed-in person's landing MUST be unchanged, and while the sign-in gate dialog keeps the account shown the current screen MUST stay behind it.
 
 _From 532-lost-session-home._
+### 500-FR-001 — The system MUST mask an IPv4 address to its first two octets followed by `.x.x` (`81.196.1.2` → `81.196.x.x`).
+
+_From 500-req-ip-behind-proxy._
+
+### 500-FR-002 — The system MUST mask an IPv6 address to its first two groups followed by six `x` groups (`2a02:2f0c:1234:5678:9abc:def0:1234:5678` → `2a02:2f0c:x:x:x:x:x:x`); a compressed form MUST be expanded first (`2a02::1` → `2a02:0:x:x:x:x:x:x`, `::1` → `0:0:x:x:x:x:x:x`), kept groups MUST be written in lower-case hex without leading zeros, and a zone id (`%eth0`) MUST be dropped before parsing.
+
+_From 500-req-ip-behind-proxy._
+
+### 500-FR-003 — The system MUST mask an IPv4-mapped IPv6 address (`::ffff:81.196.1.2`) as the IPv4 address it carries (`81.196.x.x`).
+
+_From 500-req-ip-behind-proxy._
+
+### 500-FR-004 — For a missing, empty or unparseable address the system MUST produce the fixed placeholder `unknown`, and the input MUST appear nowhere in the result.
+
+_From 500-req-ip-behind-proxy._
+
+### 500-FR-006 — A forwarded-for header set by the visitor, or any hop the API does not trust (a public address), MUST NOT change the logged caller: the caller is the address the trusted-hop chain resolves to, with `trust proxy` unchanged at `loopback, linklocal, uniquelocal`.
+
+_From 500-req-ip-behind-proxy._
 
 ## Retired
 
@@ -1178,3 +1198,4 @@ _From 532-lost-session-home._
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
 - `291-FR-007` — superseded by `292-FR-001` (2026-10-23)
 - `082-FR-019` — superseded by `532-FR-001` (2026-10-24)
+- `082-FR-011` — superseded by `500-FR-005` (2026-10-24)

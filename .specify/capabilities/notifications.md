@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 194-email-sending
   - 195-message-templates
@@ -43,6 +43,8 @@ features:
   - 068-yearly-documents
   - 414-approve-catalogue-job
   - 067-restore-suspended-garage
+  - 520-brevo-key-check-retry
+  - 525-bounce-domain-event
 ---
 
 # Capability: Notifications
@@ -111,9 +113,9 @@ _From 194-email-sending._
 
 _From 194-email-sending._
 
-### 194-FR-016 — With sending switched on, the worker MUST check the Brevo key at start-up; a missing key or one Brevo refuses MUST stop it from processing the `notifications` queue and log an error, while its health check keeps answering.
+### 520-FR-003 — The `notifications` queue consumer MUST start as soon as a check passes (at the first attempt as today, or after any number of retries) without a restart; a refused key, or sending on with `BREVO_API_KEY`, `EMAIL_FROM` or `PUBLIC_WEB_URL` missing, MUST keep the consumer off and log one error with no retry, as today; with sending off the consumer runs as today.
 
-_From 194-email-sending._
+_From 520-brevo-key-check-retry._
 
 ### 194-FR-017 — The queue MUST process up to 10 jobs at once.
 
@@ -797,6 +799,26 @@ _From 414-approve-catalogue-job._
 
 _From 067-restore-suspended-garage._
 
+### 520-FR-001 — The worker's start-up Brevo key check MUST tell a refused key from an unreachable Brevo: a network error, a timeout, any 5xx and 429 are *unreachable*; 401, 403 and any other non-2xx answer are *refused*; 2xx passes.
+
+_From 520-brevo-key-check-retry._
+
+### 520-FR-002 — While the check is unreachable the worker MUST retry it in place, never crash and never block its boot: the first retry after 1 s, each next delay double the previous up to a cap of 60 s, counted from the end of the failed attempt, until an attempt passes or the worker shuts down; the HTTP listener MUST be up while it waits, and a shutdown MUST cancel the pending retry and start no consumer afterwards.
+
+_From 520-brevo-key-check-retry._
+
+### 520-FR-005 — Each failed unreachable attempt MUST log one warning naming the attempt number, the reason (network error, timeout or the status) and the delay before the next attempt, never the key; no new metric or alert is added and `infra/observability/inventory.json` is unchanged, because the health check (Railway's and ST-294's `api` probe path) and the existing `motorfix_queue_waiting` and `motorfix_queue_oldest_waiting_seconds` gauges for the `notifications` queue already surface a worker that is not consuming.
+
+_From 520-brevo-key-check-retry._
+
+### 525-FR-001 — Recording a hard bounce for a message that belongs to an account MUST write one `account.updated` domain event through the outbox — subject the account, audience that account, payload `{ accountId, fields: ['emailBouncedAt'] }` — in the same transaction that sets the account's `email_bounced_at` and audits the change, so that none of the three exists without the other two.
+
+_From 525-bounce-domain-event._
+
+### 525-FR-002 — The bounce MUST be recorded at most once per provider message id: the transaction MUST claim the message's not-yet-failed notification rows with a conditional write, and when it claims none (a repeated or concurrent report of the same message, an unknown id, or rows already failed) it MUST write no account change, no audit entry and no event. A bounce of a message with no account (a draft's address) MUST fail its rows as today and record no event. A later bounce of a different message to the same account MUST record a new event. The push fallback rows of the claimed rows MUST be written in that same transaction (their send jobs queued after it commits; a lost job is handed over by the stranded-row sweep), so a crash after the commit cannot lose the fallback that a retry would no longer write (decision taken for the owner by Chief 1 on the code review, 2026-10-24).
+
+_From 525-bounce-domain-event._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -812,3 +834,4 @@ _From 067-restore-suspended-garage._
 - `199-FR-010` — superseded by `1190-FR-011` (2026-10-19)
 - `198-FR-010` — superseded by `068-FR-004` (2026-10-23)
 - `196-FR-012` — superseded by `068-FR-004` (2026-10-23)
+- `194-FR-016` — superseded by `520-FR-003` (2026-10-23)

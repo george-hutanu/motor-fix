@@ -1,9 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto';
 
+import { scrubDeep } from '@motor-fix/observability';
 import { Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
-import { Attempts, clientOf } from './attempts';
+import { Attempts, clientOf, maskCaller } from './attempts';
 
 describe('the reset request limit', () => {
   const down = {
@@ -95,6 +96,52 @@ function countingRedis() {
 
 const sha256 = (value: string) =>
   createHash('sha256').update(value).digest('hex');
+
+// @traces 500-FR-001 500-FR-002 500-FR-003 500-FR-004 500-FR-007
+describe('the caller as a log line may name it', () => {
+  it.each([
+    ['an IPv4 address', '81.196.1.2', '81.196.x.x'],
+    [
+      'an IPv6 address',
+      '2a02:2f0c:1234:5678:9abc:def0:1234:5678',
+      '2a02:2f0c:x:x:x:x:x:x',
+    ],
+    ['a compressed IPv6 address', '2a02::1', '2a02:0:x:x:x:x:x:x'],
+    ['the IPv6 loopback', '::1', '0:0:x:x:x:x:x:x'],
+    ['an IPv6 address in capitals', '2A02:2F0C::1', '2a02:2f0c:x:x:x:x:x:x'],
+    ['kept groups with leading zeros', '2a02:0001::', '2a02:1:x:x:x:x:x:x'],
+    ['an IPv4-mapped IPv6 address', '::ffff:81.196.1.2', '81.196.x.x'],
+    ['an IPv4-mapped address in hex', '::ffff:51c4:102', '81.196.x.x'],
+    ['an address with a zone id', 'fe80::1%eth0', 'fe80:0:x:x:x:x:x:x'],
+  ])('keeps only the network of %s', (_, address, masked) => {
+    expect(maskCaller(address)).toBe(masked);
+  });
+
+  it.each([
+    ['no address at all', ''],
+    ['something that is no address', 'not-an-ip'],
+    ['half an IPv4 address', '81.196'],
+    ['five octets', '1.2.3.4.5'],
+    ['an address with a leading space', ' 81.196.1.2'],
+    ['an address with a port', '81.196.1.2:443'],
+  ])('names %s unknown', (_, address) => {
+    expect(maskCaller(address)).toBe('unknown');
+  });
+
+  it('writes nothing the log scrubber would change', () => {
+    for (const address of [
+      '81.196.1.2',
+      '2a02:2f0c:1234:5678:9abc:def0:1234:5678',
+      '::1',
+      '::ffff:81.196.1.2',
+      'not-an-ip',
+    ]) {
+      const masked = maskCaller(address);
+      expect(masked).toMatch(/^(unknown|[0-9a-fx.:]+)$/);
+      expect(scrubDeep(masked)).toBe(masked);
+    }
+  });
+});
 
 describe('a failed sign-in', () => {
   it('logs a failure whose 15 minutes Redis refused to set', async () => {
