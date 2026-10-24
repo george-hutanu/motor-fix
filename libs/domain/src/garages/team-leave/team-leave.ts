@@ -11,7 +11,7 @@ export async function leaveTeams(
   accountId: string,
 ) {
   const mechanic = await tx.mechanic.findUnique({
-    select: { garageId: true, id: true },
+    select: { garageId: true, id: true, onProfile: true },
     where: { accountId },
   });
   if (mechanic) {
@@ -20,8 +20,15 @@ export async function leaveTeams(
       where: { id: mechanic.id },
     });
     await events.record(tx, {
-      audience: { garageIds: [mechanic.garageId], type: 'garage' },
-      kind: 'mechanic.updated',
+      // As the owner's removal: the public streams hear it while the card
+      // was still on the profile.
+      audience: {
+        garageId: mechanic.garageId,
+        mechanicId: mechanic.id,
+        public: mechanic.onProfile,
+        type: 'mechanic',
+      },
+      kind: 'mechanic.removed',
       payload: {
         from: 'account_deleted',
         garageId: mechanic.garageId,

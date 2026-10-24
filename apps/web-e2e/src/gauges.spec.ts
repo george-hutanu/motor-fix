@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 
 import { test } from './fixtures.js';
+import { rgb, token } from './tokens.js';
 
 // The page opens in Romanian, the default language.
 const read = (path: string) =>
@@ -24,20 +25,6 @@ const STATE_TOKEN = {
   red: '--mf-red',
 } as const;
 
-const token = (page: Page, name: string) =>
-  page.evaluate(
-    (n) =>
-      getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
-    name,
-  );
-
-const rgb = (hex: string) => {
-  const [r, g, b] = [1, 3, 5].map((i) =>
-    Number.parseInt(hex.slice(i, i + 2), 16),
-  );
-  return `rgb(${r}, ${g}, ${b})`;
-};
-
 async function open(page: Page, colorScheme: 'dark' | 'light', width: number) {
   await page.setViewportSize({ height: 900, width });
   await page.emulateMedia({ colorScheme });
@@ -47,6 +34,8 @@ async function open(page: Page, colorScheme: 'dark' | 'light', width: number) {
   ).toBeVisible();
 }
 
+// @traces 452-FR-002
+// @traces 452-FR-003
 for (const scheme of ['dark', 'light'] as const) {
   for (const width of [375, 1280]) {
     test(`shows every gauge state in ${scheme} at ${width} px`, async ({

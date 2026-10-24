@@ -86,7 +86,9 @@ one browser, closed in `finally`) through each flow from step 1: click, type,
 switch the language, reload, open a second tab where the spec asks for it, and
 check the empty, error and loading states the spec or design names. Each
 failure is a finding `{ severity, kind: 'flow', title, steps: [...], evidence }`
-with a screenshot under `outDir`; push each finding into `findings` as it is
+with a screenshot saved straight into `outDir`, which is already the run's
+`shots/` folder (`join(outDir, name)`: a `shots/` of its own nests them where
+the review does not look), taken once a dialog or sheet has finished opening; push each finding into `findings` as it is
 found, so a later throw keeps it, and push or return it, never both. A guarded screen (`/app/...`) opens only
 signed in: `await signIn(context, 'driver')` on a fresh browser context, before
 its first page, gives it a new session of that role's seeded account, as the
