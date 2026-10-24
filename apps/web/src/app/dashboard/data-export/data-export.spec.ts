@@ -32,6 +32,7 @@ const refusal = (status: number, code: string) =>
 
 let latest: jest.Mock;
 let request: jest.Mock;
+let download: jest.Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -51,11 +52,13 @@ async function render(
     else latest.mockResolvedValueOnce(answer);
   }
   request = jest.fn();
+  download = jest.fn();
   TestBed.configureTestingModule({
     providers: [
       {
         provide: MeService,
         useValue: {
+          dataExportControllerDownload$Response: download,
           dataExportControllerLatest: latest,
           dataExportControllerRequest: request,
         },
@@ -72,7 +75,7 @@ async function render(
 const button = (element: HTMLElement) =>
   element.querySelector('button.request') as HTMLButtonElement | null;
 const link = (element: HTMLElement) =>
-  element.querySelector('a') as HTMLAnchorElement | null;
+  element.querySelector('button.download') as HTMLButtonElement | null;
 const status = (element: HTMLElement) =>
   element.querySelector('[role="status"]') as HTMLElement;
 const text = (element: HTMLElement) =>
@@ -121,13 +124,60 @@ describe('"Descarcă datele mele" in the account panel', () => {
       }),
     ]);
 
-    const a = link(element);
-    expect(a?.textContent?.trim()).toBe(RO.download);
-    expect(a?.getAttribute('href')).toBe('/api/v1/me/data-export/download');
-    expect(a?.hasAttribute('download')).toBe(true);
+    expect(link(element)?.textContent?.trim()).toBe(RO.download);
     expect(text(element)).toContain('Disponibil până pe 31 oct. 2026.');
     expect(button(element)).toBeNull();
     expect(text(element)).not.toContain(RO.tooSoon);
+  });
+
+  it('downloads the ZIP through the API client, under the name the server gives', async () => {
+    const element = await render([
+      row({ expiresAt: '2026-10-31T10:00:00.000Z', status: 'ready' }),
+    ]);
+    const blob = new Blob(['zip'], { type: 'application/zip' });
+    download.mockResolvedValueOnce({
+      body: blob,
+      headers: new Headers({
+        'content-disposition':
+          'attachment; filename="motorfix-date-2026-10-24.zip"',
+      }),
+    });
+    const saved: { href: string; download: string }[] = [];
+    const click = jest
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        saved.push({ download: this.download, href: this.href });
+      });
+    const created = jest.fn(() => 'blob:zip');
+    Object.assign(URL, {
+      createObjectURL: created,
+      revokeObjectURL: jest.fn(),
+    });
+
+    link(element)?.click();
+    await settle();
+
+    expect(download).toHaveBeenCalledTimes(1);
+    expect(created).toHaveBeenCalledWith(blob);
+    expect(saved).toEqual([
+      { download: 'motorfix-date-2026-10-24.zip', href: 'blob:zip' },
+    ]);
+    click.mockRestore();
+  });
+
+  it('reloads the state when the file is gone by the time it is asked for', async () => {
+    const element = await render([
+      row({ expiresAt: '2026-10-31T10:00:00.000Z', status: 'ready' }),
+      row({ status: 'expired' }),
+    ]);
+    download.mockRejectedValueOnce(refusal(404, 'not_found'));
+
+    link(element)?.click();
+    await settle();
+
+    expect(latest).toHaveBeenCalledTimes(2);
+    expect(link(element)).toBeNull();
+    expect(button(element)?.disabled).toBe(false);
   });
 
   it('says the file failed and offers the button again', async () => {

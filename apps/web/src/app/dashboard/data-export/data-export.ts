@@ -11,6 +11,20 @@ import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { toProblem } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
+// The server names the file; a header the browser hides gets the same form.
+const fileNameOf = (disposition: string | null) =>
+  /filename="([^"]+)"/.exec(disposition ?? '')?.[1] ??
+  `motorfix-date-${new Date().toISOString().slice(0, 10)}.zip`;
+
+function saveFile(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = name;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url));
+}
+
 type View = 'loading' | 'unread' | 'request' | 'queued' | 'ready';
 
 // "Descarcă datele mele": the newest export as the server states it. The
@@ -80,6 +94,28 @@ export class DataExport implements OnInit {
       const { status } = toProblem(failure);
       if (status === 429) this.refused.set(true);
       else if (status === 409) await this.load();
+      else this.error.set(this.problemText(failure));
+    } finally {
+      this.sending.set(false);
+    }
+  }
+
+  // The file comes through the API client, which carries the session; a
+  // plain link would reach the server with no token. A file gone meanwhile
+  // (expired, or deleted) reloads the state.
+  protected async download() {
+    if (this.sending()) return;
+    this.sending.set(true);
+    this.error.set(null);
+    try {
+      const answer = await this.api.dataExportControllerDownload$Response();
+      saveFile(
+        answer.body,
+        fileNameOf(answer.headers.get('content-disposition')),
+      );
+    } catch (failure) {
+      const { status } = toProblem(failure);
+      if (status === 404) await this.load();
       else this.error.set(this.problemText(failure));
     } finally {
       this.sending.set(false);

@@ -171,7 +171,7 @@ for (const [label, viewport, language] of [
       await expect(button).toBeHidden();
 
       await page.goto(await readyLink(page, email, text.subject));
-      const download = panel.getByRole('link', {
+      const download = panel.getByRole('button', {
         exact: true,
         name: text.download,
       });

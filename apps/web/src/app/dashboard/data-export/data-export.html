@@ -23,7 +23,16 @@
 <div class="actions">
   @switch (view()) {
     @case ('ready') {
-      <a hlmBtn variant="ghost" href="/api/v1/me/data-export/download" download>{{ 'shell.dataExport.download' | t }}</a>
+      <button
+        hlmBtn
+        variant="ghost"
+        type="button"
+        class="download"
+        [disabled]="sending()"
+        (click)="download()"
+      >
+        {{ 'shell.dataExport.download' | t }}
+      </button>
     }
     @case ('request') {
       <button
