@@ -755,4 +755,14 @@ describe('the reviews section’s styles', () => {
   it('wraps a long text at any width', () => {
     expect(css).toMatch(/overflow-wrap:\s*anywhere/);
   });
+
+  it('draws its small text at the body size on a phone', () => {
+    expect(css).toMatch(
+      /@media \(max-width: 767\.98px\)\s*{\s*:host\s*{\s*--mf-size-small:\s*var\(--mf-size-body\);/,
+    );
+  });
+
+  it('keeps the author, the dot and the month a word apart', () => {
+    expect(css).toMatch(/\.by\s*{[^}]*gap:\s*var\(--mf-space-1\);/);
+  });
 });
