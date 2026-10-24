@@ -16,6 +16,7 @@ import { Session } from '../../../dashboard/session';
 const GARAGE: PublicGarageDto = {
   brand: { id: 'b-1', name: 'Dacia', slug: 'dacia', stance: 'works_on' },
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},

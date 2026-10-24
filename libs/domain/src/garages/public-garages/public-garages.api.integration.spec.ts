@@ -144,6 +144,7 @@ describe('reading a garage by its public slug', () => {
     expect(Object.keys(res.body).sort()).toEqual([
       'brandNote',
       'businessKind',
+      'closedDays',
       'description',
       'doesNotTake',
       'facilities',
@@ -724,7 +725,7 @@ describe('what the profile says about the garage', () => {
     expect(res.body.code).toBe('not_found');
   });
 
-  // @traces 307-FR-005
+  // @traces 307-FR-005 309-FR-006
   it('shows only public fields, with or without a brand, for a workshop and a mobile mechanic', async () => {
     const dacia = await catalogueBrand('Dacia');
     const fixed = await prisma.garage.create({
@@ -895,6 +896,7 @@ const PUBLIC_FIELDS = new Set([
   'brand',
   'brandNote',
   'businessKind',
+  'closedDays',
   'courtesyCar',
   'description',
   'doesNotTake',
@@ -925,6 +927,7 @@ function expectPublicOnly(body: Record<string, unknown>, mobile: boolean) {
   expect(Object.keys(body).filter((key) => !PUBLIC_FIELDS.has(key))).toEqual(
     [],
   );
+  expect(Array.isArray(body['closedDays'])).toBe(true);
   const hidden = ['phone', 'cui', 'seatAddress'];
   if (mobile) hidden.push('address', 'latitude', 'longitude');
   for (const key of hidden) expect(body).not.toHaveProperty(key);
@@ -1305,11 +1308,11 @@ describe('the price list a profile carries', () => {
     const redis = app.get(AUTH_REDIS);
 
     expect(
-      (await redis.zrange(`v4:tag:garage:${approved.id}`, '0', '-1')).sort(),
+      (await redis.zrange(`v5:tag:garage:${approved.id}`, '0', '-1')).sort(),
     ).toEqual(
       [
-        `v4:profile:${approved.slug}:-`,
-        `v4:profile:${approved.slug}:${bmw.slug}`,
+        `v5:profile:${approved.slug}:-`,
+        `v5:profile:${approved.slug}:${bmw.slug}`,
       ].sort(),
     );
 

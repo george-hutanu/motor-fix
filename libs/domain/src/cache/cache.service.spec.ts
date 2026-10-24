@@ -42,8 +42,8 @@ describe('cache lifetimes', () => {
 describe('cache keys', () => {
   it('names the version and the read kind first', () => {
     expect(cacheKey('profile', 'service-auto', '-')).toBe(
-      'v4:profile:service-auto:-',
+      'v5:profile:service-auto:-',
     );
-    expect(cacheKey('popular-brands', '8')).toBe('v4:popular-brands:8');
+    expect(cacheKey('popular-brands', '8')).toBe('v5:popular-brands:8');
   });
 });
