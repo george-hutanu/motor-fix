@@ -31,7 +31,9 @@
 //   node .claude/scripts/pr-test/carry.mjs <pr> [--dry-run]
 // picks the kind from the named lap, and exits 0 when it carried (or would, on
 // --dry-run), 1 when the head needs a real lap (the reason on stderr), 2 when
-// gh failed.
+// gh failed. `--find` posts nothing: it prints findCarry's answer as one JSON
+// object and exits 0 (2 when gh failed), for the watch, whose scan is
+// synchronous while findCarry answers with a promise.
 
 import { isDocsOnly, isDocumentation } from "../../../scripts/docs-only.ts";
 import { STATUS_CONTEXT, realGh, replaceSection } from "./post.mjs";
@@ -161,7 +163,8 @@ const parsed = (args, out) => {
   if (out.code !== 0) throw new Error(`gh ${args.join(" ")}: ${String(out.stderr).trim()}`);
   return JSON.parse(out.stdout);
 };
-const ghJson = (gh, args) => parsed(args, gh(args));
+/** gh's JSON answer, whether gh answers at once or with a promise; rejects when gh fails. */
+const ghJson = async (gh, args) => parsed(args, await gh(args));
 
 const compareArgs = (from, head) => ["api", `repos/${REPO}/compare/${from}...${head}`];
 export const statusesArgs = (sha) => ["api", `repos/${REPO}/commits/${sha}/statuses?per_page=100`];
@@ -199,22 +202,15 @@ function carryState(compare, shas, lists, merges = {}) {
 
 const sidesOf = (reads, answers) => Object.fromEntries(reads.map((r, i) => [r.sha, { main: names(answers[2 * i].files), pr: names(answers[2 * i + 1].files) }]));
 
-/** What `judgeCarry` needs, read from GitHub one call at a time. Throws when gh fails. */
-export function readCarryState({ from, head, gh = realGh }) {
-  const compare = ghJson(gh, compareArgs(from, head));
-  const shas = statusShas(compare, from, head);
-  const reads = mergeReads(compare, from, head);
-  const lists = shas.map((sha) => statusesOf(gh, sha));
-  return carryState(compare, shas, lists, sidesOf(reads, reads.flatMap((r) => [ghJson(gh, r.main), ghJson(gh, r.pr)])));
-}
-
 /**
- * The same, for a `gh` that answers with a promise: every statuses read goes
- * out at once after the compare, so a carry costs two rounds, not one per
- * commit (the merge gate runs under a deadline). Rejects when gh fails.
+ * What `judgeCarry` needs, read from GitHub: the one carry reader, for the
+ * merge gate and the watch's lookup alike. `gh` may answer with a promise or
+ * at once. Every statuses read goes out together after the compare, so a
+ * carry costs two rounds, not one per commit (the merge gate runs under a
+ * deadline). Rejects when gh fails.
  */
-export async function fetchCarryState({ from, head, gh }) {
-  const json = async (args) => parsed(args, await gh(args));
+export async function fetchCarryState({ from, head, gh = realGh }) {
+  const json = (args) => ghJson(gh, args);
   const compare = await json(compareArgs(from, head));
   const shas = statusShas(compare, from, head);
   const reads = mergeReads(compare, from, head);
@@ -227,17 +223,17 @@ export async function fetchCarryState({ from, head, gh }) {
  * { from, head, kind, reason } when the diff rules it out, { head, reason }
  * when there is nothing to carry. The kind is "fixes" when the named lap
  * reported findings, else "merge" when the PR's commits since are merges,
- * else "docs". Throws when gh fails.
+ * else "docs". Rejects when gh fails.
  */
-export function findCarry({ pr, gh = realGh }) {
-  const view = ghJson(gh, ["pr", "view", String(pr), "--json", "commits,headRefOid"]);
+export async function findCarry({ pr, gh = realGh }) {
+  const view = await ghJson(gh, ["pr", "view", String(pr), "--json", "commits,headRefOid"]);
   const head = view.headRefOid;
-  if (latestReview(statusesOf(gh, head))) return { head, reason: `${short(head)} already has an agent-review status` };
+  if (latestReview(await statusesOf(gh, head))) return { head, reason: `${short(head)} already has an agent-review status` };
   const earlier = (view.commits ?? []).map((c) => c.oid).filter((sha) => sha !== head).reverse().slice(0, MAX_COMMITS);
   let from = null;
   let kind = "docs";
   for (const sha of earlier) {
-    const review = latestReview(statusesOf(gh, sha));
+    const review = latestReview(await statusesOf(gh, sha));
     if (!review || (review.state === "success" && carriedFrom(review.description))) continue;
     if (review.state !== "success") return { head, reason: `the latest verdict, on ${short(sha)}, is ${review.state}` };
     from = sha;
@@ -245,7 +241,7 @@ export function findCarry({ pr, gh = realGh }) {
     break;
   }
   if (!from) return { head, reason: `no agent-review success in the ${MAX_COMMITS} commits before head` };
-  const state = readCarryState({ from, head, gh });
+  const state = await fetchCarryState({ from, head, gh });
   if (kind === "docs" && prWalk(state.compare, from, head).some(isMerge)) kind = "merge";
   const reason = judgeCarry({ from, head, kind, ...state });
   return reason ? { from, head, kind, reason } : { from, head, kind };
@@ -273,15 +269,19 @@ export function postCarry({ pr, from, head, kind = "docs", gh = realGh, dryRun =
   return { dryRun: false, description, section: where };
 }
 
-function main(argv) {
+async function main(argv) {
   const pr = argv.find((a) => /^\d+$/.test(a));
   const dryRun = argv.includes("--dry-run");
   if (!pr) {
-    console.error("usage: carry.mjs <pr> [--dry-run]");
+    console.error("usage: carry.mjs <pr> [--dry-run | --find]");
     return 2;
   }
   try {
-    const found = findCarry({ pr });
+    const found = await findCarry({ pr });
+    if (argv.includes("--find")) {
+      console.log(JSON.stringify(found));
+      return 0;
+    }
     if (found.reason) {
       console.error(`no carry for #${pr}: ${found.reason}; run a real lap`);
       return 1;
@@ -295,4 +295,4 @@ function main(argv) {
   }
 }
 
-if (isEntryPoint(import.meta.url)) process.exit(main(process.argv.slice(2)));
+if (isEntryPoint(import.meta.url)) process.exitCode = await main(process.argv.slice(2));

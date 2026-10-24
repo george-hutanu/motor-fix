@@ -10,7 +10,7 @@ import { DEADLINE_MS, deadlineMs, decideMerge, ghReader, mergeTarget, orphanNote
 
 const review = (state) => ({ __typename: 'StatusContext', context: 'agent-review', state });
 const run = (name, conclusion, status = 'COMPLETED', startedAt = '2026-10-05T07:00:00Z') => ({ __typename: 'CheckRun', name, status, conclusion, startedAt });
-const green = [run('Unit tests', 'SUCCESS'), run('CI OK', 'SUCCESS')];
+const green = [run('Unit tests', 'SUCCESS'), run('CI OK', 'SUCCESS'), run('PR title', 'SUCCESS')];
 const pr = (rollup) => ({ number: 21, state: 'OPEN', headRefOid: 'abc1234def5678', statusCheckRollup: rollup });
 
 describe('merge gate — which commands are merges', () => {
@@ -84,7 +84,7 @@ describe('merge gate — the decision', () => {
   });
 
   it('still refuses when the latest run of a check is the failing one', () => {
-    const rollup = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS'), review('SUCCESS')];
+    const rollup = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS'), run('PR title', 'SUCCESS'), review('SUCCESS')];
     assert.match(decideMerge(pr(rollup)), /CI failed.*Unit tests/);
   });
 
@@ -100,12 +100,12 @@ describe('merge gate — the decision', () => {
   });
 
   it('refuses while a green check has a queued re-run, rather than merging on the old result', () => {
-    const rollup = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', null, 'QUEUED', NOT_STARTED), run('CI OK', 'SUCCESS'), review('SUCCESS')];
+    const rollup = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', null, 'QUEUED', NOT_STARTED), run('CI OK', 'SUCCESS'), run('PR title', 'SUCCESS'), review('SUCCESS')];
     assert.match(decideMerge(pr(rollup)), /still running.*Unit tests/);
   });
 
   it('reads an in-progress run as the latest even when its start time is older', () => {
-    const rollup = [run('Unit tests', null, 'IN_PROGRESS', '2026-10-05T06:00:00Z'), run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('CI OK', 'SUCCESS'), review('SUCCESS')];
+    const rollup = [run('Unit tests', null, 'IN_PROGRESS', '2026-10-05T06:00:00Z'), run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('CI OK', 'SUCCESS'), run('PR title', 'SUCCESS'), review('SUCCESS')];
     assert.match(decideMerge(pr(rollup)), /still running.*Unit tests/);
   });
 
@@ -121,6 +121,7 @@ describe('merge gate — the decision', () => {
       { ...run('build', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'Docker' },
       { ...run('build', 'SUCCESS', 'COMPLETED', '2026-10-05T07:05:00Z'), workflowName: 'CI' },
       { ...run('CI OK', 'SUCCESS'), workflowName: 'CI' },
+      { ...run('PR title', 'SUCCESS'), workflowName: 'PR title' },
       review('SUCCESS'),
     ];
     assert.match(decideMerge(pr(rollup)), /CI failed.*Docker \/ build/);
@@ -131,6 +132,7 @@ describe('merge gate — the decision', () => {
       { ...run('build', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
       { ...run('build', 'SUCCESS', 'COMPLETED', '2026-10-05T07:05:00Z'), workflowName: 'CI' },
       { ...run('CI OK', 'SUCCESS'), workflowName: 'CI' },
+      { ...run('PR title', 'SUCCESS'), workflowName: 'PR title' },
       review('SUCCESS'),
     ];
     assert.equal(decideMerge(pr(rollup)), null);
@@ -143,10 +145,11 @@ describe('merge gate — the decision', () => {
       { ...run('E2E tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
       { ...run('E2E tests', 'SKIPPED', 'COMPLETED', '2026-10-05T07:10:00Z'), workflowName: 'CI' },
       { ...run('CI OK', 'SUCCESS', 'COMPLETED', '2026-10-05T07:12:00Z'), workflowName: 'CI' },
+      { ...run('PR title', 'SUCCESS', 'COMPLETED', '2026-10-05T07:12:00Z'), workflowName: 'PR title' },
       review('SUCCESS'),
     ];
     assert.match(decideMerge(pr(rollup)), /CI failed.*CI \/ E2E tests/);
-    assert.match(decideMerge(pr([rollup[1], rollup[0], rollup[2], rollup[3]])), /CI failed.*CI \/ E2E tests/);
+    assert.match(decideMerge(pr([rollup[1], rollup[0], rollup[2], rollup[3], rollup[4]])), /CI failed.*CI \/ E2E tests/);
   });
 
   it('lets a later run that passed replace a failed one, and a skip follow a cancelled one', () => {
@@ -157,6 +160,7 @@ describe('merge gate — the decision', () => {
       { ...run('Docker build (web)', 'CANCELLED', 'COMPLETED', '2026-10-05T07:00:00Z'), workflowName: 'CI' },
       { ...run('Docker build (web)', 'SKIPPED', 'COMPLETED', '2026-10-05T07:10:00Z'), workflowName: 'CI' },
       { ...run('CI OK', 'SUCCESS'), workflowName: 'CI' },
+      { ...run('PR title', 'SUCCESS'), workflowName: 'PR title' },
       review('SUCCESS'),
     ];
     assert.equal(decideMerge(pr(rollup)), null);
@@ -189,7 +193,7 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
     const red = decideMerge(bot([run('Unit tests', 'FAILURE'), run('CI OK', 'FAILURE')]));
     assert.match(red, /CI failed/);
     assert.match(red, /Unit tests/);
-    assert.match(decideMerge(bot([run('Build', null, 'IN_PROGRESS'), run('CI OK', 'SUCCESS')])), /still running.*Build/);
+    assert.match(decideMerge(bot([run('Build', null, 'IN_PROGRESS'), run('CI OK', 'SUCCESS'), run('PR title', 'SUCCESS')])), /still running.*Build/);
     assert.match(decideMerge(bot([{ context: 'CI OK', state: 'PENDING' }])), /still running.*CI OK/);
     assert.match(decideMerge(bot([])), /no CI OK check/);
     assert.match(decideMerge(bot([run('Unit tests', 'SUCCESS')])), /no CI OK check/);
@@ -197,11 +201,11 @@ describe('merge gate — Dependabot PRs need no agent review', () => {
 
   it('judges the latest run of each check, as for any other PR', () => {
     const NOT_STARTED = '0001-01-01T00:00:00Z';
-    const rerunRed = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS')];
+    const rerunRed = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS'), run('PR title', 'SUCCESS')];
     assert.match(decideMerge(bot(rerunRed)), /CI failed/);
-    const queued = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', null, 'QUEUED', NOT_STARTED), run('CI OK', 'SUCCESS')];
+    const queued = [run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', null, 'QUEUED', NOT_STARTED), run('CI OK', 'SUCCESS'), run('PR title', 'SUCCESS')];
     assert.match(decideMerge(bot(queued)), /still running/);
-    const fixed = [run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS')];
+    const fixed = [run('Unit tests', 'FAILURE', 'COMPLETED', '2026-10-05T07:00:00Z'), run('Unit tests', 'SUCCESS', 'COMPLETED', '2026-10-05T07:10:00Z'), run('CI OK', 'SUCCESS'), run('PR title', 'SUCCESS')];
     assert.equal(decideMerge(bot(fixed)), null);
   });
 
@@ -405,7 +409,7 @@ describe('merge gate — a verdict carried over a docs-only head is verified, no
 
   // @traces 1362-FR-005
   it('still needs every CI check after a verified QA-fixes carry', () => {
-    assert.match(decideMerge(prc([run('Unit tests', null, 'IN_PROGRESS'), run('CI OK', 'SUCCESS'), fixesCarried()]), lookup(fixesState())), /CI/);
+    assert.match(decideMerge(prc([run('Unit tests', null, 'IN_PROGRESS'), run('CI OK', 'SUCCESS'), run('PR title', 'SUCCESS'), fixesCarried()]), lookup(fixesState())), /CI/);
   });
 });
 
@@ -641,7 +645,7 @@ describe('merge gate — a Mutation run on the head is no part of the PR', () =>
   // @traces 1344-FR-010
   it('still waits for a pending check of any other workflow', () => {
     const ci = { ...run('Unit tests', null, 'IN_PROGRESS'), workflowName: 'CI' };
-    assert.match(decideMerge(pr([run('CI OK', 'SUCCESS'), ci, mutation('SUCCESS'), review('SUCCESS')])), /CI is still running/);
+    assert.match(decideMerge(pr([run('CI OK', 'SUCCESS'), run('PR title', 'SUCCESS'), ci, mutation('SUCCESS'), review('SUCCESS')])), /CI is still running/);
   });
 
   // @traces 1344-FR-010
@@ -659,12 +663,14 @@ describe('merge gate — a cloud session reads the PR over REST', () => {
     [`repos/{owner}/{repo}/commits/${HEAD}/check-runs?per_page=100&filter=all`]: [
       { name: 'Unit tests', status: 'completed', conclusion: 'success', started_at: '2026-10-05T07:00:00Z', suite: 11 },
       { name: 'CI OK', status: 'completed', conclusion: 'success', started_at: '2026-10-05T07:01:00Z', suite: 11 },
+      { name: 'PR title', status: 'completed', conclusion: 'success', started_at: '2026-10-05T06:40:00Z', suite: 10 },
       { name: 'PR QA', status: 'completed', conclusion: 'cancelled', started_at: '2026-10-05T07:02:00Z', suite: 12 },
     ],
     // REST's run `name` is the run-name a workflow gives itself (pr-qa.yml: "PR QA #<n> at <sha> lap <k>"), not the workflow's.
     [`repos/{owner}/{repo}/actions/runs?head_sha=${HEAD}&per_page=100`]: [
       { id: 101, suite: 11, workflow: 1, name: 'CI' },
       { id: 102, suite: 12, workflow: 2, name: `PR QA #21 at ${HEAD} lap 1` },
+      { id: 100, suite: 10, workflow: 3, name: 'PR title' },
     ],
     'repos/{owner}/{repo}/actions/workflows?per_page=100': [
       { id: 1, name: 'CI' },
@@ -783,7 +789,7 @@ describe('merge gate — a cloud session reads the PR over REST', () => {
       [{ id: 105, suite: 16, workflow: 3, name: 'PR title' }],
     );
     const got = await readPr('21', gh, { cloud: true });
-    assert.deepEqual(got.statusCheckRollup.filter((c) => c.name === 'PR title').map((c) => c.workflowName), ['PR title', 'PR title']);
+    assert.deepEqual(got.statusCheckRollup.filter((c) => c.name === 'PR title' && c.startedAt >= '2026-10-05T06:50').map((c) => c.workflowName), ['PR title', 'PR title']);
     assert.equal(decideMerge(got), null);
   });
 
@@ -941,5 +947,34 @@ describe('merge gate — a verdict carried over a merge of main is verified, not
 
   it('refuses a merge carry whose merge changes a file the PR changes', () => {
     assert.match(decideMerge(prc([...green, carried()]), lookup(state(['apps/web/src/mine.ts']))), /carried from fffffff.*changes apps\/web\/src\/mine\.ts/);
+  });
+});
+
+// CI OK no longer needs the PR title job (pr-title.yml runs apart), so the gate asks for both by name.
+describe('merge gate — the PR title check is required beside CI OK', () => {
+  // @traces 448-merge-gate-graphql-FR-004
+  // @traces 448-merge-gate-graphql-FR-006
+  const ciOk = [run('Unit tests', 'SUCCESS'), run('CI OK', 'SUCCESS')];
+  const bot = (rollup) => ({ ...pr(rollup), author: { login: 'app/dependabot', is_bot: true }, commits: [{ oid: 'abc1234def5678', authors: [{ login: 'dependabot[bot]' }], committer: { login: 'web-flow' }, verified: true }] });
+
+  it('refuses a head with CI OK green and no PR title check', () => {
+    const why = decideMerge(pr([...ciOk, review('SUCCESS')]));
+    assert.match(why, /no PR title check on abc1234/);
+    assert.match(why, /gh pr checks 21/);
+  });
+
+  it('waits while the PR title check runs, and refuses it failing', () => {
+    assert.match(decideMerge(pr([...ciOk, run('PR title', null, 'IN_PROGRESS'), review('SUCCESS')])), /still running.*PR title/);
+    assert.match(decideMerge(pr([...ciOk, run('PR title', 'FAILURE'), review('SUCCESS')])), /CI failed on abc1234 \(PR title\)/);
+  });
+
+  it('passes with CI OK and PR title green', () => {
+    assert.equal(decideMerge(pr([...ciOk, run('PR title', 'SUCCESS'), review('SUCCESS')])), null);
+  });
+
+  // @traces 448-merge-gate-graphql-FR-005
+  it('judges a Dependabot PR by the same rule: no exemption from the PR title check', () => {
+    assert.match(decideMerge(bot(ciOk)), /no PR title check/);
+    assert.equal(decideMerge(bot([...ciOk, run('PR title', 'SUCCESS')])), null);
   });
 });

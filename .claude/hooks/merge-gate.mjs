@@ -1,6 +1,11 @@
 // Claude Code PreToolUse hook (Bash) — Constitution VII: a PR merges only
-// after the PR tester passed it. Refuses `gh pr merge` and the REST merge
-// call while the PR's head commit has no `agent-review` success status.
+// after the PR tester passed it. Refuses `gh pr merge`, the REST merge call
+// and a `gh api graphql` mergePullRequest or enablePullRequestAutoMerge
+// mutation while the PR's head commit has no `agent-review` success status.
+// A GraphQL merge is tied to its PR through the pull request id it names
+// (inline, or a -f/-F field) and judged the same way; one naming no id the gate
+// can read, or more than one, is refused. A query read from a file, or a merge
+// made outside gh, is out of its reach.
 //
 // A PR opened by Dependabot (its author, read from gh) whose every commit
 // Dependabot wrote, and GitHub or Dependabot committed under a verified
@@ -15,7 +20,9 @@
 //
 // The tester runs beside CI rather than after it, so an agent-review success
 // does not imply CI finished: the gate also refuses while any other check is
-// failing or still running, or while CI OK has not reported at all.
+// failing or still running, or while CI OK or PR title has not reported at
+// all: pr-title.yml runs apart from CI and CI OK does not wait for it, so each
+// is required by name. A Dependabot PR needs both as well.
 //
 // A carried success (`carried from <sha>: docs-only change`, `...: QA fixes`
 // or `...: merge of main`, set by .claude/scripts/pr-test/carry.mjs) is
@@ -122,14 +129,29 @@ export function deadlineMs(env = process.env) {
 
 const GREEN = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
 const checkName = (c) => c.context ?? c.name;
+/** The checks a head needs by name: CI's aggregate, and the PR title job, which runs apart (pr-title.yml) and CI OK does not wait for. */
+const REQUIRED_CHECKS = ["CI OK", "PR title"];
 /** The workflow (.github/workflows/pr-qa.yml) whose verdict is agent-review. */
 const QA_WORKFLOW = "PR QA";
 
-/** The PR a command merges ({ pr: null } for the current branch), or null for any other command. */
 // Flags of `gh` and `gh pr merge` that take a value, so the value is not read as the PR.
 const VALUED = new Set(["-R", "--repo", "-t", "--subject", "-b", "--body", "-F", "--body-file", "--match-head-commit", "-A", "--author-email"]);
 
+/** The GraphQL mutations that merge a PR, or arm it to merge once green. */
+const MERGE_MUTATION = /\b(?:mergePullRequest|enablePullRequestAutoMerge)\b/;
+/** A GraphQL node id as GitHub writes one; anything else (a shell variable, a substitution) is unreadable. */
+const NODE_ID = /^[A-Za-z0-9_=+/-]+$/;
+
+/**
+ * The PR a command merges, or null for any other command: { pr } from
+ * `gh pr merge` (null for the current branch) or the REST merge call;
+ * { pr: null, nodeId } from a `gh api graphql` merge mutation, whose PR
+ * prOfNode reads; { pr: null, unresolved } for a GraphQL merge naming no
+ * single pull request id the gate can read, which is refused, never guessed.
+ */
 export function mergeTarget(command) {
+  let graphql = false;
+  // A quoted multi-line query is split here too, so the mutation is looked for in the whole command.
   for (const part of command.split(/&&|\|\||;|\n/)) {
     const words = part.trim().split(/\s+/);
     const gh = words.findIndex((w) => w === "gh" || w.endsWith("/gh"));
@@ -145,9 +167,39 @@ export function mergeTarget(command) {
     if (sub === "api") {
       const m = part.match(/repos\/[^/\s]+\/[^/\s]+\/pulls\/(\d+)\/merge\b/);
       if (m) return { pr: m[1] };
+      if (rest.some((w) => w === "graphql" || w.endsWith("/graphql"))) graphql = true;
     }
   }
-  return null;
+  return graphql && MERGE_MUTATION.test(command) ? graphqlTarget(command) : null;
+}
+
+/** The one pullRequestId a GraphQL merge names: inline, or a variable's -f/-F/--field/--raw-field value. */
+function graphqlTarget(command) {
+  const ids = [];
+  for (const m of command.matchAll(/pullRequestId\s*:\s*\\?"([^"\\\s]+)\\?"/g)) ids.push(m[1]);
+  for (const m of command.matchAll(/pullRequestId\s*:\s*\$(\w+)/g)) {
+    const field = new RegExp(`(?:^|\\s)(?:-f|-F|--field|--raw-field)[\\s=]+["']?${m[1]}=["']?([^\\s"']+)`);
+    ids.push(command.match(field)?.[1] ?? "");
+  }
+  const distinct = [...new Set(ids)];
+  if (distinct.length > 1) return { pr: null, unresolved: `it names more than one pull request (${distinct.map((id) => id || "an unset variable").join(", ")})` };
+  if (distinct.length === 0 || !NODE_ID.test(distinct[0])) return { pr: null, unresolved: "it names no pull request id the gate can read: a literal id, inline or as a -f/-F field" };
+  return { pr: null, nodeId: distinct[0] };
+}
+
+/**
+ * The number of the PR behind a GraphQL node id, read in one call; a node that
+ * is not a pull request, or a failed read, throws, and the merge is refused (a
+ * cloud session has no GraphQL, so there it always is). SPECKIT_PR_STATE
+ * answers instead for the eval cases.
+ */
+export async function prOfNode(nodeId, gh, env = process.env) {
+  if (env.SPECKIT_PR_STATE) return String(JSON.parse(env.SPECKIT_PR_STATE).number);
+  const out = await gh(["api", "graphql", "-f", "query=query($id: ID!) { node(id: $id) { __typename ... on PullRequest { number } } }", "-f", `id=${nodeId}`, "--jq", ".data.node"]);
+  if (out.code !== 0) throw new Error(String(out.stderr).trim());
+  const node = JSON.parse(String(out.stdout).trim() || "null");
+  if (node?.__typename !== "PullRequest" || !Number.isInteger(node.number)) throw new Error(`${nodeId} is not a pull request`);
+  return String(node.number);
 }
 
 /**
@@ -242,7 +294,8 @@ function ciRefusal(pr, checks, sha, { dependabot = false } = {}) {
     return `PR #${pr.number} cannot merge: CI failed on ${sha} (${list(red)}). It is a Dependabot PR, which merges without an agent review only while Dependabot alone commits to it: a commit pushed to its branch takes the exemption away. Read gh pr checks ${pr.number}; for a flaky or outdated run, comment "@dependabot rebase" or "@dependabot recreate"; for a real break, close it and make the bump in a PR of your own.`;
   if (red.length) return `PR #${pr.number} cannot merge: CI failed on ${sha} (${list(red)}). Read gh pr checks ${pr.number}, fix it on the branch, and run the PR tester again on the new head.`;
   if (pending.length) return `PR #${pr.number} cannot merge yet: CI is still running on ${sha} (${list(pending)}). Wait for gh pr checks ${pr.number} --watch, in the background, and merge when it is green.`;
-  if (!ci.some((c) => checkName(c) === "CI OK")) return `PR #${pr.number} cannot merge: there is no CI OK check on ${sha}. Wait for CI (gh pr checks ${pr.number}) before merging.`;
+  const missing = REQUIRED_CHECKS.find((name) => !ci.some((c) => checkName(c) === name));
+  if (missing) return `PR #${pr.number} cannot merge: there is no ${missing} check on ${sha}. Wait for CI (gh pr checks ${pr.number}) before merging.`;
   return null;
 }
 
@@ -448,7 +501,8 @@ if (isEntryPoint(import.meta.url)) {
       const payload = JSON.parse(raw || "{}");
       const target = mergeTarget(String(payload.tool_input?.command ?? ""));
       if (!target) process.exit(0);
-      const which = target.pr ? `PR ${target.pr}` : "this branch's PR";
+      if (target.unresolved) refuse(`cannot tell which PR this GraphQL merge merges, since ${target.unresolved}, so the merge is not approved. Merge with gh pr merge <n>, which the gate can judge.`);
+      const which = target.pr ? `PR ${target.pr}` : target.nodeId ? `the PR ${target.nodeId}` : "this branch's PR";
       const limit = deadlineMs();
       const stop = new AbortController();
       // run-hook.mjs's backstop: take the gh calls down with the gate.
@@ -463,7 +517,7 @@ if (isEntryPoint(import.meta.url)) {
       const gh = memoized(ghAsync(payload.cwd ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd(), stop.signal));
       let pr;
       try {
-        pr = await readPr(target.pr, gh);
+        pr = await readPr(target.nodeId ? await prOfNode(target.nodeId, gh) : target.pr, gh);
       } catch (e) {
         refuse(`could not read ${which} from GitHub (${e.message}), so the merge is not approved. Check gh auth status and the PR, then try again.`);
       }

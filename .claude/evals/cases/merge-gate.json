@@ -61,7 +61,7 @@
     },
     "env": {
       "CLAUDE_CODE_REMOTE": "true",
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"}]}"
     },
     "expect": {
       "exit": 2,
@@ -79,7 +79,7 @@
     },
     "env": {
       "CLAUDE_CODE_REMOTE": "true",
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"PENDING\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"PENDING\"}]}"
     },
     "expect": {
       "exit": 2,
@@ -97,7 +97,7 @@
     },
     "env": {
       "CLAUDE_CODE_REMOTE": "true",
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
@@ -115,7 +115,7 @@
     },
     "env": {
       "CLAUDE_CODE_REMOTE": "true",
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR QA\",\"workflowName\":\"PR QA\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR QA\",\"workflowName\":\"PR QA\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
@@ -149,7 +149,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
@@ -166,7 +166,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"body\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\",\"startedAt\":\"2026-10-05T07:03:51Z\"},{\"__typename\":\"CheckRun\",\"name\":\"body\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:04:15Z\"},{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"body\",\"status\":\"COMPLETED\",\"conclusion\":\"CANCELLED\",\"startedAt\":\"2026-10-05T07:03:51Z\"},{\"__typename\":\"CheckRun\",\"name\":\"body\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:04:15Z\"},{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
@@ -183,7 +183,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"github-actions[bot]\",\"type\":\"Bot\"},\"target_url\":\"https://github.com/george-hutanu/motor-fix/actions/runs/123\"},\"run\":{\"path\":\".github/workflows/mine.yml\",\"event\":\"pull_request\",\"head_branch\":\"feature\",\"head_sha\":\"abc1234def5678\",\"status\":\"completed\",\"conclusion\":\"success\"}}"
     },
     "expect": {
@@ -201,7 +201,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"github-actions[bot]\",\"type\":\"Bot\"},\"target_url\":\"https://github.com/george-hutanu/motor-fix/actions/runs/123\"},\"run\":{\"path\":\".github/workflows/pr-qa.yml\",\"event\":\"pull_request\",\"head_branch\":\"feature\",\"head_sha\":\"abc1234def5678\",\"status\":\"completed\",\"conclusion\":\"success\"},\"qaWorkflowChanged\":true}"
     },
     "expect": {
@@ -219,7 +219,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"checks\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"github-actions[bot]\",\"type\":\"Bot\"},\"target_url\":\"https://github.com/george-hutanu/motor-fix/actions/runs/123\"},\"run\":{\"path\":\".github/workflows/pr-qa.yml\",\"event\":\"pull_request\",\"head_branch\":\"feature\",\"head_sha\":\"abc1234def5678\",\"status\":\"completed\",\"conclusion\":\"success\"},\"testerReview\":\"failure\"}"
     },
     "expect": {
@@ -284,7 +284,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:00:00Z\"},{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"Unit tests\",\"status\":\"QUEUED\",\"conclusion\":null,\"startedAt\":\"0001-01-01T00:00:00Z\"},{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:00:00Z\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"Unit tests\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:00:00Z\"},{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"Unit tests\",\"status\":\"QUEUED\",\"conclusion\":null,\"startedAt\":\"0001-01-01T00:00:00Z\"},{\"__typename\":\"CheckRun\",\"workflowName\":\"CI\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:00:00Z\"},{\"__typename\":\"CheckRun\",\"workflowName\":\"PR title\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\",\"startedAt\":\"2026-10-05T07:00:00Z\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}"
     },
     "expect": {
       "exit": 2,
@@ -301,7 +301,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"george-hutanu\", \"is_bot\": false}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\":82,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"author\":{\"login\":\"george-hutanu\",\"is_bot\":false},\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"body\",\"conclusion\":\"SKIPPED\"}]}"
     },
     "expect": {
       "exit": 2,
@@ -318,7 +318,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}], \"commits\": [{\"oid\": \"abc1234def5678\", \"authors\": [{\"login\": \"dependabot[bot]\"}], \"committer\": {\"login\": \"web-flow\"}, \"verified\": true}]}"
+      "SPECKIT_PR_STATE": "{\"number\":82,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"author\":{\"login\":\"app/dependabot\",\"is_bot\":true},\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"body\",\"conclusion\":\"SKIPPED\"}],\"commits\":[{\"oid\":\"abc1234def5678\",\"authors\":[{\"login\":\"dependabot[bot]\"}],\"committer\":{\"login\":\"web-flow\"},\"verified\":true}]}"
     },
     "expect": {
       "exit": 0
@@ -334,7 +334,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"Unit tests\", \"conclusion\": \"FAILURE\"}], \"commits\": [{\"oid\": \"abc1234def5678\", \"authors\": [{\"login\": \"dependabot[bot]\"}], \"committer\": {\"login\": \"web-flow\"}, \"verified\": true}]}"
+      "SPECKIT_PR_STATE": "{\"number\":82,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"author\":{\"login\":\"app/dependabot\",\"is_bot\":true},\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"Unit tests\",\"conclusion\":\"FAILURE\"}],\"commits\":[{\"oid\":\"abc1234def5678\",\"authors\":[{\"login\":\"dependabot[bot]\"}],\"committer\":{\"login\":\"web-flow\"},\"verified\":true}]}"
     },
     "expect": {
       "exit": 2,
@@ -351,7 +351,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}], \"commits\": [{\"oid\": \"00000000000000\", \"authors\": [{\"login\": \"dependabot[bot]\"}], \"committer\": {\"login\": \"web-flow\"}, \"verified\": true}, {\"oid\": \"abc1234def5678\", \"authors\": [{\"login\": \"george-hutanu\"}], \"committer\": {\"login\": \"web-flow\"}, \"verified\": true}]}"
+      "SPECKIT_PR_STATE": "{\"number\":82,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"author\":{\"login\":\"app/dependabot\",\"is_bot\":true},\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"body\",\"conclusion\":\"SKIPPED\"}],\"commits\":[{\"oid\":\"00000000000000\",\"authors\":[{\"login\":\"dependabot[bot]\"}],\"committer\":{\"login\":\"web-flow\"},\"verified\":true},{\"oid\":\"abc1234def5678\",\"authors\":[{\"login\":\"george-hutanu\"}],\"committer\":{\"login\":\"web-flow\"},\"verified\":true}]}"
     },
     "expect": {
       "exit": 2,
@@ -368,7 +368,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\": 82, \"state\": \"OPEN\", \"headRefOid\": \"abc1234def5678\", \"author\": {\"login\": \"app/dependabot\", \"is_bot\": true}, \"statusCheckRollup\": [{\"__typename\": \"CheckRun\", \"name\": \"CI OK\", \"conclusion\": \"SUCCESS\"}, {\"__typename\": \"CheckRun\", \"name\": \"body\", \"conclusion\": \"SKIPPED\"}], \"commits\": [{\"oid\": \"abc1234def5678\", \"authors\": [{\"login\": \"dependabot[bot]\"}], \"committer\": {\"login\": \"george-hutanu\"}, \"verified\": false}]}"
+      "SPECKIT_PR_STATE": "{\"number\":82,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"author\":{\"login\":\"app/dependabot\",\"is_bot\":true},\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"body\",\"conclusion\":\"SKIPPED\"}],\"commits\":[{\"oid\":\"abc1234def5678\",\"authors\":[{\"login\":\"dependabot[bot]\"}],\"committer\":{\"login\":\"george-hutanu\"},\"verified\":false}]}"
     },
     "expect": {
       "exit": 2,
@@ -402,7 +402,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"docs/how-to/email-sending.md\"}]},\"between\":[],\"headReviews\":[]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
@@ -420,7 +420,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"diverged\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"docs/how-to/email-sending.md\"}]},\"between\":[],\"headReviews\":[]}"
     },
     "expect": {
@@ -438,7 +438,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"failure\",\"description\":\"2 blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"docs/how-to/email-sending.md\"}]},\"between\":[],\"headReviews\":[]}"
     },
     "expect": {
@@ -456,7 +456,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"docs/x.md\"},{\"filename\":\"apps/api/src/main.ts\"}]},\"between\":[],\"headReviews\":[]}"
     },
     "expect": {
@@ -474,7 +474,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}"
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}"
     },
     "expect": {
       "exit": 2,
@@ -491,7 +491,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: docs-only change\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\"}],\"files\":[{\"filename\":\"docs/how-to/email-sending.md\"}]},\"between\":[],\"headReviews\":[]}",
       "SPECKIT_CARRY_DELAY_MS": "15000",
       "SPECKIT_MERGE_GATE_DEADLINE_MS": "500"
@@ -511,7 +511,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: QA fixes\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: QA fixes\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings; 2 in all. Booted 2/2.\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\",\"parents\":[{\"sha\":\"ffffffffffffffffffffffffffffffffffffffff\"}],\"commit\":{\"message\":\"fix(api): ST-9 empty list answers 200\"}}],\"files\":[{\"filename\":\"apps/api/src/list.ts\"},{\"filename\":\"apps/api/src/list.spec.ts\"}]},\"between\":[],\"headReviews\":[]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
@@ -529,7 +529,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: QA fixes\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: QA fixes\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings; 2 in all. Booted 2/2.\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\",\"parents\":[{\"sha\":\"ffffffffffffffffffffffffffffffffffffffff\"}],\"commit\":{\"message\":\"feat(api): ST-9 a new route\"}}],\"files\":[{\"filename\":\"apps/api/src/list.ts\"},{\"filename\":\"apps/api/src/list.spec.ts\"}]},\"between\":[],\"headReviews\":[]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
@@ -548,7 +548,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: QA fixes\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: QA fixes\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings; 0 in all. Booted 2/2.\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":1,\"commits\":[{\"sha\":\"abc1234def5678\",\"parents\":[{\"sha\":\"ffffffffffffffffffffffffffffffffffffffff\"}],\"commit\":{\"message\":\"fix(api): ST-9 empty list answers 200\"}}],\"files\":[{\"filename\":\"apps/api/src/list.ts\"},{\"filename\":\"apps/api/src/list.spec.ts\"}]},\"between\":[],\"headReviews\":[]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
@@ -567,7 +567,7 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: merge of main\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: merge of main\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings; 0 in all.\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":2,\"commits\":[{\"sha\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"parents\":[{\"sha\":\"9999999999999999999999999999999999999999\"}],\"commit\":{\"message\":\"feat(api): ST-1 another story\"}},{\"sha\":\"abc1234def5678\",\"parents\":[{\"sha\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"sha\":\"dddddddddddddddddddddddddddddddddddddddd\"}],\"commit\":{\"message\":\"Merge remote-tracking branch 'origin/main'\"}}],\"files\":[{\"filename\":\"apps/api/src/other.ts\"}]},\"merges\":{\"abc1234def5678\":{\"main\":[\"apps/api/src/other.ts\"],\"pr\":[\"apps/web/src/mine.ts\"]}},\"between\":[],\"headReviews\":[]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
@@ -585,12 +585,82 @@
       }
     },
     "env": {
-      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: merge of main\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\",\"description\":\"carried from ffffffffffffffffffffffffffffffffffffffff: merge of main\"}],\"commits\":[{\"oid\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"oid\":\"abc1234def5678\"}]}",
       "SPECKIT_CARRY_STATE": "{\"fromReview\":{\"state\":\"success\",\"description\":\"No blocking findings; 0 in all.\"},\"compare\":{\"status\":\"ahead\",\"total_commits\":2,\"commits\":[{\"sha\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"parents\":[{\"sha\":\"9999999999999999999999999999999999999999\"}],\"commit\":{\"message\":\"feat(api): ST-1 another story\"}},{\"sha\":\"abc1234def5678\",\"parents\":[{\"sha\":\"ffffffffffffffffffffffffffffffffffffffff\"},{\"sha\":\"dddddddddddddddddddddddddddddddddddddddd\"}],\"commit\":{\"message\":\"Merge remote-tracking branch 'origin/main'\"}}],\"files\":[{\"filename\":\"apps/web/src/mine.ts\"}]},\"merges\":{\"abc1234def5678\":{\"main\":[\"apps/web/src/mine.ts\"],\"pr\":[\"apps/web/src/mine.ts\"]}},\"between\":[],\"headReviews\":[]}",
       "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
     },
     "expect": {
       "exit": 2
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-graphql-merge-without-agent-review",
+    "hook": "pre:bash:merge-gate",
+    "why": "the GraphQL mergePullRequest mutation merges as surely as the CLI and the REST call; a gate on two spellings only is a gate with a side door (ST-448)",
+    "payload": {
+      "tool_input": {
+        "command": "gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: \"PR_kwDOMotorFix21\"}) { clientMutationId } }'"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"}]}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "no agent-review status"
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-graphql-merge-of-an-unknown-pr",
+    "hook": "pre:bash:merge-gate",
+    "why": "a merge whose pull request id sits in a shell variable cannot be tied to a PR, so it is refused rather than guessed (ST-448)",
+    "payload": {
+      "tool_input": {
+        "command": "gh api graphql -f query='mutation($id: ID!) { enablePullRequestAutoMerge(input: {pullRequestId: $id}) { clientMutationId } }' -f id=$PR_ID"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "merge <n>"
+    }
+  },
+  {
+    "id": "merge-gate-passes-a-graphql-merge-with-agent-review-success",
+    "hook": "pre:bash:merge-gate",
+    "why": "a graphql merge of a PR the tester passed, with CI green, is judged like the CLI merge and goes through (ST-448)",
+    "payload": {
+      "tool_input": {
+        "command": "gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: \"PR_kwDOMotorFix21\"}) { clientMutationId } }'"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"CheckRun\",\"name\":\"PR title\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
+    },
+    "expect": {
+      "exit": 0
+    }
+  },
+  {
+    "id": "merge-gate-refuses-a-head-without-the-pr-title-check",
+    "hook": "pre:bash:merge-gate",
+    "why": "CI OK no longer needs the PR title job, so a head where pr-title.yml never ran would merge on CI OK alone; the gate asks for both (ST-658)",
+    "payload": {
+      "tool_input": {
+        "command": "gh pr merge 21 --merge"
+      }
+    },
+    "env": {
+      "SPECKIT_PR_STATE": "{\"number\":21,\"state\":\"OPEN\",\"headRefOid\":\"abc1234def5678\",\"statusCheckRollup\":[{\"__typename\":\"CheckRun\",\"name\":\"CI OK\",\"status\":\"COMPLETED\",\"conclusion\":\"SUCCESS\"},{\"__typename\":\"StatusContext\",\"context\":\"agent-review\",\"state\":\"SUCCESS\"}]}",
+      "SPECKIT_PROVENANCE_STATE": "{\"status\":{\"creator\":{\"login\":\"george-hutanu\",\"type\":\"User\"}}}"
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "no PR title check"
     }
   }
 ]
