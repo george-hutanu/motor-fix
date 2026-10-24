@@ -31,6 +31,9 @@ import { GarageLabourControllerSet$Params } from '../fn/garages/garage-labour-co
 import { garageMechanicsControllerList } from '../fn/garages/garage-mechanics-controller-list';
 import { GarageMechanicsControllerList$Params } from '../fn/garages/garage-mechanics-controller-list';
 import { GarageMechanicsDto } from '../models/garage-mechanics-dto';
+import { garageMembersControllerList } from '../fn/garages/garage-members-controller-list';
+import { GarageMembersControllerList$Params } from '../fn/garages/garage-members-controller-list';
+import { GarageMembersDto } from '../models/garage-members-dto';
 import { garageProfileControllerRead } from '../fn/garages/garage-profile-controller-read';
 import { GarageProfileControllerRead$Params } from '../fn/garages/garage-profile-controller-read';
 import { GarageProfileDto } from '../models/garage-profile-dto';
@@ -376,6 +379,39 @@ export class GaragesService extends BaseService {
   garageMechanicsControllerList(params: GarageMechanicsControllerList$Params, context?: HttpContext): Promise<GarageMechanicsDto> {
     const resp = this.garageMechanicsControllerList$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageMechanicsDto>): GarageMechanicsDto => r.body);
+  }
+
+  /** Path part for operation `garageMembersControllerList()` */
+  static readonly GarageMembersControllerListPath = '/api/v1/garages/{garageId}/members';
+
+  /**
+   * Who has access to the garage: its members and open invites, for the owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageMembersControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageMembersControllerList$Response(params: GarageMembersControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageMembersDto>> {
+    const obs = garageMembersControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Who has access to the garage: its members and open invites, for the owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageMembersControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageMembersControllerList(params: GarageMembersControllerList$Params, context?: HttpContext): Promise<GarageMembersDto> {
+    const resp = this.garageMembersControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageMembersDto>): GarageMembersDto => r.body);
   }
 
   /** Path part for operation `getImageVariant()` */

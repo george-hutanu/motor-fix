@@ -285,6 +285,8 @@ export type { GarageFeaturesControllerSet$Params as GarageFeaturesControllerSet$
 export { garageFeaturesControllerSet as garageFeaturesControllerSet } from './fn/garages/garage-features-controller-set';
 export type { GarageMechanicsControllerList$Params as GarageMechanicsControllerList$Params } from './fn/garages/garage-mechanics-controller-list';
 export { garageMechanicsControllerList as garageMechanicsControllerList } from './fn/garages/garage-mechanics-controller-list';
+export type { GarageMembersControllerList$Params as GarageMembersControllerList$Params } from './fn/garages/garage-members-controller-list';
+export { garageMembersControllerList as garageMembersControllerList } from './fn/garages/garage-members-controller-list';
 export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';
 export { getImageVariant as getImageVariant } from './fn/garages/get-image-variant';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';
