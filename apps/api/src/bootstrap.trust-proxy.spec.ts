@@ -42,8 +42,10 @@ describe('the caller address behind Railway and the web edge', () => {
   });
 
   // @traces 500-FR-016
-  it('is the visitor when Railway calls the API itself', async () => {
-    expect(await ip('100.64.1.2', '86.125.92.213')).toBe('86.125.92.213');
+  it('is the visitor when Railway calls the API itself, through its PoP', async () => {
+    expect(await ip('100.64.1.2', '86.125.92.213, 95.173.1.1')).toBe(
+      '86.125.92.213',
+    );
   });
 
   // @traces 500-FR-017
