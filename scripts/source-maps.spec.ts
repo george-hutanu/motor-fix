@@ -16,7 +16,7 @@ const stage = (name: string) => {
 describe('readable server stacks', () => {
   it('starts the Node servers with their source maps', () => {
     expect(stage('node-app')).toMatch(
-      /^ENV NODE_OPTIONS=--enable-source-maps$/m,
+      /^ENV NODE_OPTIONS="--max-old-space-size-percentage=75 --enable-source-maps"$/m,
     );
   });
 
@@ -30,6 +30,38 @@ describe('readable server stacks', () => {
       'utf8',
     );
     expect(config).toMatch(/sourceMap: true/);
+  });
+});
+
+// @traces 1188-FR-003 1188-FR-004 1188-FR-006
+describe('the Node runtime in every image', () => {
+  it('turns the compile cache on in a directory the node user can write', () => {
+    expect(stage('runtime')).toMatch(
+      /^ENV NODE_COMPILE_CACHE=\/tmp\/node-compile-cache$/m,
+    );
+  });
+
+  it('sizes the heap at 75% of the container for the web server', () => {
+    expect(stage('runtime')).toMatch(
+      /^ENV NODE_OPTIONS=--max-old-space-size-percentage=75$/m,
+    );
+    expect(stage('web')).not.toMatch(/NODE_OPTIONS/);
+  });
+
+  it('fails the build when the image Node does not take the heap option', () => {
+    expect(stage('build')).toMatch(
+      /^RUN node --max-old-space-size-percentage=75 -e 0$/m,
+    );
+  });
+
+  it('fails the build when an app that lists sharp cannot load it', () => {
+    const build = stage('build');
+    const install = build.indexOf('npm ci --omit=dev');
+    const check = build.search(
+      /grep -q '"sharp"' package\.json; then node -e "require\('sharp'\)"/,
+    );
+    expect(install).toBeGreaterThan(0);
+    expect(check).toBeGreaterThan(install);
   });
 });
 
