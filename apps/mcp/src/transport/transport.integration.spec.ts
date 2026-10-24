@@ -63,7 +63,8 @@ beforeAll(async () => {
   await app.listen(0, '127.0.0.1');
   const address = (app.getHttpServer() as Server).address() as AddressInfo;
   base = `http://127.0.0.1:${address.port}`;
-}, 120_000);
+  // The turn waits out the longest holder, as serialDatabase does.
+}, 360_000);
 
 afterAll(async () => {
   await app?.close();

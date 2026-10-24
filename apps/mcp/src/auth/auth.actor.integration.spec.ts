@@ -23,7 +23,9 @@ const actors = new McpActorService(
   new AssistantGrants(prisma, new AuditService(), outbox),
 );
 
-beforeAll(turn.take, 120_000);
+// Waits out the longest holder, as serialDatabase does: the audit history's
+// million-row case in domain holds the turn for minutes.
+beforeAll(turn.take, 360_000);
 afterAll(async () => {
   await prisma.$disconnect();
   await turn.release();
