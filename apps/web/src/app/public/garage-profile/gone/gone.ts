@@ -32,7 +32,7 @@ export class Gone {
   private readonly router = inject(Router);
 
   protected readonly cards = computed(
-    () => this.similar()?.items.slice(0, 3) ?? [],
+    () => this.similar()?.items?.slice(0, 3) ?? [],
   );
 
   // A tap on the card, as on the results, opens the garage it shows.

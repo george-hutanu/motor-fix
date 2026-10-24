@@ -6,8 +6,10 @@ import {
   InjectionToken,
   inject,
   makeEnvironmentProviders,
+  makeStateKey,
   PLATFORM_ID,
   provideEnvironmentInitializer,
+  TransferState,
   untracked,
 } from '@angular/core';
 import {
@@ -38,11 +40,25 @@ export const PUBLIC_PATHS: readonly string[] = [
   'review-rules',
 ];
 
-// The server provides PUBLIC_WEB_URL's origin: behind the host's proxy the
-// request may arrive as http.
+// The server provides PUBLIC_WEB_URL's origin, since behind the host's proxy
+// the request may arrive as http, and hands it to the browser, so an address
+// the page gives away (a shared link) is the site's on every host.
+export const SITE_ORIGIN_STATE = makeStateKey<string>('site-origin');
 export const SITE_ORIGIN = new InjectionToken<string>('SITE_ORIGIN', {
-  factory: () => inject(DOCUMENT).location.origin,
+  factory: () =>
+    inject(TransferState).get(SITE_ORIGIN_STATE, '') ||
+    inject(DOCUMENT).location.origin,
 });
+
+// On the server: the site's origin, also written into the page for the browser.
+export function provideSiteOrigin(origin: string): EnvironmentProviders {
+  return makeEnvironmentProviders([
+    { provide: SITE_ORIGIN, useValue: origin },
+    provideEnvironmentInitializer(() =>
+      inject(TransferState).set(SITE_ORIGIN_STATE, origin),
+    ),
+  ]);
+}
 
 export function alternates(origin: string, path: string) {
   const address = (language: string) => `${origin}/${language}/${path}`;

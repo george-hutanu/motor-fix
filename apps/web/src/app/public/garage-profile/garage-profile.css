@@ -77,6 +77,31 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+/* The share button beside the name; on a phone it drops under the name
+   rather than squeezing it. */
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-3) var(--mf-space-4);
+}
+
+.title h1 {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.title mf-share-button {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
+@media (max-width: 29.99rem) {
+  .title h1 {
+    flex-basis: 100%;
+  }
+}
+
 .place,
 .description,
 .verified,

@@ -96,10 +96,33 @@ test.describe('sharing a garage profile @seeded', () => {
     await expect(heading(page)).toHaveText('Pagina nu există');
   });
 
-  test('fits a 320 px phone with the button beside the name', async ({
-    page,
-  }) => {
-    await page.setViewportSize({ height: 640, width: 320 });
+  for (const viewport of [
+    { height: 640, width: 320 },
+    { height: 844, width: 390 },
+  ]) {
+    test(`fits a ${viewport.width} px phone with the button under the name`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto('/ro/garages/service-auto-militari?brand=dacia');
+
+      const button = page.getByRole('button', {
+        name: 'Distribuie Service Auto Militari',
+      });
+      await expect(button).toBeVisible();
+      const box = await button.boundingBox();
+      const name = await heading(page).boundingBox();
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+      expect(box?.width).toBeGreaterThanOrEqual(44);
+      expect(box?.y ?? 0).toBeGreaterThanOrEqual(
+        (name?.y ?? 0) + (name?.height ?? 0) - 1,
+      );
+      expect(await sideways(page)).toBeLessThanOrEqual(0);
+    });
+  }
+
+  test('sits beside the name on a computer', async ({ page }) => {
+    await page.setViewportSize({ height: 900, width: 1440 });
     await page.goto('/ro/garages/service-auto-militari?brand=dacia');
 
     const button = page.getByRole('button', {
@@ -107,9 +130,11 @@ test.describe('sharing a garage profile @seeded', () => {
     });
     await expect(button).toBeVisible();
     const box = await button.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-    expect(box?.width).toBeGreaterThanOrEqual(44);
-    expect(await sideways(page)).toBeLessThanOrEqual(0);
+    const name = await heading(page).boundingBox();
+    expect(box?.x ?? 0).toBeGreaterThan(
+      (name?.x ?? 0) + (name?.width ?? 0) - 1,
+    );
+    expect(box?.y ?? 0).toBeLessThan((name?.y ?? 0) + (name?.height ?? 0));
   });
 });
 

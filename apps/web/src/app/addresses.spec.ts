@@ -1,4 +1,4 @@
-import { PLATFORM_ID } from '@angular/core';
+import { PLATFORM_ID, TransferState } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   type PartialMatchRouteSnapshot,
@@ -19,7 +19,9 @@ import {
   alternates,
   PUBLIC_PATHS,
   provideLanguageAddresses,
+  provideSiteOrigin,
   SITE_ORIGIN,
+  SITE_ORIGIN_STATE,
   toLanguageAddress,
 } from './addresses';
 import { routes } from './app.routes';
@@ -393,5 +395,19 @@ describe('public frame', () => {
 
     expect(route?.loadComponent).toBeDefined();
     expect(route?.component).toBeUndefined();
+  });
+});
+
+// @traces 385-FR-002
+describe("the site's origin on the server", () => {
+  it('is provided and handed to the browser with the page', () => {
+    TestBed.configureTestingModule({
+      providers: [provideSiteOrigin('https://motorfix.ro')],
+    });
+
+    expect(TestBed.inject(SITE_ORIGIN)).toBe('https://motorfix.ro');
+    expect(TestBed.inject(TransferState).get(SITE_ORIGIN_STATE, '')).toBe(
+      'https://motorfix.ro',
+    );
   });
 });

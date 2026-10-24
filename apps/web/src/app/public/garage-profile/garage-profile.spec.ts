@@ -1790,8 +1790,20 @@ describe('the share button on the garage profile', () => {
     expect(button?.parentElement).toBe(
       page().querySelector('h1')?.parentElement,
     );
+    expect(button?.parentElement?.classList).toContain('title');
     expect(button?.querySelector('button')?.getAttribute('aria-label')).toBe(
       'Distribuie Service Auto Militari',
+    );
+  });
+
+  it('shares a row with the name, and drops under it only on a phone', () => {
+    const sheet = css('garage-profile.css');
+
+    expect(sheet).toMatch(
+      /\.title\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*align-items:\s*center;/,
+    );
+    expect(sheet).toMatch(
+      /@media \(max-width: 29\.99rem\)\s*\{\s*\.title h1\s*\{\s*flex-basis:\s*100%;/,
     );
   });
 

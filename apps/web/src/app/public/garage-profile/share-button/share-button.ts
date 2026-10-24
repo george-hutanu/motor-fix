@@ -31,7 +31,7 @@ export class ShareButton {
   readonly slug = input.required<string>();
   readonly brand = input<string>();
   protected readonly i18n = inject(I18n);
-  private readonly origin = inject(SITE_ORIGIN);
+  private readonly origin = inject(SITE_ORIGIN).replace(/\/+$/, '');
   private readonly injector = inject(Injector);
   private readonly field = viewChild<ElementRef<HTMLInputElement>>('field');
   protected readonly fieldId = `mf-share-${++fields}`;
@@ -56,7 +56,7 @@ export class ShareButton {
         await navigator.share({ title: this.name(), url });
         return;
       } catch (failure) {
-        if (failure instanceof DOMException && failure.name === 'AbortError')
+        if ((failure as { name?: unknown } | null)?.name === 'AbortError')
           return;
       }
     }

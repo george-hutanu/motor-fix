@@ -40,8 +40,10 @@
           {{ 'public.garageProfile.badge' | t }}
         </span>
       </div>
-      <h1>{{ garage.name }}</h1>
-      <mf-share-button [name]="garage.name" [slug]="garage.slug" [brand]="garage.brand?.slug" />
+      <div class="title">
+        <h1>{{ garage.name }}</h1>
+        <mf-share-button [name]="garage.name" [slug]="garage.slug" [brand]="garage.brand?.slug" />
+      </div>
       @let mobileArea =
         garage.businessKind === 'mobile' && garage.serviceRadiusKm;
       @if (mobileArea || distanceSaid() || statusSaid()) {
