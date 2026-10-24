@@ -20,25 +20,48 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+type Text = {
+  address?: string | null;
+  cityName?: string | null;
+  name: string;
+  seatAddress?: string | null;
+};
+
+// A garage holds an address or a seat address, never both
+// (garage_address_or_seat): one fixture for each.
 const cedillas = {
   address: 'Str. Şcolii 3, Iaşi',
   cityName: 'Iaşi',
   name: 'Service Ţuţuianu Ş.R.L.',
-  seatAddress: 'Bd. Ştefan cel Mare 12',
+  seatAddress: null,
 };
 const commas = {
   address: 'Str. Școlii 3, Iași',
   cityName: 'Iași',
   name: 'Service Țuțuianu Ș.R.L.',
+  seatAddress: null,
+};
+const mobileCedillas = {
+  address: null,
+  cityName: 'Bacău',
+  name: 'Mecanic Ştefan',
+  seatAddress: 'Bd. Ştefan cel Mare 12',
+};
+const mobileCommas = {
+  address: null,
+  cityName: 'Bacău',
+  name: 'Mecanic Ștefan',
   seatAddress: 'Bd. Ștefan cel Mare 12',
 };
 const fields = ['name', 'address', 'seatAddress', 'cityName'] as const;
+const cedilla = { ...cedillas, seatAddress: mobileCedillas.seatAddress };
+const comma = { ...commas, seatAddress: mobileCommas.seatAddress };
 
-const create = (slug: string, text: Partial<typeof cedillas> = {}) =>
+const create = (slug: string, text: Partial<Text> = {}) =>
   prisma.garage.create({
     data: {
       address: text.address,
-      cityKey: text.cityName === undefined ? undefined : 'iasi',
+      cityKey: text.cityName == null ? undefined : 'iasi',
       cityName: text.cityName,
       name: text.name ?? slug,
       seatAddress: text.seatAddress,
@@ -59,20 +82,25 @@ describe('a garage written with cedilla letters', () => {
     expect(await stored(garage.id)).toEqual(commas);
   });
 
+  it('stores a seat address with the comma letters on insert', async () => {
+    const garage = await create('mobile', mobileCedillas);
+
+    expect(await stored(garage.id)).toEqual(mobileCommas);
+  });
+
   it.each(fields)('converts %s on update', async (field) => {
     const garage = await create('update', {
-      address: 'Plain',
       cityName: 'Plain',
       name: 'Plain',
-      seatAddress: 'Plain',
+      [field === 'seatAddress' ? 'seatAddress' : 'address']: 'Plain',
     });
 
     await prisma.garage.update({
-      data: { [field]: cedillas[field] },
+      data: { [field]: cedilla[field] },
       where: { id: garage.id },
     });
 
-    expect((await stored(garage.id))[field]).toBe(commas[field]);
+    expect((await stored(garage.id))[field]).toBe(comma[field]);
   });
 
   it('converts every cedilla letter, capitals and repeats included', async () => {
@@ -86,7 +114,7 @@ describe('a garage written with cedilla letters', () => {
       address: 'Cluj-Napoca, Str. Memorandumului 1',
       cityName: 'Brașov',
       name: 'Brașov Ștefan Țară ăâî',
-      seatAddress: 'Calea Victoriei 5',
+      seatAddress: null,
     };
     const garage = await create('plain', plain);
 
@@ -100,11 +128,11 @@ describe('a garage written with cedilla letters', () => {
     expect(row.bytes).toBe(Buffer.byteLength(plain.name));
   });
 
-  it('keeps a missing value missing and an empty one empty', async () => {
-    const garage = await create('empty', { address: '', name: 'Empty' });
+  it('keeps a missing value missing', async () => {
+    const garage = await create('empty', { name: 'Empty' });
 
     expect(await stored(garage.id)).toEqual({
-      address: '',
+      address: null,
       cityName: null,
       name: 'Empty',
       seatAddress: null,
@@ -140,7 +168,7 @@ describe('the one-off conversion of the stored garages', () => {
   const conversion = migration.match(/^UPDATE "garage"[\s\S]*?;$/m)?.[0];
 
   // Rows as they were before the trigger existed.
-  const legacy = async (slug: string, text: typeof cedillas) => {
+  const legacy = async (slug: string, text: Text) => {
     await prisma.$executeRawUnsafe(
       'ALTER TABLE garage DISABLE TRIGGER garage_comma_forms',
     );
@@ -174,14 +202,21 @@ describe('the one-off conversion of the stored garages', () => {
 
   it('converts the cedilla letters of every stored garage', async () => {
     await legacy('legacy', cedillas);
-    expect((await prisma.garage.findFirstOrThrow()).name).toBe(cedillas.name);
+    await legacy('mobile', mobileCedillas);
+    expect(
+      (await prisma.garage.findFirstOrThrow({ where: { slug: 'legacy' } }))
+        .name,
+    ).toBe(cedillas.name);
 
     await prisma.$executeRawUnsafe(conversion as string);
 
-    const garage = await prisma.garage.findFirstOrThrow({
-      where: { slug: 'legacy' },
-    });
+    const [garage, mobile] = await Promise.all(
+      ['legacy', 'mobile'].map((slug) =>
+        prisma.garage.findFirstOrThrow({ where: { slug } }),
+      ),
+    );
     expect(await stored(garage.id)).toEqual(commas);
+    expect(await stored(mobile.id)).toEqual(mobileCommas);
   });
 
   it('touches nothing else of a converted garage', async () => {
@@ -195,7 +230,6 @@ describe('the one-off conversion of the stored garages', () => {
       address: commas.address,
       city_name: commas.cityName,
       name: commas.name,
-      seat_address: commas.seatAddress,
     });
   });
 

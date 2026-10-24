@@ -289,7 +289,7 @@ describe('f_unaccent', () => {
 
   it('folds a megabyte of text', async () => {
     const [{ same }] = await select<{ same: boolean }>(
-      `SELECT f_unaccent(repeat('Şţ', 500000)) = repeat('ST', 500000) AS same`,
+      `SELECT f_unaccent(repeat('Şţ', 500000)) = repeat('St', 500000) AS same`,
     );
     expect(same).toBe(true);
   });
@@ -297,7 +297,7 @@ describe('f_unaccent', () => {
   it('is immutable and owned by no extension', async () => {
     expect(
       await select(
-        `SELECT p.provolatile AS volatility,
+        `SELECT p.provolatile::text AS volatility,
                 (SELECT count(*)::int FROM pg_depend d
                   WHERE d.objid = p.oid AND d.deptype = 'e') AS extensions,
                 pg_get_functiondef(p.oid) ~* '(^|[^_])unaccent' AS uses_extension
@@ -343,7 +343,7 @@ describe('account_fold after it reads f_unaccent', () => {
   it('is still immutable and still behind a valid trigram index', async () => {
     expect(
       await select(
-        `SELECT (SELECT provolatile FROM pg_proc WHERE oid = 'account_fold(text)'::regprocedure) AS volatility,
+        `SELECT (SELECT provolatile::text FROM pg_proc WHERE oid = 'account_fold(text)'::regprocedure) AS volatility,
                 (SELECT i.indisvalid FROM pg_index i
                    JOIN pg_class c ON c.oid = i.indexrelid
                   WHERE c.relname = 'account_name_fold_trgm_idx') AS valid,
