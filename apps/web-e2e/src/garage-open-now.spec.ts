@@ -60,12 +60,15 @@ test.describe('whether a garage is open now @seeded', () => {
     await db.end();
   });
 
-  test('says the garage is open until its closing time', async ({ page }) => {
+  test('says the garage is open until its closing time on a Tuesday at 10:15', async ({
+    page,
+  }) => {
     const { at } = await at1015(
       `SELECT d::date FROM generate_series(
           (now() AT TIME ZONE 'Europe/Bucharest')::date + 1,
           (now() AT TIME ZONE 'Europe/Bucharest')::date + 14, interval '1 day') AS d
-        WHERE d::date NOT IN (SELECT day FROM public_holiday)
+        WHERE extract(isodow FROM d) = 2
+          AND d::date NOT IN (SELECT day FROM public_holiday)
         ORDER BY d LIMIT 1`,
     );
     await page.clock.setFixedTime(at);
