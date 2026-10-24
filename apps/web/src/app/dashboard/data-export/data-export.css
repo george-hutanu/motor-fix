@@ -10,12 +10,6 @@ p {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.state:empty {
-  display: none;
-}
-.actions:empty {
-  display: none;
-}
 .actions a,
 .actions button {
   width: 100%;
