@@ -81,6 +81,19 @@ describe('sign-in after a provider gave no session', () => {
     );
   });
 
+  // @traces 003-FR-008
+  it.each([
+    ['ro', 'Contul tău este suspendat. Scrie‑ne la suport.'],
+    ['en', 'Your account is suspended. Write to support.'],
+  ] as const)(
+    'says in %s that the account is suspended, and where to write',
+    async (language, text) => {
+      await open({ code: 'suspended', provider: 'apple' }, language);
+
+      expect(alertText()).toBe(text);
+    },
+  );
+
   it.each([
     ['maintenance', 'MotorFix'],
     ['suspended', 'suspendat'],

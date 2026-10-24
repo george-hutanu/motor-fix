@@ -120,3 +120,45 @@ describe('FailureLog and the session a visitor lacks', () => {
     expect(infos).toEqual([]);
   });
 });
+
+// @traces 003-FR-021
+describe('FailureLog on one account', () => {
+  it('names the route with :id, never the account id', () => {
+    answer(
+      '/api/v1/admin/accounts/5b0c1d9e-7f43-4a51-9d2c-0b6f2a4e8c11/suspend',
+      409,
+    );
+
+    expect(lines).toEqual([
+      {
+        message: 'admin accounts request failed',
+        route: 'GET /api/v1/admin/accounts/:id/suspend',
+        status: 409,
+      },
+    ]);
+  });
+
+  it('names the page read with :id', () => {
+    answer('/api/v1/admin/accounts/not-a-uuid', 404);
+
+    expect(lines).toEqual([
+      {
+        message: 'admin accounts request failed',
+        route: 'GET /api/v1/admin/accounts/:id',
+        status: 404,
+      },
+    ]);
+  });
+
+  it('keeps summary as the route it is', () => {
+    answer('/api/v1/admin/accounts/summary', 500);
+
+    expect(lines).toEqual([
+      {
+        message: 'admin accounts request failed',
+        route: 'GET /api/v1/admin/accounts/summary',
+        status: 500,
+      },
+    ]);
+  });
+});

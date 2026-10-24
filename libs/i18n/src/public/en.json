@@ -915,7 +915,7 @@
       },
       "label": "Code",
       "problem": {
-        "account_suspended": "Your account is suspended.",
+        "account_suspended": "Your account is suspended. Write to support.",
         "code_expired": "The code has expired. Ask for a new one.",
         "code_invalid": "The code is not correct.",
         "consent_required": "Tick the agreement to create the account.",
@@ -949,7 +949,7 @@
       "withEmail": "Sign in with e-mail and password"
     },
     "problem": {
-      "account_suspended": "Your account is suspended.",
+      "account_suspended": "Your account is suspended. Write to support.",
       "invalid_credentials": "The e-mail or password is not correct.",
       "too_many_attempts": "Too many attempts. Try again in 15 minutes."
     },
@@ -964,7 +964,7 @@
       "email_taken": "An account already uses this e-mail. Sign in with e-mail and password.",
       "failed": "We could not reach {provider}. Try again, or use e-mail or phone.",
       "maintenance": "MotorFix is down for maintenance. Try again in a few minutes.",
-      "suspended": "Your account is suspended."
+      "suspended": "Your account is suspended. Write to support."
     },
     "submit": "Sign in",
     "title": "Sign in",

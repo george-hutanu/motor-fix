@@ -5,7 +5,7 @@ import { AuditEntryDto } from '../models/audit-entry-dto';
 export interface AuditHistoryPageDto {
 
   /**
-   * Newest first, 20 at most
+   * Newest first; as many as limit asks, 20 when it is not given
    */
   items: Array<AuditEntryDto>;
   nextCursor: string | null;

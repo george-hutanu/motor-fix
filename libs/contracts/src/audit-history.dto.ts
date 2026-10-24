@@ -1,5 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsISO8601, IsOptional, IsUUID, Matches } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  IsUUID,
+  Matches,
+  Max,
+  Min,
+} from 'class-validator';
 
 const AUDIT_AREAS = [
   'requests',
@@ -57,6 +67,15 @@ export class AuditHistoryQueryDto {
   @IsUUID()
   actorId?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Admin only: the entries the account made or that are about the account',
+    format: 'uuid',
+  })
+  @IsOptional()
+  @IsUUID()
+  accountId?: string;
+
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()
@@ -89,6 +108,20 @@ export class AuditHistoryQueryDto {
   @IsOptional()
   @IsUUID()
   cursor?: string;
+
+  @ApiPropertyOptional({
+    default: 20,
+    description: 'Entries per page',
+    maximum: 50,
+    minimum: 1,
+    type: 'integer',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
 }
 
 export class AuditActorDto {
@@ -154,7 +187,7 @@ export class AuditEntryDto {
 
 export class AuditHistoryPageDto {
   @ApiProperty({
-    description: 'Newest first, 20 at most',
+    description: 'Newest first; as many as limit asks, 20 when it is not given',
     type: [AuditEntryDto],
   })
   items!: AuditEntryDto[];
