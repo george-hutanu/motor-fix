@@ -132,7 +132,7 @@ const NOT_CHANGES = new Set([
   'NotificationsService.dispatch',
   'NotificationsService.emailRow',
   'NotificationsService.fail',
-  'NotificationsService.fallBack',
+  'NotificationsService.fallbackRow',
   'NotificationsService.forget',
   'NotificationsService.phoneRow',
   'NotificationsService.queueToDraft',

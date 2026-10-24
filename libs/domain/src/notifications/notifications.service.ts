@@ -20,6 +20,7 @@ import { locked, STAFF_TYPES } from './staff-lists';
 import { farewell } from './templates';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import type { Actor } from '../auth/policy';
+import { outbox } from '../events/event.port';
 import { publishLive } from '../events/live/live.hub';
 import type {
   Notification,
@@ -454,21 +455,33 @@ export class NotificationsService {
 
   // Run in the transaction that marks the rows sent or failed: they no longer
   // hold what only the message in flight needed.
-  forget(ids: readonly string[]) {
-    return this.prisma
-      .$executeRaw`UPDATE notification SET params = params - ${IN_FLIGHT_ONLY}::text[] WHERE id = ANY(${ids}::uuid[])`;
+  forget(
+    ids: readonly string[],
+    db: Pick<PrismaClient, '$executeRaw'> = this.prisma,
+  ) {
+    return db.$executeRaw`UPDATE notification SET params = params - ${IN_FLIGHT_ONLY}::text[] WHERE id = ANY(${ids}::uuid[])`;
   }
 
   // The same message on the next channel, unless the event already has a
   // row there for the person or the type does not go by it.
   // At night a type that is not urgent waits until 08:00, as when it was built.
   private async fallBack(row: Notification, channel: SentChannel) {
+    const next = await this.fallbackRow(this.prisma, row, channel);
+    if (next) await this.queue(next);
+  }
+
+  // Answers the fallback's send job, or null when it wrote no row.
+  private async fallbackRow(
+    db: Pick<PrismaClient, 'account' | 'notification' | 'pushSubscription'>,
+    row: Notification,
+    channel: SentChannel,
+  ): Promise<NextJob | null> {
     const type = notificationType(row.kind);
-    if (!row.accountId || !type.channels.includes(channel)) return;
-    if (!(await this.canReach(row.accountId, channel))) return;
+    if (!row.accountId || !type.channels.includes(channel)) return null;
+    if (!(await this.canReach(row.accountId, channel, db))) return null;
     const at = this.now();
     const sendAfter = !type.urgent && isQuiet(at) ? nextMorning(at) : null;
-    const [written] = await this.prisma.notification.createManyAndReturn({
+    const [written] = await db.notification.createManyAndReturn({
       data: {
         accountId: row.accountId,
         channel,
@@ -483,15 +496,19 @@ export class NotificationsService {
       },
       skipDuplicates: true,
     });
-    if (!written) return;
+    if (!written) return null;
     const delay = sendAfter ? sendAfter.getTime() - at.getTime() : 0;
-    await this.queue({ ...send(written.id), delay });
+    return { ...send(written.id), delay };
   }
 
-  private async canReach(accountId: string, channel: SentChannel) {
-    if (channel === 'push') return this.hasDevice(this.prisma, accountId);
+  private async canReach(
+    accountId: string,
+    channel: SentChannel,
+    db: Pick<PrismaClient, 'account' | 'pushSubscription'> = this.prisma,
+  ) {
+    if (channel === 'push') return this.hasDevice(db, accountId);
     if (channel !== 'email') return true;
-    const account = await this.prisma.account.findUnique({
+    const account = await db.account.findUnique({
       select: { email: true },
       where: { id: accountId },
     });
@@ -507,7 +524,10 @@ export class NotificationsService {
     return (await db.pushSubscription.count({ where: { accountId } })) > 0;
   }
 
-  // Brevo may report a bounce twice; a grouped e-mail carries one message id
+  // Brevo may report a bounce twice, even at once: only the report that claims
+  // the rows marks the account and writes their push fallbacks, so a retry
+  // after a crash finds nothing left to do. A fallback whose job is lost is
+  // handed over by requeueStranded. A grouped e-mail carries one message id
   // on every row it sent.
   async recordBounce(messageId: string): Promise<void> {
     const rows = await this.prisma.notification.findMany({
@@ -523,7 +543,14 @@ export class NotificationsService {
     // A draft's address belongs to no account to mark.
     if (!accountId) return this.fail(rows, 'bounced', false);
     const at = this.now();
-    await this.prisma.$transaction(async (tx) => {
+    const ids = rows.map((r) => r.id);
+    const next = await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.notification.updateMany({
+        data: { failure: 'bounced', status: 'failed' },
+        where: { id: { in: ids }, status: { not: 'failed' } },
+      });
+      if (count === 0) return null;
+      await this.forget(ids, tx);
       const before = await tx.account.findUniqueOrThrow({
         select: { emailBouncedAt: true },
         where: { id: accountId },
@@ -543,8 +570,28 @@ export class NotificationsService {
         before,
         { emailBouncedAt: at },
       );
+      await outbox.record(tx, {
+        audience: { accountId, type: 'account' },
+        kind: 'account.updated',
+        payload: { accountId, fields: ['emailBouncedAt'] },
+        subjectId: accountId,
+      });
+      const jobs: NextJob[] = [];
+      for (const r of rows) {
+        // A row that is itself a fallback ends the chain.
+        if (r.fallbackOf !== null) continue;
+        const job = await this.fallbackRow(tx, r, 'push');
+        if (job) jobs.push(job);
+      }
+      return jobs;
     });
-    await this.fail(rows, 'bounced', true);
+    if (!next) return;
+    for (const r of rows) {
+      this.logger.warn(
+        `notification ${r.id} ${r.kind} ${r.channel} failed: bounced`,
+      );
+    }
+    for (const job of next) await this.queue(job);
   }
 
   // The garage whose choices a recipient's message goes by: the message's,
