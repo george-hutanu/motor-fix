@@ -3,16 +3,14 @@ import type { EventPort } from '../../events/event.port';
 import type { Prisma } from '../../generated/prisma/client';
 import type { Role } from '../capabilities';
 
-export type GrantRevokeReason =
+type GrantRevokeReason =
   | 'role_removed'
   | 'account_suspended'
   | 'account_deleted';
 
 // Who ended the grants: the acting person, or `system` when a handler acted
 // with no person behind it. A label stands in for a name that is being wiped.
-export type GrantRevoker =
-  | { id: string; role: Role; label?: string }
-  | 'system';
+type GrantRevoker = { id: string; role: Role; label?: string } | 'system';
 
 // Ends every live assistant grant of an account inside the caller's
 // transaction: one audit entry and one `assistant_grant.revoked` event per

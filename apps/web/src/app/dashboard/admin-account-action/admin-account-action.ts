@@ -6,6 +6,11 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import {
+  SUSPEND_REASON_MIN as REASON_MIN,
+  DATA_REQUEST_REFERENCE as REFERENCE,
+  ACCOUNT_NOTE_MAX as TEXT_MAX,
+} from '@motor-fix/contracts/account-action-limits';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { injectOverlayTask, toProblem } from '@motor-fix/overlays';
@@ -25,10 +30,6 @@ export interface AdminAccountActionData {
 // moved meanwhile (the drawer reads it again); or the account is gone.
 export type AccountActionResult = 'done' | 'email_failed' | 'stale' | 'gone';
 
-// The server's limits (libs/contracts accounts.dto.ts).
-const REASON_MIN = 10;
-const TEXT_MAX = 500;
-const REFERENCE = /^DR-\d{4}-\d{4,}$/;
 // The codes another admin's action leaves behind.
 const STALE = new Set([
   'account_already_suspended',

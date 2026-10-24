@@ -11,6 +11,11 @@ import {
 } from 'class-validator';
 
 import {
+  ACCOUNT_NOTE_MAX,
+  DATA_REQUEST_REFERENCE,
+  SUSPEND_REASON_MIN,
+} from './account-action-limits';
+import {
   ACCOUNT_ROLES,
   ACCOUNT_STATES,
   type AccountRole,
@@ -177,10 +182,6 @@ const SIGN_IN_METHODS = [
 const GARAGE_STATUS = ['draft', 'approved', 'suspended'] as const;
 const GARAGE_RELATION = ['owner', 'receptionist', 'mechanic'] as const;
 const EMAIL_OUTCOME = ['sent', 'none', 'failed'] as const;
-
-export const SUSPEND_REASON_MIN = 10;
-export const ACCOUNT_NOTE_MAX = 500;
-export const DATA_REQUEST_REFERENCE = /^DR-\d{4}-\d{4,}$/;
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
