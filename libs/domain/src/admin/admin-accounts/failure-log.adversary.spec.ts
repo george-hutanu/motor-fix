@@ -69,7 +69,7 @@ describe('FailureLog at the edges of the status classes', () => {
     expect(infos).toEqual([
       {
         message: 'admin accounts request failed',
-        route: 'POST /api/v1/admin/accounts/abc/suspend',
+        route: 'POST /api/v1/admin/accounts/:id/suspend',
         status: 401,
       },
     ]);
