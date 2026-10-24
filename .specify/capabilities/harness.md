@@ -7,6 +7,7 @@ features:
   - 1363-throughput-fixes
   - 482-watch-transcript-holder
   - 317-handoff-whole
+  - 961-require-agent-review
 ---
 
 # Capability: Spec-kit harness
@@ -138,6 +139,10 @@ _From 317-handoff-whole._
 ### 317-FR-006 — `tail.md` and `hand-off.md` show the note's `Repair iterations:` line and say the restore puts the count back into run state.
 
 _From 317-handoff-whole._
+
+### 961-FR-005 — A harness spec MUST pin that `carry.mjs` posts an `agent-review` success on the carried head for a docs-only carry (1362-FR-002, 1362-FR-004), so the carried head satisfies the required check.
+
+_From 961-require-agent-review._
 
 ## Retired
 
