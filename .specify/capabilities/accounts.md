@@ -42,13 +42,14 @@ features:
   - 009-copy-voice-analytics
   - 129-delete-account
   - 292-saved-garage-quote
-  - 500-req-ip-behind-proxy
-  - 003-admin-account-actions
   - 532-lost-session-home
+  - 500-req-ip-behind-proxy
   - 500-trust-railway-edge
   - 105-brand-list-admin
   - 1370-release-seed-no-ssh
   - 1372-seed-restores-accounts
+  - 947-faro-consent-journeys
+  - 003-admin-account-actions
   - 1373-seed-status-identity
 ---
 
@@ -650,9 +651,9 @@ _From 030-new-account-empty-states._
 
 _From 244-analytics-news-consent._
 
-### 244-FR-002 — Every page MUST show the consent bar while the browser holds no valid choice: the text, the privacy-notice link and the two equal-weight buttons of User Story 1 scenario 1, in the page's language. The bar MUST NOT block the page: it is a bottom bar in the Cockpit style (light and dark), on a phone a bottom sheet above the tab bar where there is one, the page's content reserving the bar's height so the bar covers no button or link, with buttons at least 44 px high, readable and usable at 320 px with no sideways scroll, reachable by keyboard and announced as a region to assistive technology.
+### 947-FR-004 — The analytics consent text MUST name Grafana Faro beside Plausible and say that, with consent, the visit is followed as one session through the pages visited, in Romanian and English in the app's translation files (the bar's text and the dialog's line; the dialog line's "no cookies and without identifying you" is reworded so it stays true: no cookie, no name, a random session id on this device only). `ANALYTICS_CONSENT_VERSION` MUST become `2026-10-24`, so a choice stored under `2026-10-10` is no longer valid: the bar shows again and no session id is sent until the visitor accepts the new text (244-FR-005 as written).
 
-_From 244-analytics-news-consent._
+_From 947-faro-consent-journeys._
 
 ### 244-FR-003 — Pressing "Accept" MUST store the choice `granted` in the browser (decision, text version, time, browser id) under the one key `mf_consent`, hide the bar, load the analytics script on that page and every page after, and send one record to the server. Pressing "Refuz" MUST do the same with `refused` and MUST NOT load the script.
 
@@ -662,17 +663,9 @@ _From 244-analytics-news-consent._
 
 _From 244-analytics-news-consent._
 
-### 244-FR-005 — The text version MUST be one constant, `ANALYTICS_CONSENT_VERSION` in the contracts library, raised with each approved text change; a stored choice MUST be valid only when its text version equals the constant and its time is less than 365 days before now ("12 months" everywhere in this spec means 365 days; one constant, `ANALYTICS_CONSENT_MAX_AGE_DAYS`, beside the version). An invalid choice MUST show the bar again, keep analytics off and show the dialog's switch off.
+### 947-FR-003 — When the choice stops being a valid `granted` (the switch saved off, a storage event from another tab, expiry, a version bump), the next event and every one after MUST carry no session id and no journey event, and the session id kept on the device MUST be removed from session storage at that moment, and the live session meta MUST lose its id (so no `x-faro-session-id` header and no `session.id` span attribute follow). Granting again MUST start a new session id, never reuse the old one.
 
-_From 244-analytics-news-consent._
-
-### 244-FR-006 — Every public page's footer and every dashboard's Setări view MUST carry the link "Setări cookie" / "Cookie settings" that opens the dialog of User Story 2 scenario 2. Saving a changed switch MUST store `granted` or `withdrawn` as FR-003 stores a choice; turning it off MUST stop every analytics event at once and keep the script off on the next page. Cancel, or an unchanged switch, MUST store nothing.
-
-_From 244-analytics-news-consent._
-
-### 244-FR-007 — Other open tabs of the same browser MUST apply a saved choice without a reload, through the browser's storage event: hide the bar and start or stop analytics.
-
-_From 244-analytics-news-consent._
+_From 947-faro-consent-journeys._
 
 ### 244-FR-008 — Consent records MUST live in one append-only table, `CONSENT_RECORD`: id, `browser_consent_id` (a random id made once in the browser and kept with the choice), `account_id` (empty for a visitor), `kind` `analytics`, `decision` one of `granted`, `refused`, `withdrawn`, `text_version`, `language`, `at`. Rows MUST only be added, never changed or deleted; an account's choice in force MUST be its row with the latest `at`. Nothing reads records by browser id: the browser's own `mf_consent` is its latest choice.
 
@@ -786,9 +779,9 @@ _From 139-edit-my-details._
 
 _From 243-terms-privacy._
 
-### 243-FR-002 — The privacy notice MUST name the operator and the contact route for data matters (FR-011), and MUST list every kind of personal data MotorFix keeps at launch, each with why it is kept: the account (name, e-mail address, phone number, language, the sign-in methods: e-mail and password, Google, Apple, a phone number with a code sent by WhatsApp); cars (brand, model, year, fuel, odometer, due dates for ITP, RCA and rovinietă, and the number plate, kept private and shown only to the garage working on the car and on its day sheets); quote requests, quotes, bookings, the one message per request, the garage's reply, and up to 3 photos on each; the repair history, repairs logged elsewhere and their invoices, sharing the history with a garage one booking at a time, and passing a car's history to a buyer; reviews (the author shown as a first name and initial, e.g. "Andrei M."), reports and appeals; the audit history of every change, including changes made through an AI assistant later; garage legal documents and verification results; garage staff (mechanics, receptionists) and mechanics' public pages; notifications and the channel chosen for each, and the device label of a push subscription (taken from the browser description); consent records (terms, privacy notice, news, analytics) with the version accepted and when; the account's city, last activity and whether e-mail to it bounced; an unfinished garage listing with its e-mail address. Items not yet built (messages, reviews, appeals, car photos) are worded so they apply when the person uses them.
+### 947-FR-005 — The privacy notice MUST state the new facts in both languages: that Grafana Faro, only after analytics consent, follows the visit as a session with a random id kept on the device and the pages visited, without a name or account; that no session replay is recorded; and that the device keeps that session id among the items it lists. `PRIVACY_VERSION` MUST become `2026-10-24` (a notice change is a new date, 132-FR-001 unchanged).
 
-_From 243-terms-privacy._
+_From 947-faro-consent-journeys._
 
 ### 243-FR-003 — The privacy notice MUST name every provider that processes personal data on MotorFix's behalf, each under a data processing agreement, and what it does: hosting in a European Union region (Railway); e-mail, SMS and WhatsApp messages (Brevo); file storage for photos and documents in an EU region (S3-compatible object storage); push messages through the browser vendor's push service, content end-to-end encrypted; monitoring and error reports from the servers and the browser (Grafana Cloud, EU region); web analytics only with the visitor's consent (Plausible); map tiles loaded by the browser (OpenFreeMap, which sees the visitor's connection address); address search called by MotorFix's server (Geoapify, which never sees the visitor's address); Google and Apple sign-in, as the method the person chooses. It MUST say that personal data is stored in the European Union and that, where a provider or its parent company is outside the EEA, transfers rely on the European Commission's standard contractual clauses or the EU-US Data Privacy Framework.
 
@@ -1339,6 +1332,11 @@ _From 1373-seed-status-identity._
 - `500-FR-005` — superseded by `500-FR-011` (2026-10-24)
 - `082-FR-023` — superseded by `1370-FR-006` (2026-10-24)
 - `1370-FR-006` — superseded by `1372-FR-004` (2026-10-24)
+- `244-FR-002` — superseded by `947-FR-004` (2026-10-24)
+- `244-FR-005` — superseded by `947-FR-004` (2026-10-24)
+- `244-FR-006` — superseded by `947-FR-003` (2026-10-24)
+- `244-FR-007` — superseded by `947-FR-003` (2026-10-24)
+- `243-FR-002` — superseded by `947-FR-005` (2026-10-24)
 - `500-FR-008` — superseded by `500-FR-016` (2026-10-24)
 - `500-FR-009` — superseded by `500-FR-017` (2026-10-24)
 - `1372-FR-005` — superseded by `1373-FR-006` (2026-10-24)

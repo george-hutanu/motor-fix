@@ -87,6 +87,36 @@ describe('the final legal texts', () => {
   );
 });
 
+describe('the browser monitoring session', () => {
+  // @traces 947-FR-005
+  it.each([
+    [
+      'en',
+      [
+        /If you agree to analytics, Grafana Faro also follows your visit as one session/,
+        /random id kept on your device/,
+        /No session replay is recorded: nothing you see or type is kept/,
+        /the monitoring session id, until you close the tab or withdraw/,
+      ],
+    ],
+    [
+      'ro',
+      [
+        /Dacă ești de acord cu analiza vizitelor, Grafana Faro îți urmărește și vizita ca o singură sesiune/,
+        /cod aleatoriu păstrat pe dispozitivul tău/,
+        /Nu se înregistrează nicio reluare a sesiunii: nimic din ce vezi sau scrii nu este păstrat/,
+        /codul sesiunii de monitorizare, până închizi tab‑ul sau îți retragi acordul/,
+      ],
+    ],
+  ] as const)(
+    'the %s privacy notice says Faro follows a consented visit as a session, without replay',
+    (language, facts) => {
+      const text = whole(language, 'privacy');
+      for (const fact of facts) expect(text).toMatch(fact);
+    },
+  );
+});
+
 describe('the operator and how to reach it', () => {
   const OPERATOR = [
     'HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ',

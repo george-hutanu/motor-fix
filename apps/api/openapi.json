@@ -8923,7 +8923,7 @@
           },
           "privacyVersion": {
             "type": "string",
-            "example": "2026-10-17",
+            "example": "2026-10-24",
             "maxLength": 32
           }
         },
@@ -9627,7 +9627,7 @@
           "textVersion": {
             "type": "string",
             "description": "The text the choice was made under; only the current one",
-            "example": "2026-10-10"
+            "example": "2026-10-24"
           },
           "language": {
             "type": "string",

@@ -32,6 +32,7 @@ import { routeTemplate } from '../telemetry/route-template/route-template';
 
 export const CONSENT_KEY = 'mf_consent';
 const MAX_AGE_MS = ANALYTICS_CONSENT_MAX_AGE_DAYS * 86_400_000;
+const SKEW_MS = 86_400_000;
 
 type Decision = RecordConsentDto['decision'];
 
@@ -58,7 +59,10 @@ export function isValid(
   now = Date.now(),
 ): boolean {
   if (!choice || choice.textVersion !== ANALYTICS_CONSENT_VERSION) return false;
-  return now - Date.parse(choice.at) < MAX_AGE_MS;
+  const age = now - Date.parse(choice.at);
+  // A choice dated ahead of the clock would never expire: a day of clock
+  // drift is tolerated, more is no choice.
+  return age > -SKEW_MS && age < MAX_AGE_MS;
 }
 
 const oneOf = <T extends string>(values: readonly T[], value: unknown) =>
