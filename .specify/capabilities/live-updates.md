@@ -26,6 +26,7 @@ features:
   - 025-review-mechanic
   - 067-restore-suspended-garage
   - 532-lost-session-home
+  - 587-live-list-e2e
 ---
 
 # Capability: Live updates
@@ -393,9 +394,9 @@ _From 1190-live-reconnects._
 
 _From 1190-live-reconnects._
 
-### 1190-FR-008 — Every tab MUST keep the latest position it has seen (its own or fanned out), and every stream the client opens after a first one MUST name it (`Last-Event-ID`); a `reconnect` message MUST be followed by a reopen at once, with no backoff and no token renewal, and every reconnect keeps re-reading the open views (255-FR-004 unchanged: replay covers the bell, not the screens).
+### 1190-FR-008 — Every tab MUST keep the latest position it has seen (its own or fanned out), and every stream the client opens after a first one MUST name it (`Last-Event-ID`); a `reconnect` message MUST be followed by a reopen at once, with no backoff and no token renewal, at most once a minute per connection (a second `reconnect` within a minute of the last reopen at once waits the backoff a failure would), and every reconnect keeps re-reading the open views (255-FR-004 unchanged: replay covers the bell, not the screens).
 
-_From 1190-live-reconnects._
+_From 1190-live-reconnects; modified by 1190-reopen-cap._
 
 ### 1190-FR-009 — On `pagehide` the tab MUST close its stream (releasing the browser's lock when it holds it) and keep no open request, so the page is eligible for the back/forward cache; on `pageshow` it MUST want the stream again, taking the lock if free, from its latest position.
 
@@ -413,9 +414,9 @@ _From 1190-live-reconnects._
 
 _From 1190-live-reconnects._
 
-### 1190-FR-015 — Tests MUST cover: in Jest on real PostgreSQL and Redis, a stream dropped, five notifications created, a reconnect with the last position receiving all five in order with the right count, a foreign and a missing position replaying nothing, the 200 cap, the count kept across create, read and read-all in one transaction, the `retry` line, the heartbeat and the planned `reconnect` close with a shortened interval, and the headers and no-compression rule for both streams; in web unit tests, the lock holder and follower roles, the position kept and sent, the reopen on `reconnect` without backoff, `pagehide`/`pageshow`, and the fallback without the primitives; in Playwright, two tabs of one browser holding one stream and both showing a test update within 2 seconds, and the stream moving when the holder closes.
+### 1190-FR-015 — Tests MUST cover: in Jest on real PostgreSQL and Redis, a stream dropped, five notifications created, a reconnect with the last position receiving all five in order with the right count, a foreign and a missing position replaying nothing, the 200 cap, the count kept across create, read and read-all in one transaction, the `retry` line, the heartbeat and the planned `reconnect` close with a shortened interval, and the headers and no-compression rule for both streams; in web unit tests, the lock holder and follower roles, the position kept and sent, the reopen on `reconnect` without backoff and the backoff on a second `reconnect` within a minute, `pagehide`/`pageshow`, and the fallback without the primitives; in Playwright, two tabs of one browser holding one stream and both showing a test update within 2 seconds, and the stream moving when the holder closes.
 
-_From 1190-live-reconnects._
+_From 1190-live-reconnects; modified by 1190-reopen-cap._
 
 ### 532-FR-004 — After a lapse, a sign-in as the same account MUST send the kept actions in order; a sign-in as another account MUST NOT send them and drops them.
 
@@ -428,6 +429,22 @@ _From 532-lost-session-home._
 ### 532-FR-005 — Each send of the waiting queue MUST be bounded at 30 seconds; a send that has no answer by then is treated as a send with no answer under 255-FR-009: the action is kept first in line as `waiting`, the request is aborted, and the line stops until the next sending moment (60 s after the attempt ends, an `online` event, a live stream opening).
 
 _From 532-lost-session-home._
+
+### 587-FR-001 — The live end-to-end suite MUST include a check in which a signed-in garage owner has the garage's quote requests list (a live list that already uses `liveRows`, `LivePill` and `LiveAnchor`) open at a phone-size viewport, scrolled so the top of the list is off screen, and a driver creates a request for that garage from another context; the check MUST assert that the pill is inside the viewport within 5 seconds of the request's 201 with a count of at least 1, and that no pill showed before that request.
+
+_From 587-live-list-e2e._
+
+### 587-FR-002 — Across that arrival, the check MUST assert that the first row that was on screen before the request keeps its on-screen position within 1 px, and that the new request's row is absent from the list (no element with its `data-live-id`) until the pill is clicked.
+
+_From 587-live-list-e2e._
+
+### 587-FR-003 — The check MUST click the pill and assert that the new request's row is then in the list and inside the viewport.
+
+_From 587-live-list-e2e._
+
+### 587-FR-004 — No product change MUST be needed for the check to pass (a product bug it exposes is fixed in this pull request with its own test); the existing live checks (two dashboards, confirm dialog, typed text, the garage's requests arriving live) stay as they are; the check creates the rows it needs, waits on visible elements and polled conditions only, and tolerates rows added to the same garage by other workers.
+
+_From 587-live-list-e2e._
 
 ## Retired
 
