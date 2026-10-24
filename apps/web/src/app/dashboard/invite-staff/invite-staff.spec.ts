@@ -24,7 +24,6 @@ let resend: jest.Mock;
 let result: Promise<OverlayResult<'sent'>>;
 let current: ReturnType<typeof signal<MeDto | null>>;
 
-// The signed-in owner of garage-1, with the garage's switches as given.
 const owner = (features: Record<string, boolean> = {}) =>
   ({
     garageAccess: [{ features, garageId: 'garage-1', role: 'owner' }],
@@ -373,6 +372,15 @@ describe('the invite dialog', () => {
     await settle();
 
     expect(panel().querySelector('b')).toBeNull();
+  });
+
+  // @traces 531-FR-003 531-FR-004
+  it('reads English with the team off, from the texts it already had', async () => {
+    await open('en', { team_mechanics: false });
+
+    expect(has('Mechanic')).toBe(false);
+    expect(field('Receptionist').checked).toBe(true);
+    expect(text()).not.toContain('garage.invite.');
   });
 
   // @traces 131-FR-013

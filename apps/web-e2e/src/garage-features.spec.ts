@@ -1,5 +1,10 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
-import { expect, type Page } from '@playwright/test';
+import {
+  type Browser,
+  type BrowserContext,
+  expect,
+  type Page,
+} from '@playwright/test';
 import { Client } from 'pg';
 
 import { ready, signIn } from './accounts.js';
@@ -87,11 +92,24 @@ test.describe("the garage's feature switches @seeded @database", () => {
 
   const menu = (page: Page) => page.getByRole('navigation').first();
 
+  // Each tab is a browser of its own, closed when the test ends, passed or
+  // not, so its live stream never outlives it.
+  let tabs: BrowserContext[] = [];
+  async function tab(browser: Browser) {
+    const context = await browser.newContext();
+    tabs.push(context);
+    return context.newPage();
+  }
+  test.afterEach(async () => {
+    await Promise.all(tabs.map((context) => context.close()));
+    tabs = [];
+  });
+
   test('switching the team off in one tab takes Mecanici away from another open tab, and back', async ({
     browser,
   }) => {
-    const a = await (await browser.newContext()).newPage();
-    const b = await (await browser.newContext()).newPage();
+    const a = await tab(browser);
+    const b = await tab(browser);
     await openDashboard(a, '/app/garage/settings');
     await openDashboard(b, '/app/garage/team');
     await b.evaluate(() => {
@@ -134,8 +152,8 @@ test.describe("the garage's feature switches @seeded @database", () => {
   test('switching day sheets off in one tab takes Programări away from another open tab, and back', async ({
     browser,
   }) => {
-    const a = await (await browser.newContext()).newPage();
-    const b = await (await browser.newContext()).newPage();
+    const a = await tab(browser);
+    const b = await tab(browser);
     await openDashboard(a, '/app/garage/settings');
     await openDashboard(b, '/app/garage/schedule');
     const schedule = menu(b).getByRole('link', {

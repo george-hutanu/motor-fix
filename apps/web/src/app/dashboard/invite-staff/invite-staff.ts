@@ -77,7 +77,7 @@ export class InviteStaff {
       this.session
         .current()
         ?.garageAccess.find((g) => g.garageId === this.task.data.garageId)
-        ?.features['team_mechanics'] !== false,
+        ?.features?.['team_mechanics'] !== false,
   );
 
   protected readonly form = new FormGroup({
@@ -118,7 +118,6 @@ export class InviteStaff {
 
   constructor() {
     void this.i18n.enter('garage');
-    // Only a receptionist is left to invite.
     effect(() => {
       if (!this.mechanics()) this.form.controls.kind.setValue('receptionist');
     });
