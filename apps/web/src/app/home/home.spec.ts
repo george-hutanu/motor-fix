@@ -675,7 +675,7 @@ describe('Home on the server when the API does not answer', () => {
     await jest.advanceTimersByTimeAsync(2_999);
     expect(stable).toBe(false);
 
-    // The cap, then the render's own scheduling: well inside SC-001's 4 s.
+    // The cap, then the render's own scheduling: well inside 4 s.
     await jest.advanceTimersByTimeAsync(1 + 100);
     await settle();
 
