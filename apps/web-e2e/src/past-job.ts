@@ -103,9 +103,9 @@ export async function pastJob(
     );
     const booking = await db.query<{ id: string }>(
       `INSERT INTO booking (id, quote_id, request_id, garage_id, driver_id, starts_at, duration_minutes,
-                            status, confirm_by, confirmed_at, mechanic_id)
+                            status, confirm_by, confirmed_at, completed_at, mechanic_id)
        VALUES (gen_random_uuid(), $1, $2, $3, $4, ${startsAt}, 60, 'completed',
-               now() - interval '1 day', now() - interval '2 days', $5)
+               now() - interval '1 day', now() - interval '2 days', now(), $5)
        RETURNING id`,
       [quote.rows[0]?.id, requestId, garageId, own?.driver_id, mechanicId],
     );
