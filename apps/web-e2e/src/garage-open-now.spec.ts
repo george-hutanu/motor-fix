@@ -40,6 +40,17 @@ test.describe('whether a garage is open now @seeded', () => {
          'Strada Exemplu 1, București', 44.43, 26.1, $2)`,
       [slug, JSON.stringify(hours)],
     );
+    // The holiday goes in before any page reads the profile: the profile is
+    // cached, so a holiday added after the first test would not be seen.
+    const { day } = await at1015(
+      `SELECT (now() AT TIME ZONE 'Europe/Bucharest')::date + 14`,
+    );
+    const inserted = await db.query(
+      `INSERT INTO public_holiday (day, name_ro, name_en)
+       VALUES ($1, 'Sărbătoare E2E', 'E2E holiday') ON CONFLICT (day) DO NOTHING`,
+      [day],
+    );
+    if (inserted.rowCount) holiday = day;
   });
 
   test.afterAll(async () => {
@@ -65,15 +76,9 @@ test.describe('whether a garage is open now @seeded', () => {
   });
 
   test('says a legal holiday shuts the garage today', async ({ page }) => {
-    const { day, at } = await at1015(
+    const { at } = await at1015(
       `SELECT (now() AT TIME ZONE 'Europe/Bucharest')::date + 14`,
     );
-    const inserted = await db.query(
-      `INSERT INTO public_holiday (day, name_ro, name_en)
-       VALUES ($1, 'Sărbătoare E2E', 'E2E holiday') ON CONFLICT (day) DO NOTHING`,
-      [day],
-    );
-    if (inserted.rowCount) holiday = day;
     await page.clock.setFixedTime(at);
 
     await page.goto(`/ro/garages/${slug}`);
