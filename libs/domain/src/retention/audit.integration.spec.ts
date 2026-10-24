@@ -95,6 +95,8 @@ describe('the append-only rule', () => {
 });
 
 // @traces 1156-FR-007
+// @traces 1156-FR-009
+// @traces 1156-FR-014
 describe('the audit anonymising sweep', () => {
   it('anonymises by garage closure, leaving the rest of the row as it was', async () => {
     const old = await data.garage(outside);
