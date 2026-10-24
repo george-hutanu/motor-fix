@@ -3,7 +3,8 @@ module.exports = {
   displayName: 'api',
   moduleFileExtensions: ['ts', 'js', 'html'],
   preset: '../../jest.preset.cjs',
-  testEnvironment: 'node',
+  testEnvironment:
+    '<rootDir>/../../libs/domain/src/auth/database-turn.environment.cjs',
   transform: {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
   },

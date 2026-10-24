@@ -113,4 +113,29 @@ describe('stopping the API boot handle', () => {
     );
     await expectTurnFree(databaseUrl);
   }, 240_000);
+
+  // A spec's afterAll that throws before api.stop() (a db.end() on a client
+  // its timed-out beforeAll never made) skipped the stop, and the turn,
+  // taken late, stayed held for the rest of the CI run. The handle gives
+  // everything back once the whole file is done, whatever its afterAll did.
+  it('hands its stop to the end of the file, so a teardown that throws first still gives the turn back', async () => {
+    type Handed = (release: () => Promise<void>) => void;
+    const global = globalThis as { releaseDatabaseTurnLast?: Handed };
+    const real = global.releaseDatabaseTurnLast;
+    expect(real).toBeDefined();
+    const handed: (() => Promise<void>)[] = [];
+    global.releaseDatabaseTurnLast = (release) => {
+      handed.push(release);
+      real?.(release);
+    };
+    try {
+      const api = apiBoot();
+      await api.start();
+      expect(handed).toHaveLength(1);
+      await handed[0]?.();
+    } finally {
+      global.releaseDatabaseTurnLast = real;
+    }
+    await expectTurnFree(databaseUrl);
+  }, 240_000);
 });
