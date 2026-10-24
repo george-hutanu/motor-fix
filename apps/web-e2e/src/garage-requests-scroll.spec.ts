@@ -2,14 +2,13 @@ import { randomUUID } from 'node:crypto';
 
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
-import { ready, signIn } from './accounts.js';
+import { ready, signIn, signUpDriver } from './accounts.js';
 import { test } from './fixtures.js';
-import { type OwnDriver, ownDriver } from './own-driver.js';
 import { accessToken, bearer } from './quoted-request.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
-// The owner of Service Auto Militari, an approved garage that works on the own
-// driver's 2018 Dacia Logan.
+// The owner of Service Auto Militari, an approved garage that works on Dacia
+// petrol cars.
 const OWNER = 'militari@example.test';
 // Sent before the page opens: at 390 × 844 they make the page scroll by more
 // than a row, and they all sit on the list's first page of 20.
@@ -18,24 +17,45 @@ const FILLERS = 6;
 // bar above the page and of the pill.
 const READING_AT = 200;
 
-// The driver sends a request with no job, straight to the owner's garage.
-async function sender(request: APIRequestContext, own: OwnDriver) {
+// A driver of the test's own with a Dacia Logan: a driver may send 20
+// requests a day, and the specs beside this one use the seeded driver's up.
+// The returned function sends a request with no job, straight to the owner's
+// garage.
+async function sender(request: APIRequestContext) {
   const owner = await accessToken(request, OWNER);
   const me = await request.get('/api/v1/me', { headers: bearer(owner) });
   const { garageId } = (await me.json()) as { garageId: string };
-  const driver = await accessToken(request, own.email);
+  const driver = bearer(
+    await accessToken(request, await signUpDriver(request, 'cerere-derulare')),
+  );
+  const brands = await request.get('/api/v1/brands?q=Dacia', {
+    headers: driver,
+  });
+  const [dacia] = ((await brands.json()) as { items: { id: string }[] }).items;
+  const car = await request.post('/api/v1/cars', {
+    data: {
+      brandId: dacia.id,
+      fuel: 'petrol',
+      model: 'Logan',
+      odometerKm: 98_000,
+      year: 2018,
+    },
+    headers: { ...driver, 'Idempotency-Key': randomUUID() },
+  });
+  expect(car.status(), await car.text()).toBe(201);
+  const carId = ((await car.json()) as { id: string }).id;
   return async () => {
     const res = await request.post('/api/v1/quote-requests', {
       data: {
-        carId: own.carId,
+        carId,
         description: `Zgomot la direcție ${randomUUID().slice(0, 8)}`,
         garageIds: [garageId],
         jobTypeIds: [],
         sources: ['profile_direct'],
       },
-      headers: { ...bearer(driver), 'Idempotency-Key': randomUUID() },
+      headers: { ...driver, 'Idempotency-Key': randomUUID() },
     });
-    expect(res.status()).toBe(201);
+    expect(res.status(), await res.text()).toBe(201);
     return ((await res.json()) as { id: string }).id;
   };
 }
@@ -59,18 +79,6 @@ const top = (page: Page, id: string) =>
 // @seeded: a request that arrives while the owner reads further down the list
 // waits behind the pill instead of pushing the list down.
 test.describe('a scrolled live list keeps its place @seeded', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'writes its driver and car straight to PostgreSQL, which needs DATABASE_URL',
-  );
-  let own: OwnDriver;
-  test.beforeEach(async ({ request }) => {
-    own = await ownDriver(request, 'cerere-derulare');
-  });
-  test.afterEach(async () => {
-    await own?.remove();
-  });
-
   // @traces 587-FR-001
   // @traces 587-FR-002
   // @traces 587-FR-003
@@ -79,7 +87,7 @@ test.describe('a scrolled live list keeps its place @seeded', () => {
     page,
     request,
   }) => {
-    const send = await sender(request, own);
+    const send = await sender(request);
     const fillers: string[] = [];
     for (let i = 0; i < FILLERS; i++) fillers.push(await send());
 
