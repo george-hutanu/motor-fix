@@ -34,21 +34,60 @@ export function apiHealth(apiURL) {
   return { health: () => get(HEALTH.live), ready: () => get(HEALTH.ready) };
 }
 
-/** Poll a URL until it answers 2xx or the time runs out. */
-export async function waitForHttp(url, { timeoutMs = 120000, intervalMs = 1000 } = {}) {
+/**
+ * Poll a URL until it answers 2xx or the time runs out; each probe is bounded
+ * too. `exited()` is checked before every probe: once it returns the exit
+ * ({ code, signal }) of the process behind the URL, the wait ends at once.
+ */
+export async function waitForHttp(url, { timeoutMs = 120000, intervalMs = 1000, exited = () => null } = {}) {
   const deadline = Date.now() + timeoutMs;
   let last = "no answer";
   while (Date.now() < deadline) {
+    const gone = exited();
+    if (gone) return { ok: false, exited: gone, error: `${url}: the server exited (${exitReason(gone)}) before it answered` };
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(Math.min(5000, timeoutMs)) });
+      const res = await fetch(url, { signal: AbortSignal.timeout(Math.max(1, Math.min(5000, deadline - Date.now()))) });
       if (res.ok) return { ok: true, status: res.status };
       last = `HTTP ${res.status}`;
     } catch (error) {
       last = error.cause?.code ?? error.message;
     }
-    await new Promise((r) => setTimeout(r, intervalMs));
+    await new Promise((r) => setTimeout(r, Math.max(0, Math.min(intervalMs, deadline - Date.now()))));
   }
+  const gone = exited();
+  if (gone) return { ok: false, exited: gone, error: `${url}: the server exited (${exitReason(gone)}) before it answered` };
   return { ok: false, error: `${url} did not answer 2xx within ${timeoutMs} ms (last: ${last})` };
+}
+
+const exitReason = ({ code, signal }) => (signal ? `signal ${signal}` : `code ${code}`);
+
+/** A function returning a child process's exit ({ code, signal }) once it has exited, else null. */
+export function watchExit(child) {
+  let gone = child.exitCode !== null || child.signalCode !== null ? { code: child.exitCode, signal: child.signalCode } : null;
+  child.once("exit", (code, signal) => {
+    gone = { code, signal };
+  });
+  return () => gone;
+}
+
+/** The last `n` lines of a server's log, or a line saying it is empty. */
+export function logTail(file, n = 20) {
+  const text = existsSync(file) ? readFileSync(file, "utf8").trimEnd() : "";
+  return text ? text.split("\n").slice(-n).join("\n") : "(the log is empty)";
+}
+
+/**
+ * Wait for a launched server (`name`, logging to `log`) to answer `url`. A
+ * server that exits first ends the wait at once; `exited()` may name another
+ * server that exited (`name`, `log` on its result), which ends it too. A
+ * failure carries the server at fault (`server`), the error and the last lines of its log (`tail`).
+ */
+export async function waitForServer(url, { name, exited, log, timeoutMs = 90000, intervalMs = 1000, lines = 20 }) {
+  const h = await waitForHttp(url, { timeoutMs, intervalMs, exited });
+  if (h.ok) return h;
+  if (!h.exited) return { ok: false, server: name, error: `${name}: ${h.error}`, tail: logTail(log, lines) };
+  const server = h.exited.name ?? name;
+  return { ok: false, server, error: `${server} exited (${exitReason(h.exited)}) before it answered`, tail: logTail(h.exited.log ?? log, lines) };
 }
 
 /**
@@ -216,7 +255,12 @@ export function externalPlan() {
 
 const STORAGE_KEYS = { id: "motorfix", secret: "motorfix-secret" };
 
-/** What every app gets: the run's services, never the shared defaults. */
+/**
+ * What every app gets: the run's services, never the shared defaults, and
+ * every other variable an app's boot requires (readEnv in apps/api/src/main.ts,
+ * WORKER_ENV, apps/web/src/server.ts; services.boot-env.spec.mjs holds them
+ * together). Fixed local values only: nothing is read from .env or any file.
+ */
 export function appEnv({ ports }) {
   return {
     APP_ENV: "test",
@@ -233,4 +277,13 @@ export function appEnv({ ports }) {
     // The web app boots with an analytics domain; a reserved .invalid name counts no page view.
     PLAUSIBLE_DOMAIN: "qa.motorfix.invalid",
   };
+}
+
+/**
+ * The whole environment of one launched app: the caller's (its PATH, the
+ * workflow's switches) with the tester's own values over it, then the app's
+ * ports and URLs (`extra`).
+ */
+export function bootEnv({ ports, extra = {}, base = process.env }) {
+  return { ...base, ...appEnv({ ports }), NX_DAEMON: "false", ...extra };
 }
