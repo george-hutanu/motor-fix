@@ -401,7 +401,7 @@ function runChecks(ctx, known) {
 /**
  * A merge commit makes most projects affected; under heavy.sh's NX_PARALLEL=2
  * and 3072 MB heap, two Jest runs of two workers each ran out of heap on a
- * 16 GB laptop (ST-1011). One worker per run, recycled past 1GB, unless the env
+ * 16 GB laptop. One worker per run, recycled past 1GB, unless the env
  * already says otherwise. jest.preset.cjs and libs/domain read JEST_IDLE_MEMORY.
  */
 function jestCaps(env) {
