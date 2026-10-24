@@ -51,6 +51,7 @@ import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { branchFeatureDir, isDir, locateFeature } from "../scripts/lib/feature.mjs";
 import { ghSync } from "../scripts/lib/gh-rest.mjs";
 import { isMutationCheck } from "../scripts/lib/mutation-check.mjs";
+import { isDependabot, openedByDependabot } from "../scripts/lib/dependabot.mjs";
 import { cloneAt } from "../scripts/specs-repo.mjs";
 
 const IN_DEVELOPMENT = "in development";
@@ -93,27 +94,6 @@ export function allGreen(checks) {
 }
 
 const isAgentReview = (c) => (c.context ?? c.name) === "agent-review";
-
-const DEPENDABOT = new Set(["app/dependabot", "dependabot[bot]"]);
-/** Who may commit a Dependabot commit: GitHub itself, or Dependabot. */
-const DEPENDABOT_COMMITTERS = new Set(["web-flow", "dependabot[bot]"]);
-
-/** Dependabot opened the PR: the only PRs whose committers the gates read. */
-export const openedByDependabot = (pr) => DEPENDABOT.has(pr?.author?.login ?? "");
-
-const dependabotCommit = (c) =>
-  c.authors?.length > 0 &&
-  c.authors.every((a) => DEPENDABOT.has(a.login ?? "")) &&
-  DEPENDABOT_COMMITTERS.has(c.committer?.login ?? "") &&
-  c.verified === true;
-
-/**
- * Dependabot opened the PR and wrote every commit on it, each committed by
- * GitHub or Dependabot under a verified signature: read off gh's authors and
- * the REST committers (attachCommitters), never the title or branch.
- */
-export const isDependabot = (pr) =>
-  openedByDependabot(pr) && Array.isArray(pr.commits) && pr.commits.length > 0 && pr.commits.every(dependabotCommit);
 
 /** The gh call listing a PR's commits with their committer and signature. */
 export const committerArgs = (number) => [

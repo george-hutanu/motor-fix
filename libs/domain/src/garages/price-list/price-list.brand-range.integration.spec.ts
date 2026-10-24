@@ -591,7 +591,7 @@ describe('what a brand range change tells the profile', () => {
     await profile();
     await profile(w.bmw.slug);
     await profile(audi.slug);
-    const entry = (slug: string) => `v4:profile:${w.nord.slug}:${slug}`;
+    const entry = (slug: string) => `v5:profile:${w.nord.slug}:${slug}`;
 
     await put(w, BMW_RANGE);
 

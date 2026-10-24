@@ -91,7 +91,7 @@ const garageOf = (status: 'approved' | 'suspended' = 'approved') =>
 const rename = (id: string, name: string) =>
   prisma.garage.update({ data: { name }, where: { id } });
 
-const entry = (slug: string, brand = '-') => `v4:profile:${slug}:${brand}`;
+const entry = (slug: string, brand = '-') => `v5:profile:${slug}:${brand}`;
 
 async function counts(kind: 'profile' | 'brands' = 'profile') {
   const { resourceMetrics } = await metricReader.collect();
@@ -123,7 +123,7 @@ describe('the profile through the cache service', () => {
       id: garage.id,
       name: 'Service Auto Militari',
     });
-    expect(await other.zrange(`v4:tag:garage:${garage.id}`, '0', '-1')).toEqual(
+    expect(await other.zrange(`v5:tag:garage:${garage.id}`, '0', '-1')).toEqual(
       [entry(garage.slug)],
     );
     expect((await counts()).miss - before.miss).toBe(1);
@@ -178,7 +178,7 @@ describe('the profile through the cache service', () => {
       stance: 'does_not_take',
     });
     expect(
-      (await other.zrange(`v4:tag:garage:${garage.id}`, '0', '-1')).sort(),
+      (await other.zrange(`v5:tag:garage:${garage.id}`, '0', '-1')).sort(),
     ).toEqual([entry(garage.slug), entry(garage.slug, slug)].sort());
   });
 
@@ -370,7 +370,7 @@ describe('the profile read from a place', () => {
     expect([first.body.distanceKm, second.body.distanceKm]).toEqual([2.4, 2.4]);
     expect(plain.body.distanceKm).toBeUndefined();
     expect((await counts()).hit - before.hit).toBe(2);
-    expect(await other.zrange(`v4:tag:garage:${garage.id}`, '0', '-1')).toEqual(
+    expect(await other.zrange(`v5:tag:garage:${garage.id}`, '0', '-1')).toEqual(
       [entry(garage.slug)],
     );
     const stored = await other.get(entry(garage.slug));
@@ -388,7 +388,7 @@ describe('the profile read from a place', () => {
     expect(res.body).not.toHaveProperty('distanceKm');
     expect(res.body).not.toHaveProperty('latitude');
     expect(res.body.serviceRadiusKm).toBe(20);
-    expect(await other.zrange(`v4:tag:garage:${garage.id}`, '0', '-1')).toEqual(
+    expect(await other.zrange(`v5:tag:garage:${garage.id}`, '0', '-1')).toEqual(
       [entry(garage.slug)],
     );
   });

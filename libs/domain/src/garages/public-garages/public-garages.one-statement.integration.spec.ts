@@ -292,6 +292,9 @@ function militariAnswer(w: Awaited<ReturnType<typeof militari>>) {
     address: 'Bd. Iuliu Maniu 10, București',
     brandNote: 'Doar benzină și motorină',
     businessKind: 'company',
+    // The next 14 days on the Bucharest calendar: holidays are seeded, so the
+    // window holds some on certain dates. closed-days.integration.spec.ts owns it.
+    closedDays: expect.any(Array),
     courtesyCar: { paid: true, pricePerDayBani: 10_000 },
     description: 'Frâne și distribuție, „rapid”.',
     doesNotTake: [ref(w.tesla)],
@@ -407,6 +410,9 @@ describe('the profile read on a cache miss', () => {
     expect(res.body).toEqual({
       brandNote: null,
       businessKind: 'mobile',
+      // The next 14 days on the Bucharest calendar: holidays are seeded, so the
+      // window holds some on certain dates. closed-days.integration.spec.ts owns it.
+      closedDays: expect.any(Array),
       doesNotTake: [],
       facilities: [],
       hours: {},

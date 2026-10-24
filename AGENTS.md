@@ -73,8 +73,8 @@ them, logging to `specs/<feature>/tracker-sync.md`.
      them under "Fixed after QA"; no lap is counted. A merge of
      `origin/main` that changes none of the PR's files carries the verdict
      too (`merge of main`).
-  7. Merge on `agent-review` success with every other check green, at once;
-     a failing, pending or missing check is never merged. Then Done
+  7. Merge on `agent-review` success at once, every other check green
+     (`main` requires it and `CI OK`, admins too). Then Done
      (`speckit-tracker-sync finish`), and the orchestrating session
      fast-forwards the main checkout (or `/speckit-watch`'s `ff-main`).
      Dependabot's own PRs skip step 6.
@@ -217,7 +217,8 @@ source for anything the constitution does not fix.
 - Heavy commands (npm ci/install, nx build/test/typecheck/e2e, Jest over more
   than a few files, docker compose, Playwright) go through `scripts/heavy.sh`
   (4 slots machine-wide, 2 in a cloud session); a dev server never holds a
-  slot, and mutation tests never run locally.
+  slot, and mutation tests never run locally. `lifecycle.mjs check`'s Jest:
+  `JEST_MAX_WORKERS=2`, `JEST_IDLE_MEMORY=1GB`, 3072 MB; env wins.
 - Parallel work is watched: `node .claude/scripts/watch.mjs` lists every
   worktree with its feature, phase, holder (a live agent or not), last
   activity, PR and the one fix a stale item needs. `/speckit-watch` applies the
@@ -238,18 +239,17 @@ source for anything the constitution does not fix.
   detached `task-runner`. Both
   sides share the claim: `watch.mjs claim` refuses a worktree whose claim is
   still live, so the schedule and a session's wait never dispatch it twice.
-- Fable usage limit hit: `node .claude/scripts/fable.mjs off` remaps `fable`
-  to Opus for sessions started afterwards (`on` restores, `status` tells).
+- Fable limit hit: `node .claude/scripts/fable.mjs off` remaps `fable` to Opus
+  for new sessions (`on` restores, `status` tells).
 - Every API route needs a session: `ActorGuard` runs app-wide (`APP_GUARD`
   in `AuthModule`). A route open to visitors carries `@Public()` and joins
   the list in `apps/api/src/public-routes.integration.spec.ts`. The web
-  interceptor answers a `sign_in_required` 401 with the sign-in dialog over
-  the screen, then sends the call again once.
+  interceptor answers a `sign_in_required` 401 with the sign-in dialog, then
+  resends the call once.
 - Lint and format: Biome only, root `biome.jsonc` (no eslint, no prettier).
   Tests: Jest from the root config, Playwright for end-to-end; a spec that
   needs PostgreSQL or Redis is named `*.integration.spec.ts`. Mutation is never
   part of a task's lifecycle.
-- CI, the test suites, mutation and release are described in
-  `.claude/skills/speckit-auto/lifecycle.md` ("CI, tests and release") and
-  in the headers of `.github/workflows/ci.yml`, `release.yml` and
-  `mutation.yml`.
+- CI, the test suites, mutation and release: `.claude/skills/speckit-auto/lifecycle.md`
+  ("CI, tests and release") and the headers of `.github/workflows/ci.yml`,
+  `release.yml` and `mutation.yml`.

@@ -37,8 +37,9 @@ import { execFileSync, spawn as nodeSpawn } from "node:child_process";
 import { closeSync, existsSync, linkSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "./lib/entry.mjs";
-import { findCarry, postCarry } from "./pr-test/carry.mjs";
+import { postCarry } from "./pr-test/carry.mjs";
 import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
 import { WAIT_RECORD, commonDir, defaultCommandOf, liveWaiter, waitHolder } from "./lib/watch-wait.mjs";
@@ -414,7 +415,20 @@ function prFor(prs, branch) {
   return mine.find((p) => p.state === "OPEN") ?? mine.sort((a, b) => b.number - a.number)[0] ?? null;
 }
 
-const defaultCarry = (pr) => findCarry({ pr });
+const CARRY_CLI = fileURLToPath(new URL("./pr-test/carry.mjs", import.meta.url));
+
+/**
+ * The carry a ready PR's head qualifies for (pr-test/carry.mjs findCarry), or a
+ * throw, which collect reads as none. findCarry answers with a promise and the
+ * scan is synchronous, so it runs as `carry.mjs <pr> --find` in a child.
+ */
+export function carryLookup(pr, { run = execFileSync } = {}) {
+  const found = JSON.parse(run(process.execPath, [CARRY_CLI, String(pr), "--find"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 120_000 }));
+  if (!found || typeof found !== "object" || Array.isArray(found)) throw new Error(`carry.mjs --find gave no carry answer for #${pr}`);
+  return found;
+}
+
+const defaultCarry = (pr) => carryLookup(pr);
 
 const defaultRunOf = (id) =>
   JSON.parse(execFileSync("gh", ["run", "view", String(id), "--json", "status,conclusion"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 30_000 }));

@@ -75,22 +75,31 @@ interface LiveDraft<T> {
   readonly source: Signal<T | undefined>;
   // The object on screen, while it differs from that source.
   readonly changed: Signal<T | undefined>;
-  // The form now builds on the object on screen.
-  accept(): void;
+  // The form now builds on `value`, or on the object on screen.
+  accept(value?: T): void;
 }
 
 // A form edits its own copy. Fill it once from `source()`; show
 // `shell.live.changed` with the new value while `changed()` holds one.
-export function liveDraft<T>(shown: Signal<T | undefined>): LiveDraft<T> {
+// `equal` says when the object on screen is no change to what the form edits.
+export function liveDraft<T>(
+  shown: Signal<T | undefined>,
+  equal: (a: T, b: T) => boolean = Object.is,
+): LiveDraft<T> {
   const source = linkedSignal<T | undefined, T | undefined>({
     computation: (next, previous) => previous?.value ?? next,
     source: shown,
   });
+  // Filled from what shows now, not from what shows at the first read.
+  source();
   return {
-    accept: () => source.set(shown()),
+    accept: (value = shown()) => source.set(value),
     changed: computed(() => {
       const now = shown();
-      return now !== undefined && now !== source() ? now : undefined;
+      const from = source();
+      return now !== undefined && (from === undefined || !equal(now, from))
+        ? now
+        : undefined;
     }),
     source: source.asReadonly(),
   };

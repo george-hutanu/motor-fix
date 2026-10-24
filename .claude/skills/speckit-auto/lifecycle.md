@@ -133,10 +133,15 @@ to `tracker-sync.md` at its next event.
      comment lines) goes to the tracker and into one comment on the merged PR
      (`gh pr comment <n>`), never a commit of its own; whatever must reach a
      file rides on the next PR.
-     A PR opened by Dependabot (its author on GitHub, not its title or branch)
-     and holding only Dependabot's commits skips step 6: it merges on every
-     other check green, `CI OK` included, with no `agent-review` status; a
-     failing, pending or missing check still refuses it.
+     `agent-review` and `CI OK` are required status checks on `main`, for
+     administrators too (`node .claude/scripts/branch-protection.mjs check`;
+     `apply` sets them with the owner's token), so GitHub refuses the merge
+     the gate would. A PR opened by Dependabot (its author on GitHub, not its
+     title or branch) and holding only Dependabot's commits skips step 6:
+     `.github/workflows/dependabot-review.yml` (base branch's copy, on
+     `pull_request_target`) writes its `agent-review` success after the
+     gates' rule, and it merges on every other check green, `CI OK`
+     included; a failing, pending or missing check still refuses it.
 
   Every verified review, QA or harden finding is fixed in the current task's
   PR before ready or merge; one needing an owner decision becomes a
@@ -225,7 +230,7 @@ there for one that will.
   shard of one (each project's `test:mutation` target, the shards in
   `scripts/mutation-shards.json`), against the floor in each project's
   `stryker.config.json`, which only rises. The root `test:mutation` and
-  `test:mutation:affected` scripts stay (431-FR-006), never for a laptop.
+  `test:mutation:affected` scripts stay, never for a laptop.
   The waits for a handed-off PR are the tail's own, in the background
   inside its run: `node .claude/scripts/pr-test/ci-wait.mjs <n> --run <id>`
   for the QA run, then `ci-wait.mjs <n>` for CI before the merge

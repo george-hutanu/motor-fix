@@ -9,23 +9,20 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, type NextFunction, type Request, type Response } from 'express';
 
 import { ProblemFilter, sendProblem } from './problem.filter';
+import { trustProxy } from './trust-proxy';
 
 // A client's id is kept only when it is short and plain, so it cannot flood or
 // forge log lines.
 const REQUEST_ID = /^[\w.-]{1,128}$/;
 
-// The browser reaches the API through Railway's edge (100.64.0.0/10) and the
-// web app's edge, each appending the address it saw. Trust is a list of ranges,
-// never a hop count, so an address the visitor writes into X-Forwarded-For is
-// never taken as req.ip.
-export const TRUSTED_PROXIES =
-  'loopback, linklocal, uniquelocal, 100.64.0.0/10';
-
 export function configureApp(app: INestApplication, env: { APP_ENV: AppEnv }) {
   // A bad image address fails the boot, not every garage profile read.
   imageBaseUrl();
   app.useLogger(new JsonLogger());
-  app.getHttpAdapter().getInstance().set('trust proxy', TRUSTED_PROXIES);
+  // The browser reaches the API through Railway's edge PoP, its internal
+  // proxy and the web service, each appending the address it saw; req.ip is
+  // the address left of the one public hop trustProxy allows.
+  app.getHttpAdapter().getInstance().set('trust proxy', trustProxy);
   // A listing draft holds up to 256 KB of form data, past the 100 KB every
   // other route reads; the draft's own limit answers above that with
   // draft_too_large. A body read here is not read again by Nest's parser.
