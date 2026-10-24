@@ -73,9 +73,9 @@ them, logging to `specs/<feature>/tracker-sync.md`.
      them under "Fixed after QA"; no lap is counted. A merge of
      `origin/main` that changes none of the PR's files carries the verdict
      too (`merge of main`).
-  7. Merge on `agent-review` success with every other check green, at once;
-     a failing, pending or missing check is never merged; GitHub requires
-     `agent-review` and `CI OK` on `main`, admins too. Then Done
+  7. Merge at once on `agent-review` success, every other check green,
+     never on a red, pending or missing one (`main` requires it and
+     `CI OK`, admins too). Then Done
      (`speckit-tracker-sync finish`), and the orchestrating session
      fast-forwards the main checkout (or `/speckit-watch`'s `ff-main`).
      Dependabot's own PRs skip step 6.
@@ -183,8 +183,9 @@ Two rules for `apps/*/src` and `libs/*/src` (Constitution IV), checked by
 - **A web component is a folder.** A `@Component` in `apps/web/src` lives at
   `<name>/<name>.ts`, with `templateUrl: './<name>.html'` and, when it has
   styles, `styleUrl: './<name>.css'`: no inline `template` or `styles`.
-  Generate one with `npx nx g @nx/angular:component --path <area>/<name>/<name>`;
-  delete an empty stylesheet together with its `styleUrl`.
+  Generate one with `npx nx g @nx/angular:component --path <area>/<name>/<name>`
+  (`nx.json` already turns inline templates and styles off); delete an empty
+  stylesheet together with its `styleUrl`.
 
 Out of scope: `libs/ui-cockpit` (Spartan's copied helm components),
 `libs/data-access` and `libs/domain/src/generated` (generated), `web-e2e`.

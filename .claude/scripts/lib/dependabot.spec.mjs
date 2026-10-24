@@ -1,7 +1,6 @@
 import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 
-import * as gate from '../../hooks/pr-lifecycle-gate.mjs';
 import { isDependabot, openedByDependabot } from './dependabot.mjs';
 
 const commit = (over = {}) => ({ oid: 'abc1234', authors: [{ login: 'dependabot[bot]' }], committer: { login: 'web-flow' }, verified: true, ...over });
@@ -23,10 +22,5 @@ describe('the Dependabot rule, shared by the gates and the review workflow', () 
     assert.equal(isDependabot(pr({ commits: [commit({ verified: false })] })), false);
     assert.equal(isDependabot(pr({ commits: [] })), false);
     assert.equal(isDependabot(pr({ commits: [commit({ authors: [] })] })), false);
-  });
-
-  it('is the same rule the gates export', () => {
-    assert.equal(gate.isDependabot, isDependabot);
-    assert.equal(gate.openedByDependabot, openedByDependabot);
   });
 });

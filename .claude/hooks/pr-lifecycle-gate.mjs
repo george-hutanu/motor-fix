@@ -95,9 +95,6 @@ export function allGreen(checks) {
 
 const isAgentReview = (c) => (c.context ?? c.name) === "agent-review";
 
-// The Dependabot rule lives in lib/dependabot.mjs, where the review workflow reads it too.
-export { isDependabot, openedByDependabot };
-
 /** The gh call listing a PR's commits with their committer and signature. */
 export const committerArgs = (number) => [
   "api",

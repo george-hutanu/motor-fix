@@ -28,7 +28,7 @@ const go = (argv, answer, env = { GH_TOKEN: 'owner-token' }) => {
 describe('branch-protection: agent-review and CI OK required on main', () => {
   // @traces 961-FR-006
   it('apply PUTs the protection: both contexts, not strict, admins enforced, no reviews or restrictions, no force push or deletion', () => {
-    const { code, calls } = go(['apply'], (args) => ok(args.includes('PUT') ? protection() : protection()));
+    const { code, calls } = go(['apply'], () => ok(protection()));
     assert.equal(code, 0);
     const put = calls.find((c) => c.args.includes('PUT'));
     assert.ok(put.args.includes('repos/george-hutanu/motor-fix/branches/main/protection'));
@@ -94,7 +94,7 @@ describe('the rule is written where agents read it', () => {
 
   // @traces 961-FR-008
   it('AGENTS.md step 7 and the lifecycle name the required checks and the Dependabot review workflow', () => {
-    assert.match(read('../../AGENTS.md'), /7\. Merge on `agent-review` success[^]*?GitHub requires `agent-review` and `CI OK` on `main`, admins too/);
+    assert.match(read('../../AGENTS.md'), /7\. Merge at once on `agent-review` success[^]*?`main` requires it and\s+`CI OK`, admins too/);
     const lifecycle = read('../skills/speckit-auto/lifecycle.md');
     assert.match(lifecycle, /`agent-review` and `CI OK` are required status checks on `main`, for administrators too/);
     assert.match(lifecycle, /dependabot-review\.yml[^.]*writes its `agent-review` success/);

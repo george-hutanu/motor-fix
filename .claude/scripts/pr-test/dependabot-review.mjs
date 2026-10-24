@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The agent-review a Dependabot-only PR gets without a tester run (961-FR-002).
+// The agent-review a Dependabot-only PR gets without a tester run.
 // GitHub requires agent-review on main; a PR Dependabot opened and alone
 // committed to skips the PR tester (AGENTS.md step 6), so this writes its
 // success instead, from .github/workflows/dependabot-review.yml.
@@ -23,12 +23,21 @@ const CONTEXT = "agent-review";
 const PAGE = 100;
 const short = (sha) => String(sha ?? "").slice(0, 7);
 
+/** The head's agent-review of any state, read page by page so an old one under newer statuses is still found. */
+async function findStatus(get, head) {
+  for (let page = 1; ; page++) {
+    const rows = await get(`/commits/${head}/statuses?per_page=${PAGE}&page=${page}`);
+    const hit = rows.find((s) => s?.context === CONTEXT);
+    if (hit || rows.length < PAGE) return hit;
+  }
+}
+
 /** Run for `argv` ([pr]); returns the exit code. */
 export async function main(argv, { fetch = globalThis.fetch, env = process.env, log = console.log } = {}) {
   const pr = argv[0];
-  const token = env.GITHUB_TOKEN;
-  const repo = env.GITHUB_REPOSITORY;
-  if (!/^\d+$/.test(pr ?? "") || !token || !repo) {
+  const token = env.GITHUB_TOKEN?.trim();
+  const repo = env.GITHUB_REPOSITORY?.trim();
+  if (!/^[1-9]\d*$/.test(pr ?? "") || !token || !repo) {
     log("usage: dependabot-review.mjs <pr>  (env GITHUB_TOKEN, GITHUB_REPOSITORY, RUN_URL)");
     return 64;
   }
@@ -64,7 +73,7 @@ export async function main(argv, { fetch = globalThis.fetch, env = process.env, 
       log(`#${pr}: no agent-review posted: ${rows.length} commits are more than one read can verify; it needs the PR tester.`);
       return 0;
     }
-    const existing = (await get(`/commits/${head}/statuses?per_page=100`)).find((s) => s?.context === CONTEXT);
+    const existing = await findStatus(get, head);
     if (existing) {
       log(`#${pr}: ${short(head)} already has agent-review ${existing.state}; left as it is.`);
       return 0;

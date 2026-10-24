@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Branch protection on main: GitHub itself refuses a merge without
-// `agent-review` success and `CI OK` (961-FR-006, AGENTS.md step 7), for the
+// `agent-review` success and `CI OK` (AGENTS.md step 7), for the
 // owner too (enforce_admins), so the rule no longer rests on the merge gate
 // running in the right session.
 //
@@ -17,9 +17,9 @@ import { spawnRun } from "./lib/gh-rest.mjs";
 
 const REPO = "george-hutanu/motor-fix";
 const PATH = `repos/${REPO}/branches/main/protection`;
-export const REQUIRED = ["CI OK", "agent-review"];
+export const REQUIRED = Object.freeze(["CI OK", "agent-review"]);
 export const BODY = {
-  required_status_checks: { strict: false, contexts: REQUIRED },
+  required_status_checks: { strict: false, contexts: [...REQUIRED] },
   enforce_admins: true,
   required_pull_request_reviews: null,
   restrictions: null,
@@ -29,7 +29,8 @@ export const BODY = {
 
 /** What main's protection lacks, from a GET of it: one entry per missing rule. */
 export function missing(protection) {
-  const contexts = protection?.required_status_checks?.contexts ?? [];
+  const listed = protection?.required_status_checks?.contexts;
+  const contexts = Array.isArray(listed) ? listed : [];
   const lacks = REQUIRED.filter((c) => !contexts.includes(c)).map((c) => `required check ${c}`);
   if (protection?.enforce_admins?.enabled !== true) lacks.push("enforce_admins (administrators are exempt)");
   return lacks;
@@ -69,7 +70,14 @@ export function main(argv, { run = (file, args, opts) => spawnRun({ env: opts.en
     log(`branch-protection: main is not protected as required (${got.stderr.trim() || "no answer"}): run apply.`);
     return 1;
   }
-  const lacks = missing(JSON.parse(got.stdout));
+  let protection;
+  try {
+    protection = JSON.parse(got.stdout);
+  } catch {
+    log(`branch-protection: main is not protected as required (GitHub's answer was not JSON): run apply.`);
+    return 1;
+  }
+  const lacks = missing(protection);
   if (lacks.length) {
     log(`branch-protection: main lacks ${lacks.join(", ")}${verb === "check" ? ": run apply." : "."}`);
     return 1;

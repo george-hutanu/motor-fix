@@ -78,7 +78,8 @@ import { isEntryPoint } from "../scripts/lib/entry.mjs";
 import { isMutationCheck } from "../scripts/lib/mutation-check.mjs";
 import { carriedFrom, carryKind, fetchCarryState, judgeCarry, latestReview, statusesArgs } from "../scripts/pr-test/carry.mjs";
 import { judgeProvenance, readProvenance } from "../scripts/pr-test/provenance.mjs";
-import { committerArgs, hasAgentReview, isDependabot, openedByDependabot, withCommitters } from "./pr-lifecycle-gate.mjs";
+import { isDependabot, openedByDependabot } from "../scripts/lib/dependabot.mjs";
+import { committerArgs, hasAgentReview, withCommitters } from "./pr-lifecycle-gate.mjs";
 
 // An orphaned check attempt: an unfinished check run for which another check
 // run of the same name in the same Actions run (the run id in its details URL)
@@ -164,7 +165,6 @@ export function decideMerge(pr, carry, provenance) {
   const checks = pr.statusCheckRollup ?? [];
   const sha = String(pr.headRefOid ?? "").slice(0, 7);
   const review = checks.find((c) => (c.context ?? c.name) === "agent-review");
-  // An exempt Dependabot PR's success comes from dependabot-review.yml, not pr-qa.yml: the exemption, not its provenance, lets it merge.
   if (hasAgentReview(checks)) return carryRefusal(pr, review, sha, carry) ?? ciRefusal(pr, checks, sha) ?? (isDependabot(pr) ? null : provenanceRefusal(pr, sha, provenance));
   if (!review && isDependabot(pr)) return ciRefusal(pr, checks, sha, { dependabot: true });
   const said = review ? `agent-review is ${String(review.state ?? review.conclusion).toLowerCase()}` : "there is no agent-review status";

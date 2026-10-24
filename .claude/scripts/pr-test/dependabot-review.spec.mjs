@@ -12,7 +12,7 @@ const botCommit = (over = {}) => ({ sha: HEAD, author: { login: 'dependabot[bot]
 /** A fake fetch answering GETs from `routes` (path after the repo → body, or a status number), recording every call. */
 function fakeFetch({ author = 'dependabot[bot]', commits = [botCommit()], statuses = [], fail = {} } = {}) {
   const calls = [];
-  const routes = { '/pulls/7': { user: { login: author }, head: { sha: HEAD } }, '/pulls/7/commits?per_page=100': commits, [`/commits/${HEAD}/statuses?per_page=100`]: statuses };
+  const routes = { '/pulls/7': { user: { login: author }, head: { sha: HEAD } }, '/pulls/7/commits?per_page=100': commits, [`/commits/${HEAD}/statuses?per_page=100&page=1`]: statuses };
   const fetch = async (url, init = {}) => {
     calls.push({ url, method: init.method ?? 'GET', headers: init.headers, body: init.body ? JSON.parse(init.body) : undefined });
     const path = url.slice(API.length);
