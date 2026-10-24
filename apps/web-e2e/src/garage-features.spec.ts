@@ -1,5 +1,10 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
-import { expect, type Page } from '@playwright/test';
+import {
+  type Browser,
+  type BrowserContext,
+  expect,
+  type Page,
+} from '@playwright/test';
 import { Client } from 'pg';
 
 import { ready, signIn } from './accounts.js';
@@ -7,6 +12,7 @@ import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
 // @traces 398-FR-009 398-FR-010 398-FR-012 398-FR-014
+// @traces 531-FR-001 531-FR-005
 
 // A garage and its owner of this file's own: every approved seeded garage has
 // a mechanic, which refuses the team switch (398-FR-005), and switching a
@@ -86,11 +92,24 @@ test.describe("the garage's feature switches @seeded @database", () => {
 
   const menu = (page: Page) => page.getByRole('navigation').first();
 
+  // Each tab is a browser of its own, closed when the test ends, passed or
+  // not, so its live stream never outlives it.
+  let tabs: BrowserContext[] = [];
+  async function tab(browser: Browser) {
+    const context = await browser.newContext();
+    tabs.push(context);
+    return context.newPage();
+  }
+  test.afterEach(async () => {
+    await Promise.all(tabs.map((context) => context.close()));
+    tabs = [];
+  });
+
   test('switching the team off in one tab takes Mecanici away from another open tab, and back', async ({
     browser,
   }) => {
-    const a = await (await browser.newContext()).newPage();
-    const b = await (await browser.newContext()).newPage();
+    const a = await tab(browser);
+    const b = await tab(browser);
     await openDashboard(a, '/app/garage/settings');
     await openDashboard(b, '/app/garage/team');
     await b.evaluate(() => {
@@ -128,6 +147,36 @@ test.describe("the garage's feature switches @seeded @database", () => {
     expect(
       await violations(a, {}, { include: [['mf-feature-switches']] }),
     ).toEqual([]);
+  });
+
+  test('switching day sheets off in one tab takes Programări away from another open tab, and back', async ({
+    browser,
+  }) => {
+    const a = await tab(browser);
+    const b = await tab(browser);
+    await openDashboard(a, '/app/garage/settings');
+    await openDashboard(b, '/app/garage/schedule');
+    const schedule = menu(b).getByRole('link', {
+      exact: true,
+      name: 'Programări',
+    });
+    await expect(schedule).toBeVisible();
+
+    const sheets = a.getByRole('switch', { name: 'Foi de lucru' });
+    await expect(sheets).toBeChecked();
+    await sheets.click();
+    await a
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Oprește' })
+      .click();
+    await expect(sheets).not.toBeChecked();
+
+    await expect(b).toHaveURL('/app/garage', { timeout: 5000 });
+    await expect(schedule).toHaveCount(0, { timeout: 5000 });
+
+    await sheets.click();
+    await expect(sheets).toBeChecked();
+    await expect(schedule).toBeVisible({ timeout: 5000 });
   });
 
   test('cancelling the confirmation leaves the switch on', async ({ page }) => {

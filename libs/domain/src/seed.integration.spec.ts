@@ -42,6 +42,23 @@ const seeded = () =>
     where: { email: { endsWith: '@example.test' } },
   });
 
+// Every table's row count, by name.
+const rowCounts = async () => {
+  const tables = await prisma.$queryRaw<{ name: string }[]>`
+    SELECT table_name AS name FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      AND table_name <> '_prisma_migrations'
+    ORDER BY table_name`;
+  const counts: Record<string, number> = {};
+  for (const { name } of tables) {
+    const [row] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
+      `SELECT count(*) AS n FROM "${name}"`,
+    );
+    counts[name] = Number(row?.n ?? 0);
+  }
+  return counts;
+};
+
 afterAll(() => prisma.$disconnect());
 
 beforeEach(async () => {
@@ -274,6 +291,38 @@ describe('seed', () => {
     expect(seed('test').status).toBe(0);
 
     expect(await seeded()).toEqual(once);
+  });
+
+  // Staging's api seeds on every deploy, after users there changed things.
+  // @traces 1370-release-seed-no-ssh-FR-006
+  it('adds no row on a second staging run and keeps what a user changed', async () => {
+    const password = { SEED_PASSWORD: 'o-parola-din-secrete' };
+    expect(seed('staging', password).status).toBe(0);
+    const driver = await prisma.account.findUniqueOrThrow({
+      include: { identities: true },
+      where: { email: 'sofer@example.test' },
+    });
+    await prisma.account.update({
+      data: { name: 'Șofer Redenumit' },
+      where: { id: driver.id },
+    });
+    await prisma.accountIdentity.updateMany({
+      data: { passwordHash: 'schimbata-de-utilizator' },
+      where: { accountId: driver.id, method: 'password' },
+    });
+    const before = await rowCounts();
+
+    expect(seed('staging', password).status).toBe(0);
+
+    expect(await rowCounts()).toEqual(before);
+    const after = await prisma.account.findUniqueOrThrow({
+      include: { identities: true },
+      where: { id: driver.id },
+    });
+    expect(after.name).toBe('Șofer Redenumit');
+    expect(after.identities.map((i) => i.passwordHash)).toEqual([
+      'schimbata-de-utilizator',
+    ]);
   });
 
   it('leaves two draft garages waiting for verification', async () => {
@@ -924,13 +973,42 @@ describe('seed of a request through to a job', () => {
     ]);
   });
 
+  // @traces 055-FR-001
+  it("gives the staff's garage a team of three on its profile, one card without an account, once however often it runs", async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const team = await prisma.mechanic.findMany({
+      orderBy: { name: 'asc' },
+      select: {
+        accountId: true,
+        name: true,
+        onProfile: true,
+        speciality: true,
+      },
+      where: { garage: { slug: 'atelier-test' } },
+    });
+    expect(
+      team.map((m) => [
+        m.name,
+        m.speciality,
+        m.onProfile,
+        m.accountId !== null,
+      ]),
+    ).toEqual([
+      ['Costel Radu', 'Frâne, suspensie și geometrie', true, false],
+      ['Radu Oferte', 'Diagnoză electrică', true, true],
+      ['Vlad Stan', 'Motor și distribuție', true, true],
+    ]);
+  });
+
   // @traces 343-FR-005
   it("gives the staff's garage a mechanic who may answer quotes beside one who may not, and the oil service ticked for Dacia", async () => {
     expect(seed('test').status).toBe(0);
 
     const mechanics = await prisma.mechanic.findMany({
       select: { account: { select: { email: true } }, canAnswerQuotes: true },
-      where: { garage: { slug: 'atelier-test' } },
+      where: { accountId: { not: null }, garage: { slug: 'atelier-test' } },
     });
     expect(
       mechanics

@@ -21,6 +21,7 @@ export * from './fold';
 export * from './garage-brands.dto';
 export * from './garage-features.dto';
 export * from './garage-hours';
+export * from './garage-mechanics.dto';
 export * from './garage-reports';
 export * from './garage-search.dto';
 export * from './garage-settings.dto';
