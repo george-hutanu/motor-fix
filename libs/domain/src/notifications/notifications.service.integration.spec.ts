@@ -401,8 +401,8 @@ const sentEmail = async (accountId: string, eventId: string, id: string) => {
 };
 
 describe('the event a hard bounce records', () => {
-  // @traces 525-FR-001
-  // @traces 525-FR-003
+  // @traces 525-bounce-domain-event-FR-001
+  // @traces 525-bounce-domain-event-FR-003
   it('writes one account change to the outbox with the bounce', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-e', '<e@relay>');
@@ -419,7 +419,7 @@ describe('the event a hard bounce records', () => {
     ]);
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('writes the change once when two reports of a message arrive together', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-e', '<e@relay>');
@@ -440,7 +440,7 @@ describe('the event a hard bounce records', () => {
     ).toMatchObject({ emailBouncedAt: new Date(DAY) });
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('writes a new event for a bounce of a later message', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-e', '<e@relay>');
@@ -452,7 +452,7 @@ describe('the event a hard bounce records', () => {
     expect(await bounceEvents(andrei)).toHaveLength(2);
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('writes nothing for a message id it never sent', async () => {
     const before = await prisma.outboxEvent.count();
 
@@ -518,8 +518,8 @@ describe('a hard bounce', () => {
       }),
     ).toBe(1);
     expect(await pushFallbacks()).toBe(1);
-    // @traces 525-FR-002
-    // @traces 525-FR-003
+    // @traces 525-bounce-domain-event-FR-002
+    // @traces 525-bounce-domain-event-FR-003
     expect(await bounceEvents(andrei)).toHaveLength(1);
   });
 
@@ -561,7 +561,7 @@ describe('a hard bounce', () => {
     expect(emails).toHaveLength(2);
     expect(emails.every((r) => r.status === 'failed')).toBe(true);
     expect(await pushFallbacks()).toBe(2);
-    // @traces 525-FR-002
+    // @traces 525-bounce-domain-event-FR-002
     expect(await bounceEvents(andrei)).toHaveLength(1);
   });
 });
@@ -925,7 +925,7 @@ describe('e-mails to a listing draft', () => {
     expect(await draftRows(id)).toEqual([
       expect.objectContaining({ failure: 'bounced', status: 'failed' }),
     ]);
-    // @traces 525-FR-002
+    // @traces 525-bounce-domain-event-FR-002
     expect(await prisma.outboxEvent.count()).toBe(events);
   });
 

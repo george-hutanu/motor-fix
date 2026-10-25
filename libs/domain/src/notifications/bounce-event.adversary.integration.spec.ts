@@ -103,7 +103,7 @@ const mark = async (accountId: string) =>
     ?.emailBouncedAt;
 
 describe('a hard bounce at its edges', () => {
-  // @traces 525-FR-001
+  // @traces 525-bounce-domain-event-FR-001
   it('rolls the mark, the audit entry and the event back together when the event cannot be written, and records in full on the next report', async () => {
     const andrei = await account('andrei');
     const rowId = await sentEmail(andrei, 'evt-1', '<r@relay>');
@@ -136,7 +136,7 @@ describe('a hard bounce at its edges', () => {
     ).toMatchObject({ failure: 'bounced', status: 'failed' });
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('writes one event and one audit entry for a grouped e-mail of three rows', async () => {
     const andrei = await account('andrei');
     await quote(andrei, 'evt-1');
@@ -158,7 +158,7 @@ describe('a hard bounce at its edges', () => {
     ).toBe(3);
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('still records when one row of the message is already failed and another is sent', async () => {
     const andrei = await account('andrei');
     await quote(andrei, 'evt-1');
@@ -179,7 +179,7 @@ describe('a hard bounce at its edges', () => {
     expect(await mark(andrei)).toEqual(new Date(DAY));
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('writes nothing when every row of the message already failed for another reason', async () => {
     const andrei = await account('andrei');
     await quote(andrei, 'evt-1');
@@ -199,7 +199,7 @@ describe('a hard bounce at its edges', () => {
     expect(await mark(andrei)).toBeNull();
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('claims nothing for an empty message id even though other rows carry no id', async () => {
     const andrei = await account('andrei');
     await quote(andrei, 'evt-1');
@@ -215,7 +215,7 @@ describe('a hard bounce at its edges', () => {
     ).toBe(0);
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('does not match a message id that differs by whitespace, case or unicode', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-1', '<Abc@relay>');
@@ -228,7 +228,7 @@ describe('a hard bounce at its edges', () => {
     expect(await mark(andrei)).toBeNull();
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('treats a message id with SQL metacharacters as plain text', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-1', '<x@relay>');
@@ -240,7 +240,7 @@ describe('a hard bounce at its edges', () => {
     expect(await mark(andrei)).toBeNull();
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('records once under twenty simultaneous reports of one message', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-1', '<c@relay>');
@@ -253,8 +253,8 @@ describe('a hard bounce at its edges', () => {
     expect(await audits(andrei)).toBe(1);
   });
 
-  // @traces 525-FR-002
-  // @traces 1370-FR-007
+  // @traces 525-bounce-domain-event-FR-002
+  // @traces 1370-release-seed-no-ssh-FR-007
   it('records two events and two audit entries when two different messages to one account bounce together', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-1', '<a@relay>');
@@ -270,7 +270,7 @@ describe('a hard bounce at its edges', () => {
     expect(await mark(andrei)).toEqual(new Date(DAY));
   });
 
-  // @traces 1370-FR-007
+  // @traces 1370-release-seed-no-ssh-FR-007
   it('audits a second bounce at the same time as the first, beside its event', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-1', '<a@relay>');
@@ -283,7 +283,7 @@ describe('a hard bounce at its edges', () => {
     expect(await audits(andrei)).toBe(2);
   });
 
-  // @traces 1370-FR-007
+  // @traces 1370-release-seed-no-ssh-FR-007
   it('keeps the later mark when an earlier bounce is recorded after it', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-1', '<a@relay>');
@@ -299,7 +299,7 @@ describe('a hard bounce at its edges', () => {
     expect(await audits(andrei)).toBe(2);
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('moves the mark to the later time when a second message bounces', async () => {
     const andrei = await account('andrei');
     await sentEmail(andrei, 'evt-1', '<a@relay>');
@@ -313,7 +313,7 @@ describe('a hard bounce at its edges', () => {
     expect(await events(andrei)).toBe(2);
   });
 
-  // @traces 525-FR-001
+  // @traces 525-bounce-domain-event-FR-001
   it('writes the event for the account that owns the message and for no other account', async () => {
     const andrei = await account('andrei');
     const maria = await account('maria');
@@ -327,7 +327,7 @@ describe('a hard bounce at its edges', () => {
     expect(await mark(maria)).toBeNull();
   });
 
-  // @traces 525-FR-002
+  // @traces 525-bounce-domain-event-FR-002
   it('ignores a bell row that carries the same provider id', async () => {
     const andrei = await account('andrei');
     await quote(andrei, 'evt-1');
