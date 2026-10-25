@@ -1,0 +1,60 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+h2,
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+h2 {
+  font-size: var(--mf-size-subheading);
+}
+.muted {
+  color: var(--mf-text-secondary);
+}
+.jobs {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row,
+.skeleton {
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+}
+.row {
+  width: 100%;
+  min-height: var(--mf-tap);
+  padding: var(--mf-space-3);
+  background: var(--mf-panel);
+  color: var(--mf-text);
+  font: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.row[data-status="in_work"] {
+  border-color: var(--mf-amber);
+}
+.row:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+.skeleton {
+  height: 56px;
+  background: var(--mf-line);
+}
+
+/* Body size on a phone, the smaller tokens from a tablet up. */
+@media (min-width: 768px) {
+  .muted {
+    font-size: var(--mf-size-small);
+  }
+}

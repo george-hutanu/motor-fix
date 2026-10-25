@@ -32,7 +32,22 @@
     "title": "Features"
   },
   "home": {
-    "mechanic": "Your jobs will appear here."
+    "ownJobs": {
+      "daySheet": "My day sheet",
+      "load": {
+        "done": {
+          "one": "{count} done",
+          "other": "{count} done"
+        },
+        "jobs": {
+          "one": "{count} job today",
+          "other": "{count} jobs today"
+        }
+      },
+      "next": "Next booking: {when} · {car}",
+      "none": "No jobs today",
+      "title": "My jobs"
+    }
   },
   "invite": {
     "canAnswerQuotes": "Can answer quote requests",

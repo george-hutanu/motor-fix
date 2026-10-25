@@ -4,6 +4,7 @@ import {
   computed,
   inject,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import type { Capability } from '@motor-fix/contracts/capabilities';
 import { formatDayMonth, I18n, TranslatePipe } from '@motor-fix/i18n';
 
@@ -12,6 +13,7 @@ import { garageOf, Session } from '../../session';
 import { VerificationProgress } from '../../verification-progress/verification-progress';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 import { GarageRequestsPanel } from '../garage-requests-panel/garage-requests-panel';
+import { OwnJobsSection } from '../own-jobs-section/own-jobs-section';
 import { SuspendedBanner } from '../suspended-banner/suspended-banner';
 
 // The garage's Panou, each section behind a capability of the table: the
@@ -19,13 +21,16 @@ import { SuspendedBanner } from '../suspended-banner/suspended-banner';
 // whoever holds its profile, the legal check, suspended too, for whoever holds
 // its switches; the four newest waiting requests for whoever may answer
 // quotes; the suspension banner above it all while the garage is suspended.
-// Someone who holds none of them reads that their jobs will appear here. A
-// draft garage sees only where its verification stands.
+// A mechanic, who holds no garage-wide section, sees her own jobs below the
+// requests, with a link to her day sheet while she holds it and the garage
+// keeps day sheets on. A draft garage sees only where its verification stands.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     GarageLegalCheck,
     GarageRequestsPanel,
+    OwnJobsSection,
+    RouterLink,
     SuspendedBanner,
     TranslatePipe,
     VerificationProgress,
@@ -53,11 +58,17 @@ export class GarageHome {
       (status === 'approved' || status === 'suspended')
     );
   });
-  // No garage-wide section: the own jobs are all there is (their sections
-  // come with their story).
-  protected readonly ownJobsOnly = computed(
+  // No garage-wide section: her own jobs are her Panou.
+  protected readonly ownJobs = computed(
     () =>
-      !this.holds('garage.profile') && !this.holds('garage.feature_switches'),
+      !this.holds('garage.profile') &&
+      !this.holds('garage.feature_switches') &&
+      this.holds('garage.own_jobs'),
+  );
+  protected readonly daySheet = computed(
+    () =>
+      this.holds('garage.schedule') &&
+      this.garage()?.features?.['day_sheets'] !== false,
   );
   protected readonly checkedLine = computed(() => {
     const garage = this.garage();
