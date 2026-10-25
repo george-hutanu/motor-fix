@@ -10,8 +10,6 @@ import { keepSeededLanguage } from './seeded-language.js';
 // @traces 074-FR-002
 // @traces 074-FR-006
 // @traces 074-FR-014
-// @traces 074-SC-001
-// @traces 074-SC-003
 
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -99,8 +97,9 @@ test.describe('new reviews on the garage dashboard @seeded', () => {
       await expect(top).toContainText(text, { timeout: 5_000 });
       await expect(top.locator('[data-mechanic]')).toHaveText('Vlad S.');
       await expect(top.locator('[data-new]')).toHaveText('Nou');
-      // The stored figures follow once the worker has recomputed them.
-      await expect(figure).not.toHaveText(was, { timeout: 15_000 });
+      // The worker recomputes the stored figures and announces them, within
+      // the same 5 seconds.
+      await expect(figure).not.toHaveText(was, { timeout: 5_000 });
       expect(reloads).toBe(0);
     } finally {
       await other.close();
