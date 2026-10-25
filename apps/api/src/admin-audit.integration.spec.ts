@@ -8,6 +8,7 @@ import {
   StorageService,
   signAccessToken,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
@@ -527,7 +528,7 @@ beforeAll(async () => {
     })
   ).id;
   authorization = `Bearer ${signAccessToken({ accountId: admin, role: 'admin' }, TEST_TOKEN_SECRET, Date.now())}`;
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   // The platform rule fixture switched maintenance on; other suites share the database.

@@ -13,6 +13,10 @@ function holderName() {
   return `turn ${path ? basename(path) : 'outside jest'}`.slice(0, 63);
 }
 
+// How long a take may wait: the turn goes out in order, so a file waits for
+// every file queued before it across the api, domain and mcp suites.
+export const TURN_WAIT_MS = 20 * 60_000;
+
 // One spec file at a time touches the shared tables. A take queues on the
 // lock, so the turn goes out in the order it was asked for. A queued
 // pg_advisory_lock outlives a hook that timed out on it, so release() calls
@@ -28,25 +32,30 @@ export function databaseTurn(databaseUrl: string) {
     }),
   });
   let released = false;
-  let waiting: { pid: number; done: Promise<unknown> } | undefined;
-  const callOff = async (pid: number) => {
-    const other = new Client({ connectionString: databaseUrl });
-    await other.connect();
+  let waiting:
+    | { caller: Client; done: Promise<unknown>; pid: number }
+    | undefined;
+  const callOff = async ({ caller, pid }: { caller: Client; pid: number }) => {
+    await caller.connect();
     try {
-      await other.query('SELECT pg_cancel_backend($1)', [pid]);
+      await caller.query('SELECT pg_cancel_backend($1)', [pid]);
     } finally {
-      await other.end();
+      await caller.end();
     }
   };
   return {
     release: async () => {
       released = true;
       const pending = waiting;
-      if (pending) {
-        await callOff(pending.pid);
-        await pending.done.catch(() => undefined);
+      try {
+        if (pending) {
+          await callOff(pending);
+          await pending.done.catch(() => undefined);
+        }
+      } finally {
+        // Closing the session also drops a take the call-off missed.
+        await lock.$disconnect();
       }
-      await lock.$disconnect();
     },
     take: async () => {
       if (released) return;
@@ -56,7 +65,10 @@ export function databaseTurn(databaseUrl: string) {
       const done = Promise.resolve(
         lock.$queryRaw`SELECT 1 AS taken FROM pg_advisory_lock(79079)`,
       );
-      waiting = { done, pid: Number(session?.pid) };
+      // Made before the wait: release() may run in the file's teardown, where
+      // a new client can no longer load the socket module it needs.
+      const caller = new Client({ connectionString: databaseUrl });
+      waiting = { caller, done, pid: Number(session?.pid) };
       try {
         await done;
       } catch (error) {

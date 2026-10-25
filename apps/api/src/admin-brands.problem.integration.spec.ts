@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
@@ -21,7 +22,7 @@ beforeAll(async () => {
     roles: ['admin'],
   });
   authorization = `Bearer ${signAccessToken({ accountId: id, role: 'admin' }, TEST_TOKEN_SECRET, Date.now())}`;
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(() => api.stop());
 
