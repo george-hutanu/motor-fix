@@ -54,6 +54,7 @@ features:
   - 094-itp-reminders
   - 074-garage-reviews
   - 1257-quote-reminders
+  - 1258-driver-cancel
 ---
 
 # Capability: Notifications
@@ -793,9 +794,9 @@ _From 389-confirm-booking-lift-mechanic._
 
 _From 428-close-on-account-closed._
 
-### 428-FR-010 — The notifications module MUST react to `booking.cancelled` with reason `driver_account_closed` with a fan-out that sends BOOKING_CANCELLED once to every owner and receptionist of the booking's garage and to the booking's mechanic when that mechanic has an account, keyed by the outbox event id; the driver is not told. A `booking.cancelled` with another reason (the cancellation stories' own) is left to its owning story.
+### 1258-FR-005 — The notifications module MUST react to `booking.cancelled` with side `driver` (modifying 428-FR-010, whose fan-out today handles `driver_account_closed` only and logs every other reason as not its own) by sending BOOKING_CANCELLED once per outbox event to every owner and receptionist of the booking's garage and to the booking's mechanic when that mechanic has an account; the driver is not told (the driver did it). The type keeps its catalogue entry (event; e-mail, push, WhatsApp; `bookings` group; always sent, so its e-mail is locked and push and WhatsApp follow the recipient's choices), and quiet hours do not hold it: a booking change goes at any time.
 
-_From 428-close-on-account-closed._
+_From 1258-driver-cancel._
 
 ### 428-FR-011 — REQUEST_CANCELLED and BOOKING_CANCELLED render through the existing templates; where the owning story (#147 for REQUEST_CANCELLED; #1258 and #203 for BOOKING_CANCELLED) has not written texts yet, the generic bell and e-mail text fills in, as 195-FR-010 allows. The garages are told at any time: quiet hours do not hold a booking change.
 
@@ -950,6 +951,14 @@ _From 1257-quote-reminders._
 
 _From 1257-quote-reminders._
 
+### 1258-FR-006 — BOOKING_CANCELLED MUST get the driver-cancel texts this story owns (428-FR-011), in Romanian and English, from a template in the templates folder with its example values: bell and push "<driver> a anulat programarea · <car> · <slot>" / "<driver> cancelled the booking · <car> · <slot>", e-mail subject "Programare anulată: <car>, <slot>" / "Booking cancelled: <car>, <slot>", the e-mail body naming the driver (short name), the car, the slot, the reason's label ("Mi s-au schimbat planurile", "Am găsit alt service", "S-a rezolvat problema", "Altceva" / "Plans changed", "Found another garage", "Problem solved", "Other"), the note when there is one (rendered as plain, escaped text, never as markup; the bell carries it whole, the push never), and the line "Anulare târzie (sub 2 ore înainte), fără penalizare." / "Late cancellation (under 2 hours before), no penalty." when `late` is true; opening one lands on Oferte trimise. The account-closed variant's text is unchanged.
+
+_From 1258-driver-cancel._
+
+### 1258-FR-007 — REQUEST_CANCELLED for a driver's cancel MUST reach every owner and receptionist of each recipient garage once through the existing `request.cancelled` fan-out (428-FR-009), with `reason` `driver`; the fan-out needs no change beyond the test for this reason. Its texts stay #147's: until that story writes them the generic bell and e-mail text fills in, as 428-FR-011 allows.
+
+_From 1258-driver-cancel._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -976,3 +985,4 @@ _From 1257-quote-reminders._
 - `138-FR-012` — superseded by `142-FR-007` (2026-10-24)
 - `032-FR-006` — superseded by `094-FR-013` (2026-10-25)
 - `032-FR-007` — superseded by `094-FR-014` (2026-10-25)
+- `428-FR-010` — superseded by `1258-FR-005` (2026-10-25)
