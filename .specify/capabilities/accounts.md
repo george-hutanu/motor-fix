@@ -52,6 +52,7 @@ features:
   - 947-faro-consent-journeys
   - 003-admin-account-actions
   - 1373-seed-status-identity
+  - 1156-retention-job
 ---
 
 # Capability: Accounts
@@ -1352,6 +1353,10 @@ _From 1373-seed-status-identity._
 ### 1373-FR-007 — Tests come first: integration tests (`libs/domain/src/seed.integration.spec.ts`) for a `deleted` seeded account, one with two password identities, the day's count at 0 after a seed and the summary line; a unit test of the pre-deploy command run split into words with no shell, each carrying `// @traces 1373-FR-<n>`.
 
 _From 1373-seed-status-identity._
+
+### 1156-FR-004 — The job MUST delete every sign-in code, phone-change code, account token (every purpose) and refresh token whose expiry has passed, used or not, and every staff invite in status `sent` whose expiry has passed; `accepted` and `revoked` invites stay.
+
+_From 1156-retention-job._
 
 ## Retired
 

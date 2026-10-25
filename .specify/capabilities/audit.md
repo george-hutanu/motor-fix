@@ -16,6 +16,7 @@ features:
   - 105-brand-list-admin
   - 140-account-delete-export
   - 003-admin-account-actions
+  - 1156-retention-job
 ---
 
 # Capability: Audit history
@@ -64,9 +65,9 @@ _From 220-requests-quotes-bookings._
 
 _From 390-audit-history._
 
-### 390-FR-011 — The history MUST be append-only: the database refuses any update, delete or truncate of an entry, whoever asks.
+### 1156-FR-008 — The database MUST keep refusing every delete and truncate of an audit entry and every update of one except the exact anonymising write of FR-007 (every column other than actor id, actor name, old value, new value and text unchanged, actor id, old value, new value and text NULL and actor name the marker), whoever asks, the job's own database user included; one schema migration makes the change and leaves every existing entry as it is.
 
-_From 390-audit-history._
+_From 1156-retention-job._
 
 ### 390-FR-012 — The history MUST be stored apart from the System status log; this writer never writes technical events or errors.
 
@@ -244,6 +245,18 @@ _From 140-account-delete-export._
 
 _From 003-admin-account-actions._
 
+### 1156-FR-007 — The job MUST anonymise every audit entry whose clock has run for more than the configured period. Each entry has one owner, by precedence: its garage when it carries a garage id (clock from the garage's closure); else the account it is about when its subject is an account (from that account's deletion); else its actor's account (from that deletion); else its own time. An entry whose owner is still active is untouched. Anonymising MUST set the actor id, old value, new value and text to NULL, set the actor name to the fixed marker `anonymised` (a named constant of the retention config), and leave every other column as it was. An entry already anonymised MUST NOT be written or counted again.
+
+_From 1156-retention-job._
+
+### 1156-FR-009 — Closure MUST be read as: an account is closed at the time of its `account_deleted` audit entry (its last activity, or creation, when there is none); a garage is closed at its `closed_at`, one nullable column this story's migration adds to the garage and does not write (ST-429 sets and clears it). A suspended garage or account is not closed.
+
+_From 1156-retention-job._
+
+### 1156-FR-012 — A decision page `docs/explanation/decisions/od-34.md` in the specs repo MUST record how audit rows age out: the options (partition drop, archive then delete, a trigger exception for a retention role, anonymise in place) and the choice (anonymise in place, owner 2026-10-11) with its reasons, and the data inventory's "Retention and lifetimes" MUST name the sweep instead of "no sweep".
+
+_From 1156-retention-job._
+
 ## Retired
 
 - `390-FR-009` — superseded by `220-FR-018` (2026-10-08)
@@ -252,3 +265,4 @@ _From 003-admin-account-actions._
 - `391-FR-010` — superseded by `469-FR-004` (2026-10-23)
 - `391-FR-006` — superseded by `003-FR-004` (2026-10-24)
 - `391-FR-009` — superseded by `003-FR-004` (2026-10-24)
+- `390-FR-011` — superseded by `1156-FR-008` (2026-10-24)

@@ -12,7 +12,12 @@ const meter = () => metrics.getMeter('motorfix');
 // a failure on the job's span. A failure that will be retried counts as
 // `retried`; the final one counts as `failed` and ends the span in error.
 // The worker's own listeners and processor write the error log lines.
-export function observeWorker(worker: Worker): void {
+// `jobNames` start at 0 completed, so an alert on `increase` sees the first
+// completion after a restart (a counter's first point is not an increase).
+export function observeWorker(
+  worker: Worker,
+  options: { jobNames?: readonly string[] } = {},
+): void {
   if (!telemetryStarted() || observed.has(worker)) return;
   observed.add(worker);
   const jobs = meter().createCounter('motorfix_jobs_total', {
@@ -23,6 +28,8 @@ export function observeWorker(worker: Worker): void {
     description: 'Time a job attempt took',
     unit: 's',
   });
+  for (const job_name of options.jobNames ?? [])
+    jobs.add(0, { job_name, outcome: 'completed', queue: worker.name });
   const record = (job: Job, outcome: string) => {
     const labels = { job_name: job.name, queue: worker.name };
     jobs.add(1, { ...labels, outcome });
