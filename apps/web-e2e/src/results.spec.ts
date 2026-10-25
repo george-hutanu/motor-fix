@@ -1550,6 +1550,9 @@ test.describe('Results measured from where the driver is @seeded', () => {
       await expect(
         page.locator('mf-result-card').filter({ hasText: 'Service Mărăști' }),
       ).toContainText(km);
+      // The live map draws the marker once asked for; the static image's own
+      // marker goes with it.
+      await openMap(page);
 
       const marker = page.locator('.here');
       await expect(marker).toHaveCount(1);
@@ -1605,7 +1608,8 @@ test.describe('Results measured from where the driver is @seeded', () => {
     await ownMap(answered);
     await answered.setViewportSize({ height: 800, width: 320 });
     await answered.goto('/en/garages?brand=dacia');
-    await expect(answered.locator('.here')).toBeVisible();
+    // The static image marks the place until the live map is asked for.
+    await expect(answered.locator('mf-static-map .here')).toBeVisible();
     expect(
       await answered.evaluate(() => document.documentElement.scrollWidth > 320),
     ).toBe(false);
@@ -1654,8 +1658,8 @@ test.describe('Results with the location refused @seeded', () => {
     await expect(field).toBeVisible();
     await expect(field).toBeFocused();
     await expect(page.locator('mf-result-card')).toHaveCount(0);
-    // The "you are here" marker waits off the map, hidden, until a place is known.
-    await expect(page.locator('.here')).toBeHidden();
+    // The static image marks no place until one is known.
+    await expect(page.locator('mf-static-map .here')).toHaveCount(0);
     expect(page.url()).not.toContain('near=');
 
     await field.fill('Cluj');
@@ -1665,7 +1669,7 @@ test.describe('Results with the location refused @seeded', () => {
     await expect(
       page.locator('mf-result-card').filter({ hasText: 'Service Mărăști' }),
     ).toContainText('1,0 km');
-    await expect(page.locator('.here')).toBeVisible();
+    await expect(page.locator('mf-static-map .here')).toBeVisible();
     await expect(page.locator('.summary .area')).toHaveText(
       'în 25 km de Cluj-Napoca',
     );

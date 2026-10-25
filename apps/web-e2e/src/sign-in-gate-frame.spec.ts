@@ -76,8 +76,9 @@ async function sessionEndsWhileWorking(page: Page) {
 
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Sign in' });
 const panel = (page: Page) => dialog(page).locator('mf-overlay-panel');
-const menu = (page: Page) =>
-  page.locator('a[href^="/app/driver/"]:visible').count();
+// Counted whether seen or not: on a phone the tab bar turns invisible under
+// the sign-in sheet and keeps its links (1127-FR-004).
+const menu = (page: Page) => page.locator('a[href^="/app/driver/"]').count();
 
 async function openGate(page: Page) {
   await sessionEndsWhileWorking(page);
