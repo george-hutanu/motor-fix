@@ -121,6 +121,7 @@ features:
   - 456-activity-log-test-cleanup
   - 1185-accent-search
   - 1188-tail-latency
+  - 1349-cockpit-chart-settle
 ---
 
 # Capability: Platform
@@ -2950,6 +2951,14 @@ _From 1193-fast-nav._
 ### 456-FR-005 — The change MUST add no endpoint, queue, outside call, product action, schema migration or user-facing text; production and staging deploys keep their current role and connection string.
 
 _From 456-activity-log-test-cleanup._
+
+### 1349-FR-001 — A harness spec MUST run the sweep twice over a Chart.js chart page that animates unless reduced motion is asked, and fail when `diffShots` finds any changed region between the two runs' shots.
+
+_From 1349-cockpit-chart-settle._
+
+### 1349-FR-002 — The same spec MUST fail when the chart in a shot is not at its final frame: the page did not see reduced motion, or the tallest bar's top is not drawn in the shot.
+
+_From 1349-cockpit-chart-settle._
 
 ## Retired
 

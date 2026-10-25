@@ -1,4 +1,5 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -24,7 +25,6 @@ import { verifyAccessToken } from '../access-token';
 import { AccountsService } from '../accounts.service';
 import { AUTH_REDIS } from '../attempts';
 import { AuthModule } from '../auth.module';
-import type { Role } from '../capabilities';
 import { MAINTENANCE } from '../maintenance';
 import { serialDatabase } from '../serial-db.testing';
 

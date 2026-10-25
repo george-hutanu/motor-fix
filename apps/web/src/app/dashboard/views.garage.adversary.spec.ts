@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { CanMatchFn } from '@angular/router';
+import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import type { MeDto } from '@motor-fix/data-access';
 
 import { garageOf, Session } from './session';
@@ -70,6 +71,44 @@ describe('the garage dashboard views under odd input', () => {
       'settings',
       'history',
     ]);
+  });
+
+  // @traces 102-FR-004
+  it('still lists eleven views when the table gives a role fewer of them', () => {
+    const none = {
+      canAnswerQuotes: false,
+      canMoveBookings: false,
+      canRecordFinalPrice: false,
+    };
+    expect(DASHBOARDS.garage.views).toHaveLength(11);
+    expect(
+      paths(allowedViews('garage', capabilitiesOf('mechanic', none))),
+    ).toHaveLength(5);
+  });
+
+  // @traces 102-FR-004
+  it('lets a mechanic through to Programări and refuses her the owner-only views', () => {
+    const mechanic = me({
+      capabilities: capabilitiesOf('mechanic', {
+        canAnswerQuotes: false,
+        canMoveBookings: false,
+        canRecordFinalPrice: false,
+      }),
+      garageAccess: [access({ role: 'mechanic' })],
+    });
+    for (const [path, allowed] of [
+      ['schedule', true],
+      ['jobs', true],
+      ['history', true],
+      ['requests', false],
+      ['team', false],
+      ['prices', false],
+      ['reviews', false],
+      ['profile', false],
+    ] as const) {
+      expect([path, matches(path, mechanic)]).toEqual([path, allowed]);
+      TestBed.resetTestingModule();
+    }
   });
 
   // @traces 097-FR-002

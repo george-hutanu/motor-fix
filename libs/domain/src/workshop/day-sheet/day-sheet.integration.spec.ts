@@ -196,7 +196,7 @@ describe('the mechanic’s day sheet read', () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 
-  it('lets the receptionist read it and no mechanic or driver', async () => {
+  it('lets the receptionist read it and no driver', async () => {
     const t = await team('Atelier Dinamo');
     const costel = await mechanic(t, 'Costel Ionescu');
 
@@ -209,21 +209,52 @@ describe('the mechanic’s day sheet read', () => {
     expect(desk.mechanic.id).toBe(costel.id);
     await expect(
       service.get(
-        garageActor(t.answering, t.garage.id, 'mechanic', {
-          canAnswerQuotes: true,
-        }),
-        { mechanic: costel.id },
-        NOW,
-      ),
-    ).rejects.toMatchObject({ status: 404 });
-    await expect(
-      service.get(
         garageActor(t.owner, t.garage.id, 'driver'),
         { mechanic: costel.id },
         NOW,
       ),
     ).rejects.toMatchObject({ status: 404 });
   });
+
+  // @traces 102-FR-008
+  it.each([
+    ['without', false],
+    ['with', true],
+  ])(
+    'gives a mechanic her own sheet and no one else’s, %s the right to answer quotes',
+    async (_, canAnswerQuotes) => {
+      const t = await team('Atelier Dinamo');
+      const costel = await mechanic(t, 'Costel Ionescu');
+      const hers = await world.booked(
+        t.garage.id,
+        '2026-10-09T06:00:00Z',
+        'confirmed',
+        { mechanicId: t.answeringMechanic.id },
+      );
+      const self = garageActor(t.answering, t.garage.id, 'mechanic', {
+        canAnswerQuotes,
+      });
+
+      for (const asked of [t.answeringMechanic.id, 'Fixer', 'fixer']) {
+        const sheet = await service.get(self, { mechanic: asked }, NOW);
+        expect(sheet.mechanic.id).toBe(t.answeringMechanic.id);
+        expect(sheet.entries.map((e) => e.id)).toEqual([hers.id]);
+      }
+      for (const asked of [costel.id, 'Costel', 'Hand', 'nobody']) {
+        const refusal = await service
+          .get(self, { mechanic: asked }, NOW)
+          .catch((error: { getStatus(): number; getResponse(): unknown }) => [
+            error.getStatus(),
+            error.getResponse(),
+          ]);
+        expect(refusal).toEqual([
+          403,
+          expect.objectContaining({ code: 'forbidden' }),
+        ]);
+        expect(JSON.stringify(refusal)).not.toMatch(/Costel|Hand|mechanics/);
+      }
+    },
+  );
 
   it('shows no plate and changes nothing', async () => {
     const t = await team('Atelier Dinamo');

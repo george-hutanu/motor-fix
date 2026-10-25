@@ -455,8 +455,8 @@ describe('the sweep measures the layout', async () => {
 });
 
 describe('the sweep\'s screenshots', () => {
-  // The headless shell leaves a WebGL map blank under a sticky bar that reaches past the viewport (ST-1351 QA
-  // laps 1 and 3: the results map at 390 x 844 with the consent bar); Chromium's own headless mode draws it whole.
+  // The headless shell leaves a WebGL map blank under a sticky bar that reaches past the viewport (two QA
+  // laps: the results map at 390 x 844 with the consent bar); Chromium's own headless mode draws it whole.
   it('runs in Chromium\'s own headless mode, not the headless shell', () => {
     assert.deepEqual(LAUNCH_OPTIONS, { channel: 'chromium' });
   });

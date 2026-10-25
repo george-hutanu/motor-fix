@@ -1,5 +1,6 @@
 // @traces 392-FR-001 392-FR-002 392-FR-003 392-FR-004 392-FR-005 392-FR-006 392-FR-007 392-FR-008 392-FR-010 522-FR-001 561-FR-001 561-FR-002 561-FR-003 561-FR-004
 import type { OutsideChannel } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
@@ -18,7 +19,6 @@ import {
   testPhoneConfig,
 } from './notifications.testing';
 import { AuditService } from '../audit/audit.service';
-import type { Role } from '../auth/capabilities';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { until } from '../waits.testing';
 

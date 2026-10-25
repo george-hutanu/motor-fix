@@ -15,6 +15,7 @@ export const CAPABILITIES = [
   'driver.settings',
   'garage.requests',
   'garage.schedule',
+  'garage.move_bookings',
   'garage.final_price',
   'garage.own_jobs',
   'garage.reviews',
@@ -59,6 +60,7 @@ const TABLE: Record<Role, readonly Capability[]> = {
   garage: [
     'garage.requests',
     'garage.schedule',
+    'garage.move_bookings',
     'garage.final_price',
     'garage.own_jobs',
     'garage.reviews',
@@ -68,19 +70,22 @@ const TABLE: Record<Role, readonly Capability[]> = {
     'garage.feature_switches',
     'garage.audit_history',
   ],
-  mechanic: ['garage.own_jobs', 'garage.audit_history'],
+  mechanic: ['garage.own_jobs', 'garage.schedule', 'garage.audit_history'],
   receptionist: [
     'garage.requests',
     'garage.schedule',
+    'garage.move_bookings',
     'garage.final_price',
     'garage.own_jobs',
+    'garage.reviews',
+    'garage.profile',
     'garage.audit_history',
   ],
 };
 
 const MECHANIC_PERMISSIONS: [keyof Permissions, Capability][] = [
   ['canAnswerQuotes', 'garage.requests'],
-  ['canMoveBookings', 'garage.schedule'],
+  ['canMoveBookings', 'garage.move_bookings'],
   ['canRecordFinalPrice', 'garage.final_price'],
 ];
 
@@ -89,7 +94,8 @@ export function capabilitiesOf(
   permissions: Permissions,
 ): Capability[] {
   // A role outside the table (the system's own actor) holds nothing.
-  if (role !== 'mechanic') return [...(TABLE[role] ?? [])];
+  if (role !== 'mechanic')
+    return Object.hasOwn(TABLE, role) ? [...TABLE[role]] : [];
   return [
     ...TABLE.mechanic,
     ...MECHANIC_PERMISSIONS.filter(([p]) => permissions?.[p] === true).map(
