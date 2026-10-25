@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 
 import { hydrated, ready, signIn } from './accounts.js';
+import { answerConsent } from './consent-bar.js';
 import { test } from './fixtures.js';
 
 // The seeded driver with a Dacia Logan, and the garage that works on Dacia
@@ -251,6 +252,10 @@ test.describe('the core flow by keyboard alone @seeded', () => {
     await page.setViewportSize({ height: 568, width: 320 });
     // Results search near a place: Militari, where the seeded Dacia garages are.
     await ready(page, '/ro/garages?brand=dacia&near=44.435,26.015');
+    // The consent bar arriving after the first paint shortens the stage at
+    // 320 by 568 and lowers the sheet mid-walk, taking the focused field out
+    // of view (run 40145209419): answered first, the walk runs on a still page.
+    await answerConsent(page);
 
     const results = page.getByRole('list', { name: 'Service‑uri găsite' });
     const first = results

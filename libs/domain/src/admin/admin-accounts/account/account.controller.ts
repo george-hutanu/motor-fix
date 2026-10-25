@@ -27,8 +27,8 @@ import { isUUID } from 'class-validator';
 
 import { AccountService } from './account.service';
 import { CurrentActor, Requires } from '../../../auth/actor.guard';
+import { refusal } from '../../../auth/http-refusal';
 import type { Actor } from '../../../auth/policy';
-import { refusal } from '../../../auth/sign-up.service';
 
 const NOT_FOUND =
   'not_found: not an admin, or no such account (unknown, malformed or deleted id)';

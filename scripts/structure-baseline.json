@@ -1,9 +1,5 @@
 {
   "_comment": "Folder-rule violations that predate the check (scripts/structure-check.ts). Shrink only: remove an entry in the change that fixes it; never add one.",
   "components": [],
-  "submodules": [
-    "libs/domain/src/catalogue/brands.controller.ts",
-    "libs/domain/src/catalogue/brands.service.ts",
-    "libs/domain/src/catalogue/brands.ts"
-  ]
+  "submodules": []
 }

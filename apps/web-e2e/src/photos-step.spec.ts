@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 
 import { hydrated, ownMap } from './accounts.js';
+import { answerConsent } from './consent-bar.js';
 import { MAILBOX, test } from './fixtures.js';
 
 const DRAFT_LINK =
@@ -81,6 +82,7 @@ async function toStep5(page: Page, nav: 'Pași' | 'Steps') {
 
 async function toPhotos(page: Page, email: string) {
   await hydrated(page, '/ro/list-your-garage');
+  await answerConsent(page);
   await page.getByLabel('E‑mail').fill(email);
   await page.getByLabel('E‑mail').blur();
   await toStep5(page, 'Pași');

@@ -213,3 +213,32 @@ describe('the delete-account row in Setări', () => {
     );
   });
 });
+
+// @traces 140-FR-015
+describe('the delete-account row inside the account panel', () => {
+  it('heads the row one level down and drops its own card', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: Session, useValue: { current: signal(DRIVER) } },
+        { provide: Overlays, useValue: { open: jest.fn() } },
+        {
+          provide: SupportService,
+          useValue: { supportContactControllerContact: async () => ({}) },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(DeleteAccount);
+    fixture.componentRef.setInput('inPanel', true);
+    fixture.autoDetectChanges();
+    await settle();
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.classList).toContain('in-panel');
+    expect(element.querySelector('h2')).toBeNull();
+    expect(element.querySelector('h3')?.textContent?.trim()).toBe(
+      'Ștergerea contului',
+    );
+    expect(button(element).textContent?.trim()).toBe('Șterge contul');
+  });
+});

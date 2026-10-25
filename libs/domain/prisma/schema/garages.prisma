@@ -36,6 +36,8 @@ enum MobileLegalForm {
 
 model Garage {
   id                         String                                 @id @default(uuid()) @db.Uuid
+  // name, address, seatAddress and cityName: a trigger in the migration
+  // stores the comma letters ș ț for the cedilla ones ş ţ, whoever writes.
   name                       String
   slug                       String                                 @unique
   status                     GarageStatus                           @default(draft)
@@ -44,6 +46,8 @@ model Garage {
   // every valid re-check.
   lastCheckedOn              DateTime?                              @map("last_checked_on") @db.Date
   createdAt                  DateTime                               @default(now()) @map("created_at") @db.Timestamptz(3)
+  // When the garage closed; NULL while open. The closure story writes it; retention reads it.
+  closedAt                   DateTime?                              @map("closed_at") @db.Timestamptz(3)
   verificationFiles          VerificationFile[]
   rechecks                   Recheck[]
   reports                    GarageReport[]

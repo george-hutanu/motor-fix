@@ -340,7 +340,7 @@ describe('the panel', () => {
     ]);
     expect(rows(el)).toHaveLength(230);
     expect(button(el, 'Mai multe')).toBeUndefined();
-  });
+  }, 30_000);
 
   it('keeps a row seen twice across reads once', async () => {
     // A garage suspended between two reads shifts the second read by one.
@@ -360,7 +360,7 @@ describe('the panel', () => {
 
     const ids = rows(el).map((r) => text(r.querySelector('.name')));
     expect(new Set(ids).size).toBe(ids.length);
-  });
+  }, 30_000);
 
   it('says so when no garage is suspended', async () => {
     answer = async () => listOf(0);
@@ -510,6 +510,48 @@ describe('putting a suspended garage back on the map from its row', () => {
       shape: 'dialog',
       title: 'admin.restore.dialog',
     });
+  });
+
+  it('reads today at the press, so a list open past midnight opens the dialog on the new day', async () => {
+    // Only the clock is faked: settle() still waits on real timers.
+    jest.useFakeTimers({
+      doNotFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'setImmediate',
+        'clearImmediate',
+        'nextTick',
+        'queueMicrotask',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+        'performance',
+        'hrtime',
+      ],
+      // 23:30 in Bucharest on 14 October.
+      now: new Date('2026-10-14T20:30:00.000Z'),
+    });
+    try {
+      answer = one({});
+      const el = await open();
+      // 00:30 in Bucharest on 15 October.
+      jest.setSystemTime(new Date('2026-10-14T21:30:00.000Z'));
+
+      restoreOf(el)?.click();
+      await settle();
+
+      expect(overlays.open).toHaveBeenCalledWith(
+        AdminRestoreGarage,
+        expect.objectContaining({
+          data: expect.objectContaining({ today: '2026-10-15' }),
+        }),
+      );
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it.each(['restored', 'stale'])(

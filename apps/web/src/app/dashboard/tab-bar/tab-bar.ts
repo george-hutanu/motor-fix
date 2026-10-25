@@ -1,5 +1,6 @@
 import {
   afterNextRender,
+  afterRenderEffect,
   Component,
   DestroyRef,
   ElementRef,
@@ -30,14 +31,25 @@ export class DashboardTabBar {
   // An entry that opens a task over the view, not a page.
   readonly act = output<DashboardView>();
 
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
   constructor() {
-    const host = inject<ElementRef<HTMLElement>>(ElementRef);
     const destroyRef = inject(DestroyRef);
+    // Tabs that arrive after the current one was marked (a garage's feature
+    // switches, the counts' chips) can push it out of sight: reveal it again.
+    afterRenderEffect(() => {
+      this.views();
+      this.counts();
+      const tab = this.host.nativeElement.querySelector<HTMLElement>(
+        'a[aria-current="page"]',
+      );
+      if (tab) this.reveal(tab);
+    });
     // A phone turned sideways and back leaves the bar scrolled where the
     // wide screen clamped it, so a change of width reveals the current tab
     // again. Height alone (the browser's address bar) leaves it be.
     afterNextRender(() => {
-      const nav = host.nativeElement.querySelector('nav');
+      const nav = this.host.nativeElement.querySelector('nav');
       if (!nav || typeof ResizeObserver === 'undefined') return;
       let width: number | undefined;
       const observer = new ResizeObserver(([entry]) => {

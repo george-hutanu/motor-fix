@@ -26,8 +26,8 @@ import {
 
 import { ListingSubmitService } from './submit.service';
 import { CurrentActor } from '../../../auth/actor.guard';
+import { refusal } from '../../../auth/http-refusal';
 import type { Actor } from '../../../auth/policy';
-import { refusal } from '../../../auth/sign-up.service';
 import { NoStore, TOKEN, tokenHeader } from '../listing-drafts.controller';
 
 const KEY = 'Idempotency-Key';

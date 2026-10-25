@@ -206,7 +206,7 @@ describe('the night job', () => {
       data: [1, 2, 3].map(() => ({ at, brandId: dacia.id })),
     });
     const cache = new Redis(redisUrl);
-    await cache.set('brands:active', '[]');
+    const version = Number((await cache.get('brands:version')) ?? 0);
     const info = jest
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
@@ -229,7 +229,7 @@ describe('the night job', () => {
         { name: 'BMW', popularity: 2 },
         { name: 'Dacia', popularity: 1 },
       ]);
-      expect(await cache.get('brands:active')).toBeNull();
+      expect(Number(await cache.get('brands:version'))).toBe(version + 1);
       expect(info).toHaveBeenCalledWith('demand-daily ranked 2, changed 2');
     } finally {
       info.mockRestore();

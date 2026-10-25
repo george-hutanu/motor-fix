@@ -2,9 +2,9 @@ import type { GarageProfileDto } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { capabilitiesOf } from '../../auth/capabilities';
+import { refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { notFound } from '../garage-brands/garage-brands.service';
 import { PublicGaragesService } from '../public-garages/public-garages';

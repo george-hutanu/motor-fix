@@ -110,6 +110,17 @@ const DASHBOARDS = [
   },
 ] as const;
 
+// The stubbed garage account has no garage behind it, so the profile view's
+// read answers 404 and the view leaves for the dashboard (its `goneOn`),
+// taking the current tab away from Profil. These tests are about the bar:
+// answer that read with a passing outage instead, which the view shows in
+// place (only a 403 or 404 sends it away), so Profil stays the open view.
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/v1/garages/*/profile', (route) =>
+    route.fulfill({ json: { code: 'unavailable' }, status: 503 }),
+  );
+});
+
 async function open(page: Page, path: string) {
   await page.goto(path);
   await settled(page);
@@ -128,10 +139,11 @@ test.describe('the dashboard tab bar on a 375 px phone', () => {
   for (const { capabilities, landing, name, role, tabs } of DASHBOARDS) {
     test(`takes a ${role} to every view of the dashboard`, async ({ page }) => {
       await signInAs(page, role, landing, [...capabilities]);
-      // The stub session names no garage, so Profil's read would be gone and
-      // send the page home mid-walk; any other failure keeps the view open.
+      // The stubbed garage account has no garage, and the profile view leaves
+      // for the dashboard on its 404, racing the check that Profil is the
+      // current tab: an outage keeps the view on Profil.
       await page.route('**/api/v1/garages/*/profile', (route) =>
-        route.fulfill({ status: 500 }),
+        route.fulfill({ status: 503 }),
       );
       await open(page, landing);
       const bar = page.getByRole('navigation', { name });

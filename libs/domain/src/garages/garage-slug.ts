@@ -1,4 +1,4 @@
-import { slugOf as brandSlugOf } from '../catalogue/brands';
+import { slugOf as brandSlugOf } from '../catalogue/brands/brands';
 
 const BATCH = 20;
 // Past a thousand taken numbers the name is not worth another query.

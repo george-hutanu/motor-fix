@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
 import { NotificationsService } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
@@ -17,7 +18,7 @@ beforeAll(async () => {
     .spyOn(NotificationsService.prototype, 'sendToDraft')
     .mockResolvedValue(undefined);
   app = await api.start();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   try {
