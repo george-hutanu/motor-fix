@@ -71,7 +71,10 @@ describe('the new review message to the garage owner', () => {
   it("opens the garage's Recenzii from the e-mail", () => {
     const email = render('REVIEW_POSTED.job', 'email', 'ro', job);
 
-    expect(email.subject).toBe('Recenzie nouă: BMW 320d');
+    expect(email.subject).toBe(
+      'Recenzie nouă de 5 de la Andrei M. pentru BMW 320d',
+    );
+    expect(email.text).toContain('Vezi recenziile');
     expect(email.html).toContain(link);
   });
 });

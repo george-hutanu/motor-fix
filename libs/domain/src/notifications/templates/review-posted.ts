@@ -4,9 +4,14 @@ import type { Template } from '../templates';
 // `source` picks the text: a profile review names no car. The author's short
 // name ends in a full stop, so no line ends in a second one. Each WhatsApp
 // name is a template registered with Brevo.
+const JOB_RO = 'Recenzie nouă de {rating} de la {author} pentru {car}';
+const JOB_EN = 'New {rating}-star review from {author} for a {car}';
+const PROFILE_RO = 'Recenzie nouă de {rating} de la {author}';
+const PROFILE_EN = 'New {rating}-star review from {author}';
+
 const email = (car: boolean): Template['email'] => ({
   en: {
-    button: { label: 'Open the reviews', link: 'link' },
+    button: { label: 'See the reviews', link: 'link' },
     lines: [
       car
         ? '{author} gave your garage {rating} stars for a {car}.'
@@ -14,10 +19,10 @@ const email = (car: boolean): Template['email'] => ({
     ],
     reason:
       'You get this e‑mail because you own a garage on MotorFix and follow its reviews.',
-    subject: car ? 'New review: {car}' : 'New review',
+    subject: car ? JOB_EN : PROFILE_EN,
   },
   ro: {
-    button: { label: 'Deschide recenziile', link: 'link' },
+    button: { label: 'Vezi recenziile', link: 'link' },
     lines: [
       car
         ? '{author} a dat service‑ului tău nota {rating} pentru {car}.'
@@ -25,14 +30,9 @@ const email = (car: boolean): Template['email'] => ({
     ],
     reason:
       'Primești acest e‑mail pentru că deții un service pe MotorFix și îi urmărești recenziile.',
-    subject: car ? 'Recenzie nouă: {car}' : 'Recenzie nouă',
+    subject: car ? JOB_RO : PROFILE_RO,
   },
 });
-
-const JOB_RO = 'Recenzie nouă de {rating} de la {author} pentru {car}';
-const JOB_EN = 'New {rating}-star review from {author} for a {car}';
-const PROFILE_RO = 'Recenzie nouă de {rating} de la {author}';
-const PROFILE_EN = 'New {rating}-star review from {author}';
 
 export const REVIEW_POSTED_JOB: Template = {
   audience: 'garage',
@@ -51,11 +51,11 @@ export const REVIEW_POSTED_JOB: Template = {
   values: { author: 'text', car: 'text', link: 'link', rating: 'num' },
   whatsapp: {
     en: {
-      name: 'motorfix_review_posted_job_en',
+      name: 'motorfix_review_posted_en',
       slots: ['{rating}', '{author}', '{car}'],
     },
     ro: {
-      name: 'motorfix_review_posted_job_ro',
+      name: 'motorfix_review_posted_ro',
       slots: ['{rating}', '{author}', '{car}'],
     },
   },

@@ -164,6 +164,21 @@ describe('telling the owner about a new review', () => {
     expect(JSON.stringify(email.params)).not.toContain('Marin');
   });
 
+  it('names a deleted author by the stand-in', async () => {
+    const { job, owner, review } = await reviewed();
+    await prisma.account.update({
+      data: { status: 'deleted' },
+      where: { id: review.driverId },
+    });
+    const fanOut = await start();
+
+    await fanOut.handle(job());
+
+    expect(await bell(owner, 'ro')).toBe(
+      'Recenzie nouă de 4 de la Șofer MotorFix pentru BMW 320d',
+    );
+  });
+
   it('names no car for a profile review', async () => {
     const { job, owner } = await reviewed({ source: 'profile' });
     const fanOut = await start();

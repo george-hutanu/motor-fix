@@ -1,4 +1,4 @@
-import type { EventKind } from '@motor-fix/contracts';
+import { DELETED_AUTHOR, type EventKind } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions } from 'bullmq';
 
@@ -58,7 +58,7 @@ export class ReviewPostedFanOut {
     const { id: eventId, payload } = job.data;
     const review = await this.prisma.review.findUnique({
       select: {
-        driver: { select: { name: true } },
+        driver: { select: { name: true, status: true } },
         garageId: true,
         job: {
           select: {
@@ -87,7 +87,10 @@ export class ReviewPostedFanOut {
     }
     const request = review.job.booking.request;
     const params = {
-      author: shortName(review.driver.name),
+      author:
+        review.driver.status === 'deleted'
+          ? DELETED_AUTHOR
+          : shortName(review.driver.name),
       ...(review.source === 'job'
         ? { car: `${request.carBrand} ${request.carModel}` }
         : {}),
