@@ -582,6 +582,14 @@ describe('the ITP reminder texts', () => {
     ).toThrow(TemplateError);
   });
 
+  // No web address set (email-config.ts): the row has its days but no link.
+  it('sends the generic e-mail for a row without the cars link', () => {
+    const { cars: _cars, ...noLink } = params;
+    expect(render('DUE_ITP', 'email', 'en', { ...noLink, app: APP })).toEqual(
+      render('GENERIC', 'email', 'en', { app: APP }),
+    );
+  });
+
   it('keeps the phone texts it had', () => {
     expect(render('DUE_ITP', 'sms', 'ro', params)).toBe(
       'MotorFix: ITP-ul mașinii tale expiră curând. Detalii în aplicație.',
