@@ -89,7 +89,6 @@ async function tapEnglish(page: Page) {
 }
 
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Sign in' });
-// On a phone the dialog opens as a sheet; its container has no box.
 const panel = (page: Page) => dialog(page).locator('mf-overlay-panel');
 
 test.describe('the sign-in gate', () => {

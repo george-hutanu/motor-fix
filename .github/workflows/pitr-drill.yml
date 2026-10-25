@@ -63,7 +63,6 @@ jobs:
       RAILWAY_PROJECT_ID: 8dd6e2d9-ee17-4935-b160-9282308d5ac7
       RAILWAY_ENVIRONMENT_ID: ${{ vars.RAILWAY_ENVIRONMENT_ID }}
       RAILWAY_SERVICE_POSTGRES: ${{ vars.RAILWAY_SERVICE_POSTGRES }}
-      KEY_NAME: pitr-drill-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Check the settings
         id: settings
@@ -80,24 +79,23 @@ jobs:
           node-version-file: .nvmrc
       - name: Install the Railway CLI
         if: steps.settings.outputs.skip != 'true'
-        run: npm install --global @railway/cli@5.63.1
-      # `railway ssh` signs in with a key registered to the token's workspace.
-      - name: Register an SSH key for this run
+        run: npm install --global @railway/cli@5.64.2
+      # The markers are written as psql in a sandbox on staging's private
+      # network: the database has no public address.
+      - name: Open a sandbox on the private network
+        id: sandbox
         if: steps.settings.outputs.skip != 'true'
-        run: |
-          mkdir -p -m 700 ~/.ssh
-          ssh-keygen -q -t ed25519 -N '' -C "$KEY_NAME" -f ~/.ssh/id_ed25519
-          railway ssh keys add --key ~/.ssh/id_ed25519.pub --name "$KEY_NAME"
-          printf 'Host ssh.railway.com\n  StrictHostKeyChecking accept-new\n' >> ~/.ssh/config
-          chmod 600 ~/.ssh/config
+        run: node scripts/railway-sandbox.ts open staging postgres
       - name: Pull the image
         if: steps.settings.outputs.skip != 'true'
         run: docker pull ghcr.io/george-hutanu/motor-fix-postgres:18
       - name: Mark, restore and check
         if: steps.settings.outputs.skip != 'true'
+        env:
+          SANDBOX_ID: ${{ steps.sandbox.outputs.id }}
         run: bash scripts/backup/pitr-drill.sh
-      - name: Remove the SSH key
-        if: always() && steps.settings.outputs.skip != 'true'
-        run: |
-          [ -f ~/.ssh/id_ed25519.pub ] || exit 0
-          railway ssh keys remove "$KEY_NAME"
+      - name: Close the sandbox
+        if: always() && steps.settings.outputs.skip != 'true' && steps.sandbox.outputs.id != ''
+        env:
+          SANDBOX_ID: ${{ steps.sandbox.outputs.id }}
+        run: node scripts/railway-sandbox.ts close "$SANDBOX_ID"

@@ -42,7 +42,7 @@ export {
 } from './form/form';
 export { FieldError, TaskDone, TaskError, TaskSubmit } from './form/form-parts';
 export { fieldRevealed } from './form/reveal';
-export { focusMain, Overlays } from './overlays';
+export { focusMain, OpenSheets, Overlays } from './overlays';
 export {
   injectOverlayTask,
   OVERLAY_TASK,

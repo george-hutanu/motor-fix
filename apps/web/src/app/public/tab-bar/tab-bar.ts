@@ -2,6 +2,7 @@ import { Component, computed, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
+import { OpenSheets } from '@motor-fix/overlays';
 import { filter } from 'rxjs';
 
 import { segmentsOf } from '../../addresses';
@@ -47,6 +48,8 @@ class LastBrand {
     '(document:focusin)': 'typing.set(takesText($event.target))',
     '(document:focusout)': 'typing.set(false)',
     '[hidden]': 'typing()',
+    // Under a bottom sheet the bar keeps its space but is not seen or reached.
+    '[style.visibility]': "sheetOpen() ? 'hidden' : null",
   },
   imports: [RouterLink, TranslatePipe],
   selector: 'mf-public-tab-bar',
@@ -63,6 +66,7 @@ export class PublicTabBar {
     return brand ? { brand } : {};
   });
   protected readonly typing = signal(false);
+  protected readonly sheetOpen = inject(OpenSheets).any;
   protected readonly takesText = takesText;
   protected readonly active = computed(() => TAB_OF[this.segments()[1] ?? '']);
   private readonly signIn = inject(SignInDialog);
