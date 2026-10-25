@@ -250,8 +250,10 @@ function nodeNames(bytes: Uint8Array): string[] | null {
       new TextDecoder('utf-8', { fatal: true }).decode(
         bytes.subarray(20, 20 + length),
       ),
-    ) as { nodes?: { name?: unknown }[] };
-    return (json.nodes ?? []).flatMap((node) =>
+    ) as { nodes?: unknown };
+    // glTF 2.0 holds its nodes in an array; anything else is no glTF.
+    if (json.nodes !== undefined && !Array.isArray(json.nodes)) return null;
+    return ((json.nodes ?? []) as { name?: unknown }[]).flatMap((node) =>
       typeof node?.name === 'string' ? [node.name] : [],
     );
   } catch {

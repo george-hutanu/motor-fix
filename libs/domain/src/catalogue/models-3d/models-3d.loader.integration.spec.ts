@@ -201,6 +201,69 @@ describe('Models3dLoader', () => {
     expect(await history()).toEqual([]);
   });
 
+  // @traces 1241-FR-002
+  it('brings a stored system back to the file, deletes one the file no longer holds, and lets two swap places', async () => {
+    await loader.load(CAR_MODELS);
+    const [engine, brakes] = await prisma.carSystem.findMany({
+      orderBy: { position: 'asc' },
+      take: 2,
+    });
+    await prisma.carSystem.update({
+      data: { nameEn: 'Motor', position: 2 },
+      where: { id: engine.id },
+    });
+    await prisma.carSystem.update({
+      data: { fuelTypes: ['petrol'], position: 1 },
+      where: { id: brakes.id },
+    });
+    const extra = await prisma.carSystem.create({
+      data: {
+        code: 'wipers',
+        fuelTypes: ['petrol'],
+        nameEn: 'Wipers',
+        nameRo: 'Ștergătoare',
+        position: 12,
+      },
+    });
+
+    const result = await loader.load(CAR_MODELS);
+
+    expect(result.changed).toBe(3);
+    expect(
+      (await systems()).map((s) => [s.position, s.code, s.nameEn]).slice(0, 2),
+    ).toEqual([
+      [1, 'engine', 'Engine'],
+      [2, 'brakes', 'Brakes'],
+    ]);
+    expect(
+      await prisma.carSystem.findUnique({ where: { id: extra.id } }),
+    ).toBeNull();
+    const entries = await history();
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        action: 'delete',
+        subjectId: extra.id,
+        subjectType: 'car_system',
+      }),
+    );
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        action: 'update',
+        field: 'nameEn',
+        newValue: 'Engine',
+        oldValue: 'Motor',
+        subjectId: engine.id,
+      }),
+    );
+    expect(entries).toContainEqual(
+      expect.objectContaining({
+        action: 'update',
+        field: 'fuelTypes',
+        subjectId: brakes.id,
+      }),
+    );
+  });
+
   it('stores each row once when two starts load together', async () => {
     await Promise.all([loader.load(CAR_MODELS), loader.load(CAR_MODELS)]);
 

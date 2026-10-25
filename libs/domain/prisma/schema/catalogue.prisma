@@ -46,7 +46,7 @@ model CarSystem {
   fuelTypes Fuel[]   @map("fuel_types")
   nameRo    String   @map("name_ro")
   nameEn    String   @map("name_en")
-  position  Int      @unique
+  position  Int
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 

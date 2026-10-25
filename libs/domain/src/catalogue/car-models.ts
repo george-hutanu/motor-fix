@@ -3,8 +3,6 @@ import { FUELS } from '@motor-fix/contracts';
 import { type BodyStyle, BRANDS } from './brands/brands';
 import { CAR_MODELS, type LicensedCarModel } from './models-3d/models-3d';
 
-export { CAR_MODELS, type LicensedCarModel } from './models-3d/models-3d';
-
 export type CarForBrand =
   | { kind: 'licensed'; model: LicensedCarModel }
   | { kind: 'generic'; bodyStyle: BodyStyle };

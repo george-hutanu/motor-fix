@@ -39,9 +39,6 @@ CREATE TABLE "car_model_3d" (
 CREATE UNIQUE INDEX "car_system_code_key" ON "car_system"("code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "car_system_position_key" ON "car_system"("position");
-
--- CreateIndex
 CREATE UNIQUE INDEX "car_model_3d_key_key" ON "car_model_3d"("key");
 
 -- CreateIndex

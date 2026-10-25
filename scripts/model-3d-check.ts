@@ -10,7 +10,7 @@
 //
 //   node scripts/model-3d-check.ts [dir]
 
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -35,6 +35,14 @@ function read(dir: string): Map<string, Uint8Array> {
 function main() {
   const { positionals } = parseArgs({ allowPositionals: true });
   const [dir] = positionals;
+  if (
+    dir !== undefined &&
+    !statSync(dir, { throwIfNoEntry: false })?.isDirectory()
+  ) {
+    console.log(`${dir}: no such directory`);
+    process.exitCode = 1;
+    return;
+  }
   const faults = checkModels3d(dir === undefined ? placeholders() : read(dir));
   for (const line of faults) console.log(line);
   if (faults.length > 0) process.exitCode = 1;

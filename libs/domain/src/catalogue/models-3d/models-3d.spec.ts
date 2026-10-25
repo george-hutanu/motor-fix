@@ -132,6 +132,19 @@ describe('the 3D files the catalogue points at', () => {
     ).toEqual(Array(6).fill('petrol'));
   });
 
+  // @traces 1241-FR-008
+  it('refuse a battery on a generic body style, held to the nine systems', () => {
+    const { catalogue, file, files } = model(
+      'generic-saloon',
+      'petrol',
+      glb([...partsFor('petrol'), 'sys_battery']),
+    );
+
+    expect(checkModels3d(files, catalogue)).toEqual([
+      `${file}: forbidden sys_battery`,
+    ]);
+  });
+
   // @traces 1241-FR-006
   it('are, until the real files arrive, placeholders made the same way every time under the keys the catalogue holds', () => {
     const first = placeholders();

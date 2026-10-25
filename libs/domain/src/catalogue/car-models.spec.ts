@@ -1,10 +1,10 @@
 import { BRANDS } from './brands/brands';
 import {
-  CAR_MODELS,
   CarModelFileError,
   carForBrand,
   validateCarModels,
 } from './car-models';
+import { CAR_MODELS } from './models-3d/models-3d';
 
 type LicensedCarModel = (typeof CAR_MODELS)[number];
 
