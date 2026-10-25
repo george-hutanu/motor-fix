@@ -648,7 +648,7 @@ _From 1196-static-map-first._
 
 _From 1196-static-map-first._
 
-### 1196-FR-006 — When the provider answers an error, times out (2 s per tile, 5 s for the image) or returns bytes that do not decode, the API MUST answer 502 `map_tiles_unavailable` as a problem document with `Cache-Control: no-store`, never a partial or empty image; a tile answering 404 (no data for the area) is drawn empty, not an error.
+### 1196-FR-006 — When the provider answers an error, times out (2 s per tile, 5 s for the image) or returns bytes that do not decode, the API MUST answer 502 `map_tiles_unavailable` as a problem document with `Cache-Control: no-store`, never a partial or empty image; a tile answering 404 (no data for the area) is drawn empty, not an error. A view whose tiles all answered 404 is still answered 200 with its image, but with `Cache-Control: no-store` in place of FR-005's header: a whole view without data is likelier an address gone stale than open sea, so no cache keeps the blank image and the tile address is read again.
 
 _From 1196-static-map-first._
 
