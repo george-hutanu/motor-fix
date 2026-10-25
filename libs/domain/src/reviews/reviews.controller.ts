@@ -1,4 +1,5 @@
 import {
+  GarageReviewsPageDto,
   JobReviewContextDto,
   MechanicReviewsPageDto,
   MechanicReviewsQueryDto,
@@ -80,6 +81,27 @@ export class ReviewsController {
     @Query() query: MechanicReviewsQueryDto,
   ): Promise<MechanicReviewsPageDto> {
     return this.service.mechanicReviews(mechanicId, query.page);
+  }
+
+  @Get('garage/:garageId')
+  @Public()
+  @ApiOperation({
+    summary:
+      'A garage’s published reviews, 20 a page, with its rating, count and breakdown',
+  })
+  @ApiOkResponse({ type: GarageReviewsPageDto })
+  @ApiBadRequestResponse({
+    description:
+      'validation_failed: a bad id, or a page not a whole number from 1',
+  })
+  @ApiNotFoundResponse({
+    description: 'not_found: no such garage, or one not shown to visitors',
+  })
+  forGarage(
+    @Param('garageId', new ParseUUIDPipe()) garageId: string,
+    @Query() query: MechanicReviewsQueryDto,
+  ): Promise<GarageReviewsPageDto> {
+    return this.service.garageReviews(garageId, query.page);
   }
 
   @Get('job/:jobId')

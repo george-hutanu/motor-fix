@@ -832,7 +832,10 @@ async function reviewed(db: Client) {
      WHERE a.email = $1`,
     [REVIEWER_CAR.email],
   );
-  if (done.rowCount) return;
+  if (done.rowCount) {
+    await garageFigures(db);
+    return;
+  }
   const who = await requester(db, REVIEWER_CAR);
   if (!who) return;
   const sent = await send(db, who, 240, true);
@@ -864,6 +867,20 @@ async function reviewed(db: Client) {
   await db.query(
     `UPDATE mechanic SET on_profile = true, rating = 5.0, review_count = 1 WHERE id = $1`,
     [who.mechanic],
+  );
+  await garageFigures(db);
+}
+
+// Atelier Test's stored rating and count, from its published reviews: the
+// review above is written straight to the table, past the API that keeps
+// them. A database seeded before this line keeps "0 recenzii" over a listed
+// review; one whose count the app already moved is left as it is.
+async function garageFigures(db: Client) {
+  await db.query(
+    `UPDATE garage g SET rating = s.rating, review_count = s.n
+     FROM (SELECT garage_id, round(avg(rating)::numeric, 1) AS rating, count(*)::int AS n
+           FROM review WHERE status = 'published' GROUP BY garage_id) s
+     WHERE g.id = s.garage_id AND g.slug = 'atelier-test' AND g.review_count = 0`,
   );
 }
 

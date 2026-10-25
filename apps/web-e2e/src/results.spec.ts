@@ -10,6 +10,7 @@ import {
   signIn,
 } from './accounts.js';
 import { answerConsent } from './consent-bar.js';
+import { deleteBrand } from './delete-brand.js';
 import { test } from './fixtures.js';
 
 // A brand and three garages of this file's own, written straight to
@@ -99,11 +100,10 @@ test.describe('the Results page @seeded', () => {
   });
 
   test.afterAll(async () => {
-    await db.query('DELETE FROM search_log WHERE brand_id = $1', [brandId]);
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [
       [...ids.values()],
     ]);
-    await db.query('DELETE FROM brand WHERE id = $1', [brandId]);
+    await deleteBrand(db, brandId);
     await db.end();
   });
 
@@ -446,9 +446,8 @@ test.describe('the map beside the results @seeded', () => {
   }
 
   test.afterAll(async () => {
-    await db.query('DELETE FROM search_log WHERE brand_id = $1', [brandId]);
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [ids]);
-    await db.query('DELETE FROM brand WHERE id = $1', [brandId]);
+    await deleteBrand(db, brandId);
     await db.end();
   });
 
@@ -873,6 +872,11 @@ test.describe('the map beside the results @seeded', () => {
       await mapReady(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
       await expect(page.locator('mf-results-map .legend .area')).toHaveCount(1);
       await expect(page.locator('mf-consent-bar button').first()).toBeVisible();
+      // The legend is measured against the zoom buttons, which MapLibre adds
+      // only once its script has loaded, after the page hydrates.
+      await expect(
+        page.locator('mf-results-map .maplibregl-ctrl-top-right button'),
+      ).toHaveCount(2);
 
       for (const at of ['half', 'low'] as const) {
         await restAt(page, at);
@@ -1058,6 +1062,8 @@ test.describe('the map beside the results @seeded', () => {
     await page.goto('/ro');
     await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     const address = page.url();
+    // A drag on a handle still sliding in misses it.
+    await still(page, 'half');
 
     // A drag the page takes before its sheet listens leaves it half: drag
     // again until it rests full, then step back.

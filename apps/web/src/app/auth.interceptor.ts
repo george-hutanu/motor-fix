@@ -89,6 +89,7 @@ export const authInterceptor: HttpInterceptorFn = (
   const status = inject(PlatformStatus);
   const onServer = isPlatformServer(inject(PLATFORM_ID));
   const token = session.token();
+  const epoch = session.epoch();
   const mayAsk = !onServer && !isWhoAmI(req, path);
 
   // Send the call again with whatever token the session now holds; with none,
@@ -104,9 +105,14 @@ export const authInterceptor: HttpInterceptorFn = (
   };
 
   // A refusal nothing renews away: sign in over the screen, then go on once.
-  // Not while this tab deletes its account: the refusal is the deletion's own.
+  // Not while this tab deletes its account (the refusal is the deletion's own),
+  // nor when the session this call went out under has since been ended (a
+  // sign-out, an account deleted elsewhere): that screen is leaving on purpose.
   const ask = (refusal: unknown) =>
-    mayAsk && signInRequired(refusal) && !session.deletingAccount()
+    mayAsk &&
+    signInRequired(refusal) &&
+    !session.deletingAccount() &&
+    session.epoch() === epoch
       ? from(dialog.gate().catch(() => false)).pipe(
           switchMap((signedIn) => repeat(signedIn, refusal)),
         )

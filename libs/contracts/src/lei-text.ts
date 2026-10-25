@@ -1,8 +1,12 @@
-// An amount in lei as a Romanian driver types it, kept here because the
-// browser imports this file and not the validators.
+// An amount in lei as a Romanian driver types it, and the review limits and
+// texts the browser shares with the server, kept here because the browser
+// imports this file and not the validators.
 export const PAID_BANI_MAX = 100_000_000;
 // The drawer counts against the same limit the server checks.
 export const REVIEW_TEXT_MAX = 2000;
+// How a review whose author deleted the account is signed; the profile shows
+// it in the reader's language.
+export const DELETED_AUTHOR = 'Șofer MotorFix';
 
 type LeiText =
   | { bani: number }

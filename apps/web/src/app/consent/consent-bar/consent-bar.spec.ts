@@ -148,6 +148,14 @@ describe('the consent bar', () => {
     );
   });
 
+  it('keeps its text to four lines, scrolling within the bar past them', () => {
+    const css = readFileSync(join(__dirname, 'consent-bar.css'), 'utf8');
+    const text = css.match(/(?:^|\n)p\s*{([^}]*)}/)?.[1] ?? '';
+
+    expect(text).toMatch(/max-height:\s*4lh/);
+    expect(text).toMatch(/overflow-y:\s*auto/);
+  });
+
   it('keeps its buttons at least 44 px high', () => {
     const css = readFileSync(join(__dirname, 'consent-bar.css'), 'utf8');
 

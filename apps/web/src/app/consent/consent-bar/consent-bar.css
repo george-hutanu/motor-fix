@@ -15,10 +15,15 @@ section {
   background: var(--mf-bg);
   color: var(--mf-text);
 }
+/* The text names every tool it covers, so on a narrow phone it runs to eight
+   lines; past four it scrolls inside the bar, which then covers no more of the
+   page than the shorter text did. */
 p {
   flex: 1 1 18rem;
   min-width: 0;
+  max-height: 4lh;
   margin: 0;
+  overflow-y: auto;
   overflow-wrap: anywhere;
 }
 a {
