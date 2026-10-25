@@ -39,9 +39,6 @@ p {
   color: var(--mf-red-ink);
   font-size: var(--mf-size-small);
 }
-.problem:empty {
-  display: none;
-}
 /* Phones: the day over its two pickers, side by side. */
 .day {
   display: grid;
@@ -165,10 +162,7 @@ li {
   gap: var(--mf-space-2);
   min-width: 0;
 }
-.warning:empty {
-  display: none;
-}
-.warning {
+.bookings {
   display: grid;
   gap: var(--mf-space-3);
   padding: var(--mf-space-3);

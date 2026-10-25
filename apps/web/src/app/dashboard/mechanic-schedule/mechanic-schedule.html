@@ -8,10 +8,10 @@
       @for (day of days; track day) {
         <div class="day" [formGroupName]="day" [attr.data-day]="day">
           @if (!bound(day)) {
-            <span class="name">{{ 'garage.mechanicSchedule.days.' + day | t }}</span>
+            <span class="name">{{ dayNames[day] | t }}</span>
             <span class="closed">{{ 'garage.mechanicSchedule.closed' | t }}</span>
           } @else if (day === 'sat') {
-            <span class="name">{{ 'garage.mechanicSchedule.days.sat' | t }}</span>
+            <span class="name">{{ dayNames.sat | t }}</span>
           } @else {
             <label class="name choice">
               <input
@@ -20,7 +20,7 @@
                 (change)="toggle(day)"
                 [attr.aria-describedby]="'mf-schedule-' + day + '-error'"
               />
-              {{ 'garage.mechanicSchedule.days.' + day | t }}
+              {{ dayNames[day] | t }}
             </label>
           }
           @if (bound(day) && working(day)) {
@@ -144,6 +144,7 @@
       </div>
       <div class="warning" role="status">
         @if (warning(); as bookings) {
+          <div class="bookings">
           @for (line of warningLines(bookings); track $index) {
             <p>{{ line }}</p>
           }
@@ -154,6 +155,7 @@
             <button hlmBtn variant="ghost" type="button" class="cancel" (click)="warning.set(null)">
               {{ 'garage.mechanicSchedule.warning.cancel' | t }}
             </button>
+          </div>
           </div>
         }
       </div>

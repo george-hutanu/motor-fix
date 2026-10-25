@@ -440,21 +440,21 @@ const DAYS_OFF = [
   { firstDay: '2027-06-01', id: 'off-2', lastDay: '2027-06-01', note: null },
 ];
 
-// @traces 058-FR-014 058-FR-018
+// @traces 058-FR-014 058-FR-018 058-FR-019
 describe('the days off', () => {
   it("lists each in the viewer's language, a range with its note", async () => {
     const { element } = await render(schedule({ daysOff: DAYS_OFF }));
 
     expect(
       [...element.querySelectorAll('.days-off li .range')].map(text),
-    ).toEqual(['12 mai – 16 mai 2027 · Concediu', '1 iun. 2027']);
+    ).toEqual(['12 – 16 mai 2027 · Concediu', '1 iun. 2027']);
   });
 
   it('lists them in English for an English viewer', async () => {
     const { element } = await render(schedule({ daysOff: DAYS_OFF }), 'en');
 
     expect(text(element.querySelector('.days-off li .range'))).toBe(
-      '12 May – 16 May 2027 · Concediu',
+      '12 – 16 May 2027 · Concediu',
     );
   });
 
@@ -487,7 +487,7 @@ describe('the days off', () => {
     ) as HTMLButtonElement;
 
     expect(remove.getAttribute('aria-label')).toBe(
-      'Elimină ziua liberă 12 mai – 16 mai 2027',
+      'Elimină ziua liberă 12 – 16 mai 2027',
     );
     remove.click();
     await settle();
@@ -655,7 +655,7 @@ describe('adding a day off', () => {
       expect(
         api.mechanicScheduleControllerAddDayOff.mock.calls[1][0].body,
       ).toMatchObject({ acknowledgeBookings: true, firstDay: dayAhead(3) });
-      expect(element.querySelector('.warning p')).toBeNull();
+      expect(element.querySelector('.warning .bookings')).toBeNull();
       expect(element.querySelectorAll('.days-off li')).toHaveLength(1);
     });
 
@@ -665,7 +665,7 @@ describe('adding a day off', () => {
       button(element, 'Renunță').click();
       await settle();
 
-      expect(element.querySelector('.warning p')).toBeNull();
+      expect(element.querySelector('.warning .bookings')).toBeNull();
       expect(api.mechanicScheduleControllerAddDayOff).toHaveBeenCalledTimes(1);
     });
   });

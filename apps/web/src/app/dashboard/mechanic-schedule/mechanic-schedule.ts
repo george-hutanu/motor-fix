@@ -144,6 +144,16 @@ export class MechanicSchedule {
   readonly card = input.required<GarageMechanicDto>();
 
   protected readonly days = WEEKDAYS;
+  // Whole keys, so the texts check finds each one.
+  protected readonly dayNames: Record<Weekday, string> = {
+    fri: 'garage.mechanicSchedule.days.fri',
+    mon: 'garage.mechanicSchedule.days.mon',
+    sat: 'garage.mechanicSchedule.days.sat',
+    sun: 'garage.mechanicSchedule.days.sun',
+    thu: 'garage.mechanicSchedule.days.thu',
+    tue: 'garage.mechanicSchedule.days.tue',
+    wed: 'garage.mechanicSchedule.days.wed',
+  };
   protected readonly noteMax = DAY_OFF_NOTE_MAX;
 
   // The first read starts in the constructor, before the inputs are set: it
@@ -394,8 +404,13 @@ export class MechanicSchedule {
     const language = this.i18n.language();
     if (dayOff.firstDay === dayOff.lastDay)
       return formatDay(dayOff.firstDay, language);
-    const first =
-      dayOff.firstDay.slice(0, 4) === dayOff.lastDay.slice(0, 4)
+    // "12 – 16 mai 2027": the first day says only what the last does not.
+    const sameMonth =
+      dayOff.firstDay.slice(0, 7) === dayOff.lastDay.slice(0, 7);
+    const sameYear = dayOff.firstDay.slice(0, 4) === dayOff.lastDay.slice(0, 4);
+    const first = sameMonth
+      ? String(Number(dayOff.firstDay.slice(8, 10)))
+      : sameYear
         ? formatDayMonth(dayOff.firstDay, language)
         : formatDay(dayOff.firstDay, language);
     return `${first} – ${formatDay(dayOff.lastDay, language)}`;
