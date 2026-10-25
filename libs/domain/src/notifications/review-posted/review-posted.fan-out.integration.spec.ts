@@ -193,9 +193,15 @@ describe('telling the owner about a new review', () => {
     const fanOut = await start();
 
     await fanOut.handle(job());
+    const before = {
+      built: await counted('built'),
+      muted: await counted('muted'),
+    };
     await fanOut.handle(job());
 
     expect(await channels(owner)).toEqual(['email', 'in_app']);
+    expect(await counted('muted')).toBe(before.muted);
+    expect(await counted('built')).toBe(before.built);
   });
 
   it('sends nothing outside to an owner who muted it, and counts muted', async () => {
@@ -246,6 +252,24 @@ describe('a review with nobody to tell', () => {
     expect(await messages(owner)).toEqual([]);
     expect(await counted('skipped')).toBe(before + 1);
   });
+
+  it.each([['deleted_by_author'], ['removed']] as const)(
+    'writes nothing for a review %s before the job ran, and counts skipped',
+    async (status) => {
+      const { job, owner, review } = await reviewed();
+      await prisma.review.update({
+        data: { status },
+        where: { id: review.id },
+      });
+      const fanOut = await start();
+      const before = await counted('skipped');
+
+      await fanOut.handle(job());
+
+      expect(await messages(owner)).toEqual([]);
+      expect(await counted('skipped')).toBe(before + 1);
+    },
+  );
 
   it('writes nothing for a garage with no owner, and counts skipped', async () => {
     const { job, receptionist } = await reviewed({ owner: false });

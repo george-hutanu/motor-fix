@@ -214,6 +214,25 @@ export class NotificationsService {
     return queued;
   }
 
+  // Whether every recipient already holds this event's bell row: a
+  // redelivered event, which builds nothing and is no one's mute.
+  async announced(
+    kind: NotifyInput['kind'],
+    eventId: string,
+    recipients: readonly string[],
+  ): Promise<boolean> {
+    const people = new Set(recipients);
+    const held = await this.prisma.notification.count({
+      where: {
+        accountId: { in: [...people] },
+        channel: 'in_app',
+        eventId,
+        kind,
+      },
+    });
+    return people.size > 0 && held === people.size;
+  }
+
   // `to` sends to an address the account does not hold yet: the link of an
   // e-mail change goes to the new address.
   async sendAccountEmail(input: {

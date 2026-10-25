@@ -1,6 +1,7 @@
 import { DELETED_AUTHOR, type EventKind } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions } from 'bullmq';
+import { isUUID } from 'class-validator';
 
 import { loadGarageAccess } from '../../events/garage-access';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -14,6 +15,9 @@ import {
 } from '../notifications.service';
 
 export const REVIEW_POSTED_QUEUE = 'review-posted';
+
+// The states a garage's staff see a review in.
+const LISTED: readonly string[] = ['published', 'reported'];
 
 // A failed run is tried 5 more times, 1, 2, 4, 8 and 16 minutes later, and
 // removed once it has run or failed for good.
@@ -56,6 +60,14 @@ export class ReviewPostedFanOut {
 
   async handle(job: Pick<Job<ReviewPostedEvent>, 'data'>): Promise<void> {
     const { id: eventId, payload } = job.data;
+    const reviewId = payload?.reviewId;
+    // A payload with no review id can never succeed: retrying it changes
+    // nothing, so it ends here as a review that is gone.
+    if (typeof reviewId !== 'string' || !isUUID(reviewId)) {
+      countReviewAnnounced('skipped');
+      this.logger.warn(`event ${eventId} names no review, nobody told`);
+      return;
+    }
     const review = await this.prisma.review.findUnique({
       select: {
         driver: { select: { name: true, status: true } },
@@ -71,18 +83,21 @@ export class ReviewPostedFanOut {
         },
         rating: true,
         source: true,
+        status: true,
       },
-      where: { id: payload.reviewId },
+      where: { id: reviewId },
     });
-    if (!review) {
+    // Deleted by its author or removed before this ran: the owner would open
+    // a list without it.
+    if (!review || !LISTED.includes(review.status)) {
       countReviewAnnounced('skipped');
-      this.logger.log(`review ${payload.reviewId} gone, nobody told`);
+      this.logger.log(`review ${reviewId} gone, nobody told`);
       return;
     }
     const { owners } = await this.access(review.garageId);
     if (owners.size === 0) {
       countReviewAnnounced('skipped');
-      this.logger.log(`review ${payload.reviewId} has no owner to tell`);
+      this.logger.log(`review ${reviewId} has no owner to tell`);
       return;
     }
     const request = review.job.booking.request;
@@ -98,18 +113,23 @@ export class ReviewPostedFanOut {
       rating: review.rating,
       source: review.source,
     };
+    const recipients = [...owners];
+    const again = await this.notifications.announced(
+      'REVIEW_POSTED',
+      eventId,
+      recipients,
+    );
     const queued = await this.notifications.notify({
       eventId,
       garageId: review.garageId,
       kind: 'REVIEW_POSTED',
       params,
-      recipients: [...owners],
-      subjectId: payload.reviewId,
+      recipients,
+      subjectId: reviewId,
     });
-    // Nothing queued: every owner muted it.
-    countReviewAnnounced(queued > 0 ? 'built' : 'muted');
-    this.logger.log(
-      `review ${payload.reviewId} announced to ${owners.size} owner(s)`,
-    );
+    // Nothing queued: every owner muted it, unless the event came again.
+    if (queued > 0) countReviewAnnounced('built');
+    else if (!again) countReviewAnnounced('muted');
+    this.logger.log(`review ${reviewId} announced to ${owners.size} owner(s)`);
   }
 }
