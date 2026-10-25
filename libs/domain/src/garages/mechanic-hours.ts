@@ -10,7 +10,7 @@ import { minuteOf, spanInsideHours, wall } from './garage-hours';
 
 type Hours = Partial<Record<string, Interval[]>>;
 
-export interface DayOff {
+interface DayOff {
   firstDay: string;
   lastDay: string;
 }
@@ -22,7 +22,7 @@ export interface MechanicSchedule {
   daysOff: readonly DayOff[];
 }
 
-export interface GarageCalendar {
+interface GarageCalendar {
   hours: Hours;
   closedDays: ReadonlySet<string>;
   holidays: ReadonlySet<string>;

@@ -106,7 +106,7 @@ const dayRule =
   };
 
 // The bookings on the new days off, one line per Bucharest day.
-export function bookingDays(bookings: readonly DayOffBookingDto[]) {
+function bookingDays(bookings: readonly DayOffBookingDto[]) {
   const days = new Map<string, string[]>();
   for (const booking of [...bookings].sort((a, b) =>
     a.startsAt.localeCompare(b.startsAt),
