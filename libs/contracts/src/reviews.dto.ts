@@ -319,7 +319,7 @@ export class GarageReviewsPageDto {
 
 // The reasons a garage may report a review for, in the order the task lists
 // them.
-export const REVIEW_REPORT_REASONS = [
+const REVIEW_REPORT_REASONS = [
   'insults',
   'personal_data',
   'ads',
@@ -333,8 +333,7 @@ export const REVIEW_REPORT_REASONS = [
 export type ReviewReportReason = (typeof REVIEW_REPORT_REASONS)[number];
 
 // Why a review may not be reported again.
-export const REPORT_REFUSALS = ['already_reported', 'already_kept'] as const;
-export type ReportRefusal = (typeof REPORT_REFUSALS)[number];
+export type ReportRefusal = 'already_reported' | 'already_kept';
 
 // Only the types are checked here: whether the text fits the reason is the
 // service's 422, after the 409s.
