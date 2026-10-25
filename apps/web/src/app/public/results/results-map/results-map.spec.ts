@@ -747,6 +747,35 @@ describe('RESULTS_MAP, the map while it loads', () => {
     expect(canvas.hasAttribute('tabindex')).toBe(false);
     host.remove();
   });
+
+  // @traces 1196-FR-015
+  it('leaves no map and no watcher behind when the pins cannot be drawn on it', async () => {
+    const { Map: Built } = jest.requireMock<{
+      Map: { prototype: { addSource(): void } };
+    }>('maplibre-gl');
+    jest.spyOn(Built.prototype, 'addSource').mockImplementationOnce(() => {
+      throw new Error('source');
+    });
+    const host = document.createElement('div');
+    document.body.append(host);
+
+    await expect(
+      TestBed.inject(RESULTS_MAP)(
+        host,
+        { moved: jest.fn(), picked: jest.fn(), shifted: jest.fn() },
+        document.createElement('div'),
+        { center: [26.1, 44.43], zoom: 12 },
+      ),
+    ).rejects.toThrow('source');
+    const canvas = document.createElement('canvas');
+    canvas.tabIndex = 0;
+    host.append(canvas);
+    await Promise.resolve();
+
+    expect(fake.map.remove).toHaveBeenCalled();
+    expect(canvas.getAttribute('tabindex')).toBe('0');
+    host.remove();
+  });
 });
 
 const BRAND = { id: 'b-1', name: 'BMW', slug: 'bmw' };

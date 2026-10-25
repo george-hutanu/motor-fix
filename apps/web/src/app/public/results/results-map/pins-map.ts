@@ -24,9 +24,10 @@ import {
   paddingOf,
   pointsOf,
 } from '../../static-map/fit-view';
+import { CLUSTER_ABOVE } from '../../static-map/overlay';
 
-// Past this many fixed pins, close ones merge into a counted cluster.
-const CLUSTER_ABOVE = 50;
+// Past CLUSTER_ABOVE fixed pins, close ones merge into a counted cluster,
+// on the static map as here.
 const SOURCE = 'pins';
 const AREAS = 'areas';
 const FONT = ['Noto Sans Bold'];

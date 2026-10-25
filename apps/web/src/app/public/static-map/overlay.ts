@@ -14,17 +14,17 @@ export interface Spot {
   y: number;
 }
 
-export interface OverlayPin extends Spot {
+interface OverlayPin extends Spot {
   id: string;
   rate: string;
   takes: boolean;
 }
 
-export interface OverlayCircle extends OverlayPin {
+interface OverlayCircle extends OverlayPin {
   r: number;
 }
 
-export interface OverlayCluster extends Spot {
+interface OverlayCluster extends Spot {
   count: number;
 }
 

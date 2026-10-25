@@ -23,14 +23,14 @@ export interface Box {
   h: number;
 }
 
-export interface Padding {
+interface Padding {
   top: number;
   right: number;
   bottom: number;
   left: number;
 }
 
-export interface Bounds {
+interface Bounds {
   north: number;
   south: number;
   east: number;

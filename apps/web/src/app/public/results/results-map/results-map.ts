@@ -91,22 +91,26 @@ export const RESULTS_MAP = new InjectionToken<OpenResultsMap>('RESULTS_MAP', {
       // From the start: MapLibre adds its focusable canvas while the style
       // is still loading, under the grey placeholder.
       const stop = keepOutOfTabOrder(host);
-      let map: Awaited<ReturnType<typeof openMapLibre>>;
+      let map: Awaited<ReturnType<typeof openMapLibre>> | undefined;
       try {
         map = await openMapLibre(host, styleFor(document), undefined, start);
+        const { Marker } = await import('maplibre-gl');
+        const pins = drawPins(map, host, on, new Marker({ element: here }));
+        const opened = map;
+        return {
+          ...pins,
+          destroy: () => {
+            stop();
+            closeMapLibre(opened);
+          },
+        };
       } catch (error) {
+        // Nothing half-open is left behind: the map, if it opened, and the
+        // tab-order watcher go with the failure.
         stop();
+        if (map) closeMapLibre(map);
         throw error;
       }
-      const { Marker } = await import('maplibre-gl');
-      const pins = drawPins(map, host, on, new Marker({ element: here }));
-      return {
-        ...pins,
-        destroy: () => {
-          stop();
-          closeMapLibre(map);
-        },
-      };
     };
   },
 });

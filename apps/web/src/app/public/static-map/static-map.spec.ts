@@ -203,6 +203,7 @@ describe('StaticMap, the overlay', () => {
     expect(lit[0]).toBe(element().querySelectorAll('.pin')[1]);
   });
 
+  // @traces 1196-FR-018
   it('draws a mobile mechanic as its circle, lit like a pin', async () => {
     await render();
     fixture.componentRef.setInput('pins', {
@@ -267,6 +268,7 @@ describe('StaticMap, the attribution and the control', () => {
     );
   });
 
+  // @traces 1196-FR-018
   it('asks for the interactive map once from the control', async () => {
     await render();
     element().querySelector('button')?.click();

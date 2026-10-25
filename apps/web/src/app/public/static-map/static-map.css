@@ -38,7 +38,7 @@ img {
   align-items: center;
   color: var(--mf-text);
   display: flex;
-  font-size: 12px;
+  font-size: var(--mf-size-label);
   font-weight: 700;
   gap: 6px;
   position: absolute;
@@ -86,7 +86,7 @@ img {
   box-sizing: border-box;
   color: var(--mf-panel);
   display: flex;
-  font-size: 12px;
+  font-size: var(--mf-size-label);
   font-weight: 700;
   height: 28px;
   justify-content: center;
@@ -105,7 +105,7 @@ img {
   box-sizing: border-box;
   color: var(--mf-text);
   display: flex;
-  font-size: 12px;
+  font-size: var(--mf-size-label);
   font-weight: 700;
   height: calc(2 * var(--r));
   justify-content: center;
