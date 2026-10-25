@@ -56,6 +56,15 @@ import { LabourRangeSavedDto } from '../models/labour-range-saved-dto';
 import { legalCheckControllerRead } from '../fn/garages/legal-check-controller-read';
 import { LegalCheckControllerRead$Params } from '../fn/garages/legal-check-controller-read';
 import { LegalCheckDto } from '../models/legal-check-dto';
+import { mechanicScheduleControllerAddDayOff } from '../fn/garages/mechanic-schedule-controller-add-day-off';
+import { MechanicScheduleControllerAddDayOff$Params } from '../fn/garages/mechanic-schedule-controller-add-day-off';
+import { mechanicScheduleControllerRead } from '../fn/garages/mechanic-schedule-controller-read';
+import { MechanicScheduleControllerRead$Params } from '../fn/garages/mechanic-schedule-controller-read';
+import { mechanicScheduleControllerRemoveDayOff } from '../fn/garages/mechanic-schedule-controller-remove-day-off';
+import { MechanicScheduleControllerRemoveDayOff$Params } from '../fn/garages/mechanic-schedule-controller-remove-day-off';
+import { mechanicScheduleControllerWrite } from '../fn/garages/mechanic-schedule-controller-write';
+import { MechanicScheduleControllerWrite$Params } from '../fn/garages/mechanic-schedule-controller-write';
+import { MechanicScheduleDto } from '../models/mechanic-schedule-dto';
 import { ownerDocumentsControllerSubmit } from '../fn/garages/owner-documents-controller-submit';
 import { OwnerDocumentsControllerSubmit$Params } from '../fn/garages/owner-documents-controller-submit';
 import { ownerDocumentsControllerUploadUrl } from '../fn/garages/owner-documents-controller-upload-url';
@@ -485,6 +494,138 @@ export class GaragesService extends BaseService {
   garageMechanicsControllerEdit(params: GarageMechanicsControllerEdit$Params, context?: HttpContext): Promise<GarageMechanicDto> {
     const resp = this.garageMechanicsControllerEdit$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageMechanicDto>): GarageMechanicDto => r.body);
+  }
+
+  /** Path part for operation `mechanicScheduleControllerRead()` */
+  static readonly MechanicScheduleControllerReadPath = '/api/v1/garages/{garageId}/mechanics/{mechanicId}/hours';
+
+  /**
+   * A mechanic's working week and upcoming days off, for the owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `mechanicScheduleControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  mechanicScheduleControllerRead$Response(params: MechanicScheduleControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<MechanicScheduleDto>> {
+    const obs = mechanicScheduleControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * A mechanic's working week and upcoming days off, for the owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `mechanicScheduleControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  mechanicScheduleControllerRead(params: MechanicScheduleControllerRead$Params, context?: HttpContext): Promise<MechanicScheduleDto> {
+    const resp = this.mechanicScheduleControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<MechanicScheduleDto>): MechanicScheduleDto => r.body);
+  }
+
+  /** Path part for operation `mechanicScheduleControllerWrite()` */
+  static readonly MechanicScheduleControllerWritePath = '/api/v1/garages/{garageId}/mechanics/{mechanicId}/hours';
+
+  /**
+   * Save a mechanic's working week, for the owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `mechanicScheduleControllerWrite()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  mechanicScheduleControllerWrite$Response(params: MechanicScheduleControllerWrite$Params, context?: HttpContext): Promise<StrictHttpResponse<MechanicScheduleDto>> {
+    const obs = mechanicScheduleControllerWrite(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Save a mechanic's working week, for the owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `mechanicScheduleControllerWrite$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  mechanicScheduleControllerWrite(params: MechanicScheduleControllerWrite$Params, context?: HttpContext): Promise<MechanicScheduleDto> {
+    const resp = this.mechanicScheduleControllerWrite$Response(params, context);
+    return resp.then((r: StrictHttpResponse<MechanicScheduleDto>): MechanicScheduleDto => r.body);
+  }
+
+  /** Path part for operation `mechanicScheduleControllerAddDayOff()` */
+  static readonly MechanicScheduleControllerAddDayOffPath = '/api/v1/garages/{garageId}/mechanics/{mechanicId}/days-off';
+
+  /**
+   * Add a day or a range off, for the owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `mechanicScheduleControllerAddDayOff()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  mechanicScheduleControllerAddDayOff$Response(params: MechanicScheduleControllerAddDayOff$Params, context?: HttpContext): Promise<StrictHttpResponse<MechanicScheduleDto>> {
+    const obs = mechanicScheduleControllerAddDayOff(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Add a day or a range off, for the owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `mechanicScheduleControllerAddDayOff$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  mechanicScheduleControllerAddDayOff(params: MechanicScheduleControllerAddDayOff$Params, context?: HttpContext): Promise<MechanicScheduleDto> {
+    const resp = this.mechanicScheduleControllerAddDayOff$Response(params, context);
+    return resp.then((r: StrictHttpResponse<MechanicScheduleDto>): MechanicScheduleDto => r.body);
+  }
+
+  /** Path part for operation `mechanicScheduleControllerRemoveDayOff()` */
+  static readonly MechanicScheduleControllerRemoveDayOffPath = '/api/v1/garages/{garageId}/mechanics/{mechanicId}/days-off/{dayOffId}';
+
+  /**
+   * Remove a day off, or end a running one yesterday, for the owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `mechanicScheduleControllerRemoveDayOff()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  mechanicScheduleControllerRemoveDayOff$Response(params: MechanicScheduleControllerRemoveDayOff$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = mechanicScheduleControllerRemoveDayOff(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Remove a day off, or end a running one yesterday, for the owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `mechanicScheduleControllerRemoveDayOff$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  mechanicScheduleControllerRemoveDayOff(params: MechanicScheduleControllerRemoveDayOff$Params, context?: HttpContext): Promise<void> {
+    const resp = this.mechanicScheduleControllerRemoveDayOff$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `garageMembersControllerList()` */

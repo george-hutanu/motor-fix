@@ -5,6 +5,7 @@ import { HttpException } from '@nestjs/common';
 import { writeGarageHours } from './garage-hours';
 import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { outbox } from '../events/event.port';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
 const { account, prisma, reset } = fixtures();
@@ -40,7 +41,11 @@ afterAll(() => prisma.$disconnect());
 
 const write = (section: Record<string, unknown>, today = TODAY) =>
   prisma.$transaction((tx) =>
-    writeGarageHours(tx, garageId, section, today, { actorId, audit }),
+    writeGarageHours(tx, garageId, section, today, {
+      actorId,
+      audit,
+      events: outbox,
+    }),
   );
 
 const stored = async () => {
@@ -456,11 +461,139 @@ describe("the history of a garage's hours, closed days and facilities", () => {
         await writeGarageHours(tx, garageId, { hours }, TODAY, {
           actorId,
           audit,
+          events: outbox,
         });
         throw new Error('sending failed');
       }),
     ).rejects.toThrow('sending failed');
 
     expect(await prisma.activityLog.count({ where: { garageId } })).toBe(0);
+  });
+});
+
+// @traces 058-FR-013
+describe("a mechanic's hours when the garage changes its own", () => {
+  const OWN = {
+    fri: [['08:00', '17:00']],
+    mon: [['07:00', '17:00']],
+    sat: [['09:00', '13:00']],
+    sun: [],
+    thu: [['14:00', '17:00']],
+    tue: [['08:00', '17:00']],
+    wed: [['08:00', '17:00']],
+  };
+  const card = async (
+    name: string,
+    workingHours: object | null,
+    extra: { worksSaturdays?: boolean; removedAt?: Date } = {},
+  ) => {
+    const { id } = await prisma.mechanic.create({
+      data: { garageId, name, removedAt: extra.removedAt },
+    });
+    await prisma.$executeRaw`UPDATE mechanic SET working_hours = ${
+      workingHours === null ? null : JSON.stringify(workingHours)
+    }::jsonb, works_saturdays = ${extra.worksSaturdays ?? false} WHERE id = ${id}::uuid`;
+    return id;
+  };
+  const rowOf = (id: string) =>
+    prisma.$queryRaw<{ working_hours: unknown; works_saturdays: boolean }[]>`
+      SELECT working_hours, works_saturdays FROM mechanic WHERE id = ${id}::uuid`.then(
+      ([row]) => row,
+    );
+  const shorter = {
+    ...hours,
+    mon: [['09:00', '16:00']],
+    sat: [],
+    thu: [['08:00', '12:00']],
+    wed: [],
+  };
+
+  it('clips each stretch to the new span, empties a closed day or one left without overlap, and turns Saturdays off', async () => {
+    const elena = await card('Elena Stan', OWN, { worksSaturdays: true });
+
+    const changed = await write({ hours: shorter });
+
+    expect(changed).toEqual(['Elena Stan']);
+    expect(await rowOf(elena)).toEqual({
+      working_hours: {
+        ...OWN,
+        mon: [['09:00', '16:00']],
+        sat: [],
+        thu: [],
+        wed: [],
+      },
+      works_saturdays: false,
+    });
+  });
+
+  it('leaves a mechanic with no hours of her own, a removed one and one inside the new span', async () => {
+    const dan = await card('Dan Ion', null);
+    const gone = await card('Ana Plecată', OWN, { removedAt: new Date() });
+    const inside = await card('Vlad Mic', {
+      ...OWN,
+      mon: [['10:00', '15:00']],
+      sat: [],
+      thu: [],
+      wed: [],
+    });
+    const before = await Promise.all([dan, gone, inside].map(rowOf));
+
+    const changed = await write({ hours: shorter });
+
+    expect(changed).toEqual([]);
+    expect(await Promise.all([dan, gone, inside].map(rowOf))).toEqual(before);
+  });
+
+  it("records each clipped card as the garage's change, with its event, in the same write", async () => {
+    const elena = await card('Elena Stan', OWN, { worksSaturdays: true });
+    const [{ mark }] = await prisma.$queryRaw<{ mark: bigint }[]>`
+      SELECT COALESCE(MAX(id), 0) AS mark FROM outbox_event`;
+
+    await write({ hours: shorter });
+
+    const entries = await prisma.activityLog.findMany({
+      orderBy: { field: 'asc' },
+      where: { subjectId: elena, subjectType: 'mechanic' },
+    });
+    expect(
+      entries.map(({ action, actorId: by, actorRole, field }) => [
+        action,
+        by,
+        actorRole,
+        field,
+      ]),
+    ).toEqual([
+      ['update', actorId, 'owner', 'workingHours'],
+      ['update', actorId, 'owner', 'worksSaturdays'],
+    ]);
+    const events = await prisma.outboxEvent.findMany({
+      where: { id: { gt: mark }, kind: 'mechanic.updated' },
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      payload: {
+        fields: ['working_hours', 'works_saturdays'],
+        mechanicId: elena,
+      },
+      subjectId: elena,
+    });
+  });
+
+  it('clips nothing when the garage write rolls back', async () => {
+    const elena = await card('Elena Stan', OWN, { worksSaturdays: true });
+    const before = await rowOf(elena);
+
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await writeGarageHours(tx, garageId, { hours: shorter }, TODAY, {
+          actorId,
+          audit,
+          events: outbox,
+        });
+        throw new Error('sending failed');
+      }),
+    ).rejects.toThrow('sending failed');
+
+    expect(await rowOf(elena)).toEqual(before);
   });
 });
