@@ -54,6 +54,7 @@ export const REQUEST_TIMERS_CONSUMER = {
     'quote.declined_by_driver',
     'request.expired',
     'quote.expired',
+    'quote.closed',
   ] as readonly EventKind[],
   queue: REQUEST_TIMERS_QUEUE,
 };
@@ -142,6 +143,7 @@ export class RequestTimers {
       case 'request.cancelled':
         await this.clearReminders(requestId);
         await this.timers.clear(EXPIRY, requestId);
+        await this.clearQuotes(requestId);
         return;
       case 'request.expired':
         return this.tellRequestExpired(id, requestId, {
@@ -158,8 +160,15 @@ export class RequestTimers {
       case 'quote.declined_by_driver':
         await this.timers.clear(QUOTE_EXPIRY, quoteId);
         return;
+      // A confirmed booking closes the request's other quotes as lost.
+      case 'quote.closed':
+        for (const closed of (payload['quoteIds'] as string[] | undefined) ??
+          [])
+          await this.timers.clear(QUOTE_EXPIRY, closed);
+        return;
       // The booking lapse expires quotes too; it tells of them itself.
       case 'quote.expired':
+        await this.timers.clear(QUOTE_EXPIRY, quoteId);
         if (payload['reason'] === 'time')
           await this.tellQuoteExpired(id, quoteId);
         return;
@@ -185,6 +194,15 @@ export class RequestTimers {
   private async clearReminders(requestId: string): Promise<void> {
     for (const day of REQUEST_REMINDER_DAYS)
       await this.timers.clear(reminder(day), requestId);
+  }
+
+  // A cancelled or account-closed request's quotes leave waiting with it.
+  private async clearQuotes(requestId: string): Promise<void> {
+    const quotes = await this.prisma.quote.findMany({
+      select: { id: true },
+      where: { requestId },
+    });
+    for (const quote of quotes) await this.timers.clear(QUOTE_EXPIRY, quote.id);
   }
 
   private async overdueReminders(day: number, now: Date): Promise<string[]> {

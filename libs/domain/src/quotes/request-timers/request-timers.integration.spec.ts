@@ -280,6 +280,7 @@ describe('setting and clearing a request’s timers', () => {
         'quote.declined_by_driver',
         'request.expired',
         'quote.expired',
+        'quote.closed',
       ],
       queue: 'request-timers',
     });
@@ -394,6 +395,56 @@ describe('setting and clearing a request’s timers', () => {
       expect(await delays()).toEqual({});
     },
   );
+
+  it.each([
+    ['quote.closed', (quoteId: string) => ({ quoteIds: [quoteId] })],
+    [
+      'quote.expired',
+      (quoteId: string) => ({ quoteId, reason: 'booking_lapsed' }),
+    ],
+  ] as const)(
+    'clears the quote’s expiry when it leaves waiting by %s',
+    async (kind, payload) => {
+      const dinamo = await staffed('Dinamo');
+      const { driverId, request } = await sent([dinamo]);
+      const quote = await quoted(request.id, dinamo);
+      const { timers } = await start(CREATED);
+      await timers.onEvent(
+        event('quote.sent', {
+          driverId,
+          garageId: dinamo.garage.id,
+          quoteId: quote.id,
+          requestId: request.id,
+        }),
+      );
+
+      await timers.onEvent(
+        event(kind, { ...payload(quote.id), requestId: request.id }),
+      );
+
+      expect(await delays()).toEqual({});
+    },
+  );
+
+  it('clears its quotes’ expiries too when the request is cancelled', async () => {
+    const dinamo = await staffed('Dinamo');
+    const { driverId, event: created, request } = await sent([dinamo]);
+    const quote = await quoted(request.id, dinamo);
+    const { timers } = await start(CREATED);
+    await timers.onEvent(created);
+    await timers.onEvent(
+      event('quote.sent', {
+        driverId,
+        garageId: dinamo.garage.id,
+        quoteId: quote.id,
+        requestId: request.id,
+      }),
+    );
+
+    await timers.onEvent(event('request.cancelled', { requestId: request.id }));
+
+    expect(await delays()).toEqual({});
+  });
 });
 
 // @traces 1257-FR-001 1257-FR-002 1257-FR-003 1257-FR-012 1257-FR-013
