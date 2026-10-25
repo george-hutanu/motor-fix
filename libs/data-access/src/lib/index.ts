@@ -140,6 +140,8 @@ export type { GarageRequestJobPriceDto } from './models/garage-request-job-price
 export type { GarageRequestListDto } from './models/garage-request-list-dto';
 export type { GarageRequestSummaryDto } from './models/garage-request-summary-dto';
 export type { GarageRestoredDto } from './models/garage-restored-dto';
+export type { GarageReviewDto } from './models/garage-review-dto';
+export type { GarageReviewsPageDto } from './models/garage-reviews-page-dto';
 export type { GarageRowBookingDto } from './models/garage-row-booking-dto';
 export type { GarageSearchPageDto } from './models/garage-search-page-dto';
 export type { GarageSettingsDto } from './models/garage-settings-dto';
@@ -238,6 +240,7 @@ export type { QuoteComparisonDto } from './models/quote-comparison-dto';
 export type { QuoteDto } from './models/quote-dto';
 export type { QuoteJobDto } from './models/quote-job-dto';
 export type { RarActivityNameDto } from './models/rar-activity-name-dto';
+export type { RatingBreakdownDto } from './models/rating-breakdown-dto';
 export type { RecheckDueListDto } from './models/recheck-due-list-dto';
 export type { RecheckDueRowDto } from './models/recheck-due-row-dto';
 export type { RecheckRecordedDto } from './models/recheck-recorded-dto';
@@ -628,6 +631,8 @@ export type { ReviewsControllerEligibility$Params as ReviewsControllerEligibilit
 export { reviewsControllerEligibility as reviewsControllerEligibility } from './fn/reviews/reviews-controller-eligibility';
 export type { ReviewsControllerForMechanic$Params as ReviewsControllerForMechanic$Params } from './fn/reviews/reviews-controller-for-mechanic';
 export { reviewsControllerForMechanic as reviewsControllerForMechanic } from './fn/reviews/reviews-controller-for-mechanic';
+export type { ReviewsControllerForGarage$Params as ReviewsControllerForGarage$Params } from './fn/reviews/reviews-controller-for-garage';
+export { reviewsControllerForGarage as reviewsControllerForGarage } from './fn/reviews/reviews-controller-for-garage';
 export type { ReviewsControllerForJob$Params as ReviewsControllerForJob$Params } from './fn/reviews/reviews-controller-for-job';
 export { reviewsControllerForJob as reviewsControllerForJob } from './fn/reviews/reviews-controller-for-job';
 export type { ReviewsControllerPublish$Params as ReviewsControllerPublish$Params } from './fn/reviews/reviews-controller-publish';

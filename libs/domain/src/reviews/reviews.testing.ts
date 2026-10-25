@@ -56,3 +56,66 @@ export function mechanicReviews(world: ReturnType<typeof quotesWorld>) {
 
   return { elena, reviewed };
 }
+
+interface GarageReviewOptions {
+  rating?: number;
+  minutesAgo?: number;
+  status?: ReviewStatus;
+  text?: string | null;
+  source?: 'job' | 'profile';
+  // The quote's jobs, in request order; only the included ones name it.
+  jobs?: { nameRo: string; nameEn: string; included?: boolean }[];
+}
+
+// A garage's reviews as its profile reads them: each one a finished job on a
+// BMW 320d, quoted with the jobs asked.
+export function garageReviews(world: ReturnType<typeof quotesWorld>) {
+  const { prisma } = world;
+
+  async function review(
+    garageId: string,
+    driverId: string,
+    options: GarageReviewOptions = {},
+  ) {
+    const { booking, quote, request } = await world.chain(driverId, garageId);
+    await prisma.quoteRequest.update({
+      data: { carBrand: 'BMW', carModel: '320d' },
+      where: { id: request.id },
+    });
+    const jobs = options.jobs ?? [
+      { nameEn: 'Timing chain kit', nameRo: 'Kit lanț distribuție' },
+    ];
+    for (const [position, one] of jobs.entries()) {
+      const type = await world.jobType(one.nameRo, one.nameEn);
+      const asked = await prisma.requestJob.create({
+        data: {
+          jobTypeId: type.id,
+          position: position + 1,
+          requestId: request.id,
+        },
+      });
+      await prisma.quoteJob.create({
+        data: {
+          included: one.included ?? true,
+          quoteId: quote.id,
+          requestJobId: asked.id,
+        },
+      });
+    }
+    const job = await world.job(booking.id, 'done');
+    return prisma.review.create({
+      data: {
+        driverId,
+        garageId,
+        jobId: job.id,
+        postedAt: new Date(Date.now() - (options.minutesAgo ?? 1) * 60_000),
+        rating: options.rating ?? 5,
+        source: options.source ?? 'job',
+        status: options.status ?? 'published',
+        text: options.text === undefined ? 'Treabă curată.' : options.text,
+      },
+    });
+  }
+
+  return { review };
+}

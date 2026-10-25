@@ -894,7 +894,7 @@ describe('seed of the listed garages', () => {
     ).toEqual([
       ['atelier-berceni', 4.9, 80, 15000],
       ['atelier-drumul-taberei', 4.2, 15, 14000],
-      ['atelier-test', null, 0, null],
+      ['atelier-test', 5, 1, null],
       ['auto-pipera', null, 0, 22000],
       ['mecanic-mobil-cluj', 4.8, 35, 12000],
       ['service-auto-militari', 4.9, 120, 18000],
@@ -1179,6 +1179,16 @@ describe('seed of a request through to a job', () => {
     expect({ ...mechanic, rating: Number(mechanic.rating) }).toEqual({
       id: mechanic.id,
       onProfile: true,
+      rating: 5,
+      reviewCount: 1,
+    });
+    // The garage's stored figures count the same review, so its profile
+    // never reads "0 recenzii" over a listed one.
+    const garage = await prisma.garage.findUniqueOrThrow({
+      select: { rating: true, reviewCount: true },
+      where: { slug: 'atelier-test' },
+    });
+    expect({ ...garage, rating: Number(garage.rating) }).toEqual({
       rating: 5,
       reviewCount: 1,
     });

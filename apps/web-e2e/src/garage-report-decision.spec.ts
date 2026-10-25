@@ -3,6 +3,7 @@ import { type APIRequestContext, expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { deleteBrand } from './delete-brand.js';
 import { test } from './fixtures.js';
 
 // A brand, a listed garage, its owner and a driver of this file's own:
@@ -127,9 +128,8 @@ test.describe('confirming a garage report @seeded', () => {
     await db.query('DELETE FROM account WHERE email = ANY($1)', [
       [owner.email, driver.email],
     ]);
-    await db.query('DELETE FROM search_log WHERE brand_id = $1', [brandId]);
     await db.query('DELETE FROM garage WHERE id = $1', [garageId]);
-    await db.query('DELETE FROM brand WHERE id = $1', [brandId]);
+    await deleteBrand(db, brandId);
     await db.end();
   });
 
