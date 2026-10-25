@@ -1,0 +1,12 @@
+<div #host class="canvas" aria-hidden="true"></div>
+<div #pin class="pin" aria-hidden="true"></div>
+@if (stage() !== 'open') {
+  <mf-static-map
+    [class.leaving]="stage() === 'leaving'"
+    [attr.inert]="stage() === 'leaving' ? '' : null"
+    [view]="still()"
+    [place]="point()"
+    (activate)="activate()"
+    (failed)="gone.emit()"
+  />
+}

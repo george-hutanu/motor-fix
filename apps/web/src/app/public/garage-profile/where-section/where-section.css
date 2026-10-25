@@ -1,5 +1,6 @@
 :host {
   display: block;
+  overflow: hidden;
   padding: var(--mf-space-5) 0 var(--mf-space-2);
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-panel);
@@ -48,4 +49,30 @@ dd {
 
 .closed {
   color: var(--mf-red-ink);
+}
+
+/* The map strip, edge to edge at the card's top, clipped by its radius. */
+mf-garage-map {
+  margin: calc(-1 * var(--mf-space-5)) 0 var(--mf-space-5);
+}
+
+/* The directions, the section's last line, in the profile's link colour. */
+.directions {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-1);
+  min-height: var(--mf-tap);
+  margin: 0 var(--mf-space-5);
+  color: var(--mf-amber-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.directions svg {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }

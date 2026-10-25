@@ -629,6 +629,26 @@
     },
     {
       "kind": "outside-service",
+      "name": "apple-maps",
+      "host": "maps.apple.com",
+      "source": "apps/web/src/app/public/garage-profile/where-section/directions.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "the garage profile's directions link on an Apple device, which the driver's maps app opens; neither the browser app nor the API calls it, and the tap is the consent-gated directions_opened analytics event",
+      "story": "ST-1366"
+    },
+    {
+      "kind": "outside-service",
+      "name": "google-maps",
+      "host": "www.google.com",
+      "source": "apps/web/src/app/public/garage-profile/where-section/directions.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "the garage profile's directions link on a computer, opened in a new tab; neither the browser app nor the API calls it, and the tap is the consent-gated directions_opened analytics event",
+      "story": "ST-1366"
+    },
+    {
+      "kind": "outside-service",
       "name": "anaf-company-lookup",
       "host": "mfinante.gov.ro",
       "source": "apps/web/src/app/dashboard/verification-file/verification-file.ts",

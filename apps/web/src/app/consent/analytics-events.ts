@@ -7,6 +7,7 @@ export const ANALYTICS_EVENTS = {
     brand: 'slug',
     source: ['home_picker', 'home_strip', 'results_chips'],
   },
+  directions_opened: { platform: ['ios', 'android', 'computer'] },
   filter_applied: {
     filter: ['open_now', 'open_saturday', 'max_price', 'min_rating', 'card'],
   },

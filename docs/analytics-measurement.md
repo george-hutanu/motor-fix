@@ -46,6 +46,7 @@ in `analytics-events.ts`, and its page is the route template.
 | `garage_opened` | The garage profile, once per open, with where it was opened from | built |
 | `filter_applied` | Results filters | not built |
 | `garage_saved` | Saving a garage from its profile or a result card | not built |
+| `directions_opened` | The garage profile: the "Arată traseul" directions link, with the platform | built |
 | `quote_request_started` | "Cere ofertă" on the garage profile, with the copy voice | built |
 | `quote_request_sent` | The quote request created, once per send, with the copy voice | built |
 | `message_sent` | Messages between a driver and a garage | not built |
