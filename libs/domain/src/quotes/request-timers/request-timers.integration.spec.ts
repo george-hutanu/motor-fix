@@ -1,11 +1,16 @@
+import { randomUUID } from 'node:crypto';
+
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
-import { Logger } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { type Job, Queue } from 'bullmq';
 
 import { REQUEST_TIMERS_QUEUE, RequestTimers } from './request-timers';
 import { RequestTimersModule } from './request-timers.module';
+import { AuditService } from '../../audit/audit.service';
+import type { Actor } from '../../auth/policy';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { outbox } from '../../events/event.port';
 import type {
   QuoteRequestStatus,
   QuoteStatus,
@@ -19,6 +24,7 @@ import {
   testConfig,
   testPhoneConfig,
 } from '../../notifications/notifications.testing';
+import { AcceptService } from '../accept/accept.service';
 import { quotesWorld } from '../quotes.testing';
 
 const redisUrl = redisUrlFor(13);
@@ -175,6 +181,15 @@ async function quoted(
   return quote;
 }
 
+const event = (kind: string, payload: Record<string, unknown>) => ({
+  data: {
+    id: randomUUID(),
+    kind,
+    payload,
+    subjectId: String(payload['quoteId'] ?? payload['requestId']),
+  },
+});
+
 const fire = (timers: RequestTimers, name: string, id: string) =>
   timers.timers.handle({ data: { id }, name } as Job<{ id?: string }>);
 
@@ -210,6 +225,22 @@ const recipientOf = (id: string) =>
 
 const requestOf = (id: string) =>
   prisma.quoteRequest.findUniqueOrThrow({ where: { id } });
+
+const quoteOf = (id: string) =>
+  prisma.quote.findUniqueOrThrow({ where: { id } });
+
+const driverActor = (accountId: string): Actor => ({
+  accountId,
+  garageId: null,
+  language: 'ro',
+  permissions: {
+    canAnswerQuotes: false,
+    canMoveBookings: false,
+    canRecordFinalPrice: false,
+  },
+  role: 'driver',
+  roles: ['driver'],
+});
 
 // @traces 1257-FR-004 1257-FR-005 1257-FR-010 1257-FR-012 1257-FR-013
 describe('expiring a request at the end of its seven days', () => {
@@ -360,5 +391,220 @@ describe('expiring a request at the end of its seven days', () => {
 
     expect((await requestOf(request.id)).status).toBe('closed');
     expect(await counted('request_closed', true)).toBe(before + 1);
+  });
+});
+
+// @traces 1257-FR-006 1257-FR-007 1257-FR-008 1257-FR-010 1257-FR-012 1257-FR-013
+describe('expiring a quote seven days after it was sent', () => {
+  const accept = (driverId: string, quoteId: string) =>
+    new AcceptService(prisma, new AuditService(), outbox).accept(
+      driverActor(driverId),
+      quoteId,
+      randomUUID(),
+      {},
+    );
+
+  it('expires it, tells the driver and the garage, keeps the request open for another quote and refuses its accept', async () => {
+    const [dinamo, berceni] = [
+      await staffed('Dinamo'),
+      await staffed('Berceni'),
+    ];
+    const { driverId, request } = await sent([dinamo, berceni]);
+    const quote = await quoted(request.id, dinamo);
+    await quoted(request.id, berceni, new Date(QUOTE_EXPIRES.getTime() + HOUR));
+    const { timers } = await start(QUOTE_EXPIRES);
+    const before = await counted('quote_expired', false);
+
+    await fire(timers, 'quote-expiry', quote.id);
+
+    expect((await quoteOf(quote.id)).status).toBe('expired');
+    expect((await requestOf(request.id)).status).toBe('quoted');
+    expect(
+      await prisma.activityLog.findMany({
+        where: { field: 'expired_reason', subjectId: quote.id },
+      }),
+    ).toEqual([
+      expect.objectContaining({ actorRole: 'system', newValue: 'time' }),
+    ]);
+    const events = await prisma.outboxEvent.findMany({
+      where: { kind: 'quote.expired' },
+    });
+    expect(events.map((e) => e.payload)).toEqual([
+      expect.objectContaining({
+        quoteId: quote.id,
+        reason: 'time',
+        requestId: request.id,
+      }),
+    ]);
+    expect(
+      await prisma.outboxEvent.count({ where: { kind: 'request.expired' } }),
+    ).toBe(0);
+    expect(await counted('quote_expired', false)).toBe(before + 1);
+
+    await relay(timers, 'quote.expired');
+
+    const [toDriver, ...more] = await bells('QUOTE_EXPIRED', driverId);
+    expect(more).toEqual([]);
+    expect(toDriver.params).toMatchObject({
+      car: 'Mini Cooper S',
+      garage: 'Dinamo',
+      side: 'driver',
+    });
+    for (const person of [dinamo.owner, dinamo.desk]) {
+      const [bell] = await bells('QUOTE_EXPIRED', person);
+      expect(bell.params).toMatchObject({
+        driver: 'Andrei M.',
+        side: 'garage',
+      });
+    }
+    expect(await messages('QUOTE_EXPIRED', dinamo.fixer)).toEqual([]);
+    expect(await messages('QUOTE_EXPIRED', berceni.owner)).toEqual([]);
+
+    const refused = await accept(driverId, quote.id).catch((e) => e);
+    expect(refused).toBeInstanceOf(HttpException);
+    expect((refused as HttpException).getStatus()).toBe(409);
+  });
+
+  it('closes the request when it was the last waiting quote, expiring the garages still waiting first, and tells the driver both', async () => {
+    const [dinamo, berceni] = [
+      await staffed('Dinamo'),
+      await staffed('Berceni'),
+    ];
+    const { driverId, recipients, request } = await sent([dinamo, berceni]);
+    const quote = await quoted(request.id, dinamo);
+    const { timers } = await start(QUOTE_EXPIRES);
+
+    await fire(timers, 'quote-expiry', quote.id);
+
+    expect(await requestOf(request.id)).toMatchObject({
+      closedReason: 'expired',
+      status: 'closed',
+    });
+    expect((await recipientOf(recipients[1].id)).status).toBe('expired');
+    const closes = await prisma.outboxEvent.findMany({
+      where: { kind: 'request.expired' },
+    });
+    expect(closes.map((e) => e.payload)).toEqual([
+      { closed: true, garageIds: [berceni.garage.id], requestId: request.id },
+    ]);
+
+    await relay(timers, 'quote.expired');
+    await relay(timers, 'request.expired');
+
+    expect(await bells('QUOTE_EXPIRED', driverId)).toHaveLength(1);
+    expect(await bells('REQUEST_EXPIRED', driverId)).toHaveLength(1);
+    expect(await bells('REQUEST_EXPIRED', berceni.owner)).toHaveLength(1);
+    expect(await messages('REQUEST_EXPIRED', dinamo.owner)).toEqual([]);
+  });
+
+  it('keeps it waiting while the request holds a booking awaiting confirmation', async () => {
+    const [dinamo, berceni] = [
+      await staffed('Dinamo'),
+      await staffed('Berceni'),
+    ];
+    const { request } = await sent([dinamo, berceni]);
+    const held = await quoted(request.id, dinamo);
+    const chosen = await quoted(
+      request.id,
+      berceni,
+      new Date(QUOTE_EXPIRES.getTime() + HOUR),
+      'accepted',
+    );
+    await world.booking(chosen.id, 'awaiting_confirmation');
+    await prisma.quoteRequest.update({
+      data: { status: 'booked' },
+      where: { id: request.id },
+    });
+    const { timers } = await start(QUOTE_EXPIRES);
+    const before = {
+      held: await counted('quote_held', false),
+      swept: await counted('quote_held', true),
+    };
+
+    await fire(timers, 'quote-expiry', held.id);
+    await timers.timers.sweep(QUOTE_EXPIRES);
+
+    expect((await quoteOf(held.id)).status).toBe('waiting');
+    expect(await prisma.outboxEvent.count()).toBe(0);
+    expect(await counted('quote_held', false)).toBe(before.held + 1);
+    expect(await counted('quote_held', true)).toBe(before.swept);
+  });
+
+  it.each(['withdrawn', 'lost', 'expired'] as const)(
+    'changes nothing and tells nobody for a quote already %s',
+    async (status) => {
+      const dinamo = await staffed('Dinamo');
+      const { request } = await sent([dinamo]);
+      const quote = await quoted(request.id, dinamo, QUOTE_EXPIRES, status);
+      const { timers } = await start(QUOTE_EXPIRES);
+
+      await fire(timers, 'quote-expiry', quote.id);
+      await timers.timers.sweep(QUOTE_EXPIRES);
+
+      expect((await quoteOf(quote.id)).status).toBe(status);
+      expect(
+        await prisma.outboxEvent.count({ where: { kind: 'quote.expired' } }),
+      ).toBe(0);
+    },
+  );
+
+  it('does nothing before its time', async () => {
+    const dinamo = await staffed('Dinamo');
+    const { request } = await sent([dinamo]);
+    const quote = await quoted(request.id, dinamo);
+    const { timers } = await start(new Date(QUOTE_EXPIRES.getTime() - MINUTE));
+
+    await fire(timers, 'quote-expiry', quote.id);
+
+    expect((await quoteOf(quote.id)).status).toBe('waiting');
+  });
+
+  it.each(['booking_lapsed', 'held_past_validity'])(
+    'tells nobody of a quote the booking lapse expired (%s)',
+    async (reason) => {
+      const dinamo = await staffed('Dinamo');
+      const { driverId, request } = await sent([dinamo]);
+      const quote = await quoted(request.id, dinamo, QUOTE_EXPIRES, 'expired');
+      const { timers } = await start(QUOTE_EXPIRES);
+
+      await timers.onEvent(
+        event('quote.expired', {
+          quoteId: quote.id,
+          reason,
+          requestId: request.id,
+        }),
+      );
+
+      expect(await messages('QUOTE_EXPIRED', driverId)).toEqual([]);
+      expect(await messages('QUOTE_EXPIRED', dinamo.owner)).toEqual([]);
+    },
+  );
+
+  it('closes the request once when its two last quotes expire in one sweep', async () => {
+    const [dinamo, berceni] = [
+      await staffed('Dinamo'),
+      await staffed('Berceni'),
+    ];
+    const { request } = await sent([dinamo, berceni]);
+    const first = await quoted(request.id, dinamo);
+    const second = await quoted(request.id, berceni);
+    const now = new Date(QUOTE_EXPIRES.getTime() + 10 * MINUTE);
+    const { timers } = await start(now);
+    const before = await counted('quote_expired', true);
+
+    await timers.timers.sweep(now);
+    await timers.timers.sweep(now);
+    await fire(timers, 'quote-expiry', first.id);
+
+    expect((await quoteOf(first.id)).status).toBe('expired');
+    expect((await quoteOf(second.id)).status).toBe('expired');
+    expect((await requestOf(request.id)).status).toBe('closed');
+    expect(
+      await prisma.outboxEvent.count({ where: { kind: 'request.expired' } }),
+    ).toBe(1);
+    expect(
+      await prisma.outboxEvent.count({ where: { kind: 'quote.expired' } }),
+    ).toBe(2);
+    expect(await counted('quote_expired', true)).toBe(before + 2);
   });
 });
