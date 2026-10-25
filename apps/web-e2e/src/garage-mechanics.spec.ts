@@ -121,3 +121,108 @@ test.describe('the garage team, written by the owner @seeded', () => {
     ).toHaveCount(0);
   });
 });
+
+// A card's Program tab: the dialog that holds the "Program" tab.
+const scheduleOf = (page: Page) =>
+  page
+    .getByRole('dialog')
+    .filter({ has: page.getByRole('tab', { name: 'Program' }) });
+
+async function openSchedule(page: Page, row: Locator) {
+  await row.getByRole('button').click();
+  const dialog = scheduleOf(page);
+  await dialog.getByRole('tab', { name: 'Program' }).click();
+  await expect(
+    dialog.getByRole('group', { name: 'Zilele de lucru' }),
+  ).toBeVisible();
+  return dialog;
+}
+
+// @traces 058-FR-014 058-FR-016 058-FR-017 058-FR-021
+test.describe("a mechanic's working hours, set by the owner @seeded", () => {
+  test('the owner sets her week and a day off; both read back, and another tab sees the week within 5 seconds', async ({
+    page,
+  }) => {
+    const name = `Elena Stan ${Math.random().toString(36).slice(2, 8)}`;
+    const panel = await openTeam(page);
+    const row = panel.getByRole('listitem').filter({ hasText: name });
+    await panel
+      .getByRole('button', { exact: true, name: 'Adaugă un mecanic' })
+      .click();
+    const add = page.getByRole('dialog', { name: 'Adaugă un mecanic' });
+    await add.getByLabel('Nume').fill(name);
+    await add.getByRole('button', { name: 'Salvează' }).click();
+    await expect(add).toBeHidden();
+    await expect(row).toHaveCount(1, { timeout: 5_000 });
+
+    try {
+      const other = await page.context().newPage();
+      await other.goto('/app/garage/team');
+      const otherRow = other
+        .getByRole('region', { name: 'Echipa' })
+        .getByRole('listitem')
+        .filter({ hasText: name });
+      const watching = await openSchedule(other, otherRow);
+      const watchedWednesday = watching
+        .locator('[data-day="wed"]')
+        .getByRole('checkbox');
+      await expect(watchedWednesday).toBeChecked();
+
+      const schedule = await openSchedule(page, row);
+      await schedule
+        .locator('[data-day="wed"]')
+        .getByRole('checkbox')
+        .uncheck();
+      await schedule
+        .getByRole('button', { name: 'Salvează programul' })
+        .click();
+      await expect(
+        schedule
+          .getByRole('status')
+          .filter({ hasText: 'Programul a fost salvat.' }),
+      ).toBeVisible();
+      await expect(watchedWednesday).not.toBeChecked({ timeout: 5_000 });
+      await other.close();
+
+      const firstDay = new Date(Date.now() + 200 * 86_400_000)
+        .toISOString()
+        .slice(0, 10);
+      await schedule.getByLabel('Prima zi').fill(firstDay);
+      await schedule.getByLabel('Notă (opțional)').fill('Concediu');
+      await schedule.getByRole('button', { name: 'Adaugă zi liberă' }).click();
+      const daysOff = schedule.getByRole('region', { name: 'Zile libere' });
+      await expect(daysOff.getByRole('listitem')).toHaveCount(1);
+      await expect(daysOff.getByRole('listitem')).toContainText('Concediu');
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+
+      const reopened = await openSchedule(page, row);
+      await expect(
+        reopened.locator('[data-day="wed"]').getByRole('checkbox'),
+      ).not.toBeChecked();
+      await expect(
+        reopened
+          .getByRole('region', { name: 'Zile libere' })
+          .getByRole('listitem'),
+      ).toContainText('Concediu');
+      await page.keyboard.press('Escape');
+    } finally {
+      await row.getByRole('button').click();
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { exact: true, name: 'Elimină' })
+        .click();
+      await page
+        .getByRole('dialog')
+        .filter({ hasText: `Elimini pe ${name} din echipă?` })
+        .getByRole('button', { exact: true, name: 'Elimină' })
+        .click();
+      await expect(row).toHaveCount(0, { timeout: 5_000 });
+    }
+  });
+});
