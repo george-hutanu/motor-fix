@@ -109,11 +109,6 @@ p {
   border-radius: 50%;
   animation: spin 800ms linear infinite;
 }
-@media (prefers-reduced-motion: reduce) {
-  .spinner {
-    animation-duration: 2.4s;
-  }
-}
 @keyframes spin {
   to {
     transform: rotate(1turn);

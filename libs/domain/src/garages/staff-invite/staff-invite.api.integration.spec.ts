@@ -10,7 +10,7 @@ import { StaffInviteService } from './staff-invite.service';
 import { foreignEntries } from '../../audit/audit.testing';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
-import { serialDatabase } from '../../auth/serial-db.testing';
+import { serialDatabase, waitingOnLocks } from '../../auth/serial-db.testing';
 import { outboxMark } from '../../events/outbox.testing';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';
@@ -886,18 +886,6 @@ const listed = async (garageId: string, auth: string, mechanicId: string) => {
   return res.body.items.find((item: { id: string }) => item.id === mechanicId);
 };
 
-// Waits until `count` statements wait on a row lock.
-async function waitingOnLocks(count: number) {
-  for (let tries = 0; tries < 200; tries += 1) {
-    const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`
-      SELECT count(*)::int AS waiting FROM pg_stat_activity
-      WHERE wait_event_type = 'Lock' AND datname = current_database()`;
-    if (waiting >= count) return;
-    await new Promise((resolve) => setTimeout(resolve, 25));
-  }
-  throw new Error(`fewer than ${count} statements wait on a lock`);
-}
-
 const phoneOf = (accountId: string, phone: string) =>
   prisma.account.update({ data: { phone }, where: { id: accountId } });
 
@@ -1414,7 +1402,7 @@ describe('two accepts for one account at the same time', () => {
           accept(toDinamo, bearer(sorin, 'mechanic')),
           accept(toSud, bearer(sorin, 'mechanic')),
         ]);
-        await waitingOnLocks(2);
+        await waitingOnLocks(prisma, 2);
       },
       { timeout: 20_000 },
     );
@@ -1463,7 +1451,7 @@ describe('two accepts for one account at the same time', () => {
           accept(toFirst, bearer(ana, 'mechanic')),
           accept(toSecond, bearer(ana, 'mechanic')),
         ]);
-        await waitingOnLocks(2);
+        await waitingOnLocks(prisma, 2);
       },
       { timeout: 20_000 },
     );
