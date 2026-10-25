@@ -8,6 +8,7 @@ import {
   GaragesService,
   type LegalCheckDto,
   type MeDto,
+  ReviewsService,
 } from '@motor-fix/data-access';
 
 import { GarageHome } from './garage-home';
@@ -117,6 +118,13 @@ async function render(
         },
       },
       { provide: GaragesService, useValue: { legalCheckControllerRead: read } },
+      // The reviews panel has its own spec; here it waits.
+      {
+        provide: ReviewsService,
+        useValue: {
+          garageReviewsControllerRead: () => new Promise(() => undefined),
+        },
+      },
     ],
   });
   const fixture = TestBed.createComponent(GarageHome);

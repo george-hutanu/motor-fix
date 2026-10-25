@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -26,6 +26,7 @@ features:
   - 414-approve-catalogue-job
   - 067-restore-suspended-garage
   - 003-admin-account-actions
+  - 1368-admin-brand-list
 ---
 
 # Capability: Admin dashboard
@@ -554,9 +555,9 @@ _From 103-demand-brands-jobs._
 
 _From 404-demand-searches._
 
-### 404-FR-007 — The admin dashboard's view "Mărci și lucrări" / "Brands and jobs" (path `catalogue`, capability `admin.catalogue`, tab "Mărci" / "Brands", in the side menu and the tab bar as the other admin views) MUST open with the subtitle "Ce au căutat și ce au cerut șoferii în ultimele 30 de zile" / "What drivers searched for and asked for in the last 30 days" as its first line under the view header, then two panels in this order: "Căutări și cereri pe marcă, 30 de zile" / "Searches and requests by brand, 30 days" and "Cereri pe lucrare, 30 de zile" / "Requests by job, 30 days". Each panel is a labelled section whose heading is its title and holds one bar chart in the shared Cockpit chart style (cockpit-charts) with the count unit, one row per brand or job, labelled with the brand name or the job's name in the interface language; the brand report draws two bars per row (FR-008), the job report one.
+### 1368-FR-001 — The admin dashboard's view "Mărci și lucrări" / "Brands and jobs" (path `catalogue`, capability `admin.catalogue`, tab "Mărci" / "Brands", in the side menu and the tab bar as the other admin views) MUST open with the subtitle "Ce au căutat și ce au cerut șoferii în ultimele 30 de zile" / "What drivers searched for and asked for in the last 30 days" as its first line under the view header, then the two demand panels in this order, each a labelled section whose heading is its title holding one bar chart in the shared Cockpit chart style with the count unit, one row per brand or job labelled in the interface language (the brand report two bars per row, the job report one): "Căutări și cereri pe marcă, 30 de zile" / "Searches and requests by brand, 30 days" and "Cereri pe lucrare, 30 de zile" / "Requests by job, 30 days"; and then, below them, a labelled section headed "Lista de mărci" / "Brand list" listing every brand the admin list returns, active and retired, one row each with: name, state ("activă" / "retrasă"; English "active" / "retired"), "Service‑uri" / "Garages" with the count of garages that work on it and "Mașini" / "Cars" with the count of drivers' cars of it, in the order the list returns (by folded name). The section shows only in the view, never on the dashboard overview's brand panel. The rows are read once when the view opens, through the existing admin brand list operation; no API changes.
 
-_From 404-demand-searches._
+_From 1368-admin-brand-list._
 
 ### 103-FR-007 — Each report MUST show at most 10 bars; when the read holds more than 10 brands (jobs), the panel MUST show under the chart a button "Vezi toate mărcile" / "See all brands" ("Vezi toate lucrările" / "See all jobs") that reveals, in the panel, the full list of brands (jobs) with their counts, most first, and becomes "Arată mai puține" / "Show fewer", which hides it again; with 10 or fewer the button is not rendered.
 
@@ -881,3 +882,4 @@ _From 003-admin-account-actions._
 - `298-FR-003` — superseded by `299-FR-006` (2026-10-17)
 - `066-FR-007` — superseded by `067-FR-009` (2026-10-23)
 - `001-FR-008` — superseded by `003-FR-017` (2026-10-24)
+- `404-FR-007` — superseded by `1368-FR-001` (2026-10-25)

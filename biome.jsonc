@@ -169,6 +169,7 @@
         "apps/web/src/app/dashboard/verification-file/verification-file.html",
         "apps/web/src/app/dashboard/garage-requests/confirm-booking-dialog/confirm-booking-dialog.html",
         "apps/web/src/app/dashboard/garage-requests/garage-requests-panel/garage-requests-panel.html",
+        "apps/web/src/app/dashboard/garage-reviews/garage-reviews-panel/garage-reviews-panel.html",
         "apps/web/src/app/dashboard/requests-view/requests-view.html",
         "apps/web/src/app/dashboard/review-task/review-task.html",
         "apps/web/src/app/dashboard/saved-garages/saved-garage-row/saved-garage-row.html",
