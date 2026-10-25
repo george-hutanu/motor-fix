@@ -1,0 +1,20 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <div class="field">
+    <label for="mf-brand-add-name">{{ 'admin.brands.add.name' | t }}</label>
+    <input
+      hlmInput
+      id="mf-brand-add-name"
+      type="text"
+      autocomplete="off"
+      formControlName="name"
+      aria-describedby="mf-brand-add-hint mf-brand-add-error mf-brand-add-exists"
+    />
+    <p id="mf-brand-add-hint" class="hint">{{ 'admin.brands.add.hint' | t }}</p>
+    <mf-field-error id="mf-brand-add-error" [save]="save" [control]="form.controls.name" />
+    <p id="mf-brand-add-exists" class="exists mf-message" role="alert">{{ exists() }}</p>
+  </div>
+  <p class="failed mf-message" role="alert">@if (save.problem() && !exists()) {{{ 'admin.brands.saveFailed' | t }}}</p>
+  <button hlmBtn type="submit" [mfTaskSubmit]="save">
+    {{ 'admin.brands.add.submit' | t }}
+  </button>
+</form>

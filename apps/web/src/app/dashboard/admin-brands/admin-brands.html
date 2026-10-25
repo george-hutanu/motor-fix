@@ -1,0 +1,97 @@
+<mf-panel [heading]="'admin.brands.heading' | t">
+  <div class="tools">
+    <input
+      hlmInput
+      type="search"
+      class="search"
+      autocomplete="off"
+      [attr.aria-label]="'admin.brands.search' | t"
+      [value]="query()"
+      (input)="search($event)"
+    />
+    <button hlmBtn type="button" (click)="add()">{{ 'admin.brands.add.title' | t }}</button>
+  </div>
+  @switch (state()) {
+    @case ('loading') {
+      <ul class="skeletons" aria-busy="true" [attr.aria-label]="'admin.brands.loading' | t">
+        @for (n of skeletonRows; track n) {
+          <li class="skeleton-row"><span class="skeleton"></span></li>
+        }
+      </ul>
+    }
+    @case ('failed') {
+      <div class="failed" role="alert">
+        <p>{{ 'admin.brands.loadFailed' | t }}</p>
+        <button hlmBtn type="button" variant="secondary" (click)="read()">{{ 'admin.brands.retry' | t }}</button>
+      </div>
+    }
+    @default {
+      @if (rows().length === 0) {
+        <p class="empty" role="status">{{ 'admin.brands.empty' | t }}</p>
+      } @else {
+        <table class="brands" [attr.aria-label]="'admin.brands.table' | t">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'admin.brands.column.name' | t }}</th>
+              <th scope="col">{{ 'admin.brands.column.state' | t }}</th>
+              <th scope="col" class="count">{{ 'admin.brands.column.garages' | t }}</th>
+              <th scope="col" class="count">{{ 'admin.brands.column.cars' | t }}</th>
+              <th scope="col">{{ 'admin.brands.column.actions' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.brand.id) {
+              @let brand = row.brand;
+              @let open = editing() === brand.id;
+              <tr [attr.aria-busy]="busy() === brand.id ? 'true' : null">
+                <td class="name">
+                  <span data-name [class.sr-only]="open">{{ brand.name }}</span>
+                  @if (open) {
+                    <form class="rename" [formGroup]="renameForm" (ngSubmit)="rename(brand)" novalidate>
+                      <input
+                        hlmInput
+                        type="text"
+                        autocomplete="off"
+                        formControlName="name"
+                        [attr.aria-label]="'admin.brands.newName' | t: { name: brand.name }"
+                        [attr.aria-invalid]="renameForm.controls.name.touched && renameForm.controls.name.invalid ? 'true' : null"
+                        [attr.aria-describedby]="'mf-brand-note-' + brand.id"
+                      />
+                      <span class="rename-actions">
+                        <button hlmBtn type="submit">{{ 'admin.brands.save' | t }}</button>
+                        <button hlmBtn type="button" variant="ghost" (click)="cancel()">{{ 'admin.brands.cancel' | t }}</button>
+                      </span>
+                    </form>
+                  }
+                  @if (notice(); as note) {
+                    @if (note.id === brand.id) {
+                      <p class="note" [id]="'mf-brand-note-' + brand.id" [attr.role]="note.status ? 'status' : 'alert'">{{ note.text ?? (note.key ?? '' | t) }}</p>
+                    }
+                  }
+                </td>
+                <td [attr.data-label]="'admin.brands.column.state' | t">
+                  <mf-lamp
+                    [state]="brand.state === 'active' ? 'green' : 'grey'"
+                    [label]="(brand.state === 'active' ? 'admin.brands.state.active' : 'admin.brands.state.retired') | t"
+                  />
+                </td>
+                <td class="count" data-garages [attr.data-label]="'admin.brands.column.garages' | t">{{ row.garages }}</td>
+                <td class="count" data-cars [attr.data-label]="'admin.brands.column.cars' | t">{{ row.cars }}</td>
+                <td class="actions">
+                  @if (!open) {
+                    <button hlmBtn type="button" variant="secondary" (click)="startRename(brand)" [attr.aria-label]="'admin.brands.renameNamed' | t: { name: brand.name }">{{ 'admin.brands.rename' | t }}</button>
+                    @if (brand.state === 'active') {
+                      <button hlmBtn type="button" variant="ghost" (click)="setActive(brand, false)" [attr.aria-label]="'admin.brands.retireNamed' | t: { name: brand.name }">{{ 'admin.brands.retire' | t }}</button>
+                    } @else {
+                      <button hlmBtn type="button" variant="ghost" (click)="setActive(brand, true)" [attr.aria-label]="'admin.brands.bringBackNamed' | t: { name: brand.name }">{{ 'admin.brands.bringBack' | t }}</button>
+                    }
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    }
+  }
+</mf-panel>

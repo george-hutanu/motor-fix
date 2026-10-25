@@ -1,0 +1,176 @@
+// @traces 1368-FR-003 1368-FR-004
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { type AdminBrandDto, AdminService } from '@motor-fix/data-access';
+import { I18n } from '@motor-fix/i18n';
+import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+
+import { AdminBrandAddDialog } from './admin-brand-add-dialog';
+
+@Component({ template: '' })
+class Host {
+  readonly overlays = inject(Overlays);
+}
+
+const created = (name: string): AdminBrandDto => ({
+  cars: 0,
+  garages: 0,
+  id: 'id-new',
+  name,
+  slug: name.toLowerCase(),
+  state: 'active',
+  updatedAt: '2026-10-25T12:00:00.000Z',
+  updatedBy: null,
+});
+
+let create: jest.Mock;
+let result: Promise<OverlayResult<AdminBrandDto>>;
+
+async function settle() {
+  for (let i = 0; i < 6; i++) {
+    TestBed.tick();
+    await new Promise((resolve) => setTimeout(resolve));
+  }
+}
+
+async function open(language: 'ro' | 'en' = 'ro') {
+  create = jest.fn(async ({ body }: { body: { name: string } }) =>
+    created(body.name),
+  );
+  TestBed.configureTestingModule({
+    providers: [
+      {
+        provide: AdminService,
+        useValue: { adminBrandsControllerCreate: create },
+      },
+    ],
+  });
+  if (language === 'en') await TestBed.inject(I18n).use('en');
+  const host = TestBed.createComponent(Host);
+  result = host.componentInstance.overlays.open<AdminBrandDto>(
+    AdminBrandAddDialog,
+    { shape: 'dialog', title: 'admin.brands.add.title' },
+  );
+  await settle();
+}
+
+const panel = () =>
+  document.querySelector<HTMLElement>('mf-overlay-panel') as HTMLElement;
+
+function field(label: string): HTMLInputElement {
+  const found = [...panel().querySelectorAll('label')].find(
+    (l) => l.textContent?.trim() === label,
+  );
+  const input = found?.htmlFor ? document.getElementById(found.htmlFor) : null;
+  if (!(input instanceof HTMLInputElement)) throw new Error(`no ${label}`);
+  return input;
+}
+
+function type(input: HTMLInputElement, value: string) {
+  input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+const button = (name: string) =>
+  [...panel().querySelectorAll('button')].find(
+    (b) => b.textContent?.trim() === name,
+  ) as HTMLButtonElement | undefined;
+
+const text = () => panel().textContent ?? '';
+
+afterEach(() => {
+  document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
+    n.innerHTML = '';
+  });
+  TestBed.resetTestingModule();
+});
+
+describe('the add-a-brand dialog', () => {
+  it('asks for the name with one field and an add button', async () => {
+    await open();
+
+    expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
+      'Adaugă o marcă',
+    );
+    expect(field('Numele mărcii').type).toBe('text');
+    expect(button('Adaugă')?.type).toBe('submit');
+  });
+
+  it('sends the trimmed name and closes with the new brand', async () => {
+    await open();
+    type(field('Numele mărcii'), '  Xpeng ');
+
+    button('Adaugă')?.click();
+    await settle();
+
+    expect(create).toHaveBeenCalledWith({ body: { name: 'Xpeng' } });
+    await expect(result).resolves.toEqual(created('Xpeng'));
+  });
+
+  it.each([
+    ['nothing', ''],
+    ['one character', ' X '],
+    ['41 characters', 'A'.repeat(41)],
+    ['only spaces', '    '],
+  ])('refuses %s before sending', async (_, value) => {
+    await open();
+    const input = field('Numele mărcii');
+    type(input, value);
+
+    button('Adaugă')?.click();
+    await settle();
+
+    expect(create).not.toHaveBeenCalled();
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(panel()).toBeDefined();
+  });
+
+  it('shows the taken-name message under the field, the name kept', async () => {
+    await open('en');
+    create.mockRejectedValueOnce(
+      new HttpErrorResponse({
+        error: {
+          code: 'brand_exists',
+          detail: 'Marca există deja: Škoda',
+          status: 409,
+        },
+        status: 409,
+      }),
+    );
+    const input = field('Brand name');
+    type(input, 'skoda');
+
+    button('Add')?.click();
+    await settle();
+
+    const described = (input.getAttribute('aria-describedby') ?? '')
+      .split(' ')
+      .map((id) => document.getElementById(id)?.textContent ?? '')
+      .join(' ');
+    expect(described).toContain('Marca există deja: Škoda');
+    expect(input.value).toBe('skoda');
+    expect(button('Add')).toBeDefined();
+  });
+
+  it('says the save failed on any other failure and stays open', async () => {
+    await open();
+    create.mockRejectedValueOnce(new HttpErrorResponse({ status: 500 }));
+    type(field('Numele mărcii'), 'Xpeng');
+
+    button('Adaugă')?.click();
+    await settle();
+
+    expect(text()).toContain('Nu s‑a putut salva. Încearcă din nou.');
+    expect(field('Numele mărcii').value).toBe('Xpeng');
+  });
+
+  it('reads English', async () => {
+    await open('en');
+
+    expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
+      'Add a brand',
+    );
+    expect(field('Brand name')).toBeDefined();
+  });
+});

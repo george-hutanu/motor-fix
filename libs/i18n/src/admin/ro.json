@@ -1,4 +1,41 @@
 {
+  "brands": {
+    "add": {
+      "hint": "Între 2 și 40 de caractere.",
+      "name": "Numele mărcii",
+      "submit": "Adaugă",
+      "title": "Adaugă o marcă"
+    },
+    "bringBack": "Readuce",
+    "bringBackNamed": "Readuce {name}",
+    "cancel": "Renunță",
+    "column": {
+      "actions": "Acțiuni",
+      "cars": "Mașini",
+      "garages": "Service‑uri",
+      "name": "Marcă",
+      "state": "Stare"
+    },
+    "empty": "Nicio marcă nu se potrivește căutării.",
+    "heading": "Lista de mărci",
+    "loadFailed": "Lista de mărci nu a putut fi citită.",
+    "loading": "Se încarcă mărcile",
+    "newName": "Numele nou pentru {name}",
+    "rename": "Redenumește",
+    "renameNamed": "Redenumește {name}",
+    "retire": "Retrage",
+    "retireNamed": "Retrage {name}",
+    "retry": "Încearcă din nou",
+    "save": "Salvează",
+    "saveFailed": "Nu s‑a putut salva. Încearcă din nou.",
+    "search": "Caută o marcă",
+    "stale": "Alt administrator a modificat marca; rândul a fost actualizat.",
+    "state": {
+      "active": "activă",
+      "retired": "retrasă"
+    },
+    "table": "Mărci"
+  },
   "copyVoices": {
     "lastVoice": "Cel puțin o voce rămâne activă",
     "line": "Ce variante de text văd vizitatorii pe prima pagină · totaluri în ultimele 30 de zile",

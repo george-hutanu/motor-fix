@@ -1,4 +1,41 @@
 {
+  "brands": {
+    "add": {
+      "hint": "2 to 40 characters.",
+      "name": "Brand name",
+      "submit": "Add",
+      "title": "Add a brand"
+    },
+    "bringBack": "Bring back",
+    "bringBackNamed": "Bring back {name}",
+    "cancel": "Cancel",
+    "column": {
+      "actions": "Actions",
+      "cars": "Cars",
+      "garages": "Garages",
+      "name": "Brand",
+      "state": "State"
+    },
+    "empty": "No brand matches the search.",
+    "heading": "Brand list",
+    "loadFailed": "The brand list could not be read.",
+    "loading": "Loading the brands",
+    "newName": "New name for {name}",
+    "rename": "Rename",
+    "renameNamed": "Rename {name}",
+    "retire": "Retire",
+    "retireNamed": "Retire {name}",
+    "retry": "Try again",
+    "save": "Save",
+    "saveFailed": "Could not save. Try again.",
+    "search": "Search for a brand",
+    "stale": "Another admin changed this brand; the row has been updated.",
+    "state": {
+      "active": "active",
+      "retired": "retired"
+    },
+    "table": "Brands"
+  },
   "copyVoices": {
     "lastVoice": "At least one voice stays on",
     "line": "Which copy visitors see on the home page · totals in the last 30 days",

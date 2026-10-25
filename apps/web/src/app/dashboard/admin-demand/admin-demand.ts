@@ -15,6 +15,8 @@ import { type AdminDemandDto, AdminService } from '@motor-fix/data-access';
 import { formatDay, formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { BarChart, type ChartPoint, HlmButton } from '@motor-fix/ui-cockpit';
 
+import { AdminBrands } from '../admin-brands/admin-brands';
+
 type Kind = 'brands' | 'jobs';
 
 interface Report {
@@ -36,7 +38,7 @@ interface Report {
 // What drivers searched for and asked for in the last 30 days: the view's two
 // reports, or with `overview` the dashboard's brand panel alone.
 @Component({
-  imports: [BarChart, HlmButton, TranslatePipe],
+  imports: [AdminBrands, BarChart, HlmButton, TranslatePipe],
   selector: 'mf-admin-demand',
   styleUrl: './admin-demand.css',
   templateUrl: './admin-demand.html',
