@@ -19,11 +19,10 @@
     <mf-garage-requests-panel [limit]="4" />
   }
   @if (ownJobs()) {
-    <mf-own-jobs-section>
-      @if (daySheet()) {
-        <a class="day-sheet" routerLink="schedule">{{ 'garage.home.ownJobs.daySheet' | t }}</a>
-      }
-    </mf-own-jobs-section>
+    @if (daySheet()) {
+      <a class="day-sheet" routerLink="schedule">{{ 'garage.home.ownJobs.daySheet' | t }}</a>
+    }
+    <mf-own-jobs-section />
   } @else if (!feed.visible()) {
     <p>{{ 'shell.frame.coming.garage.dashboard' | t }}</p>
   }

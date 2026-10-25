@@ -76,8 +76,11 @@ test.describe("a mechanic's Panou on a phone @seeded @database", () => {
   });
 
   test.afterAll(async () => {
-    if (mechanicId) await answerQuotes(db, mechanicId, false);
-    await db.end();
+    try {
+      if (mechanicId) await answerQuotes(db, mechanicId, false);
+    } finally {
+      await db.end();
+    }
   });
 
   test('she sees only her job, opens it, ticks a step, and Cereri de ofertă appears without a reload once she may answer quotes', async ({

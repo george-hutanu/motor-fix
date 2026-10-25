@@ -20,7 +20,8 @@ import {
 import { liveResource } from '../../live';
 
 // A mechanic's own jobs on Panou: today's, and those still in work from an
-// earlier day, by start; the next booking and the day's load above them. The
+// earlier day, by start; the next booking and the day's load above them, and
+// whatever the page puts in it (her day-sheet link) above all. The
 // list API already narrows a mechanic to her own jobs. A row opens the job's
 // steps as Lucrări does; a booking confirmed, moved or cancelled re-reads.
 @Component({
@@ -39,8 +40,11 @@ export class OwnJobsSection {
     () => this.api.garageJobsControllerList({}),
     [...JOB_KINDS, 'booking.confirmed', 'booking.moved', 'booking.cancelled'],
   );
+  // A cancelled booking is no work of her day.
   protected readonly rows = computed(() =>
-    (this.view.value()?.items ?? []).filter((job) => todayOrLive(job)),
+    (this.view.value()?.items ?? [])
+      .filter((job) => job.status !== 'cancelled' && todayOrLive(job))
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
   );
   // The earliest job still to start, done and cancelled ones aside.
   protected readonly next = computed(() => {

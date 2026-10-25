@@ -30,16 +30,13 @@ const bucharestDay = new Intl.DateTimeFormat('en-CA', {
 });
 
 // The Bucharest calendar day of a moment, as YYYY-MM-DD.
-export const dayOf = (at: string | Date) => bucharestDay.format(new Date(at));
+const dayOf = (at: string | Date) => bucharestDay.format(new Date(at));
 
 const LIVE = new Set<JobSummaryDto['status']>(['in_work', 'paused']);
 
 // Booked for today, or still in work from an earlier day.
-export function todayOrLive(
-  job: Pick<JobSummaryDto, 'startsAt' | 'status'>,
-  today = dayOf(new Date()),
-) {
-  return LIVE.has(job.status) || dayOf(job.startsAt) === today;
+export function todayOrLive(job: Pick<JobSummaryDto, 'startsAt' | 'status'>) {
+  return LIVE.has(job.status) || dayOf(job.startsAt) === dayOf(new Date());
 }
 
 // Today's time alone; another day's date before it.

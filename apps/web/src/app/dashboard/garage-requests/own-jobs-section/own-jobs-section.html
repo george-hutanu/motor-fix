@@ -1,5 +1,4 @@
 <h2>{{ 'garage.home.ownJobs.title' | t }}</h2>
-<ng-content />
 @if (view.value()) {
   @if (next(); as job) {
     <p class="muted" data-next>{{ nextLine(job) }}</p>

@@ -425,8 +425,8 @@ describe('the own jobs on a phone', () => {
   );
 
   it('wraps a row instead of scrolling sideways', () => {
-    expect(stylesheet).toMatch(/flex-wrap: wrap/);
-    expect(stylesheet).toMatch(/overflow-wrap: anywhere/);
+    expect(stylesheet).toMatch(/\.row \{[^}]*overflow-wrap: anywhere/);
+    expect(stylesheet).toMatch(/\.row \{[^}]*white-space: normal/);
     expect(stylesheet).not.toMatch(/white-space: nowrap/);
   });
 
