@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -610,5 +613,19 @@ describe("the card dialog's Program tab", () => {
 
     expect(tabs()).toHaveLength(0);
     expect(field('Nume').value).toBe('');
+  });
+});
+
+describe('MechanicCard tabs on a 320 px phone', () => {
+  it('keeps both tabs on one row, so Card never sits out of view above Program', () => {
+    const css = readFileSync(
+      join(__dirname, 'mechanic-card.css'),
+      'utf8',
+    ).replace(/\s+/g, ' ');
+
+    expect(css).toMatch(/\.tabs \[hlmTabsList\] \{[^}]*flex-wrap: nowrap/);
+    expect(css).toMatch(
+      /\.tabs \[hlmTabsTrigger\] \{[^}]*padding-inline: var\(--mf-space-2\)/,
+    );
   });
 });

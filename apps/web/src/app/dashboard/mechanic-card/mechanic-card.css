@@ -115,3 +115,12 @@ p {
   gap: var(--mf-space-4);
   min-width: 0;
 }
+/* Both tabs stay on one row down to 320 px: wrapped, Card sat out of view above Program. */
+.tabs [hlmTabsList] {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.tabs [hlmTabsTrigger] {
+  flex: none;
+  padding-inline: var(--mf-space-2);
+}
