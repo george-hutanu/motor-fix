@@ -45,6 +45,7 @@ describe('the one place every limit is set', () => {
       quoteSend: [60, 3600, 'key'],
       search: [120, 60, 'address'],
       signInAttempts: [30, 900, 'address'],
+      staticMap: [120, 60, 'address'],
       uploadUrl: [60, 3600, 'key'],
     });
   });
