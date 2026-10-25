@@ -24,9 +24,13 @@ import {
   ReviewsService,
 } from '@motor-fix/data-access';
 import {
+  formatDay,
+  formatLei,
+  formatLeiSpan,
   formatRating,
   formatShortMonthYear,
   I18n,
+  type Language,
   TranslatePipe,
 } from '@motor-fix/i18n';
 
@@ -37,6 +41,8 @@ import { PublicLive } from '../../live';
 
 // Any change to a review or to the garage's rating reads the first page again.
 const KINDS = EVENT_KINDS.filter((kind) => /^(review|rating)\./.test(kind));
+
+const SECTION = 'public.garageProfile.reviewsSection';
 
 const SCORES = [
   ['five', 5],
@@ -113,25 +119,9 @@ export class ReviewsSection implements OnInit {
     const page = this.page();
     if (!page) return [];
     const language = this.i18n.language();
-    return [...page.items, ...this.extra()].map((review) => {
-      const jobs = review.jobs
-        .map((job) => (language === 'en' ? job.nameEn : job.nameRo))
-        .join(', ');
-      const car = review.car && `${review.car.brand} ${review.car.model}`;
-      return {
-        about: car ? (jobs ? `${car} · ${jobs}` : car) : null,
-        author:
-          review.author.shortName === DELETED_AUTHOR
-            ? this.i18n.t('public.garageProfile.reviewsSection.deletedAuthor')
-            : review.author.shortName,
-        id: review.id,
-        month: formatShortMonthYear(review.postedAt, language),
-        score: this.i18n.t('public.garageProfile.reviewsSection.score', {
-          rating: formatRating(review.rating, language),
-        }),
-        text: review.text,
-      };
-    });
+    return [...page.items, ...this.extra()].map((review) =>
+      this.row(review, language),
+    );
   });
   // A page past the last answers no items with the real total, so the pages
   // read, not the rows shown, say whether another one remains.
@@ -140,6 +130,51 @@ export class ReviewsSection implements OnInit {
     if (!page) return false;
     return this.pages() * page.pageSize < page.total;
   });
+
+  private row(review: GarageReviewDto, language: Language) {
+    const jobs = review.jobs
+      .map((job) => (language === 'en' ? job.nameEn : job.nameRo))
+      .join(', ');
+    const car = review.car && `${review.car.brand} ${review.car.model}`;
+    const profile = review.source === 'profile';
+    return {
+      about: profile
+        ? this.i18n.t(`${SECTION}.notThroughMotorFix`)
+        : car && [car, jobs].filter(Boolean).join(' · '),
+      author:
+        review.author.shortName === DELETED_AUTHOR
+          ? this.i18n.t(`${SECTION}.deletedAuthor`)
+          : review.author.shortName,
+      edited: review.editedAt && formatDay(review.editedAt, language),
+      id: review.id,
+      month: formatShortMonthYear(review.postedAt, language),
+      price: profile ? '' : this.price(review, language),
+      score: this.i18n.t(`${SECTION}.score`, {
+        rating: formatRating(review.rating, language),
+      }),
+      text: review.text,
+    };
+  }
+
+  // "Ofertă … · Final … · Plătit, după șofer: …": each part whose amount the
+  // read carries; the driver's amount only when it says something the final
+  // price does not. No part, no line.
+  private price(review: GarageReviewDto, language: Language): string {
+    const part = (key: string, amount: string) =>
+      this.i18n.t(`${SECTION}.price.${key}`, { amount });
+    const { finalPriceBani: final, paidBani: paid, quote } = review;
+    const parts: string[] = [];
+    if (quote) {
+      parts.push(
+        part('quote', formatLeiSpan(quote.fromBani, quote.toBani, language)),
+      );
+    }
+    if (final != null) parts.push(part('final', formatLei(final, language)));
+    if (paid != null && paid !== final) {
+      parts.push(part('paid', formatLei(paid, language)));
+    }
+    return parts.join(' · ');
+  }
 
   ngOnInit(): void {
     this.handed = this.take();

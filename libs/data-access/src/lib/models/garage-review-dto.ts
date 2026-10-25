@@ -3,14 +3,24 @@
 
 import { CarSnapshotDto } from '../models/car-snapshot-dto';
 import { DriverNameDto } from '../models/driver-name-dto';
+import { GarageReviewQuoteDto } from '../models/garage-review-quote-dto';
 import { RequestJobDto } from '../models/request-job-dto';
 export interface GarageReviewDto {
   author: DriverNameDto;
   car: (CarSnapshotDto & {
 }) | null;
+  editedAt: string | null;
+  finalPriceBani: number | null;
   id: string;
   jobs: Array<RequestJobDto>;
+
+  /**
+   * What the driver says they paid
+   */
+  paidBani: number | null;
   postedAt: string;
+  quote: (GarageReviewQuoteDto & {
+}) | null;
   rating: number;
   source: 'job' | 'profile';
   text: string | null;

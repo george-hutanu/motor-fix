@@ -7,9 +7,10 @@
   z-index: 10;
   margin-top: auto;
   border-top: 1px solid var(--mf-line);
-  /* Solid: a see-through bar takes the colour of what scrolls under it, and
-     over an amber button the current tab's amber label lost its contrast. */
-  background: var(--mf-bg);
+  /* Opaque enough that amber or dark text scrolling behind keeps every tab at 4.5:1. */
+  background: color-mix(in srgb, var(--mf-bg) 88%, transparent);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  backdrop-filter: saturate(160%) blur(18px);
 }
 :host([hidden]) {
   display: none;
@@ -17,6 +18,13 @@
 @media (min-width: 768px) {
   :host {
     display: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :host {
+    background: var(--mf-bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 nav {
@@ -37,7 +45,7 @@ a {
   text-decoration: none;
 }
 a[aria-current="page"] {
-  color: var(--mf-amber-ink);
+  color: color-mix(in srgb, var(--mf-amber-ink) 80%, var(--mf-text));
 }
 svg {
   flex: none;

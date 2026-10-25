@@ -31,6 +31,8 @@ model Review {
   paidBani   Int?         @map("paid_bani")
   status     ReviewStatus @default(published)
   postedAt   DateTime     @default(now()) @map("posted_at") @db.Timestamptz(3)
+  // Set by an edit of the review; empty until the first one.
+  editedAt   DateTime?    @map("edited_at") @db.Timestamptz(3)
   createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   job        Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
   driver     Account      @relation("ReviewDriver", fields: [driverId], references: [id], onDelete: Cascade)
