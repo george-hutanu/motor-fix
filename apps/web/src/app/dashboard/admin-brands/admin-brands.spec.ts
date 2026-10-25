@@ -339,6 +339,50 @@ describe('editing a row', () => {
     );
   });
 
+  it('re-reads the row from a stale answer that arrives as text', async () => {
+    const now = brand('Dacia Group', {
+      id: 'id-Dacia',
+      state: 'retired',
+      updatedAt: '2026-10-25T11:00:00.000Z',
+    });
+    update.mockRejectedValueOnce(
+      new HttpErrorResponse({
+        error: JSON.stringify({ brand: now, code: 'stale_value', status: 409 }),
+        status: 409,
+      }),
+    );
+    const el = await open();
+
+    button(el, 'Redenumește Dacia')?.click();
+    await settle();
+    type(el.querySelector('tbody input') as HTMLInputElement, 'Dacia SA');
+    button(el, 'Salvează')?.click();
+    await settle();
+
+    const row = rowOf(el, 'Dacia Group');
+    expect(row.querySelector('mf-lamp')?.textContent?.trim()).toBe('retrasă');
+    expect(row.querySelector('[role="status"]')?.textContent?.trim()).toBe(
+      'Alt administrator a modificat marca; rândul a fost actualizat.',
+    );
+  });
+
+  it('says the save failed when a conflict body is not valid JSON', async () => {
+    update.mockRejectedValueOnce(
+      new HttpErrorResponse({ error: '{"code":"stale_value",', status: 409 }),
+    );
+    const el = await open();
+
+    button(el, 'Redenumește Dacia')?.click();
+    await settle();
+    type(el.querySelector('tbody input') as HTMLInputElement, 'Dacia SA');
+    button(el, 'Salvează')?.click();
+    await settle();
+
+    expect(rowOf(el, 'Dacia').textContent).toContain(
+      'Nu s‑a putut salva. Încearcă din nou.',
+    );
+  });
+
   it('keeps the field open with the API message when the name is taken', async () => {
     update.mockRejectedValueOnce(
       conflict({ code: 'brand_exists', detail: 'Marca există deja: Škoda' }),

@@ -98,8 +98,9 @@ td:last-child {
   }
   tr {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--mf-space-1);
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--mf-space-1) var(--mf-space-2);
     padding: var(--mf-space-3) 0;
     border-top: 1px solid var(--mf-line);
   }
@@ -111,6 +112,11 @@ td:last-child {
     padding: 0;
     border-top: 0;
     min-width: 0;
+  }
+  /* Name and state share the card's first line; the rest spans it. */
+  td.count,
+  td.actions {
+    grid-column: 1 / -1;
   }
   .count {
     text-align: start;

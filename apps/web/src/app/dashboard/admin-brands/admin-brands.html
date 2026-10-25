@@ -78,7 +78,7 @@
                 <td class="count" data-cars [attr.data-label]="'admin.brands.column.cars' | t">{{ row.cars }}</td>
                 <td class="actions">
                   @if (!open) {
-                    <button hlmBtn type="button" variant="secondary" data-rename (click)="startRename(brand)" [attr.aria-label]="'admin.brands.renameNamed' | t: { name: brand.name }">{{ 'admin.brands.rename' | t }}</button>
+                    <button hlmBtn type="button" variant="ghost" data-rename (click)="startRename(brand)" [attr.aria-label]="'admin.brands.renameNamed' | t: { name: brand.name }">{{ 'admin.brands.rename' | t }}</button>
                     @if (brand.state === 'active') {
                       <button hlmBtn type="button" variant="ghost" data-state-action (click)="setActive(brand, false)" [attr.aria-label]="'admin.brands.retireNamed' | t: { name: brand.name }">{{ 'admin.brands.retire' | t }}</button>
                     } @else {
