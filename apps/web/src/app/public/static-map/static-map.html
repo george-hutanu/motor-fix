@@ -13,7 +13,7 @@
       <span class="cluster" [style.left.px]="cluster.x" [style.top.px]="cluster.y">{{ cluster.count }}</span>
     }
     @for (pin of drawn.pins; track pin.id) {
-      <span class="pin" [class.takes]="pin.takes" [class.lit]="pin.id === lit()" [style.left.px]="pin.x" [style.top.px]="pin.y">{{ pin.rate }}</span>
+      <span class="pin" [class.takes]="pin.takes" [class.lit]="pin.id === lit()" [style.left.px]="pin.x" [style.top.px]="pin.y">{{ quiet().has(pin.id) ? '' : pin.rate }}</span>
     }
     @if (drawn.marker; as marker) {
       <span class="here" [style.left.px]="marker.x" [style.top.px]="marker.y"></span>

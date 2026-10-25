@@ -1,6 +1,6 @@
 import type { GaragePinDto, GaragePinsDto } from '@motor-fix/data-access';
 
-import { CLUSTER_ABOVE, CLUSTER_CELL, overlayOf } from './overlay';
+import { CLUSTER_ABOVE, CLUSTER_CELL, overlayOf, quietLabels } from './overlay';
 import { span } from '../map-libre/map-libre';
 
 // MapLibre's own MercatorCoordinate.fromLngLat in its 512-px world and the
@@ -166,5 +166,48 @@ describe('overlayOf, what the browser draws over the static image', () => {
       clusters: [],
       pins: [],
     });
+  });
+});
+
+// QA lap 6 at 390 px: the lit pin's rate drew over its neighbour's. The
+// interactive map lets no two labels overlap and places the lit one first.
+// @traces 1196-FR-012
+describe('quietLabels, the rates that give way', () => {
+  const pin = (id: string, x: number, y: number, rate = '180') => ({
+    id,
+    rate,
+    takes: true,
+    x,
+    y,
+  });
+
+  it('keeps every rate where none meet', () => {
+    expect(quietLabels([pin('a', 0, 0), pin('b', 100, 0)], undefined)).toEqual(
+      new Set(),
+    );
+  });
+
+  it('quiets the later of two rates that meet', () => {
+    expect(quietLabels([pin('a', 0, 0), pin('b', 20, 4)], undefined)).toEqual(
+      new Set(['b']),
+    );
+  });
+
+  it('places the lit pin’s rate first, so its neighbour gives way', () => {
+    expect(quietLabels([pin('a', 0, 0), pin('b', 20, 4)], 'b')).toEqual(
+      new Set(['a']),
+    );
+  });
+
+  it('lets rates one above the other stand when their boxes do not meet', () => {
+    expect(quietLabels([pin('a', 0, 0), pin('b', 0, 20)], undefined)).toEqual(
+      new Set(),
+    );
+  });
+
+  it('never quiets a pin with no rate, nor lets it push another away', () => {
+    expect(
+      quietLabels([pin('a', 0, 0, ''), pin('b', 4, 0)], undefined),
+    ).toEqual(new Set());
   });
 });

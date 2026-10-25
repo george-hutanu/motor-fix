@@ -20,7 +20,10 @@ const pinOf = (n: number, over: Partial<GaragePinDto> = {}): GaragePinDto => ({
   ...over,
 });
 const PINS: GaragePinsDto = {
-  pins: [pinOf(1), pinOf(2, { stance: 'does_not_take' })],
+  pins: [
+    pinOf(1),
+    pinOf(2, { lat: 44.44, lng: 26.11, stance: 'does_not_take' }),
+  ],
   total: 2,
 };
 
@@ -201,6 +204,27 @@ describe('StaticMap, the overlay', () => {
     expect(lit).toHaveLength(1);
     expect(lit[0].textContent?.trim()).toBe('150');
     expect(lit[0]).toBe(element().querySelectorAll('.pin')[1]);
+  });
+
+  // QA lap 6 at 390 px: the lit pin's rate drew over its neighbour's.
+  it('lets a rate that would cover another give way, the lit one placed first', async () => {
+    await render();
+    fixture.componentRef.setInput('pins', {
+      pins: [pinOf(1, { rateLei: 140 }), pinOf(2, { rateLei: 180 })],
+      total: 2,
+    });
+    fixture.detectChanges();
+    const rates = () =>
+      Array.from(element().querySelectorAll('.pin')).map((pin) =>
+        pin.textContent?.trim(),
+      );
+
+    expect(rates()).toEqual(['140', '']);
+
+    fixture.componentRef.setInput('lit', 'g-2');
+    fixture.detectChanges();
+
+    expect(rates()).toEqual(['', '180']);
   });
 
   // @traces 1196-FR-018

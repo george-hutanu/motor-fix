@@ -23,7 +23,7 @@ import { TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import type { Box, MapView } from './fit-view';
-import { overlayOf } from './overlay';
+import { overlayOf, quietLabels } from './overlay';
 
 // A map shown as one image of its ground with the pins drawn over it, which
 // asks its host for the interactive map on a tap, a click or its button. The
@@ -72,6 +72,10 @@ export class StaticMap {
     if (!view || !box || this.broken()) return undefined;
     return overlayOf(this.pins(), this.place(), view, box);
   });
+  // The rates that give way to one they would cover, the lit one first.
+  protected readonly quiet = computed(() =>
+    quietLabels(this.overlay()?.pins ?? [], this.lit()),
+  );
 
   constructor() {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;

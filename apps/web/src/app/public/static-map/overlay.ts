@@ -14,7 +14,7 @@ export interface Spot {
   y: number;
 }
 
-interface OverlayPin extends Spot {
+export interface OverlayPin extends Spot {
   id: string;
   rate: string;
   takes: boolean;
@@ -91,4 +91,46 @@ function clustersOf(spots: Spot[]): OverlayCluster[] {
     cells.set(key, cell);
   }
   return [...cells.values()];
+}
+
+// A rate's box beside its dot (static-map.css): the dot's 14 px less the
+// 7 px it is pulled left, the 4 px gap, then about 8 px a digit at the 12 px
+// label size, 16 px tall about the pin's centre.
+const RATE_FROM = 11;
+const DIGIT = 8;
+const HALF_LINE = 8;
+
+// The pins whose rate gives way to another's it would cover, as MapLibre
+// lets no two labels overlap: the lit pin's is placed first, then the rest
+// in order. Their dots stay.
+export function quietLabels(
+  pins: OverlayPin[],
+  lit: string | undefined,
+): Set<string> {
+  const order = [
+    ...pins.filter((pin) => pin.id === lit),
+    ...pins.filter((pin) => pin.id !== lit),
+  ];
+  const placed: { left: number; right: number; top: number; bottom: number }[] =
+    [];
+  const quiet = new Set<string>();
+  for (const pin of order) {
+    if (!pin.rate) continue;
+    const box = {
+      bottom: pin.y + HALF_LINE,
+      left: pin.x + RATE_FROM,
+      right: pin.x + RATE_FROM + DIGIT * pin.rate.length,
+      top: pin.y - HALF_LINE,
+    };
+    const meets = placed.some(
+      (other) =>
+        box.left < other.right &&
+        other.left < box.right &&
+        box.top < other.bottom &&
+        other.top < box.bottom,
+    );
+    if (meets) quiet.add(pin.id);
+    else placed.push(box);
+  }
+  return quiet;
 }

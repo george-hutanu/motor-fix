@@ -231,7 +231,7 @@ _From 1196-static-map-first._
 
 _From 1196-static-map-first._
 
-### 1196-FR-012 — Over the static image the browser MUST draw, from the pins answer and the snapped centre (FR-002), by Web Mercator maths with no map library: one pin per fixed garage with its `rateLei` label and its lamp colour (269-FR-013), above 50 fixed pins, counted circles from a simple screen grid of its own (not MapLibre's clusters), one circle per mobile mechanic of its `serviceRadiusKm` with its rate label (269-FR-014), the lit pin or circle in amber (270-FR-008), and the "you are here" marker at the place (271-FR-004, pulsing unless reduced motion); every element is hidden from assistive technology and out of the keyboard order (269-FR-016).
+### 1196-FR-012 — Over the static image the browser MUST draw, from the pins answer and the snapped centre (FR-002), by Web Mercator maths with no map library: one pin per fixed garage with its `rateLei` label and its lamp colour (269-FR-013), above 50 fixed pins, counted circles from a simple screen grid of its own (not MapLibre's clusters), one circle per mobile mechanic of its `serviceRadiusKm` with its rate label (269-FR-014), the lit pin or circle in amber (270-FR-008), a rate that would cover another's giving way with its dot kept (the lit one placed first, as MapLibre lets no two labels overlap), and the "you are here" marker at the place (271-FR-004, pulsing unless reduced motion); every element is hidden from assistive technology and out of the keyboard order (269-FR-016).
 
 _From 1196-static-map-first._
 
