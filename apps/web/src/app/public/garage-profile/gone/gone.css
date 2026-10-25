@@ -13,18 +13,33 @@ h1 {
   overflow-wrap: anywhere;
 }
 
-p {
+:host > p {
   margin: 0;
   color: var(--mf-text-secondary);
 }
 
-a {
+:host > a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
   color: var(--mf-amber-ink);
   font-weight: 600;
 }
+
+.similar {
+  display: grid;
+  gap: var(--mf-space-3);
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.similar > li {
+  min-width: 0;
+}
+
 @media (min-width: 48rem) {
   h1 {
     font-size: var(--mf-size-title);

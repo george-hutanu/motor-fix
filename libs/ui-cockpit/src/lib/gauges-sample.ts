@@ -47,6 +47,24 @@ const RATINGS = [4.8, 4.2] as const;
       flex: 1 1 200px;
       max-width: 240px;
     }
+    figure {
+      display: grid;
+      grid-template-rows: 1fr auto;
+      align-self: stretch;
+      justify-items: start;
+      gap: var(--mf-space-2);
+      min-width: 0;
+      max-width: 100%;
+      margin: 0;
+    }
+    figure > mf-odometer {
+      align-self: center;
+    }
+    figcaption {
+      color: var(--mf-text-secondary);
+      font-family: var(--mf-font-body);
+      font-size: var(--mf-size-small);
+    }
   `,
   template: `
     <div class="stack">
@@ -67,9 +85,18 @@ const RATINGS = [4.8, 4.2] as const;
         <mf-rating-dial size="small" [value]="null" />
       </div>
       <div class="row">
-        <mf-odometer [from]="140050" />
-        <mf-odometer [from]="estimate()[0]" [to]="estimate()[1]" />
-        <mf-odometer [from]="null" />
+        <figure>
+          <mf-odometer [from]="140050" />
+          <figcaption>{{ 'cockpit.gauges.odometerOne' | t }}</figcaption>
+        </figure>
+        <figure>
+          <mf-odometer [from]="estimate()[0]" [to]="estimate()[1]" />
+          <figcaption>{{ 'cockpit.gauges.odometerRange' | t }}</figcaption>
+        </figure>
+        <figure>
+          <mf-odometer [from]="null" />
+          <figcaption>{{ 'cockpit.gauges.odometerNone' | t }}</figcaption>
+        </figure>
         <button hlmBtn variant="secondary" (click)="swap()">
           {{ 'cockpit.gauges.swap' | t }}
         </button>

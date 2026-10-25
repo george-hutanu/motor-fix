@@ -48,6 +48,9 @@
     "live": "Live",
     "motionFull": "Motion: full",
     "motionReduced": "Motion: reduced",
+    "odometerNone": "No price",
+    "odometerOne": "One price",
+    "odometerRange": "Price range",
     "swap": "Change the values",
     "title": "Lamps, dials and prices"
   },

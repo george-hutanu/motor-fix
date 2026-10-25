@@ -11,7 +11,7 @@ import {
   Min,
 } from 'class-validator';
 
-import { PAID_BANI_MAX, REVIEW_TEXT_MAX } from './lei-text';
+import { DELETED_AUTHOR, PAID_BANI_MAX, REVIEW_TEXT_MAX } from './lei-text';
 import {
   CarSnapshotDto,
   DriverNameDto,
@@ -21,7 +21,7 @@ import {
 import { JOB_STATUSES, type JobStatus } from './request-status';
 import { toQueryNumber } from './verification-queue';
 
-export { REVIEW_TEXT_MAX };
+export { DELETED_AUTHOR, REVIEW_TEXT_MAX };
 
 const REVIEW_STATUSES = [
   'published',
@@ -210,4 +210,77 @@ export class MechanicReviewsPageDto {
 
   @ApiProperty({ type: [MechanicReviewDto] })
   items!: MechanicReviewDto[];
+}
+
+// How many published reviews gave each score, five stars first.
+export class RatingBreakdownDto {
+  @ApiProperty()
+  five!: number;
+
+  @ApiProperty()
+  four!: number;
+
+  @ApiProperty()
+  three!: number;
+
+  @ApiProperty()
+  two!: number;
+
+  @ApiProperty()
+  one!: number;
+}
+
+// A published review on a garage's profile: the author by short name only,
+// and for a job review the car and the jobs the garage did.
+export class GarageReviewDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ enum: ['job', 'profile'] })
+  source!: 'job' | 'profile';
+
+  @ApiProperty({ maximum: 5, minimum: 1 })
+  rating!: number;
+
+  @ApiProperty({ nullable: true, type: String })
+  text!: string | null;
+
+  @ApiProperty({ format: 'date-time' })
+  postedAt!: string;
+
+  @ApiProperty({ type: DriverNameDto })
+  author!: DriverNameDto;
+
+  @ApiProperty({ nullable: true, type: CarSnapshotDto })
+  car!: CarSnapshotDto | null;
+
+  @ApiProperty({ type: [RequestJobDto] })
+  jobs!: RequestJobDto[];
+}
+
+export class GarageReviewsPageDto {
+  @ApiProperty({
+    description: "The garage's stored rating",
+    nullable: true,
+    type: Number,
+  })
+  rating!: number | null;
+
+  @ApiProperty({ description: "The garage's stored review count" })
+  reviewCount!: number;
+
+  @ApiProperty({ type: RatingBreakdownDto })
+  breakdown!: RatingBreakdownDto;
+
+  @ApiProperty()
+  page!: number;
+
+  @ApiProperty()
+  pageSize!: number;
+
+  @ApiProperty({ description: 'Published reviews; the breakdown sums to it' })
+  total!: number;
+
+  @ApiProperty({ type: [GarageReviewDto] })
+  items!: GarageReviewDto[];
 }

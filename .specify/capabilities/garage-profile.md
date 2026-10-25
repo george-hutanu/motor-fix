@@ -25,6 +25,8 @@ features:
   - 133-garage-public-profile
   - 136-legal-check-panel
   - 309-open-now-directions
+  - 385-share-garage-link
+  - 024-garage-reviews
 ---
 
 # Capability: Garage profile
@@ -77,9 +79,9 @@ _From 307-public-garage-profile._
 
 _From 271-garage-distance._
 
-### 307-FR-015 — The page MUST show skeletons for the header and each section while the read is open; on 404, the "Pagina nu există" / "This page does not exist" view with a link to Home (the existing not-found view); on 410, the "no longer available" view, "Acest service nu mai este disponibil" / "This garage is no longer available" with a link to Home; the server answers the page with status 404 and 410 for those two views, 200 otherwise; on any other failure, an error block "Nu am putut încărca service-ul" / "We could not load the garage" with "Încearcă din nou" / "Try again" that repeats the read.
+### 385-FR-008 — On the 410 answer the page MUST show the view with the heading "Acest service nu mai este disponibil pe MotorFix." / "This garage is no longer available on MotorFix.", never the old garage's name or any detail of it, then the similar garages of FR-009 as result cards in a list (one list item per card, the heading before it as an `h1`) (the card of Results, 267-FR-014, each opening its garage's profile with the link's brand, or the card's own brand when the link had none), under a line "Service-uri similare în apropiere" / "Similar garages nearby"; the server answers the page with status 410, as today (modifies 307-FR-015: the Home link gives way to the cards and the search link).
 
-_From 307-public-garage-profile._
+_From 385-share-garage-link._
 
 ### 307-FR-016 — The page MUST render well at 320 px and 390 px (stacked), tablet and desktop (header side by side), light and dark, Romanian and English, with no sideways scroll; its texts MUST live in the public texts for both languages, and text the garage wrote MUST be shown as written in both. Accessibility: the lamp's stance and the dial's value are carried by text, never by colour alone; the back link, the sign-in controls and "Încearcă din nou" / "Try again" are reachable by keyboard with a visible focus and an accessible name; touch targets are at least 44 px under 640 px; the skeletons are hidden from assistive technology and an in-place change of the lamp or the dial is announced politely, without moving focus.
 
@@ -536,6 +538,37 @@ _From 308-profile-details._
 
 _From 308-profile-details._
 
+### 024-FR-001 — The public garage profile MUST show a "Ce spun șoferii" / "What drivers say" section in the page's `reviews` slot (after the prices, in the main column from 1024 px, 311-FR-009), visible to everyone, signed in or not, with the same content for both.
+
+_From 024-garage-reviews._
+
+### 024-FR-002 — The section MUST show the garage's rating with one decimal in the language's separator ("4,9" / "4.9", 019-FR-003), its review count ("212 recenzii" / "212 reviews", with the singular for 1), and the breakdown: for each star value from five to one, its label ("5 stele" … "2 stele", "1 stea" / "5 stars" … "1 star") and the number of published reviews with that rating. A garage with no published review shows "—" for the rating, "Încă nu are recenzii." / "No reviews yet." and no breakdown rows.
+
+_From 024-garage-reviews._
+
+### 024-FR-003 — The rating and the count MUST be the garage's stored figures (written by the ratings job, 025-FR-006); the breakdown MUST be counted from the garage's `published` reviews on each read, in the same answer as the list, so the five counts add up to that answer's `total`. The empty state shows when `total` is 0; the rating shows "—" when the stored rating is null; the count line shows the stored count.
+
+_From 024-garage-reviews._
+
+### 024-FR-011 — The open profile MUST re-read the section (its first page, dropping the extra pages) when any `review.*` or `rating.*` message for its garage arrives on the `public:garage:{garageId}` stream it already joins (307-FR-017), and after the stream reopens (256-FR-002), with no polling of its own; the re-read swaps the content in place, keeps the scroll position (307-FR-018) and is silent for assistive technology (a re-read that starts while a "Vezi mai multe" page is loading replaces it: the last answer to arrive for the newest request wins), except that the rating's in-place change is announced politely as the header's dial already is (307-FR-016).
+
+_From 024-garage-reviews._
+
+### 024-FR-012 — While the section has no answer yet (a client-side navigation to the profile) it MUST show a skeleton hidden from assistive technology, never over content already shown; when the read fails (network or 5xx) it MUST show "Nu am putut încărca recenziile" / "We could not load the reviews" with "Încearcă din nou" / "Try again", which reads again (also when the server-side first read failed); a failed re-read keeps the last shown content; a failed "Vezi mai multe" keeps the loaded pages and shows the error line with "Încearcă din nou" in the button's place.
+
+_From 024-garage-reviews._
+
+### 024-FR-013 — The section MUST render at 320 px and 390 px, tablet and desktop, light and dark, Romanian and English with no sideways scroll; "Vezi mai multe" and "Încearcă din nou" are reachable by keyboard with a visible focus and a touch target of at least 44 px under 640 px; the breakdown is readable as text, never colour alone (307-FR-016).
+
+_From 024-garage-reviews._
+
+### 024-FR-014 — The section MUST be a web component of its own folder under the garage profile, rendered on the server with the profile's first page as the rest of the page is, and MUST join no stream of its own.
+
+_From 024-garage-reviews._
+
+### 024-FR-015 — The mock's "Scrie o recenzie" button MUST NOT be added by this story (removed while `reviews_only_after_confirmed_job` is on; ST-22's button covers the off case).
+
+_From 024-garage-reviews._
 ### 309-FR-001 — The status rule MUST be one pure, browser-safe function in the shared contracts library (beside the hours types; no server-framework, validator or database import), taking the garage's weekly hours, the list of closed days ahead (each a Bucharest date with its reason, `holiday` or `closed`) and the instant "now", and answering one of: no line; open until a time of today; on a break until a time of today; closed, with the reason for today (`hours`, `holiday` or `closed`) and the next opening (the day's offset from today, 0 to 14, and its start time), or closed with no opening in the window. It MUST be usable unchanged by #210's "open now" filter (decided in #864).
 
 _From 309-open-now-directions._
@@ -663,6 +696,46 @@ _From 136-legal-check-panel._
 
 _From 136-legal-check-panel._
 
+### 385-FR-001 — The public profile header MUST show one button "Distribuie" / "Share" beside the garage's name, with a share icon, at least 44 px tall and wide on phones, reachable by keyboard with a visible focus ring, named for assistive technology "Distribuie" / "Share" followed by the garage's name (a visible label, not the icon alone), visible from 320 px without sideways scrolling, in light and dark; it is shown only on the 200 page, never on the 404 or 410 views.
+
+_From 385-share-garage-link._
+
+### 385-FR-002 — The shared address MUST be the canonical profile address in the sharer's interface language, `{site origin}/{lang}/garages/{slug}`, with `brand={slug}` when the page has a brand in context, plus `src=share`, and no other parameter; the origin is the site's public origin (`SITE_ORIGIN`, the canonical link's origin), never the browser's `location.origin`.
+
+_From 385-share-garage-link._
+
+### 385-FR-003 — When the browser offers the share menu, the button MUST open it with the garage's name as the title and the address of FR-002 as the link; a dismissed menu does nothing; a failed share falls through to FR-004.
+
+_From 385-share-garage-link._
+
+### 385-FR-004 — Without a share menu the button MUST copy the address to the clipboard and show the toast "Link copiat" / "Link copied" (the shared toast, announced politely to assistive technology); when the copy is refused, the page MUST instead show a read-only field holding the address, selected and focused, under the line "Copiază linkul de mai jos" / "Copy the link below" (the field's accessible name, so a screen reader announces it on focus), kept until the page or garage changes.
+
+_From 385-share-garage-link._
+
+### 385-FR-005 — Nothing in the share action needs a session: the button, the menu, the copy and the field behave the same for a visitor and a signed-in driver.
+
+_From 385-share-garage-link._
+
+### 385-FR-006 — A shared link to an `approved` garage MUST open the public profile with the brand in context, the view counted as `shared_link` (143-FR-008) and a request started from it storing `shared_link` as its source (the existing rules); no change to the 200 page beyond FR-001.
+
+_From 385-share-garage-link._
+
+### 385-FR-007 — A link to a garage that was never public (draft, waiting or unknown slug) MUST keep the plain not-found view and status 404 of 307-FR-015, with no similar garages and no call for them.
+
+_From 385-share-garage-link._
+
+### 385-FR-009 — The view MUST read the similar garages from `GET /api/v1/garages/{slug}/similar?brand={slug}` with the link's `brand` when present and show at most 3; with no item it MUST show "Caută un service pentru {brand name}" / "Find a garage for {brand name}" opening the results for that brand when the answer names a brand; when the link had no brand, or the read fails or answers `not_found` (an unknown brand), it MUST show "Caută un service" / "Find a garage" opening Home; it never shows an error block for this read.
+
+_From 385-share-garage-link._
+
+### 385-FR-010 — On the server the page MUST render the view with its similar garages in the same pass that found the 410, so the first paint holds the cards; in the browser the read is not repeated when the server rendered it.
+
+_From 385-share-garage-link._
+
+### 385-FR-011 — The view MUST lay out phones first: one column of cards at 320 and 390 px, the Results card's wider layout from the tablet width, no sideways scrolling at 320 px, light and dark, Romanian and English.
+
+_From 385-share-garage-link._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -683,3 +756,4 @@ _From 136-legal-check-panel._
 - `133-FR-010` — superseded by `136-FR-005` (2026-10-24)
 - `308-FR-002` — superseded by `309-FR-006` (2026-10-24)
 - `308-FR-003` — superseded by `309-FR-007` (2026-10-24)
+- `307-FR-015` — superseded by `385-FR-008` (2026-10-24)

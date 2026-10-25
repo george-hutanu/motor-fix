@@ -109,6 +109,21 @@ function expectLandmarks(harness: RouterTestingHarness, signIn: string) {
   expect(banners[0].querySelector('[role="group"]')).not.toBeNull();
 }
 
+// The pages these tests open are lazy routes. The first navigation to each one
+// transforms its whole component tree, which under a loaded machine took more
+// than a test's 5 s budget (list your garage). Loading them once up front keeps
+// that one-off cost out of the tests, which then time only the navigation.
+beforeAll(
+  () =>
+    Promise.all([
+      import('./public/frame/frame'),
+      import('./public/results/results'),
+      import('./public/list-your-garage/list-your-garage'),
+      import('./public/review-rules/review-rules'),
+    ]),
+  120_000,
+);
+
 beforeEach(() => {
   localStorage.clear();
   document.head
@@ -393,5 +408,25 @@ describe('public frame', () => {
 
     expect(route?.loadComponent).toBeDefined();
     expect(route?.component).toBeUndefined();
+  });
+});
+
+// @traces 385-FR-002
+describe("the site's origin in the browser", () => {
+  afterEach(() =>
+    document.head.querySelector('meta[name="mf-site"]')?.remove(),
+  );
+
+  it('is the one the server named in the page, never the address bar', () => {
+    const tag = document.createElement('meta');
+    tag.name = 'mf-site';
+    tag.content = 'https://motorfix.ro';
+    document.head.append(tag);
+
+    expect(TestBed.inject(SITE_ORIGIN)).toBe('https://motorfix.ro');
+  });
+
+  it('falls back to the address bar only on a page the server did not name', () => {
+    expect(TestBed.inject(SITE_ORIGIN)).toBe(location.origin);
   });
 });

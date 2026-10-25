@@ -45,8 +45,11 @@ features:
   - 068-yearly-documents
   - 067-restore-suspended-garage
   - 500-req-ip-behind-proxy
-  - 056-mechanic-dialog
   - 003-admin-account-actions
+  - 1188-tail-latency
+  - 947-faro-consent-journeys
+  - 056-mechanic-dialog
+  - 1156-retention-job
 ---
 
 # Capability: Observability
@@ -263,13 +266,13 @@ _From 877-web-health-grafana._
 
 _From 877-web-health-grafana._
 
-### 877-FR-010 — Before anything leaves the browser, e-mail addresses, Romanian phone numbers and number plates MUST be replaced by `***` in error messages, stacks and any attribute, and every URL-valued attribute, the page URL included, MUST be sent without its query string or fragment.
+### 947-FR-007 — The masking of e-mail addresses, Romanian phone numbers and number plates, and the cutting of every URL to its path (877-FR-010), MUST apply to every event, the journey events and the session's attributes included; a journey event's route template carries no parameter value.
 
-_From 877-web-health-grafana._
+_From 947-faro-consent-journeys._
 
-### 877-FR-011 — Browser telemetry MUST create and send no session id, user id or device id, set no cookie, record no session replay or user journey, and leave nothing of its own in local storage, session storage or IndexedDB once the page has loaded and sent. The SDK's transient availability probe (one test key set and removed again at load, plan.md R3) and the tracing sampling flag (a session attribute with no id, removed before sending) are permitted because nothing persists and nothing leaves the device.
+### 947-FR-001 — Without a valid `granted` analytics choice in the browser (no choice, `refused`, `withdrawn`, an older text version, or older than 365 days), browser monitoring MUST behave as ST-877 built it: no session id, user id or device id in any payload, no journey event, no cookie, and nothing of its own kept in local storage, session storage or IndexedDB (877-FR-011 applies in full); the outgoing-event filter MUST keep stripping the session and the user from every item in that state.
 
-_From 877-web-health-grafana._
+_From 947-faro-consent-journeys._
 
 ### 877-FR-012 — Browser requests to the web app's own origin MUST carry a `traceparent` header from a browser span that is exported to the collector; requests to any other origin MUST carry no trace header.
 
@@ -287,13 +290,13 @@ _From 877-web-health-grafana._
 
 _From 877-web-health-grafana._
 
-### 877-FR-016 — `infra/observability/inventory.json` MUST stay passing under `scripts/observability-inventory.ts`; the `web` entries and the new outside service (Grafana Cloud Frontend Observability) MUST be listed with dashboard and alerts `"none"` and the reason that ST-879 and ST-880 add them.
+### 947-FR-011 — The change MUST ship with its observability records: `infra/observability/inventory.json`'s `grafana-faro` entry MUST describe the sessions and journey events it now receives under consent, `infra/observability/README.md` MUST say sessions and journeys exist only under analytics consent and MUST update its owner step that held `FARO_URL` back until the consent gate shipped, `scripts/observability-inventory.ts` MUST pass, and the PR's Observability section MUST list the reports now possible (sessions per release, route walks, errors inside a session).
 
-_From 877-web-health-grafana._
+_From 947-faro-consent-journeys._
 
-### 877-FR-017 — Unit tests MUST cover the browser masking and the route-template mapping; one Playwright test MUST load Home with the collector stubbed and assert that a Web Vitals payload is sent and holds no personal data, no id and no trace header to the collector.
+### 947-FR-010 — Unit tests MUST cover: no consent, `granted`, withdrawal mid-session (no session id and no journey event afterwards, device cleared), a choice under the previous text version (no session id until re-accepted), FR-006 and FR-007. One Playwright test with the collector stubbed MUST assert no session id before consent and one session id, with a journey event per route change, after; the existing telemetry end-to-end checks that nothing is stored before consent MUST stay green.
 
-_From 877-web-health-grafana._
+_From 947-faro-consent-journeys._
 
 ### 877-FR-018 — The PR's Observability section MUST list the signals added (web traces, request metrics, runtime metrics, logs, browser Web Vitals and errors) and the reports they make possible (per-route render latency and errors, Web Vitals by route and viewport class, browser error rate per release) for ST-879 and ST-880.
 
@@ -547,7 +550,7 @@ _From 1024-alert-rules._
 
 _From 1024-alert-rules._
 
-### 1024-FR-005 — `worker.json` MUST hold `worker-queue-backlog`, firing per environment and queue when `motorfix_queue_oldest_waiting_seconds` exceeds 600 s for 5 minutes, and `worker-jobs-failed`, firing per environment and queue when `motorfix_jobs_total{outcome="failed"}` increased in the last 15 minutes for any queue but `verification-result` (which keeps `verification-result-failed`), `for: 0s`; both summaries name the queue (`{{ $labels.queue }}`). (Amended 2026-10-17: `worker-queue-backlog` alerts on no data (1345-FR-004).)
+### 1024-FR-005 — `worker.json` MUST hold `worker-queue-backlog`, firing per environment and queue when `motorfix_queue_oldest_waiting_seconds` exceeds 600 s for 5 minutes, and `worker-jobs-failed`, firing per environment and queue when `motorfix_jobs_total{outcome="failed"}` increased in the last 15 minutes for any queue but `verification-result` (which keeps `verification-result-failed`), `for: 0s`; both summaries name the queue (`{{ $labels.queue }}`). (Amended 2026-10-17: `worker-queue-backlog` alerts on no data (1345-FR-004). (Amended 2026-10-25: `worker-jobs-failed` also carries the retention job's overdue arm, `reason="overdue"` on queue `retention`, and labels its failed arm `reason="failed"` (1156-FR-011).)
 
 _From 1024-alert-rules._
 
@@ -646,6 +649,7 @@ _From 294-status-health-checks._
 ### 294-FR-012 — Tests MUST exist before the implementation and MUST cover: the two-in-a-row rule and `since` set on the first check of the new state; the 5-minute median (one sample, several, a sample older than 5 minutes left out); each tile's probe result mapped to green, amber and red with fixture limits, including a failed check and a figure exactly at a limit; the search probe writing no SEARCH_LOG row; `status_tile.changed` written in the same transaction as the tile change and only on a change, with the `admin` audience; a probe that throws not stopping the run; the job not starting on an unset or invalid `STATUS_THRESHOLDS`; the first run creating six rows; the maps probe on alternate runs and on the first; the share figure with no sends in the window. No end-to-end test in this task (#53 runs it).
 
 _From 294-status-health-checks._
+
 ### 880-FR-001 — Every rule in every file under `infra/observability/alerts/` MUST carry an `annotations.runbook` line: one non-empty sentence naming what to check first (the panel, log or job to open), next to `summary`. `scripts/alert-rules.spec.ts` MUST fail a rule without one.
 
 _From 880-grafana-alerts._
@@ -757,6 +761,7 @@ _From 297-system-status-log._
 ### 297-FR-015 — Tests MUST exist before the implementation and MUST cover: each source writing one entry with the right kind, source and severity (tile change, failed check, final job failure, Brevo and Geoapify errors, server error, backup completed and failed, deploy); grouping within a minute (40 → count 40) and across a minute boundary (two rows); the scrubber masking an e-mail, a phone and a plate in `message` and in `context`; a failed write not failing the caller and being reported once; the write surviving the caller's rollback; `system_log.added` on the `admin` audience only, on insert and not on increment, and a failed publish not failing the write; the purge deleting a 91-day entry and keeping an 89-day one; a retried job failure writing nothing; a business change (price list, reported review) writing no entry; a refused kind or source. No end-to-end test in this task (#55 runs it).
 
 _From 297-system-status-log._
+
 ### 1345-FR-001 — The Node runtime instrumentation of the api, worker, web and mcp MUST sample the event-loop delay at the library's default resolution (10 ms), never at a precision of a second or more, so that `nodejs_eventloop_delay_p99_seconds` on an idle process reads below 0.05 s and the `worker-saturation` rule (0.5 s for 5 minutes) fires only on a stall; the panels and the rule are unchanged. A test asserts the configured precision.
 
 _From 1345-staging-observability._
@@ -804,6 +809,7 @@ _From 1345-staging-observability._
 ### 1348-FR-006 — A cache read that fills an entry (the lead of a miss, inside a warm or not) MUST count its outcome (`miss`, or `warm` inside a warm, 1169-FR-011) as soon as its read function has answered and before the entry is sent to Redis, so that an entry found in Redis always has its count recorded; the counted outcome does not depend on the store's answer (as before this change, when the count followed the store whether or not it succeeded), so the meaning of `warm` and `miss` is unchanged and only the order moves; a background refresh of a stale entry still counts nothing. A cache service integration test MUST observe the counter at the moment the store is sent and fail while the count follows the store; `home-warm.integration.spec.ts` then passes every time, with no retry, sleep or wait added to it.
 
 _From 1348-release-green._
+
 ### 173-FR-014 — The two new endpoints MUST be listed in `infra/observability/inventory.json` with their metrics (the API's route metrics), logs, the dashboard panel and alert they fall under, or the reason they need none, and the PR's Observability section names them (`scripts/observability-inventory.ts` fails CI on one left out).
 
 _From 173-price-range-in-place._
@@ -811,6 +817,7 @@ _From 173-price-range-in-place._
 ### 1183-FR-006 — The `motorfix-api` dashboard MUST gain a "Profile p95 (alert above 300 ms)" panel, and the API alerts file an `api-profile-latency` rule that fires when the profile route's p95 request duration stays above 300 ms for 10 minutes, both shaped like the search ones; the route label MUST be the one the API actually emits for `GET /api/v1/garages/:slug` (checked against `apps/api/src/telemetry.ts` and the existing search panel's `http_route` value). The alert MUST be listed in `infra/observability/inventory.json` under the `api` app so `scripts/observability-inventory.ts` passes.
 
 _From 1183-garage-profile-page._
+
 ### 1178-FR-005 — The worker MUST accept one new optional setting naming Keycloak's metrics endpoint (`KEYCLOAK_METRICS_URL`, a full address to the management interface's `/metrics` on Railway's private network). When it is unset or empty, the worker MUST make no request to any metrics endpoint and publish no Keycloak sample; every other reading is unchanged.
 
 _From 1178-keycloak-sizing._
@@ -875,9 +882,41 @@ _From 068-yearly-documents._
 
 _From 067-restore-suspended-garage._
 
+### 947-FR-002 — Under a valid `granted` choice, every monitoring payload MUST carry one session id, and the browser MUST send a journey event for the page first shown and for each route change, each named by the route template (never the raw path; a route change is a change of template, so moving between two pages of the same template, such as two garage ids, sends no journey event; an unmatched URL is named `unmatched`), and the session's start or resumption MUST be reported, so that Grafana Frontend Observability lists sessions and shows each session's route walk. Errors and Web Vitals sent during the session MUST carry the same id.
+
+_From 947-faro-consent-journeys._
+
+### 947-FR-006 — No session replay: the browser monitoring MUST NOT load any session-replay instrumentation, and the web app MUST NOT depend on a replay package; a unit test MUST fail when either appears.
+
+_From 947-faro-consent-journeys._
+
+### 947-FR-008 — The session id MUST be a random short id made in the browser (a stored value that is not a short alphanumeric id of at most 32 characters is discarded and replaced by a new one, never sent), kept per tab in session storage under the monitoring SDK's own key, with no persistent copy elsewhere on the device, never derived from or stored beside the account id, the browser consent id or any other identifier, and never sent to anything but the collector; the user id MUST stay stripped from every payload with or without consent.
+
+_From 947-faro-consent-journeys._
+
+### 947-FR-009 — Whether a session id and journey events go out MUST be decided from the choice in force when each item is sent (the consent service's `granted`: `granted`, current text version, less than 365 days at the last read of the stored choice), never from a value read once at page load; the outgoing-event filter drops journey events (`view_changed`, `session_start`, `session_resume` and the SDK's `session_extend`) and removes the session id (meta and span attribute) from every item sent without it.
+
+_From 947-faro-consent-journeys._
+
+### 947-FR-012 — The feature MUST add no new endpoint, no new outside call and no new dependency; every failure of the SDK, the storage or the collector MUST be dropped silently and never break, block or slow a page (877-FR-014).
+
+_From 947-faro-consent-journeys._
+
 ### 003-FR-021 — The new routes MUST ship their observability in the same change: request count, duration and error metrics by route and status, one counter of action outcomes labelled by action (`reset_access`, `suspend`, `restore`, `delete_on_request`) and outcome (`done`, `refused`, `conflict`, `email_failed`, `failed`) with no other label, one structured log line per action and per failure (route, outcome, account id, never a name, e-mail, phone or reason text), a dashboard panel and an alert on the error rate and on `failed`, listed in `infra/observability/inventory.json` and in the PR's Notes.
 
 _From 003-admin-account-actions._
+
+### 1188-FR-008 — The event-loop delay p99 metric MUST stay exported by every service (`libs/observability/src/setup/instrumentations.ts`, the runtime instrumentation; `start.ts` keeps p99) and the "Event-loop lag p99" panel MUST stay on every service dashboard (`infra/observability/grafana/dashboards/motorfix-*.json`); a test asserts both, and nothing new is built for it (1345-FR-001 and 879-FR-007 hold).
+
+_From 1188-tail-latency._
+
+### 1156-FR-010 — Each run MUST log one line per kind with the number of rows it removed or anonymised (0 included) and one line for the run with its duration (the lines carry kinds and counts only, never row content or identifiers), and MUST count the same numbers on one product counter by kind; the job MUST be observable like the worker's other jobs (its outcome on the jobs counter, its final failure in the system log and the worker-jobs-failed alert).
+
+_From 1156-retention-job._
+
+### 1156-FR-011 — The worker dashboard MUST gain a panel with the retention counts by kind over time, and an alert MUST fire when the time since the job's last success is greater than 48 hours (an arm of `worker-jobs-failed`, `reason="overdue"`, so the rules stay within the free tier's 50); the job, the counter, the panel and the alert MUST be listed in `infra/observability/inventory.json` in the same change.
+
+_From 1156-retention-job._
 
 ## Retired
 
@@ -899,4 +938,8 @@ _From 003-admin-account-actions._
 - `1345-FR-012` — superseded by `280-FR-023` (2026-10-17)
 - `297-FR-005` — superseded by `299-FR-019` (2026-10-17)
 - `876-FR-006` — superseded by `500-FR-007` (2026-10-24)
+- `877-FR-011` — superseded by `947-FR-001` (2026-10-24)
+- `877-FR-010` — superseded by `947-FR-007` (2026-10-24)
+- `877-FR-016` — superseded by `947-FR-011` (2026-10-24)
+- `877-FR-017` — superseded by `947-FR-010` (2026-10-24)
 - `280-FR-023` — superseded by `056-FR-024` (2026-10-24)
