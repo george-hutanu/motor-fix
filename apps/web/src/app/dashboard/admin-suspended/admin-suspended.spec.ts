@@ -340,7 +340,7 @@ describe('the panel', () => {
     ]);
     expect(rows(el)).toHaveLength(230);
     expect(button(el, 'Mai multe')).toBeUndefined();
-  }, 30_000);
+  });
 
   it('keeps a row seen twice across reads once', async () => {
     // A garage suspended between two reads shifts the second read by one.
@@ -360,7 +360,7 @@ describe('the panel', () => {
 
     const ids = rows(el).map((r) => text(r.querySelector('.name')));
     expect(new Set(ids).size).toBe(ids.length);
-  }, 30_000);
+  });
 
   it('says so when no garage is suspended', async () => {
     answer = async () => listOf(0);
