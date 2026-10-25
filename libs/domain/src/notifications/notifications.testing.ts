@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import type { Role } from '@motor-fix/contracts/capabilities';
 
@@ -73,6 +75,26 @@ export function fixtures(prisma: PrismaClient = createPrisma(databaseUrl)) {
           where: { id },
         });
       }
+      return id;
+    },
+    // A Dacia of `ownerId`: what a reminder's foreign key needs.
+    async car(ownerId: string, model = 'Logan') {
+      const brand = await prisma.brand.upsert({
+        create: { key: 'test-dacia', name: 'Dacia', slug: 'test-dacia' },
+        update: {},
+        where: { name: 'Dacia' },
+      });
+      const { id } = await prisma.car.create({
+        data: {
+          brandId: brand.id,
+          fuel: 'petrol',
+          idempotencyKey: randomUUID(),
+          model,
+          odometerKm: 90000,
+          ownerId,
+          year: 2018,
+        },
+      });
       return id;
     },
     prisma,

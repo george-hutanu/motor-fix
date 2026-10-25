@@ -11,7 +11,7 @@ import { AuditService } from '../../../audit/audit.service';
 import { signAccessToken } from '../../../auth/access-token';
 import { AuthModule } from '../../../auth/auth.module';
 import { serialDatabase } from '../../../auth/serial-db.testing';
-import { localDay } from '../../../bucharest';
+import { addDays, addYears, localDay } from '../../../bucharest';
 import { outboxMark } from '../../../events/outbox.testing';
 import {
   databaseUrl,
@@ -70,8 +70,8 @@ const bearer = (accountId: string, role: Role) =>
   `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
 
 const today = localDay(new Date());
-const yearsAhead = (n: number) =>
-  `${Number(today.slice(0, 4)) + n}${today.slice(4)}`;
+// @traces 094-FR-008
+const yearsAhead = (n: number) => addYears(today, n);
 const nextYear = Number(today.slice(0, 4)) + 1;
 
 // The catalogue outlives the reset, and a brand's name is unique.
@@ -262,13 +262,9 @@ describe('POST /cars', () => {
     async (field) => {
       const { auth, id } = await driver();
       const { id: brandId } = await brand('BMW');
-      const tooFar = `${yearsAhead(5).slice(0, 8)}${today.slice(8)}`;
-      const after = new Date(`${tooFar}T12:00:00Z`);
-      after.setUTCDate(after.getUTCDate() + 1);
-
       const res = await add(auth, {
         ...bmw320d(brandId),
-        [field]: after.toISOString().slice(0, 10),
+        [field]: addDays(yearsAhead(5), 1),
       });
 
       expect(res.status).toBe(400);

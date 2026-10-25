@@ -17,7 +17,11 @@ import {
 } from '@nestjs/common';
 import { type Job, type JobsOptions, Queue, Worker } from 'bullmq';
 
-import { type CarEvent, RemindersService } from './reminders.service';
+import {
+  type CarEvent,
+  REMINDERS_WEB_URL,
+  RemindersService,
+} from './reminders.service';
 import { writeJobFailed } from '../../job-failures';
 import { inJob } from '../../logging';
 import {
@@ -52,8 +56,8 @@ interface Daily {
   day: string;
 }
 
-// A car's edit or removal, relayed onto the reminders queue: its reminders
-// follow the new dates or go. Tried 5 more times, 1 to 16 minutes later.
+// A car's addition, edit or removal, relayed onto the reminders queue: its
+// reminders follow the new dates or go. Tried 5 more times, 1 to 16 minutes later.
 export const CAR_REMINDERS_CONSUMER = {
   jobs: {
     attempts: 6,
@@ -61,7 +65,7 @@ export const CAR_REMINDERS_CONSUMER = {
     removeOnComplete: true,
     removeOnFail: true,
   } as JobsOptions,
-  kinds: ['car.updated', 'car.removed'] as readonly EventKind[],
+  kinds: ['car.added', 'car.updated', 'car.removed'] as readonly EventKind[],
   queue: REMINDERS_QUEUE,
 };
 
@@ -141,6 +145,9 @@ interface RemindersOptions {
   notifications: DynamicModule;
   // Provides DAILY_TASKS: the work the daily job runs after the reminders.
   daily?: Provider;
+  // The public web address the reminders' e-mail and push link to; unset
+  // when PUBLIC_WEB_URL is not a URL (email-config.ts), and then no link.
+  webUrl?: string;
 }
 
 @Module({})
@@ -160,6 +167,7 @@ export class RemindersModule
       providers: [
         RemindersService,
         RemindersScheduler,
+        { provide: REMINDERS_WEB_URL, useValue: options.webUrl ?? '' },
         options.daily ?? { provide: DAILY_TASKS, useValue: [] },
         {
           provide: REMINDERS_CLOCK,
