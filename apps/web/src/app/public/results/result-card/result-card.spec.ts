@@ -623,3 +623,24 @@ describe('ResultCard red lamp in every voice', () => {
     },
   );
 });
+
+// @traces 1193-FR-005
+describe('the garage name carried into the profile', () => {
+  it('names the card title after the garage, so the profile heading can grow out of it', async () => {
+    const card = await render(garageOf({ id: 'militari' }));
+
+    expect(
+      card.querySelector('h2')?.style.getPropertyValue('view-transition-name'),
+    ).toBe('garage-militari');
+  });
+
+  it('gives every card its own name, as a page may hold each name once', async () => {
+    const first = await render(garageOf({ id: 'militari' }));
+    const named = first.querySelector('h2')?.style.viewTransitionName;
+    const second = await render(garageOf({ id: 'drumul-taberei' }));
+
+    expect(second.querySelector('h2')?.style.viewTransitionName).not.toBe(
+      named,
+    );
+  });
+});

@@ -1819,6 +1819,20 @@ describe('the profile in two columns', () => {
   });
 });
 
+// @traces 1193-FR-005
+describe('the garage name grown out of its result card', () => {
+  it('names the profile heading as the card named its title', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+
+    expect(
+      page()
+        .querySelector('h1')
+        ?.style.getPropertyValue('view-transition-name'),
+    ).toBe('garage-g-2');
+  });
+});
+
 // @traces 385-FR-001
 describe('the share button on the garage profile', () => {
   it('sits beside the name of a listed garage, with the brand in context', async () => {

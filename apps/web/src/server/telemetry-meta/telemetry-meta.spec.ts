@@ -145,6 +145,28 @@ describe('withTelemetryMeta', () => {
     );
   });
 
+  it('keeps whole a character split right after the head end', async () => {
+    const bytes = new TextEncoder().encode(
+      '<html><head></head><body>ș</body></html>',
+    );
+    const cut = bytes.indexOf(0xc8) + 1;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.slice(0, cut));
+        controller.enqueue(bytes.slice(cut));
+        controller.close();
+      },
+    });
+
+    const res = await withTelemetryMeta(html(body as never), collector);
+
+    expect(await res.text()).toBe(
+      '<html><head>' +
+        '<meta name="mf-telemetry" content="https://faro.example/collect/key" data-version="abc1234" data-environment="staging">' +
+        '</head><body>ș</body></html>',
+    );
+  });
+
   // @traces 244-FR-004
   it('names the analytics domain in its own tag when one is set', async () => {
     const res = await withTelemetryMeta(html(), undefined, 'motorfix.ro');
