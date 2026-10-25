@@ -28,6 +28,7 @@ features:
   - 385-share-garage-link
   - 024-garage-reviews
   - 1367-review-price-marks
+  - 1366-garage-map-directions
 ---
 
 # Capability: Garage profile
@@ -511,9 +512,9 @@ _From 308-profile-details._
 
 _From 308-profile-details._
 
-### 308-FR-011 — The page MUST fill its "where" slot, titled "Unde" / "Where", for a workshop (`businessKind` other than `mobile`) with the address as the garage wrote it, as one wrapping text, then the hours lines of FR-012; for a mobile mechanic with the one line "Vine la tine în zona de {r} km" / "Comes to you within {r} km", where `r` is `serviceRadiusKm` or 20 when the answer has none, and no address, map or pin; the registered seat is never shown because it is never sent (FR-002). The existing header area line of 271-FR-015 is unchanged.
+### 1366-FR-001 — For a workshop (`businessKind` other than `mobile`) whose profile answer carries `latitude` and `longitude`, "Unde" MUST show, as the section's first element above the heading and the address (the Garage profile board's map strip, design.md), a small map of the garage's surroundings with one pin at the garage, using ST-1196's static-first piece (1196-FR-018): the static image from `GET /api/v1/maps/static`, the pin drawn in the browser over it, the control and the attribution, the image set in the browser after the first measure of the box (1196-FR-013) and the server render showing the placeholder only. The rest of 308-FR-011 is unchanged: the address first, the hours lines, the mobile mechanic's line.
 
-_From 308-profile-details._
+_From 1366-garage-map-directions._
 
 ### 308-FR-012 — The hours MUST be shown Monday first, one line per run of one or more consecutive days with identical intervals: a run of two or more days reads "{first} – {last}" ("Luni – vineri", "Monday – Friday"), a single day its name ("Sâmbătă", "Saturday"), day names in the language's full form with Romanian in lower case after the first word; the intervals follow as "{start} – {end}" in 24-hour two-digit times (019-FR-006), two intervals joined by ", " ("08:00 – 12:00, 13:00 – 19:00"); a day with no interval reads "Închis" / "Closed". Empty or malformed hours show no hours line.
 
@@ -749,6 +750,54 @@ _From 1367-review-price-marks._
 
 _From 1367-review-price-marks._
 
+### 1366-FR-002 — The view MUST be zoom 15 centred on the garage's point snapped as the image service snaps (1196-FR-002) — the static image and the interactive map open at that snapped centre, the pin within half a grid step of the box's centre — computed by the shared view function so the static image and the interactive map agree; the pin is drawn at the garage's exact point over the snapped image, and carries no price label and no brand colour (the profile has one garage; the Results pin's rate and lamp are 269-FR-013's and do not apply).
+
+_From 1366-garage-map-directions._
+
+### 1366-FR-003 — The map box MUST fill the section's width edge to edge and be 200 px tall (the board's strip) at every width from 320 px up, with the attribution and the control inside the box, no sideways scroll at 320 px, and the dark palette under the dark scheme; the image is decorative (`alt=""`) and the pin is hidden from assistive technology (`aria-hidden`): the address text is the accessible place, and the control is the one focusable element the map adds (1196-FR-019).
+
+_From 1366-garage-map-directions._
+
+### 1366-FR-004 — On a phone a finger moving over the static map MUST scroll the page: the static image captures no gesture, and a tap that scrolled is not an activation (the piece's host click fires only on a tap without movement, as the browser's click already does); the interactive map, once open, MUST keep MapLibre's cooperative gestures (two fingers to move on a touch screen, a modifier key for the wheel), as the opener already sets them.
+
+_From 1366-garage-map-directions._
+
+### 1366-FR-005 — A tap or a click anywhere on the static map, or activating the control "Hartă interactivă" / "Interactive map" (the existing text, reused), MUST open the interactive map in the same box at the view of FR-002 with one marker at the garage, by the shared opener (`openMapLibre` with the view as `start`); a second activation while loading does nothing; once the style has loaded the static image and the control are removed with the cross-fade of 1196-FR-019. The interactive profile map has no re-search, legend, hint or small card: it shows the garage's surroundings, pans and zooms, nothing else.
+
+_From 1366-garage-map-directions._
+
+### 1366-FR-006 — When the static image fails to load (the piece's broken state: the image's `error` event, no timeout of our own) or the interactive map fails to load after an activation (the opener rejects; no timeout of our own, the browser's), the map box MUST be removed with no message and nothing announced; the address, the directions link and the hours stay exactly as they were.
+
+_From 1366-garage-map-directions._
+
+### 1366-FR-007 — When the answer carries no `latitude` or no `longitude`, or the garage is a mobile mechanic, "Unde" MUST show no map and no directions link; the mobile mechanic's section is unchanged in every other way (308-FR-011), its circle being the follow-up story's.
+
+_From 1366-garage-map-directions._
+
+### 1366-FR-008 — For a workshop with a point, "Unde" MUST show a link "Arată traseul" / "Get directions" under the hours lines, as the section's last line (the board's placement; the same place when the map is gone), whose address is the platform's: `https://maps.apple.com/?daddr={lat},{lng}` on an iPhone, iPad or iPod; `geo:{lat},{lng}?q={lat},{lng}` on an Android device; `https://www.google.com/maps/dir/?api=1&destination={lat},{lng}` anywhere else, the computer address alone opened in a new tab (`target="_blank"`, `rel="noopener noreferrer"`), the phone addresses with no `target` and no `rel`; `{lat}` and `{lng}` are the answer's numbers as `String(n)` writes them, unrounded, with a `.` decimal separator whatever the language.
+
+_From 1366-garage-map-directions._
+
+### 1366-FR-009 — The platform MUST be read from the browser's user agent by one pure function (iPhone, iPad or iPod → `ios`; Android → `android`; anything else, the server and an iPad reporting a Macintosh user agent included → `computer`); the server render carries the `computer` address and the browser replaces it with the platform's before the link is interactive, so a browser without script keeps a working link. The function is the one tested unit; no device sniffing elsewhere.
+
+_From 1366-garage-map-directions._
+
+### 1366-FR-010 — The link MUST be a real link (an anchor with `href`), at least 44 px tall on a phone, in the theme's link style, in the keyboard order after the map's control, and readable in both schemes (the sweep's contrast check); it carries no icon-only form.
+
+_From 1366-garage-map-directions._
+
+### 1366-FR-012 — The new text "Arată traseul" / "Get directions" MUST live in the shared i18n files (`libs/i18n/src/public/ro.json`, `en.json`) in Romanian and English; the control and the attribution reuse ST-1196's keys.
+
+_From 1366-garage-map-directions._
+
+### 1366-FR-013 — Jest MUST cover: the platform function (an iPhone, an iPad, an Android, a desktop and an iPadOS Macintosh user agent, and an empty one → `computer`); the computer address alone carrying `target` and `rel`; the directions address for each platform with the coordinates written in full; the section's states (a workshop with a point: map, heading, address, hours, link in that order; without a point: no map, no link; a mobile mechanic: unchanged; the image broken: the map gone, the link kept; the interactive map rejected: the same); the view for the profile (zoom 15, the garage at the centre); the activation opening the interactive map once with the view as `start`; the analytics event sent with `platform` only; and the pin drawn without a rate label.
+
+_From 1366-garage-map-directions._
+
+### 1366-FR-014 — End to end (`apps/web-e2e`, the profile of a seeded workshop, `MAP_TILES_TILEJSON_URL=off` and `__MF_MAP_STYLE` as today): the directions link's `href` carries the seeded garage's latitude and longitude (the brief's test), as the computer address under Playwright's desktop browser; after the map shows, the network log holds one `maps/static` request with `z=15` and no `maplibre-gl` request; a tap opens the interactive map at the garage's point and zoom 15 (read from `__MF_MAP`); with the image route blocked the map box is gone and the link still carries the coordinates; at 320 px the page does not scroll sideways and the attribution and the control sit inside the map box.
+
+_From 1366-garage-map-directions._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -770,3 +819,4 @@ _From 1367-review-price-marks._
 - `308-FR-002` — superseded by `309-FR-006` (2026-10-24)
 - `308-FR-003` — superseded by `309-FR-007` (2026-10-24)
 - `307-FR-015` — superseded by `385-FR-008` (2026-10-24)
+- `308-FR-011` — superseded by `1366-FR-001` (2026-10-25)

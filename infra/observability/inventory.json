@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 200,
+    "count": 201,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -639,6 +639,26 @@
       "alerts": "none",
       "reason": "a link the admin opens in a new tab to look a company up by hand; neither the browser app nor the API calls it, and the check the admin records is counted by motorfix_verification_checks_total",
       "story": "ST-203"
+    },
+    {
+      "kind": "outside-service",
+      "name": "apple-maps",
+      "host": "maps.apple.com",
+      "source": "apps/web/src/app/public/garage-profile/where-section/directions.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "the garage profile's directions link on an Apple device, which the driver's maps app opens; neither the browser app nor the API calls it, and the tap is the consent-gated directions_opened analytics event",
+      "story": "ST-1366"
+    },
+    {
+      "kind": "outside-service",
+      "name": "google-maps",
+      "host": "www.google.com",
+      "source": "apps/web/src/app/public/garage-profile/where-section/directions.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "the garage profile's directions link on a computer, opened in a new tab; neither the browser app nor the API calls it, and the tap is the consent-gated directions_opened analytics event",
+      "story": "ST-1366"
     },
     {
       "kind": "outside-service",
@@ -2159,6 +2179,31 @@
     },
     {
       "kind": "queue",
+      "name": "request-timers",
+      "source": "libs/domain/src/quotes/request-timers/request-timers.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed",
+        "booking-lapse-sweep-late"
+      ],
+      "reason": "carries the relay request and quote events, each sent request day-2 and day-5 reminders and its day-7 expiry, each sent quote expiry, and the request.expired and quote.expired notices, with the 5-minute sweep for a lost timer; one RequestTimers log line per fired timer naming the request or quote id and the step; steps counted by motorfix_request_timers_total; BullMQ queue metrics cover depth and failures; booking-lapse-sweep-late, shared with the booking lapse under the free tier alert cap, fires when the sweep runs more than 10 in an hour (lost timers)",
+      "story": "ST-1257"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_request_timers_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "booking-lapse-sweep-late"
+      ],
+      "reason": "counts what the request and quote timers did by step (reminder_sent, reminder_muted, recipient_expired, request_closed, quote_expired, quote_held) and whether the timer or the sweep ran it, with no identifiers; a rising sweep share means lost timers, which booking-lapse-sweep-late watches with the booking lapses",
+      "story": "ST-1257"
+    },
+    {
+      "kind": "queue",
       "name": "account-closed",
       "source": "libs/domain/src/quotes/account-closed/account-closed.module.ts",
       "dashboard": "motorfix-queues",
@@ -2438,6 +2483,28 @@
       "alerts": "none",
       "reason": "counts every call refused with consent_required by surface api or mcp, never an account; a surge right after a version bump is the expected shape, not a failure, so it is watched on the panel, not paged",
       "story": "ST-1204"
+    },
+    {
+      "kind": "endpoint",
+      "name": "review-report",
+      "source": "libs/domain/src/reviews/report/report.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/reviews/{reviewId}/reports",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each report counts motorfix_reviews_reported_total by reason, writes the report and the review status audit entries and one review.reported event in one transaction",
+      "story": "ST-76"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_reviews_reported_total",
+      "source": "libs/domain/src/reviews/reviews.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each report a garage owner tries by outcome (the nine reasons, forbidden, already_reported, already_kept, validation_failed) with no identifiers; a refusal is the owner's state, not an outage; the api-error-rate rule covers the endpoint that reports it",
+      "story": "ST-76"
     }
   ]
 }

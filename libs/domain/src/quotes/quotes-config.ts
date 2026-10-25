@@ -12,7 +12,7 @@ export { REQUEST_MAX_GARAGES } from '@motor-fix/contracts';
 export const REQUEST_DAILY_LIMIT = COUNTED_IN_DATABASE.quoteRequestsPerDay;
 export const REQUEST_VALIDITY_DAYS = 7;
 export const QUOTE_VALIDITY_DAYS = 7;
-export const REQUEST_REMINDER_DAYS: readonly number[] = [2, 5];
+export const REQUEST_REMINDER_DAYS = [2, 5] as const;
 export const BOOKING_CONFIRM_LAPSE_HOURS = 24;
 // The reminders to confirm: the first this many hours after the acceptance,
 // the last this many hours before confirm_by.

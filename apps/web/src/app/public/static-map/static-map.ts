@@ -43,6 +43,8 @@ export class StaticMap {
   readonly place = input<LatLng | undefined>();
   readonly lit = input<string | undefined>();
   readonly activate = output<void>();
+  // The image failed: a host that has no use for the grey ground drops it.
+  readonly failed = output<void>();
 
   // The map box as laid out; none on the server and before the first measure.
   private readonly box = signal<Box | undefined>(undefined);
@@ -80,6 +82,11 @@ export class StaticMap {
       this.overlay()?.circles,
     ),
   );
+
+  protected broke() {
+    this.broken.set(true);
+    this.failed.emit();
+  }
 
   constructor() {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
