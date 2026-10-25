@@ -266,6 +266,41 @@ describe('the Recenzii view', () => {
     expect(button(element, 'Vezi mai multe')).toBeUndefined();
   });
 
+  it('drops a next page that answers after a live message read the first page again', async () => {
+    let answerPage2: (page: GarageStaffReviewsPageDto) => void = () =>
+      undefined;
+    const { element, settle } = await render({
+      answer: ({ page }) =>
+        page === 1
+          ? Promise.resolve(
+              staffPage({ items: rows(20), slug: SLUG, total: 41 }),
+            )
+          : new Promise((resolve) => {
+              answerPage2 = resolve;
+            }),
+    });
+    await settle();
+    button(element, 'Vezi mai multe')?.click();
+    await settle();
+
+    events.next(message('review.posted'));
+    await wait(350);
+    await settle();
+    answerPage2(
+      staffPage({
+        items: [staffReview({ id: 'r-stale' })],
+        page: 2,
+        slug: SLUG,
+        total: 41,
+      }),
+    );
+    await settle();
+
+    expect(shown(element)).toHaveLength(20);
+    expect(element.querySelector('[data-live-id="r-stale"]')).toBeNull();
+    expect(button(element, 'Vezi mai multe')?.disabled).toBe(false);
+  });
+
   it('says a further page failed and tries it again', async () => {
     let fail = true;
     const { element, settle } = await render({
@@ -295,7 +330,7 @@ describe('the Recenzii view', () => {
   });
 });
 
-// @traces 074-FR-001 074-FR-002
+// @traces 074-FR-015
 describe('loading and failing', () => {
   it('draws placeholders while the first page loads', async () => {
     const { element, settle } = await render({
@@ -380,7 +415,7 @@ describe('live', () => {
   });
 });
 
-// @traces 074-FR-015
+// @traces 074-FR-007
 describe('no action in this story', () => {
   it.each([['owner'], ['receptionist']] as const)(
     'offers the %s no reply or report button',

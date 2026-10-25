@@ -519,9 +519,9 @@
     "edited": "Editată · {day}",
     "empty": "Încă nu ai recenzii. Apar aici după prima lucrare predată.",
     "figure": {
-      "few": "Nota {rating} din {count} recenzii",
-      "one": "Nota {rating} din {count} recenzie",
-      "other": "Nota {rating} din {count} de recenzii"
+      "few": "Nota {rating} din {shown} recenzii",
+      "one": "Nota {rating} din {shown} recenzie",
+      "other": "Nota {rating} din {shown} de recenzii"
     },
     "loadFailed": "Nu am putut încărca recenziile.",
     "more": "Vezi mai multe",

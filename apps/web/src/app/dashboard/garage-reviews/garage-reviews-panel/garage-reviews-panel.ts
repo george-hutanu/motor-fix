@@ -16,7 +16,7 @@ import {
   type GarageStaffReviewsPageDto,
   ReviewsService,
 } from '@motor-fix/data-access';
-import { formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { formatNum, formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { liveView } from '../../../live/view';
@@ -87,10 +87,12 @@ export class GarageReviewsPanel {
   });
   protected readonly figure = computed(() => {
     const page = this.view.value();
-    if (!page || page.rating === null) return null;
+    if (!page || page.total === 0) return null;
+    const language = this.i18n.language();
     return this.i18n.t('garage.reviews.figure', {
       count: page.reviewCount,
-      rating: formatRating(page.rating, this.i18n.language()),
+      rating: formatRating(page.rating, language),
+      shown: formatNum(page.reviewCount, language),
     });
   });
   // Each bar is as long as its share of the largest score's count.
@@ -124,6 +126,7 @@ export class GarageReviewsPanel {
   }
 
   protected more(): void {
+    if (this.loadingMore()) return;
     const generation = this.generation;
     const page = this.pages() + 1;
     // A first-page read that answers before this page leaves it out of step.
@@ -141,7 +144,17 @@ export class GarageReviewsPanel {
       .then(
         (answer) => {
           if (stale()) return;
-          this.extra.update((loaded) => [...loaded, ...answer.items]);
+          // A review posted between two pages moves the rest down by one: the
+          // next page then repeats a row already shown.
+          const shown = new Set(
+            [...(this.view.value()?.items ?? []), ...this.extra()].map(
+              (review) => review.id,
+            ),
+          );
+          this.extra.update((loaded) => [
+            ...loaded,
+            ...answer.items.filter((review) => !shown.has(review.id)),
+          ]);
           this.pages.set(page);
           this.loadingMore.set(false);
         },
