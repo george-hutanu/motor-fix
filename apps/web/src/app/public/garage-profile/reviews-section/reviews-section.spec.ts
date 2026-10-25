@@ -872,12 +872,6 @@ describe('the prices and the marks under a review', () => {
       'Not through MotorFix',
     );
   });
-
-  it('shows no price line for a profile review even if amounts reached it', async () => {
-    await priced({ ...FULL, car: null, jobs: [], source: 'profile' });
-
-    expect(price()).toBeNull();
-  });
 });
 
 describe('the reviews section’s styles', () => {
@@ -901,8 +895,11 @@ describe('the reviews section’s styles', () => {
     expect(css).toMatch(/\.by\s*{[^}]*gap:\s*var\(--mf-space-1\);/);
   });
 
+  // @traces 1367-FR-010
   it('draws the price line muted, at the author line’s size, wrapping at any width', () => {
     expect(css).toMatch(/\.price\s*{[^}]*color:\s*var\(--mf-text-secondary\)/);
+    expect(css).toMatch(/\.price\s*{[^}]*font-size:\s*var\(--mf-size-small\)/);
+    expect(css).toMatch(/\.price\s*{[^}]*overflow-wrap:\s*anywhere/);
   });
 
   it('caps the breakdown rows at the board’s 420 px', () => {

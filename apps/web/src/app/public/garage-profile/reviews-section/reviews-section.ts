@@ -143,13 +143,13 @@ export class ReviewsSection implements OnInit {
         : car && [car, jobs].filter(Boolean).join(' · '),
       author:
         review.author.shortName === DELETED_AUTHOR
-          ? this.i18n.t('public.garageProfile.reviewsSection.deletedAuthor')
+          ? this.i18n.t(`${SECTION}.deletedAuthor`)
           : review.author.shortName,
       edited: review.editedAt && formatDay(review.editedAt, language),
       id: review.id,
       month: formatShortMonthYear(review.postedAt, language),
       price: profile ? '' : this.price(review),
-      score: this.i18n.t('public.garageProfile.reviewsSection.score', {
+      score: this.i18n.t(`${SECTION}.score`, {
         rating: formatRating(review.rating, language),
       }),
       text: review.text,
@@ -170,8 +170,8 @@ export class ReviewsSection implements OnInit {
         part('quote', formatLeiSpan(quote.fromBani, quote.toBani, language)),
       );
     }
-    if (final !== null) parts.push(part('final', formatLei(final, language)));
-    if (paid !== null && paid !== final) {
+    if (final != null) parts.push(part('final', formatLei(final, language)));
+    if (paid != null && paid !== final) {
       parts.push(part('paid', formatLei(paid, language)));
     }
     return parts.join(' · ');

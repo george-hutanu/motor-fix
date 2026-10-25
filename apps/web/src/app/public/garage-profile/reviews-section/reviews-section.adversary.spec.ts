@@ -290,3 +290,129 @@ describe('the reviews section under hostile answers', () => {
     expect(reads).toHaveLength(1);
   });
 });
+
+// @traces 1367-FR-001
+// @traces 1367-FR-003
+// @traces 1367-FR-005
+// @traces 1367-FR-007
+describe('the price line and the marks under hostile answers', () => {
+  const priceOf = () =>
+    reviews()[0]
+      ?.querySelector('.price')
+      ?.textContent?.replace(/\s+/g, ' ')
+      .trim();
+  const priced = (extra: Partial<GarageReviewDto>) =>
+    shown({ ...PAGE, items: [review(1, extra)] });
+
+  it('shows a final price of 0 bani as a value', async () => {
+    await priced({
+      finalPriceBani: 0,
+      paidBani: null,
+      quote: { fromBani: 380_000, toBani: 440_000 },
+    });
+
+    expect(priceOf()).toBe('Ofertă 3.800 – 4.400 lei · Final 0 lei');
+  });
+
+  it('shows both a zero final price and a one-bani amount paid', async () => {
+    await priced({ finalPriceBani: 0, paidBani: 1, quote: null });
+
+    expect(priceOf()).toBe('Final 0 lei · Plătit, după șofer: 0,01 lei');
+  });
+
+  it('shows a zero quote as a line', async () => {
+    await priced({
+      finalPriceBani: null,
+      paidBani: null,
+      quote: { fromBani: 0, toBani: 0 },
+    });
+
+    expect(priceOf()).toBe('Ofertă 0 lei');
+  });
+
+  it('shows the paid part when it differs from the final price by one bani', async () => {
+    await priced({
+      finalPriceBani: 420_000,
+      paidBani: 420_001,
+      quote: null,
+    });
+
+    expect(priceOf()).toBe(
+      'Final 4.200 lei · Plătit, după șofer: 4.200,01 lei',
+    );
+  });
+
+  it('draws only the final part when the answer leaves the other fields out', async () => {
+    const {
+      paidBani: _p,
+      quote: _q,
+      ...bare
+    } = {
+      ...REVIEW,
+      finalPriceBani: 420_000,
+    } as GarageReviewDto;
+    await shown({ ...PAGE, items: [bare as GarageReviewDto] });
+
+    expect(priceOf()).toBe('Final 4.200 lei');
+  });
+
+  it('draws no price line and no mark for an answer with none of the new fields', async () => {
+    await shown({ ...PAGE, items: [REVIEW] });
+
+    expect(reviews()[0]?.querySelector('.price')).toBeNull();
+    expect(reviews()[0]?.querySelector('.edited')).toBeNull();
+  });
+
+  it('dates an edit made at 22:30 UTC on 31 December on the first of January', async () => {
+    await priced({ editedAt: '2026-12-31T22:30:00.000Z' });
+
+    expect(reviews()[0]?.querySelector('.edited')?.textContent).toContain(
+      '1 ian. 2027',
+    );
+  });
+
+  it('dates an edit made just before the spring clock change by its Bucharest day', async () => {
+    await priced({ editedAt: '2026-03-28T22:30:00.000Z' });
+
+    expect(reviews()[0]?.querySelector('.edited')?.textContent).toContain(
+      '29 mart. 2026',
+    );
+  });
+
+  it('hides every dot around the mark from assistive technology', async () => {
+    await priced({ editedAt: '2026-10-05T09:30:00.000Z' });
+
+    const by = reviews()[0]?.querySelector('.by') as HTMLElement;
+    const visible = [...by.querySelectorAll('[aria-hidden="true"]')];
+    expect(visible.map((e) => e.textContent)).toEqual(['·', '·', '·']);
+  });
+
+  it('shows the mark and no price line for a profile review that carries amounts and a stale car', async () => {
+    await priced({
+      car: { brand: 'BMW', model: '320d' },
+      editedAt: '2026-10-05T09:30:00.000Z',
+      finalPriceBani: 420_000,
+      jobs: [{ id: 'j', nameEn: 'x', nameRo: 'Plăcuțe' }],
+      paidBani: 450_000,
+      quote: { fromBani: 380_000, toBani: 440_000 },
+      source: 'profile',
+    } as Partial<GarageReviewDto>);
+
+    expect(reviews()[0]?.querySelector('.about')?.textContent?.trim()).toBe(
+      'Nu prin MotorFix',
+    );
+    expect(reviews()[0]?.querySelector('.price')).toBeNull();
+  });
+
+  it('keeps a long Romanian line whole at the largest amounts', async () => {
+    await priced({
+      finalPriceBani: 1_420_000,
+      paidBani: 1_450_000,
+      quote: { fromBani: 1_380_000, toBani: 1_440_000 },
+    });
+
+    expect(priceOf()).toBe(
+      'Ofertă 13.800 – 14.400 lei · Final 14.200 lei · Plătit, după șofer: 14.500 lei',
+    );
+  });
+});

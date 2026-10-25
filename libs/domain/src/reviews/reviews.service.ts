@@ -51,6 +51,7 @@ const authorOf = (driver: { name: string; status: string }) =>
     : { shortName: shortName(driver.name) };
 
 // The job's prices under a review: a profile review carries none of them.
+// Kept apart so the page's map stays under Biome's complexity cap.
 const amountsOf = (
   fromJob: boolean,
   job: {
