@@ -468,10 +468,18 @@ export class ListingSubmitService {
     if (hours.place) {
       await this.place.write(tx, accountId, garageId, hours.place);
     }
-    await writeGarageHours(tx, garageId, hours, localDay(this.now()), {
-      actorId: accountId,
-      audit,
-    });
+    const clipped = await writeGarageHours(
+      tx,
+      garageId,
+      hours,
+      localDay(this.now()),
+      { actorId: accountId, audit, events: this.events },
+    );
+    if (clipped.length > 0) {
+      this.logger.log(
+        `garage ${garageId} hours clipped ${clipped.length} mechanic cards: ${clipped.join(', ')}`,
+      );
+    }
     await writeGaragePayments(tx, garageId, hours, {
       actorId: accountId,
       audit,

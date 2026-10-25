@@ -50,6 +50,7 @@ const completion = new CompletionService(
   legal,
   verification,
   audit,
+  outbox,
 );
 const service = new ListingSubmitService(
   prisma,

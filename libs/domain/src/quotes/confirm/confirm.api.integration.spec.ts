@@ -21,19 +21,26 @@ beforeEach(async () => {
   >`SELECT now() AS since`;
 });
 
-// Three days out or later, on a day no public holiday closes, at 10:00 in
-// Bucharest: inside any day's hours below, and after the default confirm-by.
+// Three days out or later, on a weekday no public holiday closes, at 10:00 in
+// Bucharest: inside any day's hours below, inside a mechanic's default week,
+// and after the default confirm-by.
 let DAY: string;
 let TEN: Date;
+let SATURDAY: string;
+const weekend = (d: string) => [0, 6].includes(new Date(d).getUTCDay());
+const holiday = (d: string) =>
+  prisma.publicHoliday.findUnique({
+    where: { day: new Date(`${d}T00:00:00Z`) },
+  });
 beforeAll(async () => {
   let day = addDays(localDay(new Date()), 3);
-  const holiday = (d: string) =>
-    prisma.publicHoliday.findUnique({
-      where: { day: new Date(`${d}T00:00:00Z`) },
-    });
-  while (await holiday(day)) day = addDays(day, 1);
+  while (weekend(day) || (await holiday(day))) day = addDays(day, 1);
   DAY = day;
   TEN = atLocal(DAY, 10);
+  let sat = addDays(localDay(new Date()), 3);
+  while (new Date(sat).getUTCDay() !== 6 || (await holiday(sat)))
+    sat = addDays(sat, 1);
+  SATURDAY = sat;
 });
 
 type Team = Awaited<ReturnType<typeof team>>;
@@ -1002,5 +1009,133 @@ describe('counting confirms the pipes refuse', () => {
 
     expect(res.status).toBe(400);
     expect(await refused()).toBe(before + 1);
+  });
+});
+
+// @traces 058-FR-012
+describe("the mechanic's own hours", () => {
+  const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const week = (spans: [string, string][]) =>
+    Object.fromEntries(
+      ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((d) => [d, spans]),
+    );
+  const schedule = (
+    mechanicId: string,
+    hours: object | null,
+    worksSaturdays = false,
+  ) =>
+    prisma.$executeRaw`UPDATE mechanic SET working_hours = ${
+      hours === null ? null : JSON.stringify(hours)
+    }::jsonb, works_saturdays = ${worksSaturdays} WHERE id = ${mechanicId}::uuid`;
+  const dayOff = (mechanicId: string, day: string) =>
+    prisma.$executeRaw`
+      INSERT INTO mechanic_day_off (mechanic_id, first_day, last_day, created_by)
+      VALUES (${mechanicId}::uuid, ${day}::date, ${day}::date, gen_random_uuid())`;
+  const garageOpen = (t: Team) =>
+    prisma.garage.update({
+      data: { hours: week([['08:00', '18:00']]) },
+      where: { id: t.garage.id },
+    });
+
+  it('refuses a mechanic outside her stretch, writing nothing', async () => {
+    const t = await team('Atelier Dinamo');
+    await garageOpen(t);
+    await schedule(t.plainMechanic.id, week([['12:00', '18:00']]));
+    const { booking } = await accepted(t);
+    const before = await snapshot(booking.id);
+
+    const res = await confirm(booking.id, owner(t), {
+      mechanicId: t.plainMechanic.id,
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({ code: 'mechanic_unavailable' });
+    expect(await snapshot(booking.id)).toEqual(before);
+  });
+
+  it('refuses a mechanic on her day off', async () => {
+    const t = await team('Atelier Dinamo');
+    await garageOpen(t);
+    await dayOff(t.plainMechanic.id, DAY);
+    const { booking } = await accepted(t);
+
+    const res = await confirm(booking.id, owner(t), {
+      mechanicId: t.plainMechanic.id,
+    });
+
+    expect(res.body).toMatchObject({ code: 'mechanic_unavailable' });
+  });
+
+  it('refuses a Saturday while she does not work Saturdays, and confirms it once she does', async () => {
+    const t = await team('Atelier Dinamo');
+    await garageOpen(t);
+    await schedule(t.plainMechanic.id, week([['08:00', '16:00']]));
+    const { booking } = await accepted(t, atLocal(SATURDAY, 10));
+
+    const off = await confirm(booking.id, owner(t), {
+      mechanicId: t.plainMechanic.id,
+    });
+    await schedule(t.plainMechanic.id, week([['08:00', '16:00']]), true);
+    const on = await confirm(booking.id, owner(t), {
+      mechanicId: t.plainMechanic.id,
+    });
+
+    expect(off.body).toMatchObject({ code: 'mechanic_unavailable' });
+    expect(on.status).toBe(200);
+  });
+
+  it('confirms a mechanic inside her stretch', async () => {
+    const t = await team('Atelier Dinamo');
+    await garageOpen(t);
+    await schedule(t.plainMechanic.id, {
+      ...week([]),
+      [WEEKDAYS[new Date(DAY).getUTCDay()]]: [['09:00', '12:00']],
+    });
+    const { booking } = await accepted(t);
+
+    const res = await confirm(booking.id, owner(t), {
+      mechanicId: t.plainMechanic.id,
+    });
+
+    expect(res.status).toBe(200);
+  });
+
+  it("still answers outside_hours for the garage's closed day before her own hours", async () => {
+    const t = await team('Atelier Dinamo');
+    await garageOpen(t);
+    await dayOff(t.plainMechanic.id, DAY);
+    await prisma.garageClosedDay.create({
+      data: { day: new Date(`${DAY}T00:00:00Z`), garageId: t.garage.id },
+    });
+    const { booking } = await accepted(t);
+
+    const res = await confirm(booking.id, owner(t), {
+      mechanicId: t.plainMechanic.id,
+    });
+
+    expect(res.body).toMatchObject({ code: 'outside_hours' });
+  });
+
+  it("checks only the garage's hours with the team switched off", async () => {
+    const t = await team('Atelier Dinamo');
+    await garageOpen(t);
+    await switched(t.garage.id, 'team_mechanics', false);
+    const { booking } = await accepted(t, atLocal(SATURDAY, 10));
+
+    const res = await confirm(booking.id, owner(t), {});
+
+    expect(res.status).toBe(200);
+  });
+
+  it('still offers every mechanic of the garage, at work or not', async () => {
+    const t = await team('Atelier Dinamo');
+    await dayOff(t.plainMechanic.id, DAY);
+    const { booking } = await accepted(t);
+
+    const res = await get(`/bookings/${booking.id}/confirm-options`, owner(t));
+
+    expect((res.body.mechanics as { id: string }[]).map((m) => m.id)).toContain(
+      t.plainMechanic.id,
+    );
   });
 });

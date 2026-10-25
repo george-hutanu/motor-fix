@@ -82,6 +82,7 @@ export function completionWorld(prisma: PrismaClient) {
     documents,
     verification,
     audit,
+    outbox,
   );
   const submit = new ListingSubmitService(
     prisma,
