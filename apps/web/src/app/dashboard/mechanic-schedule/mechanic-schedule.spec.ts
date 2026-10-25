@@ -145,7 +145,7 @@ function type(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event('input'));
 }
 const saveHours = (element: HTMLElement) =>
-  button(element, 'Salvează programul').click();
+  button(element, 'Salvează orele').click();
 const sentWeek = () =>
   api.mechanicScheduleControllerWrite.mock.calls.at(-1)?.[0].body;
 const addField = (element: HTMLElement, id: string) =>

@@ -173,9 +173,7 @@ test.describe("a mechanic's working hours, set by the owner @seeded", () => {
         .locator('[data-day="wed"]')
         .getByRole('checkbox')
         .uncheck();
-      await schedule
-        .getByRole('button', { name: 'Salvează programul' })
-        .click();
+      await schedule.getByRole('button', { name: 'Salvează orele' }).click();
       await expect(
         schedule
           .getByRole('status')
