@@ -7,12 +7,16 @@ const PERSONAL =
 
 interface Body {
   meta: {
-    session?: unknown;
+    session?: { id?: string };
     user?: unknown;
     view?: { name?: string };
     app?: { version?: string };
     page?: { url?: string };
   };
+  events?: {
+    name: string;
+    attributes?: { fromView?: string; toView?: string };
+  }[];
   measurements?: { type: string; context?: Record<string, string> }[];
   traces?: unknown;
 }
@@ -37,6 +41,37 @@ const leave = (page: Page) =>
     });
     document.dispatchEvent(new Event('visibilitychange'));
   });
+
+const JOURNEY = /^(session_start|session_resume|session_extend|view_changed)$/;
+
+const faroKeys = (page: Page) =>
+  page.evaluate(() =>
+    [...Object.keys(localStorage), ...Object.keys(sessionStorage)].filter(
+      (key) => /faro/i.test(key),
+    ),
+  );
+
+// Withdraws the analytics consent from the footer's Cookie settings.
+async function withdraw(page: Page) {
+  await page
+    .getByRole('button', { exact: true, name: 'Cookie settings' })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Cookie settings' });
+  await dialog.getByRole('switch', { name: 'Usage statistics' }).click();
+  await dialog.getByRole('button', { exact: true, name: 'Save' }).click();
+  await expect(dialog).toBeHidden();
+}
+
+// A body sent after withdrawal: its trace carries no session, and no event
+// in it starts, resumes or walks a session.
+function expectNoSession(body: Body) {
+  if (body.traces !== undefined) {
+    expect(body.meta).not.toHaveProperty('session');
+    expect(JSON.stringify(body.traces)).not.toContain('session.id');
+  }
+  for (const event of body.events ?? [])
+    expect(event.name).not.toMatch(JOURNEY);
+}
 
 const started = (page: Page) =>
   page.waitForFunction(() => 'faro' in window, undefined, { timeout: 15_000 });
@@ -158,5 +193,70 @@ test.describe('browser telemetry', () => {
     expect(headers).not.toHaveProperty('traceparent');
     expect(headers).not.toHaveProperty('tracestate');
     expect(headers).not.toHaveProperty('baggage');
+  });
+
+  // @traces 947-FR-001
+  // @traces 947-FR-002
+  // @traces 947-FR-003
+  // @traces 947-FR-010
+  test('a session and its journey only under consent', async ({ page }) => {
+    const sent = collected(page);
+    await page.goto('/en');
+    await started(page);
+    await leave(page);
+    await expect.poll(() => sent.requests.length).toBeGreaterThan(0);
+    for (const body of sent.bodies()) {
+      expect(body.meta).not.toHaveProperty('session');
+      expect(body.events ?? []).toEqual([]);
+    }
+    expect(await faroKeys(page)).toEqual([]);
+
+    await page
+      .getByRole('region', { name: 'Usage statistics' })
+      .getByRole('button', { exact: true, name: 'Accept' })
+      .click();
+    await leave(page);
+    await expect
+      .poll(() => sent.bodies().find((body) => body.meta.session?.id))
+      .toBeTruthy();
+    const id = sent.bodies().find((body) => body.meta.session?.id)?.meta
+      .session?.id;
+
+    await page.goto('/en/garages');
+    await started(page);
+    await leave(page);
+    await expect
+      .poll(() =>
+        sent
+          .bodies()
+          .filter((body) => body.meta.session?.id === id)
+          .flatMap((body) => body.events ?? [])
+          .filter((event) => event.name === 'view_changed')
+          .map((event) => event.attributes?.toView),
+      )
+      .toContain('/:lang/garages');
+
+    await withdraw(page);
+    const withdrawn = sent.requests.length;
+
+    const [call] = await Promise.all([
+      page.waitForRequest((request) =>
+        new URL(request.url()).pathname.startsWith('/api/v1/brands'),
+      ),
+      page.evaluate(() => fetch('/api/v1/brands').then(() => undefined)),
+    ]);
+    await leave(page);
+    await expect
+      .poll(() =>
+        sent
+          .bodies()
+          .slice(withdrawn)
+          .some((body) => body.traces !== undefined),
+      )
+      .toBe(true);
+
+    expect(await call.headerValue('x-faro-session-id')).toBeNull();
+    for (const body of sent.bodies().slice(withdrawn)) expectNoSession(body);
+    expect(await faroKeys(page)).toEqual([]);
   });
 });

@@ -65,6 +65,12 @@ export type { EmailChangeControllerRequest$Params as EmailChangeControllerReques
 export { emailChangeControllerRequest as emailChangeControllerRequest } from './fn/me/email-change-controller-request';
 export type { MeEmailConfirmationControllerAskAgain$Params as MeEmailConfirmationControllerAskAgain$Params } from './fn/me/me-email-confirmation-controller-ask-again';
 export { meEmailConfirmationControllerAskAgain as meEmailConfirmationControllerAskAgain } from './fn/me/me-email-confirmation-controller-ask-again';
+export type { DataExportControllerLatest$Params as DataExportControllerLatest$Params } from './fn/me/data-export-controller-latest';
+export { dataExportControllerLatest as dataExportControllerLatest } from './fn/me/data-export-controller-latest';
+export type { DataExportControllerRequest$Params as DataExportControllerRequest$Params } from './fn/me/data-export-controller-request';
+export { dataExportControllerRequest as dataExportControllerRequest } from './fn/me/data-export-controller-request';
+export type { DataExportControllerDownload$Params as DataExportControllerDownload$Params } from './fn/me/data-export-controller-download';
+export { dataExportControllerDownload as dataExportControllerDownload } from './fn/me/data-export-controller-download';
 export type { PhoneChangeControllerRequest$Params as PhoneChangeControllerRequest$Params } from './fn/me/phone-change-controller-request';
 export { phoneChangeControllerRequest as phoneChangeControllerRequest } from './fn/me/phone-change-controller-request';
 export type { PhoneChangeControllerConfirm$Params as PhoneChangeControllerConfirm$Params } from './fn/me/phone-change-controller-confirm';

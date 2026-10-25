@@ -1076,6 +1076,9 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "phone_not_verified: SMS or WhatsApp without a confirmed phone; notification_type_always_sent, news_consent_required, channel_not_allowed"
           }
         },
         "security": [
@@ -1548,7 +1551,7 @@
             "description": "forbidden: an assistant session"
           },
           "409": {
-            "description": "deletion_not_allowed: the account owns a garage"
+            "description": "deletion_not_allowed: the account owns a garage; car_in_work: a car of the account is in work or paused at a garage"
           }
         },
         "security": [
@@ -1558,6 +1561,113 @@
         ],
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/me/data-export": {
+      "post": {
+        "operationId": "DataExportController_request",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExportDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: an assistant session"
+          },
+          "409": {
+            "description": "export_ready: a copy is ready"
+          },
+          "429": {
+            "description": "export_too_soon: a copy was asked for in the last 24 hours"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      },
+      "get": {
+        "operationId": "DataExportController_latest",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The newest copy, or null before any request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExportDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: an assistant session"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/data-export/download": {
+      "get": {
+        "operationId": "DataExportController_download",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The ready copy as a ZIP attachment",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: an assistant session"
+          },
+          "404": {
+            "description": "not_found: no copy is ready"
+          },
+          "503": {
+            "description": "storage_unavailable: the file store did not answer"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
         ]
       }
     },
@@ -8774,7 +8884,7 @@
           },
           "privacyVersion": {
             "type": "string",
-            "example": "2026-10-17",
+            "example": "2026-10-24",
             "maxLength": 32
           }
         },
@@ -9478,7 +9588,7 @@
           "textVersion": {
             "type": "string",
             "description": "The text the choice was made under; only the current one",
-            "example": "2026-10-10"
+            "example": "2026-10-24"
           },
           "language": {
             "type": "string",
@@ -9771,6 +9881,19 @@
           "alwaysSent": {
             "type": "boolean",
             "description": "Sent whatever the person chooses"
+          },
+          "channels": {
+            "type": "array",
+            "description": "The channels the type can be sent by, in order; a staff entry lists its own",
+            "items": {
+              "type": "string",
+              "enum": [
+                "email",
+                "push",
+                "sms",
+                "whatsapp"
+              ]
+            }
           }
         },
         "required": [
@@ -9778,7 +9901,8 @@
           "channel",
           "enabled",
           "garageId",
-          "alwaysSent"
+          "alwaysSent",
+          "channels"
         ]
       },
       "NewsConsentDto": {
@@ -9818,6 +9942,23 @@
           "textVersion",
           "withdrawnAt",
           "currentTextVersion"
+        ]
+      },
+      "SmsUsageDto": {
+        "type": "object",
+        "properties": {
+          "used": {
+            "type": "number",
+            "description": "SMS sent to the driver this month (Bucharest)"
+          },
+          "cap": {
+            "type": "number",
+            "description": "SMS a driver gets per month; then WhatsApp"
+          }
+        },
+        "required": [
+          "used",
+          "cap"
         ]
       },
       "StaffWhatsAppDto": {
@@ -9969,6 +10110,17 @@
           "newsConsent": {
             "$ref": "#/components/schemas/NewsConsentDto"
           },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "A phone is saved and confirmed: SMS and WhatsApp can be picked"
+          },
+          "pushDevice": {
+            "type": "boolean",
+            "description": "The account has at least one push device"
+          },
+          "sms": {
+            "$ref": "#/components/schemas/SmsUsageDto"
+          },
           "staff": {
             "description": "One list per garage the person is staff of, and one for an admin",
             "type": "array",
@@ -9981,6 +10133,9 @@
           "groups",
           "preferences",
           "newsConsent",
+          "phoneVerified",
+          "pushDevice",
+          "sms",
           "staff"
         ]
       },
@@ -10330,6 +10485,47 @@
         },
         "required": [
           "confirmation"
+        ]
+      },
+      "DataExportDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "ready",
+              "expired",
+              "failed"
+            ]
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readyAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canRequestAt": {
+            "type": "string",
+            "description": "When a new request is allowed; null when it is now",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "requestedAt",
+          "readyAt",
+          "expiresAt",
+          "canRequestAt"
         ]
       },
       "PhoneChangeDto": {

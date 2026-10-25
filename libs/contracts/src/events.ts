@@ -40,6 +40,7 @@ export const EVENT_KINDS = [
   'catalogue_job.proposed',
   'dashboard_layout.updated',
   'data_export.ready',
+  'data_export.requested',
   'document.accepted',
   'document.due',
   'document.overdue',

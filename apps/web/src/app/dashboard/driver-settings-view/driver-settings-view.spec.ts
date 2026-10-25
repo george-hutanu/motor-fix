@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { DriverSettingsView } from './driver-settings-view';
-import { DeleteAccount } from '../delete-account/delete-account';
+import { AccountPanel } from '../account-panel/account-panel';
 import { DriverNotifications } from '../driver-notifications/driver-notifications';
 import { MyDetails } from '../my-details/my-details';
 import { PrivacyPanel } from '../privacy-panel/privacy-panel';
@@ -20,13 +20,13 @@ class FakeNotifications {}
 @Component({ selector: 'mf-privacy-panel', template: '' })
 class FakePrivacyPanel {}
 
-@Component({ selector: 'mf-delete-account', template: '' })
-class FakeDeleteAccount {}
+@Component({ selector: 'mf-account-panel', template: '' })
+class FakeAccountPanel {}
 
 describe("the driver's settings", () => {
-  // @traces 139-FR-001 244-FR-006 244-FR-015 129-FR-014
+  // @traces 139-FR-001 244-FR-006 244-FR-015 129-FR-014 140-FR-015
   // The news switch stays in the notification switches, before the panel.
-  it("shows the driver's details, this device's push panel, the notification switches, the privacy panel, then the delete-account row", () => {
+  it("shows the driver's details, this device's push panel, the notification switches, the privacy panel, then the account panel last", () => {
     TestBed.overrideComponent(DriverSettingsView, {
       add: {
         imports: [
@@ -34,7 +34,7 @@ describe("the driver's settings", () => {
           FakePushPanel,
           FakeNotifications,
           FakePrivacyPanel,
-          FakeDeleteAccount,
+          FakeAccountPanel,
         ],
       },
       remove: {
@@ -43,7 +43,7 @@ describe("the driver's settings", () => {
           PushPanel,
           DriverNotifications,
           PrivacyPanel,
-          DeleteAccount,
+          AccountPanel,
         ],
       },
     });
@@ -56,7 +56,8 @@ describe("the driver's settings", () => {
       'mf-push-panel',
       'mf-driver-notifications',
       'mf-privacy-panel',
-      'mf-delete-account',
+      'mf-account-panel',
     ]);
+    expect(element.querySelector(':scope > mf-delete-account')).toBeNull();
   });
 });
