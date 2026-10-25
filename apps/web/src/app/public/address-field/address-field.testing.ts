@@ -8,7 +8,12 @@ import { inject, type Provider } from '@angular/core';
 import { placesControllerSearch } from '@motor-fix/data-access';
 import { from, isObservable, map, type Observable, throwError } from 'rxjs';
 
-type Asked = { lang: string | null; q: string | null };
+type Asked = { lang: string; q: string };
+
+const askedIn = (req: HttpRequest<unknown>): Asked => ({
+  lang: req.params.get('lang') ?? '',
+  q: req.params.get('q') ?? '',
+});
 
 // Answers the address field's place look-ups from `search`, given what was
 // asked: a promise or a value as the API's body, an observable as the request
@@ -27,10 +32,7 @@ export function placesAnswered(search: (asked: Asked) => unknown): Provider {
               ? rest.request(req)
               : throwError(() => new Error(`no answer for ${req.url}`));
           }
-          const answer = search({
-            lang: req.params.get('lang'),
-            q: req.params.get('q'),
-          });
+          const answer = search(askedIn(req));
           const body = isObservable(answer)
             ? answer
             : from(Promise.resolve(answer));

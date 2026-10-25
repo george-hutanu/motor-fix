@@ -25,7 +25,7 @@ describe('the view transitions between screens', () => {
 
   function boot(withApi = true) {
     started = [];
-    const doc = document as Document & { startViewTransition?: unknown };
+    const doc = document as { startViewTransition?: unknown };
     doc.startViewTransition = withApi
       ? jest.fn((update: () => Promise<void>) => {
           const done = Promise.resolve().then(update);

@@ -85,7 +85,7 @@ const jobs = {
 const holidays = { publicHolidaysControllerList: jest.fn(async () => []) };
 // The address look-up and the map of step 5, both stood in for.
 const places = {
-  placesControllerSearch: jest.fn(async () => ({
+  placesControllerSearch: jest.fn(async (_asked?: unknown) => ({
     items: [{ label: 'Strada Exemplu 1, București', lat: 44.43, lng: 26.1 }],
   })),
 };
