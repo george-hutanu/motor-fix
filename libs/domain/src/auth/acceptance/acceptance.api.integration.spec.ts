@@ -1,4 +1,4 @@
-// @traces 1204-terms-reaccept-FR-004
+// @traces 1204-FR-004
 import { randomUUID } from 'node:crypto';
 
 import {
@@ -243,7 +243,7 @@ describe('recording the acceptance of the texts in force', () => {
   });
 });
 
-// @traces 1204-terms-reaccept-FR-002
+// @traces 1204-FR-002
 describe('who am I for a pending account', () => {
   it('is refused with consent_required until the acceptance is recorded', async () => {
     const { authorization, id } = await person('garage');

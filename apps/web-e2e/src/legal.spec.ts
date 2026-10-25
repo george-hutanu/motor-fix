@@ -3,7 +3,7 @@ import { expect } from '@playwright/test';
 import { hydrated } from './accounts.js';
 import { test } from './fixtures.js';
 
-// @traces 1204-terms-reaccept-FR-011
+// @traces 1204-FR-011
 test.describe('the legal pages', () => {
   for (const [path, title, version] of [
     ['/ro/terms', 'Termeni de utilizare · MotorFix', 'Versiunea'],

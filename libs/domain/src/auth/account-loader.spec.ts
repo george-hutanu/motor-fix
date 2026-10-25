@@ -36,7 +36,7 @@ async function refusal(run: Promise<unknown>) {
 }
 
 describe('AccountLoader.activeAccount', () => {
-  // @traces 1204-terms-reaccept-FR-001
+  // @traces 1204-FR-001
   it('loads the account with its roles, memberships, mechanic record and acceptances, newest first', async () => {
     const found = account({ roles: [{ role: 'driver' }, { role: 'garage' }] });
     const { findUnique, loader } = loaderFinding(found);

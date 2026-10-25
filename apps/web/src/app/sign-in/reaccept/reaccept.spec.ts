@@ -70,7 +70,7 @@ afterEach(() => {
   });
 });
 
-// @traces 1204-terms-reaccept-FR-007
+// @traces 1204-FR-007
 describe('the acceptance of new terms', () => {
   it.each([
     [

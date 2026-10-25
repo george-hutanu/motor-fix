@@ -166,7 +166,7 @@ describe('the actor of an assistant call', () => {
   });
 });
 
-// @traces 1204-terms-reaccept-FR-005
+// @traces 1204-FR-005
 describe('the actor of an assistant call whose owner has not accepted the texts in force', () => {
   it('is refused with the same consent_required the API answers, before any grant is used', async () => {
     const { id } = await newAccount(

@@ -1303,7 +1303,7 @@ describe('the garage header', () => {
   });
 });
 
-// @traces 244-FR-002 1204-terms-reaccept-FR-013
+// @traces 244-FR-002 1204-FR-013
 describe('Frame consent bar', () => {
   // First in the frame, so the first Tab after the skip link lands in it; the
   // style sheet then draws it last, on the tab bar on a phone and at the foot

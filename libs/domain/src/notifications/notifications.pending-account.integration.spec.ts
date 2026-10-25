@@ -68,7 +68,7 @@ const queuedFor = async (accountId: string) => {
   ).length;
 };
 
-// @traces 1204-terms-reaccept-FR-006
+// @traces 1204-FR-006
 describe('messages to an account that has not accepted the texts in force', () => {
   it('are written and handed to their channels as for an account that has', async () => {
     const current = await account('current');

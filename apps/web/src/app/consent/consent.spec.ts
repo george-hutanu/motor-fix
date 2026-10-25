@@ -792,7 +792,7 @@ describe('a custom event Plausible cannot take', () => {
   });
 });
 
-// @traces 1204-terms-reaccept-FR-008
+// @traces 1204-FR-008
 describe('a record refused until the account accepts the new texts', () => {
   it('stays pending, to go again once the texts are accepted', async () => {
     const consent = await start({
@@ -826,7 +826,7 @@ describe('a record refused until the account accepts the new texts', () => {
   });
 });
 
-// @traces 1204-terms-reaccept-FR-009
+// @traces 1204-FR-009
 describe('a choice made just after a sign-out', () => {
   async function signedOutChoice() {
     const consent = await start();

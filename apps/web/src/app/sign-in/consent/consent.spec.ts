@@ -58,7 +58,7 @@ describe('the consent tick in any account form', () => {
     expect(element.textContent).not.toContain('Bifează pentru a continua.');
   });
 
-  // @traces 1204-terms-reaccept-FR-012
+  // @traces 1204-FR-012
   it('ties its error line to the box by one fixed id, which no input changes', async () => {
     const { box, element, submit } = await render();
     await submit();

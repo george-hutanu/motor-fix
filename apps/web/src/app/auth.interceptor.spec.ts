@@ -438,7 +438,7 @@ describe('authInterceptor', () => {
   });
 });
 
-// @traces 1204-terms-reaccept-FR-007
+// @traces 1204-FR-007
 describe('authInterceptor when the account must accept new texts', () => {
   const versions = { privacyVersion: '2026-10-24', termsVersion: '2026-10-12' };
   const pending = {

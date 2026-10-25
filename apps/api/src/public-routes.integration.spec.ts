@@ -283,8 +283,8 @@ describe("a mechanic's reviews read without a session", () => {
   );
 });
 
-// @traces 1204-terms-reaccept-FR-002
-// @traces 1204-terms-reaccept-FR-003
+// @traces 1204-FR-002
+// @traces 1204-FR-003
 describe('routes for an account whose acceptance is pending', () => {
   it('refuses every session route but the acceptance with consent_required', async () => {
     await app.get(PRISMA).accountConsent.updateMany({

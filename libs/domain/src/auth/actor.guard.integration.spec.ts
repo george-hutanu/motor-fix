@@ -400,8 +400,8 @@ function expectConsentRequired(res: request.Response) {
   });
 }
 
-// @traces 1204-terms-reaccept-FR-002
-// @traces 1204-terms-reaccept-FR-003
+// @traces 1204-FR-002
+// @traces 1204-FR-003
 describe('the actor check for an account whose acceptance is pending', () => {
   it.each([
     ['driver', ['driver'], 'driver'],

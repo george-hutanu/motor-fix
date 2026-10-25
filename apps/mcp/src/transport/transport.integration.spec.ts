@@ -311,7 +311,7 @@ describe('the MCP endpoint', () => {
     expect(await res.json()).toMatchObject({ code: 'account_suspended' });
   });
 
-  // @traces 1204-terms-reaccept-FR-005
+  // @traces 1204-FR-005
   it('refuses an owner who has not accepted the texts in force with 403 and no challenge, then answers once they have', async () => {
     const { id } = await newAccount('2026-10-11');
     const token = await tokenFor(id);

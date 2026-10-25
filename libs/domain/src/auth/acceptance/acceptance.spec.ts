@@ -1,4 +1,4 @@
-// @traces 1204-terms-reaccept-FR-001
+// @traces 1204-FR-001
 import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts';
 import { HttpException } from '@nestjs/common';
 

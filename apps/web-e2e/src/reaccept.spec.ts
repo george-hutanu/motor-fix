@@ -17,7 +17,7 @@ async function signInStale(page: Page) {
   await expect(reaccept(page).locator('mf-overlay-panel')).toBeVisible();
 }
 
-// @traces 1204-terms-reaccept-FR-007
+// @traces 1204-FR-007
 test('asks for the new texts at sign-in, and only accepting or signing out closes it', async ({
   page,
 }) => {
@@ -48,7 +48,7 @@ test('asks for the new texts at sign-in, and only accepting or signing out close
   ).toBeHidden();
 });
 
-// @traces 1204-terms-reaccept-FR-007 1204-terms-reaccept-FR-014
+// @traces 1204-FR-007 1204-FR-014 1204-FR-015
 test('fits a 320 px phone, and once accepted opens the dashboard and never asks again', async ({
   page,
 }) => {

@@ -381,7 +381,7 @@ test.describe('the account carries the choice @seeded', () => {
   });
 });
 
-// @traces 1204-terms-reaccept-FR-013
+// @traces 1204-FR-013
 // The account's own choice is answered as none and its new one is not kept,
 // so the bar shows on a seeded account whatever another flow recorded there.
 test.describe('the consent bar on a 320 px dashboard @seeded', () => {

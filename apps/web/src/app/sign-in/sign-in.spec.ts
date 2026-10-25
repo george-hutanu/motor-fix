@@ -341,7 +341,7 @@ describe('sending', () => {
     await expect(result).resolves.toBe('signed-in');
   });
 
-  // @traces 1204-terms-reaccept-FR-007
+  // @traces 1204-FR-007
   it('closes without an error when the person signed out at the new terms instead', async () => {
     await open();
     signIn.mockResolvedValueOnce(null);

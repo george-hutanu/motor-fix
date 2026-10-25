@@ -99,7 +99,7 @@ const routeOf = (all: Routes, path: string): Route | undefined => {
   return undefined;
 };
 
-// @traces 1204-terms-reaccept-FR-010 1204-terms-reaccept-FR-011
+// @traces 1204-FR-010 1204-FR-011
 describe('the legal pages labels and titles', () => {
   it('keeps no label in the legal texts module', () => {
     expect('LEGAL_LABELS' in legalTexts).toBe(false);

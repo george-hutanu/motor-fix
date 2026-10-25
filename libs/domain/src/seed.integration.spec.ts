@@ -214,7 +214,7 @@ describe('seed', () => {
     });
   });
 
-  // @traces 1204-terms-reaccept-FR-014
+  // @traces 1204-FR-014
   it('gives every account the texts in force, but one driver older ones, and keeps it so when run again', async () => {
     const versions = async () => {
       const rows = await prisma.accountConsent.findMany({

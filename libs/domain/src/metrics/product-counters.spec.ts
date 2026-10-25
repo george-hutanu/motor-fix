@@ -429,7 +429,7 @@ describe('the product counters', () => {
           { decision },
         ] as const,
     ),
-    // @traces 1204-terms-reaccept-FR-016
+    // @traces 1204-FR-016
     [() => countAcceptance(), 'motorfix_acceptances_total', {}],
     ...(['api', 'mcp'] as const).map(
       (surface) =>
