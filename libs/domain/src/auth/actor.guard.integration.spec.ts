@@ -1,10 +1,22 @@
 import { randomUUID } from 'node:crypto';
 
-import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import {
+  CURRENT_CONSENT,
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from '@motor-fix/contracts';
 import type { Role } from '@motor-fix/contracts/capabilities';
-import { Controller, Get, type INestApplication } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  type INestApplication,
+  Post,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { metrics } from '@opentelemetry/api';
+import { IsString } from 'class-validator';
 import request from 'supertest';
 
 import { signAccessToken } from './access-token';
@@ -12,6 +24,7 @@ import { AccountsService } from './accounts.service';
 import {
   CurrentActor,
   OpenInMaintenance,
+  OpenToPending,
   OptionalActor,
   Public,
 } from './actor.guard';
@@ -96,6 +109,25 @@ class StaysPublicController {
   }
 }
 
+class NoteBody {
+  @IsString()
+  note!: string;
+}
+
+@Controller('pending')
+class PendingController {
+  @Post('validated')
+  validated(@Body() body: NoteBody) {
+    return { note: body.note };
+  }
+
+  @Get('let-through')
+  @OpenToPending()
+  letThrough(@CurrentActor() actor: Actor) {
+    return { accountId: actor.accountId };
+  }
+}
+
 let app: INestApplication;
 let maintenance = false;
 const refusals = jest.fn();
@@ -112,6 +144,7 @@ beforeAll(async () => {
       StaysController,
       StaysPublicController,
       OptionalController,
+      PendingController,
     ],
     imports: [AuthModule.register({ databaseUrl, redisUrl, tokenSecret })],
   })
@@ -119,6 +152,7 @@ beforeAll(async () => {
     .useValue({ on: async () => maintenance, set: async () => undefined })
     .compile();
   app = moduleRef.createNestApplication();
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   await app.init();
 });
 
@@ -337,5 +371,126 @@ describe('the actor check while the platform is in maintenance', () => {
     expect(visitor.status).toBe(401);
     expect(visitor.body).toMatchObject({ code: 'sign_in_required' });
     expect(refusals).not.toHaveBeenCalled();
+  });
+});
+
+const IN_FORCE = {
+  privacyVersion: PRIVACY_VERSION,
+  termsVersion: TERMS_VERSION,
+};
+
+async function pending(authorization: string) {
+  const [, payload] = authorization.slice('Bearer '.length).split('.');
+  const { sub: accountId } = JSON.parse(
+    Buffer.from(payload ?? '', 'base64url').toString(),
+  ) as { sub: string };
+  await prisma.accountConsent.updateMany({
+    data: { textVersion: '2026-10-11' },
+    where: { accountId },
+  });
+  return { accountId, authorization };
+}
+
+function expectConsentRequired(res: request.Response) {
+  expect(res.status).toBe(403);
+  expect(res.body).toEqual({
+    code: 'consent_required',
+    message: expect.any(String),
+    ...IN_FORCE,
+  });
+}
+
+// @traces 1204-FR-002
+// @traces 1204-FR-003
+describe('the actor check for an account whose acceptance is pending', () => {
+  it.each([
+    ['driver', ['driver'], 'driver'],
+    ['garage owner', ['garage'], 'garage'],
+    ['mechanic', ['mechanic'], 'mechanic'],
+    ['receptionist', ['receptionist'], 'receptionist'],
+    ['admin', ['admin'], 'admin'],
+  ] as const)(
+    'refuses a %s with consent_required and the versions in force',
+    async (_, roles, role) => {
+      const { authorization } = await pending(await signedIn([...roles], role));
+
+      expectConsentRequired(await get('/unmarked', authorization));
+    },
+  );
+
+  it('refuses before the body is validated', async () => {
+    const { authorization } = await pending(await driver());
+
+    const res = await request(app.getHttpServer())
+      .post('/pending/validated')
+      .set('Authorization', authorization)
+      .send({ note: 42 });
+
+    expectConsentRequired(res);
+  });
+
+  it('lets an account through once its latest rows are the versions in force', async () => {
+    const { accountId, authorization } = await pending(await driver());
+    await prisma.accountConsent.createMany({
+      data: [
+        {
+          accountId,
+          kind: 'terms',
+          language: 'ro',
+          method: 'google',
+          textVersion: TERMS_VERSION,
+        },
+        {
+          accountId,
+          kind: 'privacy_notice',
+          language: 'ro',
+          method: 'google',
+          textVersion: PRIVACY_VERSION,
+        },
+      ],
+    });
+
+    await get('/unmarked', authorization).expect(200, { reached: true });
+  });
+
+  it('refuses an account with no acceptance rows at all', async () => {
+    const { accountId, authorization } = await pending(await driver());
+    await prisma.accountConsent.deleteMany({ where: { accountId } });
+
+    expectConsentRequired(await get('/unmarked', authorization));
+  });
+
+  it('lets a pending account through a handler marked open to it, as the account', async () => {
+    const { accountId, authorization } = await pending(await driver());
+
+    await get('/pending/let-through', authorization).expect(200, { accountId });
+  });
+
+  it('answers a public route as for any visitor, the optional actor included', async () => {
+    const { accountId, authorization } = await pending(await driver());
+
+    await get('/open', authorization).expect(200, { reached: true });
+    await get('/optional/marked', authorization).expect(200, { accountId });
+  });
+
+  it('keeps sign-in and suspension ahead of the pending check', async () => {
+    const { authorization } = await pending(await driver('suspended'));
+
+    const suspended = await get('/unmarked', authorization);
+    const missing = await get('/unmarked');
+
+    expect(suspended.body).toMatchObject({ code: 'account_suspended' });
+    expect(missing.body).toMatchObject({ code: 'sign_in_required' });
+  });
+
+  it('keeps maintenance ahead for a non-admin and refuses a pending admin with consent_required', async () => {
+    maintenance = true;
+    const { authorization: asDriver } = await pending(await driver());
+    const { authorization: asAdmin } = await pending(
+      await signedIn(['admin'], 'admin'),
+    );
+
+    expectMaintenance(await get('/unmarked', asDriver));
+    expectConsentRequired(await get('/unmarked', asAdmin));
   });
 });

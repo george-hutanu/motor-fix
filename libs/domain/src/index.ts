@@ -12,6 +12,10 @@ export { systemLog } from './admin/system-log/system-log';
 export { SystemLogModule } from './admin/system-log/system-log.module';
 export { AUDIT_PORT, type AuditPort } from './audit/audit.port';
 export { AuditService } from './audit/audit.service';
+export {
+  consentPending,
+  pendingAcceptance,
+} from './auth/acceptance/acceptance';
 export { signAccessToken } from './auth/access-token';
 export {
   AccountLoader,
@@ -93,8 +97,12 @@ export { GarageFiguresService } from './insights/garage-figures/garage-figures.s
 export { InsightsModule } from './insights/insights.module';
 export { ProfileViewsModule } from './insights/profile-views/profile-views.module';
 export * from './logging';
+export { MapsModule } from './maps/maps.module';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
-export { initProductCounters } from './metrics/product-counters';
+export {
+  countConsentRefusal,
+  initProductCounters,
+} from './metrics/product-counters';
 export { BOOKING_CANCELLED_CONSUMER } from './notifications/booking-cancelled/booking-cancelled.fan-out';
 export { BOOKING_CONFIRMED_CONSUMER } from './notifications/booking-confirmed/booking-confirmed.fan-out';
 export { BOOKING_LAPSED_CONSUMER } from './notifications/booking-lapsed/booking-lapsed.fan-out';

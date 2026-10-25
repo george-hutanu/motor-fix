@@ -155,6 +155,7 @@ const summary = async (accountId: string) =>
     .map((r) => [r.channel, r.status, r.failure])
     .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
 
+// @traces 094-FR-010
 describe('a reminder a driver chose to get by SMS', () => {
   it('goes by SMS through Brevo and counts in its month', async () => {
     const ana = await person('ana', 1);
@@ -281,6 +282,7 @@ describe('a reminder a driver chose to get by SMS', () => {
   });
 });
 
+// @traces 094-FR-012
 describe('an SMS that does not go', () => {
   it('is retried while Brevo is down, and gives its count back each time', async () => {
     const ana = await person('ana', 1);
@@ -543,6 +545,7 @@ describe('an SMS that may have gone', () => {
   });
 });
 
+// @traces 094-FR-012
 describe('a WhatsApp message that does not go', () => {
   it('goes by e-mail when Brevo refuses the number', async () => {
     const ana = await person('ana', 1);

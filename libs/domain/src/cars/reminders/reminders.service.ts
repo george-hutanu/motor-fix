@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { dueStage, type ReminderStage, seasonOf } from './reminders';
-import { addDays, localDay } from '../../bucharest';
+import { addDays, daysBetween, localDay } from '../../bucharest';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   NOTIFICATIONS_PRISMA,
@@ -18,10 +18,14 @@ const CAR_DATES: [CarDate, DueKind][] = [
   ['rovinietaUntil', 'rovinieta'],
 ];
 
+// The public web address, for the link a reminder's e-mail and push open.
+export const REMINDERS_WEB_URL = Symbol('REMINDERS_WEB_URL');
+
 interface CarUpdated {
   carId: string;
   ownerId: string;
-  changed: string[];
+  // Absent on `car.added`: every date the car has is new.
+  changed?: string[];
 }
 
 // A car event as the outbox relay queues it.
@@ -62,6 +66,7 @@ export class RemindersService {
   constructor(
     @Inject(NOTIFICATIONS_PRISMA) private readonly prisma: PrismaClient,
     private readonly notifications: NotificationsService,
+    @Inject(REMINDERS_WEB_URL) private readonly webUrl: string = '',
   ) {}
 
   // A new date resets what was sent for the old one and takes a new id, since
@@ -93,8 +98,8 @@ export class RemindersService {
                  OR EXCLUDED.sent_7`;
   }
 
-  // A relayed car event: an edit's changed dates move, set or cancel their
-  // reminders; a removal deletes them all. The dates are read from the car,
+  // A relayed car event: an added car's dates set their reminders, an edit's
+  // changed dates move, set or cancel theirs; a removal deletes them all. The dates are read from the car,
   // not the event, so a retried older edit cannot move a reminder back or
   // recreate one cleared since; delivered twice, it writes the same rows. An
   // edit that reaches a car removed since changes nothing.
@@ -114,7 +119,8 @@ export class RemindersService {
     const today = localDay(this.notifications.now());
     const payload = event.payload as CarUpdated;
     for (const [field, kind] of CAR_DATES) {
-      if (!payload.changed.includes(field)) continue;
+      const all = event.kind === 'car.added';
+      if (!all && !payload.changed?.includes(field)) continue;
       const dueOn = day(car[field]);
       if (dueOn === null) {
         await this.prisma.reminder.deleteMany({ where: { carId, kind } });
@@ -210,9 +216,7 @@ export class RemindersService {
     await this.notifications.notify({
       eventId: `reminder:${reminder.id}:${due.stage}:${dueOn ?? today.slice(0, 4)}`,
       kind: due.type,
-      params: reminder.car
-        ? { car: `${reminder.car.brand.name} ${reminder.car.model}`, dueOn }
-        : { dueOn },
+      params: this.params(reminder, dueOn, today),
       recipients: [reminder.accountId],
       subjectId: reminder.carId ?? reminder.bookingId,
     });
@@ -222,6 +226,18 @@ export class RemindersService {
       where: { dueOn: reminder.dueOn, id: reminder.id },
     });
     return true;
+  }
+
+  // The car by name, its date, the true days left and, with a web address,
+  // the link to the driver's cars.
+  private params(reminder: Due, dueOn: string | null, today: string) {
+    if (!reminder.car) return { dueOn };
+    return {
+      car: `${reminder.car.brand.name} ${reminder.car.model}`,
+      ...(this.webUrl ? { cars: `${this.webUrl}/app/driver/cars` } : {}),
+      dueOn,
+      ...(dueOn ? { left: daysBetween(today, dueOn) } : {}),
+    };
   }
 
   private async removed(carId: string): Promise<boolean> {

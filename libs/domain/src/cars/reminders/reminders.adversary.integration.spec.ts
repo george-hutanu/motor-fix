@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
@@ -16,7 +14,7 @@ import {
 } from '../../notifications/notifications.testing';
 
 const redisUrl = redisUrlFor(3);
-const { account, prisma, reset } = fixtures();
+const { account, car, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
 const queue = new Queue('notifications', { connection: { url: redisUrl } });
@@ -25,26 +23,6 @@ const publisher = new Redis(redisUrl);
 let notifications: NotificationsService;
 let reminders: RemindersService;
 let driver: string;
-
-const car = async (ownerId: string, model = 'Logan') => {
-  const brand = await prisma.brand.upsert({
-    create: { key: 'test-dacia', name: 'Dacia', slug: 'test-dacia' },
-    update: {},
-    where: { name: 'Dacia' },
-  });
-  const { id } = await prisma.car.create({
-    data: {
-      brandId: brand.id,
-      fuel: 'petrol',
-      idempotencyKey: randomUUID(),
-      model,
-      odometerKm: 90000,
-      ownerId,
-      year: 2018,
-    },
-  });
-  return id;
-};
 
 type Kind = 'itp' | 'rca' | 'rovinieta';
 const reminder = (carId: string, kind: Kind = 'itp') =>
@@ -126,7 +104,7 @@ beforeEach(async () => {
   driver = await account('ana');
 });
 
-// @traces 092-FR-008
+// @traces 092-FR-008 094-FR-003
 describe('the stage days of a date set on 8 October 2026', () => {
   const today = '2026-10-08';
 
@@ -190,7 +168,7 @@ describe('the stage days of a date set on 8 October 2026', () => {
   });
 });
 
-// @traces 092-FR-008
+// @traces 092-FR-008 094-FR-003
 describe('a date changed after a stage went out', () => {
   it('keeps the stage sent when the same date is set again, so a redelivery sends nothing', async () => {
     const carId = await car(driver);
@@ -227,7 +205,7 @@ describe('a date changed after a stage went out', () => {
   });
 });
 
-// @traces 092-FR-006
+// @traces 092-FR-006 094-FR-004
 describe('a removal beside other cars', () => {
   it('cancels every reminder of the car and none of another car of the same driver', async () => {
     const gone = await car(driver, 'Logan');

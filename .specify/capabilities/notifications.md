@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 194-email-sending
   - 195-message-templates
@@ -51,6 +51,7 @@ features:
   - 1156-retention-job
   - 142-notification-channels
   - 140-account-delete-export
+  - 094-itp-reminders
 ---
 
 # Capability: Notifications
@@ -691,13 +692,13 @@ _From 032-notifications-bell._
 
 _From 032-notifications-bell._
 
-### 032-FR-006 — The DUE_ITP bell text MUST name the car (brand and model) and the date the ITP is due, in Romanian and English, formatted with the app's day format in each language (a `day` template value rendered by `formatDay`) from the stored calendar date, so the day shown never shifts with the reader's time zone; the text MUST pass the templates' CI check (both languages, declared values only, no plate) and MUST fall back to the generic text when a value is missing.
+### 094-FR-013 — The message MUST be in the recipient's language (Romanian when it is neither `ro` nor `en`), name the car by brand and model and the date in the language's long day format, say how many days are left on the day it is sent (30 or 7 on the stage's own day, the true count on a catch-up; Romanian "o zi" / "de zile" as the number asks; "astăzi" / "today" when a missed run is caught up on the expiry day itself, and a count below 0 renders as missing), never show the plate, and link to Mașinile mele. The e-mail, the push and the bell MUST read, in English, "The ITP on your BMW 320d expires on 13 November 2026, in 30 days." and, in Romanian, "ITP-ul la BMW 320d expiră pe 13 noiembrie 2026, peste 30 de zile." with the e-mail and the push adding "Programează inspecția din timp." / "Book the inspection in time."; the SMS keeps a text within its 70-character limit that names no car; every text MUST pass the templates' CI check. (Modifies 032-FR-006: the bell text now also says the days left.)
 
-_From 032-notifications-bell._
+_From 094-itp-reminders._
 
-### 032-FR-007 — The reminder that sends DUE_ITP MUST pass the car's brand and model with the due date, so the text renders.
+### 094-FR-014 — The reminder MUST hand the message the car's brand and model, the due date and the days left of its stage, so every channel's text renders; a row sent before a value existed falls back to the generic text. A missing value is one absent or null: the car's name is never empty, since its model is a trimmed text of at least one character (`libs/contracts/src/cars.dto.ts:65-70`). (Modifies 032-FR-007.)
 
-_From 032-notifications-bell._
+_From 094-itp-reminders._
 
 ### 032-FR-008 — On a 320 px and a 390 px phone the bell with its badge MUST be visible at the right of the top bar of every driver view, with no sideways scroll, and the list MUST open as the shared bottom sheet with a close button; on desktop the list MUST keep opening in the shared drawer.
 
@@ -907,6 +908,18 @@ _From 142-notification-channels._
 
 _From 142-notification-channels._
 
+### 094-FR-010 — A DUE_ITP MUST go on the channel the driver chose for DUE_ITP (e-mail, push, SMS or WhatsApp); an SMS beyond the driver's 5 SMS in the calendar month (Europe/Bucharest) MUST go by WhatsApp and count as the fallback it is; a push with no device that allows push MUST go by e-mail; an SMS or WhatsApp with no confirmed phone MUST go by e-mail.
+
+_From 094-itp-reminders._
+
+### 094-FR-011 — DUE_ITP is a non-urgent message: an outside send (e-mail, push, SMS, WhatsApp) that would go between 22:00 and 08:00 Europe/Bucharest — a retry, a catch-up — MUST be held until 08:00 local time, correct across clock changes; its bell row MUST be written at once. The 09:00 run itself is never held.
+
+_From 094-itp-reminders._
+
+### 094-FR-012 — When the sending provider fails, the outside send MUST be retried on the notifications queue's own schedule (5 retries at 1, 5, 15, 60 and 240 minutes); then a failed push or WhatsApp MUST fall back once to e-mail, and a send with no fallback left MUST be `failed`, the bell MUST still list it, and the reminder's stage MUST count as sent so the next run does not repeat it. Sending a reminder MUST write no audit entry: the message row is its record.
+
+_From 094-itp-reminders._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -931,3 +944,5 @@ _From 142-notification-channels._
 - `138-FR-001` — superseded by `142-FR-001` (2026-10-24)
 - `196-FR-007` — superseded by `142-FR-005` (2026-10-24)
 - `138-FR-012` — superseded by `142-FR-007` (2026-10-24)
+- `032-FR-006` — superseded by `094-FR-013` (2026-10-25)
+- `032-FR-007` — superseded by `094-FR-014` (2026-10-25)

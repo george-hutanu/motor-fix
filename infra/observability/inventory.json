@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 193,
+    "count": 195,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -221,6 +221,17 @@
       ],
       "reason": "counts every call refused past a rate limit (the route limits of rate-limit.config.ts and the existing ones alike) by method and route template only, 'unknown' when no route matched, never an address, account or e-mail; the api counts its 429s in ProblemFilter, the MCP its own as 'POST /mcp' (panel on motorfix-mcp too); a refusal logs nothing, and Redis down logs one warning per limit and admits the call",
       "story": "ST-1181"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_static_map_renders_total",
+      "source": "libs/domain/src/maps/static-map/static-map.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate"
+      ],
+      "reason": "counts every static map answer by outcome ok, invalid or tiles_failed, never a centre or an address, and times each render in motorfix_static_map_render_duration_seconds (0.25 to 5 s); tiles_failed above 5% of 20 renders in 10 minutes is folded into api-error-rate, keeping the alert count at 50",
+      "story": "ST-1196"
     },
     {
       "kind": "product-counter",
@@ -598,9 +609,12 @@
       "name": "openfreemap",
       "host": "tiles.openfreemap.org",
       "source": "apps/web/src/app/public/place-step/place-map.ts",
-      "dashboard": "none",
-      "alerts": "none",
-      "reason": "map tiles fetched by the browser, no key; a failed load shows the map-down message and is not counted server-side",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "map tiles: the browser fetches them for the interactive maps, no key, a failed load showing the map-down message; the api's static map (libs/domain/src/maps/static-map/static-map.renderer.ts) reads the TileJSON once an hour and up to a few tiles per image, each a static-map.tile span and an Outside calls row entry, 2 s a tile and 5 s an image, a failure counted as motorfix_static_map_renders_total{outcome=tiles_failed} under api-error-rate",
       "story": "ST-111"
     },
     {
@@ -1892,6 +1906,19 @@
       "story": "ST-269"
     },
     {
+      "kind": "endpoint",
+      "name": "maps-static",
+      "source": "libs/domain/src/maps/static-map/static-map.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/maps/static",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a public WebP of one map view, cached a day by the browser and a month at the CDN; renders count in motorfix_static_map_renders_total, a refusal past 120 a minute per address in motorfix_rate_limit_refusals_total; one static-map.render span (zoom, theme, size, tile count, never the centre) and one StaticMapRender warning per failed render",
+      "story": "ST-1196"
+    },
+    {
       "kind": "outside-service",
       "name": "bunny",
       "host": "api.bunny.net",
@@ -2293,6 +2320,37 @@
         "notification-fallback-rate"
       ],
       "story": "ST-142"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-acceptance",
+      "source": "libs/domain/src/auth/acceptance/acceptance.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/acceptance",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a signed-in account accepting the terms and privacy notice in force: the missing rows and their audit entry in one transaction, counted by motorfix_acceptances_total, one Acceptance log line without the account id; a 400 consent_required is a stale page sending old versions, the rule working; the API error-rate and latency rules cover the route; no outside call",
+      "story": "ST-1204"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_acceptances_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts every acceptance that wrote a row after a version change, never an account; a count has no failure of its own to alert on, a failed write is a 5xx under api-error-rate",
+      "story": "ST-1204"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_consent_refusals_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts every call refused with consent_required by surface api or mcp, never an account; a surge right after a version bump is the expected shape, not a failure, so it is watched on the panel, not paged",
+      "story": "ST-1204"
     }
   ]
 }

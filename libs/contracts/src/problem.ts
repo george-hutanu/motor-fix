@@ -27,6 +27,10 @@ export interface Problem {
   decidedAt?: string;
   // A name already in the catalogue (`exists`): that job's Romanian name.
   nameRo?: string;
+  // An account that has not accepted the texts in force
+  // (`consent_required`): their versions.
+  termsVersion?: string;
+  privacyVersion?: string;
   // A save on a brand that changed since it was read (`stale_value`): the
   // brand as it is now.
   brand?: ProblemBrand;

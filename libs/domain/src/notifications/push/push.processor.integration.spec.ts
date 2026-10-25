@@ -273,6 +273,7 @@ describe('routing to push', () => {
   });
 });
 
+// @traces 094-FR-010
 describe('a driver who chose push', () => {
   it('gets the message by e-mail when there is no device', async () => {
     const ana = await person('ana');
@@ -378,6 +379,7 @@ describe('a database error after the push service took a message', () => {
   });
 });
 
+// @traces 094-FR-012
 describe('a push service that fails', () => {
   it('is retried on the e-mail schedule while it may still answer', async () => {
     const ana = await person('ana', { devices: ['down'] });

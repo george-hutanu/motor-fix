@@ -17,6 +17,8 @@ export const consentRequired = () =>
       code: 'consent_required',
       errors: [{ code: 'consent_required', field: 'consent' }],
       message: 'Accept the current terms of use and privacy notice',
+      privacyVersion: PRIVACY_VERSION,
+      termsVersion: TERMS_VERSION,
     },
     HttpStatus.BAD_REQUEST,
   );

@@ -3,12 +3,27 @@ import type { Map as MapLibre, Marker } from 'maplibre-gl';
 
 import { drawPins } from './pins-map';
 import { ring } from '../../map-libre/map-libre';
+import { boundsOf, fitView, paddingOf } from '../../static-map/fit-view';
 
 const GREEN = 'rgb(0, 128, 0)';
 const RED = 'rgb(200, 0, 0)';
 const AMBER = 'rgb(255, 176, 0)';
 const ON_AMBER = 'rgb(11, 12, 14)';
 const PLACE = { lat: 44.437, lng: 26.117 };
+const BOX = { h: 600, w: 800 };
+// The view the static image showed: the interactive map jumps to it.
+const jumpedTo = (
+  points: { lat: number; lng: number }[],
+  covered = 0,
+  coveredTop = 0,
+) => {
+  const { center, zoom } = fitView(
+    boundsOf(points),
+    BOX,
+    paddingOf(covered, coveredTop),
+  );
+  return { center: [center.lng, center.lat], zoom };
+};
 
 const pinOf = (n: number, over: Partial<GaragePinDto> = {}): GaragePinDto => ({
   id: `g-${n}`,
@@ -84,6 +99,8 @@ beforeEach(() => {
   host.style.setProperty('--mf-red', RED);
   host.style.setProperty('--mf-amber', AMBER);
   host.style.setProperty('--mf-on-amber', ON_AMBER);
+  Object.defineProperty(host, 'clientWidth', { value: BOX.w });
+  Object.defineProperty(host, 'clientHeight', { value: BOX.h });
   document.body.append(host);
 });
 
@@ -234,11 +251,9 @@ describe('the pins on the results map', () => {
   });
 });
 
-// @traces 269-FR-012
+// @traces 269-FR-012 1196-FR-011
 describe('fitting the results map', () => {
-  const OPTIONS = { animate: false, maxZoom: 15, padding: 40 };
-
-  it('fits the place and every fixed pin, instantly, never past zoom 15', () => {
+  it('jumps to the view of the place and every fixed pin the static image showed, never fitting bounds', () => {
     draw().fit(
       PLACE,
       answer([
@@ -247,13 +262,17 @@ describe('fitting the results map', () => {
       ]),
     );
 
-    expect(map.fitBounds).toHaveBeenCalledWith(
-      [
-        [26.0, 44.3],
-        [26.2, 44.5],
-      ],
-      OPTIONS,
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(map.jumpTo).toHaveBeenCalledWith(
+      jumpedTo([PLACE, { lat: 44.5, lng: 26.0 }, { lat: 44.3, lng: 26.2 }]),
     );
+  });
+
+  it('jumps instantly to a whole zoom never past 15', () => {
+    draw().fit(PLACE, answer([]));
+    const [{ zoom }] = map.jumpTo.mock.calls.at(-1) as [{ zoom: number }];
+
+    expect(zoom).toBe(15);
   });
 
   it('leaves a mobile mechanic out of the fit', () => {
@@ -262,35 +281,23 @@ describe('fitting the results map', () => {
       answer([pinOf(1, { lat: 47, lng: 27, serviceRadiusKm: 20 })]),
     );
 
-    expect(map.fitBounds).toHaveBeenCalledWith(
-      [
-        [PLACE.lng, PLACE.lat],
-        [PLACE.lng, PLACE.lat],
-      ],
-      OPTIONS,
-    );
+    expect(map.jumpTo).toHaveBeenCalledWith(jumpedTo([PLACE]));
   });
 
   it('fits the pins alone without a place', () => {
     draw().fit(undefined, answer([pinOf(1, { lat: 44.5, lng: 26.0 })]));
 
-    expect(map.fitBounds).toHaveBeenCalledWith(
-      [
-        [26.0, 44.5],
-        [26.0, 44.5],
-      ],
-      OPTIONS,
+    expect(map.jumpTo).toHaveBeenCalledWith(
+      jumpedTo([{ lat: 44.5, lng: 26.0 }]),
     );
   });
 
-  it('shows Romania whole with neither a place nor a pin', () => {
+  it('shows Romania whole with neither a place nor a pin, at the zoom the image takes', () => {
     draw().fit(undefined, answer([]));
 
     expect(map.fitBounds).not.toHaveBeenCalled();
-    expect(map.jumpTo).toHaveBeenCalledWith({
-      center: [24.97, 45.94],
-      zoom: 5.2,
-    });
+    expect(map.jumpTo).toHaveBeenCalledWith(jumpedTo([]));
+    expect(jumpedTo([]).zoom).toBe(5);
   });
 });
 
@@ -728,22 +735,18 @@ describe('the "you are here" marker on the results map', () => {
   it("keeps the place clear of what covers the map's bottom edge", () => {
     draw().fit(PLACE, answer([pinOf(1, { lat: 44.5, lng: 26.0 })]), 70);
 
-    expect(map.fitBounds).toHaveBeenCalledWith(expect.any(Array), {
-      animate: false,
-      maxZoom: 15,
-      padding: { bottom: 110, left: 40, right: 40, top: 40 },
-    });
+    expect(map.jumpTo).toHaveBeenCalledWith(
+      jumpedTo([PLACE, { lat: 44.5, lng: 26.0 }], 70),
+    );
   });
 
   // @traces 1358-FR-004
   it("keeps the place clear of what covers the map's top edge too", () => {
     draw().fit(PLACE, answer([pinOf(1, { lat: 44.5, lng: 26.0 })]), 200, 66);
 
-    expect(map.fitBounds).toHaveBeenCalledWith(expect.any(Array), {
-      animate: false,
-      maxZoom: 15,
-      padding: { bottom: 240, left: 40, right: 40, top: 106 },
-    });
+    expect(map.jumpTo).toHaveBeenCalledWith(
+      jumpedTo([PLACE, { lat: 44.5, lng: 26.0 }], 200, 66),
+    );
   });
 
   it('keeps the place in the fit with no pin around it', () => {
@@ -751,13 +754,7 @@ describe('the "you are here" marker on the results map', () => {
     view.mark(PLACE);
     view.fit(PLACE, answer([]));
 
-    expect(map.fitBounds).toHaveBeenCalledWith(
-      [
-        [PLACE.lng, PLACE.lat],
-        [PLACE.lng, PLACE.lat],
-      ],
-      { animate: false, maxZoom: 15, padding: 40 },
-    );
-    expect(map.jumpTo).not.toHaveBeenCalled();
+    expect(map.jumpTo).toHaveBeenCalledWith(jumpedTo([PLACE]));
+    expect(map.jumpTo).not.toHaveBeenCalledWith(jumpedTo([]));
   });
 });

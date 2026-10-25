@@ -83,7 +83,11 @@ export class Overlays {
         ariaLabelledBy: titleId,
         ariaModal: true,
         autoFocus: false,
-        backdropClass: 'spartan-dialog-overlay',
+        // A task only its own buttons close hides the screen behind it.
+        backdropClass:
+          options.dismissible === false
+            ? ['spartan-dialog-overlay', 'mf-overlay-veil']
+            : 'spartan-dialog-overlay',
         // The panel decides on Escape and outside clicks: it may ask first.
         closeOnOutsidePointerEvents: false,
         disableClose: true,

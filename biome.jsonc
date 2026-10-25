@@ -193,7 +193,8 @@
         "apps/web/src/app/public/results/results.html",
         "apps/web/src/app/public/tab-bar/tab-bar.html",
         "apps/web/src/app/public/unsubscribe/unsubscribe.html",
-        "apps/web/src/app/sign-in/consent/consent.html"
+        "apps/web/src/app/sign-in/consent/consent.html",
+        "apps/web/src/app/sign-in/reaccept/reaccept.html"
       ],
       "linter": {
         "rules": {
