@@ -6,11 +6,13 @@ import {
 import { OverlayPositionBuilder } from '@angular/cdk/overlay';
 import { DOCUMENT } from '@angular/common';
 import {
+  computed,
   createEnvironmentInjector,
   DestroyRef,
   EnvironmentInjector,
   Injectable,
   inject,
+  signal,
 } from '@angular/core';
 import { BrnDialogService } from '@spartan-ng/brain/dialog';
 import { firstValueFrom } from 'rxjs';
@@ -37,6 +39,23 @@ export function focusMain(document: Document): boolean {
   return true;
 }
 
+// How many bottom sheets are open. Overlays counts them; a phone's tab bar
+// reads any() and steps aside while one is up, so it never covers the
+// sheet's last button.
+@Injectable({ providedIn: 'root' })
+export class OpenSheets {
+  private readonly count = signal(0);
+  readonly any = computed(() => this.count() > 0);
+
+  opened(): void {
+    this.count.update((n) => n + 1);
+  }
+
+  closed(): void {
+    this.count.update((n) => Math.max(0, n - 1));
+  }
+}
+
 // Opens a task on top of the current screen. The address never changes; the
 // promise settles with the task's result, or "cancelled" when the person
 // closed it (X, Escape, outside, a drag down, or the browser's Back button).
@@ -59,6 +78,7 @@ export class Overlays {
   );
   private readonly dialogs = this.scope.get(BrnDialogService);
   private readonly positions = inject(OverlayPositionBuilder);
+  private readonly sheets = inject(OpenSheets);
   private readonly document = inject(DOCUMENT);
   private readonly window = this.document.defaultView;
 
@@ -91,15 +111,19 @@ export class Overlays {
         // The panel decides on Escape and outside clicks: it may ask first.
         closeOnOutsidePointerEvents: false,
         disableClose: true,
+        // The pane takes the sheet's width or the drawer's height, so the
+        // dialog element around the panel has the box the panel draws.
         positionStrategy: sheet
-          ? this.positions.global().bottom('0').left('0')
+          ? this.positions.global().bottom('0').left('0').width('100%')
           : options.shape === 'dialog'
             ? undefined
-            : this.positions.global().top('0').right('0'),
+            : this.positions.global().top('0').right('0').height('100%'),
         restoreFocus: true,
         role: 'dialog',
       },
     );
+    // Counted once the dialog exists, so a failed open never leaves the bars hidden.
+    if (sheet) this.sheets.opened();
     options.signal?.addEventListener('abort', () => ref.close(), {
       once: true,
     });
@@ -114,6 +138,7 @@ export class Overlays {
     // Focus the person already moved elsewhere stays where it is.
     return firstValueFrom(ref.closed$, { defaultValue: undefined }).then(
       (result) => {
+        if (sheet) this.sheets.closed();
         if (!this.stays(opener) && this.lost()) focusMain(this.document);
         return new Promise<OverlayResult<R>>((resolve) =>
           setTimeout(() => resolve(result ?? 'cancelled')),
