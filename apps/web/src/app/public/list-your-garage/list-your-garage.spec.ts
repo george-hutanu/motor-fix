@@ -27,6 +27,7 @@ import { Consent } from '../../consent/consent';
 import { Live } from '../../dashboard/live';
 import { Session } from '../../dashboard/session';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
+import { placesAnswered } from '../address-field/address-field.testing';
 import { type BrowserDraft, STORAGE_KEY } from '../draft/draft';
 import { PLACE_MAP, type PlaceMapEvents } from '../place-step/place-map';
 
@@ -84,7 +85,7 @@ const jobs = {
 const holidays = { publicHolidaysControllerList: jest.fn(async () => []) };
 // The address look-up and the map of step 5, both stood in for.
 const places = {
-  placesControllerSearch: jest.fn(async () => ({
+  placesControllerSearch: jest.fn(async (_asked?: unknown) => ({
     items: [{ label: 'Strada Exemplu 1, București', lat: 44.43, lng: 26.1 }],
   })),
 };
@@ -166,6 +167,7 @@ async function open(path: string, reduced = false) {
       { provide: PublicHolidaysService, useValue: holidays },
       { provide: CatalogueService, useValue: jobs },
       { provide: PlacesService, useValue: places },
+      placesAnswered((asked) => places.placesControllerSearch(asked)),
       { provide: PLACE_MAP, useValue: placeMap },
     ],
   });

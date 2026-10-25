@@ -6,7 +6,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import { DOCUMENT } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { FetchBackend, HttpBackend, HttpClient } from '@angular/common/http';
 import {
   createEnvironmentInjector,
   type EnvironmentInjector,
@@ -17,7 +17,7 @@ import {
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { apiHttpClient } from './app.config';
+import { apiHttpClient, appConfig } from './app.config';
 
 let server: Server;
 let base: string;
@@ -47,8 +47,8 @@ beforeEach(() => {
 });
 
 // The app's own HttpClient on a server's root injector, in Node, where
-// withFetch reaches Node's global fetch; no page is rendered, so no DOM.
-const serverHttp = () =>
+// the fetch backend reaches Node's global fetch; no page is rendered, so no DOM.
+const serverInjector = () =>
   createEnvironmentInjector(
     [
       apiHttpClient(),
@@ -61,7 +61,8 @@ const serverHttp = () =>
       },
     ],
     Injector.NULL as EnvironmentInjector,
-  ).get(HttpClient);
+  );
+const serverHttp = () => serverInjector().get(HttpClient);
 
 // @traces 1188-FR-001
 describe("the server render's connection to the API", () => {
@@ -74,5 +75,34 @@ describe("the server render's connection to the API", () => {
     // undici may open a second socket while the first is being handed back
     // to the pool; without keep-alive each of the ten calls opens its own.
     expect(connections).toBeLessThanOrEqual(2);
+  });
+});
+
+type Provider = {
+  provide?: unknown;
+  ɵproviders?: unknown[];
+};
+
+// Every provider the app config gives, opened through the environment
+// providers each provide* function wraps its own in.
+const flatten = (providers: unknown[]): Provider[] =>
+  providers.flatMap((p) => {
+    if (Array.isArray(p)) return flatten(p);
+    const provider = p as Provider;
+    return provider?.ɵproviders
+      ? [provider, ...flatten(provider.ɵproviders)]
+      : [provider];
+  });
+
+// @traces 1193-FR-008
+describe('the app config', () => {
+  it('sends its requests through the fetch backend, the default since Angular 21', () => {
+    expect(serverInjector().get(HttpBackend)).toBeInstanceOf(FetchBackend);
+  });
+
+  it('still replays a tap made on the server-rendered page before hydration', () => {
+    expect(
+      flatten(appConfig.providers).map((p) => String(p?.provide)),
+    ).toContain('InjectionToken IS_EVENT_REPLAY_ENABLED');
   });
 });
