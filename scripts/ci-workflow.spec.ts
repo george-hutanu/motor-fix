@@ -211,6 +211,7 @@ describe('ci workflow', () => {
     ['checks', 'Dashboard check', 'node scripts/dashboard-check.ts'],
     ['checks', 'Harness', 'npm run test:harness'],
     ['checks', 'Structure', 'node scripts/structure-check.ts'],
+    ['checks', '3D assets', 'node scripts/model-3d-check.ts'],
     ['checks', 'Dependency audit', 'npm audit --omit=dev --audit-level=high'],
     [
       'checks',
