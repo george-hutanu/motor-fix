@@ -728,6 +728,16 @@
     "google": "Continuă cu Google",
     "or": "sau"
   },
+  "reaccept": {
+    "accept": "Accept",
+    "error": "Nu am putut salva acceptarea. Încearcă din nou.",
+    "privacy": "Nota de informare privind datele personale",
+    "signOut": "Deconectare",
+    "terms": "Termenii de utilizare",
+    "text": "Am actualizat termenii de utilizare și nota de informare privind datele personale. Ca să continui, acceptă‑le.",
+    "title": "Termeni noi",
+    "version": "versiunea {version}"
+  },
   "reportGarage": {
     "cancel": "Anulează",
     "count": "{typed} / {max}",

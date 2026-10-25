@@ -197,7 +197,7 @@ function nextEntry(window: Window | null) {
     }
   `,
   template: `
-    @if (context.sheet) {
+    @if (context.sheet && context.dismissible !== false) {
       <div
         class="mf-overlay-grip"
         aria-hidden="true"
@@ -212,6 +212,7 @@ function nextEntry(window: Window | null) {
       <h2 class="mf-label mf-overlay-title" [id]="context.titleId">
         {{ context.title | t: context.titleParams }}
       </h2>
+      @if (context.dismissible !== false) {
       <button
         type="button"
         class="spartan-button spartan-button-variant-ghost mf-overlay-close"
@@ -231,6 +232,7 @@ function nextEntry(window: Window | null) {
           <path d="M18 6 6 18M6 6l12 12" />
         </svg>
       </button>
+      }
     </header>
     <div
       #body
@@ -389,8 +391,9 @@ export class OverlayPanel {
         return;
       }
       if (!this.asking()) this.dismiss();
-      // Asking instead of closing: the entry comes back, so Back asks again.
-      if (this.asking()) mark();
+      // Asking or staying instead of closing: the entry comes back, so Back
+      // asks again.
+      if (this.asking() || this.context.dismissible === false) mark();
     };
     // A page nobody has touched yet: Chrome skips an entry pushed now when
     // Back is pressed, so the entry waits for the first touch or key.
@@ -530,6 +533,7 @@ export class OverlayPanel {
 
   // X, Escape, a click outside and a drag down: ask first when a field changed.
   protected dismiss() {
+    if (this.context.dismissible === false) return;
     if (!this.changed || this.context.confirmDiscard === false) {
       this.close();
       return;

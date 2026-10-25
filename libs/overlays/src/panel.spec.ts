@@ -34,12 +34,14 @@ class FieldTask {
 class Host {
   private readonly overlays = inject(Overlays);
   shape: OverlayShape = 'dialog';
+  dismissible?: boolean;
   result?: Promise<OverlayResult<'saved'>>;
 
   open() {
     this.result = this.overlays.open<'saved'>(FieldTask, {
       shape: this.shape,
       title: 'shell.brand',
+      ...(this.dismissible !== undefined && { dismissible: this.dismissible }),
     });
   }
 }
@@ -95,9 +97,10 @@ async function settle() {
   }
 }
 
-async function openTask(shape: OverlayShape = 'dialog') {
+async function openTask(shape: OverlayShape = 'dialog', dismissible?: boolean) {
   const fixture = TestBed.createComponent(Host);
   fixture.componentInstance.shape = shape;
+  fixture.componentInstance.dismissible = dismissible;
   fixture.detectChanges();
   document.querySelector<HTMLButtonElement>('#opener')?.click();
   await settle();
@@ -708,5 +711,53 @@ describe('a task whose autofocus field arrives late', () => {
     await settle();
 
     expect(document.activeElement?.id).toBe('other');
+  });
+});
+
+// @traces 1204-terms-reaccept-FR-007
+describe('a task that only its own buttons may close', () => {
+  const closeButton = () =>
+    panel()?.querySelector<HTMLButtonElement>('.mf-overlay-close');
+
+  it('shows no X and no grip, and stays up on Escape, a click outside, a drag down and Back', async () => {
+    history.pushState({ page: 'here' }, '');
+    const host = await openTask('dialog', false);
+    let settled = false;
+    host.result?.then(() => {
+      settled = true;
+    });
+
+    expect(closeButton()).toBeNull();
+    expect(grip()).toBeNull();
+    expect(
+      document.querySelector('.cdk-overlay-backdrop')?.classList,
+    ).toContain('mf-overlay-veil');
+    pressEscape();
+    document
+      .querySelector<HTMLElement>('.cdk-overlay-backdrop')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await settle();
+    history.back();
+    await settle();
+
+    expect(open()).toBe(1);
+    expect(settled).toBe(false);
+    document.querySelector<HTMLButtonElement>('#done')?.click();
+    await settle();
+    await expect(host.result).resolves.toBe('saved');
+  });
+
+  it('stays dismissible when the option is left out', async () => {
+    const host = await openTask();
+
+    expect(closeButton()).not.toBeNull();
+    expect(
+      document.querySelector('.cdk-overlay-backdrop')?.classList,
+    ).not.toContain('mf-overlay-veil');
+    pressEscape();
+    await settle();
+
+    expect(open()).toBe(0);
+    await expect(host.result).resolves.toBe('cancelled');
   });
 });

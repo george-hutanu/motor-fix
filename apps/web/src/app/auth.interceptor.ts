@@ -20,6 +20,8 @@ import {
 import { Session } from './dashboard/session';
 import { PlatformStatus } from './maintenance/platform-status';
 import { PUBLIC_READ } from './public-read';
+import type { Versions } from './sign-in/reaccept/reaccept';
+import { ReacceptDialog } from './sign-in/reaccept/reaccept-dialog';
 import { SignInDialog } from './sign-in/sign-in-dialog';
 
 // Only the page's own API gets the token; the session calls work by cookie.
@@ -51,6 +53,18 @@ const withToken = (req: HttpRequest<unknown>, token: string) =>
 const signInRequired = (error: unknown) => {
   const problem = toProblem(error);
   return problem.status === 401 && problem.code === 'sign_in_required';
+};
+
+// The account must accept the texts now in force; the refusal names them.
+const pendingVersions = (error: unknown): Versions | null => {
+  if (!(error instanceof HttpErrorResponse) || error.status !== 403)
+    return null;
+  const body = error.error as Partial<Versions> & { code?: unknown };
+  return body?.code === 'consent_required' &&
+    typeof body.termsVersion === 'string' &&
+    typeof body.privacyVersion === 'string'
+    ? { privacyVersion: body.privacyVersion, termsVersion: body.termsVersion }
+    : null;
 };
 
 // A wrong password is the answer, not an expired token: sending it again
@@ -86,6 +100,7 @@ export const authInterceptor: HttpInterceptorFn = (
   if (path === null || !carriesToken(path)) return next(req);
   const session = inject(Session);
   const dialog = inject(SignInDialog);
+  const reaccept = inject(ReacceptDialog);
   const status = inject(PlatformStatus);
   const onServer = isPlatformServer(inject(PLATFORM_ID));
   const token = session.token();
@@ -118,8 +133,20 @@ export const authInterceptor: HttpInterceptorFn = (
         )
       : throwError(() => refusal);
 
+  // Accepted: the same session goes on, so the call goes once more. Signed
+  // out instead: the refusal is the answer. "Who am I" asks too, since the
+  // sign-in reads it first. Not for a session that has since ended.
+  const accept = (refusal: unknown, versions: Versions) =>
+    !onServer && session.epoch() === epoch
+      ? from(reaccept.gate(versions).catch(() => false)).pipe(
+          switchMap((accepted) => repeat(accepted, refusal)),
+        )
+      : throwError(() => refusal);
+
   return next(token ? withToken(req, token) : req).pipe(
     catchError((error: unknown) => {
+      const versions = pendingVersions(error);
+      if (versions) return accept(error, versions);
       const expired =
         error instanceof HttpErrorResponse &&
         error.status === 401 &&
