@@ -12,7 +12,7 @@ import {
   GaragesService,
   type MeDto,
 } from '@motor-fix/data-access';
-import { I18n } from '@motor-fix/i18n';
+import { bucharestDayStart, I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
 import { GarageMembers } from './garage-members';
@@ -20,7 +20,6 @@ import { Live } from '../live';
 import { Session } from '../session';
 
 const GARAGE = '0f9c2a54-6a1e-4f43-9d2b-2f5a3c1d7e10';
-const DAY = 86_400_000;
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const member = (over: Partial<GarageMemberDto> = {}): GarageMemberDto => ({
@@ -49,7 +48,10 @@ const SEEDED: GarageMembersDto = {
       email: 'elena@example.test',
       id: 'invite-2',
       kind: 'receptionist',
-      sentAt: new Date(Date.now() - DAY).toISOString(),
+      // An hour before today began in Bucharest: yesterday even on a 25-hour day.
+      sentAt: new Date(
+        bucharestDayStart(new Date()).getTime() - 3_600_000,
+      ).toISOString(),
     }),
     invite({
       email: 'dan@example.test',

@@ -25,13 +25,16 @@ jest.mock('@motor-fix/ui-cockpit', () => ({
 
 const FILE = 'file-1';
 const NOW = new Date();
-const DAY = 86_400_000;
-
-// A calendar day `n` days before today in Bucharest.
-const daysAgo = (n: number) =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Bucharest' }).format(
-    new Date(NOW.getTime() - n * DAY),
-  );
+// A calendar day `n` days before today in Bucharest, counted in calendar
+// days: a 25-hour day must not make 24 hours ago read as today.
+const daysAgo = (n: number) => {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Bucharest',
+  }).format(NOW);
+  const day = new Date(`${today}T00:00:00.000Z`);
+  day.setUTCDate(day.getUTCDate() - n);
+  return day.toISOString().slice(0, 10);
+};
 
 const KINDS = [
   'company',
