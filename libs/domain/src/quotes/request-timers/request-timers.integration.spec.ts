@@ -80,7 +80,7 @@ beforeEach(async () => {
 
 // Compiled, never started: no worker takes the queue's jobs and no sweep is
 // scheduled, so each case runs the timers itself at `now`.
-async function start(now: Date) {
+async function start(now: Date, webUrl = WEB) {
   app = await Test.createTestingModule({
     imports: [
       RequestTimersModule.registerWorker({
@@ -91,7 +91,7 @@ async function start(now: Date) {
           redisUrl,
         }),
         redisUrl,
-        webUrl: WEB,
+        webUrl,
       }),
     ],
   }).compile();
@@ -103,7 +103,7 @@ async function start(now: Date) {
     service.now = () => later;
     timers.now = () => later;
   };
-  return { at, timers };
+  return { at, service, timers };
 }
 
 // A garage with an owner, an English-speaking receptionist, a mechanic who
@@ -445,6 +445,41 @@ describe('setting and clearing a request’s timers', () => {
 
     expect(await delays()).toEqual({});
   });
+
+  it('refuses an event whose ids are missing or malformed, clearing nothing', async () => {
+    const dinamo = await staffed('Dinamo');
+    const { driverId, event: created, request } = await sent([dinamo]);
+    const quote = await quoted(request.id, dinamo);
+    const { timers } = await start(CREATED);
+    await timers.onEvent(created);
+    await timers.onEvent(
+      event('quote.sent', {
+        driverId,
+        garageId: dinamo.garage.id,
+        quoteId: quote.id,
+        requestId: request.id,
+      }),
+    );
+    const before = await delays();
+
+    await expect(
+      timers.onEvent(event('request.cancelled', {})),
+    ).rejects.toThrow('requestId missing');
+    await expect(
+      timers.onEvent(event('request.cancelled', { requestId: 42 })),
+    ).rejects.toThrow('requestId missing');
+    await expect(
+      timers.onEvent(event('quote.closed', { quoteIds: [quote.id, 7] })),
+    ).rejects.toThrow('quoteIds is not a list of ids');
+    await expect(
+      timers.onEvent(
+        event('request.expired', { garageIds: 'x', requestId: request.id }),
+      ),
+    ).rejects.toThrow('garageIds is not a list of ids');
+
+    expect(await delays()).toEqual(before);
+    expect(Object.keys(before)).toHaveLength(4);
+  });
 });
 
 // @traces 1257-FR-001 1257-FR-002 1257-FR-003 1257-FR-012 1257-FR-013
@@ -736,6 +771,56 @@ describe('expiring a request at the end of its seven days', () => {
     ).toBe(1);
     expect(await bells('REQUEST_EXPIRED', dinamo.owner)).toHaveLength(1);
     expect(await bells('REQUEST_EXPIRED', driverId)).toHaveLength(1);
+  });
+
+  it('still expires the request with no web address set, but sends no notice and marks no reminder day', async () => {
+    const dinamo = await staffed('Dinamo');
+    const { driverId, recipients, request } = await sent([dinamo]);
+    const { at, timers } = await start(DAY2, '');
+
+    await fire(timers, 'request-reminder-2', request.id);
+    expect((await recipientOf(recipients[0].id)).remindedDay2At).toBeNull();
+
+    at(EXPIRES);
+    await fire(timers, 'request-expiry', request.id);
+    await relay(timers, 'request.expired');
+
+    expect((await recipientOf(recipients[0].id)).status).toBe('expired');
+    expect((await requestOf(request.id)).status).toBe('closed');
+    expect(await prisma.notification.count()).toBe(0);
+    expect(await messages('REQUEST_EXPIRED', driverId)).toEqual([]);
+  });
+
+  it('tells each person exactly once when a notice fails partway and the job is retried', async () => {
+    const [dinamo, berceni] = [
+      await staffed('Dinamo'),
+      await staffed('Berceni'),
+    ];
+    const { driverId, request } = await sent([dinamo, berceni]);
+    const { service, timers } = await start(EXPIRES);
+    const notify = service.notify.bind(service);
+    let calls = 0;
+    jest.spyOn(service, 'notify').mockImplementation(async (input) => {
+      calls += 1;
+      if (calls === 2) throw new Error('mail queue down');
+      return notify(input);
+    });
+
+    await fire(timers, 'request-expiry', request.id);
+    await expect(relay(timers, 'request.expired')).rejects.toThrow(
+      'mail queue down',
+    );
+    await relay(timers, 'request.expired');
+
+    for (const person of [
+      dinamo.owner,
+      dinamo.desk,
+      berceni.owner,
+      berceni.desk,
+      driverId,
+    ]) {
+      expect(await bells('REQUEST_EXPIRED', person)).toHaveLength(1);
+    }
   });
 
   it('expires a request whose timer was lost, from the sweep, counted as the sweep’s', async () => {

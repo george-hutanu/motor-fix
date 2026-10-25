@@ -38,11 +38,13 @@ export const REQUEST_EXPIRED_DRIVER: Template = {
     en: {
       body: 'Ask other garages for quotes for the {car}.',
       link: 'link',
+      shorten: 'car',
       title: 'Request expired',
     },
     ro: {
       body: 'Cere oferte de la alte service-uri pentru {car}.',
       link: 'link',
+      shorten: 'car',
       title: 'Cerere expirată',
     },
   },
@@ -87,8 +89,18 @@ export const REQUEST_EXPIRED_GARAGE: Template = {
     link: 'https://motorfix.example/app/garage/requests',
   },
   push: {
-    en: { body: '{driver} · {car}', link: 'link', title: 'Request expired' },
-    ro: { body: '{driver} · {car}', link: 'link', title: 'Cerere expirată' },
+    en: {
+      body: '{driver} · {car}',
+      link: 'link',
+      shorten: 'car',
+      title: 'Request expired',
+    },
+    ro: {
+      body: '{driver} · {car}',
+      link: 'link',
+      shorten: 'car',
+      title: 'Cerere expirată',
+    },
   },
   values: { car: 'text', driver: 'text', link: 'link' },
   whatsapp: {

@@ -35,8 +35,18 @@ export const QUOTE_EXPIRED_DRIVER: Template = {
     link: 'https://motorfix.example/app/driver/requests/0a9b8c7d',
   },
   push: {
-    en: { body: '{garage} · {car}', link: 'link', title: 'Quote expired' },
-    ro: { body: '{garage} · {car}', link: 'link', title: 'Ofertă expirată' },
+    en: {
+      body: '{garage} · {car}',
+      link: 'link',
+      shorten: 'car',
+      title: 'Quote expired',
+    },
+    ro: {
+      body: '{garage} · {car}',
+      link: 'link',
+      shorten: 'car',
+      title: 'Ofertă expirată',
+    },
   },
   values: { car: 'text', garage: 'text', link: 'link' },
   whatsapp: {
@@ -85,8 +95,18 @@ export const QUOTE_EXPIRED_GARAGE: Template = {
     link: 'https://motorfix.example/app/garage/requests',
   },
   push: {
-    en: { body: '{driver} · {car}', link: 'link', title: 'Quote expired' },
-    ro: { body: '{driver} · {car}', link: 'link', title: 'Ofertă expirată' },
+    en: {
+      body: '{driver} · {car}',
+      link: 'link',
+      shorten: 'car',
+      title: 'Quote expired',
+    },
+    ro: {
+      body: '{driver} · {car}',
+      link: 'link',
+      shorten: 'car',
+      title: 'Ofertă expirată',
+    },
   },
   values: { car: 'text', driver: 'text', link: 'link' },
   whatsapp: {

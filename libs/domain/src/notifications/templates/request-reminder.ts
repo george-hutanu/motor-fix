@@ -37,10 +37,16 @@ export const REQUEST_REMINDER: Template = {
     link: 'https://motorfix.example/app/garage/requests',
   },
   push: {
-    en: { body: '{driver} · {car}', link: 'link', title: 'Request waiting' },
+    en: {
+      body: '{driver} · {car}',
+      link: 'link',
+      shorten: 'car',
+      title: 'Request waiting',
+    },
     ro: {
       body: '{driver} · {car}',
       link: 'link',
+      shorten: 'car',
       title: 'Cerere în așteptare',
     },
   },

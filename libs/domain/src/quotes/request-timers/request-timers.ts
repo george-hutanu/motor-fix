@@ -27,9 +27,11 @@ export const REQUEST_TIMERS_URL = Symbol('REQUEST_TIMERS_URL');
 
 const EXPIRY = 'request-expiry';
 const QUOTE_EXPIRY = 'quote-expiry';
-const reminder = (day: number) => `request-reminder-${day}`;
-// The column that records each reminder day was sent, so it goes once.
-const REMINDED: Record<number, string> = {
+type ReminderDay = (typeof REQUEST_REMINDER_DAYS)[number];
+const reminder = (day: ReminderDay) => `request-reminder-${day}`;
+// The column that records each reminder day was sent, so it goes once:
+// every configured day must name one.
+const REMINDED: Record<ReminderDay, string> = {
   2: 'reminded_day2_at',
   5: 'reminded_day5_at',
 };
@@ -65,6 +67,44 @@ export interface RequestTimerEvent {
   kind: string;
   payload: Record<string, unknown>;
   subjectId?: string;
+}
+
+// The ids an event kind reads from its payload, checked before any is used:
+// a missing request id would reach Prisma as undefined, which drops the
+// filter and would clear every quote's timer.
+const NEEDS: Record<string, readonly ('requestId' | 'quoteId')[]> = {
+  'quote.accepted': ['requestId', 'quoteId'],
+  'quote.declined_by_driver': ['quoteId'],
+  'quote.expired': ['quoteId'],
+  'quote.sent': ['quoteId'],
+  'quote.withdrawn': ['quoteId'],
+  'request.cancelled': ['requestId'],
+  'request.created': ['requestId'],
+  'request.expired': ['requestId'],
+};
+
+const isId = (value: unknown): value is string =>
+  typeof value === 'string' && value.length > 0;
+
+function ids(payload: Record<string, unknown>, key: string): string[] {
+  const value = payload[key];
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || !value.every(isId))
+    throw new Error(`request timer event: ${key} is not a list of ids`);
+  return value;
+}
+
+function checked(event: RequestTimerEvent) {
+  const { kind, payload } = event;
+  for (const key of NEEDS[kind] ?? [])
+    if (!isId(payload[key]))
+      throw new Error(`request timer event ${kind}: ${key} missing`);
+  return {
+    garageIds: kind === 'request.expired' ? ids(payload, 'garageIds') : [],
+    quoteId: payload['quoteId'] as string,
+    quoteIds: kind === 'quote.closed' ? ids(payload, 'quoteIds') : [],
+    requestId: payload['requestId'] as string,
+  };
 }
 
 const SYSTEM: TransitionActor = { accountId: null, role: 'system' };
@@ -135,8 +175,7 @@ export class RequestTimers {
 
   async onEvent(job: Pick<Job<RequestTimerEvent>, 'data'>): Promise<void> {
     const { id, kind, payload } = job.data;
-    const requestId = payload['requestId'] as string;
-    const quoteId = payload['quoteId'] as string;
+    const { garageIds, quoteId, quoteIds, requestId } = checked(job.data);
     switch (kind) {
       case 'request.created':
         return this.setRequest(requestId);
@@ -148,7 +187,7 @@ export class RequestTimers {
       case 'request.expired':
         return this.tellRequestExpired(id, requestId, {
           closed: payload['closed'] === true,
-          garageIds: (payload['garageIds'] as string[] | undefined) ?? [],
+          garageIds,
         });
       case 'quote.sent':
         return this.setQuote(quoteId);
@@ -162,8 +201,7 @@ export class RequestTimers {
         return;
       // A confirmed booking closes the request's other quotes as lost.
       case 'quote.closed':
-        for (const closed of (payload['quoteIds'] as string[] | undefined) ??
-          [])
+        for (const closed of quoteIds)
           await this.timers.clear(QUOTE_EXPIRY, closed);
         return;
       // The booking lapse expires quotes too; it tells of them itself.
@@ -205,7 +243,10 @@ export class RequestTimers {
     for (const quote of quotes) await this.timers.clear(QUOTE_EXPIRY, quote.id);
   }
 
-  private async overdueReminders(day: number, now: Date): Promise<string[]> {
+  private async overdueReminders(
+    day: ReminderDay,
+    now: Date,
+  ): Promise<string[]> {
     const rows = await this.prisma.$queryRaw<{ id: string }[]>`
       SELECT r.id FROM quote_request r
       WHERE r.status IN ('sent', 'quoted') AND r.expires_at > ${now}
@@ -218,15 +259,15 @@ export class RequestTimers {
   }
 
   // A garage still waiting, not suspended, and not yet reminded that day.
-  private unreminded(day: number) {
+  private unreminded(day: ReminderDay) {
     return Prisma.sql`
       SELECT rr.id, rr.garage_id AS "garageId" FROM request_recipient rr
       JOIN garage g ON g.id = rr.garage_id
       WHERE rr.status = 'waiting' AND g.status <> 'suspended'
-        AND rr.${Prisma.raw(REMINDED[day] ?? '')} IS NULL`;
+        AND rr.${Prisma.raw(REMINDED[day])} IS NULL`;
   }
 
-  private async remind(day: number, id: string, sweep: boolean) {
+  private async remind(day: ReminderDay, id: string, sweep: boolean) {
     const now = this.now();
     const request = await this.prisma.quoteRequest.findUnique({
       select: {
@@ -269,7 +310,7 @@ export class RequestTimers {
   // The notice's event id is the garage's and the day's, so a repeated
   // timer, the sweep and a retry build it once; the day is marked after.
   private async remindGarage(
-    day: number,
+    day: ReminderDay,
     requestId: string,
     recipient: Reminding,
     params: Record<string, string>,
@@ -286,7 +327,7 @@ export class RequestTimers {
           subjectId: requestId,
         })
       : 0;
-    const column = Prisma.raw(REMINDED[day] ?? '');
+    const column = Prisma.raw(REMINDED[day]);
     const marked = await this.prisma.$executeRaw`
       UPDATE request_recipient SET ${column} = ${now}
       WHERE id = ${recipient.id}::uuid AND ${column} IS NULL`;
