@@ -4,14 +4,21 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
-import { DELETED_AUTHOR, PAID_BANI_MAX, REVIEW_TEXT_MAX } from './lei-text';
+import {
+  DELETED_AUTHOR,
+  PAID_BANI_MAX,
+  REVIEW_REPORT_TEXT_MAX,
+  REVIEW_TEXT_MAX,
+} from './lei-text';
 import {
   CarSnapshotDto,
   DriverNameDto,
@@ -309,6 +316,75 @@ export class GarageReviewsPageDto {
 
   @ApiProperty({ type: [GarageReviewDto] })
   items!: GarageReviewDto[];
+}
+
+// The reasons a garage may report a review for, in the order the task lists
+// them.
+const REVIEW_REPORT_REASONS = [
+  'insults',
+  'personal_data',
+  'ads',
+  'promotion',
+  'off_topic',
+  'hate',
+  'fake_or_conflicted',
+  'threats_or_legal_accusations',
+  'other',
+] as const;
+export type ReviewReportReason = (typeof REVIEW_REPORT_REASONS)[number];
+
+// Why a review may not be reported again.
+export type ReportRefusal = 'already_reported' | 'already_kept';
+
+// Only the types are checked here: whether the text fits the reason is the
+// service's 422, after the 409s.
+export class ReportReviewDto {
+  @ApiProperty({ enum: REVIEW_REPORT_REASONS })
+  @IsIn(REVIEW_REPORT_REASONS)
+  reason!: ReviewReportReason;
+
+  @ApiPropertyOptional({
+    description: 'Only with the reason other',
+    maxLength: REVIEW_REPORT_TEXT_MAX,
+  })
+  // Absent is fine; null is a malformed body (400), as any other non-string.
+  @ValidateIf((_, value) => value !== undefined)
+  // PostgreSQL cannot store a NUL character, so it goes before the trim.
+  @Transform(({ value }) =>
+    typeof value === 'string'
+      ? value.replaceAll('\u0000', '').trim() || undefined
+      : value,
+  )
+  @IsString()
+  text?: string;
+}
+
+export class ReviewReportReviewDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ enum: REVIEW_STATUSES })
+  status!: ReviewStatus;
+}
+
+export class ReviewReportDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ enum: REVIEW_REPORT_REASONS })
+  reason!: ReviewReportReason;
+
+  @ApiProperty({ enum: ['pending'] })
+  status!: 'pending';
+
+  @ApiProperty({
+    description: 'When an admin is due to decide',
+    format: 'date-time',
+  })
+  dueAt!: string;
+
+  @ApiProperty({ type: ReviewReportReviewDto })
+  review!: ReviewReportReviewDto;
 }
 
 // A mechanic as a review names them on the garage's own page: by short name.
