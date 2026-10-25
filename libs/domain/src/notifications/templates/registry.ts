@@ -48,9 +48,15 @@ import { PHONE_CHANGE_CODE } from './phone-change-code';
 import { PUSH_TEST } from './push-test';
 import { QUOTE_ACCEPTED } from './quote-accepted';
 import { QUOTE_DECLINED_BY_DRIVER } from './quote-declined-by-driver';
+import { QUOTE_EXPIRED_DRIVER, QUOTE_EXPIRED_GARAGE } from './quote-expired';
 import { QUOTE_RECEIVED, QUOTE_RECEIVED_GROUPED } from './quote-received';
 import { REQUEST_DECLINED } from './request-declined';
+import {
+  REQUEST_EXPIRED_DRIVER,
+  REQUEST_EXPIRED_GARAGE,
+} from './request-expired';
 import { REQUEST_RECEIVED } from './request-received';
+import { REQUEST_REMINDER } from './request-reminder';
 import { REVIEW_POSTED_JOB, REVIEW_POSTED_PROFILE } from './review-posted';
 import { SIGN_IN_CODE } from './sign-in-code';
 import {
@@ -112,10 +118,15 @@ export const TEMPLATES: Registry = {
   PUSH_TEST,
   QUOTE_ACCEPTED,
   QUOTE_DECLINED_BY_DRIVER,
+  'QUOTE_EXPIRED.driver': QUOTE_EXPIRED_DRIVER,
+  'QUOTE_EXPIRED.garage': QUOTE_EXPIRED_GARAGE,
   QUOTE_RECEIVED,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
   REQUEST_DECLINED,
+  'REQUEST_EXPIRED.driver': REQUEST_EXPIRED_DRIVER,
+  'REQUEST_EXPIRED.garage': REQUEST_EXPIRED_GARAGE,
   REQUEST_RECEIVED,
+  REQUEST_REMINDER,
   'REVIEW_POSTED.job': REVIEW_POSTED_JOB,
   'REVIEW_POSTED.profile': REVIEW_POSTED_PROFILE,
   SIGN_IN_CODE,

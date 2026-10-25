@@ -9,6 +9,7 @@ features:
   - 055-team-list
   - 056-mechanic-dialog
   - 102-garage-members
+  - 058-mechanic-hours
 ---
 
 # Capability: Garage team
@@ -169,9 +170,9 @@ _From 056-mechanic-dialog._
 
 _From 056-mechanic-dialog._
 
-### 056-FR-008 — The garage's booking DTO MUST carry `toReassign` (true for a booking that is `confirmed`, starts after now and whose mechanic has `removed_at` set; false otherwise; no booking column), and every garage booking view that names the mechanic MUST show "de realocat" / "to reassign" beside the name when it is true; the owner reassigns through the existing mechanic change.
+### 058-FR-007 — (056-FR-008 modified) The garage's booking DTO's `toReassign` MUST be true for a booking that is `confirmed`, starts after now and whose mechanic either has `removed_at` set or is not at work over the booking's span by the mechanic's own part of FR-011's rule (the effective stretch, the Saturday switch, the days off; the garage's closed days and holidays are the garage's, not a reassignment), so a booking left outside a clipped stretch (FR-013) reads it too; false otherwise; no booking column; every garage booking view that names the mechanic shows "de realocat" / "to reassign" when it is true, and reassigning stays the existing mechanic change (#134 for the rest).
 
-_From 056-mechanic-dialog._
+_From 058-mechanic-hours._
 
 ### 056-FR-009 — The catalogue MUST gain STAFF_REMOVED (trigger event, channels e-mail and push, no group, transactional: never WhatsApp and never muted), with templates in Romanian and English (bell "Nu mai faci parte din echipa {garage}." / "You are no longer part of the team of {garage}.", e-mail with the same line and a button to the app's home in the account's language; never muted as STAFF_INVITE's e-mail is not, by the same catalogue attribute), sent to the removed card's account after the commit, in the account's language; a card with no account gets nothing.
 
@@ -245,6 +246,82 @@ _From 102-garage-members._
 
 _From 102-garage-members._
 
+### 058-FR-001 — A mechanic's schedule MUST hold, for each weekday Monday to Sunday, at most one stretch (a from and a to on the 15-minute grid, the end after the start, both inside the garage's span for that weekday: from its first opening to its last closing) or nothing (not working), plus `worksSaturdays` (default false); the stretch is kept in the existing `working_hours` column in the shared weekly-hours shape (a day's list holding zero or one interval), and `works_saturdays` is a new boolean column on the MECHANIC row. A weekday the garage is closed MUST refuse any stretch (`outside_opening`); Sunday is settable only when the garage has Sunday hours.
+
+_From 058-mechanic-hours._
+
+### 058-FR-002 — While a mechanic's `working_hours` is null, the effective schedule MUST be the garage's hours Monday to Friday (each day collapsed to one stretch from its first opening to its last closing), Saturday and Sunday nothing, `worksSaturdays` false, and the read MUST say so (`isDefault` true); a garage with empty hours gives an empty default. A stored day with two intervals (copied before this story) MUST read as one stretch from the first opening to the last closing, never rewritten by a read.
+
+_From 058-mechanic-hours._
+
+### 058-FR-003 — A Saturday stretch MUST count (for the rule of FR-011 and the planned minutes) only while `worksSaturdays` is true; saving `worksSaturdays` true while the garage has no Saturday hours MUST be refused 422 `validation_failed` with the code `garage_closed_saturday` on the field `worksSaturdays`, nothing written.
+
+_From 058-mechanic-hours._
+
+### 058-FR-004 — A day off MUST be a first day and a last day (Bucharest dates, last ≥ first, the same day for a single day), an optional plain-text note of at most 120 code points (trimmed, blank as none), the creator and the creation time, in a new MECHANIC_DAY_OFF table, one row per added day or range; adding MUST refuse a first day before today (Bucharest) as `past`, a last day before the first as `order`, a last day more than 365 days ahead as `too_far`, a longer note as `too_long` (each 422 `validation_failed` naming the field), and a range overlapping any of the mechanic's days off as 409 `day_off_overlap`.
+
+_From 058-mechanic-hours._
+
+### 058-FR-005 — Removing a day off whose first day is today or later MUST answer 204 and delete the row; removing a running day off (first day before today, last day today or later) MUST answer 204 and end it yesterday, so its past days stay (audited as an `update` of the last day); a day off whose last day is before today MUST be refused 409 `past_day_off`; the read MUST list only days off whose last day is today or later, by first day.
+
+_From 058-mechanic-hours._
+
+### 058-FR-006 — Adding a day off MUST, unless the body carries `acknowledgeBookings` true, answer 409 `bookings_on_days_off` with the mechanic's `confirmed` bookings whose Bucharest day falls in the range (each as id and start), writing nothing; with `acknowledgeBookings` true it MUST save; a range with no such booking saves either way.
+
+_From 058-mechanic-hours._
+
+### 058-FR-008 — (`PUT` body: `workingHours` MUST carry all seven weekday keys, each a list; a missing key or a non-list is `invalid`, more than one interval `count`; POST refusals are judged in the order 422 fields, then 409 `day_off_overlap`, then 409 `bookings_on_days_off`, so an acknowledged re-send can only meet a new overlap.) The API MUST offer `GET /api/v1/garages/:garageId/mechanics/:mechanicId/hours` answering the schedule (`workingHours` as effective stretches per weekday, `worksSaturdays`, `isDefault`, `daysOff` as `{ id, firstDay, lastDay, note }` of FR-005, and `garageHours`, the garage's weekly hours, for the dialog's bounds), `PUT …/hours` with the body `{ workingHours, worksSaturdays }` answering 200 with the schedule (every field required; the refusals of FR-001 and FR-003 as 422 `validation_failed` with `errors: [{ code, field }]`, codes `invalid`, `grid`, `order`, `count`, `outside_opening` on `workingHours.<day>`; a save that changes nothing writes nothing), `POST …/days-off` with `{ firstDay, lastDay?, note?, acknowledgeBookings? }` answering 201 with the schedule (FR-004, FR-006), and `DELETE …/days-off/:dayOffId` answering 204 (FR-005; an unknown id or another mechanic's 404).
+
+_From 058-mechanic-hours._
+
+### 058-FR-009 — The four routes MUST be open to the owner of that garage only, checked on the server before anything else in the order of 055-FR-002/003 and 056-FR-003: a receptionist or a mechanic of the garage gets 403 `forbidden`; any other actor 404 `not_found` (a signed-out call 401 `sign_in_required`); then, with `team_mechanics` off, the owner gets 404 `feature_off`; then an unknown, removed or foreign card answers 404 `not_found`.
+
+_From 058-mechanic-hours._
+
+### 058-FR-010 — Every save of hours MUST write, with the actor and the role, one audit `update` entry per changed field (`workingHours`, `worksSaturdays`; old and new value; none for an unchanged field) and record `mechanic.updated` with `fields` naming `working_hours` and/or `works_saturdays` in the same transaction; adding or removing a day off MUST write one audit `create` or `delete` entry on subject type `mechanic_day_off` (first day, last day, note) and record `mechanic.updated` with the field `days_off` in the same transaction; each event goes to the card's audience as 056-FR-005's do, so open screens re-read within 5 seconds.
+
+_From 058-mechanic-hours._
+
+### 058-FR-011 — One pure rule, in the domain next to the garage hours rule (389-FR-008), MUST answer whether a mechanic is at work over a span: the span lies inside the garage's hours and is on no closed day or legal holiday (389-FR-008), and inside the mechanic's effective stretch for the span's Bucharest weekday (FR-002's default when no hours are set; Saturday only with `worksSaturdays`), and the span's day is in none of the mechanic's days off; and a second pure function MUST answer the mechanic's planned minutes for a Bucharest day (the effective stretch's length, 0 for a day off, a closed day, a holiday or no stretch; 08:00–16:30 reads 510). The load (#133), the schedule and the free slots (#21) read these two functions and nothing else.
+
+_From 058-mechanic-hours._
+
+### 058-FR-013 — When the garage's weekly hours are written (the listing's submit and completion, #804), every mechanic of the garage with explicit `working_hours` MUST have each stretch clipped to the new span of that weekday in the same transaction (a day the garage closes, or a stretch with no overlap with the new span, empties the stretch; Saturday closed also sets `worksSaturdays` false), each change audited and evented as FR-010; a mechanic with null hours is untouched. The write MUST return the names of the mechanics changed, for the caller's log.
+
+_From 058-mechanic-hours._
+
+### 058-FR-014 — The card dialog's edit mode MUST gain a tab "Program" / "Schedule" (absent for a new card until it is saved) showing one row per weekday Monday to Sunday with the day's name, a tick for working, and from and to pickers on the 15-minute grid limited to the garage's span for that day (a day the garage is closed reads "Închis" / "Closed" with no pickers); the "Lucrează sâmbăta" / "Works on Saturdays" switch, which when turned on fills Saturday with 09:00–14:00 clipped to the garage's Saturday span (the garage's whole Saturday span when that clip is empty); a line "Programul service-ului până la prima modificare" / "The garage's hours until changed" while `isDefault` is true; the list of upcoming days off ("{first} – {last} · {note}", or the single day) each with a remove button; and "Adaugă zi liberă" / "Add a day off" with a first day, an optional last day and an optional note with its 120-character limit shown.
+
+_From 058-mechanic-hours._
+
+### 058-FR-015 — The tab MUST show each refusal under its field before and after the call: "Ora de închidere trebuie să fie după deschidere" / "Closing must be after opening" (`order`), "În afara programului service-ului" / "Outside the garage's hours" (`outside_opening`), "Service-ul nu e deschis sâmbăta" / "The garage is not open on Saturdays" (`garage_closed_saturday`), "Ziua trebuie să fie azi sau mai târziu" / "The day must be today or later" (`past`), "Cel mult un an înainte" / "At most a year ahead" (`too_far`), "Ultima zi trebuie să fie după prima" / "The last day must be after the first" (`order` on `lastDay`), "Cel mult 120 de caractere" / "At most 120 characters" (`too_long`), "Se suprapune cu o zi liberă existentă" / "Overlaps an existing day off" (`day_off_overlap`); the save button shows a spinner while saving, the tab stays open on a refusal, and any other failure shows a toast in the person's language.
+
+_From 058-mechanic-hours._
+
+### 058-FR-016 — On 409 `bookings_on_days_off` the tab MUST show a warning naming the count and the start times of the listed bookings ("{n} programări confirmate pe {day}: {times}. Vor trebui realocate." / "{n} confirmed bookings on {day}: {times}. They will need reassigning.", Romanian plural rules, the days grouped when a range holds several) with "Adaugă oricum" / "Add anyway", which sends again with `acknowledgeBookings` true, and "Renunță" / "Cancel".
+
+_From 058-mechanic-hours._
+
+### 058-FR-017 — The tab MUST re-read the schedule when the dashboard's live stream delivers `mechanic.updated` for that card, within 5 seconds and without a reload; a save answered 200 or 201 updates the tab from the answer at once.
+
+_From 058-mechanic-hours._
+
+### 058-FR-018 — Every new text MUST come from the garage area's translation files in Romanian and English (016-FR-002) with comma-below diacritics; dates read in the viewer's language ("12 – 16 mai 2027", "12 – 16 May 2027") and times on the 24-hour clock; a note typed by a person MUST never be shown as markup (131-FR-013).
+
+_From 058-mechanic-hours._
+
+### 058-FR-019 — The tab MUST lay out phones first: at 320 px and 390 px the weekday rows stack with the pickers on one line under the day, no horizontal scroll; from a tablet a centred dialog; light and dark follow the Cockpit theme's tokens; every control has a visible label, each problem is tied to its field for assistive technology, the warning and the saved state are announced, and every control is reachable and operable by keyboard, as 056-FR-021 holds for the card.
+
+_From 058-mechanic-hours._
+
+### 058-FR-020 — The four routes MUST be listed in `infra/observability/inventory.json` as endpoints with their reason (the API's request-duration histogram labels the route, 876-FR-008; the `api-error-rate` and `api-latency` rules cover them; no new alert rule, the cap of 50 holds); no id reaches a metric label (876-FR-011).
+
+_From 058-mechanic-hours._
+
+### 058-FR-021 — Tests MUST cover, failing first: Jest on real PostgreSQL for FR-001/FR-003 (each refusal code at its bound, the garage-closed weekday, Sunday with and without garage hours, the Saturday refusal, an unchanged save writing nothing), FR-002 (the default from the garage's hours, `isDefault`, the two-interval legacy value read as one stretch and left unchanged), FR-004/FR-005/FR-006 (a single day and a range, each refusal code, the overlap, the past removal refused, the listing by first day without past ranges, the warning with 3 confirmed bookings and the save with `acknowledgeBookings`), FR-007 (`toReassign` true for a confirmed booking ahead on a day off, false before the day off is added), FR-009 (owner 200/201/204, receptionist and mechanic 403, driver, admin and another owner 404, signed out 401, `feature_off` after the access check, unknown, removed and foreign card 404), FR-010 (one audit entry per changed field with old and new, the day-off entries, each event in the same transaction), FR-012 (a confirm for a mechanic outside her stretch, on a day off and on a Saturday with the switch off answers `mechanic_unavailable`; inside passes), FR-013 (the clip on a shortened Monday, a closed day, a closed Saturday turning the switch off, a null-hours mechanic untouched); Jest for FR-011 (the rule and the planned minutes on hours, the default, Saturday on and off, a day off, a legal holiday, a closed day, the March and October clock changes); Jest for the tab (the rows from the garage's span, "Închis" for a closed weekday, the Saturday fill, each message under its field, the warning and "Adaugă oricum", the days-off list and remove, the spinner and the kept tab on a refusal); Playwright (`web-e2e`): as an owner set Elena's hours and a day off, re-open the card and read them back, a second tab following the change live (the confirm refused on that day stays with the confirm integration spec, D22); the PR QA sweep: the tab at 320 px, 390 px, tablet and desktop, light and dark, RO and EN.
+
+_From 058-mechanic-hours._
+
 ## Retired
 
 - `129-FR-009` — superseded by `055-FR-004` (2026-10-24)
@@ -254,3 +331,4 @@ _From 102-garage-members._
 - `055-FR-012` — superseded by `056-FR-013` (2026-10-24)
 - `055-FR-004` — superseded by `056-FR-014` (2026-10-24)
 - `389-FR-005` — superseded by `056-FR-015` (2026-10-24)
+- `056-FR-008` — superseded by `058-FR-007` (2026-10-25)

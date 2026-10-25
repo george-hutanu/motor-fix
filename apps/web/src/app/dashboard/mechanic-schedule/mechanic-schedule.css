@@ -1,0 +1,208 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-5);
+  min-width: 0;
+}
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+fieldset {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+legend,
+h3,
+.field > label,
+.saturdays > label {
+  padding: 0;
+  margin: 0 0 var(--mf-space-2);
+  font-size: var(--mf-size-body);
+  font-weight: 700;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.default,
+.hint,
+.closed {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
+.problem {
+  color: var(--mf-red-ink);
+  font-size: var(--mf-size-small);
+}
+/* Phones: the day over its two pickers, side by side. */
+.day {
+  display: grid;
+  gap: var(--mf-space-2);
+  padding-block: var(--mf-space-2);
+  border-bottom: 1px solid var(--mf-line);
+  min-width: 0;
+}
+.name {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-3);
+  min-height: var(--mf-tap);
+}
+.choice {
+  cursor: pointer;
+}
+.choice input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--mf-amber);
+}
+.closed {
+  align-self: center;
+}
+.pickers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+.pickers label {
+  display: grid;
+  gap: var(--mf-space-1);
+  min-width: 0;
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}
+select {
+  min-height: var(--mf-tap);
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: var(--mf-size-field);
+  color: var(--mf-text);
+  background: var(--mf-bg);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  padding: 0 var(--mf-space-2);
+}
+select:focus-visible,
+.choice input:focus-visible {
+  outline: 2px solid var(--mf-focus);
+  outline-offset: 2px;
+}
+.saturdays {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--mf-space-2) var(--mf-space-3);
+}
+.saturdays > label {
+  margin: 0;
+}
+.saturdays .problem {
+  grid-column: 1 / -1;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-3);
+  justify-content: space-between;
+}
+.actions button {
+  white-space: normal;
+}
+.submit {
+  margin-inline-start: auto;
+}
+.saved {
+  color: var(--mf-green-ink);
+  font-size: var(--mf-size-small);
+}
+.days-off {
+  display: grid;
+  gap: var(--mf-space-3);
+  padding-top: var(--mf-space-4);
+  border-top: 1px solid var(--mf-line-strong);
+  min-width: 0;
+}
+ul {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+.range {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.note {
+  color: var(--mf-text-secondary);
+}
+.remove {
+  flex: none;
+  color: var(--mf-red-ink);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+.bookings {
+  display: grid;
+  gap: var(--mf-space-3);
+  padding: var(--mf-space-3);
+  border: 1px solid var(--mf-amber);
+  border-radius: var(--mf-radius-chip);
+}
+.state {
+  display: grid;
+  gap: var(--mf-space-3);
+  justify-items: start;
+}
+/* From a tablet the day's name sits beside its pickers. */
+@media (min-width: 600px) {
+  .day {
+    grid-template-columns: 10rem 1fr;
+    align-items: center;
+  }
+  .day .problem {
+    grid-column: 2;
+  }
+  .add {
+    grid-template-columns: 1fr 1fr;
+  }
+  .note-field,
+  .add .warning,
+  .add mf-task-error,
+  .add-day-off {
+    grid-column: 1 / -1;
+  }
+  .add-day-off {
+    justify-self: start;
+  }
+}
+@media (max-width: 479px) {
+  .actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .actions button,
+  .add-day-off {
+    width: 100%;
+  }
+}

@@ -23,6 +23,7 @@ import type { Actor } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
 import { taken } from '../../../auth/sign-up.service';
 import { localDay } from '../../../bucharest';
+import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type {
   Prisma,
   PrismaClient,
@@ -101,6 +102,7 @@ export class CompletionService {
     private readonly documents: LegalDocumentsService,
     private readonly verification: VerificationService,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
+    @Inject(EVENT_PORT) private readonly events: EventPort,
   ) {}
 
   async open(actor: Actor): Promise<CompletionCopyDto> {
@@ -235,6 +237,9 @@ export class CompletionService {
     data: ListingDraftData,
     sizes: PhotoSize[],
   ): Promise<{ cuiChanged: boolean; dropped: string[] }> {
+    // The garage's row before any card's, the order a mechanic's week save
+    // takes them in, so the two cannot deadlock.
+    await tx.$queryRaw`SELECT id FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
     const live = await copyOf(tx, garageId);
     const steps = data.steps ?? {};
     const was = live.steps ?? {};
@@ -331,7 +336,18 @@ export class CompletionService {
     }
     if (same(hours, was)) return;
     const by = { actorId, audit: this.audit };
-    await writeGarageHours(tx, garageId, hours, localDay(new Date()), by);
+    const clipped = await writeGarageHours(
+      tx,
+      garageId,
+      hours,
+      localDay(new Date()),
+      { ...by, events: this.events },
+    );
+    if (clipped.length > 0) {
+      this.logger.log(
+        `garage ${garageId} hours clipped ${clipped.length} mechanic cards: ${clipped.join(', ')}`,
+      );
+    }
     await writeGaragePayments(tx, garageId, hours, by);
   }
 

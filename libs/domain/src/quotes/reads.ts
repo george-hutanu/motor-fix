@@ -12,6 +12,7 @@ import type {
 import { BadRequestException } from '@nestjs/common';
 
 import { DECLINE_UNDO_MINUTES, PAGE_SIZE } from './quotes-config';
+import { mechanicOwnAtWork } from '../garages/mechanic-hours';
 import type {
   Booking,
   Garage,
@@ -153,14 +154,29 @@ export const bookingOf = (
 });
 
 // Who does the job: the booking's own mechanic, else the one its job carries
-// (the owner, for a garage that works without a team).
-export const bookingMechanicInclude = {
-  job: { select: { mechanic: true } },
-  mechanic: true,
-} as const;
+// (the owner, for a garage that works without a team). The mechanic's days
+// off still running or ahead and its garage's hours tell whether it is at work.
+export const bookingMechanicInclude = (today: string) =>
+  ({
+    job: { select: { mechanic: true } },
+    mechanic: {
+      include: {
+        daysOff: {
+          select: { firstDay: true, lastDay: true },
+          where: { lastDay: { gte: new Date(`${today}T00:00:00Z`) } },
+        },
+        garage: { select: { hours: true } },
+      },
+    },
+  }) as const;
+
+type ScheduledMechanic = Mechanic & {
+  daysOff: { firstDay: Date; lastDay: Date }[];
+  garage: { hours: unknown };
+};
 
 export type MechanicRow = {
-  mechanic: Mechanic | null;
+  mechanic: ScheduledMechanic | null;
   job: { mechanic: Mechanic | null } | null;
 };
 
@@ -169,21 +185,46 @@ export function mechanicOf(row: MechanicRow): BookingMechanicDto | null {
   return mechanic ? { id: mechanic.id, name: mechanic.name } : null;
 }
 
-// A confirmed booking still ahead whose card was taken off the team: the
-// garage gives it to someone else. Only the booking's own
-// mechanic counts; the job's fallback is the owner's row, never removed.
+const dayOf = (date: Date) => date.toISOString().slice(0, 10);
+
+// A confirmed booking still ahead whose mechanic was taken off the team, or
+// is no longer at work over it (a day off, hours that left it out): the
+// garage gives it to someone else. Only the booking's own mechanic counts;
+// the job's fallback is the owner's row, never removed.
 export function toReassign(
   row: {
-    mechanic: Pick<Mechanic, 'removedAt'> | null;
+    mechanic: {
+      daysOff: { firstDay: Date; lastDay: Date }[];
+      garage: { hours: unknown };
+      removedAt: Date | null;
+      workingHours: unknown;
+      worksSaturdays: boolean;
+    } | null;
     startsAt: Date;
+    durationMinutes: number;
     status: string;
   },
   now: Date,
 ): boolean {
-  return (
-    row.status === 'confirmed' &&
-    row.startsAt.getTime() > now.getTime() &&
-    row.mechanic?.removedAt != null
+  const { mechanic } = row;
+  if (row.status !== 'confirmed' || row.startsAt.getTime() <= now.getTime()) {
+    return false;
+  }
+  if (!mechanic) return false;
+  if (mechanic.removedAt != null) return true;
+  const schedule = {
+    daysOff: mechanic.daysOff.map((d) => ({
+      firstDay: dayOf(d.firstDay),
+      lastDay: dayOf(d.lastDay),
+    })),
+    workingHours: mechanic.workingHours,
+    worksSaturdays: mechanic.worksSaturdays,
+  };
+  return !mechanicOwnAtWork(
+    schedule,
+    mechanic.garage.hours,
+    row.startsAt,
+    row.durationMinutes,
   );
 }
 

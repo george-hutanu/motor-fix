@@ -2,6 +2,7 @@
 // @traces 056-FR-014
 import { leaveTeams } from './team-leave';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { localDay } from '../../bucharest';
 import { audienceOf, type LiveSubject } from '../../events/audience';
 import type { EventPort } from '../../events/event.port';
 import { databaseUrl } from '../../notifications/notifications.testing';
@@ -118,7 +119,7 @@ describe('leaving the garage team when the account is deleted', () => {
     const read = async (id: string) =>
       reads.garageBookingOf(
         await prisma.booking.findUniqueOrThrow({
-          include: reads.bookingMechanicInclude,
+          include: reads.bookingMechanicInclude(localDay(new Date())),
           where: { id },
         }),
       ) as unknown as { toReassign?: boolean };

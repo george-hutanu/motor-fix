@@ -451,7 +451,7 @@ export class GarageBookingDto extends OmitType(BookingDto, [
 
   @ApiProperty({
     description:
-      "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else",
+      "A confirmed booking still ahead whose mechanic's card was taken off the team, or that falls on one of her days off or outside her working hours: the garage gives it to someone else",
   })
   toReassign!: boolean;
 }
@@ -472,7 +472,7 @@ export class GarageRowBookingDto extends RequestBookingDto {
 
   @ApiProperty({
     description:
-      "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else",
+      "A confirmed booking still ahead whose mechanic's card was taken off the team, or that falls on one of her days off or outside her working hours: the garage gives it to someone else",
   })
   toReassign!: boolean;
 }

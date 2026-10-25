@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-23
+updated: 2026-10-25
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -20,6 +20,8 @@ features:
   - 009-copy-voice-analytics
   - 428-close-on-account-closed
   - 292-saved-garage-quote
+  - 058-mechanic-hours
+  - 1257-quote-reminders
 ---
 
 # Capability: Quotes
@@ -572,9 +574,9 @@ _From 389-confirm-booking-lift-mechanic._
 
 _From 389-confirm-booking-lift-mechanic._
 
-### 389-FR-004 — With the garage's `team_mechanics` on (a missing row is on), `mechanicId` MUST be required and MUST name a MECHANIC row of this garage (else 409 `mechanic_unavailable`); the dialog MUST offer every mechanic row of the garage by name, in the garage's own order (name), through one read the plan names (the team's existing list where it has one). The predicate "offered mechanics" is one place, so the team stories can narrow it (a pending move, [X13]) without touching the confirm.
+### 058-FR-012 — (389-FR-004 modified) With the garage's `team_mechanics` on, `mechanicId` MUST be required and MUST name a MECHANIC row of this garage that is at work over the booking's span by FR-011's rule (else 409 `mechanic_unavailable`); the dialog MUST offer every mechanic row of the garage by name, through one read the plan names. The predicate "offered mechanics" stays one place.
 
-_From 389-confirm-booking-lift-mechanic._
+_From 058-mechanic-hours._
 
 ### 389-FR-006 — GARAGE MUST gain `lift_count` (integer, 0 or more, default 0), backfilled once by the migration from the garage's survey answer (`1` → 1, `2-3` → 2, `4+` → 4, `0` or no survey → 0); with `lift_schedule` on (a missing row is on) `lift` MUST be optional and, when given, an integer from 1 to `lift_count` (else 400 `validation_failed` naming `lift`); with `lift_schedule` off `lift` MUST be refused (400) and stay empty. The schedule read's `lifts` flag is unchanged.
 
@@ -764,6 +766,30 @@ _From 428-close-on-account-closed._
 
 _From 292-saved-garage-quote._
 
+### 1257-FR-001 — On each reminder day N in REQUEST_REMINDER_DAYS (2 and 5), at `created_at` + N Bucharest calendar days (the same day arithmetic as the stored `expires_at`), the system MUST, while `now` is before the request's `expires_at`, for every REQUEST_RECIPIENT of that request that is `waiting` while the request is `sent` or `quoted`, build one REQUEST_REMINDER for the garage through the shipped notification service and set `reminded_day2_at` (N = 2) or `reminded_day5_at` (N = 5) to now: notify first under the per-recipient event id `request-reminder-<N>-<recipientId>` (the notification service dedupes on it), then set the stamp, so a retry never sends twice; a recipient whose timestamp for that day is already set MUST be skipped.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-004 — At a request's `expires_at` (due when `now` is at or after it; FR-001's reminder is due only while `now` is before it), while the request is `sent` or `quoted`, the system MUST, in one transaction: move every `waiting` recipient to `expired` through the transition tables (220-FR-008), with an audit entry per recipient (actor system); then, when no QUOTE of the request is `waiting`, move the request to `closed` with `closed_reason` `expired`, `closed_at` now, its audit entry. The run records one `request.expired` event naming the expired recipients' garages and whether the request closed (none when it did neither). A request with a `waiting` quote MUST stay `quoted` after its recipients expire.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-006 — At a quote's `expires_at`, while the quote is `waiting` and its request holds no booking `awaiting_confirmation`, the system MUST, in one transaction, move the quote to `expired` through the transition tables with the audit entry (`expired_reason` `time`) and `quote.expired` (reason `time`) as the lapse path records them today; while the request holds a booking `awaiting_confirmation` the quote MUST stay `waiting` and be left to the shipped lapse and confirmation paths.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-007 — In the same transaction as FR-006, when the expired quote was the request's last `waiting` quote and the request is `quoted` (so it holds no open booking), the system MUST move the request to `closed` with `closed_reason` `expired`, `closed_at` now, its audit entry, after first expiring the request's still `waiting` recipients exactly as FR-004 does, with one `request.expired` event naming those garages and the close; when another quote is `waiting` the request stays `quoted`.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-010 — The reminders and expiries MUST be timers of the shipped object-timer helper (one job per object under a stable id, set when the request is sent (`request.created`) or the quote is sent (`quote.sent`), replaced when set again, cleared when the object leaves the state the timer serves: a quoted or declined recipient's reminders are not cleared per recipient, the request's reminders are cleared when the request leaves `sent`/`quoted`, the request's expiry when it closes, the quote's expiry when the quote leaves `waiting`), with the helper's 5-minute sweep listing the overdue objects (a request past a reminder day with a `waiting` recipient lacking that day's timestamp; a request past `expires_at` still `sent`/`quoted`; a quote past `expires_at` still `waiting` on a request without a booking `awaiting_confirmation`); every step re-reads the object's state and time inside its transaction, so a late, early or repeated timer and the sweep do nothing a previous run did.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-011 — A request's reminder and expiry timers are set in the request send's transaction commit path (as the booking timers are set on `quote.accepted`: through the relay's existing events, `request.created` for the request and `quote.sent` for the quote), never by a new endpoint or a change to the API's contracts.
+
+_From 1257-quote-reminders._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -788,3 +814,4 @@ _From 292-saved-garage-quote._
 - `222-FR-005` — superseded by `389-FR-009` (2026-10-21)
 - `222-FR-006` — superseded by `389-FR-016` (2026-10-21)
 - `221-FR-016` — superseded by `292-FR-006` (2026-10-23)
+- `389-FR-004` — superseded by `058-FR-012` (2026-10-25)

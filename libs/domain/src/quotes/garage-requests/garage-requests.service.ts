@@ -6,6 +6,7 @@ import type {
   GarageRequestSummaryDto,
   GarageRequestsQueryDto,
 } from '@motor-fix/contracts';
+import { todayInBucharest } from '@motor-fix/contracts';
 import {
   HttpStatus,
   Inject,
@@ -55,7 +56,7 @@ import {
 // Only this garage's own recipient row, quote and booking ride along.
 const summaryInclude = (garageId: string) => ({
   bookings: {
-    include: bookingMechanicInclude,
+    include: bookingMechanicInclude(todayInBucharest()),
     orderBy: NEWEST_FIRST,
     take: 1,
     where: { garageId },
