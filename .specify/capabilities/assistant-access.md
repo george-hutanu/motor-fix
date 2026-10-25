@@ -1,12 +1,13 @@
 ---
 capability: assistant-access
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 365-mcp-oauth
   - 374-assistant-requests
   - 1016-mcp-staging
   - 1019-staging-mcp-connect
   - 003-admin-account-actions
+  - 1204-terms-reaccept
 ---
 
 # Capability: Assistant access
@@ -71,9 +72,9 @@ _From 365-mcp-oauth._
 
 _From 365-mcp-oauth._
 
-### 365-FR-017 — Refusals before the actor exists (token, grant, account) MUST be HTTP answers: 401 with the `WWW-Authenticate` header for token, grant and deleted-account failures, 403 `account_suspended` for a suspended account, each body `{ code, message }`. Everything after the actor is built (scope, role, feature, unknown tool, validation, use-case refusals, maintenance, database down) MUST be an MCP tool error `{ code, message }` over HTTP 200. (clarify Q2)
+### 1204-FR-005 — Refusals before the actor exists (token, grant, account) MUST be HTTP answers: 401 with the `WWW-Authenticate` header for token, grant and deleted-account failures, 403 `account_suspended` for a suspended account, and 403 `consent_required` for an account whose acceptance is pending, each body `{ code, message }`, the pending one also naming the versions in force (the same exception body as the API's). Everything after the actor is built (scope, role, feature, unknown tool, validation, use-case refusals, maintenance, database down) MUST be an MCP tool error `{ code, message }` over HTTP 200. The pending refusal covers every call (tool listing and tool calls alike) and is decided through the same domain rule the API guard uses (FR-001), never a copy of it; an assistant has no acceptance of its own, no grant change and no new sign-in: once the owner accepts in the app, the next call is answered as before (modifies 365-FR-017 by adding the pending refusal).
 
-_From 365-mcp-oauth._
+_From 1204-terms-reaccept._
 
 ### 374-FR-001 — The catalogue MUST hold four garage read tools, named exactly `list_quote_requests`, `get_schedule`, `get_day_sheet` and `get_stats`, each read-only (`readOnlyHint` true, `destructiveHint` false, not acting, so consented with `motorfix.read` alone), with an English description and an input and output schema; they are listed and called through the registry of 365-FR-006, so role, permission, scope and garage feature are checked on listing and again on every call. (brief Scope, acceptance criterion 5)
 
@@ -168,3 +169,5 @@ _From 1019-staging-mcp-connect._
 _From 003-admin-account-actions._
 
 ## Retired
+
+- `365-FR-017` — superseded by `1204-FR-005` (2026-10-25)

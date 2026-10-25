@@ -1,0 +1,22 @@
+<p>{{ 'public.reaccept.text' | t }}</p>
+<ul>
+  <li>
+    <a [href]="'/' + lang() + '/terms'" target="_blank" rel="noopener">{{ 'public.reaccept.terms' | t }}</a>
+    <span>{{ 'public.reaccept.version' | t: { version: versions().termsVersion } }}</span>
+  </li>
+  <li>
+    <a [href]="'/' + lang() + '/privacy'" target="_blank" rel="noopener">{{ 'public.reaccept.privacy' | t }}</a>
+    <span>{{ 'public.reaccept.version' | t: { version: versions().privacyVersion } }}</span>
+  </li>
+</ul>
+@if (failed()) {
+  <p role="alert" class="error">{{ 'public.reaccept.error' | t }}</p>
+}
+<div class="actions">
+  <button hlmBtn type="button" [attr.autofocus]="''" [disabled]="sending()" (click)="accept()">
+    {{ 'public.reaccept.accept' | t }}
+  </button>
+  <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="signOut()">
+    {{ 'public.reaccept.signOut' | t }}
+  </button>
+</div>

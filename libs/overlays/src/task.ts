@@ -15,6 +15,9 @@ export interface OverlayOptions<D = undefined> {
   data?: D;
   // Ask before closing a task whose fields changed. On unless set to false.
   confirmDiscard?: boolean;
+  // Off: no X, grip, Escape, click outside or Back closes it; only the
+  // task's own buttons do. On unless set to false.
+  dismissible?: boolean;
   // The opener's way to close the task itself: an abort closes it, unasked,
   // with "cancelled".
   signal?: AbortSignal;

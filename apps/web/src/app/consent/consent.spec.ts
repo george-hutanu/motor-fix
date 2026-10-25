@@ -791,3 +791,87 @@ describe('a custom event Plausible cannot take', () => {
     expect(analytics.event).toHaveBeenCalledTimes(1);
   });
 });
+
+// @traces 1204-FR-008
+describe('a record refused until the account accepts the new texts', () => {
+  it('stays pending, to go again once the texts are accepted', async () => {
+    const consent = await start({
+      calls: {
+        consentsControllerRecordMine: jest.fn(async () => {
+          throw new HttpErrorResponse({
+            error: { code: 'consent_required' },
+            status: 403,
+          });
+        }),
+      },
+    });
+    signIn();
+    await settle();
+
+    await consent.accept();
+
+    expect(stored()).toMatchObject({ accountId: ACCOUNT, pending: true });
+  });
+
+  it('is dropped after a refusal for any other reason', async () => {
+    const consent = await start({
+      calls: { consentsControllerRecordMine: failWith(403) },
+    });
+    signIn();
+    await settle();
+
+    await consent.accept();
+
+    expect(stored()?.pending).toBe(false);
+  });
+});
+
+// @traces 1204-FR-009
+describe('a choice made just after a sign-out', () => {
+  async function signedOutChoice() {
+    const consent = await start();
+    signIn();
+    await settle();
+    current.set(null);
+    await settle();
+    await consent.refuse();
+    return consent;
+  }
+
+  it('stays with the account that left and is sent nowhere while signed out', async () => {
+    await signedOutChoice();
+
+    expect(stored()).toMatchObject({
+      accountId: ACCOUNT,
+      decision: 'refused',
+      pending: true,
+    });
+    expect(api.consentsControllerRecord).not.toHaveBeenCalled();
+    expect(api.consentsControllerRecordMine).not.toHaveBeenCalled();
+  });
+
+  it('goes on that account exactly once when it signs in again', async () => {
+    await signedOutChoice();
+
+    signIn();
+    await settle();
+
+    expect(api.consentsControllerRecordMine).toHaveBeenCalledTimes(1);
+    expect(api.consentsControllerRecordMine).toHaveBeenCalledWith({
+      body: expect.objectContaining({ decision: 'refused' }),
+    });
+    expect(api.consentsControllerRecord).not.toHaveBeenCalled();
+    expect(stored()).toMatchObject({ accountId: ACCOUNT, pending: false });
+  });
+
+  it('is dropped, never stored, when another account signs in', async () => {
+    await signedOutChoice();
+
+    signIn(OTHER);
+    await settle();
+
+    expect(api.consentsControllerRecordMine).not.toHaveBeenCalled();
+    expect(api.consentsControllerRecord).not.toHaveBeenCalled();
+    expect(stored()).toBeNull();
+  });
+});

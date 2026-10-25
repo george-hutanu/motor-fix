@@ -36,13 +36,21 @@ async function refusal(run: Promise<unknown>) {
 }
 
 describe('AccountLoader.activeAccount', () => {
-  it('loads the account with its roles, memberships and mechanic record', async () => {
+  // @traces 1204-FR-001
+  it('loads the account with its roles, memberships, mechanic record and acceptances, newest first', async () => {
     const found = account({ roles: [{ role: 'driver' }, { role: 'garage' }] });
     const { findUnique, loader } = loaderFinding(found);
 
     await expect(loader.activeAccount(found.id)).resolves.toBe(found);
     expect(findUnique).toHaveBeenCalledWith({
-      include: { mechanic: true, memberships: true, roles: true },
+      include: {
+        consents: {
+          select: { acceptedAt: true, kind: true, textVersion: true },
+        },
+        mechanic: true,
+        memberships: true,
+        roles: true,
+      },
       where: { id: found.id },
     });
   });

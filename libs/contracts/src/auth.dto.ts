@@ -64,6 +64,19 @@ export class ConsentDto {
   privacyVersion?: string;
 }
 
+// The texts in force a pending account accepts again.
+export class AcceptanceDto {
+  @ApiProperty({ example: TERMS_VERSION, maxLength: 32 })
+  @IsString()
+  @MaxLength(32)
+  termsVersion!: string;
+
+  @ApiProperty({ example: PRIVACY_VERSION, maxLength: 32 })
+  @IsString()
+  @MaxLength(32)
+  privacyVersion!: string;
+}
+
 export class SignUpDto {
   @ApiProperty({ description: 'Trimmed', maxLength: 80, minLength: 2 })
   @Transform(trimmed)
