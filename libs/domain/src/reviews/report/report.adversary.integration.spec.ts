@@ -525,6 +525,15 @@ describe('what a report leaves in the reads', () => {
     ]);
     expect(during.body.items).toEqual([]);
     expect(JSON.stringify(during.body)).not.toContain('reason');
+
+    await prisma.review.update({
+      data: { status: 'published' },
+      where: { id: s.review.id },
+    });
+    const after = await get(`/reviews/garage/${s.dinamo.garage.id}`);
+    expect(after.body.items.map((i: { id: string }) => i.id)).toEqual([
+      s.review.id,
+    ]);
   });
 
   it('leaves the author’s own rows and the review’s text untouched', async () => {
