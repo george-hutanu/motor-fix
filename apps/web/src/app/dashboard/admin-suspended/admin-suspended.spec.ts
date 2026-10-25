@@ -512,6 +512,48 @@ describe('putting a suspended garage back on the map from its row', () => {
     });
   });
 
+  it('reads today at the press, so a list open past midnight opens the dialog on the new day', async () => {
+    // Only the clock is faked: settle() still waits on real timers.
+    jest.useFakeTimers({
+      doNotFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'setImmediate',
+        'clearImmediate',
+        'nextTick',
+        'queueMicrotask',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+        'performance',
+        'hrtime',
+      ],
+      // 23:30 in Bucharest on 14 October.
+      now: new Date('2026-10-14T20:30:00.000Z'),
+    });
+    try {
+      answer = one({});
+      const el = await open();
+      // 00:30 in Bucharest on 15 October.
+      jest.setSystemTime(new Date('2026-10-14T21:30:00.000Z'));
+
+      restoreOf(el)?.click();
+      await settle();
+
+      expect(overlays.open).toHaveBeenCalledWith(
+        AdminRestoreGarage,
+        expect.objectContaining({
+          data: expect.objectContaining({ today: '2026-10-15' }),
+        }),
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it.each(['restored', 'stale'])(
     'reads the list again once %s',
     async (end) => {

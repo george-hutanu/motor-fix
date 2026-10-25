@@ -138,6 +138,12 @@ test.describe('the dashboard tab bar on a 375 px phone', () => {
   for (const { capabilities, landing, name, role, tabs } of DASHBOARDS) {
     test(`takes a ${role} to every view of the dashboard`, async ({ page }) => {
       await signInAs(page, role, landing, [...capabilities]);
+      // The stubbed garage account has no garage, and the profile view leaves
+      // for the dashboard on its 404, racing the check that Profil is the
+      // current tab: an outage keeps the view on Profil.
+      await page.route('**/api/v1/garages/*/profile', (route) =>
+        route.fulfill({ status: 503 }),
+      );
       await open(page, landing);
       const bar = page.getByRole('navigation', { name });
 
@@ -228,6 +234,11 @@ test.describe('the bar on the smallest phones', () => {
       page,
     }) => {
       await signInAs(page, 'garage', '/app/garage', OWNER);
+      // The stubbed account has no garage, and the profile view leaves for the
+      // dashboard on a 404: an outage keeps it on Profil, the tab under test.
+      await page.route('**/api/v1/garages/*/profile', (route) =>
+        route.fulfill({ status: 503 }),
+      );
       await page.setViewportSize({ height: 640, width });
       // Istoric, the last tab: a view that reads nothing of a garage this
       // stubbed session lacks (Profil leaves for the dashboard without one).
