@@ -1,6 +1,6 @@
 ---
 capability: cars
-updated: 2026-10-23
+updated: 2026-10-25
 features:
   - 089-add-a-car
   - 090-itp-status-lamp
@@ -10,6 +10,7 @@ features:
   - 029-overview-panels-own-data
   - 291-saved-garages
   - 129-delete-account
+  - 094-itp-reminders
 ---
 
 # Capability: Cars
@@ -26,9 +27,9 @@ _From 089-add-a-car._
 
 _From 029-overview-panels-own-data._
 
-### 089-FR-003 — Validation: brand required and active in the catalogue; model required, trimmed, 1 to 40 characters; year a whole number from 1950 to the current year + 1; odometer a whole number from 0 to 2,000,000; fuel one of the four; engine at most 30 characters, trimmed; plate stored in capitals with spaces and hyphens removed, 2 to 12 characters of letters and digits; each date at most 5 years ahead of today, a past date accepted. A refused body answers 400 `validation_failed` with the fields (472-FR-001), and the dialog shows each message under its field in the person's language (159-FR-002).
+### 094-FR-008 — The cars service's "at most five years ahead" check and the adversary helper that builds a date five years ahead MUST compute it with one shared rule, so that on 29 February they land on the same day (29 February + 5 years = 28 February of that year, the last day the month has); a fixed-clock test on 2028-02-29 MUST pass for both (#630). (Modifies 089-FR-003: the five-years limit now says what day it falls on in a leap year.)
 
-_From 089-add-a-car._
+_From 094-itp-reminders._
 
 ### 089-FR-004 — An account MUST hold at most 20 cars not removed; the 21st is refused with 409 `car_limit`; the count and the insert run in one transaction that first locks the account row (`SELECT … FOR UPDATE`), so two parallel saves at 19 cars create one car, not two and the dialog shows "Poți avea cel mult 20 de mașini." / "You can have at most 20 cars.".
 
@@ -110,9 +111,9 @@ _From 092-edit-remove-car._
 
 _From 092-edit-remove-car._
 
-### 092-FR-008 — A reminder stage MUST be sent once per date setting: a change of the date resets the flags, and that reset is the one way a stage goes out again. When a date is set or changed, every stage whose day (the due day minus 30, the due day minus 7) is before today in Europe/Bucharest MUST be marked as sent, so it is never sent late; a stage whose day is today is still sent by today's run.
+### 094-FR-003 — A new ITP date MUST reset the flags, and the old date's remaining stages MUST never be sent; a stage whose day is already past when the date is entered or changed MUST be skipped (marked sent), while a stage whose day is today is still sent by today's run. (Modifies 092-FR-008 for the ITP, with scenario 2.2 and the edge cases of this spec as its tests.)
 
-_From 092-edit-remove-car._
+_From 094-itp-reminders._
 
 ### 092-FR-009 — Mașinile mele's car card MUST show the brand and model, "<year> · <km> km", the plate grouped as today when the car has one, then the ITP due-date line (090-FR-001..005), then the RCA and rovinietă lines below; a car added or edited from its dialog shows its lines at once (supersedes 090-FR-006). The card MUST carry a "⋯" menu (accessible name "Acțiuni pentru <brand model>" / "Actions for <brand model>", operable by keyboard, a 44 px touch target) with "Modifică" / "Edit" and "Șterge mașina" / "Remove the car". The card MUST show, after the ITP line, an RCA due-date line and a rovinietă due-date line (the shared line of 090-FR-001 with their own texts, the lamp states of 090-FR-003): "RCA valabilă până în <month> <year>" / "RCA valid until <Month> <year>", "RCA-ul expiră în <n> <zile>" / "RCA expires in <n> days" (mâine/azi as the ITP), "RCA-ul a expirat pe <day>" / "RCA expired on <day>", and the same for "Rovinieta" ("Rovinieta e valabilă până în …", "Rovinieta expiră în …", "Rovinieta a expirat pe …" / "Rovinietă valid until …", "Rovinietă expires in …", "Rovinietă expired on …"); no garage link on these two. With no date the grey line reads "RCA: adaugă data" / "RCA: add the date" and "Rovinietă: adaugă data" / "Rovinietă: add the date"; the ITP's grey sentence stays 090-FR-004's. Each of the three grey lines is a button that opens the edit dialog with the focus on that date's field.
 
@@ -217,9 +218,39 @@ _From 291-saved-garages._
 
 _From 129-delete-account._
 
+### 094-FR-001 — For every car with an ITP date and a living owner account, the system MUST send one DUE_ITP 30 days before the date and one 7 days before it, each on the day the daily run (09:00 Europe/Bucharest) falls on `due_on − 30` and `due_on − 7`, recording `sent_30` and `sent_7` on the car's one `itp` reminder (`due_on` = the car's `itp_until`), and writing the bell row of each. A stage whose flag is set MUST NOT go again for the same date setting.
+
+_From 094-itp-reminders._
+
+### 094-FR-002 — A run repeated on the same day, or a retried send, MUST produce one message per stage: the send is identified by the reminder (one per car and kind `itp`, given a new id by each new date), the due date and the stage, so two attempts write one bell row and send one message.
+
+_From 094-itp-reminders._
+
+### 094-FR-004 — No reminder MUST go for a car removed before the send day, for a car removed between the run's read and its send, or for an account that is deleted; with the driver's Scadențe switch off, no e-mail, push, SMS or WhatsApp MUST go and the bell row MUST still be written.
+
+_From 094-itp-reminders._
+
+### 094-FR-005 — A daily run that was missed (an outage) MUST send the missed stage at its next run while the date is still ahead, once; once 7 or fewer days remain only the 7-day stage goes and the 30-day stage counts as sent; a message that ended `failed` MUST NOT be sent again by a later run.
+
+_From 094-itp-reminders._
+
+### 094-FR-006 — A Playwright test in `apps/web-e2e` MUST seed a signed-in driver who adds a car whose ITP is due in 30 (shortened) days, let the worker the test run starts do the reminders job on shortened days, and show the DUE_ITP row in the driver's bell; advancing to the 7-day stage MUST show the second DUE_ITP row. Its spec file MUST set Playwright retries to 0, pass in the PR's CI runs, and MUST never shorten a day in staging or production (#447).
+
+_From 094-itp-reminders._
+
+### 094-FR-007 — The `car()` fixture of the reminder specs MUST live once in `fixtures()` of `libs/domain/src/notifications/notifications.testing.ts`, and the three reminder integration specs (service, worker, adversary) MUST import it and keep no copy (#629).
+
+_From 094-itp-reminders._
+
+### 094-FR-009 — Tests MUST cover, with a fixed clock on a real database: the 30-day and 7-day send days, the skipped window, the catch-up, idempotency on a double run, the reset on a date change and no resend of the old date, no send for a removed car, a deleted account or Scadențe off, SMS cap to WhatsApp, push to e-mail, no confirmed phone to e-mail, a retry held to 08:00, Brevo failing through the queue's retries to the e-mail fallback or `failed`, and not resent, and the Romanian and English texts; the e2e of FR-006; and the fixture and leap-year checks of FR-007 and FR-008. Each test file names the ids it covers in one whole-line `// @traces` comment.
+
+_From 094-itp-reminders._
+
 ## Retired
 
 - `089-FR-008` — superseded by `090-FR-006` (2026-10-08)
 - `090-FR-006` — superseded by `092-FR-009` (2026-10-11)
 - `089-FR-002` — superseded by `029-FR-006` (2026-10-17)
 - `092-FR-009` — superseded by `029-FR-007` (2026-10-17)
+- `092-FR-008` — superseded by `094-FR-003` (2026-10-25)
+- `089-FR-003` — superseded by `094-FR-008` (2026-10-25)

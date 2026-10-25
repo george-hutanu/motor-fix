@@ -11,7 +11,7 @@ import { AccountsService } from '../../../auth/accounts.service';
 import { refusal } from '../../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
-import { localDay } from '../../../bucharest';
+import { addYears, localDay } from '../../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 
@@ -69,8 +69,7 @@ const invalid = (field: string, code: string, message: string) =>
 function assertNotTooFar(
   dto: Partial<Record<(typeof DATES)[number], string | null>>,
 ) {
-  const today = localDay(new Date());
-  const latest = `${Number(today.slice(0, 4)) + 5}${today.slice(4)}`;
+  const latest = addYears(localDay(new Date()), 5);
   const field = DATES.find((f) => (dto[f] ?? '') > latest);
   if (field) {
     throw invalid(

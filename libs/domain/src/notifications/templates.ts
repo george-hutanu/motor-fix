@@ -4,6 +4,7 @@ import {
   formatDay,
   formatLei,
   formatLeiRange,
+  formatMonthYear,
   formatNum,
 } from '@motor-fix/i18n/formats';
 
@@ -22,6 +23,8 @@ type Format =
   | 'lei'
   | 'when'
   | 'day'
+  | 'date'
+  | 'days'
   | 'reason';
 
 interface EmailText {
@@ -60,6 +63,9 @@ export interface Template {
   push?: Texts<PushText>;
   sms?: Texts<string>;
   whatsapp?: Texts<WhatsAppText>;
+  // Its e-mail used to be the generic one: a row stored before its values
+  // existed still gets that, rather than failing.
+  genericEmailWhenMissing?: true;
 }
 
 interface Rendered {
@@ -117,10 +123,33 @@ function realDay(value: unknown): boolean {
   return new Date(`${value}T00:00:00Z`).toISOString().startsWith(value);
 }
 
+// The days left as when it falls: "astăzi", "peste o zi", "peste 7 zile",
+// "peste 30 de zile". Days already past are no due date.
+function days(value: unknown, language: Language): string {
+  if (typeof value !== 'number' || value < 0) {
+    throw new Error(`not days left: ${String(value)}`);
+  }
+  if (value === 0) return language === 'en' ? 'today' : 'astăzi';
+  if (language === 'en')
+    return `in ${formatNum(value, language)} ${value === 1 ? 'day' : 'days'}`;
+  return value === 1 ? 'peste o zi' : `peste ${count(value, language)} zile`;
+}
+
+// A calendar day with its month in full: "13 noiembrie 2026".
+function longDay(value: unknown, language: Language): string {
+  const month = formatMonthYear(value, language);
+  if (month === '—') throw new Error(`not a day: ${String(value)}`);
+  return `${Number(String(value).slice(8))} ${month}`;
+}
+
 function format(kind: Format, value: unknown, language: Language): string {
   switch (kind) {
     case 'count':
       return count(value, language);
+    case 'days':
+      return days(value, language);
+    case 'date':
+      return longDay(value, language);
     case 'num':
       return formatNum(value, language);
     case 'lei':
@@ -188,6 +217,11 @@ export function render<C extends Channel>(
   };
   const fill = (source: string) =>
     source.replace(PLACEHOLDER, (_, key: string) => value(key));
+  const older =
+    channel === 'email' &&
+    template.genericEmailWhenMissing &&
+    Object.keys(template.values).some((key) => params[key] == null);
+  if (older) return render('GENERIC', channel, languageCode, params, registry);
   return renderText(channel, text, fill, value, language, fail) as Rendered[C];
 }
 
