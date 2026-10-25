@@ -33,13 +33,9 @@ const row = (page: Page, name: string) =>
 
 // An admin adds a brand no garage has yet, through the real dialog, and the
 // brand reaches every place a brand is offered: the listing's brands step,
-// its results page and Home's search. The brand is removed afterwards; a
-// deployed address, whose run has no DATABASE_URL, skips the file.
+// its results page and Home's search. The brand is removed afterwards
+// straight from PostgreSQL, so a deployed address leaves out @database.
 test.describe('the admin brand list @seeded @database', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'removes the brand it adds straight from PostgreSQL, which needs DATABASE_URL',
-  );
   test.describe.configure({ mode: 'serial' });
 
   const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
