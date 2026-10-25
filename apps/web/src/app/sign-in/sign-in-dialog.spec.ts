@@ -590,6 +590,46 @@ describe('SignInDialog, from an invite link', () => {
   });
 });
 
+// @traces 1255-FR-010
+describe('SignInDialog, from an invite link sent to a phone', () => {
+  const BY_PHONE = { name: 'Elena Stan', phone: '+40722000111' };
+
+  it('opens the phone sign-in with the invited number filled in', async () => {
+    const { dialog, open } = setup(null, 'cancelled');
+
+    await expect(dialog.join(BY_PHONE)).resolves.toBeNull();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    const [loader, options] = open.mock.calls[0] as [
+      () => Promise<unknown>,
+      { data: { phone?: string }; title: string },
+    ];
+    expect((await loader()) as { name: string }).toHaveProperty(
+      'name',
+      'PhoneSignIn',
+    );
+    expect(options.data.phone).toBe('+40722000111');
+    expect(options.title).toBe('public.signIn.title');
+  });
+
+  it('says the person signed in, so the page waits for a second press', async () => {
+    const { dialog, navigate } = setup(null, 'signed-in');
+
+    await expect(dialog.join(BY_PHONE)).resolves.toBe('signed-in');
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('still opens account creation for an invite by e-mail', async () => {
+    const { dialog, open } = setup(null, 'cancelled');
+
+    await dialog.join({ email: 'elena@example.ro', name: 'Elena Stan' });
+
+    expect(open.mock.calls[0]?.[1]).toMatchObject({
+      title: 'public.signUp.title',
+    });
+  });
+});
+
 @Component({ template: '' })
 class Page {}
 

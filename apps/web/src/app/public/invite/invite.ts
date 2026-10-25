@@ -23,11 +23,14 @@ const GONE = new Set(['invite_invalid', 'invite_expired', 'feature_off']);
 
 const gone = (error: unknown) => GONE.has(toProblem(error).code);
 
-// The invite e-mail's link: who invites whom, as what, and "Acceptă". A
-// signed-in person accepts on the press; anyone else gets account creation
-// with the invited name and e-mail filled in. Creating the account accepts at
-// once; signing in to an existing one waits for "Acceptă" again, so it is
-// that account that joins. The server renders the checking state only.
+// The invite's link: who invites whom, as what, and "Acceptă". A signed-in
+// person accepts on the press; anyone else gets account creation with the
+// invited name and e-mail filled in, or the phone sign-in for an invite sent
+// to a phone. Creating the account accepts at once; signing in to an existing
+// one reads the link again and waits for "Acceptă", so it is that account
+// that joins, warned first when it would leave another garage's team. Moving
+// a linked mechanic between garages is refused with its own message. The
+// server renders the checking state only.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, RouterLink, TranslatePipe],
@@ -48,6 +51,7 @@ export class InvitePage implements OnInit {
   protected readonly state = signal<State>('checking');
   protected readonly invite = signal<InviteViewDto | null>(null);
   protected readonly failed = signal(false);
+  protected readonly moveRequired = signal(false);
   // Set once the server has taken the acceptance: a retry then only switches
   // the role, since accepting again would answer that the link is used.
   private joined = false;
@@ -78,20 +82,10 @@ export class InvitePage implements OnInit {
     const invite = this.invite();
     if (!invite || this.state() === 'accepting') return;
     this.failed.set(false);
+    this.moveRequired.set(false);
     this.state.set('accepting');
     try {
-      if (!(await this.session.load({ keepLanguage: true }))) {
-        const joined = await this.dialog.join({
-          email: invite.email,
-          name: invite.name,
-        });
-        // Signed in to an existing account: that account joins on the next
-        // press, once the person has seen which one it is.
-        if (joined !== 'signed-up') {
-          this.state.set('ready');
-          return;
-        }
-      }
+      if (!(await this.signedIn(invite))) return;
       if (!this.joined) {
         await this.invites.invitesControllerAccept({
           body: { token: this.token },
@@ -101,12 +95,34 @@ export class InvitePage implements OnInit {
       const me = await this.session.switchRole(invite.kind);
       await this.router.navigateByUrl(me?.landing ?? '/app/garage');
     } catch (error) {
-      if (gone(error)) {
-        this.state.set('invalid');
-        return;
-      }
-      this.failed.set(true);
-      this.state.set('ready');
+      this.refused(error);
     }
+  }
+
+  // Whether to accept now: with a session already, or once a new account is
+  // made. Signing in to an existing account accepts on the next press, once the
+  // person has seen which account it is and what it leaves.
+  private async signedIn(invite: InviteViewDto): Promise<boolean> {
+    if (await this.session.load({ keepLanguage: true })) return true;
+    const joined = await this.dialog.join({
+      name: invite.name,
+      ...(invite.phone
+        ? { phone: invite.phone }
+        : { email: invite.email ?? '' }),
+    });
+    if (joined === 'signed-up') return true;
+    if (joined === 'signed-in') await this.check();
+    else this.state.set('ready');
+    return false;
+  }
+
+  private refused(error: unknown) {
+    if (gone(error)) {
+      this.state.set('invalid');
+      return;
+    }
+    if (toProblem(error).code === 'move_required') this.moveRequired.set(true);
+    else this.failed.set(true);
+    this.state.set('ready');
   }
 }
