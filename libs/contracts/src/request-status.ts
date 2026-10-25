@@ -189,6 +189,9 @@ export const DRIVER_CANCEL_REASONS = [
 ] as const;
 export type DriverCancelReasonCode = (typeof DRIVER_CANCEL_REASONS)[number];
 
+// What a driver may write when cancelling a booking, counted after trimming.
+export const BOOKING_CANCEL_NOTE_MAX = 500;
+
 export const CANCEL_REASON_TEXTS: Record<
   DriverCancelReasonCode,
   { label: Words }

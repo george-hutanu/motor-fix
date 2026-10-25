@@ -58,6 +58,7 @@ export type { BrandRangeDto } from './models/brand-range-dto';
 export type { BrandRangeItemDto } from './models/brand-range-item-dto';
 export type { BrandRangeSavedDto } from './models/brand-range-saved-dto';
 export type { BrandRefDto } from './models/brand-ref-dto';
+export type { CancelBookingDto } from './models/cancel-booking-dto';
 export type { CandidateGarageDto } from './models/candidate-garage-dto';
 export type { CandidateGarageListDto } from './models/candidate-garage-list-dto';
 export type { CarDto } from './models/car-dto';
@@ -644,6 +645,8 @@ export type { ConfirmControllerOptions$Params as ConfirmControllerOptions$Params
 export { confirmControllerOptions as confirmControllerOptions } from './fn/bookings/confirm-controller-options';
 export type { ConfirmControllerConfirm$Params as ConfirmControllerConfirm$Params } from './fn/bookings/confirm-controller-confirm';
 export { confirmControllerConfirm as confirmControllerConfirm } from './fn/bookings/confirm-controller-confirm';
+export type { CancelBookingControllerCancel$Params as CancelBookingControllerCancel$Params } from './fn/bookings/cancel-booking-controller-cancel';
+export { cancelBookingControllerCancel as cancelBookingControllerCancel } from './fn/bookings/cancel-booking-controller-cancel';
 export type { GarageReviewsControllerRead$Params as GarageReviewsControllerRead$Params } from './fn/reviews/garage-reviews-controller-read';
 export { garageReviewsControllerRead as garageReviewsControllerRead } from './fn/reviews/garage-reviews-controller-read';
 export type { ReviewsControllerEligibility$Params as ReviewsControllerEligibility$Params } from './fn/reviews/reviews-controller-eligibility';

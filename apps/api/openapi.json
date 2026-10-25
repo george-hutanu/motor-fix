@@ -4161,6 +4161,64 @@
         ]
       }
     },
+    "/api/v1/bookings/{id}/cancel": {
+      "post": {
+        "operationId": "CancelBookingController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelBookingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id, a reason the driver may not give, a note past its length"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not the driver’s booking"
+          },
+          "409": {
+            "description": "invalid_transition: the booking has ended, its time has come or its job has started (its currentStatus named), with a message in the caller’s language"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a booking that has not started, with a reason; late inside the free-cancel cutoff, never a penalty",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/reviews": {
       "get": {
         "operationId": "GarageReviewsController_read",
@@ -14904,6 +14962,29 @@
           "id",
           "status",
           "declinedAt"
+        ]
+      },
+      "CancelBookingDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "plans_changed",
+              "found_another_garage",
+              "problem_solved",
+              "other"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "Counted after trimming; whitespace alone is no note",
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "RatingBreakdownDto": {

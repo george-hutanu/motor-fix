@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 197,
+    "count": 198,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -2407,6 +2407,19 @@
         "api-latency"
       ],
       "reason": "one RequestCancel log line per cancel naming the request id and the outcome; the count by outcome is the motorfix_cancellations_total entry",
+      "story": "ST-1258"
+    },
+    {
+      "kind": "endpoint",
+      "name": "booking-cancel",
+      "source": "libs/domain/src/quotes/cancel-booking/cancel-booking.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/bookings/:id/cancel",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "one BookingCancel log line per cancel naming the booking id, the reason and whether it came late, never the note; the count by outcome and lateness is the motorfix_cancellations_total entry",
       "story": "ST-1258"
     }
   ]
