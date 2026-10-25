@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ACCOUNTS, openSignIn, ownMap, ready, signIn } from './accounts.js';
+import { deleteBrand } from './delete-brand.js';
 import { test } from './fixtures.js';
 
 // A brand and three garages of this file's own, written straight to
@@ -91,11 +92,10 @@ test.describe('the Results page @seeded', () => {
   });
 
   test.afterAll(async () => {
-    await db.query('DELETE FROM search_log WHERE brand_id = $1', [brandId]);
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [
       [...ids.values()],
     ]);
-    await db.query('DELETE FROM brand WHERE id = $1', [brandId]);
+    await deleteBrand(db, brandId);
     await db.end();
   });
 
@@ -426,9 +426,8 @@ test.describe('the map beside the results @seeded', () => {
   });
 
   test.afterAll(async () => {
-    await db.query('DELETE FROM search_log WHERE brand_id = $1', [brandId]);
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [ids]);
-    await db.query('DELETE FROM brand WHERE id = $1', [brandId]);
+    await deleteBrand(db, brandId);
     await db.end();
   });
 
