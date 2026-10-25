@@ -7,7 +7,6 @@ import type { Prisma, PrismaClient } from '../generated/prisma/client';
 
 const INCLUDE = {
   consents: {
-    orderBy: { acceptedAt: 'desc' },
     select: { acceptedAt: true, kind: true, textVersion: true },
   },
   mechanic: true,

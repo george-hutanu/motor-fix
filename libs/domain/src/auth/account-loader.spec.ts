@@ -45,7 +45,6 @@ describe('AccountLoader.activeAccount', () => {
     expect(findUnique).toHaveBeenCalledWith({
       include: {
         consents: {
-          orderBy: { acceptedAt: 'desc' },
           select: { acceptedAt: true, kind: true, textVersion: true },
         },
         mechanic: true,

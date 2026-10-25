@@ -9,7 +9,11 @@ type AcceptanceRow = {
   textVersion: string;
 };
 
-const latest = (rows: readonly AcceptanceRow[], kind: AcceptanceRow['kind']) =>
+// The version of the account's newest acceptance of one text.
+export const latest = (
+  rows: readonly AcceptanceRow[],
+  kind: AcceptanceRow['kind'],
+) =>
   rows
     .filter((row) => row.kind === kind)
     .reduce<AcceptanceRow | undefined>(

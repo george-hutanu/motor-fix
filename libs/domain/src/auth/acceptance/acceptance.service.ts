@@ -1,7 +1,7 @@
 import type { AcceptanceDto } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
-import { pendingAcceptance } from './acceptance';
+import { latest, pendingAcceptance } from './acceptance';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { countAcceptance } from '../../metrics/product-counters';
@@ -33,17 +33,12 @@ export class AcceptanceService {
         select: { method: true },
         where: { accountId: actor.accountId },
       });
-      const latest = (kind: 'terms' | 'privacy_notice') =>
-        rows
-          .filter((row) => row.kind === kind)
-          .sort((a, b) => b.acceptedAt.getTime() - a.acceptedAt.getTime())[0]
-          ?.textVersion;
       const due = (
         [
           ['terms', body.termsVersion],
           ['privacy_notice', body.privacyVersion],
         ] as const
-      ).filter(([kind, version]) => latest(kind) !== version);
+      ).filter(([kind, version]) => latest(rows, kind) !== version);
       await tx.accountConsent.createMany({
         data: due.map(([kind, textVersion]) => ({
           accountId: actor.accountId,
