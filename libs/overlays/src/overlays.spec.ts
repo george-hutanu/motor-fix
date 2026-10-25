@@ -3,9 +3,11 @@ import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationStart, provideRouter, Router } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
+import { BrnDialogService } from '@spartan-ng/brain/dialog';
 
 import {
   injectOverlayTask,
+  OpenSheets,
   type OverlayOptions,
   type OverlayResult,
   Overlays,
@@ -595,6 +597,43 @@ describe('Overlays: shapes', () => {
     },
   );
 
+  const pane = () => top().closest<HTMLElement>('.cdk-overlay-pane');
+
+  // @traces 1127-FR-001
+  it.each(['dialog', 'drawer', 'drawer-wide'] as const)(
+    'on a phone gives the %s’s pane the full width, so the dialog is as wide as the sheet',
+    async (shape) => {
+      computer = false;
+      await openTask((host) => {
+        host.options = { shape, title: 'shell.brand' };
+      });
+
+      expect(pane()?.style.width).toBe('100%');
+      expect(pane()?.style.height).toBe('');
+    },
+  );
+
+  // @traces 1127-FR-002
+  it.each(['drawer', 'drawer-wide'] as const)(
+    'on a computer gives the %s’s pane the full height, so the dialog is as tall as the drawer',
+    async (shape) => {
+      await openTask((host) => {
+        host.options = { shape, title: 'shell.brand' };
+      });
+
+      expect(pane()?.style.height).toBe('100%');
+      expect(pane()?.style.width).toBe('');
+    },
+  );
+
+  // @traces 1127-FR-002
+  it('leaves the centred dialog’s pane sized by its content', async () => {
+    await openTask();
+
+    expect(pane()?.style.width).toBe('');
+    expect(pane()?.style.height).toBe('');
+  });
+
   it('scrolls the body, not the header with the X', async () => {
     await openTask();
 
@@ -739,6 +778,106 @@ describe('Overlays: stacked tasks', () => {
     clickOutside();
     await settle();
     expect(dialogs()).toHaveLength(1);
+  });
+});
+
+// @traces 1127-FR-004
+describe('Overlays: whether a sheet is open', () => {
+  const sheetOpen = () => TestBed.inject(OpenSheets).any();
+
+  beforeEach(() => {
+    computer = false;
+  });
+
+  it.each([
+    ['the X', () => closeButton()?.click()],
+    ['Escape', pressEscape],
+    ['Back', () => history.back()],
+    [
+      'the task',
+      () => top().querySelector<HTMLButtonElement>('#done')?.click(),
+    ],
+  ])(
+    'is true while a sheet is open and false once %s closes it',
+    async (_, close) => {
+      expect(sheetOpen()).toBe(false);
+      await openTask();
+      expect(sheetOpen()).toBe(true);
+
+      close();
+      await settle();
+
+      expect(dialogs()).toHaveLength(0);
+      expect(sheetOpen()).toBe(false);
+    },
+  );
+
+  it('is false again when the opener aborts the sheet', async () => {
+    const opener = new AbortController();
+    await openTask((h) => {
+      h.options = { ...h.options, signal: opener.signal };
+    });
+    expect(sheetOpen()).toBe(true);
+
+    opener.abort();
+    await settle();
+
+    expect(sheetOpen()).toBe(false);
+  });
+
+  it('stays true until the last of two stacked sheets closes', async () => {
+    await openTask();
+    top().querySelector<HTMLButtonElement>('#again')?.click();
+    await settle();
+    expect(dialogs()).toHaveLength(2);
+
+    pressEscape();
+    await settle();
+    expect(dialogs()).toHaveLength(1);
+    expect(sheetOpen()).toBe(true);
+
+    pressEscape();
+    await settle();
+    expect(sheetOpen()).toBe(false);
+  });
+
+  it('is never true for a dialog or a drawer on a computer', async () => {
+    computer = true;
+    for (const shape of ['dialog', 'drawer', 'drawer-wide'] as const) {
+      await openTask((host) => {
+        host.options = { shape, title: 'shell.brand' };
+      });
+      expect(dialogs().length).toBeGreaterThan(0);
+      expect(sheetOpen()).toBe(false);
+      pressEscape();
+      await settle();
+    }
+  });
+
+  it('counts nothing when the sheet fails to open', async () => {
+    await render();
+    const failing = jest
+      .spyOn(BrnDialogService.prototype, 'open')
+      .mockImplementationOnce(() => {
+        throw new Error('no overlay');
+      });
+
+    expect(() =>
+      TestBed.inject(Overlays).open(FormTask, {
+        shape: 'dialog',
+        title: 'shell.brand',
+      }),
+    ).toThrow('no overlay');
+    expect(sheetOpen()).toBe(false);
+    failing.mockRestore();
+  });
+
+  it('counts nothing for a signal already aborted', async () => {
+    await openTask((h) => {
+      h.options = { ...h.options, signal: AbortSignal.abort() };
+    });
+
+    expect(sheetOpen()).toBe(false);
   });
 });
 

@@ -44,11 +44,8 @@ test.describe('the public tab bar on a 375 px phone', () => {
 
     await bar(page).getByRole('link', { exact: true, name: 'Cont' }).click();
 
-    // On a phone the sign-in opens as a sheet; the dialog container has no box.
     await expect(
-      page
-        .getByRole('dialog', { name: 'Autentificare' })
-        .locator('mf-overlay-panel'),
+      page.getByRole('dialog', { name: 'Autentificare' }),
     ).toBeVisible();
     await expect(page).toHaveURL('/ro/garages');
   });
@@ -200,4 +197,84 @@ test.describe('the public tab bar on a tablet and a desktop', () => {
       });
     }
   }
+});
+
+test.describe('the tab bar under the sign-in sheet', () => {
+  // @traces 1127-FR-004
+  // @traces 1127-FR-005
+  // @traces 1127-FR-007
+  test('at 390 × 844 steps aside while the sheet is open and comes back where it was', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 844, width: 390 });
+    await page.goto('/app/driver');
+    await expect(page).toHaveURL(/\/ro(\?|$)/);
+    const dialog = page.getByRole('dialog', { name: 'Autentificare' });
+    await expect(dialog).toBeVisible();
+    await settled(page);
+
+    await expect(bar(page)).toBeHidden();
+    const last = await dialog.getByRole('button').last().boundingBox();
+    expect(last).not.toBeNull();
+    expect((last?.y ?? 0) + (last?.height ?? 0)).toBeLessThanOrEqual(844);
+
+    const scrolled = await page.evaluate(() => window.scrollY);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(bar(page)).toBeVisible();
+    expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+  });
+
+  // @traces 1127-FR-005
+  test('at 320 × 640 the last button scrolls into the sheet with nothing over it', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 640, width: 320 });
+    await page.goto('/app/driver');
+    await expect(page).toHaveURL(/\/ro(\?|$)/);
+    const dialog = page.getByRole('dialog', { name: 'Autentificare' });
+    await expect(dialog).toBeVisible();
+    await settled(page);
+    await expect(bar(page)).toBeHidden();
+
+    const behind = await page.evaluate(() => window.scrollY);
+    const last = dialog.getByRole('button').last();
+    // The sheet stops at 92% of the screen; its own body scrolls the rest in.
+    await last.evaluate((button) => {
+      let box = button.parentElement;
+      while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) {
+        box = box.parentElement;
+      }
+      if (box) box.scrollTop = box.scrollHeight;
+    });
+    const at = await last.boundingBox();
+    expect(at).not.toBeNull();
+    expect(at?.y ?? -1).toBeGreaterThanOrEqual(0);
+    expect((at?.y ?? 0) + (at?.height ?? 0)).toBeLessThanOrEqual(640);
+    const onTop = await last.evaluate((button) => {
+      const { x, y, width, height } = button.getBoundingClientRect();
+      const hit = document.elementFromPoint(x + width / 2, y + height / 2);
+      return hit !== null && button.contains(hit);
+    });
+    expect(onTop).toBe(true);
+    expect(await page.evaluate(() => window.scrollY)).toBe(behind);
+  });
+
+  // @traces 1127-FR-006
+  test('at 1024 × 768 there is no bar before, during or after the dialog', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 768, width: 1024 });
+    await page.goto('/ro');
+    await settled(page);
+    await expect(bar(page)).toBeHidden();
+
+    await page.goto('/app/driver');
+    const dialog = page.getByRole('dialog', { name: 'Autentificare' });
+    await expect(dialog).toBeVisible();
+    await expect(bar(page)).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(bar(page)).toBeHidden();
+  });
 });
