@@ -315,7 +315,7 @@ _From 208-resubmit-after-more._
 
 _From 208-resubmit-after-more._
 
-### 1127-FR-005 — While the sign-in sheet is open on a 320 px and a 390 px phone at `/app/driver` signed out, every button of the sheet MUST lie fully inside the viewport and be tappable, with nothing drawn over it.
+### 1127-FR-005 — While the sign-in sheet is open on a 320 px and a 390 px phone at `/app/driver` signed out, every button of the sheet MUST come fully inside the viewport, where it stands or once the sheet's own body is scrolled to it (the page behind never moving), and be tappable there, with nothing drawn over it.
 
 _From 1127-bottom-sheet-size._
 

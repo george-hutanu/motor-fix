@@ -225,6 +225,41 @@ test.describe('the tab bar under the sign-in sheet', () => {
     expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
   });
 
+  // @traces 1127-FR-005
+  test('at 320 × 640 the last button scrolls into the sheet with nothing over it', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 640, width: 320 });
+    await page.goto('/app/driver');
+    await expect(page).toHaveURL(/\/ro(\?|$)/);
+    const dialog = page.getByRole('dialog', { name: 'Autentificare' });
+    await expect(dialog).toBeVisible();
+    await settled(page);
+    await expect(bar(page)).toBeHidden();
+
+    const behind = await page.evaluate(() => window.scrollY);
+    const last = dialog.getByRole('button').last();
+    // The sheet stops at 92% of the screen; its own body scrolls the rest in.
+    await last.evaluate((button) => {
+      let box = button.parentElement;
+      while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) {
+        box = box.parentElement;
+      }
+      if (box) box.scrollTop = box.scrollHeight;
+    });
+    const at = await last.boundingBox();
+    expect(at).not.toBeNull();
+    expect(at?.y ?? -1).toBeGreaterThanOrEqual(0);
+    expect((at?.y ?? 0) + (at?.height ?? 0)).toBeLessThanOrEqual(640);
+    const onTop = await last.evaluate((button) => {
+      const { x, y, width, height } = button.getBoundingClientRect();
+      const hit = document.elementFromPoint(x + width / 2, y + height / 2);
+      return hit !== null && button.contains(hit);
+    });
+    expect(onTop).toBe(true);
+    expect(await page.evaluate(() => window.scrollY)).toBe(behind);
+  });
+
   // @traces 1127-FR-006
   test('at 1024 × 768 there is no bar before, during or after the dialog', async ({
     page,
