@@ -7,7 +7,7 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { MeDto } from '@motor-fix/data-access';
 import { LanguageChoice } from '@motor-fix/i18n';
-import { Overlays } from '@motor-fix/overlays';
+import { OpenSheets, Overlays } from '@motor-fix/overlays';
 import { Subject } from 'rxjs';
 
 import { provideLanguageAddresses, SITE_ORIGIN } from '../../addresses';
@@ -308,6 +308,41 @@ describe('the public tab bar', () => {
     expect(await focus('submit')).toBe(false);
   });
 
+  // @traces 1127-FR-004
+  it('turns invisible while a bottom sheet is open and keeps its space', async () => {
+    await open('/ro');
+    const sheets = TestBed.inject(OpenSheets);
+
+    expect(bar()?.style.visibility).toBe('');
+    sheets.opened();
+    await settle();
+    expect(bar()?.style.visibility).toBe('hidden');
+    expect(bar()?.hidden).toBe(false);
+    sheets.closed();
+    await settle();
+    expect(bar()?.style.visibility).toBe('');
+  });
+
+  // @traces 1127-FR-004
+  it('stays hidden for a text field under an open sheet, and invisible once the field lets go', async () => {
+    await open('/ro');
+    const sheets = TestBed.inject(OpenSheets);
+    const field = document.createElement('input');
+    document.body.append(field);
+
+    sheets.opened();
+    field.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    await settle();
+    expect(bar()?.hidden).toBe(true);
+    expect(bar()?.style.visibility).toBe('hidden');
+    field.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    field.remove();
+    await settle();
+    expect(bar()?.hidden).toBe(false);
+    expect(bar()?.style.visibility).toBe('hidden');
+    sheets.closed();
+  });
+
   it('spaces the bar and its tabs on the 4 px grid', () => {
     const css = styles().replace(/\s+/g, ' ');
     const nav = /nav \{[^}]*padding: ([^;]+);/.exec(css)?.[1] ?? '';
@@ -332,12 +367,62 @@ describe('the public tab bar', () => {
     expect(css).toMatch(/font-size: var\(--mf-size-body\)/);
     expect(css).toMatch(/\ba \{[^}]*gap: 4px/);
     expect(css).toMatch(
-      /\[aria-current=["']?page["']?\][^{]*\{[^}]*color: var\(--mf-amber-ink\)/,
+      /\[aria-current=["']?page["']?\][^{]*\{[^}]*color: color-mix\(in srgb, var\(--mf-amber-ink\)/,
     );
     expect(css).toMatch(
       /@media \(min-width: 768px\) \{[^{]*\{[^}]*display: none/,
     );
     expect(css).toMatch(/:host\(\[hidden\]\) \{ display: none/);
+  });
+  // QA lap 1 of #579: the amber Cere ofertă showing through the translucent
+  // bar left the active tab under 4.5:1 in light mode (axe color-contrast).
+  it('keeps every tab at 4.5:1 in light mode over amber or dark text behind the bar', () => {
+    const css = styles().replace(/\s+/g, ' ');
+    const cockpit = readFileSync(
+      join(
+        __dirname,
+        '../../../../../../libs/ui-cockpit/src/styles/cockpit.css',
+      ),
+      'utf8',
+    );
+    const light = cockpit.slice(cockpit.indexOf('prefers-color-scheme: light'));
+    const token = (name: string) =>
+      new RegExp(`--mf-${name}: (#[0-9a-f]{6})`).exec(light)?.[1] ?? '';
+    const rgb = (hex: string) =>
+      [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
+    const mix = (a: number[], b: number[], share: number) =>
+      a.map((v, i) => v * share + b[i] * (1 - share));
+    const luminance = (c: number[]) => {
+      const [r, g, b] = c.map((v) => {
+        const s = v / 255;
+        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const ratio = (a: number[], b: number[]) => {
+      const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const fill =
+      Number(
+        /:host \{[^}]*color-mix\(in srgb, var\(--mf-bg\) (\d+)%, transparent\)/.exec(
+          css,
+        )?.[1],
+      ) / 100;
+    const ink =
+      Number(
+        /color-mix\(in srgb, var\(--mf-amber-ink\) (\d+)%, var\(--mf-text\)\)/.exec(
+          css,
+        )?.[1],
+      ) / 100;
+    const active = mix(rgb(token('amber-ink')), rgb(token('text')), ink);
+    const idle = rgb(token('text-secondary'));
+
+    for (const behind of [token('amber'), token('text')]) {
+      const backdrop = mix(rgb(token('bg')), rgb(behind), fill);
+      expect(ratio(active, backdrop)).toBeGreaterThanOrEqual(4.5);
+      expect(ratio(idle, backdrop)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });
 

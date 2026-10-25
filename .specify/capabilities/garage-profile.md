@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -27,6 +27,7 @@ features:
   - 309-open-now-directions
   - 385-share-garage-link
   - 024-garage-reviews
+  - 1367-review-price-marks
 ---
 
 # Capability: Garage profile
@@ -735,6 +736,18 @@ _From 385-share-garage-link._
 ### 385-FR-011 — The view MUST lay out phones first: one column of cards at 320 and 390 px, the Results card's wider layout from the tablet width, no sideways scrolling at 320 px, light and dark, Romanian and English.
 
 _From 385-share-garage-link._
+
+### 1367-FR-001 — Under each review of the "Ce spun șoferii" / "What drivers say" section (024-FR-004), after the text (or the score when there is no text) and before the author line, the section MUST show one price line of up to three parts joined by " · ", in this order: the accepted quote's range, the job's final price, the driver's amount; a part shows exactly when the read carries its value (FR-003 for the third); when no part shows, no line and no empty element is rendered. The line is muted text under the review, styled as the author line.
+
+_From 1367-review-price-marks._
+
+### 1367-FR-005 — The section MUST show the mark "Editată · {day}" / "Edited · {day}" exactly when the review's edited date is set, the day in the shared day format in Europe/Bucharest ("5 oct. 2026" / "5 Oct 2026"), as muted text joined to the author line after the posted month ("Andrei M. · oct. 2026 · Editată · 5 oct. 2026"); the "·" separators around the mark are decorative and hidden from assistive technology, so a screen reader reads "Editată" and the day; a review with no edited date shows no mark and no separator for it.
+
+_From 1367-review-price-marks._
+
+### 1367-FR-010 — The price line and the marks MUST render at 320 px and 390 px, tablet and desktop, light and dark, Romanian and English with no sideways scroll, wrapping onto more lines where needed, with the muted text meeting WCAG AA contrast (4.5:1) in both themes as the author line already does.
+
+_From 1367-review-price-marks._
 
 ## Retired
 

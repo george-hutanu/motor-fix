@@ -266,6 +266,30 @@ describe('what each row of the garage’s list shows', () => {
     expect(read.body.breakdown.five).toBe(0);
   });
 
+  it('carries no edit day for an unedited review and the day for an edited one', async () => {
+    const { andrei, asOwner, garage } = await dinamo();
+    const plain = await review(garage.id, andrei, {
+      minutesAgo: 120,
+    });
+    const edited = await review(garage.id, andrei, {
+      minutesAgo: 60,
+    });
+    await prisma.review.update({
+      data: { editedAt: new Date('2026-10-12T09:00:00.000Z') },
+      where: { id: edited.id },
+    });
+
+    const read = await staffList(garage.id, asOwner);
+
+    expect(read.body.items).toEqual([
+      expect.objectContaining({
+        editedAt: '2026-10-12T09:00:00.000Z',
+        id: edited.id,
+      }),
+      expect.objectContaining({ editedAt: null, id: plain.id }),
+    ]);
+  });
+
   it('gives a profile review no car, no jobs and no mechanic', async () => {
     const { andrei, answeringMechanic, asOwner, garage } = await dinamo();
     const one = await review(garage.id, andrei, { source: 'profile' });

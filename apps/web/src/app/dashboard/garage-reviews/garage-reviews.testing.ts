@@ -24,6 +24,7 @@ export const staffReview = (
     year: 2019,
   },
   editedAt: null,
+  finalPriceBani: 180_000,
   id: 'r-1',
   jobs: [
     {
@@ -35,7 +36,9 @@ export const staffReview = (
     },
   ],
   mechanic: { shortName: 'Costel R.' },
+  paidBani: null,
   postedAt: hoursAgo(2),
+  quote: { fromBani: 150_000, toBani: 200_000 },
   rating: 5,
   source: 'job',
   status: 'published',

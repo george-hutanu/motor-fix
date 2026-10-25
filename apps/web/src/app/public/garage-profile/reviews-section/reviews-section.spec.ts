@@ -47,6 +47,8 @@ const REVIEW: GarageReviewDto = {
     model: '320d',
     year: 2019,
   },
+  editedAt: null,
+  finalPriceBani: null,
   id: 'r-1',
   jobs: [
     {
@@ -64,7 +66,9 @@ const REVIEW: GarageReviewDto = {
       position: 1,
     },
   ],
+  paidBani: null,
   postedAt: '2026-03-14T10:00:00.000Z',
+  quote: null,
   rating: 5,
   source: 'job',
   text: 'Treabă curată, <b>la timp</b>.',
@@ -328,18 +332,6 @@ describe('the reviews section on a garage profile', () => {
     await shown({ ...PAGE, items: [review(1, { text: null })] });
 
     expect(reviews()[0]?.querySelector('.text')).toBeNull();
-  });
-
-  it('shows nothing in the car-and-job place for a review written from the profile', async () => {
-    await shown({
-      ...PAGE,
-      items: [review(1, { car: null, jobs: [], source: 'profile' })],
-    });
-
-    expect(reviews()[0]?.querySelector('.about')).toBeNull();
-    expect(reviews()[0]?.querySelector('.score')?.textContent?.trim()).toBe(
-      '5,0 / 5',
-    );
   });
 
   it('dates a review posted late on the last day of a month in Bucharest by the next month', async () => {
@@ -745,6 +737,143 @@ describe('the reviews section in the server render', () => {
   });
 });
 
+// @traces 1367-FR-001
+// @traces 1367-FR-002
+// @traces 1367-FR-003
+// @traces 1367-FR-005
+// @traces 1367-FR-007
+// @traces 1367-FR-009
+// @traces 1367-FR-012
+describe('the prices and the marks under a review', () => {
+  beforeEach(() => configure());
+
+  const price = () => reviews()[0]?.querySelector('.price');
+  const priceText = () => price()?.textContent?.replace(/\s+/g, ' ').trim();
+  // The line's parts sit apart by the flex gap, not by spaces.
+  const byText = () =>
+    [...(reviews()[0]?.querySelector('.by')?.children ?? [])]
+      .map((part) => part.textContent?.replace(/\s+/g, ' ').trim())
+      .join(' ');
+  const priced = (extra: Partial<GarageReviewDto>) =>
+    shown({ ...PAGE, items: [review(1, extra)] });
+  const FULL = {
+    finalPriceBani: 420_000,
+    paidBani: 450_000,
+    quote: { fromBani: 380_000, toBani: 440_000 },
+  };
+
+  it.each([
+    [
+      'the quote, the final price and the driver’s other amount',
+      FULL,
+      'Ofertă 3.800 – 4.400 lei · Final 4.200 lei · Plătit, după șofer: 4.500 lei',
+      'Quote 3,800 – 4,400 lei · Final 4,200 lei · Paid, says the driver: 4,500 lei',
+    ],
+    [
+      'the amount once when the driver gave the final price',
+      { ...FULL, paidBani: 420_000 },
+      'Ofertă 3.800 – 4.400 lei · Final 4.200 lei',
+      'Quote 3,800 – 4,400 lei · Final 4,200 lei',
+    ],
+    [
+      'one amount for a quote whose ends are equal',
+      {
+        finalPriceBani: null,
+        paidBani: null,
+        quote: { fromBani: 420_000, toBani: 420_000 },
+      },
+      'Ofertă 4.200 lei',
+      'Quote 4,200 lei',
+    ],
+    [
+      'the driver’s amount when the job has no final price',
+      { ...FULL, finalPriceBani: null, paidBani: 400_000 },
+      'Ofertă 3.800 – 4.400 lei · Plătit, după șofer: 4.000 lei',
+      'Quote 3,800 – 4,400 lei · Paid, says the driver: 4,000 lei',
+    ],
+    [
+      'each amount in its own decimals',
+      { ...FULL, paidBani: 450_050 },
+      'Ofertă 3.800 – 4.400 lei · Final 4.200 lei · Plătit, după șofer: 4.500,50 lei',
+      'Quote 3,800 – 4,400 lei · Final 4,200 lei · Paid, says the driver: 4,500.50 lei',
+    ],
+  ])('writes %s', async (_case, extra, ro, en) => {
+    await priced(extra);
+
+    expect(priceText()).toBe(ro);
+
+    await english();
+
+    expect(priceText()).toBe(en);
+  });
+
+  it('draws the price line between the text and the author line', async () => {
+    await priced(FULL);
+
+    const parts = [...(reviews()[0]?.children ?? [])].map((el) => el.className);
+    expect(parts).toEqual(['top', 'text', 'price', 'by']);
+  });
+
+  it('draws no price line when the read carries no amount', async () => {
+    await priced({ finalPriceBani: null, paidBani: null, quote: null });
+
+    expect(price()).toBeNull();
+    expect(reviews()[0]?.querySelectorAll('p')).toHaveLength(2);
+  });
+
+  it('marks an edited review “Editată · 5 oct. 2026” after the month, “Edited · 5 Oct 2026” in English', async () => {
+    await priced({ editedAt: '2026-10-05T09:30:00.000Z' });
+
+    expect(byText()).toBe('Andrei M. · mart. 2026 · Editată · 5 oct. 2026');
+    expect(
+      reviews()[0]
+        ?.querySelector('.edited')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim(),
+    ).toBe('Editată · 5 oct. 2026');
+
+    await english();
+
+    expect(byText()).toBe('Andrei M. · Mar 2026 · Edited · 5 Oct 2026');
+  });
+
+  it('dates the edit by its Bucharest day', async () => {
+    await priced({ editedAt: '2026-10-04T22:30:00.000Z' });
+
+    expect(byText()).toContain('Editată · 5 oct. 2026');
+  });
+
+  it('leaves the mark out of a review never edited', async () => {
+    await priced({ editedAt: null });
+
+    expect(reviews()[0]?.querySelector('.edited')).toBeNull();
+    expect(byText()).toBe('Andrei M. · mart. 2026');
+  });
+
+  it('shows “Nu prin MotorFix” in the car-and-job place of a review written from the profile, with no price line', async () => {
+    await priced({
+      car: null,
+      editedAt: '2026-10-05T09:30:00.000Z',
+      jobs: [],
+      source: 'profile',
+    });
+
+    const [one] = reviews();
+    expect(one?.querySelector('.about')?.textContent?.trim()).toBe(
+      'Nu prin MotorFix',
+    );
+    expect(price()).toBeNull();
+    expect(one?.querySelector('.score')?.textContent?.trim()).toBe('5,0 / 5');
+    expect(byText()).toBe('Andrei M. · mart. 2026 · Editată · 5 oct. 2026');
+
+    await english();
+
+    expect(reviews()[0]?.querySelector('.about')?.textContent?.trim()).toBe(
+      'Not through MotorFix',
+    );
+  });
+});
+
 describe('the reviews section’s styles', () => {
   const css = readFileSync(join(__dirname, 'reviews-section.css'), 'utf8');
 
@@ -764,6 +893,13 @@ describe('the reviews section’s styles', () => {
 
   it('keeps the author, the dot and the month a word apart', () => {
     expect(css).toMatch(/\.by\s*{[^}]*gap:\s*var\(--mf-space-1\);/);
+  });
+
+  // @traces 1367-FR-010
+  it('draws the price line muted, at the author line’s size, wrapping at any width', () => {
+    expect(css).toMatch(/\.price\s*{[^}]*color:\s*var\(--mf-text-secondary\)/);
+    expect(css).toMatch(/\.price\s*{[^}]*font-size:\s*var\(--mf-size-small\)/);
+    expect(css).toMatch(/\.price\s*{[^}]*overflow-wrap:\s*anywhere/);
   });
 
   it('caps the breakdown rows at the board’s 420 px', () => {

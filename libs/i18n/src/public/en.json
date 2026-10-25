@@ -92,10 +92,17 @@
     },
     "reviewsSection": {
       "deletedAuthor": "MotorFix driver",
+      "edited": "Edited",
       "empty": "No reviews yet.",
       "failed": "We could not load the reviews",
       "label": "Reviews by score",
       "more": "See more",
+      "notThroughMotorFix": "Not through MotorFix",
+      "price": {
+        "final": "Final {amount}",
+        "paid": "Paid, says the driver: {amount}",
+        "quote": "Quote {amount}"
+      },
       "retry": "Try again",
       "score": "{rating} / 5",
       "stars": {
@@ -843,6 +850,8 @@
     "locating": "Finding your location…",
     "locationFailed": "We could not get your location.",
     "map": {
+      "attribution": "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors",
+      "interactive": "Interactive map",
       "label": "Map of garages",
       "mobile": "Mobile mechanic · service area",
       "rate": "lei per hour",

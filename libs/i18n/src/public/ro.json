@@ -93,10 +93,17 @@
     },
     "reviewsSection": {
       "deletedAuthor": "Șofer MotorFix",
+      "edited": "Editată",
       "empty": "Încă nu are recenzii.",
       "failed": "Nu am putut încărca recenziile",
       "label": "Recenzii după notă",
       "more": "Vezi mai multe",
+      "notThroughMotorFix": "Nu prin MotorFix",
+      "price": {
+        "final": "Final {amount}",
+        "paid": "Plătit, după șofer: {amount}",
+        "quote": "Ofertă {amount}"
+      },
       "retry": "Încearcă din nou",
       "score": "{rating} / 5",
       "stars": {
@@ -860,6 +867,8 @@
     "locating": "Se caută locația…",
     "locationFailed": "Nu am putut afla locația.",
     "map": {
+      "attribution": "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors",
+      "interactive": "Hartă interactivă",
       "label": "Harta service‑urilor",
       "mobile": "Mecanic mobil · zona deservită",
       "rate": "lei pe oră",

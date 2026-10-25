@@ -6,6 +6,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { I18n } from '@motor-fix/i18n';
+import { OpenSheets } from '@motor-fix/overlays';
 
 import { DashboardTabBar } from './tab-bar';
 import { spoken } from '../../spoken.testing';
@@ -132,6 +133,25 @@ describe('DashboardTabBar', () => {
       inline: 'nearest',
     });
     expect(scrolled.mock.contexts.at(-1)).toBe(tabs(element)[4]);
+  });
+
+  // @traces 1127-FR-004
+  it('turns invisible while a bottom sheet is open and keeps its space', async () => {
+    const { element, harness } = await open('/app/garage');
+    const bar = element.querySelector<HTMLElement>('mf-dashboard-tab-bar');
+    const sheets = TestBed.inject(OpenSheets);
+
+    expect(bar?.style.visibility).toBe('');
+    sheets.opened();
+    sheets.opened();
+    harness.detectChanges();
+    expect(bar?.style.visibility).toBe('hidden');
+    sheets.closed();
+    harness.detectChanges();
+    expect(bar?.style.visibility).toBe('hidden');
+    sheets.closed();
+    harness.detectChanges();
+    expect(bar?.style.visibility).toBe('');
   });
 
   it('turns its labels and its name English', async () => {
