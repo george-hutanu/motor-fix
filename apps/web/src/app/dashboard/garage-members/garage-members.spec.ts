@@ -294,6 +294,7 @@ describe('Persoane cu acces, loading, failing and reading again', () => {
     'invite.revoked',
     'invite.accepted',
     'mechanic.updated',
+    'mechanic.removed',
     'member.removed',
   ])('reads again when the stream says %s', async (kind) => {
     const { settle } = await render();

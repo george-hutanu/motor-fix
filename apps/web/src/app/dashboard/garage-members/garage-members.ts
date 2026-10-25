@@ -51,6 +51,7 @@ export class GarageMembers {
       'invite.revoked',
       'invite.accepted',
       'mechanic.updated',
+      'mechanic.removed',
       'member.removed',
     ],
   );
