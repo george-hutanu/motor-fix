@@ -342,6 +342,7 @@ const TWO_WAY = new Map<string, [param: string, first: string, second: string]>(
     ['ADMIN_OUTAGE_ALERT', ['state', 'back', 'down']],
     ['BOOKING_LAPSED', ['side', 'garage', 'driver']],
     ['CATALOGUE_JOB_DECIDED', ['decision', 'approved', 'rejected']],
+    ['REVIEW_POSTED', ['source', 'profile', 'job']],
   ],
 );
 

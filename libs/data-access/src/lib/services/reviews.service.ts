@@ -9,7 +9,10 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { garageReviewsControllerRead } from '../fn/reviews/garage-reviews-controller-read';
+import { GarageReviewsControllerRead$Params } from '../fn/reviews/garage-reviews-controller-read';
 import { GarageReviewsPageDto } from '../models/garage-reviews-page-dto';
+import { GarageStaffReviewsPageDto } from '../models/garage-staff-reviews-page-dto';
 import { JobReviewContextDto } from '../models/job-review-context-dto';
 import { MechanicReviewsPageDto } from '../models/mechanic-reviews-page-dto';
 import { ReviewDto } from '../models/review-dto';
@@ -32,6 +35,72 @@ import { ReviewsControllerPublish$Params } from '../fn/reviews/reviews-controlle
 export class ReviewsService extends BaseService {
   constructor(config: ApiConfiguration, http: HttpClient) {
     super(config, http);
+  }
+
+  /** Path part for operation `garageReviewsControllerRead()` */
+  static readonly GarageReviewsControllerReadPath = '/api/v1/garages/{garageId}/reviews';
+
+  /**
+   * The garage’s published and reported reviews, 20 a page, with its rating, count and breakdown.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageReviewsControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageReviewsControllerRead$Response(params: GarageReviewsControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageStaffReviewsPageDto>> {
+    const obs = garageReviewsControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The garage’s published and reported reviews, 20 a page, with its rating, count and breakdown.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageReviewsControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageReviewsControllerRead(params: GarageReviewsControllerRead$Params, context?: HttpContext): Promise<GarageStaffReviewsPageDto> {
+    const resp = this.garageReviewsControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageStaffReviewsPageDto>): GarageStaffReviewsPageDto => r.body);
+  }
+
+  /** Path part for operation `reviewReportsControllerReport()` */
+  static readonly ReviewReportsControllerReportPath = '/api/v1/reviews/{reviewId}/reports';
+
+  /**
+   * Report one of the garage’s reviews to an admin, with a reason.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `reviewReportsControllerReport()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reviewReportsControllerReport$Response(params: ReviewReportsControllerReport$Params, context?: HttpContext): Promise<StrictHttpResponse<ReviewReportDto>> {
+    const obs = reviewReportsControllerReport(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Report one of the garage’s reviews to an admin, with a reason.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `reviewReportsControllerReport$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reviewReportsControllerReport(params: ReviewReportsControllerReport$Params, context?: HttpContext): Promise<ReviewReportDto> {
+    const resp = this.reviewReportsControllerReport$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ReviewReportDto>): ReviewReportDto => r.body);
   }
 
   /** Path part for operation `reviewsControllerEligibility()` */
@@ -197,39 +266,6 @@ export class ReviewsService extends BaseService {
   reviewsControllerPublish(params: ReviewsControllerPublish$Params, context?: HttpContext): Promise<ReviewDto> {
     const resp = this.reviewsControllerPublish$Response(params, context);
     return resp.then((r: StrictHttpResponse<ReviewDto>): ReviewDto => r.body);
-  }
-
-  /** Path part for operation `reviewReportsControllerReport()` */
-  static readonly ReviewReportsControllerReportPath = '/api/v1/reviews/{reviewId}/reports';
-
-  /**
-   * Report one of the garage’s reviews to an admin, with a reason.
-   *
-   *
-   *
-   * This method provides access to the full `HttpResponse`, allowing access to response headers.
-   * To access only the response body, use `reviewReportsControllerReport()` instead.
-   *
-   * This method sends `application/json` and handles request body of type `application/json`.
-   */
-  reviewReportsControllerReport$Response(params: ReviewReportsControllerReport$Params, context?: HttpContext): Promise<StrictHttpResponse<ReviewReportDto>> {
-    const obs = reviewReportsControllerReport(this.http, this.rootUrl, params, context);
-    return firstValueFrom(obs);
-  }
-
-  /**
-   * Report one of the garage’s reviews to an admin, with a reason.
-   *
-   *
-   *
-   * This method provides access only to the response body.
-   * To access the full response (for headers, for example), `reviewReportsControllerReport$Response()` instead.
-   *
-   * This method sends `application/json` and handles request body of type `application/json`.
-   */
-  reviewReportsControllerReport(params: ReviewReportsControllerReport$Params, context?: HttpContext): Promise<ReviewReportDto> {
-    const resp = this.reviewReportsControllerReport$Response(params, context);
-    return resp.then((r: StrictHttpResponse<ReviewReportDto>): ReviewReportDto => r.body);
   }
 
 }

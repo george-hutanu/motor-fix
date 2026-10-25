@@ -354,9 +354,12 @@ describe('telling a garage’s staff about a new request', () => {
     const { fanOut } = await start();
 
     await fanOut.handle(job);
+    const muted = await counted('muted');
     await fanOut.handle(job);
 
     expect(await channels(owner)).toEqual(['email', 'in_app']);
+    // The second run is no one's mute.
+    expect(await counted('muted')).toBe(muted);
   });
 
   it('builds the message from the event the relay queued, once when relayed twice', async () => {
