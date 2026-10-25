@@ -44,6 +44,7 @@ features:
   - 292-saved-garage-quote
   - 532-lost-session-home
   - 500-req-ip-behind-proxy
+  - 140-account-delete-export
   - 500-trust-railway-edge
   - 1370-release-seed-no-ssh
   - 1372-seed-restores-accounts
@@ -1080,9 +1081,9 @@ _From 129-delete-account._
 
 _From 129-delete-account._
 
-### 129-FR-004 — An account holding an owner membership of any garage MUST be refused with 409 `deletion_not_allowed`, whichever role is in use and whatever the garage's status; the checks run in the order 403 `forbidden` (FR-005), 409 `deletion_not_allowed`, 401 `reauth_required` (FR-003), 400 `validation_failed` (FR-002).
+### 140-FR-012 — ST-129's deletion use case MUST refuse with 409 `car_in_work` ("Ai o mașină în service. Poți șterge contul după ce o ridici.") when the account is the driver of a job whose status is `in_work` or `paused`, checked after 409 `deletion_not_allowed` (owner) and before 401 `reauth_required`, counted as outcome `refused_in_work`; otherwise the use case runs unchanged (129-FR-001–FR-013).
 
-_From 129-delete-account._
+_From 140-account-delete-export._
 
 ### 129-FR-005 — A session opened for an AI assistant MUST be refused with 403 `forbidden`.
 
@@ -1104,9 +1105,9 @@ _From 129-delete-account._
 
 _From 129-delete-account._
 
-### 129-FR-014 — Setări MUST show, for every signed-in role, a row "Șterge contul" in its account area that opens a dialog saying what is removed (details, sign-in methods, sessions, notification settings, plates) and what stays (reviews as "Șofer MotorFix", bookings history, legal records), with the confirmation field, a destructive confirm button disabled until the field is filled, and a cancel; for a garage owner the row's button is disabled with the owner message and links to the contact form and the support e-mail; while the request runs the confirm button is disabled (no second submit), and on a 500 or a lost connection the dialog stays open, keeps the typed text and shows an error message with a retry; after 204 the tab signs out and lands on Home with a toast "Contul tău a fost șters".
+### 140-FR-015 — The driver's Setări MUST end with a panel "Contul tău" / "Your account" that holds the export control of FR-009 and ST-129's "Șterge contul" row and dialog (129-FR-014, moved into the panel for the driver; other roles' Setări keep the row as it is), each action with one line on what it does; it works at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll, and passes the axe checks; a change of the export's state is announced to assistive technology (a polite live region) and every action is reachable and operable by keyboard with a visible focus.
 
-_From 129-delete-account._
+_From 140-account-delete-export._
 
 ### 129-FR-015 — The dialog MUST work at 320 px, 390 px, tablet and desktop, light and dark, in Romanian and English, with no sideways scroll, and MUST pass the axe checks; the row and the dialog's texts live in the i18n catalogue.
 
@@ -1176,6 +1177,58 @@ _From 500-trust-railway-edge._
 
 _From 532-lost-session-home._
 
+### 140-FR-001 — `POST /api/v1/me/data-export` MUST create one DATA_EXPORT for the signed-in driver's own account in state `queued`, record the audit entry of FR-011 in the same transaction, and queue the build; it MUST answer 403 `forbidden` to an assistant session, 429 `export_too_soon` (no row written) when the account has a DATA_EXPORT requested less than 24 hours ago whose state is not `failed`, and 409 `export_ready` (no row written) when the account has a `ready` export; two concurrent requests create one row (a unique constraint or a conditional write, the loser answering 429).
+
+_From 140-account-delete-export._
+
+### 140-FR-002 — `GET /api/v1/me/data-export` MUST return the account's latest DATA_EXPORT (state, requested time, ready time, expiry time) and `canRequestAt` (when the 24-hour rule next allows a request, null when it allows one now), or none, so Setări can show the panel's state; it never returns another account's export.
+
+_From 140-account-delete-export._
+
+### 140-FR-003 — The worker MUST build the ZIP for a `queued` export with at most 3 attempts (the queue's retry with back-off); on success it stores the file, sets `ready` with `ready_at` and `expires_at` = `ready_at` + 7 days, emits `data_export.ready` and queues the e-mail of FR-006; after the third failure it sets `failed` and logs the reason without personal values; an export whose account is `deleted` is set `expired` without a file; any other account status still builds it.
+
+_From 140-account-delete-export._
+
+### 140-FR-004 — The ZIP MUST hold exactly, in UTF-8 with times in ISO 8601: `account.json` (the account's details, roles, sign-in methods without secrets, language), `cars.json` (cars with plates, dates, reminders and driver-logged repairs), `requests-and-quotes.json` (the driver's requests and the quotes received), `bookings-and-jobs.json` (bookings, jobs and the job history as the driver sees it, repairs from MotorFix), `reviews.json` (the driver's reviews and the replies to them), `messages.json` (the driver's support messages, SupportMessage), `notifications-and-preferences.json` (notifications of the last 12 months and every notification preference and push subscription without its keys), `consents.json` (consents and the news consent), `audit.json` (audit entries whose subject or actor is the driver, as the driver's own history shows them; an entry whose subject is another account or a garage carries only the subject's type and the label the driver already sees, never its id), and `README.txt`, a readable summary in the driver's language naming each file and the request date. No other file; an area with no rows is written as `[]`, so every export holds the ten files.
+
+_From 140-account-delete-export._
+
+### 140-FR-005 — Every row in the export MUST belong to the signed-in driver (by owner, driver, author or account id); another person appears only as the product already shows them to this driver (a garage's name and city, a mechanic's first name on the driver's job, a reply's author label); no other account's e-mail, phone, plate or id is ever written. A two-driver test asserts it over every file.
+
+_From 140-account-delete-export._
+
+### 140-FR-007 — `GET /api/v1/me/data-export/download` MUST serve the signed-in driver's own `ready` export as a ZIP download (directly or by redirecting to a short-lived link to the stored file), MUST answer 404 `not_found` for no export, an `expired`, `failed` or `queued` one, and 403 `forbidden` to an assistant session, and 401 `sign_in_required` to no session; a store that fails answers 503 `storage_unavailable` and the export stays `ready`; the response carries `Cache-Control: no-store`; the stored file is never public.
+
+_From 140-account-delete-export._
+
+### 140-FR-008 — A scheduled worker sweep MUST, at least hourly, delete the stored file of every `ready` export past `expires_at` and set it `expired`, idempotently; on `account.deleted` the worker MUST do the same for that account's `queued` and `ready` exports at once.
+
+_From 140-account-delete-export._
+
+### 140-FR-009 — Setări › Contul tău MUST show "Descarcă datele mele" from FR-002's state: no export or `expired` → the button; `queued` → "Pregătim fișierul. Îți trimitem un e-mail când e gata."; `ready` → "Descarcă (ZIP)" with the expiry date in the driver's locale and no request button (this wins over the 24-hour line); `failed` → "Nu am putut pregăti fișierul. Încearcă din nou." with the button; any request younger than 24 hours that is not `failed` → the button disabled with "Poți cere un fișier nou o dată pe zi." (and the same text when the API answers 429); outside `ready`, the age rule wins over the state (an `expired` row younger than 24 hours shows the disabled button), and a `failed` row never counts; each text in Romanian and English in the i18n catalogue.
+
+_From 140-account-delete-export._
+
+### 140-FR-010 — DATA_EXPORT is stored with: id, account, `requested_at`, `status` ∈ `queued` / `ready` / `expired` / `failed`, `zip_key` (nullable), `ready_at`, `expires_at`, `attempts`; the export's module owns its Prisma schema and its migration.
+
+_From 140-account-delete-export._
+
+### 140-FR-013 — ST-129's web dialog MUST show the `car_in_work` refusal's text in place of the generic task error, in both languages.
+
+_From 140-account-delete-export._
+
+### 140-FR-014 — Tests MUST assert, through ST-129's use case and the existing handlers, the effects the story promises: after a driver's deletion sign-in by every method answers as for an unknown account, the reminder job sends nothing to the account, the driver's open request is closed and its waiting quotes `lost`, the future booking is cancelled by `system` with the garage and mechanic told, and a published 4-star review stays with author "Șofer MotorFix", no name and no account link, while the garage's and the mechanic's rating and review count are unchanged.
+
+_From 140-account-delete-export._
+
+### 140-FR-016 — The three endpoints, the export queue and the sweep MUST be listed in `infra/observability/inventory.json` with a counter of export outcomes (`requested`, `too_soon`, `already_ready`, `forbidden`, `ready`, `failed`, `expired`, `downloaded`), log lines without personal values, a panel, and an alert on `failed`; the deletion counter gains `refused_in_work`.
+
+_From 140-account-delete-export._
+
+### 140-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Valkey where rows are written: FR-001–FR-003 and FR-007–FR-008 (states, the 24-hour, `ready` and concurrent refusals, the three attempts, the 7-day expiry and file deletion, the clean-up on deletion, the assistant refusals, the download for the owner only), FR-004–FR-005 (every file present, no other file, the two-driver isolation over every file), FR-006 (one e-mail, none without an address), FR-011, FR-012 (refused with `in_work` and `paused`, allowed with `done`), FR-014; the web panel and dialog states in component specs (FR-009, FR-013, FR-015); and in Playwright: request the export and download the ZIP from the sandbox e-mail's link, delete a test driver and fail to sign in with it. Each test file names its FRs in a whole-line `// @traces` comment.
+
+_From 140-account-delete-export._
+### 500-FR-009 — The trusted hops MUST remain a list of address ranges, never a count of hops: a chain `<spoof>, <visitor>, <100.64.0.0/10 address>` from a unique-local socket MUST resolve its caller to `<visitor>`, and no public address MUST ever be trusted.
 ### 500-FR-017 — The function MUST never trust two public hops, a public hop that is not directly before a trusted private hop (so a public socket trusts nothing), any hop past the trusted public hop, or an entry that is not an address; a client-forged prefix before the real chain resolves to the visitor. It is never a hop count and reads no header other than X-Forwarded-For (X-Real-IP is not read; `req.ip` stays the one source). (Modifies 500-FR-009: one public hop is now trusted, by position, never by count.)
 
 _From 500-trust-railway-edge._
@@ -1326,6 +1379,8 @@ _From 1156-retention-job._
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
 - `291-FR-007` — superseded by `292-FR-001` (2026-10-23)
 - `082-FR-011` — superseded by `500-FR-005` (2026-10-24)
+- `129-FR-004` — superseded by `140-FR-012` (2026-10-24)
+- `129-FR-014` — superseded by `140-FR-015` (2026-10-24)
 - `082-FR-016` — superseded by `003-FR-008` (2026-10-24)
 - `129-FR-001` — superseded by `003-FR-012` (2026-10-24)
 - `500-FR-006` — superseded by `500-FR-008` (2026-10-24)

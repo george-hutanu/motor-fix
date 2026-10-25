@@ -1551,7 +1551,7 @@
             "description": "forbidden: an assistant session"
           },
           "409": {
-            "description": "deletion_not_allowed: the account owns a garage"
+            "description": "deletion_not_allowed: the account owns a garage; car_in_work: a car of the account is in work or paused at a garage"
           }
         },
         "security": [
@@ -1561,6 +1561,113 @@
         ],
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/me/data-export": {
+      "post": {
+        "operationId": "DataExportController_request",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExportDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: an assistant session"
+          },
+          "409": {
+            "description": "export_ready: a copy is ready"
+          },
+          "429": {
+            "description": "export_too_soon: a copy was asked for in the last 24 hours"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      },
+      "get": {
+        "operationId": "DataExportController_latest",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The newest copy, or null before any request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExportDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: an assistant session"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/data-export/download": {
+      "get": {
+        "operationId": "DataExportController_download",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The ready copy as a ZIP attachment",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: an assistant session"
+          },
+          "404": {
+            "description": "not_found: no copy is ready"
+          },
+          "503": {
+            "description": "storage_unavailable: the file store did not answer"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
         ]
       }
     },
@@ -10378,6 +10485,47 @@
         },
         "required": [
           "confirmation"
+        ]
+      },
+      "DataExportDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "ready",
+              "expired",
+              "failed"
+            ]
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readyAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canRequestAt": {
+            "type": "string",
+            "description": "When a new request is allowed; null when it is now",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "requestedAt",
+          "readyAt",
+          "expiresAt",
+          "canRequestAt"
         ]
       },
       "PhoneChangeDto": {

@@ -4940,6 +4940,113 @@
     },
     {
       "id": 168,
+      "type": "row",
+      "title": "Data exports",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 219
+      },
+      "panels": []
+    },
+    {
+      "id": 169,
+      "type": "stat",
+      "title": "Data exports, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 220
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_data_exports_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 170,
+      "type": "stat",
+      "title": "Data exports, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 220
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_data_exports_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 171,
+      "type": "timeseries",
+      "title": "Data exports per hour, by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 220
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_data_exports_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 172,
       "type": "stat",
       "title": "Retention rows, last hour",
       "datasource": {
@@ -4950,7 +5057,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 219
+        "y": 224
       },
       "targets": [
         {
@@ -4971,7 +5078,7 @@
       }
     },
     {
-      "id": 169,
+      "id": 173,
       "type": "stat",
       "title": "Retention rows, last 24 hours",
       "datasource": {
@@ -4982,7 +5089,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 219
+        "y": 224
       },
       "targets": [
         {
@@ -5003,7 +5110,7 @@
       }
     },
     {
-      "id": 170,
+      "id": 174,
       "type": "timeseries",
       "title": "Retention rows per hour, by kind",
       "datasource": {
@@ -5014,7 +5121,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 219
+        "y": 224
       },
       "targets": [
         {

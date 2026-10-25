@@ -104,6 +104,7 @@ const ZERO_WAIT = new Set([
   'web-error-rate',
   'mcp-tool-errors',
   'worker-jobs-failed',
+  'worker-data-export-failed',
   'verification-result-failed',
   'profile-views-job-failed',
   'profile-views-lost',
@@ -347,6 +348,15 @@ const EXPECTED: Record<
     ],
     for: '15m',
     from: 300,
+    type: 'gt',
+    value: 0,
+  },
+  'worker-data-export-failed': {
+    expr: [
+      'sum by (deployment_environment) (increase(motorfix_data_exports_total{service_name="worker", outcome="failed"}[15m]))',
+    ],
+    for: '0m',
+    from: 900,
     type: 'gt',
     value: 0,
   },
@@ -821,9 +831,10 @@ describe('alert rules', () => {
   // @traces 304-FR-012
   // @traces 1181-FR-009
   // @traces 1156-FR-011
+  // @traces 140-FR-016
   // @traces 142-FR-008
-  it('holds forty-nine rules in all, under the free tier cap', () => {
-    expect(rows(files)).toHaveLength(49);
+  it('holds fifty rules in all, the free tier cap', () => {
+    expect(rows(files)).toHaveLength(50);
   });
 
   // @traces 1345-FR-004

@@ -13,6 +13,7 @@ features:
   - 1352-catalogue-job-visibility
   - 129-delete-account
   - 469-activity-log-at-index
+  - 140-account-delete-export
   - 003-admin-account-actions
   - 1156-retention-job
 ---
@@ -231,6 +232,9 @@ _From 469-activity-log-at-index._
 
 _From 469-activity-log-at-index._
 
+### 140-FR-011 — The request's transaction MUST write one audit entry through the audit writer: action `create`, subject `account` = the driver, kind `data_export_requested`, with the time; it is kept under the audit retention rule.
+
+_From 140-account-delete-export._
 ### 003-FR-005 — Reading the page or its history MUST write no audit entry. Opening a garage owner's legal document from the page MUST write one audit entry through the shared writer (action `open`, subject the document, actor the admin, garage id set, no personal value), through the same recording the garage's own legal panel uses where one exists.
 
 _From 003-admin-account-actions._

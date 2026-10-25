@@ -12,6 +12,8 @@ import {
   CATALOGUE_JOB_DECIDED_CONSUMER,
   CATALOGUE_JOB_PENDING_CONSUMER,
   CarAccountDeletedModule,
+  DATA_EXPORT_CONSUMER,
+  DataExportModule,
   DataStoreMetricsModule,
   DECLINE_WINDOW_CONSUMER,
   DeclineWindowModule,
@@ -98,6 +100,7 @@ export function workerModule(
           BOOKING_LAPSED_CONSUMER,
           BOOKING_TIMERS_CONSUMER,
           CAR_ACCOUNT_DELETED_CONSUMER,
+          DATA_EXPORT_CONSUMER,
           CAR_REMINDERS_CONSUMER,
           CATALOGUE_JOB_DECIDED_CONSUMER,
           CATALOGUE_JOB_PENDING_CONSUMER,
@@ -130,6 +133,13 @@ export function workerModule(
       AccountClosedModule.registerWorker({
         notifications,
         redisUrl: env.REDIS_URL,
+      }),
+      // Builds a requested copy of a person's data, e-mails its link and
+      // expires the files.
+      DataExportModule.registerWorker({
+        notifications,
+        redisUrl: env.REDIS_URL,
+        webUrl: email.webUrl,
       }),
       // Clears a deleted account's plates.
       CarAccountDeletedModule.registerWorker({
