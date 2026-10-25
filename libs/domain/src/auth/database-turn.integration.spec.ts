@@ -61,6 +61,59 @@ it('a take still waiting when released closes its session and never holds the tu
   expect(await holders()).not.toContain(pid);
 }, 60_000);
 
+// The turn goes out in the order it was asked for: a take polled for it
+// instead could lose every round to newer spec files until its hook timed out,
+// which failed whole files of CI's integration run while the turn moved on.
+it('queues a waiting take in PostgreSQL, so the first to ask is the next to hold', async () => {
+  const waiting = async () => {
+    const { rows } = await watcher.query<{ pid: number }>(
+      `SELECT pid FROM pg_locks
+        WHERE locktype = 'advisory' AND objid = 79079 AND NOT granted`,
+    );
+    return rows.map((row) => row.pid);
+  };
+  const holder = databaseTurn(databaseUrl);
+  await holder.take();
+  const first = databaseTurn(databaseUrl);
+  const second = databaseTurn(databaseUrl);
+  try {
+    let firstTaken = false;
+    let secondTaken = false;
+    const takingFirst = first.take().then(() => {
+      firstTaken = true;
+    });
+    const queuedFirst = await until(
+      async () => (await waiting()).length === 1,
+      10_000,
+    );
+    const takingSecond = second.take().then(() => {
+      secondTaken = true;
+    });
+    const queuedSecond = await until(
+      async () => (await waiting()).length === 2,
+      10_000,
+    );
+    expect({ queuedFirst, queuedSecond }).toEqual({
+      queuedFirst: true,
+      queuedSecond: true,
+    });
+
+    await holder.release();
+    await takingFirst;
+    expect({ firstTaken, secondTaken }).toEqual({
+      firstTaken: true,
+      secondTaken: false,
+    });
+    await first.release();
+    await takingSecond;
+    expect(secondTaken).toBe(true);
+  } finally {
+    await holder.release();
+    await first.release();
+    await second.release();
+  }
+}, 60_000);
+
 // A turn held past its time is found in pg_stat_activity by the spec it
 // belongs to: CI's Database waits step prints each holder's name.
 it('names its spec file on the session that holds the turn', async () => {
