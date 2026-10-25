@@ -338,7 +338,7 @@
         "worker-queue-growing",
         "worker-jobs-failed"
       ],
-      "reason": "counted by motorfix_review_announced_total (built, muted, skipped) on motorfix-queues, with one ReviewPosted log line per event naming the review id; BullMQ's queue metrics cover depth and failures",
+      "reason": "counted by motorfix_review_announced_total (built, muted, skipped) on motorfix-product, with one ReviewPosted log line per event naming the review id; BullMQ's queue metrics cover depth and failures",
       "story": "ST-74"
     },
     {
