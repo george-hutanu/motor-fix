@@ -547,4 +547,34 @@ describe('the garage members read route', () => {
     expect(members?.alerts?.length).toBeGreaterThan(0);
     expect(members?.reason).toBeTruthy();
   });
+
+  // @traces 058-FR-020
+  it("lists the mechanic schedule routes under the API's existing alerts", () => {
+    const { entries } = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    ) as {
+      entries: {
+        alerts?: string[];
+        metric?: string;
+        name: string;
+        reason?: string;
+      }[];
+    };
+    const schedule = entries.filter((each) =>
+      /mechanics\/:mechanicId\/(hours|days-off)/.test(each.metric ?? ''),
+    );
+
+    expect(
+      schedule.map((each) => each.metric?.split(' ').at(-1)).sort(),
+    ).toEqual([
+      '/api/v1/garages/:garageId/mechanics/:mechanicId/days-off',
+      '/api/v1/garages/:garageId/mechanics/:mechanicId/days-off/:dayOffId',
+      '/api/v1/garages/:garageId/mechanics/:mechanicId/hours',
+      '/api/v1/garages/:garageId/mechanics/:mechanicId/hours',
+    ]);
+    for (const each of schedule) {
+      expect(each.alerts).toEqual(['api-error-rate', 'api-latency']);
+      expect(each.reason).toBeTruthy();
+    }
+  });
 });

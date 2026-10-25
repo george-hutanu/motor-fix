@@ -3,6 +3,7 @@ import type {
   ConfirmOptionsDto,
   GarageBookingDto,
 } from '@motor-fix/contracts';
+import { todayInBucharest } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import {
@@ -13,11 +14,14 @@ import {
 import { refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
+import { localDay } from '../../bucharest';
 import { EVENT_PORT, type EventPort, noEvents } from '../../events/event.port';
 import { slotInsideHours } from '../../garages/garage-hours';
+import { mechanicOwnAtWork } from '../../garages/mechanic-hours';
 import type {
   Booking,
   Garage,
+  Mechanic,
   Prisma,
   PrismaClient,
 } from '../../generated/prisma/client';
@@ -234,6 +238,9 @@ export class ConfirmService {
       booking.durationMinutes,
     );
     if (!inside) throw outsideHours(en);
+    if (mechanic && !(await this.atWork(tx, mechanic, booking))) {
+      throw mechanicUnavailable(en);
+    }
     await this.judgeOverlaps(tx, actor, booking, mechanic, dto.lift);
     const worker =
       mechanic ?? (await this.ownerMechanic(tx, actor, booking.garage));
@@ -241,7 +248,7 @@ export class ConfirmService {
     await this.openJob(tx, actor, booking, worker.id);
     await this.closeRest(tx, actor, booking);
     const read = await tx.booking.findUniqueOrThrow({
-      include: bookingMechanicInclude,
+      include: bookingMechanicInclude(todayInBucharest()),
       where: { id: bookingId },
     });
     return garageBookingOf(read);
@@ -263,6 +270,40 @@ export class ConfirmService {
         'lift is not taken: the garage schedules without lifts',
       );
     }
+  }
+
+  // Whether the named mechanic works over the booking by her own hours and
+  // days off; the garage's hours were judged first.
+  private async atWork(
+    tx: Tx,
+    mechanic: Mechanic,
+    booking: Booking & { garage: { hours: Prisma.JsonValue } },
+  ) {
+    // Waits out a day off being added, which holds this row: the read below
+    // then sees it, and the add sees this booking.
+    await tx.$queryRaw`SELECT id FROM mechanic WHERE id = ${mechanic.id}::uuid FOR SHARE`;
+    const day = new Date(`${localDay(booking.startsAt)}T00:00:00Z`);
+    const daysOff = await tx.mechanicDayOff.findMany({
+      select: { firstDay: true, lastDay: true },
+      where: {
+        firstDay: { lte: day },
+        lastDay: { gte: day },
+        mechanicId: mechanic.id,
+      },
+    });
+    return mechanicOwnAtWork(
+      {
+        daysOff: daysOff.map((d) => ({
+          firstDay: d.firstDay.toISOString().slice(0, 10),
+          lastDay: d.lastDay.toISOString().slice(0, 10),
+        })),
+        workingHours: mechanic.workingHours,
+        worksSaturdays: mechanic.worksSaturdays,
+      },
+      booking.garage.hours,
+      booking.startsAt,
+      booking.durationMinutes,
+    );
   }
 
   private async mechanicOf(

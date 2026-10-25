@@ -72,6 +72,12 @@ export const DEFAULT_HOURS: WeeklyHours = {
   wed: OPEN_DAY,
 };
 
+// A mechanic's week: one stretch a day at most, Saturday filled with
+// SATURDAY_DEFAULT when the switch turns on.
+export const SATURDAY_DEFAULT: Interval = ['09:00', '14:00'];
+export const DAY_OFF_NOTE_MAX = 120;
+export const DAY_OFF_DAYS_AHEAD = 365;
+
 const TIME = /^([01]\d|2[0-3]):(00|15|30|45)$/;
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -117,7 +123,21 @@ export function isWeeklyHours(value: unknown): value is WeeklyHours {
   );
 }
 
-const isDay = (value: unknown): value is string => {
+// A week read back from a jsonb column, keeping only the days stored as a
+// list of intervals: anything else reads as a day with no hours.
+export function storedWeek(
+  value: unknown,
+): Partial<Record<Weekday, Interval[]>> {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    WEEKDAYS.flatMap((day) => {
+      const list = value[day];
+      return Array.isArray(list) && list.every(isInterval) ? [[day, list]] : [];
+    }),
+  );
+}
+
+export const isDay = (value: unknown): value is string => {
   if (typeof value !== 'string') return false;
   const match = DAY.exec(value);
   if (!match) return false;
@@ -258,3 +278,23 @@ const BUCHAREST_DAY = new Intl.DateTimeFormat('en-CA', {
 
 export const todayInBucharest = (at: Date = new Date()): string =>
   BUCHAREST_DAY.format(at);
+
+// A day's intervals as one stretch: the first opening to the last closing.
+export const stretchOf = (intervals: readonly Interval[]): Interval | null =>
+  intervals.length === 0
+    ? null
+    : [
+        intervals.reduce((a, [from]) => (from < a ? from : a), intervals[0][0]),
+        intervals.reduce((a, [, to]) => (to > a ? to : a), intervals[0][1]),
+      ];
+
+// The part of a stretch inside a bound, or none when they do not overlap.
+export function clipStretch(
+  stretch: Interval | null,
+  bound: Interval | null,
+): Interval | null {
+  if (!stretch || !bound) return null;
+  const from = stretch[0] > bound[0] ? stretch[0] : bound[0];
+  const to = stretch[1] < bound[1] ? stretch[1] : bound[1];
+  return from < to ? [from, to] : null;
+}

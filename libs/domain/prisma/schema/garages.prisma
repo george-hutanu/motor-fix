@@ -227,7 +227,10 @@ model Mechanic {
   brandIds            String[]  @default([]) @map("brand_ids") @db.Uuid
   // The garage owner's own row: never removed, created with the garage.
   isOwner             Boolean   @default(false) @map("is_owner")
+  // One stretch a weekday at most; null keeps the garage's weekdays.
   workingHours        Json?     @map("working_hours")
+  // Whether the Saturday stretch counts.
+  worksSaturdays      Boolean   @default(false) @map("works_saturdays")
   onProfile           Boolean   @default(false) @map("on_profile")
   canMoveBookings     Boolean   @default(false) @map("can_move_bookings")
   canAnswerQuotes     Boolean   @default(false) @map("can_answer_quotes")
@@ -244,9 +247,28 @@ model Mechanic {
   bookings            Booking[]
   jobs                Job[]
   reviews             Review[]
+  daysOff             MechanicDayOff[]
 
   @@index([garageId])
   @@map("mechanic")
+}
+
+// A day or a range a mechanic is off, as the owner entered it; no two of one
+// mechanic overlap (a service rule under the mechanic row's lock). Past rows
+// stay for the history.
+model MechanicDayOff {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mechanicId String   @map("mechanic_id") @db.Uuid
+  firstDay   DateTime @map("first_day") @db.Date
+  lastDay    DateTime @map("last_day") @db.Date
+  note       String?
+  // The account that added it; no foreign key, so the row outlives it.
+  createdBy  String   @map("created_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  mechanic   Mechanic @relation(fields: [mechanicId], references: [id], onDelete: Cascade)
+
+  @@index([mechanicId, lastDay])
+  @@map("mechanic_day_off")
 }
 
 // A switch the garage turns off for itself (`whatsapp`); a missing row is on.
