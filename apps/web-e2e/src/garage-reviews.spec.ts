@@ -174,9 +174,13 @@ test.describe('a reviewed garage’s profile @seeded', () => {
       reviewId,
       changed,
     ]);
+    // Redis hands a message only to the streams open as it goes out; one
+    // that re-opened in between learns of the change from its resync, after
+    // a backoff that can outlast one wait. So the edit is announced again
+    // until the page shows it, as a second edit would be.
     const redis = new Redis(process.env['REDIS_URL'] as string);
-    try {
-      await redis.publish(
+    const announce = () =>
+      redis.publish(
         'live:events',
         JSON.stringify({
           audience: [`public:garage:${garageId}`],
@@ -187,11 +191,16 @@ test.describe('a reviewed garage’s profile @seeded', () => {
           },
         }),
       );
+    try {
+      await expect(async () => {
+        await announce();
+        await expect(reviews.getByText(changed)).toBeVisible({
+          timeout: 3_000,
+        });
+      }).toPass({ intervals: [0], timeout: 15_000 });
     } finally {
       redis.disconnect();
     }
-
-    await expect(reviews.getByText(changed)).toBeVisible({ timeout: 5_000 });
     expect(reloads).toBe(0);
   });
 });
