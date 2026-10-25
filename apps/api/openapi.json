@@ -17584,17 +17584,10 @@
               "receptionist"
             ]
           },
-          "name": {
-            "type": "string"
-          },
           "email": {
             "type": "string"
           },
           "sentAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "expiresAt": {
             "type": "string",
             "format": "date-time"
           }
@@ -17602,10 +17595,8 @@
         "required": [
           "id",
           "kind",
-          "name",
           "email",
-          "sentAt",
-          "expiresAt"
+          "sentAt"
         ]
       },
       "GarageMembersDto": {

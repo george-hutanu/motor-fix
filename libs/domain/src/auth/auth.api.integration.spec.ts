@@ -1,4 +1,5 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import {
   Controller,
   type DynamicModule,
@@ -15,7 +16,6 @@ import { signAccessToken } from './access-token';
 import { AccountsService } from './accounts.service';
 import { CurrentActor, Requires } from './actor.guard';
 import { AuthModule } from './auth.module';
-import type { Role } from './capabilities';
 import { type Actor, assertOwner } from './policy';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';

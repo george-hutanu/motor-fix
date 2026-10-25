@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -8,7 +9,6 @@ import request from 'supertest';
 import { signAccessToken } from './access-token';
 import { AccountsService } from './accounts.service';
 import { AuthModule } from './auth.module';
-import type { Role } from './capabilities';
 import { createPrisma } from './prisma';
 import { serialDatabase } from './serial-db.testing';
 import { AuditService } from '../audit/audit.service';

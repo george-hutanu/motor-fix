@@ -46,7 +46,7 @@ export class GarageMembersService {
         since: m.joinedAt.toISOString(),
       })),
       ...mechanics
-        .filter((card) => card.accountId && !listed.has(card.accountId))
+        .filter((card) => !listed.has(card.accountId as string))
         .map((card) => ({
           accountId: card.accountId as string,
           name: card.name,
@@ -65,10 +65,8 @@ export class GarageMembersService {
     return {
       invites: invites.map((invite) => ({
         email: invite.email,
-        expiresAt: invite.expiresAt.toISOString(),
         id: invite.id,
         kind: invite.kind,
-        name: invite.name,
         sentAt: invite.createdAt.toISOString(),
       })),
       members,

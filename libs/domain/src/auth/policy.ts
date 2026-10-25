@@ -1,12 +1,11 @@
-import { HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
-
 import {
   CAPABILITIES,
   type Capability,
   capabilitiesOf,
   type Permissions,
   type Role,
-} from './capabilities';
+} from '@motor-fix/contracts/capabilities';
+import { HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 
 export interface Actor {
   accountId: string;
@@ -80,21 +79,4 @@ export function assertOwner(actor: Actor, ownerAccountId: string) {
 
 export function assertGarage(actor: Actor, garageId: string) {
   if (!actor.garageId || actor.garageId !== garageId) throw notFound();
-}
-
-interface Customer {
-  firstName: string;
-  car: string;
-  phone: string;
-  plate: string;
-}
-
-export function describeCustomer(
-  actor: Actor,
-  customer: Customer,
-  { ownJob }: { ownJob: boolean },
-): Partial<Customer> {
-  if (actor.role !== 'mechanic') return { ...customer };
-  const { car, firstName, plate } = customer;
-  return ownJob ? { car, firstName, plate } : { car, firstName };
 }

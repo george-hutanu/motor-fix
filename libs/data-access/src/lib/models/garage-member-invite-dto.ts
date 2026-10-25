@@ -3,9 +3,7 @@
 
 export interface GarageMemberInviteDto {
   email: string;
-  expiresAt: string;
   id: string;
   kind: 'mechanic' | 'receptionist';
-  name: string;
   sentAt: string;
 }

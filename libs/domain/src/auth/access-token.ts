@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-import { ROLES, type Role } from './capabilities';
+import { ROLES, type Role } from '@motor-fix/contracts/capabilities';
 
 interface AccessClaims {
   accountId: string;

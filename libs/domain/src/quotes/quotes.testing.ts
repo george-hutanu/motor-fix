@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Permissions, Role } from '@motor-fix/contracts/capabilities';
 
 import {
   BOOKING_CONFIRM_LAPSE_HOURS,
@@ -9,7 +10,6 @@ import {
 } from './quotes-config';
 import { AuditService } from '../audit/audit.service';
 import { AccountsService } from '../auth/accounts.service';
-import type { Permissions, Role } from '../auth/capabilities';
 import type { Actor } from '../auth/policy';
 import { createPrisma } from '../auth/prisma';
 import { noEvents } from '../events/event.port';

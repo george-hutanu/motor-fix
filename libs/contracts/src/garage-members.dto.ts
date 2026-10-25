@@ -35,18 +35,12 @@ export class GarageMemberInviteDto {
   @ApiProperty({ enum: INVITE_KINDS })
   kind!: (typeof INVITE_KINDS)[number];
 
-  @ApiProperty()
-  name!: string;
-
   // The address the owner typed.
   @ApiProperty()
   email!: string;
 
   @ApiProperty({ format: 'date-time' })
   sentAt!: string;
-
-  @ApiProperty({ format: 'date-time' })
-  expiresAt!: string;
 }
 
 // Who has access to the garage: its members, owner first, then the open invites.

@@ -4,7 +4,6 @@ import {
   type Actor,
   assertGarage,
   assertOwner,
-  describeCustomer,
   landingFor,
   requireCapability,
   roleInUse,
@@ -26,13 +25,6 @@ function actor(overrides: Partial<Actor>): Actor {
     ...overrides,
   };
 }
-
-const customer = {
-  car: 'BMW 320d',
-  firstName: 'Andrei',
-  phone: '+40722000111',
-  plate: 'B 123 ABC',
-};
 
 describe('role in use', () => {
   it('is the role the token carries when the account still holds it', () => {
@@ -187,41 +179,4 @@ describe('ownership', () => {
     expect(() => assertGarage(owner, 'g2')).toThrow(NotFoundException);
     expect(() => assertGarage(actor({}), 'g1')).toThrow(NotFoundException);
   });
-});
-
-describe('describeCustomer', () => {
-  const mechanic = actor({
-    garageId: 'g1',
-    role: 'mechanic',
-    roles: ['mechanic'],
-  });
-
-  it('gives a mechanic the first name and the car, never the phone', () => {
-    const seen = describeCustomer(mechanic, customer, { ownJob: false });
-
-    expect(seen).toEqual({ car: 'BMW 320d', firstName: 'Andrei' });
-    expect(seen).not.toHaveProperty('phone');
-  });
-
-  it('adds the plate for a mechanic on their own job, still without the phone', () => {
-    const seen = describeCustomer(mechanic, customer, { ownJob: true });
-
-    expect(seen).toEqual({
-      car: 'BMW 320d',
-      firstName: 'Andrei',
-      plate: 'B 123 ABC',
-    });
-    expect(seen).not.toHaveProperty('phone');
-  });
-
-  it.each(['receptionist', 'garage'] as const)(
-    'gives a %s the phone and the plate',
-    (role) => {
-      const staff = actor({ garageId: 'g1', role, roles: [role] });
-
-      expect(describeCustomer(staff, customer, { ownJob: false })).toEqual(
-        customer,
-      );
-    },
-  );
 });

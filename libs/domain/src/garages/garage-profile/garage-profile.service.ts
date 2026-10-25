@@ -1,7 +1,7 @@
 import type { GarageProfileDto } from '@motor-fix/contracts';
+import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import { capabilitiesOf } from '../../auth/capabilities';
 import { refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';

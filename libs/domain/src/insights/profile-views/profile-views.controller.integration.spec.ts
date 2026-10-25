@@ -1,3 +1,4 @@
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { type INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
@@ -6,7 +7,6 @@ import request from 'supertest';
 import { ProfileViewsModule } from './profile-views.module';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { redisUrlFor } from '../../notifications/notifications.testing';
 import { databaseUrl, quotesWorld } from '../../quotes/quotes.testing';

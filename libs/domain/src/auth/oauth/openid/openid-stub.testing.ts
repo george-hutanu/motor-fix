@@ -8,6 +8,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import { CURRENT_CONSENT, type OAuthProvider } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -18,7 +19,6 @@ import { AuditService } from '../../../audit/audit.service';
 import { noEvents } from '../../../events/event.port';
 import { AccountsService } from '../../accounts.service';
 import { AuthModule } from '../../auth.module';
-import type { Role } from '../../capabilities';
 import { MAINTENANCE } from '../../maintenance';
 import { createPrisma } from '../../prisma';
 import { serialDatabase } from '../../serial-db.testing';

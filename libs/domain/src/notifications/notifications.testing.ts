@@ -1,10 +1,10 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 
 import { emailConfig } from './email-config';
 import { phoneConfig } from './phone-config';
 import { AuditService } from '../audit/audit.service';
 import { AccountsService } from '../auth/accounts.service';
-import type { Role } from '../auth/capabilities';
 import { createPrisma } from '../auth/prisma';
 import { noEvents } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';

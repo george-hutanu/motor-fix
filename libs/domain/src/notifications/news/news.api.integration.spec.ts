@@ -1,4 +1,5 @@
 import { NEWS_CONSENT_TEXT_VERSION } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { type Job, Queue } from 'bullmq';
@@ -16,7 +17,6 @@ import { NewsService } from './news.service';
 import { AuditService } from '../../audit/audit.service';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { OutboxRelay } from '../../events/outbox-relay/outbox-relay';
 import { NotificationsModule } from '../notifications.module';

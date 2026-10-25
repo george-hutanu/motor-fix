@@ -1,9 +1,9 @@
 import { EventEmitter } from 'node:events';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { Logger } from '@nestjs/common';
 
 import { LiveHub } from './live.hub';
-import type { Role } from '../../auth/capabilities';
 import type { LiveSubject } from '../audience';
 import { audienceOf } from '../audience';
 import type { GarageAccess } from '../garage-access';

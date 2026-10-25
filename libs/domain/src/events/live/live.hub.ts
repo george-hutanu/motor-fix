@@ -1,16 +1,16 @@
 import { randomUUID } from 'node:crypto';
 
 import type { LiveByeReason, LiveMessage } from '@motor-fix/contracts';
-import { Logger } from '@nestjs/common';
-
-import { countReplay, countStreamClose } from './live.metrics';
-import { type LoadReplay, REPLAY_LIMIT, type ReplayRow } from './live.replay';
 import {
   type Capability,
   capabilitiesOf,
   type Permissions,
   type Role,
-} from '../../auth/capabilities';
+} from '@motor-fix/contracts/capabilities';
+import { Logger } from '@nestjs/common';
+
+import { countReplay, countStreamClose } from './live.metrics';
+import { type LoadReplay, REPLAY_LIMIT, type ReplayRow } from './live.replay';
 import type { GarageAccess, LoadGarageAccess } from '../garage-access';
 
 export const LIVE_CHANNEL = 'live:events';

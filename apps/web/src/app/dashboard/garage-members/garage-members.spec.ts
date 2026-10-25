@@ -35,10 +35,8 @@ const invite = (
   over: Partial<GarageMemberInviteDto> = {},
 ): GarageMemberInviteDto => ({
   email: 'andrei@example.test',
-  expiresAt: new Date(Date.now() + 7 * DAY).toISOString(),
   id: 'invite-1',
   kind: 'mechanic',
-  name: 'Andrei Pop',
   sentAt: new Date().toISOString(),
   ...over,
 });
