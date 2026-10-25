@@ -263,6 +263,8 @@ export type { ConfirmControllerConfirm$Params as ConfirmControllerConfirm$Params
 export { confirmControllerConfirm as confirmControllerConfirm } from './fn/bookings/confirm-controller-confirm';
 export type { GarageReviewsControllerRead$Params as GarageReviewsControllerRead$Params } from './fn/reviews/garage-reviews-controller-read';
 export { garageReviewsControllerRead as garageReviewsControllerRead } from './fn/reviews/garage-reviews-controller-read';
+export type { ReviewReportsControllerReport$Params as ReviewReportsControllerReport$Params } from './fn/reviews/review-reports-controller-report';
+export { reviewReportsControllerReport as reviewReportsControllerReport } from './fn/reviews/review-reports-controller-report';
 export type { ReviewsControllerEligibility$Params as ReviewsControllerEligibility$Params } from './fn/reviews/reviews-controller-eligibility';
 export { reviewsControllerEligibility as reviewsControllerEligibility } from './fn/reviews/reviews-controller-eligibility';
 export type { ReviewsControllerForMechanic$Params as ReviewsControllerForMechanic$Params } from './fn/reviews/reviews-controller-for-mechanic';
