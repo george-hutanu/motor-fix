@@ -103,14 +103,18 @@ export function liveView<T>(
       again = true;
       return running;
     }
+    // Cleared in the same turn the loop ends: a read asked for after that
+    // starts its own instead of joining one that will not run again.
     running = (async () => {
-      do {
-        again = false;
-        await readOnce();
-      } while (again && !destroyRef.destroyed);
-    })().finally(() => {
-      running = undefined;
-    });
+      try {
+        do {
+          again = false;
+          await readOnce();
+        } while (again && !destroyRef.destroyed);
+      } finally {
+        running = undefined;
+      }
+    })();
     return running;
   };
 
