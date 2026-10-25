@@ -1,6 +1,6 @@
 import { type BrowserContext, expect, type Page } from '@playwright/test';
 
-import { ACCOUNTS, ready, settled, signIn } from './accounts.js';
+import { ACCOUNTS, openSignIn, ready, settled, signIn } from './accounts.js';
 import { needsAnalytics, test } from './fixtures.js';
 import { clearConsentCounts } from './global-setup.js';
 
@@ -379,4 +379,70 @@ test.describe('the account carries the choice @seeded', () => {
     ).toBeHidden();
     await other.close();
   });
+});
+
+// @traces 1204-terms-reaccept-FR-013
+// The account's own choice is answered as none and its new one is not kept,
+// so the bar shows on a seeded account whatever another flow recorded there.
+test.describe('the consent bar on a 320 px dashboard @seeded', () => {
+  const routes = [
+    { email: ACCOUNTS.garage, path: '/app/garage/requests' },
+    { email: ACCOUNTS.driver, path: '/app/driver' },
+  ];
+  for (const { email, path } of routes) {
+    for (const name of [TEXT.ro.accept, TEXT.ro.refuse]) {
+      test(`shows both buttons above the tab bar on ${path}, answered with ${name}`, async ({
+        page,
+      }) => {
+        await analyticsCalls(page);
+        await page.route('**/api/v1/me/consents', async (route) => {
+          if (route.request().method() !== 'GET')
+            return route.fulfill({ body: '{}', status: 201 });
+          const response = await route.fetch();
+          const json = await response.json();
+          return route.fulfill({
+            json: { ...json, analytics: null },
+            response,
+          });
+        });
+        await page.setViewportSize({ height: 640, width: 320 });
+        await ready(page, '/ro');
+        await openSignIn(page);
+        await signIn(page, email);
+        await expect(page).toHaveURL(/\/app\//);
+        await page.goto(path);
+        const region = bar(page, 'ro');
+        await expect(region).toBeVisible();
+
+        const tabs = page.locator('mf-dashboard-tab-bar');
+        const top = (await tabs.boundingBox())?.y ?? 0;
+        for (const label of [TEXT.ro.accept, TEXT.ro.refuse]) {
+          const box = await region
+            .getByRole('button', { exact: true, name: label })
+            .boundingBox();
+          expect(box?.height).toBeGreaterThanOrEqual(44);
+          expect(box?.width).toBeGreaterThanOrEqual(44);
+          expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(
+            top + 1,
+          );
+        }
+        expect(await noSideScroll(page)).toBe(true);
+
+        // The skip link is the page's first stop; the bar comes next.
+        await page.keyboard.press('Tab');
+        await expect(page.locator('mf-skip-link a')).toBeFocused();
+        await page.keyboard.press('Tab');
+        expect(
+          await page.evaluate(
+            () => !!document.activeElement?.closest('mf-consent-bar'),
+          ),
+        ).toBe(true);
+
+        await region.getByRole('button', { exact: true, name }).click();
+        await expect(region).toBeHidden();
+        const after = await tabs.boundingBox();
+        expect((after?.y ?? 0) + (after?.height ?? 0)).toBeCloseTo(640, 0);
+      });
+    }
+  }
 });

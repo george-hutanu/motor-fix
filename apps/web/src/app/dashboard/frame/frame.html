@@ -1,3 +1,4 @@
+<mf-consent-bar />
 <aside>
   <a class="logo" routerLink="/" [attr.aria-label]="'shell.frame.home' | t">{{ 'shell.frame.logo' | t }}</a>
   <span class="eyebrow">{{ dashboard().tag | t }}</span>
@@ -83,7 +84,6 @@
     @if (lastTest(); as at) { {{ 'shell.live.test' | t }} · {{ at | clock }} }
   </p>
   <main id="main"><router-outlet /></main>
-  <mf-consent-bar />
   <mf-dashboard-tab-bar [base]="base()" [views]="menu()" [name]="dashboard().name" [counts]="counts()" [countsLoading]="countsLoading()" (act)="act($event)" />
 </div>
 <hlm-toaster />

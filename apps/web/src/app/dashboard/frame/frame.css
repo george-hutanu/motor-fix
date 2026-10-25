@@ -221,6 +221,13 @@ main {
   .view {
     display: contents;
   }
+  /* First in the frame for the keyboard, drawn last: on the tab bar. */
+  mf-consent-bar {
+    order: 1;
+  }
+  mf-dashboard-tab-bar {
+    order: 2;
+  }
 }
 .chip-skeleton {
   width: 20px;
@@ -245,6 +252,19 @@ main {
 @media (min-width: 768px) {
   :host {
     grid-template: 1fr / minmax(0, 16rem) minmax(0, 1fr);
+  }
+  aside {
+    grid-area: 1 / 1;
+  }
+  /* The bar shares the view's cell, at its foot, so it sticks to the bottom
+     of the window as it did inside the view; the view keeps its height free. */
+  .view {
+    grid-area: 1 / 2;
+    padding-bottom: var(--consent-bar, 0px);
+  }
+  mf-consent-bar {
+    grid-area: 1 / 2;
+    align-self: end;
   }
   aside nav {
     display: flex;

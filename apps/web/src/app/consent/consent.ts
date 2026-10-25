@@ -115,12 +115,15 @@ function write(choice: StoredChoice | null) {
   }
 }
 
-// A record worth sending again: no answer, an outage or the address limit.
+// A record worth sending again: no answer, an outage, the address limit, or
+// the account still to accept the texts in force.
 const retryable = (error: unknown) =>
   !(error instanceof HttpErrorResponse) ||
   error.status === 0 ||
   error.status === 429 ||
-  error.status >= 500;
+  error.status >= 500 ||
+  (error.status === 403 &&
+    (error.error as { code?: unknown } | null)?.code === 'consent_required');
 
 const body = (choice: StoredChoice): RecordConsentDto => ({
   at: choice.at,
@@ -151,6 +154,8 @@ export class Consent {
   private readonly ready = signal(false);
   // The account whose choice was last reconciled.
   private reconciled: string | null = null;
+  // The account that last signed out here: a choice made since is its own.
+  private signedOut: string | null = null;
 
   readonly granted = computed(() => {
     const choice = this.choice();
@@ -179,9 +184,11 @@ export class Consent {
     effect(() => {
       const account = this.session.current();
       if (!account) {
+        this.signedOut = this.reconciled ?? this.signedOut;
         this.reconciled = null;
         return;
       }
+      this.signedOut = null;
       if (account.id === this.reconciled) return;
       this.reconciled = account.id;
       untracked(() => void this.reconcile(account.id));
@@ -203,7 +210,7 @@ export class Consent {
   }
 
   private async choose(decision: Decision) {
-    const account = this.session.current()?.id ?? null;
+    const account = this.session.current()?.id ?? this.signedOut;
     const choice: StoredChoice = {
       accountId: account,
       at: new Date().toISOString(),
@@ -254,12 +261,14 @@ export class Consent {
     write(choice);
   }
 
-  // One try; a refusal other than the limit drops the record.
+  // One try; a refusal other than the limit drops the record. A choice bound
+  // to an account goes only on that account, once it is signed in again.
   private async send(choice: StoredChoice) {
     try {
-      if (choice.accountId && this.session.current()?.id === choice.accountId)
+      if (choice.accountId) {
+        if (this.session.current()?.id !== choice.accountId) return;
         await this.api.consentsControllerRecordMine({ body: body(choice) });
-      else await this.api.consentsControllerRecord({ body: body(choice) });
+      } else await this.api.consentsControllerRecord({ body: body(choice) });
       this.settle(choice, false);
     } catch (error) {
       this.settle(choice, retryable(error));
