@@ -1,0 +1,33 @@
+<div class="top">
+  @if (about(); as line) {
+    <span class="about" data-about>{{ line }}</span>
+  } @else {
+    <span class="about off" data-about>{{ 'garage.reviews.notViaMotorfix' | t }}</span>
+  }
+  <span class="score" data-score>{{ score() }}</span>
+</div>
+@if (fresh() || edited() || review().status === 'reported') {
+  <p class="tags">
+    @if (fresh()) {
+      <span class="tag new" data-new>{{ 'garage.reviews.new' | t }}</span>
+    }
+    @if (edited(); as mark) {
+      <span class="tag" data-edited>{{ mark }}</span>
+    }
+    @if (review().status === 'reported') {
+      <span class="tag reported" data-reported>{{ 'garage.reviews.reported' | t }}</span>
+    }
+  </p>
+}
+@if (review().text; as said) {
+  <p class="text" data-text>{{ said }}</p>
+}
+<p class="by">
+  <span data-author>{{ author() }}</span>
+  <span aria-hidden="true">·</span>
+  <span data-time>{{ time() }}</span>
+  @if (review().mechanic; as mechanic) {
+    <span aria-hidden="true">·</span>
+    <span data-mechanic>{{ mechanic.shortName }}</span>
+  }
+</p>

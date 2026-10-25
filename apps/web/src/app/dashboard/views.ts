@@ -274,7 +274,13 @@ export const DASHBOARDS: Record<
         load: () =>
           import('./prices-view/prices-view').then((m) => m.PricesView),
       },
-      garageView('reviews', 'garage.reviews'),
+      {
+        ...garageView('reviews', 'garage.reviews'),
+        load: () =>
+          import(
+            './garage-reviews/garage-reviews-panel/garage-reviews-panel'
+          ).then((m) => m.GarageReviewsPanel),
+      },
       {
         ...garageView('profile', 'garage.profile'),
         load: () =>
