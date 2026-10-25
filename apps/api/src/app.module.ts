@@ -11,6 +11,7 @@ import {
   assistantBroker,
   CarsModule,
   CatalogueModule,
+  DataExportModule,
   DemandModule,
   EmailConfirmationModule,
   EventsModule,
@@ -101,6 +102,7 @@ export class AppModule {
           notifications,
         ),
         PasswordResetModule.register({ webUrl: email.webUrl }, notifications),
+        DataExportModule.register(),
         PhoneSignInModule.register({
           brevo: { apiKey: email.apiKey ?? '', apiUrl: email.apiUrl },
           phone: phoneConfig(env.APP_ENV, process.env),

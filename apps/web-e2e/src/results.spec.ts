@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ACCOUNTS, openSignIn, ownMap, ready, signIn } from './accounts.js';
+import { answerConsent } from './consent-bar.js';
 import { test } from './fixtures.js';
 
 // A brand and three garages of this file's own, written straight to
@@ -393,6 +394,12 @@ test.describe('the map beside the results @seeded', () => {
   test.beforeAll(async () => {
     db = new Client({ connectionString: process.env['DATABASE_URL'] });
     await db.connect();
+    // The pins of a search near here are every garage standing here, whatever
+    // its brand: a second copy of this block (another worker, a repeated run)
+    // seeding its own four at the same spot doubles them. One copy at a time:
+    // the lock is held until afterAll closes this connection.
+    test.setTimeout(600_000);
+    await db.query("SELECT pg_advisory_lock(hashtext('e2e results map'))");
     const made = await db.query<{ id: string }>(
       `INSERT INTO brand (id, key, name, slug, updated_at)
        VALUES (gen_random_uuid(), $1, $2, $1, now()) RETURNING id`,
@@ -629,6 +636,8 @@ test.describe('the map beside the results @seeded', () => {
     await ownMap(page);
     await page.setViewportSize({ height: 812, width: 375 });
     await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    // The drags land on the handle, not on the consent bar over it.
+    await answerConsent(page);
     const map = page.getByRole('region', { name: 'Harta service‑urilor' });
     const first = page.locator('mf-result-card').first();
 
@@ -768,34 +777,41 @@ test.describe('the map beside the results @seeded', () => {
 
   // Whole above the sheet and left of the zoom buttons, or hidden with them
   // while the sheet covers the map's top on a stage too short to clear it.
+  // The sheet learns the stage's height from a ResizeObserver, a frame or
+  // more after the consent bar shows: the screen is measured once it has
+  // settled on one of its two allowed states, never half-way.
   async function legendClear(page: Page, where: string, short: boolean) {
-    const { edge, legend, legendHidden, map, zoom } = await boxes(page);
-    if (legendHidden) {
-      expect(short, where).toBe(true);
-      await expect(sheet(page)).toHaveClass(/over-zoom/);
-      return;
-    }
-    expect(legend && edge && legend.bottom <= edge.top, where).toBe(true);
-    expect(legend && map && legend.top >= map.top, where).toBe(true);
-    expect(legend && map && legend.left >= map.left, where).toBe(true);
-    expect(legend && zoom && legend.right <= zoom.left, where).toBe(true);
+    await expect(async () => {
+      const { edge, legend, legendHidden, map, zoom } = await boxes(page);
+      if (legendHidden) {
+        expect(short, where).toBe(true);
+        await expect(sheet(page)).toHaveClass(/over-zoom/, { timeout: 0 });
+        return;
+      }
+      expect(legend && edge && legend.bottom <= edge.top, where).toBe(true);
+      expect(legend && map && legend.top >= map.top, where).toBe(true);
+      expect(legend && map && legend.left >= map.left, where).toBe(true);
+      expect(legend && zoom && legend.right <= zoom.left, where).toBe(true);
+    }).toPass({ timeout: 5_000 });
   }
 
   // Both buttons whole above the sheet and tap-sized, or both hidden: only a
   // stage too short to clear them (320 x 568 with the consent bar) hides them.
   async function zoomWhole(page: Page, where: string, short: boolean) {
-    const { buttons, edge, zoomHidden } = await boxes(page);
-    expect(buttons, where).toHaveLength(2);
-    if (zoomHidden) {
-      expect(short, where).toBe(true);
-      await expect(sheet(page)).toHaveClass(/over-zoom/);
-      return;
-    }
-    for (const button of buttons) {
-      expect(button && edge && button.bottom <= edge.top, where).toBe(true);
-      expect(button?.width ?? 0, where).toBeGreaterThanOrEqual(44);
-      expect(button?.height ?? 0, where).toBeGreaterThanOrEqual(44);
-    }
+    await expect(async () => {
+      const { buttons, edge, zoomHidden } = await boxes(page);
+      expect(buttons, where).toHaveLength(2);
+      if (zoomHidden) {
+        expect(short, where).toBe(true);
+        await expect(sheet(page)).toHaveClass(/over-zoom/, { timeout: 0 });
+        return;
+      }
+      for (const button of buttons) {
+        expect(button && edge && button.bottom <= edge.top, where).toBe(true);
+        expect(button?.width ?? 0, where).toBeGreaterThanOrEqual(44);
+        expect(button?.height ?? 0, where).toBeGreaterThanOrEqual(44);
+      }
+    }).toPass({ timeout: 5_000 });
   }
 
   async function footerBelow(page: Page, where: string) {
@@ -828,6 +844,8 @@ test.describe('the map beside the results @seeded', () => {
   test('shows the whole legend, mobile mechanic included, above the sheet and clear of the zoom buttons at 320 px and 390 px', async ({
     page,
   }) => {
+    // Five pages, each loaded and measured at two rests: about 32 s on CI.
+    test.slow();
     await ownMap(page);
     await asking(page);
     for (const [[width, height], lang, scheme] of [
@@ -858,6 +876,9 @@ test.describe('the map beside the results @seeded', () => {
   test('never lets the sheet cover part of a zoom button, with the consent bar asking and after it is answered', async ({
     page,
   }) => {
+    // Three pages, each measured at two rests before and after the answer:
+    // past 30 s on CI.
+    test.slow();
     await ownMap(page);
     await asking(page);
     for (const [width, height] of PHONES) {

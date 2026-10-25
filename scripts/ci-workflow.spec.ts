@@ -323,6 +323,26 @@ describe('ci workflow', () => {
     expect(setting(step(job(id), name), 'JEST_SUITE')).toBe(suite);
   });
 
+  // A suite that stalls under the turn lock names its holder and its waiters:
+  // the database's busy sessions are sampled each minute while the suite runs
+  // and printed after it, timed out or not.
+  it('prints what the database waited on, even when the suite times out', () => {
+    const block = job('integration');
+    const watch = step(block, 'Watch the database');
+    const report = step(block, 'Database waits');
+
+    expect(block.indexOf('- name: Watch the database')).toBeLessThan(
+      block.indexOf('- name: Integration tests'),
+    );
+    expect(watch).toContain('pg_stat_activity');
+    expect(watch).toContain('pg_blocking_pids');
+    expect(watch).toMatch(/&\s*$/m);
+    expect(setting(report, 'if')).toBe(gh('always()'));
+    expect(block.indexOf('- name: Database waits')).toBeGreaterThan(
+      block.indexOf('- name: Integration tests'),
+    );
+  });
+
   it('migrates the database before the integration tests', () => {
     const block = job('integration');
 

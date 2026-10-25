@@ -16,7 +16,8 @@ import {
   type AuditEntry,
   type AuditPort,
 } from '../../../audit/audit.port';
-import { refusal, taken } from '../../../auth/sign-up.service';
+import { refusal } from '../../../auth/http-refusal';
+import { taken } from '../../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type {
   GaragePrice,

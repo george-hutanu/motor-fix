@@ -14,8 +14,8 @@ import type { PrismaClient } from '../../generated/prisma/client';
 import { AddressThrottle } from '../../rate-limit/address-throttle';
 import { THROTTLES } from '../../rate-limit/rate-limit.config';
 import { AUTH_OPTIONS, type AuthOptions } from '../actor.guard';
+import { refusal } from '../http-refusal';
 import { PRISMA } from '../prisma';
-import { refusal } from '../sign-up.service';
 
 // The identity server's client at these routes, and the web app that holds
 // the connect page and names itself as the id token's issuer.

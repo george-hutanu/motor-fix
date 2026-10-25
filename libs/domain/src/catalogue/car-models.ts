@@ -1,6 +1,6 @@
 import { FUELS, type Fuel } from '@motor-fix/contracts';
 
-import { type BodyStyle, BRANDS } from './brands';
+import { type BodyStyle, BRANDS } from './brands/brands';
 
 // The car models MotorFix licenses for the 3D car: the most registered
 // passenger-car families in Romania (DRPCIV "Parc auto", 31.12.2025), in that

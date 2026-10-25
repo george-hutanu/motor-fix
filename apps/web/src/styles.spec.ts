@@ -160,3 +160,20 @@ describe('the map’s legend under the Results sheet on a phone', () => {
     expect(body).toMatch(/visibility:\s*hidden/);
   });
 });
+
+// @traces 248-FR-001
+describe('the toasts on a phone', () => {
+  // Sonner pins its bottom toasts 20 px over the screen's edge on a phone,
+  // over the tab bar, and holds one while a finger rests on it: a tab under
+  // it could not be tapped.
+  it('sit above the tab bar and the consent bar', () => {
+    const body = rule(":root [data-sonner-toaster][data-y-position='bottom']");
+    const bottom = body?.match(/bottom:([^;]*)/)?.[1] ?? '';
+
+    expect(bottom).toMatch(/var\(--tab-bar,\s*0px\)/);
+    expect(bottom).toMatch(/var\(--consent-bar,\s*0px\)/);
+    expect(css).toMatch(
+      /@media \(max-width: 767px\) \{\s*:root\s*\[data-sonner-toaster\]\[data-y-position=["']bottom["']\]\s*\{/,
+    );
+  });
+});
