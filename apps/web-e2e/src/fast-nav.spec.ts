@@ -11,7 +11,9 @@ test.use({
   launchOptions: { ignoreDefaultArgs: ['--disable-back-forward-cache'] },
 });
 
-const RESULTS = '/ro/garages?brand=dacia';
+// Near the seeded Militari garages: with no location the page asks for an
+// address and lists no garage.
+const RESULTS = '/ro/garages?brand=dacia&near=44.435,26.015';
 const PROFILE = '/ro/garages/service-auto-militari';
 const heading = (page: Page) => page.getByRole('heading', { level: 1 });
 
