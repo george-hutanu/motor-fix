@@ -196,7 +196,7 @@ test.describe('on a phone, every task is a bottom sheet', () => {
 });
 
 // The dialog element itself carries the box its panel draws, so a check of
-// getByRole('dialog') sees the task the person sees (ST-1127).
+// getByRole('dialog') sees the task the person sees.
 async function dialogMatchesPanel(page: Page) {
   await expect(task(page)).toBeVisible();
   const outer = await task(page).boundingBox();
@@ -212,7 +212,8 @@ test.describe('the dialog element has the box of its task', () => {
     [320, 640],
     [390, 844],
   ] as const) {
-    // @traces 1127-FR-001, 1127-FR-003
+    // @traces 1127-FR-001
+    // @traces 1127-FR-003
     test(`at ${width} × ${height} the dialog is the sheet for every shape`, async ({
       page,
     }) => {
@@ -229,7 +230,8 @@ test.describe('the dialog element has the box of its task', () => {
     });
   }
 
-  // @traces 1127-FR-002, 1127-FR-006
+  // @traces 1127-FR-002
+  // @traces 1127-FR-006
   test('at 1280 × 900 the dialog is the drawer, the wide drawer and the centred dialog', async ({
     page,
   }) => {
@@ -319,6 +321,7 @@ test.describe('closing a sheet', () => {
     await page.mouse.up();
   });
 
+  // @traces 1127-FR-008
   test('a drag of a quarter springs back; past a third it closes', async ({
     page,
   }) => {
@@ -425,6 +428,7 @@ test.describe('focus in a sheet', () => {
 });
 
 test.describe('the on-screen keyboard', () => {
+  // @traces 1127-FR-008
   test('lifts the sheet above it and keeps the field in view', async ({
     page,
   }) => {

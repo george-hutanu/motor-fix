@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { NavigationStart, provideRouter, Router } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
+import { BrnDialogService } from '@spartan-ng/brain/dialog';
 
 import {
   injectOverlayTask,
@@ -851,6 +852,24 @@ describe('Overlays: whether a sheet is open', () => {
       pressEscape();
       await settle();
     }
+  });
+
+  it('counts nothing when the sheet fails to open', async () => {
+    await render();
+    const failing = jest
+      .spyOn(BrnDialogService.prototype, 'open')
+      .mockImplementationOnce(() => {
+        throw new Error('no overlay');
+      });
+
+    expect(() =>
+      TestBed.inject(Overlays).open(FormTask, {
+        shape: 'dialog',
+        title: 'shell.brand',
+      }),
+    ).toThrow('no overlay');
+    expect(sheetOpen()).toBe(false);
+    failing.mockRestore();
   });
 
   it('counts nothing for a signal already aborted', async () => {

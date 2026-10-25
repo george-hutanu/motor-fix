@@ -95,7 +95,6 @@ export class Overlays {
     const titleId = `mf-overlay-title-${++titles}`;
     const sheet = !this.window?.matchMedia?.(TABLET).matches;
     const context: PanelContext = { ...options, sheet, source, titleId };
-    if (sheet) this.sheets.opened();
     const ref = this.dialogs.open<PanelContext, R>(
       OverlayPanel,
       undefined,
@@ -119,6 +118,8 @@ export class Overlays {
         role: 'dialog',
       },
     );
+    // Counted once the dialog exists, so a failed open never leaves the bars hidden.
+    if (sheet) this.sheets.opened();
     options.signal?.addEventListener('abort', () => ref.close(), {
       once: true,
     });

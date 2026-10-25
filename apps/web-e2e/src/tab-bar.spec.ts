@@ -200,7 +200,9 @@ test.describe('the public tab bar on a tablet and a desktop', () => {
 });
 
 test.describe('the tab bar under the sign-in sheet', () => {
-  // @traces 1127-FR-004, 1127-FR-005, 1127-FR-007
+  // @traces 1127-FR-004
+  // @traces 1127-FR-005
+  // @traces 1127-FR-007
   test('at 390 × 844 steps aside while the sheet is open and comes back where it was', async ({
     page,
   }) => {
