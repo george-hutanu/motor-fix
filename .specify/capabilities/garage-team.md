@@ -9,6 +9,7 @@ features:
   - 055-team-list
   - 056-mechanic-dialog
   - 102-garage-members
+  - 1255-invite-mechanic
 ---
 
 # Capability: Garage team
@@ -17,17 +18,17 @@ How a garage's owner brings mechanics and receptionists into the garage: the sta
 
 ## Requirements
 
-### 131-FR-001 — The system MUST store a staff invite with garage, kind (`mechanic` or `receptionist`), invitee name (2 to 80 characters, trimmed), e-mail (trimmed, lower-case, at most 254 characters), the three permissions (`can_move_bookings`, `can_answer_quotes`, `can_record_final_price`, all false by default, only meaningful for kind `mechanic` and stored false for a `receptionist` whatever the request carries), the hash of a single-use token of 32 random bytes, status (`sent`, `accepted`, `revoked`; `expired` is never written: a `sent` invite past its expiry reads as `expired`), expiry (7 days from sending or resending) and creation time.
+### 1255-FR-001 — The staff invite MUST gain `mechanic_id` (nullable, the card it was sent for, of the same garage) and `phone` (nullable, E.164, at most 20 characters); `email` becomes nullable and exactly one of `email` or `phone` MUST be set (a database CHECK); an invite by phone has the same kind, permissions, token, status and 7-day expiry as one by e-mail (131-FR-001 otherwise unchanged). Receptionist invites keep e-mail only.
 
-_From 131-invite-garage-staff._
+_From 1255-invite-mechanic._
 
 ### 131-FR-002 — Only the owner of that garage MUST be able to send, resend or revoke its invites: a receptionist or a mechanic of the garage gets 403; the owner of another garage, or any other actor, gets 404.
 
 _From 131-invite-garage-staff._
 
-### 131-FR-003 — Sending MUST refuse a second open invite (status `sent` and not past its expiry) for the same garage and e-mail (409), a mechanic invite for a garage whose `team_mechanics` feature is off (404 `feature_off`), an e-mail whose account already holds the invited kind at that garage (409), and the owner's own e-mail (409).
+### 1255-FR-003 — With `mechanicId`, the send MUST check, after 131-FR-002's access and `team_mechanics` (404 `feature_off`): the card exists, belongs to the garage and is not removed (else 404 `not_found`); the card is not the owner's row (409 `owner_row`); the card has no account (409 `card_linked`); the card has no `sent` invite that has not expired (409 `invite_open`, with `inviteId`); a new send sets the card's older (expired) `sent` invites to `revoked` in its transaction, so a card holds at most one `sent` invite; the card checks run again in that transaction under the card's row lock, so of two sends for one card at once one stores its invite and the other answers 409 `invite_open`; then the e-mail or phone checks of 131-FR-003, also by phone (an account found by `phone` that is already a mechanic here: 409 `already_in_team`).
 
-_From 131-invite-garage-staff._
+_From 1255-invite-mechanic._
 
 ### 131-FR-004 — Sending and resending MUST send a STAFF_INVITE e-mail to the invited address, whether or not an account holds it, with the link `/{lang}/invite/:token` in the language of the owner's interface; the send happens within the request, and the answer says whether the e-mail went out; when it could not be sent the invite MUST stay `sent` and the answer MUST carry the link so the owner can copy it (the link is returned only then).
 
@@ -41,9 +42,9 @@ _From 131-invite-garage-staff._
 
 _From 131-invite-garage-staff._
 
-### 131-FR-007 — Accepting MUST require a session and a valid `sent` invite (a link past its expiry answers `invite_expired`, a revoked, used, voided or unknown one `invite_invalid`; of two simultaneous accepts of one link only one succeeds and the other answers `invite_invalid`), and MUST in one transaction: grant the invite's role to the signed-in account if not held; for a mechanic, create the mechanic row (garage, account, the invite's permissions; the row existing is what puts the mechanic on the public profile) or move the account's existing mechanic row to this garage with these permissions; for a receptionist, create the garage membership with role `receptionist`; set the invite `accepted`; write the audit entry; emit `invite.accepted` and, on a move, `mechanic.updated`. The answer is 204 with no session; the web then switches the session to the invited role through the role switch (a new access token, `lastRole` set), so the garage dashboard opens in that role, and a failed switch is retried without accepting again.
+### 1255-FR-006 — Accepting an invite that names a card MUST, in the transaction of 131-FR-007, lock and re-read the card and the account's mechanic row: a removed card, a card of another garage, or an account that already holds a mechanic row at this garage answers `invite_invalid`; an account whose mechanic row is at another garage answers 409 `move_required` with that garage's name (the move is ST-1256) and nothing changes (a frame invite with no card keeps 131-FR-007's move at once); otherwise it sets the card's `account_id` to the account, `on_profile` true, copies the three permissions from the invite onto the card, keeps every other card field, grants the `mechanic` role, sets the invite `accepted`, writes the audit entry and records `invite.accepted` and `mechanic.updated` (payload: the card id, `fields: ['account']`) to the garage audience and, since the card is now on the profile, to `public:garage:{garageId}` and `public:mechanic:{mechanicId}` (056-FR-005's channels). Of two accepts at once by an account with no mechanic row, for two cards, one links its card and the other answers `invite_invalid` (never a 500). After the commit the owner gets STAFF_JOINED and the live update reaches `garage:{garageId}` (131-FR-009).
 
-_From 131-invite-garage-staff._
+_From 1255-invite-mechanic._
 
 ### 131-FR-008 — Accepting MUST be refused with `invite_invalid` when the signed-in account owns this garage, is receptionist at another garage (receptionist invite), or when the invite's `team_mechanics` feature is off (404 `feature_off`); an account already holding the invited role at this garage completes with no change beyond the invite status.
 
@@ -61,9 +62,9 @@ _From 131-invite-garage-staff._
 
 _From 531-garage-feature-tabs._
 
-### 131-FR-012 — The public acceptance screen at `/{lang}/invite/:token` MUST show "{garage} te invită să te alături echipei ca {rol}." and, for a mechanic, the line about appearing on the garage's public profile; signed out, it MUST offer sign-in and account creation (the existing dialogs, with the invited name and e-mail filled in) and, when the account is created from the link, accept in the same flow; signed in (including after signing in from the link), it MUST accept only on an explicit "Acceptă"; after acceptance it MUST open the garage dashboard in the account's language; an invalid or expired link MUST show "Invitația nu mai este valabilă. Cere service-ului una nouă."
+### 1255-FR-010 — The public acceptance screen (131-FR-012) MUST, for a phone invite, open the phone sign-in with the number filled in instead of the e-mail sign-up; MUST show "Vei părăsi echipa {garage}" / "You will leave the team of {garage}" above "Acceptă" when `leaving` is set, and after a 409 `move_required` show "Mutarea la alt service nu este disponibilă încă." / "Moving to another garage is not available yet." and keep the page; a removed card's link shows the invalid-link message. After acceptance the person lands on the garage dashboard in the mechanic role (its existing limited menu).
 
-_From 131-invite-garage-staff._
+_From 1255-invite-mechanic._
 
 ### 131-FR-013 — Every new text MUST exist in Romanian and English, and text typed by a person (names, e-mails, garage names) MUST never be shown back as markup.
 
@@ -97,9 +98,9 @@ _From 055-team-list._
 
 _From 055-team-list._
 
-### 055-FR-006 — Each row MUST show the name; under it the speciality when set (no years, no separator when empty); a lamp with its text; and the rating cell. The lamp MUST be green with "pe profil" / "on the profile" when `onProfile` is true; grey with "nu apare pe profil · fără cont" / "not on the profile · no account" when `hasAccount` is false; grey with "nu apare pe profil" / "not on the profile" otherwise. The state MUST be readable without colour (the text is always shown, the lamp is decorative for assistive technology).
+### 1255-FR-012 — Each row's lamp (055-FR-006) MUST read, grey, "nu apare pe profil · invitație trimisă" / "not on the profile · invite sent" when `invite` is set and not past `expiresAt`, and "nu apare pe profil · invitație expirată" / "not on the profile · invite expired" when past it; the other states are unchanged. The view MUST read again on `invite.sent` and `invite.revoked` too (056-FR-013's bound).
 
-_From 055-team-list._
+_From 1255-invite-mechanic._
 
 ### 055-FR-007 — The rating cell MUST read "{rating} · {count} recenzii" / "{rating} · {count} reviews" with the rating in the interface language's format (RO "4,9", EN "4.9") and the count with Romanian plural rules ("1 recenzie", "2 recenzii", "20 de recenzii"); with a count of 0 it reads "fără recenzii" / "no reviews".
 
@@ -161,9 +162,9 @@ _From 056-mechanic-dialog._
 
 _From 056-mechanic-dialog._
 
-### 056-FR-006 — `DELETE /api/v1/garages/:garageId/mechanics/:mechanicId` MUST answer 204 and, in one transaction: set `removed_at`, set `on_profile` false, clear `account_id`, set every open (`sent`) invite of kind `mechanic` of this garage to the linked account's current e-mail, lower-cased, to `revoked`, write an audit `delete` entry with the actor and role, and record `mechanic.removed` (to the garage audience and, for a card that was on the profile, to the public channels of FR-005). The row, its reviews, its jobs and its bookings' mechanic reference are kept. A card with `is_owner` true MUST answer 409 `owner_row`, nothing written.
+### 1255-FR-014 — Removing a card (056-FR-006) MUST also set every `sent` invite naming that card to `revoked` in the same transaction.
 
-_From 056-mechanic-dialog._
+_From 1255-invite-mechanic._
 
 ### 056-FR-007 — A removed card's linked account MUST lose the garage at once: the account's garage and permissions are read from its card per request, and a detached card gives none, so the next request has no garage dashboard; a later accepted invite makes a new row (the detached row is never matched, as 055-FR-004 holds).
 
@@ -245,6 +246,54 @@ _From 102-garage-members._
 
 _From 102-garage-members._
 
+### 1255-FR-002 — The invite send MUST accept `mechanicId` (optional, UUID) and `phone` (optional, E.164 after the phone sign-in's normalisation: a Romanian number without a prefix reads as +40) beside `email` (now optional), refusing a body with both or neither of `email` and `phone` (validation refusal), a `phone` with kind `receptionist` (validation refusal), and with `mechanicId` a kind other than `mechanic` (validation refusal). With `mechanicId` the name of the invite is the card's name and `name` is optional (ignored when sent); without `mechanicId`, `name` stays required (2–80 characters), a validation refusal otherwise.
+
+_From 1255-invite-mechanic._
+
+### 1255-FR-004 — The send MUST refuse the owner's own e-mail or own phone (the signed-in account's, compared normalised) with 409 `self_invite`, shown as "Nu te poți invita pe tine." / "You cannot invite yourself." (replacing 131-FR-003's `already_in_team` for that case).
+
+_From 1255-invite-mechanic._
+
+### 1255-FR-005 — Sending and resending an invite by phone MUST send STAFF_INVITE by WhatsApp to that number, through the provider's approved template for STAFF_INVITE in the owner's language with the garage name and the link, straight from the request as the sign-in code is (not through the notifications queue, which addresses accounts); never by SMS. When the message was not sent (sending off, number not allowed outside production, template missing, provider refusal) the invite MUST stay `sent` and the answer MUST carry `emailSent: false` and the link, exactly as a refused e-mail (131-FR-004); the answer's field keeps its name.
+
+_From 1255-invite-mechanic._
+
+### 1255-FR-007 — (#548) For every accept, the account's mechanic row MUST be read inside the transaction, after the invite row is taken, so that `mechanic.updated`'s `from` is the garage the row was in when this move committed; a concurrent move cannot leave a stale `from`.
+
+_From 1255-invite-mechanic._
+
+### 1255-FR-008 — (#550) The `invite_accepted` audit entry MUST carry `newValue` with `kind`, `name` and `permissions` (the three flags the row was created or linked with) in the same shape as `invite_sent`'s, plus `mechanicId` when the invite named a card; `oldValue` and `field` record the status change as before; the `invite_sent` entry is unchanged.
+
+_From 1255-invite-mechanic._
+
+### 1255-FR-009 — Opening a link (`check`, 131-FR-006) MUST answer `phone` (nullable) beside `email` (now nullable) and, when the call carries a session (the route takes an optional actor and the web sends its bearer) whose account has a mechanic row at another garage than the invite's, `leaving`: that garage's public name (else null); a session of the invite garage's own owner answers `invite_invalid`, as accept does; it still needs no session and reveals nothing else.
+
+_From 1255-invite-mechanic._
+
+### 1255-FR-011 — The team list (056-FR-011) MUST carry on each item `invite`: null, or `{ id, email, phone, sentAt, expiresAt }` of the card's one `sent` invite (the newest, when an old row exists), so the row and the card can show it; nothing else about the invite is listed.
+
+_From 1255-invite-mechanic._
+
+### 1255-FR-013 — The card dialog (056-FR-016) MUST, for a saved card with no account other than the owner's, offer "Invită" / "Invite": it opens the invite dialog (131-FR-011) in card mode: title "Invită pe {name}", no name field and no role choice (mechanic), one field that takes an e-mail or a phone ("E-mail sau telefon" / "E-mail or phone"; a value containing "@" is an e-mail, otherwise a phone; one that is neither a valid e-mail nor a valid phone shows "Introdu un e-mail sau un număr de telefon valid." / "Enter a valid e-mail or phone number." under the field and sends nothing), the three ticks unticked, and sends with `mechanicId`; the sent and not-sent outcomes are those of 131-FR-011. When the card's `invite` is set, expired or not, the card dialog MUST instead show "Invitație trimisă pe {to} · expiră {date}" / "Invite sent to {to} · expires {date}" (or "a expirat" / "expired") with "Retrimite" / "Resend" and "Anulează invitația" / "Cancel the invite", calling the resend and revoke routes; while a send, resend or revoke is in flight its button is disabled and shows progress, so a second tap sends nothing; the date reads in the page language's short format (dd.MM.yyyy); a success closes nothing and refreshes the list; a 409 `invite_invalid` (answered elsewhere meanwhile) refreshes the list and shows a toast.
+
+_From 1255-invite-mechanic._
+
+### 1255-FR-015 — A card with no account MUST still be given bookings as any mechanic (389-FR-005, 056-FR-015 unchanged) and is not public (`on_profile` false until acceptance); covered by a test on the confirm path with a card that has an open invite.
+
+_From 1255-invite-mechanic._
+
+### 1255-FR-016 — Every new text MUST exist in Romanian and English (016-FR-002), with comma-below diacritics; names, e-mails, phones and garage names typed by a person MUST never be shown as markup (131-FR-013). The dialog and the page MUST lay out phones first: 320 px and 390 px with no horizontal scroll, light and dark, Romanian and English; every control reachable by keyboard; the field has a visible label and its error is tied to it and announced, focus returns to the control that opened the dialog on close and to the invite block's first button after a refresh, and the leaving warning and the `move_required` message are announced as alerts. Refusals reaching the dialog (`invite_open`, `self_invite`, `already_in_team`, `feature_off`, 403) each have a Romanian and English text; `owner_row` and `card_linked` are not reachable from the UI (no button) and fall back to a generic "Nu am putut trimite invitația." / "The invite could not be sent."
+
+_From 1255-invite-mechanic._
+
+### 1255-FR-017 — No new endpoint is added: the existing send, resend, revoke, check and accept routes gain the fields above; the DTOs live in the contracts library and the web calls the regenerated client (Constitution V). `infra/observability/inventory.json` gains no entry: the WhatsApp send goes through the existing `brevo` outside-call entry and the routes are already listed; the PR's Notes say so.
+
+_From 1255-invite-mechanic._
+
+### 1255-FR-018 — Tests MUST be written first and cover: Jest on real PostgreSQL for FR-001–FR-008 and FR-014 (the card named and the permissions false by default; by phone, WhatsApp called with the template, SMS never, the not-sent fallback with the link; `owner_row`, `card_linked`, `invite_open`, `self_invite` by e-mail and by phone, `already_in_team` by phone, 403/404/`feature_off`; accept: a new account and an existing driver account linking the same card with `on_profile` true and the permissions copied, the card's fields kept, `move_required` for a mechanic elsewhere, `invite_invalid` for a removed card and for a second row at the garage, the frame invite unchanged; the concurrent move's `from` (FR-007); the `invite_accepted` entry's permissions, failing on today's code (FR-008); the card's invites revoked on removal; the list's `invite` field); Jest for the web (the card's "Invită" absent for a linked card and the owner's row, the card-mode dialog's fields, the lamp texts by state, the card's invite block with resend and revoke, the landing page's phone sign-in, the "Vei părăsi" line and the `move_required` message); Playwright (`web-e2e`): the owner invites Elena from her card by e-mail (Brevo stubbed), Elena opens the link in a second browser, creates her account, accepts and lands on the garage dashboard as a mechanic, and the owner's row turns "pe profil" live; the PR QA sweep: the card dialog's invite block and the landing page at 320 px, 390 px, tablet and desktop, light and dark, RO and EN.
+
+_From 1255-invite-mechanic._
+
 ## Retired
 
 - `129-FR-009` — superseded by `055-FR-004` (2026-10-24)
@@ -254,3 +303,9 @@ _From 102-garage-members._
 - `055-FR-012` — superseded by `056-FR-013` (2026-10-24)
 - `055-FR-004` — superseded by `056-FR-014` (2026-10-24)
 - `389-FR-005` — superseded by `056-FR-015` (2026-10-24)
+- `131-FR-001` — superseded by `1255-FR-001` (2026-10-25)
+- `131-FR-003` — superseded by `1255-FR-003` (2026-10-25)
+- `131-FR-007` — superseded by `1255-FR-006` (2026-10-25)
+- `131-FR-012` — superseded by `1255-FR-010` (2026-10-25)
+- `055-FR-006` — superseded by `1255-FR-012` (2026-10-25)
+- `056-FR-006` — superseded by `1255-FR-014` (2026-10-25)
