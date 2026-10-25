@@ -6,6 +6,7 @@ import { Redis } from 'ioredis';
 import request from 'supertest';
 
 import { BRANDS } from './brands';
+import { raceListWrite } from './brands.testing';
 import { signAccessToken } from '../../auth/access-token';
 import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
@@ -615,23 +616,17 @@ describe('PATCH /admin/brands/{id}', () => {
     async () => {
       const cache = app.get<Redis>(AUTH_REDIS);
       await redis.incr('brands:version');
-      let raced = false;
       // The search has read PostgreSQL; the admin's rename commits and drops the
       // cache before the search writes what it read.
-      const write = jest
-        .spyOn(cache, 'set')
-        .mockImplementationOnce(async (...args: Parameters<Redis['set']>) => {
-          write.mockRestore();
-          raced = true;
-          await update(mercedes.id, {
-            name: 'Mercedes-Benz',
-            seenUpdatedAt: await seen(mercedes.id),
-          });
-          return cache.set(...args);
-        });
+      const race = raceListWrite(cache, async () =>
+        update(mercedes.id, {
+          name: 'Mercedes-Benz',
+          seenUpdatedAt: await seen(mercedes.id),
+        }),
+      );
 
       expect(await publicNames('merc')).toEqual(['Mercedes']);
-      expect(raced).toBe(true);
+      expect(race.raced).toBe(true);
       expect(await publicNames('merc')).toEqual(['Mercedes-Benz']);
     },
   );
@@ -642,20 +637,12 @@ describe('PATCH /admin/brands/{id}', () => {
     async () => {
       const cache = app.get<Redis>(AUTH_REDIS);
       await redis.incr('brands:version');
-      let raced = false;
       // The search has read PostgreSQL; the file's rename commits and drops the
       // cache before the search writes what it read.
-      const write = jest
-        .spyOn(cache, 'set')
-        .mockImplementationOnce(async (...args: Parameters<Redis['set']>) => {
-          write.mockRestore();
-          raced = true;
-          await loader.load(BRANDS);
-          return cache.set(...args);
-        });
+      const race = raceListWrite(cache, () => loader.load(BRANDS));
 
       expect(await publicNames('merc')).toEqual(['Mercedes']);
-      expect(raced).toBe(true);
+      expect(race.raced).toBe(true);
       expect(await publicNames('merc')).toEqual(['Mercedes-Benz']);
     },
   );

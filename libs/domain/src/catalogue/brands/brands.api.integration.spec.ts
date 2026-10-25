@@ -7,6 +7,7 @@ import request from 'supertest';
 
 import { BRANDS, type BrandRecord } from './brands';
 import { BrandsService } from './brands.service';
+import { raceListWrite } from './brands.testing';
 import { AuditService } from '../../audit/audit.service';
 import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
@@ -287,25 +288,19 @@ describe('a search racing a change of the list', () => {
       const name = `Dacia ${run}`;
       // A cold cache, so the search reads PostgreSQL.
       for (const key of await cache.keys('brands:*')) await cache.del(key);
-      let raced = false;
       // The search has read PostgreSQL; the change commits and drops the
       // cache before the search writes what it read.
-      const write = jest
-        .spyOn(cache, 'set')
-        .mockImplementationOnce(async (...args: Parameters<Redis['set']>) => {
-          write.mockRestore();
-          raced = true;
-          await loader.load(
-            BRANDS.map((brand) =>
-              brand.key === 'dacia' ? { ...brand, name } : brand,
-            ),
-          );
-          return cache.set(...args);
-        });
+      const race = raceListWrite(cache, () =>
+        loader.load(
+          BRANDS.map((brand) =>
+            brand.key === 'dacia' ? { ...brand, name } : brand,
+          ),
+        ),
+      );
 
       await search({ q: 'dacia' });
 
-      expect(raced).toBe(true);
+      expect(race.raced).toBe(true);
       expect(names((await search({ q: 'dacia' })).body)).toEqual([name]);
     }
   });
