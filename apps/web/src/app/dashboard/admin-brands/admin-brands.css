@@ -1,0 +1,168 @@
+/* One column under the two reports, as wide as both. */
+:host {
+  display: grid;
+  min-width: 0;
+}
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-3);
+  margin-bottom: var(--mf-space-4);
+}
+.search {
+  flex: 1 1 14rem;
+  min-width: 0;
+  min-height: 44px;
+}
+.tools button {
+  flex: 0 1 auto;
+  min-height: 44px;
+  white-space: normal;
+}
+.brands {
+  width: 100%;
+  border-collapse: collapse;
+}
+th {
+  padding: 0 var(--mf-space-3) var(--mf-space-2) 0;
+  text-align: start;
+  font-size: var(--mf-size-small);
+  font-weight: 600;
+  color: var(--mf-text-secondary);
+}
+td {
+  padding: var(--mf-space-3) var(--mf-space-3) var(--mf-space-3) 0;
+  border-top: 1px solid var(--mf-line);
+  vertical-align: middle;
+}
+th:last-child,
+td:last-child {
+  padding-inline-end: 0;
+}
+.count {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.name {
+  font-weight: 700;
+  color: var(--mf-text);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.rename {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+.rename input {
+  width: 100%;
+  min-height: 44px;
+}
+.rename-actions,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.actions {
+  justify-content: flex-end;
+}
+.actions-head {
+  text-align: end;
+}
+.rename-actions button,
+.actions button {
+  min-height: 44px;
+  white-space: normal;
+}
+.note {
+  margin: var(--mf-space-2) 0 0;
+  font-size: var(--mf-size-small);
+  font-weight: 400;
+  color: var(--mf-text-secondary);
+}
+.note[role="alert"] {
+  color: var(--mf-red-ink);
+}
+/* Phones and narrow tablets: each row is a card of one column, the counts
+   named beside their value and the actions last; the column names stay for
+   screen readers. */
+@media (max-width: 767px) {
+  thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .brands,
+  tbody {
+    display: block;
+  }
+  tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--mf-space-1) var(--mf-space-2);
+    padding: var(--mf-space-3) 0;
+    border-top: 1px solid var(--mf-line);
+  }
+  tr:first-child {
+    border-top: 0;
+  }
+  td {
+    display: block;
+    padding: 0;
+    border-top: 0;
+    min-width: 0;
+  }
+  /* Name and state share the card's first line; the rest spans it. */
+  td.count,
+  td.actions {
+    grid-column: 1 / -1;
+  }
+  .count {
+    text-align: start;
+  }
+  td.count::before {
+    content: attr(data-label) ": ";
+    color: var(--mf-text-secondary);
+  }
+  .actions {
+    justify-content: flex-start;
+    margin-top: var(--mf-space-2);
+  }
+  .actions button {
+    flex: 1 1 auto;
+  }
+}
+.skeletons {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.skeleton-row {
+  padding: var(--mf-space-3) 0;
+  border-top: 1px solid var(--mf-line);
+}
+.skeleton-row:first-child {
+  border-top: 0;
+}
+.skeleton {
+  display: block;
+  height: 1em;
+  width: 70%;
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-line);
+}
+.empty,
+.failed p {
+  margin: 0;
+  color: var(--mf-text-secondary);
+}
+.failed {
+  display: grid;
+  justify-items: start;
+  gap: var(--mf-space-3);
+}

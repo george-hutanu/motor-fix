@@ -20,8 +20,9 @@ COPY . .
 ARG APP
 RUN npx nx run ${APP}:build --configuration=production
 # The web server is fully bundled; the Node apps install the dependencies
-# their build listed in its own package.json and lockfile.
-RUN cd dist/apps/${APP} && if [ -f package-lock.json ]; then npm ci --omit=dev; fi
+# their build listed in its own package.json and lockfile, running no install
+# script but the Prisma engine's (the api migrates from its image) and sharp's.
+RUN cd dist/apps/${APP} && if [ -f package-lock.json ]; then npm ci --omit=dev --ignore-scripts && npm rebuild @prisma/engines sharp; fi
 # sharp ships a native binary per platform: an app that lists it must load it
 # here, in the image's own Node, or the build fails.
 RUN cd dist/apps/${APP} && if grep -q '"sharp"' package.json; then node -e "require('sharp')"; fi

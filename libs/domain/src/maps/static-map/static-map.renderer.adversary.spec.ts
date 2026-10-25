@@ -39,12 +39,13 @@ function fetcher(
   return { calls, fn: fn as unknown as typeof fetch };
 }
 
-// An off source makes no outside call, so its renders get a generous cap:
-// drawing the background alone can pass 400 ms on a slow CI runner.
+// No check here times the whole image (static-map.renderer.spec does), so
+// every render gets a generous cap: drawing a 1280 x 1024 image alone can pass
+// 400 ms on a slow CI runner. The tile timeout stays short.
 const renderer = (fn: typeof fetch, url = TILEJSON) =>
   new StaticMapRenderer(url, {
     fetch: fn,
-    renderTimeoutMs: url === 'off' ? 60_000 : 400,
+    renderTimeoutMs: 60_000,
     tileTimeoutMs: 200,
   });
 

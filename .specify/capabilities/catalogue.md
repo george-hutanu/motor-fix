@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -21,6 +21,7 @@ features:
   - 245-seed-catalogues
   - 105-brand-list-admin
   - 309-open-now-directions
+  - 1368-admin-brand-list
 ---
 
 # Capability: Catalogue
@@ -400,6 +401,42 @@ _From 105-brand-list-admin._
 ### 105-FR-021 — Tests MUST cover, before the code (Principle II): in Jest (API, real PostgreSQL and Valkey) — the list's rows, counts and search; 404/401/403 per role; add with slug and cache drop; duplicate on accent and case variants and on a retired holder; rename keeps the id and references; retire hides from public search and keeps references; bring back; no-op writes nothing; 409 `stale_value`; one audit entry per changed field with old and new values (a rename writes two: `name` and `slug`); the loader skips an admin-changed brand and still adds a missing one; the stale cache write interleaving (FR-014); in unit tests — `BRAND_LOAD_TIMEOUT_MS` default and override, DTO validation bounds.
 
 _From 105-brand-list-admin._
+
+### 1368-FR-002 — The section MUST have a search box labelled "Caută o marcă" / "Search a brand" that filters the loaded rows as the admin types, keeping the rows whose folded name contains the folded text (the product's shared fold: accents, case and format characters ignored, as the public brand search and the API's `q`), without a new read; an empty box shows every row, and a text matching nothing, or a read that returns no brand at all, shows one line "Nicio marcă nu se potrivește" / "No brand matches".
+
+_From 1368-admin-brand-list._
+
+### 1368-FR-003 — The section MUST have a button "Adaugă o marcă" / "Add a brand" that opens the dashboards' shared dialog, titled the same, with one field "Nume" / "Name" bounded to 2–40 visible characters (trimmed; checked by the contracts' `visibleTextProblem` rule the API uses; the range shown), "Salvează" / "Save" and "Renunță" / "Cancel". A name outside the range is refused in the field with nothing sent. Saving sends the create operation; on success the dialog closes, the search box is cleared and the new row (active, 0 and 0) appears at its folded-name position in the list.
+
+_From 1368-admin-brand-list._
+
+### 1368-FR-004 — When the create answers 409 `brand_exists`, the dialog MUST stay open with the typed name and show the API's message ("Marca există deja: <holder's name>") under the field; any other failure shows "Nu s-a putut salva. Încearcă din nou." / "Could not save. Try again." and leaves the dialog open.
+
+_From 1368-admin-brand-list._
+
+### 1368-FR-005 — Each row MUST offer "Redenumește" / "Rename": the name becomes a field holding the current name (the same bounds as FR-003) with "Salvează" / "Save" and "Renunță" / "Cancel"; saving sends the update operation with the new name and the row's `updatedAt` as `seenUpdatedAt`; the row then shows the answer's values at its folded-name position and the field closes. While the field is open the row's state action (FR-006) is hidden. 409 `brand_exists` keeps the field open with the API's message under it.
+
+_From 1368-admin-brand-list._
+
+### 1368-FR-006 — Each active row MUST offer "Retrage" / "Retire" and each retired row "Readuce" / "Bring back"; pressing it sends the update operation with `active` false or true and the row's `updatedAt` as `seenUpdatedAt`, and the row shows the answer's state and the other action.
+
+_From 1368-admin-brand-list._
+
+### 1368-FR-007 — When a rename, retirement or bring-back answers 409 `stale_value`, the row MUST re-read itself from the brand the answer carries (name, state, counts, `updatedAt`), close any open rename field, and show a short notice under the row, "Alt administrator a modificat marca; rândul a fost actualizat." / "Another admin changed this brand; the row was refreshed.", until the admin's next action on that row. Any other failure of a row action shows "Nu s-a putut salva. Încearcă din nou." / "Could not save. Try again." under the row and leaves the row as it was, an open rename field staying open with its typed name.
+
+_From 1368-admin-brand-list._
+
+### 1368-FR-008 — While a row's save is in flight the row MUST ignore a second action on the same row; while the first read is on its way the section MUST show its heading, search box and button with three skeleton rows, `aria-busy="true"` and no row action; when the read fails the section MUST show "Lista de mărci nu a putut fi citită." / "The brand list could not be read." with a "Încearcă din nou" / "Try again" control, and the demand report above is unaffected either way.
+
+_From 1368-admin-brand-list._
+
+### 1368-FR-009 — Every text of the section MUST exist in Romanian and English (except the `brand_exists` message, which is shown verbatim as the API sends it) in the shared i18n files (a Romanian hyphenated word with U+2011, "Service‑uri"); at 320 px, 390 px, a tablet and a desktop, light and dark, Romanian and English, the section MUST fit without sideways scrolling, laying each row out as a stacked card below 768 px and as a table row from 768 px; every control MUST be operable by keyboard and carry an accessible name that includes its brand's name ("Redenumește Škoda"), the state and the counts MUST be readable as text, a notice or error under a row or field MUST be announced to assistive technology (a status or alert live region), focus MUST return to the control that opened a closed dialog or rename field, and the QA sweep's axe check MUST have no finding on the view.
+
+_From 1368-admin-brand-list._
+
+### 1368-FR-010 — Tests MUST come before the code (Principle II): component specs for FR-001–FR-008 (rows, states and counts from a seeded list; the fold filter on accent and case; the empty-search line; add and the new row; `brand_exists` in the dialog and at a row; rename, retire and bring back with `seenUpdatedAt`; `stale_value` re-read and notice; the busy row; the read failure and retry), and one Playwright flow: the seeded admin adds a brand on screen; the garage form's brand step offers it unmarked; the garage results filtered by it show the red lamp of a brand with no stance; a visitor types it in Home's brand search and is offered it.
+
+_From 1368-admin-brand-list._
 
 ## Retired
 

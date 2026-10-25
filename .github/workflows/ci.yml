@@ -94,7 +94,10 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      # Typecheck, lint and build never load photo-processing: no sharp rebuild.
       - uses: ./.github/actions/setup
+        with:
+          sharp: 'false'
       - name: Biome
         if: ${{ !cancelled() }}
         run: npx biome ci
@@ -102,8 +105,11 @@ jobs:
         if: ${{ !cancelled() }}
         # npm ci installs the lockfile as is; the dry run re-resolves
         # package.json, so a peer conflict the lockfile hides (ERESOLVE) fails here.
+        # signatures fails on a package whose registry signature or provenance
+        # attestation does not verify.
         run: |
           npm audit --omit=dev --audit-level=high
+          npm audit signatures
           npm install --dry-run --ignore-scripts --no-audit --no-fund
       - name: Typecheck
         if: ${{ !cancelled() }}
