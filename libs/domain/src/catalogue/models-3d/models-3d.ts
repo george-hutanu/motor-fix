@@ -18,7 +18,7 @@ type BodyStyle =
   | 'estate'
   | 'fastback';
 
-export type CarSystemCode =
+type CarSystemCode =
   | 'engine'
   | 'brakes'
   | 'suspension'
@@ -101,39 +101,62 @@ const row = (
   fuel: Fuel,
   rank: number,
   bodyStyle: BodyStyle,
-  hash: string,
 ): LicensedCarModel => ({
   bodyStyle,
   brand,
-  file: `${key}.${hash}.glb`,
+  file: `${key}.${FILE_HASH[key]}.glb`,
   fuel,
   key,
   model,
   rank,
 });
 
-// biome-ignore format: one line per model reads as the table it is
+// The first 16 hex of the SHA-256 of each model's GLB: its key in storage is
+// <key>.<hash>.glb. Today's are the placeholders'; a real file brings its own.
+const FILE_HASH: Readonly<Record<string, string>> = {
+  'audi-a4': '26f508853f7d547f',
+  'audi-a6': 'f94860088a9127c1',
+  'bmw-seria-3': 'c4736b957a0d15f9',
+  'bmw-seria-5': '5e13e636e033d2c2',
+  'dacia-duster': 'f09b1762fc5b4e07',
+  'dacia-logan': '2099f2575d8f1377',
+  'dacia-sandero': 'f9d306f4c8b2befb',
+  'ford-fiesta': 'f64fbb394ffacf63',
+  'ford-focus': '192d5db6bf487095',
+  'opel-astra': '7a7f9d4023d8a36a',
+  'opel-corsa': '8b5e8c105436bebd',
+  'renault-clio': 'd49ee1a5d3811fd5',
+  'renault-megane': '3095601d36c81603',
+  'skoda-fabia': '60847c033f8702ff',
+  'skoda-octavia': 'c15ebf7584bc6fce',
+  'volkswagen-golf': 'd9a3ef361eeaa3c6',
+  'volkswagen-passat': 'a8f16bcc9981b032',
+  'volkswagen-polo': '14439e6cb396e0eb',
+  'volkswagen-tiguan': '0afa78603a1b5932',
+  'volkswagen-touran': 'aa31199f1af686c4',
+};
+
 export const CAR_MODELS: readonly LicensedCarModel[] = [
-  row('dacia-logan', 'dacia', 'Logan', 'petrol', 1, 'saloon', '2099f2575d8f1377'),
-  row('volkswagen-golf', 'volkswagen', 'Golf', 'diesel', 1, 'hatchback', 'd9a3ef361eeaa3c6'),
-  row('volkswagen-passat', 'volkswagen', 'Passat', 'diesel', 2, 'estate', 'a8f16bcc9981b032'),
-  row('opel-astra', 'opel', 'Astra', 'diesel', 1, 'hatchback', '7a7f9d4023d8a36a'),
-  row('ford-focus', 'ford', 'Focus', 'diesel', 1, 'hatchback', '192d5db6bf487095'),
-  row('audi-a4', 'audi', 'A4', 'diesel', 1, 'saloon', '26f508853f7d547f'),
-  row('skoda-octavia', 'skoda', 'Octavia', 'diesel', 1, 'estate', 'c15ebf7584bc6fce'),
-  row('bmw-seria-3', 'bmw', 'Seria 3', 'diesel', 1, 'saloon', 'c4736b957a0d15f9'),
-  row('dacia-duster', 'dacia', 'Duster', 'diesel', 2, 'suv', 'f09b1762fc5b4e07'),
-  row('renault-megane', 'renault', 'Megane', 'diesel', 1, 'hatchback', '3095601d36c81603'),
-  row('volkswagen-polo', 'volkswagen', 'Polo', 'petrol', 3, 'hatchback', '14439e6cb396e0eb'),
-  row('skoda-fabia', 'skoda', 'Fabia', 'petrol', 2, 'hatchback', '60847c033f8702ff'),
-  row('dacia-sandero', 'dacia', 'Sandero', 'petrol', 3, 'hatchback', 'f9d306f4c8b2befb'),
-  row('bmw-seria-5', 'bmw', 'Seria 5', 'diesel', 2, 'saloon', '5e13e636e033d2c2'),
-  row('ford-fiesta', 'ford', 'Fiesta', 'petrol', 2, 'hatchback', 'f64fbb394ffacf63'),
-  row('opel-corsa', 'opel', 'Corsa', 'petrol', 2, 'hatchback', '8b5e8c105436bebd'),
-  row('audi-a6', 'audi', 'A6', 'diesel', 2, 'saloon', 'f94860088a9127c1'),
-  row('volkswagen-touran', 'volkswagen', 'Touran', 'diesel', 4, 'estate', 'aa31199f1af686c4'),
-  row('volkswagen-tiguan', 'volkswagen', 'Tiguan', 'diesel', 5, 'suv', '0afa78603a1b5932'),
-  row('renault-clio', 'renault', 'Clio', 'petrol', 2, 'hatchback', 'd49ee1a5d3811fd5'),
+  row('dacia-logan', 'dacia', 'Logan', 'petrol', 1, 'saloon'),
+  row('volkswagen-golf', 'volkswagen', 'Golf', 'diesel', 1, 'hatchback'),
+  row('volkswagen-passat', 'volkswagen', 'Passat', 'diesel', 2, 'estate'),
+  row('opel-astra', 'opel', 'Astra', 'diesel', 1, 'hatchback'),
+  row('ford-focus', 'ford', 'Focus', 'diesel', 1, 'hatchback'),
+  row('audi-a4', 'audi', 'A4', 'diesel', 1, 'saloon'),
+  row('skoda-octavia', 'skoda', 'Octavia', 'diesel', 1, 'estate'),
+  row('bmw-seria-3', 'bmw', 'Seria 3', 'diesel', 1, 'saloon'),
+  row('dacia-duster', 'dacia', 'Duster', 'diesel', 2, 'suv'),
+  row('renault-megane', 'renault', 'Megane', 'diesel', 1, 'hatchback'),
+  row('volkswagen-polo', 'volkswagen', 'Polo', 'petrol', 3, 'hatchback'),
+  row('skoda-fabia', 'skoda', 'Fabia', 'petrol', 2, 'hatchback'),
+  row('dacia-sandero', 'dacia', 'Sandero', 'petrol', 3, 'hatchback'),
+  row('bmw-seria-5', 'bmw', 'Seria 5', 'diesel', 2, 'saloon'),
+  row('ford-fiesta', 'ford', 'Fiesta', 'petrol', 2, 'hatchback'),
+  row('opel-corsa', 'opel', 'Corsa', 'petrol', 2, 'hatchback'),
+  row('audi-a6', 'audi', 'A6', 'diesel', 2, 'saloon'),
+  row('volkswagen-touran', 'volkswagen', 'Touran', 'diesel', 4, 'estate'),
+  row('volkswagen-tiguan', 'volkswagen', 'Tiguan', 'diesel', 5, 'suv'),
+  row('renault-clio', 'renault', 'Clio', 'petrol', 2, 'hatchback'),
 ];
 
 // The generic car of each body shape, shown for a brand with no licensed
@@ -147,7 +170,7 @@ export const GENERIC_FILES: Readonly<Record<BodyStyle, string>> = {
   suv: 'generic-suv.1a5c3c6515fc37bd.glb',
 };
 
-export interface Model3dFile {
+interface Model3dFile {
   // The model key, or generic-<style>.
   key: string;
   file: string;
@@ -164,7 +187,7 @@ export const MODEL_3D_FILES: readonly Model3dFile[] = [
   })),
 ];
 
-export const MODEL_3D_MAX_BYTES = 2_097_152;
+const MODEL_3D_MAX_BYTES = 2_097_152;
 
 const GLB_MAGIC = 0x46546c67;
 const JSON_CHUNK = 0x4e4f534a;
