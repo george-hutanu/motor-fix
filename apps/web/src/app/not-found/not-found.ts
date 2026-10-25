@@ -18,6 +18,7 @@ import {
 @Component({
   imports: [LanguageSwitch, RouterLink, TranslatePipe],
   selector: 'mf-not-found',
+  styleUrl: './not-found.css',
   templateUrl: './not-found.html',
 })
 export class NotFound {
