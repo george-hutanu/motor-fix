@@ -260,7 +260,7 @@ main {
      of the window as it did inside the view; the view keeps its height free. */
   .view {
     grid-area: 1 / 2;
-    padding-bottom: var(--consent-bar, 0px);
+    padding-bottom: round(up, var(--consent-bar, 0px), 4px);
   }
   mf-consent-bar {
     grid-area: 1 / 2;

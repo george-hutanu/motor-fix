@@ -1335,6 +1335,11 @@ describe('Frame consent bar', () => {
     expect(css).toMatch(
       /@media \(min-width: 768px\) \{.*mf-consent-bar \{[^}]*grid-area: 1 \/ 2;[^}]*align-self: end;/,
     );
+    // The bar's own height is any number of pixels: the room kept for it
+    // rounds up to the 4 px grid.
+    expect(css).toMatch(
+      /\.view \{[^}]*padding-bottom: round\(up, var\(--consent-bar, 0px\), 4px\);/,
+    );
   });
 });
 
