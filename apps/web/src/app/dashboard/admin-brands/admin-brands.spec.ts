@@ -152,6 +152,27 @@ describe('the brand list', () => {
     expect(search(el).getAttribute('aria-label')).toBe('Caută o marcă');
   });
 
+  it('shows the search box its name as visible text', async () => {
+    expect(search(await open()).getAttribute('placeholder')).toBe(
+      'Caută o marcă',
+    );
+  });
+
+  it('shows the search box its English name as visible text', async () => {
+    expect(search(await open('en')).getAttribute('placeholder')).toBe(
+      'Search a brand',
+    );
+  });
+
+  it('lines the Actions header up with the buttons under it', async () => {
+    const el = await open();
+    const heads = el.querySelectorAll('thead th');
+
+    expect(heads[heads.length - 1]?.classList.contains('actions-head')).toBe(
+      true,
+    );
+  });
+
   it('says no brand matches when the search finds none', async () => {
     const el = await open();
 

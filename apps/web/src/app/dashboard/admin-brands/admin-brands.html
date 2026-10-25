@@ -6,6 +6,7 @@
       class="search"
       autocomplete="off"
       [attr.aria-label]="'admin.brands.search' | t"
+      [attr.placeholder]="'admin.brands.search' | t"
       [value]="query()"
       (input)="search($event)"
     />
@@ -36,7 +37,7 @@
               <th scope="col">{{ 'admin.brands.column.state' | t }}</th>
               <th scope="col" class="count">{{ 'admin.brands.column.garages' | t }}</th>
               <th scope="col" class="count">{{ 'admin.brands.column.cars' | t }}</th>
-              <th scope="col">{{ 'admin.brands.column.actions' | t }}</th>
+              <th scope="col" class="actions-head">{{ 'admin.brands.column.actions' | t }}</th>
             </tr>
           </thead>
           <tbody>

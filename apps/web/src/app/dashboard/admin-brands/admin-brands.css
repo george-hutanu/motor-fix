@@ -66,6 +66,9 @@ td:last-child {
 .actions {
   justify-content: flex-end;
 }
+.actions-head {
+  text-align: end;
+}
 .rename-actions button,
 .actions button {
   min-height: 44px;
