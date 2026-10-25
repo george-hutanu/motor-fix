@@ -245,6 +245,7 @@ export function noDockerMessage(project: string): string {
     `  export DATABASE_URL=postgresql://motorfix:motorfix@127.0.0.1:$(docker compose -p ${project} port postgres 5432 | sed 's/.*://')/motorfix`,
     `  export REDIS_URL=redis://127.0.0.1:$(docker compose -p ${project} port redis 6379 | sed 's/.*://')`,
     '  npx prisma migrate deploy --config libs/domain/prisma.config.ts',
+    '  node scripts/clear-activity-log.ts',
     '  JEST_SUITE=integration npx nx affected -t test',
   ].join('\n');
 }
@@ -406,6 +407,7 @@ function main() {
       ],
       { ...process.env, ...env, PRISMA_HIDE_UPDATE_MESSAGE: '1' },
     );
+    run('node', ['scripts/clear-activity-log.ts'], { ...process.env, ...env });
   } catch (error) {
     throw new Error(
       `${(error as Error).message}; to start from an empty database: docker compose -p ${project} down -v`,
