@@ -234,7 +234,7 @@ const shown = (value: unknown) =>
 const joined = (specialties: string[]) => specialties.join(', ') || null;
 
 // The live audience of a card: its public pages only while it is on the profile.
-const cardAudience = (
+export const cardAudience = (
   garageId: string,
   card: { id: string; onProfile: boolean },
 ) => ({
@@ -566,7 +566,7 @@ export class GarageMechanicsService {
   }
 
   // Who may read or write is checked before the switch.
-  private async access(
+  async access(
     db: Pick<Prisma.TransactionClient, 'garageFeature'>,
     actor: Actor,
     garageId: string,

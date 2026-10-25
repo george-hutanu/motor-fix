@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 196,
+    "count": 200,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -996,6 +996,58 @@
       ],
       "reason": "each removal is audited (delete) and recorded as mechanic.removed in the same transaction; the STAFF_REMOVED e-mail and push go through the notifications pipeline, whose sends and failures its own entries count, and a failed send is logged as an error with the card id while the removal stays; a 409 owner_row is the rule working",
       "story": "ST-56"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanic-hours-read",
+      "source": "libs/domain/src/garages/mechanics/schedule/schedule.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId/hours",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read of the card's working week and upcoming days off writes nothing; a 404 not_found is a card removed in another tab or the team switch off",
+      "story": "ST-58"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanic-hours-save",
+      "source": "libs/domain/src/garages/mechanics/schedule/schedule.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId/hours",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each changed day or the Saturday switch is audited (update, old and new value) and recorded as mechanic.updated with the fields in the same transaction; an unchanged save writes nothing; a 422 validation_failed (order, outside_opening, garage_closed_saturday) is the owner's input refused, not a failure",
+      "story": "ST-58"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanic-day-off-add",
+      "source": "libs/domain/src/garages/mechanics/schedule/schedule.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId/days-off",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each day off added is audited (create on mechanic_day_off) and recorded as mechanic.updated with days_off in the same transaction; a 409 day_off_overlap or bookings_on_days_off (until acknowledged) is the rule working; confirmed bookings on those days show as to reassign on the garage's requests",
+      "story": "ST-58"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanic-day-off-remove",
+      "source": "libs/domain/src/garages/mechanics/schedule/schedule.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId/days-off/:dayOffId",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each removal is audited (delete, or update of lastDay when a running day off ends yesterday) and recorded as mechanic.updated with days_off; a 409 past_day_off is the rule working, a 404 not_found a day off already removed in another tab",
+      "story": "ST-58"
     },
     {
       "kind": "endpoint",
