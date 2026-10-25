@@ -100,6 +100,28 @@ p {
 .invite button {
   white-space: normal;
 }
+.spinner {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+.mf-task-sending {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
 .actions {
   display: flex;
   flex-wrap: wrap;

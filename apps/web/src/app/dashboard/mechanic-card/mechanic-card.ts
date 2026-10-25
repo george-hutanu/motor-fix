@@ -167,9 +167,10 @@ export class MechanicCard {
     const card = this.current();
     return !!card && !card.hasAccount && !card.isOwner;
   });
-  protected readonly inviting = signal(false);
-  private readonly resendButton =
-    viewChild<ElementRef<HTMLButtonElement>>('resendButton');
+  // The invite action in flight: its button shows progress, both are inert.
+  protected readonly inviting = signal<'resend' | 'revoke' | null>(null);
+  private readonly inviteBlock =
+    viewChild<ElementRef<HTMLElement>>('inviteBlock');
 
   protected readonly form = new FormGroup({
     brandIds: new FormGroup(
@@ -326,19 +327,16 @@ export class MechanicCard {
   }
 
   protected resend(id: string) {
-    return this.answer(async () => {
-      await this.garages.garageInvitesControllerResend({
+    return this.answer('resend', () =>
+      this.garages.garageInvitesControllerResend({
         garageId: this.task.data.garageId,
         id,
-      });
-      afterNextRender(() => this.resendButton()?.nativeElement.focus(), {
-        injector: this.injector,
-      });
-    });
+      }),
+    );
   }
 
   protected revoke(id: string) {
-    return this.answer(() =>
+    return this.answer('revoke', () =>
       this.garages.garageInvitesControllerRevoke({
         garageId: this.task.data.garageId,
         id,
@@ -347,10 +345,15 @@ export class MechanicCard {
   }
 
   // One invite action at a time; whatever it answers, the card reads again,
-  // since a refusal means the invite changed elsewhere.
-  private async answer(act: () => Promise<unknown>) {
+  // since a refusal means the invite changed elsewhere. The focus then goes
+  // to the invite block's first button, enabled again: "Retrimite" while an
+  // invite is open, "Invită" once it is gone.
+  private async answer(
+    action: 'resend' | 'revoke',
+    act: () => Promise<unknown>,
+  ) {
     if (this.inviting()) return;
-    this.inviting.set(true);
+    this.inviting.set(action);
     try {
       await act();
     } catch (error) {
@@ -363,7 +366,14 @@ export class MechanicCard {
       );
     } finally {
       await this.refresh();
-      this.inviting.set(false);
+      this.inviting.set(null);
+      afterNextRender(
+        () =>
+          this.inviteBlock()
+            ?.nativeElement.querySelector<HTMLButtonElement>('button')
+            ?.focus(),
+        { injector: this.injector },
+      );
     }
   }
 

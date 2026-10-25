@@ -55,6 +55,9 @@ export class InvitePage implements OnInit {
   // Set once the server has taken the acceptance: a retry then only switches
   // the role, since accepting again would answer that the link is used.
   private joined = false;
+  // Whether the last read of the link carried a session: only then does its
+  // answer name the garage the account would leave.
+  private readSignedIn = false;
 
   constructor() {
     void this.i18n.enter('public');
@@ -64,9 +67,12 @@ export class InvitePage implements OnInit {
     if (this.browser) void this.check();
   }
 
+  // The session is loaded from the cookie first, so the read carries the
+  // bearer and a signed-in visitor learns what accepting would leave.
   protected async check() {
     this.state.set('checking');
     try {
+      this.readSignedIn = !!(await this.session.load({ keepLanguage: true }));
       this.invite.set(
         await this.invites.invitesControllerCheck({
           body: { token: this.token },
@@ -103,7 +109,13 @@ export class InvitePage implements OnInit {
   // made. Signing in to an existing account accepts on the next press, once the
   // person has seen which account it is and what it leaves.
   private async signedIn(invite: InviteViewDto): Promise<boolean> {
-    if (await this.session.load({ keepLanguage: true })) return true;
+    if (await this.session.load({ keepLanguage: true })) {
+      if (this.readSignedIn) return true;
+      // The session appeared after the link was read: read it again, so the
+      // warning is on screen before a press accepts.
+      await this.check();
+      return false;
+    }
     const joined = await this.dialog.join({
       name: invite.name,
       ...(invite.phone

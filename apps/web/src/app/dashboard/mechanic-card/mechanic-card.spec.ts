@@ -721,6 +721,67 @@ describe('the card dialog, inviting the mechanic', () => {
     );
   });
 
+  // @traces 1255-FR-013
+  it.each([
+    ['Retrimite', 'resend'],
+    ['Anulează invitația', 'revoke'],
+  ])(
+    'shows %s busy while in flight, with both buttons disabled',
+    async (name, path) => {
+      await open(invited());
+
+      button(name)?.click();
+      await settle();
+
+      expect(button(name)?.getAttribute('aria-busy')).toBe('true');
+      expect(button(name)?.querySelector('.mf-task-sending')).not.toBeNull();
+      expect(button('Retrimite')?.disabled).toBe(true);
+      expect(button('Anulează invitația')?.disabled).toBe(true);
+      const other = name === 'Retrimite' ? 'Anulează invitația' : 'Retrimite';
+      expect(button(other)?.getAttribute('aria-busy')).toBeNull();
+      http
+        .expectOne({ method: 'POST', url: `${INVITES}/invite-1/${path}` })
+        .flush(path === 'resend' ? { emailSent: true, id: 'invite-1' } : null, {
+          status: path === 'resend' ? 201 : 204,
+          statusText: 'OK',
+        });
+      await settle();
+
+      expect(button(name)?.getAttribute('aria-busy') ?? null).toBeNull();
+    },
+  );
+
+  // @traces 1255-FR-016
+  it('focus returns to Retrimite, enabled again, after a resend', async () => {
+    await open(invited());
+
+    button('Retrimite')?.click();
+    await settle();
+    http
+      .expectOne({ method: 'POST', url: `${INVITES}/invite-1/resend` })
+      .flush({ emailSent: true, id: 'invite-1' });
+    await settle();
+
+    const resend = button('Retrimite');
+    expect(resend?.disabled).toBe(false);
+    expect(document.activeElement).toBe(resend);
+  });
+
+  // @traces 1255-FR-016
+  it('focus returns to Invită after a revoke removes the invite block', async () => {
+    await open(invited());
+    refresh.mockResolvedValueOnce(card());
+
+    button('Anulează invitația')?.click();
+    await settle();
+    http
+      .expectOne({ method: 'POST', url: `${INVITES}/invite-1/revoke` })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+
+    expect(document.activeElement).toBe(button('Invită'));
+  });
+
   it('reads English', async () => {
     await open(invited(), 'en');
 

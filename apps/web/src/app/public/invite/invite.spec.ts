@@ -328,6 +328,53 @@ describe('the invite link page, for a card', () => {
     ).toBeTruthy();
   });
 
+  it('loads the session from the cookie before reading the link, so a signed-in visitor opening it fresh is warned before "Acceptă" accepts', async () => {
+    const { acceptInvite, check, fixture, load } = setup();
+    // The server names the garage left only when the call carries the
+    // session, which exists once it is loaded from the cookie.
+    let bearer = false;
+    load.mockImplementation(async () => {
+      bearer = true;
+      return MECHANIC;
+    });
+    check.mockImplementation(async () => ({
+      ...view('mechanic'),
+      leaving: bearer ? 'Atelier Nord' : null,
+    }));
+    await flush(fixture);
+
+    expect(load).toHaveBeenCalledWith({ keepLanguage: true });
+    expect(load.mock.invocationCallOrder[0]).toBeLessThan(
+      check.mock.invocationCallOrder[0],
+    );
+    expect(alerts(fixture)).toContain(LEAVING);
+    expect(acceptInvite).not.toHaveBeenCalled();
+
+    accept(fixture)?.click();
+    await flush(fixture);
+
+    expect(acceptInvite).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not accept on the first press when the session appeared after the link was read', async () => {
+    const { acceptInvite, check, fixture, load } = setup();
+    let bearer = false;
+    load.mockImplementation(async () => (bearer ? MECHANIC : null));
+    check.mockImplementation(async () => ({
+      ...view('mechanic'),
+      leaving: bearer ? 'Atelier Nord' : null,
+    }));
+    await flush(fixture);
+    expect(text(fixture)).not.toContain(LEAVING);
+    bearer = true;
+
+    accept(fixture)?.click();
+    await flush(fixture);
+
+    expect(acceptInvite).not.toHaveBeenCalled();
+    expect(alerts(fixture)).toContain(LEAVING);
+  });
+
   it('reads the link again after a sign-in, to learn what the person would leave', async () => {
     const { check, fixture } = setup({ joined: 'signed-in' });
     await flush(fixture);
