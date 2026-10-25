@@ -16,7 +16,7 @@ const stage = (name: string) => {
 describe('readable server stacks', () => {
   it('starts the Node servers with their source maps', () => {
     expect(stage('node-app')).toMatch(
-      /^ENV NODE_OPTIONS=--enable-source-maps$/m,
+      /^ENV NODE_OPTIONS="\$\{NODE_OPTIONS\} --enable-source-maps"$/m,
     );
   });
 
