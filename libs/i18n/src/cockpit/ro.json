@@ -48,6 +48,9 @@
     "live": "În direct",
     "motionFull": "Mișcare: completă",
     "motionReduced": "Mișcare: redusă",
+    "odometerNone": "Fără preț",
+    "odometerOne": "Un singur preț",
+    "odometerRange": "Interval de preț",
     "swap": "Schimbă valorile",
     "title": "Lămpi, cadrane și prețuri"
   },
