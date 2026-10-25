@@ -31,6 +31,7 @@ features:
   - 413-verification-file-presence
   - 102-garage-members
   - 1193-fast-nav
+  - 074-garage-reviews
 ---
 
 # Capability: Live updates
@@ -480,6 +481,10 @@ _From 587-live-list-e2e._
 ### 413-FR-007 — When an admin's entry is created or removed by a call, the system MUST publish a `presence.changed` message with the file's id straight to the live stream, to the `admin` audience, through the existing direct publish (not the outbox); a heartbeat that only renews an entry and an expiry publish nothing. `presence.changed` stays out of the shared list of event kinds (`EVENT_KINDS` holds the outbox kinds; its header already names presence among the kinds published straight to the store), as `session.revoked` and `notification.created` do; the drawer reads it from the stream's messages by kind and file id (plan, research R3).
 
 _From 413-verification-file-presence._
+
+### 074-FR-006 — The panel and the view MUST re-read, without a reload and without issuing any scroll-to-top, on any `review.posted`, `review.edited`, `review.deleted`, `review.replied`, `review.reply_edited`, `review.reported`, `review.decided`, `review.appeal_decided` or `rating.updated` message for the garage on `garage:{garageId}`, which the owner's and the receptionist's connections MUST receive, and on the live client's reconnect resync; the view re-reads its first page and drops the extra pages (024-FR-011). One read at a time, coalesced as 419-FR-009. The hub already lets these kinds through `garage:{garageId}` to the owner and the receptionist and to no mechanic (`live.hub.ts` `KIND_CAPABILITY`, 102-FR-010 unchanged); FR-017 proves it.
+
+_From 074-garage-reviews._
 
 ## Retired
 
