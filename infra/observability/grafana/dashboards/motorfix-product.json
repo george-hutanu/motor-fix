@@ -4281,7 +4281,7 @@
       }
     },
     {
-      "id": 144,
+      "id": 177,
       "type": "stat",
       "title": "Reviews posted, last 24 hours",
       "datasource": {
@@ -4313,7 +4313,7 @@
       }
     },
     {
-      "id": 146,
+      "id": 178,
       "type": "stat",
       "title": "Copy voice changes, last 24 hours",
       "datasource": {
@@ -5044,6 +5044,143 @@
         "defaults": {},
         "overrides": []
       }
+    },
+    {
+      "id": 172,
+      "type": "stat",
+      "title": "Retention rows, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 224
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind) (increase(motorfix_retention_rows_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{kind}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 173,
+      "type": "stat",
+      "title": "Retention rows, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 224
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind) (increase(motorfix_retention_rows_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{kind}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 174,
+      "type": "timeseries",
+      "title": "Retention rows per hour, by kind",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 224
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind) (increase(motorfix_retention_rows_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{kind}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 228
+      },
+      "id": 175,
+      "panels": [],
+      "title": "Similar garages",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 229
+      },
+      "id": 176,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_similar_garages_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Similar garages answers per hour, by outcome",
+      "type": "timeseries"
     }
   ]
 }

@@ -2,7 +2,7 @@ import { fuelColumns, isBrandsSection } from '@motor-fix/contracts';
 import { HttpStatus } from '@nestjs/common';
 
 import type { AuditEntry, AuditPort } from '../../audit/audit.port';
-import { refusal } from '../../auth/sign-up.service';
+import { refusal } from '../../auth/http-refusal';
 import type { Prisma } from '../../generated/prisma/client';
 
 // Every brand id must be one the catalogue holds, a retired one included: a

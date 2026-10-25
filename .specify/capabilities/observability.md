@@ -45,9 +45,11 @@ features:
   - 068-yearly-documents
   - 067-restore-suspended-garage
   - 500-req-ip-behind-proxy
-  - 947-faro-consent-journeys
   - 003-admin-account-actions
+  - 1188-tail-latency
+  - 947-faro-consent-journeys
   - 056-mechanic-dialog
+  - 1156-retention-job
 ---
 
 # Capability: Observability
@@ -548,7 +550,7 @@ _From 1024-alert-rules._
 
 _From 1024-alert-rules._
 
-### 1024-FR-005 — `worker.json` MUST hold `worker-queue-backlog`, firing per environment and queue when `motorfix_queue_oldest_waiting_seconds` exceeds 600 s for 5 minutes, and `worker-jobs-failed`, firing per environment and queue when `motorfix_jobs_total{outcome="failed"}` increased in the last 15 minutes for any queue but `verification-result` (which keeps `verification-result-failed`), `for: 0s`; both summaries name the queue (`{{ $labels.queue }}`). (Amended 2026-10-17: `worker-queue-backlog` alerts on no data (1345-FR-004).)
+### 1024-FR-005 — `worker.json` MUST hold `worker-queue-backlog`, firing per environment and queue when `motorfix_queue_oldest_waiting_seconds` exceeds 600 s for 5 minutes, and `worker-jobs-failed`, firing per environment and queue when `motorfix_jobs_total{outcome="failed"}` increased in the last 15 minutes for any queue but `verification-result` (which keeps `verification-result-failed`), `for: 0s`; both summaries name the queue (`{{ $labels.queue }}`). (Amended 2026-10-17: `worker-queue-backlog` alerts on no data (1345-FR-004). (Amended 2026-10-25: `worker-jobs-failed` also carries the retention job's overdue arm, `reason="overdue"` on queue `retention`, and labels its failed arm `reason="failed"` (1156-FR-011).)
 
 _From 1024-alert-rules._
 
@@ -647,6 +649,7 @@ _From 294-status-health-checks._
 ### 294-FR-012 — Tests MUST exist before the implementation and MUST cover: the two-in-a-row rule and `since` set on the first check of the new state; the 5-minute median (one sample, several, a sample older than 5 minutes left out); each tile's probe result mapped to green, amber and red with fixture limits, including a failed check and a figure exactly at a limit; the search probe writing no SEARCH_LOG row; `status_tile.changed` written in the same transaction as the tile change and only on a change, with the `admin` audience; a probe that throws not stopping the run; the job not starting on an unset or invalid `STATUS_THRESHOLDS`; the first run creating six rows; the maps probe on alternate runs and on the first; the share figure with no sends in the window. No end-to-end test in this task (#53 runs it).
 
 _From 294-status-health-checks._
+
 ### 880-FR-001 — Every rule in every file under `infra/observability/alerts/` MUST carry an `annotations.runbook` line: one non-empty sentence naming what to check first (the panel, log or job to open), next to `summary`. `scripts/alert-rules.spec.ts` MUST fail a rule without one.
 
 _From 880-grafana-alerts._
@@ -758,6 +761,7 @@ _From 297-system-status-log._
 ### 297-FR-015 — Tests MUST exist before the implementation and MUST cover: each source writing one entry with the right kind, source and severity (tile change, failed check, final job failure, Brevo and Geoapify errors, server error, backup completed and failed, deploy); grouping within a minute (40 → count 40) and across a minute boundary (two rows); the scrubber masking an e-mail, a phone and a plate in `message` and in `context`; a failed write not failing the caller and being reported once; the write surviving the caller's rollback; `system_log.added` on the `admin` audience only, on insert and not on increment, and a failed publish not failing the write; the purge deleting a 91-day entry and keeping an 89-day one; a retried job failure writing nothing; a business change (price list, reported review) writing no entry; a refused kind or source. No end-to-end test in this task (#55 runs it).
 
 _From 297-system-status-log._
+
 ### 1345-FR-001 — The Node runtime instrumentation of the api, worker, web and mcp MUST sample the event-loop delay at the library's default resolution (10 ms), never at a precision of a second or more, so that `nodejs_eventloop_delay_p99_seconds` on an idle process reads below 0.05 s and the `worker-saturation` rule (0.5 s for 5 minutes) fires only on a stall; the panels and the rule are unchanged. A test asserts the configured precision.
 
 _From 1345-staging-observability._
@@ -805,6 +809,7 @@ _From 1345-staging-observability._
 ### 1348-FR-006 — A cache read that fills an entry (the lead of a miss, inside a warm or not) MUST count its outcome (`miss`, or `warm` inside a warm, 1169-FR-011) as soon as its read function has answered and before the entry is sent to Redis, so that an entry found in Redis always has its count recorded; the counted outcome does not depend on the store's answer (as before this change, when the count followed the store whether or not it succeeded), so the meaning of `warm` and `miss` is unchanged and only the order moves; a background refresh of a stale entry still counts nothing. A cache service integration test MUST observe the counter at the moment the store is sent and fail while the count follows the store; `home-warm.integration.spec.ts` then passes every time, with no retry, sleep or wait added to it.
 
 _From 1348-release-green._
+
 ### 173-FR-014 — The two new endpoints MUST be listed in `infra/observability/inventory.json` with their metrics (the API's route metrics), logs, the dashboard panel and alert they fall under, or the reason they need none, and the PR's Observability section names them (`scripts/observability-inventory.ts` fails CI on one left out).
 
 _From 173-price-range-in-place._
@@ -812,6 +817,7 @@ _From 173-price-range-in-place._
 ### 1183-FR-006 — The `motorfix-api` dashboard MUST gain a "Profile p95 (alert above 300 ms)" panel, and the API alerts file an `api-profile-latency` rule that fires when the profile route's p95 request duration stays above 300 ms for 10 minutes, both shaped like the search ones; the route label MUST be the one the API actually emits for `GET /api/v1/garages/:slug` (checked against `apps/api/src/telemetry.ts` and the existing search panel's `http_route` value). The alert MUST be listed in `infra/observability/inventory.json` under the `api` app so `scripts/observability-inventory.ts` passes.
 
 _From 1183-garage-profile-page._
+
 ### 1178-FR-005 — The worker MUST accept one new optional setting naming Keycloak's metrics endpoint (`KEYCLOAK_METRICS_URL`, a full address to the management interface's `/metrics` on Railway's private network). When it is unset or empty, the worker MUST make no request to any metrics endpoint and publish no Keycloak sample; every other reading is unchanged.
 
 _From 1178-keycloak-sizing._
@@ -895,9 +901,22 @@ _From 947-faro-consent-journeys._
 ### 947-FR-012 — The feature MUST add no new endpoint, no new outside call and no new dependency; every failure of the SDK, the storage or the collector MUST be dropped silently and never break, block or slow a page (877-FR-014).
 
 _From 947-faro-consent-journeys._
+
 ### 003-FR-021 — The new routes MUST ship their observability in the same change: request count, duration and error metrics by route and status, one counter of action outcomes labelled by action (`reset_access`, `suspend`, `restore`, `delete_on_request`) and outcome (`done`, `refused`, `conflict`, `email_failed`, `failed`) with no other label, one structured log line per action and per failure (route, outcome, account id, never a name, e-mail, phone or reason text), a dashboard panel and an alert on the error rate and on `failed`, listed in `infra/observability/inventory.json` and in the PR's Notes.
 
 _From 003-admin-account-actions._
+
+### 1188-FR-008 — The event-loop delay p99 metric MUST stay exported by every service (`libs/observability/src/setup/instrumentations.ts`, the runtime instrumentation; `start.ts` keeps p99) and the "Event-loop lag p99" panel MUST stay on every service dashboard (`infra/observability/grafana/dashboards/motorfix-*.json`); a test asserts both, and nothing new is built for it (1345-FR-001 and 879-FR-007 hold).
+
+_From 1188-tail-latency._
+
+### 1156-FR-010 — Each run MUST log one line per kind with the number of rows it removed or anonymised (0 included) and one line for the run with its duration (the lines carry kinds and counts only, never row content or identifiers), and MUST count the same numbers on one product counter by kind; the job MUST be observable like the worker's other jobs (its outcome on the jobs counter, its final failure in the system log and the worker-jobs-failed alert).
+
+_From 1156-retention-job._
+
+### 1156-FR-011 — The worker dashboard MUST gain a panel with the retention counts by kind over time, and an alert MUST fire when the time since the job's last success is greater than 48 hours (an arm of `worker-jobs-failed`, `reason="overdue"`, so the rules stay within the free tier's 50); the job, the counter, the panel and the alert MUST be listed in `infra/observability/inventory.json` in the same change.
+
+_From 1156-retention-job._
 
 ## Retired
 

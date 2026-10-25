@@ -3,6 +3,7 @@ import { Client } from 'pg';
 
 import { headers, ready, signIn, signUpDriver } from './accounts.js';
 import { test } from './fixtures.js';
+import { keepSeededLanguage, savedLanguage } from './seeded-language.js';
 
 const SETTINGS = '/app/driver/settings';
 const PREFERENCES = '/api/v1/notification-preferences';
@@ -26,6 +27,8 @@ async function restore(request: APIRequestContext) {
 }
 
 async function settings(page: Page, email: string) {
+  // The language buttons below turn the page, never the shared account.
+  await keepSeededLanguage(page);
   await ready(page, '/ro');
   await page
     .getByRole('banner')
@@ -168,6 +171,7 @@ test.describe('the opened channel pickers at every size @seeded', () => {
   ]) {
     test(`each group opens with its pickers and no sideways scroll at ${width} px`, async ({
       page,
+      request,
     }, testInfo) => {
       // Four looks, each with a full-page screenshot.
       test.setTimeout(120_000);
@@ -191,6 +195,8 @@ test.describe('the opened channel pickers at every size @seeded', () => {
           });
         }
       }
+      // The later specs signing in as this driver read Romanian.
+      expect(await savedLanguage(request, WITH_PHONE)).toBe('ro');
     });
   }
 });

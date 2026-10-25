@@ -547,7 +547,8 @@ test.describe('the rating dial with reduced motion @seeded', () => {
   }) => {
     await ready(page, '/ro');
     await tile(page, 'Dacia').click();
-    await expect(dialValue(page)).toHaveText('4,9');
+    // Atelier Test leads Dacia with no place set: 5.0 from its seeded review.
+    await expect(dialValue(page)).toHaveText('5,0');
 
     await chooseTesla(page);
     // "—" is also the dial while the answer loads: wait for Tesla's rows.
@@ -926,16 +927,22 @@ test('sets the preview as one panel of 64 px rows, the rating over the rate on t
   await ready(page, '/ro');
   await pickDacia(page);
 
+  let rated = 0;
   for (const row of await previewRows(page).all()) {
     const box = await row.boundingBox();
     expect(box?.height).toBeGreaterThanOrEqual(64);
     const rating = await row.locator('.rating').boundingBox();
-    const rate = await row.locator('.rate').boundingBox();
     const name = await row.locator('.name').boundingBox();
-    if (!rating || !rate || !name || !box) throw new Error('row parts missing');
-    expect(rating.y + rating.height).toBeLessThanOrEqual(rate.y + 1);
+    if (!rating || !name || !box) throw new Error('row parts missing');
     expect(rating.x).toBeGreaterThan(name.x + name.width - 1);
+    // A garage with no labour rate (Atelier Test) shows the rating alone.
+    if ((await row.locator('.rate').count()) === 0) continue;
+    const rate = await row.locator('.rate').boundingBox();
+    if (!rate) throw new Error('rate missing');
+    expect(rating.y + rating.height).toBeLessThanOrEqual(rate.y + 1);
+    rated += 1;
   }
+  expect(rated).toBeGreaterThan(0);
   const panel = page.locator('mf-home-preview ul');
   const radius = () =>
     panel.evaluate((list) => getComputedStyle(list).borderTopLeftRadius);

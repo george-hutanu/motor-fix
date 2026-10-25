@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { expect, type Page } from '@playwright/test';
 
+import { hydrated } from './accounts.js';
 import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
@@ -22,7 +23,9 @@ async function open(
 ) {
   await page.setViewportSize({ height: 800, width });
   await page.emulateMedia({ colorScheme: scheme, reducedMotion });
-  await page.goto('/cockpit');
+  // Hydrated first: hydration sets every binding again, so an attribute a
+  // test removes before it would be put back.
+  await hydrated(page, '/cockpit');
   await expect(
     page.locator('mf-cockpit-gauges-sample mf-lamp').first(),
   ).toBeVisible();
@@ -146,11 +149,17 @@ test('scanner helper flags a gauge whose accessible name is removed', async ({
   page,
 }) => {
   await open(page, 'dark', 1280);
+  // A copy beside the dial, outside Angular: a binding on the dial itself
+  // writes its label back as the reading moves, before the scan (run
+  // 40145209419 found none on its first try).
   const stripped = await page
     .locator('mf-cockpit-gauges-sample [role="img"][aria-label]')
     .first()
     .evaluate((el) => {
-      el.removeAttribute('aria-label');
+      const copy = el.cloneNode(true) as Element;
+      copy.removeAttribute('aria-label');
+      copy.removeAttribute('aria-labelledby');
+      el.after(copy);
       return true;
     });
   expect(stripped).toBe(true);

@@ -27,11 +27,12 @@ import { AccountsService } from '../accounts.service';
 import { AUTH_OPTIONS, type AuthOptions } from '../actor.guard';
 import { Attempts } from '../attempts';
 import { consentRequired, isCurrentConsent } from '../consent';
+import { refusal } from '../http-refusal';
 import { MAINTENANCE, type Maintenance } from '../maintenance';
 import { roleInUse } from '../policy';
 import { PRISMA } from '../prisma';
 import { type Issued, SignInService } from '../sign-in.service';
-import { refusal, taken } from '../sign-up.service';
+import { taken } from '../sign-up.service';
 
 export const PHONE_BREVO = Symbol('PHONE_BREVO');
 

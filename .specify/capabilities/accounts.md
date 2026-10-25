@@ -46,11 +46,13 @@ features:
   - 500-req-ip-behind-proxy
   - 140-account-delete-export
   - 500-trust-railway-edge
+  - 105-brand-list-admin
   - 1370-release-seed-no-ssh
   - 1372-seed-restores-accounts
   - 947-faro-consent-journeys
   - 003-admin-account-actions
   - 1373-seed-status-identity
+  - 1156-retention-job
 ---
 
 # Capability: Accounts
@@ -1236,6 +1238,10 @@ _From 500-trust-railway-edge._
 
 _From 500-trust-railway-edge._
 
+### 105-FR-016 — `refusal` MUST live in a shared module of the auth library (`libs/domain/src/auth/http-refusal.ts`), re-exported where the existing imports expect it or every import updated; after the change no file outside `libs/domain/src/auth/` imports `auth/sign-up.service` for it (`git grep` shows none). (#568)
+
+_From 105-brand-list-admin._
+
 ### 003-FR-001 — `GET /api/v1/admin/accounts/{id}` MUST answer, for a MotorFix admin, the account's: name, e-mail, phone, language, roles (in the list's order), the linked garage when the account owns one, is receptionist at one or holds a mechanic card at one (id, name, status), joined time, last active time, status, the suspension reason when `suspended`, counts (cars, quote requests, reviews), sign-in methods (`password`, `google`, `apple`, `whatsapp_phone`, as a list of methods only), whether the account holds `admin` (so no action is offered) and, for a garage owner, the garage's legal documents (ids and titles) the page can open. The answer MUST carry no password hash, no sign-in subject and no token.
 
 _From 003-admin-account-actions._
@@ -1347,6 +1353,10 @@ _From 1373-seed-status-identity._
 ### 1373-FR-007 — Tests come first: integration tests (`libs/domain/src/seed.integration.spec.ts`) for a `deleted` seeded account, one with two password identities, the day's count at 0 after a seed and the summary line; a unit test of the pre-deploy command run split into words with no shell, each carrying `// @traces 1373-FR-<n>`.
 
 _From 1373-seed-status-identity._
+
+### 1156-FR-004 — The job MUST delete every sign-in code, phone-change code, account token (every purpose) and refresh token whose expiry has passed, used or not, and every staff invite in status `sent` whose expiry has passed; `accepted` and `revoked` invites stay.
+
+_From 1156-retention-job._
 
 ## Retired
 

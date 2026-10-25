@@ -1,4 +1,6 @@
 // @traces 1174-FR-004
+// @traces 1185-FR-003
+// @traces 1185-FR-005
 import { createPrisma } from './auth/prisma';
 
 // Every environment boots the repository's own database image
@@ -35,6 +37,41 @@ describe('the database image', () => {
 
     expect(preload.split(',').map((name) => name.trim())).toContain(
       'pg_stat_statements',
+    );
+  });
+});
+
+describe('the Romanian fold', () => {
+  const fold = async (sql: string) => {
+    const [{ folded }] = await prisma.$queryRawUnsafe<{ folded: string }[]>(
+      `SELECT ${sql} AS folded`,
+    );
+    return folded;
+  };
+
+  it('reads the comma and cedilla letters and the other marks as their base letters', async () => {
+    expect(await fold(`f_unaccent('ș ş ț ţ ă â î')`)).toBe('s s t t a a i');
+  });
+
+  it('keeps the case of a capital', async () => {
+    expect(await fold(`f_unaccent('ȘŞȚŢĂÂÎ')`)).toBe('SSTTAAI');
+  });
+
+  it('reads a letter and its combining mark as the one letter', async () => {
+    expect(
+      await fold(`f_unaccent('s' || U&'\\0326' || 'a' || U&'\\0306')`),
+    ).toBe('sa');
+  });
+
+  it('passes every other character through', async () => {
+    expect(await fold(`f_unaccent('Cluj-Napoca 12, é ü')`)).toBe(
+      'Cluj-Napoca 12, é ü',
+    );
+  });
+
+  it('is what the account search folds, in lower case', async () => {
+    expect(await fold(`account_fold('Ştefan Țăndărică ÎÂ')`)).toBe(
+      'stefan tandarica ia',
     );
   });
 });

@@ -1,4 +1,4 @@
-import { databaseTurn } from './database-turn.testing';
+import { databaseTurn, TURN_WAIT_MS } from './database-turn.testing';
 
 type TurnGlobal = {
   releaseDatabaseTurnLast?: (release: () => Promise<void>) => void;
@@ -12,8 +12,7 @@ export function serialDatabase(databaseUrl: string) {
       'serialDatabase needs testEnvironment database-turn.environment.cjs',
     );
   const turn = databaseTurn(databaseUrl);
-  // Waits out the longest holder: the audit history's million-row case.
-  beforeAll(turn.take, 360_000);
+  beforeAll(turn.take, TURN_WAIT_MS);
   // Given back after every afterAll of the spec, not before them.
   releaseLast(turn.release);
 }

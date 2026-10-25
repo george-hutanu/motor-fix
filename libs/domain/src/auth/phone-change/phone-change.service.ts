@@ -17,6 +17,7 @@ import {
 } from '../../notifications/phone-config';
 import { AUTH_OPTIONS, type AuthOptions } from '../actor.guard';
 import { Attempts } from '../attempts';
+import { refusal } from '../http-refusal';
 import {
   CODE_ATTEMPTS,
   CODE_TTL_MS,
@@ -28,7 +29,7 @@ import { PHONE_BREVO } from '../phone-sign-in/phone-sign-in.service';
 import { sendWhatsAppCode } from '../phone-sign-in/whatsapp-code';
 import type { Actor } from '../policy';
 import { PRISMA } from '../prisma';
-import { refusal, tooMany } from '../sign-up.service';
+import { tooMany } from '../sign-up.service';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 

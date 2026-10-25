@@ -2576,6 +2576,152 @@
         ]
       }
     },
+    "/api/v1/admin/brands": {
+      "get": {
+        "operationId": "AdminBrandsController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Part of the name, accents and case ignored.",
+            "schema": {
+              "maxLength": 40,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBrandListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "operationId": "AdminBrandsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBrandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBrandDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          },
+          "409": {
+            "description": "brand_exists"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/brands/{id}": {
+      "patch": {
+        "operationId": "AdminBrandsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBrandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBrandDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no brand"
+          },
+          "409": {
+            "description": "stale_value (with the current brand); brand_exists"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/brands": {
       "get": {
         "operationId": "BrandsController_search",
@@ -3162,6 +3308,53 @@
         },
         "tags": [
           "brands"
+        ]
+      }
+    },
+    "/api/v1/garages/{slug}/similar": {
+      "get": {
+        "operationId": "SimilarGaragesController_forGarage",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "The brand, by its catalogue slug; without it, every brand the garage worked on",
+            "schema": {
+              "pattern": "^[a-z0-9-]{1,80}$",
+              "example": "bmw",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimilarGaragesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad brand slug or another parameter"
+          },
+          "404": {
+            "description": "not_found: no garage with that slug that was listed and is no longer, or no brand with that slug"
+          }
+        },
+        "tags": [
+          "search"
         ]
       }
     },
@@ -3984,6 +4177,58 @@
           }
         ],
         "summary": "A mechanic’s published reviews at every garage, 20 a page",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/api/v1/reviews/garage/{garageId}": {
+      "get": {
+        "operationId": "ReviewsController_forGarage",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageReviewsPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id, or a page not a whole number from 1"
+          },
+          "404": {
+            "description": "not_found: no such garage, or one not shown to visitors"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A garage’s published reviews, 20 a page, with its rating, count and breakdown",
         "tags": [
           "reviews"
         ]
@@ -11466,6 +11711,111 @@
           "ids"
         ]
       },
+      "AdminBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Škoda"
+          },
+          "slug": {
+            "type": "string",
+            "example": "skoda"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "retired"
+            ]
+          },
+          "garages": {
+            "type": "number",
+            "description": "Garages that work on it.",
+            "example": 12
+          },
+          "cars": {
+            "type": "number",
+            "description": "Drivers’ cars of this brand.",
+            "example": 40
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Sent back as seenUpdatedAt on an edit.",
+            "format": "date-time"
+          },
+          "updatedBy": {
+            "type": "string",
+            "description": "The admin who last changed it; null when only the loader did.",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "state",
+          "garages",
+          "cars",
+          "updatedAt",
+          "updatedBy"
+        ]
+      },
+      "AdminBrandListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminBrandDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CreateBrandDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Xpeng",
+            "maxLength": 40,
+            "minLength": 2
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateBrandDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Mercedes-Benz",
+            "maxLength": 40
+          },
+          "active": {
+            "type": "boolean",
+            "description": "false retires it, true brings it back."
+          },
+          "seenUpdatedAt": {
+            "type": "string",
+            "description": "The updatedAt the admin saw.",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "seenUpdatedAt"
+        ]
+      },
       "BrandDto": {
         "type": "object",
         "properties": {
@@ -12198,6 +12548,155 @@
           "preview",
           "total",
           "takers"
+        ]
+      },
+      "SimilarGarageDto": {
+        "type": "object",
+        "properties": {
+          "worksOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "doesNotTake": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "brandNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "refusalPhrase": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Service Auto Nord"
+          },
+          "slug": {
+            "type": "string",
+            "example": "service-auto-nord"
+          },
+          "stance": {
+            "type": "string",
+            "description": "The garage's answer for the brand; unstated when it has not marked it",
+            "enum": [
+              "works_on",
+              "does_not_take",
+              "unstated"
+            ]
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Km from the place, one decimal; null for a mobile mechanic. Only with near",
+            "nullable": true
+          },
+          "comesToYou": {
+            "type": "boolean",
+            "description": "True for a mobile mechanic whose area holds the place. Only with near"
+          },
+          "rating": {
+            "type": "number",
+            "description": "Out of 5, one decimal; null until reviewed",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "integer"
+          },
+          "labourFromLei": {
+            "type": "integer",
+            "description": "The hourly labour rate it starts from, in whole lei",
+            "nullable": true
+          },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ],
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "description": "The address's city; never for a mobile mechanic",
+            "example": "Militari"
+          },
+          "serviceRadiusKm": {
+            "type": "integer",
+            "description": "A mobile mechanic's area, in km; only for one"
+          },
+          "facilities": {
+            "type": "array",
+            "description": "The facilities it lists, in catalogue order",
+            "items": {
+              "type": "string",
+              "enum": [
+                "courtesy_car",
+                "pickup_dropoff",
+                "waiting_area"
+              ]
+            }
+          },
+          "brand": {
+            "description": "The brand it was matched for: the asked one, or the first brand both garages work on, most popular first",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BrandRefDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "worksOn",
+          "doesNotTake",
+          "brandNote",
+          "refusalPhrase",
+          "id",
+          "name",
+          "slug",
+          "stance",
+          "rating",
+          "reviewCount",
+          "labourFromLei",
+          "businessKind",
+          "facilities",
+          "brand"
+        ]
+      },
+      "SimilarGaragesDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "description": "The asked brand; null when none was asked",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BrandRefDto"
+              }
+            ]
+          },
+          "items": {
+            "description": "Approved garages that work on the brand around the garage that is gone: fixed ones within 25 km, mobile mechanics whose area holds its place; by rating, unrated last, then reviews, name and id; 3 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimilarGarageDto"
+            }
+          }
+        },
+        "required": [
+          "brand",
+          "items"
         ]
       },
       "CarSnapshotDto": {
@@ -14184,6 +14683,132 @@
           }
         },
         "required": [
+          "page",
+          "pageSize",
+          "total",
+          "items"
+        ]
+      },
+      "RatingBreakdownDto": {
+        "type": "object",
+        "properties": {
+          "five": {
+            "type": "number"
+          },
+          "four": {
+            "type": "number"
+          },
+          "three": {
+            "type": "number"
+          },
+          "two": {
+            "type": "number"
+          },
+          "one": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "five",
+          "four",
+          "three",
+          "two",
+          "one"
+        ]
+      },
+      "GarageReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "job",
+              "profile"
+            ]
+          },
+          "rating": {
+            "type": "number",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DriverNameDto"
+          },
+          "car": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CarSnapshotDto"
+              }
+            ]
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "rating",
+          "text",
+          "postedAt",
+          "author",
+          "car",
+          "jobs"
+        ]
+      },
+      "GarageReviewsPageDto": {
+        "type": "object",
+        "properties": {
+          "rating": {
+            "type": "number",
+            "description": "The garage's stored rating",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number",
+            "description": "The garage's stored review count"
+          },
+          "breakdown": {
+            "$ref": "#/components/schemas/RatingBreakdownDto"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number",
+            "description": "Published reviews; the breakdown sums to it"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageReviewDto"
+            }
+          }
+        },
+        "required": [
+          "rating",
+          "reviewCount",
+          "breakdown",
           "page",
           "pageSize",
           "total",

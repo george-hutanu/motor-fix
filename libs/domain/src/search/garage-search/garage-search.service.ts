@@ -1,4 +1,5 @@
 import {
+  type BrandRefDto,
   bboxOf,
   FACILITIES,
   type GarageSearchPageDto,
@@ -14,8 +15,8 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 
 import { GarageSearchCache } from './garage-search.cache';
+import { refusal } from '../../auth/http-refusal';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import { brandAnswer } from '../../garages/brand-answer';
 import {
   publicGarages,
@@ -200,10 +201,12 @@ export async function brandOf(prisma: PrismaClient, key: BrandKey) {
 
 export type Group = (typeof GROUPS)[number];
 
-// The garages that take the brand; the rest of a search is the other group.
-const takes = (brandId: string) => Prisma.sql`EXISTS (
+// The garages that take the brand, or any of the brands; the rest of a
+// search is the other group.
+const takes = (brandId: string | string[]) => Prisma.sql`EXISTS (
   SELECT 1 FROM garage_brand gb
-  WHERE gb.garage_id = garage.id AND gb.brand_id = ${brandId}::uuid
+  WHERE gb.garage_id = garage.id
+    AND ${typeof brandId === 'string' ? Prisma.sql`gb.brand_id = ${brandId}::uuid` : Prisma.sql`gb.brand_id = ANY(${brandId}::uuid[])`}
     AND gb.stance = 'works_on')`;
 
 // The public garages of each group, in the area when there is one: the
@@ -235,7 +238,7 @@ export async function countGroups(
 // order of the approved garages, so a page with no area reads the index
 // instead of sorting every garage.
 export function groupPageSql(
-  brandId: string,
+  brandId: string | string[],
   group: Group,
   area: AreaSql | undefined,
   { after, ids, sort = 'rating', take }: GroupPageOptions,
@@ -269,7 +272,7 @@ type PageRow = AreaRow & { labour_bani: number | null };
 
 export function groupPage(
   prisma: PrismaClient,
-  brandId: string,
+  brandId: string | string[],
   group: Group,
   area: AreaSql | undefined,
   options: GroupPageOptions,
@@ -316,10 +319,11 @@ const CARD = {
 
 type CardRow = Prisma.GarageGetPayload<{ select: typeof CARD }>;
 
-// What a card shows. A mobile mechanic's city would tell where its seat is,
+// What a card shows, its stance for the brand `brandFor` picks among the
+// brands it works on. A mobile mechanic's city would tell where its seat is,
 // so it gets its area instead.
 function cardOf(
-  brandId: string,
+  brandFor: (worksOn: BrandRefDto[]) => string,
   {
     brandNote,
     brands,
@@ -334,11 +338,13 @@ function cardOf(
 ): ListedGarageDto {
   const mobile = garage.businessKind === 'mobile';
   const listed = new Set(facilities.map((row) => row.facility));
+  const answer = brandAnswer(brands, { brandNote, refusalPhrase });
+  const brandId = brandFor(answer.worksOn);
   return {
     ...garage,
     stance:
       brands.find((row) => row.brand.id === brandId)?.stance ?? 'unstated',
-    ...brandAnswer(brands, { brandNote, refusalPhrase }),
+    ...answer,
     facilities: FACILITIES.filter((facility) => listed.has(facility)),
     labourFromLei:
       labourFromBani === null ? null : Math.round(labourFromBani / 100),
@@ -431,7 +437,12 @@ export class GarageSearchService {
         })),
       );
     }
-    const items = await this.cards(brandId, rows.slice(0, PAGE), area);
+    const items = await listedCards(
+      this.prisma,
+      rows.slice(0, PAGE),
+      area,
+      () => brandId,
+    );
     const last = items.at(-1);
     const row = rows.find((one) => one.id === last?.id);
     return {
@@ -466,7 +477,12 @@ export class GarageSearchService {
     return {
       brand,
       ...found,
-      items: await this.cards(brand.id, [...takers, ...others], area),
+      items: await listedCards(
+        this.prisma,
+        [...takers, ...others],
+        area,
+        () => brand.id,
+      ),
       nextCursor: null,
     };
   }
@@ -482,22 +498,23 @@ export class GarageSearchService {
     if (!last) throw invalidCursor();
     return { ...cursor, ...last };
   }
+}
 
-  // The cards of a page's rows, by their ids only, in the page's order.
-  private async cards(
-    brandId: string,
-    rows: AreaRow[],
-    area: AreaSql | undefined,
-  ): Promise<ListedGarageDto[]> {
-    const garages = await inOrder(rows, (ids) =>
-      this.prisma.garage.findMany({
-        select: CARD,
-        where: { id: { in: ids }, ...publicGarages() },
-      }),
-    );
-    const at = area && inAreaOf(rows);
-    return garages.map((garage) => placed(cardOf(brandId, garage), at));
-  }
+// The cards of a page's rows, by their ids only, in the page's order.
+export async function listedCards(
+  prisma: PrismaClient,
+  rows: AreaRow[],
+  area: AreaSql | undefined,
+  brandFor: (worksOn: BrandRefDto[]) => string,
+): Promise<ListedGarageDto[]> {
+  const garages = await inOrder(rows, (ids) =>
+    prisma.garage.findMany({
+      select: CARD,
+      where: { id: { in: ids }, ...publicGarages() },
+    }),
+  );
+  const at = area && inAreaOf(rows);
+  return garages.map((garage) => placed(cardOf(brandFor, garage), at));
 }
 
 // The area of a search with a place or a box; none reads all of Romania.
