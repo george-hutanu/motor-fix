@@ -31,6 +31,9 @@
     "saveFailed": "Nu am putut salva. Încearcă din nou.",
     "title": "Funcții"
   },
+  "home": {
+    "mechanic": "Lucrările tale vor apărea aici."
+  },
   "invite": {
     "canAnswerQuotes": "Poate răspunde la cererile de ofertă",
     "cancel": "Anulează",
@@ -238,6 +241,30 @@
     "title": "Adaugă un mecanic",
     "titleEdit": "{name}",
     "years": "Ani de experiență"
+  },
+  "members": {
+    "error": "Nu am putut încărca persoanele cu acces.",
+    "invites": {
+      "none": "Nicio invitație în așteptare.",
+      "sent": "trimisă {when}",
+      "title": "Invitații în așteptare",
+      "today": "azi",
+      "yesterday": "ieri"
+    },
+    "loading": "Se încarcă persoanele cu acces.",
+    "permissions": {
+      "canAnswerQuotes": "poate răspunde la cereri",
+      "canMoveBookings": "poate muta programări",
+      "canRecordFinalPrice": "poate înregistra prețul final"
+    },
+    "retry": "Reîncearcă",
+    "role": {
+      "mechanic": "mecanic",
+      "owner": "proprietar",
+      "receptionist": "recepție"
+    },
+    "since": "din {date}",
+    "title": "Persoane cu acces"
   },
   "prices": {
     "add": "Adaugă o lucrare",

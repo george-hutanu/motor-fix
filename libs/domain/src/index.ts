@@ -1,3 +1,10 @@
+export {
+  type Capability,
+  capabilitiesOf,
+  ROLES,
+  type Role,
+} from '@motor-fix/contracts/capabilities';
+
 export { AdminAccountModule } from './admin/admin-accounts/account/account.module';
 export { AdminAccountsModule } from './admin/admin-accounts/admin-accounts.module';
 export { PlatformRulesModule } from './admin/platform-rules/platform-rules.module';
@@ -19,12 +26,6 @@ export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
 export { assistantBroker } from './auth/assistant/assistant.service';
 export { AuthModule } from './auth/auth.module';
-export {
-  type Capability,
-  capabilitiesOf,
-  ROLES,
-  type Role,
-} from './auth/capabilities';
 export { DATA_EXPORT_CONSUMER } from './auth/data-export/data-export.builder';
 export { DataExportModule } from './auth/data-export/data-export.module';
 export { EmailConfirmationModule } from './auth/email-confirmation/email-confirmation.module';

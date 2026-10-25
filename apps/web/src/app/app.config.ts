@@ -17,6 +17,7 @@ import { provideCockpitTheme } from '@motor-fix/ui-cockpit';
 import { provideLanguageAddresses } from './addresses';
 import { routes } from './app.routes';
 import { authInterceptor } from './auth.interceptor';
+import { garageGoneInterceptor } from './dashboard/garage-gone.interceptor';
 import { PlatformStatus } from './maintenance/platform-status';
 import { provideViewScrolling } from './scrolling';
 import { serverTimeoutInterceptor } from './server-timeout.interceptor';
@@ -30,7 +31,11 @@ import { provideVoiceRead } from './voice/voice';
 // connections alive between calls.
 export const apiHttpClient = () =>
   provideHttpClient(
-    withInterceptors([authInterceptor, serverTimeoutInterceptor]),
+    withInterceptors([
+      authInterceptor,
+      garageGoneInterceptor,
+      serverTimeoutInterceptor,
+    ]),
   );
 
 export const appConfig: ApplicationConfig = {

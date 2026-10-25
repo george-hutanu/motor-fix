@@ -1,3 +1,4 @@
+import type { Capability } from '@motor-fix/contracts/capabilities';
 import {
   type CanActivate,
   createParamDecorator,
@@ -18,7 +19,6 @@ import {
   signInRequired,
 } from './account-loader';
 import type { AssistantBroker } from './assistant/assistant.service';
-import type { Capability } from './capabilities';
 import {
   MAINTENANCE,
   type Maintenance,

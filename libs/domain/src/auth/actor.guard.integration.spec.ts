@@ -5,6 +5,7 @@ import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import {
   Body,
   Controller,
@@ -28,7 +29,6 @@ import {
   Public,
 } from './actor.guard';
 import { AuthModule } from './auth.module';
-import type { Role } from './capabilities';
 import { MAINTENANCE } from './maintenance';
 import type { Actor } from './policy';
 import { createPrisma } from './prisma';

@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import {
   GarageRequestsService,
   GaragesService,
@@ -18,10 +19,16 @@ import { GarageRequestsFeed } from '../garage-requests-feed';
 type Role = 'owner' | 'receptionist' | 'mechanic';
 type Status = 'draft' | 'approved' | 'suspended';
 
+const NONE = {
+  canAnswerQuotes: false,
+  canMoveBookings: false,
+  canRecordFinalPrice: false,
+};
+// Each role's row of the table the server answers with.
 const CAPABILITIES: Record<Role, string[]> = {
-  mechanic: ['garage.own_jobs'],
-  owner: ['garage.requests', 'garage.schedule', 'garage.team'],
-  receptionist: ['garage.requests', 'garage.schedule'],
+  mechanic: capabilitiesOf('mechanic', NONE),
+  owner: capabilitiesOf('garage', NONE),
+  receptionist: capabilitiesOf('receptionist', NONE),
 };
 
 const ANSWER: LegalCheckDto = {

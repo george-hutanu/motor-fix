@@ -194,6 +194,7 @@ describe('the garage inbox read', () => {
 
     expect(answered.items).toEqual([]);
   });
+  // @traces 102-FR-007
 
   it('lets a mechanic who may answer quotes read it, and refuses one who may not', async () => {
     const r = await inbox();
@@ -207,7 +208,7 @@ describe('the garage inbox read', () => {
     expect(ids(answering)).toEqual([r.waiting.id]);
     await expect(
       service.inbox(garageActor(r.t.plain, g, 'mechanic'), {}),
-    ).rejects.toMatchObject({ status: 404 });
+    ).rejects.toMatchObject({ response: { code: 'forbidden' }, status: 403 });
   });
 
   it('changes no row and records nothing when read', async () => {

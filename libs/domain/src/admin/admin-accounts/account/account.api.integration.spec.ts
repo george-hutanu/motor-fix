@@ -2,6 +2,7 @@
 // @traces 003-FR-008 003-FR-010 003-FR-011 003-FR-012 003-FR-013 003-FR-014
 // @traces 003-FR-015 003-FR-016 003-FR-020 003-FR-021
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -14,7 +15,6 @@ import { AuditService } from '../../../audit/audit.service';
 import { signAccessToken } from '../../../auth/access-token';
 import { AccountsService } from '../../../auth/accounts.service';
 import { AuthModule } from '../../../auth/auth.module';
-import type { Role } from '../../../auth/capabilities';
 import { hashPassword } from '../../../auth/password/password';
 import { serialDatabase } from '../../../auth/serial-db.testing';
 import { noEvents } from '../../../events/event.port';

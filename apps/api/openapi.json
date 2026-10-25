@@ -5995,6 +5995,54 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/members": {
+      "get": {
+        "operationId": "GarageMembersController_list",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageMembersDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "the garage id is not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Who has access to the garage: its members and open invites, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/images/g/{owner}/{digest}/{file}": {
       "get": {
         "operationId": "getImageVariant",
@@ -17531,6 +17579,97 @@
             "minLength": 2
           }
         }
+      },
+      "GarageMemberDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "receptionist",
+              "mechanic"
+            ]
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "permissions": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GaragePermissionsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "accountId",
+          "name",
+          "role",
+          "since",
+          "permissions"
+        ]
+      },
+      "GarageMemberInviteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "mechanic",
+              "receptionist"
+            ]
+          },
+          "email": {
+            "type": "string"
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "email",
+          "sentAt"
+        ]
+      },
+      "GarageMembersDto": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageMemberDto"
+            }
+          },
+          "invites": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageMemberInviteDto"
+            }
+          }
+        },
+        "required": [
+          "members",
+          "invites"
+        ]
       },
       "UpdateGarageDto": {
         "type": "object",

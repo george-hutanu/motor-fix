@@ -1,7 +1,8 @@
+import type { Role } from '@motor-fix/contracts/capabilities';
+
 import type { AuditPort } from '../../audit/audit.port';
 import type { EventPort } from '../../events/event.port';
 import type { Prisma } from '../../generated/prisma/client';
-import type { Role } from '../capabilities';
 
 type GrantRevokeReason =
   | 'role_removed'

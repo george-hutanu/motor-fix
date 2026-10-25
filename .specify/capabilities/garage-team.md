@@ -1,6 +1,6 @@
 ---
 capability: garage-team
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 131-invite-garage-staff
   - 389-confirm-booking-lift-mechanic
@@ -8,6 +8,7 @@ features:
   - 531-garage-feature-tabs
   - 055-team-list
   - 056-mechanic-dialog
+  - 102-garage-members
 ---
 
 # Capability: Garage team
@@ -211,6 +212,38 @@ _From 056-mechanic-dialog._
 ### 056-FR-023 — Tests MUST cover, failing first: Jest on real PostgreSQL for FR-001 (the limits at each bound, `speciality` written from the specialties, the backfill), FR-002/FR-003 (owner 201/200, receptionist and mechanic 403, driver, admin and another owner 404, signed out 401, 404 `feature_off` with the switch off after the access check, 404 for an unknown, removed or foreign card), FR-004 (403 before any write, `photo`, `bio`, `languages` each), FR-005 (one audit entry per changed field with old and new, none for an unchanged one; the events in the same transaction, the public channels only for a card on the profile), FR-006/FR-007 (the row's state, the invite revoked, the account's next request has no garage, a new invite makes a new row, the owner's row 409 `owner_row`), FR-008 (`toReassign` true for a future confirmed booking of a removed card, false for a past, cancelled or current card's), FR-009 (STAFF_REMOVED to the account by e-mail and push, no WhatsApp with the garage's WhatsApp on, nothing for a card with no account), FR-011 (the owner's row first, the new fields, `futureBookings`, `brands`), FR-014 (the deletion records `mechanic.removed`, bookings read `toReassign`, reviews stay), FR-015 (the row at creation with the garage's hours, the fallback marks `is_owner`, the re-save leaves it, two overlapping confirmed bookings with the team off); Jest for the dialog (tags from a comma-separated input, the two messages, the brand ticks, the read-only block, "Elimină" absent for the owner, the confirmation's plurals at 0, 1, 2 and 20, the spinner and the kept dialog on a refusal) and the view (the owner's row first with "proprietar", the years tail, the empty state's button opening the dialog, re-read on the two new kinds); Playwright (`web-e2e`): as an owner add Elena, edit her specialties, remove her, and a past job still shows her name; the PR QA sweep: the dialog at 320 px, 390 px, tablet and desktop, light and dark, RO and EN.
 
 _From 056-mechanic-dialog._
+
+### 102-FR-011 — The API MUST offer `GET /api/v1/garages/:garageId/members` answering 200 with `{ members: [...], invites: [...] }`: each member carries `accountId`, `name`, `role` (`owner`, `receptionist` or `mechanic`), `since` (the membership's joined time; for a mechanic the time their invite was accepted when the system holds it, otherwise null) and, for a mechanic, `permissions` (the three flags; null for the others); each invite carries `id`, `email`, `kind` (`mechanic` or `receptionist`) and `sentAt`, and is listed only while `sent` and not past its expiry (131-FR-003). Members are ordered owner, receptionists, mechanics, each group by name in Romanian collation (as 055-FR-001); invites by `sentAt` ascending. The DTOs live in the contracts library and the web calls it through the generated client (Constitution V).
+
+_From 102-garage-members._
+
+### 102-FR-012 — The read MUST be open to the garage's owner only, through the held `assertGarageOwner` check (`garage-brands.service.ts`): a receptionist or a mechanic of the garage gets 403 `forbidden`; any other actor (another garage's owner, a driver, an admin) gets 404. A call without a session answers 401 `sign_in_required` (the app-wide guard), a `garageId` that is not a UUID answers 400, and a garage that does not exist answers 404. Nothing is written: no audit entry, no event.
+
+_From 102-garage-members._
+
+### 102-FR-013 — The garage's Setări view MUST show, to the owner only (`garage.feature_switches`, under the "Funcții" panel, 398-FR-001), a panel "Persoane cu acces" / "People with access": one row per member "{name} · {role}" with " · din {date}" when `since` is set and, for a mechanic, the names of the ticked permissions joined with ", " after " · " ("poate muta programări", "poate răspunde la cereri", "poate înregistra prețul final" / "can move bookings", "can answer requests", "can record the final price"); then "Invitații în așteptare" / "Pending invites" with one row per invite "{email} · {role} · trimisă {when}" (`when` the relative day: "azi", "ieri", else the date in the viewer's language, `14 oct. 2026` / `Oct 14, 2026`), or "Nicio invitație în așteptare." / "No pending invites." when none. Roles read "proprietar", "recepție", "mecanic" / "owner", "front desk", "mechanic". Revoke, remove and permission actions are not here: they belong to #811, #364, #202 and #10.
+
+_From 102-garage-members._
+
+### 102-FR-014 — While the first read is in flight the panel MUST show three skeleton rows; a failed read (any non-2xx or a network error) MUST show "Nu am putut încărca persoanele cu acces." / "We could not load the people with access." with a "Reîncearcă" / "Try again" button that reads again. The panel MUST read again, without a reload and within 5 seconds of the event (SC-002's figure), when the dashboard's live stream delivers `invite.sent`, `invite.revoked`, `invite.accepted`, `mechanic.updated` or `member.removed` for the garage.
+
+_From 102-garage-members._
+
+### 102-FR-017 — Every new text MUST exist in Romanian and English in the garage and shell translation files (016-FR-002), with comma-below diacritics; names and e-mails typed by a person MUST never be shown back as markup.
+
+_From 102-garage-members._
+
+### 102-FR-018 — The panel MUST lay out phones first: at 320 px and 390 px each row wraps onto its own lines with no horizontal scroll, light and dark; from a tablet (768 px, the `md` breakpoint) the fragments sit on one line. Every control is reachable and operable by keyboard with a visible focus ring, the rows form a list for assistive technology, and the loading, error and lost-access texts are announced (`role="status"` / `role="alert"`); text and controls meet WCAG AA contrast in light and dark.
+
+_From 102-garage-members._
+
+### 102-FR-019 — The members read MUST be listed in `infra/observability/inventory.json` as an endpoint with its reason (a read; the API's request-duration histogram labels the route, 876-FR-008; no panel or alert of its own), and the PR's Notes MUST say so.
+
+_From 102-garage-members._
+
+### 102-FR-020 — Tests MUST be written first and cover: Jest on the table for FR-001–FR-002 (every role × capability "may not", each permission on and off, every view's capability in the table); Jest on `allowedViews` for the three menus of FR-004 and on Panou for FR-005; Jest on real PostgreSQL for FR-007 (403 for same-garage staff, 404 outside, 404 `feature_off` to the owner only), FR-008, FR-009 (no `phone` key in any garage read as a mechanic), FR-011–FR-012; Jest on the live hub for FR-010; Jest on the frame and the panel for FR-013–FR-016; Playwright: a seeded mechanic signs in and sees the limited menu, the owner opens Persoane cu acces and sees the members and a pending invite the test creates through the invite API (`POST …/invites`, held), the seed untouched. The permission-tick half of the brief's end-to-end flow waits for #202, which owns the tick.
+
+_From 102-garage-members._
 
 ## Retired
 

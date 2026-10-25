@@ -45,6 +45,7 @@ async function open(capabilities: string[] | null, area: Area, url: string) {
         useValue: {
           current,
           ended: new Subject<void>(),
+          garageGone: () => false,
           shown: current,
           signOut: jest.fn(),
           token: () => 'access',

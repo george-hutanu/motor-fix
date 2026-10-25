@@ -3,9 +3,9 @@ import {
   type MeDto,
   recheckedSince,
 } from '@motor-fix/contracts';
+import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import { Inject, Injectable } from '@nestjs/common';
 
-import { capabilitiesOf } from './capabilities';
 import { pendingEmail } from './email-change/email-change.service';
 import { type Actor, landingFor } from './policy';
 import { PRISMA } from './prisma';

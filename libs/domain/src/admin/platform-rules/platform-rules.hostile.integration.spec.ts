@@ -1,3 +1,4 @@
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -5,7 +6,6 @@ import request from 'supertest';
 import { PlatformRulesModule } from './platform-rules.module';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import { MAINTENANCE, type Maintenance } from '../../auth/maintenance';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';

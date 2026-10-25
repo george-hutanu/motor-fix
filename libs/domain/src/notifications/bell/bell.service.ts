@@ -3,6 +3,7 @@ import type {
   NotificationListQueryDto,
   NotificationPageDto,
 } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import {
   HttpException,
   HttpStatus,
@@ -13,7 +14,6 @@ import {
 } from '@nestjs/common';
 
 import { bellLink } from './bell.link';
-import type { Role } from '../../auth/capabilities';
 import { publishLive } from '../../events/live/live.hub';
 import type {
   Notification,

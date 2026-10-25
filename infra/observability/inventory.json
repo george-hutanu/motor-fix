@@ -891,6 +891,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "garage-members-list",
+      "source": "libs/domain/src/garages/members/members.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/members",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read of what the database already holds, so nothing is audited and no event is owed; its request span and log line carry the route and status, and a 403 forbidden or 404 not_found is the access rule working, not a failure",
+      "story": "ST-102"
+    },
+    {
+      "kind": "endpoint",
       "name": "garage-mechanics-add",
       "source": "libs/domain/src/garages/mechanics/mechanics.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics",

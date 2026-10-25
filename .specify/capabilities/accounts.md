@@ -54,6 +54,7 @@ features:
   - 1373-seed-status-identity
   - 1156-retention-job
   - 1204-terms-reaccept
+  - 102-garage-members
 ---
 
 # Capability: Accounts
@@ -98,9 +99,9 @@ _From 079-account-model._
 
 _From 079-account-model._
 
-### 079-FR-010 — The capabilities of each role MUST be one table on the server, with a test for every "may not" (every role × capability not granted). It holds the capabilities this epic's frames and scenarios name, read from the Security page's "Capabilities by role": driver — `driver.requests`, `driver.cars`, `driver.reviews`, `driver.saved_garages`, `driver.settings`; garage side — `garage.requests` (owner, receptionist; mechanic with `can_answer_quotes`), `garage.schedule` (owner, receptionist; mechanic with `can_move_bookings`), `garage.final_price` (owner, receptionist; mechanic with `can_record_final_price`), `garage.own_jobs` (owner, receptionist, mechanic), `garage.reviews`, `garage.team`, `garage.prices`, `garage.profile`, `garage.feature_switches` (owner only); admin — `admin.garages`, `admin.users`, `admin.reviews`, `admin.catalogue`, `admin.settings`. Later epics add rows. The web app gets the actor's capabilities through "who am I", never a copy of the table.
+### 102-FR-002 — The rows MUST be: owner (role `garage`) every `garage.*` capability; receptionist `garage.requests`, `garage.schedule`, `garage.move_bookings`, `garage.final_price`, `garage.own_jobs`, `garage.reviews`, `garage.profile`, `garage.audit_history`; mechanic `garage.own_jobs`, `garage.schedule`, `garage.audit_history`, plus `garage.requests` with `can_answer_quotes`, `garage.move_bookings` (new) with `can_move_bookings`, `garage.final_price` with `can_record_final_price`. Admin and driver rows are unchanged. A test MUST cover every role × capability pair not granted ("may not"), as 079-FR-010 asks, and every permission on and off for the mechanic.
 
-_From 079-account-model._
+_From 102-garage-members._
 
 ### 130-FR-001 — The API MUST check the actor on every route by default; a route MUST be explicitly marked public to be reachable without a session. Without a valid access token a gated route MUST answer 401 `sign_in_required` before its body is validated (modifies 079-FR-011).
 
@@ -110,9 +111,9 @@ _From 130-sign-in-gate._
 
 _From 079-account-model._
 
-### 079-FR-013 — The policy MUST answer 404 when the actor's role lacks the capability or the resource belongs to another account or garage; it MUST be callable from use cases, not only from controllers.
+### 102-FR-007 — `requireCapability` MUST answer 403 `forbidden` when the actor is garage staff of a garage (a `garage`, `receptionist` or `mechanic` role with a `garageId`) and lacks the capability, and 404 when the actor holds no garage or the capability is not a `garage.*` one; `assertGarage` MUST keep answering 404 for another garage (A31/A34, decided 2026-10-16: 403 within one garage's staff, 404 across garages and between drivers). The garage figures' mechanic refusal (`garage-figures.service.ts`) MUST become the same 403. Every existing test asserting 404 for same-garage staff is updated to 403; the feature-off 404 stays.
 
-_From 079-account-model._
+_From 102-garage-members._
 
 ### 079-FR-014 — A mechanic capability that depends on a permission (`can_move_bookings`, `can_answer_quotes`, `can_record_final_price`) MUST be allowed only when that permission is on.
 
@@ -299,10 +300,6 @@ _From 020-account-language._
 _From 139-edit-my-details._
 
 ### 130-FR-002 — The public list MUST be exactly: `POST /api/v1/auth/sign-in`, `POST /api/v1/auth/sign-up`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/sign-out`, `GET /health/live`, `GET /health/ready` (outside the `/api/v1` prefix), `POST /api/v1/webhooks/brevo`, which checks Brevo's own bearer secret and is left out of the OpenAPI document (it arrived with ST-194; its own integration spec boots the app-wide check), and the two cookie-authenticated routes added since, `POST /api/v1/auth/sign-out-everywhere` (128-FR-001) and `POST /api/v1/auth/roles/switch` (394-FR-001); a test MUST enumerate every route the API serves, call each without a token, and fail when the set of routes not answering 401 `sign_in_required` differs from this list.
-
-_From 130-sign-in-gate._
-
-### 130-FR-003 — The suspended (403 `account_suspended`) and capability (404) answers of the actor check MUST stay as they are for gated routes.
 
 _From 130-sign-in-gate._
 
@@ -1407,6 +1404,42 @@ _From 1204-terms-reaccept._
 
 _From 1204-terms-reaccept._
 
+### 102-FR-001 — The capabilities table (`ROLES`, `CAPABILITIES`, `Permissions`, the role rows and `capabilitiesOf`) MUST live in one browser-safe module of the contracts library (`libs/contracts/src/capabilities.ts`, imported as `@motor-fix/contracts/capabilities`), read by the API's policy, the live filter and the web app; the domain library re-exports it so no existing import path breaks. The web's view list MUST type each view's `capability` with the table's `Capability` type, and a test MUST fail on a view naming a capability the table does not hold.
+
+_From 102-garage-members._
+
+### 102-FR-003 — Whether a person sees a view, a Panou section or an action, and whether the server lets them call it, MUST be decided in this order: a feature switched off removes it for everyone (404 `feature_off` on the server, 398-FR-007), then the role's row, then the mechanic's permissions. `allowedViews` already applies this order for the menu; on the server the held order stays role first, then feature (055-FR-003, `garage-mechanics.service.ts` "so staff and strangers never learn whether the team is on"): same-garage staff outside their row get 403 whatever the switch, and the owner of a garage with the feature off gets 404 `feature_off`.
+
+_From 102-garage-members._
+
+### 102-FR-004 — The garage menu, tab bar and routes MUST keep coming from `allowedViews` over the table (160-FR-007), so that with the rows of FR-002 a mechanic without permissions sees Panou, Lucrări, Programări, Setări and Istoric modificări; a receptionist sees Panou, Cereri de ofertă, Programări, Lucrări, Recenzii, Profilul service-ului, Setări and Istoric modificări; the owner sees everything released. Setări stays for every role because it holds the person's own device and notification choices (198-FR-001, ST-142); its owner-only panels are gated inside it (FR-013).
+
+_From 102-garage-members._
+
+### 102-FR-005 — Panou (`garage-home`) MUST decide each section by a capability of the table read from the session, never by a role string: the legal-check panel needs `garage.feature_switches`, the verified strip and its re-check line need `garage.profile`, the requests panel needs `garage.requests` (as its feed already does). A new section added by a later story declares its capability the same way; a mechanic without permissions sees no section but one status line, "Lucrările tale vor apărea aici." / "Your jobs will appear here." (proposed wording; no such text exists on `main`), until #208 builds the own-jobs sections.
+
+_From 102-garage-members._
+
+### 102-FR-006 — The views Recenzii and Profilul service-ului, now reachable by the receptionist, MUST show no "Răspunde" and no "Modifică profilul" to her: neither button exists on `main` today, and the story that adds one MUST gate it on an owner-only capability of the table, not on the view capability. The garage profile read (`GET /api/v1/garages/:garageId/profile`) MUST answer the receptionist as it answers the owner.
+
+_From 102-garage-members._
+
+### 102-FR-008 — The schedule read (`GET /api/v1/garages/:garageId/schedule` and the day sheet, `garage.schedule`) MUST, for a mechanic, return only bookings whose mechanic card is the mechanic's own (`BOOKING.mechanic_id` = their MECHANIC id); a `mechanicId` query naming any id other than her own MUST answer 403 `forbidden` without a lookup, and bookings with no mechanic (`mechanic_id` null) are not hers. Jobs already follow this rule (`garage-jobs.service.ts` `scope`).
+
+_From 102-garage-members._
+
+### 102-FR-009 — No response to a mechanic MUST carry a driver's phone, and a plate MUST appear only on the mechanic's own bookings and jobs (079-FR-015 holds; the schedule rows of FR-008 and the request reads MUST go through `describeCustomer` or an equivalent that a test proves by walking every field of every garage read's answer as a mechanic for a `phone` key).
+
+_From 102-garage-members._
+
+### 102-FR-015 — When the account re-read that follows `mechanic.updated` or `garage.features_changed` (531-FR-002) no longer allows the view on screen, the frame MUST open Panou (it already leaves the view) and show, once, the short message "Nu mai ai acces la această secțiune." / "You no longer have access to this section." on the dashboard's status line.
+
+_From 102-garage-members._
+
+### 102-FR-016 — When a call under the signed-in garage's own path answers 404, the garage dashboard MUST read the account again, once per such 404 and coalesced while a re-read is in flight, counting only calls under `/api/v1/garages/{garageId}/` of the signed-in garage; when `garageAccess` no longer holds that garage, the dashboard body MUST show "Nu mai ai acces la acest service" / "You no longer have access to this garage" with a link "Spre pagina principală" / "To the home page", and the garage menu MUST show no view. A 404 while the garage is still held changes nothing (a feature off, a resource that is gone).
+
+_From 102-garage-members._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -1452,3 +1485,6 @@ _From 1204-terms-reaccept._
 - `244-FR-013` — superseded by `1204-FR-008` (2026-10-25)
 - `243-FR-013` — superseded by `1204-FR-010` (2026-10-25)
 - `132-FR-007` — superseded by `1204-FR-012` (2026-10-25)
+- `079-FR-010` — superseded by `102-FR-002` (2026-10-25)
+- `079-FR-013` — superseded by `102-FR-007` (2026-10-25)
+- `130-FR-003` — superseded by `102-FR-007` (2026-10-25)

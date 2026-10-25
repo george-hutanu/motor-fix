@@ -6,6 +6,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
+import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import {
   type DocumentCycleDto,
   type GarageProfileDto,
@@ -78,6 +79,12 @@ const legal = (over: Partial<LegalCheckDto> = {}): LegalCheckDto => ({
 });
 
 const ME = {
+  // The owner's row: the legal check is hers.
+  capabilities: capabilitiesOf('garage', {
+    canAnswerQuotes: false,
+    canMoveBookings: false,
+    canRecordFinalPrice: false,
+  }),
   garageAccess: [{ garageId: GARAGE, role: 'owner' }],
   garageId: GARAGE,
 } as unknown as MeDto;

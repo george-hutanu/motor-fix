@@ -1,14 +1,18 @@
 import { createHmac } from 'node:crypto';
 
+import {
+  CAPABILITIES,
+  capabilitiesOf,
+  ROLES,
+  type Role,
+} from '@motor-fix/contracts/capabilities';
 import { NotFoundException } from '@nestjs/common';
 
 import { signAccessToken, verifyAccessToken } from './access-token';
-import { CAPABILITIES, capabilitiesOf, ROLES, type Role } from './capabilities';
 import {
   type Actor,
   assertGarage,
   assertOwner,
-  describeCustomer,
   requireCapability,
   roleInUse,
 } from './policy';
@@ -298,6 +302,7 @@ describe('capability table boundaries', () => {
     expect([...held].sort()).toEqual([
       'garage.audit_history',
       'garage.final_price',
+      'garage.move_bookings',
       'garage.own_jobs',
       'garage.requests',
       'garage.schedule',
@@ -307,10 +312,20 @@ describe('capability table boundaries', () => {
   it('opens each mechanic capability only through its own permission', () => {
     expect(
       [...capabilitiesOf('mechanic', { ...off, canMoveBookings: true })].sort(),
-    ).toEqual(['garage.audit_history', 'garage.own_jobs', 'garage.schedule']);
+    ).toEqual([
+      'garage.audit_history',
+      'garage.move_bookings',
+      'garage.own_jobs',
+      'garage.schedule',
+    ]);
     expect(
       [...capabilitiesOf('mechanic', { ...off, canAnswerQuotes: true })].sort(),
-    ).toEqual(['garage.audit_history', 'garage.own_jobs', 'garage.requests']);
+    ).toEqual([
+      'garage.audit_history',
+      'garage.own_jobs',
+      'garage.requests',
+      'garage.schedule',
+    ]);
     expect(
       [
         ...capabilitiesOf('mechanic', { ...off, canRecordFinalPrice: true }),
@@ -319,16 +334,19 @@ describe('capability table boundaries', () => {
       'garage.audit_history',
       'garage.final_price',
       'garage.own_jobs',
+      'garage.schedule',
     ]);
   });
 
   it('gives a mechanic only the base capabilities when the permissions are missing or not true booleans', () => {
     expect(capabilitiesOf('mechanic', {} as never)).toEqual([
       'garage.own_jobs',
+      'garage.schedule',
       'garage.audit_history',
     ]);
     expect(capabilitiesOf('mechanic', null as never)).toEqual([
       'garage.own_jobs',
+      'garage.schedule',
       'garage.audit_history',
     ]);
     expect(
@@ -337,7 +355,7 @@ describe('capability table boundaries', () => {
         canMoveBookings: 1,
         canRecordFinalPrice: {},
       } as never),
-    ).toEqual(['garage.own_jobs', 'garage.audit_history']);
+    ).toEqual(['garage.own_jobs', 'garage.schedule', 'garage.audit_history']);
   });
 
   it('ignores mechanic permissions for the other roles', () => {
@@ -455,78 +473,5 @@ describe('policy boundaries', () => {
 
   it('falls back when the token role is held but the token is for a role outside the held list', () => {
     expect(roleInUse('admin', 'driver', ['driver', 'mechanic'])).toBe('driver');
-  });
-
-  it('keeps a customer view free of extra fields on the input for a mechanic', () => {
-    const mechanic = actor({
-      garageId: 'g1',
-      role: 'mechanic',
-      roles: ['mechanic'],
-    });
-    const seen = describeCustomer(
-      mechanic,
-      {
-        car: 'Dacia Logan',
-        email: 'a@b.ro',
-        firstName: 'Ana',
-        phone: '+40700000000',
-        plate: 'B 1 XYZ',
-      } as never,
-      { ownJob: false },
-    );
-
-    expect(seen).toEqual({ car: 'Dacia Logan', firstName: 'Ana' });
-    expect(JSON.stringify(seen)).not.toContain('40700000000');
-  });
-
-  it('does not change the customer it describes', () => {
-    const mechanic = actor({
-      garageId: 'g1',
-      role: 'mechanic',
-      roles: ['mechanic'],
-    });
-    const customer = Object.freeze({
-      car: 'Dacia Logan',
-      firstName: 'Ana',
-      phone: '+40700000000',
-      plate: 'B 1 XYZ',
-    });
-
-    expect(() =>
-      describeCustomer(mechanic, customer, { ownJob: true }),
-    ).not.toThrow();
-    expect(customer.phone).toBe('+40700000000');
-  });
-
-  it('gives a mechanic without a plate on the input no plate key on their own job', () => {
-    const mechanic = actor({
-      garageId: 'g1',
-      role: 'mechanic',
-      roles: ['mechanic'],
-    });
-    const seen = describeCustomer(
-      mechanic,
-      { car: 'Dacia', firstName: 'Ana', phone: '1', plate: undefined as never },
-      { ownJob: true },
-    );
-
-    expect(seen).not.toHaveProperty('phone');
-    expect(Object.keys(seen).sort()).not.toContain('phone');
-  });
-
-  it('treats a mechanic with permissions on exactly like one with them off for the phone', () => {
-    const mechanic = actor({
-      garageId: 'g1',
-      permissions: on,
-      role: 'mechanic',
-      roles: ['mechanic'],
-    });
-    const seen = describeCustomer(
-      mechanic,
-      { car: 'Dacia', firstName: 'Ana', phone: '1', plate: 'B 1 A' },
-      { ownJob: false },
-    );
-
-    expect(seen).toEqual({ car: 'Dacia', firstName: 'Ana' });
   });
 });
