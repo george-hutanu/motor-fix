@@ -11,7 +11,7 @@ import { signAccessToken } from '../../../auth/access-token';
 import { AuthModule } from '../../../auth/auth.module';
 import type { Role } from '../../../auth/capabilities';
 import { serialDatabase } from '../../../auth/serial-db.testing';
-import { localDay } from '../../../bucharest';
+import { addDays, addYears, localDay } from '../../../bucharest';
 import { outboxMark } from '../../../events/outbox.testing';
 import {
   databaseUrl,
@@ -70,8 +70,8 @@ const bearer = (accountId: string, role: Role) =>
   `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
 
 const today = localDay(new Date());
-const yearsAhead = (n: number) =>
-  `${Number(today.slice(0, 4)) + n}${today.slice(4)}`;
+// @traces 094-FR-008
+const yearsAhead = (n: number) => addYears(today, n);
 const nextYear = Number(today.slice(0, 4)) + 1;
 
 // The catalogue outlives the reset, and a brand's name is unique.
@@ -323,11 +323,8 @@ describe('PATCH /cars/:id', () => {
     async (field) => {
       const { auth } = await driver();
       const car = await saved(auth);
-      const after = new Date(`${yearsAhead(5)}T12:00:00Z`);
-      after.setUTCDate(after.getUTCDate() + 1);
-
       const res = await edit(auth, car.id, {
-        [field]: after.toISOString().slice(0, 10),
+        [field]: addDays(yearsAhead(5), 1),
         version: car.updatedAt,
       });
 

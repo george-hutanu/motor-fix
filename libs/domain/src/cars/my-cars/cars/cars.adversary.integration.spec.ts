@@ -10,7 +10,7 @@ import { signAccessToken } from '../../../auth/access-token';
 import { AuthModule } from '../../../auth/auth.module';
 import type { Role } from '../../../auth/capabilities';
 import { serialDatabase } from '../../../auth/serial-db.testing';
-import { localDay } from '../../../bucharest';
+import { addDays, addYears, localDay } from '../../../bucharest';
 import {
   databaseUrl,
   fixtures,
@@ -56,13 +56,9 @@ const bearer = (accountId: string, role: Role) =>
   `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
 
 const today = localDay(new Date());
-const yearsAhead = (n: number, shiftDays = 0) => {
-  const d = new Date(
-    `${Number(today.slice(0, 4)) + n}${today.slice(4)}T00:00:00Z`,
-  );
-  d.setUTCDate(d.getUTCDate() + shiftDays);
-  return d.toISOString().slice(0, 10);
-};
+// @traces 094-FR-008
+const yearsAhead = (n: number, shiftDays = 0, from = today) =>
+  addDays(addYears(from, n), shiftDays);
 
 async function brand(name: string, active = true) {
   const key = `test-${name.toLowerCase()}`;
@@ -180,6 +176,52 @@ describe('POST /cars under hostile input', () => {
       field: expect.stringMatching(/^(itpUntil|rcaUntil|rovinietaUntil)$/),
     });
     expect(await cars(id)).toBe(1);
+  });
+
+  // @traces 094-FR-008
+  it('on 29 February 2028 takes 28 February 2033 and refuses 1 March 2033', async () => {
+    // Only the clock moves; timers stay real for the database and HTTP.
+    jest.useFakeTimers({
+      doNotFake: [
+        'hrtime',
+        'nextTick',
+        'performance',
+        'queueMicrotask',
+        'setImmediate',
+        'clearImmediate',
+        'setInterval',
+        'clearInterval',
+        'setTimeout',
+        'clearTimeout',
+      ],
+      now: new Date('2028-02-29T10:00:00Z'),
+    });
+    try {
+      const { auth, id } = await driver();
+      const { id: brandId } = await brand('BMW');
+      const leap = '2028-02-29';
+
+      const edge = await post(
+        auth,
+        body(brandId, { itpUntil: yearsAhead(5, 0, leap) }),
+        randomUUID(),
+      );
+      const past = await post(
+        auth,
+        body(brandId, { itpUntil: yearsAhead(5, 1, leap) }),
+        randomUUID(),
+      );
+
+      expect(yearsAhead(5, 0, leap)).toBe('2033-02-28');
+      expect(edge.status).toBe(201);
+      expect(past.status).toBe(400);
+      expect(past.body.errors).toEqual([
+        expect.objectContaining({ code: 'too_far_ahead', field: 'itpUntil' }),
+      ]);
+      expect(await cars(id)).toBe(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it.each(['rcaUntil', 'rovinietaUntil'])(
