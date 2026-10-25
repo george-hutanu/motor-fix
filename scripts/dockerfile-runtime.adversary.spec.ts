@@ -92,8 +92,16 @@ describe('the image-processing library in the build stage', () => {
     expect(load).toBeGreaterThan(install);
   });
 
+  // `npm rebuild` of a named package only reruns its install script (sharp has
+  // none, the Prisma engine's downloads a prebuilt binary, 1179-FR-002); a bare
+  // rebuild, node-gyp or a from-source flag would compile.
   it('does not rebuild any native module from source', () => {
-    expect(text).not.toMatch(/npm rebuild|node-gyp|--build-from-source/);
+    expect(text).not.toMatch(/node-gyp|build-from-source/i);
+    for (const [, args] of text.matchAll(/npm rebuild([^\n&;]*)/g))
+      expect(args.trim().split(/\s+/).sort()).toEqual([
+        '@prisma/engines',
+        'sharp',
+      ]);
   });
 
   it('runs the load check in the app directory with no shell fallback that hides a failure', () => {
