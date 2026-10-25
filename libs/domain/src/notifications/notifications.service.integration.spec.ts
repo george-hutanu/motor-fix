@@ -17,6 +17,12 @@ import type { Actor } from '../auth/policy';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { until } from '../waits.testing';
 
+const REMINDER = {
+  car: 'Dacia Logan',
+  driver: 'Andrei M.',
+  link: 'https://motorfix.example/app/garage/requests',
+};
+
 const redisUrl = redisUrlFor(11);
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
@@ -766,6 +772,8 @@ describe('quiet hours', () => {
     await service.notify({
       eventId: 'evt-n1',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     const written = await rows(ion);

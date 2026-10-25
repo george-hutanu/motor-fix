@@ -20,6 +20,13 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
 
+// What main's REQUEST_REMINDER template words (ST-1257).
+const REMINDER = {
+  car: 'Dacia Logan',
+  driver: 'Andrei M.',
+  link: 'https://motorfix.example/app/garage/requests',
+};
+
 const redisUrl = redisUrlFor(12);
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
@@ -477,6 +484,8 @@ describe('the sweep of held rows whose job was lost', () => {
     await service.notify({
       eventId: 'r',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     await queue.obliterate({ force: true });
@@ -766,6 +775,8 @@ describe('releasing a held message at 08:00', () => {
     await service.notify({
       eventId: 'r',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     service.now = at(MORNING);
@@ -781,6 +792,8 @@ describe('releasing a held message at 08:00', () => {
     await service.notify({
       eventId: 'r',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     await prisma.account.update({
@@ -1086,6 +1099,8 @@ describe('two send jobs for one row', () => {
     await service.notify({
       eventId: 'r',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     service.now = at(MORNING);

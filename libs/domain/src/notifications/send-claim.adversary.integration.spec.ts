@@ -21,6 +21,13 @@ import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { timersArmedBy, until } from '../waits.testing';
 
+// What main's REQUEST_REMINDER template words (ST-1257).
+const REMINDER = {
+  car: 'Dacia Logan',
+  driver: 'Andrei M.',
+  link: 'https://motorfix.example/app/garage/requests',
+};
+
 const redisUrl = redisUrlFor(2);
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
@@ -144,6 +151,8 @@ describe('many send jobs for one row', () => {
     await service.notify({
       eventId: 'r',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     processor.now = at(MORNING);
@@ -372,6 +381,8 @@ describe('a claim held by another job', () => {
     await service.notify({
       eventId: 'r',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     const [held] = await emailRows(ion);
@@ -388,6 +399,8 @@ describe('a claim held by another job', () => {
     await service.notify({
       eventId: 'r',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     const [held] = await emailRows(ion);
