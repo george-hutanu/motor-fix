@@ -30,10 +30,17 @@
       @if (review.text) {
         <p class="text">{{ review.text }}</p>
       }
+      @if (review.price) {
+        <p class="price">{{ review.price }}</p>
+      }
       <p class="by">
         <span class="author">{{ review.author }}</span>
         <span aria-hidden="true">·</span>
         <span class="month">{{ review.month }}</span>
+        @if (review.edited) {
+          <span aria-hidden="true">·</span>
+          <span class="edited">{{ 'public.garageProfile.reviewsSection.edited' | t }} <span aria-hidden="true">·</span> {{ review.edited }}</span>
+        }
       </p>
     </article>
   }
