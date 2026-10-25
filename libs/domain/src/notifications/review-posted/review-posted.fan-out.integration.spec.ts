@@ -204,6 +204,27 @@ describe('telling the owner about a new review', () => {
     expect(await counted('built')).toBe(before.built);
   });
 
+  it('counts nothing again on a redelivery when a second owner’s account is deleted', async () => {
+    const { garage, job, owner } = await reviewed();
+    const gone = await account('dinamo-gone-owner', ['garage']);
+    await prisma.garageMember.create({
+      data: { accountId: gone, garageId: garage.id, role: 'owner' },
+    });
+    await prisma.account.update({
+      data: { status: 'deleted' },
+      where: { id: gone },
+    });
+    const fanOut = await start();
+
+    await fanOut.handle(job());
+    const muted = await counted('muted');
+    await fanOut.handle(job());
+
+    expect(await channels(owner)).toEqual(['email', 'in_app']);
+    expect(await messages(gone)).toEqual([]);
+    expect(await counted('muted')).toBe(muted);
+  });
+
   it('sends nothing outside to an owner who muted it, and counts muted', async () => {
     const { garage, job, owner } = await reviewed();
     await prisma.notificationPreference.createMany({
