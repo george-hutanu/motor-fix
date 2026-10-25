@@ -145,7 +145,8 @@ interface RemindersOptions {
   notifications: DynamicModule;
   // Provides DAILY_TASKS: the work the daily job runs after the reminders.
   daily?: Provider;
-  // The public web address the reminders' e-mail and push link to.
+  // The public web address the reminders' e-mail and push link to; unset
+  // when PUBLIC_WEB_URL is not a URL (email-config.ts), and then no link.
   webUrl?: string;
 }
 

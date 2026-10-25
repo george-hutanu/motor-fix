@@ -608,6 +608,24 @@ describe('the car events', () => {
     expect(await rows('DUE_ITP')).toHaveLength(1);
   });
 
+  // Only a car.added takes every date as new; an update naming no change
+  // sets nothing.
+  it('sets no reminder for a car.updated without its changed fields', async () => {
+    await saveDates(carId, {
+      itpUntil: '2026-11-07',
+      rcaUntil: null,
+      rovinietaUntil: null,
+    });
+    await reminders.onCarEvent({
+      id: 'updated-unnamed',
+      kind: 'car.updated',
+      payload: { carId, ownerId: driver },
+      subjectId: carId,
+    });
+
+    expect(await prisma.reminder.count({ where: { carId } })).toBe(0);
+  });
+
   it('sets a reminder for each changed date, and none for the rest', async () => {
     await reminders.onCarEvent(
       await updated(['itpUntil', 'rcaUntil', 'odometerKm'], {

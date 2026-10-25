@@ -229,7 +229,12 @@ describe('the reminders worker with shortened days', () => {
     });
     const app = await Test.createTestingModule({
       imports: [
-        RemindersModule.registerWorker({ dayMs: 250, notifications, redisUrl }),
+        RemindersModule.registerWorker({
+          dayMs: 250,
+          notifications,
+          redisUrl,
+          webUrl: 'https://motorfix.test',
+        }),
       ],
     }).compile();
     await app.init();
@@ -320,7 +325,12 @@ describe('the reminders worker and the car events', () => {
     });
     const app = await Test.createTestingModule({
       imports: [
-        RemindersModule.registerWorker({ dayMs: 250, notifications, redisUrl }),
+        RemindersModule.registerWorker({
+          dayMs: 250,
+          notifications,
+          redisUrl,
+          webUrl: 'https://motorfix.test',
+        }),
       ],
     }).compile();
     await app.init();

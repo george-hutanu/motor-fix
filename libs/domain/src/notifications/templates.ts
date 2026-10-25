@@ -123,11 +123,16 @@ function realDay(value: unknown): boolean {
   return new Date(`${value}T00:00:00Z`).toISOString().startsWith(value);
 }
 
-// A number of days with its noun: "o zi", "7 zile", "30 de zile".
+// The days left as when it falls: "astăzi", "peste o zi", "peste 7 zile",
+// "peste 30 de zile". Days already past are no due date.
 function days(value: unknown, language: Language): string {
+  if (typeof value !== 'number' || value < 0) {
+    throw new Error(`not days left: ${String(value)}`);
+  }
+  if (value === 0) return language === 'en' ? 'today' : 'astăzi';
   if (language === 'en')
-    return `${formatNum(value, language)} ${value === 1 ? 'day' : 'days'}`;
-  return value === 1 ? 'o zi' : `${count(value, language)} zile`;
+    return `in ${formatNum(value, language)} ${value === 1 ? 'day' : 'days'}`;
+  return value === 1 ? 'peste o zi' : `peste ${count(value, language)} zile`;
 }
 
 // A calendar day with its month in full: "13 noiembrie 2026".

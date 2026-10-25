@@ -1,4 +1,4 @@
-import { Inject, Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 import { dueStage, type ReminderStage, seasonOf } from './reminders';
 import { addDays, daysBetween, localDay } from '../../bucharest';
@@ -66,9 +66,7 @@ export class RemindersService {
   constructor(
     @Inject(NOTIFICATIONS_PRISMA) private readonly prisma: PrismaClient,
     private readonly notifications: NotificationsService,
-    @Optional()
-    @Inject(REMINDERS_WEB_URL)
-    private readonly webUrl: string = '',
+    @Inject(REMINDERS_WEB_URL) private readonly webUrl: string = '',
   ) {}
 
   // A new date resets what was sent for the old one and takes a new id, since
@@ -121,7 +119,8 @@ export class RemindersService {
     const today = localDay(this.notifications.now());
     const payload = event.payload as CarUpdated;
     for (const [field, kind] of CAR_DATES) {
-      if (payload.changed && !payload.changed.includes(field)) continue;
+      const all = event.kind === 'car.added';
+      if (!all && !payload.changed?.includes(field)) continue;
       const dueOn = day(car[field]);
       if (dueOn === null) {
         await this.prisma.reminder.deleteMany({ where: { carId, kind } });

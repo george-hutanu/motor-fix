@@ -1,20 +1,20 @@
 import type { Template } from '../templates';
 
 // The car by brand and model, never its plate, the day the ITP expires and
-// the days left on the day it is sent. A row sent before it had these values
+// when that is, from the day it is sent ("peste 7 zile", "astăzi"). A row sent before it had these values
 // falls back to the generic text, its e-mail too. Each WhatsApp name is a template registered
 // with Brevo, one per language.
 export const DUE_ITP: Template = {
   audience: 'driver',
   bell: {
-    en: 'The ITP on your {car} expires on {dueOn}, in {left}.',
-    ro: 'ITP-ul la {car} expiră pe {dueOn}, peste {left}.',
+    en: 'The ITP on your {car} expires on {dueOn}, {left}.',
+    ro: 'ITP-ul la {car} expiră pe {dueOn}, {left}.',
   },
   email: {
     en: {
       button: { label: 'See my cars', link: 'cars' },
       lines: [
-        'The ITP on your {car} expires on {dueOn}, in {left}.',
+        'The ITP on your {car} expires on {dueOn}, {left}.',
         'Book the inspection in time.',
       ],
       reason:
@@ -24,7 +24,7 @@ export const DUE_ITP: Template = {
     ro: {
       button: { label: 'Vezi mașinile mele', link: 'cars' },
       lines: [
-        'ITP-ul la {car} expiră pe {dueOn}, peste {left}.',
+        'ITP-ul la {car} expiră pe {dueOn}, {left}.',
         'Programează inspecția din timp.',
       ],
       reason:
@@ -41,13 +41,13 @@ export const DUE_ITP: Template = {
   genericEmailWhenMissing: true,
   push: {
     en: {
-      body: 'The ITP on your {car} expires on {dueOn}, in {left}. Book the inspection in time.',
+      body: 'The ITP on your {car} expires on {dueOn}, {left}. Book the inspection in time.',
       link: 'cars',
       shorten: 'car',
       title: 'Your ITP expires soon',
     },
     ro: {
-      body: 'ITP-ul la {car} expiră pe {dueOn}, peste {left}. Programează inspecția din timp.',
+      body: 'ITP-ul la {car} expiră pe {dueOn}, {left}. Programează inspecția din timp.',
       link: 'cars',
       shorten: 'car',
       title: 'ITP-ul expiră curând',

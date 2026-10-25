@@ -65,10 +65,11 @@ test.describe('the ITP reminders of a car added by a driver @shortened-days', ()
     // The 30-day stage, or its catch-up a few days late; then the 7-day one.
     await expect
       .poll(() => bellRows(request, auth), { timeout: 60_000 })
-      .toEqual([expect.stringMatching(/peste \d+ de zile\.$/)]);
+      .toEqual([expect.stringMatching(/peste \d+ (de )?zile\.$/)]);
     await expect
       .poll(() => bellRows(request, auth), { timeout: 150_000 })
       .toEqual([`${sentence}, peste 7 zile.`, expect.any(String)]);
+    const [, first] = await bellRows(request, auth);
 
     await ready(page, '/ro');
     await page
@@ -84,8 +85,6 @@ test.describe('the ITP reminders of a car added by a driver @shortened-days', ()
         name: new RegExp(`${sentence}, peste 7 zile`),
       }),
     ).toBeVisible();
-    await expect(
-      list.getByRole('button', { name: /peste \d+ de zile\./ }),
-    ).toBeVisible();
+    await expect(list.getByRole('button', { name: first })).toBeVisible();
   });
 });

@@ -510,6 +510,22 @@ describe('the ITP reminder texts', () => {
     );
   });
 
+  // A missed run caught up on the expiry day itself.
+  it('says today when no day is left', () => {
+    expect(bellText('DUE_ITP', 'ro', { ...params, left: 0 })).toBe(
+      'ITP-ul la BMW 320d expiră pe 13 noiembrie 2026, astăzi.',
+    );
+    expect(bellText('DUE_ITP', 'en', { ...params, left: 0 })).toBe(
+      'The ITP on your BMW 320d expires on 13 November 2026, today.',
+    );
+  });
+
+  it('is the generic text for days already past', () => {
+    expect(bellText('DUE_ITP', 'ro', { ...params, left: -3 })).toBe(
+      'Ai o notificare nouă',
+    );
+  });
+
   it('sends the e-mail with the sentence, the advice and Mașinile mele', () => {
     const ro = render('DUE_ITP', 'email', 'ro', params);
     expect(ro.subject).toBe('ITP-ul expiră pe 13 noiembrie 2026');
