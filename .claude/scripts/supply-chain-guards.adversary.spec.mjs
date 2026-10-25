@@ -143,7 +143,8 @@ describe('jobs get what the skipped postinstall used to give them', () => {
         const text = runs(def.steps);
         const runsTests = commands(text).some((c) => /(\s-t\s+(test|e2e)\b|:test\b|:test:mutation|:e2e\b|\bstryker\b)/.test(c));
         const rebuilt =
-          /npm\s+rebuild\s+sharp/.test(text) || (def.steps ?? []).some((s) => s.uses === './.github/actions/setup');
+          /npm\s+rebuild\s+sharp/.test(text) ||
+          (def.steps ?? []).some((s) => s.uses === './.github/actions/setup' && s.with?.sharp !== 'false');
         if (runsTests && !rebuilt) offenders.push(`${file}:${job}`);
       }
     }

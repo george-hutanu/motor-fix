@@ -2,6 +2,12 @@ name: Setup
 description: >-
   Node from .nvmrc with the npm cache, then npm ci without install scripts,
   the Prisma client generated and sharp rebuilt explicitly.
+inputs:
+  sharp:
+    description: >-
+      'false' skips the sharp rebuild, for a job that never loads
+      photo-processing (CI's Checks).
+    default: 'true'
 runs:
   using: composite
   steps:
@@ -15,5 +21,7 @@ runs:
     - run: |
         npm ci --ignore-scripts
         npx prisma generate --config libs/domain/prisma.config.ts
-        npm rebuild sharp
+      shell: bash
+    - if: inputs.sharp != 'false'
+      run: npm rebuild sharp
       shell: bash
