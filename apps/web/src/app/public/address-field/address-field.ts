@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -176,8 +176,10 @@ export class AddressField {
     }).subscribe({
       error: (error: unknown) => {
         this.lastAsked = '';
-        // A look-up called off is no answer, and no failure either.
-        if (error instanceof DOMException && error.name === 'AbortError')
+        // A look-up called off is no answer, and no failure either; the HTTP
+        // client wraps the browser's abort in its own error.
+        const cause = error instanceof HttpErrorResponse ? error.error : error;
+        if (cause instanceof DOMException && cause.name === 'AbortError')
           return;
         this.message.set('searchUnavailable');
       },

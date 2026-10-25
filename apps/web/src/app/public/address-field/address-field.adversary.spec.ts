@@ -347,7 +347,7 @@ describe('the address field under hostile requests', () => {
 
     await type('Cluj');
 
-    expect(message()).not.toMatch(/Nu am găsit/);
+    expect(message()).not.toMatch(/Nu putem|Nu am găsit|cannot|No address/i);
   });
 
   it('asks again a text whose look-up was aborted', async () => {
