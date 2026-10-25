@@ -6,6 +6,7 @@ describe('the event contract', () => {
     expect(Object.keys(ANALYTICS_EVENTS).sort()).toEqual(
       [
         'brand_picked',
+        'directions_opened',
         'filter_applied',
         'garage_opened',
         'garage_saved',
@@ -187,5 +188,25 @@ describe('the copy voice on an event', () => {
     expect(sanitise('review_posted', { rating: 4, voice: 2 })).toEqual({
       rating: 4,
     });
+  });
+});
+
+// @traces 1366-FR-011
+describe('the directions event', () => {
+  it('keeps the platform of each kind of device and nothing else', () => {
+    for (const platform of ['ios', 'android', 'computer'])
+      expect(sanitise('directions_opened', { platform })).toEqual({ platform });
+    expect(
+      sanitise('directions_opened', {
+        garage: 'service-auto-militari',
+        lat: 44.43,
+        platform: 'ios',
+      }),
+    ).toEqual({ platform: 'ios' });
+  });
+
+  it('drops a platform outside the three', () => {
+    expect(sanitise('directions_opened', { platform: 'windows' })).toEqual({});
+    expect(sanitise('directions_opened', { platform: 'IOS' })).toEqual({});
   });
 });

@@ -38,9 +38,11 @@ import {
   QUOTE_RECEIVED_CONSUMER,
   REQUEST_CANCELLED_CONSUMER,
   REQUEST_RECEIVED_CONSUMER,
+  REQUEST_TIMERS_CONSUMER,
   REVIEW_POSTED_CONSUMER,
   REVIEW_RATINGS_CONSUMER,
   RemindersModule,
+  RequestTimersModule,
   RetentionModule,
   ReviewRatingsModule,
   reminderDayMs,
@@ -118,6 +120,7 @@ export function workerModule(
           QUOTE_LOST_CONSUMER,
           REQUEST_CANCELLED_CONSUMER,
           REQUEST_RECEIVED_CONSUMER,
+          REQUEST_TIMERS_CONSUMER,
           REVIEW_POSTED_CONSUMER,
           REVIEW_RATINGS_CONSUMER,
           supportMessagesConsumer(support),
@@ -158,6 +161,13 @@ export function workerModule(
       }),
       // Reminds the garage to confirm an accepted booking, and lapses it.
       BookingTimersModule.registerWorker({
+        notifications,
+        redisUrl: env.REDIS_URL,
+        webUrl: email.webUrl,
+      }),
+      // Reminds the garages a request still waits on, and expires requests
+      // and quotes at the end of their seven days.
+      RequestTimersModule.registerWorker({
         notifications,
         redisUrl: env.REDIS_URL,
         webUrl: email.webUrl,

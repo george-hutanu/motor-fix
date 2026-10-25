@@ -54,6 +54,7 @@ features:
   - 223-request-act-notifications
   - 094-itp-reminders
   - 074-garage-reviews
+  - 1257-quote-reminders
 ---
 
 # Capability: Notifications
@@ -985,6 +986,26 @@ _From 074-garage-reviews._
 ### 074-FR-013 — REVIEW_POSTED MUST be sent at most once per owner per review: the outbox event id and the recipient key the notification so a retry or a second relay writes nothing more; when the owner's reviews group is off at send time nothing is sent; when the review no longer exists or the garage has no owner the job logs it and ends without writing. The bell row of a REVIEW_POSTED MUST open the garage's Recenzii view.
 
 _From 074-garage-reviews._
+
+### 1257-FR-002 — REQUEST_REMINDER MUST go to the people REQUEST_RECEIVED goes to for that garage (owners, receptionists and the mechanics allowed to answer quotes), on the catalogue's channels, with each person's mute of REQUEST_RECEIVED covering it (the shipped mapping, `rowsType` in libs/domain/src/notifications/preferences/preferences.ts); a garage whose every recipient is muted gets no outside message (the bell entry is written, as `NotificationsService` mutes outside channels only), and the recipient's reminder timestamp MUST still be set so it is never retried.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-003 — REQUEST_REMINDER MUST stay a non-urgent type in the catalogue, so one built between 22:00 and 08:00 Europe/Bucharest is held and sent at 08:00 by the shipped quiet-hours rule; the timer itself is set at the reminder's own time.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-005 — Each garage whose recipient was expired by FR-004 MUST get one REQUEST_EXPIRED (owners and receptionists), and the driver of a request closed `expired` by FR-004 or FR-007 MUST get one REQUEST_EXPIRED whose link opens the driver's request page (`/app/driver/requests/<id>`) and whose text carries the call to action "Cere oferte de la alte service-uri" / "Ask other garages for quotes"; both through the shipped notification service, on the catalogue's channels, with the person's mute honoured and the quiet-hours rule of each type's shipped catalogue flag (no new flag is added; a type the catalogue marks urgent goes at once).
+
+_From 1257-quote-reminders._
+
+### 1257-FR-008 — A quote expired by FR-006 MUST tell the driver and the garage's owners and receptionists with one QUOTE_EXPIRED each, through the shipped notification service, on the catalogue's channels, with the person's mute honoured; a quote the lapse path expires (reason `booking_lapsed` or `held_past_validity`) is not told again here (BOOKING_LAPSED already tells both sides).
+
+_From 1257-quote-reminders._
+
+### 1257-FR-009 — REQUEST_REMINDER, REQUEST_EXPIRED and QUOTE_EXPIRED MUST have registered templates in Romanian and English for e-mail, push and WhatsApp that name the car and the garage (the driver's REQUEST_EXPIRED names the request's car and carries FR-005's call to action and link; the garage's name the car and the driver's short name), hold no personal data beyond that, and pass the existing template tests; the bell entry of each MUST open the request on the reader's side (the driver's request page); the garage's bell entry carries no link, as the shipped bell gives none to any garage row (`bell.service.ts`, REQUEST_RECEIVED included).
+
+_From 1257-quote-reminders._
 
 ## Retired
 

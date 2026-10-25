@@ -1,4 +1,9 @@
 @if (!empty()) {
+  @if (point(); as point) {
+    @if (!mapGone()) {
+      <mf-garage-map [point]="point" (gone)="mapGone.set(true)" />
+    }
+  }
   <h2>{{ 'public.garageProfile.where.title' | t }}</h2>
   @if (address()) {
     <p class="address">{{ address() }}</p>
@@ -15,5 +20,15 @@
         </div>
       }
     </dl>
+  }
+  @if (href(); as href) {
+    <a
+      class="directions"
+      [href]="href"
+      [attr.target]="computer() ? '_blank' : null"
+      [attr.rel]="computer() ? 'noopener noreferrer' : null"
+      (click)="track()"
+      >{{ 'public.garageProfile.where.directions' | t }}<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16"><path d="m9 18 6-6-6-6" /></svg></a
+    >
   }
 }

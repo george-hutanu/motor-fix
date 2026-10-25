@@ -147,6 +147,8 @@ export { DeclineWindowModule } from './quotes/decline-window/decline-window.modu
 export { GarageRequestsService } from './quotes/garage-requests/garage-requests.service';
 export { GarageScheduleService } from './quotes/garage-schedule/garage-schedule.service';
 export { QuotesModule } from './quotes/quotes.module';
+export { REQUEST_TIMERS_CONSUMER } from './quotes/request-timers/request-timers';
+export { RequestTimersModule } from './quotes/request-timers/request-timers.module';
 export { ROUTE_LIMITS } from './rate-limit/rate-limit.config';
 export { countRateLimitRefusal } from './rate-limit/rate-limit.metrics';
 export { RateLimits } from './rate-limit/rate-limit.service';
