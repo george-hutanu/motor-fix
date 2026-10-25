@@ -234,17 +234,31 @@ export class ResultsMap {
     afterNextRender(() => {
       const around = this.element.nativeElement.parentElement;
       if (!this.browser || !around) return;
+      const again = () => {
+        if (!untracked(this.view) && untracked(this.phone)) this.measure();
+      };
       const settled = (event: Event) => {
-        const target = event.target as Element | null;
-        if (target?.tagName !== 'MF-RESULTS-SHEET' || untracked(this.view))
-          return;
-        if (untracked(this.phone)) this.measure();
+        if ((event.target as Element | null)?.tagName === 'MF-RESULTS-SHEET')
+          again();
       };
       around.addEventListener('animationend', settled);
       around.addEventListener('transitionend', settled);
+      // Under reduced motion the sheet moves with no transition to end: its
+      // own attributes changing (its rest, its header's height) say it has.
+      const moved = new MutationObserver((changes) => {
+        if (
+          changes.some(({ target }) => target.nodeName === 'MF-RESULTS-SHEET')
+        )
+          again();
+      });
+      moved.observe(around, {
+        attributeFilter: ['class', 'data-position', 'style'],
+        subtree: true,
+      });
       destroyRef.onDestroy(() => {
         around.removeEventListener('animationend', settled);
         around.removeEventListener('transitionend', settled);
+        moved.disconnect();
       });
     });
     effect(() => this.view()?.show(this.pins()));

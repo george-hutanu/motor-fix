@@ -365,6 +365,26 @@ describe('ResultsMap, the static map under a phone sheet that moves', () => {
     expect(cramped()).toBe(false);
   });
 
+  // QA lap 5: under reduced motion the sheet moves with no transition, so no
+  // transitionend ever came and the control stayed cut at 320 x 568 (en).
+  it('measures again when the sheet moves with no transition, under reduced motion', async () => {
+    await withSheet();
+    sheetTop = 140;
+    sheet.setAttribute('data-position', 'half');
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(cramped()).toBe(true);
+    expect(shown()).toEqual(framed(424, 56));
+
+    sheetTop = 400;
+    sheet.setAttribute('style', '--sheet-top: 90px;');
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(cramped()).toBe(false);
+  });
+
   it('ignores the end of a transition inside the sheet', async () => {
     await withSheet();
     const chip = document.createElement('button');
