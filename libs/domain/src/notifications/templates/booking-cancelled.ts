@@ -1,16 +1,16 @@
 import type { Template } from '../templates';
 
 // As the driver cancels a booking: the garage's owners, receptionists and the
-// booking's mechanic learn who, which car, which slot and why. The note is a
-// line of its own, left out when the driver wrote none, and never reaches
-// the bell or the push. Inside the free-cancel cutoff the late text adds
+// booking's mechanic learn who, which car, which slot and why. The note is
+// the bell's last segment and a line of the e-mail, left out when the driver
+// wrote none, and never reaches the push (FR-006). Inside the free-cancel cutoff the late text adds
 // that there is no penalty. No WhatsApp text: its names are not yet
 // registered with Brevo.
 const cancelled = (late: boolean): Template => ({
   audience: 'garage',
   bell: {
-    en: '{driver} cancelled the booking · {car} · {slot}',
-    ro: '{driver} a anulat programarea · {car} · {slot}',
+    en: '{driver} cancelled the booking · {car} · {slot} · {note}',
+    ro: '{driver} a anulat programarea · {car} · {slot} · {note}',
   },
   email: {
     en: {

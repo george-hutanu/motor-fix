@@ -185,7 +185,7 @@ describe('telling the garage of a booking the driver cancelled', () => {
     }
   });
 
-  it('keeps the note out of the bell text it builds', async () => {
+  it('carries the note whole, as text, in the bell text it builds', async () => {
     const note = 'SECRET-NOTE-<b>x</b>';
     const { job, owner } = await cancelled({
       note,
@@ -205,7 +205,7 @@ describe('telling the garage of a booking the driver cancelled', () => {
       for (const lang of ['ro', 'en']) {
         const text = bellText('BOOKING_CANCELLED', lang, params);
         expect(text).toContain('Andrei M.');
-        expect(text).not.toContain('SECRET-NOTE');
+        expect(text).toContain(note);
       }
     }
   });

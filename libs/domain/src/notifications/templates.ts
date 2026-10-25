@@ -109,6 +109,7 @@ const PUSH_BODY = 120;
 // Romanian diacritics force UCS-2, whose single SMS holds 70 characters.
 const SMS = 70;
 const PLACEHOLDER = /\{(\w*)\}/g;
+const SEGMENT = ' · ';
 
 // Romanian numerals ending in 20–99 or 00 take "de": "20 de oferte".
 function count(value: unknown, language: Language): string {
@@ -322,9 +323,21 @@ function renderText(
       const whatsapp = text as WhatsAppText;
       return { name: whatsapp.name, params: whatsapp.slots.map(fill) };
     }
+    case 'bell':
+      return bellLine(text as string, fill);
     default:
       return fill(text as string);
   }
+}
+
+// A bell line is segments joined by " · "; a segment whose value is empty,
+// such as a note the driver did not write, is left out with its separator.
+function bellLine(source: string, fill: (source: string) => string): string {
+  return source
+    .split(SEGMENT)
+    .map(fill)
+    .filter((part) => part !== '')
+    .join(SEGMENT);
 }
 
 // The push body, its `shorten` value cut at a whole character and closed

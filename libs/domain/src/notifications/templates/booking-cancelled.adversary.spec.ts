@@ -23,17 +23,23 @@ const NAMES = ['BOOKING_CANCELLED.driver', 'BOOKING_CANCELLED.driver_late'];
 
 describe('the driver’s booking cancellation under hostile values', () => {
   it.each(NAMES)(
-    '%s keeps the note out of the bell and the push in both languages',
+    '%s puts the note in the bell, keeps it out of the push, in both languages',
     (name) => {
       const note = 'SECRET-NOTE-123';
       for (const lang of ['ro', 'en']) {
-        expect(render(name, 'bell', lang, params({ note }))).not.toContain(
-          note,
-        );
+        expect(render(name, 'bell', lang, params({ note }))).toContain(note);
         expect(
           JSON.stringify(render(name, 'push', lang, params({ note }))),
         ).not.toContain(note);
       }
+    },
+  );
+
+  it.each(NAMES)(
+    '%s keeps a note of 500 characters whole in the bell',
+    (name) => {
+      const note = 'ț'.repeat(500);
+      expect(render(name, 'bell', 'ro', params({ note }))).toContain(note);
     },
   );
 

@@ -105,6 +105,25 @@ describe('the driver’s booking cancellation message', () => {
     }
   });
 
+  it('carries the note whole in the bell, and no trailing separator without one', () => {
+    const note = 'Am găsit un loc mai aproape';
+    for (const name of [
+      'BOOKING_CANCELLED.driver',
+      'BOOKING_CANCELLED.driver_late',
+    ]) {
+      const ro = render(name, 'bell', 'ro', params({ note }));
+      const en = render(name, 'bell', 'en', params({ note }));
+      expect(ro).toMatch(
+        /^Andrei M\. a anulat programarea · Dacia Logan · .+ · /,
+      );
+      expect(ro.endsWith(` · ${note}`)).toBe(true);
+      expect(en.endsWith(` · ${note}`)).toBe(true);
+      const without = render(name, 'bell', 'ro', params());
+      expect(without).not.toMatch(/·\s*$/);
+      expect(without).toMatch(/09:00$/);
+    }
+  });
+
   it('leaves the note’s line out when there is no note', () => {
     const without = render('BOOKING_CANCELLED.driver', 'email', 'ro', params());
     const withNote = render(
