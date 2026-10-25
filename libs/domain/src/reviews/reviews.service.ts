@@ -248,7 +248,7 @@ export class ReviewsService {
           review.source === 'job' && review.mechanic
             ? { shortName: shortName(review.mechanic.name) }
             : null,
-        status: review.status as 'published' | 'reported',
+        status: review.status,
       })),
       page,
       pageSize: MECHANIC_REVIEWS_PAGE,
@@ -261,15 +261,15 @@ export class ReviewsService {
   // One page of a garage's reviews in the given states, newest first, with how
   // many published reviews gave each score and how many reviews the states
   // hold in all.
-  private async reviewPage(
+  private async reviewPage<S extends ReviewStatus>(
     garageId: string,
     page: number,
-    statuses: ReviewStatus[],
+    statuses: readonly S[],
   ) {
     const scores = await this.prisma.review.groupBy({
       _count: { _all: true },
       by: ['rating', 'status'],
-      where: { garageId, status: { in: statuses } },
+      where: { garageId, status: { in: [...statuses] } },
     });
     const scored = (rating: number) =>
       scores.find((one) => one.rating === rating && one.status === 'published')
@@ -291,10 +291,15 @@ export class ReviewsService {
             orderBy: [{ postedAt: 'desc' }, { id: 'desc' }],
             skip,
             take: MECHANIC_REVIEWS_PAGE,
-            where: { garageId, status: { in: statuses } },
+            where: { garageId, status: { in: [...statuses] } },
           })
         : [];
-    return { breakdown, reviews, total };
+    // The filter above holds every row to the states asked for.
+    return {
+      breakdown,
+      reviews: reviews as (PageReview & { status: S })[],
+      total,
+    };
   }
 
   async read(actor: Actor, jobId: string): Promise<JobReviewContextDto> {

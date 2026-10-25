@@ -4148,7 +4148,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: a bad id, or a page not a whole number from 1"
+            "description": "validation_failed: a page not a whole number from 1"
           },
           "401": {
             "description": "sign_in_required"
@@ -4157,7 +4157,7 @@
             "description": "forbidden: a mechanic of this garage"
           },
           "404": {
-            "description": "not_found: not the caller’s garage"
+            "description": "not_found: not the caller’s garage, or not an id at all"
           }
         },
         "security": [

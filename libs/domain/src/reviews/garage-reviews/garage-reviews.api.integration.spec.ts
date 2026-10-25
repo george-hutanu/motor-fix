@@ -108,12 +108,12 @@ describe('who may read a garage’s own reviews', () => {
     },
   );
 
-  it('refuses a garage id that is not a uuid with 400', async () => {
+  it('answers a garage id that is not a uuid with 404, as an unknown one', async () => {
     const { asOwner } = await dinamo();
 
     const read = await staffList('dinamo', asOwner);
 
-    expect(read.status).toBe(400);
+    expect(read.status).toBe(404);
   });
 });
 
