@@ -1,6 +1,20 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts/consent';
 
-import { LEGAL_LABELS, LEGAL_TEXTS, type LegalText } from '../legal-texts';
+import { LEGAL_TEXTS, type LegalText } from '../legal-texts';
+
+const legalLabels = (language: 'ro' | 'en') =>
+  JSON.parse(
+    readFileSync(
+      join(
+        __dirname,
+        `../../../../../../libs/i18n/src/public/${language}.json`,
+      ),
+      'utf8',
+    ),
+  ).legal as { version: string; terms: object; privacy: object };
 
 const kinds: LegalText[] = ['terms', 'privacy'];
 const languages = ['ro', 'en'] as const;
@@ -66,10 +80,14 @@ describe('the legal texts as data', () => {
   );
 
   it.each(languages)(
-    'the %s version label is not empty and is the only label',
+    'the %s version label is not empty, beside the two page titles',
     (language) => {
-      expect(Object.keys(LEGAL_LABELS[language])).toEqual(['version']);
-      expect(LEGAL_LABELS[language].version.trim()).not.toBe('');
+      expect(Object.keys(legalLabels(language)).sort()).toEqual([
+        'privacy',
+        'terms',
+        'version',
+      ]);
+      expect(legalLabels(language).version.trim()).not.toBe('');
     },
   );
 

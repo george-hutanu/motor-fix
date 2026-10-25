@@ -233,6 +233,15 @@
     "retry": "Try again",
     "title": "Team invitation"
   },
+  "legal": {
+    "privacy": {
+      "title": "Privacy notice · MotorFix"
+    },
+    "terms": {
+      "title": "Terms of use · MotorFix"
+    },
+    "version": "Version"
+  },
   "listing": {
     "askedFor": "Asked by MotorFix",
     "bar": "{n} / 6 · {label}",

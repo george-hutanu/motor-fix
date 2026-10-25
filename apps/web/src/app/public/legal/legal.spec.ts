@@ -1,11 +1,14 @@
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, type Route, type Routes } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts/consent';
 import { I18n } from '@motor-fix/i18n';
 
 import { Legal } from './legal';
+import { routes } from '../../app.routes';
+import * as legalTexts from '../legal-texts';
+import { LEGAL_TEXTS } from '../legal-texts';
 
 async function open(path: string, platform: 'browser' | 'server' = 'browser') {
   TestBed.configureTestingModule({
@@ -85,4 +88,56 @@ describe('the terms and the privacy notice', () => {
 
     expect(en.querySelectorAll('h2').length).toBe(roSections);
   });
+});
+
+const routeOf = (all: Routes, path: string): Route | undefined => {
+  for (const route of all) {
+    if (route.path === path) return route;
+    const inner = routeOf(route.children ?? [], path);
+    if (inner) return inner;
+  }
+  return undefined;
+};
+
+// @traces 1204-terms-reaccept-FR-010 1204-terms-reaccept-FR-011
+describe('the legal pages labels and titles', () => {
+  it('keeps no label in the legal texts module', () => {
+    expect('LEGAL_LABELS' in legalTexts).toBe(false);
+  });
+
+  it.each([
+    ['ro', 'terms'],
+    ['ro', 'privacy'],
+    ['en', 'terms'],
+    ['en', 'privacy'],
+  ] as const)(
+    'names the %s %s page after its text, then MotorFix',
+    async (language, kind) => {
+      const i18n = TestBed.inject(I18n);
+      await i18n.enter('public');
+      await i18n.use(language);
+
+      const title = i18n.t(`public.legal.${kind}.title`);
+      expect(title.startsWith(LEGAL_TEXTS[language][kind].title)).toBe(true);
+      expect(title.endsWith(' · MotorFix')).toBe(true);
+      expect(i18n.t('public.legal.version')).toBe(
+        language === 'ro' ? 'Versiunea' : 'Version',
+      );
+    },
+  );
+
+  it.each(['terms', 'privacy'] as const)(
+    'gives the %s route its title from the language files',
+    async (kind) => {
+      const i18n = TestBed.inject(I18n);
+      await i18n.enter('public');
+      await i18n.use('en');
+      const title = routeOf(routes, kind)?.title;
+
+      expect(typeof title).toBe('function');
+      expect(
+        TestBed.runInInjectionContext(() => (title as () => string)()),
+      ).toBe(i18n.t(`public.legal.${kind}.title`));
+    },
+  );
 });
