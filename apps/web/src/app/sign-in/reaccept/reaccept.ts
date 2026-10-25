@@ -10,23 +10,8 @@ import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { injectOverlayTask } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
+import { versionsOf } from './reaccept-dialog';
 import { Session } from '../../dashboard/session';
-
-// The versions in force a consent_required refusal names, or null.
-export const versionsOf = (body: unknown): AcceptanceDto | null => {
-  const refusal = body as
-    | (Partial<AcceptanceDto> & { code?: unknown })
-    | null
-    | undefined;
-  return refusal?.code === 'consent_required' &&
-    typeof refusal.termsVersion === 'string' &&
-    typeof refusal.privacyVersion === 'string'
-    ? {
-        privacyVersion: refusal.privacyVersion,
-        termsVersion: refusal.termsVersion,
-      }
-    : null;
-};
 
 // The texts changed since the account accepted them: accept the ones in force,
 // or sign out. Nothing else closes it, and nothing behind it answers until then.

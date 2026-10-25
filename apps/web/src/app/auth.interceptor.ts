@@ -21,8 +21,7 @@ import {
 import { Session } from './dashboard/session';
 import { PlatformStatus } from './maintenance/platform-status';
 import { PUBLIC_READ } from './public-read';
-import { versionsOf } from './sign-in/reaccept/reaccept';
-import { ReacceptDialog } from './sign-in/reaccept/reaccept-dialog';
+import { ReacceptDialog, versionsOf } from './sign-in/reaccept/reaccept-dialog';
 import { SignInDialog } from './sign-in/sign-in-dialog';
 
 // Only the page's own API gets the token; the session calls work by cookie.
