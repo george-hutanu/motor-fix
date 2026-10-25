@@ -32,11 +32,11 @@ import { AUTH_OPTIONS, type AuthOptions } from '../actor.guard';
 import { AUTH_REDIS } from '../attempts';
 import type { Role } from '../capabilities';
 import { consentRequired, isCurrentConsent } from '../consent';
+import { refusal } from '../http-refusal';
 import { MAINTENANCE, type Maintenance } from '../maintenance';
 import { roleInUse } from '../policy';
 import { PRISMA } from '../prisma';
 import { type Issued, SignInService } from '../sign-in.service';
-import { refusal } from '../sign-up.service';
 
 // What the web's return page shows.
 export type Result =

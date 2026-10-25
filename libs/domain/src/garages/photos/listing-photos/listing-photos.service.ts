@@ -17,8 +17,8 @@ import {
 } from '@nestjs/common';
 import type { Queue } from 'bullmq';
 
+import { refusal } from '../../../auth/http-refusal';
 import { PRISMA } from '../../../auth/prisma';
-import { refusal } from '../../../auth/sign-up.service';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { RateLimits } from '../../../rate-limit/rate-limit.service';
 import { StorageService } from '../../../storage/storage.service';

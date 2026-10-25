@@ -9,7 +9,7 @@ import {
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
-import { refusal } from '../../auth/sign-up.service';
+import { refusal } from '../../auth/http-refusal';
 import type { Prisma } from '../../generated/prisma/client';
 import { cityOf } from '../../places/city';
 import { plainText } from '../plain-text';

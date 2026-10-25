@@ -8,7 +8,7 @@ import {
 import { HttpStatus } from '@nestjs/common';
 
 import type { AuditEntry, AuditPort } from '../audit/audit.port';
-import { refusal } from '../auth/sign-up.service';
+import { refusal } from '../auth/http-refusal';
 import { local, localDay } from '../bucharest';
 import type { Prisma } from '../generated/prisma/client';
 

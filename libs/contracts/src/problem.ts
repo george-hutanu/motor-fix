@@ -27,6 +27,21 @@ export interface Problem {
   decidedAt?: string;
   // A name already in the catalogue (`exists`): that job's Romanian name.
   nameRo?: string;
+  // A save on a brand that changed since it was read (`stale_value`): the
+  // brand as it is now.
+  brand?: ProblemBrand;
+}
+
+// A brand as the admin list shows it (AdminBrandDto), framework-free.
+export interface ProblemBrand {
+  id: string;
+  name: string;
+  slug: string;
+  state: 'active' | 'retired';
+  garages: number;
+  cars: number;
+  updatedAt: string;
+  updatedBy: string | null;
 }
 
 export interface FieldProblem {

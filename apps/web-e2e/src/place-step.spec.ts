@@ -1,6 +1,7 @@
 import { expect, type Page, type Route } from '@playwright/test';
 
 import { ownMap, ready, settled } from './accounts.js';
+import { answerConsent } from './consent-bar.js';
 import { COLLECTOR, test } from './fixtures.js';
 
 const STEFAN = {
@@ -76,19 +77,6 @@ async function kept(
     })
     .toBe(true);
   return (await keptPlace(page)) as Record<string, unknown>;
-}
-
-// At 320 by 640 the consent bar and the tab bar pinned at the bottom
-// leave the pin under them, where a drag by the mouse lands on a bar: answer
-// the bar first, as a visitor does on their first page.
-async function answerConsent(page: Page) {
-  await page
-    .getByRole('region', { name: 'Statistici de utilizare' })
-    .getByRole('button', { exact: true, name: 'Refuz' })
-    .click();
-  await expect(
-    page.getByRole('region', { name: 'Statistici de utilizare' }),
-  ).toBeHidden();
 }
 
 // Read from the live map, which the page exposes under the test style only.

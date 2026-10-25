@@ -1,4 +1,4 @@
-import { BRANDS } from './brands';
+import { BRANDS } from './brands/brands';
 import {
   CAR_MODELS,
   CarModelFileError,

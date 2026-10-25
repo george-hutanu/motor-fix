@@ -23,7 +23,7 @@ describe('legal texts, structure and hygiene', () => {
   // @traces 243-FR-012 1203-FR-005 366-FR-003
   it.each([
     ['terms', TERMS_VERSION, '2026-10-12'],
-    ['privacy', PRIVACY_VERSION, '2026-10-17'],
+    ['privacy', PRIVACY_VERSION, '2026-10-24'],
   ] as const)(
     'the %s of both languages carries the shared version',
     (kind, expected, date) => {

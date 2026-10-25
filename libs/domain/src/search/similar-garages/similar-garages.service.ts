@@ -6,8 +6,8 @@ import type {
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { recordSimilarGarages } from './similar-garages.metrics';
+import { refusal } from '../../auth/http-refusal';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { areaSql } from '../area/area-sql';
 import {

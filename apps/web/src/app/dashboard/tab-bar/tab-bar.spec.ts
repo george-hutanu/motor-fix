@@ -16,10 +16,10 @@ class Blank {}
 
 @Component({
   imports: [DashboardTabBar],
-  template: `<mf-dashboard-tab-bar base="/app/garage" [views]="views" name="shell.frame.bar.garage" />`,
+  template: `<mf-dashboard-tab-bar base="/app/garage" [views]="views()" name="shell.frame.bar.garage" />`,
 })
 class Host {
-  readonly views = DASHBOARDS.garage.views.slice(0, 5);
+  readonly views = signal(DASHBOARDS.garage.views.slice(0, 5));
 }
 
 let scrolled: jest.Mock;
@@ -100,6 +100,30 @@ describe('DashboardTabBar', () => {
     scrolled.mockClear();
 
     await harness.navigateByUrl('/app/garage/team');
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+
+    expect(scrolled).toHaveBeenCalledWith({
+      block: 'nearest',
+      inline: 'nearest',
+    });
+    expect(scrolled.mock.contexts.at(-1)).toBe(tabs(element)[4]);
+  });
+
+  it('keeps the current tab in sight when a tab before it arrives later', async () => {
+    const { element, harness } = await open('/app/garage/team');
+    const host = harness.fixture.debugElement.query(
+      (node) => node.componentInstance instanceof Host,
+    ).componentInstance as Host;
+    const all = host.views();
+    host.views.set(all.filter((view) => view.path !== 'schedule'));
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    scrolled.mockClear();
+
+    // A garage's feature switches load after the bar marked its tab: the
+    // schedule tab lands before Mecanici and would push it out of sight.
+    host.views.set(all);
     harness.detectChanges();
     await harness.fixture.whenStable();
 
