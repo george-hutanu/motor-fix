@@ -17,6 +17,9 @@ function reads(page: Page) {
     const url = new URL(request.url());
     if (!url.pathname.startsWith('/api/') && url.pathname !== '/health/ready')
       return;
+    // An image the page draws (the profile's small map) is no read the
+    // server could hand over with the page.
+    if (request.resourceType() === 'image') return;
     seen.push({
       method: request.method(),
       path: url.pathname,

@@ -35,16 +35,18 @@ jest.mock('@motor-fix/ui-cockpit', () => ({
 
 const FILE = 'file-1';
 const NOW = new Date();
+
 // A calendar day `n` days before today in Bucharest, counted in calendar
-// days: a day of 23 or 25 hours, as the clocks change, still counts as one.
-const [YEAR, MONTH, DATE] = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'Europe/Bucharest',
-})
-  .format(NOW)
-  .split('-')
-  .map(Number);
-const daysAgo = (n: number) =>
-  new Date(Date.UTC(YEAR, MONTH - 1, DATE - n)).toISOString().slice(0, 10);
+// days: `n` times 24 hours back lands on the same day in the evening the
+// clocks go back.
+const daysAgo = (n: number) => {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Bucharest',
+  }).format(NOW);
+  const day = new Date(`${today}T00:00:00Z`);
+  day.setUTCDate(day.getUTCDate() - n);
+  return day.toISOString().slice(0, 10);
+};
 
 const KINDS = [
   'company',

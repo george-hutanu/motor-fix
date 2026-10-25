@@ -482,6 +482,19 @@
     },
     {
       "kind": "queue",
+      "name": "quote-lost",
+      "source": "libs/domain/src/notifications/quote-lost/quote-lost.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one QuoteLost log line per job naming the request id, how many lost quotes and how many staff were told; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-223"
+    },
+    {
+      "kind": "queue",
       "name": "quote-received",
       "source": "libs/domain/src/notifications/quote-received/quote-received.fan-out.ts",
       "dashboard": "motorfix-queues",

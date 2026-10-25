@@ -56,7 +56,7 @@ import { Consent } from '../../consent/consent';
 import { LiveChange } from '../../dashboard/live-in-place/live-in-place';
 import { PlaceStore } from '../../home/place/place-store';
 import type { LiveView } from '../../live/view';
-import { publicRead } from '../../public-read';
+import { freshPublicRead, publicRead } from '../../public-read';
 import { publicLiveResource } from '../live';
 import { ProfilePrefetch } from '../profile-prefetch/profile-prefetch';
 import { SaveGarageButton } from '../saved-garages/save-garage-button/save-garage-button';
@@ -409,7 +409,7 @@ export class GarageProfile {
     return this.garages
       .publicGaragesControllerBySlug(
         { slug, ...(brand ? { brand } : {}) },
-        publicRead(),
+        freshPublicRead(),
       )
       .then(
         (garage) => {

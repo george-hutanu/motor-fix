@@ -183,9 +183,14 @@ export class VerificationService {
       this.renewals(db, offset + limit),
       this.countWaiting(db),
     ]);
+    // Prisma reads a file's garage in a query of its own, so a garage deleted
+    // between the two (its account closed meanwhile) comes back as null.
+    const kept = <T extends { garage: unknown }>(row: T) => row.garage !== null;
     const rows: QueueEntry[] = [
-      ...files.map((file) => ({ at: file.submittedAt, file, id: file.id })),
-      ...renewals.flatMap((renewal) => {
+      ...files
+        .filter(kept)
+        .map((file) => ({ at: file.submittedAt, file, id: file.id })),
+      ...renewals.filter(kept).flatMap((renewal) => {
         const first = renewal.documents[0];
         return first
           ? [{ at: first.createdAt, first, id: renewal.id, renewal }]
