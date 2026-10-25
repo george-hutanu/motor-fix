@@ -62,6 +62,8 @@ const EXCEPTIONS: Record<string, string> = {
     'an invite names the garage that sent it, approved or not, to the person holding its secret',
   'garages/staff-invite/staff-invite.service.ts#joined':
     'the owners of the garage a new member joined hear its name, approved or not',
+  'garages/staff-invite/staff-invite.service.ts#link':
+    'a mechanic asked to move is told the name of the garage they work at, approved or not',
   'garages/verification/verification.service.ts#autoApprove': OWN_NEW_GARAGE,
   'quotes/quote-requests/quote-requests.service.ts#assertRouted':
     'reads the garages a driver picked only to refuse the request, naming why a hidden one cannot take it; it sends to none of them',
