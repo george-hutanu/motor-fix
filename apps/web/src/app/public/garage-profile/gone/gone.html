@@ -4,5 +4,18 @@
   <a [routerLink]="['/', i18n.language()]">{{ 'shell.notFound.home' | t }}</a>
 } @else {
   <h1>{{ 'public.gone.title' | t }}</h1>
-  <a [routerLink]="['/', i18n.language()]">{{ 'public.gone.home' | t }}</a>
+  @if (cards().length) {
+    <p>{{ 'public.gone.similar' | t }}</p>
+    <ul class="similar">
+      @for (item of cards(); track item.id) {
+        <li><mf-result-card [brand]="item.brand" [garage]="item" (pick)="open(item)" /></li>
+      }
+    </ul>
+  } @else if (similar()?.brand; as brand) {
+    <a [routerLink]="['/', i18n.language(), 'garages']" [queryParams]="{ brand: brand.slug }">{{
+      'public.gone.searchBrand' | t: { brand: brand.name }
+    }}</a>
+  } @else if (similar() !== undefined) {
+    <a [routerLink]="['/', i18n.language()]">{{ 'public.gone.search' | t }}</a>
+  }
 }

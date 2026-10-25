@@ -67,6 +67,8 @@ const EXCEPTIONS: Record<string, string> = {
     'reads the garages a driver picked only to refuse the request, naming why a hidden one cannot take it; it sends to none of them',
   'search/garage-search/garage-search.service.ts#after':
     'reads only the name of the last garage of a page, by the id in the cursor, to find where the next starts; it never returns it',
+  'search/similar-garages/similar-garages.service.ts#forGarage':
+    'reads a garage no longer listed only for its place and brands, to find listed garages like it; it answers only for a suspended one and never returns it',
 };
 
 // ─── sources ────────────────────────────────────────────────────────────────
