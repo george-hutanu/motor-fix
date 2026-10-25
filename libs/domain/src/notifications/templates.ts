@@ -1,4 +1,8 @@
-import { DECLINE_REASON_TEXTS, isDeclineReason } from '@motor-fix/contracts';
+import {
+  CANCEL_REASON_TEXTS,
+  DECLINE_REASON_TEXTS,
+  isDeclineReason,
+} from '@motor-fix/contracts';
 import {
   formatClock,
   formatDay,
@@ -25,7 +29,8 @@ type Format =
   | 'day'
   | 'date'
   | 'days'
-  | 'reason';
+  | 'reason'
+  | 'cancel_reason';
 
 interface EmailText {
   subject: string;
@@ -142,6 +147,27 @@ function longDay(value: unknown, language: Language): string {
   return `${Number(String(value).slice(8))} ${month}`;
 }
 
+// A decline's reason code reads as the clause after the garage's name; a
+// driver's cancel reason as the label the driver picked.
+function reasonText(
+  kind: 'reason' | 'cancel_reason',
+  value: unknown,
+  language: Language,
+): string {
+  if (kind === 'reason') {
+    if (!isDeclineReason(value)) {
+      throw new Error(`unknown decline reason ${String(value)}`);
+    }
+    return DECLINE_REASON_TEXTS[value].clause[language];
+  }
+  if (!Object.hasOwn(CANCEL_REASON_TEXTS, String(value))) {
+    throw new Error(`unknown cancel reason ${String(value)}`);
+  }
+  return CANCEL_REASON_TEXTS[value as keyof typeof CANCEL_REASON_TEXTS].label[
+    language
+  ];
+}
+
 function format(kind: Format, value: unknown, language: Language): string {
   switch (kind) {
     case 'count':
@@ -169,12 +195,9 @@ function format(kind: Format, value: unknown, language: Language): string {
       const day = formatDay(value, language);
       return day === '—' ? day : `${day}, ${formatClock(value)}`;
     }
-    // A decline's reason code, as the clause after the garage's name.
     case 'reason':
-      if (!isDeclineReason(value)) {
-        throw new Error(`unknown decline reason ${String(value)}`);
-      }
-      return DECLINE_REASON_TEXTS[value].clause[language];
+    case 'cancel_reason':
+      return reasonText(kind, value, language);
     default:
       return String(value);
   }
@@ -256,7 +279,9 @@ function renderText(
     case 'email': {
       const mail = text as EmailText;
       const subject = fill(mail.subject);
-      const lines = mail.lines.map(fill);
+      // A line made of an optional value alone, such as a note, is left out
+      // when that value is empty.
+      const lines = mail.lines.map(fill).filter((line) => line !== '');
       const button = {
         href: safeHref(value(mail.button.link), 'button', fail),
         label: fill(mail.button.label),
@@ -331,6 +356,7 @@ function pushBody(
 const BY_PARAM: Record<string, [param: string, values: ReadonlySet<unknown>]> =
   {
     ADMIN_VERIFICATION_QUEUED: ['item', new Set(['documents'])],
+    BOOKING_CANCELLED: ['variant', new Set(['driver', 'driver_late'])],
     GARAGE_REPORT_DECIDED: ['decision', REPORT_DECISION_SET],
     VERIFICATION_RESULT: ['decision', DECISIONS],
   };
