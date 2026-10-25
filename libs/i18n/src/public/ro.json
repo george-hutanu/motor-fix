@@ -860,6 +860,8 @@
     "locating": "Se caută locația…",
     "locationFailed": "Nu am putut afla locația.",
     "map": {
+      "attribution": "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors",
+      "interactive": "Hartă interactivă",
       "label": "Harta service‑urilor",
       "mobile": "Mecanic mobil · zona deservită",
       "rate": "lei pe oră",

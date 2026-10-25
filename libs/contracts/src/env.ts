@@ -166,6 +166,26 @@ export function grafanaUrl(
   return optionalUrl('GRAFANA_URL', source);
 }
 
+// The vector tiles the static map image is drawn from, as a TileJSON
+// address; `off` calls no provider and draws the ground colour only, which
+// the end-to-end and QA runs use so no test fetches a tile.
+const MAP_TILES_DEFAULT = 'https://tiles.openfreemap.org/planet';
+
+export function mapTilesTileJsonUrl(
+  source: Record<string, string | undefined> = process.env,
+): string {
+  const value = source['MAP_TILES_TILEJSON_URL'];
+  if (value === undefined || value === '') return MAP_TILES_DEFAULT;
+  if (value === 'off') return value;
+  const url = /^https?:\/\//i.test(value) ? URL.parse(value) : null;
+  if (!url) {
+    throw new Error(
+      'MAP_TILES_TILEJSON_URL must be an absolute http(s) URL or off',
+    );
+  }
+  return url.href;
+}
+
 function optionalUrl(
   name: string,
   source: Record<string, string | undefined>,
