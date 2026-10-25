@@ -4,10 +4,12 @@ import { Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
 import { BrandLoader } from './brand-loader';
-import { BRANDS, BrandFileError, type BrandRecord } from './brands';
+import { BRANDS, BrandFileError, type BrandRecord } from './brands/brands';
+import { BrandsService, dropActiveBrands } from './brands/brands.service';
 import { AuditService } from '../audit/audit.service';
 import { foreignEntries } from '../audit/audit.testing';
 import { serialDatabase } from '../auth/serial-db.testing';
+import type { Prisma } from '../generated/prisma/client';
 import {
   databaseUrl,
   fixtures,
@@ -17,6 +19,7 @@ import {
 const { prisma } = fixtures();
 const redis = new Redis(redisUrlFor(3));
 const loader = new BrandLoader(prisma, new AuditService(), redis);
+const brands = new BrandsService(prisma, redis, new AuditService());
 serialDatabase(databaseUrl);
 
 const FILE: BrandRecord[] = [
@@ -30,7 +33,7 @@ let since: Date;
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
-  await redis.del('brands:active');
+  await dropActiveBrands(redis, new Logger('test'));
   const [{ now }] = await prisma.$queryRaw<
     { now: Date }[]
   >`SELECT clock_timestamp() AS now`;
@@ -111,6 +114,7 @@ describe('BrandLoader', () => {
     ]);
   });
 
+  // @traces 039-FR-008
   it('records each created brand in the history as the system', async () => {
     await loader.load(FILE);
 
@@ -359,6 +363,7 @@ describe('BrandLoader', () => {
     ).toMatchObject({ active: true, id: dacia.id });
   });
 
+  // @traces 039-FR-007
   it('fails the whole load on a duplicate in the file, naming it, and stores nothing', async () => {
     await loader.load(FILE);
     const before = await stored();
@@ -411,20 +416,30 @@ describe('BrandLoader', () => {
   });
 
   it('drops the cached brand list when the list changed', async () => {
-    await redis.set('brands:active', '[]');
-
     await loader.load(FILE);
+    await brands.search();
 
-    expect(await redis.get('brands:active')).toBeNull();
+    await loader.load([...FILE, { key: 'xpeng', name: 'Xpeng' }]);
+
+    expect((await brands.search('xpeng')).total).toBe(1);
   });
 
   it('keeps the cached brand list when nothing changed', async () => {
     await loader.load(FILE);
-    await redis.set('brands:active', '[]');
+    await brands.search();
+    await prisma.brand.update({
+      data: { name: 'Dacia Groupe', slug: 'dacia-groupe' },
+      where: { key: 'dacia' },
+    });
 
-    await loader.load(FILE);
+    await loader.load([
+      ...FILE.slice(0, 2),
+      { key: 'dacia', name: 'Dacia Groupe' },
+    ]);
 
-    expect(await redis.get('brands:active')).toBe('[]');
+    expect((await brands.search('dacia')).items.map((b) => b.name)).toEqual([
+      'Dacia',
+    ]);
   });
 
   // The old list then stays cached for the rest of its hour; the load itself
@@ -433,7 +448,7 @@ describe('BrandLoader', () => {
     // A client whose every call fails as an unreachable server's does; a real
     // one pointed at a closed port keeps Jest from exiting.
     const down = {
-      del: () => Promise.reject(new Error('connect ECONNREFUSED 127.0.0.1:1')),
+      incr: () => Promise.reject(new Error('connect ECONNREFUSED 127.0.0.1:1')),
     } as unknown as Redis;
     const warn = jest
       .spyOn(Logger.prototype, 'warn')
@@ -454,6 +469,122 @@ describe('BrandLoader', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+// @traces 105-FR-012 105-FR-011
+describe('BrandLoader and a brand an admin changed', () => {
+  const ADMIN = randomUUID();
+
+  const ownedByAdmin = async (key: string, data: Prisma.BrandUpdateInput) =>
+    prisma.brand.update({
+      data: { ...data, updatedBy: ADMIN },
+      where: { key },
+    });
+
+  const quietly = () =>
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+  it('keeps its name, slug, state, your form and rank whatever the file says', async () => {
+    await loader.load(FILE);
+    const skoda = await ownedByAdmin('skoda', {
+      active: false,
+      name: 'Skoda Auto',
+      popularity: 9,
+      roPossessive: 'Skoda Auto-ul',
+      slug: 'skoda-auto',
+    });
+    const warn = quietly();
+
+    try {
+      await loader.load(
+        FILE.map((record) =>
+          record.key === 'skoda'
+            ? { ...record, roPossessive: 'Škoda-ul' }
+            : record,
+        ),
+      );
+    } finally {
+      warn.mockRestore();
+    }
+
+    expect(
+      await prisma.brand.findUniqueOrThrow({ where: { key: 'skoda' } }),
+    ).toEqual(skoda);
+  });
+
+  it('does not retire it for being absent from the file', async () => {
+    await loader.load(FILE);
+    const dacia = await ownedByAdmin('dacia', {});
+
+    await loader.load(FILE.filter((record) => record.key !== 'dacia'));
+
+    expect(
+      await prisma.brand.findUniqueOrThrow({ where: { key: 'dacia' } }),
+    ).toEqual(dacia);
+  });
+
+  it('still creates every file brand whose key is missing', async () => {
+    await loader.load(FILE);
+    await ownedByAdmin('bmw', { name: 'BMW AG', slug: 'bmw-ag' });
+    const warn = quietly();
+
+    try {
+      const result = await loader.load([
+        ...FILE,
+        { key: 'xpeng', name: 'Xpeng' },
+      ]);
+
+      expect(result.changed).toBe(1);
+    } finally {
+      warn.mockRestore();
+    }
+    expect((await stored()).map((brand) => brand.key)).toEqual([
+      'bmw',
+      'dacia',
+      'skoda',
+      'xpeng',
+    ]);
+  });
+
+  it.each([
+    ['key', { key: 'xpeng', name: 'Xpeng Motors' }],
+    ['name', { key: 'xpeng-motors', name: 'Xpeng' }],
+    ['slug', { key: 'xpeng-motors', name: 'XPENG' }],
+  ])(
+    'skips a file record whose %s an admin-owned brand holds, with one warning naming the key',
+    async (_, record) => {
+      await prisma.brand.create({
+        data: { key: 'xpeng', name: 'Xpeng', slug: 'xpeng', updatedBy: ADMIN },
+      });
+      const warn = quietly();
+
+      try {
+        await expect(loader.load([...FILE, record])).resolves.toEqual({
+          changed: 3,
+        });
+        expect(
+          warn.mock.calls.filter(([line]) => String(line).includes(record.key)),
+        ).toHaveLength(1);
+      } finally {
+        warn.mockRestore();
+      }
+      expect(
+        await prisma.brand.findUniqueOrThrow({ where: { key: 'xpeng' } }),
+      ).toMatchObject({ active: true, name: 'Xpeng', slug: 'xpeng' });
+      expect(await prisma.brand.count()).toBe(4);
+    },
+  );
+
+  it('still fails the load when two brands only the loader owns collide', async () => {
+    await loader.load(FILE);
+    await ownedByAdmin('dacia', {});
+    const before = await stored();
+
+    await expect(
+      loader.load([{ key: 'bmw-group', name: 'BMW' }, ...FILE.slice(1)]),
+    ).rejects.toThrow(BrandFileError);
+    expect(await stored()).toEqual(before);
   });
 });
 

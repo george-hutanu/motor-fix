@@ -161,6 +161,16 @@ input[type="checkbox"].mf-check:checked::after {
   }
 }
 
+/* Sonner pins a phone's bottom toasts 20 px over the screen's edge, over the
+   tab bar, and holds one while a finger rests on it: they sit above the tab
+   bar and the consent bar instead, whose heights the frames and the consent
+   bar give. */
+@media (max-width: 767px) {
+  :root [data-sonner-toaster][data-y-position="bottom"] {
+    bottom: calc(var(--tab-bar, 0px) + var(--consent-bar, 0px) + 16px);
+  }
+}
+
 /* The hero carries every copy voice; the one the page head picked shows. */
 [data-voice-of] {
   display: none;

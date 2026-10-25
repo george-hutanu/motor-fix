@@ -1,6 +1,5 @@
 import { mergeApplicationConfig } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { Router } from '@angular/router';
 import { provideApiConfiguration } from '@motor-fix/data-access/api-configuration';
 
 import { App } from './app/app';
@@ -14,5 +13,5 @@ const browserConfig = mergeApplicationConfig(appConfig, {
 });
 
 bootstrapApplication(App, browserConfig)
-  .then((app) => loadTelemetry(app.injector.get(Router)))
+  .then((app) => loadTelemetry(app.injector))
   .catch((err) => console.error(err));

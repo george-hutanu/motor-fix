@@ -100,6 +100,26 @@ describe('observeWorker', () => {
     expect(duration?.value).toMatchObject({ count: 1, sum: 0.25 });
   });
 
+  // @traces 1156-FR-011
+  it('starts each named job at 0 completed, so the first completion after a restart is an increase', async () => {
+    const worker = fakeWorker('seeded');
+    observeWorker(worker, { jobNames: ['seeded-nightly'] });
+
+    const seeded = {
+      job_name: 'seeded-nightly',
+      outcome: 'completed',
+      queue: 'seeded',
+    };
+    expect(await points('motorfix_jobs_total')).toContainEqual(
+      expect.objectContaining({ attributes: seeded, value: 0 }),
+    );
+
+    emitInSpan(worker, 'completed', job({ name: 'seeded-nightly' }));
+    expect(await points('motorfix_jobs_total')).toContainEqual(
+      expect.objectContaining({ attributes: seeded, value: 1 }),
+    );
+  });
+
   it('ends the job span of a final failure in error, with the exception', async () => {
     const worker = fakeWorker();
     observeWorker(worker);

@@ -34,26 +34,43 @@ export const canMute = (name: string) => {
 
 const enabledByDefault = (name: string) => name !== 'NEWS';
 
-// What a driver type is when nothing is saved: every driver type allows e-mail.
+// With a push device, a type that offers push and can be muted goes by push
+// until the driver picks; without one, and for every other type, by e-mail.
+const channelByDefault = (name: string, pushDevice: boolean): OutsideChannel =>
+  pushDevice &&
+  canMute(name) &&
+  notificationType(name).channels.includes('push')
+    ? 'push'
+    : 'email';
+
+// What a driver type is: the saved row, else its default.
 function driverChoice(
   name: string,
   rows: readonly PreferenceRow[],
+  pushDevice: boolean,
 ): { channel: OutsideChannel; enabled: boolean } {
   const saved = rows.find((r) => r.type === name && r.garageId === null);
   return saved
     ? { channel: saved.channel, enabled: saved.enabled }
-    : { channel: 'email', enabled: enabledByDefault(name) };
+    : {
+        channel: channelByDefault(name, pushDevice),
+        enabled: enabledByDefault(name),
+      };
 }
 
 const driverTypes = NAMES.filter(isDriverType);
 
-// A group is on when every type of it that can be muted is enabled.
+// A group is on when every type of it that can be muted is enabled; the
+// channel does not change that.
 const groupOn = (key: DriverGroup, rows: readonly PreferenceRow[]) =>
   groupTypes(key)
     .filter(canMute)
-    .every((name) => driverChoice(name, rows).enabled);
+    .every((name) => driverChoice(name, rows, false).enabled);
 
-export function preferencesView(rows: readonly PreferenceRow[]) {
+export function preferencesView(
+  rows: readonly PreferenceRow[],
+  pushDevice = false,
+) {
   const groups = NOTIFICATION_GROUPS.map((key) => ({
     enabled: groupOn(key, rows),
     key,
@@ -61,7 +78,8 @@ export function preferencesView(rows: readonly PreferenceRow[]) {
   }));
   const driver = driverTypes.map((type) => ({
     alwaysSent: !canMute(type),
-    ...driverChoice(type, rows),
+    ...driverChoice(type, rows, pushDevice),
+    channels: [...notificationType(type).channels],
     garageId: null,
     type,
   }));
@@ -70,6 +88,7 @@ export function preferencesView(rows: readonly PreferenceRow[]) {
     .map((r) => ({
       alwaysSent: !canMute(r.type),
       channel: r.channel,
+      channels: [r.channel],
       enabled: r.enabled,
       garageId: r.garageId,
       type: r.type,
@@ -103,10 +122,11 @@ export function mutedChannels(
   name: string,
   rows: readonly PreferenceRow[],
   garageId: string | null = null,
+  pushDevice = false,
 ): Set<OutsideChannel> {
   const { channels } = notificationType(name);
   if (isDriverChoice(name, garageId)) {
-    const { channel, enabled } = driverChoice(name, rows);
+    const { channel, enabled } = driverChoice(name, rows, pushDevice);
     return new Set(channels.filter((c) => !enabled || c !== channel));
   }
   return new Set(channels.filter((c) => !staffEnabled(name, c, rows)));
@@ -121,6 +141,7 @@ export interface PreferenceChange {
 }
 
 interface Plan {
+  pushDevice: boolean;
   rows: PreferenceRow[];
   writes: PreferenceRow[];
   changes: PreferenceChange[];
@@ -142,7 +163,7 @@ function switchGroup(plan: Plan, key: DriverGroup, enabled: boolean) {
   const before = groupOn(key, plan.rows);
   const written = plan.writes.length;
   for (const type of groupTypes(key).filter(canMute)) {
-    const was = driverChoice(type, plan.rows);
+    const was = driverChoice(type, plan.rows, plan.pushDevice);
     if (was.enabled !== enabled) {
       put(plan, { channel: was.channel, enabled, garageId: null, type });
     }
@@ -158,7 +179,7 @@ function switchGroup(plan: Plan, key: DriverGroup, enabled: boolean) {
 function choose(plan: Plan, choice: PreferenceRow) {
   const { channel, enabled, garageId, type } = choice;
   if (isDriverChoice(type, garageId)) {
-    const was = driverChoice(type, plan.rows);
+    const was = driverChoice(type, plan.rows, plan.pushDevice);
     if (was.channel === channel && was.enabled === enabled) return;
     put(plan, choice);
     plan.changes.push({
@@ -189,8 +210,9 @@ export function planSave(
   rows: readonly PreferenceRow[],
   groups: readonly { key: DriverGroup; enabled: boolean }[],
   choices: readonly PreferenceRow[],
+  pushDevice = false,
 ): { writes: PreferenceRow[]; changes: PreferenceChange[] } {
-  const plan: Plan = { changes: [], rows: [...rows], writes: [] };
+  const plan: Plan = { changes: [], pushDevice, rows: [...rows], writes: [] };
   for (const { key, enabled } of groups) switchGroup(plan, key, enabled);
   for (const choice of choices) choose(plan, choice);
   return { changes: plan.changes, writes: plan.writes };

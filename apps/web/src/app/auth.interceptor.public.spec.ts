@@ -24,6 +24,7 @@ let server: HttpTestingController;
 function setup(token: string | null) {
   const session = {
     deletingAccount: () => false,
+    epoch: () => 0,
     renew: jest.fn(async () => true),
     token: () => token,
   };

@@ -9,6 +9,13 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { dataExportControllerDownload } from '../fn/me/data-export-controller-download';
+import { DataExportControllerDownload$Params } from '../fn/me/data-export-controller-download';
+import { dataExportControllerLatest } from '../fn/me/data-export-controller-latest';
+import { DataExportControllerLatest$Params } from '../fn/me/data-export-controller-latest';
+import { dataExportControllerRequest } from '../fn/me/data-export-controller-request';
+import { DataExportControllerRequest$Params } from '../fn/me/data-export-controller-request';
+import { DataExportDto } from '../models/data-export-dto';
 import { emailChangeControllerRequest } from '../fn/me/email-change-controller-request';
 import { EmailChangeControllerRequest$Params } from '../fn/me/email-change-controller-request';
 import { meControllerMe } from '../fn/me/me-controller-me';
@@ -128,6 +135,81 @@ export class MeService extends BaseService {
   meEmailConfirmationControllerAskAgain(params?: MeEmailConfirmationControllerAskAgain$Params, context?: HttpContext): Promise<void> {
     const resp = this.meEmailConfirmationControllerAskAgain$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `dataExportControllerLatest()` */
+  static readonly DataExportControllerLatestPath = '/api/v1/me/data-export';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `dataExportControllerLatest()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  dataExportControllerLatest$Response(params?: DataExportControllerLatest$Params, context?: HttpContext): Promise<StrictHttpResponse<DataExportDto>> {
+    const obs = dataExportControllerLatest(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `dataExportControllerLatest$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  dataExportControllerLatest(params?: DataExportControllerLatest$Params, context?: HttpContext): Promise<DataExportDto> {
+    const resp = this.dataExportControllerLatest$Response(params, context);
+    return resp.then((r: StrictHttpResponse<DataExportDto>): DataExportDto => r.body);
+  }
+
+  /** Path part for operation `dataExportControllerRequest()` */
+  static readonly DataExportControllerRequestPath = '/api/v1/me/data-export';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `dataExportControllerRequest()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  dataExportControllerRequest$Response(params?: DataExportControllerRequest$Params, context?: HttpContext): Promise<StrictHttpResponse<DataExportDto>> {
+    const obs = dataExportControllerRequest(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `dataExportControllerRequest$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  dataExportControllerRequest(params?: DataExportControllerRequest$Params, context?: HttpContext): Promise<DataExportDto> {
+    const resp = this.dataExportControllerRequest$Response(params, context);
+    return resp.then((r: StrictHttpResponse<DataExportDto>): DataExportDto => r.body);
+  }
+
+  /** Path part for operation `dataExportControllerDownload()` */
+  static readonly DataExportControllerDownloadPath = '/api/v1/me/data-export/download';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `dataExportControllerDownload()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  dataExportControllerDownload$Response(params?: DataExportControllerDownload$Params, context?: HttpContext): Promise<StrictHttpResponse<Blob>> {
+    const obs = dataExportControllerDownload(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `dataExportControllerDownload$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  dataExportControllerDownload(params?: DataExportControllerDownload$Params, context?: HttpContext): Promise<Blob> {
+    const resp = this.dataExportControllerDownload$Response(params, context);
+    return resp.then((r: StrictHttpResponse<Blob>): Blob => r.body);
   }
 
   /** Path part for operation `phoneChangeControllerRequest()` */

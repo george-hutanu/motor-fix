@@ -6,6 +6,7 @@ import {
   ROUTE_LIMITS,
   signAccessToken,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import request from 'supertest';
@@ -19,7 +20,7 @@ let app: INestApplication;
 // Booting the API on a busy CI runner takes longer than Jest's five seconds.
 beforeAll(async () => {
   app = await api.start();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   await store.quit();

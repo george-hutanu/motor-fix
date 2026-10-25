@@ -18,9 +18,10 @@ import {
 import { copyOf, heldOf } from './completion.copy';
 import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
 import { newToken } from '../../../auth/email-confirmation/email-confirmation';
+import { refusal } from '../../../auth/http-refusal';
 import type { Actor } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
-import { refusal, taken } from '../../../auth/sign-up.service';
+import { taken } from '../../../auth/sign-up.service';
 import { localDay } from '../../../bucharest';
 import type {
   Prisma,

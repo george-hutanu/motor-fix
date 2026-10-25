@@ -191,6 +191,13 @@
   },
   "notifications": {
     "alwaysSent": "Mereu trimise: programarea confirmată, ora nouă propusă de service, programarea anulată sau expirată, mașina e gata.",
+    "alwaysSentMark": "Se trimite mereu",
+    "channel": {
+      "email": "E‑mail",
+      "push": "Push",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp"
+    },
     "consent": {
       "cancel": "Renunță",
       "confirm": "Sunt de acord",
@@ -219,7 +226,53 @@
         "title": "Recenzii și istoric"
       }
     },
-    "title": "Notificări"
+    "phoneHint": "Adaugă și confirmă numărul de telefon în Datele tale.",
+    "pushDismissed": "Permite notificările când browserul te întreabă, apoi alege Push din nou.",
+    "smsUsed": "Ai folosit {used} din {cap} SMS luna aceasta; următoarele merg pe WhatsApp.",
+    "title": "Notificări",
+    "type": {
+      "BOOKING_CANCELLED": "Programare anulată",
+      "BOOKING_CONFIRMED": "Programare confirmată",
+      "BOOKING_LAPSED": "Programare neconfirmată la timp",
+      "BOOKING_MOVE_LAPSED": "Propunere de mutare expirată",
+      "BOOKING_MOVE_REFUSED": "Mutare refuzată de service",
+      "BOOKING_MOVED": "Programare mutată",
+      "BOOKING_REMINDER": "Memento de programare",
+      "BOOKING_TIME_PROPOSED": "Oră nouă propusă de service",
+      "CAR_TRANSFER_ACCEPTED": "Transfer de mașină acceptat",
+      "DUE_ITP": "ITP",
+      "DUE_RCA": "RCA",
+      "DUE_ROVINIETA": "Rovinietă",
+      "FINAL_PRICE_CORRECTED": "Preț final corectat",
+      "GARAGE_REPORT_DECIDED": "Rezultatul sesizării tale",
+      "GARAGE_SUSPENDED_NOTICE": "Service suspendat",
+      "JOB_ETA_CHANGED": "Ora de gata s‑a schimbat",
+      "JOB_READY": "Mașina e gata",
+      "JOB_STARTED": "Lucrare începută",
+      "LIVE_STARTED": "Transmisie live pornită",
+      "MEDIA_ADDED": "Poze sau video noi",
+      "MEDIA_REMOVED": "Poze sau video șterse",
+      "MESSAGE_RECEIVED": "Mesaj nou",
+      "NEWS": "Noutăți MotorFix",
+      "NO_SHOW_RECORDED": "Neprezentare înregistrată",
+      "QUOTE_CHANGED": "Ofertă modificată",
+      "QUOTE_EXPIRED": "Ofertă expirată",
+      "QUOTE_RECEIVED": "Ofertă nouă de la un service",
+      "QUOTE_WITHDRAWN": "Ofertă retrasă",
+      "REPAIR_UPDATED": "Istoric de reparații actualizat",
+      "REQUEST_DECLINED": "Cerere refuzată de un service",
+      "REQUEST_EXPIRED": "Cerere expirată",
+      "REVIEW_APPEAL_DECIDED": "Decizie despre o contestație",
+      "REVIEW_DECIDED": "Decizie despre o recenzie raportată",
+      "REVIEW_INVITE": "Invitație la recenzie",
+      "REVIEW_REPLIED": "Răspuns la recenzia ta",
+      "SERVICE_DUE": "Revizie",
+      "TYRES_SEASON": "Anvelope"
+    },
+    "types": {
+      "label": "Alege canalele: {group}",
+      "show": "Alege canalele"
+    }
   },
   "panel": {
     "activeRequest": "Cererea activă",

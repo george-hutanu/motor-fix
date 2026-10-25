@@ -67,6 +67,59 @@ describe('CockpitGaugesSample', () => {
     expect(odometers(page)[1]).toBe('1.400–1.800 lei');
   });
 
+  // @traces 453-FR-001
+  // @traces 453-FR-002
+  // @traces 453-FR-003
+  describe('odometer captions', () => {
+    const KEYS = ['odometerOne', 'odometerRange', 'odometerNone'];
+    const figures = (page: HTMLElement) =>
+      [...page.querySelectorAll('mf-odometer')].map((o) => {
+        const figure = o.closest('figure');
+        return {
+          captions: figure?.querySelectorAll('figcaption').length,
+          odometers: figure?.querySelectorAll('mf-odometer').length,
+          text: figure?.querySelector('figcaption')?.textContent?.trim(),
+        };
+      });
+
+    it('captions each odometer sample in its own figure, in Romanian', async () => {
+      const { page } = await render();
+
+      expect(figures(page)).toEqual(
+        KEYS.map((key) => ({ captions: 1, odometers: 1, text: text(key) })),
+      );
+      expect(new Set(KEYS.map(text)).size).toBe(3);
+      expect(KEYS.map(text).some((t) => t.includes('cockpit.'))).toBe(false);
+    });
+
+    it('captions them in English after a language switch', async () => {
+      const { fixture, page } = await render();
+      const romanian = KEYS.map(text);
+
+      await TestBed.inject(I18n).use('en');
+      fixture.detectChanges();
+
+      const english = KEYS.map(text);
+      expect(figures(page).map((f) => f.text)).toEqual(english);
+      expect(english.every((t, i) => t !== romanian[i])).toBe(true);
+      expect(english.some((t) => t.includes('cockpit.'))).toBe(false);
+    });
+
+    it('keeps every caption when the values change', async () => {
+      const { fixture, page } = await render();
+      const before = figures(page).map((f) => f.text);
+      expect(before).toEqual(KEYS.map(text));
+
+      [...page.querySelectorAll('button')]
+        .find((b) => b.textContent?.trim() === text('swap'))
+        ?.click();
+      fixture.detectChanges();
+
+      expect(odometers(page)[1]).toBe('1.400–1.800 lei');
+      expect(figures(page).map((f) => f.text)).toEqual(before);
+    });
+  });
+
   it('swaps the ratings together with the estimate, so the dials and digits move', async () => {
     const { fixture, page } = await render();
     const ratings = () =>

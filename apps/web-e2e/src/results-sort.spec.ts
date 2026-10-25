@@ -3,6 +3,7 @@ import { Client } from 'pg';
 
 import { ready } from './accounts.js';
 import { violations } from './axe.js';
+import { deleteBrand } from './delete-brand.js';
 import { test } from './fixtures.js';
 
 // A brand and three garages of this file's own, written straight to
@@ -66,9 +67,8 @@ test.describe('sorting the Results page @seeded @database', () => {
   });
 
   test.afterAll(async () => {
-    await db.query('DELETE FROM search_log WHERE brand_id = $1', [brandId]);
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [ids]);
-    await db.query('DELETE FROM brand WHERE id = $1', [brandId]);
+    await deleteBrand(db, brandId);
     await db.end();
   });
 

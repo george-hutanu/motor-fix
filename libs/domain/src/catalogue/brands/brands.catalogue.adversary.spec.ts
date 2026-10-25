@@ -1,5 +1,5 @@
 import { BRANDS, slugOf, validateFile } from './brands';
-import { JOB_TYPES } from './job-types/job-types';
+import { JOB_TYPES } from '../job-types/job-types';
 
 const MOCK_ORDER = [
   'BMW',

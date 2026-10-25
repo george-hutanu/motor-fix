@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter } from '@angular/router';
@@ -88,5 +91,14 @@ describe('the dashboard view of a draft garage', () => {
     } as unknown as Partial<MeDto>);
 
     expect(text(element)).toBe('Aici vei vedea ce se întâmplă azi în service.');
+  });
+});
+
+describe('the dashboard view’s plain line', () => {
+  it('sits inset as far as the title, not against the screen’s edge', () => {
+    const css = readFileSync(join(__dirname, 'view.css'), 'utf8');
+    const line = /(?:^|\n)p \{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+    expect(line).toMatch(/margin: [^;]*var\(--mf-space-4\)/);
   });
 });

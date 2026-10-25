@@ -64,3 +64,36 @@ export function outsideChannels(
     );
   return [...new Set(sent)].sort();
 }
+
+export type FallbackReason =
+  | 'no_device'
+  | 'phone_not_verified'
+  | 'send_failed'
+  | 'sms_cap_reached';
+
+export interface Substitution {
+  from: OutsideChannel;
+  reason: FallbackReason;
+  to: SentChannel;
+}
+
+// The driver's channel a message cannot use and what it goes by instead: a
+// push with no device, an SMS or WhatsApp with no confirmed phone, each by
+// e-mail. Only when e-mail is written; a staff message has none.
+export function substitutions(
+  name: string,
+  muted: ReadonlySet<OutsideChannel>,
+  reach: Reach,
+  garageId: string | null = null,
+): Substitution[] {
+  if (!isDriverChoice(name, garageId) || !reach.email) return [];
+  const type = notificationType(name);
+  return type.channels
+    .filter((channel) => channel !== 'email' && !muted.has(channel))
+    .filter((channel) => sentBy(channel, type, muted, reach, true) === 'email')
+    .map((from) => ({
+      from,
+      reason: from === 'push' ? 'no_device' : 'phone_not_verified',
+      to: 'email',
+    }));
+}

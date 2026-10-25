@@ -6,6 +6,9 @@ ARG NODE_VERSION=26
 
 FROM node:${NODE_VERSION}-slim AS build
 WORKDIR /repo
+# The runtime sizes its heap from the container (runtime below); a Node that
+# does not know the option must fail the build, not the first start.
+RUN node --max-old-space-size-percentage=75 -e 0
 COPY package.json package-lock.json ./
 COPY libs/domain/prisma.config.ts libs/domain/prisma.config.ts
 COPY libs/domain/prisma libs/domain/prisma
@@ -19,6 +22,9 @@ RUN npx nx run ${APP}:build --configuration=production
 # The web server is fully bundled; the Node apps install the dependencies
 # their build listed in its own package.json and lockfile.
 RUN cd dist/apps/${APP} && if [ -f package-lock.json ]; then npm ci --omit=dev; fi
+# sharp ships a native binary per platform: an app that lists it must load it
+# here, in the image's own Node, or the build fails.
+RUN cd dist/apps/${APP} && if grep -q '"sharp"' package.json; then node -e "require('sharp')"; fi
 # The web build's source maps never reach the image: the browser's go to the
 # web-maps stage, which the release uploads to the error collector; the web
 # server's are deleted. The Node apps keep theirs beside main.js, so a thrown
@@ -45,6 +51,10 @@ FROM node:${NODE_VERSION}-slim AS runtime
 ARG APP
 ARG RELEASE_SHA=dev
 ENV NODE_ENV=production RELEASE_SHA=${RELEASE_SHA} TZ=UTC
+# Each start reuses the compiled code of the last one, in a directory the node
+# user can write; the heap follows the container's memory limit.
+ENV NODE_COMPILE_CACHE=/tmp/node-compile-cache
+ENV NODE_OPTIONS=--max-old-space-size-percentage=75
 COPY --from=build --chown=node:node /repo/dist/apps/${APP} /app
 WORKDIR /app
 USER node
@@ -54,5 +64,5 @@ FROM runtime AS web
 CMD ["node", "server/server.mjs"]
 
 FROM runtime AS node-app
-ENV NODE_OPTIONS=--enable-source-maps
+ENV NODE_OPTIONS="${NODE_OPTIONS} --enable-source-maps"
 CMD ["node", "main.js"]

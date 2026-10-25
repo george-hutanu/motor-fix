@@ -1,5 +1,6 @@
 /* Pinned on the tab bar, and on the consent bar while it asks; under the
-   overlays, which open over it. */
+   overlays, which open over it. Opaque, so its text keeps AA contrast
+   whatever is scrolled under it. */
 :host {
   display: block;
   box-sizing: border-box;
@@ -8,9 +9,7 @@
   bottom: calc(var(--tab-bar, 0px) + var(--consent-bar, 0px));
   z-index: 10;
   border-top: 1px solid var(--mf-line);
-  background: color-mix(in srgb, var(--mf-bg) 74%, transparent);
-  -webkit-backdrop-filter: saturate(160%) blur(18px);
-  backdrop-filter: saturate(160%) blur(18px);
+  background: var(--mf-bg);
 }
 :host([hidden]) {
   display: none;
@@ -18,13 +17,6 @@
 @media (min-width: 768px) {
   :host {
     display: none;
-  }
-}
-@media (prefers-reduced-transparency: reduce) {
-  :host {
-    background: var(--mf-bg);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
   }
 }
 .bar {

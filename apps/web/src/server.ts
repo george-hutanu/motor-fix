@@ -28,6 +28,7 @@ import { mountOriginGuard } from './server/origin-guard/origin-guard';
 import { withPageCache } from './server/page-cache/page-cache';
 import { renderError } from './server/render-error/render-error';
 import { mountSearch } from './server/search';
+import { withSiteOrigin } from './server/site-origin/site-origin';
 import { mountStaticFiles } from './server/static-files/static-files';
 import { withTelemetryMeta } from './server/telemetry-meta/telemetry-meta';
 
@@ -77,7 +78,10 @@ app.use((req, res, next) => {
         response &&
         withPageCache(
           req.originalUrl,
-          await withTelemetryMeta(response, collector, analytics),
+          await withSiteOrigin(
+            await withTelemetryMeta(response, collector, analytics),
+            publicUrl?.origin,
+          ),
         ),
     )
     .then((response) =>
