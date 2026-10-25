@@ -93,10 +93,17 @@
     },
     "reviewsSection": {
       "deletedAuthor": "Șofer MotorFix",
+      "edited": "Editată",
       "empty": "Încă nu are recenzii.",
       "failed": "Nu am putut încărca recenziile",
       "label": "Recenzii după notă",
       "more": "Vezi mai multe",
+      "notThroughMotorFix": "Nu prin MotorFix",
+      "price": {
+        "final": "Final {amount}",
+        "paid": "Plătit, după șofer: {amount}",
+        "quote": "Ofertă {amount}"
+      },
       "retry": "Încearcă din nou",
       "score": "{rating} / 5",
       "stars": {

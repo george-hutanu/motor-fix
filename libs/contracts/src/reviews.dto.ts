@@ -230,6 +230,15 @@ export class RatingBreakdownDto {
   one!: number;
 }
 
+// The range of the quote the driver booked, in bani; the ends may be equal.
+export class GarageReviewQuoteDto {
+  @ApiProperty()
+  fromBani!: number;
+
+  @ApiProperty()
+  toBani!: number;
+}
+
 // A published review on a garage's profile: the author by short name only,
 // and for a job review the car and the jobs the garage did.
 export class GarageReviewDto {
@@ -256,6 +265,23 @@ export class GarageReviewDto {
 
   @ApiProperty({ type: [RequestJobDto] })
   jobs!: RequestJobDto[];
+
+  // The amounts are a job review's only: a profile review carries none.
+  @ApiProperty({ nullable: true, type: GarageReviewQuoteDto })
+  quote!: GarageReviewQuoteDto | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  finalPriceBani!: number | null;
+
+  @ApiProperty({
+    description: 'What the driver says they paid',
+    nullable: true,
+    type: Number,
+  })
+  paidBani!: number | null;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  editedAt!: string | null;
 }
 
 export class GarageReviewsPageDto {

@@ -1,6 +1,6 @@
 ---
 capability: reviews
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 022-review-drawer
   - 023-review-confirmed-job
@@ -8,6 +8,7 @@ features:
   - 129-delete-account
   - 182-review-rules
   - 024-garage-reviews
+  - 1367-review-price-marks
 ---
 
 # Capability: Reviews
@@ -268,9 +269,9 @@ _From 182-review-rules._
 
 _From 182-review-rules._
 
-### 024-FR-004 — The section MUST list the garage's `published` reviews newest first (posted date, then id), 20 a page. Each review shows: for `source` `job`, the car ("BMW 320d": the request's brand and model) and the names of the accepted quote's included jobs (`included` true) joined by ", " ("Kit lanț distribuție"), as "{car} · {jobs}"; for `source` `profile`, nothing in that place (its "Nu prin MotorFix" mark is ST-1367's); then the score "{rating},0 / 5" ("5,0 / 5" / "5.0 / 5"), the text when there is one (no empty block otherwise), the author's short name and the posted month. The text shows in full (no truncation), wraps at any width and is shown as plain text, never as markup.
+### 1367-FR-007 — A review with source `profile` MUST show "Nu prin MotorFix" / "Not through MotorFix" in the place of the car and job label ("{car} · {jobs}" of 024-FR-004), styled as that label, and no price line; its score, text, author, month and the "Editată" mark show as for any review.
 
-_From 024-garage-reviews._
+_From 1367-review-price-marks._
 
 ### 024-FR-005 — The posted month MUST read as the abbreviated month and year in Europe/Bucharest: "mar. 2026" in Romanian (the 019-FR-005 abbreviations, so "mart. 2026" where the shared format gives it) and "Mar 2026" in English.
 
@@ -288,9 +289,9 @@ _From 024-garage-reviews._
 
 _From 024-garage-reviews._
 
-### 024-FR-017 — Each item MUST carry the review's id, `source`, rating, text (null when none), posted date, the author's short name as FR-007 and, for a job review, the car (brand, model) with the accepted quote's job names in both languages; a profile review carries `car` null and `jobs` `[]`. The quote range, the final price, the driver's amount and the edited date are ST-1367's.
+### 1367-FR-004 — The section MUST take the three values and the edited date from the same read it already makes (024-FR-016), with no extra request; each item of `GET /api/v1/reviews/garage/{garageId}` MUST carry, beside its 024-FR-017 fields, a nullable quote range (`from` and `to` in bani), a nullable final price in bani, a nullable paid amount in bani and a nullable edited date: for a job review the range of the accepted quote (always present, since both ends are required on a quote), the job's final price when set and the review's amount when given; for a profile review all three amounts null (FR-008).
 
-_From 024-garage-reviews._
+_From 1367-review-price-marks._
 
 ### 024-FR-018 — The read MUST answer 404 `not_found` with one body when the garage does not exist or is not `approved`; `page` below 1 or not an integer MUST answer 400 `validation_failed`; a missing `page` is page 1; a `page` past the last answers 200 with an empty `items` and the real `total`.
 
@@ -300,9 +301,9 @@ _From 024-garage-reviews._
 
 _From 024-garage-reviews._
 
-### 024-FR-020 — The read performs no write, emits no event and records no audit history.
+### 1367-FR-011 — The read MUST stay a public read with no write, no event and no audit history (024-FR-020), MUST expose nothing of 024-FR-019's list, and its existing fields, order, paging and errors (024-FR-016 to 024-FR-018) MUST NOT change; the route is not new, so the observability inventory gains no line.
 
-_From 024-garage-reviews._
+_From 1367-review-price-marks._
 
 ### 024-FR-022 — The read MUST ship with its request metrics by route template, its logs, a dashboard panel and an alert (its 5xx rate, as the other API operations' alerts), each listed in `infra/observability/inventory.json`; metric labels carry no id.
 
@@ -311,6 +312,30 @@ _From 024-garage-reviews._
 ### 024-FR-023 — Tests MUST be written first: Jest on real PostgreSQL for the read (the breakdown's counts and sum, the stored figures, the page order and size, 404 cases, 400 page, the past-last page, hidden statuses excluded from the list and the breakdown, the profile-source item with `car` null and `jobs` `[]`, the deleted author); Jest component tests for the section (the summary and the empty state in both languages, name formatting, the month, paging, skeleton and error states, the re-read on a live message); Playwright end to end: a visitor opens a profile and sees the breakdown and a review, and a second browser posts a review that the first sees appear without a reload. Every test file names its requirements in a `// @traces` line.
 
 _From 024-garage-reviews._
+
+### 1367-FR-002 — The quote part MUST read "Ofertă {range}" / "Quote {range}", the range being both ends in the shared lei format joined by " – " (space, en dash, space: "3.800 – 4.400 lei" / "3,800 – 4,400 lei"), or one amount when the ends are equal ("Ofertă 4.200 lei"). The final part MUST read "Final {amount}" / "Final {amount}". Every other screen that shows a lei range today keeps its text unchanged.
+
+_From 1367-review-price-marks._
+
+### 1367-FR-003 — The driver's amount MUST read "Plătit, după șofer: {amount}" / "Paid, says the driver: {amount}" and MUST show only when the review has an amount and either the job has no final price or the amount differs from the final price (compared in bani); an amount equal to the final price shows once, as the final part.
+
+_From 1367-review-price-marks._
+
+### 1367-FR-006 — A review MUST gain a nullable edited date (`edited_at`), empty for every existing and every newly posted review; this story adds the column and its migration and writes it nowhere: ST-408 (edit a review) writes it. The read carries it as FR-004.
+
+_From 1367-review-price-marks._
+
+### 1367-FR-008 — For a review with source `profile` the read MUST carry `car` null, `jobs` `[]` (024-FR-017) and null for the quote range, the final price and the paid amount, whatever the underlying job holds; no amount of a profile review reaches a visitor.
+
+_From 1367-review-price-marks._
+
+### 1367-FR-009 — Every new text (the three part labels, the "Editată" mark, the "Nu prin MotorFix" mark) MUST exist in Romanian and English in the public texts and follow the reader's language; the amounts and dates follow the language's shared formats (019-FR-003, 019-FR-005).
+
+_From 1367-review-price-marks._
+
+### 1367-FR-012 — Tests MUST be written first: Jest on real PostgreSQL for the read (the quote range from the accepted quote, the final price, the paid amount and the edited date of a job review; nulls where the job has no final price or the review no amount; the profile-source item with `car` null, `jobs` `[]` and the three amounts null although its job has them; the edited date null by default); Jest component tests for the section (the price line in its three full cases: all three parts, paid equal to final shown once, equal quote ends as one amount; plus no final price with an amount, and no part at all with no line; the "Editată" mark present and absent; the "Nu prin MotorFix" mark in place of the car and job label with no price line), each in Romanian and English; the migration applies on the existing schema. End to end (Playwright): none of its own (ST-24's profile flow already opens the section). Every test file names its requirements in a `// @traces` line.
+
+_From 1367-review-price-marks._
 
 ## Retired
 
@@ -322,3 +347,6 @@ _From 024-garage-reviews._
 - `022-FR-026` — superseded by `023-FR-002` (2026-10-21)
 - `022-FR-016` — superseded by `025-FR-001` (2026-10-23)
 - `129-FR-010` — superseded by `024-FR-007` (2026-10-24)
+- `024-FR-004` — superseded by `1367-FR-007` (2026-10-25)
+- `024-FR-017` — superseded by `1367-FR-004` (2026-10-25)
+- `024-FR-020` — superseded by `1367-FR-011` (2026-10-25)
