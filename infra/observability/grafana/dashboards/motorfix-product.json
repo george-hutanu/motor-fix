@@ -5454,6 +5454,70 @@
         "defaults": {},
         "overrides": []
       }
+    },
+    {
+      "id": 189,
+      "type": "stat",
+      "title": "Request timers, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 247
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (step, sweep) (increase(motorfix_request_timers_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{step}} sweep={{sweep}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 190,
+      "type": "stat",
+      "title": "Request timers, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 247
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (step, sweep) (increase(motorfix_request_timers_total{deployment_environment=\"$env\"}[24h]))",
+          "legendFormat": "{{step}} sweep={{sweep}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
     }
   ]
 }

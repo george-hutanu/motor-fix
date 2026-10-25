@@ -46,6 +46,10 @@ import { QUOTE_ACCEPTED } from './quote-accepted';
 import { QUOTE_DECLINED_BY_DRIVER } from './quote-declined-by-driver';
 import { QUOTE_RECEIVED, QUOTE_RECEIVED_GROUPED } from './quote-received';
 import { REQUEST_DECLINED } from './request-declined';
+import {
+  REQUEST_EXPIRED_DRIVER,
+  REQUEST_EXPIRED_GARAGE,
+} from './request-expired';
 import { REQUEST_RECEIVED } from './request-received';
 import { REVIEW_POSTED_JOB, REVIEW_POSTED_PROFILE } from './review-posted';
 import { SIGN_IN_CODE } from './sign-in-code';
@@ -109,6 +113,8 @@ export const TEMPLATES: Registry = {
   QUOTE_RECEIVED,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
   REQUEST_DECLINED,
+  'REQUEST_EXPIRED.driver': REQUEST_EXPIRED_DRIVER,
+  'REQUEST_EXPIRED.garage': REQUEST_EXPIRED_GARAGE,
   REQUEST_RECEIVED,
   'REVIEW_POSTED.job': REVIEW_POSTED_JOB,
   'REVIEW_POSTED.profile': REVIEW_POSTED_PROFILE,
