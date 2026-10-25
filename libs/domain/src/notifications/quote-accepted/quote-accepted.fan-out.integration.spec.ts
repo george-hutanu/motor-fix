@@ -18,6 +18,7 @@ import {
   fixtures,
   redisUrlFor,
   testConfig,
+  testPhone,
   testPhoneConfig,
 } from '../notifications.testing';
 
@@ -247,4 +248,40 @@ describe('telling the garage its quote was accepted', () => {
       await prisma.notification.count({ where: { kind: 'QUOTE_ACCEPTED' } }),
     ).toBe(once);
   });
+});
+
+// @traces 223-FR-010
+describe('the accepted quote and the garage’s WhatsApp switch', () => {
+  it.each([
+    [true, ['email', 'in_app', 'whatsapp']],
+    [false, ['email', 'in_app']],
+  ])(
+    'with WhatsApp on: %s, the owner who chose it gets %j',
+    async (on, expected) => {
+      const { garage, job, owner } = await acceptedQuote();
+      await prisma.account.update({
+        data: { phone: testPhone(1), phoneVerifiedAt: new Date() },
+        where: { id: owner },
+      });
+      await prisma.notificationPreference.create({
+        data: {
+          accountId: owner,
+          channel: 'whatsapp',
+          enabled: true,
+          garageId: garage.id,
+          type: 'QUOTE_ACCEPTED',
+        },
+      });
+      await prisma.garageFeature.create({
+        data: { enabled: on, garageId: garage.id, key: 'whatsapp' },
+      });
+      const { fanOut } = await start();
+
+      await fanOut.handle(job);
+
+      expect((await messages(owner)).map((m) => m.channel).sort()).toEqual(
+        expected,
+      );
+    },
+  );
 });

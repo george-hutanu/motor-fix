@@ -229,6 +229,7 @@ describe('telling a garage’s staff about a new request', () => {
     expect(await channels(receptionist)).toEqual(['email', 'in_app']);
   });
 
+  // @traces 223-FR-010
   it('sends WhatsApp to a person who chose it while the garage allows it, and none once it is off', async () => {
     const first = await staffedGarage('unu');
     const second = await staffedGarage('doi');
