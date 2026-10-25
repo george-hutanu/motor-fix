@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { AccountsService, PRISMA, signAccessToken } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
@@ -51,7 +52,7 @@ beforeAll(async () => {
     '/api/v1/job-types',
     '/api/v1/public-holidays?year=2026',
   ];
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(() => api.stop());
 

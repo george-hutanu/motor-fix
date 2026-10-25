@@ -162,6 +162,48 @@ describe('ProblemFilter', () => {
     expect(res.body).not.toHaveProperty('inviteId');
   });
 
+  // @traces 105-FR-006
+  it('keeps the current brand a stale save is refused with, and only its fields', () => {
+    const brand = {
+      cars: 2,
+      garages: 1,
+      id: 'b-1',
+      name: 'Škoda',
+      slug: 'skoda',
+      state: 'active',
+      updatedAt: '2026-10-24T12:00:00.000Z',
+      updatedBy: null,
+    };
+    const res = send(
+      new HttpException(
+        {
+          brand: { ...brand, internal: 'secret' },
+          code: 'stale_value',
+          message: 'The brand changed since it was read',
+        },
+        409,
+      ),
+    );
+
+    expect(res.body).toMatchObject({
+      brand,
+      code: 'stale_value',
+      detail: 'The brand changed since it was read',
+    });
+    expect((res.body as { brand: object }).brand).not.toHaveProperty(
+      'internal',
+    );
+  });
+
+  // @traces 105-FR-006
+  it('drops a brand member that is not a whole brand', () => {
+    for (const brand of ['skoda', null, { id: 'b-1' }, [1]]) {
+      const res = send(new HttpException({ brand, code: 'stale_value' }, 409));
+
+      expect(res.body).not.toHaveProperty('brand');
+    }
+  });
+
   // @traces 220-FR-015
   it('keeps the entity, current status, asked status and rule of a refused move', () => {
     const res = send(

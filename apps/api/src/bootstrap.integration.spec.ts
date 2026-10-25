@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import { Public } from '@motor-fix/domain';
 import { databaseTurn, S3TestStore } from '@motor-fix/domain/testing';
@@ -71,6 +73,10 @@ const store = new S3TestStore();
 // Its refused sign-in leaves failure counters in Redis that the domain's
 // sign-in specs count exactly: wait for their turn to end.
 const turn = databaseTurn(env.DATABASE_URL);
+
+// An e-mail no run has been refused for yet: five failed sign-ins for one in a
+// quarter of an hour are refused with 429, and the store outlives a run.
+const nobody = () => `nobody-${randomUUID()}@example.test`;
 
 async function start(appEnv: string = env.APP_ENV) {
   const config = readEnv(
@@ -234,7 +240,7 @@ describe('api conventions', () => {
       request(app.getHttpServer())
         .post('/api/v1/auth/sign-in')
         .set('X-Forwarded-For', forwarded)
-        .send({ email: 'nobody@example.test', password: 'x' });
+        .send({ email: nobody(), password: 'x' });
 
     await refused('203.0.113.9, 10.0.0.5');
     await refused('9.9.9.9, 1.2.3.4, 198.51.100.4');
@@ -253,7 +259,7 @@ describe('api conventions', () => {
 
     const res = await request(app.getHttpServer())
       .post('/api/v1/auth/sign-in')
-      .send({ email: 'nobody@example.test', password: 'x' });
+      .send({ email: nobody(), password: 'x' });
 
     expect(res.status).toBe(401);
     expect(res.headers['content-type']).toContain('application/problem+json');

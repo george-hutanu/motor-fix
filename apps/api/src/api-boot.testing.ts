@@ -8,10 +8,21 @@ import { configureApp } from './bootstrap';
 
 export const TEST_TOKEN_SECRET = 'test-secret';
 
+type TurnGlobal = {
+  releaseDatabaseTurnLast?: (release: () => Promise<void>) => void;
+};
+
 // Boots the API as production sets it up, against its own object store, once
 // the database turn is ours: the domain specs empty the account tables
-// meanwhile. stop() gives everything back from whatever stage start() reached.
+// meanwhile. stop() gives everything back from whatever stage start() reached,
+// and runs again once the whole file is done: a spec's afterAll that throws
+// before its own stop() must not keep the turn for the rest of the run.
 export function apiBoot() {
+  const releaseLast = (globalThis as TurnGlobal).releaseDatabaseTurnLast;
+  if (!releaseLast)
+    throw new Error(
+      'apiBoot needs testEnvironment database-turn.environment.cjs',
+    );
   const env = {
     APP_ENV: 'test',
     AUTH_TOKEN_SECRET: TEST_TOKEN_SECRET,
@@ -53,6 +64,12 @@ export function apiBoot() {
     throw new Error('the API boot was stopped before it finished');
   }
 
+  const stop = (): Promise<void> => {
+    stopped = true;
+    return giveBack();
+  };
+  releaseLast(stop);
+
   return {
     async start(): Promise<INestApplication> {
       await turn.take();
@@ -75,9 +92,6 @@ export function apiBoot() {
       return app;
     },
 
-    stop(): Promise<void> {
-      stopped = true;
-      return giveBack();
-    },
+    stop,
   };
 }
