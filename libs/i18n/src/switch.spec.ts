@@ -146,6 +146,44 @@ describe('provideRememberedLanguage', () => {
     expect(i18n.language()).toBe('en');
   });
 
+  // @traces 468-FR-001
+  it('ignores another tab while a hold is open, and follows it again once every hold is released', async () => {
+    const i18n = await start();
+    const choice = TestBed.inject(LanguageChoice);
+    const otherTab = async (newValue: string) => {
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: 'mf.lang', newValue }),
+      );
+      await new Promise((resolve) => setTimeout(resolve));
+    };
+    const first = choice.hold();
+    const second = choice.hold();
+
+    await otherTab('en');
+    first();
+    first();
+    await otherTab('en');
+
+    expect(i18n.language()).toBe('ro');
+
+    second();
+    await otherTab('en');
+
+    expect(i18n.language()).toBe('en');
+  });
+
+  // @traces 468-FR-001
+  it('still switches on a choice made in this tab while a hold is open', async () => {
+    const i18n = await start();
+    const choice = TestBed.inject(LanguageChoice);
+    choice.hold();
+
+    await choice.pick('en');
+
+    expect(i18n.language()).toBe('en');
+    expect(localStorage.getItem('mf.lang')).toBe('en');
+  });
+
   it('ignores storage events for other keys or with no value', async () => {
     const i18n = await start();
 
