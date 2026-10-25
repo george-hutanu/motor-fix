@@ -10,6 +10,7 @@ import {
   IsString,
   IsUUID,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
 import {
@@ -346,7 +347,8 @@ export class ReportReviewDto {
     description: 'Only with the reason other',
     maxLength: REVIEW_REPORT_TEXT_MAX,
   })
-  @IsOptional()
+  // Absent is fine; null is a malformed body (400), as any other non-string.
+  @ValidateIf((_, value) => value !== undefined)
   // PostgreSQL cannot store a NUL character, so it goes before the trim.
   @Transform(({ value }) =>
     typeof value === 'string'

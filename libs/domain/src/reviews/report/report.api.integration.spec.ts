@@ -373,10 +373,28 @@ describe('what a report may hold', () => {
     expect(await counted('validation_failed')).toBe(before + 1);
   });
 
+  it('names the text problem in the caller’s language', async () => {
+    const s = await setting();
+    const body = { reason: 'insults', text: 'Jigniri.' };
+
+    const ro = await report(s.owner, s.review.id, body);
+    await prisma.account.update({
+      data: { language: 'en' },
+      where: { id: s.dinamo.owner },
+    });
+    const en = await report(s.owner, s.review.id, body);
+
+    expect(ro.body.message).toBe(
+      'Textul raportului nu se potrivește cu motivul ales.',
+    );
+    expect(en.body.message).toBe('The report’s text does not fit its reason.');
+  });
+
   it.each([
     ['a reason outside the nine', { reason: 'spam' }],
     ['no reason', {}],
     ['a text not a string', { reason: 'other', text: 5 }],
+    ['a null text', { reason: 'insults', text: null }],
     ['another member', { reason: 'insults', urgent: true }],
   ])('refuses %s at the edge', async (_, body) => {
     const s = await setting();

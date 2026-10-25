@@ -31,6 +31,10 @@ const MESSAGES = {
     en: 'Only the owner can report a review.',
     ro: 'Doar proprietarul poate raporta o recenzie.',
   },
+  validation_failed: {
+    en: 'The report’s text does not fit its reason.',
+    ro: 'Textul raportului nu se potrivește cu motivul ales.',
+  },
 };
 
 const STAFF: readonly Actor['role'][] = ['garage', 'receptionist', 'mechanic'];
@@ -51,7 +55,6 @@ export class ReviewReportsService {
     dto: ReportReviewDto,
   ): Promise<ReviewReportDto> {
     const review = await this.refuse(actor, reviewId, dto);
-    const text = dto.text?.trim() || null;
     const now = new Date();
     try {
       const report = await this.prisma.$transaction(async (tx) => {
@@ -69,7 +72,7 @@ export class ReviewReportsService {
             reporterId: actor.accountId,
             reviewId: review.id,
             source: 'garage',
-            text: dto.reason === 'other' ? text : null,
+            text: dto.reason === 'other' ? (dto.text ?? null) : null,
           },
         });
         const scope = {
@@ -139,10 +142,16 @@ export class ReviewReportsService {
     } catch (error) {
       // The loser of two reports at once reads the review as the winner left
       // it, and is refused for that.
-      if (error instanceof Moved || taken(error)) {
-        await this.refuse(actor, reviewId, dto);
-      }
-      throw error;
+      if (!(error instanceof Moved || taken(error))) throw error;
+      await this.refuse(actor, reviewId, dto);
+      // A pending report the review's status does not show still holds the
+      // one-pending index: the review counts as reported.
+      recordReviewReported('already_reported');
+      throw refusal(
+        HttpStatus.CONFLICT,
+        'already_reported',
+        MESSAGES.already_reported[languageOf(actor)],
+      );
     }
   }
 
@@ -168,7 +177,7 @@ export class ReviewReportsService {
           })
         : null;
     if (!review) throw new NotFoundException();
-    const language = actor.language === 'en' ? 'en' : 'ro';
+    const language = languageOf(actor);
     if (actor.role !== 'garage') {
       recordReviewReported('forbidden');
       throw forbidden(MESSAGES.forbidden[language]);
@@ -184,7 +193,7 @@ export class ReviewReportsService {
       throw refusal(
         HttpStatus.UNPROCESSABLE_ENTITY,
         'validation_failed',
-        'The report’s text does not fit its reason',
+        MESSAGES.validation_failed[language],
         [{ code: problem, field: 'text' }],
       );
     }
@@ -193,3 +202,5 @@ export class ReviewReportsService {
 }
 
 class Moved extends Error {}
+
+const languageOf = (actor: Actor) => (actor.language === 'en' ? 'en' : 'ro');
