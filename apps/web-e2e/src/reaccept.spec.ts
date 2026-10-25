@@ -7,6 +7,8 @@ import { test } from './fixtures.js';
 // is for good, so the tests run in order: sign out first, accept last.
 test.describe.configure({ mode: 'serial' });
 
+// The CDK's dialog container draws nothing itself: whether the dialog shows
+// is read on its panel.
 const reaccept = (page: Page) =>
   page.getByRole('dialog', { name: 'Termeni noi' });
 
@@ -38,13 +40,15 @@ test('asks for the new texts at sign-in, and only accepting or signing out close
 
   await page.keyboard.press('Escape');
   await page.mouse.click(5, 5);
-  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
 
   await dialog.getByRole('button', { name: 'Deconectare' }).click();
   await expect(page).toHaveURL(/\/ro$/);
-  await expect(dialog).toBeHidden();
+  await expect(dialog.locator('mf-overlay-panel')).toBeHidden();
   await expect(
-    page.getByRole('dialog', { name: 'Autentificare' }),
+    page
+      .getByRole('dialog', { name: 'Autentificare' })
+      .locator('mf-overlay-panel'),
   ).toBeHidden();
 });
 
@@ -63,7 +67,7 @@ test('fits a 320 px phone, and once accepted opens the dashboard and never asks 
   await page.setViewportSize({ height: 844, width: 390 });
   await dialog.getByRole('button', { name: 'Accept' }).click();
   await expect(page).toHaveURL('/app/driver');
-  await expect(dialog).toBeHidden();
+  await expect(dialog.locator('mf-overlay-panel')).toBeHidden();
 
   await page.context().clearCookies();
   await page.evaluate(() => localStorage.clear());
