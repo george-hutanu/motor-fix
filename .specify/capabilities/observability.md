@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -50,6 +50,7 @@ features:
   - 947-faro-consent-journeys
   - 056-mechanic-dialog
   - 1156-retention-job
+  - 1366-garage-map-directions
 ---
 
 # Capability: Observability
@@ -917,6 +918,10 @@ _From 1156-retention-job._
 ### 1156-FR-011 — The worker dashboard MUST gain a panel with the retention counts by kind over time, and an alert MUST fire when the time since the job's last success is greater than 48 hours (an arm of `worker-jobs-failed`, `reason="overdue"`, so the rules stay within the free tier's 50); the job, the counter, the panel and the alert MUST be listed in `infra/observability/inventory.json` in the same change.
 
 _From 1156-retention-job._
+
+### 1366-FR-011 — A directions tap (a `click` on the anchor, a keyboard activation and a tap included; a context-menu copy is not) MUST be a product action observed as the repo observes a browser-only action: the consent-gated analytics event `directions_opened` with the one property `platform` (`ios` | `android` | `computer`), added to the closed event set (`apps/web/src/app/consent/analytics-events.ts`) and sent through `Consent.track`, so it leaves the browser only under a valid analytics choice and never carries the garage or the coordinates; no server counter, metric, panel or alert rule (the free tier's 50 rules stay; the image service's own `motorfix_static_map_renders_total` already counts the profile's renders); the PR's Observability section says so.
+
+_From 1366-garage-map-directions._
 
 ## Retired
 
