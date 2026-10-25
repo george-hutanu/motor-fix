@@ -46,17 +46,25 @@ describe("the staff read of a garage's own public profile, in order", () => {
     expect(bySlug).toHaveBeenCalledWith('nord');
   });
 
-  it.each(['mechanic', 'receptionist'] as const)(
-    'refuses the %s before reading the garage, even with every permission',
-    async (role) => {
-      const { findUnique, profile } = service({ phone: null, slug: 'nord' });
+  // @traces 102-FR-006
+  it('answers the receptionist as it answers the owner', async () => {
+    const { profile } = service({ phone: '+40722123456', slug: 'nord' });
 
-      const failure = await profile.read(actor(role), GARAGE).catch((e) => e);
+    await expect(profile.read(actor('receptionist'), GARAGE)).resolves.toEqual(
+      await profile.read(actor('garage'), GARAGE),
+    );
+  });
 
-      expect(status(failure)).toBe(403);
-      expect(findUnique).not.toHaveBeenCalled();
-    },
-  );
+  it('refuses the mechanic before reading the garage, even with every permission', async () => {
+    const { findUnique, profile } = service({ phone: null, slug: 'nord' });
+
+    const failure = await profile
+      .read(actor('mechanic'), GARAGE)
+      .catch((e) => e);
+
+    expect(status(failure)).toBe(403);
+    expect(findUnique).not.toHaveBeenCalled();
+  });
 
   it.each([
     ['another garage', actor('garage', 'other')],

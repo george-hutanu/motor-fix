@@ -31,6 +31,9 @@
     "saveFailed": "We could not save. Try again.",
     "title": "Features"
   },
+  "home": {
+    "mechanic": "Your jobs will appear here."
+  },
   "invite": {
     "canAnswerQuotes": "Can answer quote requests",
     "cancel": "Cancel",
@@ -237,6 +240,30 @@
     "title": "Add a mechanic",
     "titleEdit": "{name}",
     "years": "Years of experience"
+  },
+  "members": {
+    "error": "We could not load the people with access.",
+    "invites": {
+      "none": "No pending invites.",
+      "sent": "sent {when}",
+      "title": "Pending invites",
+      "today": "today",
+      "yesterday": "yesterday"
+    },
+    "loading": "Loading the people with access.",
+    "permissions": {
+      "canAnswerQuotes": "can answer requests",
+      "canMoveBookings": "can move bookings",
+      "canRecordFinalPrice": "can record the final price"
+    },
+    "retry": "Try again",
+    "role": {
+      "mechanic": "mechanic",
+      "owner": "owner",
+      "receptionist": "front desk"
+    },
+    "since": "since {date}",
+    "title": "People with access"
   },
   "prices": {
     "add": "Add a job",

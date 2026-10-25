@@ -67,6 +67,7 @@ export async function renderAdmin(url = '/app/admin') {
         useValue: {
           current: me,
           ended: new Subject<void>(),
+          garageGone: () => false,
           reload: jest.fn(async () => undefined),
           shown: computed(() => me()),
           signOut: jest.fn(),

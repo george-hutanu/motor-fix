@@ -1,9 +1,9 @@
 import { EventEmitter } from 'node:events';
 
 import { EVENT_KINDS } from '@motor-fix/contracts';
+import { capabilitiesOf, type Role } from '@motor-fix/contracts/capabilities';
 
 import { KIND_CAPABILITY, LiveHub } from './live.hub';
-import { capabilitiesOf, type Role } from '../../auth/capabilities';
 import type { GarageAccess } from '../garage-access';
 
 class Sink extends EventEmitter {
@@ -118,8 +118,9 @@ describe('kind families', () => {
   });
 
   it.each([
-    ['booking.mover', 'garage.schedule'],
-    ['booking.move_lapsed', 'garage.schedule'],
+    // @traces 102-FR-010
+    ['booking.mover', 'garage.move_bookings'],
+    ['booking.move_lapsed', 'garage.move_bookings'],
     ['review.', 'garage.reviews'],
     ['invite.sent', 'garage.team'],
     ['garage.updated', 'garage.profile'],
@@ -135,15 +136,18 @@ describe('a receptionist through the garage channel', () => {
     'invite',
     'booking.mover',
     'quote.sent',
-  ])('hears the unmapped or schedule kind %s', async (kind) => {
-    const maria = staff('maria', 'receptionist');
-    expect(await heard(maria, kind)).toBe(true);
-  });
-
-  it.each([
     'review.posted',
     'review.',
     'garage.updated',
+  ])(
+    'hears the unmapped, booking move, review or profile kind %s',
+    async (kind) => {
+      const maria = staff('maria', 'receptionist');
+      expect(await heard(maria, kind)).toBe(true);
+    },
+  );
+
+  it.each([
     'invite.sent',
     'invite.revoked',
     'price_list.updated',
@@ -181,8 +185,9 @@ describe('a receptionist through the garage channel', () => {
       access({ mechanics: new Map([['maria', { ...ALL }]]) }),
     );
     const maria = staff('maria', 'receptionist');
-    expect(await heard(maria, 'review.posted')).toBe(false);
+    expect(await heard(maria, 'review.posted')).toBe(true);
     expect(await heard(maria, 'quote.sent')).toBe(true);
+    expect(await heard(maria, 'price_list.updated')).toBe(false);
   });
 
   it('is judged as a mechanic when a mechanic-role stream belongs to a listed receptionist', async () => {
@@ -276,6 +281,39 @@ describe('a mechanic through the garage channel', () => {
       expect([kind, await heard(elena, kind)]).toEqual([kind, true]);
     }
     expect(await heard(elena, 'request.created')).toBe(false);
+  });
+
+  // @traces 102-FR-010
+  it.each([
+    ['without', NONE],
+    ['with', { ...NONE, canAnswerQuotes: true }],
+  ])(
+    "hears nothing about another mechanic's booking %s the right to answer quotes, while the owner does",
+    async (_, rights) => {
+      const elena = mechanicWith(rights);
+      const ion = staff('ion', 'garage');
+      await fanOut(['garage:g1', 'mechanic:costel'], 'booking.moved');
+      expect(elena.kinds()).toEqual([]);
+      expect(ion.kinds()).toEqual(['booking.moved']);
+    },
+  );
+
+  // @traces 102-FR-010
+  it.each([
+    'invite.sent',
+    'invite.revoked',
+    'invite.accepted',
+    'member.removed',
+  ])('gives %s to the owner only', async (kind) => {
+    const elena = mechanicWith({ ...ALL });
+    const maria = staff('maria', 'receptionist');
+    const ion = staff('ion', 'garage');
+    await fanOut(['garage:g1'], kind);
+    expect([elena.kinds(), maria.kinds(), ion.kinds()]).toEqual([
+      [],
+      [],
+      [kind],
+    ]);
   });
 
   it('hears nothing through the garage when the account is not a listed mechanic', async () => {

@@ -1,10 +1,10 @@
 import { EventEmitter } from 'node:events';
 
 import { EVENT_KINDS } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { Logger } from '@nestjs/common';
 
 import { KIND_CAPABILITY, LiveHub } from './live.hub';
-import type { Role } from '../../auth/capabilities';
 import type { GarageAccess } from '../garage-access';
 
 class Sink extends EventEmitter {
@@ -160,7 +160,8 @@ describe('who a live event reaches', () => {
 
   // @traces 398-FR-008
   // @traces 172-FR-007
-  it('keeps prices, settings, feature switches, the team, reviews, the profile and invites from a receptionist, and gives the owner everything', async () => {
+  // @traces 102-FR-010
+  it('keeps prices, settings, feature switches, the team and invites from a receptionist, gives her reviews and the profile, and gives the owner everything', async () => {
     const receptionist = staff('maria', 'receptionist');
     const owner = staff('ion', 'garage');
     const hidden = [
@@ -169,11 +170,11 @@ describe('who a live event reaches', () => {
       'garage.settings_changed',
       'member.joined',
       'mechanic.updated',
-      'review.posted',
-      'garage.updated',
       'invite.sent',
     ];
     const shown = [
+      'review.posted',
+      'garage.updated',
       'request.created',
       'message.sent',
       'booking.move_proposed',
@@ -386,8 +387,9 @@ describe('what each garage role hears through the garage channel', () => {
     ['review.posted', 'garage.reviews'],
     ['request.created', 'garage.requests'],
     ['message.sent', 'garage.requests'],
-    ['booking.move_proposed', 'garage.schedule'],
-    ['booking.moved', 'garage.schedule'],
+    // @traces 102-FR-010
+    ['booking.move_proposed', 'garage.move_bookings'],
+    ['booking.moved', 'garage.move_bookings'],
     ['quote.sent', null],
   ] as const;
 
@@ -395,11 +397,11 @@ describe('what each garage role hears through the garage channel', () => {
   // rights, one who may answer quotes, and one who may move bookings.
   const HEARS: Record<string, [boolean, boolean, boolean, boolean, boolean]> = {
     'garage.feature_switches': [true, false, false, false, false],
+    'garage.move_bookings': [true, true, false, false, true],
     'garage.prices': [true, false, false, false, false],
-    'garage.profile': [true, false, false, false, false],
+    'garage.profile': [true, true, false, false, false],
     'garage.requests': [true, true, false, true, false],
-    'garage.reviews': [true, false, false, false, false],
-    'garage.schedule': [true, true, false, false, true],
+    'garage.reviews': [true, true, false, false, false],
     'garage.team': [true, false, false, false, false],
     none: [true, true, false, false, false],
   };

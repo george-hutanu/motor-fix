@@ -1,4 +1,5 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -21,7 +22,6 @@ import {
 import { until } from '../../waits.testing';
 import { AccountsService } from '../accounts.service';
 import { AuthModule } from '../auth.module';
-import type { Role } from '../capabilities';
 import { hashPassword } from '../password/password';
 import { PasswordResetModule } from '../password/password-reset/password-reset.module';
 import { PhoneSignInModule } from '../phone-sign-in/phone-sign-in.module';

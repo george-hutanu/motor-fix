@@ -1,4 +1,5 @@
 import { type DeleteMeDto, normalisePhone } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import {
   HttpException,
   HttpStatus,
@@ -18,7 +19,6 @@ import {
 import { NotificationsService } from '../../notifications/notifications.service';
 import { signInRequired } from '../account-loader';
 import { revokeAssistantGrants } from '../assistant-grants/assistant-grants';
-import type { Role } from '../capabilities';
 import { refusal } from '../http-refusal';
 import {
   RESET_OPTIONS,

@@ -1,5 +1,6 @@
 // @traces 392-FR-009
 import { NEWS_CONSENT_TEXT_VERSION } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
@@ -7,7 +8,6 @@ import request from 'supertest';
 
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import * as counters from '../../metrics/product-counters';
 import { until } from '../../waits.testing';

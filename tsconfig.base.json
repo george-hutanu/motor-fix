@@ -19,6 +19,9 @@
       "@motor-fix/contracts/account-search": [
         "./libs/contracts/src/account-search.ts"
       ],
+      "@motor-fix/contracts/capabilities": [
+        "./libs/contracts/src/capabilities.ts"
+      ],
       "@motor-fix/contracts/car-systems": [
         "./libs/contracts/src/car-systems.ts"
       ],
