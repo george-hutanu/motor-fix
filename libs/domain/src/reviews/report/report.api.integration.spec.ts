@@ -460,7 +460,7 @@ describe('who may report', () => {
 
 // @traces 076-FR-010 076-FR-011
 describe('what the other reads show of a report', () => {
-  it('carries no reporter, reason or refusal in the public and the driver’s reads', async () => {
+  it('carries no reporter, reason or refusal in the public and the driver’s reads, eligibility included', async () => {
     const s = await setting();
     await prisma.mechanic.update({
       data: { onProfile: true },
@@ -475,10 +475,14 @@ describe('what the other reads show of a report', () => {
       get(`/reviews/garage/${s.dinamo.garage.id}`),
       get(`/reviews/mechanic/${s.dinamo.answeringMechanic.id}`),
       get(`/reviews/job/${s.review.jobId}`, bearer(s.andrei, 'driver')),
+      get(
+        `/reviews/eligibility?jobIds=${s.review.jobId}`,
+        bearer(s.andrei, 'driver'),
+      ),
     ]);
 
     expect(sent.status).toBe(201);
-    expect(reads.map((r) => r.status)).toEqual([200, 200, 200]);
+    expect(reads.map((r) => r.status)).toEqual([200, 200, 200, 200]);
     expect(reads[0].body.items).toEqual([]);
     expect(reads[1].body.items).toEqual([]);
     expect(reads[2].body.existing.status).toBe('reported');
