@@ -160,7 +160,7 @@ export function recordBookingLapse(
 // What a request's or a quote's timer did: a reminder sent or muted, a
 // garage's wait expired, a request closed, a quote expired or held by a
 // booking awaiting confirmation.
-export const REQUEST_TIMER_STEPS = [
+const REQUEST_TIMER_STEPS = [
   'reminder_sent',
   'reminder_muted',
   'recipient_expired',
@@ -170,7 +170,7 @@ export const REQUEST_TIMER_STEPS = [
 ] as const;
 export type RequestTimerStep = (typeof REQUEST_TIMER_STEPS)[number];
 
-export const requestTimers = () =>
+const requestTimers = () =>
   meter().createCounter('motorfix_request_timers_total', {
     description:
       'What the request and quote timers did, by step and whether the sweep ran them',

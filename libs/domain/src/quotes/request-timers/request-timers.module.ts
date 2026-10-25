@@ -25,7 +25,7 @@ import { AuditService } from '../../audit/audit.service';
 import { logFinalFailure } from '../../job-failures';
 import { inJob } from '../../logging';
 
-export const REQUEST_TIMERS_WORKER = Symbol('REQUEST_TIMERS_WORKER');
+const REQUEST_TIMERS_WORKER = Symbol('REQUEST_TIMERS_WORKER');
 
 interface RequestTimersOptions {
   redisUrl: string;
