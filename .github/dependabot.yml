@@ -16,6 +16,11 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@prisma/*"
         update-types: ["version-update:semver-major"]
+      # The generic 3D files are named by their bytes (ST-1242): a new encoder
+      # changes them, so these move only by hand, with the generator re-run
+      # and the catalogue keys updated in the same change.
+      - dependency-name: "@gltf-transform/*"
+      - dependency-name: meshoptimizer
     # A release pulled or patched within hours of publishing never reaches us.
     cooldown:
       default-days: 3
