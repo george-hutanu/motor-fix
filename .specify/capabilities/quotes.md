@@ -20,6 +20,7 @@ features:
   - 009-copy-voice-analytics
   - 428-close-on-account-closed
   - 292-saved-garage-quote
+  - 223-request-act-notifications
   - 058-mechanic-hours
   - 1257-quote-reminders
 ---
@@ -730,9 +731,9 @@ _From 428-close-on-account-closed._
 
 _From 428-close-on-account-closed._
 
-### 428-FR-003 — The same transaction MUST record one `request.cancelled` outbox event, subject the request, payload `{ requestId, reason: 'account_closed', garageIds }` where `garageIds` are the garages whose recipient was `waiting` or `quoted` at the close, audience the request's driver and those garages (`garage:{garageId}` live updates). When `garageIds` is empty (no recipient was `waiting` or `quoted`), the event is still recorded and FR-009 sends nothing.
+### 223-FR-004 — The account-closed close (428-FR-003) MUST set the `request.cancelled` payload `garageIds` (what the fan-out reads; the event's live-stream audience keeps every `waiting` or `quoted` recipient) to the garages whose recipient is still `waiting` plus the garages holding a `waiting` quote on the request, at the close; a garage that declined, or whose quote is `withdrawn`, `expired`, `lost`, `accepted` or `declined_by_driver`, is not in it; the booked garage is told by its booking's cancellation only. An empty `garageIds` is still recorded (the request's own close and the driver's live stream need the event) and sends nothing; this differs on purpose from `quote.closed`, which the confirm skips when empty.
 
-_From 428-close-on-account-closed._
+_From 223-request-act-notifications._
 
 ### 428-FR-004 — A booking is cancellable when its status is `awaiting_confirmation` or `confirmed`, its `starts_at` is after now, and it has no job or a job in `to_do`; the handler MUST cancel it in the request's transaction: booking to `cancelled` with `cancelled_by_side` = `system` and `cancel_reason` = `driver_account_closed`, its `to_do` job to `cancelled`, and one `booking.cancelled` outbox event, subject the booking, payload `{ bookingId, requestId, garageId, reason: 'driver_account_closed' }`, audience the booking's driver, garage and mechanic.
 
@@ -814,4 +815,5 @@ _From 1257-quote-reminders._
 - `222-FR-005` — superseded by `389-FR-009` (2026-10-21)
 - `222-FR-006` — superseded by `389-FR-016` (2026-10-21)
 - `221-FR-016` — superseded by `292-FR-006` (2026-10-23)
+- `428-FR-003` — superseded by `223-FR-004` (2026-10-25)
 - `389-FR-004` — superseded by `058-FR-012` (2026-10-25)

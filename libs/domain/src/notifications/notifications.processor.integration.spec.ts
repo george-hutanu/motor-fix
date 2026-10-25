@@ -1294,3 +1294,37 @@ describe('an e-mail to a listing draft', () => {
     expect(mock.emails()).toEqual([]);
   });
 });
+
+// @traces 223-FR-014
+describe('a garage message whose e-mail Brevo refuses for good', () => {
+  it.each([
+    ['QUOTE_LOST', {}],
+    ['REQUEST_CANCELLED', { driver: 'Andrei M.', reason: 'cancelled' }],
+    ['REQUEST_CANCELLED', { reason: 'account_closed' }],
+  ])('fails the %s e-mail and keeps the bell row', async (kind, extra) => {
+    const owner = await account('owner', ['garage']);
+    await service.notify({
+      eventId: `evt-${kind}`,
+      kind,
+      params: {
+        car: 'Dacia Logan',
+        link: 'https://motorfix.test/app/garage/requests',
+        ...extra,
+      },
+      recipients: [owner],
+    });
+    mock.answer({ status: 400 });
+    await sendJob((await emailRows(owner))[0].id, 0);
+    const stored = await prisma.notification.findMany({
+      select: { channel: true, status: true },
+      where: { accountId: owner, kind },
+    });
+    expect(stored).toHaveLength(2);
+    expect(stored).toEqual(
+      expect.arrayContaining([
+        { channel: 'email', status: 'failed' },
+        { channel: 'in_app', status: 'sent' },
+      ]),
+    );
+  });
+});

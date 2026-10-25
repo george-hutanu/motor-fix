@@ -64,6 +64,8 @@ export class PublicLive implements OnDestroy {
   private views: PublicView[] = [];
   private pending = false;
   private query = '';
+  // The query of the stream open now; null while none is.
+  private openFor: string | null = null;
   private wanted: AbortController | null = null;
   private hiddenAt: number | null = null;
   // Dropped as the page left: the browser keeps no page with an open stream
@@ -134,6 +136,17 @@ export class PublicLive implements OnDestroy {
     return this.events.pipe(filter((m) => wanted.has(m.kind)));
   }
 
+  // Whether the stream open now names everything this view names: a resync
+  // can come from a stream opened for a view that has gone since.
+  names(view: PublicView): boolean {
+    if (this.openFor === null) return false;
+    const open = new URLSearchParams(this.openFor);
+    return PARAMS.every(([param, named]) => {
+      const value = named(view);
+      return !value || open.get(param) === value;
+    });
+  }
+
   // Views opened and closed in the same tick make one change of stream.
   private schedule() {
     if (this.pending) return;
@@ -169,21 +182,26 @@ export class PublicLive implements OnDestroy {
     this.wanted?.abort();
     const wanted = new AbortController();
     this.wanted = wanted;
-    const query = this.query ? `?${this.query}` : '';
-    void this.run(`/api/v1/live/public${query}`, wanted.signal);
+    void this.run(this.query, wanted.signal);
   }
 
   // Tries and waits until the views change or go away.
-  private async run(url: string, wanted: AbortSignal) {
+  private async run(query: string, wanted: AbortSignal) {
+    const url = `/api/v1/live/public${query ? `?${query}` : ''}`;
     this.status.set('reconnecting');
     let failures = 0;
     for (;;) {
       await this.stream(url, wanted, () => {
         failures = 0;
+        this.openFor = query;
         this.status.set('open');
         if (this.opened) this.resyncs.next();
         this.opened = true;
-      }).catch(() => undefined);
+      })
+        .catch(() => undefined)
+        .finally(() => {
+          if (this.openFor === query) this.openFor = null;
+        });
       if (wanted.aborted) return;
       this.status.set('reconnecting');
       failures++;
