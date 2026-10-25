@@ -102,6 +102,25 @@
       <span>{{ 'garage.mechanicCard.owned.line' | t }}</span>
     </p>
   }
+  @if (invitable()) {
+    <div class="invite">
+      @if (current()?.invite; as invite) {
+        <p>{{ inviteLine(invite) }}</p>
+        <div class="invite-actions">
+          <button #resendButton hlmBtn variant="secondary" type="button" [disabled]="inviting()" (click)="resend(invite.id)">
+            {{ 'garage.mechanicCard.invite.resend' | t }}
+          </button>
+          <button hlmBtn variant="ghost" type="button" [disabled]="inviting()" (click)="revoke(invite.id)">
+            {{ 'garage.mechanicCard.invite.cancel' | t }}
+          </button>
+        </div>
+      } @else {
+        <button hlmBtn variant="secondary" type="button" (click)="openInvite()">
+          {{ 'garage.mechanicCard.invite.button' | t }}
+        </button>
+      }
+    </div>
+  }
   <mf-task-error [save]="save" />
   <div class="actions">
     @if (card && !card.isOwner) {

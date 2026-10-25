@@ -35,6 +35,7 @@ const card = (over: Partial<GarageMechanicDto> = {}): GarageMechanicDto => ({
   futureBookings: 0,
   hasAccount: false,
   id: 'mechanic-1',
+  invite: null,
   isOwner: false,
   name: 'Elena Stan',
   onProfile: false,

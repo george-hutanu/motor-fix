@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  type ElementRef,
+  Injector,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import {
   type AbstractControl,
   FormControl,
@@ -34,14 +44,22 @@ import {
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
 import {
+  InviteStaff,
+  type InviteStaffData,
+} from '../invite-staff/invite-staff';
+import {
   RemoveMechanic,
   type RemoveMechanicData,
 } from '../remove-mechanic/remove-mechanic';
+
+type CardInvite = NonNullable<GarageMechanicDto['invite']>;
 
 export type MechanicCardData = {
   brands: GarageBrandOptionDto[];
   card?: GarageMechanicDto;
   garageId: string;
+  // The card as the list now reads it, once its invite changed.
+  refresh?: () => Promise<GarageMechanicDto | undefined>;
 };
 
 // The fields by name, for the template: a quoted name there would read as
@@ -114,6 +132,8 @@ const SERVER: Record<Field, (code: string) => string> = {
 // The card dialog: the owner adds a mechanic, or edits a card, the owner's
 // own row included. Photo, bio and languages are the mechanic's, shown as
 // such and never sent. "Elimină" asks first, on any card but the owner's.
+// A saved card with no account offers "Invită", or shows its open invite
+// with "Retrimite" and "Anulează invitația".
 // Closes with "saved", or "removed" once the card is gone (removed here, or
 // found removed in another tab).
 @Component({
@@ -133,6 +153,7 @@ const SERVER: Record<Field, (code: string) => string> = {
 export class MechanicCard {
   private readonly garages = inject(GaragesService);
   private readonly i18n = inject(I18n);
+  private readonly injector = inject(Injector);
   private readonly overlays = inject(Overlays);
   protected readonly task = injectOverlayTask<
     MechanicCardData,
@@ -141,6 +162,14 @@ export class MechanicCard {
   protected readonly field = FIELDS;
   protected readonly card = this.task.data.card;
   protected readonly brands = this.task.data.brands;
+  protected readonly current = signal(this.card);
+  protected readonly invitable = computed(() => {
+    const card = this.current();
+    return !!card && !card.hasAccount && !card.isOwner;
+  });
+  protected readonly inviting = signal(false);
+  private readonly resendButton =
+    viewChild<ElementRef<HTMLButtonElement>>('resendButton');
 
   protected readonly form = new FormGroup({
     brandIds: new FormGroup(
@@ -259,6 +288,88 @@ export class MechanicCard {
 
   protected tags(field: 'certifications' | 'specialties') {
     return tagsOf(this.form.controls[field].value);
+  }
+
+  protected inviteLine(invite: CardInvite) {
+    const to = invite.email ?? invite.phone ?? '';
+    if (Date.parse(invite.expiresAt) <= Date.now()) {
+      return this.i18n.t('garage.mechanicCard.invite.expired', { to });
+    }
+    const date = new Intl.DateTimeFormat(
+      this.i18n.language() === 'ro' ? 'ro-RO' : 'en-GB',
+      {
+        day: '2-digit',
+        month: '2-digit',
+        timeZone: 'Europe/Bucharest',
+        year: 'numeric',
+      },
+    ).format(new Date(invite.expiresAt));
+    return this.i18n.t('garage.mechanicCard.invite.sent', { date, to });
+  }
+
+  protected async openInvite() {
+    const card = this.current();
+    if (!card) return;
+    const sent = await this.overlays.open<'sent', InviteStaffData>(
+      InviteStaff,
+      {
+        data: {
+          card: { id: card.id, name: card.name },
+          garageId: this.task.data.garageId,
+        },
+        shape: 'dialog',
+        title: 'garage.invite.titleCard',
+        titleParams: { name: card.name },
+      },
+    );
+    if (sent === 'sent') await this.refresh();
+  }
+
+  protected resend(id: string) {
+    return this.answer(async () => {
+      await this.garages.garageInvitesControllerResend({
+        garageId: this.task.data.garageId,
+        id,
+      });
+      afterNextRender(() => this.resendButton()?.nativeElement.focus(), {
+        injector: this.injector,
+      });
+    });
+  }
+
+  protected revoke(id: string) {
+    return this.answer(() =>
+      this.garages.garageInvitesControllerRevoke({
+        garageId: this.task.data.garageId,
+        id,
+      }),
+    );
+  }
+
+  // One invite action at a time; whatever it answers, the card reads again,
+  // since a refusal means the invite changed elsewhere.
+  private async answer(act: () => Promise<unknown>) {
+    if (this.inviting()) return;
+    this.inviting.set(true);
+    try {
+      await act();
+    } catch (error) {
+      toast(
+        this.i18n.t(
+          toProblem(error).code === 'invite_invalid'
+            ? 'garage.mechanicCard.invite.gone'
+            : 'garage.mechanicCard.invite.failed',
+        ),
+      );
+    } finally {
+      await this.refresh();
+      this.inviting.set(false);
+    }
+  }
+
+  private async refresh() {
+    const fresh = await this.task.data.refresh?.();
+    if (fresh) this.current.set(fresh);
   }
 
   protected async remove() {

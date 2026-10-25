@@ -37,6 +37,7 @@ const invite = (
   email: 'andrei@example.test',
   id: 'invite-1',
   kind: 'mechanic',
+  phone: null,
   sentAt: new Date().toISOString(),
   ...over,
 });
@@ -173,6 +174,19 @@ describe('Persoane cu acces, the rows', () => {
       'andrei@example.test · mecanic · trimisă azi',
       'elena@example.test · recepție · trimisă ieri',
       'dan@example.test · mecanic · trimisă 14 oct. 2026',
+    ]);
+  });
+
+  // @traces 1255-FR-001
+  it('lists an invite sent to a phone by its number', async () => {
+    const { element, settle } = await render(async () => ({
+      ...SEEDED,
+      invites: [invite({ email: null, phone: '+40722000111' })],
+    }));
+    await settle();
+
+    expect(inviteRows(element)).toEqual([
+      '+40722000111 · mecanic · trimisă azi',
     ]);
   });
 

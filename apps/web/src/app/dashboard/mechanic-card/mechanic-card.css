@@ -87,6 +87,19 @@ p {
   border: 1px dashed var(--mf-line-strong);
   border-radius: var(--mf-radius-chip);
 }
+.invite {
+  display: grid;
+  gap: var(--mf-space-2);
+  justify-items: start;
+}
+.invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.invite button {
+  white-space: normal;
+}
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -106,7 +119,13 @@ p {
   .actions {
     flex-direction: column-reverse;
   }
-  .actions button {
+  .actions button,
+  .invite button {
     width: 100%;
+  }
+  .invite,
+  .invite-actions {
+    justify-items: stretch;
+    flex-direction: column;
   }
 }

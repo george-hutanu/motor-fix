@@ -41,6 +41,7 @@ async function settle() {
 async function open(
   language: 'ro' | 'en' = 'ro',
   features: Record<string, boolean> = {},
+  card?: { id: string; name: string },
 ) {
   send = jest.fn(async () => ({ emailSent: true, id: 'invite-1' }));
   resend = jest.fn(async () => ({ emailSent: true, id: 'invite-1' }));
@@ -59,14 +60,16 @@ async function open(
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const host = TestBed.createComponent(Host);
-  result = host.componentInstance.overlays.open<'sent', { garageId: string }>(
-    InviteStaff,
-    {
-      data: { garageId: 'garage-1' },
-      shape: 'dialog',
-      title: 'garage.invite.title',
-    },
-  );
+  result = host.componentInstance.overlays.open<
+    'sent',
+    { card?: { id: string; name: string }; garageId: string }
+  >(InviteStaff, {
+    data: { card, garageId: 'garage-1' },
+    shape: 'dialog',
+    ...(card
+      ? { title: 'garage.invite.titleCard', titleParams: { name: card.name } }
+      : { title: 'garage.invite.title' }),
+  });
   await settle();
 }
 
@@ -392,5 +395,91 @@ describe('the invite dialog', () => {
     );
     expect(field('Mechanic').checked).toBe(true);
     expect(button('Send the invite')).toBeDefined();
+  });
+});
+
+// @traces 1255-FR-013 1255-FR-016
+describe('the invite dialog opened from a card', () => {
+  const ELENA = { id: 'card-1', name: 'Elena Stan' };
+  const TO = 'E‑mail sau telefon';
+
+  it('asks only for an e-mail or a phone, with three unticked permissions', async () => {
+    await open('ro', {}, ELENA);
+
+    expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
+      'Invită pe Elena Stan',
+    );
+    expect(has('Nume')).toBe(false);
+    expect(has('Mecanic')).toBe(false);
+    expect(has('Recepționer')).toBe(false);
+    expect(field(TO)).toBeDefined();
+    for (const label of TICKS) expect(field(label).checked).toBe(false);
+  });
+
+  it('shows the problem under the field and sends nothing for a value that is neither', async () => {
+    await open('ro', {}, ELENA);
+    type(field(TO), 'elena');
+    await settle();
+
+    button('Trimite invitația')?.click();
+    await settle();
+
+    expect(send).not.toHaveBeenCalled();
+    expect(text()).toContain(
+      'Introdu un e‑mail sau un număr de telefon valid.',
+    );
+    expect(field(TO).getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it.each([
+    ['an e-mail', ' elena@example.ro ', { email: 'elena@example.ro' }],
+    ['a phone', '0722 000 111', { phone: '+40722000111' }],
+  ])('sends the card with %s and the ticks chosen', async (_, typed, to) => {
+    await open('ro', {}, ELENA);
+    type(field(TO), typed);
+    tick(field('Poate răspunde la cererile de ofertă'));
+    await settle();
+
+    button('Trimite invitația')?.click();
+    await settle();
+
+    expect(send).toHaveBeenCalledWith({
+      body: {
+        canAnswerQuotes: true,
+        canMoveBookings: false,
+        canRecordFinalPrice: false,
+        kind: 'mechanic',
+        mechanicId: 'card-1',
+        ...to,
+      },
+      garageId: 'garage-1',
+    });
+    expect(text()).toContain('Invitația a fost trimisă.');
+  });
+
+  it('says the owner cannot invite himself', async () => {
+    await open('ro', {}, ELENA);
+    send.mockRejectedValueOnce(
+      new HttpErrorResponse({
+        error: { code: 'self_invite', message: 'self' },
+        status: 409,
+      }),
+    );
+    type(field(TO), 'mihai@example.ro');
+    await settle();
+
+    button('Trimite invitația')?.click();
+    await settle();
+
+    expect(text()).toContain('Nu te poți invita pe tine.');
+  });
+
+  it('reads English', async () => {
+    await open('en', {}, ELENA);
+
+    expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
+      'Invite Elena Stan',
+    );
+    expect(field('E‑mail or phone')).toBeDefined();
   });
 });
