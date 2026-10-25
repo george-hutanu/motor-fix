@@ -1,7 +1,7 @@
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { HttpException, NotFoundException } from '@nestjs/common';
 
 import type { AuditPort } from './audit/audit.port';
-import type { Role } from './auth/capabilities';
 import type { DomainEvent, EventPort } from './events/event.port';
 import { Prisma } from './generated/prisma/client';
 

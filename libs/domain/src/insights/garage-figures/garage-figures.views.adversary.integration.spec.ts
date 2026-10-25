@@ -178,7 +178,8 @@ describe('profile views asked for in a wrong way', () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 
-  it('answers a mechanic with 404 before it looks at the span', async () => {
+  // @traces 102-FR-007
+  it('answers a mechanic with 403 before it looks at the span', async () => {
     const t = await team('Atelier Dinamo');
 
     await expect(
@@ -187,6 +188,6 @@ describe('profile views asked for in a wrong way', () => {
         from: '2026-10-06',
         to: '2026-10-05',
       }),
-    ).rejects.toMatchObject({ status: 404 });
+    ).rejects.toMatchObject({ response: { code: 'forbidden' }, status: 403 });
   });
 });

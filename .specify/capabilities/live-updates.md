@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 253-live-connection
   - 254-live-audience
@@ -28,6 +28,9 @@ features:
   - 532-lost-session-home
   - 588-live-changed-gone
   - 587-live-list-e2e
+  - 413-verification-file-presence
+  - 102-garage-members
+  - 1193-fast-nav
 ---
 
 # Capability: Live updates
@@ -104,9 +107,9 @@ _From 419-live-garage-updates._
 
 _From 254-live-audience._
 
-### 398-FR-008 — Whether an event kind reaches a garage-staff stream that met it only on `garage:{garageId}` MUST be derived from the connection role's capabilities through one table of kind families: `price_list.*` → `garage.prices`; `member.*`, `mechanic.*`, `invite.*` → `garage.team`; `garage.settings_changed` → `garage.feature_switches`; `garage.updated` → `garage.profile`; `review.*` → `garage.reviews`; `request.*`, `message.*` → `garage.requests`; `booking.move*` → `garage.schedule`. For an owner or a receptionist still that garage's staff in that role, a kind in a mapped family MUST reach the stream only when the role holds its capability, and a kind in no family MUST reach it. For a mechanic, a kind MUST reach the stream through the garage channel only when it is in a mapped family whose capability the mechanic holds through their permissions (`can_answer_quotes` → `request.*`, `message.*`; `can_move_bookings` → every kind starting `booking.move`), and a kind in no family MUST NOT; the mechanic's own channel, the staff-membership check and the feature-switch rules are unchanged. The one exception, and the hub's only other list of kinds: `garage.features_changed` is in no family and MUST reach every staff stream of the garage, the owner, a receptionist and a mechanic alike, after the membership check; the hub's cached access for the garage is still dropped on it (254-FR-006). (Restates 574-FR-001, 574-FR-002 and 574-FR-003 with that exception.)
+### 102-FR-010 — The live filter of `garage:{garageId}` MUST keep deriving from the shared table (398-FR-008): owner and receptionist receive every garage event their row allows, a mechanic receives their own bookings and jobs (the `mechanic:` channel) plus the inbox kinds only with `can_answer_quotes`, everyone receives `garage.features_changed` and `mechanic.updated` about themselves, and `invite.*` and `member.removed` reach the owner only. The `booking.move*` family MUST map to `garage.move_bookings`. A test MUST show a mechanic receiving nothing about another mechanic's booking and an owner receiving it.
 
-_From 398-garage-feature-switches._
+_From 102-garage-members._
 
 ### 254-FR-004 — A garage-staff connection MUST receive through `garage:{garageId}` or `mechanic:{mechanicId}` only while its account is still that garage's staff in the role of the connection (owner or receptionist membership, or the mechanic record).
 
@@ -324,9 +327,9 @@ _From 419-live-garage-updates._
 
 _From 419-live-garage-updates._
 
-### 419-FR-008 — The web app MUST offer a public live connection: one stream per browser tab, opened only in the browser (never during server rendering) and only while at least one public live view is open, its `garages`, `mechanics` and `brand` taken from the open views, and closed when the last of them is destroyed. Its named garage, mechanic and brand are those of the most recently opened view naming each; when that set changes it MUST re-open the stream once (changes in one tick coalesced), and the re-open counts as a stream opening again. It MUST expose the signed-in connection's states except `polling` (`closed`, `reconnecting`, `open`; it stays `reconnecting` where the signed-in connection would poll), try again on the same backoff after a failure or a drop (255-FR-002), treat 60 silent seconds as a drop and re-open after a long-hidden tab wakes (255-FR-005), and MUST NOT renew a token, poll the API, show an offline bar or raise an error: a public page that cannot reach the stream stays as loaded.
+### 1193-FR-001 — The public pages' live stream (`apps/web/src/app/public/live.ts`) MUST abort its stream on `pagehide`, leaving the page with no open request, and MUST want it again on `pageshow`, reopening from its current query; the reopen MUST trigger the views' re-read (the existing resync), so a page restored from the back/forward cache shows fresh data. The dashboard stream's existing behaviour (1190-FR-009) is unchanged. Modifies 419-FR-008 (`pagehide` joins the closes and `pageshow` the reopens of the public connection).
 
-_From 419-live-garage-updates._
+_From 1193-fast-nav._
 
 ### 419-FR-009 — The web app MUST offer a public live view helper, built on the in-place helper of 256-FR-001 to 256-FR-004: it loads its data through the API, re-reads once when the stream first opens (to cover a page served from a cache) and whenever a stream opens again after a drop, re-reads when an event of its kinds about its object arrives, coalesces events within 300 ms into one re-read, runs one read at a time, merges by structural sharing, keeps its last value and shows no error on a failed re-read and arms no retry timer (256-FR-003 without its 60-second retry: the next event or reopen re-reads), and marks the view `gone` on 404 or 410.
 
@@ -474,6 +477,10 @@ _From 587-live-list-e2e._
 
 _From 587-live-list-e2e._
 
+### 413-FR-007 — When an admin's entry is created or removed by a call, the system MUST publish a `presence.changed` message with the file's id straight to the live stream, to the `admin` audience, through the existing direct publish (not the outbox); a heartbeat that only renews an entry and an expiry publish nothing. `presence.changed` stays out of the shared list of event kinds (`EVENT_KINDS` holds the outbox kinds; its header already names presence among the kinds published straight to the store), as `session.revoked` and `notification.created` do; the drawer reads it from the stream's messages by kind and file id (plan, research R3).
+
+_From 413-verification-file-presence._
+
 ## Retired
 
 - `253-FR-006` — superseded by `254-FR-013` (2026-10-05)
@@ -496,3 +503,5 @@ _From 587-live-list-e2e._
 - `049-FR-007` — superseded by `067-FR-007` (2026-10-23)
 - `256-FR-006` — superseded by `588-FR-004` (2026-10-24)
 - `256-FR-004` — superseded by `588-FR-006` (2026-10-24)
+- `398-FR-008` — superseded by `102-FR-010` (2026-10-25)
+- `419-FR-008` — superseded by `1193-FR-001` (2026-10-25)

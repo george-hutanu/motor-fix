@@ -7,6 +7,7 @@ import {
   type Maintenance,
   signAccessToken,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
@@ -45,7 +46,7 @@ beforeAll(async () => {
     roles: ['admin'],
   });
   admin = bearer(account.id);
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   await db.end();

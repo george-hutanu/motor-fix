@@ -14,6 +14,9 @@ class CopyVoicesStub {}
 @Component({ selector: 'mf-feature-switches', template: '' })
 class FeatureSwitchesStub {}
 
+@Component({ selector: 'mf-garage-members', template: '' })
+class GarageMembersStub {}
+
 @Component({ selector: 'mf-push-panel', template: '' })
 class PushPanelStub {}
 
@@ -39,6 +42,7 @@ function render(me: MeDto | null) {
         CopyVoicesStub,
         DeleteAccountStub,
         FeatureSwitchesStub,
+        GarageMembersStub,
         NotificationSettingsStub,
         PlatformRulesStub,
         PrivacyPanelStub,
@@ -114,7 +118,27 @@ describe('SettingsView', () => {
     );
 
     expect(element.firstElementChild?.tagName).toBe('MF-FEATURE-SWITCHES');
-    expect(element.children[1]?.tagName).toBe('MF-PUSH-PANEL');
+    expect(element.children[2]?.tagName).toBe('MF-PUSH-PANEL');
+  });
+
+  // @traces 102-FR-013
+  it('shows the owner who has access right after the feature switches', async () => {
+    const element = await rendered(
+      account(['garage.settings', 'garage.feature_switches']),
+    );
+
+    expect(element.children[1]?.tagName).toBe('MF-GARAGE-MEMBERS');
+  });
+
+  // @traces 102-FR-013
+  it.each([
+    ['a receptionist', ['garage.requests', 'garage.profile', 'garage.reviews']],
+    ['a mechanic', ['garage.own_jobs', 'garage.schedule']],
+    ['an admin', ['admin.settings']],
+  ])('shows %s no list of who has access', async (_who, capabilities) => {
+    const element = await rendered(account(capabilities));
+
+    expect(element.querySelector('mf-garage-members')).toBeNull();
   });
 
   // @traces 398-FR-001

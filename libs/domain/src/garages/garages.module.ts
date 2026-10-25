@@ -24,6 +24,8 @@ import { ListingDraftsService } from './listing-drafts/listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts/listing-drafts.throttle';
 import { GarageMechanicsService } from './mechanics/garage-mechanics.service';
 import { GarageMechanicsController } from './mechanics/mechanics.controller';
+import { GarageMembersController } from './members/members.controller';
+import { GarageMembersService } from './members/members.service';
 import { GaragePlaceService } from './place/garage-place.service';
 import { CatalogueJobsController } from './price-list/catalogue-jobs.controller';
 import { GarageLabourController } from './price-list/labour/labour.controller';
@@ -61,6 +63,7 @@ import {
   VERIFICATION_CONFIG,
   type VerificationConfig,
 } from './verification/verification-config';
+import { PresenceService } from './verification/verification-file/presence/presence.service';
 import { VerificationFileController } from './verification/verification-file/verification-file.controller';
 import { VerificationFileService } from './verification/verification-file/verification-file.service';
 import { VerificationStatusController } from './verification/verification-status/verification-status.controller';
@@ -96,6 +99,7 @@ export class GaragesModule {
         GarageReportsController,
         GarageFeaturesController,
         GarageMechanicsController,
+        GarageMembersController,
         ImagesController,
         GarageSettingsController,
         InvitesController,
@@ -130,6 +134,7 @@ export class GaragesModule {
         GarageBrandsService,
         GarageDetailsService,
         GarageMechanicsService,
+        GarageMembersService,
         GaragePlaceService,
         GaragePricesService,
         GarageProfileService,
@@ -158,6 +163,7 @@ export class GaragesModule {
         VerificationService,
         VerificationChecksService,
         VerificationFileService,
+        PresenceService,
         { provide: VERIFICATION_CONFIG, useValue: verification },
         ...(observabilityUrl
           ? [{ provide: OBSERVABILITY_URL, useValue: observabilityUrl }]

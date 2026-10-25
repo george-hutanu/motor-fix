@@ -2,9 +2,9 @@ import {
   type CreateSupportMessageDto,
   supportReference,
 } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
-import type { Role } from '../../auth/capabilities';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { localDay } from '../../bucharest';

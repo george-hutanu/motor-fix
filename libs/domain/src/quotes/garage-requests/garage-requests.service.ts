@@ -13,9 +13,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { refusal } from '../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import type {
   Account,
   Booking,
@@ -49,6 +49,7 @@ import {
   rowBookingOf,
   shortName,
   snapshotOf,
+  toReassign,
 } from '../reads';
 
 // Only this garage's own recipient row, quote and booking ride along.
@@ -147,6 +148,7 @@ function summaryOf(
           id: booking.id,
           lift: booking.lift,
           mechanic: mechanicOf(booking),
+          toReassign: toReassign(booking, new Date()),
         }
       : null,
     car: snapshotOf(row),

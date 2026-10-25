@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
 import {
   HttpException,
   HttpStatus,
@@ -13,7 +14,6 @@ import {
 import { signAccessToken } from './access-token';
 import { AUTH_OPTIONS, type AuthOptions } from './actor.guard';
 import { Attempts, maskCaller } from './attempts';
-import type { Role } from './capabilities';
 import { type Forwarding, forwardingFields } from './forwarding';
 import { MAINTENANCE, type Maintenance } from './maintenance';
 import { DECOY_HASH, verifyPassword } from './password/password';

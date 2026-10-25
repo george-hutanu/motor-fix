@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
-import type { Role } from '../../../auth/capabilities';
+import type { Role } from '@motor-fix/contracts/capabilities';
+
 import type { PrismaClient } from '../../../generated/prisma/client';
 
 type NewAccount = (

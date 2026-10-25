@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { capabilitiesOf, type Role } from '@motor-fix/contracts/capabilities';
 import {
   GarageRequestsService,
   GaragesService,
@@ -17,16 +18,34 @@ import { Session } from '../../session';
 import { fakeLive, listOf, requestRow, wait } from '../garage-requests.testing';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 
-const OWNER = ['garage.requests', 'garage.schedule', 'garage.team'];
-const RECEPTIONIST = ['garage.requests', 'garage.schedule'];
-const ANSWERING_MECHANIC = ['garage.own_jobs', 'garage.requests'];
-const MECHANIC = ['garage.own_jobs'];
+const NONE = {
+  canAnswerQuotes: false,
+  canMoveBookings: false,
+  canRecordFinalPrice: false,
+};
+// Each role's row, read from the table the server answers with.
+const rowOf = (role: Role, permissions = NONE) =>
+  capabilitiesOf(role, permissions) as string[];
+const OWNER = rowOf('garage');
+const RECEPTIONIST = rowOf('receptionist');
+const ANSWERING_MECHANIC = rowOf('mechanic', {
+  ...NONE,
+  canAnswerQuotes: true,
+});
+const MECHANIC = rowOf('mechanic');
 
 let list: jest.Mock;
 
+// The membership's role string follows the row unless a test sets it, so a
+// test can prove a section follows the capabilities and not the role.
 const account = (
   capabilities: string[],
   status: 'draft' | 'approved' | 'suspended',
+  role = capabilities.includes('garage.team')
+    ? 'owner'
+    : capabilities.includes('garage.profile')
+      ? 'receptionist'
+      : 'mechanic',
 ) =>
   ({
     capabilities,
@@ -40,11 +59,7 @@ const account = (
           canMoveBookings: false,
           canRecordFinalPrice: false,
         },
-        role: capabilities.includes('garage.own_jobs')
-          ? 'mechanic'
-          : capabilities.includes('garage.team')
-            ? 'owner'
-            : 'receptionist',
+        role,
         status,
       },
     ],
@@ -55,16 +70,18 @@ async function render(
   capabilities: string[],
   {
     answer = () => Promise.resolve(listOf([requestRow()])),
+    role,
     status = 'approved',
   }: {
     answer?: () => Promise<unknown>;
+    role?: string;
     status?: 'draft' | 'approved' | 'suspended';
   } = {},
 ) {
   list = jest.fn(({ status: filter }: { status: string }) =>
     filter === 'waiting' ? answer() : Promise.resolve(listOf([])),
   );
-  const me = signal(account(capabilities, status));
+  const me = signal(account(capabilities, status, role));
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -179,12 +196,16 @@ describe('the garage Panou for each role', () => {
     expect(list).toHaveBeenCalledWith({ status: 'waiting' });
   });
 
-  it('shows a mechanic without the permission no panel, and makes no call', async () => {
+  // @traces 102-FR-005
+  it('shows a mechanic without the permission no panel, makes no call, and says her jobs will appear', async () => {
     const element = await render(MECHANIC);
 
     expect(panel(element)).toBeNull();
     expect(list).not.toHaveBeenCalled();
-    expect(text(element)).toBe('Aici vei vedea ce se întâmplă azi în service.');
+    expect(text(element)).toBe('Lucrările tale vor apărea aici.');
+    expect(text(element.querySelector('[role="status"]'))).toBe(
+      'Lucrările tale vor apărea aici.',
+    );
   });
 
   it('shows nothing of the requests, and no error, when the server answers 404', async () => {
@@ -197,6 +218,78 @@ describe('the garage Panou for each role', () => {
     expect(text(element)).toBe(
       'Profil verificat Aici vei vedea ce se întâmplă azi în service.',
     );
+  });
+});
+
+// @traces 102-FR-005
+// @traces 102-FR-006
+describe('the garage Panou sections, each behind a capability of the table', () => {
+  const sections = (element: HTMLElement) => ({
+    legal: element.querySelector('mf-garage-legal-check') !== null,
+    requests: panel(element) !== null,
+    status: element.querySelector('[role="status"]') !== null,
+    strip: element.querySelector('[data-verified-pill]') !== null,
+  });
+
+  it.each([
+    ['the owner', OWNER, { legal: true, requests: true, strip: true }],
+    [
+      'the receptionist',
+      RECEPTIONIST,
+      { legal: false, requests: true, strip: true },
+    ],
+    [
+      'a mechanic who may answer quotes',
+      ANSWERING_MECHANIC,
+      { legal: false, requests: true, strip: false },
+    ],
+    ['a mechanic', MECHANIC, { legal: false, requests: false, strip: false }],
+  ])('gives %s the sections of the row', async (_, capabilities, shown) => {
+    const element = await render(capabilities);
+
+    expect(sections(element)).toEqual({
+      ...shown,
+      status: !shown.requests && !shown.strip,
+    });
+  });
+
+  it('reads the capabilities, not the role string: an owner row without the switches has no legal check', async () => {
+    const element = await render(
+      OWNER.filter((c) => c !== 'garage.feature_switches'),
+      { role: 'owner' },
+    );
+
+    expect(sections(element).legal).toBe(false);
+    expect(sections(element).strip).toBe(true);
+  });
+
+  it('reads the capabilities, not the role string: an owner row without the profile has no strip', async () => {
+    const element = await render(
+      OWNER.filter((c) => c !== 'garage.profile'),
+      { role: 'owner' },
+    );
+
+    expect(sections(element).strip).toBe(false);
+    expect(sections(element).legal).toBe(true);
+  });
+
+  it('shows the receptionist no action button on Panou', async () => {
+    const element = await render(RECEPTIONIST);
+    const buttons = [...element.querySelectorAll('button')].map(text);
+
+    expect(buttons).not.toContain('Răspunde');
+    expect(buttons).not.toContain('Modifică profilul');
+  });
+
+  it('says the mechanic line in English too', () => {
+    const en = JSON.parse(
+      readFileSync(
+        join(__dirname, '../../../../../../../libs/i18n/src/garage/en.json'),
+        'utf8',
+      ),
+    );
+
+    expect(en.home.mechanic).toBe('Your jobs will appear here.');
   });
 });
 

@@ -17,7 +17,7 @@ const OWNER = [
   'garage.audit_history',
 ];
 
-// The capabilities "who am I" gives each seeded role (libs/domain/src/auth/capabilities.ts).
+// The capabilities "who am I" gives each seeded role (libs/contracts/src/capabilities.ts).
 const DASHBOARDS = [
   {
     capabilities: [
@@ -110,6 +110,17 @@ const DASHBOARDS = [
   },
 ] as const;
 
+// The stubbed garage account has no garage behind it, so the profile view's
+// read answers 404 and the view leaves for the dashboard (its `goneOn`),
+// taking the current tab away from Profil. These tests are about the bar:
+// answer that read with a passing outage instead, which the view shows in
+// place (only a 403 or 404 sends it away), so Profil stays the open view.
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/v1/garages/*/profile', (route) =>
+    route.fulfill({ json: { code: 'unavailable' }, status: 503 }),
+  );
+});
+
 async function open(page: Page, path: string) {
   await page.goto(path);
   await settled(page);
@@ -124,9 +135,16 @@ test.describe('the dashboard tab bar on a 375 px phone', () => {
     await page.setViewportSize({ height: 812, width: 375 });
   });
 
+  // @traces 1380-FR-006
   for (const { capabilities, landing, name, role, tabs } of DASHBOARDS) {
     test(`takes a ${role} to every view of the dashboard`, async ({ page }) => {
       await signInAs(page, role, landing, [...capabilities]);
+      // The stubbed garage account has no garage, and the profile view leaves
+      // for the dashboard on its 404, racing the check that Profil is the
+      // current tab: an outage keeps the view on Profil.
+      await page.route('**/api/v1/garages/*/profile', (route) =>
+        route.fulfill({ status: 503 }),
+      );
       await open(page, landing);
       const bar = page.getByRole('navigation', { name });
 
@@ -211,40 +229,58 @@ test.describe('the side menu and the bar', () => {
   });
 });
 
+// The bar's last view, Istoric, reads nothing, so the stub session keeps it
+// open; it is the tab the bar has to scroll farthest to reveal.
+const SMALL_PHONE_BAR = {
+  en: { bar: 'Garage dashboard', first: 'Home', last: 'History' },
+  ro: { bar: 'Panou service', first: 'Panou', last: 'Istoric' },
+} as const;
+
+// @traces 1380-FR-001 1380-FR-002 1380-FR-003 1380-FR-004
 test.describe('the bar on the smallest phones', () => {
   for (const width of [320, 390]) {
-    test(`shows whole labels and scrolls itself, not the page, at ${width} px`, async ({
-      page,
-    }) => {
-      await signInAs(page, 'garage', '/app/garage', OWNER);
-      await page.setViewportSize({ height: 640, width });
-      await open(page, '/app/garage/profile');
-      const bar = page.getByRole('navigation', { name: 'Panou service' });
+    for (const language of ['ro', 'en'] as const) {
+      test(`shows whole labels and scrolls itself, not the page, at ${width} px in ${language}`, async ({
+        page,
+      }) => {
+        const names = SMALL_PHONE_BAR[language];
+        await signInAs(page, 'garage', '/app/garage', OWNER, language);
+        await page.setViewportSize({ height: 640, width });
+        await open(page, '/app/garage/history');
+        await expect(page).toHaveURL('/app/garage/history');
+        const bar = page.getByRole('navigation', { name: names.bar });
+        const last = bar.getByRole('link', { exact: true, name: names.last });
 
-      expect(await sideways(page)).toBeLessThanOrEqual(width);
-      const tabs = await bar.getByRole('link').evaluateAll((links) =>
-        links.map((a) => {
-          const label = a.lastElementChild as HTMLElement;
-          return {
-            cut: label.scrollWidth > label.clientWidth,
-            height: a.getBoundingClientRect().height,
-            size: Number.parseFloat(getComputedStyle(label).fontSize),
-          };
-        }),
-      );
-      expect(tabs).toHaveLength(10);
-      expect(tabs.filter((t) => t.cut)).toEqual([]);
-      expect(tabs.filter((t) => t.height < 44)).toEqual([]);
-      expect(tabs.filter((t) => t.size < 12)).toEqual([]);
-      const scroller = await bar.evaluate((nav) => ({
-        client: nav.clientWidth,
-        scroll: nav.scrollWidth,
-      }));
-      expect(scroller.scroll).toBeGreaterThan(scroller.client);
-      await expect(
-        bar.getByRole('link', { exact: true, name: 'Profil' }),
-      ).toBeInViewport();
-    });
+        for (const colorScheme of ['light', 'dark'] as const) {
+          await page.emulateMedia({ colorScheme });
+          expect(await sideways(page)).toBeLessThanOrEqual(width);
+          const tabs = await bar.getByRole('link').evaluateAll((links) =>
+            links.map((a) => {
+              const label = a.lastElementChild as HTMLElement;
+              return {
+                cut: label.scrollWidth > label.clientWidth,
+                height: a.getBoundingClientRect().height,
+                size: Number.parseFloat(getComputedStyle(label).fontSize),
+              };
+            }),
+          );
+          expect(tabs).toHaveLength(10);
+          expect(tabs.filter((t) => t.cut)).toEqual([]);
+          expect(tabs.filter((t) => t.height < 44)).toEqual([]);
+          expect(tabs.filter((t) => t.size < 12)).toEqual([]);
+          const scroller = await bar.evaluate((nav) => ({
+            client: nav.clientWidth,
+            scroll: nav.scrollWidth,
+          }));
+          expect(scroller.scroll).toBeGreaterThan(scroller.client);
+          await expect(last).toHaveAttribute('aria-current', 'page');
+          await expect(last).toBeInViewport();
+          await expect(
+            bar.getByRole('link', { exact: true, name: names.first }),
+          ).not.toBeInViewport();
+        }
+      });
+    }
   }
 
   test('sits above the home indicator', async ({ page }) => {

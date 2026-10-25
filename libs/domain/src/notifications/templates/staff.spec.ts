@@ -6,6 +6,7 @@ const link = 'https://motorfix.test/ro/invite/abc';
 const app = 'https://motorfix.test';
 
 describe('staff templates', () => {
+  // @traces 056-FR-009
   it('passes the template check', () => {
     const staff = Object.fromEntries(
       Object.entries(TEMPLATES).filter(([name]) => name.startsWith('STAFF_')),
@@ -15,6 +16,7 @@ describe('staff templates', () => {
       'STAFF_INVITE.mechanic',
       'STAFF_INVITE.receptionist',
       'STAFF_JOINED',
+      'STAFF_REMOVED',
     ]);
     expect(checkTemplates(staff)).toEqual([]);
   });
@@ -66,4 +68,25 @@ describe('staff templates', () => {
       'Elena Stan',
     );
   });
+
+  // @traces 056-FR-009
+  it.each([
+    ['ro', 'Nu mai faci parte din echipa Atelier Dinamo.'],
+    ['en', 'You are no longer part of the team of Atelier Dinamo.'],
+  ])(
+    'tells a removed account in %s that it left the team, in the bell, the e-mail and the push',
+    (language, line) => {
+      const params = { app, garage: 'Atelier Dinamo' };
+
+      expect(render('STAFF_REMOVED', 'bell', language, params)).toBe(line);
+      const mail = render('STAFF_REMOVED', 'email', language, params);
+      expect(mail.text).toContain(line);
+      expect(mail.text).toContain(`: ${app}`);
+      expect(mail.html).toContain(`href="${app}"`);
+      const push = render('STAFF_REMOVED', 'push', language, params);
+      expect(push.body).toContain(line);
+      expect(push.link).toBe(app);
+      expect(push.title).not.toBe('');
+    },
+  );
 });

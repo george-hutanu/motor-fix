@@ -38,10 +38,17 @@ export const PUBLIC_PATHS: readonly string[] = [
   'review-rules',
 ];
 
-// The server provides PUBLIC_WEB_URL's origin: behind the host's proxy the
-// request may arrive as http.
+// The server provides PUBLIC_WEB_URL's origin, since behind the host's proxy
+// the request may arrive as http, and names it in every page it sends; the
+// address bar is the last resort, for a page no server sent (a test).
 export const SITE_ORIGIN = new InjectionToken<string>('SITE_ORIGIN', {
-  factory: () => inject(DOCUMENT).location.origin,
+  factory: () => {
+    const doc = inject(DOCUMENT);
+    return (
+      doc.querySelector<HTMLMetaElement>('meta[name="mf-site"]')?.content ||
+      doc.location.origin
+    );
+  },
 });
 
 export function alternates(origin: string, path: string) {
@@ -90,6 +97,9 @@ export const assistantTexts: CanMatchFn = async () => {
   return true;
 };
 
+// A page that never settles (a stream, a poll) must not keep a first visit on /.
+const FIRST_VISIT_BOUND = 2_000;
+
 // The server cannot read the device's memory, so `/` stays Romanian there; the
 // browser goes on to the address of the remembered or current language. The
 // first page is the server's `/`: it hydrates where it is, so a tap made before
@@ -106,9 +116,12 @@ export const toLanguageAddress: CanMatchFn = () => {
   const taps = inject(LanguageChoice).taps.subscribe((language) => {
     tapped = language;
   });
-  void inject(ApplicationRef)
-    .whenStable()
+  void Promise.race([
+    inject(ApplicationRef).whenStable(),
+    new Promise((resolve) => setTimeout(resolve, FIRST_VISIT_BOUND)),
+  ])
     // The replay runs in its own whenStable callback; a task later, it is done.
+    // When the bound wins instead, a tap counted so far still decides.
     .then(() => new Promise((resolve) => setTimeout(resolve)))
     .then(() => {
       taps.unsubscribe();

@@ -832,7 +832,10 @@ async function reviewed(db: Client) {
      WHERE a.email = $1`,
     [REVIEWER_CAR.email],
   );
-  if (done.rowCount) return;
+  if (done.rowCount) {
+    await garageFigures(db);
+    return;
+  }
   const who = await requester(db, REVIEWER_CAR);
   if (!who) return;
   const sent = await send(db, who, 240, true);
@@ -864,6 +867,20 @@ async function reviewed(db: Client) {
   await db.query(
     `UPDATE mechanic SET on_profile = true, rating = 5.0, review_count = 1 WHERE id = $1`,
     [who.mechanic],
+  );
+  await garageFigures(db);
+}
+
+// Atelier Test's stored rating and count, from its published reviews: the
+// review above is written straight to the table, past the API that keeps
+// them. A database seeded before this line keeps "0 recenzii" over a listed
+// review; one whose count the app already moved is left as it is.
+async function garageFigures(db: Client) {
+  await db.query(
+    `UPDATE garage g SET rating = s.rating, review_count = s.n
+     FROM (SELECT garage_id, round(avg(rating)::numeric, 1) AS rating, count(*)::int AS n
+           FROM review WHERE status = 'published' GROUP BY garage_id) s
+     WHERE g.id = s.garage_id AND g.slug = 'atelier-test' AND g.review_count = 0`,
   );
 }
 
@@ -928,6 +945,8 @@ async function quoteable(db: Client) {
 
 // Atelier Test's team list, set once: its two mechanics with a speciality and on the
 // profile, beside a card with no account yet, as an owner names one at step 4.
+// Each card carries a role and its years, and every seeded garage gets
+// its owner's own row, as the migration gives every garage made before it.
 async function team(db: Client) {
   await db.query(
     `UPDATE mechanic m SET on_profile = true, speciality = s.speciality
@@ -940,6 +959,36 @@ async function team(db: Client) {
      SELECT gen_random_uuid(), g.id, 'Costel Radu', 'Frâne, suspensie și geometrie', true
      FROM garage g WHERE g.slug = 'atelier-test'
        AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.garage_id = g.id AND m.name = 'Costel Radu')`,
+  );
+  await db.query(
+    `UPDATE mechanic m SET role_title = c.role_title, years = c.years,
+       specialties = string_to_array(m.speciality, ', ')
+     FROM garage g, (VALUES ('mecanic@example.test', 'Mecanic șef', 12),
+                            ('mecanic-oferte@example.test', 'Electrician auto', 6),
+                            ('', 'Mecanic', 15)) AS c (email, role_title, years)
+     WHERE g.id = m.garage_id AND g.slug = 'atelier-test' AND m.role_title IS NULL
+       AND m.speciality IS NOT NULL
+       AND (CASE WHEN c.email = '' THEN m.name = 'Costel Radu'
+            ELSE m.account_id = (SELECT id FROM account WHERE email = c.email) END)`,
+  );
+  await db.query(
+    `INSERT INTO mechanic (id, garage_id, account_id, name, on_profile, can_move_bookings,
+       can_answer_quotes, can_record_final_price, is_owner, working_hours)
+     SELECT gen_random_uuid(), g.id, gm.account_id, left(btrim(a.name), 80), false, true, true, true, true, g.hours
+     FROM garage g
+     JOIN garage_member gm ON gm.garage_id = g.id AND gm.role = 'owner'
+     JOIN account a ON a.id = gm.account_id
+     WHERE char_length(btrim(a.name)) >= 2
+       AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.garage_id = g.id AND m.is_owner)
+       AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.account_id = gm.account_id)`,
+  );
+  // An owner's row always holds the three permissions; a seeded owner's row
+  // that lost them gets them back, as the staff rows do above.
+  await db.query(
+    `UPDATE mechanic SET can_move_bookings = true, can_answer_quotes = true, can_record_final_price = true
+     WHERE is_owner
+       AND NOT (can_move_bookings AND can_answer_quotes AND can_record_final_price)
+       AND account_id IN (SELECT id FROM account WHERE email LIKE '%@example.test')`,
   );
 }
 
@@ -1153,6 +1202,16 @@ async function seed(db: Client, secret: string): Promise<string> {
   }
   for (const garage of LISTED) await list(db, garage);
   for (const person of PEOPLE) await add(db, person, secret, restored);
+  // Saab, retired by the admin, so the admin's brand list shows a retired
+  // brand and the loader leaves it retired.
+  await db.query(
+    `INSERT INTO brand (id, key, name, slug, ro_possessive, active, updated_at, updated_by)
+     SELECT gen_random_uuid(), 'saab', 'Saab', 'saab', 'Saabul tău', false, now(), a.id
+     FROM account a WHERE a.email = 'admin@example.test'
+     ON CONFLICT (key) DO UPDATE SET active = false, updated_at = now(),
+       updated_by = EXCLUDED.updated_by
+     WHERE brand.updated_by IS NULL`,
+  );
   // The day the suspended driver was suspended, as an admin's change records
   // it; added apart from the account so a database seeded before has it too.
   await db.query(

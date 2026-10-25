@@ -400,6 +400,39 @@ describe('the Error % panels', () => {
   });
 });
 
+// @traces 1188-FR-008
+describe('the event-loop panel', () => {
+  type Panel = {
+    title?: string;
+    panels?: Panel[];
+    targets?: { expr: string }[];
+  };
+  const flatten = (panels: Panel[]): Panel[] =>
+    panels.flatMap((panel) => [panel, ...flatten(panel.panels ?? [])]);
+
+  it.each(['api', 'web', 'worker', 'mcp'])(
+    'shows the event-loop delay p99 on the %s dashboard',
+    (name) => {
+      const panels = flatten(
+        JSON.parse(
+          read(
+            'infra',
+            'observability',
+            'grafana',
+            'dashboards',
+            `motorfix-${name}.json`,
+          ),
+        ).panels,
+      ).filter((panel) => panel.title === 'Event-loop lag p99');
+
+      expect(panels).toHaveLength(1);
+      expect(panels[0].targets?.[0]?.expr).toContain(
+        `nodejs_eventloop_delay_p99_seconds{service_name="${name}"`,
+      );
+    },
+  );
+});
+
 // @traces 1345-FR-020
 describe('the observability README after the staging review', () => {
   const readme = read('infra', 'observability', 'README.md');

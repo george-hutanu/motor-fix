@@ -11,4 +11,9 @@ export interface GarageRowBookingDto {
 }) | null;
   startsAt: string;
   status: 'awaiting_confirmation' | 'confirmed' | 'lapsed' | 'cancelled' | 'no_show' | 'completed';
+
+  /**
+   * A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else
+   */
+  toReassign: boolean;
 }

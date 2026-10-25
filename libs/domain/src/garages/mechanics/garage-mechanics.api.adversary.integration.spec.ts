@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -7,7 +8,6 @@ import request from 'supertest';
 
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';
@@ -75,7 +75,7 @@ const team = (garageId: string, auth?: string) => {
   return auth ? call.set('Authorization', auth) : call;
 };
 
-// Atelier Dinamo: its owner Mihai (who has a card of his own), a receptionist,
+// Atelier Dinamo: its owner Mihai (whose own row leads the list), a receptionist,
 // a mechanic with an account, and cards with none; Atelier Nord with its owner.
 async function world() {
   const dinamo = await prisma.garage.create({
@@ -89,7 +89,12 @@ async function world() {
     data: { accountId: mihai, garageId: dinamo.id, role: 'owner' },
   });
   await prisma.mechanic.create({
-    data: { accountId: mihai, garageId: dinamo.id, name: 'Mihai Pop' },
+    data: {
+      accountId: mihai,
+      garageId: dinamo.id,
+      isOwner: true,
+      name: 'Mihai Pop',
+    },
   });
   const ioana = await account('ioana', ['receptionist']);
   await prisma.garageMember.create({
@@ -122,8 +127,12 @@ const switchOff = (garageId: string) =>
     data: { enabled: false, garageId, key: 'team_mechanics' },
   });
 
-const names = (res: request.Response) =>
-  (res.body.items as { name: string }[]).map((i) => i.name);
+// The team under the owner's own row, which always comes first.
+const crewOf = (res: request.Response) =>
+  (res.body.items as { isOwner: boolean; name: string }[]).filter(
+    (item, i) => !(i === 0 && item.isOwner),
+  );
+const names = (res: request.Response) => crewOf(res).map((i) => i.name);
 
 // @traces 055-FR-001
 describe('the team list under awkward cards', () => {
@@ -181,7 +190,7 @@ describe('the team list under awkward cards', () => {
     const res = await team(dinamo.id, bearer(mihai, 'garage'));
 
     expect(res.status).toBe(200);
-    expect(res.body.items).toHaveLength(301);
+    expect(crewOf(res)).toHaveLength(301);
     expect(names(res).slice(0, 3)).toEqual([
       'Mecanic 000',
       'Mecanic 001',
@@ -198,10 +207,9 @@ describe('the team list under awkward cards', () => {
     const res = await team(dinamo.id, bearer(mihai, 'garage'));
 
     expect(
-      res.body.items.map((i: { rating: string; reviewCount: number }) => [
-        i.rating,
-        i.reviewCount,
-      ]),
+      (crewOf(res) as unknown as { rating: string; reviewCount: number }[]).map(
+        (i) => [i.rating, i.reviewCount],
+      ),
     ).toEqual([
       ['5.0', 100000],
       ['1.0', 1],
@@ -217,7 +225,7 @@ describe('the team list under awkward cards', () => {
 
     const res = await team(dinamo.id, bearer(mihai, 'garage'));
 
-    expect(res.body.items[0]).toMatchObject({
+    expect(crewOf(res)[0]).toMatchObject({
       name: '<script>alert(1)</script>',
       speciality: '"; DROP TABLE mechanic; --',
     });
@@ -235,10 +243,11 @@ describe('the team list under awkward cards', () => {
 
     const res = await team(dinamo.id, bearer(mihai, 'garage'));
 
-    expect(res.body).toEqual({ items: [] });
+    expect(crewOf(res)).toEqual([]);
   });
 
-  it("leaves out the owner's own card even when it sits on the profile with reviews", async () => {
+  // @traces 056-FR-011
+  it("answers the owner's own row first, as stored, even on the profile with reviews", async () => {
     const { dinamo, mihai, vlad } = await world();
     await prisma.mechanic.delete({ where: { accountId: vlad } });
     await prisma.mechanic.update({
@@ -248,7 +257,15 @@ describe('the team list under awkward cards', () => {
 
     const res = await team(dinamo.id, bearer(mihai, 'garage'));
 
-    expect(res.body).toEqual({ items: [] });
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.items[0]).toMatchObject({
+      hasAccount: true,
+      isOwner: true,
+      name: 'Mihai Pop',
+      onProfile: true,
+      rating: '4.2',
+      reviewCount: 12,
+    });
   });
 
   it('ignores a garageId in the query string and reads the one in the path', async () => {

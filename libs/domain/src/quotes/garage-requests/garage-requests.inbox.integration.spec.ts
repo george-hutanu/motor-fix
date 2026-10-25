@@ -194,6 +194,7 @@ describe('the garage inbox read', () => {
 
     expect(answered.items).toEqual([]);
   });
+  // @traces 102-FR-007
 
   it('lets a mechanic who may answer quotes read it, and refuses one who may not', async () => {
     const r = await inbox();
@@ -207,7 +208,7 @@ describe('the garage inbox read', () => {
     expect(ids(answering)).toEqual([r.waiting.id]);
     await expect(
       service.inbox(garageActor(r.t.plain, g, 'mechanic'), {}),
-    ).rejects.toMatchObject({ status: 404 });
+    ).rejects.toMatchObject({ response: { code: 'forbidden' }, status: 403 });
   });
 
   it('changes no row and records nothing when read', async () => {
@@ -223,5 +224,37 @@ describe('the garage inbox read', () => {
       await prisma.requestRecipient.findMany({ orderBy: { id: 'asc' } }),
     ).toEqual(before);
     expect(await prisma.activityLog.count()).toBe(logged);
+  });
+});
+
+// @traces 056-FR-008
+describe("the inbox row's booking to reassign", () => {
+  async function row(removed: boolean) {
+    const andrei = await driver();
+    const t = await team('Atelier Dinamo');
+    const { booking } = await world.chain(andrei, t.garage.id);
+    const elena = await prisma.mechanic.create({
+      data: { garageId: t.garage.id, name: 'Elena', onProfile: true },
+    });
+    await prisma.booking.update({
+      data: { mechanicId: elena.id },
+      where: { id: booking.id },
+    });
+    if (removed)
+      await prisma.mechanic.update({
+        data: { onProfile: false, removedAt: new Date() },
+        where: { id: elena.id },
+      });
+    const answered = await service.inbox(garageActor(t.owner, t.garage.id), {});
+    expect(answered.items).toHaveLength(1);
+    return answered.items[0].booking as unknown as { toReassign?: boolean };
+  }
+
+  it("is told for a future confirmed booking of a removed mechanic's card", async () => {
+    expect((await row(true)).toReassign).toBe(true);
+  });
+
+  it('is not told while the card is current', async () => {
+    expect((await row(false)).toReassign).toBe(false);
   });
 });

@@ -44,7 +44,7 @@ const completion = new CompletionService(
   prisma,
   new GarageDetailsService(audit),
   new GaragePricesService(audit, outbox),
-  new GarageMechanicsService(audit),
+  new GarageMechanicsService(audit, {} as never, {} as never),
   new GaragePlaceService(audit),
   new GaragePhotosService(audit),
   legal,
@@ -57,7 +57,7 @@ const service = new ListingSubmitService(
   new AccountsService(prisma, audit, outbox),
   new GarageDetailsService(audit),
   new GaragePricesService(audit, outbox),
-  new GarageMechanicsService(audit),
+  new GarageMechanicsService(audit, {} as never, {} as never),
   new GaragePlaceService(audit),
   new GaragePhotosService(audit),
   photos,
@@ -278,7 +278,9 @@ describe('sending a complete draft', () => {
       expect.objectContaining({ brandId: dacia, stance: 'works_on' }),
     ]);
     expect(garage.prices).toHaveLength(2);
-    expect(garage.mechanics.map((m) => m.name)).toEqual(['Mihai Ionescu']);
+    expect(
+      garage.mechanics.filter((m) => !m.accountId).map((m) => m.name),
+    ).toEqual(['Mihai Ionescu']);
     expect(garage.photos.map((p) => p.fileKey)).toEqual([PHOTO]);
     expect(garage.survey).toMatchObject(SURVEY);
     expect(garage.features).toHaveLength(5);
@@ -453,6 +455,101 @@ describe('a send that fails part-way', () => {
 
     expect(sent.status).toBe('submitted');
     expect(await prisma.garage.count()).toBe(1);
+  });
+});
+
+type OwnerRow = {
+  account_id: string;
+  can_answer_quotes: boolean;
+  can_move_bookings: boolean;
+  can_record_final_price: boolean;
+  id: string;
+  name: string;
+  on_profile: boolean;
+  speciality: string | null;
+  specialties: string[];
+  working_hours: unknown;
+};
+
+const ownerRows = (garageId: string) =>
+  prisma.$queryRaw<OwnerRow[]>`
+    SELECT account_id, can_answer_quotes, can_move_bookings,
+      can_record_final_price, id, name, on_profile, speciality, specialties,
+      working_hours
+    FROM mechanic WHERE garage_id = ${garageId}::uuid AND is_owner`;
+
+// @traces 056-FR-015
+describe("the owner's mechanic row", () => {
+  it("is made with the garage: the owner's account and name, the opening hours, off the profile, every right", async () => {
+    const actor = await driver();
+    const { id, token } = await draft();
+
+    const sent = await service.submit(actor, id, token, 'key-1');
+
+    const garage = await prisma.garage.findUniqueOrThrow({
+      where: { id: sent.garageId },
+    });
+    const { name } = await prisma.account.findUniqueOrThrow({
+      where: { id: actor.accountId },
+    });
+    expect(await ownerRows(sent.garageId)).toEqual([
+      {
+        account_id: actor.accountId,
+        can_answer_quotes: true,
+        can_move_bookings: true,
+        can_record_final_price: true,
+        id: expect.any(String),
+        name,
+        on_profile: false,
+        speciality: null,
+        specialties: [],
+        working_hours: garage.hours,
+      },
+    ]);
+  });
+
+  it('is rolled back with the garage when the send fails part-way', async () => {
+    const actor = await driver();
+    const { id, token } = await draft();
+    const attach = jest
+      .spyOn(legal, 'attach')
+      .mockRejectedValueOnce(new Error('connection lost'));
+
+    await service.submit(actor, id, token, 'key-1').catch(() => undefined);
+
+    attach.mockRestore();
+    expect(
+      await prisma.mechanic.count({ where: { accountId: actor.accountId } }),
+    ).toBe(0);
+  });
+
+  it('is never matched, changed or deleted by a re-save of the team step', async () => {
+    const actor = await driver();
+    const { id, token } = await draft();
+    const sent = await service.submit(actor, id, token, 'key-1');
+    const [before] = await ownerRows(sent.garageId);
+
+    await prisma.$transaction((tx) =>
+      new GarageMechanicsService(audit, {} as never, {} as never).saveAgain(
+        tx,
+        sent.garageId,
+        actor.accountId,
+        {
+          mechanics: [{ name: before.name, speciality: 'Diagnoză' }],
+          onProfile: true,
+        },
+      ),
+    );
+    await prisma.$transaction((tx) =>
+      new GarageMechanicsService(audit, {} as never, {} as never).saveAgain(
+        tx,
+        sent.garageId,
+        actor.accountId,
+        { mechanics: [], onProfile: false },
+      ),
+    );
+
+    expect(await ownerRows(sent.garageId)).toEqual([before]);
   });
 });
 

@@ -227,19 +227,28 @@ export class Frame implements OnInit {
   protected readonly garage = computed(() =>
     this.area() === 'garage' ? garageOf(this.session.shown()) : null,
   );
+  // The signed-in garage is no longer the person's: the frame shows no view.
+  protected readonly garageGone = computed(
+    () => this.area() === 'garage' && this.session.garageGone(),
+  );
+  // The view on screen was taken away: Panou says so until another opens.
+  protected readonly lost = signal<string | null>(null);
   protected readonly entries = computed(() =>
-    allowedViews(
-      this.area(),
-      this.session.shown()?.capabilities ?? [],
-      this.garage()?.features,
-      this.garage()?.status,
-    ),
+    this.garageGone()
+      ? []
+      : allowedViews(
+          this.area(),
+          this.session.shown()?.capabilities ?? [],
+          this.garage()?.features,
+          this.garage()?.status,
+        ),
   );
   // The menu and the bar: the views, then the entries that open a task.
-  protected readonly menu = computed(() => [
-    ...this.entries(),
-    ...(this.dashboard().actions ?? []),
-  ]);
+  protected readonly menu = computed(() =>
+    this.garageGone()
+      ? []
+      : [...this.entries(), ...(this.dashboard().actions ?? [])],
+  );
   // The address on screen.
   private readonly address = toSignal(
     this.router.events.pipe(
@@ -275,13 +284,39 @@ export class Frame implements OnInit {
   constructor() {
     // A role switch or a lost right moves the person off a view they may no
     // longer open; signed out, sign-out itself decides where to go.
+    // Only a right lost on a view already open says so: not an address typed
+    // on first load, not a role switch, not a garage that is gone.
+    let before = untracked(() => ({
+      entries: this.entries(),
+      role: this.session.current()?.role,
+    }));
     effect(() => {
-      if (!this.session.current()) return;
+      const me = this.session.current();
+      if (!me) return;
+      const entries = this.entries();
       const [, area, view] = this.segments();
+      const here = `/app/${area}` === this.base();
       const off =
-        `/app/${area}` !== this.base() ||
-        (view !== undefined && !this.entries().some((v) => v.path === view));
-      if (off) untracked(() => void this.router.navigateByUrl(this.base()));
+        !here || (view !== undefined && !entries.some((v) => v.path === view));
+      const taken =
+        off &&
+        here &&
+        me.role === before.role &&
+        !untracked(this.garageGone) &&
+        before.entries.some((v) => v.path === view);
+      before = { entries, role: me.role };
+      if (!off) return;
+      untracked(() => {
+        if (taken) this.lost.set(this.dashboard().views[0].path);
+        void this.router.navigateByUrl(this.base());
+      });
+    });
+    // The notice stays on Panou until another view opens.
+    effect(() => {
+      const path = this.open().path;
+      untracked(() => {
+        if (this.lost() !== null && this.lost() !== path) this.lost.set(null);
+      });
     });
     // A session lost mid-flight (a refused renewal) with no sign-in dialog
     // keeping its account on screen: Home, as after a sign-out.
@@ -402,11 +437,12 @@ export class Frame implements OnInit {
         // A suspension, a restore or a verification decision changes what the garage's
         // dashboard shows, a re-check the RAR line under its verified pill, and
         // the owner's feature switches or a mechanic's change its menu, bar
-        // and routes.
+        // and routes, and a removed mechanic loses the garage's.
         if (
           message.kind === 'account.email_confirmed' ||
           message.kind === 'garage.features_changed' ||
           message.kind === 'mechanic.updated' ||
+          message.kind === 'mechanic.removed' ||
           message.kind === 'garage.suspended' ||
           message.kind === 'garage.restored' ||
           message.kind === 'verification.decided' ||

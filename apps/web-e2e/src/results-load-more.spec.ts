@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ready } from './accounts.js';
+import { deleteBrand } from './delete-brand.js';
 import { test } from './fixtures.js';
 
 // A brand and 48 garages of this file's own, written straight to PostgreSQL:
@@ -84,9 +85,8 @@ test.describe('loading more garages on the Results page @seeded @database', () =
   });
 
   test.afterAll(async () => {
-    await db.query('DELETE FROM search_log WHERE brand_id = $1', [brandId]);
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [ids]);
-    await db.query('DELETE FROM brand WHERE id = $1', [brandId]);
+    await deleteBrand(db, brandId);
     await db.end();
   });
 

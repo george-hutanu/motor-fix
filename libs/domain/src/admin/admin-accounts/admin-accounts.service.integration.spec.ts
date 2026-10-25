@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { Redis } from 'ioredis';
 
 import { AdminAccountsService, SUMMARY_KEY } from './admin-accounts.service';
-import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import {
   databaseUrl,

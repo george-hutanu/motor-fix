@@ -108,21 +108,24 @@ describe('the brands, under odd answers', () => {
   });
 
   it('keeps a long list whole and in the order given, the brand in context first', async () => {
-    const many = Array.from({ length: 1500 }, (_, i) => taken(`Marca${i}`));
+    // 300 is far past any real garage list and past any cap a template might
+    // add (a slice of 100 or 250), while rendering it stays well inside a
+    // test's budget on a loaded machine; 1500 chips took over 5 s there.
+    const many = Array.from({ length: 300 }, (_, i) => taken(`Marca${i}`));
     await show({
       brand: {
-        id: 'b-Marca1499',
-        name: 'Marca1499',
-        slug: 'marca1499',
+        id: 'b-Marca299',
+        name: 'Marca299',
+        slug: 'marca299',
         stance: 'works_on',
       },
       worksOn: many,
     });
 
     const shown = names('works');
-    expect(shown.length).toBe(1500);
-    expect(shown.slice(0, 3)).toEqual(['Marca1499', 'Marca0', 'Marca1']);
-    expect(shown.at(-1)).toBe('Marca1498');
+    expect(shown.length).toBe(300);
+    expect(shown.slice(0, 3)).toEqual(['Marca299', 'Marca0', 'Marca1']);
+    expect(shown.at(-1)).toBe('Marca298');
   });
 
   it('puts no control, link or per-chip label inside the section', async () => {

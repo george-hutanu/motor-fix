@@ -1,10 +1,10 @@
 import type { GarageProfileDto } from '@motor-fix/contracts';
+import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import { capabilitiesOf } from '../../auth/capabilities';
+import { refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { notFound } from '../garage-brands/garage-brands.service';
 import { PublicGaragesService } from '../public-garages/public-garages';
@@ -29,7 +29,7 @@ export class GarageProfileService {
       throw refusal(
         HttpStatus.FORBIDDEN,
         'forbidden',
-        "Only the owner reads the garage's profile",
+        "Your role does not read the garage's profile",
       );
     }
     const row = await this.prisma.garage.findUnique({

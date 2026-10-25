@@ -1,4 +1,5 @@
 import { type DeleteMeDto, normalisePhone } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import {
   HttpException,
   HttpStatus,
@@ -18,7 +19,7 @@ import {
 import { NotificationsService } from '../../notifications/notifications.service';
 import { signInRequired } from '../account-loader';
 import { revokeAssistantGrants } from '../assistant-grants/assistant-grants';
-import type { Role } from '../capabilities';
+import { refusal } from '../http-refusal';
 import {
   RESET_OPTIONS,
   type ResetOptions,
@@ -26,7 +27,6 @@ import {
 import type { Actor } from '../policy';
 import { PRISMA } from '../prisma';
 import { SignInService } from '../sign-in.service';
-import { refusal } from '../sign-up.service';
 
 // The self-service deletion's actor, shown in place of the name it wipes.
 const SELF_LABEL = 'Cont șters';
@@ -112,6 +112,19 @@ export class AccountDeletionService {
           HttpStatus.CONFLICT,
           'deletion_not_allowed',
           'Close the garage you own before deleting the account',
+        ),
+      );
+    }
+    const inWork = await this.prisma.job.count({
+      where: { driverId: accountId, status: { in: ['in_work', 'paused'] } },
+    });
+    if (inWork > 0) {
+      throw this.refused(
+        'refused_in_work',
+        refusal(
+          HttpStatus.CONFLICT,
+          'car_in_work',
+          'Collect the car from the garage before deleting the account',
         ),
       );
     }

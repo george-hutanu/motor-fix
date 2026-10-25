@@ -90,6 +90,24 @@
       "one": "{count} review",
       "other": "{count} reviews"
     },
+    "reviewsSection": {
+      "deletedAuthor": "MotorFix driver",
+      "empty": "No reviews yet.",
+      "failed": "We could not load the reviews",
+      "label": "Reviews by score",
+      "more": "See more",
+      "retry": "Try again",
+      "score": "{rating} / 5",
+      "stars": {
+        "one": "{count} star",
+        "other": "{count} stars"
+      },
+      "title": "What drivers say"
+    },
+    "share": "Share",
+    "shareCopied": "Link copied",
+    "shareCopyBelow": "Copy the link below",
+    "shareName": "Share {name}",
     "status": {
       "break": "Break until {start}",
       "closedDay": "Closed today · opens {when} at {start}",
@@ -108,8 +126,10 @@
     "works": "Works on {brand}"
   },
   "gone": {
-    "home": "Go to the home page",
-    "title": "This garage is no longer available"
+    "search": "Find a garage",
+    "searchBrand": "Find a garage for {brand}",
+    "similar": "Similar garages nearby",
+    "title": "This garage is no longer available on MotorFix."
   },
   "home": {
     "cards": {

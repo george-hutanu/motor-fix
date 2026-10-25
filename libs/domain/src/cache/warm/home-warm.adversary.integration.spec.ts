@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { type INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
@@ -12,7 +13,6 @@ import { AuditService } from '../../audit/audit.service';
 import { AccountsService } from '../../auth/accounts.service';
 import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import * as password from '../../auth/password/password';
 import { PRISMA } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';

@@ -1,4 +1,5 @@
 import { CURRENT_CONSENT, type OAuthProvider } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import request from 'supertest';
 
@@ -12,7 +13,6 @@ import {
   WEB,
 } from './openid/openid-stub.testing';
 import { oauthSettings } from './providers';
-import type { Role } from '../capabilities';
 
 let maintenance = false;
 const h = oauthHarness(() => maintenance);

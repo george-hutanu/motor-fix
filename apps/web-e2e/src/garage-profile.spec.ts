@@ -301,7 +301,7 @@ test.describe('a mobile mechanic, then suspended @seeded', () => {
     await db.query('COMMIT');
 
     await expect(heading(page)).toHaveText(
-      'Acest service nu mai este disponibil',
+      'Acest service nu mai este disponibil pe MotorFix.',
       { timeout: 15_000 },
     );
     expect(navigations).toBe(0);

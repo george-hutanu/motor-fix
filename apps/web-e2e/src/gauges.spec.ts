@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 
 import { test } from './fixtures.js';
+import { rgb, token } from './tokens.js';
 
 // The page opens in Romanian, the default language.
 const read = (path: string) =>
@@ -24,20 +25,6 @@ const STATE_TOKEN = {
   red: '--mf-red',
 } as const;
 
-const token = (page: Page, name: string) =>
-  page.evaluate(
-    (n) =>
-      getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
-    name,
-  );
-
-const rgb = (hex: string) => {
-  const [r, g, b] = [1, 3, 5].map((i) =>
-    Number.parseInt(hex.slice(i, i + 2), 16),
-  );
-  return `rgb(${r}, ${g}, ${b})`;
-};
-
 async function open(page: Page, colorScheme: 'dark' | 'light', width: number) {
   await page.setViewportSize({ height: 900, width });
   await page.emulateMedia({ colorScheme });
@@ -47,6 +34,8 @@ async function open(page: Page, colorScheme: 'dark' | 'light', width: number) {
   ).toBeVisible();
 }
 
+// @traces 452-FR-002
+// @traces 452-FR-003
 for (const scheme of ['dark', 'light'] as const) {
   for (const width of [375, 1280]) {
     test(`shows every gauge state in ${scheme} at ${width} px`, async ({
@@ -170,3 +159,88 @@ test('fits a 320 px wide screen without scrolling sideways', async ({
     });
   }
 });
+
+// @traces 453-FR-001
+// @traces 453-FR-004
+for (const scheme of ['dark', 'light'] as const) {
+  for (const width of [320, 390]) {
+    test(`captions each odometer sample, unclipped, in ${scheme} at ${width} px`, async ({
+      page,
+    }) => {
+      await open(page, scheme, width);
+      const captions = page.locator('mf-cockpit-gauges-sample figcaption');
+
+      await expect(captions).toHaveText([
+        COCKPIT['odometerOne'],
+        COCKPIT['odometerRange'],
+        COCKPIT['odometerNone'],
+      ]);
+
+      const result = await page.evaluate(() => {
+        const panel = document.querySelector(
+          'section.mf-panel:has(mf-cockpit-gauges-sample)',
+        ) as HTMLElement;
+        const frame = panel.getBoundingClientRect();
+        const figures = [
+          ...panel.querySelectorAll('figure:has(> mf-odometer)'),
+        ] as HTMLElement[];
+        const boxes = figures.map((f) => f.getBoundingClientRect());
+        const inside = (box: DOMRect) =>
+          box.left >= frame.left &&
+          box.right <= frame.right &&
+          box.width > 0 &&
+          box.height > 0;
+        const overlaps = boxes.some((a, i) =>
+          boxes.some(
+            (b, j) =>
+              i < j &&
+              a.left < b.right &&
+              b.left < a.right &&
+              a.top < b.bottom &&
+              b.top < a.bottom,
+          ),
+        );
+        return {
+          clipped: figures
+            .flatMap((f) => [...f.querySelectorAll('figcaption, mf-odometer')])
+            .filter(
+              (el) =>
+                el.scrollWidth > el.clientWidth + 1 ||
+                !inside(el.getBoundingClientRect()),
+            )
+            .map((el) => el.outerHTML.slice(0, 80)),
+          figures: figures.length,
+          overlaps,
+          pageScrolls:
+            document.documentElement.scrollWidth >
+            document.documentElement.clientWidth,
+        };
+      });
+
+      expect(result).toEqual({
+        clipped: [],
+        figures: 3,
+        overlaps: false,
+        pageScrolls: false,
+      });
+    });
+  }
+}
+
+// @traces 453-FR-001
+for (const width of [768, 1280]) {
+  test(`lines the odometer captions up on one row at ${width} px`, async ({
+    page,
+  }) => {
+    await open(page, 'dark', width);
+    const captions = page.locator('mf-cockpit-gauges-sample figcaption');
+    await expect(captions).toHaveCount(3);
+
+    const tops = await captions.evaluateAll((els) =>
+      els.map((el) => Math.round(el.getBoundingClientRect().top)),
+    );
+    const rows = new Set(tops);
+
+    expect(rows.size).toBe(1);
+  });
+}

@@ -158,3 +158,61 @@ test.describe('on a 320 px phone', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   });
 });
+
+// @traces 468-FR-001
+test('EN chosen in another tab leaves the not-found page of an unknown prefix Romanian', async ({
+  context,
+}) => {
+  const notFound = await context.newPage();
+  const other = await context.newPage();
+  await notFound.goto('/de/');
+  await expect(
+    notFound.getByRole('heading', { name: 'Pagina nu există' }),
+  ).toBeVisible();
+  await settled(notFound);
+  // Both languages' texts loaded here first, so a page that does follow the
+  // other tab turns English within the task that heard the event.
+  await languageSwitch(notFound, 'Limba')
+    .getByRole('button', { name: 'EN' })
+    .click();
+  await expect(notFound.locator('html')).toHaveAttribute('lang', 'en');
+  await languageSwitch(notFound, 'Language')
+    .getByRole('button', { name: 'RO' })
+    .click();
+  await expect(notFound.locator('html')).toHaveAttribute('lang', 'ro');
+  await openHome(other);
+  await notFound.evaluate(() => {
+    (window as unknown as { heard: Promise<void> }).heard = new Promise(
+      (resolve) =>
+        window.addEventListener(
+          'storage',
+          () => setTimeout(() => requestAnimationFrame(() => resolve())),
+          { once: true },
+        ),
+    );
+  });
+
+  await languageSwitch(other, 'Limba')
+    .getByRole('button', { name: 'EN' })
+    .click();
+  await notFound.evaluate(
+    () => (window as unknown as { heard: Promise<void> }).heard,
+  );
+
+  await expect(other.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(notFound.locator('html')).toHaveAttribute('lang', 'ro');
+  await expect(
+    notFound.getByRole('heading', { name: 'Pagina nu există' }),
+  ).toBeVisible();
+  await expect(
+    languageSwitch(notFound, 'Limba').getByRole('button', { name: 'RO' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(notFound).toHaveURL(/\/de\/?$/);
+
+  await notFound
+    .getByRole('link', { name: 'Înapoi la pagina principală' })
+    .click();
+
+  await expect(notFound).toHaveURL(/\/en\/?$/);
+  await expect(notFound.locator('html')).toHaveAttribute('lang', 'en');
+});

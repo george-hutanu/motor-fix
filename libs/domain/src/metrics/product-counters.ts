@@ -4,6 +4,7 @@ import {
   DECLINE_REASON_CODES,
   DOCUMENT_KINDS,
   type DocumentKind,
+  type OutsideChannel,
   RECHECK_RESULTS,
   type RecheckResult,
   SEARCH_SORTS,
@@ -21,6 +22,7 @@ import {
 import { type Attributes, type Counter, metrics } from '@opentelemetry/api';
 
 import type { Outcome } from '../admin/system-log/system-log';
+import type { FallbackReason, SentChannel } from '../notifications/routing';
 import { TEMPLATES } from '../notifications/templates/registry';
 import {
   ACCOUNT_CLOSED_SERIES,
@@ -40,6 +42,10 @@ import {
   REQUEST_DECLINE_OUTCOMES,
   requestDeclines,
 } from '../quotes/quotes/quotes.metrics';
+import {
+  RETENTION_KINDS,
+  type RetentionKind,
+} from '../retention/retention.config';
 import {
   REVIEW_POSTED_OUTCOMES,
   reviewsPosted,
@@ -64,9 +70,21 @@ export type AccountDeletionOutcome =
   | 'deleted'
   | 'forbidden'
   | 'refused_owner'
+  | 'refused_in_work'
   | 'reauth_required'
   | 'mismatch'
   | 'failed';
+// Not started at 0 either: the requests and the download are the API's, the
+// build and the expiry the worker's.
+export type DataExportOutcome =
+  | 'requested'
+  | 'too_soon'
+  | 'already_ready'
+  | 'forbidden'
+  | 'ready'
+  | 'failed'
+  | 'expired'
+  | 'downloaded';
 // Not started at 0 either, for the same cap.
 export type AdminAccountAction =
   | 'reset_access'
@@ -151,6 +169,11 @@ function counter(name: string, description: string): Counter {
 
 const searches = () =>
   counter('motorfix_searches_total', 'Garage searches, by outcome');
+const retentionRows = () =>
+  counter(
+    'motorfix_retention_rows_total',
+    'Rows the nightly retention job removed or anonymised, by kind',
+  );
 const sortChanges = () =>
   counter('motorfix_sort_changes_total', 'Sort changes on Results, by sort');
 const signIns = () => counter('motorfix_sign_ins_total', 'Sign-ins, by method');
@@ -170,6 +193,11 @@ const accountDeletions = () =>
   counter(
     'motorfix_account_deletions_total',
     'Account deletions asked for, by outcome',
+  );
+const dataExports = () =>
+  counter(
+    'motorfix_data_exports_total',
+    'Copies of their data people asked for, by outcome',
   );
 const adminAccountActions = () =>
   counter(
@@ -196,6 +224,14 @@ const verificationChecks = () =>
   counter(
     'motorfix_verification_checks_total',
     "Checks an admin recorded on a garage's file, by kind and result",
+  );
+const PRESENCE_OUTCOMES = ['created', 'removed', 'store_unavailable'] as const;
+type PresenceOutcome = (typeof PRESENCE_OUTCOMES)[number];
+// No account or file is ever a label.
+const presences = () =>
+  counter(
+    'motorfix_verification_presence_total',
+    'Verification file presence entries created and removed, and store calls that failed, by outcome',
   );
 const rechecks = () =>
   counter(
@@ -309,6 +345,37 @@ const consentRecords = () =>
     'motorfix_consent_records_total',
     'Analytics consent choices stored, by decision',
   );
+// The fallbacks the send path can take: a driver's channel it could not use,
+// the row it wrote instead, and why.
+const FALLBACKS = [
+  { from: 'sms', reason: 'sms_cap_reached', to: 'whatsapp' },
+  { from: 'sms', reason: 'send_failed', to: 'whatsapp' },
+  { from: 'sms', reason: 'phone_not_verified', to: 'email' },
+  { from: 'sms', reason: 'send_failed', to: 'email' },
+  { from: 'whatsapp', reason: 'phone_not_verified', to: 'email' },
+  { from: 'whatsapp', reason: 'send_failed', to: 'email' },
+  { from: 'push', reason: 'no_device', to: 'email' },
+  { from: 'push', reason: 'send_failed', to: 'email' },
+  { from: 'email', reason: 'send_failed', to: 'push' },
+] as const;
+// A label outside these sets would open a series of its own.
+const CHOICE_CHANNELS: readonly OutsideChannel[] = [
+  'email',
+  'push',
+  'sms',
+  'whatsapp',
+];
+// Not started at 0: the API's start set is at its series cap.
+const channelChoices = () =>
+  counter(
+    'motorfix_notification_channel_choices_total',
+    "Drivers' channel picks for a notification type, by channel",
+  );
+const channelFallbacks = () =>
+  counter(
+    'motorfix_notification_channel_fallbacks_total',
+    'Messages sent on another channel than the chosen one, by pair and reason',
+  );
 const accountChanges = () =>
   counter(
     'motorfix_account_changes_total',
@@ -343,6 +410,10 @@ export function countAccountDeletion(outcome: AccountDeletionOutcome) {
   accountDeletions().add(1, { outcome });
 }
 
+export function countDataExport(outcome: DataExportOutcome, by = 1) {
+  dataExports().add(by, { outcome });
+}
+
 export function countAdminAccountAction(
   action: AdminAccountAction,
   outcome: AdminAccountOutcome,
@@ -367,6 +438,10 @@ export function countVerificationCheck(
   result: VerificationCheckResult,
 ) {
   verificationChecks().add(1, { kind, result });
+}
+
+export function countPresence(outcome: PresenceOutcome) {
+  presences().add(1, { outcome });
 }
 
 export function countRecheck(result: RecheckResult) {
@@ -501,6 +576,25 @@ export function countAccountChange(field: (typeof ACCOUNT_FIELDS)[number]) {
   accountChanges().add(1, { field });
 }
 
+// One driver pick of a new channel for one type.
+export function countChannelChoice(channel: OutsideChannel) {
+  if (!CHOICE_CHANNELS.includes(channel)) return;
+  channelChoices().add(1, { channel });
+}
+
+// One message written on `to` because `from` could not be used.
+export function countChannelFallback(
+  from: SentChannel,
+  to: SentChannel,
+  reason: FallbackReason,
+) {
+  const known = FALLBACKS.some(
+    (f) => f.from === from && f.reason === reason && f.to === to,
+  );
+  if (!known) return;
+  channelFallbacks().add(1, { from, reason, to });
+}
+
 const each = <K extends string>(key: K, values: readonly string[]) =>
   values.map((value) => ({ [key]: value }) as Record<K, string>);
 
@@ -532,6 +626,9 @@ const STARTS: Record<
       ),
     ],
     [rechecks, each('result', RECHECK_RESULTS)],
+    // Only the failure starts at zero for its alert: the 150-series budget
+    // has no room for the other two, which appear with the first presence.
+    [presences, [{ outcome: 'store_unavailable' }]],
     [rejections, each('reason', VERIFICATION_REASON_CODES)],
     [decisionRefusals, each('reason', DECISION_REFUSAL_REASONS)],
     [reopenings, each('role', REOPENING_ROLES)],
@@ -602,6 +699,8 @@ const STARTS: Record<
       ),
     ],
     [documentCycle, each('step', WORKER_DOCUMENT_CYCLE_STEPS)],
+    [retentionRows, each('kind', RETENTION_KINDS)],
+    [channelFallbacks, FALLBACKS],
   ],
 };
 
@@ -611,6 +710,10 @@ export function initProductCounters(process: 'api' | 'worker') {
     const started = series();
     for (const one of labels) started.add(0, one);
   }
+}
+
+export function countRetention(kind: RetentionKind, rows: number) {
+  retentionRows().add(rows, { kind });
 }
 
 // A maintenance refusal is counted by motorfix_maintenance_refusals_total.

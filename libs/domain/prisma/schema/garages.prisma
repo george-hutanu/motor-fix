@@ -36,6 +36,8 @@ enum MobileLegalForm {
 
 model Garage {
   id                         String                                 @id @default(uuid()) @db.Uuid
+  // name, address, seatAddress and cityName: a trigger in the migration
+  // stores the comma letters ș ț for the cedilla ones ş ţ, whoever writes.
   name                       String
   slug                       String                                 @unique
   status                     GarageStatus                           @default(draft)
@@ -44,6 +46,8 @@ model Garage {
   // every valid re-check.
   lastCheckedOn              DateTime?                              @map("last_checked_on") @db.Date
   createdAt                  DateTime                               @default(now()) @map("created_at") @db.Timestamptz(3)
+  // When the garage closed; NULL while open. The closure story writes it; retention reads it.
+  closedAt                   DateTime?                              @map("closed_at") @db.Timestamptz(3)
   verificationFiles          VerificationFile[]
   rechecks                   Recheck[]
   reports                    GarageReport[]
@@ -212,7 +216,18 @@ model Mechanic {
   garageId            String    @map("garage_id") @db.Uuid
   accountId           String?   @unique @map("account_id") @db.Uuid
   name                String
+  // The specialties joined with ", ", kept for the readers of one line.
   speciality          String?
+  // The card's own fields, the owner's to write (migration CHECKs).
+  roleTitle           String?   @map("role_title")
+  specialties         String[]  @default([])
+  certifications      String[]  @default([])
+  years               Int?
+  // The garage's works_on brands the mechanic works on; no foreign key.
+  brandIds            String[]  @default([]) @map("brand_ids") @db.Uuid
+  // The garage owner's own row: never removed, created with the garage.
+  isOwner             Boolean   @default(false) @map("is_owner")
+  workingHours        Json?     @map("working_hours")
   onProfile           Boolean   @default(false) @map("on_profile")
   canMoveBookings     Boolean   @default(false) @map("can_move_bookings")
   canAnswerQuotes     Boolean   @default(false) @map("can_answer_quotes")

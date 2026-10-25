@@ -215,6 +215,7 @@ describe('a row whose quote the driver accepted', () => {
         mechanic: null,
         startsAt: '2026-10-10T06:00:00Z',
         status: 'awaiting_confirmation',
+        toReassign: false,
       },
       driver,
     });
@@ -298,6 +299,7 @@ const awaiting = () => {
       mechanic: null,
       startsAt: '2026-10-10T06:00:00Z',
       status: 'awaiting_confirmation',
+      toReassign: false,
     },
     driver: { phone: '+40722111222', shortName: 'Irina S.' },
   });
@@ -318,6 +320,7 @@ const booked = (
       lift: 2,
       mechanic: { id: 'mech-1', name: 'Ion Popescu' },
       status: 'confirmed',
+      toReassign: false,
       ...booking,
     },
     car: { ...base.car, plate: 'B123ABC' },
@@ -442,6 +445,32 @@ describe('a confirmed row', () => {
     expect(row.querySelector('.mechanic')).toBeNull();
     expect(row.querySelector('.lift')).toBeNull();
     expect(text(row.querySelector('.plate'))).toBe('B123ABC');
+  });
+});
+
+// @traces 056-FR-008
+describe('a confirmed row whose mechanic left the team', () => {
+  it('reads de realocat beside the mechanic', async () => {
+    const row = await render(booked({ toReassign: true }));
+
+    const booking = text(row.querySelector('.booking'));
+    expect(text(row.querySelector('.mechanic'))).toContain('Ion Popescu');
+    expect(booking).toMatch(/Ion Popescu.*de realocat/);
+  });
+
+  it('reads to reassign in English', async () => {
+    const row = await render(booked({ toReassign: true }), 'en');
+
+    expect(text(row.querySelector('.booking'))).toMatch(
+      /Ion Popescu.*to reassign/,
+    );
+  });
+
+  it('says nothing more while the mechanic is still on the team', async () => {
+    const row = await render(booked({ toReassign: false }));
+
+    expect(text(row)).not.toContain('de realocat');
+    expect(text(row.querySelector('.mechanic'))).toBe('Ion Popescu');
   });
 });
 

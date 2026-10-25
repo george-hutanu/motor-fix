@@ -66,6 +66,7 @@ async function render(url: string) {
         useValue: {
           current,
           ended: new Subject<void>(),
+          garageGone: () => false,
           reload,
           shown: current,
           signOut: jest.fn(),
@@ -151,6 +152,16 @@ describe('the frame following the garage’s team', () => {
     reload.mockClear();
 
     events.next(event('mechanic.updated'));
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 056-FR-006
+  it('reads the account again when a mechanic leaves the team, so a removed one loses its menu', async () => {
+    const { events, reload } = await render('/app/garage');
+    reload.mockClear();
+
+    events.next(event('mechanic.removed'));
 
     expect(reload).toHaveBeenCalledTimes(1);
   });

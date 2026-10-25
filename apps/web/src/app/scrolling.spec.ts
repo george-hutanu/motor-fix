@@ -102,7 +102,8 @@ describe('the router scrolling', () => {
     expect(scroller['scrollToPosition']).not.toHaveBeenCalled();
   });
 
-  it('leaves the back button to the browser, which returns to where the person was', async () => {
+  // @traces 1193-FR-003
+  it('returns the back button to where the person was on that page', async () => {
     await router.navigateByUrl('/app/driver/cars');
     await scrolled();
     scroller['scrollToPosition'].mockClear();
@@ -111,6 +112,16 @@ describe('the router scrolling', () => {
     await scrolled();
 
     expect(router.url).toBe('/app/driver');
-    expect(scroller['scrollToPosition']).not.toHaveBeenCalled();
+    expect(scroller['scrollToPosition']).toHaveBeenCalledTimes(1);
+    expect(scroller['scrollToPosition']).toHaveBeenCalledWith([0, 640], {
+      behavior: 'instant',
+    });
+  });
+
+  // @traces 1193-FR-003
+  it('takes the scroll restore from the browser, which would land before the page has drawn', () => {
+    expect(scroller['setHistoryScrollRestoration']).toHaveBeenCalledWith(
+      'manual',
+    );
   });
 });

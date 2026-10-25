@@ -1,9 +1,9 @@
 import { EventEmitter } from 'node:events';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { Logger } from '@nestjs/common';
 
 import { LiveHub } from './live.hub';
-import type { Role } from '../../auth/capabilities';
 import type { LiveSubject } from '../audience';
 import { audienceOf } from '../audience';
 import type { GarageAccess } from '../garage-access';
@@ -286,8 +286,6 @@ describe('what each garage role gets through the garage channel', () => {
     'member.removed',
     'mechanic.created',
     'mechanic.updated',
-    'garage.updated',
-    'review.posted',
     'invite.sent',
   ])('keeps %s from a receptionist', async (kind) => {
     const receptionist = staff('maria', 'receptionist');
@@ -304,6 +302,10 @@ describe('what each garage role gets through the garage channel', () => {
     'message.created',
     'job.updated',
     'media.added',
+    // @traces 102-FR-010
+    'garage.updated',
+    'review.posted',
+    'booking.moved',
   ])('gives a receptionist %s', async (kind) => {
     const receptionist = staff('maria', 'receptionist');
 

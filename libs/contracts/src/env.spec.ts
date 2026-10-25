@@ -3,6 +3,7 @@
 // @traces 430-FR-004 430-FR-007
 // @traces 1192-FR-008 1192-FR-011
 import {
+  brandLoadTimeoutMs,
   bunnyConfig,
   faroUrl,
   grafanaUrl,
@@ -140,6 +141,24 @@ describe('the send transaction timeout', () => {
     expect(() =>
       submitTimeoutMs({ LISTING_SUBMIT_TX_TIMEOUT_MS: value }),
     ).toThrow(/LISTING_SUBMIT_TX_TIMEOUT_MS/);
+  });
+});
+
+// @traces 105-FR-013
+describe('the brand load transaction timeout', () => {
+  it('is 60 seconds when the variable is not set', () => {
+    expect(brandLoadTimeoutMs({})).toBe(60_000);
+    expect(brandLoadTimeoutMs({ BRAND_LOAD_TIMEOUT_MS: '' })).toBe(60_000);
+  });
+
+  it('reads a positive whole number of milliseconds', () => {
+    expect(brandLoadTimeoutMs({ BRAND_LOAD_TIMEOUT_MS: '90000' })).toBe(90_000);
+  });
+
+  it.each(['0', '-5', '1.5', '60s', 'abc'])('refuses %s', (value) => {
+    expect(() => brandLoadTimeoutMs({ BRAND_LOAD_TIMEOUT_MS: value })).toThrow(
+      /BRAND_LOAD_TIMEOUT_MS/,
+    );
   });
 });
 

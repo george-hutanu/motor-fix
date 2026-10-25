@@ -2,7 +2,7 @@ import { hoursComplete, isHoursSection } from '@motor-fix/contracts';
 import { HttpStatus } from '@nestjs/common';
 
 import type { AuditPort } from '../../audit/audit.port';
-import { refusal } from '../../auth/sign-up.service';
+import { refusal } from '../../auth/http-refusal';
 import type { Prisma } from '../../generated/prisma/client';
 
 // Writes a garage's payment methods and courtesy car price from the listing's
