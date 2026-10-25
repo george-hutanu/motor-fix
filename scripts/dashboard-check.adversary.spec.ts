@@ -637,6 +637,8 @@ describe('the product dashboard', () => {
       'motorfix_document_cycle_total',
       'motorfix_quote_received_total',
       'motorfix_consent_records_total',
+      'motorfix_consent_refusals_total',
+      'motorfix_acceptances_total',
       'motorfix_verification_checks_total',
       'motorfix_verification_result_total',
       'motorfix_account_changes_total',
