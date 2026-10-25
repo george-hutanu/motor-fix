@@ -45,22 +45,26 @@ interface Tile {
 
 type Palette = (typeof PALETTES)[keyof typeof PALETTES];
 
-// Polygons in the order the styles paint them, ground first.
+// Polygons in the order the styles paint them, ground first; water running
+// in a tunnel is under the ground and not drawn.
 const FILLS: {
   layer: string;
-  colour: (p: Palette, cls: unknown) => string | null;
+  colour: (p: Palette, cls: unknown, brunnel?: unknown) => string | null;
 }[] = [
-  {
-    colour: (p, cls) => (cls === 'residential' ? p.residential : null),
-    layer: 'landuse',
-  },
   {
     colour: (p, cls) =>
       cls === 'wood' ? p.wood : cls === 'grass' ? p.grass : null,
     layer: 'landcover',
   },
+  {
+    colour: (p, cls) => (cls === 'residential' ? p.residential : null),
+    layer: 'landuse',
+  },
   { colour: (p) => p.park, layer: 'park' },
-  { colour: (p) => p.water, layer: 'water' },
+  {
+    colour: (p, _cls, brunnel) => (brunnel === 'tunnel' ? null : p.water),
+    layer: 'water',
+  },
 ];
 const ROAD_ORDER: RoadGroup[] = ['path', 'minor', 'major'];
 
@@ -291,7 +295,11 @@ function draw(view: StaticMapView, tiles: Tile[], frame: Frame): string {
     for (const [index, fill] of FILLS.entries()) {
       collect(tile, fill.layer, frame, fills[index], true, (feature) =>
         feature.type === 3
-          ? fill.colour(palette, feature.properties['class'])
+          ? fill.colour(
+              palette,
+              feature.properties['class'],
+              feature.properties['brunnel'],
+            )
           : null,
       );
     }

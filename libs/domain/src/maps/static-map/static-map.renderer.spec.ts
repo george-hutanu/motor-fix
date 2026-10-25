@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { type StaticMapView, unproject } from '@motor-fix/contracts/map-view';
+import { PbfWriter } from 'pbf';
 import sharp from 'sharp';
 
 import { PALETTES } from './static-map.palette';
@@ -34,6 +35,55 @@ const view = (theme: 'light' | 'dark', z = 14): StaticMapView => ({
   z,
 });
 const at = (tx: number, ty: number) => [64 + tx / 8, 64 + ty / 8] as const;
+
+// A tile of one water layer, each square [x0, y0, size] in tile units with
+// its `brunnel`, written as the provider writes them.
+function waterTile(
+  squares: { at: [number, number, number]; brunnel?: string }[],
+) {
+  const zigzag = (n: number) => (n << 1) ^ (n >> 31);
+  const pbf = new PbfWriter();
+  pbf.writeMessage(
+    3,
+    (_: unknown, layer: PbfWriter) => {
+      layer.writeVarintField(15, 2);
+      layer.writeStringField(1, 'water');
+      for (const { at, brunnel } of squares) {
+        layer.writeMessage(
+          2,
+          (__: unknown, feature: PbfWriter) => {
+            if (brunnel) feature.writePackedVarint(2, [0, 0]);
+            feature.writeVarintField(3, 3);
+            const [x, y, size] = at;
+            feature.writePackedVarint(4, [
+              9,
+              zigzag(x),
+              zigzag(y),
+              (3 << 3) | 2,
+              zigzag(size),
+              0,
+              0,
+              zigzag(size),
+              zigzag(-size),
+              0,
+              15,
+            ]);
+          },
+          null,
+        );
+      }
+      layer.writeStringField(3, 'brunnel');
+      layer.writeMessage(
+        4,
+        (__: unknown, value: PbfWriter) => value.writeStringField(1, 'tunnel'),
+        null,
+      );
+      layer.writeVarintField(5, 4096);
+    },
+    null,
+  );
+  return Buffer.from(pbf.finish());
+}
 
 type Answer = () => Promise<Response>;
 
@@ -92,6 +142,23 @@ describe('rendering a static map', () => {
     expectColour(await pixel(image, at(3584, 3600)), hex(PALETTES.light.minor));
     expectColour(
       await pixel(image, at(1024, 3500)),
+      hex(PALETTES.light.background),
+    );
+  });
+
+  it('leaves out water running in a tunnel', async () => {
+    const tile = waterTile([
+      { at: [512, 512, 1024] },
+      { at: [2560, 512, 1024], brunnel: 'tunnel' },
+    ]);
+    const { fetch } = provider(async () => new Response(tile));
+    const image = await new StaticMapRenderer(TILEJSON, { fetch }).render(
+      view('light'),
+    );
+
+    expectColour(await pixel(image, at(1024, 1024)), hex(PALETTES.light.water));
+    expectColour(
+      await pixel(image, at(3072, 1024)),
       hex(PALETTES.light.background),
     );
   });

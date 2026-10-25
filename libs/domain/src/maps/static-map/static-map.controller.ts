@@ -56,7 +56,7 @@ export class StaticMapAnswers implements NestInterceptor {
             refusal(
               HttpStatus.BAD_GATEWAY,
               'map_tiles_unavailable',
-              'The map tiles cannot be read right now',
+              'The map tiles did not answer',
             ),
           );
         }
