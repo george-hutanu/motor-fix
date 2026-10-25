@@ -278,7 +278,8 @@ function renderText(
   switch (channel) {
     case 'email': {
       const mail = text as EmailText;
-      const subject = fill(mail.subject);
+      // A subject is one line, whatever a filled-in name holds.
+      const subject = fill(mail.subject).replace(/[\r\n]+/g, ' ');
       // A line made of an optional value alone, such as a note, is left out
       // when that value is empty.
       const lines = mail.lines.map(fill).filter((line) => line !== '');
@@ -401,7 +402,7 @@ const ACCOUNT_PURPOSES = new Set([
   'account_suspended',
 ]);
 
-// A suspension with no support address set names none (FR-022).
+// A suspension with no support address set names none.
 function accountEmailName(params: Params): string {
   const purpose = params['purpose'];
   if (purpose === 'account_suspended' && typeof params['support'] !== 'string')

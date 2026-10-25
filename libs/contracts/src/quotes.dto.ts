@@ -640,6 +640,11 @@ export class CancelBookingDto {
   @IsOptional()
   @IsString()
   @Length(1, BOOKING_CANCEL_NOTE_MAX)
+  // Line breaks and tabs are text; any other control character is refused,
+  // NUL first, which PostgreSQL cannot store.
+  @Matches(/^(?:\P{Cc}|[\t\n\r])*$/u, {
+    message: 'note must not hold control characters',
+  })
   note?: string | null;
 }
 

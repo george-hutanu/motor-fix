@@ -37,6 +37,10 @@ interface Locked {
   jobId?: string;
 }
 
+// Inside the free-cancel cutoff a cancel is late: recorded, never penalised.
+const isLate = (booking: Locked, now: Date) =>
+  booking.startsAt.getTime() - now.getTime() < FREE_CANCEL_CUTOFF_HOURS * HOUR;
+
 // The driver cancels a booking that has not started, with a reason and maybe
 // a note. Inside the free-cancel cutoff it is marked late, never penalised.
 // The booking, its to-do job, its quote and the request move together, and
@@ -44,7 +48,6 @@ interface Locked {
 @Injectable()
 export class CancelBookingService {
   private readonly logger = new Logger('BookingCancel');
-  now = () => new Date();
 
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
@@ -58,13 +61,14 @@ export class CancelBookingService {
     body: CancelBookingDto,
   ): Promise<BookingDto> {
     requireCapability(actor, 'driver.requests');
-    let late = false;
+    let cancelled: Locked & { late: boolean };
     try {
-      late = await this.prisma.$transaction(async (tx) => {
-        const locked = await this.lock(tx, actor, bookingId);
-        const isLate = this.isLate(locked);
-        await this.store(tx, actor, bookingId, locked, body, isLate);
-        return isLate;
+      cancelled = await this.prisma.$transaction(async (tx) => {
+        const now = new Date();
+        const locked = await this.lock(tx, actor, bookingId, now);
+        const late = isLate(locked, now);
+        await this.store(tx, actor, bookingId, locked, body, late);
+        return { ...locked, late };
       });
     } catch (error) {
       if (error instanceof HttpException && error.getStatus() === 409) {
@@ -73,9 +77,10 @@ export class CancelBookingService {
       }
       throw error;
     }
+    const { garageId, late, requestId } = cancelled;
     recordCancellation('booking', 'cancelled', late);
     this.logger.log(
-      `booking ${bookingId}: cancelled by the driver (${body.reason}${late ? ', late' : ''})`,
+      `booking ${bookingId} (request ${requestId}, garage ${garageId}): cancelled by the driver (${body.reason}${late ? ', late' : ''})`,
     );
     const booking = await this.prisma.booking.findUniqueOrThrow({
       include: { garage: true },
@@ -86,7 +91,12 @@ export class CancelBookingService {
 
   // Locks the booking, then refuses one that is not the driver's, has
   // ended, has started or whose job is under way.
-  private async lock(tx: Tx, actor: Actor, bookingId: string): Promise<Locked> {
+  private async lock(
+    tx: Tx,
+    actor: Actor,
+    bookingId: string,
+    now: Date,
+  ): Promise<Locked> {
     const [booking] = await tx.$queryRaw<Locked[]>`
       SELECT driver_id AS "driverId", garage_id AS "garageId",
         mechanic_id AS "mechanicId", quote_id AS "quoteId",
@@ -102,19 +112,12 @@ export class CancelBookingService {
     });
     if (
       !LIVE.includes(booking.status) ||
-      booking.startsAt <= this.now() ||
+      booking.startsAt <= now ||
       (job && job.status !== 'to_do')
     ) {
       throw cancelRefused(actor, 'booking', booking.status);
     }
     return { ...booking, jobId: job?.id };
-  }
-
-  private isLate(booking: Locked) {
-    return (
-      booking.startsAt.getTime() - this.now().getTime() <
-      FREE_CANCEL_CUTOFF_HOURS * HOUR
-    );
   }
 
   private async store(
@@ -169,13 +172,10 @@ export class CancelBookingService {
       id: booking.quoteId,
       to: 'lost',
     });
-    // Another garage's quote still open sends the request back to choosing.
+    // Another garage's quote still waiting sends the request back to
+    // choosing; one past its validity is the expiry sweep's to close.
     const open = await tx.quote.count({
-      where: {
-        expiresAt: { gt: this.now() },
-        requestId: booking.requestId,
-        status: 'waiting',
-      },
+      where: { requestId: booking.requestId, status: 'waiting' },
     });
     await moveRequest(
       tx,

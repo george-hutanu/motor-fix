@@ -40,8 +40,11 @@ export class CancelRequestService {
 
   async cancel(actor: Actor, requestId: string): Promise<RequestDto> {
     requireCapability(actor, 'driver.requests');
+    let garageIds: string[];
     try {
-      await this.prisma.$transaction((tx) => this.store(tx, actor, requestId));
+      garageIds = await this.prisma.$transaction((tx) =>
+        this.store(tx, actor, requestId),
+      );
     } catch (error) {
       if (error instanceof HttpException && error.getStatus() === 409) {
         recordCancellation('request', 'refused', false);
@@ -50,7 +53,9 @@ export class CancelRequestService {
       throw error;
     }
     recordCancellation('request', 'cancelled', false);
-    this.logger.log(`request ${requestId}: cancelled by the driver`);
+    this.logger.log(
+      `request ${requestId}: cancelled by the driver, garages ${garageIds.join(', ') || 'none'} told`,
+    );
     return this.requests.get(actor, requestId);
   }
 
@@ -120,5 +125,6 @@ export class CancelRequestService {
       payload: { garageIds, reason: 'driver', requestId },
       subjectId: requestId,
     });
+    return garageIds;
   }
 }
