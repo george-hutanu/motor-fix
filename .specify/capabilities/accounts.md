@@ -55,6 +55,7 @@ features:
   - 1156-retention-job
   - 1204-terms-reaccept
   - 102-garage-members
+  - 423-mechanic-garage-dashboard
 ---
 
 # Capability: Accounts
@@ -1416,9 +1417,9 @@ _From 102-garage-members._
 
 _From 102-garage-members._
 
-### 102-FR-005 — Panou (`garage-home`) MUST decide each section by a capability of the table read from the session, never by a role string: the legal-check panel needs `garage.feature_switches`, the verified strip and its re-check line need `garage.profile`, the requests panel needs `garage.requests` (as its feed already does). A new section added by a later story declares its capability the same way; a mechanic without permissions sees no section but one status line, "Lucrările tale vor apărea aici." / "Your jobs will appear here." (proposed wording; no such text exists on `main`), until #208 builds the own-jobs sections.
+### 423-FR-001 — Panou (`/app/garage`) MUST show a person whose capabilities hold `garage.own_jobs` but neither `garage.profile` nor `garage.feature_switches` (a mechanic, with or without `can_answer_quotes`) an own-jobs section in place of the placeholder line of 102-FR-005: a list of the jobs the existing jobs read returns for them whose start falls on today's Bucharest day or that are `in_work` or `paused`, ordered by start time, each row carrying the start time (HH:MM), the car's brand and model, the plate when the read carries one, the job names and the stage label of Lucrări; a next-booking line with the start (day and HH:MM) and the car of the earliest own job starting after now, absent when there is none; and a load line, n counting the rows shown and m those whose stage is done, "{n} lucrări azi · {m} terminate" / "{n} jobs today · {m} done" with the Romanian count forms of the shared formatter. The section declares its capability as 102-FR-005 asks, never a role string; a mechanic with `can_answer_quotes` sees the requests panel above it, as today, and nobody sees figures, demand or reviews on it who does not today.
 
-_From 102-garage-members._
+_From 423-mechanic-garage-dashboard._
 
 ### 102-FR-006 — The views Recenzii and Profilul service-ului, now reachable by the receptionist, MUST show no "Răspunde" and no "Modifică profilul" to her: neither button exists on `main` today, and the story that adds one MUST gate it on an owner-only capability of the table, not on the view capability. The garage profile read (`GET /api/v1/garages/:garageId/profile`) MUST answer the receptionist as it answers the owner.
 
@@ -1439,6 +1440,30 @@ _From 102-garage-members._
 ### 102-FR-016 — When a call under the signed-in garage's own path answers 404, the garage dashboard MUST read the account again, once per such 404 and coalesced while a re-read is in flight, counting only calls under `/api/v1/garages/{garageId}/` of the signed-in garage; when `garageAccess` no longer holds that garage, the dashboard body MUST show "Nu mai ai acces la acest service" / "You no longer have access to this garage" with a link "Spre pagina principală" / "To the home page", and the garage menu MUST show no view. A 404 while the garage is still held changes nothing (a feature off, a resource that is gone).
 
 _From 102-garage-members._
+
+### 423-FR-003 — Panou MUST show, above the own-jobs section, a link "Foaia mea de zi" / "My day sheet" to the Programări view (`/app/garage/schedule`) when the garage's `day_sheets` switch is on and the person's capabilities hold `garage.schedule`; absent otherwise. The view itself stays ST-263's: until it ships, the link opens the view's coming text.
+
+_From 423-mechanic-garage-dashboard._
+
+### 423-FR-005 — The mechanic's menu and routes MUST keep coming from the capability table and the switches (102-FR-004): with no permission ticked the garage menu holds Panou, Lucrări, Istoric modificări and Setări, plus Programări when `day_sheets` is on; Cereri de ofertă appears with `can_answer_quotes`; Echipa, Prețuri, Recenzii and Profilul service-ului never; a typed address of a view she lacks lands on Panou; the Setări view shows a mechanic only her own device and notification choices (102-FR-013 holds).
+
+_From 423-mechanic-garage-dashboard._
+
+### 423-FR-006 — A permission change MUST reach an open dashboard within 5 seconds of the owner's save answer, without a reload: `mechanic.updated` re-reads the account, the menu, the tab bar and Panou's sections follow the new capabilities, and a view no longer allowed is left for Panou with "Nu mai ai acces la această secțiune." (102-FR-015 holds); the permissions are read from the mechanic card on every call, never from the sign-in token, so the server enforces the change on the next call.
+
+_From 423-mechanic-garage-dashboard._
+
+### 423-FR-010 — Tests MUST prove that `allowedViews` yields the menu of FR-005 for each permission on and off, and that the web's job lists re-read on `job.mechanic_changed` (FR-002); the Playwright suite MUST add, on a phone viewport, a mechanic who signs in, sees only her job on Panou, opens it and ticks a step, while `can_answer_quotes` is saved as the owner's save writes it (the mechanic's column and its `mechanic.updated` event in one transaction) and Cereri de ofertă appears for her without a reload, then goes when it is unticked. The odometer reading at reception and the owner's permission screen are not built yet (ST-276 #163 and ST-399 #202, both open); each brings its own end-to-end step with it (decision taken for the owner on 2026-10-25, see Clarifications). The landing per role and the role used last are ST-1381's tests.
+
+_From 423-mechanic-garage-dashboard._
+
+### 423-FR-011 — The mechanic's Panou MUST be phone-first: readable at 320 px and 390 px, a tablet and a desktop, light and dark, Romanian and English, with no sideways scroll at 320 px and no text under 12 px; its texts MUST be in the garage translation files in both languages.
+
+_From 423-mechanic-garage-dashboard._
+
+### 423-FR-012 — This story MUST write nothing on the server beyond FR-004, add no endpoint, no event emitter and no audit entry (reading the dashboard is not recorded); the own-jobs section is built from the existing jobs read, and `job.mechanic_changed` keeps its emitter with the story that lets an owner reassign a job.
+
+_From 423-mechanic-garage-dashboard._
 
 ## Retired
 
@@ -1488,3 +1513,4 @@ _From 102-garage-members._
 - `079-FR-010` — superseded by `102-FR-002` (2026-10-25)
 - `079-FR-013` — superseded by `102-FR-007` (2026-10-25)
 - `130-FR-003` — superseded by `102-FR-007` (2026-10-25)
+- `102-FR-005` — superseded by `423-FR-001` (2026-10-25)

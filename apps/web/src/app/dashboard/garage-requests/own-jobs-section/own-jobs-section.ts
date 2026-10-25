@@ -20,10 +20,10 @@ import {
 import { liveResource } from '../../live';
 
 // A mechanic's own jobs on Panou: today's, and those still in work from an
-// earlier day, by start; the next booking and the day's load above them, and
-// whatever the page puts in it (her day-sheet link) above all. The
-// list API already narrows a mechanic to her own jobs. A row opens the job's
-// steps as Lucrări does; a booking confirmed, moved or cancelled re-reads.
+// earlier day, by start, cancelled ones aside; the next booking and the day's
+// load above them. The list API already narrows a mechanic to her own jobs. A
+// row opens the job's steps as Lucrări does; a booking confirmed, moved or
+// cancelled re-reads.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
