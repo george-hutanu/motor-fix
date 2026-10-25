@@ -69,9 +69,19 @@ export class DashboardTabBar {
     });
   }
 
-  // Once the tab is marked current; `nearest` keeps the page itself still.
-  // `scrollIntoView` is absent on the server and in jsdom.
+  // Once the tab is marked current, the bar scrolls sideways just enough to
+  // show it. Not `scrollIntoView`: in Chrome it also moves where Tab starts
+  // from, so the first Tab skipped the skip link for the next dashboard tab.
   protected reveal(tab: HTMLElement) {
-    tab.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    const nav = tab.closest('nav');
+    if (!nav) return;
+    const box = tab.getBoundingClientRect();
+    const view = nav.getBoundingClientRect();
+    // Whole pixels, rounded away from the tab: a phone's fractional widths
+    // would otherwise leave a sliver of it out of sight.
+    if (box.left < view.left) nav.scrollLeft -= Math.ceil(view.left - box.left);
+    else if (box.right > view.right) {
+      nav.scrollLeft += Math.ceil(box.right - view.right);
+    }
   }
 }
