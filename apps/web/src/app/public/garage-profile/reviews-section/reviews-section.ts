@@ -148,7 +148,7 @@ export class ReviewsSection implements OnInit {
       edited: review.editedAt && formatDay(review.editedAt, language),
       id: review.id,
       month: formatShortMonthYear(review.postedAt, language),
-      price: profile ? '' : this.price(review),
+      price: profile ? '' : this.price(review, language),
       score: this.i18n.t(`${SECTION}.score`, {
         rating: formatRating(review.rating, language),
       }),
@@ -159,8 +159,7 @@ export class ReviewsSection implements OnInit {
   // "Ofertă … · Final … · Plătit, după șofer: …": each part whose amount the
   // read carries; the driver's amount only when it says something the final
   // price does not. No part, no line.
-  private price(review: GarageReviewDto): string {
-    const language = this.i18n.language();
+  private price(review: GarageReviewDto, language: Language): string {
     const part = (key: string, amount: string) =>
       this.i18n.t(`${SECTION}.price.${key}`, { amount });
     const { finalPriceBani: final, paidBani: paid, quote } = review;
