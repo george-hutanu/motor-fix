@@ -115,6 +115,19 @@ export class AccountDeletionService {
         ),
       );
     }
+    const inWork = await this.prisma.job.count({
+      where: { driverId: accountId, status: { in: ['in_work', 'paused'] } },
+    });
+    if (inWork > 0) {
+      throw this.refused(
+        'refused_in_work',
+        refusal(
+          HttpStatus.CONFLICT,
+          'car_in_work',
+          'Collect the car from the garage before deleting the account',
+        ),
+      );
+    }
     await this.recentSignIn(token, accountId);
     if (!matches(body.confirmation, account)) {
       throw this.refused(
