@@ -22,9 +22,10 @@ features:
   - 1192-photo-variants
   - 308-profile-details
   - 025-review-mechanic
+  - 024-garage-reviews
   - 133-garage-public-profile
-  - 136-legal-check-panel
   - 309-open-now-directions
+  - 136-legal-check-panel
 ---
 
 # Capability: Garage profile
@@ -536,6 +537,37 @@ _From 308-profile-details._
 
 _From 308-profile-details._
 
+### 024-FR-001 — The public garage profile MUST show a "Ce spun șoferii" / "What drivers say" section in the page's `reviews` slot (after the prices, in the main column from 1024 px, 311-FR-009), visible to everyone, signed in or not, with the same content for both.
+
+_From 024-garage-reviews._
+
+### 024-FR-002 — The section MUST show the garage's rating with one decimal in the language's separator ("4,9" / "4.9", 019-FR-003), its review count ("212 recenzii" / "212 reviews", with the singular for 1), and the breakdown: for each star value from five to one, its label ("5 stele" … "2 stele", "1 stea" / "5 stars" … "1 star") and the number of published reviews with that rating. A garage with no published review shows "—" for the rating, "Încă nu are recenzii." / "No reviews yet." and no breakdown rows.
+
+_From 024-garage-reviews._
+
+### 024-FR-003 — The rating and the count MUST be the garage's stored figures (written by the ratings job, 025-FR-006); the breakdown MUST be counted from the garage's `published` reviews on each read, in the same answer as the list, so the five counts add up to that answer's `total`. The empty state shows when `total` is 0; the rating shows "—" when the stored rating is null; the count line shows the stored count.
+
+_From 024-garage-reviews._
+
+### 024-FR-011 — The open profile MUST re-read the section (its first page, dropping the extra pages) when any `review.*` or `rating.*` message for its garage arrives on the `public:garage:{garageId}` stream it already joins (307-FR-017), and after the stream reopens (256-FR-002), with no polling of its own; the re-read swaps the content in place, keeps the scroll position (307-FR-018) and is silent for assistive technology (a re-read that starts while a "Vezi mai multe" page is loading replaces it: the last answer to arrive for the newest request wins), except that the rating's in-place change is announced politely as the header's dial already is (307-FR-016).
+
+_From 024-garage-reviews._
+
+### 024-FR-012 — While the section has no answer yet (a client-side navigation to the profile) it MUST show a skeleton hidden from assistive technology, never over content already shown; when the read fails (network or 5xx) it MUST show "Nu am putut încărca recenziile" / "We could not load the reviews" with "Încearcă din nou" / "Try again", which reads again (also when the server-side first read failed); a failed re-read keeps the last shown content; a failed "Vezi mai multe" keeps the loaded pages and shows the error line with "Încearcă din nou" in the button's place.
+
+_From 024-garage-reviews._
+
+### 024-FR-013 — The section MUST render at 320 px and 390 px, tablet and desktop, light and dark, Romanian and English with no sideways scroll; "Vezi mai multe" and "Încearcă din nou" are reachable by keyboard with a visible focus and a touch target of at least 44 px under 640 px; the breakdown is readable as text, never colour alone (307-FR-016).
+
+_From 024-garage-reviews._
+
+### 024-FR-014 — The section MUST be a web component of its own folder under the garage profile, rendered on the server with the profile's first page as the rest of the page is, and MUST join no stream of its own.
+
+_From 024-garage-reviews._
+
+### 024-FR-015 — The mock's "Scrie o recenzie" button MUST NOT be added by this story (removed while `reviews_only_after_confirmed_job` is on; ST-22's button covers the off case).
+
+_From 024-garage-reviews._
 ### 309-FR-001 — The status rule MUST be one pure, browser-safe function in the shared contracts library (beside the hours types; no server-framework, validator or database import), taking the garage's weekly hours, the list of closed days ahead (each a Bucharest date with its reason, `holiday` or `closed`) and the instant "now", and answering one of: no line; open until a time of today; on a break until a time of today; closed, with the reason for today (`hours`, `holiday` or `closed`) and the next opening (the day's offset from today, 0 to 14, and its start time), or closed with no opening in the window. It MUST be usable unchanged by #210's "open now" filter (decided in #864).
 
 _From 309-open-now-directions._

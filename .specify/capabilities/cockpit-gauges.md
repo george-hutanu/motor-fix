@@ -5,6 +5,7 @@ features:
   - 051-cockpit-gauges
   - 053-motion
   - 466-odometer-digit-wrap
+  - 453-odometer-captions
   - 451-gauges-axe
 ---
 
@@ -82,6 +83,21 @@ _From 466-odometer-digit-wrap._
 
 _From 466-odometer-digit-wrap._
 
+### 453-FR-001 — The gauges catalogue MUST show a caption with each of its three odometer samples, naming what the sample shows: one price, a price range, no price.
+
+_From 453-odometer-captions._
+
+### 453-FR-002 — Each caption MUST be bound to its own sample (the sample and its caption form one figure), so it is read with that sample and not with its neighbour.
+
+_From 453-odometer-captions._
+
+### 453-FR-003 — The captions MUST come from the cockpit catalogue's Romanian and English text files through the existing translation pipe, with the same keys in both languages.
+
+_From 453-odometer-captions._
+
+### 453-FR-004 — At 320 px and 390 px wide, in light and dark, the page MUST NOT scroll sideways and every odometer sample with its caption MUST sit inside the gauges panel, unclipped.
+
+_From 453-odometer-captions._
 ### 451-FR-001 — The end-to-end suite MUST include a scan of the gauges catalogue page (`/cockpit`) that runs the suite's one shared accessibility-scanner helper over the whole page and fails when the scanner reports any violation.
 
 _From 451-gauges-axe._

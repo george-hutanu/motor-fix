@@ -107,7 +107,7 @@
       <section data-slot="brands" mf-details-section [garage]="garage"></section>
       <section data-slot="mechanics"></section>
       <section data-slot="prices" mf-prices-section [garage]="garage"></section>
-      <section data-slot="reviews"></section>
+      <section data-slot="reviews" mf-reviews-section [garageId]="garage.id"></section>
     </div>
     <div class="side">
       @if (garage.prices.length) {

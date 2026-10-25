@@ -4135,6 +4135,58 @@
         ]
       }
     },
+    "/api/v1/reviews/garage/{garageId}": {
+      "get": {
+        "operationId": "ReviewsController_forGarage",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageReviewsPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id, or a page not a whole number from 1"
+          },
+          "404": {
+            "description": "not_found: no such garage, or one not shown to visitors"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A garage’s published reviews, 20 a page, with its rating, count and breakdown",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/api/v1/reviews/job/{jobId}": {
       "get": {
         "operationId": "ReviewsController_forJob",
@@ -14435,6 +14487,132 @@
           }
         },
         "required": [
+          "page",
+          "pageSize",
+          "total",
+          "items"
+        ]
+      },
+      "RatingBreakdownDto": {
+        "type": "object",
+        "properties": {
+          "five": {
+            "type": "number"
+          },
+          "four": {
+            "type": "number"
+          },
+          "three": {
+            "type": "number"
+          },
+          "two": {
+            "type": "number"
+          },
+          "one": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "five",
+          "four",
+          "three",
+          "two",
+          "one"
+        ]
+      },
+      "GarageReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "job",
+              "profile"
+            ]
+          },
+          "rating": {
+            "type": "number",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DriverNameDto"
+          },
+          "car": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CarSnapshotDto"
+              }
+            ]
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "rating",
+          "text",
+          "postedAt",
+          "author",
+          "car",
+          "jobs"
+        ]
+      },
+      "GarageReviewsPageDto": {
+        "type": "object",
+        "properties": {
+          "rating": {
+            "type": "number",
+            "description": "The garage's stored rating",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number",
+            "description": "The garage's stored review count"
+          },
+          "breakdown": {
+            "$ref": "#/components/schemas/RatingBreakdownDto"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number",
+            "description": "Published reviews; the breakdown sums to it"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageReviewDto"
+            }
+          }
+        },
+        "required": [
+          "rating",
+          "reviewCount",
+          "breakdown",
           "page",
           "pageSize",
           "total",

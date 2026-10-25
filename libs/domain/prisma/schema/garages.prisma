@@ -36,6 +36,8 @@ enum MobileLegalForm {
 
 model Garage {
   id                         String                                 @id @default(uuid()) @db.Uuid
+  // name, address, seatAddress and cityName: a trigger in the migration
+  // stores the comma letters ș ț for the cedilla ones ş ţ, whoever writes.
   name                       String
   slug                       String                                 @unique
   status                     GarageStatus                           @default(draft)
