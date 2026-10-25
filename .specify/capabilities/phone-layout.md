@@ -21,6 +21,7 @@ features:
   - 208-resubmit-after-more
   - 1351-results-phone-layout
   - 531-garage-feature-tabs
+  - 1380-dashboard-tab-bar-e2e
 ---
 
 # Capability: Phone layout and installable web app
@@ -141,9 +142,9 @@ _From 288-dashboard-tab-bar._
 
 _From 288-dashboard-tab-bar._
 
-### 288-FR-006 — The open view's tab and menu entry MUST be marked as the current page (`aria-current="page"`, amber), and the active tab MUST be scrolled into sight in the bar.
+### 1380-FR-005 — The open view's tab and menu entry MUST be marked as the current page (`aria-current="page"`, amber), and the active tab MUST be scrolled into sight in the bar when the view opens and again whenever the bar's width changes (a phone turned sideways and back).
 
-_From 288-dashboard-tab-bar._
+_From 1380-dashboard-tab-bar-e2e._
 
 ### 288-FR-007 — When the tabs do not fit, the bar MUST scroll sideways on its own; the page MUST never scroll sideways at 320 px.
 
@@ -329,3 +330,4 @@ _From 208-resubmit-after-more._
 - `097-FR-008` — superseded by `101-FR-001` (2026-10-21)
 - `228-FR-001` — superseded by `1351-FR-005` (2026-10-23)
 - `288-FR-001` — superseded by `531-FR-001` (2026-10-24)
+- `288-FR-006` — superseded by `1380-FR-005` (2026-10-24)
