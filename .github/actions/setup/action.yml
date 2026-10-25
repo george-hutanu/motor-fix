@@ -1,5 +1,13 @@
 name: Setup
-description: Node from .nvmrc with the npm cache, then npm ci (which also generates the Prisma client).
+description: >-
+  Node from .nvmrc with the npm cache, then npm ci without install scripts,
+  the Prisma client generated and sharp rebuilt explicitly.
+inputs:
+  sharp:
+    description: >-
+      'false' skips the sharp rebuild, for a job that never loads
+      photo-processing (CI's Checks).
+    default: 'true'
 runs:
   using: composite
   steps:
@@ -7,5 +15,13 @@ runs:
       with:
         node-version-file: .nvmrc
         cache: npm
-    - run: npm ci
+    # No package's install script runs on the runner. What the jobs need from
+    # them is run by name: the Prisma client, and sharp, which the unit,
+    # integration and E2E suites and the restore drill load.
+    - run: |
+        npm ci --ignore-scripts
+        npx prisma generate --config libs/domain/prisma.config.ts
+      shell: bash
+    - if: inputs.sharp != 'false'
+      run: npm rebuild sharp
       shell: bash

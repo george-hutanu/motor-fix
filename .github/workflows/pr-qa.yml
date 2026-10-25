@@ -183,7 +183,11 @@ jobs:
 
       - name: Install
         working-directory: pr
-        run: npm ci
+        # No install scripts; the booted api loads sharp, rebuilt explicitly.
+        run: |
+          npm ci --ignore-scripts
+          npx prisma generate --config libs/domain/prisma.config.ts
+          npm rebuild sharp
 
       - id: playwright
         working-directory: pr
