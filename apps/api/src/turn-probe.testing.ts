@@ -13,8 +13,7 @@ export async function expectTurnFree(databaseUrl: string) {
     leaked,
   ]);
   clearTimeout(timer);
-  // A take still waiting on the lock would hold the disconnect forever.
-  if (outcome === 'free') await probe.release();
-  else void probe.release();
+  // A take still asking for the turn stops once released.
+  await probe.release();
   expect(outcome).toBe('free');
 }

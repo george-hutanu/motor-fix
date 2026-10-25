@@ -7,9 +7,9 @@ import {
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 
+import { refusal } from '../../../auth/http-refusal';
 import type { Actor } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
-import { refusal } from '../../../auth/sign-up.service';
 import type { PrismaClient } from '../../../generated/prisma/client';
 
 const notFound = () =>

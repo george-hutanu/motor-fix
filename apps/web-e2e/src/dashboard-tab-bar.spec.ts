@@ -229,7 +229,9 @@ test.describe('the bar on the smallest phones', () => {
     }) => {
       await signInAs(page, 'garage', '/app/garage', OWNER);
       await page.setViewportSize({ height: 640, width });
-      await open(page, '/app/garage/profile');
+      // Istoric, the last tab: a view that reads nothing of a garage this
+      // stubbed session lacks (Profil leaves for the dashboard without one).
+      await open(page, '/app/garage/history');
       const bar = page.getByRole('navigation', { name: 'Panou service' });
 
       expect(await sideways(page)).toBeLessThanOrEqual(width);
@@ -253,7 +255,7 @@ test.describe('the bar on the smallest phones', () => {
       }));
       expect(scroller.scroll).toBeGreaterThan(scroller.client);
       await expect(
-        bar.getByRole('link', { exact: true, name: 'Profil' }),
+        bar.getByRole('link', { exact: true, name: 'Istoric' }),
       ).toBeInViewport();
     });
   }

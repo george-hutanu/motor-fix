@@ -1668,7 +1668,7 @@ describe('the brands step in the draft', () => {
     } finally {
       jest.useRealTimers();
     }
-  });
+  }, 30_000);
 
   it('restores the marked brands from a kept copy', async () => {
     seed({

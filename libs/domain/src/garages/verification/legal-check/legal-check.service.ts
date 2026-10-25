@@ -1,9 +1,9 @@
 import { type LegalCheckDto, legalCheckRows } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
+import { refusal } from '../../../auth/http-refusal';
 import type { Actor } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
-import { refusal } from '../../../auth/sign-up.service';
 import { localDay } from '../../../bucharest';
 import type { PrismaClient } from '../../../generated/prisma/client';
 import { DocumentCycleService } from '../../documents/document-cycle/document-cycle.service';

@@ -7,6 +7,7 @@ import {
   signAccessToken,
   VerificationService,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import { type INestApplication, Logger } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
@@ -105,7 +106,7 @@ beforeAll(async () => {
       process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres',
   });
   await db.connect();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 beforeEach(async () => {
   adminId = await account('admin', 'Ioana Popa');

@@ -175,7 +175,8 @@ export function dataExportWorld(prisma: PrismaClient) {
   async function twoDrivers() {
     const garage = await world.garage('Atelier Dinamo');
     await prisma.garage.update({
-      data: { cityName: 'Cluj-Napoca' },
+      // A city is its key and its name together (garage_city_both).
+      data: { cityKey: 'cluj-napoca', cityName: 'Cluj-Napoca' },
       where: { id: garage.id },
     });
     const mechanic = await prisma.mechanic.create({

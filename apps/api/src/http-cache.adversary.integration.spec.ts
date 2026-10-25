@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { PRISMA } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
@@ -23,7 +24,7 @@ beforeAll(async () => {
       status: 'approved',
     },
   });
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(() => api.stop());
 

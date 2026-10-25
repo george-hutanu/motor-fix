@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 187,
+    "count": 190,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -198,6 +198,19 @@
       "story": "ST-297"
     },
     {
+      "kind": "queue",
+      "name": "retention",
+      "source": "libs/domain/src/retention/retention.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "the nightly retention job: one scheduler, retention-nightly, at 04:00 Europe/Bucharest deletes expired sign-in, phone-change, account and refresh tokens and sent invites, notifications past 12 months and legal documents (with their page files) of garages closed 5 years, and anonymises audit entries past their owner's closure; counted by motorfix_jobs_total{job_name,outcome}, one log line per kind with its count and one with the run's duration, a failed sweep failing the job (3 tries) and worker-jobs-failed on the last; worker-jobs-failed (reason overdue) fires when no run completed in 48 hours",
+      "story": "ST-1156"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_rate_limit_refusals_total",
       "source": "libs/domain/src/rate-limit/rate-limit.metrics.ts",
@@ -377,6 +390,19 @@
       ],
       "reason": "one CATALOGUE_JOB_DECIDED to the proposing garage's owner for each catalogue_job.decided event, keyed by the event id; one log line per event with the job id, the decision and how many owners were told, never the reason; no counter of its own, as its pending twin has none: the notifications table holds what was built; the job runs in the worker's queue span; BullMQ's queue metrics on motorfix-queues cover depth, and the shared backlog and failed-job rules alert on a job that fails for good",
       "story": "ST-414"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-brands",
+      "source": "libs/domain/src/catalogue/brands/admin-brands.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/brands and /api/v1/admin/brands/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's brand list with its counts, the add and the edit (rename, retire, bring back), written to PostgreSQL with their audit entries in one transaction, then the cached active list dropped by bumping brands:version; one Brands log line per write naming the brand id and the admin's account id, never the name; a failed cache drop is a warning line; a 409 brand_exists or stale_value is the rule working; the API error-rate and latency rules cover the routes; no outside call",
+      "story": "ST-105"
     },
     {
       "kind": "queue",
@@ -2178,6 +2204,17 @@
       "alerts": "none",
       "reason": "counts each step of the yearly document cycle (reminders, overdue, uploads, acceptances, refusals); a count has no failure to alert on; the api-error-rate and worker-jobs-failed rules cover the services that report it",
       "story": "ST-68"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_retention_rows_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-worker",
+      "alerts": [
+        "worker-jobs-failed"
+      ],
+      "reason": "counts the rows each nightly retention run removed or anonymised, by kind (eight fixed kinds, started at 0 in the worker); panel Retention rows per night; a failed run and a run that has not completed in 48 hours are both worker-jobs-failed's (reason failed or overdue)",
+      "story": "ST-1156"
     },
     {
       "kind": "product-counter",

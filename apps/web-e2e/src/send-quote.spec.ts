@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { PASSWORD, ready, signIn } from './accounts.js';
+import { bucharestDay } from './bucharest-day.js';
 import { test } from './fixtures.js';
 import { type OwnDriver, ownDriver } from './own-driver.js';
 import { keepSeededLanguage } from './seeded-language.js';
@@ -48,10 +49,7 @@ async function sendRequest(request: APIRequestContext, own: OwnDriver) {
 // Tomorrow's date in Bucharest, as a date field takes it, and an instant's
 // Bucharest wall time.
 const BUCHAREST = { timeZone: 'Europe/Bucharest' } as const;
-const tomorrow = () =>
-  new Intl.DateTimeFormat('en-CA', BUCHAREST).format(
-    new Date(Date.now() + 24 * 60 * 60 * 1000),
-  );
+const tomorrow = () => bucharestDay(1);
 const wallTime = (instant: string) =>
   new Intl.DateTimeFormat('sv-SE', {
     ...BUCHAREST,

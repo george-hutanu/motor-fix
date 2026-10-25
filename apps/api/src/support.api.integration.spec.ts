@@ -7,6 +7,7 @@ import {
   type Maintenance,
   signAccessToken,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Redis } from 'ioredis';
@@ -83,7 +84,7 @@ beforeAll(async () => {
   const keys = await redis.keys('support:*');
   if (keys.length > 0) await redis.del(...keys);
   await redis.quit();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 beforeEach(() => db.query('TRUNCATE support_message, support_reference'));
 

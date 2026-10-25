@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { ready, signIn } from './accounts.js';
+import { bucharestDay } from './bucharest-day.js';
 import { test } from './fixtures.js';
 import { type OwnDriver, ownDriver } from './own-driver.js';
 import { accessToken, bearer } from './quoted-request.js';
@@ -41,10 +42,7 @@ const BUCHAREST = { timeZone: 'Europe/Bucharest' } as const;
 const DAY = 24 * 60 * 60 * 1000;
 const day = (at: Date) =>
   new Intl.DateTimeFormat('en-CA', BUCHAREST).format(at);
-const tomorrow = () =>
-  new Intl.DateTimeFormat('en-CA', BUCHAREST).format(
-    new Date(Date.now() + 24 * 60 * 60 * 1000),
-  );
+const tomorrow = () => bucharestDay(1);
 
 async function signedIn(page: Page) {
   await keepSeededLanguage(page);
