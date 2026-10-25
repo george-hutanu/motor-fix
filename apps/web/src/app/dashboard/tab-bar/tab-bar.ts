@@ -10,11 +10,14 @@ import {
 } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@motor-fix/i18n';
+import { OpenSheets } from '@motor-fix/overlays';
 
 import type { Counts, DashboardView } from '../views';
 
 // The dashboards' menu on a phone; from 768 px the side menu takes over.
 @Component({
+  // Under a bottom sheet the bar keeps its space but is not seen or reached.
+  host: { '[style.visibility]': "sheetOpen() ? 'hidden' : null" },
   imports: [RouterLink, RouterLinkActive, TranslatePipe],
   selector: 'mf-dashboard-tab-bar',
   styleUrl: './tab-bar.css',
@@ -32,6 +35,7 @@ export class DashboardTabBar {
   readonly act = output<DashboardView>();
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  protected readonly sheetOpen = inject(OpenSheets).any;
 
   constructor() {
     const destroyRef = inject(DestroyRef);

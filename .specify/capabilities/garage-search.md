@@ -24,8 +24,9 @@ features:
   - 330-listed-facilities
   - 1351-results-phone-layout
   - 067-restore-suspended-garage
-  - 1193-fast-nav
+  - 1196-static-map-first
   - 385-share-garage-link
+  - 1193-fast-nav
 ---
 
 # Capability: Garage search
@@ -222,17 +223,17 @@ _From 269-map-price-pins._
 
 _From 1358-results-phone-map-list._
 
-### 269-FR-011 — The map MUST use the tile styles and the dark-scheme choice of the place-step map (A17's provider, openfreemap `liberty` and `dark`), honouring the same test override that points it at the app's empty style, so the neighbourhood names come from the style and no test fetches a tile from outside.
+### 1196-FR-016 — Once open, the interactive map MUST behave as today: pin taps and the small card (270-FR-004, 270-FR-010, 1358-FR-007), re-search on move (269-FR-007), the legend and the hints (269-FR-009, 269-FR-015, 1351-FR-001), live re-reads (269-FR-018), the style failure line (269-FR-017, 1358-FR-010), and the `__MF_MAP_STYLE` test override (269-FR-011); no existing Results test is weakened.
 
-_From 269-map-price-pins._
+_From 1196-static-map-first._
 
-### 269-FR-012 — On load, and on "Înapoi la 25 km", the map MUST fit the bounds of the place and every fixed pin (with padding, at most zoom 15, so one pin does not fill the screen); mobile circles do not widen the fit; with no place and no pin it shows Romania whole. The move is instant (never animated), so reduced motion needs nothing more.
+### 1196-FR-011 — The static view MUST be the one the interactive map's first fit reaches (269-FR-012): the bounds of the place and every fixed pin, padding 40 px, at most zoom 15, the phone's covered bands (`covered`, `coveredTop`, 1358-FR-003's sheet and summary) added to the padding as today, computed for the bucket size, zoom rounded down to the integer the image service takes, the centre snapped as FR-002 does, and Romania whole (`START`, its zoom rounded down) with no place and no pin; the same pure function MUST compute the view for the static image and the interactive map's first position (`jumpTo`), so the two never disagree.
 
-_From 269-map-price-pins._
+_From 1196-static-map-first._
 
-### 269-FR-013 — Each fixed garage MUST be one pin labelled with its `rateLei` (no label when null) and coloured with the lamp colours of `libs/ui-cockpit` (green for `works_on`, red for `does_not_take` and `unstated`); when the pins answer holds more than 50 fixed pins, pins MUST merge into clusters showing their count (MapLibre's GeoJSON clustering), and a cluster MUST split when zoomed into.
+### 1196-FR-012 — Over the static image the browser MUST draw, from the pins answer and the snapped centre (FR-002), by Web Mercator maths with no map library: one pin per fixed garage with its `rateLei` label and its lamp colour (269-FR-013), above 50 fixed pins, counted circles from a simple screen grid of its own (not MapLibre's clusters), one circle per mobile mechanic of its `serviceRadiusKm` with its rate label (269-FR-014), the lit pin or circle in amber (270-FR-008), a rate that would cover another's giving way with its dot kept (the lit one placed first, as MapLibre lets no two labels overlap), and the "you are here" marker at the place (271-FR-004, pulsing unless reduced motion); every element is hidden from assistive technology and out of the keyboard order (269-FR-016).
 
-_From 269-map-price-pins._
+_From 1196-static-map-first._
 
 ### 269-FR-014 — Each mobile mechanic MUST be one light circle of its `serviceRadiusKm` around its centre, drawn under the pins, with a small label of its `rateLei` inside and no centre marker, no pin and no address.
 
@@ -628,6 +629,78 @@ _From 1351-results-phone-layout._
 
 _From 1351-results-phone-layout._
 
+### 1196-FR-001 — The API MUST answer `GET /api/v1/maps/static` without a session (`@Public()`, on the public-routes list of `apps/api/src/public-routes.integration.spec.ts`) with a WebP image of a map view given by `theme` (`light` | `dark`), `z` (an integer zoom from 5 to 16), `lat`, `lng` (a centre inside Romania's bounding box, the one shared in `libs/contracts`), `w` and `h` (pixels, each from the size buckets of FR-003); anything else answers 400 `validation_failed` with the field named.
+
+_From 1196-static-map-first._
+
+### 1196-FR-002 — The centre MUST be snapped to a grid before rendering: at zoom `z` the centre is moved to the nearest point of a grid whose step is 1/8 of the image's width in map units at that zoom (so two searches a few hundred metres apart at a city zoom share one image), and the answer carries the snapped centre in headers `X-Map-Lat` and `X-Map-Lng`; the page draws its overlay from the snapped centre, never from the one it asked for.
+
+_From 1196-static-map-first._
+
+### 1196-FR-003 — `w` and `h` MUST each be one of the size buckets `320, 390, 480, 640, 768, 1024, 1280` and the pair MUST be at most `1280 × 1024`; a page asks for the smallest bucket at or above its map box in each direction and draws the image at the bucket size, cropped centred by the box at its own pixel size (`object-fit: none`, never scaled or stretched), keeping the centre and the zoom.
+
+_From 1196-static-map-first._
+
+### 1196-FR-004 — The image MUST be rendered on the server from A17's provider's vector tiles (OpenFreeMap's `openmaptiles` source, the one behind the `liberty` and `dark` styles the interactive map uses; its tile URL read from the provider's TileJSON and kept in process for one hour), decoded and drawn as a simplified picture: water, land cover and parks, land use, roads in three width groups (major, minor, path), in the `liberty` palette for `light` and the `dark` palette for `dark`, with no labels and no icons; no tile is stored or served by MotorFix (OD-31).
+
+_From 1196-static-map-first._
+
+### 1196-FR-005 — The answer MUST carry `Content-Type: image/webp`, `Cache-Control: public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800, stale-if-error=604800` and `Vary` on nothing (the theme is a query parameter), so the CDN and the browser keep one copy per view; the render time is measured once and recorded in the PR, the enforced bound being FR-006's timeout.
+
+_From 1196-static-map-first._
+
+### 1196-FR-006 — When the provider answers an error, times out (2 s per tile, 5 s for the image) or returns bytes that do not decode, the API MUST answer 502 `map_tiles_unavailable` as a problem document with `Cache-Control: no-store`, never a partial or empty image; a tile answering 404 (no data for the area) is drawn empty, not an error. A view whose tiles all answered 404 is still answered 200 with its image, but with `Cache-Control: no-store` in place of FR-005's header: a whole view without data is likelier an address gone stale than open sea, so no cache keeps the blank image and the tile address is read again.
+
+_From 1196-static-map-first._
+
+### 1196-FR-007 — The tile source MUST come from one configuration value (`MAP_TILES_TILEJSON_URL`, default the provider's `openmaptiles` TileJSON; `off` disables the outside call and renders the background colour only), listed in `.env.example` with no secret; the end-to-end suite and the PR QA run set it to `off`, so no test fetches a tile from outside and the image still answers 200.
+
+_From 1196-static-map-first._
+
+### 1196-FR-008 — The route MUST sit under the API's per-address rate limit like the other public reads and MUST be excluded from the SEARCH_LOG and from the cache service's Redis tags (it is a CDN-cached static asset, 1182's service does not apply).
+
+_From 1196-static-map-first._
+
+### 1196-FR-009 — Observability MUST ship with the endpoint: `motorfix_static_map_renders_total{outcome}` (`ok`, `invalid`, `tiles_failed`) and `motorfix_static_map_render_duration_seconds`, one span for the render with a child span per tile fetch (the outside call, 876-FR-004), one `StaticMapRender` log line per failure with the zoom and the outcome (no coordinates), a panel on the API dashboard, alerting through the existing `api-error-rate` rule, into which the tiles-failure share (`tiles_failed` above 5 % of at least 20 renders over 10 minutes) is folded as a second signal, and `api-latency`, with no new rule: the 50-rule free-tier cap stays (decided by Chief on #1196, 2026-10-25), and an entry in `infra/observability/inventory.json` naming the provider as an outside service (`scripts/observability-inventory.ts` passes).
+
+_From 1196-static-map-first._
+
+### 1196-FR-010 — Results MUST show the map as a static image first: before any tap, click or keyboard activation on the map, the page MUST NOT request MapLibre's script (the `maplibre-gl` chunk), its stylesheet (`/map/maplibre-gl.css`), its worker (`/map/maplibre-gl-worker.mjs`) or any tile; the end-to-end check reads the network log after the pins are shown.
+
+_From 1196-static-map-first._
+
+### 1196-FR-013 — The server render MUST show the placeholder only; the static image's `src` MUST be set in the browser after the first measure of the map box, built from the view: theme from the colour scheme (dark when `prefers-color-scheme: dark`, as `styleFor` decides), the integer zoom, the view's centre and the smallest buckets at or above the map box; a change of pins, place, scheme or box that changes the view requests a new image and redraws the overlay; one that does not changes only the overlay. While a search is loading the picture shows the placeholder and is drawn once the pins answer settles, so it never shows the last search's ground under the new search's pins (amended at review, 2026-10-25).
+
+_From 1196-static-map-first._
+
+### 1196-FR-014 — The attribution "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors" MUST show on the static image, in the interactive map's compact-attribution corner (the map's bottom right: on a phone that lies under the results sheet, as MapLibre's own does), in the theme's small text from a tablet up and its body text on a phone, readable in both schemes (the sweep's contrast check), as a text that is not a tab stop.
+
+_From 1196-static-map-first._
+
+### 1196-FR-015 — A tap or a click anywhere on the static map, or activating the visible control "Hartă interactivă" / "Interactive map" (a button at the map's bottom right, above the legend, from a tablet up, and on a phone at its top right where the interactive map's zoom buttons sit, at least 44 px tall, in the keyboard order, the one focusable element the map adds; on a phone it hides, as the zoom buttons do, while the results sheet rests over it or within 8 px of its bottom, the map tap still opening the map), MUST load MapLibre and open the interactive map at the static view's centre and zoom (FR-011) with the same pins, circles and marker; a second activation while loading does nothing; once the style has loaded the static image and the overlay are removed and the control is hidden.
+
+_From 1196-static-map-first._
+
+### 1196-FR-017 — When the static image fails to load, the grey placeholder MUST stay with no overlay and no message, and the tap and the control MUST still open the interactive map; the list is unchanged.
+
+_From 1196-static-map-first._
+
+### 1196-FR-018 — The static-first map (image, overlay, control, the view function) MUST be one reusable web piece under `apps/web/src/app/public/` that takes a view and pins and tells its host when the interactive map is wanted, so ST-1366 places it on the profile with one pin or one circle and this story's Results map is its first host; the place-step map of onboarding (`apps/web/src/app/public/place-step`) is unchanged.
+
+_From 1196-static-map-first._
+
+### 1196-FR-019 — Every new text (the control, the attribution) MUST live in the shared i18n files in Romanian and English; the map MUST hold at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll, and the static image MUST fill the map box with no letterboxing. The static `<img>` is decorative (`alt=""`, the list is the accessible path, 269-FR-016), and the hand-over to the interactive map is a cross-fade of at most 200 ms that is an instant swap under reduced motion.
+
+_From 1196-static-map-first._
+
+### 1196-FR-020 — Jest MUST cover: the view function (bounds, padding, maxZoom 15, covered bands, integer zoom, Romania whole); the snapping (two centres in a cell share a path and the snapped centre); the renderer on a committed fixture tile (sampled pixel colours for water, park and road); the overlay's pixel positions against the interactive map's projection for the same view (within one pixel); the parameter validation (each 400); the provider failure (502, no body, `no-store`); `off` renders 200 with the background only; the cache header; the metrics and the log line; and that no MapLibre module is imported before activation (the loader is called only from the activation path).
+
+_From 1196-static-map-first._
+
+### 1196-FR-021 — End to end (`apps/web-e2e`, Results), with `MAP_TILES_TILEJSON_URL=off` and `__MF_MAP_STYLE` as today: after the pins show, the network log holds no `maplibre-gl` request and one `maps/static` request; a tap opens the interactive map at the same centre and zoom (read from `__MF_MAP`); the keyboard control does the same; the image failing (the route blocked) leaves the placeholder and the tap still works; at 320 px and 390 px the attribution and the control are inside the map box.
+
+_From 1196-static-map-first._
+
 ### 1193-FR-005 — The garage card in the results and the profile's heading MUST carry one shared transition name per garage (the garage's identity, so two cards never share a name), applied on the element the two screens have in common; the name is inert without the API or under reduced motion.
 
 _From 1193-fast-nav._
@@ -683,4 +756,7 @@ _From 385-share-garage-link._
 - `1358-FR-004` — superseded by `1351-FR-002` (2026-10-23)
 - `1358-FR-005` — superseded by `1351-FR-003` (2026-10-23)
 - `049-FR-006` — superseded by `067-FR-006` (2026-10-23)
+- `269-FR-012` — superseded by `1196-FR-011` (2026-10-25)
+- `269-FR-013` — superseded by `1196-FR-012` (2026-10-25)
+- `269-FR-011` — superseded by `1196-FR-016` (2026-10-25)
 - `1356-FR-008` — superseded by `1193-FR-003` (2026-10-25)

@@ -22,6 +22,18 @@
   background: var(--mf-line);
 }
 
+/* Once the interactive map has drawn, the static one fades off it. */
+mf-static-map.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  mf-static-map {
+    transition: opacity 200ms var(--mf-motion-ease);
+  }
+}
+
 .legend {
   align-items: center;
   backdrop-filter: blur(12px);
@@ -106,6 +118,23 @@
 
   .hint:not(:empty) ~ .legend {
     visibility: hidden;
+  }
+}
+
+/* While the static map shows, its control takes the zoom buttons' place,
+   in a width that holds "Hartă interactivă" on two lines; the legend leaves
+   it that, its 12 px inset and a gap. */
+@media (max-width: 767.98px) {
+  .map {
+    --static-control: 7.5rem;
+  }
+
+  .map:has(> mf-static-map:not(.leaving)) {
+    --zoom-room: calc(
+      var(--static-control) +
+      var(--mf-space-3) +
+      var(--mf-space-2)
+    );
   }
 }
 

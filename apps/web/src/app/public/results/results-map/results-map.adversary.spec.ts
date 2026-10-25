@@ -42,6 +42,9 @@ async function render(platform = 'browser') {
   fixture.componentRef.setInput('pins', undefined);
   fixture.detectChanges();
   await fixture.whenStable();
+  // The interactive map opens on a tap of the static one.
+  element().querySelector<HTMLElement>('mf-static-map button')?.click();
+  fixture.detectChanges();
 }
 
 const ready = async () => {

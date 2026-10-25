@@ -254,6 +254,16 @@ async function open(
     localStorage.getItem('mf-place') === null;
   await harness.navigateByUrl(placed && bare ? `${url}&near=${NEAR}` : url);
   await settle();
+  await interactive();
+}
+
+// The map shows a static image until the driver taps it; these tests drive
+// the interactive map, so they ask for it as a driver would.
+async function interactive() {
+  const ask = page().querySelector<HTMLElement>('mf-static-map button');
+  if (!ask) return;
+  ask.click();
+  await settle();
 }
 
 const page = () => harness.routeNativeElement as HTMLElement;
@@ -3322,6 +3332,25 @@ describe('the phone results screen in the stylesheet', () => {
     expect(rule('mf-results-sheet')).toMatch(/grid-area: stage;/);
     expect(rule(':host:has(mf-results-sheet.typing)')).toMatch(
       /height: calc\(100dvh - var\(--public-site-bar\) - var\(--consent-bar, 0px\)\);/,
+    );
+  });
+});
+
+// QA lap 4 at 1440 x 900: the unanswered consent bar lay over the map's
+// bottom, and the static map's control and credit under it.
+describe('the desktop map in the stylesheet', () => {
+  const desktop =
+    readFileSync(join(__dirname, 'results.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ')
+      .match(/@media \(min-width: 1024px\) \{(.*?\}) \}/)?.[1] ?? '';
+
+  it('holds the sticky map between the site bar and the consent bar while it asks', () => {
+    expect(desktop).toMatch(
+      /mf-results-map \{[^}]*height: calc\(\s*100vh - var\(--public-site-bar\) - 2 \* var\(--mf-space-4\) - var\(--consent-bar, 0px\)\s*\);/,
+    );
+    expect(desktop).toMatch(
+      /mf-results-map \{[^}]*top: calc\(var\(--public-site-bar\) \+ var\(--mf-space-4\)\);/,
     );
   });
 });

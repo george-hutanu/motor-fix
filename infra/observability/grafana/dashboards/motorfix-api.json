@@ -1364,6 +1364,81 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 38,
+      "type": "timeseries",
+      "title": "Static map renders by outcome",
+      "description": "Static map images answered per minute: ok, invalid (a refused query) and tiles_failed (the tile provider failed or took over 5 s, answered 502). tiles_failed above 5% of 20 or more renders in 10 minutes fires api-error-rate.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 100
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_static_map_renders_total{service_name=\"api\", deployment_environment=\"$env\"}[1m]))",
+          "legendFormat": "{{outcome}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_static_map_renders_total{service_name=\"api\", outcome=\"tiles_failed\", deployment_environment=\"$env\"}[10m]))",
+          "legendFormat": "tiles_failed, last 10 min"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 39,
+      "type": "timeseries",
+      "title": "Static map render p95",
+      "description": "Time to fetch the tiles and draw one static map image; the CDN serves repeats, so this is the first view of each grid cell.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 100
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(motorfix_static_map_render_duration_seconds_bucket{service_name=\"api\", deployment_environment=\"$env\"}[5m])))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     }
   ]
 }

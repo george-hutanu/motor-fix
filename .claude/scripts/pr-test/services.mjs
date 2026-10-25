@@ -284,6 +284,8 @@ export function appEnv({ ports }) {
     STORAGE_SECRET_ACCESS_KEY: STORAGE_KEYS.secret,
     // The web app boots with an analytics domain; a reserved .invalid name counts no page view.
     PLAUSIBLE_DOMAIN: "qa.motorfix.invalid",
+    // The static map image draws its background only: QA never calls the tile provider.
+    MAP_TILES_TILEJSON_URL: "off",
   };
 }
 

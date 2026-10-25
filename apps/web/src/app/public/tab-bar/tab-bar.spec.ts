@@ -7,7 +7,7 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { MeDto } from '@motor-fix/data-access';
 import { LanguageChoice } from '@motor-fix/i18n';
-import { Overlays } from '@motor-fix/overlays';
+import { OpenSheets, Overlays } from '@motor-fix/overlays';
 import { Subject } from 'rxjs';
 
 import { provideLanguageAddresses, SITE_ORIGIN } from '../../addresses';
@@ -318,6 +318,41 @@ describe('the public tab bar', () => {
     expect(host).toMatch(/background: var\(--mf-bg\);/);
     expect(css).not.toMatch(/backdrop-filter/);
     expect(css).not.toMatch(/transparent/);
+  });
+
+  // @traces 1127-FR-004
+  it('turns invisible while a bottom sheet is open and keeps its space', async () => {
+    await open('/ro');
+    const sheets = TestBed.inject(OpenSheets);
+
+    expect(bar()?.style.visibility).toBe('');
+    sheets.opened();
+    await settle();
+    expect(bar()?.style.visibility).toBe('hidden');
+    expect(bar()?.hidden).toBe(false);
+    sheets.closed();
+    await settle();
+    expect(bar()?.style.visibility).toBe('');
+  });
+
+  // @traces 1127-FR-004
+  it('stays hidden for a text field under an open sheet, and invisible once the field lets go', async () => {
+    await open('/ro');
+    const sheets = TestBed.inject(OpenSheets);
+    const field = document.createElement('input');
+    document.body.append(field);
+
+    sheets.opened();
+    field.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    await settle();
+    expect(bar()?.hidden).toBe(true);
+    expect(bar()?.style.visibility).toBe('hidden');
+    field.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    field.remove();
+    await settle();
+    expect(bar()?.hidden).toBe(false);
+    expect(bar()?.style.visibility).toBe('hidden');
+    sheets.closed();
   });
 
   it('spaces the bar and its tabs on the 4 px grid', () => {

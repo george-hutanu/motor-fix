@@ -1,6 +1,7 @@
 import {
   type Env,
   grafanaUrl,
+  mapTilesTileJsonUrl,
   outageWebhookToken,
   type StorageEnv,
 } from '@motor-fix/contracts';
@@ -21,6 +22,7 @@ import {
   ListingDocumentsModule,
   ListingPhotosModule,
   ListingSubmitModule,
+  MapsModule,
   NotificationsModule,
   OwnerDocumentsModule,
   oauthSettings,
@@ -121,6 +123,7 @@ export class AppModule {
         WarmModule,
         WorkshopModule,
         PlacesModule.register(placesConfig(env.APP_ENV, process.env)),
+        MapsModule.register({ tileJsonUrl: mapTilesTileJsonUrl(process.env) }),
         ProfileViewsModule,
         SupportModule.register(supportConfig(process.env)),
         DemandModule,
