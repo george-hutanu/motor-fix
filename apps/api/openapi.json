@@ -4366,6 +4366,70 @@
         ]
       }
     },
+    "/api/v1/reviews/{reviewId}/reports": {
+      "post": {
+        "operationId": "ReviewReportsController_report",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewReportDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a reason outside the list, or a member"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a receptionist or mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found: no such review of the caller’s garage, or one removed or deleted"
+          },
+          "409": {
+            "description": "already_reported; already_kept"
+          },
+          "422": {
+            "description": "validation_failed: the text missing or too long for other, or given with another reason"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Report one of the garage’s reviews to an admin, with a reason",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/api/v1/quote-requests/active": {
       "get": {
         "operationId": "ActiveRequestController_get",
@@ -15204,6 +15268,99 @@
         "required": [
           "jobId",
           "rating"
+        ]
+      },
+      "ReportReviewDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "insults",
+              "personal_data",
+              "ads",
+              "promotion",
+              "off_topic",
+              "hate",
+              "fake_or_conflicted",
+              "threats_or_legal_accusations",
+              "other"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "description": "Only with the reason other",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "ReviewReportReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "reported",
+              "removed",
+              "deleted_by_author"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ]
+      },
+      "ReviewReportDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "insults",
+              "personal_data",
+              "ads",
+              "promotion",
+              "off_topic",
+              "hate",
+              "fake_or_conflicted",
+              "threats_or_legal_accusations",
+              "other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          },
+          "dueAt": {
+            "type": "string",
+            "description": "When an admin is due to decide",
+            "format": "date-time"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReviewReportReviewDto"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "status",
+          "dueAt",
+          "review"
         ]
       },
       "ActiveRequestCarDto": {
