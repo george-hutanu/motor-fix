@@ -136,7 +136,7 @@ export async function writeGarageHours(
 
 // The Bucharest day and wall-clock minute of an instant. Romania's offsets are
 // whole hours, so the minute is the UTC one.
-function wall(at: Date) {
+export function wall(at: Date) {
   const day = localDay(at);
   return {
     day,
@@ -145,7 +145,7 @@ function wall(at: Date) {
   };
 }
 
-const minuteOf = (time: string) =>
+export const minuteOf = (time: string) =>
   Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
 
 // Whether [start, start + duration) lies inside one interval of the garage's
