@@ -9,6 +9,7 @@ import { type Meter, metrics } from '@opentelemetry/api';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
 import {
+  countAcceptance,
   countAccountChange,
   countAdminAccountAction,
   countApproval,
@@ -16,6 +17,7 @@ import {
   countChannelFallback,
   countCompletionOpened,
   countConsentRecord,
+  countConsentRefusal,
   countDeclarationSigned,
   countDocumentOpened,
   countDocumentUploaded,
@@ -425,6 +427,16 @@ describe('the product counters', () => {
           () => countConsentRecord(decision),
           'motorfix_consent_records_total',
           { decision },
+        ] as const,
+    ),
+    // @traces 1204-terms-reaccept-FR-016
+    [() => countAcceptance(), 'motorfix_acceptances_total', {}],
+    ...(['api', 'mcp'] as const).map(
+      (surface) =>
+        [
+          () => countConsentRefusal(surface),
+          'motorfix_consent_refusals_total',
+          { surface },
         ] as const,
     ),
   ] as const)('counts one %#: %s', async (count, name, labels) => {

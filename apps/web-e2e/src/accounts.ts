@@ -23,6 +23,7 @@ export const ACCOUNTS = {
   mechanic: 'mecanic@example.test',
   otherDriver: 'sofer2@example.test',
   receptionist: 'receptie@example.test',
+  staleDriver: 'termeni-vechi@example.test',
   suspended: 'suspendat@example.test',
   switcher: 'comutare@example.test',
   twoRoles: 'doua-roluri@example.test',

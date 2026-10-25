@@ -9,8 +9,14 @@ import {
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 
+import { consentPending, pendingAcceptance } from './acceptance/acceptance';
 import { verifyAccessToken } from './access-token';
-import { AccountLoader, actorOf, signInRequired } from './account-loader';
+import {
+  AccountLoader,
+  actorOf,
+  type LoadedAccount,
+  signInRequired,
+} from './account-loader';
 import type { AssistantBroker } from './assistant/assistant.service';
 import type { Capability } from './capabilities';
 import {
@@ -20,6 +26,7 @@ import {
 } from './maintenance';
 import type { OAuthSettings } from './oauth/providers';
 import { type Actor, requireCapability, roleInUse } from './policy';
+import { countConsentRefusal } from '../metrics/product-counters';
 
 export const AUTH_OPTIONS = Symbol('AUTH_OPTIONS');
 
@@ -40,6 +47,7 @@ const REQUIRES = 'auth:requires';
 const PUBLIC = 'auth:public';
 const OPEN_IN_MAINTENANCE = 'auth:maintenance-open';
 const OPTIONAL_ACTOR = 'auth:optional-actor';
+const OPEN_TO_PENDING = 'auth:open-to-pending';
 
 // Every route needs a signed-in account unless it carries this mark.
 export const Public = () => SetMetadata(PUBLIC, true);
@@ -51,6 +59,10 @@ export const OpenInMaintenance = () => SetMetadata(OPEN_IN_MAINTENANCE, true);
 // bad token leaves them a visitor instead of refusing them.
 export const OptionalActor = () => SetMetadata(OPTIONAL_ACTOR, true);
 
+// Answers an account that has not yet accepted the terms and privacy notice in
+// force; every other signed-in route refuses it until it does.
+export const OpenToPending = () => SetMetadata(OPEN_TO_PENDING, true);
+
 export const Requires = (capability: Capability) =>
   SetMetadata(REQUIRES, capability);
 
@@ -60,6 +72,13 @@ export const CurrentActor = createParamDecorator(
   (_: unknown, context: ExecutionContext) =>
     context.switchToHttp().getRequest<WithActor>().actor,
 );
+
+function refusePending(account: LoadedAccount) {
+  const pending = pendingAcceptance(account.consents);
+  if (!pending) return;
+  countConsentRefusal('api');
+  throw consentPending(pending);
+}
 
 @Injectable()
 export class ActorGuard implements CanActivate {
@@ -86,15 +105,18 @@ export class ActorGuard implements CanActivate {
       const authorization = request.header('authorization');
       if (marked(OPTIONAL_ACTOR) && authorization) {
         request.actor =
-          admin ?? (await this.actor(authorization).catch(() => undefined));
+          admin?.actor ??
+          (await this.actor(authorization).catch(() => undefined))?.actor;
       }
       return true;
     }
-    const actor = admin ?? (await this.actor(request.header('authorization')));
+    const { account, actor } =
+      admin ?? (await this.actor(request.header('authorization')));
     const capability = this.reflector.get<Capability | undefined>(
       REQUIRES,
       context.getHandler(),
     );
+    if (!marked(OPEN_TO_PENDING)) refusePending(account);
     if (capability) requireCapability(actor, capability);
     request.actor = actor;
     return true;
@@ -105,14 +127,14 @@ export class ActorGuard implements CanActivate {
     const authorization = request.header('authorization');
     if (!authorization) throw maintenanceRefusal(route, 'visitor');
     // A token that does not resolve answers as usual, so the app renews it.
-    const actor = await this.actor(authorization);
-    if (!actor.roles.includes('admin')) {
+    const signedIn = await this.actor(authorization);
+    if (!signedIn.actor.roles.includes('admin')) {
       throw maintenanceRefusal(route, 'signed_in');
     }
-    return actor;
+    return signedIn;
   }
 
-  private async actor(authorization: string | undefined): Promise<Actor> {
+  private async actor(authorization: string | undefined) {
     const token = authorization?.match(/^Bearer (\S+)$/)?.[1];
     const claims = token
       ? verifyAccessToken(token, this.options.tokenSecret)
@@ -122,6 +144,6 @@ export class ActorGuard implements CanActivate {
     const roles = account.roles.map((r) => r.role);
     const role = roleInUse(claims.role, account.lastRole, roles);
     if (!role) throw signInRequired();
-    return actorOf(account, role);
+    return { account, actor: actorOf(account, role) };
   }
 }

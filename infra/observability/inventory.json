@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 192,
+    "count": 193,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -2280,6 +2280,37 @@
         "notification-fallback-rate"
       ],
       "story": "ST-142"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-acceptance",
+      "source": "libs/domain/src/auth/acceptance/acceptance.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/acceptance",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a signed-in account accepting the terms and privacy notice in force: the missing rows and their audit entry in one transaction, counted by motorfix_acceptances_total, one Acceptance log line without the account id; a 400 consent_required is a stale page sending old versions, the rule working; the API error-rate and latency rules cover the route; no outside call",
+      "story": "ST-1204"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_acceptances_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts every acceptance that wrote a row after a version change, never an account; a count has no failure of its own to alert on, a failed write is a 5xx under api-error-rate",
+      "story": "ST-1204"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_consent_refusals_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts every call refused with consent_required by surface api or mcp, never an account; a surge right after a version bump is the expected shape, not a failure, so it is watched on the panel, not paged",
+      "story": "ST-1204"
     }
   ]
 }

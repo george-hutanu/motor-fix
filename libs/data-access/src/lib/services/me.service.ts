@@ -9,6 +9,8 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { acceptanceControllerAccept } from '../fn/me/acceptance-controller-accept';
+import { AcceptanceControllerAccept$Params } from '../fn/me/acceptance-controller-accept';
 import { dataExportControllerDownload } from '../fn/me/data-export-controller-download';
 import { DataExportControllerDownload$Params } from '../fn/me/data-export-controller-download';
 import { dataExportControllerLatest } from '../fn/me/data-export-controller-latest';
@@ -85,6 +87,31 @@ export class MeService extends BaseService {
   meControllerUpdate(params: MeControllerUpdate$Params, context?: HttpContext): Promise<MeDto> {
     const resp = this.meControllerUpdate$Response(params, context);
     return resp.then((r: StrictHttpResponse<MeDto>): MeDto => r.body);
+  }
+
+  /** Path part for operation `acceptanceControllerAccept()` */
+  static readonly AcceptanceControllerAcceptPath = '/api/v1/me/acceptance';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `acceptanceControllerAccept()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  acceptanceControllerAccept$Response(params: AcceptanceControllerAccept$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = acceptanceControllerAccept(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `acceptanceControllerAccept$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  acceptanceControllerAccept(params: AcceptanceControllerAccept$Params, context?: HttpContext): Promise<void> {
+    const resp = this.acceptanceControllerAccept$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `emailChangeControllerRequest()` */

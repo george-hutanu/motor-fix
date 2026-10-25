@@ -2,7 +2,12 @@ import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 
-import { isValidCui, isWeeklyHours } from '@motor-fix/contracts';
+import {
+  isValidCui,
+  isWeeklyHours,
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+} from '@motor-fix/contracts';
 
 import { verifyPassword } from './auth/password/password';
 import { createPrisma } from './auth/prisma';
@@ -201,7 +206,73 @@ describe('seed', () => {
         roles: ['driver'],
         status: 'suspended',
       },
+      'termeni-vechi@example.test': {
+        lastRole: 'driver',
+        roles: ['driver'],
+        status: 'active',
+      },
     });
+  });
+
+  // @traces 1204-terms-reaccept-FR-014
+  it('gives every account the texts in force, but one driver older ones, and keeps it so when run again', async () => {
+    const versions = async () => {
+      const rows = await prisma.accountConsent.findMany({
+        include: { account: { select: { email: true } } },
+      });
+      const by: Record<string, string[]> = {};
+      for (const row of rows) {
+        const email = row.account.email ?? '';
+        by[email] = [
+          ...(by[email] ?? []),
+          `${row.kind} ${row.textVersion} ${row.language} ${row.method}`,
+        ].sort();
+      }
+      return by;
+    };
+    expect(seed('test').status).toBe(0);
+    const current = [
+      `privacy_notice ${PRIVACY_VERSION} ro password`,
+      `terms ${TERMS_VERSION} ro password`,
+    ];
+    const stale = [
+      'privacy_notice 2026-10-11 ro password',
+      'terms 2026-10-11 ro password',
+    ];
+
+    const once = await versions();
+    const emails = (await seeded()).map((a) => a.email ?? '');
+    expect(Object.keys(once).sort()).toEqual([...emails].sort());
+    for (const email of emails)
+      expect([email, once[email]]).toEqual([
+        email,
+        email === 'termeni-vechi@example.test' ? stale : current,
+      ]);
+
+    const stalled = await prisma.account.findFirstOrThrow({
+      where: { email: 'termeni-vechi@example.test' },
+    });
+    await prisma.accountConsent.createMany({
+      data: [
+        {
+          accountId: stalled.id,
+          kind: 'terms',
+          language: 'ro',
+          method: 'password',
+          textVersion: TERMS_VERSION,
+        },
+        {
+          accountId: stalled.id,
+          kind: 'privacy_notice',
+          language: 'ro',
+          method: 'password',
+          textVersion: PRIVACY_VERSION,
+        },
+      ],
+    });
+    expect(seed('test').status).toBe(0);
+
+    expect(await versions()).toEqual(once);
   });
 
   it('gives a garage owner a verified number for the sign-in by phone', async () => {

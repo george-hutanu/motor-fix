@@ -7,6 +7,7 @@ export { RequestBuilder } from './request-builder';
 export type { StrictHttpResponse } from './strict-http-response';
 export { Api } from './api';
 
+export type { AcceptanceDto } from './models/acceptance-dto';
 export type { AcceptedTextDto } from './models/accepted-text-dto';
 export type { AcceptQuoteDto } from './models/accept-quote-dto';
 export type { AccessResetDto } from './models/access-reset-dto';
@@ -433,6 +434,8 @@ export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
 export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './fn/me/me-controller-update';
 export { meControllerUpdate as meControllerUpdate } from './fn/me/me-controller-update';
+export type { AcceptanceControllerAccept$Params as AcceptanceControllerAccept$Params } from './fn/me/acceptance-controller-accept';
+export { acceptanceControllerAccept as acceptanceControllerAccept } from './fn/me/acceptance-controller-accept';
 export type { EmailChangeControllerRequest$Params as EmailChangeControllerRequest$Params } from './fn/me/email-change-controller-request';
 export { emailChangeControllerRequest as emailChangeControllerRequest } from './fn/me/email-change-controller-request';
 export type { MeEmailConfirmationControllerAskAgain$Params as MeEmailConfirmationControllerAskAgain$Params } from './fn/me/me-email-confirmation-controller-ask-again';
