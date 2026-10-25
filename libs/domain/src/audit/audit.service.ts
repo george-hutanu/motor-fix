@@ -21,7 +21,7 @@ const KEY_CHANGES = new Set([
 ]);
 
 // JSON with object keys sorted, so equal content compares equal whatever the key order.
-const canonical = (value: unknown): string =>
+export const canonical = (value: unknown): string =>
   JSON.stringify(value, (_key, v: unknown) =>
     v && typeof v === 'object' && !Array.isArray(v)
       ? Object.fromEntries(

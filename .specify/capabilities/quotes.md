@@ -21,6 +21,7 @@ features:
   - 428-close-on-account-closed
   - 292-saved-garage-quote
   - 223-request-act-notifications
+  - 058-mechanic-hours
 ---
 
 # Capability: Quotes
@@ -573,9 +574,9 @@ _From 389-confirm-booking-lift-mechanic._
 
 _From 389-confirm-booking-lift-mechanic._
 
-### 389-FR-004 — With the garage's `team_mechanics` on (a missing row is on), `mechanicId` MUST be required and MUST name a MECHANIC row of this garage (else 409 `mechanic_unavailable`); the dialog MUST offer every mechanic row of the garage by name, in the garage's own order (name), through one read the plan names (the team's existing list where it has one). The predicate "offered mechanics" is one place, so the team stories can narrow it (a pending move, [X13]) without touching the confirm.
+### 058-FR-012 — (389-FR-004 modified) With the garage's `team_mechanics` on, `mechanicId` MUST be required and MUST name a MECHANIC row of this garage that is at work over the booking's span by FR-011's rule (else 409 `mechanic_unavailable`); the dialog MUST offer every mechanic row of the garage by name, through one read the plan names. The predicate "offered mechanics" stays one place.
 
-_From 389-confirm-booking-lift-mechanic._
+_From 058-mechanic-hours._
 
 ### 389-FR-006 — GARAGE MUST gain `lift_count` (integer, 0 or more, default 0), backfilled once by the migration from the garage's survey answer (`1` → 1, `2-3` → 2, `4+` → 4, `0` or no survey → 0); with `lift_schedule` on (a missing row is on) `lift` MUST be optional and, when given, an integer from 1 to `lift_count` (else 400 `validation_failed` naming `lift`); with `lift_schedule` off `lift` MUST be refused (400) and stay empty. The schedule read's `lifts` flag is unchanged.
 
@@ -790,3 +791,4 @@ _From 292-saved-garage-quote._
 - `222-FR-006` — superseded by `389-FR-016` (2026-10-21)
 - `221-FR-016` — superseded by `292-FR-006` (2026-10-23)
 - `428-FR-003` — superseded by `223-FR-004` (2026-10-25)
+- `389-FR-004` — superseded by `058-FR-012` (2026-10-25)

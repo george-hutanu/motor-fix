@@ -1,15 +1,21 @@
 import {
+  clipStretch,
   DEFAULT_HOURS,
   type Interval,
   isHoursSection,
   lastClosedDay,
+  storedWeek,
+  stretchOf,
   WEEKDAYS,
 } from '@motor-fix/contracts';
 import { HttpStatus } from '@nestjs/common';
 
-import type { AuditEntry, AuditPort } from '../audit/audit.port';
+import { cardAudience } from './mechanics/garage-mechanics.service';
+import type { AuditChange, AuditEntry, AuditPort } from '../audit/audit.port';
+import { canonical } from '../audit/audit.service';
 import { refusal } from '../auth/http-refusal';
 import { local, localDay } from '../bucharest';
+import type { EventPort } from '../events/event.port';
 import type { Prisma } from '../generated/prisma/client';
 
 const asDate = (day: string) => new Date(`${day}T00:00:00Z`);
@@ -19,14 +25,20 @@ const dayOf = (date: Date) => date.toISOString().slice(0, 10);
 // listing's step 5 section, inside the caller's transaction. A day before
 // `today`, past the two-year window (an aged draft) or a legal holiday gets no
 // row: the calendar alone closes a holiday. What changed goes to the history as the
-// garage's own edit; the caller records the event.
+// garage's own edit; the caller records the garage's event. Each team
+// mechanic's own hours are clipped to the new span, each with its event;
+// the names of the cards clipped are returned.
 export async function writeGarageHours(
   tx: Prisma.TransactionClient,
   garageId: string,
   section: Record<string, unknown>,
   today: string,
-  { actorId, audit }: { actorId: string; audit: AuditPort },
-): Promise<void> {
+  {
+    actorId,
+    audit,
+    events,
+  }: { actorId: string; audit: AuditPort; events: EventPort },
+): Promise<string[]> {
   if (!isHoursSection(section)) {
     throw refusal(
       HttpStatus.BAD_REQUEST,
@@ -132,11 +144,103 @@ export async function writeGarageHours(
       })),
   ];
   await audit.recordMany(tx, entries);
+  return clipMechanics(tx, garageId, after.hours, change, { audit, events });
+}
+
+type Week = Partial<Record<string, Interval[]>>;
+
+// A mechanic's week inside the garage's: a stretch the garage's span of that
+// day cuts is shortened, or emptied when nothing is left. A day it leaves
+// whole stays as stored.
+function clippedWeek(own: Week, garage: Week): Week {
+  return Object.fromEntries(
+    WEEKDAYS.map((day) => {
+      const list = own[day] ?? [];
+      const stretch = stretchOf(list);
+      if (!stretch) return [day, list];
+      const kept = clipStretch(stretch, stretchOf(garage[day] ?? []));
+      const same = kept?.[0] === stretch[0] && kept?.[1] === stretch[1];
+      return [day, same ? list : kept ? [kept] : []];
+    }),
+  );
+}
+
+// What the garage's new hours change on one card: its week and its
+// Saturday switch before and after, and the event's field names.
+function clipOf(
+  card: { workingHours: unknown; worksSaturdays: boolean },
+  garage: Week,
+) {
+  const before = {
+    workingHours: card.workingHours,
+    worksSaturdays: card.worksSaturdays,
+  };
+  const after = {
+    workingHours: clippedWeek(storedWeek(card.workingHours), garage),
+    worksSaturdays:
+      card.worksSaturdays && stretchOf(garage['sat'] ?? []) !== null,
+  };
+  const fields = [
+    ...(canonical(before.workingHours) === canonical(after.workingHours)
+      ? []
+      : ['working_hours']),
+    ...(before.worksSaturdays === after.worksSaturdays
+      ? []
+      : ['works_saturdays']),
+  ];
+  return { after, before, fields };
+}
+
+async function clipMechanics(
+  tx: Prisma.TransactionClient,
+  garageId: string,
+  hours: unknown,
+  change: Omit<AuditChange, 'subjectType'>,
+  { audit, events }: { audit: AuditPort; events: EventPort },
+): Promise<string[]> {
+  const garage: Week = storedWeek(hours);
+  const cards = await tx.mechanic.findMany({
+    orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      onProfile: true,
+      workingHours: true,
+      worksSaturdays: true,
+    },
+    where: { garageId, removedAt: null },
+  });
+  const clipped: string[] = [];
+  for (const card of cards) {
+    if (card.workingHours === null || typeof card.workingHours !== 'object') {
+      continue;
+    }
+    const { after, before, fields } = clipOf(card, garage);
+    if (fields.length === 0) continue;
+    await tx.mechanic.update({
+      data: after as Prisma.MechanicUpdateInput,
+      where: { id: card.id },
+    });
+    await audit.recordChanges(
+      tx,
+      { ...change, subjectId: card.id, subjectType: 'mechanic' },
+      before,
+      after,
+    );
+    await events.record(tx, {
+      audience: cardAudience(garageId, card),
+      kind: 'mechanic.updated',
+      payload: { fields, garageId, mechanicId: card.id },
+      subjectId: card.id,
+    });
+    clipped.push(card.name);
+  }
+  return clipped;
 }
 
 // The Bucharest day and wall-clock minute of an instant. Romania's offsets are
 // whole hours, so the minute is the UTC one.
-function wall(at: Date) {
+export function wall(at: Date) {
   const day = localDay(at);
   return {
     day,
@@ -145,7 +249,7 @@ function wall(at: Date) {
   };
 }
 
-const minuteOf = (time: string) =>
+export const minuteOf = (time: string) =>
   Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
 
 // Whether [start, start + duration) lies inside one interval of the garage's
