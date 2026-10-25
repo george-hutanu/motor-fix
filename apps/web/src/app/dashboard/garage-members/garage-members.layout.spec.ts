@@ -40,9 +40,24 @@ describe('garage members panel layout', () => {
   it('titles the panel as a card, not a small label', () => {
     const h2Rules = members
       .split('}')
-      .filter((block) => /(^|[\s,])h2[\s,{]/.test(block.split('{')[0] + '{'));
+      .filter((block) => /(^|[\s,])h2[\s,{]/.test(`${block.split('{')[0]}{`));
     expect(h2Rules.length).toBeGreaterThan(0);
     for (const block of h2Rules)
       expect(block).not.toMatch(/text-transform|font-size/);
+  });
+
+  // QA lap 2: a wrapped phone row never starts its next line with " · ".
+  it('keeps each " · " in its own separator span, stacked without it below a tablet', () => {
+    const html = readFileSync(join(__dirname, 'garage-members.html'), 'utf8');
+    expect(html).not.toMatch(/<span(?! class="sep")[^>]*>\s*·/);
+    expect(html.match(/<span class="sep"> · <\/span>/g)?.length).toBe(5);
+    const phone =
+      /@media \(max-width: 767px\)\s*\{([\s\S]*?)\n\}/.exec(members)?.[1] ?? '';
+    expect(
+      decl(rule(phone.replace(/\n {2}/g, '\n'), '.row'), 'flex-direction'),
+    ).toBe('column');
+    expect(rule(phone.replace(/\n {2}/g, '\n'), '.sep')).toMatch(
+      /clip-path: inset\(50%\)/,
+    );
   });
 });

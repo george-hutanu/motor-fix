@@ -5,12 +5,12 @@
       @for (member of list.members; track member.accountId) {
         <li data-member class="row">
           <span class="name">{{ member.name }}</span>
-          <span> · {{ role(member.role) }}</span>
+          <span><span class="sep"> · </span>{{ role(member.role) }}</span>
           @if (since(member); as since) {
-            <span class="meta"> · {{ since }}</span>
+            <span class="meta"><span class="sep"> · </span>{{ since }}</span>
           }
           @if (permissions(member); as permissions) {
-            <span class="meta"> · {{ permissions }}</span>
+            <span class="meta"><span class="sep"> · </span>{{ permissions }}</span>
           }
         </li>
       }
@@ -21,8 +21,8 @@
         @for (invite of list.invites; track invite.id) {
           <li data-invite class="row">
             <span class="name">{{ invite.email }}</span>
-            <span> · {{ role(invite.kind) }}</span>
-            <span class="meta"> · {{ sent(invite) }}</span>
+            <span><span class="sep"> · </span>{{ role(invite.kind) }}</span>
+            <span class="meta"><span class="sep"> · </span>{{ sent(invite) }}</span>
           </li>
         }
       </ul>

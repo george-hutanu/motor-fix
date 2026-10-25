@@ -41,7 +41,7 @@ h3 {
 .skeleton {
   border-top: 1px solid var(--mf-line);
 }
-/* A phone wraps the parts of a row; a long name or e-mail breaks anywhere. */
+/* A long name or e-mail breaks anywhere. */
 .row {
   display: flex;
   flex-wrap: wrap;
@@ -85,5 +85,20 @@ h3 {
 @media (min-width: 768px) {
   .row {
     flex-wrap: nowrap;
+  }
+}
+/* Below a tablet each part of a row takes its own line, its " · " kept for screen readers only. */
+@media (max-width: 767px) {
+  .row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .sep {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
