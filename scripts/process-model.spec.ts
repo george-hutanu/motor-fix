@@ -27,23 +27,34 @@ describe('one Node process per replica', () => {
 
 // User context travels in the async-local storage of logging.ts; a provider
 // built per request would rebuild its whole graph on every call.
+const SOURCE_PATHSPEC = [
+  ':(glob)apps/*/src/**',
+  ':(glob)libs/*/src/**',
+  ':(exclude,glob)**/*.spec.ts',
+  ':(exclude)libs/domain/src/generated',
+];
+
+const gitGrep = (args: string[]) =>
+  spawnSync('git', ['grep', ...args, '--', ...SOURCE_PATHSPEC], {
+    cwd: root,
+    encoding: 'utf8',
+  });
+
 // @traces 1188-FR-009
 describe('no request-scoped provider', () => {
-  it('declares no request or transient scope in app or library source', () => {
-    const grep = spawnSync(
-      'git',
-      [
-        'grep',
-        '-nE',
-        'Scope\\.(REQUEST|TRANSIENT)',
-        '--',
-        'apps/*/src',
-        'libs/*/src',
-        ':!*.spec.ts',
-        ':!libs/domain/src/generated',
-      ],
-      { cwd: root, encoding: 'utf8' },
+  it('searches the app and library sources that hold providers', () => {
+    const grep = gitGrep(['-l', '@Injectable(']);
+    const files = grep.stdout.split('\n').filter(Boolean);
+
+    expect(files).toContain('apps/mcp/src/auth/auth.actor.ts');
+    expect(files).toContain(
+      'libs/domain/src/admin/admin-accounts/admin-accounts.service.ts',
     );
+    expect(files.length).toBeGreaterThan(20);
+  });
+
+  it('declares no request or transient scope in app or library source', () => {
+    const grep = gitGrep(['-nE', 'Scope\\.(REQUEST|TRANSIENT)']);
 
     expect(grep.status).toBe(1);
     expect(grep.stdout).toBe('');
