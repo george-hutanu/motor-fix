@@ -12,41 +12,43 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-3);
+  margin: var(--mf-space-4);
+  padding: var(--mf-space-4);
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
   min-width: 0;
 }
-h2,
+h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 h3 {
   font-family: var(--mf-font-label);
   font-size: var(--mf-size-label);
   font-weight: 400;
   letter-spacing: var(--mf-label-tracking);
   text-transform: uppercase;
-}
-h3 {
   color: var(--mf-text-secondary);
 }
 .rows {
   display: flex;
   flex-direction: column;
-  gap: var(--mf-space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .row,
 .skeleton {
-  border: 1px solid var(--mf-line-strong);
-  border-radius: var(--mf-radius-control);
+  border-top: 1px solid var(--mf-line);
 }
 /* A phone wraps the parts of a row; a long name or e-mail breaks anywhere. */
 .row {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: 0.25ch;
+  align-items: center;
+  column-gap: var(--mf-space-1);
   min-height: var(--mf-tap);
-  padding: var(--mf-space-3);
-  background: var(--mf-panel);
+  padding: var(--mf-space-3) 0;
   color: var(--mf-text);
 }
 .row > * {
@@ -70,7 +72,6 @@ h3 {
 }
 .skeleton {
   height: var(--mf-tap);
-  background: var(--mf-panel);
 }
 .hidden {
   position: absolute;
