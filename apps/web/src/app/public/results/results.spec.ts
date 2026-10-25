@@ -7,7 +7,12 @@ import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Component, PLATFORM_ID, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { provideRouter, type Route, Router } from '@angular/router';
+import {
+  GuardsCheckStart,
+  provideRouter,
+  type Route,
+  Router,
+} from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
@@ -3915,6 +3920,92 @@ describe('Results loading more', () => {
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 900 });
     expect(back).not.toHaveBeenCalled();
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
+    jest.restoreAllMocks();
+  });
+
+  // The page is torn down after the next screen is chosen: by then the list
+  // is gone, the sheet no longer scrolls and the shorter page has clamped
+  // its scroll to the top, so the place is read as the navigation starts.
+  // @traces 1193-FR-003
+  it.each([
+    ['phone', 640],
+    ['tablet', 900],
+  ] as const)(
+    'keeps where the list was as the navigation starts, not once the page is torn down, on a %s',
+    async (size, y) => {
+      layout.set(size);
+      let gone = false;
+      TestBed.inject(Router)
+        .events.pipe(filter((event) => event instanceof GuardsCheckStart))
+        .subscribe(() => {
+          gone = true;
+        });
+      jest
+        .spyOn(ResultsSheet.prototype, 'scrolled')
+        .mockImplementation(() => (gone ? 0 : y));
+      Object.defineProperty(window, 'scrollY', {
+        configurable: true,
+        get: () => (gone ? 0 : y),
+      });
+      const back = jest.spyOn(ResultsSheet.prototype, 'scrollBack');
+      window.scrollTo = jest.fn();
+      await loaded();
+      gone = false;
+      await harness.navigateByUrl('/ro/elsewhere');
+      await settle();
+      await harness.navigateByUrl(`/ro/garages?brand=bmw&near=${NEAR}`);
+      await settle();
+
+      if (size === 'phone') expect(back).toHaveBeenCalledWith(y);
+      else expect(window.scrollTo).toHaveBeenCalledWith({ top: y });
+      Object.defineProperty(window, 'scrollY', {
+        configurable: true,
+        value: 0,
+      });
+      jest.restoreAllMocks();
+    },
+  );
+
+  // A row still to come under the list (the end line) clamps the first
+  // scroll short of the place; it is set again until it lands.
+  // @traces 1193-FR-003
+  it.each([
+    [
+      'scrolls the sheet again when the list was still too short to reach the place',
+      false,
+      [[640], [640]],
+    ],
+    [
+      'leaves the sheet where the driver scrolled it while the list settles',
+      true,
+      [[640]],
+    ],
+  ] as const)('%s', async (_, driverScrolls, calls) => {
+    let top = 640;
+    let tall = 600;
+    jest
+      .spyOn(ResultsSheet.prototype, 'scrolled')
+      .mockImplementation(() => top);
+    const scrolls = jest
+      .spyOn(ResultsSheet.prototype, 'scrollBack')
+      .mockImplementation((y) => {
+        top = Math.min(y, tall);
+        tall = 1000;
+        if (driverScrolls)
+          queueMicrotask(() => {
+            window.dispatchEvent(new Event('wheel'));
+            top = 300;
+          });
+      });
+    await loaded();
+    await harness.navigateByUrl('/ro/elsewhere');
+    await settle();
+    await harness.navigateByUrl(`/ro/garages?brand=bmw&near=${NEAR}`);
+    await settle();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(scrolls.mock.calls).toEqual(calls);
+    expect(top).toBe(driverScrolls ? 300 : 640);
     jest.restoreAllMocks();
   });
 

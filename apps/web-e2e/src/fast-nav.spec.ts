@@ -16,6 +16,12 @@ test.use({
 const RESULTS = '/ro/garages?brand=dacia&near=44.435,26.015';
 const PROFILE = '/ro/garages/service-auto-militari';
 const heading = (page: Page) => page.getByRole('heading', { level: 1 });
+// The results page has an h1 of its own: the profile is told by its address
+// first, or a step back taken too soon leaves the site altogether.
+const onProfile = async (page: Page) => {
+  await expect(page).toHaveURL(/\/ro\/garages\/[a-z0-9-]+/);
+  await expect(heading(page)).toBeVisible();
+};
 
 // Each view transition the page starts, and whether the app skipped it.
 const watchTransitions = (page: Page) =>
@@ -71,7 +77,7 @@ test.describe('fast navigation on the public pages @seeded', () => {
       expect(before).toBeGreaterThan(0);
 
       await view.click();
-      await expect(heading(page)).toBeVisible();
+      await onProfile(page);
       await page.goBack();
 
       await expect(page).toHaveURL(RESULTS);
@@ -123,7 +129,7 @@ test.describe('fast navigation on the public pages @seeded', () => {
     await hydrated(page, RESULTS);
 
     await page.getByRole('link', { name: 'Vezi service‑ul' }).first().click();
-    await expect(heading(page)).toBeVisible();
+    await onProfile(page);
 
     // Chromium has had view transitions since 111.
     expect(await transitions(page)).toEqual({ skipped: 0, started: 1 });
@@ -138,7 +144,7 @@ test.describe('fast navigation on the public pages @seeded', () => {
     await hydrated(page, RESULTS);
 
     await page.getByRole('link', { name: 'Vezi service‑ul' }).first().click();
-    await expect(heading(page)).toBeVisible();
+    await onProfile(page);
 
     const seen = await transitions(page);
     expect(seen?.started).toBeGreaterThan(0);
@@ -184,7 +190,7 @@ test.describe('fast navigation on the public pages @seeded', () => {
     expect(await sideways()).toBeLessThanOrEqual(0);
 
     await page.getByRole('link', { name: 'Vezi service‑ul' }).first().click();
-    await expect(heading(page)).toBeVisible();
+    await onProfile(page);
     expect(await sideways()).toBeLessThanOrEqual(0);
 
     await page.goBack();
