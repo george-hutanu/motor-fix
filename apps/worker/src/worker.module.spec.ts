@@ -5,6 +5,7 @@ import {
   QUOTE_LOST_CONSUMER,
   QUOTE_RECEIVED_CONSUMER,
   REQUEST_RECEIVED_CONSUMER,
+  REQUEST_TIMERS_CONSUMER,
 } from '@motor-fix/domain';
 
 import { workerModule } from './worker.module';
@@ -28,11 +29,19 @@ function consumers(): Consumer[] {
 
 // @traces 223-FR-007
 describe('the outbox consumers of the worker', () => {
+  // The request timers (ST-1257) follow each of them too; they send nothing.
   it.each([
-    ['request.created', [REQUEST_RECEIVED_CONSUMER]],
-    ['quote.sent', [QUOTE_RECEIVED_CONSUMER]],
-    ['quote.accepted', [BOOKING_TIMERS_CONSUMER, QUOTE_ACCEPTED_CONSUMER]],
-    ['quote.closed', [QUOTE_LOST_CONSUMER]],
+    ['request.created', [REQUEST_RECEIVED_CONSUMER, REQUEST_TIMERS_CONSUMER]],
+    ['quote.sent', [QUOTE_RECEIVED_CONSUMER, REQUEST_TIMERS_CONSUMER]],
+    [
+      'quote.accepted',
+      [
+        BOOKING_TIMERS_CONSUMER,
+        QUOTE_ACCEPTED_CONSUMER,
+        REQUEST_TIMERS_CONSUMER,
+      ],
+    ],
+    ['quote.closed', [QUOTE_LOST_CONSUMER, REQUEST_TIMERS_CONSUMER]],
   ])('hands %s to one notifications fan-out', (kind, expected) => {
     const taking = consumers().filter((c) => c.kinds.includes(kind));
     expect(taking.map((c) => c.queue).sort()).toEqual(
