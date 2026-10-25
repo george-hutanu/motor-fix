@@ -20,7 +20,7 @@ p {
 .about {
   min-width: 0;
   font-family: var(--mf-font-label);
-  font-size: 10px;
+  font-size: var(--mf-size-label);
   letter-spacing: var(--mf-label-tracking);
   text-transform: uppercase;
   color: var(--mf-amber-ink);

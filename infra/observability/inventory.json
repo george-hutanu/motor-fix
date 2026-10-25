@@ -880,7 +880,7 @@
       "kind": "product-counter",
       "name": "motorfix_review_announced_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
-      "dashboard": "motorfix-queues",
+      "dashboard": "motorfix-product",
       "alerts": "none",
       "reason": "counts each posted review announced to its garage's owners by outcome (built, muted, skipped), with the fan-out's log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-74"

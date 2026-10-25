@@ -1,6 +1,10 @@
 <section class="panel" [attr.aria-busy]="view.isLoading() || null">
   <header>
-    <h2>{{ (home() ? 'garage.reviews.title' : 'garage.reviews.viewTitle') | t }}</h2>
+    @if (home()) {
+      <h2>{{ 'garage.reviews.title' | t }}</h2>
+    } @else {
+      <h2>{{ 'garage.reviews.viewTitle' | t }}</h2>
+    }
     @if (profileHref(); as href) {
       <a class="link" data-profile [routerLink]="href">{{ 'garage.reviews.seeProfile' | t }}</a>
     }
