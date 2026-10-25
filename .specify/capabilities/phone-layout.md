@@ -1,6 +1,6 @@
 ---
 capability: phone-layout
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 286-phone-layout
   - 287-public-tab-bar
@@ -22,6 +22,7 @@ features:
   - 1351-results-phone-layout
   - 531-garage-feature-tabs
   - 1380-dashboard-tab-bar-e2e
+  - 1127-bottom-sheet-size
 ---
 
 # Capability: Phone layout and installable web app
@@ -74,9 +75,9 @@ _From 286-phone-layout._
 
 _From 286-phone-layout._
 
-### 287-FR-001 — Below 768 px, every public screen — Home and the results, garage, mechanic and account screens under a language prefix — MUST show a bar at the bottom of the screen with three tabs, in this order: "Caută", "Service-uri", "Cont" (English "Search", "Garages", "Account"), each an icon with its label, never an icon alone.
+### 1127-FR-004 — While any overlay task whose shape chosen at open time is a bottom sheet is open, the public bottom tab bar and the dashboard bottom tab bar MUST be hidden: not visible, not reachable by assistive technology or the keyboard, while the page keeps its layout (the bar's space is kept, nothing behind it moves); when the last open sheet closes the bar MUST be visible again. The sheet reason hides the bar with `visibility: hidden` (out of sight, of the accessibility tree and of the tab order, its space kept); the public bar's existing hide-while-typing (`[hidden]`) stays as it is, and either reason alone hides the bar.
 
-_From 287-public-tab-bar._
+_From 1127-bottom-sheet-size._
 
 ### 287-FR-002 — The bar MUST be a navigation landmark named "Navigare principală" (English "Main navigation"); the icons MUST be hidden from assistive technology.
 
@@ -131,10 +132,6 @@ _From 531-garage-feature-tabs._
 _From 288-dashboard-tab-bar._
 
 ### 288-FR-003 — Opening the address of a view the session's capabilities do not allow, or of a view that does not exist, MUST redirect the person to their dashboard's own address before the view loads; the decision MUST read the same view list as the menus.
-
-_From 288-dashboard-tab-bar._
-
-### 288-FR-004 — Below 768 px, the dashboard MUST show a bottom tab bar instead of the side menu, with one tab per view the session allows, in list order; the bar and the side menu MUST both be rendered from that one filtered list.
 
 _From 288-dashboard-tab-bar._
 
@@ -318,6 +315,18 @@ _From 208-resubmit-after-more._
 
 _From 208-resubmit-after-more._
 
+### 1127-FR-005 — While the sign-in sheet is open on a 320 px and a 390 px phone at `/app/driver` signed out, every button of the sheet MUST come fully inside the viewport, where it stands or once the sheet's own body is scrolled to it (the page behind never moving), and be tappable there, with nothing drawn over it.
+
+_From 1127-bottom-sheet-size._
+
+### 1127-FR-006 — On a tablet or a computer nothing about the bars changes; there is no bottom tab bar there.
+
+_From 1127-bottom-sheet-size._
+
+### 1127-FR-007 — An end-to-end check at 390 px MUST open `/app/driver` signed out and assert that the tab bar is not visible while the sign-in sheet is open, that the sheet's last button is in the viewport, and that the tab bar is visible again after the sheet closes.
+
+_From 1127-bottom-sheet-size._
+
 ## Retired
 
 - `287-FR-006` — superseded by `082-FR-012` (2026-10-04)
@@ -331,3 +340,5 @@ _From 208-resubmit-after-more._
 - `228-FR-001` — superseded by `1351-FR-005` (2026-10-23)
 - `288-FR-001` — superseded by `531-FR-001` (2026-10-24)
 - `288-FR-006` — superseded by `1380-FR-005` (2026-10-24)
+- `287-FR-001` — superseded by `1127-FR-004` (2026-10-25)
+- `288-FR-004` — superseded by `1127-FR-004` (2026-10-25)

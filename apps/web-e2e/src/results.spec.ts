@@ -1,7 +1,14 @@
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ACCOUNTS, openSignIn, ownMap, ready, signIn } from './accounts.js';
+import {
+  ACCOUNTS,
+  openMap,
+  openSignIn,
+  ownMap,
+  ready,
+  signIn,
+} from './accounts.js';
 import { answerConsent } from './consent-bar.js';
 import { deleteBrand } from './delete-brand.js';
 import { test } from './fixtures.js';
@@ -432,6 +439,12 @@ test.describe('the map beside the results @seeded', () => {
     }
   });
 
+  // The page opened with its interactive map, which these tests drive.
+  async function mapReady(page: Page, path: string) {
+    await ready(page, path);
+    await openMap(page);
+  }
+
   test.afterAll(async () => {
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [ids]);
     await deleteBrand(db, brandId);
@@ -457,7 +470,7 @@ test.describe('the map beside the results @seeded', () => {
         await route.fulfill({ json, response });
       },
     );
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
 
     await expect(
       page.getByRole('region', { name: 'Harta service‑urilor' }),
@@ -492,7 +505,7 @@ test.describe('the map beside the results @seeded', () => {
     page,
   }) => {
     await ownMap(page);
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
 
     const drawn = () =>
       page.evaluate(async () => {
@@ -536,7 +549,7 @@ test.describe('the map beside the results @seeded', () => {
     page,
   }) => {
     await ownMap(page);
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     const tally = page.locator('.summary .tally');
     await expect(tally).toContainText('4 service‑uri găsite');
     // The map exists before its style loads and it frames the garages; the
@@ -634,7 +647,7 @@ test.describe('the map beside the results @seeded', () => {
   }) => {
     await ownMap(page);
     await page.setViewportSize({ height: 812, width: 375 });
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     // The drags land on the handle, not on the consent bar over it.
     await answerConsent(page);
     const map = page.getByRole('region', { name: 'Harta service‑urilor' });
@@ -683,7 +696,7 @@ test.describe('the map beside the results @seeded', () => {
     ] as const) {
       await page.setViewportSize({ height: 800, width });
       await page.emulateMedia({ colorScheme: scheme });
-      await ready(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
+      await mapReady(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
 
       await expect(page.getByRole('region', { name: region })).toBeVisible();
       await expect(page.locator('mf-result-card')).toHaveCount(4);
@@ -697,7 +710,7 @@ test.describe('the map beside the results @seeded', () => {
     }
 
     await page.setViewportSize({ height: 1024, width: 820 });
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     await expect(handleOf(page)).toHaveCount(0);
     const mapBox = await page
       .getByRole('region', { name: 'Harta service‑urilor' })
@@ -856,7 +869,7 @@ test.describe('the map beside the results @seeded', () => {
     ] as const) {
       await page.setViewportSize({ height, width });
       await page.emulateMedia({ colorScheme: scheme });
-      await ready(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
+      await mapReady(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
       await expect(page.locator('mf-results-map .legend .area')).toHaveCount(1);
       await expect(page.locator('mf-consent-bar button').first()).toBeVisible();
       // The legend is measured against the zoom buttons, which MapLibre adds
@@ -887,7 +900,7 @@ test.describe('the map beside the results @seeded', () => {
     await asking(page);
     for (const [width, height] of PHONES) {
       await page.setViewportSize({ height, width });
-      await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+      await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
       for (const bar of ['asking', 'answered'] as const) {
         if (bar === 'answered') await answer(page);
         await zoomAtRests(page, `${width} x ${height} ${bar}`, height);
@@ -903,7 +916,7 @@ test.describe('the map beside the results @seeded', () => {
     await asking(page);
     for (const [width, height] of [PHONES[0], PHONES[2]]) {
       await page.setViewportSize({ height, width });
-      await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+      await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
       for (const bar of ['asking', 'answered'] as const) {
         if (bar === 'answered') await answer(page);
         await footerAtRests(page, `${width} x ${height} ${bar}`);
@@ -924,7 +937,7 @@ test.describe('the map beside the results @seeded', () => {
       [390, 'en'],
     ] as const) {
       await page.setViewportSize({ height: 800, width });
-      await ready(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
+      await mapReady(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
       await expect(page.locator('header.intro .summary .tally')).toBeVisible();
       const sizes = await page
         .locator('header.intro .summary > *')
@@ -944,7 +957,10 @@ test.describe('the map beside the results @seeded', () => {
     for (const [width, height] of [PHONES[0], PHONES[2]]) {
       for (const lang of ['ro', 'en'] as const) {
         await page.setViewportSize({ height, width });
-        await ready(page, `/${lang}/garages?brand=${brand.slug}&near=${near}`);
+        await mapReady(
+          page,
+          `/${lang}/garages?brand=${brand.slug}&near=${near}`,
+        );
         await expect(page.locator('mf-result-card').first()).toBeAttached();
         const where = `${width} x ${height} ${lang}`;
         const widths = await page.evaluate(() => ({
@@ -985,7 +1001,7 @@ test.describe('the map beside the results @seeded', () => {
   }) => {
     await ownMap(page);
     await page.setViewportSize({ height: 812, width: 375 });
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     await mapSettled(page);
     await dragTo(page, 780);
     await rests(page, 'low');
@@ -1012,7 +1028,7 @@ test.describe('the map beside the results @seeded', () => {
   }) => {
     await ownMap(page);
     await page.setViewportSize({ height: 812, width: 375 });
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     await rests(page, 'half');
     await sheet(page)
       .locator(':scope > .body')
@@ -1044,7 +1060,7 @@ test.describe('the map beside the results @seeded', () => {
     await ownMap(page);
     await page.setViewportSize({ height: 812, width: 375 });
     await page.goto('/ro');
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     const address = page.url();
     // A drag on a handle still sliding in misses it.
     await still(page, 'half');
@@ -1075,7 +1091,7 @@ test.describe('the map beside the results @seeded', () => {
         '/map/no-such-style.json';
     });
     await page.setViewportSize({ height: 812, width: 375 });
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
 
     await rests(page, 'full');
     await expect(page.locator('header.intro p.unavailable')).toHaveText(
@@ -1093,7 +1109,7 @@ test.describe('the map beside the results @seeded', () => {
       (window as { __MF_MAP_STYLE?: string }).__MF_MAP_STYLE =
         '/map/no-such-style.json';
     });
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
 
     await expect(page.locator('mf-result-card')).toHaveCount(4);
     await expect(
@@ -1164,7 +1180,7 @@ test.describe('the map beside the results @seeded', () => {
     page,
   }) => {
     await ownMap(page);
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     await mapSettled(page);
     const first = page.locator('mf-result-card').first();
     await expect(first.locator('article.card')).toHaveClass(/selected/);
@@ -1190,7 +1206,7 @@ test.describe('the map beside the results @seeded', () => {
   }) => {
     await ownMap(page);
     await page.setViewportSize({ height: 480, width: 1280 });
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     await mapSettled(page);
 
     await clickAt(page, placed[2].at);
@@ -1210,7 +1226,7 @@ test.describe('the map beside the results @seeded', () => {
     page,
   }) => {
     await ownMap(page);
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     await mapSettled(page);
 
     await named(page, 3).hover();
@@ -1254,7 +1270,7 @@ test.describe('the map beside the results @seeded', () => {
         await route.fulfill({ json, response });
       },
     );
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     await mapSettled(page);
     await expect(named(page, 0)).toHaveCount(0);
 
@@ -1284,7 +1300,7 @@ test.describe('the map beside the results @seeded', () => {
         '/map/no-such-style.json';
     });
     await page.setViewportSize({ height: 800, width: 320 });
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
 
     await named(page, 1).getByRole('heading').click();
     await expect(named(page, 1).locator('article.card')).toHaveClass(
@@ -1301,6 +1317,157 @@ test.describe('the map beside the results @seeded', () => {
     ).toBe(true);
   });
 
+  // The static map first: the view its image was asked for, and the one the
+  // interactive map opened at.
+  const staticMap = (page: Page) =>
+    page.locator('mf-results-map mf-static-map');
+  async function asked(page: Page) {
+    const src =
+      (await staticMap(page).locator('img').getAttribute('src')) ?? '';
+    const query = new URL(src, 'http://local').searchParams;
+    return {
+      lat: Number(query.get('lat')),
+      lng: Number(query.get('lng')),
+      zoom: Number(query.get('z')),
+    };
+  }
+  const openedAt = (page: Page) =>
+    page.evaluate(() => {
+      const map = (
+        window as unknown as {
+          __MF_MAP: {
+            getCenter(): { lat: number; lng: number };
+            getZoom(): number;
+          };
+        }
+      ).__MF_MAP;
+      const { lat, lng } = map.getCenter();
+      return { lat, lng, zoom: map.getZoom() };
+    });
+  async function sameView(page: Page, view: Awaited<ReturnType<typeof asked>>) {
+    await expect
+      .poll(() => page.evaluate(() => '__MF_MAP' in window))
+      .toBe(true);
+    const at = await openedAt(page);
+    expect(at.zoom).toBeCloseTo(view.zoom, 5);
+    expect(at.lat).toBeCloseTo(view.lat, 4);
+    expect(at.lng).toBeCloseTo(view.lng, 4);
+  }
+
+  // @traces 1196-FR-010 1196-FR-021
+  test('loads one static image and no MapLibre until the driver asks for the map', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    const statics: string[] = [];
+    const libre: string[] = [];
+    page.on('request', (request) => {
+      const url = request.url();
+      if (url.includes('/api/v1/maps/static')) statics.push(url);
+      if (/maplibre-gl/i.test(url)) libre.push(url);
+    });
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+
+    await expect(staticMap(page).locator('.overlay .pin')).toHaveCount(3);
+    await expect(page.locator('mf-result-card')).toHaveCount(4);
+    expect(statics).toHaveLength(1);
+    expect(libre).toHaveLength(0);
+    await expect(page.locator('mf-results-map canvas')).toHaveCount(0);
+  });
+
+  // @traces 1196-FR-011 1196-FR-015 1196-FR-021
+  test('opens the interactive map on a tap at the view of the static image', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await expect(staticMap(page).locator('.overlay .pin')).toHaveCount(3);
+    const view = await asked(page);
+
+    await staticMap(page).click({ position: { x: 24, y: 24 } });
+    await staticMap(page).waitFor({ state: 'detached' });
+
+    await sameView(page, view);
+  });
+
+  // @traces 1196-FR-015 1196-FR-021
+  test('opens the interactive map from its keyboard control at the same view', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await expect(staticMap(page).locator('.overlay .pin')).toHaveCount(3);
+    const view = await asked(page);
+    const control = staticMap(page).getByRole('button', {
+      name: 'Hartă interactivă',
+    });
+
+    await control.focus();
+    await expect(control).toBeFocused();
+    await page.keyboard.press('Enter');
+    await staticMap(page).waitFor({ state: 'detached' });
+
+    await sameView(page, view);
+  });
+
+  // @traces 1196-FR-017 1196-FR-021
+  test('keeps the grey placeholder when the image cannot load, and still opens the map on a tap', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    await page.route('**/api/v1/maps/static**', (route) => route.abort());
+    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await expect(page.locator('mf-result-card')).toHaveCount(4);
+
+    await expect(staticMap(page).locator('img')).toHaveCount(0);
+    await expect(staticMap(page).locator('.overlay')).toHaveCount(0);
+    await expect(staticMap(page).locator('.blank')).toBeVisible();
+    await expect(page.locator('.state[role="alert"]')).toHaveCount(0);
+
+    await staticMap(page).click({ position: { x: 24, y: 24 } });
+    await staticMap(page).waitFor({ state: 'detached' });
+    await expect
+      .poll(() => page.evaluate(() => '__MF_MAP' in window))
+      .toBe(true);
+  });
+
+  type Box = { x: number; y: number; width: number; height: number } | null;
+  // A part of the map lies wholly inside the map's box (half a pixel kept
+  // for rounding).
+  const within = (box: Box, part: Box) =>
+    !!box &&
+    !!part &&
+    part.x >= box.x &&
+    part.y >= box.y &&
+    part.x + part.width <= box.x + box.width + 0.5 &&
+    part.y + part.height <= box.y + box.height + 0.5;
+
+  // @traces 1196-FR-014 1196-FR-019 1196-FR-021
+  test('keeps the attribution and the control inside the map box at 320 px and 390 px, with no sideways scroll', async ({
+    page,
+  }) => {
+    await ownMap(page);
+    for (const width of [320, 390]) {
+      await page.setViewportSize({ height: 800, width });
+      await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+      const box = await page.locator('mf-results-map').boundingBox();
+      const control = await staticMap(page).getByRole('button').boundingBox();
+      const credit = await staticMap(page)
+        .locator('.attribution')
+        .boundingBox();
+      for (const part of [control, credit])
+        expect(within(box, part)).toBe(true);
+      expect(control?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth <=
+            document.documentElement.clientWidth,
+        ),
+      ).toBe(true);
+    }
+  });
+
   // Last: the garage it suspends stays suspended for the rest of the file.
   // @traces 269-FR-018
   test('takes the pin of a garage suspended while the page is open off the map within 2 seconds', async ({
@@ -1313,7 +1480,7 @@ test.describe('the map beside the results @seeded', () => {
         r.url().includes('garages=') &&
         r.ok(),
     );
-    await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    await mapReady(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
     await stream;
     const pinned = () =>
       page.evaluate(async () => {

@@ -74,9 +74,9 @@
             "service": "api"
           },
           "annotations": {
-            "summary": "More than 5% of api responses were 5xx in the last 10 minutes, over at least 20 responses ({{ $labels.deployment_environment }}).",
+            "summary": "More than 5% of api responses were 5xx, or more than 5% of static map renders failed on the tiles, in the last 10 minutes, over at least 20 ({{ $labels.deployment_environment }}).",
             "dashboard_uid": "motorfix-api",
-            "runbook": "Open the API dashboard and its Logs and traces row: find the route returning 5xx, read the error logs and traces, and roll back the last deploy if it brought the errors."
+            "runbook": "Open the API dashboard and its Logs and traces row: find the route returning 5xx, read the error logs and traces, and roll back the last deploy if it brought the errors. If only the static maps fail (the Static map renders panel), the tile provider is down or slow: the page keeps the interactive map on tap and the CDN serves cached images stale for a week; set MAP_TILES_TILEJSON_URL to another TileJSON only if the outage lasts."
           },
           "data": [
             {
@@ -88,7 +88,7 @@
               },
               "model": {
                 "refId": "A",
-                "expr": "(sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{service_name=\"api\", http_response_status_code=~\"5..\"}[10m])) / sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{service_name=\"api\"}[10m]))) and on (deployment_environment) (sum by (deployment_environment) (increase(http_server_request_duration_seconds_count{service_name=\"api\"}[10m])) >= 20)",
+                "expr": "max by (deployment_environment) (label_replace((sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{service_name=\"api\", http_response_status_code=~\"5..\"}[10m])) / sum by (deployment_environment) (rate(http_server_request_duration_seconds_count{service_name=\"api\"}[10m]))) and on (deployment_environment) (sum by (deployment_environment) (increase(http_server_request_duration_seconds_count{service_name=\"api\"}[10m])) >= 20), \"signal\", \"http\", \"\", \"\") or label_replace((sum by (deployment_environment) (rate(motorfix_static_map_renders_total{service_name=\"api\", outcome=\"tiles_failed\"}[10m])) / sum by (deployment_environment) (rate(motorfix_static_map_renders_total{service_name=\"api\"}[10m]))) and on (deployment_environment) (sum by (deployment_environment) (increase(motorfix_static_map_renders_total{service_name=\"api\"}[10m])) >= 20), \"signal\", \"static_map\", \"\", \"\"))",
                 "instant": true,
                 "intervalMs": 60000,
                 "maxDataPoints": 43200

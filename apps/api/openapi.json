@@ -4843,6 +4843,108 @@
         ]
       }
     },
+    "/api/v1/maps/static": {
+      "get": {
+        "operationId": "StaticMapController_render",
+        "parameters": [
+          {
+            "name": "theme",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "light",
+                "dark"
+              ]
+            }
+          },
+          {
+            "name": "z",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 5,
+              "maximum": 16,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "lat",
+            "required": true,
+            "in": "query",
+            "description": "The centre’s latitude, in Romania; the answer is drawn at the nearest grid point",
+            "schema": {
+              "minimum": 43.5,
+              "maximum": 48.4,
+              "type": "number"
+            }
+          },
+          {
+            "name": "lng",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 20.2,
+              "maximum": 29.8,
+              "type": "number"
+            }
+          },
+          {
+            "name": "w",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                320,
+                390,
+                480,
+                640,
+                768,
+                1024,
+                1280
+              ]
+            }
+          },
+          {
+            "name": "h",
+            "required": true,
+            "in": "query",
+            "description": "One of the widths; width × height at most 1280 × 1024",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                320,
+                390,
+                480,
+                640,
+                768,
+                1024,
+                1280
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The map at the snapped centre, named in X-Map-Lat and X-Map-Lng; the same query always draws the same image"
+          },
+          "400": {
+            "description": "validation_failed: a theme other than light or dark, a zoom not a whole 5 to 16, a centre outside Romania, a width or height not one of the sizes, or more than 1280 × 1024"
+          },
+          "429": {
+            "description": "rate_limited: too many maps from this address"
+          },
+          "502": {
+            "description": "map_tiles_unavailable: the tile provider failed or took too long"
+          }
+        },
+        "tags": [
+          "maps"
+        ]
+      }
+    },
     "/api/v1/garages/{id}/views": {
       "post": {
         "operationId": "ProfileViewsController_record",
@@ -15065,6 +15167,21 @@
           "one"
         ]
       },
+      "GarageReviewQuoteDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "number"
+          },
+          "toBani": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "fromBani",
+          "toBani"
+        ]
+      },
       "GarageReviewDto": {
         "type": "object",
         "properties": {
@@ -15109,6 +15226,29 @@
             "items": {
               "$ref": "#/components/schemas/RequestJobDto"
             }
+          },
+          "quote": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageReviewQuoteDto"
+              }
+            ]
+          },
+          "finalPriceBani": {
+            "type": "number",
+            "nullable": true
+          },
+          "paidBani": {
+            "type": "number",
+            "description": "What the driver says they paid",
+            "nullable": true
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "required": [
@@ -15119,7 +15259,11 @@
           "postedAt",
           "author",
           "car",
-          "jobs"
+          "jobs",
+          "quote",
+          "finalPriceBani",
+          "paidBani",
+          "editedAt"
         ]
       },
       "GarageReviewsPageDto": {

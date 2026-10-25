@@ -13,6 +13,7 @@ const itp = (
   ...flags,
 });
 
+// @traces 094-FR-003 094-FR-005
 describe('when a 30 and 7 day reminder is due', () => {
   it('sends the 30-day reminder 30 days before', () => {
     expect(dueStage(itp('2026-12-10'), '2026-11-10')).toEqual({

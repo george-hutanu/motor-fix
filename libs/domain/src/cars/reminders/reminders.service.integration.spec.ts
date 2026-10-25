@@ -13,9 +13,13 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import { render } from '../../notifications/templates';
 
 const redisUrl = redisUrlFor(3);
-const { account, prisma, reset } = fixtures();
+// @traces 094-FR-007
+const { account, car, prisma, reset } = fixtures();
+const WEB = 'https://motorfix.test';
+const CARS = `${WEB}/app/driver/cars`;
 
 // The edit writes its event with the car, so the car already holds the dates
 // the event carries when the worker reads it.
@@ -31,26 +35,6 @@ const saveDates = (carId: string, dates: Dates) =>
     where: { id: carId },
   });
 
-// A reminder's car must exist (the foreign key); any car of the account will do.
-const car = async (ownerId: string) => {
-  const brand = await prisma.brand.upsert({
-    create: { key: 'test-dacia', name: 'Dacia', slug: 'test-dacia' },
-    update: {},
-    where: { name: 'Dacia' },
-  });
-  const { id } = await prisma.car.create({
-    data: {
-      brandId: brand.id,
-      fuel: 'petrol',
-      idempotencyKey: randomUUID(),
-      model: 'Logan',
-      odometerKm: 90000,
-      ownerId,
-      year: 2018,
-    },
-  });
-  return id;
-};
 serialDatabase(databaseUrl);
 
 const queue = new Queue('notifications', { connection: { url: redisUrl } });
@@ -94,7 +78,7 @@ beforeEach(async () => {
     null,
     new AuditService(),
   );
-  reminders = new RemindersService(prisma, notifications);
+  reminders = new RemindersService(prisma, notifications, WEB);
 });
 
 async function runOn(day: string, clock = MORNING) {
@@ -102,6 +86,7 @@ async function runOn(day: string, clock = MORNING) {
   return reminders.run(day);
 }
 
+// @traces 094-FR-002 094-FR-003 094-FR-004 094-FR-005 094-FR-009
 describe('an ITP reminder due on 10 December 2026', () => {
   let driver: string;
   let carId: string;
@@ -146,11 +131,47 @@ describe('an ITP reminder due on 10 December 2026', () => {
   });
 
   // @traces 032-FR-007
-  it('names the car and its date, so the bell can say which ITP is due', async () => {
+  // @traces 094-FR-014
+  it('names the car, its date, the days left and the cars link', async () => {
     await runOn('2026-11-10');
+    await runOn('2026-12-03');
+
+    const bell = await rows('DUE_ITP');
+    expect(bell.map((n) => n.params)).toEqual([
+      { car: 'Dacia Logan', cars: CARS, dueOn: '2026-12-10', left: 30 },
+      { car: 'Dacia Logan', cars: CARS, dueOn: '2026-12-10', left: 7 },
+    ]);
+  });
+
+  // @traces 094-FR-005
+  // @traces 094-FR-014
+  it('says the true days left when the 30-day stage is caught up late', async () => {
+    expect(await runOn('2026-11-28')).toBe(1);
 
     const [bell] = await rows('DUE_ITP');
-    expect(bell.params).toEqual({ car: 'Dacia Logan', dueOn: '2026-12-10' });
+    expect(bell.params).toMatchObject({ left: 12 });
+    expect(bell.eventId).toMatch(/:30:2026-12-10$/);
+  });
+
+  // @traces 094-FR-013
+  it('renders the e-mail and the push of the stored message in both languages, without the plate', async () => {
+    await prisma.car.update({
+      data: { plate: 'B123ABC' },
+      where: { id: carId },
+    });
+    await runOn('2026-11-10');
+    const [email] = await rows('DUE_ITP', 'email');
+    const params = email.params as Record<string, unknown>;
+
+    const ro = render('DUE_ITP', 'email', 'ro', { ...params, app: WEB });
+    expect(ro.subject).toBe('ITP-ul expiră pe 10 decembrie 2026');
+    expect(JSON.stringify(ro)).toContain(
+      'ITP-ul la Dacia Logan expiră pe 10 decembrie 2026, peste 30 de zile.',
+    );
+    expect(JSON.stringify(ro)).toContain(CARS);
+    const en = render('DUE_ITP', 'push', 'en', params);
+    expect(en.body).toContain('expires on 10 December 2026, in 30 days.');
+    expect(JSON.stringify([ro, en])).not.toContain('B123ABC');
   });
 
   it('goes through the pipeline, which writes the e-mail too', async () => {
@@ -219,6 +240,7 @@ describe('an ITP reminder due on 10 December 2026', () => {
     expect(await prisma.reminder.count({ where: { carId } })).toBe(1);
   });
 
+  // @traces 094-FR-011
   it('writes the bell at once at 23:15 and holds the e-mail until 08:00', async () => {
     expect(await runOn('2026-11-10', NIGHT)).toBe(1);
 
@@ -238,8 +260,45 @@ describe('an ITP reminder due on 10 December 2026', () => {
     expect(await rows('DUE_ITP')).toHaveLength(0);
     expect(await reminder(carId)).toMatchObject({ sent30: true });
   });
+
+  it('writes only the bell while the due-date messages are switched off', async () => {
+    await prisma.notificationPreference.create({
+      data: {
+        accountId: driver,
+        channel: 'email',
+        enabled: false,
+        type: 'DUE_ITP',
+      },
+    });
+    await runOn('2026-11-10');
+    expect(await rows('DUE_ITP')).toHaveLength(1);
+    expect(
+      await prisma.notification.count({
+        where: { channel: { not: 'in_app' }, kind: 'DUE_ITP' },
+      }),
+    ).toBe(0);
+  });
+
+  // @traces 094-FR-012
+  it('does not send again a stage whose e-mail ended failed', async () => {
+    await runOn('2026-11-10');
+    await prisma.notification.updateMany({
+      data: { status: 'failed' },
+      where: { channel: 'email', kind: 'DUE_ITP' },
+    });
+    expect(await runOn('2026-11-11')).toBe(0);
+    expect(await rows('DUE_ITP', 'email')).toHaveLength(1);
+  });
+
+  // @traces 094-FR-012
+  it('writes no audit entry for a reminder it sends', async () => {
+    const before = await prisma.activityLog.count();
+    await runOn('2026-11-10');
+    expect(await prisma.activityLog.count()).toBe(before);
+  });
 });
 
+// @traces 094-FR-002
 describe('a run that fails part-way', () => {
   it('fails, keeps what it sent, and a retry sends the rest once', async () => {
     const driver = await account('george');
@@ -377,7 +436,7 @@ describe('the tyre reminders', () => {
   });
 });
 
-// @traces 092-FR-008
+// @traces 092-FR-008 094-FR-003
 describe('a date set by an edit', () => {
   let driver: string;
   let carId: string;
@@ -522,6 +581,51 @@ describe('the car events', () => {
     notifications.now = MORNING('2026-10-08');
   });
 
+  // @traces 094-FR-001
+  it('sets the ITP reminder of a car added with an ITP date, and none without one', async () => {
+    await saveDates(carId, {
+      itpUntil: '2026-11-07',
+      rcaUntil: null,
+      rovinietaUntil: null,
+    });
+    const other = await car(driver, 'Duster');
+    const added = (id: string) => ({
+      id: `added-${id}`,
+      kind: 'car.added',
+      payload: { carId: id, ownerId: driver },
+      subjectId: id,
+    });
+    await reminders.onCarEvent(added(carId));
+    await reminders.onCarEvent(added(other));
+
+    expect(await reminder(carId)).toMatchObject({
+      accountId: driver,
+      dueOn: new Date('2026-11-07T00:00:00Z'),
+      sent30: false,
+    });
+    expect(await prisma.reminder.count({ where: { carId: other } })).toBe(0);
+    expect(await runOn('2026-10-08')).toBe(1);
+    expect(await rows('DUE_ITP')).toHaveLength(1);
+  });
+
+  // Only a car.added takes every date as new; an update naming no change
+  // sets nothing.
+  it('sets no reminder for a car.updated without its changed fields', async () => {
+    await saveDates(carId, {
+      itpUntil: '2026-11-07',
+      rcaUntil: null,
+      rovinietaUntil: null,
+    });
+    await reminders.onCarEvent({
+      id: 'updated-unnamed',
+      kind: 'car.updated',
+      payload: { carId, ownerId: driver },
+      subjectId: carId,
+    });
+
+    expect(await prisma.reminder.count({ where: { carId } })).toBe(0);
+  });
+
   it('sets a reminder for each changed date, and none for the rest', async () => {
     await reminders.onCarEvent(
       await updated(['itpUntil', 'rcaUntil', 'odometerKm'], {
@@ -639,7 +743,7 @@ describe('the car events', () => {
   });
 });
 
-// @traces 092-FR-007
+// @traces 092-FR-007 094-FR-004
 describe('the daily run and a removed car', () => {
   let driver: string;
   let carId: string;

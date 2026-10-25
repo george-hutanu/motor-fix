@@ -23,6 +23,7 @@ export { BookingsService } from './services/bookings.service';
 export { ReviewsService } from './services/reviews.service';
 export { GarageJobsService } from './services/garage-jobs.service';
 export { PlacesService } from './services/places.service';
+export { MapsService } from './services/maps.service';
 export { GaragesService } from './services/garages.service';
 export { SupportService } from './services/support.service';
 export { InvitesService } from './services/invites.service';

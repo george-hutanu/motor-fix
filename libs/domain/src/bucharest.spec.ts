@@ -1,6 +1,7 @@
 import {
   addLocalDays,
   addMonths,
+  addYears,
   atLocal,
   isoWeek,
   localDay,
@@ -116,5 +117,17 @@ describe('addMonths', () => {
     ['2026-03-31', -1, '2026-02-28'],
   ])('moves %s by %i months to %s, clamped to the month', (day, n, moved) => {
     expect(addMonths(day, n)).toBe(moved);
+  });
+});
+
+// @traces 094-FR-008
+describe('addYears', () => {
+  it.each([
+    ['2026-10-25', 5, '2031-10-25'],
+    ['2028-02-29', 5, '2033-02-28'],
+    ['2028-02-29', 4, '2032-02-29'],
+    ['2026-12-31', 1, '2027-12-31'],
+  ])('moves %s by %i years to %s, clamped to the month', (day, n, moved) => {
+    expect(addYears(day, n)).toBe(moved);
   });
 });

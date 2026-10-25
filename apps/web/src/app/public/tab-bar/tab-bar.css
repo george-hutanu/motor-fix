@@ -7,7 +7,8 @@
   z-index: 10;
   margin-top: auto;
   border-top: 1px solid var(--mf-line);
-  background: color-mix(in srgb, var(--mf-bg) 74%, transparent);
+  /* Opaque enough that amber or dark text scrolling behind keeps every tab at 4.5:1. */
+  background: color-mix(in srgb, var(--mf-bg) 88%, transparent);
   -webkit-backdrop-filter: saturate(160%) blur(18px);
   backdrop-filter: saturate(160%) blur(18px);
 }
@@ -44,7 +45,7 @@ a {
   text-decoration: none;
 }
 a[aria-current="page"] {
-  color: var(--mf-amber-ink);
+  color: color-mix(in srgb, var(--mf-amber-ink) 80%, var(--mf-text));
 }
 svg {
   flex: none;

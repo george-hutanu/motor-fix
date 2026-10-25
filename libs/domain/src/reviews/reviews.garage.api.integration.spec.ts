@@ -143,6 +143,8 @@ describe('what a garage’s review shows', () => {
     expect(item).toEqual({
       author: { shortName: 'Andrei M.' },
       car: expect.objectContaining({ brand: 'BMW', model: '320d' }),
+      editedAt: null,
+      finalPriceBani: null,
       id: one.id,
       jobs: [
         expect.objectContaining({
@@ -154,7 +156,9 @@ describe('what a garage’s review shows', () => {
           nameRo: 'Plăcuțe frână',
         }),
       ],
+      paidBani: null,
       postedAt: one.postedAt.toISOString(),
+      quote: { fromBani: 45_000, toBani: 60_000 },
       rating: 5,
       source: 'job',
       text: 'Treabă curată.',
@@ -335,5 +339,86 @@ describe('reading a garage’s reviews', () => {
       prisma.review.findMany({ orderBy: { id: 'asc' } }),
     ]);
     expect(after).toEqual(before);
+  });
+});
+
+// @traces 1367-FR-004
+// @traces 1367-FR-006
+// @traces 1367-FR-008
+// @traces 1367-FR-011
+// @traces 1367-FR-012
+describe('the prices and the marks of a garage’s review', () => {
+  it('carries the accepted quote’s range, the job’s final price, the driver’s amount and the edited date', async () => {
+    const { andrei, garage } = await dinamo();
+    await review(garage.id, andrei, {
+      editedAt: new Date('2026-10-05T09:30:00Z'),
+      finalPriceBani: 420_000,
+      paidBani: 450_000,
+      quote: { fromBani: 380_000, toBani: 440_000 },
+    });
+
+    const [item] = (await listOf(garage.id)).body.items;
+
+    expect(item).toMatchObject({
+      editedAt: '2026-10-05T09:30:00.000Z',
+      finalPriceBani: 420_000,
+      paidBani: 450_000,
+      quote: { fromBani: 380_000, toBani: 440_000 },
+    });
+  });
+
+  it('answers null for a job with no final price, a review with no amount and one never edited', async () => {
+    const { andrei, garage } = await dinamo();
+    await review(garage.id, andrei, {
+      quote: { fromBani: 420_000, toBani: 420_000 },
+    });
+
+    const [item] = (await listOf(garage.id)).body.items;
+
+    expect(item).toMatchObject({
+      editedAt: null,
+      finalPriceBani: null,
+      paidBani: null,
+      quote: { fromBani: 420_000, toBani: 420_000 },
+    });
+  });
+
+  it('gives a review written from the profile no car, no jobs and no amount, whatever its job holds', async () => {
+    const { andrei, garage } = await dinamo();
+    await review(garage.id, andrei, {
+      editedAt: new Date('2026-10-05T09:30:00Z'),
+      finalPriceBani: 2_345_678,
+      paidBani: 3_456_789,
+      quote: { fromBani: 1_234_567, toBani: 1_234_568 },
+      source: 'profile',
+    });
+
+    const read = await listOf(garage.id);
+    const [item] = read.body.items;
+
+    expect(item).toMatchObject({
+      car: null,
+      editedAt: '2026-10-05T09:30:00.000Z',
+      finalPriceBani: null,
+      jobs: [],
+      paidBani: null,
+      quote: null,
+      source: 'profile',
+    });
+    const body = JSON.stringify(read.body);
+    for (const amount of ['1234567', '1234568', '2345678', '3456789']) {
+      expect(body).not.toContain(amount);
+    }
+  });
+
+  it('leaves every review’s edited date empty until an edit writes it', async () => {
+    const { andrei, garage } = await dinamo();
+    const one = await review(garage.id, andrei);
+
+    const stored = await prisma.review.findUniqueOrThrow({
+      where: { id: one.id },
+    });
+
+    expect(stored.editedAt).toBeNull();
   });
 });

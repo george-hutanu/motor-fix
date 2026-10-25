@@ -124,6 +124,27 @@ describe('openMapLibre, what MapLibre needs that the bundle does not hold', () =
   });
 });
 
+// @traces 1196-FR-015
+describe('openMapLibre, where it opens', () => {
+  it('opens over Romania whole when it is given no view', async () => {
+    await openMapLibre(document.createElement('div'), LIGHT);
+
+    expect(fake.map.options).toMatchObject({
+      center: [24.97, 45.94],
+      zoom: 5.2,
+    });
+  });
+
+  it('opens at the view it is given, as the static image showed it', async () => {
+    await openMapLibre(document.createElement('div'), LIGHT, undefined, {
+      center: [26.1, 44.43],
+      zoom: 12,
+    });
+
+    expect(fake.map.options).toMatchObject({ center: [26.1, 44.43], zoom: 12 });
+  });
+});
+
 // @traces 269-FR-017
 describe('openMapLibre, a map that loads or says it cannot', () => {
   // The opener awaits MapLibre's import before it builds the map.

@@ -346,7 +346,7 @@ describe('the staging seed password under hostile input', () => {
     ['surrounded by quotes', (v) => `invalid "${v}"`],
   ];
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it.each(echoes)(
     'redacts a password echoed %s in a GraphQL error',
     async (_, text) => {
@@ -365,7 +365,7 @@ describe('the staging seed password under hostile input', () => {
     },
   );
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('redacts a password echoed in an HTTP 400 error body', async () => {
     respond = (_c, raw) =>
       raw.send(
@@ -380,7 +380,7 @@ describe('the staging seed password under hostile input', () => {
     expect(message).toBe('Railway API answered HTTP 400: got [redacted]');
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('redacts a password that Railway echoes JSON-escaped inside its error text', async () => {
     respond = (_c, raw) =>
       raw.send(
@@ -401,7 +401,7 @@ describe('the staging seed password under hostile input', () => {
     expect(message).not.toContain(JSON.stringify(PASSWORD).slice(1, -1));
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('redacts a password that Railway echoes URL-encoded inside its error text', async () => {
     respond = (_c, raw) =>
       raw.send(
@@ -420,7 +420,7 @@ describe('the staging seed password under hostile input', () => {
     expect(message).not.toContain(encodeURIComponent(PASSWORD));
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('does not leave the password in a message that echoes only its first half', async () => {
     const password = 'Tr0ub4dor&3-horse';
     respond = (_c, raw) =>
@@ -438,7 +438,7 @@ describe('the staging seed password under hostile input', () => {
     expect(message).not.toContain(password.slice(0, 8));
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('redacts the password when the token fallback retry also echoes it', async () => {
     let n = 0;
     respond = (_c, raw) => {
@@ -455,7 +455,7 @@ describe('the staging seed password under hostile input', () => {
     expect(message).toBe('bad [redacted]');
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('redacts a regex-special password without mangling the rest of the text', async () => {
     const password = '$&.*+?(a|b)[x]\\1';
     respond = (_c, raw) =>
@@ -471,7 +471,7 @@ describe('the staging seed password under hostile input', () => {
     expect(message).toBe('abc [redacted] xyz abc');
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('keeps the password out of an error from a later call of the same deploy', async () => {
     const api: Service = {
       healthcheckPath: '/health/ready',
@@ -498,7 +498,7 @@ describe('the staging seed password under hostile input', () => {
     expect(message).toBe('env has [redacted]');
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('keeps the password out of the error when the api deployment fails', async () => {
     const api: Service = {
       healthcheckPath: '/health/ready',
@@ -527,7 +527,7 @@ describe('the staging seed password under hostile input', () => {
     );
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it.each([
     'production',
     'Staging',
@@ -552,7 +552,7 @@ describe('the staging seed password under hostile input', () => {
     expect(calls).toEqual([]);
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-001
+  // @traces 1370-FR-001
   it.each([
     'Staging',
     'STAGING',
@@ -571,7 +571,7 @@ describe('the staging seed password under hostile input', () => {
     );
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-001
+  // @traces 1370-FR-001
   it('puts the seed in no production service pre-deploy command, with every variable set', () => {
     const env = {
       IMAGE_API: 'a',
@@ -598,7 +598,7 @@ describe('the staging seed password under hostile input', () => {
     ]);
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it.each(['production', 'Staging', 'STAGING', '', '__proto__', 'staging '])(
     'returns no seed password for the environment %j',
     (environment) => {
@@ -608,7 +608,7 @@ describe('the staging seed password under hostile input', () => {
     },
   );
 
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it.each([undefined, ''])(
     'rejects a staging password of %j naming the variable',
     (value) => {
@@ -618,7 +618,7 @@ describe('the staging seed password under hostile input', () => {
     },
   );
 
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it('returns a staging password byte for byte, whitespace and unicode included', () => {
     const value = '  pä ss\t\n';
 
@@ -685,7 +685,7 @@ describe('the deploy script as a process, with odd environments and a missing pr
     );
   }
 
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it.each([
     [['Staging']],
     [['STAGING']],
@@ -705,7 +705,7 @@ describe('the deploy script as a process, with odd environments and a missing pr
     15_000,
   );
 
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it('fails a staging run with no project id before any Railway call, naming the variable', async () => {
     const { code, out } = await run(['staging'], { RAILWAY_PROJECT_ID: '' });
 
@@ -715,7 +715,7 @@ describe('the deploy script as a process, with odd environments and a missing pr
     expect(out).not.toContain(PASSWORD);
   }, 15_000);
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('keeps the password out of the output when the endpoint is refused as not loopback', async () => {
     const { code, out } = await run(['staging'], {
       RAILWAY_API_ENDPOINT: 'https://evil.example/graphql',
@@ -726,7 +726,7 @@ describe('the deploy script as a process, with odd environments and a missing pr
     expect(out).not.toContain(PASSWORD);
   }, 15_000);
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('keeps the password out of the output when the connection is dropped mid-request', async () => {
     server.removeAllListeners('request');
     server.on('request', (req) => {

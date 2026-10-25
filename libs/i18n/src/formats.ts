@@ -63,12 +63,12 @@ function digits(
 const isNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
 
-function lei(bani: number[], language: Language): string {
+function lei(bani: number[], language: Language, join = '–'): string {
   const decimals = bani.some((b) => b % 100 !== 0) ? 2 : 0;
   const amounts = bani.map((b) =>
     digits(b / 100, language, decimals, decimals),
   );
-  return `${amounts.join('–')} lei`;
+  return `${amounts.join(join)} lei`;
 }
 
 export function formatLei(bani: unknown, language: Language): string {
@@ -79,10 +79,20 @@ export function formatLeiRange(
   from: unknown,
   to: unknown,
   language: Language,
+  join = '–',
 ): string {
   if (!isNumber(from) || !isNumber(to)) return MISSING;
   const ends = [Math.round(from), Math.round(to)];
-  return lei(ends[0] === ends[1] ? [ends[0]] : ends, language);
+  return lei(ends[0] === ends[1] ? [ends[0]] : ends, language, join);
+}
+
+// A quote's two ends set apart by a spaced dash: "3.800 – 4.400 lei".
+export function formatLeiSpan(
+  from: unknown,
+  to: unknown,
+  language: Language,
+): string {
+  return formatLeiRange(from, to, language, ' – ');
 }
 
 // A price range read in whole lei, as drivers and owners see a price list:
