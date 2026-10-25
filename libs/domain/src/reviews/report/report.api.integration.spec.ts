@@ -85,6 +85,7 @@ const decided = (
 
 // @traces 076-FR-006 076-FR-008 076-FR-009
 // @traces 076-FR-014
+// @traces 076-FR-013
 describe('the owner reports a review', () => {
   it('stores a pending report due in 48 hours and answers it with the review now reported', async () => {
     const s = await setting();
@@ -263,6 +264,7 @@ describe('the owner reports a review', () => {
 });
 
 // @traces 076-FR-007 076-FR-014
+// @traces 076-FR-012
 describe('a review that may not be reported again', () => {
   it('refuses a reported review in the caller’s language, writing nothing', async () => {
     const s = await setting();
