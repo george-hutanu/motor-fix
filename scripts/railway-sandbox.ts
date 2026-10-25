@@ -179,8 +179,11 @@ function parse(stdout: string): Answer {
   }
 }
 
+// A refused token gets no answer at all: data is null, or (for a nullable
+// field such as sandbox or sandboxDestroy) every field in it is null.
 const refused = (answer: Answer) =>
-  !answer.data && (answer.errors ?? []).some((e) => e.message === REFUSED);
+  Object.values(answer.data ?? {}).every((field) => field == null) &&
+  (answer.errors ?? []).some((e) => e.message === REFUSED);
 
 // Runs one CLI command with the token, retried once as a project token when
 // Railway refuses a bearer it was not told the kind of.

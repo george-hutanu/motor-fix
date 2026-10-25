@@ -213,6 +213,44 @@ describe('railwayApi', () => {
     expect(ctx.kind).toBe('project');
   });
 
+  // Railway refuses a nullable field (sandbox, sandboxDestroy) with the field
+  // set to null beside the error, as answered to a refused token on
+  // 2026-10-25: exec and close, each a new process, met it first.
+  it('retries as a project token when the refusal comes with a null field', () => {
+    const nullField = JSON.stringify({
+      data: { sandbox: null },
+      errors: [{ message: 'Not Authorized', path: ['sandbox'] }],
+    });
+    const running = JSON.stringify({
+      data: { sandbox: { status: 'RUNNING' } },
+    });
+    const { calls, run } = fake([nullField, running]);
+    const ctx: Parameters<typeof railwayApi>[2] = {
+      env: { RAILWAY_API_TOKEN: 'tok' },
+      run,
+    };
+
+    expect(railwayApi('query { sandbox }', {}, ctx)).toEqual({
+      sandbox: { status: 'RUNNING' },
+    });
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.env.RAILWAY_TOKEN).toBe('tok');
+    expect(ctx.kind).toBe('project');
+  });
+
+  it('does not retry a refusal that came with a real answer beside it', () => {
+    const mixed = JSON.stringify({
+      data: { other: null, sandbox: { status: 'RUNNING' } },
+      errors: [{ message: 'Not Authorized', path: ['other'] }],
+    });
+    const { calls, run } = fake([mixed]);
+
+    expect(() =>
+      railwayApi('query { x }', {}, { env: { RAILWAY_API_TOKEN: 't' }, run }),
+    ).toThrow(/Not Authorized/);
+    expect(calls).toHaveLength(1);
+  });
+
   it("fails with Railway's message, never the token, when both are refused", () => {
     const { run } = fake([refused, refused]);
     const ctx = { env: { RAILWAY_API_TOKEN: 'sekret-token' }, run };
