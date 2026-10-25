@@ -1,7 +1,16 @@
 :host {
+  display: block;
+  min-width: 0;
+}
+/* The Cockpit section card of the requests panel on Panou. */
+.panel {
   display: flex;
   flex-direction: column;
-  gap: var(--mf-space-3);
+  gap: var(--mf-space-4);
+  padding: var(--mf-space-5) var(--mf-space-6);
+  background: var(--mf-panel);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-panel);
   min-width: 0;
 }
 h2,
@@ -10,7 +19,10 @@ p {
   overflow-wrap: anywhere;
 }
 h2 {
-  font-size: var(--mf-size-subheading);
+  font-family: var(--mf-font-label);
+  font-weight: 400;
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
 }
 .muted {
   color: var(--mf-text-secondary);
@@ -54,6 +66,9 @@ h2 {
 
 /* Body size on a phone, the smaller tokens from a tablet up. */
 @media (min-width: 768px) {
+  h2 {
+    font-size: var(--mf-size-label);
+  }
   .muted {
     font-size: var(--mf-size-small);
   }

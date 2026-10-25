@@ -1,27 +1,31 @@
-<h2>{{ 'garage.home.ownJobs.title' | t }}</h2>
-@if (view.value()) {
-  @if (next(); as job) {
-    <p class="muted" data-next>{{ nextLine(job) }}</p>
-  }
-  @if (rows().length) {
-    <p class="muted" data-load>{{ load() }}</p>
-    <ul class="jobs">
-      @for (job of rows(); track job.id) {
-        <li [attr.data-job]="job.id">
-          <button type="button" class="row" [attr.data-status]="job.status" (click)="open(job)">{{ line(job) }}</button>
-        </li>
+<section class="panel">
+  <h2>{{ 'garage.home.ownJobs.title' | t }}</h2>
+  @if (view.value()) {
+    @if (rows().length) {
+      <ul class="jobs">
+        @for (job of rows(); track job.id) {
+          <li [attr.data-job]="job.id">
+            <button type="button" class="row" [attr.data-status]="job.status" (click)="open(job)">{{ line(job) }}</button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p role="status">{{ 'garage.home.ownJobs.none' | t }}</p>
+    }
+    @if (next(); as job) {
+      <p class="muted" data-next>{{ nextLine(job) }}</p>
+    }
+    @if (rows().length) {
+      <p class="muted" data-load>{{ load() }}</p>
+    }
+  } @else if (view.failed()) {
+    <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'garage.jobs.retry' | t }}</button>
+  } @else {
+    <ul class="jobs" aria-busy="true">
+      @for (n of skeletons; track n) {
+        <li data-skeleton class="skeleton" aria-hidden="true"></li>
       }
     </ul>
-  } @else {
-    <p role="status">{{ 'garage.home.ownJobs.none' | t }}</p>
   }
-} @else if (view.failed()) {
-  <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
-  <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'garage.jobs.retry' | t }}</button>
-} @else {
-  <ul class="jobs" aria-busy="true">
-    @for (n of skeletons; track n) {
-      <li data-skeleton class="skeleton" aria-hidden="true"></li>
-    }
-  </ul>
-}
+</section>

@@ -248,6 +248,24 @@ describe("a mechanic's own jobs on Panou", () => {
     );
   });
 
+  it('puts her next booking and her load line under the rows', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    const list = element.querySelector('.jobs');
+    const next = element.querySelector('[data-next]');
+    const load = element.querySelector('[data-load]');
+    expect(list && next && load).toBeTruthy();
+    const follows = (a: Element | null, b: Element | null) =>
+      Boolean(
+        a &&
+          b &&
+          a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    expect(follows(list, next)).toBe(true);
+    expect(follows(next, load)).toBe(true);
+  });
+
   it('counts the rows shown and those done in her load line', async () => {
     const { element, settle } = await render();
     await settle();
@@ -294,6 +312,13 @@ describe("the own jobs' states", () => {
     );
     expect(element.querySelector('[data-next]')).not.toBeNull();
     expect(element.querySelector('[data-load]')).toBeNull();
+    const empty = element.querySelector('[role="status"]');
+    const next = element.querySelector('[data-next]');
+    expect(
+      empty && next
+        ? empty.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING
+        : 0,
+    ).toBeTruthy();
   });
 
   it('shows only the empty line to a mechanic with no booking yet', async () => {
@@ -423,6 +448,41 @@ describe('the own jobs on a phone', () => {
     join(__dirname, 'own-jobs-section.css'),
     'utf8',
   );
+
+  it('is a section card like the requests panel: same card, title and padding', async () => {
+    const panel = readFileSync(
+      join(__dirname, '../garage-requests-panel/garage-requests-panel.css'),
+      'utf8',
+    );
+    const block = (css: string, selector: string) =>
+      css.match(new RegExp(`\\n${selector} \\{([^}]*)\\}`))?.[1] ?? '';
+    const card = (css: string) =>
+      ['padding', 'background', 'border', 'border-radius'].map((property) =>
+        block(css, '\\.panel')
+          .match(new RegExp(`\\n\\s*${property}: [^;]+;`))?.[0]
+          .trim(),
+      );
+    expect(card(stylesheet).every(Boolean)).toBe(true);
+    expect(card(stylesheet)).toEqual(card(panel));
+    for (const property of [
+      'font-family',
+      'text-transform',
+      'letter-spacing',
+    ]) {
+      const own = block(stylesheet, 'h2').match(
+        new RegExp(`${property}: [^;]+;`),
+      )?.[0];
+      expect(own).toBeDefined();
+      expect(block(panel, 'h2')).toContain(own);
+    }
+
+    const { element, settle } = await render();
+    await settle();
+    const section = element.querySelector('section.panel');
+    expect(section).not.toBeNull();
+    expect(section?.querySelector('h2')).not.toBeNull();
+    expect(section?.querySelector('.jobs')).not.toBeNull();
+  });
 
   it('wraps a row instead of scrolling sideways', () => {
     expect(stylesheet).toMatch(/\.row \{[^}]*overflow-wrap: anywhere/);
