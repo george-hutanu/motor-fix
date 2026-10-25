@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -50,6 +50,7 @@ features:
   - 947-faro-consent-journeys
   - 056-mechanic-dialog
   - 1156-retention-job
+  - 1257-quote-reminders
 ---
 
 # Capability: Observability
@@ -917,6 +918,10 @@ _From 1156-retention-job._
 ### 1156-FR-011 — The worker dashboard MUST gain a panel with the retention counts by kind over time, and an alert MUST fire when the time since the job's last success is greater than 48 hours (an arm of `worker-jobs-failed`, `reason="overdue"`, so the rules stay within the free tier's 50); the job, the counter, the panel and the alert MUST be listed in `infra/observability/inventory.json` in the same change.
 
 _From 1156-retention-job._
+
+### 1257-FR-012 — Observability MUST ship with the change: the new queue or timer kinds listed in `infra/observability/inventory.json` with one log line per fired timer naming the object and what it did, a counter of reminders sent, recipients expired, requests closed and quotes expired by timer or sweep, BullMQ's queue metrics for depth and failures, and a sweep-late alert on the sweep doing the work of lost timers. The alert counts the expiry steps the sweep ran (`recipient_expired`, `request_closed`, `quote_expired`) and leaves reminders out, because after a booking lapse the sweep is their expected sender; it is the shipped `booking-lapse-sweep-late`, widened to this counter, as Grafana's free tier caps the alert rules at 50.
+
+_From 1257-quote-reminders._
 
 ## Retired
 
