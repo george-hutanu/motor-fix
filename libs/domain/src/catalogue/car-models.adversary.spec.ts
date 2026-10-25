@@ -13,7 +13,15 @@ const car = (
   brand: string,
   rank: number,
   fuel: Model['fuel'] = 'petrol',
-): Model => ({ brand, fuel, key, model: key, rank });
+): Model => ({
+  bodyStyle: 'saloon',
+  brand,
+  file: `${key}.0000000000000000.glb`,
+  fuel,
+  key,
+  model: key,
+  rank,
+});
 
 describe('validateCarModels under attack', () => {
   // @traces 405-FR-004
