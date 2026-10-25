@@ -12,6 +12,7 @@ import {
 import {
   provideClientHydration,
   withEventReplay,
+  withHttpTransferCacheOptions,
 } from '@angular/platform-browser';
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -22,6 +23,7 @@ import { provideLanguageAddresses } from './addresses';
 import { routes } from './app.routes';
 import { authInterceptor } from './auth.interceptor';
 import { PlatformStatus } from './maintenance/platform-status';
+import { transferCacheFilter } from './public-read';
 import { provideViewScrolling } from './scrolling';
 import { provideServiceWorkerRecovery } from './service-worker-recovery';
 import { provideHomeVisit } from './voice/home-visit/home-visit';
@@ -30,7 +32,10 @@ import { provideVoiceRead } from './voice/voice';
 export const appConfig: ApplicationConfig = {
   providers: [
     // A tap on the server-rendered page before hydration is replayed, not lost.
-    provideClientHydration(withEventReplay()),
+    provideClientHydration(
+      withEventReplay(),
+      withHttpTransferCacheOptions({ filter: transferCacheFilter }),
+    ),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideRouter(routes, withInMemoryScrolling()),
     provideViewScrolling(),
