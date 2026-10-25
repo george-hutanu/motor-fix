@@ -53,8 +53,10 @@ describe('the sweep shoots an awkward chart page finished', async () => {
   const pages = {};
   const server = createServer(async (req, res) => {
     const path = new URL(req.url, 'http://x').pathname;
-    if (path === '/chart.umd.js') return res.writeHead(200, { 'content-type': 'text/javascript' }).end(await readFile(chartJs));
-    if (pages[path]) return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(pages[path]);
+    try {
+      if (path === '/chart.umd.js') return res.writeHead(200, { 'content-type': 'text/javascript' }).end(await readFile(chartJs));
+      if (pages[path]) return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(pages[path]);
+    } catch {}
     res.writeHead(404).end();
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -74,31 +76,33 @@ describe('the sweep shoots an awkward chart page finished', async () => {
     return out;
   };
 
-  it.skipIf(!ready)('a chart that animates for 1.5 s even under reduced motion is shot at its final frame at every viewport', async () => {
+  it.skipIf(!ready)('a chart that animates for 1.5 s even under reduced motion is shot at its final frame at every viewport, the same twice', async () => {
     pages['/ignores.html'] = page({ setup: 'mount({ duration: 1500, easing: "easeOutQuart" });' });
     await sweep('ignores', ['/ignores.html']);
     const found = await probes('ignores');
     assert.equal(found.length, Object.keys(VIEWPORTS).length);
     for (const [shot, colour] of found) assert.equal(colour, 'red', shot);
-  }, 120000);
-
-  it.skipIf(!ready)('two sweeps of a chart that ignores reduced motion find no changed region', async () => {
+    // A second sweep of the same page finds no changed region.
     await sweep('ignores-b', ['/ignores.html']);
     const diff = await diffShots(join(work, 'ignores-b'), join(work, 'ignores'), join(work, 'ignores-diff'), { root });
     assert.equal(Object.keys(diff).length, Object.keys(VIEWPORTS).length);
     for (const [shot, outcome] of Object.entries(diff)) assert.equal(outcome.status, 'identical', shot);
-  }, 120000);
+  }, 240000);
 
   it.skipIf(!ready)('a chart mounted 800 ms after load is shot at its final frame', async () => {
     pages['/late-mount.html'] = page({ setup: 'setTimeout(() => mount(reduced ? false : { duration: 1000 }), 800);' });
     await sweep('late-mount', ['/late-mount.html']);
-    for (const [shot, colour] of await probes('late-mount')) assert.equal(colour, 'red', shot);
+    const found = await probes('late-mount');
+    assert.equal(found.length, Object.keys(VIEWPORTS).length);
+    for (const [shot, colour] of found) assert.equal(colour, 'red', shot);
   }, 120000);
 
   it.skipIf(!ready)('a chart whose data arrives 800 ms after load and animates in is shot at its final frame', async () => {
     pages['/late-data.html'] = page({ setup: 'const c = mount({ duration: 1000 }, [0]); setTimeout(() => { c.data.datasets[0].data = [100]; c.update(); }, 800);' });
     await sweep('late-data', ['/late-data.html']);
-    for (const [shot, colour] of await probes('late-data')) assert.equal(colour, 'red', shot);
+    const found = await probes('late-data');
+    assert.equal(found.length, Object.keys(VIEWPORTS).length);
+    for (const [shot, colour] of found) assert.equal(colour, 'red', shot);
   }, 120000);
 
   it.skipIf(!ready)('a page that never stops drawing is still shot at every viewport within a bounded time', async () => {
