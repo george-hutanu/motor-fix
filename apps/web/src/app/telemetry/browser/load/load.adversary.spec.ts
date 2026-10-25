@@ -1,4 +1,5 @@
-import type { Router } from '@angular/router';
+import { Injector } from '@angular/core';
+import { Router } from '@angular/router';
 
 import { loadTelemetry } from './load';
 import { startFaro } from '../faro';
@@ -6,6 +7,9 @@ import { startFaro } from '../faro';
 jest.mock('../faro', () => ({ startFaro: jest.fn() }));
 
 const router = { navigated: true } as Router;
+const injector = Injector.create({
+  providers: [{ provide: Router, useValue: router }],
+});
 
 function pageWith(meta: string): Document {
   const doc = document.implementation.createHTMLDocument('MotorFix');
@@ -18,20 +22,20 @@ beforeEach(() => jest.mocked(startFaro).mockReset());
 describe('loadTelemetry with hostile pages', () => {
   it('loads nothing when the tag has an empty content', async () => {
     await loadTelemetry(
-      router,
+      injector,
       pageWith('<meta name="mf-telemetry" content="" data-version="x">'),
     );
     expect(startFaro).not.toHaveBeenCalled();
   });
 
   it('loads nothing when the tag has no content attribute', async () => {
-    await loadTelemetry(router, pageWith('<meta name="mf-telemetry">'));
+    await loadTelemetry(injector, pageWith('<meta name="mf-telemetry">'));
     expect(startFaro).not.toHaveBeenCalled();
   });
 
   it('does not start with a javascript: collector url', async () => {
     await loadTelemetry(
-      router,
+      injector,
       pageWith(
         '<meta name="mf-telemetry" content="javascript:alert(1)" data-version="x">',
       ),
@@ -45,7 +49,7 @@ describe('loadTelemetry with hostile pages', () => {
     });
     await expect(
       loadTelemetry(
-        router,
+        injector,
         pageWith(
           '<meta name="mf-telemetry" content="https://f.example/c/k" data-version="x">',
         ),
@@ -55,7 +59,7 @@ describe('loadTelemetry with hostile pages', () => {
 
   it('starts once when the page carries two tags', async () => {
     await loadTelemetry(
-      router,
+      injector,
       pageWith(
         '<meta name="mf-telemetry" content="https://f.example/a" data-version="x"><meta name="mf-telemetry" content="https://evil.example/b" data-version="y">',
       ),
@@ -63,7 +67,7 @@ describe('loadTelemetry with hostile pages', () => {
     expect(startFaro).toHaveBeenCalledTimes(1);
     expect(startFaro).toHaveBeenCalledWith({
       environment: 'development',
-      router,
+      injector,
       url: 'https://f.example/a',
       version: 'x',
     });

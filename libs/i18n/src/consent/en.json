@@ -4,11 +4,11 @@
     "label": "Usage statistics",
     "privacy": "Privacy notice",
     "refuse": "Refuse",
-    "text": "MotorFix would like to measure how the site is used, to make it better. We never sell or pass on your data."
+    "text": "MotorFix would like to measure how the site is used, to make it better: Plausible counts the pages visited and Grafana Faro follows your visit as one session. We never sell or pass on your data."
   },
   "dialog": {
     "cancel": "Cancel",
-    "line": "We count the pages visited, with no cookies and without identifying you.",
+    "line": "Plausible counts the pages visited and Grafana Faro follows the visit as one session, with a random id kept on this device; no cookies, no name, no account.",
     "privacy": "Privacy notice",
     "save": "Save",
     "switch": "Usage statistics",

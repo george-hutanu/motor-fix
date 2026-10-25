@@ -15,8 +15,8 @@ import {
   Logger,
 } from '@nestjs/common';
 
+import { refusal } from '../../../auth/http-refusal';
 import { PRISMA } from '../../../auth/prisma';
-import { refusal } from '../../../auth/sign-up.service';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { countDocumentUploaded } from '../../../metrics/product-counters';
 import { RateLimits } from '../../../rate-limit/rate-limit.service';

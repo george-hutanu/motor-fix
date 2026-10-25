@@ -1,5 +1,6 @@
 // @traces 129-FR-001 129-FR-002 129-FR-003 129-FR-004 129-FR-005
 // @traces 129-FR-006 129-FR-007 129-FR-008 129-FR-012 129-FR-013
+// @traces 140-FR-012 140-FR-014 140-FR-017
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException, Logger, ValidationPipe } from '@nestjs/common';
@@ -10,9 +11,12 @@ import request from 'supertest';
 
 import { AccountDeletionService } from './account-deletion.service';
 import { AuditService } from '../../audit/audit.service';
+import { RemindersService } from '../../cars/reminders/reminders.service';
 import { noEvents } from '../../events/event.port';
+import type { JobStatus } from '../../generated/prisma/enums';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';
+import { NotificationsService } from '../../notifications/notifications.service';
 import {
   databaseUrl,
   fixtures,
@@ -20,6 +24,11 @@ import {
   testConfig,
   testPhoneConfig,
 } from '../../notifications/notifications.testing';
+import { AccountClosed } from '../../quotes/account-closed/account-closed';
+import { AccountClosedModule } from '../../quotes/account-closed/account-closed.module';
+import { quotesWorld } from '../../quotes/quotes.testing';
+import type { ReviewEligibility } from '../../reviews/eligibility/eligibility';
+import { ReviewsService } from '../../reviews/reviews.service';
 import { until } from '../../waits.testing';
 import { AccountsService } from '../accounts.service';
 import { AuthModule } from '../auth.module';
@@ -138,6 +147,21 @@ interface Device {
 function setCookie(res: request.Response): string | undefined {
   const header = res.headers['set-cookie'] as unknown as string[] | undefined;
   return header?.find((c) => c.startsWith('mf_refresh='));
+}
+
+// A WhatsApp code asked for and sent back, with no name or consent: the
+// answer of an existing account's phone, or of an unknown one.
+async function phoneSignIn(phone: string) {
+  await http()
+    .post('/auth/phone-code')
+    .set('X-Forwarded-For', address())
+    .send({ phone })
+    .expect(202);
+  const body = brevo.whatsapp().at(-1)?.body as { params: string[] };
+  return http()
+    .post('/auth/phone-sign-in')
+    .set('X-Forwarded-For', address())
+    .send({ code: String(body.params[0]), phone });
 }
 
 const signIn = (email: string) =>
@@ -746,5 +770,249 @@ describe('the audit history of a deletion', () => {
     expect(written).not.toContain(EMAIL);
     expect(written).not.toContain('Andrei');
     expect(written).not.toContain('+40710000001');
+  });
+});
+
+describe('a car in the workshop', () => {
+  const world = quotesWorld(prisma);
+
+  async function carInWork(driverId: string, status: JobStatus) {
+    const garage = await world.garage('Atelier Dinamo');
+    const { booking } = await world.chain(driverId, garage.id);
+    return world.job(booking.id, status);
+  }
+
+  it.each(['in_work', 'paused'] as const)(
+    'answers 409 car_in_work while a job of the account is %s, and changes nothing',
+    async (status) => {
+      const id = await person();
+      await carInWork(id, status);
+      const phone = await device();
+      const before = await deletions('refused_in_work');
+
+      const res = await remove(phone, { confirmation: EMAIL });
+
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe('car_in_work');
+      expect((await accountOf(id)).status).toBe('active');
+      expect(
+        await prisma.refreshToken.count({ where: { accountId: id } }),
+      ).toBe(1);
+      expect(await eventsOf(id)).toHaveLength(0);
+      expect(await auditOf(id)).toHaveLength(0);
+      expect(await deletions('refused_in_work')).toBe(before + 1);
+    },
+  );
+
+  it.each(['to_do', 'done', 'cancelled'] as const)(
+    'deletes the account whose only job is %s',
+    async (status) => {
+      const id = await person();
+      await carInWork(id, status);
+
+      const res = await remove(await device(), { confirmation: EMAIL });
+
+      expect(res.status).toBe(204);
+      expect((await accountOf(id)).status).toBe('deleted');
+    },
+  );
+
+  it("refuses only for the account's own car, not another driver's", async () => {
+    const id = await person();
+    const other = await person(
+      'ioana@example.test',
+      ['driver'],
+      '+40710000002',
+    );
+    await carInWork(other, 'in_work');
+
+    const res = await remove(await device(), { confirmation: EMAIL });
+
+    expect(res.status).toBe(204);
+    expect((await accountOf(id)).status).toBe('deleted');
+  });
+
+  it('checks the owner first, then the car in work, then the sign-in', async () => {
+    const id = await person(EMAIL, ['driver', 'garage']);
+    const phone = await device();
+    await openedAgo(id, 30);
+    const wrong = { confirmation: 'nu' };
+    await owner(id);
+    await carInWork(id, 'in_work');
+
+    expect((await remove(phone, wrong)).body.code).toBe('deletion_not_allowed');
+
+    await prisma.garageMember.deleteMany({ where: { accountId: id } });
+    expect((await remove(phone, wrong)).body.code).toBe('car_in_work');
+
+    await prisma.job.updateMany({
+      data: { status: 'done' },
+      where: { driverId: id },
+    });
+    expect((await remove(phone, wrong)).body.code).toBe('reauth_required');
+    expect((await accountOf(id)).status).toBe('active');
+  });
+});
+
+describe("what a driver's deletion leaves behind", () => {
+  const world = quotesWorld(prisma);
+
+  async function closer() {
+    const ref = await Test.createTestingModule({
+      imports: [
+        AccountClosedModule.registerWorker({
+          notifications: NotificationsModule.registerWorker({
+            databaseUrl,
+            email: testConfig('http://127.0.0.1:9'),
+            phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
+            redisUrl,
+          }),
+          redisUrl,
+        }),
+      ],
+    }).compile();
+    return { handler: ref.get(AccountClosed), ref };
+  }
+
+  it('signs in by no method, closes the open request, cancels the booking as the system and keeps the review under a stand-in', async () => {
+    const id = await person();
+    const garage = await world.garage('Atelier Dinamo');
+    const fixer = await prisma.mechanic.create({
+      data: {
+        canAnswerQuotes: false,
+        garageId: garage.id,
+        name: 'Fixer',
+        onProfile: true,
+      },
+    });
+    const open = await world.request(id, { status: 'quoted' });
+    const waiting = await world.quote(open.id, garage.id, 'waiting');
+    const { booking } = await world.chain(id, garage.id);
+    await prisma.booking.update({
+      data: { mechanicId: fixer.id },
+      where: { id: booking.id },
+    });
+    const past = await world.chain(id, garage.id, { booking: 'completed' });
+    const done = await world.job(past.booking.id, 'done', {
+      mechanicId: fixer.id,
+    });
+    await prisma.review.create({
+      data: {
+        driverId: id,
+        garageId: garage.id,
+        jobId: done.id,
+        mechanicId: fixer.id,
+        rating: 4,
+        status: 'published',
+        text: 'Rapid și corect.',
+      },
+    });
+    const reviews = new ReviewsService(
+      prisma,
+      new AuditService(),
+      noEvents,
+      {} as ReviewEligibility,
+    );
+    const before = await reviews.mechanicReviews(fixer.id);
+    const ratings = async () => ({
+      garage: await prisma.garage.findUniqueOrThrow({
+        select: { rating: true, reviewCount: true },
+        where: { id: garage.id },
+      }),
+      mechanic: await prisma.mechanic.findUniqueOrThrow({
+        select: { rating: true, reviewCount: true },
+        where: { id: fixer.id },
+      }),
+    });
+    const rated = await ratings();
+    await prisma.accountIdentity.createMany({
+      data: [
+        { accountId: id, method: 'whatsapp_phone', subject: PHONE },
+        { accountId: id, method: 'google', subject: 'google-andrei' },
+        { accountId: id, method: 'apple', subject: 'apple-andrei' },
+      ],
+    });
+    await prisma.reminder.create({
+      data: {
+        accountId: id,
+        bookingId: booking.id,
+        dueOn: new Date('2030-01-11T00:00:00Z'),
+        kind: 'booking',
+      },
+    });
+    const unknown = await signIn('nimeni@example.test');
+    const unknownPhone = await phoneSignIn('+40710000999');
+
+    expect((await remove(await device(), { confirmation: EMAIL })).status).toBe(
+      204,
+    );
+    const [event] = await eventsOf(id);
+    const { handler, ref } = await closer();
+    await handler.onEvent({
+      data: {
+        id: String(event.id),
+        kind: event.kind,
+        payload: { accountId: id },
+        subjectId: id,
+      },
+    });
+    await ref.close();
+
+    // Every method answers as for an unknown account: the password and the
+    // WhatsApp code by their routes, Google and Apple by the identities the
+    // provider's subject is looked up in, which are gone.
+    const again = await signIn(EMAIL);
+    expect(again.status).toBe(unknown.status);
+    expect(again.body.code).toBe(unknown.body.code);
+    const againPhone = await phoneSignIn(PHONE);
+    expect(againPhone.status).toBe(unknownPhone.status);
+    expect(againPhone.body.code).toBe(unknownPhone.body.code);
+    expect(
+      await prisma.accountIdentity.count({
+        where: {
+          OR: [
+            { accountId: id },
+            { subject: { in: ['google-andrei', 'apple-andrei', PHONE] } },
+          ],
+        },
+      }),
+    ).toBe(0);
+    const notes = () => prisma.notification.count({ where: { accountId: id } });
+    const noted = await notes();
+    await new RemindersService(prisma, app.get(NotificationsService)).run(
+      '2030-01-10',
+    );
+    expect(await notes()).toBe(noted);
+    expect(
+      await prisma.quoteRequest.findUniqueOrThrow({ where: { id: open.id } }),
+    ).toMatchObject({ status: 'closed' });
+    expect(
+      (await prisma.quote.findUniqueOrThrow({ where: { id: waiting.id } }))
+        .status,
+    ).toBe('lost');
+    expect(
+      await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } }),
+    ).toMatchObject({ cancelledBySide: 'system', status: 'cancelled' });
+    const told = await prisma.outboxEvent.findMany({
+      where: { kind: 'booking.cancelled', subjectId: booking.id },
+    });
+    expect(told).toHaveLength(1);
+    expect(told[0]?.audience).toEqual(
+      expect.arrayContaining([`garage:${garage.id}`, `mechanic:${fixer.id}`]),
+    );
+    expect(told[0]?.payload).toMatchObject({
+      garageId: garage.id,
+      reason: 'driver_account_closed',
+    });
+    expect(await ratings()).toEqual(rated);
+    const after = await reviews.mechanicReviews(fixer.id);
+    expect(after.total).toBe(before.total);
+    expect(after.items).toEqual([
+      expect.objectContaining({
+        author: { shortName: 'Șofer MotorFix' },
+        rating: 4,
+      }),
+    ]);
+    expect(JSON.stringify(after.items)).not.toContain(id);
   });
 });

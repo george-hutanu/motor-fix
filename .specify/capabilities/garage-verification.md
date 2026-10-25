@@ -30,6 +30,7 @@ features:
   - 067-restore-suspended-garage
   - 413-verification-file-presence
   - 136-legal-check-panel
+  - 1156-retention-job
 ---
 
 # Capability: Garage verification
@@ -890,6 +891,10 @@ _From 413-verification-file-presence._
 ### 136-FR-004 — `document.due` for the garage arriving on `garage:{garageId}` MUST make the panel read again without a reload, on the view and on the overview alike (it is one host), joining the kinds that already do so (`verification.decided`, `verification.check_recorded`, `verification.reopened`, `recheck.recorded`, `garage.suspended`, `garage.restored`, `document.uploaded`, `document.overdue`, `document.accepted`, `document.refused`); a change arriving during a read makes one more read after it and the panel shows the last read's answer (existing live-view serialisation); the swap is silent for assistive technology. The event already exists and already reaches the garage's channel (068-FR-014; `libs/domain/src/garages/documents/document-cycle/document-cycle.step.ts:126-131`); nothing is emitted anew.
 
 _From 136-legal-check-panel._
+
+### 1156-FR-006 — The job MUST remove every legal document (every status: current, replaced, in review, refused) of a garage closed more than the configured period ago, each with every page file it holds in storage; a page already missing from storage is not a failure.
+
+_From 1156-retention-job._
 
 ## Retired
 

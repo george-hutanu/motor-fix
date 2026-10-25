@@ -5,21 +5,25 @@ import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
-import { BrandLoader } from './brand-loader';
 import type { BrandRecord } from './brands';
-import { CatalogueModule } from './catalogue.module';
-import { AuthModule } from '../auth/auth.module';
-import { serialDatabase } from '../auth/serial-db.testing';
+import { AuthModule } from '../../auth/auth.module';
+import { serialDatabase } from '../../auth/serial-db.testing';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
-} from '../notifications/notifications.testing';
+} from '../../notifications/notifications.testing';
+import { BrandLoader } from '../brand-loader';
+import { CatalogueModule } from '../catalogue.module';
 
 const redisUrl = redisUrlFor(3);
 const { prisma } = fixtures();
 const redis = new Redis(redisUrl);
 serialDatabase(databaseUrl);
+
+// The cache entry a search reads now: the list under the current version.
+const activeKey = async () =>
+  `brands:active:${(await redis.get('brands:version')) ?? 0}`;
 
 let app: INestApplication;
 let loader: BrandLoader;
@@ -45,7 +49,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
-  await redis.del('brands:active');
+  await redis.incr('brands:version');
 });
 
 afterAll(async () => {
@@ -245,7 +249,7 @@ describe('GET /brands under hostile queries', () => {
 
   it('recovers when the cache holds text that is not a brand list', async () => {
     await loader.load([{ key: 'a', name: 'Alfa' }]);
-    await redis.set('brands:active', 'not json');
+    await redis.set(await activeKey(), 'not json');
 
     const res = await get();
 
@@ -261,7 +265,7 @@ describe('GET /brands under hostile queries', () => {
     'recovers when the cache holds JSON that is %s, not a list',
     async (_, text) => {
       await loader.load([{ key: 'a', name: 'Alfa' }]);
-      await redis.set('brands:active', text);
+      await redis.set(await activeKey(), text);
 
       const res = await get();
 
@@ -274,7 +278,7 @@ describe('GET /brands under hostile queries', () => {
     await loader.load([{ key: 'a', name: 'Alfa' }]);
     await get();
 
-    const ttl = await redis.ttl('brands:active');
+    const ttl = await redis.ttl(await activeKey());
 
     expect(ttl).toBeGreaterThan(3500);
     expect(ttl).toBeLessThanOrEqual(3600);

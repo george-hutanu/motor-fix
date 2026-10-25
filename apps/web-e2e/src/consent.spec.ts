@@ -5,7 +5,7 @@ import { needsAnalytics, test } from './fixtures.js';
 import { clearConsentCounts } from './global-setup.js';
 
 const KEY = 'mf_consent';
-const VERSION = '2026-10-10';
+const VERSION = '2026-10-24';
 const DAY = 86_400_000;
 
 const TEXT = {
@@ -235,9 +235,11 @@ test.describe('cookie settings', () => {
 });
 
 // @traces 244-FR-005
+// @traces 947-FR-004
 test.describe('asking again', () => {
   for (const [label, at, version] of [
     ['made under an older text', Date.now() - DAY, '2025-01-01'],
+    ['made before the text named Grafana Faro', Date.now() - DAY, '2026-10-10'],
     ['365 days old', Date.now() - 365 * DAY - 60_000, VERSION],
   ] as const) {
     test(`asks again over a choice ${label}, and not after the new answer`, async ({

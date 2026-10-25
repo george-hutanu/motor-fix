@@ -83,6 +83,7 @@ model Account {
   reviews                 Review[]                 @relation("ReviewDriver")
   supportMessages         SupportMessage[]
   decidedJobTypes         JobType[]                @relation("JobTypeDecider")
+  dataExports             DataExport[]
 
   @@index([createdAt(sort: Desc), id(sort: Desc)])
   // The admin's search. The migration also holds account_fold(text) and a
@@ -239,4 +240,34 @@ model RefreshToken {
   @@index([accountId])
   @@index([familyId])
   @@map("refresh_token")
+}
+
+enum DataExportStatus {
+  queued
+  ready
+  expired
+  failed
+
+  @@map("data_export_status")
+}
+
+// A copy of an account's data the person asked for: built by the worker,
+// downloadable while ready, expired seven days after.
+model DataExport {
+  id          String           @id @default(uuid()) @db.Uuid
+  accountId   String           @map("account_id") @db.Uuid
+  account     Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  requestedAt DateTime         @default(now()) @map("requested_at") @db.Timestamptz(3)
+  status      DataExportStatus @default(queued)
+  // Kept after expiry, for the log.
+  zipKey      String?          @map("zip_key")
+  readyAt     DateTime?        @map("ready_at") @db.Timestamptz(3)
+  expiresAt   DateTime?        @map("expires_at") @db.Timestamptz(3)
+  attempts    Int              @default(0)
+
+  // The migration also holds data_export_one_queued: one queued export per
+  // account, which Prisma cannot declare.
+  @@index([accountId, requestedAt(sort: Desc)])
+  @@index([status, expiresAt])
+  @@map("data_export")
 }

@@ -7,7 +7,7 @@ import {
   phoneBlockedReason,
 } from '../../notifications/phone-config';
 import { render } from '../../notifications/templates';
-import { refusal } from '../sign-up.service';
+import { refusal } from '../http-refusal';
 
 // The approved WhatsApp templates that carry a six-digit code.
 type CodeTemplate = 'SIGN_IN_CODE' | 'PHONE_CHANGE_CODE';

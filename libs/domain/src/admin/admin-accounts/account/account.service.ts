@@ -14,11 +14,11 @@ import {
 import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
 import { AccountDeletionService } from '../../../auth/account-deletion/account-deletion.service';
 import { revokeAssistantGrants } from '../../../auth/assistant-grants/assistant-grants';
+import { refusal } from '../../../auth/http-refusal';
 import { PasswordResetService } from '../../../auth/password/password-reset/password-reset.service';
 import type { Actor } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
 import { SignInService } from '../../../auth/sign-in.service';
-import { refusal } from '../../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type { PrismaClient } from '../../../generated/prisma/client';
 import {
