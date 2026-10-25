@@ -211,6 +211,21 @@ describe('the notification catalogue', () => {
     expect(NOTIFICATION_TYPES['DAY_SHEET_OUTDATED'].channels).toEqual([]);
   });
 
+  // @traces 056-FR-009
+  it('tells a removed mechanic by e-mail and push on the event, never on WhatsApp and never muted', () => {
+    const type = NOTIFICATION_TYPES['STAFF_REMOVED'];
+
+    expect(type).toMatchObject({
+      channels: ['email', 'push'],
+      group: null,
+      groupable: false,
+      transactional: true,
+      trigger: 'event',
+    });
+    expect(type.channels).not.toContain('whatsapp');
+    expect(sendsEmail(type, new Set(['email']))).toBe(true);
+  });
+
   it('refuses an unknown type', () => {
     expect(() => notificationType('NOT_A_TYPE')).toThrow(/NOT_A_TYPE/);
     expect(notificationType('JOB_READY').alwaysSent).toBe(true);

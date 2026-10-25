@@ -1,5 +1,9 @@
 <section aria-labelledby="delete-account-title">
-  <h2 id="delete-account-title">{{ 'shell.deleteAccount.title' | t }}</h2>
+  @if (inPanel()) {
+    <h3 id="delete-account-title">{{ 'shell.deleteAccount.title' | t }}</h3>
+  } @else {
+    <h2 id="delete-account-title">{{ 'shell.deleteAccount.title' | t }}</h2>
+  }
   <p>{{ 'shell.deleteAccount.text' | t }}</p>
   @if (owner()) {
     <p id="delete-account-owner">{{ 'shell.deleteAccount.ownerText' | t }}</p>

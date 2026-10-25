@@ -1,4 +1,5 @@
 // @traces 129-FR-014 129-FR-015 129-FR-017
+// @traces 140-FR-012 140-FR-014
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
@@ -123,6 +124,33 @@ for (const [label, viewport] of [
         expect(again.status()).toBe(401);
       });
     }
+
+    // The seeded driver whose car the seed put in work: the refusal changes
+    // nothing, so the account stays for the specs that sign in with it.
+    test('a driver whose car is in the workshop is told to collect it first', async ({
+      page,
+    }) => {
+      const email = 'cerere@example.test';
+      await signedIn(page, email);
+      await settings(page, '/app/driver/settings', TEXT.ro.button);
+
+      await page
+        .getByRole('button', { exact: true, name: TEXT.ro.button })
+        .click();
+      const dialog = page.getByRole('dialog', { name: TEXT.ro.dialog });
+      await dialog.getByLabel(TEXT.ro.field).fill(email);
+      await dialog
+        .getByRole('button', { exact: true, name: TEXT.ro.button })
+        .click();
+
+      await expect(
+        dialog.getByText(
+          'Ai o mașină în service. Poți șterge contul după ce o ridici.',
+        ),
+      ).toBeVisible();
+      await page.goto('/app/driver');
+      await expect(page).toHaveURL(/\/app\/driver/);
+    });
 
     test('a garage owner sees the button disabled, with the contact form and the e-mail', async ({
       page,

@@ -75,6 +75,13 @@ p {
 .mechanic {
   font-weight: 600;
 }
+/* The booking's mechanic left the team: someone has to take the slot. */
+.reassign {
+  padding: 0 var(--mf-space-1);
+  border: 1px solid var(--mf-amber);
+  border-radius: var(--mf-radius-chip);
+  color: var(--mf-amber-ink);
+}
 .plate {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;

@@ -120,6 +120,10 @@ to `tracker-sync.md` at its next event.
      findings are fixed (tests first), listed under "Fixed after QA" in
      `finish-comment.md`, and its verdict carried to the fixed head
      (`carried from <sha>: QA fixes`), with no lap counted (tail.md step 3).
+     Each line names its severity and where the fix is, made after the
+     lap's verdict: a PR commit's sha, `specs@<sha>` for a commit on the
+     specs repo's trunk, or `qa-flows-<n>.mjs` for a change to the
+     git-ignored QA flows file only (its modification time is the proof).
   7. Merge on `agent-review` success with every other check green, at once
      (`node .claude/scripts/lifecycle.mjs merge --pr <n>`, which also checks
      the "Fixed after QA" list; with a check still pending the tail holds

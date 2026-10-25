@@ -57,6 +57,9 @@ const ALLOWED: Record<string, string[]> = {
     'garage.updated',
     'price_list.updated',
     'mechanic.updated',
+    // @traces 056-FR-005
+    'mechanic.added',
+    'mechanic.removed',
     'facility.removed',
     'facility.re_add_decided',
     ...REVIEW_KINDS,
@@ -72,6 +75,9 @@ const ALLOWED: Record<string, string[]> = {
   ],
   [`public:mechanic:${MECHANIC}`]: [
     'mechanic.updated',
+    // @traces 056-FR-005
+    'mechanic.added',
+    'mechanic.removed',
     ...REVIEW_KINDS,
     // @traces 025-FR-009
     'rating.updated',
