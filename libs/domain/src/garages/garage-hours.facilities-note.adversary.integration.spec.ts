@@ -5,6 +5,7 @@ import { HttpException } from '@nestjs/common';
 import { writeGarageHours } from './garage-hours';
 import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
+import { outbox } from '../events/event.port';
 import { databaseUrl, fixtures } from '../notifications/notifications.testing';
 
 const { account, prisma, reset } = fixtures();
@@ -29,7 +30,11 @@ afterAll(() => prisma.$disconnect());
 
 const write = (section: Record<string, unknown>) =>
   prisma.$transaction((tx) =>
-    writeGarageHours(tx, garageId, section, '2026-10-07', { actorId, audit }),
+    writeGarageHours(tx, garageId, section, '2026-10-07', {
+      actorId,
+      audit,
+      events: outbox,
+    }),
   );
 
 const note = async () =>
