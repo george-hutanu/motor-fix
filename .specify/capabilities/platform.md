@@ -2824,6 +2824,7 @@ _From 1179-supply-chain-guards._
 ### 1179-FR-004 — The state of the repository's secret scanning and push protection MUST be checked (`gh api repos/george-hutanu/motor-fix`) and recorded; when either is off, the story gets a needs-confirmation question for the owner, and no setting is changed by the agent. The question does not hold the PR: FR-001..003 merge on green CI, and the story waits on the owner's answer instead of going to Done.
 
 _From 1179-supply-chain-guards._
+
 ### 1377-FR-001 — A review refused with HTTP 422 whose body (stdout or stderr) carries GitHub's own-PR refusal ("Can not approve your own pull request", "Can not request changes on your own pull request") is posted again as a COMMENT review with the same body; `reviewError` is null and post.mjs exits 0.
 
 _From 1377-own-pr-422-fallback._
