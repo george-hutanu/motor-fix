@@ -9,6 +9,7 @@ features:
   - 182-review-rules
   - 024-garage-reviews
   - 1367-review-price-marks
+  - 076-report-review
 ---
 
 # Capability: Reviews
@@ -336,6 +337,42 @@ _From 1367-review-price-marks._
 ### 1367-FR-012 — Tests MUST be written first: Jest on real PostgreSQL for the read (the quote range from the accepted quote, the final price, the paid amount and the edited date of a job review; nulls where the job has no final price or the review no amount; the profile-source item with `car` null, `jobs` `[]` and the three amounts null although its job has them; the edited date null by default); Jest component tests for the section (the price line in its three full cases: all three parts, paid equal to final shown once, equal quote ends as one amount; plus no final price with an amount, and no part at all with no line; the "Editată" mark present and absent; the "Nu prin MotorFix" mark in place of the car and job label with no price line), each in Romanian and English; the migration applies on the existing schema. End to end (Playwright): none of its own (ST-24's profile flow already opens the section). Every test file names its requirements in a `// @traces` line.
 
 _From 1367-review-price-marks._
+
+### 076-FR-006 — The system MUST expose `POST /api/v1/reviews/{reviewId}/reports` in the reviews module, taking `{ reason, text? }` through a DTO in the contracts library validated at the edge: `reason` one of the nine codes of FR-003 and `text` a string, anything else or any other member 400 `validation_failed`; `reviewId` not a UUID 404 `not_found` (as the other review reads answer a bad id to a non-owner, one body). It MUST require a session (401 `sign_in_required`) and the `garage.reviews` capability, and MUST answer 403 `forbidden` ("Doar proprietarul poate raporta o recenzie." / "Only the owner can report a review.") to a receptionist or a mechanic of the review's garage, and 404 `not_found` with one body and no review data to every other caller: another garage's staff, a driver, an admin, an account with no garage. The owner is the actor whose garage is the review's garage and whose role in use is the owner's.
+
+_From 076-report-review._
+
+### 076-FR-007 — After the session check, the pipe's 400 and the access rule, the operation MUST run its checks in this order and answer with the first that fails: 404 `not_found` when the review does not exist, belongs to another garage, or is `removed` or `deleted_by_author`; 409 `already_reported` ("Recenzia e deja raportată." / "This review is already reported.") when it is `reported`; 409 `already_kept` (the FR-002 words) when it is `published` and its newest report in status `decided` was decided at or after the review's last edit (`editedAt` null counts as never edited); 422 `validation_failed` naming `text` when `reason` is `other` and the trimmed text is empty or over 500 characters, or when `reason` is not `other` and a text is given. Every refusal body MUST be `{ code, message }`, the message in the caller's language.
+
+_From 076-report-review._
+
+### 076-FR-008 — An accepted report MUST be stored as a review report row holding: id, the review, `target` `review`, `reason`, `text` (null unless `other`; the trimmed text, never rendered as markup), `source` `garage`, the reporter's account id, status `pending`, `dueAt` = the report time + 48 hours, and the report time in UTC; `decision`, `decidedBy` and `decidedAt` exist and stay empty for the stories that decide. The row's `status` is `pending`, `decided` or `closed`; its `decision` `kept` or `removed`; its `source` `garage`, `author` or `automatic` (only `garage` is written here).
+
+_From 076-report-review._
+
+### 076-FR-009 — In one transaction with the row, the system MUST set the review's status from `published` to `reported`, write two audit entries by the reporter (actor role `owner`, garage id and, for a job review, job id and car id set): `create` on subject `review_report` holding the row's fields except nothing about the author, and `update` on subject `review`, field `status`, old `published`, new `reported`; and write one `review.reported` event with the review audience (the garage's staff, the author, the mechanic's and the garage's public channels, as `review.posted` does) and the payload `{ reviewId, reportId, garageId, mechanicId, driverId, jobId, reason, source: 'garage', target: 'review' }`; none of the four may exist without the others. At most one `pending` report per review MUST hold under concurrent calls, guaranteed by the database (the loser answers 409 `already_reported`), and the 201 body MUST carry `{ id, reason, status, dueAt, review: { id, status } }` and nothing about the author.
+
+_From 076-report-review._
+
+### 076-FR-010 — The public reads and the driver's reads MUST carry nothing of a report (no reporter, no reason, no refusal); the refusal flag on ST-74's staff read is ST-1382's (FR-010a below), computed with this story's rule.
+
+_From 076-report-review._
+
+### 076-FR-011 — A `reported` review MUST leave the garage's and the mechanic's stored rating and review count: the existing recomputation consumes the `review.reported` event (025-FR-007) and counts `published` reviews only; this story proves it on a real event and writes no second path. The public profile reads (024-FR-016, 025-FR-011) already list `published` reviews only and MUST stay so.
+
+_From 076-report-review._
+
+### 076-FR-012 — Every new API text (the three refusal messages) MUST exist in Romanian and English in the API's messages and follow the caller's language; for ST-1382, every web text (the button, the hint, the task's title, subtitle, reasons, field, counter, note and buttons, the toast) MUST exist in Romanian and English in the garage area's interface files and the API's messages and follow the owner's language; the task MUST render at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll and no text under 12 px, and pass the QA sweep's accessibility checks.
+
+_From 076-report-review._
+
+### 076-FR-013 — The new operation MUST ship with its observability: its request metrics by route template, a product counter of reports by reason and of refusals by code, its logs, a dashboard panel and an alert: the existing `api-error-rate` rule (the API's 5xx share, `infra/observability/alerts/api.json`) and `api-latency` cover the route through its metrics, as they cover the other review operations, so no new alert rule is added and the product counter's inventory entry states why it carries none (a refusal is the owner's state, not an outage), each listed in `infra/observability/inventory.json` with its reason; the PR's Notes list them.
+
+_From 076-report-review._
+
+### 076-FR-014 — Tests MUST be written first: Jest on real PostgreSQL for the operation (the owner's 201 with the row, the status change, the two audit entries and the event in one transaction, and the rollback of all four when one write fails; `other` with and without text; 422 cases; 409 `already_reported`; 409 `already_kept` before and 201 after an author edit; two concurrent reports giving one 201 and one 409; 403 receptionist and mechanic; 404 for another garage's owner, a driver, an admin, a bad id, a `removed` and a `deleted_by_author` review; 401 with no session; the staff read's `reportRefusal` in each state; the public and driver reads carrying no report data; the ratings job dropping the review on the real event), and component tests for the button and its three states, the task's options, the `other` field and counter, the disabled send, the discard question, the 201 toast and row update, the 409 toast and the network error with the kept values, in both languages.
+
+_From 076-report-review._
 
 ## Retired
 
