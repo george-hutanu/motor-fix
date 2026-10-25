@@ -121,6 +121,7 @@ export { phoneConfig } from './notifications/phone-config';
 export { pushConfig } from './notifications/push/push-config';
 export { QUOTE_ACCEPTED_CONSUMER } from './notifications/quote-accepted/quote-accepted.fan-out';
 export { QUOTE_DECLINED_CONSUMER } from './notifications/quote-declined/quote-declined.fan-out';
+export { QUOTE_LOST_CONSUMER } from './notifications/quote-lost/quote-lost.fan-out';
 export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-received.fan-out';
 export { REQUEST_CANCELLED_CONSUMER } from './notifications/request-cancelled/request-cancelled.fan-out';
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';

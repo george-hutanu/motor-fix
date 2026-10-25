@@ -44,6 +44,7 @@ import { PHONE_CHANGE_CODE } from './phone-change-code';
 import { PUSH_TEST } from './push-test';
 import { QUOTE_ACCEPTED } from './quote-accepted';
 import { QUOTE_DECLINED_BY_DRIVER } from './quote-declined-by-driver';
+import { QUOTE_LOST } from './quote-lost';
 import { QUOTE_RECEIVED, QUOTE_RECEIVED_GROUPED } from './quote-received';
 import { REQUEST_DECLINED } from './request-declined';
 import { REQUEST_RECEIVED } from './request-received';
@@ -105,6 +106,7 @@ export const TEMPLATES: Registry = {
   PUSH_TEST,
   QUOTE_ACCEPTED,
   QUOTE_DECLINED_BY_DRIVER,
+  QUOTE_LOST,
   QUOTE_RECEIVED,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
   REQUEST_DECLINED,
