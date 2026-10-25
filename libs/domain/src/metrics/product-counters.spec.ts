@@ -32,6 +32,7 @@ import {
   countRejection,
   countRequestReceived,
   countResubmission,
+  countReviewAnnounced,
   countSearch,
   countSignIn,
   countSortChange,
@@ -369,6 +370,14 @@ describe('the product counters', () => {
         [
           () => countRequestReceived(outcome),
           'motorfix_request_received_total',
+          { outcome },
+        ] as const,
+    ),
+    ...(['built', 'muted', 'skipped'] as const).map(
+      (outcome) =>
+        [
+          () => countReviewAnnounced(outcome),
+          'motorfix_review_announced_total',
           { outcome },
         ] as const,
     ),

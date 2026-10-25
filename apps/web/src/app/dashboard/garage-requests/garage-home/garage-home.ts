@@ -9,6 +9,7 @@ import type { Capability } from '@motor-fix/contracts/capabilities';
 import { formatDayMonth, I18n, TranslatePipe } from '@motor-fix/i18n';
 
 import { GarageLegalCheck } from '../../garage-legal-check/garage-legal-check';
+import { GarageReviewsPanel } from '../../garage-reviews/garage-reviews-panel/garage-reviews-panel';
 import { garageOf, Session } from '../../session';
 import { VerificationProgress } from '../../verification-progress/verification-progress';
 import { GarageRequestsFeed } from '../garage-requests-feed';
@@ -20,7 +21,8 @@ import { SuspendedBanner } from '../suspended-banner/suspended-banner';
 // "Profil verificat" pill and the RAR check line of an approved garage for
 // whoever holds its profile, the legal check, suspended too, for whoever holds
 // its switches; the four newest waiting requests for whoever may answer
-// quotes; the suspension banner above it all while the garage is suspended.
+// quotes, then the five newest reviews for whoever reads them; the suspension
+// banner above it all while the garage is suspended.
 // A mechanic, who holds no garage-wide section, sees her own jobs below the
 // requests, with a link to her day sheet while she holds it and the garage
 // keeps day sheets on. A draft garage sees only where its verification stands.
@@ -29,6 +31,7 @@ import { SuspendedBanner } from '../suspended-banner/suspended-banner';
   imports: [
     GarageLegalCheck,
     GarageRequestsPanel,
+    GarageReviewsPanel,
     OwnJobsSection,
     RouterLink,
     SuspendedBanner,
@@ -46,6 +49,9 @@ export class GarageHome {
   private readonly garage = computed(() => garageOf(this.session.shown()));
   private readonly holds = (capability: Capability) =>
     (this.session.shown()?.capabilities ?? []).includes(capability);
+  protected readonly reviews = computed(
+    () => !!this.garage() && this.holds('garage.reviews'),
+  );
   protected readonly draft = computed(() => this.garage()?.status === 'draft');
   protected readonly verified = computed(
     () => this.garage()?.status === 'approved' && this.holds('garage.profile'),

@@ -5,7 +5,14 @@
 // opens the reported garage's public profile its e-mail links to; a decision
 // on a job the garage proposed opens its Prețuri. Any other
 // kind opens nothing: the bell only marks it read.
-type View = 'cars' | 'garage' | 'prices' | 'profile' | 'requests' | 'reviews';
+type View =
+  | 'cars'
+  | 'garage'
+  | 'garage-reviews'
+  | 'prices'
+  | 'profile'
+  | 'requests'
+  | 'reviews';
 
 export const VIEW_OF_KIND: Readonly<Record<string, View>> = {
   BOOKING_CANCELLED: 'requests',
@@ -47,9 +54,17 @@ export const VIEW_OF_KIND: Readonly<Record<string, View>> = {
   REVIEW_APPEAL_DECIDED: 'reviews',
   REVIEW_DECIDED: 'reviews',
   REVIEW_INVITE: 'reviews',
+  REVIEW_POSTED: 'garage-reviews',
   REVIEW_REPLIED: 'reviews',
   SERVICE_DUE: 'cars',
   TYRES_SEASON: 'cars',
+};
+
+// The views a row opens at one address whatever it carries.
+const FIXED_PATH: Partial<Record<View, string>> = {
+  garage: '/app/garage',
+  'garage-reviews': '/app/garage/reviews',
+  prices: '/app/garage/prices',
 };
 
 const ROOT = '/app/driver';
@@ -91,8 +106,8 @@ function profileOf(params: unknown): string | null {
 export function bellLink(row: Row): string | null {
   if (!Object.hasOwn(VIEW_OF_KIND, row.kind)) return null;
   const view = VIEW_OF_KIND[row.kind];
-  if (view === 'garage') return '/app/garage';
-  if (view === 'prices') return '/app/garage/prices';
+  const fixed = FIXED_PATH[view];
+  if (fixed) return fixed;
   if (view === 'profile') return profileOf(row.params);
   if (view === 'cars') {
     return row.subjectId ? `${ROOT}/cars/${row.subjectId}` : `${ROOT}/cars`;

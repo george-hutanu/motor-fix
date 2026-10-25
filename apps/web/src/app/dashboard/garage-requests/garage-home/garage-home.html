@@ -23,7 +23,10 @@
       <a class="day-sheet" routerLink="schedule">{{ 'garage.home.ownJobs.daySheet' | t }}</a>
     }
     <mf-own-jobs-section />
-  } @else if (!feed.visible()) {
+  } @else if (!feed.visible() && !reviews()) {
     <p>{{ 'shell.frame.coming.garage.dashboard' | t }}</p>
+  }
+  @if (reviews()) {
+    <mf-garage-reviews-panel [limit]="5" />
   }
 }
