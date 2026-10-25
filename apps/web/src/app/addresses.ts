@@ -38,10 +38,17 @@ export const PUBLIC_PATHS: readonly string[] = [
   'review-rules',
 ];
 
-// The server provides PUBLIC_WEB_URL's origin: behind the host's proxy the
-// request may arrive as http.
+// The server provides PUBLIC_WEB_URL's origin, since behind the host's proxy
+// the request may arrive as http, and names it in every page it sends; the
+// address bar is the last resort, for a page no server sent (a test).
 export const SITE_ORIGIN = new InjectionToken<string>('SITE_ORIGIN', {
-  factory: () => inject(DOCUMENT).location.origin,
+  factory: () => {
+    const doc = inject(DOCUMENT);
+    return (
+      doc.querySelector<HTMLMetaElement>('meta[name="mf-site"]')?.content ||
+      doc.location.origin
+    );
+  },
 });
 
 export function alternates(origin: string, path: string) {
