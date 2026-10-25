@@ -94,6 +94,12 @@ test.describe('fast navigation on the public pages @seeded', () => {
       'no-store',
     );
     await hydrated(page);
+    // A driver who leaves while the list is still being read keeps the page
+    // out of the cache (an open request): leave once it has answered.
+    await expect(
+      page.getByRole('link', { name: 'Vezi service‑ul' }).first(),
+    ).toBeVisible();
+    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
     await page.evaluate(() => {
       addEventListener('pageshow', (e) => {
         (window as { __persisted?: boolean }).__persisted = e.persisted;
