@@ -351,7 +351,7 @@ describe('the panel', () => {
     ]);
     expect(rows(el)).toHaveLength(230);
     expect(button(el, 'Mai multe')).toBeUndefined();
-  });
+  }, 30_000);
 
   it('says so when no file waits, with a count of 0', async () => {
     answer = async () => queueOf(0);

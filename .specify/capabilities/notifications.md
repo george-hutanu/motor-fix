@@ -46,10 +46,11 @@ features:
   - 523-flush-late-follower
   - 520-brevo-key-check-retry
   - 525-bounce-domain-event
-  - 140-account-delete-export
-  - 1370-release-seed-no-ssh
   - 003-admin-account-actions
+  - 1370-release-seed-no-ssh
+  - 1156-retention-job
   - 142-notification-channels
+  - 140-account-delete-export
   - 223-request-act-notifications
 ---
 
@@ -874,6 +875,10 @@ _From 140-account-delete-export._
 ### 003-FR-022 — The system MUST carry an ACCOUNT_EMAIL purpose `account_suspended` with a Romanian and an English template: subject "Contul tău a fost suspendat" / "Your account was suspended", a body that gives the reason as escaped plain text, the support address when one is configured (279-FR-003) and a button linking to the contact page `/{lang}/contact`, and a footer saying why the person gets it; it is transactional (no preference switches it off), follows the sender's bounce rule, passes the template check and joins the inbox-test matrix (279-FR-007) by being registered.
 
 _From 003-admin-account-actions._
+
+### 1156-FR-005 — The job MUST delete every notification row, whatever its channel or status, created more than the configured notification period ago; a younger row that referred to a deleted one as its group leader or fallback source MUST keep everything else and lose only the reference; each account's stored unread count MUST equal its remaining unread in-app rows after the sweep.
+
+_From 1156-retention-job._
 
 ### 142-FR-002 — Picking a channel MUST save that one type at once (the option shows as chosen before the save answers), with no other action, through the existing preferences save, carrying the type's last-read `enabled` unchanged; a failed save MUST return the picker to the channel the last read gave and show an error toast in the driver's language; the panel MUST re-read on the existing live preference update, keeping choices still in flight as the switches do (138-FR-011).
 
