@@ -9,6 +9,8 @@ import { HomeService } from './home/home.service';
 import { PopularBrandsController } from './popular-brands/popular-brands.controller';
 import { PopularBrandsService } from './popular-brands/popular-brands.service';
 import { SearchLogService } from './search-log/search-log.service';
+import { SimilarGaragesController } from './similar-garages/similar-garages.controller';
+import { SimilarGaragesService } from './similar-garages/similar-garages.service';
 import { CacheModule } from '../cache/cache.module';
 
 // The PostgreSQL and Redis clients come from the global AuthModule.
@@ -17,6 +19,7 @@ import { CacheModule } from '../cache/cache.module';
     GarageSearchController,
     HomeController,
     PopularBrandsController,
+    SimilarGaragesController,
   ],
   imports: [CacheModule],
   providers: [
@@ -26,6 +29,7 @@ import { CacheModule } from '../cache/cache.module';
     HomeService,
     PopularBrandsService,
     SearchLogService,
+    SimilarGaragesService,
   ],
 })
 export class SearchModule {}

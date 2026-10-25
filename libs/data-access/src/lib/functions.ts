@@ -227,6 +227,8 @@ export type { GarageSearchControllerForBrand$Params as GarageSearchControllerFor
 export { garageSearchControllerForBrand as garageSearchControllerForBrand } from './fn/search/garage-search-controller-for-brand';
 export type { GarageSearchControllerPins$Params as GarageSearchControllerPins$Params } from './fn/search/garage-search-controller-pins';
 export { garageSearchControllerPins as garageSearchControllerPins } from './fn/search/garage-search-controller-pins';
+export type { SimilarGaragesControllerForGarage$Params as SimilarGaragesControllerForGarage$Params } from './fn/search/similar-garages-controller-for-garage';
+export { similarGaragesControllerForGarage as similarGaragesControllerForGarage } from './fn/search/similar-garages-controller-for-garage';
 export type { HomeControllerForBrand$Params as HomeControllerForBrand$Params } from './fn/home/home-controller-for-brand';
 export { homeControllerForBrand as homeControllerForBrand } from './fn/home/home-controller-for-brand';
 export type { RequestsControllerList$Params as RequestsControllerList$Params } from './fn/requests/requests-controller-list';

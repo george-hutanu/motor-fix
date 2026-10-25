@@ -187,6 +187,21 @@ describe('the dashboard check', () => {
     );
   });
 
+  it('fails two panels that share an id', () => {
+    put(
+      'motorfix-api.json',
+      dashboard('motorfix-api', [
+        panel('Requests', `sum(up{${ENV}})`, { id: 7 }),
+        panel('Bookings', `sum(up{${ENV}})`, { id: 7 }),
+        panel('Latency', `sum(up{${ENV}})`, { id: 8 }),
+      ]),
+    );
+
+    expect(checkDashboards(root)).toEqual([
+      'motorfix-api.json: panel-id: 7 is used by "Requests" and "Bookings"',
+    ]);
+  });
+
   it('fails without an env variable', () => {
     const file = dashboard('motorfix-api');
     (file['templating'] as { list: Json[] }).list.pop();

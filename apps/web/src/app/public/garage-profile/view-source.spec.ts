@@ -1,6 +1,7 @@
 import { sourceOf } from './view-source';
 
 // @traces 143-FR-008
+// @traces 385-FR-006
 describe('where a profile view came from', () => {
   it('names a shared link by the address it was opened with', () => {
     expect(sourceOf('/ro/garages', 'share')).toBe('shared_link');

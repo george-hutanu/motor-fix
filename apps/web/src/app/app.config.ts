@@ -25,9 +25,18 @@ import { authInterceptor } from './auth.interceptor';
 import { PlatformStatus } from './maintenance/platform-status';
 import { transferCacheFilter } from './public-read';
 import { provideViewScrolling } from './scrolling';
+import { serverTimeoutInterceptor } from './server-timeout.interceptor';
 import { provideServiceWorkerRecovery } from './service-worker-recovery';
 import { provideHomeVisit } from './voice/home-visit/home-visit';
 import { provideVoiceRead } from './voice/voice';
+
+// On the server, withFetch sends every API call through Node's global fetch,
+// whose one undici dispatcher keeps its connections alive between calls.
+export const apiHttpClient = () =>
+  provideHttpClient(
+    withFetch(),
+    withInterceptors([authInterceptor, serverTimeoutInterceptor]),
+  );
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -36,7 +45,7 @@ export const appConfig: ApplicationConfig = {
       withEventReplay(),
       withHttpTransferCacheOptions({ filter: transferCacheFilter }),
     ),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    apiHttpClient(),
     provideRouter(routes, withInMemoryScrolling()),
     provideViewScrolling(),
     provideI18n(),
