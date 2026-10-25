@@ -117,6 +117,7 @@ features:
   - 471-crlf-harness-tidy
   - 1188-tail-latency
   - 493-watcher-docs
+  - 1156-retention-job
 ---
 
 # Capability: Platform
@@ -2894,6 +2895,26 @@ _From 1188-tail-latency._
 ### 1188-FR-011 — FR-001, FR-002, FR-005, FR-007, FR-008 and FR-009 MUST have failing-first tests beside the code they exercise; FR-003 and FR-004 a test that reads the Dockerfile's runtime stages; FR-006 is proven by the build itself (Constitution II).
 
 _From 1188-tail-latency._
+
+### 1156-FR-001 — One configuration module (`libs/domain/src/retention/retention.config.ts`, beside the sweeps that read it) MUST hold every retention period the privacy notice states, named by what it covers: legal documents and audit history 5 years after the garage or account closes; media (photos, clips, recordings, request and reply photos) 90 days; day-sheet PDFs 30 days; notifications 12 months. Each period MUST carry what it covers and the date of the owner's decision (T10, 2026-10-16) beside it, and nothing else in the product MUST state those periods as numbers of its own.
+
+_From 1156-retention-job._
+
+### 1156-FR-002 — A unit test MUST fail when any retention sweep source holds a numeric literal other than 0 and 1 (every period and the batch size are read from the configuration); the test reads the sweep sources, and passes on the shipped code. Every period in the configuration is a whole number of days.
+
+_From 1156-retention-job._
+
+### 1156-FR-003 — A nightly job in the worker MUST run once per night across every worker instance (one repeatable job under a fixed scheduler id, Europe/Bucharest, as the system-log purge is scheduled) and run every sweep below in turn; a sweep that fails MUST NOT stop the others, and a run with any failed sweep MUST end as a failed job, retried with the system-log purge job's attempts and backoff and, on final failure, reported like the worker's other jobs.
+
+_From 1156-retention-job._
+
+### 1156-FR-013 — The job MUST delete in bounded batches per kind until nothing is due, so one night's run never holds one statement over a whole table, and a run that removes nothing is a normal success.
+
+_From 1156-retention-job._
+
+### 1156-FR-014 — Integration tests (real PostgreSQL) MUST exist before the implementation and MUST seed, for every kind the job sweeps today (each token and code kind, invites, notifications, legal documents, audit entries by account closure, by garage closure and by own time), one row just inside and one just outside its limit, and show after one run that only the outside one was removed or anonymised, that the counts match, and that the database still refuses a delete and any non-anonymising update of an audit entry.
+
+_From 1156-retention-job._
 
 ### 493-FR-005 — `merge-main.mjs`'s capability resolution (`unionConflicts`) MUST keep one blank line between the last line of ours and a heading (`#`) of theirs that follows it in the same conflict hunk, so two features appended at the same place never glue a `_From …_` line to the next requirement's heading.
 
