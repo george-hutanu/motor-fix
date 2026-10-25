@@ -177,7 +177,6 @@ describe('StaticMap, the image', () => {
   });
 });
 
-// @traces 1196-FR-012
 // @traces 1366-FR-006
 describe('StaticMap, telling its host the image failed', () => {
   it('says so once when the image fails, and never while it shows', async () => {
@@ -196,6 +195,7 @@ describe('StaticMap, telling its host the image failed', () => {
   });
 });
 
+// @traces 1196-FR-012
 describe('StaticMap, the overlay', () => {
   it('draws a pin per fixed garage with its rate, coloured by stance, hidden from assistive technology', async () => {
     await render();

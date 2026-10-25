@@ -26,6 +26,7 @@ const open = jest.fn(
   (
     _host: HTMLElement,
     _pin: HTMLElement,
+    _at: { lat: number; lng: number },
     _start: { center: [number, number]; zoom: number },
   ) =>
     new Promise<{ destroy(): void }>((resolve, reject) => {
@@ -158,6 +159,7 @@ describe('GarageMap, the interactive map', () => {
     expect(open).toHaveBeenCalledWith(
       element().querySelector('.canvas'),
       element().querySelector('.pin'),
+      POINT,
       { center: [center.lng, center.lat], zoom },
     );
   });
@@ -262,7 +264,14 @@ describe('GarageMap, when it cannot show', () => {
 describe('GARAGE_MAP, the opener', () => {
   const { fake } = jest.requireMock<MapFake>('maplibre-gl');
 
-  it('opens MapLibre at the view with cooperative gestures and one marker on the pin', async () => {
+  // The view's snapped centre, a little off the garage.
+  const START = { center: [26.0119, 44.4349] as [number, number], zoom: 15 };
+
+  afterEach(() => {
+    fake.manualLoad = false;
+  });
+
+  it('opens MapLibre at the view with cooperative gestures and one marker at the garage', async () => {
     const host = document.createElement('div');
     const pin = document.createElement('div');
     document.body.append(host);
@@ -271,19 +280,17 @@ describe('GARAGE_MAP, the opener', () => {
     }>('maplibre-gl');
     const at = jest.spyOn(Marker.prototype, 'setLngLat');
 
-    const map = await TestBed.inject(GARAGE_MAP)(host, pin, {
-      center: [POINT.lng, POINT.lat],
-      zoom: 15,
-    });
+    const map = await TestBed.inject(GARAGE_MAP)(host, pin, POINT, START);
 
     expect(fake.map.options).toMatchObject({
-      center: [POINT.lng, POINT.lat],
+      center: START.center,
       container: host,
       cooperativeGestures: true,
       zoom: 15,
     });
     expect(fake.marker.options).toEqual({ element: pin });
     expect(at).toHaveBeenCalledTimes(1);
+    expect(at).toHaveBeenCalledWith([POINT.lng, POINT.lat]);
     map.destroy();
     expect(fake.map.remove).toHaveBeenCalled();
     host.remove();
@@ -300,10 +307,12 @@ describe('GARAGE_MAP, the opener', () => {
     document.body.append(host);
 
     await expect(
-      TestBed.inject(GARAGE_MAP)(host, document.createElement('div'), {
-        center: [POINT.lng, POINT.lat],
-        zoom: 15,
-      }),
+      TestBed.inject(GARAGE_MAP)(
+        host,
+        document.createElement('div'),
+        POINT,
+        START,
+      ),
     ).rejects.toThrow('marker');
     const canvas = document.createElement('canvas');
     canvas.tabIndex = 0;
@@ -311,6 +320,29 @@ describe('GARAGE_MAP, the opener', () => {
     await Promise.resolve();
 
     expect(fake.map.remove).toHaveBeenCalled();
+    expect(canvas.getAttribute('tabindex')).toBe('0');
+    host.remove();
+  });
+
+  it('stops watching the tab order when the map itself fails to load', async () => {
+    fake.manualLoad = true;
+    const host = document.createElement('div');
+    document.body.append(host);
+    const opening = TestBed.inject(GARAGE_MAP)(
+      host,
+      document.createElement('div'),
+      POINT,
+      START,
+    );
+    await new Promise((resolve) => setTimeout(resolve));
+    fake.map.fire('error', { error: new Error('style') });
+
+    await expect(opening).rejects.toThrow('style');
+    const canvas = document.createElement('canvas');
+    canvas.tabIndex = 0;
+    host.append(canvas);
+    await Promise.resolve();
+
     expect(canvas.getAttribute('tabindex')).toBe('0');
     host.remove();
   });

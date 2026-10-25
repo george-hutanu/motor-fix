@@ -39,21 +39,23 @@ const FADE_MS = 200;
 type OpenGarageMap = (
   host: HTMLElement,
   pin: HTMLElement,
+  at: LatLng,
   start: MapStart,
 ) => Promise<{ destroy(): void }>;
 
 // Opens the garage's map in the browser at the static map's view, with one
-// marker at the garage; MapLibre is fetched only once the driver asks.
+// marker at the garage's own point; MapLibre is fetched only once the driver
+// asks.
 export const GARAGE_MAP = new InjectionToken<OpenGarageMap>('GARAGE_MAP', {
   factory: () => {
     const document = inject(DOCUMENT);
-    return async (host, pin, start) => {
+    return async (host, pin, at, start) => {
       const stop = keepOutOfTabOrder(host);
       let map: Awaited<ReturnType<typeof openMapLibre>> | undefined;
       try {
         map = await openMapLibre(host, styleFor(document), undefined, start);
         const { Marker } = await import('maplibre-gl');
-        new Marker({ element: pin }).setLngLat(start.center).addTo(map);
+        new Marker({ element: pin }).setLngLat([at.lng, at.lat]).addTo(map);
         const opened = map;
         return {
           destroy: () => {
@@ -99,6 +101,8 @@ export class GarageMap {
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private map: { destroy(): void } | undefined;
   private closed = false;
+  // Said once: the host drops the box on the first word.
+  private left = false;
 
   constructor() {
     const destroyRef = inject(DestroyRef);
@@ -128,26 +132,40 @@ export class GarageMap {
 
   // The driver asked for the interactive map: it opens at the static view,
   // and a second ask while it loads does nothing.
-  protected activate() {
+  protected async activate() {
     const still = untracked(this.still);
-    if (!this.browser || !still || untracked(this.stage) !== 'static') return;
+    if (!this.browser || !still || this.left) return;
+    if (untracked(this.stage) !== 'static') return;
     this.stage.set('opening');
-    this.open(this.host().nativeElement, this.pin().nativeElement, {
-      center: [still.center.lng, still.center.lat],
-      zoom: still.zoom,
-    }).then(
-      (map) => {
-        if (this.closed) return map.destroy();
-        this.map = map;
-        this.stage.set('leaving');
-        setTimeout(
-          () => this.stage.set('open'),
-          untracked(this.reduced) ? 0 : FADE_MS,
-        );
-      },
-      () => {
-        if (!this.closed) this.gone.emit();
-      },
+    let map: { destroy(): void };
+    try {
+      map = await this.open(
+        this.host().nativeElement,
+        this.pin().nativeElement,
+        this.point(),
+        { center: [still.center.lng, still.center.lat], zoom: still.zoom },
+      );
+    } catch {
+      return this.leave();
+    }
+    if (this.closed) return map.destroy();
+    this.map = map;
+    this.stage.set('leaving');
+    setTimeout(
+      () => this.stage.set('open'),
+      untracked(this.reduced) ? 0 : FADE_MS,
     );
+  }
+
+  // The image failed. Once the interactive map is on its way it is that
+  // map's success or failure that counts.
+  protected broken() {
+    if (untracked(this.stage) === 'static') this.leave();
+  }
+
+  private leave() {
+    if (this.closed || this.left) return;
+    this.left = true;
+    this.gone.emit();
   }
 }
