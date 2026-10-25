@@ -100,27 +100,35 @@ const RATE_FROM = 11;
 const DIGIT = 8;
 const HALF_LINE = 8;
 
-// The pins whose rate gives way to another's it would cover, as MapLibre
-// lets no two labels overlap: the lit pin's is placed first, then the rest
-// in order. Their dots stay.
+// The pins and circles whose rate gives way to another's it would cover, as
+// MapLibre lets no two labels overlap: the lit one's is placed first, then
+// the pins' in order, then the circles'. A circle's rate sits centred on it.
+// Their dots and circles stay.
 export function quietLabels(
   pins: OverlayPin[],
   lit: string | undefined,
+  circles: OverlayPin[] = [],
 ): Set<string> {
+  const all = [
+    ...pins.map((pin) => ({ ...pin, centred: false })),
+    ...circles.map((circle) => ({ ...circle, centred: true })),
+  ];
   const order = [
-    ...pins.filter((pin) => pin.id === lit),
-    ...pins.filter((pin) => pin.id !== lit),
+    ...all.filter((label) => label.id === lit),
+    ...all.filter((label) => label.id !== lit),
   ];
   const placed: { left: number; right: number; top: number; bottom: number }[] =
     [];
   const quiet = new Set<string>();
-  for (const pin of order) {
-    if (!pin.rate) continue;
+  for (const label of order) {
+    if (!label.rate) continue;
+    const wide = DIGIT * label.rate.length;
+    const left = label.centred ? label.x - wide / 2 : label.x + RATE_FROM;
     const box = {
-      bottom: pin.y + HALF_LINE,
-      left: pin.x + RATE_FROM,
-      right: pin.x + RATE_FROM + DIGIT * pin.rate.length,
-      top: pin.y - HALF_LINE,
+      bottom: label.y + HALF_LINE,
+      left,
+      right: left + wide,
+      top: label.y - HALF_LINE,
     };
     const meets = placed.some(
       (other) =>
@@ -129,7 +137,7 @@ export function quietLabels(
         box.top < other.bottom &&
         other.top < box.bottom,
     );
-    if (meets) quiet.add(pin.id);
+    if (meets) quiet.add(label.id);
     else placed.push(box);
   }
   return quiet;

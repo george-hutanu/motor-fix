@@ -210,4 +210,34 @@ describe('quietLabels, the rates that give way', () => {
       quietLabels([pin('a', 0, 0, ''), pin('b', 4, 0)], undefined),
     ).toEqual(new Set());
   });
+
+  // A mobile mechanic's rate sits centred on its circle (static-map.css .area).
+  const circle = (id: string, x: number, y: number, rate = '150') => ({
+    ...pin(id, x, y, rate),
+    r: 30,
+  });
+
+  it('quiets a circle’s rate that a pin’s rate covers', () => {
+    expect(
+      quietLabels([pin('a', 0, 0)], undefined, [circle('m', 30, 2)]),
+    ).toEqual(new Set(['m']));
+  });
+
+  it('quiets a pin’s rate that the lit circle’s rate covers', () => {
+    expect(quietLabels([pin('a', 0, 0)], 'm', [circle('m', 30, 2)])).toEqual(
+      new Set(['a']),
+    );
+  });
+
+  it('keeps a circle’s rate centred clear of a pin’s', () => {
+    expect(
+      quietLabels([pin('a', 0, 0)], undefined, [circle('m', 60, 0)]),
+    ).toEqual(new Set());
+  });
+
+  it('quiets the later of two circles’ rates that meet', () => {
+    expect(
+      quietLabels([], undefined, [circle('m', 0, 0), circle('n', 10, 4)]),
+    ).toEqual(new Set(['n']));
+  });
 });

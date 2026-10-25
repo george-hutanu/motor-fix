@@ -74,7 +74,11 @@ export class StaticMap {
   });
   // The rates that give way to one they would cover, the lit one first.
   protected readonly quiet = computed(() =>
-    quietLabels(this.overlay()?.pins ?? [], this.lit()),
+    quietLabels(
+      this.overlay()?.pins ?? [],
+      this.lit(),
+      this.overlay()?.circles,
+    ),
   );
 
   constructor() {

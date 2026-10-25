@@ -203,7 +203,9 @@ button {
    control and the credit, so they take the interactive map's places: the
    control at the top right where its zoom buttons sit, in the width the
    legend leaves it (results-map.css), and the credit at the map's own
-   bottom right, under the sheet, as MapLibre's compact one is. */
+   bottom right, under the sheet, as MapLibre's compact one is. The
+   control keeps the zoom buttons' column and wraps its two words onto two
+   lines: one line would push the legend into the sheet at 320 px. */
 @media (max-width: 767.98px) {
   .corner {
     display: contents;
