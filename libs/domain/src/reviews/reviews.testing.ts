@@ -63,6 +63,10 @@ interface GarageReviewOptions {
   status?: ReviewStatus;
   text?: string | null;
   source?: 'job' | 'profile';
+  quote?: { fromBani: number; toBani: number };
+  finalPriceBani?: number;
+  paidBani?: number;
+  editedAt?: Date;
   // The quote's jobs, in request order; only the included ones name it.
   jobs?: { nameRo: string; nameEn: string; included?: boolean }[];
 }
@@ -71,6 +75,23 @@ interface GarageReviewOptions {
 // BMW 320d, quoted with the jobs asked.
 export function garageReviews(world: ReturnType<typeof quotesWorld>) {
   const { prisma } = world;
+
+  // The quote's ends and the job's final price the options name.
+  async function priced(
+    quoteId: string,
+    jobId: string,
+    { finalPriceBani, quote }: GarageReviewOptions,
+  ) {
+    if (quote) {
+      await prisma.quote.update({ data: quote, where: { id: quoteId } });
+    }
+    if (finalPriceBani !== undefined) {
+      await prisma.job.update({
+        data: { finalPriceBani },
+        where: { id: jobId },
+      });
+    }
+  }
 
   async function review(
     garageId: string,
@@ -103,11 +124,14 @@ export function garageReviews(world: ReturnType<typeof quotesWorld>) {
       });
     }
     const job = await world.job(booking.id, 'done');
+    await priced(quote.id, job.id, options);
     return prisma.review.create({
       data: {
         driverId,
+        editedAt: options.editedAt,
         garageId,
         jobId: job.id,
+        paidBani: options.paidBani,
         postedAt: new Date(Date.now() - (options.minutesAgo ?? 1) * 60_000),
         rating: options.rating ?? 5,
         source: options.source ?? 'job',

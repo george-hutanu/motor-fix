@@ -15,6 +15,7 @@ import {
   formatKm,
   formatLei,
   formatLeiRange,
+  formatLeiSpan,
   formatMonthYear,
   formatNum,
   formatPct,
@@ -72,6 +73,27 @@ describe('formatLeiRange', () => {
   it.each(notNumbers)('shows a dash when an end is %p', (value) => {
     expect(formatLeiRange(value, 80000, 'ro')).toBe(MISSING);
     expect(formatLeiRange(80000, value, 'en')).toBe(MISSING);
+  });
+});
+
+// @traces 1367-FR-002
+describe('formatLeiSpan', () => {
+  it('joins the two ends with a spaced en dash', () => {
+    expect(formatLeiSpan(380000, 440000, 'ro')).toBe('3.800 – 4.400 lei');
+    expect(formatLeiSpan(380000, 440000, 'en')).toBe('3,800 – 4,400 lei');
+  });
+
+  it('shows one amount when both ends are equal', () => {
+    expect(formatLeiSpan(420000, 420000, 'ro')).toBe('4.200 lei');
+  });
+
+  it('gives both ends two decimals when either is not whole lei', () => {
+    expect(formatLeiSpan(420050, 440000, 'ro')).toBe('4.200,50 – 4.400,00 lei');
+  });
+
+  it.each(notNumbers)('shows a dash when an end is %p', (value) => {
+    expect(formatLeiSpan(value, 80000, 'ro')).toBe(MISSING);
+    expect(formatLeiSpan(80000, value, 'en')).toBe(MISSING);
   });
 });
 

@@ -120,6 +120,13 @@ p {
   overflow-wrap: anywhere;
 }
 
+/* Not on the board: the author line's muted voice, under the review's text. */
+.price {
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
+
 .text {
   white-space: pre-line;
   overflow-wrap: anywhere;
