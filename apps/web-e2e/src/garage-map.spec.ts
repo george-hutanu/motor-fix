@@ -163,7 +163,10 @@ test.describe('the garage on a small map, with directions', () => {
       'href',
       `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`,
     );
-    await expect(where(page).locator('.address')).toBeVisible();
+    // The rest of the section stays (the seeded garage has no address line).
+    await expect(
+      where(page).getByRole('heading', { level: 2, name: 'Unde' }),
+    ).toBeVisible();
     await expect(
       where(page).locator('[role="alert"], [role="status"], [aria-live]'),
     ).toHaveCount(0);
