@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -8,7 +9,6 @@ import request from 'supertest';
 
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
@@ -591,7 +591,7 @@ describe('what a brand range change tells the profile', () => {
     await profile();
     await profile(w.bmw.slug);
     await profile(audi.slug);
-    const entry = (slug: string) => `v4:profile:${w.nord.slug}:${slug}`;
+    const entry = (slug: string) => `v5:profile:${w.nord.slug}:${slug}`;
 
     await put(w, BMW_RANGE);
 

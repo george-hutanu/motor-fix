@@ -289,6 +289,12 @@
     },
     "noReason": "no reason",
     "photo": "Photo {n}, opened full size",
+    "presence": {
+      "and": "and",
+      "item": "{name} (since {time})",
+      "many": "{list} have the file open",
+      "one": "{name} has had the file open since {time}"
+    },
     "problem": {
       "cancel": "Cancel",
       "choice": "How serious it is",
@@ -797,6 +803,69 @@
     "state": "suspended · {text}"
   },
   "users": {
+    "account": {
+      "activity": "Activity",
+      "adminAccount": "Admin account: no action is taken from here.",
+      "change": "{from} → {to}",
+      "changed": "The account changed meanwhile",
+      "details": "Details",
+      "documentFailed": "We could not open the document.",
+      "documents": "The garage's documents",
+      "email": "E‑mail",
+      "emailFailed": "The e‑mail could not be sent",
+      "empty": "Nothing recorded yet",
+      "failed": "The account did not load.",
+      "garage": "Garage",
+      "garagePage": "Open the garage's page",
+      "garageSuspended": "The garage is suspended and is handled from its own page.",
+      "history": "History",
+      "historyFailed": "The history did not load.",
+      "joined": "Account created",
+      "kinds": {
+        "access_reset": "reset the access",
+        "account_restored": "restored the account",
+        "account_suspended": "suspended the account",
+        "assistant_grant_revoked": "an assistant's access was withdrawn",
+        "delete": "deleted the account",
+        "other": "changed {field}"
+      },
+      "language": "Language",
+      "languages": {
+        "en": "English",
+        "ro": "Romanian"
+      },
+      "lastActive": "Last active",
+      "line": "{who} · {what} · {when}",
+      "loading": "Loading the account",
+      "methodNames": {
+        "apple": "Apple",
+        "google": "Google",
+        "password": "E‑mail and password",
+        "whatsapp_phone": "Phone, code on WhatsApp"
+      },
+      "methods": "Sign‑in methods",
+      "more": "More",
+      "none": "—",
+      "notFound": "The account does not exist or was deleted.",
+      "openPage": "Open {document}, page {n}",
+      "ownerDelete": "The garage is closed through support first",
+      "phone": "Phone",
+      "reason": "Reason for the suspension",
+      "relation": {
+        "mechanic": "mechanic at {name}",
+        "owner": "owner of {name}",
+        "receptionist": "reception at {name}"
+      },
+      "roles": "Roles",
+      "state": "State"
+    },
+    "actions": {
+      "delete": "Delete at the holder's request",
+      "heading": "Actions",
+      "reset": "Reset access",
+      "restore": "Restore",
+      "suspend": "Suspend"
+    },
     "cars": {
       "count": {
         "one": "{n} car",
@@ -818,6 +887,41 @@
         "one": "{n} review",
         "other": "{n} reviews"
       }
+    },
+    "dialogs": {
+      "cancel": "Cancel",
+      "count": "{n}/{max}",
+      "delete": {
+        "confirm": "Delete",
+        "date": "Date received",
+        "identity": "Identity was checked",
+        "reference": "Request reference",
+        "title": "Delete at the holder's request"
+      },
+      "reset": {
+        "confirm": "Reset",
+        "hint": "Sessions end on every device; with a password and an e‑mail, the person gets the reset link.",
+        "question": "Reset access for {name}?",
+        "title": "Reset access"
+      },
+      "restore": {
+        "confirm": "Restore",
+        "note": "Note (optional)",
+        "title": "Restore the account"
+      },
+      "suspend": {
+        "confirm": "Suspend",
+        "hint": "The person gets the reason by e‑mail.",
+        "reason": "Reason",
+        "short": "Write the reason, at least 10 characters",
+        "title": "Suspend the account"
+      }
+    },
+    "done": {
+      "delete": "The account was deleted",
+      "reset": "Access was reset",
+      "restore": "The account was restored",
+      "suspend": "The account was suspended"
     },
     "empty": "No accounts yet.",
     "failed": "The list did not load.",
@@ -841,6 +945,7 @@
     "loading": "Loading the accounts",
     "more": "The next accounts did not load.",
     "noMatch": "No account matches.",
+    "open": "Open the account of",
     "recent": "Recent accounts",
     "retry": "Try again",
     "roles": {

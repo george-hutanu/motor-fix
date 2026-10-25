@@ -1,6 +1,6 @@
 // Run directly by Node (type stripping), so this file imports nothing from the
 // workspace. Each module's seed rows are added here by the story that owns it.
-import { argon2, randomBytes } from 'node:crypto';
+import { argon2, randomBytes, timingSafeEqual } from 'node:crypto';
 
 import { Client } from 'pg';
 
@@ -379,44 +379,172 @@ const PEOPLE: Person[] = [
   },
 ];
 
-// The same argon2id form the sign-in checks: 19 MiB, 2 passes, 1 lane.
-function hash(secret: string): Promise<string> {
-  const nonce = randomBytes(16);
-  const b64 = (b: Buffer) => b.toString('base64').replace(/=+$/, '');
+function derive(
+  secret: string,
+  nonce: Buffer,
+  [memory, passes, parallelism]: number[],
+  tagLength: number,
+): Promise<Buffer> {
   return new Promise((resolve, reject) =>
     argon2(
       'argon2id',
-      {
-        memory: 19456,
-        message: secret,
-        nonce,
-        parallelism: 1,
-        passes: 2,
-        tagLength: 32,
-      },
-      (error, tag) =>
-        error
-          ? reject(error)
-          : resolve(`$argon2id$v=19$m=19456,t=2,p=1$${b64(nonce)}$${b64(tag)}`),
+      { memory, message: secret, nonce, parallelism, passes, tagLength },
+      (error, tag) => (error ? reject(error) : resolve(tag)),
     ),
   );
 }
 
-function link(db: Client, id: string, at: NonNullable<Person['at']>) {
-  const garage = '(SELECT id FROM garage WHERE slug = $2)';
-  return at.as === 'mechanic'
-    ? db.query(
-        `INSERT INTO mechanic (id, account_id, garage_id, name, can_answer_quotes) SELECT gen_random_uuid(), $1, ${garage}, name, $3 FROM account WHERE id = $1`,
-        [id, at.garage, at.answersQuotes ?? false],
-      )
-    : db.query(
-        `INSERT INTO garage_member (account_id, garage_id, role) VALUES ($1, ${garage}, $3::garage_member_role)`,
-        [id, at.garage, at.as],
-      );
+// The same argon2id form the sign-in checks: 19 MiB, 2 passes, 1 lane.
+async function hash(secret: string): Promise<string> {
+  const nonce = randomBytes(16);
+  const b64 = (b: Buffer) => b.toString('base64').replace(/=+$/, '');
+  const tag = await derive(secret, nonce, [19456, 2, 1], 32);
+  return `$argon2id$v=19$m=19456,t=2,p=1$${b64(nonce)}$${b64(tag)}`;
 }
 
-async function add(db: Client, person: Person, secret: string) {
-  // An account that exists is left as it is.
+// Whether a stored hash is of the secret, read the way the sign-in reads it;
+// a hash with a fresh salt never equals the stored one, so it is checked.
+async function verifies(secret: string, stored: string | null) {
+  const parts =
+    /^\$argon2id\$v=19\$m=(\d{1,6}),t=(\d{1,2}),p=(\d{1,2})\$([A-Za-z0-9+/]{11,64})\$([A-Za-z0-9+/]{22,88})$/.exec(
+      stored ?? '',
+    );
+  if (!parts || Number(parts[1]) > 262_144) return false;
+  const expected = Buffer.from(parts[5] ?? '', 'base64');
+  try {
+    const tag = await derive(
+      secret,
+      Buffer.from(parts[4] ?? '', 'base64'),
+      parts.slice(1, 4).map(Number),
+      expected.length,
+    );
+    return timingSafeEqual(tag, expected);
+  } catch {
+    return false;
+  }
+}
+
+// The seeded link, put back with its seeded values. A link at another garage
+// stays: the account may hold one role at one garage, and moving it would
+// rewrite that garage's staff, so the seed says why it could not link.
+async function link(
+  db: Client,
+  id: string,
+  { at, email }: Person,
+): Promise<boolean> {
+  if (!at) return false;
+  const garage = '(SELECT id FROM garage WHERE slug = $2)';
+  const linked =
+    at.as === 'mechanic'
+      ? await db.query(
+          `INSERT INTO mechanic (id, account_id, garage_id, name, can_answer_quotes)
+           SELECT gen_random_uuid(), $1, ${garage}, name, $3 FROM account WHERE id = $1
+           ON CONFLICT (account_id) DO UPDATE SET can_answer_quotes = EXCLUDED.can_answer_quotes
+           WHERE mechanic.garage_id = EXCLUDED.garage_id
+             AND mechanic.can_answer_quotes <> EXCLUDED.can_answer_quotes
+           RETURNING 1`,
+          [id, at.garage, at.answersQuotes ?? false],
+        )
+      : await db.query(
+          `INSERT INTO garage_member (account_id, garage_id, role)
+           SELECT $1, ${garage}, $3::garage_member_role
+           WHERE NOT EXISTS (
+             SELECT 1 FROM garage_member WHERE account_id = $1
+               AND role = $3::garage_member_role AND garage_id <> ${garage})
+           ON CONFLICT (garage_id, account_id) DO UPDATE SET role = EXCLUDED.role
+           WHERE garage_member.role <> EXCLUDED.role
+           RETURNING 1`,
+          [id, at.garage, at.as],
+        );
+  if (linked.rowCount) return true;
+  const { rowCount } = await db.query(
+    at.as === 'mechanic'
+      ? `SELECT 1 FROM mechanic WHERE account_id = $1 AND garage_id = ${garage}`
+      : `SELECT 1 FROM garage_member WHERE account_id = $1 AND garage_id = ${garage}
+           AND role = $3::garage_member_role`,
+    at.as === 'mechanic' ? [id, at.garage] : [id, at.garage, at.as],
+  );
+  if (!rowCount) {
+    console.warn(
+      `seed: ${email} is ${at.as} at another garage, so its link to ${at.garage} is not added`,
+    );
+  }
+  return false;
+}
+
+// What one run put back on the accounts that were already there, per field,
+// for the summary line (no value, so no secret, is ever in it).
+type Restored = {
+  identities: number;
+  link: number;
+  password: number;
+  roles: number;
+  status: number;
+};
+
+// The account's password, held by exactly one password identity: the one on
+// its e-mail if any, its hash put back when it does not verify; every other
+// password identity of the account is deleted. Says what it wrote.
+async function onePassword(
+  db: Client,
+  id: string,
+  email: string,
+  secret: string,
+): Promise<{ extra: number; password: boolean }> {
+  const { rows } = await db.query<{
+    id: string;
+    password_hash: string | null;
+    subject: string;
+  }>(
+    `SELECT id, subject, password_hash FROM account_identity
+     WHERE account_id = $1 AND method = 'password'
+     ORDER BY subject = $2 DESC, subject, id LIMIT 1`,
+    [id, email],
+  );
+  const identity = rows[0];
+  let password = true;
+  if (!identity) {
+    await db.query(
+      `INSERT INTO account_identity (id, account_id, method, subject, password_hash)
+       VALUES (gen_random_uuid(), $1, 'password', $2, $3)`,
+      [id, email, await hash(secret)],
+    );
+  } else if (!(await verifies(secret, identity.password_hash))) {
+    await db.query(
+      'UPDATE account_identity SET subject = $2, password_hash = $3 WHERE id = $1',
+      [identity.id, email, await hash(secret)],
+    );
+  } else if (identity.subject !== email) {
+    await db.query('UPDATE account_identity SET subject = $2 WHERE id = $1', [
+      identity.id,
+      email,
+    ]);
+  } else {
+    password = false;
+  }
+  // The one kept above is this account's only password identity; another
+  // method's, and other accounts', are not touched.
+  const extra = identity
+    ? await db.query(
+        `DELETE FROM account_identity
+         WHERE account_id = $1 AND method = 'password' AND id <> $2`,
+        [id, identity.id],
+      )
+    : { rowCount: 0 };
+  return { extra: extra.rowCount ?? 0, password };
+}
+
+// A seeded account is the seed's: each run gives it back its password, held
+// by exactly one password identity (the sign-in reads any one of several, and
+// none of a deleted account), its status, its roles and its garage link,
+// writing only what drifted. Its other columns (name, phone, last role) are
+// left as a user set them.
+async function add(
+  db: Client,
+  person: Person,
+  secret: string,
+  restored: Restored,
+) {
   const created = await db.query<{ id: string }>(
     `INSERT INTO account (id, email, email_verified_at, name, last_role, status, phone, phone_verified_at)
      VALUES (gen_random_uuid(), $1, now(), $2, $3::role, $4::account_status, $5::text, CASE WHEN $5::text IS NULL THEN NULL ELSE now() END)
@@ -429,20 +557,38 @@ async function add(db: Client, person: Person, secret: string) {
       person.phone ?? null,
     ],
   );
-  const id = created.rows[0]?.id;
+  const id =
+    created.rows[0]?.id ??
+    (
+      await db.query<{ id: string }>(
+        'SELECT id FROM account WHERE email = $1',
+        [person.email],
+      )
+    ).rows[0]?.id;
   if (!id) return;
+  const existed = !created.rows[0];
+  const status = await db.query(
+    `UPDATE account SET status = $2::account_status
+     WHERE id = $1 AND status <> $2::account_status`,
+    [id, person.status ?? 'active'],
+  );
+  let roles = 0;
   for (const role of person.roles) {
-    await db.query(
-      'INSERT INTO account_role (account_id, role) VALUES ($1, $2::role)',
+    const added = await db.query(
+      `INSERT INTO account_role (account_id, role) VALUES ($1, $2::role)
+       ON CONFLICT DO NOTHING`,
       [id, role],
     );
+    roles += added.rowCount ?? 0;
   }
-  await db.query(
-    `INSERT INTO account_identity (id, account_id, method, subject, password_hash)
-     VALUES (gen_random_uuid(), $1, 'password', $2, $3)`,
-    [id, person.email, await hash(secret)],
-  );
-  if (person.at) await link(db, id, person.at);
+  const { password, extra } = await onePassword(db, id, person.email, secret);
+  const linked = await link(db, id, person);
+  if (!existed) return;
+  restored.password += Number(password);
+  restored.status += status.rowCount ?? 0;
+  restored.roles += Number(roles > 0);
+  restored.link += Number(linked);
+  restored.identities += Number(extra > 0);
 }
 
 async function list(db: Client, garage: (typeof LISTED)[number]) {
@@ -573,7 +719,9 @@ async function send(
                                 description, status, created_at, expires_at, idempotency_key)
      VALUES (gen_random_uuid(), $1, $2, 'Dacia', 'Logan', 2018, 'petrol', '1.0 TCe',
              'Scârțâie la frânare', $3::quote_request_status,
-             now() - make_interval(hours => $4), now() + interval '7 days', $5 || gen_random_uuid()::text)
+             (date_trunc('day', now() AT TIME ZONE 'Europe/Bucharest') AT TIME ZONE 'Europe/Bucharest')
+               - make_interval(hours => $4),
+             now() + interval '7 days', $5 || gen_random_uuid()::text)
      RETURNING id`,
     [who.driverId, who.carId, booked ? 'booked' : 'sent', hours, OWN_KEY],
   );
@@ -684,7 +832,10 @@ async function reviewed(db: Client) {
      WHERE a.email = $1`,
     [REVIEWER_CAR.email],
   );
-  if (done.rowCount) return;
+  if (done.rowCount) {
+    await garageFigures(db);
+    return;
+  }
   const who = await requester(db, REVIEWER_CAR);
   if (!who) return;
   const sent = await send(db, who, 240, true);
@@ -717,6 +868,20 @@ async function reviewed(db: Client) {
     `UPDATE mechanic SET on_profile = true, rating = 5.0, review_count = 1 WHERE id = $1`,
     [who.mechanic],
   );
+  await garageFigures(db);
+}
+
+// Atelier Test's stored rating and count, from its published reviews: the
+// review above is written straight to the table, past the API that keeps
+// them. A database seeded before this line keeps "0 recenzii" over a listed
+// review; one whose count the app already moved is left as it is.
+async function garageFigures(db: Client) {
+  await db.query(
+    `UPDATE garage g SET rating = s.rating, review_count = s.n
+     FROM (SELECT garage_id, round(avg(rating)::numeric, 1) AS rating, count(*)::int AS n
+           FROM review WHERE status = 'published' GROUP BY garage_id) s
+     WHERE g.id = s.garage_id AND g.slug = 'atelier-test' AND g.review_count = 0`,
+  );
 }
 
 // A driver sends at most 20 requests a day (quotes-config.ts), and the
@@ -725,14 +890,15 @@ async function reviewed(db: Client) {
 // 25 hours (a Bucharest day, the API's, is never longer), so each run starts
 // with the day unused. Their quotes, bookings and jobs go with them; the
 // seed's own requests stay.
-async function clearDay(db: Client) {
-  await db.query(
+async function clearDay(db: Client): Promise<number> {
+  const { rowCount } = await db.query(
     `DELETE FROM quote_request r USING account a
      WHERE a.id = r.driver_id AND a.email LIKE '%@example.test'
        AND r.created_at > now() - interval '25 hours'
        AND r.idempotency_key NOT LIKE $1 || '%'`,
     [OWN_KEY],
   );
+  return rowCount ?? 0;
 }
 
 // A database seeded before book() started its job holds that job to do, never
@@ -779,6 +945,8 @@ async function quoteable(db: Client) {
 
 // Atelier Test's team list, set once: its two mechanics with a speciality and on the
 // profile, beside a card with no account yet, as an owner names one at step 4.
+// Each card carries a role and its years, and every seeded garage gets
+// its owner's own row, as the migration gives every garage made before it.
 async function team(db: Client) {
   await db.query(
     `UPDATE mechanic m SET on_profile = true, speciality = s.speciality
@@ -791,6 +959,36 @@ async function team(db: Client) {
      SELECT gen_random_uuid(), g.id, 'Costel Radu', 'Frâne, suspensie și geometrie', true
      FROM garage g WHERE g.slug = 'atelier-test'
        AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.garage_id = g.id AND m.name = 'Costel Radu')`,
+  );
+  await db.query(
+    `UPDATE mechanic m SET role_title = c.role_title, years = c.years,
+       specialties = string_to_array(m.speciality, ', ')
+     FROM garage g, (VALUES ('mecanic@example.test', 'Mecanic șef', 12),
+                            ('mecanic-oferte@example.test', 'Electrician auto', 6),
+                            ('', 'Mecanic', 15)) AS c (email, role_title, years)
+     WHERE g.id = m.garage_id AND g.slug = 'atelier-test' AND m.role_title IS NULL
+       AND m.speciality IS NOT NULL
+       AND (CASE WHEN c.email = '' THEN m.name = 'Costel Radu'
+            ELSE m.account_id = (SELECT id FROM account WHERE email = c.email) END)`,
+  );
+  await db.query(
+    `INSERT INTO mechanic (id, garage_id, account_id, name, on_profile, can_move_bookings,
+       can_answer_quotes, can_record_final_price, is_owner, working_hours)
+     SELECT gen_random_uuid(), g.id, gm.account_id, left(btrim(a.name), 80), false, true, true, true, true, g.hours
+     FROM garage g
+     JOIN garage_member gm ON gm.garage_id = g.id AND gm.role = 'owner'
+     JOIN account a ON a.id = gm.account_id
+     WHERE char_length(btrim(a.name)) >= 2
+       AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.garage_id = g.id AND m.is_owner)
+       AND NOT EXISTS (SELECT 1 FROM mechanic m WHERE m.account_id = gm.account_id)`,
+  );
+  // An owner's row always holds the three permissions; a seeded owner's row
+  // that lost them gets them back, as the staff rows do above.
+  await db.query(
+    `UPDATE mechanic SET can_move_bookings = true, can_answer_quotes = true, can_record_final_price = true
+     WHERE is_owner
+       AND NOT (can_move_bookings AND can_answer_quotes AND can_record_final_price)
+       AND account_id IN (SELECT id FROM account WHERE email LIKE '%@example.test')`,
   );
 }
 
@@ -922,7 +1120,9 @@ async function priceList(db: Client) {
   await price('front-brakes', 'bmw', [110000, 170000], null, 2);
   await db.query(
     `UPDATE garage SET labour_to_bani = COALESCE(labour_to_bani, 24000),
-       lift_count = GREATEST(lift_count, 2)
+       lift_count = GREATEST(lift_count, 2),
+       -- The stored phone the owner's profile view shows and drivers never see.
+       phone = COALESCE(phone, '+40700000201')
      WHERE slug = 'service-auto-militari'`,
   );
   await db.query(
@@ -941,7 +1141,16 @@ async function priceList(db: Client) {
   );
 }
 
-async function seed(db: Client, secret: string) {
+// Runs the whole seed and returns its summary line, printed once committed:
+// the deploy log's evidence of what each run put back and cleared.
+async function seed(db: Client, secret: string): Promise<string> {
+  const restored: Restored = {
+    identities: 0,
+    link: 0,
+    password: 0,
+    roles: 0,
+    status: 0,
+  };
   for (const garage of GARAGES) {
     await db.query(
       `INSERT INTO garage (id, name, slug) VALUES (gen_random_uuid(), $1, $2)
@@ -962,6 +1171,26 @@ async function seed(db: Client, secret: string) {
     `UPDATE garage SET rar_activities = (SELECT array_agg(code ORDER BY code) FROM rar_activity)
      WHERE slug = 'atelier-test' AND rar_activities = '{}'`,
   );
+  // The staff's garage as a sent listing has it: a stored phone, which only
+  // the owner's profile view shows, an address and weekly hours. Each set
+  // once: an owner's later edit is never put back.
+  await db.query(
+    `UPDATE garage SET phone = COALESCE(phone, '+40700000202'),
+       address = COALESCE(address, 'Strada Atelierului 14, București'),
+       hours = CASE WHEN hours = '{}'::jsonb THEN $1::jsonb ELSE hours END
+     WHERE slug = 'atelier-test'`,
+    [
+      JSON.stringify({
+        fri: [['08:00', '18:00']],
+        mon: [['08:00', '18:00']],
+        sat: [['09:00', '13:00']],
+        sun: [],
+        thu: [['08:00', '18:00']],
+        tue: [['08:00', '18:00']],
+        wed: [['08:00', '18:00']],
+      }),
+    ],
+  );
   // The API's catalogue loader reconciles these rows by key when it boots.
   for (const brand of BRANDS) {
     await db.query(
@@ -972,7 +1201,17 @@ async function seed(db: Client, secret: string) {
     );
   }
   for (const garage of LISTED) await list(db, garage);
-  for (const person of PEOPLE) await add(db, person, secret);
+  for (const person of PEOPLE) await add(db, person, secret, restored);
+  // Saab, retired by the admin, so the admin's brand list shows a retired
+  // brand and the loader leaves it retired.
+  await db.query(
+    `INSERT INTO brand (id, key, name, slug, ro_possessive, active, updated_at, updated_by)
+     SELECT gen_random_uuid(), 'saab', 'Saab', 'saab', 'Saabul tău', false, now(), a.id
+     FROM account a WHERE a.email = 'admin@example.test'
+     ON CONFLICT (key) DO UPDATE SET active = false, updated_at = now(),
+       updated_by = EXCLUDED.updated_by
+     WHERE brand.updated_by IS NULL`,
+  );
   // The day the suspended driver was suspended, as an admin's change records
   // it; added apart from the account so a database seeded before has it too.
   await db.query(
@@ -1056,7 +1295,7 @@ async function seed(db: Client, secret: string) {
      ON CONFLICT DO NOTHING`,
     [WAITING.map(({ garage }) => garage)],
   );
-  await clearDay(db);
+  const cleared = await clearDay(db);
   await requests(db);
   await reviewed(db);
   await startOlderJob(db);
@@ -1069,6 +1308,12 @@ async function seed(db: Client, secret: string) {
             (gen_random_uuid(), 'skip_rar_check', 'false', 'false')
      ON CONFLICT (key) DO NOTHING`,
   );
+  return (
+    `seed: restored password ${restored.password}, status ${restored.status}, ` +
+    `roles ${restored.roles}, link ${restored.link}, ` +
+    `extra password identities ${restored.identities}; ` +
+    `cleared ${cleared} quote requests`
+  );
 }
 
 async function main(secret: string) {
@@ -1076,8 +1321,9 @@ async function main(secret: string) {
   await db.connect();
   try {
     await db.query('BEGIN');
-    await seed(db, secret);
+    const summary = await seed(db, secret);
     await db.query('COMMIT');
+    console.log(summary);
   } catch (error) {
     await db.query('ROLLBACK');
     throw error;

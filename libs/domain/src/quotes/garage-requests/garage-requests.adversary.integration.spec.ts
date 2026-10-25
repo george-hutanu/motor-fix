@@ -78,13 +78,14 @@ describe('GET /garage/requests as each caller', () => {
   );
 
   // @traces 347-FR-008
-  it('answers the mechanic without the permission 404 on the list and 403 on the detail, with nothing of the request', async () => {
+  // @traces 102-FR-007
+  it('answers the mechanic without the permission 403 on the list and on the detail, with nothing of the request', async () => {
     const s = await setting();
     const { request } = await sentTo(s);
     const auth = bearer(s.dinamo.plain, 'mechanic');
 
     for (const [path, status] of [
-      ['/garage/requests', 404],
+      ['/garage/requests', 403],
       [`/garage/requests/${request.id}`, 403],
     ] as const) {
       const res = await get(path, auth);
@@ -682,16 +683,26 @@ describe('GET /garage/requests?status= as each caller', () => {
     expect(ids(closed)).toEqual([rows.closed.id]);
   });
 
-  it('answers 404 never 403 to the mechanic without the permission, an account with no garage and a driver', async () => {
+  // @traces 102-FR-007
+  it('answers 403 forbidden to the mechanic without the permission, with none of the rows', async () => {
+    const s = await setting();
+    await waitingAndClosed(s);
+    const auth = bearer(s.dinamo.plain, 'mechanic');
+
+    for (const status of ['waiting', 'closed']) {
+      const res = await get(`/garage/requests?status=${status}`, auth);
+      expect([res.status, res.body.code]).toEqual([403, 'forbidden']);
+      expect(res.body.items).toBeUndefined();
+      expect(JSON.stringify(res.body)).not.toContain(DESCRIPTION);
+    }
+  });
+
+  it('answers 404 to an account with no garage and a driver', async () => {
     const s = await setting();
     await waitingAndClosed(s);
     const loner = await world.account('Ion Singur', ['garage']);
 
-    for (const auth of [
-      bearer(s.dinamo.plain, 'mechanic'),
-      bearer(loner, 'garage'),
-      bearer(s.andrei, 'driver'),
-    ]) {
+    for (const auth of [bearer(loner, 'garage'), bearer(s.andrei, 'driver')]) {
       for (const status of ['waiting', 'closed']) {
         const res = await get(`/garage/requests?status=${status}`, auth);
         expect(res.status).toBe(404);

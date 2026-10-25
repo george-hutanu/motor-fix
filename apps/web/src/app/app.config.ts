@@ -1,8 +1,4 @@
-import {
-  provideHttpClient,
-  withFetch,
-  withInterceptors,
-} from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
   inject,
@@ -21,18 +17,33 @@ import { provideCockpitTheme } from '@motor-fix/ui-cockpit';
 import { provideLanguageAddresses } from './addresses';
 import { routes } from './app.routes';
 import { authInterceptor } from './auth.interceptor';
+import { garageGoneInterceptor } from './dashboard/garage-gone.interceptor';
 import { PlatformStatus } from './maintenance/platform-status';
 import { provideViewScrolling } from './scrolling';
+import { serverTimeoutInterceptor } from './server-timeout.interceptor';
 import { provideServiceWorkerRecovery } from './service-worker-recovery';
+import { screenTransitions } from './view-transitions';
 import { provideHomeVisit } from './voice/home-visit/home-visit';
 import { provideVoiceRead } from './voice/voice';
+
+// The fetch backend is the default since Angular 21: on the server every API
+// call goes through Node's global fetch, whose one undici dispatcher keeps its
+// connections alive between calls.
+export const apiHttpClient = () =>
+  provideHttpClient(
+    withInterceptors([
+      authInterceptor,
+      garageGoneInterceptor,
+      serverTimeoutInterceptor,
+    ]),
+  );
 
 export const appConfig: ApplicationConfig = {
   providers: [
     // A tap on the server-rendered page before hydration is replayed, not lost.
     provideClientHydration(withEventReplay()),
-    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
-    provideRouter(routes, withInMemoryScrolling()),
+    apiHttpClient(),
+    provideRouter(routes, withInMemoryScrolling(), screenTransitions()),
     provideViewScrolling(),
     provideI18n(),
     provideCockpitTheme(),

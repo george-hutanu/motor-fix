@@ -22,7 +22,12 @@ import { SignInDialog } from './sign-in/sign-in-dialog';
 let server: HttpTestingController;
 
 function setup(token: string | null) {
-  const session = { renew: jest.fn(async () => true), token: () => token };
+  const session = {
+    deletingAccount: () => false,
+    epoch: () => 0,
+    renew: jest.fn(async () => true),
+    token: () => token,
+  };
   const gate = jest.fn(async () => true);
   const platformStatus = { on: jest.fn() };
   TestBed.configureTestingModule({

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import {
   type BeforeApplicationShutdown,
@@ -18,7 +19,6 @@ import { signAccessToken } from '../../auth/access-token';
 import { AccountsService } from '../../auth/accounts.service';
 import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import * as password from '../../auth/password/password';
 import { PRISMA } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
@@ -80,8 +80,8 @@ afterAll(async () => {
 
 const warmKeys = () =>
   Promise.all([
-    redis.keys('v4:driver-home:*'),
-    redis.keys('v4:garage-home:*'),
+    redis.keys('v5:driver-home:*'),
+    redis.keys('v5:garage-home:*'),
   ]).then(([driver, garage]) => [...driver, ...garage]);
 
 beforeEach(async () => {
@@ -89,7 +89,7 @@ beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE outbox_event');
   const keys = [
     ...(await warmKeys()),
-    ...(await redis.keys('v4:tag:warm:*')),
+    ...(await redis.keys('v5:tag:warm:*')),
     ...(await redis.keys('auth:fail:*')),
     ...(await redis.keys(`${ROUTE_LIMITS.signInAttempts.key}:*`)),
   ];

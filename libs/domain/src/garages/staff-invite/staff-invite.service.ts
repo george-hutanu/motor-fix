@@ -17,9 +17,9 @@ import {
   hashToken,
   newToken,
 } from '../../auth/email-confirmation/email-confirmation';
+import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { PrismaClient, StaffInvite } from '../../generated/prisma/client';
 import { Brevo } from '../../notifications/brevo/brevo';
@@ -235,7 +235,12 @@ export class StaffInviteService {
     const elsewhere = account.memberships.some(
       (m) => m.role === 'receptionist' && m.garageId !== garageId,
     );
-    if (owner || (invite.kind === 'receptionist' && elsewhere)) throw invalid();
+    // An owner's own row is his garage's: a mechanic link from
+    // another garage would move it away.
+    const ownRow = invite.kind === 'mechanic' && account.mechanic?.isOwner;
+    if (owner || ownRow || (invite.kind === 'receptionist' && elsewhere)) {
+      throw invalid();
+    }
     const by = { id: actor.accountId, role: actor.role };
     await this.prisma.$transaction(async (tx) => {
       // The row lock makes a second accept wait, then find it taken.

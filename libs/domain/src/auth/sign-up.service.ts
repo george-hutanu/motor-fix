@@ -13,6 +13,7 @@ import { Attempts } from './attempts';
 import { isCommonPassword } from './common-passwords';
 import { consentRequired, isCurrentConsent } from './consent';
 import { EmailConfirmationService } from './email-confirmation/email-confirmation.service';
+import { refusal } from './http-refusal';
 import { MAINTENANCE, type Maintenance } from './maintenance';
 import { hashPassword } from './password/password';
 import { type Issued, SignInService } from './sign-in.service';
@@ -20,13 +21,6 @@ import { Prisma } from '../generated/prisma/client';
 
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 128;
-
-export const refusal = (
-  status: HttpStatus,
-  code: string,
-  message: string,
-  errors?: { code: string; field: string }[],
-) => new HttpException({ code, message, ...(errors && { errors }) }, status);
 
 export const tooMany = () =>
   refusal(

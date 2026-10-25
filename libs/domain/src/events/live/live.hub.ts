@@ -1,16 +1,16 @@
 import { randomUUID } from 'node:crypto';
 
 import type { LiveByeReason, LiveMessage } from '@motor-fix/contracts';
-import { Logger } from '@nestjs/common';
-
-import { countReplay, countStreamClose } from './live.metrics';
-import { type LoadReplay, REPLAY_LIMIT, type ReplayRow } from './live.replay';
 import {
   type Capability,
   capabilitiesOf,
   type Permissions,
   type Role,
-} from '../../auth/capabilities';
+} from '@motor-fix/contracts/capabilities';
+import { Logger } from '@nestjs/common';
+
+import { countReplay, countStreamClose } from './live.metrics';
+import { type LoadReplay, REPLAY_LIMIT, type ReplayRow } from './live.replay';
 import type { GarageAccess, LoadGarageAccess } from '../garage-access';
 
 export const LIVE_CHANNEL = 'live:events';
@@ -51,12 +51,13 @@ export const KIND_CAPABILITY: [RegExp, Capability][] = [
   [/^garage\.updated$/, 'garage.profile'],
   [/^review\./, 'garage.reviews'],
   [/^(request|message)\./, 'garage.requests'],
-  [/^booking\.move/, 'garage.schedule'],
+  [/^booking\.move/, 'garage.move_bookings'],
 ];
 const FEATURES: [RegExp, string][] = [[/^media\./, 'live_media']];
 const REREAD_ACCESS = new Set([
   'member.removed',
   'mechanic.updated',
+  'mechanic.removed',
   'garage.features_changed',
 ]);
 const ENDS_ACCOUNT = new Set(['account.suspended', 'account.deleted']);
@@ -79,7 +80,9 @@ const PUBLIC_KINDS: [RegExp, Set<string>][] = [
     new Set([
       'garage.updated',
       'price_list.updated',
+      'mechanic.added',
       'mechanic.updated',
+      'mechanic.removed',
       'facility.removed',
       'facility.re_add_decided',
       ...REVIEW_KINDS,
@@ -93,7 +96,13 @@ const PUBLIC_KINDS: [RegExp, Set<string>][] = [
   ],
   [
     /^public:mechanic:/,
-    new Set(['mechanic.updated', ...REVIEW_KINDS, 'rating.updated']),
+    new Set([
+      'mechanic.added',
+      'mechanic.updated',
+      'mechanic.removed',
+      ...REVIEW_KINDS,
+      'rating.updated',
+    ]),
   ],
   [
     /^public:search$/,

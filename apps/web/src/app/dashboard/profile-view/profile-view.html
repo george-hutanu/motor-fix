@@ -1,0 +1,109 @@
+@if (suspended()) {
+  <p class="panel suspended" data-suspended>{{ 'garage.profile.suspended' | t }}</p>
+} @else {
+  <section class="panel" aria-labelledby="mf-profile-public">
+    <h2 id="mf-profile-public">{{ 'garage.profile.panel' | t }}</h2>
+    @if (profile(); as garage) {
+      <ul class="fields">
+        <li class="field" data-line="name">
+          <span class="label">{{ 'garage.profile.name' | t }}</span>&ngsp;<span class="value" data-value>{{ garage.name }}</span>
+        </li>
+        @if (area()) {
+          <li class="field" data-line="area">
+            <span class="value" data-value>{{ area() }}</span>
+          </li>
+        } @else if (address(garage)) {
+          <li class="field" data-line="address">
+            <span class="label">{{ 'garage.profile.address' | t }}</span>&ngsp;<span class="value" data-value>{{ address(garage) }}</span>
+          </li>
+        }
+        @if (hours().length) {
+          <li class="field" data-line="hours">
+            <span class="label">{{ 'garage.profile.hours' | t }}</span>&ngsp;<span class="value hours" data-value>
+              @for (line of hours(); track line.days) {
+                &ngsp;<span class="hours-line"><span class="days">{{ line.days }}</span>&ngsp;<span class="times" [class.closed]="line.closed">{{ line.times }}</span></span>
+              }
+            </span>
+          </li>
+        }
+        @if (garage.phone) {
+          <li class="field" data-line="phone">
+            <span class="label">{{ 'garage.profile.phone' | t }}&ngsp;<span class="tag" data-phone-tag>{{ 'garage.profile.phonePrivate' | t }}</span></span>&ngsp;<span class="value" data-value>{{ garage.phone }}</span>
+          </li>
+        }
+      </ul>
+
+      <div class="group" data-works>
+        <h3>{{ 'public.garageProfile.details.worksOn' | t }}</h3>
+        @if (worksOn().length) {
+          <ul class="chips">
+            @for (brand of worksOn(); track brand.id) {
+              <li>
+                <span class="chip"><mf-lamp state="green" [label]="brand.name" /></span>
+                @if (brand.fuels) {
+                  <span class="fuels" data-fuels>{{ brand.fuels }}</span>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="muted">{{ 'garage.profile.none' | t }}</p>
+        }
+      </div>
+      <div class="group refuses" data-refuses>
+        <h3>{{ 'public.garageProfile.details.refuses' | t }}</h3>
+        @if (garage.doesNotTake.length) {
+          <ul class="chips">
+            @for (brand of garage.doesNotTake; track brand.id) {
+              <li>
+                <span class="chip"><mf-lamp state="red" [label]="brand.name" /></span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="muted">{{ 'garage.profile.none' | t }}</p>
+        }
+      </div>
+      <p class="muted" data-unmarked>{{ 'garage.profile.unmarked' | t }}</p>
+      @if (garage.brandNote && (garage.worksOn.length || garage.doesNotTake.length)) {
+        <p class="note" data-brand-note>{{ garage.brandNote }}</p>
+      }
+
+      <div class="group" data-facilities>
+        <h3>{{ 'public.garageProfile.details.facilities' | t }}</h3>
+        <ul class="chips">
+          @for (facility of facilities(); track facility.key) {
+            <li [attr.data-facility]="facility.key" [class.off]="!facility.offered">
+              <span class="chip"><mf-lamp [state]="facility.offered ? 'green' : 'grey'" [label]="facility.label" /></span>
+            </li>
+          }
+        </ul>
+        @if (payment()) {
+          <p data-payment>{{ payment() }}</p>
+        }
+        @if (garage.facilitiesNote) {
+          <p class="note" data-facilities-note>{{ garage.facilitiesNote }}</p>
+        }
+      </div>
+
+      <a hlmBtn variant="ghost" class="public-link" data-public-link [href]="publicHref()" target="_blank" rel="noopener">
+        {{ 'garage.profile.publicLink' | t }}
+        <span class="sr-only">({{ 'garage.profile.newTab' | t }})</span>
+      </a>
+    } @else if (view.error()) {
+      <div class="failed" data-error>
+        <p>{{ 'garage.profile.error' | t }}</p>
+        <button hlmBtn variant="secondary" type="button" class="retry" data-retry (click)="view.reload()">{{ 'garage.profile.retry' | t }}</button>
+      </div>
+    } @else {
+      <ul class="skeletons" aria-hidden="true">
+        @for (n of skeletons; track n) {
+          <li class="skeleton" data-skeleton></li>
+        }
+      </ul>
+    }
+  </section>
+}
+@if (legalCheck() && (profile() || suspended() || view.error())) {
+  <mf-garage-legal-check />
+}

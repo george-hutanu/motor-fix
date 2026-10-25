@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -9,7 +10,6 @@ import { StaffInviteService } from './staff-invite.service';
 import { foreignEntries } from '../../audit/audit.testing';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { outboxMark } from '../../events/outbox.testing';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
@@ -624,6 +624,25 @@ describe('opening and accepting a link', () => {
 
     expect(again.status).toBe(410);
     expect(again.body.code).toBe('invite_invalid');
+  });
+
+  // @traces 056-FR-015
+  it("refuses another garage's owner, whose own row never moves", async () => {
+    const { id, nord, radu, token } = await invited();
+    const own = await prisma.mechanic.create({
+      data: { accountId: radu, garageId: nord.id, isOwner: true, name: 'Radu' },
+    });
+
+    const res = await accept(token, bearer(radu, 'garage'));
+
+    expect(res.status).toBe(410);
+    expect(res.body.code).toBe('invite_invalid');
+    expect(
+      await prisma.mechanic.findUniqueOrThrow({ where: { id: own.id } }),
+    ).toMatchObject({ garageId: nord.id, isOwner: true });
+    expect(
+      (await prisma.staffInvite.findUniqueOrThrow({ where: { id } })).status,
+    ).toBe('sent');
   });
 
   // @traces 131-FR-008

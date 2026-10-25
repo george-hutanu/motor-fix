@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import { Public } from '@motor-fix/domain';
 import { databaseTurn, S3TestStore } from '@motor-fix/domain/testing';
@@ -71,6 +73,10 @@ const store = new S3TestStore();
 // Its refused sign-in leaves failure counters in Redis that the domain's
 // sign-in specs count exactly: wait for their turn to end.
 const turn = databaseTurn(env.DATABASE_URL);
+
+// An e-mail no run has been refused for yet: five failed sign-ins for one in a
+// quarter of an hour are refused with 429, and the store outlives a run.
+const nobody = () => `nobody-${randomUUID()}@example.test`;
 
 async function start(appEnv: string = env.APP_ENV) {
   const config = readEnv(
@@ -194,8 +200,8 @@ describe('api conventions', () => {
     expect(res.body).toMatchObject({ code: 'sign_in_required', status: 401 });
   });
 
-  // @traces 500-FR-008
-  it('takes the caller from the right of X-Forwarded-For, past private hops and the Railway edge only', async () => {
+  // @traces 500-FR-016
+  it('takes the caller from the right of X-Forwarded-For, past private hops and one public edge hop only', async () => {
     app = await start();
     const ip = async (forwarded: string) =>
       (
@@ -207,10 +213,20 @@ describe('api conventions', () => {
     expect(await ip('203.0.113.9, 10.0.0.5')).toBe('203.0.113.9');
     expect(await ip('203.0.113.9, fd12::1')).toBe('203.0.113.9');
     expect(await ip('203.0.113.9, 100.64.1.2')).toBe('203.0.113.9');
-    expect(await ip('1.2.3.4, 198.51.100.4')).toBe('198.51.100.4');
+    expect(await ip('9.9.9.9, 1.2.3.4, 198.51.100.4')).toBe('1.2.3.4');
   });
 
-  // @traces 500-FR-008
+  // @traces 500-FR-016
+  it('takes the visitor from the chain staging check 3 logged', async () => {
+    app = await start();
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/probe/ip')
+      .set('X-Forwarded-For', '86.125.92.213, 95.173.1.1, 100.64.0.5');
+
+    expect(res.body.ip).toBe('86.125.92.213');
+  });
+
+  // @traces 500-FR-016
   it('logs the caller of a refused sign-in as the trusted chain names it, not as the visitor wrote it', async () => {
     app = await start();
     const callers: string[] = [];
@@ -224,16 +240,18 @@ describe('api conventions', () => {
       request(app.getHttpServer())
         .post('/api/v1/auth/sign-in')
         .set('X-Forwarded-For', forwarded)
-        .send({ email: 'nobody@example.test', password: 'x' });
+        .send({ email: nobody(), password: 'x' });
 
     await refused('203.0.113.9, 10.0.0.5');
-    await refused('1.2.3.4, 198.51.100.4');
+    await refused('9.9.9.9, 1.2.3.4, 198.51.100.4');
     warn.mockRestore();
 
-    expect(callers).toEqual([
+    // The line goes on with the masked hops; the caller is as before.
+    expect(callers.map((line) => line.split(' hops=')[0])).toEqual([
       'sign-in refused: invalid_credentials caller=203.0.x.x',
-      'sign-in refused: invalid_credentials caller=198.51.x.x',
+      'sign-in refused: invalid_credentials caller=1.2.x.x',
     ]);
+    expect(callers[1]).toContain(' hops=9.9.x.x,1.2.x.x,198.51.x.x,');
   });
 
   it('serves sign-in under the prefix with problem details', async () => {
@@ -241,7 +259,7 @@ describe('api conventions', () => {
 
     const res = await request(app.getHttpServer())
       .post('/api/v1/auth/sign-in')
-      .send({ email: 'nobody@example.test', password: 'x' });
+      .send({ email: nobody(), password: 'x' });
 
     expect(res.status).toBe(401);
     expect(res.headers['content-type']).toContain('application/problem+json');
@@ -272,7 +290,17 @@ describe('api conventions', () => {
 
     expect(
       operation?.parameters?.map((p) => 'name' in p && p.name).sort(),
-    ).toEqual(['actorId', 'area', 'cursor', 'from', 'garageId', 'jobId', 'to']);
+    ).toEqual([
+      'accountId',
+      'actorId',
+      'area',
+      'cursor',
+      'from',
+      'garageId',
+      'jobId',
+      'limit',
+      'to',
+    ]);
     expect(operation?.responses['200']).toBeDefined();
   });
 

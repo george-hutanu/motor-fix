@@ -126,7 +126,32 @@ export class Session {
   private accessToken: string | null = null;
   // Until when this tab's own password change keeps it signed in.
   private keepUntil = 0;
+  // This tab is deleting its account: the "sessions ended" word that sends is
+  // its own, and the deletion signs the tab out itself.
+  private deleting = false;
   private loading: Promise<MeDto | null> | null = null;
+  // The account re-read in flight, which a 404's re-read joins.
+  private reloading: Promise<void> | null = null;
+  // The garage a re-read after a 404 under its path found no longer held, for
+  // the account and role that lost it.
+  private readonly lostGarage = signal<{
+    accountId: string;
+    garageId: string;
+    role: MeDto['role'];
+  } | null>(null);
+  // The signed-in role's garage is gone: a sign-out, another role or the
+  // garage held again ends it.
+  readonly garageGone = computed(() => {
+    const lost = this.lostGarage();
+    const me = this.current();
+    return (
+      !!lost &&
+      !!me &&
+      me.id === lost.accountId &&
+      me.role === lost.role &&
+      !me.garageAccess.some((garage) => garage.garageId === lost.garageId)
+    );
+  });
   private renewing: Promise<boolean> | null = null;
   // Bumped at sign-out, so an answer that arrives later restores nothing.
   private generation = 0;
@@ -312,6 +337,30 @@ export class Session {
     }
   }
 
+  // Sends this tab's account deletion; the "sessions ended" word it brings is
+  // left to the deletion until the tab forgets the session, or given back
+  // when the deletion is refused.
+  async deleteAccount<T>(send: () => Promise<T>): Promise<T> {
+    this.deleting = true;
+    try {
+      return await send();
+    } catch (error) {
+      this.deleting = false;
+      throw error;
+    }
+  }
+
+  // Whether a "sessions ended" word is this tab's own account deletion.
+  deletingAccount(): boolean {
+    return this.deleting;
+  }
+
+  // Bumped by every sign-out and revoke: a call sent before the bump is
+  // answered for a session that is gone.
+  epoch(): number {
+    return this.generation;
+  }
+
   // Whether a "sessions ended" word may be this tab's own password change.
   keepsThroughRevoke(): boolean {
     return Date.now() < this.keepUntil;
@@ -333,7 +382,7 @@ export class Session {
           if (generation !== this.generation) return false;
           if (replaced()) return true;
           if (typeof answer?.accessToken !== 'string' || !answer.accessToken) {
-            this.lapse();
+            this.lapseUnlessDeleting();
             return false;
           }
           this.accessToken = answer.accessToken;
@@ -342,7 +391,7 @@ export class Session {
         () => {
           if (generation !== this.generation) return false;
           if (replaced()) return true;
-          this.lapse();
+          this.lapseUnlessDeleting();
           return false;
         },
       )
@@ -382,7 +431,29 @@ export class Session {
 
   // What the server now says about the signed-in account; the old answer
   // stays on screen until then, and stays when the server does not answer.
-  async reload(): Promise<void> {
+  reload(): Promise<void> {
+    const reading = this.reread().finally(() => {
+      if (this.reloading === reading) this.reloading = null;
+    });
+    this.reloading = reading;
+    return reading;
+  }
+
+  // One re-read for every 404 that arrives while one is in flight.
+  reloadOnce(): Promise<void> {
+    return this.reloading ?? this.reload();
+  }
+
+  // A 404 under the garage's own path, after the re-read: when the account
+  // no longer holds the garage, the dashboard says so.
+  loseGarage(garageId: string) {
+    const me = this.current();
+    if (!me || me.garageAccess.some((garage) => garage.garageId === garageId))
+      return;
+    this.lostGarage.set({ accountId: me.id, garageId, role: me.role });
+  }
+
+  private async reread(): Promise<void> {
     if (!this.current()) return;
     const generation = this.generation;
     // A sign-in or a role switch meanwhile: this answer is for the old one.
@@ -506,6 +577,7 @@ export class Session {
 
   private drop() {
     const leaving = this.current()?.id ?? this.lapsed?.id;
+    this.deleting = false;
     this.generation++;
     this.loading = null;
     this.renewing = null;
@@ -525,6 +597,12 @@ export class Session {
     await this.sendPending();
     if (!this.accessToken && !(await this.renew())) return null;
     return this.me.meControllerMe().catch(() => null);
+  }
+
+  // This tab's own deletion revoked the session: the account stays on screen
+  // until the deletion signs the tab out itself, Home with its toast.
+  private lapseUnlessDeleting() {
+    if (!this.deleting) this.lapse();
   }
 
   private lapse() {

@@ -4,10 +4,11 @@ import { join } from 'node:path';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
-import { PlacesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Observable } from 'rxjs';
 
 import { type AddressChoice, AddressField } from './address-field';
+import { placesAnswered } from './address-field.testing';
 
 @Component({
   imports: [AddressField],
@@ -84,9 +85,7 @@ async function mount(
   over: { language?: 'ro' | 'en'; locate?: boolean; autofocus?: boolean } = {},
 ) {
   TestBed.configureTestingModule({
-    providers: [
-      { provide: PlacesService, useValue: { placesControllerSearch: search } },
-    ],
+    providers: [placesAnswered((asked) => search(asked))],
   });
   const i18n = TestBed.inject(I18n);
   await i18n.enter('public');
@@ -421,9 +420,13 @@ describe('the address field', () => {
   it('asks nothing once it is gone before the pause ends', async () => {
     await mount();
 
-    await type('Cluj', 100);
+    // Gone in the same tick as the key: a real-time pause before destroy() can
+    // outlast the 300 ms search pause on a loaded machine.
+    const input = field();
+    input.value = 'Cluj';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
     fixture.destroy();
-    await wait(300);
+    await wait(400);
 
     expect(search).not.toHaveBeenCalled();
   });
@@ -537,4 +540,130 @@ describe('the template', () => {
     );
     expect(template).toMatch(/<!--[^>]*Biome[^>]*aria-expanded[^>]*-->/);
   });
+});
+
+// @traces 1193-FR-007
+describe('the address field, kept quick', () => {
+  const BRASOV: Suggestion = {
+    label: 'Strada Lungă 1, Brașov',
+    lat: 45.65,
+    lng: 25.6,
+  };
+  const held = () => {
+    const teardown = jest.fn();
+    return { asked: new Observable<never>(() => teardown), teardown };
+  };
+
+  it('sends one look-up for three keys inside the pause, for the last text', async () => {
+    await mount();
+
+    await type('Clu', 50);
+    await type('Cluj', 50);
+    await type('Cluj-N');
+
+    expect(search.mock.calls).toEqual([[{ lang: 'ro', q: 'Cluj-N' }]]);
+  });
+
+  it('drops the look-up on its way when a key comes, and says nothing of it', async () => {
+    const first = held();
+    search.mockImplementationOnce(() => first.asked);
+    await mount();
+
+    await type('Strada');
+    await type('Cluj');
+
+    expect(first.teardown).toHaveBeenCalledTimes(1);
+    expect(live()).not.toMatch(/Nu putem|Nu am găsit/);
+    expect(options().map(text)).toEqual([CLUJ.label]);
+  });
+
+  it('drops the look-up on its way when the list closes', async () => {
+    const first = held();
+    search.mockImplementationOnce(() => first.asked);
+    await mount();
+
+    await type('Strada');
+    await key('Escape');
+
+    expect(first.teardown).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops the look-up on its way when the field is gone', async () => {
+    const first = held();
+    search.mockImplementationOnce(() => first.asked);
+    await mount();
+
+    await type('Strada');
+    fixture.destroy();
+
+    expect(first.teardown).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers a text asked before from what it kept, sending nothing', async () => {
+    search.mockImplementation(async ({ q }: { q: string }) => ({
+      items: q.startsWith('Bra') ? [BRASOV] : [CLUJ],
+    }));
+    await mount();
+
+    await type('Cluj');
+    await type('Brașov');
+    await type('  Cluj ');
+
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(options().map(text)).toEqual([CLUJ.label]);
+  });
+
+  it('keeps an answer with nothing found, and says so again', async () => {
+    search.mockResolvedValueOnce({ items: [] });
+    await mount();
+
+    await type('Zzzz');
+    await type('Cluj');
+    await type('Zzzz');
+
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(live()).toBe('Nu am găsit adresa');
+  });
+
+  it('asks again a text whose look-up failed', async () => {
+    search.mockRejectedValueOnce(new HttpErrorResponse({ status: 503 }));
+    await mount();
+
+    await type('Cluj');
+    await type('Brașov');
+    await type('Cluj');
+
+    expect(search).toHaveBeenCalledTimes(3);
+    expect(options().map(text)).toEqual([CLUJ.label]);
+  });
+
+  it('asks again the same text in the other language', async () => {
+    await mount();
+
+    await type('Cluj');
+    await TestBed.inject(I18n).use('en');
+    await type('Brașov');
+    await type('Cluj');
+
+    expect(search.mock.calls.map(([asked]) => asked)).toEqual([
+      { lang: 'ro', q: 'Cluj' },
+      { lang: 'en', q: 'Brașov' },
+      { lang: 'en', q: 'Cluj' },
+    ]);
+  });
+
+  it('keeps the last twenty answers, forgetting the oldest first', async () => {
+    await mount();
+    const texts = Array.from({ length: 21 }, (_, i) => `Strada ${i + 1}`);
+
+    for (const t of texts) await type(t, 320);
+    expect(search).toHaveBeenCalledTimes(21);
+
+    await type('Strada 21', 320);
+    await type('Strada 2', 320);
+    expect(search).toHaveBeenCalledTimes(21);
+
+    await type('Strada 1', 320);
+    expect(search).toHaveBeenCalledTimes(22);
+  }, 30_000);
 });

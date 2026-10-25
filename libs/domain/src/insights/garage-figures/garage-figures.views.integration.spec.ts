@@ -183,6 +183,7 @@ describe('who may read profile views', () => {
     ).toEqual(await service.profileViews(owner(t), query));
   });
 
+  // @traces 102-FR-007
   it('refuses a mechanic, even one who may answer quotes, and a driver', async () => {
     const t = await team('Atelier Dinamo');
     const query = { by: 'day', from: '2026-10-05', to: '2026-10-05' } as const;
@@ -192,7 +193,7 @@ describe('who may read profile views', () => {
         garageActor(t.plain, t.garage.id, 'mechanic'),
         query,
       ),
-    ).rejects.toMatchObject({ status: 404 });
+    ).rejects.toMatchObject({ response: { code: 'forbidden' }, status: 403 });
     await expect(
       service.profileViews(
         garageActor(t.answering, t.garage.id, 'mechanic', {
@@ -200,7 +201,7 @@ describe('who may read profile views', () => {
         }),
         query,
       ),
-    ).rejects.toMatchObject({ status: 404 });
+    ).rejects.toMatchObject({ response: { code: 'forbidden' }, status: 403 });
     await expect(
       service.profileViews(garageActor(t.owner, t.garage.id, 'driver'), query),
     ).rejects.toMatchObject({ status: 404 });

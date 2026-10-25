@@ -28,6 +28,7 @@ const row = (jobTypeId: string, nameRo: string, from: number, to: number) => ({
 
 const GARAGE: PublicGarageDto = {
   brandNote: null,
+  closedDays: [],
   doesNotTake: [],
   facilities: [],
   hours: {},
@@ -153,14 +154,21 @@ describe('the bar’s stylesheet', () => {
     expect(css).toMatch(/:host\(\[hidden\]\)\s*\{\s*display:\s*none;?\s*\}/);
   });
 
-  it('has tap-sized buttons, readable text, steady digits and a plain fallback', () => {
+  it('has tap-sized buttons, readable text and steady digits', () => {
     expect(css).toContain('min-height: var(--mf-tap)');
     // No size below the small step: the bar's text inherits the body size.
     for (const size of css.match(/font-size:[^;]+/g) ?? []) {
       expect(size).toBe('font-size: var(--mf-size-small)');
     }
     expect(css).toContain('tabular-nums');
-    expect(css).toContain('prefers-reduced-transparency: reduce');
+  });
+
+  // The bar's text keeps AA contrast whatever is scrolled under it (PR #548
+  // QA lap 6: the see-through bar over the amber request button failed axe).
+  it('is opaque, so nothing under it shows through its text', () => {
+    const host = css.match(/^:host\s*\{[^}]*\}/m)?.[0] ?? '';
+    expect(host).toMatch(/background:\s*var\(--mf-bg\);/);
+    expect(css).not.toMatch(/transparent|backdrop-filter/);
   });
 });
 

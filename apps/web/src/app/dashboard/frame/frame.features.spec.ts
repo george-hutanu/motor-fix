@@ -66,6 +66,7 @@ async function render(url: string) {
         useValue: {
           current,
           ended: new Subject<void>(),
+          garageGone: () => false,
           reload,
           shown: current,
           signOut: jest.fn(),
@@ -138,5 +139,55 @@ describe('the frame following the garage’s switches', () => {
     await settle(harness);
 
     expect(TestBed.inject(Router).url).toBe('/app/garage/team');
+  });
+});
+
+// @traces 531-FR-002
+describe('the frame following the garage’s team', () => {
+  const event = (kind: string): LiveMessage =>
+    ({ at: '2026-10-24T10:00:00.000Z', id: 'garage-1', kind }) as LiveMessage;
+
+  it('reads the account again when a mechanic of the garage changes', async () => {
+    const { events, reload } = await render('/app/garage');
+    reload.mockClear();
+
+    events.next(event('mechanic.updated'));
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 056-FR-006
+  it('reads the account again when a mechanic leaves the team, so a removed one loses its menu', async () => {
+    const { events, reload } = await render('/app/garage');
+    reload.mockClear();
+
+    events.next(event('mechanic.removed'));
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not read the account again for a kind that changes no view', async () => {
+    const { events, reload } = await render('/app/garage');
+    reload.mockClear();
+
+    events.next(event('mechanic.added'));
+    events.next(event('price_list.updated'));
+
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('leaves Programări for the dashboard once the reread account has day sheets off', async () => {
+    const { current, events, harness, reload } = await render(
+      '/app/garage/schedule',
+    );
+    expect(TestBed.inject(Router).url).toBe('/app/garage/schedule');
+    reload.mockImplementation(async () => {
+      current.set(owner({ day_sheets: false }));
+    });
+
+    events.next(featuresChanged());
+    await settle(harness);
+
+    expect(TestBed.inject(Router).url).toBe('/app/garage');
   });
 });

@@ -9,12 +9,32 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { AccessResetDto } from '../models/access-reset-dto';
+import { accountControllerDeleteOnRequest } from '../fn/admin/account-controller-delete-on-request';
+import { AccountControllerDeleteOnRequest$Params } from '../fn/admin/account-controller-delete-on-request';
+import { accountControllerRead } from '../fn/admin/account-controller-read';
+import { AccountControllerRead$Params } from '../fn/admin/account-controller-read';
+import { accountControllerResetAccess } from '../fn/admin/account-controller-reset-access';
+import { AccountControllerResetAccess$Params } from '../fn/admin/account-controller-reset-access';
+import { accountControllerRestore } from '../fn/admin/account-controller-restore';
+import { AccountControllerRestore$Params } from '../fn/admin/account-controller-restore';
+import { accountControllerSuspend } from '../fn/admin/account-controller-suspend';
+import { AccountControllerSuspend$Params } from '../fn/admin/account-controller-suspend';
+import { AdminAccountPageDto } from '../models/admin-account-page-dto';
 import { adminAccountsControllerList } from '../fn/admin/admin-accounts-controller-list';
 import { AdminAccountsControllerList$Params } from '../fn/admin/admin-accounts-controller-list';
 import { adminAccountsControllerSummary } from '../fn/admin/admin-accounts-controller-summary';
 import { AdminAccountsControllerSummary$Params } from '../fn/admin/admin-accounts-controller-summary';
 import { AdminAccountsPageDto } from '../models/admin-accounts-page-dto';
 import { AdminAccountsSummaryDto } from '../models/admin-accounts-summary-dto';
+import { AdminBrandDto } from '../models/admin-brand-dto';
+import { AdminBrandListDto } from '../models/admin-brand-list-dto';
+import { adminBrandsControllerCreate } from '../fn/admin/admin-brands-controller-create';
+import { AdminBrandsControllerCreate$Params } from '../fn/admin/admin-brands-controller-create';
+import { adminBrandsControllerList } from '../fn/admin/admin-brands-controller-list';
+import { AdminBrandsControllerList$Params } from '../fn/admin/admin-brands-controller-list';
+import { adminBrandsControllerUpdate } from '../fn/admin/admin-brands-controller-update';
+import { AdminBrandsControllerUpdate$Params } from '../fn/admin/admin-brands-controller-update';
 import { AdminCatalogueJobsDto } from '../models/admin-catalogue-jobs-dto';
 import { AdminDemandDto } from '../models/admin-demand-dto';
 import { AdminGaragesDto } from '../models/admin-garages-dto';
@@ -95,13 +115,18 @@ import { verificationFileControllerCorrect } from '../fn/admin/verification-file
 import { VerificationFileControllerCorrect$Params } from '../fn/admin/verification-file-controller-correct';
 import { verificationFileControllerDecision } from '../fn/admin/verification-file-controller-decision';
 import { VerificationFileControllerDecision$Params } from '../fn/admin/verification-file-controller-decision';
+import { verificationFileControllerLeave } from '../fn/admin/verification-file-controller-leave';
+import { VerificationFileControllerLeave$Params } from '../fn/admin/verification-file-controller-leave';
 import { verificationFileControllerOpen } from '../fn/admin/verification-file-controller-open';
 import { VerificationFileControllerOpen$Params } from '../fn/admin/verification-file-controller-open';
+import { verificationFileControllerPresence } from '../fn/admin/verification-file-controller-presence';
+import { VerificationFileControllerPresence$Params } from '../fn/admin/verification-file-controller-presence';
 import { verificationFileControllerRead } from '../fn/admin/verification-file-controller-read';
 import { VerificationFileControllerRead$Params } from '../fn/admin/verification-file-controller-read';
 import { verificationFileControllerReopen } from '../fn/admin/verification-file-controller-reopen';
 import { VerificationFileControllerReopen$Params } from '../fn/admin/verification-file-controller-reopen';
 import { VerificationFileDto } from '../models/verification-file-dto';
+import { VerificationPresenceDto } from '../models/verification-presence-dto';
 import { VerificationQueueDto } from '../models/verification-queue-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -158,6 +183,206 @@ export class AdminService extends BaseService {
   adminAccountsControllerSummary(params?: AdminAccountsControllerSummary$Params, context?: HttpContext): Promise<AdminAccountsSummaryDto> {
     const resp = this.adminAccountsControllerSummary$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminAccountsSummaryDto>): AdminAccountsSummaryDto => r.body);
+  }
+
+  /** Path part for operation `accountControllerRead()` */
+  static readonly AccountControllerReadPath = '/api/v1/admin/accounts/{id}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `accountControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  accountControllerRead$Response(params: AccountControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminAccountPageDto>> {
+    const obs = accountControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `accountControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  accountControllerRead(params: AccountControllerRead$Params, context?: HttpContext): Promise<AdminAccountPageDto> {
+    const resp = this.accountControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminAccountPageDto>): AdminAccountPageDto => r.body);
+  }
+
+  /** Path part for operation `accountControllerResetAccess()` */
+  static readonly AccountControllerResetAccessPath = '/api/v1/admin/accounts/{id}/reset-access';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `accountControllerResetAccess()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  accountControllerResetAccess$Response(params: AccountControllerResetAccess$Params, context?: HttpContext): Promise<StrictHttpResponse<AccessResetDto>> {
+    const obs = accountControllerResetAccess(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `accountControllerResetAccess$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  accountControllerResetAccess(params: AccountControllerResetAccess$Params, context?: HttpContext): Promise<AccessResetDto> {
+    const resp = this.accountControllerResetAccess$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AccessResetDto>): AccessResetDto => r.body);
+  }
+
+  /** Path part for operation `accountControllerSuspend()` */
+  static readonly AccountControllerSuspendPath = '/api/v1/admin/accounts/{id}/suspend';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `accountControllerSuspend()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerSuspend$Response(params: AccountControllerSuspend$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminAccountPageDto>> {
+    const obs = accountControllerSuspend(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `accountControllerSuspend$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerSuspend(params: AccountControllerSuspend$Params, context?: HttpContext): Promise<AdminAccountPageDto> {
+    const resp = this.accountControllerSuspend$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminAccountPageDto>): AdminAccountPageDto => r.body);
+  }
+
+  /** Path part for operation `accountControllerRestore()` */
+  static readonly AccountControllerRestorePath = '/api/v1/admin/accounts/{id}/restore';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `accountControllerRestore()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerRestore$Response(params: AccountControllerRestore$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminAccountPageDto>> {
+    const obs = accountControllerRestore(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `accountControllerRestore$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerRestore(params: AccountControllerRestore$Params, context?: HttpContext): Promise<AdminAccountPageDto> {
+    const resp = this.accountControllerRestore$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminAccountPageDto>): AdminAccountPageDto => r.body);
+  }
+
+  /** Path part for operation `accountControllerDeleteOnRequest()` */
+  static readonly AccountControllerDeleteOnRequestPath = '/api/v1/admin/accounts/{id}/delete-on-request';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `accountControllerDeleteOnRequest()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerDeleteOnRequest$Response(params: AccountControllerDeleteOnRequest$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = accountControllerDeleteOnRequest(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `accountControllerDeleteOnRequest$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  accountControllerDeleteOnRequest(params: AccountControllerDeleteOnRequest$Params, context?: HttpContext): Promise<void> {
+    const resp = this.accountControllerDeleteOnRequest$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `adminBrandsControllerList()` */
+  static readonly AdminBrandsControllerListPath = '/api/v1/admin/brands';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminBrandsControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminBrandsControllerList$Response(params?: AdminBrandsControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminBrandListDto>> {
+    const obs = adminBrandsControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminBrandsControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminBrandsControllerList(params?: AdminBrandsControllerList$Params, context?: HttpContext): Promise<AdminBrandListDto> {
+    const resp = this.adminBrandsControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminBrandListDto>): AdminBrandListDto => r.body);
+  }
+
+  /** Path part for operation `adminBrandsControllerCreate()` */
+  static readonly AdminBrandsControllerCreatePath = '/api/v1/admin/brands';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminBrandsControllerCreate()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  adminBrandsControllerCreate$Response(params: AdminBrandsControllerCreate$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminBrandDto>> {
+    const obs = adminBrandsControllerCreate(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminBrandsControllerCreate$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  adminBrandsControllerCreate(params: AdminBrandsControllerCreate$Params, context?: HttpContext): Promise<AdminBrandDto> {
+    const resp = this.adminBrandsControllerCreate$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminBrandDto>): AdminBrandDto => r.body);
+  }
+
+  /** Path part for operation `adminBrandsControllerUpdate()` */
+  static readonly AdminBrandsControllerUpdatePath = '/api/v1/admin/brands/{id}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminBrandsControllerUpdate()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  adminBrandsControllerUpdate$Response(params: AdminBrandsControllerUpdate$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminBrandDto>> {
+    const obs = adminBrandsControllerUpdate(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminBrandsControllerUpdate$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  adminBrandsControllerUpdate(params: AdminBrandsControllerUpdate$Params, context?: HttpContext): Promise<AdminBrandDto> {
+    const resp = this.adminBrandsControllerUpdate$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminBrandDto>): AdminBrandDto => r.body);
   }
 
   /** Path part for operation `jobDecisionsControllerQueue()` */
@@ -665,6 +890,56 @@ export class AdminService extends BaseService {
   verificationFileControllerChanges(params: VerificationFileControllerChanges$Params, context?: HttpContext): Promise<VerificationFileChangesDto> {
     const resp = this.verificationFileControllerChanges$Response(params, context);
     return resp.then((r: StrictHttpResponse<VerificationFileChangesDto>): VerificationFileChangesDto => r.body);
+  }
+
+  /** Path part for operation `verificationFileControllerPresence()` */
+  static readonly VerificationFileControllerPresencePath = '/api/v1/admin/verification-files/{id}/presence';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `verificationFileControllerPresence()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerPresence$Response(params: VerificationFileControllerPresence$Params, context?: HttpContext): Promise<StrictHttpResponse<VerificationPresenceDto>> {
+    const obs = verificationFileControllerPresence(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `verificationFileControllerPresence$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerPresence(params: VerificationFileControllerPresence$Params, context?: HttpContext): Promise<VerificationPresenceDto> {
+    const resp = this.verificationFileControllerPresence$Response(params, context);
+    return resp.then((r: StrictHttpResponse<VerificationPresenceDto>): VerificationPresenceDto => r.body);
+  }
+
+  /** Path part for operation `verificationFileControllerLeave()` */
+  static readonly VerificationFileControllerLeavePath = '/api/v1/admin/verification-files/{id}/presence';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `verificationFileControllerLeave()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerLeave$Response(params: VerificationFileControllerLeave$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = verificationFileControllerLeave(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `verificationFileControllerLeave$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  verificationFileControllerLeave(params: VerificationFileControllerLeave$Params, context?: HttpContext): Promise<void> {
+    const resp = this.verificationFileControllerLeave$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `verificationFileControllerOpen()` */

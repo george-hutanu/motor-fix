@@ -1,9 +1,9 @@
 // Checks the Grafana dashboards under infra/observability/grafana/dashboards/
 // before the release pushes them: each file parses, carries its uid (the
 // file's name) and a title, reads its data sources through variables, never
-// names an environment, filters every query by the `env` variable (the
-// stack-wide usage panels aside), shows the
-// deploy annotations and is listed in the inventory. The overview has a row
+// names an environment, gives no two panels one id, filters every query by
+// the `env` variable (the stack-wide usage panels aside), shows the deploy
+// annotations and is listed in the inventory. The overview has a row
 // per service, every error panel links to that service's logs and traces, and
 // the product dashboard reads each product counter per hour and per day.
 //
@@ -33,8 +33,11 @@ export const PRODUCT_COUNTERS = [
   'motorfix_quotes_total',
   'motorfix_emails_sent_total',
   'motorfix_notifications_sent_total',
+  'motorfix_notification_channel_choices_total',
+  'motorfix_notification_channel_fallbacks_total',
   'motorfix_job_steps_total',
   'motorfix_request_received_total',
+  'motorfix_retention_rows_total',
   'motorfix_documents_uploaded_total',
   'motorfix_declarations_signed_total',
   'motorfix_documents_opened_total',
@@ -45,6 +48,8 @@ export const PRODUCT_COUNTERS = [
   'motorfix_verification_result_total',
   'motorfix_account_changes_total',
   'motorfix_account_deletions_total',
+  'motorfix_data_exports_total',
+  'motorfix_admin_account_actions_total',
   'motorfix_garage_suspensions_total',
   'motorfix_garage_restores_total',
   'motorfix_garage_restored_notices_total',
@@ -55,6 +60,7 @@ export const PRODUCT_COUNTERS = [
   'motorfix_system_log_entries_total',
   'motorfix_verification_decision_refusals_total',
   'motorfix_verification_more_requests_total',
+  'motorfix_verification_presence_total',
   'motorfix_verification_rejections_total',
   'motorfix_verification_reopenings_total',
   'motorfix_verification_resubmissions_total',
@@ -213,6 +219,21 @@ function identityProblems(dashboard: Json, file: string): string[] {
   return problems;
 }
 
+// Grafana keys a panel's links and edits by its id, so two panels never share one.
+function panelIdProblems(dashboard: Json): string[] {
+  const seen = new Map<number, string>();
+  const problems: string[] = [];
+  for (const panel of panelsOf(dashboard)) {
+    const id = (panel as Json)['id'];
+    if (typeof id !== 'number') continue;
+    const title = text((panel as Json)['title']);
+    const first = seen.get(id);
+    if (first === undefined) seen.set(id, title);
+    else problems.push(`panel-id: ${id} is used by "${first}" and "${title}"`);
+  }
+  return problems;
+}
+
 function envProblems(dashboard: Json): string[] {
   const literals = strings(dashboard, QUERY_KEYS)
     .filter((value) => ENV_NAMES.test(value))
@@ -261,6 +282,7 @@ function fileProblems(dashboard: Json, file: string, listed: Set<string>) {
     OWN_RULES[uid] ?? (LINKED.has(uid) ? errorLinkProblems : () => []);
   return [
     ...identityProblems(dashboard, file),
+    ...panelIdProblems(dashboard),
     ...datasourceProblems(dashboard),
     ...envProblems(dashboard),
     ...deployProblems(dashboard),

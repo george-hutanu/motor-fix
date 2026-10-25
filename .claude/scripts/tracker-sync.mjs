@@ -328,7 +328,7 @@ async function statusEvent(ctx) {
   const reason = ctx.rest.join(" ");
   const current = story.values.Status ?? "To do";
   const prior = ctx.own ? (readState(ctx.repo).prior_status ?? null) : event === "unblock" ? ((await dependentPrior(ctx)) ?? "To do") : null;
-  const decision = decide({ event, current, prior });
+  const decision = decide({ event, current, prior, pr: event === "unblock" && ctx.own && !prior ? prState(ctx) : null });
 
   // Status first, then the prior it left, so a failure further on replays into the same decision.
   if (decision.write) {
@@ -365,6 +365,18 @@ async function statusEvent(ctx) {
     if (ctx.prWrite(["pr", "edit", pr, ...labels], `labels PR #${pr}`)) log("labels", `PR #${pr}`, decision.stage ?? "none");
   }
   return { status: decision.story, write: decision.write };
+}
+
+/** The PR's draft flag and labels, for an `unblock` with no recorded prior (tracker/status.mjs); null when none reads. */
+function prState(ctx) {
+  const pr = ctx.prNumber();
+  if (!pr) return null;
+  try {
+    const { isDraft, labels } = JSON.parse(ctx.gh(["pr", "view", pr, "--json", "isDraft,labels"]) || "null") ?? {};
+    return typeof isDraft === "boolean" ? { draft: isDraft, labels: (labels ?? []).map((l) => l.name) } : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Whether this feature's log started, or linked a PR for, story `st`. */
@@ -577,8 +589,8 @@ async function fileIssue(ctx) {
   const epic = flags.epic ? await t.find(flags.epic, { label: "epic" }) : null;
   const made = await t.create({
     title: flags.title.trim(),
-    // A later `start --story ST-<n>` finds the issue by its id; one given already is kept.
-    numbered: !/^(?:ST|EP)-\d+\b/.test(flags.title.trim()),
+    // A later `start --story ST-<n>` finds the issue by its id; one given already (a sub-id such as ST-1177c too) is kept.
+    numbered: !/^(?:ST|EP)-\d+[a-z]?\b/.test(flags.title.trim()),
     body: readFileSync(flags["body-file"], "utf8"),
     labels: [...(flags.epic ? [flags.epic] : []), `type: ${flags.type}`],
     fields: { Status: "To do", "Work type": kind, Priority: flags.priority ?? "Medium", ...(flags.epic ? { Epic: flags.epic } : {}) },

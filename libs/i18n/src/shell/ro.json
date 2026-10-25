@@ -1,4 +1,8 @@
 {
+  "accountPanel": {
+    "text": "Datele tale și contul: o copie a datelor sau ștergerea contului.",
+    "title": "Contul tău"
+  },
   "bell": {
     "empty": "Nicio notificare încă",
     "failed": "Notificările nu s‑au încărcat.",
@@ -56,6 +60,17 @@
     },
     "trap": "Nu completa acest câmp"
   },
+  "dataExport": {
+    "button": "Descarcă datele mele",
+    "download": "Descarcă (ZIP)",
+    "expires": "Disponibil până pe {date}.",
+    "failed": "Nu am putut pregăti fișierul. Încearcă din nou.",
+    "queued": "Pregătim fișierul. Îți trimitem un e‑mail când e gata.",
+    "retry": "Încearcă din nou",
+    "text": "Un fișier ZIP cu tot ce păstrează MotorFix despre tine, pe zone, plus un rezumat.",
+    "title": "Descarcă datele mele",
+    "tooSoon": "Poți cere un fișier nou o dată pe zi."
+  },
   "deleteAccount": {
     "button": "Șterge contul",
     "cancel": "Renunță",
@@ -70,6 +85,7 @@
     "kept": "Rămân recenziile publicate, semnate „Șofer MotorFix”, și programările și înregistrările cerute de lege, cât timp spune nota de informare.",
     "ownerText": "Contul tău deține un service. Scrie‑ne prin formularul de contact sau pe e‑mail ca să închidem service‑ul; apoi poți șterge contul.",
     "problem": {
+      "car_in_work": "Ai o mașină în service. Poți șterge contul după ce o ridici.",
       "deletion_not_allowed": "Contul tău deține un service, așa că nu poate fi șters încă."
     },
     "removed": "Ștergem datele contului, metodele de autentificare, sesiunile de pe toate dispozitivele, setările de notificări și numerele de înmatriculare ale mașinilor.",
@@ -114,6 +130,11 @@
     "sending": "Se trimite…"
   },
   "frame": {
+    "access": {
+      "garage": "Nu mai ai acces la acest service",
+      "home": "Spre pagina principală",
+      "section": "Nu mai ai acces la această secțiune."
+    },
     "addCar": "Adaugă o mașină",
     "admin": {
       "city": {

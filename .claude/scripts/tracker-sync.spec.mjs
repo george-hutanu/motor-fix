@@ -90,7 +90,7 @@ function repoWith({ deferred, comment } = {}) {
   return repo;
 }
 
-async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_TOKEN: TOKEN }, tokenRun, fetchImpl, ghFails = () => false, realGh = false, now = () => new Date(2026, 9, 10, 12) } = {}) {
+async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_TOKEN: TOKEN }, tokenRun, fetchImpl, ghFails = () => false, prJson, realGh = false, now = () => new Date(2026, 9, 10, 12) } = {}) {
   const out = [];
   const err = [];
   const ghCalls = [];
@@ -107,6 +107,7 @@ async function run(argv, { repo = repoWith(), gh = world(), env = { GH_PROJECT_T
     gh: realGh ? undefined : (args) => {
       ghCalls.push(args);
       if (ghFails(args)) throw new Error(`gh ${args.join(" ")}: HTTP 502`);
+      if (args[0] === "pr" && args[1] === "view" && prJson && args.includes("isDraft,labels")) return JSON.stringify(prJson);
       if (args[0] === "pr" && args[1] === "view") return args.includes(".url") ? `${PR_URL}\n` : "335\n";
       return "";
     },
@@ -209,6 +210,31 @@ describe("blocked and unblock", () => {
 
     await run(["unblock", "--pr", "335"], { gh, repo });
     assert.equal(gh.itemValues(60).Status, "QA");
+  });
+
+  // @traces 487-FR-001 487-FR-002 487-FR-003
+  it("unblock with no recorded prior reads the PR: ready returns to QA, a draft to its label's stage", async () => {
+    const ready = world({ story: "Blocked" });
+    const r = await run(["unblock", "--pr", "335"], { gh: ready, prJson: { isDraft: false, labels: [{ name: "in development" }, { name: "blocked" }] } });
+    assert.equal(ready.itemValues(60).Status, "QA");
+    assert.ok(prEdits(r).some((a) => a.join(" ").includes("--add-label QA --remove-label planning --remove-label in development")), JSON.stringify(prEdits(r)));
+
+    const draft = world({ story: "Blocked" });
+    const d = await run(["unblock", "--pr", "335"], { gh: draft, prJson: { isDraft: true, labels: [{ name: "planning" }, { name: "blocked" }] } });
+    assert.equal(draft.itemValues(60).Status, "Planning");
+    assert.ok(prEdits(d).some((a) => a.join(" ").includes("--add-label planning --remove-label in development --remove-label QA --remove-label blocked")));
+  });
+
+  // @traces 487-FR-004
+  it("unblock with no recorded prior returns to Implementing when the PR read fails or answers nothing", async () => {
+    const failed = world({ story: "Blocked" });
+    const f = await run(["unblock", "--pr", "335"], { gh: failed, ghFails: (a) => a.includes("isDraft,labels") });
+    assert.equal(f.code, 0);
+    assert.equal(failed.itemValues(60).Status, "Implementing");
+
+    const empty = world({ story: "Blocked" });
+    await run(["unblock", "--pr", "335"], { gh: empty, prJson: {} });
+    assert.equal(empty.itemValues(60).Status, "Implementing");
   });
 });
 
@@ -346,6 +372,7 @@ describe("pr links the PR and the issue both ways", () => {
 
 // @traces 1324-FR-005
 // @traces 1324-FR-008
+// @traces 1153-FR-002
 describe("debt and ready are retired", () => {
   for (const [event, message] of [
     ["debt", "tech-debt tickets are retired; fix it in this task"],
@@ -396,6 +423,26 @@ describe("file", () => {
     assert.equal(again.json.issue, r.json.issue);
   });
 
+  // @traces 1153-FR-001
+  for (const [type, title] of [
+    ["tech debt", "Tech debt (ST-500): drop the import"],
+    ["decision", "Decision (ST-500): keep the BlockList"],
+  ]) {
+    it(`titles a ${type} issue ST-<its number> before the story it came from`, async () => {
+      const gh = world();
+      const repo = repoWith();
+      writeFileSync(join(repo, "body.md"), "body\n");
+      const r = await run(["file", "--type", type, "--title", title, "--body-file", join(repo, "body.md")], { gh, repo });
+      assert.equal(r.code, 0, r.err.join("\n"));
+      const made = issueOf(gh, r.json.issue);
+      assert.equal(made.title, `ST-${made.number} ${title}`);
+      assert.deepEqual(
+        made.labels.map((l) => l.name),
+        [`type: ${type}`],
+      );
+    });
+  }
+
   // @traces 1132-FR-003
   it("keeps a title that already carries an ST or EP id", async () => {
     const gh = world();
@@ -403,6 +450,16 @@ describe("file", () => {
     writeFileSync(join(repo, "body.md"), "body\n");
     const r = await run(["file", "--type", "story", "--title", "ST-77 Old story, refiled", "--body-file", join(repo, "body.md")], { gh, repo });
     assert.equal(issueOf(gh, r.json.issue).title, "ST-77 Old story, refiled");
+  });
+
+  // @traces 1153-FR-001
+  it("keeps a title led by a lettered id such as ST-1177c", async () => {
+    const gh = world();
+    const repo = repoWith();
+    writeFileSync(join(repo, "body.md"), "body\n");
+    const r = await run(["file", "--type", "tech debt", "--title", "ST-1177c Drop the import", "--body-file", join(repo, "body.md")], { gh, repo });
+    assert.equal(r.code, 0, r.err.join("\n"));
+    assert.equal(issueOf(gh, r.json.issue).title, "ST-1177c Drop the import");
   });
 
   it("refuses an unknown type as a usage error", async () => {

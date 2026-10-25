@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -108,6 +108,20 @@ features:
   - 520-brevo-key-check-retry
   - 988-pr-qa-postgres-wait
   - 1370-release-seed-no-ssh
+  - 1373-seed-status-identity
+  - 961-require-agent-review
+  - 447-own-pr-refusal
+  - 1376-pr-test-local-boot
+  - 1377-own-pr-422-fallback
+  - 438-test-suites-projects
+  - 471-crlf-harness-tidy
+  - 1156-retention-job
+  - 493-watcher-docs
+  - 1193-fast-nav
+  - 456-activity-log-test-cleanup
+  - 1185-accent-search
+  - 1188-tail-latency
+  - 1349-cockpit-chart-settle
 ---
 
 # Capability: Platform
@@ -224,9 +238,9 @@ _From 1175-valkey._
 
 _From 421-monorepo-platform; modified by 1170-integration-on-demand._
 
-### 1370-FR-001 — On staging only, the api's Railway pre-deploy command MUST be the migration, the monitor password and then the seed-only reset (`SEED_ONLY=1 sh scripts/reset-staging.sh`, which keeps its double staging guard and its `SEED_PASSWORD` guard), and the api image MUST carry `scripts/reset-staging.sh` beside `scripts/monitor-password.ts`; production's pre-deploy command MUST stay the migration and the monitor password, and a spec MUST prove production's api sends no seed.
+### 1373-FR-001 — The api's Railway pre-deploy command MUST hold no shell syntax (no `&&`, `;`, `|`, quotes or `NAME=value` prefix): it MUST be `sh scripts/api-pre-deploy.sh <environment>`, a script in the api image that runs `npx prisma migrate deploy`, then `node scripts/monitor-password.ts`, then, on `staging` only, `SEED_ONLY=1 sh scripts/reset-staging.sh`, stopping at the first step that fails with its exit code; any other environment argument is refused with a non-zero exit before any step (modifies `1370-FR-001`).
 
-_From 1370-release-seed-no-ssh._
+_From 1373-seed-status-identity._
 
 ### 1348-FR-002 — (replaces 000-FR-014) Once staging and its `@core` end-to-end flows pass and production is on (1348-FR-001), the pipeline MUST deploy the same `web`, `api` and `worker` image digests to production after the production migrations, wait for `/health/ready`, and restore the previous images and fail the run if the check does not pass within 5 minutes; one production release runs at a time, in commit order, and a running deploy is never cancelled. While production is off nothing is deployed, referenced or promoted there. The production job MUST NOT deploy, reference or promote `mcp` or `keycloak`: its variables and the deploy script's production service list stay `web`, `api`, `worker` only (owner decision: staging only; production is a later task).
 
@@ -304,13 +318,13 @@ _From 431-mutation-testing._
 
 _From 464-agent-watch._
 
-### 1360-FR-011 — (Modifies 464-FR-002) Phase MUST be one of planning, tests, development, review, qa, merging, blocked, done, decided in this order: PR merged or closed → done; run-state `status` `blocked` → blocked; PR ready with every check passed and `agent-review` success on its head → merging; any other ready PR → qa (marking it ready puts it in QA; there is no review stage between the two, owner 2026-10-04); run-state `status` `done` → done; run-state `phase` by this table — size, constitution, specify, context, clarify, plan, checklist, tasks, analyze → planning; tests → tests; implement, converge, harden → development; closer, refresh, review, retro, archive, hand-off → review; pr-test, qa → qa; merge → merging; any other value falls through — then the feature's artifacts (no `spec.md`, `plan.md` or `tasks.md` → planning; open tasks → development; every task done → review); no feature → development. Checks are the PR's status rollup without `agent-review`.
+### 493-FR-002 — Phase MUST be one of planning, tests, development, review, qa, merging, blocked, done, decided in this order: PR merged or closed → done; run-state `status` `blocked` → blocked; PR ready with every check passed and `agent-review` success on its head → merging; any other ready PR → qa (marking it ready puts it in QA; there is no review stage between the two, owner 2026-10-04); run-state `status` `done` → done; run-state `phase` by this table — size, constitution, specify, context, clarify, plan, checklist, tasks, analyze → planning; tests → tests; implement, converge, harden → development; closer, refresh, review, retro, archive, hand-off → review; pr-test, qa → qa; merge → merging; any other value falls through — then the feature's artifacts (no `spec.md`, `plan.md` or `tasks.md` → planning; an open task, or a `tasks.md` with no checkbox at all → development; every task done → review); no feature → development. Checks are the PR's status rollup without `agent-review`.
 
-_From 1360-refresh-gate-level1-handoff._
+_From 493-watcher-docs._
 
-### 482-FR-001 — Holder MUST be `owner` for the main worktree; `live` when the worktree's lock names a pid whose process is a running `claude` process (for a `claude agent` lock, which carries the pid of the session that started the subagent, only while the worktree's last activity — the newest of its commit, its changed files, its run state and the subagent's own transcript — is within its phase threshold), when its lock names no pid (a lock set by hand), when a PR-tester run for its PR is running, or when it carries a claim younger than its phase's threshold; `dead` when the lock names a pid that is not running `claude`; `none` when it has no lock.
+### 493-FR-001 — Holder MUST be `owner` for the main worktree; `live`, whatever its lock, for the worktree the watcher itself runs in (`holderOf`'s `self`: the checkout `watch.mjs` was started from, so a session never reads its own worktree as stale), when a PR-tester run for its PR is running, or when it carries a claim younger than its phase's threshold; otherwise `none` when it has no lock; `none` for a `claude agent` lock at run-state phase `closer` (1360-FR-012); `live` when its lock names no pid (a lock set by hand); `dead` when the lock names a pid that is not running `claude`; and, for a lock whose pid runs `claude`, `live` — except a `claude agent` lock, which carries the pid of the session that started the subagent: `live` only while the worktree's last activity (the newest of its commit, its changed files, its run state and the subagent's own transcript) is within its phase threshold, and `none` once all of them are quiet past it, although the session still runs (482-FR-003).
 
-_From 482-watch-transcript-holder._
+_From 493-watcher-docs._
 
 ### 464-FR-004 — Last activity MUST be the newest of the branch head's commit time, the modification time of each file `git status` reports changed or untracked, and run-state's `updated`, with the source of the newest named.
 
@@ -338,9 +352,9 @@ _From 464-agent-watch._
 
 _From 464-agent-watch._
 
-### 703-FR-009 — The `/speckit-watch` skill MUST run the command with `--fix`, claim each item in the dispatch plan, and start one subagent per item that works in that worktree with that fix's instructions, dispatching only from a session on the main checkout (a worktree-isolated session reports the plan instead); a pass with nothing to fix MUST write and dispatch nothing; the skill MUST say how the orchestrating session keeps it scheduled (one background `watch.mjs --wait`, never a second; armed once two or more tasks or worktrees are active; never from a worktree session).
+### 493-FR-004 — The `/speckit-watch` skill MUST run the command with `--fix` only from a session on the main checkout: a worktree-isolated session runs it without `--fix` (step 1 says so, the same rule as the dispatch step), reports the board and the plan, and claims and dispatches nothing; from the main checkout it MUST claim each item in the dispatch plan and start one subagent per item that works in that worktree with that fix's instructions; a pass with nothing to fix MUST write and dispatch nothing; the skill MUST say how the orchestrating session keeps it scheduled (one background `watch.mjs --wait`, never a second; armed once two or more tasks or worktrees are active; never from a worktree session).
 
-_From 703-idle-watch-gate._
+_From 493-watcher-docs._
 
 ### 464-FR-012 — `scripts/heavy.sh` MUST default to 4 slots, and AGENTS.md MUST state that up to 4 PR-tester (QA) runs may run at the same time and name the watcher and how to repeat it.
 
@@ -694,9 +708,9 @@ _From 432-mutation-floors._
 
 _From 432-mutation-floors._
 
-### 432-FR-005 — Every surviving and uncovered mutant in `contracts`, `mcp` and `api` MUST be killed by a test or silenced on its line with `// Stryker disable next-line <mutator>: <reason>`.
+### 493-FR-003 — Every surviving and uncovered mutant in `contracts`, `mcp` and `api` MUST be killed by a test, removed by a behaviour-preserving rewrite of the code it mutates (the tests still pass and the rewritten line no longer yields that mutant), or silenced on its line with `// Stryker disable next-line <mutator>: <reason>`.
 
-_From 432-mutation-floors._
+_From 493-watcher-docs._
 
 ### 432-FR-006 — `contracts` MUST score at least its existing floor of 95.
 
@@ -742,9 +756,9 @@ _From 610-dependabot-exemption._
 
 _From 610-dependabot-exemption._
 
-### 610-FR-003 — The merge gate MUST give an exempt Dependabot PR with a failing check its own refusal: it names the failing checks, never asks for the PR tester, says a pushed commit takes the exemption away, and points at `@dependabot rebase` / `@dependabot recreate` or closing it for a PR of one's own.
+### 961-FR-004 — `decideMerge` MUST keep the Dependabot exemption for a PR `isDependabot` judges exempt when its `agent-review` is absent or a success: it refuses only on a failing, pending or missing check (610-FR-003's refusal) and does not run the pr-qa provenance check against that success; a Dependabot PR whose `agent-review` is a failure MUST still be refused with the standard refusal. `pr-lifecycle-gate.mjs` keeps its behaviour (it only imports the predicate from `lib/dependabot.mjs`, as `merge-gate.mjs` does). Eval cases in `.claude/evals/cases/merge-gate.json` cover the success, the failure and the no-status Dependabot heads.
 
-_From 610-dependabot-exemption._
+_From 961-require-agent-review._
 
 ### 678-FR-001 — Each session ledger MUST record, for every write, the level of the active feature and the phase from the run state at that moment, and MUST bucket the tokens consumed since the previous write under that (level, phase) pair, so a promotion mid-run splits the run's cost between the two levels, at the granularity of Stop writes (a turn lands whole in the level current at its Stop), rather than rewriting it.
 
@@ -1185,13 +1199,14 @@ _From 854-precompact-pr-signal._
 ### 854-FR-005 — The hook MUST NOT read the PR state when 854-FR-002 already decided to skip.
 
 _From 854-precompact-pr-signal._
+
 ### 850-FR-001 — `dispatch.mjs` MUST read how many times it looks for the run from `PR_QA_POLL_TRIES` (a positive integer), defaulting to 36 when unset or invalid, in both the dispatched (laptop) and the pull_request (cloud) wait, and its "appeared within N s" message MUST use that count.
 
 _From 850-dispatch-test-timeouts._
 
-### 499-FR-001 — `trace-matrix.mjs` MUST collect a feature's requirements only from plain `FR-XXX` ids in its spec.md, never from an id prefixed by a number and a hyphen (`NNN-FR-XXX`, or a shorter ST id such as `81-`).
+### 471-FR-005 — `trace-matrix.mjs` counts only the FRs a spec declares on a `- **FR-XXX**:` line, with the same anchor as `status.mjs`, `impact.mjs` and `retro-evidence.mjs` (one shared helper); an FR named only in prose, or prefixed by a number and a hyphen (`NNN-FR-XXX`, as a Spec Delta names another feature's), is not counted, and trace-matrix and status give the same total.
 
-_From 499-trace-matrix-delta-ids._
+_From 471-crlf-harness-tidy._
 
 ### 884-FR-001 — The web server MUST compress its own responses — the static files it serves (scripts, stylesheets, fonts) and the server-rendered HTML — for a client whose `Accept-Encoding` includes an encoding the server produces (gzip at least), MUST name the encoding and carry `Vary: Accept-Encoding` on the response and MUST send the uncompressed bytes to a client that accepts none. The one-year public cache header on content-hashed static files MUST stay as it is today.
 
@@ -1228,6 +1243,7 @@ _From 884-railway-egress._
 ### 884-FR-009 — The compression behaviour (FR-001 to FR-003) and the asset cache (FR-004 to FR-006) MUST each have failing-first automated tests beside the code they exercise, in line with Constitution II.
 
 _From 884-railway-egress._
+
 ### 891-FR-001 — `lifecycle.mjs` MUST resolve the story for `open`, `ready` and `merge` in this order: `--story ST-<n>`, the `: ST-<n> ` of the title (`open`'s `--title`; the PR's title for `ready` and `merge`), `.specify/feature.json`'s `story` when its `story_for` names the current `feature_directory` (both compared as `featureKey`s, as `level_for` is), then `ST-<folder number>`. The title is read with the existing `: ST-<n> ` pattern.
 
 _From 891-lifecycle-story-override._
@@ -2067,6 +2083,7 @@ _From 1175-valkey._
 ### 1175-FR-014 — In the living capabilities, "Redis" names the store role (cache, queues, fan-out, counters) reached through the Redis protocol at `REDIS_URL`; from this feature on, that store is Valkey 9, and a requirement naming Redis is read as naming it.
 
 _From 1175-valkey._
+
 ### 1200-FR-001 — In the browser the generated API client MUST address the API absolutely at the page's own origin (`location.origin`), so the server's and the browser's requests for one read share one address once the server's origin is mapped (FR-002); the request path, method, parameters and body are unchanged.
 
 _From 1200-transfer-cache-origin._
@@ -2258,6 +2275,7 @@ _From 1019-staging-mcp-connect._
 ### 173-FR-013 — `libs/domain/src/garages/prices/garage-prices.service.ts` and `garage-prices.testing.ts`, with their colocated specs, MUST move to `libs/domain/src/garages/prices/garage-prices/` (files named after the subfolder), every import updated, their two entries removed from `scripts/structure-baseline.json`, and `node scripts/structure-check.ts` MUST pass (Constitution IV; folded-in #658).
 
 _From 173-price-range-in-place._
+
 ### 1174-FR-001 — The repository MUST hold one database image definition (`infra/postgres/Dockerfile`), `FROM ghcr.io/railwayapp-templates/postgres-ssl:18` plus the distribution's `postgresql-18-postgis-3` package (PostGIS 3.6.x) from the base image's pgdg repository, nothing else added, with `PGDATA` set under `/var/lib/postgresql/data` so the base entrypoint starts; it MUST be published to `ghcr.io/george-hutanu/motor-fix-postgres` for amd64 and arm64, tagged with the commit sha on every publish and `18` from `main` (from another branch only when the dispatch sets its `move_18` input, so nothing moves the tag compose, CI and staging pull by accident), by a workflow (`postgres-image.yml`) that runs on `workflow_dispatch` from any branch and on a push to `main` that changes `infra/postgres/**` or the workflow itself, and builds both architectures without pushing on a pull request that changes them (the proof before merge, and what registers the workflow for a dispatch from a branch); the package is public, as the application images are, so compose, CI and Railway pull it with no login (making a new package public is an owner step if GitHub creates it private); a failed publish run is its alert.
 
 _From 1174-postgres-18-pitr._
@@ -2389,6 +2407,7 @@ _From 1361-watch-schedule-qa-telemetry._
 ### 1361-FR-013 — `speckit-auto`'s report MUST show the story's phases with their durations and the skills each subagent ran.
 
 _From 1361-watch-schedule-qa-telemetry._
+
 ### 1358-FR-015 — (D1) `.husky/pre-commit` MUST run only `identity.sh check`, `structure-check.ts --base origin/main` and `biome check` on the staged files, never `nx affected -t typecheck test` or `npm run lint`; the affected typecheck and unit tests (`JEST_SUITE=unit npx nx affected -t typecheck test --base=<merge-base>` under `scripts/heavy.sh`) MUST run once at each slice end in the commit protocol, before every tail fix push and in `lifecycle.mjs ready`, refusing on red, except that `lifecycle.mjs check` and `ready` MUST skip the local checks (observability inventory, folder rules, lint, the affected typecheck and unit tests) when the worktree is clean and a passing proof matches its `git write-tree` hash, its merge base with `origin/main` and `origin/main`'s sha, recording `local checks: reused proof <hash7>`; a dirty file, a different tree, merge base or origin/main, or no proof MUST run them. `lifecycle.mjs check` is the one way the slice end and a tail fix run them. `stop-test-gate.sh` checks the same things as before.
 
 _From 1358-preflight-delta-archive._
@@ -2548,6 +2567,7 @@ _From 1357-merge-when-overlapping._
 ### 1357-FR-014 — A cut from a stock spec-kit skill or template MUST be marked as a project-local override where the file records its deltas.
 
 _From 1357-merge-when-overlapping._
+
 ### 1361-FR-101 — `speckit-clarify` MUST no longer carry the interactive question-rendering boilerplate (the per-question presentation format, the option-table formatting rules, the "wait for the user" prose of the sequential loop) and its hook blocks (replaced by one line naming the optional `speckit.git.commit` hooks), while keeping, in its deltas record, the one-question-per-turn gate that a human-driven run still honours.
 
 _From 1361-trim-dead-lanes._
@@ -2675,6 +2695,7 @@ _From 1363-throughput-fixes._
 ### 1363-FR-011 — (Item 11) `apps/web-e2e/src/voice-languages.spec.ts` (lines 239 and 255), `libs/domain/src/store/store.ttl.integration.spec.ts` ("the account totals carry a time to live") and `apps/web-e2e/src/garage-views.spec.ts:262` MUST be made deterministic: each waits on the state it needs rather than on time, the TTL is asserted as a range, the account is seeded rather than shared, and any retry that hid a failure is removed. *Done when*: the three specs pass 20 runs in a row on CI (SC-006).
 
 _From 1363-throughput-fixes._
+
 ### 068-FR-015 — The DTOs (the upload-url request and answer, the upload body, the accept answer, the refuse body, the cycle, the queue row's `item`, the file read's documents) live in the contracts library, the four routes are REST with OpenAPI, the OpenAPI document and the generated client are regenerated, and the document kinds stay the contracts list (a new yearly kind is one entry there, #835).
 
 _From 068-yearly-documents._
@@ -2766,6 +2787,178 @@ _From 1370-release-seed-no-ssh._
 ### 1370-FR-005 — `release.yml`'s staging job MUST drop the Railway CLI install, the SSH key registration, the SSH seed and the key removal steps, MUST pass `SEED_PASSWORD` (the staging environment's secret) to the deploy step and mask it (`::add-mask::`) before that step, and MUST keep "Core flows on staging" after the deploy; `reset-staging.yml` is unchanged.
 
 _From 1370-release-seed-no-ssh._
+
+### 961-FR-001 — A workflow `.github/workflows/dependabot-review.yml` MUST run on `pull_request_target` (opened, synchronize, reopened) and `workflow_dispatch` with a PR number input, with the job gated on the PR author being `dependabot[bot]`, permissions limited to `statuses: write`, `pull-requests: read`, `contents: read`, and MUST run the base checkout's `.claude/scripts/pr-test/dependabot-review.mjs` without checking out or executing the PR's code.
+
+_From 961-require-agent-review._
+
+### 961-FR-002 — `dependabot-review.mjs <pr>` MUST read the PR and its commits over REST and apply the same rule as `isDependabot` (610-FR-001: every commit authored by Dependabot, committed by `web-flow` or `dependabot[bot]`, signature verified); only then MUST it post an `agent-review` success on the head with a description naming the Dependabot exemption and `target_url` the workflow run; it MUST NOT post when the head already has an `agent-review` status of any state (a tester's verdict stands); otherwise it MUST post nothing, print the reason naming the first failing commit or the author, and exit 0. On `workflow_dispatch` the author check is the script's own, from the PR it reads.
+
+_From 961-require-agent-review._
+
+### 961-FR-003 — The script MUST be dependency-free (Node, `fetch` with `GITHUB_TOKEN`), have a colocated vitest spec covering the exempt PR, a human-commit PR, a non-Dependabot author and a REST failure (no status, exit 1); a spec MUST pin the workflow's event, its author gate and its permissions.
+
+_From 961-require-agent-review._
+
+### 961-FR-006 — `node .claude/scripts/branch-protection.mjs apply` MUST PUT `repos/george-hutanu/motor-fix/branches/main/protection` with required status checks `CI OK` (from GitHub Actions) and `agent-review` (from any source, since `post.mjs` and `carry.mjs` write it with the owner's token) (strict off), `enforce_admins` on, no required pull-request reviews, no push restrictions, force pushes and deletions off, using the george-hutanu token (`GH_TOKEN`, else `gh auth token -u george-hutanu`) and refusing to run without one; `check` MUST exit 0 only when main's protection requires both contexts with `agent-review` not pinned to an app, and names what is missing otherwise. Both read and write over REST through `.claude/scripts/lib/gh-rest.mjs`.
+
+_From 961-require-agent-review._
+
+### 961-FR-007 — The protection MUST be applied to `main` by this task's agent at hand-off, once the review left no CRITICAL/HIGH finding and before the PR is marked ready (so the PR tester can verify it on this PR), and `branch-protection.mjs check` MUST pass afterwards, its output recorded in the PR body and the run log.
+
+_From 961-require-agent-review._
+
+### 961-FR-008 — AGENTS.md step 7 MUST state that `agent-review` and `CI OK` are required status checks on `main`, enforced for administrators, and `.claude/skills/speckit-auto/lifecycle.md`'s Dependabot sentence MUST say the Dependabot review workflow writes the exempt PR's `agent-review` success.
+
+_From 961-require-agent-review._
+
+### 1377-FR-001 — A review refused with HTTP 422 whose body (stdout or stderr) carries GitHub's own-PR refusal ("Can not approve your own pull request", "Can not request changes on your own pull request") is posted again as a COMMENT review with the same body; `reviewError` is null and post.mjs exits 0.
+
+_From 1377-own-pr-422-fallback._
+
+### 447-FR-002 — `post.mjs --report <file>` MUST set the `agent-review` status's `target_url` to the run URL in `ci-run.json` beside the report when that file exists and names a GitHub Actions run, and set none otherwise.
+
+_From 447-own-pr-refusal._
+
+### 447-FR-003 — `judgeProvenance` MUST judge a person-written `agent-review` success whose `target_url` names a run by the same run rules as a workflow-written one (PR QA workflow, completed, success, this commit, dispatched on the default branch or a `pull_request` run on a PR that leaves `pr-qa.yml` alone), refusing a `pull_request` run on a PR that changes `pr-qa.yml`; a person-written success that names no run stays accepted. `readProvenance` MUST read the named run for a person's status too, and only a run of this repository (the `target_url`'s owner and name equal to the repository's), so a status naming another repository's run is refused as naming no run.
+
+_From 447-own-pr-refusal._
+
+### 1376-FR-001 — `services.mjs` MUST supply, from its own fixed values, every environment variable the api, web and worker boots require for a local QA run, `APP_ENV` included, and MUST NOT read `.env` or any other file to do so.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-002 — A harness spec MUST fail, naming the variable, when a server's boot requires a variable `services.mjs` does not supply.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-003 — The wait for a server MUST end at once when its process has exited before answering, with an error naming the exit code or signal and carrying the last lines of its log, and `run.mjs` MUST fail the boot with a blocking finding that carries those lines.
+
+_From 1376-pr-test-local-boot._
+
+### 1376-FR-004 — The wait for a server MUST be bounded: at its deadline it ends with an error carrying the last lines of the server's log.
+
+_From 1376-pr-test-local-boot._
+
+### 1185-FR-003 — The database MUST offer one immutable function `f_unaccent(text)` that maps the Romanian diacritics ș ş ț ţ ă â î and their capitals Ș Ş Ț Ţ Ă Â Î to the base letters s t a i (and S T A I), NFC-composing the whole string first, leaving every other character and the case unchanged, with no dependency on a database extension; `account_fold` MUST become `lower(f_unaccent($1))`, so the map exists once and `account_fold`'s values (and its trigram index) do not change; `f_unaccent('ș ş ț ţ ă â î')` MUST equal `'s s t t a a i'` on the repository's own PostgreSQL image.
+
+_From 1185-accent-search._
+
+### 1377-FR-002 — Any other refusal, an HTTP 422 such as "commit_id is not part of the pull request" included, posts no COMMENT review, is reported as `reviewError` with GitHub's message, and post.mjs exits 1.
+
+_From 1377-own-pr-422-fallback._
+
+### 1377-FR-003 — When the COMMENT fallback is itself refused, that refusal is the `reviewError` and post.mjs exits 1.
+
+_From 1377-own-pr-422-fallback._
+
+### 438-FR-001 — `scripts/test-suites.spec.ts` MUST derive the projects whose unit/integration split it asserts from the repository: the project (nearest ancestor holding a `project.json`) of every `*.integration.spec.ts` under `apps/` or `libs/` (outside `node_modules` and `test-output`), each once, sorted; the fixed `['apps/api', 'libs/domain']` goes. For each derived project the four existing assertions hold (every spec runs with no suite chosen, the unit suite holds no integration spec, the integration suite holds only integration specs, the two suites partition the whole), so a project whose Jest config does not honour `JEST_SUITE` fails the spec by name.
+
+_From 438-test-suites-projects._
+
+### 438-FR-002 — The spec MUST assert the derived list itself as a superset: it is non-empty and contains `apps/api` and `libs/domain` (the two the spec checked until now), so an empty or broken derivation cannot pass vacuously. The full list is observed, not asserted (on `main`: `apps/api`, `apps/mcp`, `apps/worker`, `libs/domain`).
+
+_From 438-test-suites-projects._
+
+### 438-FR-003 — The 435-FR-008 guard MUST report a spec, run by Jest and not named `*.integration.spec.ts`, whose source reads `DATABASE_URL` or `REDIS_URL` from `process.env` in any of: the bracket form (`process.env['DATABASE_URL']`, either quote), the dot form (`process.env.DATABASE_URL`), or a destructuring from `process.env` whose braces name the key in key position, alone, among other keys, renamed (`DATABASE_URL: url`), with a default (`DATABASE_URL = 'x'`) or across lines; and a source that names `seed.ts` as a file (quoted, or inside a command such as `tsx prisma/seed.ts`). It MUST NOT report a longer identifier (`DATABASE_URL_TEST`, `DATABASE_URL$x`, `DATABASE_URLé`: any identifier character, `$` and non-ASCII letters included, continues the name), another variable, an assignment (`process.env.DATABASE_URL = 'x'`) or `delete`, the name in value position (`{ url: DATABASE_URL }`), or the bare name outside a `process.env` expression; a comment holding the whole expression is reported (raw text, no comment stripping). A `delete` separated from `process.env` by any whitespace, newlines included, is not a read. The guard decides any source in time linear in its length (no backtracking blow-up on unclosed braces).
+
+_From 438-test-suites-projects._
+
+### 1188-FR-001 — The web server's HTTP client MUST send every server-side API call (to `API_INTERNAL_URL`, `apps/web/src/api-url.ts`, as today) through one keep-alive connection pool shared by all renders of the process (Node's one global fetch dispatcher, an undici `Agent` created once per process and pooling connections per origin, behind `provideHttpClient(withFetch())`, `apps/web/src/app/app.config.ts`; no `undici` dependency is added), so that connections are reused across calls and renders; the browser's client is unchanged. The smallest change: one pool, created once, no per-route configuration, proven by a test (plan R1).
+
+_From 1188-tail-latency._
+
+### 1188-FR-002 — Every server-side API call MUST end within 3 s of being sent; when the cap is reached the call fails as a timeout, the render still completes, and the component that asked renders its existing empty or error state (unit test: a never-answering API, the server HTML within the cap plus margin). No new `@defer` block is added. A call that answers or fails earlier is unchanged.
+
+_From 1188-tail-latency._
+
+### 1188-FR-003 — Every image (web, api, worker, mcp) MUST start Node with the compile cache on (`NODE_COMPILE_CACHE` pointing at a directory the `node` user can write, set in the Dockerfile's runtime stages), and MUST still start when the directory cannot be written.
+
+_From 1188-tail-latency._
+
+### 1188-FR-004 — Every image MUST size the heap at 75% of the container's memory limit through the container-aware option (`--max-old-space-size-percentage=75` in `NODE_OPTIONS`, both the `web` and the `node-app` targets of `Dockerfile`), never a fixed megabyte figure; `--enable-source-maps` of the `node-app` target stays; the build stage runs `node --max-old-space-size-percentage=75 -e 0` so a flag the image's Node does not accept fails the build.
+
+_From 1188-tail-latency._
+
+### 1188-FR-005 — Each replica MUST stay one Node process: no cluster, fork or process pool for request handling in `apps/*/src/main.ts` or the web server (true today); a guard test MUST fail when one is introduced.
+
+_From 1188-tail-latency._
+
+### 1188-FR-006 — The image build MUST prove in the build stage, after `npm ci --omit=dev` of the pruned `dist/apps/<APP>` dependencies, that the image-processing library (`sharp`, used by `libs/domain/src/garages/photos/photo-processing.ts`) loads for an image whose dependencies list it, and fail the build otherwise; no from-source rebuild (the library ships prebuilt binaries for the image's Node).
+
+_From 1188-tail-latency._
+
+### 1188-FR-007 — Every Redis client that sends commands MUST have a 2 s `commandTimeout`: the one command-client factory, `borrowStore` in `libs/domain/src/store/store.ts`, already sets it, and every publisher (`LIVE_PUBLISHER` in `libs/domain/src/notifications/notifications.module.ts`, `AUTH_REDIS` in `libs/domain/src/auth/auth.module.ts`, the other `borrowStore` callers) is that client — `libs/domain/src/events/events.module.ts` creates no publisher, only the subscriber (plan R6, a correction of the earlier wording); a test asserts the option (`store.spec.ts`); the callers' existing error handling covers the timeout error. BullMQ-managed connections (blocking pops by design) and the pub/sub subscriber (`SUBSCRIBE` only, `connectTimeout` already set) are excluded.
+
+_From 1188-tail-latency._
+
+### 1188-FR-009 — No request-scoped or transient provider (`Scope.REQUEST`, `Scope.TRANSIENT`) MUST exist under `apps/*/src` or `libs/*/src` (none exists today; user context goes through the existing async-local storage in `logging.ts`); a guard test MUST fail when one is introduced.
+
+_From 1188-tail-latency._
+
+### 1188-FR-010 — The PR body MUST carry, per image (web, api, worker, mcp), the size before and after this change, and the staging SSR → API p95 for the public pages (home, a garage profile) before and after over 24 h each, the target being below 400 ms after; the image baseline is the same image built from `origin/main` at the merge base on the same machine; a figure that cannot be measured is written as "not measured" with the reason. These are measurements for the PR, not code.
+
+_From 1188-tail-latency._
+
+### 1188-FR-011 — FR-001, FR-002, FR-005, FR-007, FR-008 and FR-009 MUST have failing-first tests beside the code they exercise; FR-003 and FR-004 a test that reads the Dockerfile's runtime stages; FR-006 is proven by the build itself (Constitution II).
+
+_From 1188-tail-latency._
+
+### 1156-FR-001 — One configuration module (`libs/domain/src/retention/retention.config.ts`, beside the sweeps that read it) MUST hold every retention period the privacy notice states, named by what it covers: legal documents and audit history 5 years after the garage or account closes; media (photos, clips, recordings, request and reply photos) 90 days; day-sheet PDFs 30 days; notifications 12 months. Each period MUST carry what it covers and the date of the owner's decision (T10, 2026-10-16) beside it, and nothing else in the product MUST state those periods as numbers of its own.
+
+_From 1156-retention-job._
+
+### 1156-FR-002 — A unit test MUST fail when any retention sweep source holds a numeric literal other than 0 and 1 (every period and the batch size are read from the configuration); the test reads the sweep sources, and passes on the shipped code. Every period in the configuration is a whole number of days.
+
+_From 1156-retention-job._
+
+### 1156-FR-003 — A nightly job in the worker MUST run once per night across every worker instance (one repeatable job under a fixed scheduler id, Europe/Bucharest, as the system-log purge is scheduled) and run every sweep below in turn; a sweep that fails MUST NOT stop the others, and a run with any failed sweep MUST end as a failed job, retried with the system-log purge job's attempts and backoff and, on final failure, reported like the worker's other jobs.
+
+_From 1156-retention-job._
+
+### 1156-FR-013 — The job MUST delete in bounded batches per kind until nothing is due, so one night's run never holds one statement over a whole table, and a run that removes nothing is a normal success.
+
+_From 1156-retention-job._
+
+### 1156-FR-014 — Integration tests (real PostgreSQL) MUST exist before the implementation and MUST seed, for every kind the job sweeps today (each token and code kind, invites, notifications, legal documents, audit entries by account closure, by garage closure and by own time), one row just inside and one just outside its limit, and show after one run that only the outside one was removed or anonymised, that the counts match, and that the database still refuses a delete and any non-anonymising update of an audit entry.
+
+_From 1156-retention-job._
+
+### 493-FR-005 — `merge-main.mjs`'s capability resolution (`unionConflicts`) MUST keep one blank line between the last line of ours and a heading (`#`) of theirs that follows it in the same conflict hunk, so two features appended at the same place never glue a `_From …_` line to the next requirement's heading.
+
+_From 493-watcher-docs._
+
+### 1193-FR-002 — The web app MUST remain eligible for the browser's back/forward cache on the journey search results → garage profile → back: no `unload` or `beforeunload` handler, `Cache-Control: no-store` only on the signed-in and one-person pages (as today), and no connection kept open on `pagehide`. The e2e suite MUST prove the journey with the back/forward cache enabled: on back, `pageshow` reports `persisted` and the browser reports no not-restored reason; the Lighthouse audit of the same journey is shown in the PR.
+
+_From 1193-fast-nav._
+
+### 1193-FR-004 — Navigations to another screen (another path) MUST run as view transitions, with the browser's default cross-fade (no custom duration or easing), when the browser supports them; a same-screen navigation (only the query or fragment changes, or the language rewrite) and the first screen as the page loads MUST NOT; and every transition MUST be skipped entirely when the device asks for reduced motion (read from the kit's shared signal, 053-FR-013); a browser without the API navigates as today, with no error.
+
+_From 1193-fast-nav._
+
+### 1193-FR-006 — The rendered HTML head MUST carry a `preconnect` hint to the image base when it is an origin other than the page's, on every page, and one to the map tiles origin on the pages whose first screen renders a map (today the results page, `/:lang/garages`; no other); the tiles hint carries `crossorigin` (its requests are cross-origin fetches) and the image hint does not (images load without CORS); no hint for the page's own origin, the API, the telemetry collector or a sign-in server; at most four hints in all.
+
+_From 1193-fast-nav._
+
+### 1193-FR-008 — The app MUST drop the deprecated fetch opt-in from its HTTP client configuration (fetch is Angular 22's default) and keep event replay on, with no change in behaviour: requests still use fetch, taps before hydration are still replayed.
+
+_From 1193-fast-nav._
+
+### 1193-FR-011 — Every change MUST hold on a 320 px and a 390 px phone, a tablet and a desktop, light and dark, Romanian and English, with no sideways scroll at 320 px and no motion under `prefers-reduced-motion`; the PR MUST show each item of the story (bfcache, preconnect, transitions, scroll restoration, type-ahead, fonts) as done or already in place.
+
+_From 1193-fast-nav._
+
+### 456-FR-005 — The change MUST add no endpoint, queue, outside call, product action, schema migration or user-facing text; production and staging deploys keep their current role and connection string.
+
+_From 456-activity-log-test-cleanup._
+
+### 1349-FR-001 — A harness spec MUST run the sweep twice over a Chart.js chart page that animates unless reduced motion is asked, and fail when `diffShots` finds any changed region between the two runs' shots.
+
+_From 1349-cockpit-chart-settle._
+
+### 1349-FR-002 — The same spec MUST fail when the chart in a shot is not at its final frame: the page did not see reduced motion, or the tallest bar's top is not drawn in the shot.
+
+_From 1349-cockpit-chart-settle._
 
 ## Retired
 
@@ -2868,3 +3061,11 @@ _From 1370-release-seed-no-ssh._
 - `728-FR-001` — superseded by `486-FR-005` (2026-10-23)
 - `1230-FR-012` — superseded by `988-FR-006` (2026-10-24)
 - `1348-FR-001` — superseded by `1370-FR-001` (2026-10-24)
+- `1370-FR-001` — superseded by `1373-FR-001` (2026-10-24)
+- `610-FR-003` — superseded by `961-FR-004` (2026-10-24)
+- `447-FR-001` — superseded by `1377-FR-001` (2026-10-24)
+- `499-FR-001` — superseded by `471-FR-005` (2026-10-24)
+- `482-FR-001` — superseded by `493-FR-001` (2026-10-24)
+- `1360-FR-011` — superseded by `493-FR-002` (2026-10-24)
+- `432-FR-005` — superseded by `493-FR-003` (2026-10-24)
+- `703-FR-009` — superseded by `493-FR-004` (2026-10-24)

@@ -1,5 +1,7 @@
 import {
   ACCOUNT_DELETED,
+  ACCOUNT_SUSPENDED,
+  ACCOUNT_SUSPENDED_CONTACT,
   EMAIL_CHANGE_NOTICE,
   EMAIL_CHECK,
   PASSWORD_CHANGED,
@@ -24,6 +26,7 @@ import {
   CATALOGUE_JOB_APPROVED,
   CATALOGUE_JOB_REJECTED,
 } from './catalogue-job-decided';
+import { DATA_EXPORT_READY } from './data-export-ready';
 import { DOCUMENT_DUE } from './document-due';
 import { DOCUMENT_OVERDUE } from './document-overdue';
 import { DOCUMENT_REFUSED } from './document-refused';
@@ -49,6 +52,7 @@ import {
   STAFF_INVITE_MECHANIC,
   STAFF_INVITE_RECEPTIONIST,
   STAFF_JOINED,
+  STAFF_REMOVED,
 } from './staff';
 import { SUPPORT_ACKNOWLEDGEMENT, SUPPORT_MESSAGE } from './support';
 import { TEST_MESSAGE } from './test-message';
@@ -63,6 +67,8 @@ import type { Registry } from '../templates';
 // type with no e-mail or bell text.
 export const TEMPLATES: Registry = {
   'ACCOUNT_EMAIL.account_deleted': ACCOUNT_DELETED,
+  'ACCOUNT_EMAIL.account_suspended': ACCOUNT_SUSPENDED,
+  'ACCOUNT_EMAIL.account_suspended_contact': ACCOUNT_SUSPENDED_CONTACT,
   'ACCOUNT_EMAIL.email_change_notice': EMAIL_CHANGE_NOTICE,
   'ACCOUNT_EMAIL.email_check': EMAIL_CHECK,
   'ACCOUNT_EMAIL.password_changed': PASSWORD_CHANGED,
@@ -81,6 +87,7 @@ export const TEMPLATES: Registry = {
   'BOOKING_LAPSED.garage': BOOKING_LAPSED_GARAGE,
   'CATALOGUE_JOB_DECIDED.approved': CATALOGUE_JOB_APPROVED,
   'CATALOGUE_JOB_DECIDED.rejected': CATALOGUE_JOB_REJECTED,
+  DATA_EXPORT_READY,
   DOCUMENT_DUE,
   DOCUMENT_OVERDUE,
   DOCUMENT_REFUSED,
@@ -106,6 +113,7 @@ export const TEMPLATES: Registry = {
   'STAFF_INVITE.mechanic': STAFF_INVITE_MECHANIC,
   'STAFF_INVITE.receptionist': STAFF_INVITE_RECEPTIONIST,
   STAFF_JOINED,
+  STAFF_REMOVED,
   SUPPORT_ACKNOWLEDGEMENT,
   SUPPORT_MESSAGE,
   TEST_MESSAGE,

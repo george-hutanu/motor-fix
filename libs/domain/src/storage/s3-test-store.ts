@@ -11,7 +11,7 @@ import { crc32 } from 'node:zlib';
 import type { StorageEnv } from '@motor-fix/contracts';
 
 // The entry point of @motor-fix/domain/testing: the database turn-taking too.
-export { databaseTurn } from '../auth/database-turn.testing';
+export { databaseTurn, TURN_WAIT_MS } from '../auth/database-turn.testing';
 export { PRISMA } from '../auth/prisma';
 
 // For a module that needs storage wired but never reaches it.

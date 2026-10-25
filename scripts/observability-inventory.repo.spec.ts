@@ -386,6 +386,19 @@ describe("the mechanic's reviews read and the review-ratings queue", () => {
     expect(entry?.alerts).toEqual(['api-error-rate', 'api-latency']);
   });
 
+  // @traces 024-FR-022
+  it('lists the garage reviews read with its route metric, panel and alerts', () => {
+    const read = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/reviews/garage/{garageId}'];
+    const entry = inventory().find((each) => each.name === 'garage-reviews');
+
+    expect(Object.keys(read)).toEqual(['get']);
+    expect(entry?.metric).toMatch(/\/api\/v1\/reviews\/garage\/\{garageId\}$/);
+    expect(entry?.source).toBe('libs/domain/src/reviews/reviews.controller.ts');
+    expect(entry?.alerts).toEqual(['api-error-rate', 'api-latency']);
+  });
+
   it('lists the queue with its failed-job and backlog alerts', () => {
     const entry = inventory().find((each) => each.name === 'review-ratings');
 
@@ -396,6 +409,31 @@ describe("the mechanic's reviews read and the review-ratings queue", () => {
     expect(entry?.alerts).toEqual(
       expect.arrayContaining(['worker-jobs-failed', 'worker-queue-backlog']),
     );
+  });
+});
+
+// @traces 133-FR-014
+describe("the staff read of a garage's own profile", () => {
+  it('lists the route with its metric and only the shared API alerts', () => {
+    const read = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/garages/{garageId}/profile'];
+    const entries: { name?: string; [key: string]: unknown }[] = Object.values(
+      JSON.parse(
+        readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+      ),
+    ).flatMap((each) => (Array.isArray(each) ? each : []));
+
+    expect(Object.keys(read)).toEqual(['get']);
+    expect(
+      entries.find((each) => each.name === 'garage-profile'),
+    ).toMatchObject({
+      alerts: ['api-error-rate', 'api-latency'],
+      dashboard: 'motorfix-api',
+      metric: expect.stringMatching(/\/api\/v1\/garages\/:garageId\/profile$/),
+      source:
+        'libs/domain/src/garages/garage-profile/garage-profile.controller.ts',
+    });
   });
 });
 
@@ -414,8 +452,99 @@ describe("the garage's team read route", () => {
       );
     const team = entries.find((each) => each.name === 'garage-mechanics-list');
 
-    expect(Object.keys(read)).toEqual(['get']);
+    // @traces 056-FR-022
+    expect(Object.keys(read).sort()).toEqual(['get', 'post']);
     expect(team?.metric).toMatch(/\/api\/v1\/garages\/:garageId\/mechanics$/);
     expect(team?.alerts).toEqual(['api-error-rate', 'api-latency']);
+    // The owner's three writes, each with its route's metric and alerts.
+    for (const [name, route] of [
+      ['garage-mechanics-add', /\/mechanics$/],
+      ['garage-mechanics-edit', /\/mechanics\/:mechanicId$/],
+      ['garage-mechanics-remove', /\/mechanics\/:mechanicId$/],
+    ] as const) {
+      const write = entries.find((each) => each.name === name);
+      expect(write?.metric).toMatch(route);
+      expect(write?.alerts).toEqual(['api-error-rate', 'api-latency']);
+    }
+  });
+});
+
+// @traces 105-FR-018
+describe('the admin brand list routes', () => {
+  repoIt(
+    'are OpenAPI operations the inventory lists with its metric and alerts',
+    () => {
+      const paths = JSON.parse(
+        readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+      ).paths;
+      const inventory = JSON.parse(
+        readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+      );
+      const entries: { name?: string; metric?: string; alerts?: string[] }[] =
+        Object.values(inventory).flatMap((each) =>
+          Array.isArray(each) ? each : [],
+        );
+      const brands = entries.find((each) => each.name === 'admin-brands');
+
+      expect(Object.keys(paths['/api/v1/admin/brands'])).toEqual(
+        expect.arrayContaining(['get', 'post']),
+      );
+      expect(Object.keys(paths['/api/v1/admin/brands/{id}'])).toEqual([
+        'patch',
+      ]);
+      expect(brands?.metric).toMatch(/\/api\/v1\/admin\/brands\/:id/);
+      expect(brands?.alerts).toEqual(['api-error-rate', 'api-latency']);
+      expect(checkInventory(root)).toEqual([]);
+    },
+  );
+});
+
+describe('the browser monitoring records', () => {
+  const inventory = JSON.parse(
+    readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+  );
+  const readme = readFileSync(
+    join(root, 'infra/observability/README.md'),
+    'utf8',
+  );
+
+  // @traces 947-FR-011
+  it('say Faro receives sessions and journeys under analytics consent only', () => {
+    const faro = JSON.stringify(inventory).match(
+      /"name":"grafana-faro"[^}]*"reason":"([^"]*)"/,
+    )?.[1];
+
+    expect(faro).toMatch(
+      /under analytics consent only, a per-tab session id and the journey events session_start, session_resume and view_changed/,
+    );
+    expect(readme).toMatch(/Without analytics\s+consent: no session id/);
+    expect(readme).toMatch(/no session replay is loaded/);
+    expect(readme).not.toMatch(/only once the analytics consent gate\s+ships/);
+  });
+});
+
+// @traces 102-FR-019
+describe('the garage members read route', () => {
+  it('is an OpenAPI operation the inventory lists with its metric, alerts and reason', () => {
+    const route = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/garages/{garageId}/members'];
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: {
+      name?: string;
+      metric?: string;
+      alerts?: string[];
+      reason?: string;
+    }[] = Object.values(inventory).flatMap((each) =>
+      Array.isArray(each) ? each : [],
+    );
+    const members = entries.find((each) => each.name === 'garage-members-list');
+
+    expect(Object.keys(route)).toContain('get');
+    expect(members?.metric).toMatch(/\/api\/v1\/garages\/:garageId\/members$/);
+    expect(members?.alerts?.length).toBeGreaterThan(0);
+    expect(members?.reason).toBeTruthy();
   });
 });

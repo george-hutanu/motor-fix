@@ -3,6 +3,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import {
   CarsService,
   GarageRequestsService,
@@ -30,6 +31,7 @@ import { GarageRequestsView } from './garage-requests/garage-requests-view/garag
 import { JobsView } from './jobs-view/jobs-view';
 import { Live } from './live';
 import { PricesView } from './prices-view/prices-view';
+import { ProfileView } from './profile-view/profile-view';
 import { RequestsView } from './requests-view/requests-view';
 import {
   fakeSavedGarages,
@@ -51,13 +53,14 @@ const OWNER = [
   'garage.feature_switches',
   'garage.audit_history',
 ];
-const RECEPTIONIST = [
-  'garage.requests',
-  'garage.schedule',
-  'garage.final_price',
-  'garage.own_jobs',
-  'garage.audit_history',
-];
+const NO_PERMISSIONS = {
+  canAnswerQuotes: false,
+  canMoveBookings: false,
+  canRecordFinalPrice: false,
+};
+// The receptionist's and the mechanic's rows, read from the table itself.
+const RECEPTIONIST = capabilitiesOf('receptionist', NO_PERMISSIONS);
+const MECHANIC = capabilitiesOf('mechanic', NO_PERMISSIONS);
 
 // Each key's text in Romanian, then in English (a missing key reads as itself).
 async function texts(keys: readonly (string | undefined)[]) {
@@ -342,12 +345,15 @@ describe('the dashboard view lists', () => {
     ]);
   });
 
-  it('keeps the team, the prices and the garage profile from a receptionist', () => {
+  // @traces 102-FR-004
+  it('keeps the team and the prices from a receptionist, and gives her the reviews and the garage profile', () => {
     expect(paths('garage', RECEPTIONIST)).toEqual([
       '',
       'requests',
       'schedule',
       'jobs',
+      'reviews',
+      'profile',
       'settings',
       'history',
     ]);
@@ -369,6 +375,23 @@ describe('the dashboard view lists', () => {
     expect(
       paths('garage', ['garage.own_jobs', 'garage.audit_history']),
     ).not.toContain('prices');
+  });
+
+  // @traces 133-FR-002 133-FR-005
+  // @traces 102-FR-004
+  it('gives the owner and the receptionist the garage profile view, its body downloaded with the view', async () => {
+    const profile = DASHBOARDS.garage.views.find(
+      (view) => view.path === 'profile',
+    );
+    expect(profile?.capability).toBe('garage.profile');
+    await expect(profile?.load?.()).resolves.toBe(ProfileView);
+    const route = dashboardRoutes('garage').find((r) => r.path === 'profile');
+    await expect(route?.children?.[0].loadComponent?.()).resolves.toBe(
+      ProfileView,
+    );
+    expect(paths('garage', OWNER)).toContain('profile');
+    expect(paths('garage', RECEPTIONIST)).toContain('profile');
+    expect(paths('garage', MECHANIC)).not.toContain('profile');
   });
 
   it('gives a mechanic the dashboard view, the settings and what their permissions allow', () => {
@@ -582,6 +605,34 @@ describe('the dashboard view lists', () => {
     ).toEqual(paths('garage', OWNER));
   });
 
+  // @traces 531-FR-001
+  it('drops Programări while the garage has day sheets off, and keeps it while they are on or unknown', () => {
+    const shown = (features: Record<string, boolean>) =>
+      allowedViews('garage', OWNER, features).map((v) => v.path);
+
+    expect(shown({ day_sheets: false })).not.toContain('schedule');
+    expect(shown({ day_sheets: false })).toEqual(
+      paths('garage', OWNER).filter((path) => path !== 'schedule'),
+    );
+    expect(shown({ day_sheets: true })).toContain('schedule');
+    expect(shown({})).toContain('schedule');
+    expect(shown({ day_sheets: false, team_mechanics: false })).toEqual(
+      paths('garage', OWNER).filter(
+        (path) => path !== 'schedule' && path !== 'team',
+      ),
+    );
+  });
+
+  it('ties Programări to day sheets and Mecanici to the team, and no other garage view to a switch', () => {
+    expect(
+      Object.fromEntries(
+        DASHBOARDS.garage.views
+          .filter((view) => view.feature)
+          .map((view) => [view.path, view.feature]),
+      ),
+    ).toEqual({ schedule: 'day_sheets', team: 'team_mechanics' });
+  });
+
   // @traces 101-FR-007
   it('opens no garage view while the garage is a draft, and every allowed one once it is approved or suspended', () => {
     expect(allowedViews('garage', OWNER, {}, 'draft')).toEqual([]);
@@ -725,6 +776,69 @@ async function open(
   }
   return { element: harness.routeNativeElement as HTMLElement, harness };
 }
+
+// @traces 102-FR-003
+// @traces 102-FR-004
+describe('the garage menu of each role, read from the table', () => {
+  const menu = (
+    capabilities: readonly string[],
+    features: Record<string, boolean> = {},
+  ) => allowedViews('garage', capabilities, features).map((view) => view.path);
+  const mechanic = (permissions: Partial<typeof NO_PERMISSIONS>) =>
+    capabilitiesOf('mechanic', { ...NO_PERMISSIONS, ...permissions });
+
+  it('gives a mechanic without permissions Panou, Lucrări, Programări, Setări and Istoric modificări', () => {
+    expect(menu(MECHANIC)).toEqual([
+      '',
+      'schedule',
+      'jobs',
+      'settings',
+      'history',
+    ]);
+  });
+
+  it('adds Cereri de ofertă to a mechanic who may answer quotes, and nothing for the other permissions', () => {
+    expect(menu(mechanic({ canAnswerQuotes: true }))).toEqual([
+      '',
+      'requests',
+      'schedule',
+      'jobs',
+      'settings',
+      'history',
+    ]);
+    expect(
+      menu(mechanic({ canMoveBookings: true, canRecordFinalPrice: true })),
+    ).toEqual(menu(MECHANIC));
+  });
+
+  it('gives the receptionist no Mecanici and no Prețuri', () => {
+    expect(menu(RECEPTIONIST)).not.toContain('team');
+    expect(menu(RECEPTIONIST)).not.toContain('prices');
+  });
+
+  it('gives the owner every released garage view', () => {
+    expect(menu(capabilitiesOf('garage', NO_PERMISSIONS))).toEqual(
+      DASHBOARDS.garage.views
+        .filter((view) => !view.unreleased)
+        .map((view) => view.path),
+    );
+  });
+
+  it('removes a switched-off view for every role before the role row is read', () => {
+    for (const capabilities of [
+      capabilitiesOf('garage', NO_PERMISSIONS),
+      RECEPTIONIST,
+      MECHANIC,
+    ]) {
+      expect(menu(capabilities, { day_sheets: false })).not.toContain(
+        'schedule',
+      );
+      expect(menu(capabilities, { team_mechanics: false })).not.toContain(
+        'team',
+      );
+    }
+  });
+});
 
 describe('the dashboard view routes', () => {
   // @traces 097-FR-004

@@ -23,6 +23,7 @@ import { basename, join } from "node:path";
 import { activeFeature, featureLevel, featuresRoot, LEVELS } from "./lib/feature.mjs";
 import { loadCapabilities, parseDelta, retiredTokens } from "./capabilities.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
+import { declaredFrs } from "./lib/traces.mjs";
 
 const git = (repo, args) => {
   try {
@@ -126,7 +127,7 @@ export function gather(repo, feature, { since } = {}) {
   const open = taskLines.filter((l) => /^\s*- \[ \]/.test(l));
   const done = taskLines.filter((l) => /^\s*- \[[Xx]\]/.test(l));
 
-  const declared = [...new Set([...(spec ?? "").matchAll(/^\s*-\s+\*{0,2}(FR-\d{3})\*{0,2}\s*[:.]/gm)].map((m) => m[1]))];
+  const declared = declaredFrs(spec);
   const retired = retiredTokens(repo);
   const commits = featureCommits(repo, feature.dir, { since });
   const tracked = specsTracked(repo, feature.dir);

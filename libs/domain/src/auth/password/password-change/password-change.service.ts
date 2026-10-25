@@ -13,10 +13,11 @@ import type { PrismaClient } from '../../../generated/prisma/client';
 import { countAccountChange } from '../../../metrics/product-counters';
 import { NotificationsService } from '../../../notifications/notifications.service';
 import { Attempts } from '../../attempts';
+import { refusal } from '../../http-refusal';
 import type { Actor } from '../../policy';
 import { PRISMA } from '../../prisma';
 import { SignInService } from '../../sign-in.service';
-import { refusal, tooMany, weakPassword } from '../../sign-up.service';
+import { tooMany, weakPassword } from '../../sign-up.service';
 import { hashPassword, verifyPassword } from '../password';
 import {
   RESET_OPTIONS,

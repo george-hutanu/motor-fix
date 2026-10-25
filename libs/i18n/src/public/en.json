@@ -90,6 +90,34 @@
       "one": "{count} review",
       "other": "{count} reviews"
     },
+    "reviewsSection": {
+      "deletedAuthor": "MotorFix driver",
+      "empty": "No reviews yet.",
+      "failed": "We could not load the reviews",
+      "label": "Reviews by score",
+      "more": "See more",
+      "retry": "Try again",
+      "score": "{rating} / 5",
+      "stars": {
+        "one": "{count} star",
+        "other": "{count} stars"
+      },
+      "title": "What drivers say"
+    },
+    "share": "Share",
+    "shareCopied": "Link copied",
+    "shareCopyBelow": "Copy the link below",
+    "shareName": "Share {name}",
+    "status": {
+      "break": "Break until {start}",
+      "closedDay": "Closed today · opens {when} at {start}",
+      "closedHoliday": "Closed today · public holiday · opens {when} at {start}",
+      "closedNow": "Closed now · opens {when} at {start}",
+      "onDate": "on {d} {month}",
+      "open": "Open today until {end}",
+      "today": "today",
+      "tomorrow": "tomorrow"
+    },
     "verified": "Active company and RAR technical authorisation, checked by MotorFix. Last check: {date}.",
     "where": {
       "mobile": "Comes to you within {km}",
@@ -98,8 +126,10 @@
     "works": "Works on {brand}"
   },
   "gone": {
-    "home": "Go to the home page",
-    "title": "This garage is no longer available"
+    "search": "Find a garage",
+    "searchBrand": "Find a garage for {brand}",
+    "similar": "Similar garages nearby",
+    "title": "This garage is no longer available on MotorFix."
   },
   "home": {
     "cards": {
@@ -901,7 +931,7 @@
       },
       "label": "Code",
       "problem": {
-        "account_suspended": "Your account is suspended.",
+        "account_suspended": "Your account is suspended. Write to support.",
         "code_expired": "The code has expired. Ask for a new one.",
         "code_invalid": "The code is not correct.",
         "consent_required": "Tick the agreement to create the account.",
@@ -935,7 +965,7 @@
       "withEmail": "Sign in with e-mail and password"
     },
     "problem": {
-      "account_suspended": "Your account is suspended.",
+      "account_suspended": "Your account is suspended. Write to support.",
       "invalid_credentials": "The e-mail or password is not correct.",
       "too_many_attempts": "Too many attempts. Try again in 15 minutes."
     },
@@ -950,7 +980,7 @@
       "email_taken": "An account already uses this e-mail. Sign in with e-mail and password.",
       "failed": "We could not reach {provider}. Try again, or use e-mail or phone.",
       "maintenance": "MotorFix is down for maintenance. Try again in a few minutes.",
-      "suspended": "Your account is suspended."
+      "suspended": "Your account is suspended. Write to support."
     },
     "submit": "Sign in",
     "title": "Sign in",

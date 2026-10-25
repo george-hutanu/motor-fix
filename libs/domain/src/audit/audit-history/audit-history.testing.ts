@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -8,7 +9,6 @@ import request from 'supertest';
 import { signAccessToken } from '../../auth/access-token';
 import { AccountsService } from '../../auth/accounts.service';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import { createPrisma } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { noEvents } from '../../events/event.port';

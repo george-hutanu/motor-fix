@@ -41,6 +41,13 @@ h2 {
   max-width: 100%;
   text-wrap: balance;
 }
+/* The narrowest phones: the label keeps the 16 px body size; dropping its tracking and taking the 8 px padding step keeps "Adaugă un mecanic" on one line. */
+@media (max-width: 359px) {
+  .add {
+    padding-inline: var(--mf-space-2);
+    letter-spacing: 0;
+  }
+}
 .count {
   color: var(--mf-text-secondary);
 }
@@ -70,6 +77,30 @@ h2 {
   padding: var(--mf-space-3);
   background: var(--mf-panel);
   color: var(--mf-text);
+}
+/* A row is the button that opens its card. */
+.row {
+  width: 100%;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.row:hover {
+  border-color: var(--mf-text-secondary);
+}
+.row:focus-visible {
+  outline: 2px solid var(--mf-amber);
+  outline-offset: 2px;
+}
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--mf-space-2);
+}
+.owner {
+  color: var(--mf-text-secondary);
+  font-weight: 400;
 }
 .row > *,
 .who > * {
@@ -123,6 +154,7 @@ h2 {
     align-items: center;
     column-gap: var(--mf-space-3);
   }
+  .owner,
   .speciality,
   .rating,
   .count,

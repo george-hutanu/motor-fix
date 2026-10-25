@@ -1,5 +1,6 @@
 import { inject, type Type } from '@angular/core';
 import type { Routes } from '@angular/router';
+import type { Capability } from '@motor-fix/contracts/capabilities';
 import type { GarageAccessDto } from '@motor-fix/data-access/models/garage-access-dto';
 
 import { CarsView } from './cars-view/cars-view';
@@ -29,7 +30,7 @@ export interface DashboardView {
   title?: string;
   subtitle?: string;
   // Absent: every role of the area sees it.
-  capability?: string;
+  capability?: Capability;
   // The garage feature switch it needs; absent or on in the switches, shown.
   feature?: string;
   // What will appear here, until its story builds the body.
@@ -67,7 +68,7 @@ const CONTACT: DashboardView = {
 };
 
 // A garage view whose keys all follow its path.
-const garageView = (path: string, capability?: string): DashboardView => ({
+const garageView = (path: string, capability?: Capability): DashboardView => ({
   capability,
   empty: `shell.frame.coming.garage.${path}`,
   label: `shell.frame.nav.garage.${path}`,
@@ -258,7 +259,7 @@ export const DASHBOARDS: Record<
             './garage-requests/garage-requests-view/garage-requests-view'
           ).then((m) => m.GarageRequestsView),
       },
-      garageView('schedule', 'garage.schedule'),
+      { ...garageView('schedule', 'garage.schedule'), feature: 'day_sheets' },
       {
         ...garageView('jobs', 'garage.own_jobs'),
         load: () => import('./jobs-view/jobs-view').then((m) => m.JobsView),
@@ -274,7 +275,11 @@ export const DASHBOARDS: Record<
           import('./prices-view/prices-view').then((m) => m.PricesView),
       },
       garageView('reviews', 'garage.reviews'),
-      garageView('profile', 'garage.profile'),
+      {
+        ...garageView('profile', 'garage.profile'),
+        load: () =>
+          import('./profile-view/profile-view').then((m) => m.ProfileView),
+      },
       {
         label: 'shell.frame.nav.garage.assistant',
         path: 'assistant',

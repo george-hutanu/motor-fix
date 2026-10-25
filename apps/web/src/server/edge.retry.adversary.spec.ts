@@ -173,7 +173,11 @@ describe('web edge proxy failures and retries', () => {
     });
 
     it('logs the path of an unreachable API without the query for a GET', async () => {
-      await close(upstream);
+      // Kept bound and resetting each connection as it is accepted: a closed
+      // port can be handed to a server in another Jest worker at once.
+      upstream.prependListener('connection', (socket) =>
+        socket.resetAndDestroy(),
+      );
 
       const res = await call('/api/v1/search/garages?q=0722123456');
 
@@ -184,7 +188,7 @@ describe('web edge proxy failures and retries', () => {
         path: '/api/v1/search/garages',
       });
       expect(JSON.stringify(entries())).not.toContain('0722123456');
-      upstream = createServer();
+      expect(seen).toEqual([]);
     });
   });
 
@@ -257,7 +261,9 @@ describe('web edge proxy failures and retries', () => {
       );
       expect(seen).toHaveLength(40);
       expect(entries()).toEqual([]);
-    });
+      // Forty sockets opened and cut take well under a second alone, but past
+      // Jest's 5 s default when the affected suites share the machine.
+    }, 20_000);
 
     it('is not retried when the upstream answered an error status', async () => {
       behave = (_req, res) => {
@@ -453,6 +459,7 @@ describe('web edge proxy failures and retries', () => {
 
       expect(seen).toHaveLength(20);
       expect(entries()).toEqual([]);
-    });
+      // Twenty sockets under a full parallel run, as the retry case above.
+    }, 20_000);
   });
 });

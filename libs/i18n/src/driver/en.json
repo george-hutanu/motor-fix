@@ -149,7 +149,7 @@
     "phone": "Phone",
     "phoneLine": "A garage sees your number only after you accept its quote.",
     "problem": {
-      "account_suspended": "Your account is suspended."
+      "account_suspended": "Your account is suspended. Write to support."
     },
     "resend": "Send the link again",
     "resent": "Link sent.",
@@ -187,6 +187,13 @@
   },
   "notifications": {
     "alwaysSent": "Always sent: booking confirmed, new time proposed by the garage, booking cancelled or lapsed, car ready.",
+    "alwaysSentMark": "Always sent",
+    "channel": {
+      "email": "E-mail",
+      "push": "Push",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp"
+    },
     "consent": {
       "cancel": "Cancel",
       "confirm": "I agree",
@@ -215,7 +222,53 @@
         "title": "Reviews and history"
       }
     },
-    "title": "Notifications"
+    "phoneHint": "Add and confirm your phone number in Your details.",
+    "pushDismissed": "Allow notifications when the browser asks, then pick Push again.",
+    "smsUsed": "You have used {used} of {cap} SMS this month; the next ones go by WhatsApp.",
+    "title": "Notifications",
+    "type": {
+      "BOOKING_CANCELLED": "Booking cancelled",
+      "BOOKING_CONFIRMED": "Booking confirmed",
+      "BOOKING_LAPSED": "Booking not confirmed in time",
+      "BOOKING_MOVE_LAPSED": "Move proposal expired",
+      "BOOKING_MOVE_REFUSED": "Move refused by the garage",
+      "BOOKING_MOVED": "Booking moved",
+      "BOOKING_REMINDER": "Booking reminder",
+      "BOOKING_TIME_PROPOSED": "New time proposed by the garage",
+      "CAR_TRANSFER_ACCEPTED": "Car transfer accepted",
+      "DUE_ITP": "ITP",
+      "DUE_RCA": "RCA",
+      "DUE_ROVINIETA": "Road vignette",
+      "FINAL_PRICE_CORRECTED": "Final price corrected",
+      "GARAGE_REPORT_DECIDED": "Outcome of your report",
+      "GARAGE_SUSPENDED_NOTICE": "Garage suspended",
+      "JOB_ETA_CHANGED": "Ready time changed",
+      "JOB_READY": "Car ready",
+      "JOB_STARTED": "Work started",
+      "LIVE_STARTED": "Live view started",
+      "MEDIA_ADDED": "New photos or video",
+      "MEDIA_REMOVED": "Photos or video removed",
+      "MESSAGE_RECEIVED": "New message",
+      "NEWS": "MotorFix news",
+      "NO_SHOW_RECORDED": "No-show recorded",
+      "QUOTE_CHANGED": "Offer changed",
+      "QUOTE_EXPIRED": "Offer expired",
+      "QUOTE_RECEIVED": "New offer from a garage",
+      "QUOTE_WITHDRAWN": "Offer withdrawn",
+      "REPAIR_UPDATED": "Repair history updated",
+      "REQUEST_DECLINED": "Request declined by a garage",
+      "REQUEST_EXPIRED": "Request expired",
+      "REVIEW_APPEAL_DECIDED": "Decision on an appeal",
+      "REVIEW_DECIDED": "Decision on a reported review",
+      "REVIEW_INVITE": "Invitation to review",
+      "REVIEW_REPLIED": "Reply to your review",
+      "SERVICE_DUE": "Service",
+      "TYRES_SEASON": "Tyres"
+    },
+    "types": {
+      "label": "Choose the channels: {group}",
+      "show": "Choose the channels"
+    }
   },
   "panel": {
     "activeRequest": "Active request",

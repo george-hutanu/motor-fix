@@ -1,4 +1,5 @@
 import {
+  type ClosedDayAheadDto,
   FACILITIES,
   type Facility,
   imageBaseUrl,
@@ -12,8 +13,8 @@ import {
 import type { SearchPoint } from '@motor-fix/contracts/search-place';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
+import { refusal } from '../../auth/http-refusal';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import { CacheService, cacheKey, type Filled } from '../../cache/cache.service';
 import {
   type BusinessKind,
@@ -97,6 +98,7 @@ type ProfileRow = {
   slug: string;
   status: string;
   hours: unknown;
+  closed_days: ClosedDayAheadDto[];
 };
 
 const present = <T extends Record<string, unknown>>(fields: T) =>
@@ -303,6 +305,27 @@ export class PublicGaragesService {
         g.rating::float8 AS rating, g.review_count, g.service_radius_km,
         rs.lifetime_requests, rs.rate,
         g.facilities_note, g.hours,
+        -- Today to today + 14 on the Bucharest calendar, the reach of the
+        -- page's next-opening search; a holiday wins over a closed day.
+        COALESCE((
+          SELECT jsonb_agg(jsonb_build_object(
+            'day', to_char(shut.day, 'YYYY-MM-DD'),
+            'reason', CASE WHEN shut.holiday THEN 'holiday' ELSE 'closed' END
+          ) ORDER BY shut.day)
+          FROM (
+            SELECT u.day, bool_or(u.holiday) AS holiday
+            FROM (
+              SELECT ph.day, true AS holiday FROM public_holiday ph
+              UNION ALL
+              SELECT cd.day, false FROM garage_closed_day cd
+              WHERE cd.garage_id = g.id
+            ) u, LATERAL (
+              SELECT (now() AT TIME ZONE 'Europe/Bucharest')::date AS today
+            ) b
+            WHERE u.day BETWEEN b.today AND b.today + 14
+            GROUP BY u.day
+          ) shut
+        ), '[]'::jsonb) AS closed_days,
         ARRAY(
           SELECT f.facility::text FROM garage_facility f
           WHERE f.garage_id = g.id AND f.status = 'listed'
@@ -399,6 +422,7 @@ export class PublicGaragesService {
       },
       photos: await this.photos(row.photos ?? []),
       ...facilitiesOf(row),
+      closedDays: row.closed_days,
       // A stored table the editor would refuse reads as none.
       hours: isWeeklyHours(row.hours) ? row.hours : {},
       ...placeOf(row),

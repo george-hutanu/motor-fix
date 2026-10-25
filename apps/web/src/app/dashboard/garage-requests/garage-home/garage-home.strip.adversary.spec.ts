@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import {
   GarageRequestsService,
   GaragesService,
@@ -23,7 +24,11 @@ const account = (
   rechecked: boolean,
 ) =>
   ({
-    capabilities: [],
+    capabilities: capabilitiesOf(role === 'owner' ? 'garage' : role, {
+      canAnswerQuotes: false,
+      canMoveBookings: false,
+      canRecordFinalPrice: false,
+    }),
     garageAccess: [
       {
         features: {},

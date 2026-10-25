@@ -17,6 +17,8 @@
   }
   @if (feed.visible()) {
     <mf-garage-requests-panel [limit]="4" />
+  } @else if (ownJobsOnly()) {
+    <p role="status">{{ 'garage.home.mechanic' | t }}</p>
   } @else {
     <p>{{ 'shell.frame.coming.garage.dashboard' | t }}</p>
   }

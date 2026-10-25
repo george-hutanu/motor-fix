@@ -1,12 +1,13 @@
 ---
 capability: reviews
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 022-review-drawer
   - 023-review-confirmed-job
   - 025-review-mechanic
   - 129-delete-account
   - 182-review-rules
+  - 024-garage-reviews
 ---
 
 # Capability: Reviews
@@ -223,9 +224,10 @@ _From 025-review-mechanic._
 
 _From 025-review-mechanic._
 
-### 129-FR-010 — A published review whose driver account is `deleted` MUST show the author "Șofer MotorFix" in place of the first name and surname initial of 022-FR-007 and 025-FR-011, wherever reviews are rendered (garage profile, the mechanic's list, the garage's dashboard list), with counts and ratings unchanged. The API renders the author's short name as "Șofer MotorFix", with no other mark on the author; an English rendering belongs to the first web screen that shows other people's review authors (none exists today).
+### 024-FR-007 — The author MUST read as the first word of the account's name plus the first letter of its last word and a full stop ("Andrei M."); a one-word name as it is; a deleted account as "Șofer MotorFix" / "MotorFix driver" (129-FR-010, which this story renders in English). No review shows the mechanic's name, the plate, the phone, the e-mail or the full surname.
 
-_From 129-delete-account._
+_From 024-garage-reviews._
+
 ### 182-FR-001 — The review drawer's form MUST show, under the "Comentariul tău" field and above the privacy line, the summary "Fără insulte, date personale sau reclame. Scrie doar despre această reparație." followed by the link "Regulile recenziilor" (English: "No insults, personal data or ads. Write only about this repair." and "Review rules"), on every path that shows the form: today the write path; the profile path (dropped from release 1 by OD-32) and edit mode (ST-408) inherit it when they ship, since the summary is part of the form. It is one paragraph placed after the comment field's block (after its count and error) and before the privacy line, with the link inline. A state that replaces the form shows no summary.
 
 _From 182-review-rules._
@@ -266,6 +268,50 @@ _From 182-review-rules._
 
 _From 182-review-rules._
 
+### 024-FR-004 — The section MUST list the garage's `published` reviews newest first (posted date, then id), 20 a page. Each review shows: for `source` `job`, the car ("BMW 320d": the request's brand and model) and the names of the accepted quote's included jobs (`included` true) joined by ", " ("Kit lanț distribuție"), as "{car} · {jobs}"; for `source` `profile`, nothing in that place (its "Nu prin MotorFix" mark is ST-1367's); then the score "{rating},0 / 5" ("5,0 / 5" / "5.0 / 5"), the text when there is one (no empty block otherwise), the author's short name and the posted month. The text shows in full (no truncation), wraps at any width and is shown as plain text, never as markup.
+
+_From 024-garage-reviews._
+
+### 024-FR-005 — The posted month MUST read as the abbreviated month and year in Europe/Bucharest: "mar. 2026" in Romanian (the 019-FR-005 abbreviations, so "mart. 2026" where the shared format gives it) and "Mar 2026" in English.
+
+_From 024-garage-reviews._
+
+### 024-FR-008 — Job names MUST follow the reader's language (the catalogue's Romanian or English name); every label of the section MUST exist in Romanian and English in the public texts.
+
+_From 024-garage-reviews._
+
+### 024-FR-010 — With more than one page, the section MUST show "Vezi mai multe" / "See more", which appends the next page below the loaded ones; the button disappears after the last page; the button is disabled while a page loads.
+
+_From 024-garage-reviews._
+
+### 024-FR-016 — The system MUST expose `GET /api/v1/reviews/garage/{garageId}?page=` to anyone, signed in or not (a public route joining the public-routes list), answering the garage's stored `rating` (null when none) and `reviewCount`, a `breakdown` of five counts from five stars to one over its `published` reviews, and the page of its `published` reviews newest first (posted date, then id), 20 a page, with `page`, `pageSize` 20 and `total`.
+
+_From 024-garage-reviews._
+
+### 024-FR-017 — Each item MUST carry the review's id, `source`, rating, text (null when none), posted date, the author's short name as FR-007 and, for a job review, the car (brand, model) with the accepted quote's job names in both languages; a profile review carries `car` null and `jobs` `[]`. The quote range, the final price, the driver's amount and the edited date are ST-1367's.
+
+_From 024-garage-reviews._
+
+### 024-FR-018 — The read MUST answer 404 `not_found` with one body when the garage does not exist or is not `approved`; `page` below 1 or not an integer MUST answer 400 `validation_failed`; a missing `page` is page 1; a `page` past the last answers 200 with an empty `items` and the real `total`.
+
+_From 024-garage-reviews._
+
+### 024-FR-019 — The read MUST never expose the author's plate, phone, e-mail or account id, the mechanic, nor any review that is not `published`, and MUST compute the breakdown over `published` reviews only; a review in `reported`, `removed` or `deleted_by_author` counts in nothing (X24a) and returns to the list and the maths when an admin's keep sets it `published` again.
+
+_From 024-garage-reviews._
+
+### 024-FR-020 — The read performs no write, emits no event and records no audit history.
+
+_From 024-garage-reviews._
+
+### 024-FR-022 — The read MUST ship with its request metrics by route template, its logs, a dashboard panel and an alert (its 5xx rate, as the other API operations' alerts), each listed in `infra/observability/inventory.json`; metric labels carry no id.
+
+_From 024-garage-reviews._
+
+### 024-FR-023 — Tests MUST be written first: Jest on real PostgreSQL for the read (the breakdown's counts and sum, the stored figures, the page order and size, 404 cases, 400 page, the past-last page, hidden statuses excluded from the list and the breakdown, the profile-source item with `car` null and `jobs` `[]`, the deleted author); Jest component tests for the section (the summary and the empty state in both languages, name formatting, the month, paging, skeleton and error states, the re-read on a live message); Playwright end to end: a visitor opens a profile and sees the breakdown and a review, and a second browser posts a review that the first sees appear without a reload. Every test file names its requirements in a `// @traces` line.
+
+_From 024-garage-reviews._
+
 ## Retired
 
 - `022-FR-012` — superseded by `023-FR-015` (2026-10-21)
@@ -275,3 +321,4 @@ _From 182-review-rules._
 - `022-FR-022` — superseded by `023-FR-009` (2026-10-21)
 - `022-FR-026` — superseded by `023-FR-002` (2026-10-21)
 - `022-FR-016` — superseded by `025-FR-001` (2026-10-23)
+- `129-FR-010` — superseded by `024-FR-007` (2026-10-24)

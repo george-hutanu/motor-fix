@@ -4,6 +4,7 @@ import {
   isSurveySection,
   type ListingDraftData,
   type ListingSubmittedDto,
+  MECHANIC_CARD_NAME_MAX,
   stripCui,
   submitTimeoutMs,
   surveyComplete,
@@ -19,9 +20,10 @@ import {
 import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
 import { AccountsService } from '../../../auth/accounts.service';
 import { hashToken } from '../../../auth/email-confirmation/email-confirmation';
+import { refusal } from '../../../auth/http-refusal';
 import type { Actor } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
-import { refusal, taken } from '../../../auth/sign-up.service';
+import { taken } from '../../../auth/sign-up.service';
 import { localDay } from '../../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type {
@@ -303,6 +305,45 @@ export class ListingSubmitService {
     return this.fill(tx, owner, garageId, data, extras);
   }
 
+  // The owner's own mechanic row, made with the garage once its
+  // hours are written: the owner's name, off the profile, every right. An
+  // account already on another garage's team keeps that card and gets none,
+  // as the migration's backfill skips it.
+  private async ownerRow(
+    tx: Prisma.TransactionClient,
+    garageId: string,
+    accountId: string,
+  ) {
+    if (await tx.mechanic.findUnique({ where: { accountId } })) return;
+    const [account, garage] = await Promise.all([
+      tx.account.findUniqueOrThrow({ where: { id: accountId } }),
+      tx.garage.findUniqueOrThrow({ where: { id: garageId } }),
+    ]);
+    const name = account.name.trim().slice(0, MECHANIC_CARD_NAME_MAX);
+    const row = await tx.mechanic.create({
+      data: {
+        accountId,
+        canAnswerQuotes: true,
+        canMoveBookings: true,
+        canRecordFinalPrice: true,
+        garageId,
+        isOwner: true,
+        name,
+        onProfile: false,
+        workingHours: garage.hours as Prisma.InputJsonValue,
+      },
+    });
+    await this.audit.record(tx, {
+      action: 'create',
+      actorId: accountId,
+      actorRole: 'garage',
+      garageId,
+      newValue: { accountId, isOwner: true, name },
+      subjectId: row.id,
+      subjectType: 'mechanic',
+    });
+  }
+
   // The new garage's rows, written as its owner.
   private async fill(
     tx: Prisma.TransactionClient,
@@ -345,6 +386,7 @@ export class ListingSubmitService {
     ]);
 
     await this.writeSteps(tx, garageId, accountId, data, sizes);
+    await this.ownerRow(tx, garageId, accountId);
 
     const file = await this.verification.submit(
       tx,

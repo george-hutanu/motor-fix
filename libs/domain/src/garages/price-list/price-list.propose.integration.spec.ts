@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -9,7 +10,6 @@ import request from 'supertest';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { audienceOf } from '../../events/audience';
 import { NotificationsModule } from '../../notifications/notifications.module';
@@ -469,7 +469,7 @@ describe('what the proposal leaves alone', () => {
     expect(
       await prisma.garage.findUniqueOrThrow({ where: { id: w.nord.id } }),
     ).toMatchObject({ status: 'approved' });
-    expect(await redis.exists(`v4:profile:${w.nord.slug}:-`)).toBe(0);
+    expect(await redis.exists(`v5:profile:${w.nord.slug}:-`)).toBe(0);
   });
 });
 

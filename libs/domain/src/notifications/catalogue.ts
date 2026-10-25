@@ -67,7 +67,7 @@ const ENTRIES: Record<string, Entry> = {
   CAR_TRANSFER_ACCEPTED: ['event', EPW, 'reviews_history'],
   CAR_TRANSFER_LINK: ['event', ['whatsapp'], null, 'transactional'],
   CATALOGUE_JOB_DECIDED: ['event', EPW, null],
-  DATA_EXPORT_READY: ['event', ['email'], null, 'transactional'],
+  DATA_EXPORT_READY: ['direct', ['email'], null, 'transactional'],
   // The whole sheet is sent again after a change, so it is never grouped.
   DAY_SHEET: ['timer', ['whatsapp'], null, 'single'],
   DAY_SHEET_NOT_SENT: ['event', ['email'], null],
@@ -122,6 +122,8 @@ const ENTRIES: Record<string, Entry> = {
   SIGN_IN_CODE: ['direct', ['whatsapp'], null, 'transactional'],
   STAFF_INVITE: ['event', ['email', 'whatsapp'], null, 'transactional'],
   STAFF_JOINED: ['event', EPW, null],
+  // Never muted and never on WhatsApp, as an invite is not.
+  STAFF_REMOVED: ['event', ['email', 'push'], null, 'transactional'],
   SUPPORT_ACKNOWLEDGEMENT: ['event', ['email'], null, 'transactional'],
   SUPPORT_MESSAGE: ['direct', ['email'], null, 'transactional'],
   TEST_MESSAGE: ['direct', ['email', 'push'], null, 'transactional'],

@@ -39,6 +39,8 @@ async function open(
 ) {
   let token = options.token ?? null;
   const session = {
+    deletingAccount: () => false,
+    epoch: () => 0,
     renew: jest.fn(async () => false),
     token: () => token,
   };

@@ -77,12 +77,54 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+/* The share button beside the name; on a phone it drops under the name
+   rather than squeezing it. */
+.name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-3) var(--mf-space-4);
+}
+
+.name-row h1 {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.name-row mf-share-button {
+  flex: none;
+  max-width: 100%;
+}
+
+@media (max-width: 29.99rem) {
+  .name-row h1 {
+    flex-basis: 100%;
+  }
+}
+
 .place,
 .description,
 .verified,
 .rate {
   margin: 0;
   color: var(--mf-text-secondary);
+}
+
+.place-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2) var(--mf-space-6);
+  align-items: center;
+}
+
+.status {
+  display: inline-flex;
+  gap: var(--mf-space-1);
+  align-items: center;
+}
+
+.status svg {
+  flex: none;
 }
 
 .description {

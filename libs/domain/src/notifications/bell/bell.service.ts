@@ -3,6 +3,7 @@ import type {
   NotificationListQueryDto,
   NotificationPageDto,
 } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import {
   HttpException,
   HttpStatus,
@@ -13,7 +14,6 @@ import {
 } from '@nestjs/common';
 
 import { bellLink } from './bell.link';
-import type { Role } from '../../auth/capabilities';
 import { publishLive } from '../../events/live/live.hub';
 import type {
   Notification,
@@ -164,29 +164,20 @@ interface Left {
   unreadCount: number;
 }
 
-// Takes `read` off the stored count, never below zero: a row written while
-// these were read keeps its place in the count. The time is taken after the
-// account's row is locked, so the bell can order counts that cross in Redis.
+// Takes `read` off the stored count, never below zero, in one locked
+// statement: a row written while these were read keeps its place in the
+// count. The time is taken with the account's row locked, so the bell can
+// order counts that cross in Redis.
 async function lower(
   tx: Prisma.TransactionClient,
   accountId: string,
   read: number,
 ): Promise<Left> {
-  const { count } = await tx.account.updateMany({
-    data: { unreadCount: { decrement: read } },
-    where: { id: accountId, unreadCount: { gte: read } },
-  });
-  if (!count) {
-    await tx.account.updateMany({
-      data: { unreadCount: 0 },
-      where: { id: accountId },
-    });
-  }
-  const account = await tx.account.findUnique({
-    select: { unreadCount: true },
-    where: { id: accountId },
-  });
-  return { at: new Date(), unreadCount: account?.unreadCount ?? 0 };
+  const [account] = await tx.$queryRaw<{ unread_count: number }[]>`
+    UPDATE account SET unread_count = GREATEST(unread_count - ${read}, 0)
+    WHERE id = ${accountId}::uuid
+    RETURNING unread_count`;
+  return { at: new Date(), unreadCount: account?.unread_count ?? 0 };
 }
 
 // The same kinds also reach garage staff, so a row read from any other

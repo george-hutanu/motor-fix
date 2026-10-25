@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
 import {
   HttpException,
   HttpStatus,
@@ -13,7 +14,7 @@ import {
 import { signAccessToken } from './access-token';
 import { AUTH_OPTIONS, type AuthOptions } from './actor.guard';
 import { Attempts, maskCaller } from './attempts';
-import type { Role } from './capabilities';
+import { type Forwarding, forwardingFields } from './forwarding';
 import { MAINTENANCE, type Maintenance } from './maintenance';
 import { DECOY_HASH, verifyPassword } from './password/password';
 import { roleInUse } from './policy';
@@ -95,12 +96,17 @@ export class SignInService {
   async signIn(
     input: { email: string; password: string; remember?: boolean },
     address: string,
+    // How the request came, for the refusal line only: the facts trust proxy
+    // rests on, masked.
+    forwarding: Forwarding,
   ): Promise<Issued> {
     const email = input.email.trim().toLowerCase();
-    if (await this.attempts.blocked(email, address)) {
+    const refused = (reason: string) =>
       this.logger.warn(
-        `sign-in refused: too_many_attempts caller=${maskCaller(address)}`,
+        `sign-in refused: ${reason} caller=${maskCaller(address)} ${forwardingFields(forwarding)}`,
       );
+    if (await this.attempts.blocked(email, address)) {
+      refused('too_many_attempts');
       throw refusal(
         HttpStatus.TOO_MANY_REQUESTS,
         'too_many_attempts',
@@ -110,9 +116,7 @@ export class SignInService {
     const found = await this.credentials(email, input.password);
     if (!found) {
       await this.attempts.fail(email, address);
-      this.logger.warn(
-        `sign-in refused: invalid_credentials caller=${maskCaller(address)}`,
-      );
+      refused('invalid_credentials');
       throw invalidCredentials();
     }
     const { account, role } = found;

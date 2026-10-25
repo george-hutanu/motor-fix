@@ -15,6 +15,8 @@ import { GarageFeaturesController } from './features/features.controller';
 import { GarageFeaturesService } from './features/features.service';
 import { GarageBrandsController } from './garage-brands/garage-brands.controller';
 import { GarageBrandsService } from './garage-brands/garage-brands.service';
+import { GarageProfileController } from './garage-profile/garage-profile.controller';
+import { GarageProfileService } from './garage-profile/garage-profile.service';
 import { GarageSettingsController } from './garage-settings/garage-settings.controller';
 import { GarageSettingsService } from './garage-settings/garage-settings.service';
 import { ListingDraftsController } from './listing-drafts/listing-drafts.controller';
@@ -22,6 +24,8 @@ import { ListingDraftsService } from './listing-drafts/listing-drafts.service';
 import { ListingDraftThrottle } from './listing-drafts/listing-drafts.throttle';
 import { GarageMechanicsService } from './mechanics/garage-mechanics.service';
 import { GarageMechanicsController } from './mechanics/mechanics.controller';
+import { GarageMembersController } from './members/members.controller';
+import { GarageMembersService } from './members/members.service';
 import { GaragePlaceService } from './place/garage-place.service';
 import { CatalogueJobsController } from './price-list/catalogue-jobs.controller';
 import { GarageLabourController } from './price-list/labour/labour.controller';
@@ -59,6 +63,7 @@ import {
   VERIFICATION_CONFIG,
   type VerificationConfig,
 } from './verification/verification-config';
+import { PresenceService } from './verification/verification-file/presence/presence.service';
 import { VerificationFileController } from './verification/verification-file/verification-file.controller';
 import { VerificationFileService } from './verification/verification-file/verification-file.service';
 import { VerificationStatusController } from './verification/verification-status/verification-status.controller';
@@ -90,9 +95,11 @@ export class GaragesModule {
         DocumentReviewController,
         GarageBrandsController,
         GarageInvitesController,
+        GarageProfileController,
         GarageReportsController,
         GarageFeaturesController,
         GarageMechanicsController,
+        GarageMembersController,
         ImagesController,
         GarageSettingsController,
         InvitesController,
@@ -127,8 +134,10 @@ export class GaragesModule {
         GarageBrandsService,
         GarageDetailsService,
         GarageMechanicsService,
+        GarageMembersService,
         GaragePlaceService,
         GaragePricesService,
+        GarageProfileService,
         GarageReportsService,
         {
           provide: GARAGE_REPORTS_OPTIONS,
@@ -154,6 +163,7 @@ export class GaragesModule {
         VerificationService,
         VerificationChecksService,
         VerificationFileService,
+        PresenceService,
         { provide: VERIFICATION_CONFIG, useValue: verification },
         ...(observabilityUrl
           ? [{ provide: OBSERVABILITY_URL, useValue: observabilityUrl }]

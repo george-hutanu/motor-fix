@@ -261,9 +261,7 @@ describe('the deploy script as a process, with the staging seed password', () =>
       value: PASSWORD,
     });
     expect(upserts()).toHaveLength(1);
-    expect(apiPreDeploy()?.join(' ')).toContain(
-      'SEED_ONLY=1 sh scripts/reset-staging.sh',
-    );
+    expect(apiPreDeploy()).toEqual(['sh scripts/api-pre-deploy.sh staging']);
     expect(out).not.toContain(PASSWORD);
   }, 15_000);
 
@@ -318,9 +316,7 @@ describe('the deploy script as a process, with the staging seed password', () =>
     expect(code).toBe(0);
     expect(upserts()).toEqual([]);
     expect(JSON.stringify(calls)).not.toContain(PASSWORD);
-    expect(apiPreDeploy()).toEqual([
-      'npx prisma migrate deploy && node scripts/monitor-password.ts',
-    ]);
+    expect(apiPreDeploy()).toEqual(['sh scripts/api-pre-deploy.sh production']);
     expect(out).not.toContain(PASSWORD);
   }, 15_000);
 });

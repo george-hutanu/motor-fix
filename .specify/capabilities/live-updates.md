@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 253-live-connection
   - 254-live-audience
@@ -26,6 +26,11 @@ features:
   - 025-review-mechanic
   - 067-restore-suspended-garage
   - 532-lost-session-home
+  - 588-live-changed-gone
+  - 587-live-list-e2e
+  - 413-verification-file-presence
+  - 102-garage-members
+  - 1193-fast-nav
 ---
 
 # Capability: Live updates
@@ -102,9 +107,9 @@ _From 419-live-garage-updates._
 
 _From 254-live-audience._
 
-### 398-FR-008 — Whether an event kind reaches a garage-staff stream that met it only on `garage:{garageId}` MUST be derived from the connection role's capabilities through one table of kind families: `price_list.*` → `garage.prices`; `member.*`, `mechanic.*`, `invite.*` → `garage.team`; `garage.settings_changed` → `garage.feature_switches`; `garage.updated` → `garage.profile`; `review.*` → `garage.reviews`; `request.*`, `message.*` → `garage.requests`; `booking.move*` → `garage.schedule`. For an owner or a receptionist still that garage's staff in that role, a kind in a mapped family MUST reach the stream only when the role holds its capability, and a kind in no family MUST reach it. For a mechanic, a kind MUST reach the stream through the garage channel only when it is in a mapped family whose capability the mechanic holds through their permissions (`can_answer_quotes` → `request.*`, `message.*`; `can_move_bookings` → every kind starting `booking.move`), and a kind in no family MUST NOT; the mechanic's own channel, the staff-membership check and the feature-switch rules are unchanged. The one exception, and the hub's only other list of kinds: `garage.features_changed` is in no family and MUST reach every staff stream of the garage, the owner, a receptionist and a mechanic alike, after the membership check; the hub's cached access for the garage is still dropped on it (254-FR-006). (Restates 574-FR-001, 574-FR-002 and 574-FR-003 with that exception.)
+### 102-FR-010 — The live filter of `garage:{garageId}` MUST keep deriving from the shared table (398-FR-008): owner and receptionist receive every garage event their row allows, a mechanic receives their own bookings and jobs (the `mechanic:` channel) plus the inbox kinds only with `can_answer_quotes`, everyone receives `garage.features_changed` and `mechanic.updated` about themselves, and `invite.*` and `member.removed` reach the owner only. The `booking.move*` family MUST map to `garage.move_bookings`. A test MUST show a mechanic receiving nothing about another mechanic's booking and an owner receiving it.
 
-_From 398-garage-feature-switches._
+_From 102-garage-members._
 
 ### 254-FR-004 — A garage-staff connection MUST receive through `garage:{garageId}` or `mechanic:{mechanicId}` only while its account is still that garage's staff in the role of the connection (owner or receptionist membership, or the mechanic record).
 
@@ -190,17 +195,17 @@ _From 256-live-in-place._
 
 _From 256-live-in-place._
 
-### 256-FR-004 — A re-read that answers 404 marks a single-object view `gone`, and the view keeps its last value. A drawer that shows it says "Nu mai este disponibil" / "No longer available" and stays open.
+### 588-FR-006 — When the request drawer has shown a request and a re-read answers 404, it MUST keep the request's detail on screen and show the text `shell.live.gone` as its banner (the place the close-reason banner takes), with Trimite oferta and Refuză disabled; it MUST NOT close, empty or replace what it showed. The gone banner replaces any close-reason banner (one banner) and is announced like it (the existing banner's `role="status"`).
 
-_From 256-live-in-place._
+_From 588-live-changed-gone._
 
 ### 256-FR-005 — A live update never reloads the page, changes the route, closes a dialog, drawer or sheet, or moves focus.
 
 _From 256-live-in-place._
 
-### 256-FR-006 — A form edits a local copy taken when it opens. A re-read never writes into it. While the shown object differs from that copy's source, `changed()` holds the new object, a line "S-a schimbat între timp: <value>" shows, and accepting it makes the new object the source.
+### 588-FR-004 — The line MUST go when the row's range on the list equals the range the form was last filled from again. The 409 re-read that refills the form makes the re-read range the one the form was filled from, so the line goes once the list shows it; while the list still shows a row older than that re-read (by `updatedAt`), no line names that older range.
 
-_From 256-live-in-place._
+_From 588-live-changed-gone._
 
 ### 256-FR-007 — While a list is not at its top, new rows that sort before the rows shown are held back and counted. A pill "{count} actualizare nouă / actualizări noi / de actualizări noi" (EN "{count} new update / updates") shows at the top. Tapping it shows the held rows and scrolls up to the first. At the top, new rows show at once.
 
@@ -322,9 +327,9 @@ _From 419-live-garage-updates._
 
 _From 419-live-garage-updates._
 
-### 419-FR-008 — The web app MUST offer a public live connection: one stream per browser tab, opened only in the browser (never during server rendering) and only while at least one public live view is open, its `garages`, `mechanics` and `brand` taken from the open views, and closed when the last of them is destroyed. Its named garage, mechanic and brand are those of the most recently opened view naming each; when that set changes it MUST re-open the stream once (changes in one tick coalesced), and the re-open counts as a stream opening again. It MUST expose the signed-in connection's states except `polling` (`closed`, `reconnecting`, `open`; it stays `reconnecting` where the signed-in connection would poll), try again on the same backoff after a failure or a drop (255-FR-002), treat 60 silent seconds as a drop and re-open after a long-hidden tab wakes (255-FR-005), and MUST NOT renew a token, poll the API, show an offline bar or raise an error: a public page that cannot reach the stream stays as loaded.
+### 1193-FR-001 — The public pages' live stream (`apps/web/src/app/public/live.ts`) MUST abort its stream on `pagehide`, leaving the page with no open request, and MUST want it again on `pageshow`, reopening from its current query; the reopen MUST trigger the views' re-read (the existing resync), so a page restored from the back/forward cache shows fresh data. The dashboard stream's existing behaviour (1190-FR-009) is unchanged. Modifies 419-FR-008 (`pagehide` joins the closes and `pageshow` the reopens of the public connection).
 
-_From 419-live-garage-updates._
+_From 1193-fast-nav._
 
 ### 419-FR-009 — The web app MUST offer a public live view helper, built on the in-place helper of 256-FR-001 to 256-FR-004: it loads its data through the API, re-reads once when the stream first opens (to cover a page served from a cache) and whenever a stream opens again after a drop, re-reads when an event of its kinds about its object arrives, coalesces events within 300 ms into one re-read, runs one read at a time, merges by structural sharing, keeps its last value and shows no error on a failed re-read and arms no retry timer (256-FR-003 without its 60-second retry: the next event or reopen re-reads), and marks the view `gone` on 404 or 410.
 
@@ -393,9 +398,9 @@ _From 1190-live-reconnects._
 
 _From 1190-live-reconnects._
 
-### 1190-FR-008 — Every tab MUST keep the latest position it has seen (its own or fanned out), and every stream the client opens after a first one MUST name it (`Last-Event-ID`); a `reconnect` message MUST be followed by a reopen at once, with no backoff and no token renewal, and every reconnect keeps re-reading the open views (255-FR-004 unchanged: replay covers the bell, not the screens).
+### 1190-FR-008 — Every tab MUST keep the latest position it has seen (its own or fanned out), and every stream the client opens after a first one MUST name it (`Last-Event-ID`); a `reconnect` message MUST be followed by a reopen at once, with no backoff and no token renewal, at most once a minute per connection (a second `reconnect` within a minute of the last reopen at once waits the backoff a failure would), and every reconnect keeps re-reading the open views (255-FR-004 unchanged: replay covers the bell, not the screens).
 
-_From 1190-live-reconnects._
+_From 1190-live-reconnects; modified by 1190-reopen-cap._
 
 ### 1190-FR-009 — On `pagehide` the tab MUST close its stream (releasing the browser's lock when it holds it) and keep no open request, so the page is eligible for the back/forward cache; on `pageshow` it MUST want the stream again, taking the lock if free, from its latest position.
 
@@ -413,9 +418,9 @@ _From 1190-live-reconnects._
 
 _From 1190-live-reconnects._
 
-### 1190-FR-015 — Tests MUST cover: in Jest on real PostgreSQL and Redis, a stream dropped, five notifications created, a reconnect with the last position receiving all five in order with the right count, a foreign and a missing position replaying nothing, the 200 cap, the count kept across create, read and read-all in one transaction, the `retry` line, the heartbeat and the planned `reconnect` close with a shortened interval, and the headers and no-compression rule for both streams; in web unit tests, the lock holder and follower roles, the position kept and sent, the reopen on `reconnect` without backoff, `pagehide`/`pageshow`, and the fallback without the primitives; in Playwright, two tabs of one browser holding one stream and both showing a test update within 2 seconds, and the stream moving when the holder closes.
+### 1190-FR-015 — Tests MUST cover: in Jest on real PostgreSQL and Redis, a stream dropped, five notifications created, a reconnect with the last position receiving all five in order with the right count, a foreign and a missing position replaying nothing, the 200 cap, the count kept across create, read and read-all in one transaction, the `retry` line, the heartbeat and the planned `reconnect` close with a shortened interval, and the headers and no-compression rule for both streams; in web unit tests, the lock holder and follower roles, the position kept and sent, the reopen on `reconnect` without backoff and the backoff on a second `reconnect` within a minute, `pagehide`/`pageshow`, and the fallback without the primitives; in Playwright, two tabs of one browser holding one stream and both showing a test update within 2 seconds, and the stream moving when the holder closes.
 
-_From 1190-live-reconnects._
+_From 1190-live-reconnects; modified by 1190-reopen-cap._
 
 ### 532-FR-004 — After a lapse, a sign-in as the same account MUST send the kept actions in order; a sign-in as another account MUST NOT send them and drops them.
 
@@ -428,6 +433,53 @@ _From 532-lost-session-home._
 ### 532-FR-005 — Each send of the waiting queue MUST be bounded at 30 seconds; a send that has no answer by then is treated as a send with no answer under 255-FR-009: the action is kept first in line as `waiting`, the request is aborted, and the line stops until the next sending moment (60 s after the attempt ends, an `online` event, a live stream opening).
 
 _From 532-lost-session-home._
+
+### 588-FR-001 — While the price range editor is open on a job's own row, it MUST see that row as the live price list currently shows it (a `shown` signal of that row, required on the kind `row` data and handed over by the list), so a re-read of the list reaches the open editor; it sees no other row and opens no live read of its own.
+
+_From 588-live-changed-gone._
+
+### 588-FR-002 — When the row's range (both ends and the duration) on the live list differs from the range the form was last filled from, the editor MUST show the text `shell.live.changed` under the range fields, driven by `liveDraft(…).changed()` over the shown range compared by range, its value being the new range written as the Prețuri list writes it (`formatWholeLeiRange`; an open top as `garage.prices.from`), followed by " · " and the new duration as `formatDuration` writes it when the row has one. The line is `role="status"` and is announced once.
+
+_From 588-live-changed-gone._
+
+### 588-FR-003 — The line MUST NOT write into any field: what the person typed, and what the form was filled with, stay as they are until the person changes them or the existing 409 re-read refills the form.
+
+_From 588-live-changed-gone._
+
+### 588-FR-005 — A re-read that changes only other fields of the row (visibility, state, brand ranges) or other rows MUST show no line; the editor open for a brand range, the labour rate, a new job or a proposal shows no line and is otherwise unchanged.
+
+_From 588-live-changed-gone._
+
+### 588-FR-007 — When the drawer's very first read answers 404 (nothing shown yet), it MUST keep today's `garage.requests.detail.notFound` refusal.
+
+_From 588-live-changed-gone._
+
+### 588-FR-008 — When a later re-read answers the request again, the gone banner MUST go and the drawer MUST behave as before it.
+
+_From 588-live-changed-gone._
+
+### 588-FR-009 — Unit specs MUST cover FR-002 to FR-008 in Romanian and in English, asserting the rendered texts, and MUST prove that each of `shell.live.changed` and `shell.live.gone` is rendered by at least one screen.
+
+_From 588-live-changed-gone._
+### 587-FR-001 — The live end-to-end suite MUST include a check in which a signed-in garage owner has the garage's quote requests list (a live list that already uses `liveRows`, `LivePill` and `LiveAnchor`) open at a phone-size viewport, scrolled so the top of the list is off screen, and a driver creates a request for that garage from another context; the check MUST assert that the pill is inside the viewport within 5 seconds of the request's 201 with a count of at least 1, and that no pill showed before that request.
+
+_From 587-live-list-e2e._
+
+### 587-FR-002 — Across that arrival, the check MUST assert that the first row that was on screen before the request keeps its on-screen position within 1 px, and that the new request's row is absent from the list (no element with its `data-live-id`) until the pill is clicked.
+
+_From 587-live-list-e2e._
+
+### 587-FR-003 — The check MUST click the pill and assert that the new request's row is then in the list and inside the viewport.
+
+_From 587-live-list-e2e._
+
+### 587-FR-004 — No product change MUST be needed for the check to pass (a product bug it exposes is fixed in this pull request with its own test); the existing live checks (two dashboards, confirm dialog, typed text, the garage's requests arriving live) stay as they are; the check creates the rows it needs, waits on visible elements and polled conditions only, and tolerates rows added to the same garage by other workers.
+
+_From 587-live-list-e2e._
+
+### 413-FR-007 — When an admin's entry is created or removed by a call, the system MUST publish a `presence.changed` message with the file's id straight to the live stream, to the `admin` audience, through the existing direct publish (not the outbox); a heartbeat that only renews an entry and an expiry publish nothing. `presence.changed` stays out of the shared list of event kinds (`EVENT_KINDS` holds the outbox kinds; its header already names presence among the kinds published straight to the store), as `session.revoked` and `notification.created` do; the drawer reads it from the stream's messages by kind and file id (plan, research R3).
+
+_From 413-verification-file-presence._
 
 ## Retired
 
@@ -449,3 +501,7 @@ _From 532-lost-session-home._
 - `257-FR-006` — superseded by `025-FR-009` (2026-10-23)
 - `254-FR-001` — superseded by `025-FR-009` (2026-10-23)
 - `049-FR-007` — superseded by `067-FR-007` (2026-10-23)
+- `256-FR-006` — superseded by `588-FR-004` (2026-10-24)
+- `256-FR-004` — superseded by `588-FR-006` (2026-10-24)
+- `398-FR-008` — superseded by `102-FR-010` (2026-10-25)
+- `419-FR-008` — superseded by `1193-FR-001` (2026-10-25)

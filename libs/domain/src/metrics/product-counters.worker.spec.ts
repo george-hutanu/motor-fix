@@ -2,8 +2,9 @@ import { startTelemetry } from '@motor-fix/observability';
 import { inMemory } from '@motor-fix/observability/testing';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
-import { initProductCounters } from './product-counters';
+import { countRetention, initProductCounters } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
+import { RETENTION_KINDS } from '../retention/retention.config';
 
 const memory = inMemory();
 const started = startTelemetry(
@@ -47,9 +48,9 @@ describe("the worker's product counters at start", () => {
     expect(named(all, 'motorfix_emails_sent_total')).toHaveLength(
       emails.length,
     );
-    // Its own 39, one per e-mailed template, and one per support e-mail kind
+    // Its own 56, one per e-mailed template, and one per support e-mail kind
     // and outcome.
-    expect(all).toHaveLength(emails.length + 39 + SUPPORT_EMAILS.length);
+    expect(all).toHaveLength(emails.length + 56 + SUPPORT_EMAILS.length);
     // @traces 067-FR-013
     expect(
       named(all, 'motorfix_garage_restored_notices_total').map(
@@ -92,6 +93,24 @@ describe("the worker's product counters at start", () => {
     // Each instance stays under 150 series.
     expect(all.length).toBeLessThan(150);
     expect(named(all, 'motorfix_sign_ins_total')).toEqual([]);
+    // @traces 142-FR-008
+    expect(
+      named(all, 'motorfix_notification_channel_fallbacks_total').map((one) => [
+        one.labels['from'],
+        one.labels['to'],
+        one.labels['reason'],
+      ]),
+    ).toEqual([
+      ['sms', 'whatsapp', 'sms_cap_reached'],
+      ['sms', 'whatsapp', 'send_failed'],
+      ['sms', 'email', 'phone_not_verified'],
+      ['sms', 'email', 'send_failed'],
+      ['whatsapp', 'email', 'phone_not_verified'],
+      ['whatsapp', 'email', 'send_failed'],
+      ['push', 'email', 'no_device'],
+      ['push', 'email', 'send_failed'],
+      ['email', 'push', 'send_failed'],
+    ]);
   });
 
   it('holds the verification results and every closed decline window at 0', async () => {
@@ -112,6 +131,27 @@ describe("the worker's product counters at start", () => {
     }
     expect([...sweeps.values()].map((both) => both.sort())).toEqual(
       Array.from({ length: 5 }, () => ['false', 'true']),
+    );
+  });
+});
+
+// @traces 1156-FR-010
+describe('the retention counter', () => {
+  it('starts every kind at 0 and adds what a run removed or anonymised', async () => {
+    initProductCounters('worker');
+    const rows = async () =>
+      named(await series(), 'motorfix_retention_rows_total').map((one) => [
+        one.labels['kind'],
+        one.value,
+      ]);
+    expect(await rows()).toEqual(RETENTION_KINDS.map((kind) => [kind, 0]));
+
+    countRetention('notification', 3);
+    countRetention('notification', 2);
+    countRetention('audit_entry', 0);
+
+    expect(await rows()).toEqual(
+      RETENTION_KINDS.map((kind) => [kind, kind === 'notification' ? 5 : 0]),
     );
   });
 });

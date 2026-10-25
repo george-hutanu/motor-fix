@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 079-account-model
   - 082-sign-in
@@ -44,8 +44,16 @@ features:
   - 292-saved-garage-quote
   - 532-lost-session-home
   - 500-req-ip-behind-proxy
+  - 140-account-delete-export
   - 500-trust-railway-edge
+  - 105-brand-list-admin
   - 1370-release-seed-no-ssh
+  - 1372-seed-restores-accounts
+  - 947-faro-consent-journeys
+  - 003-admin-account-actions
+  - 1373-seed-status-identity
+  - 1156-retention-job
+  - 102-garage-members
 ---
 
 # Capability: Accounts
@@ -90,9 +98,9 @@ _From 079-account-model._
 
 _From 079-account-model._
 
-### 079-FR-010 — The capabilities of each role MUST be one table on the server, with a test for every "may not" (every role × capability not granted). It holds the capabilities this epic's frames and scenarios name, read from the Security page's "Capabilities by role": driver — `driver.requests`, `driver.cars`, `driver.reviews`, `driver.saved_garages`, `driver.settings`; garage side — `garage.requests` (owner, receptionist; mechanic with `can_answer_quotes`), `garage.schedule` (owner, receptionist; mechanic with `can_move_bookings`), `garage.final_price` (owner, receptionist; mechanic with `can_record_final_price`), `garage.own_jobs` (owner, receptionist, mechanic), `garage.reviews`, `garage.team`, `garage.prices`, `garage.profile`, `garage.feature_switches` (owner only); admin — `admin.garages`, `admin.users`, `admin.reviews`, `admin.catalogue`, `admin.settings`. Later epics add rows. The web app gets the actor's capabilities through "who am I", never a copy of the table.
+### 102-FR-002 — The rows MUST be: owner (role `garage`) every `garage.*` capability; receptionist `garage.requests`, `garage.schedule`, `garage.move_bookings`, `garage.final_price`, `garage.own_jobs`, `garage.reviews`, `garage.profile`, `garage.audit_history`; mechanic `garage.own_jobs`, `garage.schedule`, `garage.audit_history`, plus `garage.requests` with `can_answer_quotes`, `garage.move_bookings` (new) with `can_move_bookings`, `garage.final_price` with `can_record_final_price`. Admin and driver rows are unchanged. A test MUST cover every role × capability pair not granted ("may not"), as 079-FR-010 asks, and every permission on and off for the mechanic.
 
-_From 079-account-model._
+_From 102-garage-members._
 
 ### 130-FR-001 — The API MUST check the actor on every route by default; a route MUST be explicitly marked public to be reachable without a session. Without a valid access token a gated route MUST answer 401 `sign_in_required` before its body is validated (modifies 079-FR-011).
 
@@ -102,9 +110,9 @@ _From 130-sign-in-gate._
 
 _From 079-account-model._
 
-### 079-FR-013 — The policy MUST answer 404 when the actor's role lacks the capability or the resource belongs to another account or garage; it MUST be callable from use cases, not only from controllers.
+### 102-FR-007 — `requireCapability` MUST answer 403 `forbidden` when the actor is garage staff of a garage (a `garage`, `receptionist` or `mechanic` role with a `garageId`) and lacks the capability, and 404 when the actor holds no garage or the capability is not a `garage.*` one; `assertGarage` MUST keep answering 404 for another garage (A31/A34, decided 2026-10-16: 403 within one garage's staff, 404 across garages and between drivers). The garage figures' mechanic refusal (`garage-figures.service.ts`) MUST become the same 403. Every existing test asserting 404 for same-garage staff is updated to 403; the feature-off 404 stays.
 
-_From 079-account-model._
+_From 102-garage-members._
 
 ### 079-FR-014 — A mechanic capability that depends on a permission (`can_move_bookings`, `can_answer_quotes`, `can_record_final_price`) MUST be allowed only when that permission is on.
 
@@ -166,9 +174,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 500-FR-005 — Both refused-sign-in warning lines of the SignIn logger (`sign-in refused: invalid_credentials` and `sign-in refused: too_many_attempts`) MUST carry the masked caller as the field `caller`, taken from the request address passed to the sign-in service (the same value the per-address attempt counter receives, read with the counter's own parsing), written as a `caller=<masked>` token at the end of the message text, and MUST never carry the full address, the e-mail or the password. No other sign-in outcome logs an address. (Modifies 082-FR-011: "no address" becomes "no address beyond the caller masked by FR-001–FR-004".)
+### 500-FR-011 — Both refused-sign-in warning lines (`sign-in refused: invalid_credentials` and `sign-in refused: too_many_attempts`) MUST carry, after `caller=<masked>` and in this order, the tokens `hops=<hops>` (FR-012) and `headers=<names>` (FR-013), then `real-ip=<masked>` and `forwarded=<masked>` (FR-014) only when that header is present; the controller always hands the sign-in service the request's headers and socket address, so the tokens are always there (`hops=unknown headers=none` for a request that names neither). No token may carry a full address, the e-mail or the password, and no other sign-in outcome logs an address. (Modifies 500-FR-005: the line gains the forwarding facts beside the caller.)
 
-_From 500-req-ip-behind-proxy._
+_From 500-trust-railway-edge._
 
 ### 393-FR-012 — The sign-in dialog MUST offer, under its main button and a "sau" divider, the button "Continuă cu telefonul" (English "Continue with phone"); tapping it MUST show the phone step inside the same dialog: the field "Număr de telefon" with "+40" filled in (`type=tel`, `autocomplete=tel`), "Ține‑mă autentificat" ticked by default, the main button "Trimite codul", and a link back to e-mail and password. Before sending, the dialog MUST check that the number is a possible phone number and show the problem under the field as 082-FR-014 does (modifies 080-FR-009, which lists the dialog's controls under its main button).
 
@@ -182,9 +190,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 082-FR-016 — The dialog MUST show the message for the answer's code in the person's language — `invalid_credentials`, `too_many_attempts`, `account_suspended`, `maintenance`, offline (no answer while the device reports no connection), and the shared messages for a failed call while online and for any other code — in a region screen readers announce; the typed e-mail MUST stay, and the password MUST be cleared after `invalid_credentials`.
+### 003-FR-008 — Once suspended, the next sign-in by every method (e-mail and password, Google, Apple, phone code) and every refresh MUST be refused as the existing `account_suspended` answers say (082-FR-004, 082-FR-008, 083-FR-006, 393-FR-007); the message shown for `account_suspended` everywhere the web shows it MUST read "Contul tău este suspendat. Scrie‑ne la suport." / "Your account is suspended. Write to support." (Modifies 082-FR-016.)
 
-_From 082-sign-in._
+_From 003-admin-account-actions._
 
 ### 082-FR-017 — After a successful sign-in the dialog MUST close and the role's landing (`/app/driver`, `/app/garage` for garage owner, receptionist and mechanic, `/app/admin`) MUST open, in the account's language.
 
@@ -206,9 +214,9 @@ _From 082-sign-in._
 
 _From 082-sign-in._
 
-### 1370-FR-006 — The seed MUST stay idempotent now that it runs on every staging deploy: a second run on the same database MUST add no row to any table (its only writes are the missing seed accounts, which a seeded database has none of, and the existing removal of the seed accounts' quote requests of the last day) and MUST keep a seeded account's row that a user changed between the runs; an integration spec runs the seed twice and checks the row counts and the changed row.
+### 1372-FR-004 — The seed MUST stay idempotent on every staging deploy: a second run on the same database MUST add no row to any table (the existing removal of the seed accounts' last-day quote requests is the one exception) and MUST change no row, the password hash of every seeded identity included (replaces `1370-FR-006`: a seeded account's password identity, seeded roles and seeded garage link a user changed are restored, not kept); the integration spec MUST run the seed twice and compare the row counts and every seeded account's account, identity, role and link rows.
 
-_From 1370-release-seed-no-ssh._
+_From 1372-seed-restores-accounts._
 
 ### 080-FR-001 — `POST /api/v1/auth/sign-up` MUST take a name, an e-mail, a password and the interface language (`ro` or `en`); it MUST create, through the one `createAccount` use case, an account holding only the role `driver`, a `password` identity with the argon2id hash of the password, that language and the last role `driver`, with its audit entry and `account.created` event in the same transaction.
 
@@ -291,10 +299,6 @@ _From 020-account-language._
 _From 139-edit-my-details._
 
 ### 130-FR-002 — The public list MUST be exactly: `POST /api/v1/auth/sign-in`, `POST /api/v1/auth/sign-up`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/sign-out`, `GET /health/live`, `GET /health/ready` (outside the `/api/v1` prefix), `POST /api/v1/webhooks/brevo`, which checks Brevo's own bearer secret and is left out of the OpenAPI document (it arrived with ST-194; its own integration spec boots the app-wide check), and the two cookie-authenticated routes added since, `POST /api/v1/auth/sign-out-everywhere` (128-FR-001) and `POST /api/v1/auth/roles/switch` (394-FR-001); a test MUST enumerate every route the API serves, call each without a token, and fail when the set of routes not answering 401 `sign_in_required` differs from this list.
-
-_From 130-sign-in-gate._
-
-### 130-FR-003 — The suspended (403 `account_suspended`) and capability (404) answers of the actor check MUST stay as they are for gated routes.
 
 _From 130-sign-in-gate._
 
@@ -646,9 +650,9 @@ _From 030-new-account-empty-states._
 
 _From 244-analytics-news-consent._
 
-### 244-FR-002 — Every page MUST show the consent bar while the browser holds no valid choice: the text, the privacy-notice link and the two equal-weight buttons of User Story 1 scenario 1, in the page's language. The bar MUST NOT block the page: it is a bottom bar in the Cockpit style (light and dark), on a phone a bottom sheet above the tab bar where there is one, the page's content reserving the bar's height so the bar covers no button or link, with buttons at least 44 px high, readable and usable at 320 px with no sideways scroll, reachable by keyboard and announced as a region to assistive technology.
+### 947-FR-004 — The analytics consent text MUST name Grafana Faro beside Plausible and say that, with consent, the visit is followed as one session through the pages visited, in Romanian and English in the app's translation files (the bar's text and the dialog's line; the dialog line's "no cookies and without identifying you" is reworded so it stays true: no cookie, no name, a random session id on this device only). `ANALYTICS_CONSENT_VERSION` MUST become `2026-10-24`, so a choice stored under `2026-10-10` is no longer valid: the bar shows again and no session id is sent until the visitor accepts the new text (244-FR-005 as written).
 
-_From 244-analytics-news-consent._
+_From 947-faro-consent-journeys._
 
 ### 244-FR-003 — Pressing "Accept" MUST store the choice `granted` in the browser (decision, text version, time, browser id) under the one key `mf_consent`, hide the bar, load the analytics script on that page and every page after, and send one record to the server. Pressing "Refuz" MUST do the same with `refused` and MUST NOT load the script.
 
@@ -658,17 +662,9 @@ _From 244-analytics-news-consent._
 
 _From 244-analytics-news-consent._
 
-### 244-FR-005 — The text version MUST be one constant, `ANALYTICS_CONSENT_VERSION` in the contracts library, raised with each approved text change; a stored choice MUST be valid only when its text version equals the constant and its time is less than 365 days before now ("12 months" everywhere in this spec means 365 days; one constant, `ANALYTICS_CONSENT_MAX_AGE_DAYS`, beside the version). An invalid choice MUST show the bar again, keep analytics off and show the dialog's switch off.
+### 947-FR-003 — When the choice stops being a valid `granted` (the switch saved off, a storage event from another tab, expiry, a version bump), the next event and every one after MUST carry no session id and no journey event, and the session id kept on the device MUST be removed from session storage at that moment, and the live session meta MUST lose its id (so no `x-faro-session-id` header and no `session.id` span attribute follow). Granting again MUST start a new session id, never reuse the old one.
 
-_From 244-analytics-news-consent._
-
-### 244-FR-006 — Every public page's footer and every dashboard's Setări view MUST carry the link "Setări cookie" / "Cookie settings" that opens the dialog of User Story 2 scenario 2. Saving a changed switch MUST store `granted` or `withdrawn` as FR-003 stores a choice; turning it off MUST stop every analytics event at once and keep the script off on the next page. Cancel, or an unchanged switch, MUST store nothing.
-
-_From 244-analytics-news-consent._
-
-### 244-FR-007 — Other open tabs of the same browser MUST apply a saved choice without a reload, through the browser's storage event: hide the bar and start or stop analytics.
-
-_From 244-analytics-news-consent._
+_From 947-faro-consent-journeys._
 
 ### 244-FR-008 — Consent records MUST live in one append-only table, `CONSENT_RECORD`: id, `browser_consent_id` (a random id made once in the browser and kept with the choice), `account_id` (empty for a visitor), `kind` `analytics`, `decision` one of `granted`, `refused`, `withdrawn`, `text_version`, `language`, `at`. Rows MUST only be added, never changed or deleted; an account's choice in force MUST be its row with the latest `at`. Nothing reads records by browser id: the browser's own `mf_consent` is its latest choice.
 
@@ -782,9 +778,9 @@ _From 139-edit-my-details._
 
 _From 243-terms-privacy._
 
-### 243-FR-002 — The privacy notice MUST name the operator and the contact route for data matters (FR-011), and MUST list every kind of personal data MotorFix keeps at launch, each with why it is kept: the account (name, e-mail address, phone number, language, the sign-in methods: e-mail and password, Google, Apple, a phone number with a code sent by WhatsApp); cars (brand, model, year, fuel, odometer, due dates for ITP, RCA and rovinietă, and the number plate, kept private and shown only to the garage working on the car and on its day sheets); quote requests, quotes, bookings, the one message per request, the garage's reply, and up to 3 photos on each; the repair history, repairs logged elsewhere and their invoices, sharing the history with a garage one booking at a time, and passing a car's history to a buyer; reviews (the author shown as a first name and initial, e.g. "Andrei M."), reports and appeals; the audit history of every change, including changes made through an AI assistant later; garage legal documents and verification results; garage staff (mechanics, receptionists) and mechanics' public pages; notifications and the channel chosen for each, and the device label of a push subscription (taken from the browser description); consent records (terms, privacy notice, news, analytics) with the version accepted and when; the account's city, last activity and whether e-mail to it bounced; an unfinished garage listing with its e-mail address. Items not yet built (messages, reviews, appeals, car photos) are worded so they apply when the person uses them.
+### 947-FR-005 — The privacy notice MUST state the new facts in both languages: that Grafana Faro, only after analytics consent, follows the visit as a session with a random id kept on the device and the pages visited, without a name or account; that no session replay is recorded; and that the device keeps that session id among the items it lists. `PRIVACY_VERSION` MUST become `2026-10-24` (a notice change is a new date, 132-FR-001 unchanged).
 
-_From 243-terms-privacy._
+_From 947-faro-consent-journeys._
 
 ### 243-FR-003 — The privacy notice MUST name every provider that processes personal data on MotorFix's behalf, each under a data processing agreement, and what it does: hosting in a European Union region (Railway); e-mail, SMS and WhatsApp messages (Brevo); file storage for photos and documents in an EU region (S3-compatible object storage); push messages through the browser vendor's push service, content end-to-end encrypted; monitoring and error reports from the servers and the browser (Grafana Cloud, EU region); web analytics only with the visitor's consent (Plausible); map tiles loaded by the browser (OpenFreeMap, which sees the visitor's connection address); address search called by MotorFix's server (Geoapify, which never sees the visitor's address); Google and Apple sign-in, as the method the person chooses. It MUST say that personal data is stored in the European Union and that, where a provider or its parent company is outside the EEA, transfers rely on the European Commission's standard contractual clauses or the EU-US Data Privacy Framework.
 
@@ -1071,9 +1067,9 @@ _From 009-copy-voice-analytics._
 
 _From 009-copy-voice-analytics._
 
-### 129-FR-001 — `DELETE /api/v1/auth/account` MUST delete the signed-in account holder's own account, in one transaction: `ACCOUNT.status` → `deleted` by a conditional write that changes the row only while it is `active` (a request that changes no row rolls back and answers 401 `sign_in_required`); name, e-mail, phone, city, `email_verified_at`, `phone_verified_at` and `email_bounced_at` cleared; every ACCOUNT_IDENTITY, REFRESH_TOKEN, PUSH_SUBSCRIPTION, NOTIFICATION_PREFERENCE, ACCOUNT_TOKEN, PHONE_CHANGE, ASSISTANT_GRANT, ASSISTANT_SIGN_IN_CODE and ACCOUNT_ROLE row of the account deleted; then answer 204.
+### 003-FR-012 — `POST /api/v1/admin/accounts/{id}/delete-on-request` with `{ reference, receivedOn, identityChecked }` MUST validate at the edge: `reference` matching `DR-<four-digit year>-<four or more digits>`, `receivedOn` a calendar date not after today (Europe/Bucharest), `identityChecked` exactly `true`; else 400 `validation_failed`. It MUST refuse with 409 `deletion_not_allowed` an account holding an owner membership of any garage, whatever the garage's status (129-FR-004's rule) and with 409 `admin_account` an admin (FR-003). Otherwise it MUST run the deletion use case of ST-129 for an `active` or a `suspended` account (the conditional write admitting both; 129-FR-001's row and field clearing, 129-FR-007's events, 129-FR-008's `session.revoked`, 129-FR-009's team leave, 129-FR-010–FR-012's review, plate and e-mail rules all unchanged) without the self-service checks (no confirmation text, no 15-minute re-sign-in, no assistant refusal), the assistant grants revoked with reason `account_deleted` (FR-015), and write the deletion's audit entry (action `delete`, subject `account`, kind `account_deleted`) with the admin as actor and `text` = `{ reference, receivedOn }`, never the personal values removed. The answer is 204. (Modifies 129-FR-001.)
 
-_From 129-delete-account._
+_From 003-admin-account-actions._
 
 ### 129-FR-002 — The request MUST carry a confirmation: the account's e-mail (case-insensitive) or phone (as normalised at sign-in), or, for an account holding neither, the word `ȘTERGE` or `DELETE`; a mismatch answers 400 `validation_failed` and changes nothing.
 
@@ -1083,9 +1079,9 @@ _From 129-delete-account._
 
 _From 129-delete-account._
 
-### 129-FR-004 — An account holding an owner membership of any garage MUST be refused with 409 `deletion_not_allowed`, whichever role is in use and whatever the garage's status; the checks run in the order 403 `forbidden` (FR-005), 409 `deletion_not_allowed`, 401 `reauth_required` (FR-003), 400 `validation_failed` (FR-002).
+### 140-FR-012 — ST-129's deletion use case MUST refuse with 409 `car_in_work` ("Ai o mașină în service. Poți șterge contul după ce o ridici.") when the account is the driver of a job whose status is `in_work` or `paused`, checked after 409 `deletion_not_allowed` (owner) and before 401 `reauth_required`, counted as outcome `refused_in_work`; otherwise the use case runs unchanged (129-FR-001–FR-013).
 
-_From 129-delete-account._
+_From 140-account-delete-export._
 
 ### 129-FR-005 — A session opened for an AI assistant MUST be refused with 403 `forbidden`.
 
@@ -1107,9 +1103,9 @@ _From 129-delete-account._
 
 _From 129-delete-account._
 
-### 129-FR-014 — Setări MUST show, for every signed-in role, a row "Șterge contul" in its account area that opens a dialog saying what is removed (details, sign-in methods, sessions, notification settings, plates) and what stays (reviews as "Șofer MotorFix", bookings history, legal records), with the confirmation field, a destructive confirm button disabled until the field is filled, and a cancel; for a garage owner the row's button is disabled with the owner message and links to the contact form and the support e-mail; while the request runs the confirm button is disabled (no second submit), and on a 500 or a lost connection the dialog stays open, keeps the typed text and shows an error message with a retry; after 204 the tab signs out and lands on Home with a toast "Contul tău a fost șters".
+### 140-FR-015 — The driver's Setări MUST end with a panel "Contul tău" / "Your account" that holds the export control of FR-009 and ST-129's "Șterge contul" row and dialog (129-FR-014, moved into the panel for the driver; other roles' Setări keep the row as it is), each action with one line on what it does; it works at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll, and passes the axe checks; a change of the export's state is announced to assistive technology (a polite live region) and every action is reachable and operable by keyboard with a visible focus.
 
-_From 129-delete-account._
+_From 140-account-delete-export._
 
 ### 129-FR-015 — The dialog MUST work at 320 px, 390 px, tablet and desktop, light and dark, in Romanian and English, with no sideways scroll, and MUST pass the axe checks; the row and the dialog's texts live in the i18n catalogue.
 
@@ -1171,7 +1167,7 @@ _From 500-req-ip-behind-proxy._
 
 _From 500-req-ip-behind-proxy._
 
-### 500-FR-008 — The API MUST treat an address in `100.64.0.0/10` (Railway's edge) as a trusted hop, in addition to loopback, link-local and unique-local addresses, so that a request whose forwarded-for chain is `<visitor>, <100.64.0.0/10 address>` arriving from a unique-local socket resolves its caller to `<visitor>`, and a request arriving from a `100.64.0.0/10` socket with the forwarded-for header `<visitor>` resolves its caller to `<visitor>`. A forwarded-for header set by the visitor, or any hop the API does not trust (a public address), MUST NOT change the resolved or logged caller. (Modifies 500-FR-006: "with `trust proxy` unchanged at `loopback, linklocal, uniquelocal`" becomes "with the trusted hops being loopback, link-local, unique-local and `100.64.0.0/10`".)
+### 500-FR-016 — The API MUST resolve the caller with a `trust proxy` function that walks the hops from the socket inward and trusts every hop in loopback, link-local, private (RFC 1918), `100.64.0.0/10` or `fc00::/7` (an IPv4-mapped IPv6 hop as the IPv4 address it carries) until it trusts one public hop, and trusts exactly one public hop (Railway's edge PoP, whose range varies by region) when it sits directly before a trusted private hop; the caller is the first hop not trusted. A chain `86.125.92.213, 95.173.1.1, 100.64.0.5` from socket `fd12:e82::1` resolves to `86.125.92.213`. (Modifies 500-FR-008: the trusted hops gain private and the one PoP hop, decided on #303.)
 
 _From 500-trust-railway-edge._
 
@@ -1179,13 +1175,221 @@ _From 500-trust-railway-edge._
 
 _From 532-lost-session-home._
 
+### 140-FR-001 — `POST /api/v1/me/data-export` MUST create one DATA_EXPORT for the signed-in driver's own account in state `queued`, record the audit entry of FR-011 in the same transaction, and queue the build; it MUST answer 403 `forbidden` to an assistant session, 429 `export_too_soon` (no row written) when the account has a DATA_EXPORT requested less than 24 hours ago whose state is not `failed`, and 409 `export_ready` (no row written) when the account has a `ready` export; two concurrent requests create one row (a unique constraint or a conditional write, the loser answering 429).
+
+_From 140-account-delete-export._
+
+### 140-FR-002 — `GET /api/v1/me/data-export` MUST return the account's latest DATA_EXPORT (state, requested time, ready time, expiry time) and `canRequestAt` (when the 24-hour rule next allows a request, null when it allows one now), or none, so Setări can show the panel's state; it never returns another account's export.
+
+_From 140-account-delete-export._
+
+### 140-FR-003 — The worker MUST build the ZIP for a `queued` export with at most 3 attempts (the queue's retry with back-off); on success it stores the file, sets `ready` with `ready_at` and `expires_at` = `ready_at` + 7 days, emits `data_export.ready` and queues the e-mail of FR-006; after the third failure it sets `failed` and logs the reason without personal values; an export whose account is `deleted` is set `expired` without a file; any other account status still builds it.
+
+_From 140-account-delete-export._
+
+### 140-FR-004 — The ZIP MUST hold exactly, in UTF-8 with times in ISO 8601: `account.json` (the account's details, roles, sign-in methods without secrets, language), `cars.json` (cars with plates, dates, reminders and driver-logged repairs), `requests-and-quotes.json` (the driver's requests and the quotes received), `bookings-and-jobs.json` (bookings, jobs and the job history as the driver sees it, repairs from MotorFix), `reviews.json` (the driver's reviews and the replies to them), `messages.json` (the driver's support messages, SupportMessage), `notifications-and-preferences.json` (notifications of the last 12 months and every notification preference and push subscription without its keys), `consents.json` (consents and the news consent), `audit.json` (audit entries whose subject or actor is the driver, as the driver's own history shows them; an entry whose subject is another account or a garage carries only the subject's type and the label the driver already sees, never its id), and `README.txt`, a readable summary in the driver's language naming each file and the request date. No other file; an area with no rows is written as `[]`, so every export holds the ten files.
+
+_From 140-account-delete-export._
+
+### 140-FR-005 — Every row in the export MUST belong to the signed-in driver (by owner, driver, author or account id); another person appears only as the product already shows them to this driver (a garage's name and city, a mechanic's first name on the driver's job, a reply's author label); no other account's e-mail, phone, plate or id is ever written. A two-driver test asserts it over every file.
+
+_From 140-account-delete-export._
+
+### 140-FR-007 — `GET /api/v1/me/data-export/download` MUST serve the signed-in driver's own `ready` export as a ZIP download (directly or by redirecting to a short-lived link to the stored file), MUST answer 404 `not_found` for no export, an `expired`, `failed` or `queued` one, and 403 `forbidden` to an assistant session, and 401 `sign_in_required` to no session; a store that fails answers 503 `storage_unavailable` and the export stays `ready`; the response carries `Cache-Control: no-store`; the stored file is never public.
+
+_From 140-account-delete-export._
+
+### 140-FR-008 — A scheduled worker sweep MUST, at least hourly, delete the stored file of every `ready` export past `expires_at` and set it `expired`, idempotently; on `account.deleted` the worker MUST do the same for that account's `queued` and `ready` exports at once.
+
+_From 140-account-delete-export._
+
+### 140-FR-009 — Setări › Contul tău MUST show "Descarcă datele mele" from FR-002's state: no export or `expired` → the button; `queued` → "Pregătim fișierul. Îți trimitem un e-mail când e gata."; `ready` → "Descarcă (ZIP)" with the expiry date in the driver's locale and no request button (this wins over the 24-hour line); `failed` → "Nu am putut pregăti fișierul. Încearcă din nou." with the button; any request younger than 24 hours that is not `failed` → the button disabled with "Poți cere un fișier nou o dată pe zi." (and the same text when the API answers 429); outside `ready`, the age rule wins over the state (an `expired` row younger than 24 hours shows the disabled button), and a `failed` row never counts; each text in Romanian and English in the i18n catalogue.
+
+_From 140-account-delete-export._
+
+### 140-FR-010 — DATA_EXPORT is stored with: id, account, `requested_at`, `status` ∈ `queued` / `ready` / `expired` / `failed`, `zip_key` (nullable), `ready_at`, `expires_at`, `attempts`; the export's module owns its Prisma schema and its migration.
+
+_From 140-account-delete-export._
+
+### 140-FR-013 — ST-129's web dialog MUST show the `car_in_work` refusal's text in place of the generic task error, in both languages.
+
+_From 140-account-delete-export._
+
+### 140-FR-014 — Tests MUST assert, through ST-129's use case and the existing handlers, the effects the story promises: after a driver's deletion sign-in by every method answers as for an unknown account, the reminder job sends nothing to the account, the driver's open request is closed and its waiting quotes `lost`, the future booking is cancelled by `system` with the garage and mechanic told, and a published 4-star review stays with author "Șofer MotorFix", no name and no account link, while the garage's and the mechanic's rating and review count are unchanged.
+
+_From 140-account-delete-export._
+
+### 140-FR-016 — The three endpoints, the export queue and the sweep MUST be listed in `infra/observability/inventory.json` with a counter of export outcomes (`requested`, `too_soon`, `already_ready`, `forbidden`, `ready`, `failed`, `expired`, `downloaded`), log lines without personal values, a panel, and an alert on `failed`; the deletion counter gains `refused_in_work`.
+
+_From 140-account-delete-export._
+
+### 140-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Valkey where rows are written: FR-001–FR-003 and FR-007–FR-008 (states, the 24-hour, `ready` and concurrent refusals, the three attempts, the 7-day expiry and file deletion, the clean-up on deletion, the assistant refusals, the download for the owner only), FR-004–FR-005 (every file present, no other file, the two-driver isolation over every file), FR-006 (one e-mail, none without an address), FR-011, FR-012 (refused with `in_work` and `paused`, allowed with `done`), FR-014; the web panel and dialog states in component specs (FR-009, FR-013, FR-015); and in Playwright: request the export and download the ZIP from the sandbox e-mail's link, delete a test driver and fail to sign in with it. Each test file names its FRs in a whole-line `// @traces` comment.
+
+_From 140-account-delete-export._
 ### 500-FR-009 — The trusted hops MUST remain a list of address ranges, never a count of hops: a chain `<spoof>, <visitor>, <100.64.0.0/10 address>` from a unique-local socket MUST resolve its caller to `<visitor>`, and no public address MUST ever be trusted.
+### 500-FR-017 — The function MUST never trust two public hops, a public hop that is not directly before a trusted private hop (so a public socket trusts nothing), any hop past the trusted public hop, or an entry that is not an address; a client-forged prefix before the real chain resolves to the visitor. It is never a hop count and reads no header other than X-Forwarded-For (X-Real-IP is not read; `req.ip` stays the one source). (Modifies 500-FR-009: one public hop is now trusted, by position, never by count.)
 
 _From 500-trust-railway-edge._
 
 ### 500-FR-010 — A request arriving from a public socket address MUST resolve its caller to that socket address whatever forwarded-for header it carries.
 
 _From 500-trust-railway-edge._
+
+### 105-FR-016 — `refusal` MUST live in a shared module of the auth library (`libs/domain/src/auth/http-refusal.ts`), re-exported where the existing imports expect it or every import updated; after the change no file outside `libs/domain/src/auth/` imports `auth/sign-up.service` for it (`git grep` shows none). (#568)
+
+_From 105-brand-list-admin._
+
+### 003-FR-001 — `GET /api/v1/admin/accounts/{id}` MUST answer, for a MotorFix admin, the account's: name, e-mail, phone, language, roles (in the list's order), the linked garage when the account owns one, is receptionist at one or holds a mechanic card at one (id, name, status), joined time, last active time, status, the suspension reason when `suspended`, counts (cars, quote requests, reviews), sign-in methods (`password`, `google`, `apple`, `whatsapp_phone`, as a list of methods only), whether the account holds `admin` (so no action is offered) and, for a garage owner, the garage's legal documents (ids and titles) the page can open. The answer MUST carry no password hash, no sign-in subject and no token.
+
+_From 003-admin-account-actions._
+
+### 003-FR-002 — The read and every action route of this story MUST be admin-only through the existing actor check: any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended caller 403 `account_suspended`; an unknown id, a malformed id or a `deleted` account answers 404 `not_found`; every error as RFC 9457 problem details with a `code`.
+
+_From 003-admin-account-actions._
+
+### 003-FR-003 — The actions (FR-006, FR-007, FR-010, FR-012) MUST be refused with 409 `admin_account` for an account that holds `admin`, before any write, and the page MUST offer no action button on such an account.
+
+_From 003-admin-account-actions._
+
+### 003-FR-006 — `POST /api/v1/admin/accounts/{id}/reset-access` MUST, in one transaction: revoke every refresh token of the account (the sign-out-everywhere step), write one audit entry (action `update`, subject `account`, kind `access_reset`, actor the admin with role `admin` and their name) and record the outbox event `account.access_reset` (`{ accountId }`, audience `account:{accountId}`). After the commit it MUST publish `session.revoked` to `account:{accountId}` through the sign-in service's one method (569-FR-003) and, when the account holds a `password` identity and an e-mail, send the existing password-reset e-mail with its link directly (194-FR-012, the reset flow's own request), never to a phone-only or e-mail-less account. The answer is 200 `{ email: 'sent' | 'none' | 'failed' }`; a refused send answers `failed` with the sessions already ended, and a repeat of the call is allowed as the retry. The admin never receives, sees or sets a password.
+
+_From 003-admin-account-actions._
+
+### 003-FR-007 — `POST /api/v1/admin/accounts/{id}/suspend` with `{ reason }` (10 to 500 characters after trimming, else 400 `validation_failed`) MUST, in one transaction: move `ACCOUNT.status` `active` → `suspended` by a conditional write (zero rows changed rolls back and answers 409 `account_already_suspended`, or 404 when the account is `deleted`), store the reason as the account's suspension reason, revoke every refresh token, revoke every active assistant grant of the account with reason `account_suspended` (FR-015), write one audit entry (action `update`, subject `account`, field `status`, old `active`, new `suspended`, kind `account_suspended`, `text` = the reason, actor the admin) and record the outbox event `account.suspended` (`{ accountId }`, audience `account:{accountId}`). After the commit it MUST publish `session.revoked` as FR-006 does and, when the account holds an e-mail, queue one ACCOUNT_EMAIL `account_suspended` (FR-022) in the account's language; an account without an e-mail gets no message; a send the sender refuses is logged and counted as outcome `email_failed`, with no retry, and does not change the answer. The answer is 200 with the page's read (FR-001).
+
+_From 003-admin-account-actions._
+
+### 003-FR-009 — The suspension's clean-up runs through the existing consumer of `account.suspended` (428-FR-001–FR-012): the person's open quote requests are closed, their future bookings are cancelled with `cancelled_by_side` `system`, and the garages are told by REQUEST_CANCELLED and BOOKING_CANCELLED [X11]; this story adds no second handler and MUST test that the existing one runs exactly once for the event; a restore reopens nothing (428-FR-001 ignores `account.restored`).
+
+_From 003-admin-account-actions._
+
+### 003-FR-010 — `POST /api/v1/admin/accounts/{id}/restore` with `{ note }` (optional, at most 500 characters) MUST, in one transaction: move `suspended` → `active` by a conditional write (zero rows changed answers 409 `account_not_suspended`, or 404 when `deleted`), clear the suspension reason, write one audit entry (action `update`, subject `account`, field `status`, old `suspended`, new `active`, kind `account_restored`, `text` = the note when given, actor the admin) and record the outbox event `account.restored` (`{ accountId }`, audience `account:{accountId}`); after it the person can sign in again. Requests closed and bookings cancelled by the suspension stay so, revoked assistant grants stay revoked, and no message is sent to the person. The answer is 200 with the page's read.
+
+_From 003-admin-account-actions._
+
+### 003-FR-011 — Suspending, restoring or deleting an account MUST never change a garage's status, its listing or its other members' access: a suspended owner's garage stays listed and its receptionists keep working; the page MUST say, for an owner whose garage is `suspended`, that the garage is suspended from its own page (MF-44) and link there, offering no garage action.
+
+_From 003-admin-account-actions._
+
+### 003-FR-013 — A mechanic's or a receptionist's account deleted on request MUST leave the team as 129-FR-009 says, with the reviews of their work staying with the garage [X12]; the page MUST disable "Șterge la cererea titularului" for a garage owner with the text "Garajul se închide mai întâi prin suport" / "The garage is closed through support first" and keep it disabled until the account holds no owner membership.
+
+_From 003-admin-account-actions._
+
+### 003-FR-014 — Every action MUST write its audit entry and its outbox event in the same transaction as its change, with the admin's account id, role `admin` and first name as the actor (164-FR-001), and every status change MUST be a conditional write so that two admins acting at once leave exactly one winner: the loser answers 409 and the web re-reads the page. Reads write nothing except FR-005's document opening.
+
+_From 003-admin-account-actions._
+
+### 003-FR-016 — Every session end of this story (reset, suspend, delete) MUST reach the person's open tabs through `session.revoked` on `account:{accountId}` (128-FR-009), and the live hub's eviction on `account.suspended` and `account.deleted` (254-FR-008) stays as it is; a failed publish is logged and does not change the answer.
+
+_From 003-admin-account-actions._
+
+### 003-FR-020 — The five routes MUST be REST with OpenAPI, their DTOs in the contracts library validated at the edge, and the generated Angular client regenerated; the events `account.access_reset`, `account.suspended`, `account.restored`, `account.deleted` and `assistant_grant.revoked` are the kinds already declared in the contracts' event list.
+
+_From 003-admin-account-actions._
+
+### 003-FR-023 — Tests MUST cover, before the code (Principle II), in Jest on real PostgreSQL and Valkey where rows are written: each action with its audit entry and event (FR-006, FR-007, FR-010, FR-012); sessions revoked on reset and suspend; sign-in refused for a suspended account by every method and refresh; restore and sign-in again; delete on request refused without the fields and for a garage owner whose garage is open or suspended, allowed for a driver, a mechanic and a receptionist (team left, reviews kept) and for a suspended account; the suspension's clean-up run exactly once; the document opening logged; the actions refused on admin accounts; 404 for non-admins and unknown ids; the concurrent suspend, restore and delete; the e-mail queued with the reason and the contact link, none for an e-mail-less account; the reset e-mail for a password account, none for phone-only, `failed` on a refused send with the tokens gone; the grants revoked per trigger (suspend, delete, role loss) with one event per grant, a still-valid token refused, a role added leaving grants intact; the history filter by actor or subject and the 50 limit; and in Playwright: suspend a seeded driver, fail to sign in as that driver, restore it and sign in, at 390 px and on desktop, in Romanian and English.
+
+_From 003-admin-account-actions._
+
+### 500-FR-012 — `hops` MUST list the X-Forwarded-For entries left to right, then the address of the socket the API was called on, each masked as FR-001–FR-004 mask the caller (an entry that is not an address reads `unknown`, an empty entry is skipped), comma-separated without spaces. At most the rightmost 8 entries of the header are listed; when more were sent, the list starts with `+<n>`, the number left out. With no X-Forwarded-For header the list is the socket address alone. The entry just before the socket is the one the web edge appended (FR-015).
+
+_From 500-trust-railway-edge._
+
+### 500-FR-013 — `headers` MUST list the names, never the values, of the forwarding-related request headers present, lower-case, sorted and each once, comma-separated: `forwarded`, `via`, `x-real-ip`, `true-client-ip`, `cf-connecting-ip`, `cdn-clientip`, `fastly-client-ip`, `x-client-ip`, `x-cluster-client-ip`, every `x-forwarded-*`, `x-railway-*` and `x-envoy-*` name, and every other name ending in `-ip` or `clientip`. Only a name made of letters and hyphens, at most 40 characters, is listed, at most 16 names; `none` when no such header is present.
+
+_From 500-trust-railway-edge._
+
+### 500-FR-014 — When an `x-real-ip` header is present, `real-ip` MUST list its comma-separated entries, each masked as FR-012 masks a hop; when a `Forwarded` header is present, `forwarded` MUST list the `for=` value of each of its elements, quotes, IPv6 brackets and a port removed, each masked the same way (an obfuscated or missing `for=` reads `unknown`). Both keep at most 8 entries, the rightmost, with the same `+<n>` prefix.
+
+_From 500-trust-railway-edge._
+
+### 500-FR-015 — The web edge MUST keep forwarding the X-Forwarded-For chain it was given unchanged and append the address of the socket it was called on (`<given>, <socket>`, or `<socket>` alone), so the API's `hops` show that socket hop masked; this PR asserts the behaviour and does not change it.
+
+_From 500-trust-railway-edge._
+
+### 1372-FR-001 — For each account in its list (`PEOPLE`, matched by e-mail), the seed MUST restore the account's password identity to its seeded state: an identity with method `password` and subject equal to the e-mail whose hash verifies against the seed password; a missing identity is inserted, a hash that does not verify is rewritten with a new argon2id hash of the seed password, and a hash that verifies is left byte-for-byte unchanged (the stored hash is verified against the seed password, never compared to a fresh hash).
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-002 — For each account in its list, the seed MUST ensure every role in that account's seeded `roles` exists on it, inserting the missing ones; a role the account holds that the seed does not list for it MUST be left in place.
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-003 — For each account in its list with an `at`, the seed MUST ensure its seeded garage link exists with the seeded values: for `as: owner` or `receptionist`, a `garage_member` row at the seeded garage with that role; for `as: mechanic`, a `mechanic` row for the account at the seeded garage with `can_answer_quotes` equal to the seeded `answersQuotes` (false when absent). A missing link is inserted and a link at the seeded garage with other values is set to the seeded ones; a link at any other garage is left in place; when that link holds the seeded role (an account holds one role at one garage, `garage_member` unique on account and role; one `mechanic` row per account) the seeded link cannot be added, and the seed prints `seed: <e-mail> is <role> at another garage, so its link to <slug> is not added` on stderr and goes on.
+
+_From 1372-seed-restores-accounts._
+
+### 1373-FR-006 — The staging guard of `scripts/reset-staging.sh`, the refusal on `APP_ENV=production`, the `SEED_PASSWORD` rules and the seed's idempotence (`1372-FR-004`) MUST be unchanged; accounts outside the list MUST stay untouched (`1372-FR-005`, whose `status` column now belongs to the seed per FR-002).
+
+_From 1373-seed-status-identity._
+
+### 1372-FR-006 — The staging guard of `scripts/reset-staging.sh`, the staging-only seed in the api's Railway pre-deploy (1370-FR-001), the refusal on `APP_ENV=production` and the `SEED_PASSWORD` guard MUST be unchanged, and the seed password's value MUST never be printed to stdout, stderr, a log or an error message.
+
+_From 1372-seed-restores-accounts._
+
+### 1372-FR-007 — Tests come first and live in `libs/domain/src/seed.integration.spec.ts` (PostgreSQL): a drifted-account test (a seeded account with a hash that does not verify, a missing seeded role and no garage link is restored; a renamed seeded account keeps its name; an account outside the list with a wrong hash, no roles and no link is unchanged) and a second-run test that proves FR-004, each carrying `// @traces 1372-FR-<n>` (the form `.claude/scripts/lib/traces.mjs` reads); the test of `1370-FR-006` that asserts a user-changed hash survives is replaced by these.
+
+_From 1372-seed-restores-accounts._
+
+### 1373-FR-002 — For each account in its list, the seed MUST restore the account's `status` to the seeded one (`active`, or the entry's `status`), writing only when it differs.
+
+_From 1373-seed-status-identity._
+
+### 1373-FR-003 — For each account in its list, the seed MUST leave exactly one `password` identity: the one FR-001 of 1372 repairs (subject = e-mail preferred), every other `password` identity of that account deleted; identities of another method and of other accounts are untouched.
+
+_From 1373-seed-status-identity._
+
+### 1373-FR-004 — After every seed run, no seeded account MUST hold a quote request created since the start of the current Bucharest day: `clearDay()` keeps removing what seeded accounts sent in the last 25 hours, and the seed's own requests are written dated before the start of the Bucharest day (2 h and 1 h before it).
+
+_From 1373-seed-status-identity._
+
+### 1373-FR-005 — The seed MUST print exactly one summary line on stdout per run, `seed: restored password <n>, status <n>, roles <n>, link <n>, extra password identities <n>; cleared <n> quote requests`, each count the number of accounts that existed before the run whose field it wrote (an account that lost three extra password identities counts 1); the seed password's value MUST never appear in stdout, stderr or an error.
+
+_From 1373-seed-status-identity._
+
+### 1373-FR-007 — Tests come first: integration tests (`libs/domain/src/seed.integration.spec.ts`) for a `deleted` seeded account, one with two password identities, the day's count at 0 after a seed and the summary line; a unit test of the pre-deploy command run split into words with no shell, each carrying `// @traces 1373-FR-<n>`.
+
+_From 1373-seed-status-identity._
+
+### 1156-FR-004 — The job MUST delete every sign-in code, phone-change code, account token (every purpose) and refresh token whose expiry has passed, used or not, and every staff invite in status `sent` whose expiry has passed; `accepted` and `revoked` invites stay.
+
+_From 1156-retention-job._
+
+### 102-FR-001 — The capabilities table (`ROLES`, `CAPABILITIES`, `Permissions`, the role rows and `capabilitiesOf`) MUST live in one browser-safe module of the contracts library (`libs/contracts/src/capabilities.ts`, imported as `@motor-fix/contracts/capabilities`), read by the API's policy, the live filter and the web app; the domain library re-exports it so no existing import path breaks. The web's view list MUST type each view's `capability` with the table's `Capability` type, and a test MUST fail on a view naming a capability the table does not hold.
+
+_From 102-garage-members._
+
+### 102-FR-003 — Whether a person sees a view, a Panou section or an action, and whether the server lets them call it, MUST be decided in this order: a feature switched off removes it for everyone (404 `feature_off` on the server, 398-FR-007), then the role's row, then the mechanic's permissions. `allowedViews` already applies this order for the menu; on the server the held order stays role first, then feature (055-FR-003, `garage-mechanics.service.ts` "so staff and strangers never learn whether the team is on"): same-garage staff outside their row get 403 whatever the switch, and the owner of a garage with the feature off gets 404 `feature_off`.
+
+_From 102-garage-members._
+
+### 102-FR-004 — The garage menu, tab bar and routes MUST keep coming from `allowedViews` over the table (160-FR-007), so that with the rows of FR-002 a mechanic without permissions sees Panou, Lucrări, Programări, Setări and Istoric modificări; a receptionist sees Panou, Cereri de ofertă, Programări, Lucrări, Recenzii, Profilul service-ului, Setări and Istoric modificări; the owner sees everything released. Setări stays for every role because it holds the person's own device and notification choices (198-FR-001, ST-142); its owner-only panels are gated inside it (FR-013).
+
+_From 102-garage-members._
+
+### 102-FR-005 — Panou (`garage-home`) MUST decide each section by a capability of the table read from the session, never by a role string: the legal-check panel needs `garage.feature_switches`, the verified strip and its re-check line need `garage.profile`, the requests panel needs `garage.requests` (as its feed already does). A new section added by a later story declares its capability the same way; a mechanic without permissions sees no section but one status line, "Lucrările tale vor apărea aici." / "Your jobs will appear here." (proposed wording; no such text exists on `main`), until #208 builds the own-jobs sections.
+
+_From 102-garage-members._
+
+### 102-FR-006 — The views Recenzii and Profilul service-ului, now reachable by the receptionist, MUST show no "Răspunde" and no "Modifică profilul" to her: neither button exists on `main` today, and the story that adds one MUST gate it on an owner-only capability of the table, not on the view capability. The garage profile read (`GET /api/v1/garages/:garageId/profile`) MUST answer the receptionist as it answers the owner.
+
+_From 102-garage-members._
+
+### 102-FR-008 — The schedule read (`GET /api/v1/garages/:garageId/schedule` and the day sheet, `garage.schedule`) MUST, for a mechanic, return only bookings whose mechanic card is the mechanic's own (`BOOKING.mechanic_id` = their MECHANIC id); a `mechanicId` query naming any id other than her own MUST answer 403 `forbidden` without a lookup, and bookings with no mechanic (`mechanic_id` null) are not hers. Jobs already follow this rule (`garage-jobs.service.ts` `scope`).
+
+_From 102-garage-members._
+
+### 102-FR-009 — No response to a mechanic MUST carry a driver's phone, and a plate MUST appear only on the mechanic's own bookings and jobs (079-FR-015 holds; the schedule rows of FR-008 and the request reads MUST go through `describeCustomer` or an equivalent that a test proves by walking every field of every garage read's answer as a mechanic for a `phone` key).
+
+_From 102-garage-members._
+
+### 102-FR-015 — When the account re-read that follows `mechanic.updated` or `garage.features_changed` (531-FR-002) no longer allows the view on screen, the frame MUST open Panou (it already leaves the view) and show, once, the short message "Nu mai ai acces la această secțiune." / "You no longer have access to this section." on the dashboard's status line.
+
+_From 102-garage-members._
+
+### 102-FR-016 — When a call under the signed-in garage's own path answers 404, the garage dashboard MUST read the account again, once per such 404 and coalesced while a re-read is in flight, counting only calls under `/api/v1/garages/{garageId}/` of the signed-in garage; when `garageAccess` no longer holds that garage, the dashboard body MUST show "Nu mai ai acces la acest service" / "You no longer have access to this garage" with a link "Spre pagina principală" / "To the home page", and the garage menu MUST show no view. A 404 while the garage is still held changes nothing (a feature off, a resource that is gone).
+
+_From 102-garage-members._
 
 ## Retired
 
@@ -1213,5 +1417,22 @@ _From 500-trust-railway-edge._
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
 - `291-FR-007` — superseded by `292-FR-001` (2026-10-23)
 - `082-FR-011` — superseded by `500-FR-005` (2026-10-24)
+- `129-FR-004` — superseded by `140-FR-012` (2026-10-24)
+- `129-FR-014` — superseded by `140-FR-015` (2026-10-24)
+- `082-FR-016` — superseded by `003-FR-008` (2026-10-24)
+- `129-FR-001` — superseded by `003-FR-012` (2026-10-24)
 - `500-FR-006` — superseded by `500-FR-008` (2026-10-24)
+- `500-FR-005` — superseded by `500-FR-011` (2026-10-24)
 - `082-FR-023` — superseded by `1370-FR-006` (2026-10-24)
+- `1370-FR-006` — superseded by `1372-FR-004` (2026-10-24)
+- `244-FR-002` — superseded by `947-FR-004` (2026-10-24)
+- `244-FR-005` — superseded by `947-FR-004` (2026-10-24)
+- `244-FR-006` — superseded by `947-FR-003` (2026-10-24)
+- `244-FR-007` — superseded by `947-FR-003` (2026-10-24)
+- `243-FR-002` — superseded by `947-FR-005` (2026-10-24)
+- `500-FR-008` — superseded by `500-FR-016` (2026-10-24)
+- `500-FR-009` — superseded by `500-FR-017` (2026-10-24)
+- `1372-FR-005` — superseded by `1373-FR-006` (2026-10-24)
+- `079-FR-010` — superseded by `102-FR-002` (2026-10-25)
+- `079-FR-013` — superseded by `102-FR-007` (2026-10-25)
+- `130-FR-003` — superseded by `102-FR-007` (2026-10-25)

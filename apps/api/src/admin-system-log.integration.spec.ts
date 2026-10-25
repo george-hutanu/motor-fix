@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
@@ -77,7 +78,7 @@ beforeAll(async () => {
       process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres',
   });
   await db.connect();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 beforeEach(async () => {
   await db.query('DELETE FROM system_log_entry WHERE at >= $1', [FUTURE]);

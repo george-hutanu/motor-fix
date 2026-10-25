@@ -652,6 +652,16 @@
             }
           },
           {
+            "name": "accountId",
+            "required": false,
+            "in": "query",
+            "description": "Admin only: the entries the account made or that are about the account",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "jobId",
             "required": false,
             "in": "query",
@@ -709,6 +719,18 @@
             "schema": {
               "format": "uuid",
               "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Entries per page",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "integer"
             }
           }
         ],
@@ -1054,6 +1076,9 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "phone_not_verified: SMS or WhatsApp without a confirmed phone; notification_type_always_sent, news_consent_required, channel_not_allowed"
           }
         },
         "security": [
@@ -1526,7 +1551,7 @@
             "description": "forbidden: an assistant session"
           },
           "409": {
-            "description": "deletion_not_allowed: the account owns a garage"
+            "description": "deletion_not_allowed: the account owns a garage; car_in_work: a car of the account is in work or paused at a garage"
           }
         },
         "security": [
@@ -1536,6 +1561,113 @@
         ],
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/me/data-export": {
+      "post": {
+        "operationId": "DataExportController_request",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExportDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: an assistant session"
+          },
+          "409": {
+            "description": "export_ready: a copy is ready"
+          },
+          "429": {
+            "description": "export_too_soon: a copy was asked for in the last 24 hours"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      },
+      "get": {
+        "operationId": "DataExportController_latest",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The newest copy, or null before any request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataExportDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: an assistant session"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/data-export/download": {
+      "get": {
+        "operationId": "DataExportController_download",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The ready copy as a ZIP attachment",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: an assistant session"
+          },
+          "404": {
+            "description": "not_found: no copy is ready"
+          },
+          "503": {
+            "description": "storage_unavailable: the file store did not answer"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "me"
         ]
       }
     },
@@ -1804,6 +1936,240 @@
           },
           "404": {
             "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/{id}": {
+      "get": {
+        "operationId": "AccountController_read",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountPageDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such account (unknown, malformed or deleted id)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/{id}/reset-access": {
+      "post": {
+        "operationId": "AccountController_resetAccess",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessResetDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such account (unknown, malformed or deleted id)"
+          },
+          "409": {
+            "description": "admin_account: the account holds admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/{id}/suspend": {
+      "post": {
+        "operationId": "AccountController_suspend",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuspendAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a reason under 10 or over 500 characters"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such account (unknown, malformed or deleted id)"
+          },
+          "409": {
+            "description": "admin_account: the account holds admin; account_already_suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/{id}/restore": {
+      "post": {
+        "operationId": "AccountController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAccountPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a note over 500 characters"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such account (unknown, malformed or deleted id)"
+          },
+          "409": {
+            "description": "admin_account: the account holds admin; account_not_suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/accounts/{id}/delete-on-request": {
+      "post": {
+        "operationId": "AccountController_deleteOnRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountOnRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "400": {
+            "description": "validation_failed: a reference not like DR-2026-0001, a date after today, or identity not checked"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such account (unknown, malformed or deleted id)"
+          },
+          "409": {
+            "description": "admin_account: the account holds admin; deletion_not_allowed: the account owns a garage"
           }
         },
         "security": [
@@ -2207,6 +2573,152 @@
         "summary": "The ids of the caller's saved garages, whatever their status",
         "tags": [
           "saved-garages"
+        ]
+      }
+    },
+    "/api/v1/admin/brands": {
+      "get": {
+        "operationId": "AdminBrandsController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Part of the name, accents and case ignored.",
+            "schema": {
+              "maxLength": 40,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBrandListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "operationId": "AdminBrandsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBrandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBrandDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          },
+          "409": {
+            "description": "brand_exists"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/brands/{id}": {
+      "patch": {
+        "operationId": "AdminBrandsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBrandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBrandDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no brand"
+          },
+          "409": {
+            "description": "stale_value (with the current brand); brand_exists"
+          },
+          "415": {
+            "description": "unsupported_media_type"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -2796,6 +3308,53 @@
         },
         "tags": [
           "brands"
+        ]
+      }
+    },
+    "/api/v1/garages/{slug}/similar": {
+      "get": {
+        "operationId": "SimilarGaragesController_forGarage",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "The brand, by its catalogue slug; without it, every brand the garage worked on",
+            "schema": {
+              "pattern": "^[a-z0-9-]{1,80}$",
+              "example": "bmw",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimilarGaragesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad brand slug or another parameter"
+          },
+          "404": {
+            "description": "not_found: no garage with that slug that was listed and is no longer, or no brand with that slug"
+          }
+        },
+        "tags": [
+          "search"
         ]
       }
     },
@@ -3618,6 +4177,58 @@
           }
         ],
         "summary": "A mechanic’s published reviews at every garage, 20 a page",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/api/v1/reviews/garage/{garageId}": {
+      "get": {
+        "operationId": "ReviewsController_forGarage",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageReviewsPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id, or a page not a whole number from 1"
+          },
+          "404": {
+            "description": "not_found: no such garage, or one not shown to visitors"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A garage’s published reviews, 20 a page, with its rating, count and breakdown",
         "tags": [
           "reviews"
         ]
@@ -4957,6 +5568,57 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/profile": {
+      "get": {
+        "operationId": "GarageProfileController_read",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageProfileDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The garage id is not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage without the profile"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          },
+          "410": {
+            "description": "The garage is suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage's public profile as drivers see it, with its stored phone",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{id}/reports": {
       "post": {
         "operationId": "GarageReportsController_report",
@@ -5127,6 +5789,223 @@
           }
         ],
         "summary": "The garage's mechanic cards, for the owner",
+        "tags": [
+          "garages"
+        ]
+      },
+      "post": {
+        "operationId": "GarageMechanicsController_add",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMechanicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageMechanicDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage; mechanic_owned_field"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "422": {
+            "description": "validation_failed, with errors: [{ code, field }]"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a mechanic card, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/mechanics/{mechanicId}": {
+      "patch": {
+        "operationId": "GarageMechanicsController_edit",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMechanicDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageMechanicDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage; mechanic_owned_field"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "422": {
+            "description": "validation_failed, with errors: [{ code, field }]"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit a mechanic card, for the owner",
+        "tags": [
+          "garages"
+        ]
+      },
+      "delete": {
+        "operationId": "GarageMechanicsController_remove",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "409": {
+            "description": "owner_row: the owner's own row"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a mechanic from the team, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/members": {
+      "get": {
+        "operationId": "GarageMembersController_list",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageMembersDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "the garage id is not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Who has access to the garage: its members and open invites, for the owner",
         "tags": [
           "garages"
         ]
@@ -6531,6 +7410,73 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/verification-files/{id}/presence": {
+      "put": {
+        "operationId": "VerificationFileController_presence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationPresenceDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin, or no file"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      },
+      "delete": {
+        "operationId": "VerificationFileController_leave",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Gone from the file, or never there"
           },
           "404": {
             "description": "not_found: not an admin, or no file"
@@ -8231,7 +9177,7 @@
           },
           "privacyVersion": {
             "type": "string",
-            "example": "2026-10-17",
+            "example": "2026-10-24",
             "maxLength": 32
           }
         },
@@ -8894,7 +9840,7 @@
         "type": "object",
         "properties": {
           "items": {
-            "description": "Newest first, 20 at most",
+            "description": "Newest first; as many as limit asks, 20 when it is not given",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AuditEntryDto"
@@ -8935,7 +9881,7 @@
           "textVersion": {
             "type": "string",
             "description": "The text the choice was made under; only the current one",
-            "example": "2026-10-10"
+            "example": "2026-10-24"
           },
           "language": {
             "type": "string",
@@ -9228,6 +10174,19 @@
           "alwaysSent": {
             "type": "boolean",
             "description": "Sent whatever the person chooses"
+          },
+          "channels": {
+            "type": "array",
+            "description": "The channels the type can be sent by, in order; a staff entry lists its own",
+            "items": {
+              "type": "string",
+              "enum": [
+                "email",
+                "push",
+                "sms",
+                "whatsapp"
+              ]
+            }
           }
         },
         "required": [
@@ -9235,7 +10194,8 @@
           "channel",
           "enabled",
           "garageId",
-          "alwaysSent"
+          "alwaysSent",
+          "channels"
         ]
       },
       "NewsConsentDto": {
@@ -9275,6 +10235,23 @@
           "textVersion",
           "withdrawnAt",
           "currentTextVersion"
+        ]
+      },
+      "SmsUsageDto": {
+        "type": "object",
+        "properties": {
+          "used": {
+            "type": "number",
+            "description": "SMS sent to the driver this month (Bucharest)"
+          },
+          "cap": {
+            "type": "number",
+            "description": "SMS a driver gets per month; then WhatsApp"
+          }
+        },
+        "required": [
+          "used",
+          "cap"
         ]
       },
       "StaffWhatsAppDto": {
@@ -9426,6 +10403,17 @@
           "newsConsent": {
             "$ref": "#/components/schemas/NewsConsentDto"
           },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "A phone is saved and confirmed: SMS and WhatsApp can be picked"
+          },
+          "pushDevice": {
+            "type": "boolean",
+            "description": "The account has at least one push device"
+          },
+          "sms": {
+            "$ref": "#/components/schemas/SmsUsageDto"
+          },
           "staff": {
             "description": "One list per garage the person is staff of, and one for an admin",
             "type": "array",
@@ -9438,6 +10426,9 @@
           "groups",
           "preferences",
           "newsConsent",
+          "phoneVerified",
+          "pushDevice",
+          "sms",
           "staff"
         ]
       },
@@ -9789,6 +10780,47 @@
           "confirmation"
         ]
       },
+      "DataExportDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "ready",
+              "expired",
+              "failed"
+            ]
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readyAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canRequestAt": {
+            "type": "string",
+            "description": "When a new request is allowed; null when it is now",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "requestedAt",
+          "readyAt",
+          "expiresAt",
+          "canRequestAt"
+        ]
+      },
       "PhoneChangeDto": {
         "type": "object",
         "properties": {
@@ -10048,6 +11080,278 @@
           "activeDrivers",
           "garagesListed",
           "mechanics"
+        ]
+      },
+      "AdminAccountGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "approved",
+              "suspended"
+            ]
+          },
+          "relation": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "receptionist",
+              "mechanic"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "relation"
+        ]
+      },
+      "AdminAccountCountsDto": {
+        "type": "object",
+        "properties": {
+          "cars": {
+            "type": "integer",
+            "description": "Cars not removed",
+            "minimum": 0
+          },
+          "requests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reviews": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "cars",
+          "requests",
+          "reviews"
+        ]
+      },
+      "AdminAccountDocumentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "The document kind, as the legal panel names it"
+          },
+          "pages": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "verificationFileId": {
+            "type": "string",
+            "description": "Opened through the verification file page download route",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "pages",
+          "verificationFileId"
+        ]
+      },
+      "AdminAccountPageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ro",
+              "en"
+            ]
+          },
+          "roles": {
+            "type": "array",
+            "description": "In the order driver, garage, receptionist, mechanic, admin",
+            "items": {
+              "type": "string",
+              "enum": [
+                "driver",
+                "garage",
+                "receptionist",
+                "mechanic",
+                "admin"
+              ]
+            }
+          },
+          "garage": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AdminAccountGarageDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastActiveAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended"
+            ]
+          },
+          "suspendedReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "counts": {
+            "$ref": "#/components/schemas/AdminAccountCountsDto"
+          },
+          "signInMethods": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "password",
+                "google",
+                "apple",
+                "whatsapp_phone"
+              ]
+            }
+          },
+          "isAdmin": {
+            "type": "boolean",
+            "description": "Holds admin: no action is offered or taken"
+          },
+          "isOwner": {
+            "type": "boolean",
+            "description": "Holds an owner membership: deletion on request is refused"
+          },
+          "documents": {
+            "description": "The owned garage's current legal documents; empty for a non-owner",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAccountDocumentDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "phone",
+          "language",
+          "roles",
+          "garage",
+          "createdAt",
+          "lastActiveAt",
+          "status",
+          "suspendedReason",
+          "counts",
+          "signInMethods",
+          "isAdmin",
+          "isOwner",
+          "documents"
+        ]
+      },
+      "AccessResetDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "sent: the reset e-mail went out; none: no password or no e-mail; failed: the send was refused, the sessions still ended",
+            "enum": [
+              "sent",
+              "none",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "SuspendAccountDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Trimmed; shown to the person in the e-mail",
+            "maxLength": 500,
+            "minLength": 10
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "RestoreAccountDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 500
+          }
+        }
+      },
+      "DeleteAccountOnRequestDto": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "description": "The data request reference",
+            "example": "DR-2026-0001",
+            "pattern": "^DR-\\d{4}-\\d{4,}$"
+          },
+          "receivedOn": {
+            "type": "string",
+            "description": "The day the request arrived, not after today in Bucharest",
+            "format": "date"
+          },
+          "identityChecked": {
+            "type": "boolean",
+            "description": "Must be true",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "reference",
+          "receivedOn",
+          "identityChecked"
         ]
       },
       "CreateCarDto": {
@@ -10453,6 +11757,111 @@
         },
         "required": [
           "ids"
+        ]
+      },
+      "AdminBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Škoda"
+          },
+          "slug": {
+            "type": "string",
+            "example": "skoda"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "retired"
+            ]
+          },
+          "garages": {
+            "type": "number",
+            "description": "Garages that work on it.",
+            "example": 12
+          },
+          "cars": {
+            "type": "number",
+            "description": "Drivers’ cars of this brand.",
+            "example": 40
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Sent back as seenUpdatedAt on an edit.",
+            "format": "date-time"
+          },
+          "updatedBy": {
+            "type": "string",
+            "description": "The admin who last changed it; null when only the loader did.",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "state",
+          "garages",
+          "cars",
+          "updatedAt",
+          "updatedBy"
+        ]
+      },
+      "AdminBrandListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminBrandDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CreateBrandDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Xpeng",
+            "maxLength": 40,
+            "minLength": 2
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateBrandDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Mercedes-Benz",
+            "maxLength": 40
+          },
+          "active": {
+            "type": "boolean",
+            "description": "false retires it, true brings it back."
+          },
+          "seenUpdatedAt": {
+            "type": "string",
+            "description": "The updatedAt the admin saw.",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "seenUpdatedAt"
         ]
       },
       "BrandDto": {
@@ -11187,6 +12596,155 @@
           "preview",
           "total",
           "takers"
+        ]
+      },
+      "SimilarGarageDto": {
+        "type": "object",
+        "properties": {
+          "worksOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "doesNotTake": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "brandNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "refusalPhrase": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Service Auto Nord"
+          },
+          "slug": {
+            "type": "string",
+            "example": "service-auto-nord"
+          },
+          "stance": {
+            "type": "string",
+            "description": "The garage's answer for the brand; unstated when it has not marked it",
+            "enum": [
+              "works_on",
+              "does_not_take",
+              "unstated"
+            ]
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Km from the place, one decimal; null for a mobile mechanic. Only with near",
+            "nullable": true
+          },
+          "comesToYou": {
+            "type": "boolean",
+            "description": "True for a mobile mechanic whose area holds the place. Only with near"
+          },
+          "rating": {
+            "type": "number",
+            "description": "Out of 5, one decimal; null until reviewed",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "integer"
+          },
+          "labourFromLei": {
+            "type": "integer",
+            "description": "The hourly labour rate it starts from, in whole lei",
+            "nullable": true
+          },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ],
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "description": "The address's city; never for a mobile mechanic",
+            "example": "Militari"
+          },
+          "serviceRadiusKm": {
+            "type": "integer",
+            "description": "A mobile mechanic's area, in km; only for one"
+          },
+          "facilities": {
+            "type": "array",
+            "description": "The facilities it lists, in catalogue order",
+            "items": {
+              "type": "string",
+              "enum": [
+                "courtesy_car",
+                "pickup_dropoff",
+                "waiting_area"
+              ]
+            }
+          },
+          "brand": {
+            "description": "The brand it was matched for: the asked one, or the first brand both garages work on, most popular first",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BrandRefDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "worksOn",
+          "doesNotTake",
+          "brandNote",
+          "refusalPhrase",
+          "id",
+          "name",
+          "slug",
+          "stance",
+          "rating",
+          "reviewCount",
+          "labourFromLei",
+          "businessKind",
+          "facilities",
+          "brand"
+        ]
+      },
+      "SimilarGaragesDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "description": "The asked brand; null when none was asked",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BrandRefDto"
+              }
+            ]
+          },
+          "items": {
+            "description": "Approved garages that work on the brand around the garage that is gone: fixed ones within 25 km, mobile mechanics whose area holds its place; by rating, unrated last, then reviews, name and id; 3 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimilarGarageDto"
+            }
+          }
+        },
+        "required": [
+          "brand",
+          "items"
         ]
       },
       "CarSnapshotDto": {
@@ -12051,6 +13609,10 @@
           "lift": {
             "type": "number",
             "nullable": true
+          },
+          "toReassign": {
+            "type": "boolean",
+            "description": "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else"
           }
         },
         "required": [
@@ -12060,7 +13622,8 @@
           "id",
           "durationMinutes",
           "mechanic",
-          "lift"
+          "lift",
+          "toReassign"
         ]
       },
       "GarageRequestSummaryDto": {
@@ -12383,6 +13946,10 @@
           },
           "lateCancellation": {
             "type": "boolean"
+          },
+          "toReassign": {
+            "type": "boolean",
+            "description": "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else"
           }
         },
         "required": [
@@ -12406,7 +13973,8 @@
           "moveCount",
           "historyShared",
           "cancelNote",
-          "lateCancellation"
+          "lateCancellation",
+          "toReassign"
         ]
       },
       "GarageRequestDto": {
@@ -13163,6 +14731,132 @@
           }
         },
         "required": [
+          "page",
+          "pageSize",
+          "total",
+          "items"
+        ]
+      },
+      "RatingBreakdownDto": {
+        "type": "object",
+        "properties": {
+          "five": {
+            "type": "number"
+          },
+          "four": {
+            "type": "number"
+          },
+          "three": {
+            "type": "number"
+          },
+          "two": {
+            "type": "number"
+          },
+          "one": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "five",
+          "four",
+          "three",
+          "two",
+          "one"
+        ]
+      },
+      "GarageReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "job",
+              "profile"
+            ]
+          },
+          "rating": {
+            "type": "number",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DriverNameDto"
+          },
+          "car": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CarSnapshotDto"
+              }
+            ]
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "rating",
+          "text",
+          "postedAt",
+          "author",
+          "car",
+          "jobs"
+        ]
+      },
+      "GarageReviewsPageDto": {
+        "type": "object",
+        "properties": {
+          "rating": {
+            "type": "number",
+            "description": "The garage's stored rating",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number",
+            "description": "The garage's stored review count"
+          },
+          "breakdown": {
+            "$ref": "#/components/schemas/RatingBreakdownDto"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number",
+            "description": "Published reviews; the breakdown sums to it"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageReviewDto"
+            }
+          }
+        },
+        "required": [
+          "rating",
+          "reviewCount",
+          "breakdown",
           "page",
           "pageSize",
           "total",
@@ -15079,6 +16773,473 @@
           "emailSent"
         ]
       },
+      "PublicBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          },
+          "fuels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "petrol",
+                "diesel",
+                "hybrid",
+                "electric"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "fuels"
+        ]
+      },
+      "ResponseRateDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "description": "new: under 10 requests ever; none: no request counted in 30 days",
+            "enum": [
+              "new",
+              "rate",
+              "none"
+            ]
+          },
+          "rate": {
+            "type": "number",
+            "description": "Percent answered within a day; only in the rate state",
+            "maximum": 100,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "PublicGarageBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          },
+          "stance": {
+            "type": "string",
+            "description": "does_not_take also when the garage never named the brand",
+            "enum": [
+              "works_on",
+              "does_not_take"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "stance"
+        ]
+      },
+      "PaymentMethodsDto": {
+        "type": "object",
+        "properties": {
+          "cash": {
+            "type": "boolean"
+          },
+          "card": {
+            "type": "boolean"
+          },
+          "transfer": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cash",
+          "card",
+          "transfer"
+        ]
+      },
+      "CourtesyCarDto": {
+        "type": "object",
+        "properties": {
+          "paid": {
+            "type": "boolean"
+          },
+          "pricePerDayBani": {
+            "type": "integer",
+            "description": "Per day, in bani: whole lei; only when paid",
+            "maximum": 200000,
+            "minimum": 100,
+            "multipleOf": 100
+          }
+        },
+        "required": [
+          "paid"
+        ]
+      },
+      "ClosedDayAheadDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "description": "A Bucharest calendar day, \"YYYY-MM-DD\"",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "description": "holiday: a legal holiday, which wins when the garage also closed the day; closed: a day the garage closed",
+            "enum": [
+              "holiday",
+              "closed"
+            ]
+          }
+        },
+        "required": [
+          "day",
+          "reason"
+        ]
+      },
+      "PublicJobTypeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nameRo",
+          "nameEn"
+        ]
+      },
+      "PublicLabourDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "integer"
+          },
+          "toBani": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fromBani",
+          "toBani"
+        ]
+      },
+      "PublicPriceRowDto": {
+        "type": "object",
+        "properties": {
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fromBani": {
+            "type": "integer",
+            "description": "The brand's range when the garage set one for the brand in context, else the default"
+          },
+          "toBani": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "jobTypeId",
+          "nameRo",
+          "nameEn",
+          "fromBani",
+          "toBani"
+        ]
+      },
+      "PublicGaragePhotoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "The thumbnail copy (400 px), signed for an hour",
+            "format": "uri"
+          },
+          "displayUrl": {
+            "type": "string",
+            "description": "The display copy (1,600 px), signed for an hour",
+            "format": "uri"
+          },
+          "width": {
+            "type": "number",
+            "description": "Upright, when known",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "description": "Upright, when known",
+            "minimum": 1
+          },
+          "imageBase": {
+            "type": "string",
+            "description": "Where the responsive copies are: <imageBase>/<320|640|960|1600>.<avif|webp>, cached for a year. Absent for a photo processed before they existed"
+          },
+          "thumbhash": {
+            "type": "string",
+            "description": "A ThumbHash of the photo, base64, shown while it loads",
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "id",
+          "thumbnailUrl",
+          "displayUrl"
+        ]
+      },
+      "GarageProfileDto": {
+        "type": "object",
+        "properties": {
+          "worksOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicBrandDto"
+            }
+          },
+          "doesNotTake": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "brandNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "refusalPhrase": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string",
+            "description": "A workshop only.",
+            "maxLength": 200
+          },
+          "latitude": {
+            "type": "number",
+            "description": "A workshop only.",
+            "format": "double"
+          },
+          "longitude": {
+            "type": "number",
+            "description": "A workshop only.",
+            "format": "double"
+          },
+          "serviceRadiusKm": {
+            "type": "number",
+            "description": "A mobile mechanic only: how far from its base it travels.",
+            "maximum": 100,
+            "minimum": 1
+          },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "description": "The line the garage wrote about itself, as written",
+            "maxLength": 160
+          },
+          "verifiedAt": {
+            "type": "string",
+            "description": "The garage's stored day of last check (its approval, then each valid monthly RAR re-check) at UTC midnight; the approval instant for a garage with no stored day; null when it has neither",
+            "format": "date-time",
+            "nullable": true
+          },
+          "rating": {
+            "type": "number",
+            "description": "Out of 5, one decimal; null until reviews exist",
+            "format": "double",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "responseRate": {
+            "$ref": "#/components/schemas/ResponseRateDto"
+          },
+          "brand": {
+            "description": "Only when the read named a catalogue brand",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicGarageBrandDto"
+              }
+            ]
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Km from the place, one decimal. Only with near, and never for a mobile mechanic",
+            "format": "double",
+            "minimum": 0
+          },
+          "paymentMethods": {
+            "$ref": "#/components/schemas/PaymentMethodsDto"
+          },
+          "courtesyCar": {
+            "description": "Absent when the garage does not list one; a price only when paid",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CourtesyCarDto"
+              }
+            ]
+          },
+          "facilities": {
+            "type": "array",
+            "description": "The facilities it lists, in catalogue order",
+            "items": {
+              "type": "string",
+              "enum": [
+                "courtesy_car",
+                "pickup_dropoff",
+                "waiting_area"
+              ]
+            }
+          },
+          "facilitiesNote": {
+            "type": "string",
+            "description": "What the garage wrote about its facilities; absent when none",
+            "maxLength": 200
+          },
+          "hours": {
+            "type": "object",
+            "additionalProperties": {
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "description": "Each weekday (mon…sun) to its intervals as \"HH:MM\" pairs, an empty list on a closed day; empty when the garage never sent its hours"
+          },
+          "closedDays": {
+            "description": "The days from today to today + 14 (Bucharest) when the garage is shut, in date order; the closed days' notes stay private",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClosedDayAheadDto"
+            }
+          },
+          "jobTypes": {
+            "description": "The public jobs of the price list, in its order; empty without one",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicJobTypeDto"
+            }
+          },
+          "labour": {
+            "description": "Absent when either end of the labour range is unset",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicLabourDto"
+              }
+            ]
+          },
+          "prices": {
+            "description": "The public jobs with the range for the brand in context, in the list order; empty without one",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicPriceRowDto"
+            }
+          },
+          "photos": {
+            "description": "In the owner's order; empty when no photo is ready to be seen",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicGaragePhotoDto"
+            }
+          },
+          "phone": {
+            "type": "string",
+            "description": "The garage's stored phone as saved; never public",
+            "nullable": true
+          }
+        },
+        "required": [
+          "worksOn",
+          "doesNotTake",
+          "brandNote",
+          "refusalPhrase",
+          "id",
+          "name",
+          "slug",
+          "verifiedAt",
+          "rating",
+          "reviewCount",
+          "responseRate",
+          "paymentMethods",
+          "facilities",
+          "hours",
+          "closedDays",
+          "jobTypes",
+          "prices",
+          "photos",
+          "phone"
+        ]
+      },
       "CreateGarageReportDto": {
         "type": "object",
         "properties": {
@@ -15173,6 +17334,39 @@
             "type": "string",
             "nullable": true
           },
+          "roleTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "specialties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "certifications": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "years": {
+            "type": "number",
+            "nullable": true
+          },
+          "brandIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "isOwner": {
+            "type": "boolean"
+          },
+          "futureBookings": {
+            "type": "number"
+          },
           "onProfile": {
             "type": "boolean"
           },
@@ -15192,10 +17386,33 @@
           "id",
           "name",
           "speciality",
+          "roleTitle",
+          "specialties",
+          "certifications",
+          "years",
+          "brandIds",
+          "isOwner",
+          "futureBookings",
           "onProfile",
           "hasAccount",
           "rating",
           "reviewCount"
+        ]
+      },
+      "GarageBrandOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
         ]
       },
       "GarageMechanicsDto": {
@@ -15206,47 +17423,201 @@
             "items": {
               "$ref": "#/components/schemas/GarageMechanicDto"
             }
+          },
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageBrandOptionDto"
+            }
           }
         },
         "required": [
-          "items"
+          "items",
+          "brands"
         ]
       },
-      "PaymentMethodsDto": {
+      "CreateMechanicDto": {
         "type": "object",
         "properties": {
-          "cash": {
-            "type": "boolean"
+          "roleTitle": {
+            "type": "string",
+            "description": "null clears it",
+            "maxLength": 40,
+            "nullable": true
           },
-          "card": {
-            "type": "boolean"
+          "specialties": {
+            "description": "At most 6, each 1 to 40 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
-          "transfer": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "cash",
-          "card",
-          "transfer"
-        ]
-      },
-      "CourtesyCarDto": {
-        "type": "object",
-        "properties": {
-          "paid": {
-            "type": "boolean"
+          "certifications": {
+            "description": "At most 10, each 1 to 80 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
-          "pricePerDayBani": {
+          "years": {
             "type": "integer",
-            "description": "Per day, in bani: whole lei; only when paid",
-            "maximum": 200000,
-            "minimum": 100,
-            "multipleOf": 100
+            "description": "null clears it",
+            "maximum": 60,
+            "minimum": 0,
+            "nullable": true
+          },
+          "brandIds": {
+            "description": "Brands the garage works on, each once",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2
           }
         },
         "required": [
-          "paid"
+          "name"
+        ]
+      },
+      "UpdateMechanicDto": {
+        "type": "object",
+        "properties": {
+          "roleTitle": {
+            "type": "string",
+            "description": "null clears it",
+            "maxLength": 40,
+            "nullable": true
+          },
+          "specialties": {
+            "description": "At most 6, each 1 to 40 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "certifications": {
+            "description": "At most 10, each 1 to 80 characters once trimmed; [] clears them",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "years": {
+            "type": "integer",
+            "description": "null clears it",
+            "maximum": 60,
+            "minimum": 0,
+            "nullable": true
+          },
+          "brandIds": {
+            "description": "Brands the garage works on, each once",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 2
+          }
+        }
+      },
+      "GarageMemberDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "receptionist",
+              "mechanic"
+            ]
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "permissions": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GaragePermissionsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "accountId",
+          "name",
+          "role",
+          "since",
+          "permissions"
+        ]
+      },
+      "GarageMemberInviteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "mechanic",
+              "receptionist"
+            ]
+          },
+          "email": {
+            "type": "string"
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "email",
+          "sentAt"
+        ]
+      },
+      "GarageMembersDto": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageMemberDto"
+            }
+          },
+          "invites": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageMemberInviteDto"
+            }
+          }
+        },
+        "required": [
+          "members",
+          "invites"
         ]
       },
       "UpdateGarageDto": {
@@ -15869,21 +18240,6 @@
           "brandRanges"
         ]
       },
-      "PublicLabourDto": {
-        "type": "object",
-        "properties": {
-          "fromBani": {
-            "type": "integer"
-          },
-          "toBani": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "fromBani",
-          "toBani"
-        ]
-      },
       "PriceListDto": {
         "type": "object",
         "properties": {
@@ -16046,191 +18402,6 @@
           "warnings"
         ]
       },
-      "PublicBrandDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string",
-            "example": "BMW"
-          },
-          "slug": {
-            "type": "string",
-            "example": "bmw"
-          },
-          "fuels": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "enum": [
-                "petrol",
-                "diesel",
-                "hybrid",
-                "electric"
-              ]
-            }
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "fuels"
-        ]
-      },
-      "ResponseRateDto": {
-        "type": "object",
-        "properties": {
-          "state": {
-            "type": "string",
-            "description": "new: under 10 requests ever; none: no request counted in 30 days",
-            "enum": [
-              "new",
-              "rate",
-              "none"
-            ]
-          },
-          "rate": {
-            "type": "number",
-            "description": "Percent answered within a day; only in the rate state",
-            "maximum": 100,
-            "minimum": 0
-          }
-        },
-        "required": [
-          "state"
-        ]
-      },
-      "PublicGarageBrandDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string",
-            "example": "BMW"
-          },
-          "slug": {
-            "type": "string",
-            "example": "bmw"
-          },
-          "stance": {
-            "type": "string",
-            "description": "does_not_take also when the garage never named the brand",
-            "enum": [
-              "works_on",
-              "does_not_take"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "stance"
-        ]
-      },
-      "PublicJobTypeDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nameRo": {
-            "type": "string"
-          },
-          "nameEn": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "nameRo",
-          "nameEn"
-        ]
-      },
-      "PublicPriceRowDto": {
-        "type": "object",
-        "properties": {
-          "jobTypeId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "nameRo": {
-            "type": "string"
-          },
-          "nameEn": {
-            "type": "string"
-          },
-          "durationMinutes": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "fromBani": {
-            "type": "integer",
-            "description": "The brand's range when the garage set one for the brand in context, else the default"
-          },
-          "toBani": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "jobTypeId",
-          "nameRo",
-          "nameEn",
-          "fromBani",
-          "toBani"
-        ]
-      },
-      "PublicGaragePhotoDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "thumbnailUrl": {
-            "type": "string",
-            "description": "The thumbnail copy (400 px), signed for an hour",
-            "format": "uri"
-          },
-          "displayUrl": {
-            "type": "string",
-            "description": "The display copy (1,600 px), signed for an hour",
-            "format": "uri"
-          },
-          "width": {
-            "type": "number",
-            "description": "Upright, when known",
-            "minimum": 1
-          },
-          "height": {
-            "type": "number",
-            "description": "Upright, when known",
-            "minimum": 1
-          },
-          "imageBase": {
-            "type": "string",
-            "description": "Where the responsive copies are: <imageBase>/<320|640|960|1600>.<avif|webp>, cached for a year. Absent for a photo processed before they existed"
-          },
-          "thumbhash": {
-            "type": "string",
-            "description": "A ThumbHash of the photo, base64, shown while it loads",
-            "maxLength": 64
-          }
-        },
-        "required": [
-          "id",
-          "thumbnailUrl",
-          "displayUrl"
-        ]
-      },
       "PublicGarageDto": {
         "type": "object",
         "properties": {
@@ -16375,6 +18546,13 @@
             },
             "description": "Each weekday (mon…sun) to its intervals as \"HH:MM\" pairs, an empty list on a closed day; empty when the garage never sent its hours"
           },
+          "closedDays": {
+            "description": "The days from today to today + 14 (Bucharest) when the garage is shut, in date order; the closed days' notes stay private",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClosedDayAheadDto"
+            }
+          },
           "jobTypes": {
             "description": "The public jobs of the price list, in its order; empty without one",
             "type": "array",
@@ -16420,6 +18598,7 @@
           "paymentMethods",
           "facilities",
           "hours",
+          "closedDays",
           "jobTypes",
           "prices",
           "photos"
@@ -17925,6 +20104,39 @@
           "requestedAt",
           "changes",
           "total"
+        ]
+      },
+      "VerificationPresenceEntryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "First name and the initial of the last"
+          },
+          "since": {
+            "type": "string",
+            "description": "When this admin opened the file",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "name",
+          "since"
+        ]
+      },
+      "VerificationPresenceDto": {
+        "type": "object",
+        "properties": {
+          "others": {
+            "description": "The other admins with the file open, never the caller, the earliest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificationPresenceEntryDto"
+            }
+          }
+        },
+        "required": [
+          "others"
         ]
       },
       "VerificationDecisionDto": {

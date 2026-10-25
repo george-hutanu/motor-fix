@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   inject,
+  type Signal,
   signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -20,7 +21,12 @@ import {
   type PriceListItemDto,
   type PublicLabourDto,
 } from '@motor-fix/data-access';
-import { formatDuration, I18n, TranslatePipe } from '@motor-fix/i18n';
+import {
+  formatDuration,
+  formatWholeLeiRange,
+  I18n,
+  TranslatePipe,
+} from '@motor-fix/i18n';
 import {
   injectOverlayTask,
   type OverlayResult,
@@ -32,6 +38,7 @@ import {
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
 import { LeiInput } from '../../../public/lei-input';
+import { liveDraft } from '../../live-in-place/live-in-place';
 
 // A job's own row, as the read gives it once the garage has one.
 export type EditableRow = PriceListItemDto & {
@@ -40,7 +47,13 @@ export type EditableRow = PriceListItemDto & {
 };
 
 export type PriceRangeEditorData =
-  | { kind: 'row'; garageId: string; item: EditableRow }
+  | {
+      kind: 'row';
+      garageId: string;
+      item: EditableRow;
+      // The row as the live list shows it while the editor is open.
+      shown: Signal<EditableRow | undefined>;
+    }
   | {
       kind: 'new';
       garageId: string;
@@ -73,6 +86,25 @@ const RANGE_FIELD = {
   from: 'fromBani',
   to: 'toBani',
 } as const;
+
+type Range = { fromBani?: number; toBani?: number };
+
+// A range as the price list writes it: both ends, or the low end alone as a
+// starting price.
+export function priceText({ fromBani, toBani }: Range, i18n: I18n) {
+  const language = i18n.language();
+  if (fromBani !== undefined && toBani === undefined) {
+    return i18n.t('garage.prices.from', {
+      amount: formatWholeLeiRange(fromBani, fromBani, language),
+    });
+  }
+  return formatWholeLeiRange(fromBani, toBani, language);
+}
+
+const sameRange = (a: EditableRow, b: EditableRow) =>
+  a.fromBani === b.fromBani &&
+  a.toBani === b.toBani &&
+  a.durationMinutes === b.durationMinutes;
 
 // A refusal of the job itself (already listed, the list full) is the
 // editor's own message, since no field shows the job; a full list refused
@@ -135,6 +167,33 @@ export class PriceRangeEditor {
     toBani: new FormControl<number | null>(null),
   });
   private readonly changed = toSignal(this.form.events);
+
+  // The row's range saved meanwhile in another session, said under the
+  // fields; what was typed stays.
+  private readonly draft = liveDraft(
+    this.data.kind === 'row'
+      ? this.data.shown
+      : signal<EditableRow | undefined>(undefined),
+    sameRange,
+  );
+  protected readonly changedMeanwhile = computed(() => {
+    const row = this.draft.changed();
+    // A list that has not caught up with the stored row a refused save read
+    // shows an older range, which is no change made meanwhile.
+    if (!row || Date.parse(row.updatedAt) < Date.parse(this.stamp())) return '';
+    // On a phone the line wraps before the price, never after the separator
+    // or inside the duration, so "1 h 30" never sits alone on a line.
+    const value = [
+      priceText(row, this.i18n),
+      formatDuration(row.durationMinutes, this.i18n.language()).replace(
+        / /g,
+        '\u00a0',
+      ),
+    ]
+      .filter(Boolean)
+      .join('\u00a0· ');
+    return this.i18n.t('shell.live.changed', { value });
+  });
 
   protected readonly save = taskSave({
     done: () => this.task.close('saved'),
@@ -348,9 +407,13 @@ export class PriceRangeEditor {
     const list = await this.api.priceListControllerRead({
       garageId: data.garageId,
     });
-    const row = list.items.find((item) => item.priceId === data.item.priceId);
+    const row = list.items.find(
+      (item): item is EditableRow =>
+        item.priceId === data.item.priceId && item.updatedAt !== undefined,
+    );
     if (!row?.updatedAt) return;
     this.stamp.set(row.updatedAt);
     this.fill(row);
+    this.draft.accept(row);
   }
 }

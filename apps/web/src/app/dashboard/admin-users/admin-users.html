@@ -38,6 +38,7 @@
 />
 <div class="panels">
   <mf-panel [heading]="'admin.users.recent' | t">
+    <p class="said" aria-live="polite">{{ said() }}</p>
     @if (isNarrowed()) {
       <p class="found" aria-live="polite">{{ found() }}</p>
     }
@@ -67,12 +68,19 @@
           <ul class="list" [attr.aria-busy]="moreState() === 'loading' ? 'true' : null">
             @for (row of rows(); track row.id) {
               <li class="row">
-                <span class="who">
-                  <span class="name">{{ row.name }}</span>
-                  <span class="detail">{{ row.detail }}</span>
-                </span>
-                <mf-lamp [state]="row.lamp" [label]="row.state" />
-                <span class="count">{{ row.count }}</span>
+                <button
+                  type="button"
+                  class="open"
+                  (click)="openAccount(row.id)"
+                >
+                  <span class="who">
+                    <span class="sr-only">{{ 'admin.users.open' | t }} </span>
+                    <span class="name">{{ row.name }}</span>
+                    <span class="detail">{{ row.detail }}</span>
+                  </span>
+                  <mf-lamp [state]="row.lamp" [label]="row.state" />
+                  <span class="count">{{ row.count }}</span>
+                </button>
               </li>
             }
           </ul>

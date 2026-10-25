@@ -53,6 +53,7 @@ const EXCEPTIONS: Record<string, string> = {
   'garages/listing-drafts/completion/completion.copy.ts#copyOf': OWN_COPY,
   'garages/listing-drafts/listing-drafts.service.ts#cuiHeldElsewhere':
     'a listing whose CUI any garage holds, hidden or not, is told only that it is in use; the names go to the admins on the file',
+  'garages/listing-drafts/submit/submit.service.ts#ownerRow': OWN_NEW_GARAGE,
   'garages/place/garage-place.service.ts#write': OWN_NEW_GARAGE,
   'garages/prices/garage-prices/garage-prices.service.ts#labourAgain': OWN_COPY,
   'garages/prices/garage-prices/garage-prices.service.ts#saveStarting':
@@ -66,6 +67,8 @@ const EXCEPTIONS: Record<string, string> = {
     'reads the garages a driver picked only to refuse the request, naming why a hidden one cannot take it; it sends to none of them',
   'search/garage-search/garage-search.service.ts#after':
     'reads only the name of the last garage of a page, by the id in the cursor, to find where the next starts; it never returns it',
+  'search/similar-garages/similar-garages.service.ts#forGarage':
+    'reads a garage no longer listed only for its place and brands, to find listed garages like it; it answers only for a suspended one and never returns it',
 };
 
 // ─── sources ────────────────────────────────────────────────────────────────

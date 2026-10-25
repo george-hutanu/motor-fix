@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-23
+updated: 2026-10-25
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -37,6 +37,8 @@ features:
   - 009-copy-voice-analytics
   - 1192-photo-variants
   - 067-restore-suspended-garage
+  - 1193-fast-nav
+  - 1185-accent-search
 ---
 
 # Capability: Garage listing
@@ -523,9 +525,9 @@ _From 885-restored-draft-check._
 
 _From 111-garage-address-map._
 
-### 111-FR-002 — From the third character typed, 300 ms after the last keystroke, the field MUST ask the API's address look-up for suggestions and show at most 5 as buttons reachable by keyboard, each the suggestion's text; fewer than three characters show none and ask nothing; a newer text's answer always replaces an older one, never the other way round. Choosing a suggestion MUST fill the field with its text and set the position to the suggestion's point; a text with no suggestion shows a line saying nothing was found and offers the manual pin.
+### 1193-FR-007 — The address field MUST keep its 300 ms wait after the last keystroke so three quick keystrokes send one request (for the final text), MUST abort the in-flight request when a new question is asked, MUST treat an abort as no result (no message, no error), and MUST reuse the answer of a question already answered in the field's life (same language, same trimmed text; the last 20 questions are kept) without sending a request; a failed question is asked again. Modifies 111-FR-002 (a newer text now cancels the older request instead of only outranking its answer, and a repeated text is answered from the field's memory).
 
-_From 111-garage-address-map._
+_From 1193-fast-nav._
 
 ### 959-FR-004 — For a garage that is not `mobile`, the map MUST centre on the pin at street zoom 16 (`PLACE_ZOOM`, the constant of 111-FR-003) on the first placement and whenever the pin lands outside the current viewport, and MUST NOT otherwise change the view.
 
@@ -1221,6 +1223,22 @@ _From 1192-photo-variants._
 
 _From 1192-photo-variants._
 
+### 1185-FR-001 — On every insert or update of a garage, the stored `name`, `address`, `seat_address` and `city_name` MUST hold the comma-below letters ș ț Ș Ț wherever the written value held the cedilla letters ş ţ Ş Ţ, whatever path wrote it (listing submit, owner profile edit, admin, seed, direct SQL); every other character of the value is stored unchanged, so a value with no cedilla letter is stored byte-for-byte and nothing changes its length.
+
+_From 1185-accent-search._
+
+### 1185-FR-002 — A one-off step at deployment MUST convert the cedilla letters in the four columns of every existing garage row to the comma forms, touching no row that holds none.
+
+_From 1185-accent-search._
+
+### 1185-FR-004 — Nothing else changes: no index, search screen, text-search configuration or collation is added; `slug`, `city_key` and every other column are untouched; the existing length checks on the four columns keep holding.
+
+_From 1185-accent-search._
+
+### 1185-FR-005 — Tests MUST cover, on the real database: the conversion on insert and on update for each of the four columns through the Prisma client every application write path uses, the byte-for-byte storage of a value without cedillas, the one-off conversion of pre-existing rows, and the `f_unaccent` value of FR-003 together with its capitals; the suite that proves the image (`libs/domain/src/database-image.integration.spec.ts` or a sibling) is where the image assertion lives.
+
+_From 1185-accent-search._
+
 ## Retired
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
@@ -1247,3 +1265,4 @@ _From 1192-photo-variants._
 - `885-FR-004` — superseded by `1359-FR-008` (2026-10-20)
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
 - `049-FR-012` — superseded by `067-FR-007` (2026-10-23)
+- `111-FR-002` — superseded by `1193-FR-007` (2026-10-25)

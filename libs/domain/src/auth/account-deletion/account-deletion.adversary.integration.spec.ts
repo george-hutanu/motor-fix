@@ -1,4 +1,5 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -21,7 +22,6 @@ import {
 import { until } from '../../waits.testing';
 import { AccountsService } from '../accounts.service';
 import { AuthModule } from '../auth.module';
-import type { Role } from '../capabilities';
 import { hashPassword } from '../password/password';
 import { PasswordResetModule } from '../password/password-reset/password-reset.module';
 import { PhoneSignInModule } from '../phone-sign-in/phone-sign-in.module';
@@ -803,7 +803,7 @@ describe('the session after the account is deleted', () => {
 });
 
 describe('what a deletion leaves of the team and the events', () => {
-  it('detaches the mechanic and records one mechanic.updated for the garage', async () => {
+  it('detaches the mechanic and records one mechanic.removed for the garage and the profile', async () => {
     const id = await person(EMAIL, ['driver', 'mechanic']);
     const garage = await teamOf(id, 'mechanic');
 
@@ -822,11 +822,17 @@ describe('what a deletion leaves of the team and the events', () => {
     const events = await prisma.outboxEvent.findMany({
       where: {
         audience: { has: `garage:${garage.id}` },
-        kind: 'mechanic.updated',
+        kind: 'mechanic.removed',
       },
     });
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ audience: [`garage:${garage.id}`] });
+    // The card was on the profile, so the public streams hear it.
+    expect(events[0].audience).toEqual(
+      expect.arrayContaining([
+        `garage:${garage.id}`,
+        `public:garage:${garage.id}`,
+      ]),
+    );
   });
 
   it('records one member.removed for the garage a receptionist leaves', async () => {
@@ -858,7 +864,7 @@ describe('what a deletion leaves of the team and the events', () => {
       await prisma.outboxEvent.count({
         where: {
           audience: { has: `garage:${south.id}` },
-          kind: 'mechanic.updated',
+          kind: 'mechanic.removed',
           subjectId: { not: '' },
         },
       }),

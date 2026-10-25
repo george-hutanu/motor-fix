@@ -192,9 +192,7 @@ test.describe('the yearly documents, from the owner’s row to the admin’s dec
     await signInAt(page, renewed.email, 390);
 
     await expect(documentsRow(page)).toHaveAttribute('data-lamp', 'amber');
-    await expect(documentsRow(page)).toContainText(
-      'de reîncărcat o dată pe an, până în',
-    );
+    await expect(documentsRow(page)).toContainText('scadent pe');
     expect(await sideways(page)).toBeLessThanOrEqual(0);
 
     await documentsRow(page)

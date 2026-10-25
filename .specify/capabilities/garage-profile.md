@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -22,6 +22,11 @@ features:
   - 1192-photo-variants
   - 308-profile-details
   - 025-review-mechanic
+  - 133-garage-public-profile
+  - 136-legal-check-panel
+  - 309-open-now-directions
+  - 385-share-garage-link
+  - 024-garage-reviews
 ---
 
 # Capability: Garage profile
@@ -42,9 +47,9 @@ _From 1353-verified-badge-last-check._
 
 _From 307-public-garage-profile._
 
-### 308-FR-002 — The answer's key allow-list test (307-FR-005) MUST gain `hours` and keep failing on `phone`, `cui`, `seatAddress` and a mobile mechanic's `latitude`/`longitude`; a mobile mechanic's answer MUST carry no `address`, the seat included, and a workshop's MUST carry its one `address` string as the garage wrote it. The `worksOn`, `doesNotTake`, `brandNote`, `refusalPhrase`, `paymentMethods`, `courtesyCar`, `facilities`, `facilitiesNote`, `businessKind` and `serviceRadiusKm` fields stay as they are (modifies 307-FR-005: one more allowed key).
+### 309-FR-006 — The public profile read (`GET /api/v1/garages/{slug}`, with its optional `brand`) MUST carry `closedDays`: every day from today (Bucharest) through today + 14 that is a legal holiday of the calendar or a closed day of the garage, each as `{ day, reason }` with `day` a Bucharest date ("YYYY-MM-DD") and `reason` `holiday` or `closed`, in date order, a day held once with `holiday` winning; empty when there is none. The closed day's note is not sent. The answer's key allow-list test MUST gain `closedDays` and keep failing on `phone`, `cui`, `seatAddress` and a mobile mechanic's `latitude`/`longitude`; `hours` and every other field stay as they are (modifies 308-FR-002: one more allowed key).
 
-_From 308-profile-details._
+_From 309-open-now-directions._
 
 ### 1182-FR-007 — The public garage profile read MUST go through the cache service in place of its own Redis hash, slug pointer and generation: one entry per garage and brand in context (and one for none), found from the slug, tagged with the garage, a soft lifetime of 10 minutes, keeping every rule of 307-FR-001 and 307-FR-006 that the reader sees (the one public scope, the 404/410 verdicts of garages that exist read fresh every time, the brand-in-context variants, the drop on every event relayed to `public:garage:{id}`, PostgreSQL the only truth). The old keys, generation and per-module fail-open wrapper are removed, not kept beside the new service.
 
@@ -74,9 +79,9 @@ _From 307-public-garage-profile._
 
 _From 271-garage-distance._
 
-### 307-FR-015 — The page MUST show skeletons for the header and each section while the read is open; on 404, the "Pagina nu există" / "This page does not exist" view with a link to Home (the existing not-found view); on 410, the "no longer available" view, "Acest service nu mai este disponibil" / "This garage is no longer available" with a link to Home; the server answers the page with status 404 and 410 for those two views, 200 otherwise; on any other failure, an error block "Nu am putut încărca service-ul" / "We could not load the garage" with "Încearcă din nou" / "Try again" that repeats the read.
+### 385-FR-008 — On the 410 answer the page MUST show the view with the heading "Acest service nu mai este disponibil pe MotorFix." / "This garage is no longer available on MotorFix.", never the old garage's name or any detail of it, then the similar garages of FR-009 as result cards in a list (one list item per card, the heading before it as an `h1`) (the card of Results, 267-FR-014, each opening its garage's profile with the link's brand, or the card's own brand when the link had none), under a line "Service-uri similare în apropiere" / "Similar garages nearby"; the server answers the page with status 410, as today (modifies 307-FR-015: the Home link gives way to the cards and the search link).
 
-_From 307-public-garage-profile._
+_From 385-share-garage-link._
 
 ### 307-FR-016 — The page MUST render well at 320 px and 390 px (stacked), tablet and desktop (header side by side), light and dark, Romanian and English, with no sideways scroll; its texts MUST live in the public texts for both languages, and text the garage wrote MUST be shown as written in both. Accessibility: the lamp's stance and the dial's value are carried by text, never by colour alone; the back link, the sign-in controls and "Încearcă din nou" / "Try again" are reachable by keyboard with a visible focus and an accessible name; touch targets are at least 44 px under 640 px; the skeletons are hidden from assistive technology and an in-place change of the lamp or the dial is announced politely, without moving focus.
 
@@ -473,9 +478,9 @@ _From 1192-photo-variants._
 
 _From 308-profile-details._
 
-### 308-FR-003 — The hours MUST be read in the profile's one PostgreSQL statement and served from the profile's existing cache per brand in context (307-FR-006, 1182-FR-007), dropped on the events already relayed to `public:garage:{garageId}`; the answer's shape version in the cache key MUST be bumped, so no older cached answer without hours is read back (as 355-FR-005 and 310-FR-013 did). The read performs no write, emits no event and records no audit history.
+### 309-FR-007 — The closed days MUST be read in the profile's existing read path and served from the profile's cache per brand in context (307-FR-006, 1182-FR-007): the cached answer carries the list, the answer's shape version in the cache key MUST be bumped so no older answer without it is read back, and the cache's own lifetime bounds how far "today" can drift inside a cached answer (the window of FR-006 starts at the day the answer was built; the browser evaluates on its own clock, so a day that slid out of the window is simply not consulted, and a day that slid in is at most the cache's lifetime away). The read performs no write, emits no event and records no audit history (modifies 308-FR-003: the shape version moves once more).
 
-_From 308-profile-details._
+_From 309-open-now-directions._
 
 ### 308-FR-004 — The profile page MUST fill its brands slot with "Lucrează pe" / "Works on": one chip per brand of `worksOn`, each a green lamp carrying the brand's name as text, and "Nu lucrează pe" / "Does not work on": one chip per brand of `doesNotTake`, each a red lamp carrying the name. A brand with no row (unstated) is in neither list. The stance is carried by the section heading, with the brand's name as the chip's visible text and the lamp `aria-hidden`, as the header lamp does (307-FR-016); no per-chip screen-reader string; never by colour alone.
 
@@ -533,6 +538,204 @@ _From 308-profile-details._
 
 _From 308-profile-details._
 
+### 024-FR-001 — The public garage profile MUST show a "Ce spun șoferii" / "What drivers say" section in the page's `reviews` slot (after the prices, in the main column from 1024 px, 311-FR-009), visible to everyone, signed in or not, with the same content for both.
+
+_From 024-garage-reviews._
+
+### 024-FR-002 — The section MUST show the garage's rating with one decimal in the language's separator ("4,9" / "4.9", 019-FR-003), its review count ("212 recenzii" / "212 reviews", with the singular for 1), and the breakdown: for each star value from five to one, its label ("5 stele" … "2 stele", "1 stea" / "5 stars" … "1 star") and the number of published reviews with that rating. A garage with no published review shows "—" for the rating, "Încă nu are recenzii." / "No reviews yet." and no breakdown rows.
+
+_From 024-garage-reviews._
+
+### 024-FR-003 — The rating and the count MUST be the garage's stored figures (written by the ratings job, 025-FR-006); the breakdown MUST be counted from the garage's `published` reviews on each read, in the same answer as the list, so the five counts add up to that answer's `total`. The empty state shows when `total` is 0; the rating shows "—" when the stored rating is null; the count line shows the stored count.
+
+_From 024-garage-reviews._
+
+### 024-FR-011 — The open profile MUST re-read the section (its first page, dropping the extra pages) when any `review.*` or `rating.*` message for its garage arrives on the `public:garage:{garageId}` stream it already joins (307-FR-017), and after the stream reopens (256-FR-002), with no polling of its own; the re-read swaps the content in place, keeps the scroll position (307-FR-018) and is silent for assistive technology (a re-read that starts while a "Vezi mai multe" page is loading replaces it: the last answer to arrive for the newest request wins), except that the rating's in-place change is announced politely as the header's dial already is (307-FR-016).
+
+_From 024-garage-reviews._
+
+### 024-FR-012 — While the section has no answer yet (a client-side navigation to the profile) it MUST show a skeleton hidden from assistive technology, never over content already shown; when the read fails (network or 5xx) it MUST show "Nu am putut încărca recenziile" / "We could not load the reviews" with "Încearcă din nou" / "Try again", which reads again (also when the server-side first read failed); a failed re-read keeps the last shown content; a failed "Vezi mai multe" keeps the loaded pages and shows the error line with "Încearcă din nou" in the button's place.
+
+_From 024-garage-reviews._
+
+### 024-FR-013 — The section MUST render at 320 px and 390 px, tablet and desktop, light and dark, Romanian and English with no sideways scroll; "Vezi mai multe" and "Încearcă din nou" are reachable by keyboard with a visible focus and a touch target of at least 44 px under 640 px; the breakdown is readable as text, never colour alone (307-FR-016).
+
+_From 024-garage-reviews._
+
+### 024-FR-014 — The section MUST be a web component of its own folder under the garage profile, rendered on the server with the profile's first page as the rest of the page is, and MUST join no stream of its own.
+
+_From 024-garage-reviews._
+
+### 024-FR-015 — The mock's "Scrie o recenzie" button MUST NOT be added by this story (removed while `reviews_only_after_confirmed_job` is on; ST-22's button covers the off case).
+
+_From 024-garage-reviews._
+### 309-FR-001 — The status rule MUST be one pure, browser-safe function in the shared contracts library (beside the hours types; no server-framework, validator or database import), taking the garage's weekly hours, the list of closed days ahead (each a Bucharest date with its reason, `holiday` or `closed`) and the instant "now", and answering one of: no line; open until a time of today; on a break until a time of today; closed, with the reason for today (`hours`, `holiday` or `closed`) and the next opening (the day's offset from today, 0 to 14, and its start time), or closed with no opening in the window. It MUST be usable unchanged by #210's "open now" filter (decided in #864).
+
+_From 309-open-now-directions._
+
+### 309-FR-002 — Every time MUST be worked out on the Europe/Bucharest wall clock, including the nights of the March and October clock changes: "today" is the Bucharest date of now, a weekday is the Bucharest weekday, and the hours' "HH:MM" ends are read on that clock.
+
+_From 309-open-now-directions._
+
+### 309-FR-003 — The rule for a day MUST be, in this order: a legal holiday or a garage closed day closes the whole day; otherwise the day's intervals apply, and a day with no interval is closed. A garage whose hours table is empty, or fails the contracts library's existing weekly-hours guard (`isWeeklyHours`, the one check), gets no line.
+
+_From 309-open-now-directions._
+
+### 309-FR-004 — Intervals are half-open, [start, end): 08:00:00 is open, 19:00:00 is closed. Now inside an interval MUST answer open until that interval's end; now after one interval of today and before the next MUST answer a break until the next interval's start; otherwise the garage is closed and the next opening is the start of the first interval of the first day, today included, from now through today + 14 that is neither a holiday nor a closed day and has an interval starting after now (today) or at all (a later day). With no such day the rule answers closed with no opening, and the page shows no line. The rule trusts only the closed days it is given: a day past the answer's window (a cached answer, a tab left open for days) is not known to it, and that drift is accepted.
+
+_From 309-open-now-directions._
+
+### 309-FR-005 — The line's texts MUST be, Romanian / English, from the public texts of both languages: open "Deschis azi până la {end}" / "Open today until {end}"; break "Pauză până la {start}" / "Break until {start}"; closed by hours "Închis acum · deschide {when} la {start}" / "Closed now · opens {when} at {start}"; closed by a holiday "Închis azi · sărbătoare legală · deschide {when} la {start}" / "Closed today · public holiday · opens {when} at {start}"; closed by a garage closed day "Închis azi · deschide {when} la {start}" / "Closed today · opens {when} at {start}". `{when}` is "azi" / "today" for an opening later today, "mâine" / "tomorrow" for one day ahead, the weekday's name in the language's full form (Romanian lower case: "luni"; English capitalised: "Monday") for two to six days ahead, and from seven days ahead the date as "pe {d} {month}" / "on {d} {month}", the day unpadded and first, the month's full name (Romanian lower case): "pe 5 noiembrie" / "on 5 November". Times are 24-hour two-digit (019-FR-006). The middle dot is " · " (a middle dot between ordinary spaces), as the header's other lines use.
+
+_From 309-open-now-directions._
+
+### 309-FR-009 — The profile header MUST show the line as one short text in the header's text column, where the mock places "Deschis azi până la 19:00" (under the name and place line, before the verification line), for a workshop and for a mobile mechanic alike; the line MUST be absent, leaving no empty space, when the rule answers no line. The line is plain text with no control, so no touch-target rule applies; it is not announced on each change (no live region), the way the header's other lines are silent (307-FR-016).
+
+_From 309-open-now-directions._
+
+### 309-FR-010 — The server render MUST draw the line once on the server's clock; in the browser the page MUST evaluate it again at start and then once a minute, on the browser's clock, from the answer it already holds, with no request of its own; the timer stops when the page is left.
+
+_From 309-open-now-directions._
+
+### 309-FR-011 — When `garage.updated` arrives on the profile's `public:garage:{garageId}` subscription the line MUST re-read with the profile (the existing live re-read, 307-FR-018, 310-FR-010) and show the new state in place, with no reload and no polling of its own.
+
+_From 309-open-now-directions._
+
+### 309-FR-012 — The line MUST render at 320 px and 390 px (wrapping onto a second line when the text is long, no sideways scroll), tablet and desktop, light and dark, Romanian and English, switching with the language without a reload; every text of this story MUST live in the public texts of both languages.
+
+_From 309-open-now-directions._
+
+### 309-FR-013 — Tests MUST cover, in Jest, a table of cases for the status rule: open, before opening, after closing, a lunch break, Saturday with hours, Sunday closed, a legal holiday (1 December 2027), a garage closed day (27 December 2027), the exact start (08:00, open) and end (19:00, closed) of an interval, a date seven or more days ahead ("pe 5 noiembrie"), Orthodox Easter Monday 2027 (3 May 2027), the nights of the March and October 2027 clock changes, two closed days in a row, a next opening seven or more days ahead, fifteen closed days (no line) and no hours; the seeded holidays of 2028 to 2030 (17 rows each year, no shared day, the Easter-derived days); the public read's `closedDays` window (a holiday inside, a closed day inside, a closed day on day 15 left out, a holiday winning over a closed day on one day) with the key allow-list; the header line for each rule outcome, the absent line, the minute tick and the live re-read. End to end (Playwright): with the browser's clock fixed at a Tuesday 10:15 inside the answer's window, the open line shows on a garage with weekday hours; with the clock fixed at 10:15 on a day the profile answer carries as a holiday (the plan chooses the day, research R7), the holiday line shows. Every test file names its requirements in a `// @traces` line.
+
+_From 309-open-now-directions._
+
+### 309-FR-014 — The feature adds no service, queue, outside call, endpoint or product action and writes nothing but the seed migration: the observability inventory is unchanged, and this is recorded in the PR.
+
+_From 309-open-now-directions._
+### 133-FR-001 — The API MUST expose `GET /api/v1/garages/{garageId}/profile` for the garage's own staff, answering 200 with the public profile read model of `GET /api/v1/garages/{slug}` — the same `PublicGarageDto` fields, field for field, built by the same read (one read model, no second query shape) — plus one field `phone` (the garage's stored `phone` column as saved, already normalised at save by 109-FR-001; `null` when the row has none). The read model part is served through the public read's own cache (1182-FR-007); `phone` is read apart from it and never written into that cache entry. It takes no `brand` or `near` parameter: the owner's view is brand-neutral and shows no distance.
+
+_From 133-garage-public-profile._
+
+### 133-FR-002 — The read MUST answer: 200 for the garage's owner (role `garage`); 403 `forbidden` for the garage's staff who do not hold `garage.profile` (the mechanic, and the receptionist until ST-1369); 404 `not_found` for every other actor (another garage's staff, a driver, an admin) and for a `garageId` that is no garage; 410 `gone` for the staff of a suspended garage, as the public read does; a garage not yet approved answers 404 like the public read. The checks run in this order: no session 401; not staff of this garage (or no such garage) 404; staff without `garage.profile` (the mechanic) 403; then the garage's status (not approved 404, suspended 410). The trust check runs on the server; the menu entry and the view only mirror it.
+
+_From 133-garage-public-profile._
+
+### 133-FR-003 — The capability table MUST stay unchanged in this story: `garage.profile` stays the owner's only, so the receptionist is refused the read like the mechanic (granting it is ST-1369's, see `## Split`). Every write keeps checking the owner (`assertGarageOwner`).
+
+_From 133-garage-public-profile._
+
+### 133-FR-004 — The read MUST write no database row, emit no event, record no audit entry and count no profile view; it is read-only and idempotent (filling the public read's cache on a miss, as the public read does, is not a write in this sense).
+
+_From 133-garage-public-profile._
+
+### 133-FR-005 — The dashboard view `profile` of the garage area MUST render the view "Profilul service-ului" / "Garage profile" with the subtitle "Așa te văd șoferii pe hartă" / "This is how drivers see you on the map" (the titles of 097-FR-003 are already in place), read only, with no edit control: the place where "Modifică profilul" will go stays empty until the editing stories (#1246–#1249) add their dialogs.
+
+_From 133-garage-public-profile._
+
+### 133-FR-006 — The view MUST show a panel "Profilul public" / "Public profile" with the lines, in this order and each with its label: "Nume" / "Name"; for a workshop "Adresă" / "Address" with the address as the garage wrote it, for a mobile mechanic (`businessKind` `mobile`) "Zonă de lucru: {r} km" / "Service area: {r} km" where `r` is `serviceRadiusKm` or 20 when the answer has none, and never any address; "Program" / "Hours" as the public profile's hours lines (Monday first, runs of identical days, 24-hour two-digit times, "Închis" / "Closed", 308-FR-012), no line when the answer carries no usable hours; "Telefon" / "Phone" with the stored phone and the tag "nu apare public" / "not shown publicly", no line when the answer has no phone.
+
+_From 133-garage-public-profile._
+
+### 133-FR-007 — The view MUST show "Lucrează pe" / "Works on" and "Nu lucrează pe" / "Does not work on" with chips built in the garage area the way the public profile builds them (308-FR-004, 308-FR-005 minus the brand in context) — the shared lamp, the same fuel labels and order; the public profile's own section component is not reused, as it carries the brand in context and the driver's copy: one chip per brand of `worksOn` with a green lamp, one per brand of `doesNotTake` with a red lamp, in the answer's order; each `worksOn` chip carries its fuel line ("benzină · motorină · hibrid · electric" / "petrol · diesel · hybrid · electric", the ticked ones in that fixed order) exactly as the public profile shows it; the lamp is `aria-hidden`, the stance carried by the heading. An unstated brand is in neither list. An empty list shows its heading and "nimic ales încă" / "nothing chosen yet". Under both lists one line reads "Mărcile nemarcate contează ca refuz: apari ultimul la ele și nu primești cereri." / "Unmarked brands count as a refusal: you show last for them and get no requests." The garage's brand note, when the answer carries one, follows as on the public profile (308-FR-007).
+
+_From 133-garage-public-profile._
+
+### 133-FR-008 — The view MUST show "Facilități" / "Facilities" with every catalogue facility, in catalogue order (`courtesy_car`, `pickup_dropoff`, `waiting_area`): one listed in the answer's `facilities` with its label and a green lamp — the courtesy car's label carrying " · gratuit" / " · free" or " · {price} / zi" / " · {price} / day" with the price in whole lei by the money rule (308-FR-009) — and one not listed as "{label}: nu" / "{label}: no" with a grey lamp. Then "Plată: {methods}" / "Payment: {methods}" with the ticked methods in the fixed order numerar, card, transfer / cash, card, transfer (308-FR-010), hidden when none is ticked; then the facilities note when the answer carries one. The labels are the public profile's (308-FR-008).
+
+_From 133-garage-public-profile._
+
+### 133-FR-009 — The view MUST show one button "Vezi profilul public" / "View public profile" that opens `/{lang}/garages/{slug}` — `lang` the interface language, `slug` the answer's — in a new tab with `rel="noopener"`; it is hidden while the view has no answer and on the 410 state.
+
+_From 133-garage-public-profile._
+
+### 136-FR-005 — On the view's suspended state (the profile read answers 410, 133-FR-010) the view MUST show the suspended line in place of the "Profilul public" panel and MUST still show the legal panel below it, which reads the legal check as for an approved garage (the API answers 200 with `status: suspended`, 1354-FR-001) and shows its "Suspendat" tag and rows (1354-FR-004); the panel's host is mounted once the profile read has answered, with 200, 410 or a failure other than 403 or 404 (each panel then shows its own error and retry, as the Edge Cases state), so on 403 or 404 of the profile read the view redirects as today and the panel is never rendered (no flash of its error or skeleton), and while the first profile read is open neither is the panel; the legal check's own 404 hides the panel alone. Modifies 133-FR-010 (the 410 state keeps the legal panel).
+
+_From 136-legal-check-panel._
+
+### 133-FR-011 — The open view MUST re-read in place when `garage.updated`, `garage.suspended`, `garage.restored`, `facility.removed` or `facility.re_add_decided` for its garage arrives on the dashboard's existing live stream, with no reload and no polling; the latest read's answer wins over an older one still in flight; the swap is silent for assistive technology (as 308-FR-014).
+
+_From 133-garage-public-profile._
+
+### 133-FR-012 — Every text this story introduces for FR-005 to FR-010 MUST come from the garage area's translation files in Romanian and English with comma-below diacritics (016-FR-002); the labels the view shares with the public profile (fuel words, weekday names, "Închis", the facility labels, "gratuit" / "{price} / zi", "Plată: {methods}" and the payment words) are read from the public area's files, the one copy the public profile shows; money in whole lei and hours in 24-hour time through the shared formats (019-FR-001, 019-FR-006); the view MUST render at 320 px and 390 px (fields stacked, chips wrapping), tablet and desktop, light and dark, Romanian and English, with no sideways scroll at 320 px, buttons at least 44 × 44 px and the smallest text at least 12 px.
+
+_From 133-garage-public-profile._
+
+### 133-FR-013 — The view MUST be one named region, the board's panel "Profilul public" with its `h2` under the view's `h1`, the groups "Lucrează pe", "Nu lucrează pe" and "Facilități" each headed by an `h3`, the lamps `aria-hidden` and never the only carrier of meaning (the "nu" / "no" text carries the not-offered state), the public-profile button a link with its destination announced ("se deschide într-o filă nouă" / "opens in a new tab"); the QA sweep's axe checks pass on the view.
+
+_From 133-garage-public-profile._
+
+### 133-FR-014 — The read of FR-001 MUST be listed in `infra/observability/inventory.json` as an endpoint with its route metric (as `GET /api/v1/garages/:slug` is), with no new panel beyond the existing API latency and error panels, and no alert of its own: it is a staff read of an existing read model. The story adds no service, queue or outside call.
+
+_From 133-garage-public-profile._
+
+### 133-FR-015 — Tests MUST exist before the code (Principle II) and name this feature's ids. Jest on real PostgreSQL and Redis: the answer equals the public read's answer for the same garage plus `phone` (key allow-list: the public keys plus `phone`, never `cui`, `seatAddress`, `latitude`/`longitude` of the seat for a mobile mechanic); 200 owner, 403 receptionist (until ST-1369), 403 mechanic, 404 another garage's owner, driver, admin and a random uuid, 401 without a session, 410 suspended, 404 pending; the read writes no audit row and no event; the capability table and its tests are unchanged (ST-1369 changes them). Jest for the web: the panel lines for a workshop and a mobile mechanic, the two chip lists with fuel lines and the refusal line, the facilities with a not-offered row, the courtesy car free and paid, the payment line, the skeleton, the error with retry, the 410 state, the re-read on each of the five live kinds with the latest answer winning, the public-profile link's address and target. Playwright: the owner opens the view and the public profile and sees the same brands, fuel types, facilities and hours; the phone shows only in the dashboard; a mechanic's menu lacks it.
+
+_From 133-garage-public-profile._
+
+### 136-FR-001 — The dashboard view `profile` ("Profilul service-ului", 133-FR-005) MUST show, for the garage's owner, the panel "Verificare legală" / "Legal check" below the "Profilul public" panel as the board's `prof` view places it (a full-width panel under the grid, `DashGarage.dc.html` lines 499–568), placed as the next sibling of the "Profilul public" section with no grid wrapper (the grid's second panel is ST-143's, unbuilt): the same reusable panel component and the same owner host that the overview shows (`mf-garage-legal-check`, 210-FR-012), with no second read, copy or component.
+
+_From 136-legal-check-panel._
+
+### 136-FR-002 — On the view the panel MUST show exactly what it shows on the overview: the tag "Verificat" (or "Suspendat" in red, 1354-FR-004), the four rows company, CAEN, RAR and documents in that order with their state in words and colour (`ok` green "în regulă", `warning` amber "atenție", `failed` red "problemă", `not_run` grey "neverificat"), the RAR row dated by the stored last check or re-check (1354-FR-003), the mobile mechanic's CAEN wording (210-FR-007), the dates as "1 oct. 2026" / "1 Oct 2026" in Europe/Bucharest (210-FR-008), the note on the monthly re-check (1354-FR-006), the "Încarcă documentele" button (068-FR-005), the four-row skeleton and the error with retry (210-FR-010); no admin note, reviewer, evidence or document file is in the answer or the view.
+
+_From 136-legal-check-panel._
+
+### 136-FR-006 — The panel on the view MUST be rendered only for the garage's owner (role `garage`), with no gate of its own: the view's route and redirect (133-FR-010) and the legal check read's refusals (210-FR-001) already keep everyone else out; this story MUST change no capability, role, menu entry or API answer: the receptionist and the mechanic do not reach the view (133-FR-002, 133-FR-003) and the legal check read keeps its 403 for them (210-FR-001). The brief's receptionist tag-only form is deferred to ST-1369 (see Assumptions).
+
+_From 136-legal-check-panel._
+
+### 136-FR-007 — Every text this story introduces MUST come from the garage area's translation files in Romanian and English with comma-below diacritics (016-FR-002); the view with the panel MUST render at 320 px and 390 px (the panel's rows stacking and wrapping), tablet and desktop, light and dark, Romanian and English, with no sideways scroll at 320 px, every button at least 44 × 44 px and the smallest text at least 12 px; the panel keeps its own named region (its `h2` under the view's `h1`, beside the "Profilul public" region in the approved state, 133-FR-013; on the suspended state the suspended line stays a paragraph, 133-FR-010), its lamps `aria-hidden` and every state carried by text, not colour alone; the QA sweep's axe checks pass on the view in both states.
+
+_From 136-legal-check-panel._
+
+### 136-FR-008 — The story MUST write nothing (no audit entry, no event, no field written), add no endpoint, table, service, queue or outside call, and change no entry of `infra/observability/inventory.json`: the legal check read is already listed there as `garage-legal-check` (210-FR-013) and the profile read as ST-133 lists it (133-FR-014).
+
+_From 136-legal-check-panel._
+
+### 136-FR-009 — Tests MUST exist before the code (Principle II) and name this feature's ids. Jest for the web: the view renders the legal panel for the owner under the "Profilul public" panel; the panel is present on the 410 state and absent on the panel's own 404; the `due` row's text and colour in Romanian and English, with the `valid`, `in_review`, `overdue` and `refused` rows unchanged; the re-read on `document.due` with the latest answer winning; the public profile panel's error leaves the legal panel standing and the reverse. Playwright: the seeded owner opens Profilul service-ului and sees "Verificare legală" with "Verificat", four rows, the RAR day, the documents deadline and the note; a receptionist's and a mechanic's menu lack the view. The amber-without-reload case is covered in Jest through the live kind, and end to end when the e2e fixtures can set the seeded cycle `due` without a new seed (see Assumptions).
+
+_From 136-legal-check-panel._
+
+### 385-FR-001 — The public profile header MUST show one button "Distribuie" / "Share" beside the garage's name, with a share icon, at least 44 px tall and wide on phones, reachable by keyboard with a visible focus ring, named for assistive technology "Distribuie" / "Share" followed by the garage's name (a visible label, not the icon alone), visible from 320 px without sideways scrolling, in light and dark; it is shown only on the 200 page, never on the 404 or 410 views.
+
+_From 385-share-garage-link._
+
+### 385-FR-002 — The shared address MUST be the canonical profile address in the sharer's interface language, `{site origin}/{lang}/garages/{slug}`, with `brand={slug}` when the page has a brand in context, plus `src=share`, and no other parameter; the origin is the site's public origin (`SITE_ORIGIN`, the canonical link's origin), never the browser's `location.origin`.
+
+_From 385-share-garage-link._
+
+### 385-FR-003 — When the browser offers the share menu, the button MUST open it with the garage's name as the title and the address of FR-002 as the link; a dismissed menu does nothing; a failed share falls through to FR-004.
+
+_From 385-share-garage-link._
+
+### 385-FR-004 — Without a share menu the button MUST copy the address to the clipboard and show the toast "Link copiat" / "Link copied" (the shared toast, announced politely to assistive technology); when the copy is refused, the page MUST instead show a read-only field holding the address, selected and focused, under the line "Copiază linkul de mai jos" / "Copy the link below" (the field's accessible name, so a screen reader announces it on focus), kept until the page or garage changes.
+
+_From 385-share-garage-link._
+
+### 385-FR-005 — Nothing in the share action needs a session: the button, the menu, the copy and the field behave the same for a visitor and a signed-in driver.
+
+_From 385-share-garage-link._
+
+### 385-FR-006 — A shared link to an `approved` garage MUST open the public profile with the brand in context, the view counted as `shared_link` (143-FR-008) and a request started from it storing `shared_link` as its source (the existing rules); no change to the 200 page beyond FR-001.
+
+_From 385-share-garage-link._
+
+### 385-FR-007 — A link to a garage that was never public (draft, waiting or unknown slug) MUST keep the plain not-found view and status 404 of 307-FR-015, with no similar garages and no call for them.
+
+_From 385-share-garage-link._
+
+### 385-FR-009 — The view MUST read the similar garages from `GET /api/v1/garages/{slug}/similar?brand={slug}` with the link's `brand` when present and show at most 3; with no item it MUST show "Caută un service pentru {brand name}" / "Find a garage for {brand name}" opening the results for that brand when the answer names a brand; when the link had no brand, or the read fails or answers `not_found` (an unknown brand), it MUST show "Caută un service" / "Find a garage" opening Home; it never shows an error block for this read.
+
+_From 385-share-garage-link._
+
+### 385-FR-010 — On the server the page MUST render the view with its similar garages in the same pass that found the 410, so the first paint holds the cards; in the browser the read is not repeated when the server rendered it.
+
+_From 385-share-garage-link._
+
+### 385-FR-011 — The view MUST lay out phones first: one column of cards at 320 and 390 px, the Results card's wider layout from the tablet width, no sideways scrolling at 320 px, light and dark, Romanian and English.
+
+_From 385-share-garage-link._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -550,3 +753,7 @@ _From 308-profile-details._
 - `310-FR-004` — superseded by `1192-FR-009` (2026-10-22)
 - `307-FR-005` — superseded by `308-FR-002` (2026-10-22)
 - `308-FR-006` — superseded by `025-FR-016` (2026-10-23)
+- `133-FR-010` — superseded by `136-FR-005` (2026-10-24)
+- `308-FR-002` — superseded by `309-FR-006` (2026-10-24)
+- `308-FR-003` — superseded by `309-FR-007` (2026-10-24)
+- `307-FR-015` — superseded by `385-FR-008` (2026-10-24)

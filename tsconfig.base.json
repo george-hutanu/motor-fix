@@ -13,8 +13,14 @@
     "noImplicitReturns": true,
     "paths": {
       "@motor-fix/contracts": ["./libs/contracts/src/index.ts"],
+      "@motor-fix/contracts/account-action-limits": [
+        "./libs/contracts/src/account-action-limits.ts"
+      ],
       "@motor-fix/contracts/account-search": [
         "./libs/contracts/src/account-search.ts"
+      ],
+      "@motor-fix/contracts/capabilities": [
+        "./libs/contracts/src/capabilities.ts"
       ],
       "@motor-fix/contracts/car-systems": [
         "./libs/contracts/src/car-systems.ts"
@@ -62,6 +68,9 @@
       ],
       "@motor-fix/contracts/notification-groups": [
         "./libs/contracts/src/notification-groups.ts"
+      ],
+      "@motor-fix/contracts/open-status": [
+        "./libs/contracts/src/open-status.ts"
       ],
       "@motor-fix/contracts/phone": ["./libs/contracts/src/phone.ts"],
       "@motor-fix/contracts/place-section": [

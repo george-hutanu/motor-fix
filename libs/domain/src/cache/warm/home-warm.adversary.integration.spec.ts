@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { type INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
@@ -12,7 +13,6 @@ import { AuditService } from '../../audit/audit.service';
 import { AccountsService } from '../../auth/accounts.service';
 import { AUTH_REDIS } from '../../auth/attempts';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import * as password from '../../auth/password/password';
 import { PRISMA } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
@@ -49,9 +49,9 @@ beforeEach(async () => {
   await world.reset();
   await prisma.$executeRawUnsafe('TRUNCATE outbox_event');
   const keys = [
-    ...(await redis.keys('v4:driver-home:*')),
-    ...(await redis.keys('v4:garage-home:*')),
-    ...(await redis.keys('v4:tag:warm:*')),
+    ...(await redis.keys('v5:driver-home:*')),
+    ...(await redis.keys('v5:garage-home:*')),
+    ...(await redis.keys('v5:tag:warm:*')),
     ...(await redis.keys('auth:fail:*')),
     ...(await redis.keys(`${ROUTE_LIMITS.signInAttempts.key}:*`)),
   ];
@@ -138,7 +138,7 @@ function watch(nest: INestApplication) {
   jest.spyOn(store, 'eval').mockImplementation((...args) => {
     const key = args
       .map(String)
-      .find((arg) => /^v4:(driver|garage)-home:/.test(arg));
+      .find((arg) => /^v5:(driver|garage)-home:/.test(arg));
     if (!key || !String(args[0]).includes('ZADD')) return evaluate(...args);
     const who = key.split(':')[2] ?? '';
     const run = () =>

@@ -1,7 +1,7 @@
 @if (unknown()) {
   <mf-gone missing />
 } @else if (removed()) {
-  <mf-gone />
+  <mf-gone [similar]="similar()" />
 } @else if (garage(); as garage) {
   @if (garage.brand; as brand) {
     <a
@@ -40,18 +40,33 @@
           {{ 'public.garageProfile.badge' | t }}
         </span>
       </div>
-      <h1>{{ garage.name }}</h1>
-      @if (garage.businessKind === 'mobile' && garage.serviceRadiusKm) {
-        <p class="place">
-          {{
-            'public.garageProfile.mobileArea'
-              | t: { km: (garage.serviceRadiusKm | km) }
-          }}
-        </p>
-      } @else if (distanceSaid()) {
-        <p class="place">
-          {{ 'public.garageProfile.distance' | t: { km: distanceSaid() } }}
-        </p>
+      <div class="name-row">
+        <h1 [style.view-transition-name]="'garage-' + garage.id">{{ garage.name }}</h1>
+        <mf-share-button [name]="garage.name" [slug]="garage.slug" [brand]="garage.brand?.slug" />
+      </div>
+      @let mobileArea =
+        garage.businessKind === 'mobile' && garage.serviceRadiusKm;
+      @if (mobileArea || distanceSaid() || statusSaid()) {
+        <div class="place-row">
+          @if (mobileArea) {
+            <p class="place">
+              {{
+                'public.garageProfile.mobileArea'
+                  | t: { km: (garage.serviceRadiusKm | km) }
+              }}
+            </p>
+          } @else if (distanceSaid()) {
+            <p class="place">
+              {{ 'public.garageProfile.distance' | t: { km: distanceSaid() } }}
+            </p>
+          }
+          @if (statusSaid(); as line) {
+            <p class="place status">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+              <span>{{ line }}</span>
+            </p>
+          }
+        </div>
       }
       @if (garage.description) {
         <p class="description">{{ garage.description }}</p>
@@ -95,7 +110,7 @@
       <section data-slot="brands" mf-details-section [garage]="garage"></section>
       <section data-slot="mechanics"></section>
       <section data-slot="prices" mf-prices-section [garage]="garage"></section>
-      <section data-slot="reviews"></section>
+      <section data-slot="reviews" mf-reviews-section [garageId]="garage.id"></section>
     </div>
     <div class="side">
       @if (garage.prices.length) {

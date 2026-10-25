@@ -36,6 +36,7 @@ const problem = (
 let remove: jest.Mock;
 let gate: jest.Mock;
 let revoked: jest.Mock;
+let deleteAccount: jest.Mock;
 let close: jest.Mock;
 let dropped: jest.Mock;
 let navigate: jest.SpyInstance;
@@ -57,6 +58,7 @@ async function open(
   remove = jest.fn(() => (queue.shift() ?? (async () => undefined))());
   gate = jest.fn(async () => true);
   revoked = jest.fn();
+  deleteAccount = jest.fn((send: () => Promise<unknown>) => send());
   close = jest.fn();
   dropped = jest.fn(async () => undefined);
   TestBed.configureTestingModule({
@@ -73,6 +75,7 @@ async function open(
             phone: null,
             ...me,
           }),
+          deleteAccount,
           revoked,
         },
       },
@@ -168,7 +171,22 @@ describe('the delete-account dialog', () => {
     expect(button('Șterge contul').disabled).toBe(false);
   });
 
-  it('sends what was typed and, once deleted, signs the tab out to Home with a toast', async () => {
+  // @traces 129-FR-008
+  it("sends the deletion as the session's own, so the sign-out word it sends this tab is left to it", async () => {
+    await open();
+
+    await confirm('andrei@example.ro');
+
+    expect(deleteAccount).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(deleteAccount.mock.invocationCallOrder[0]).toBeLessThan(
+      remove.mock.invocationCallOrder[0],
+    );
+    expect(await result).toBe(true);
+  });
+
+  // @traces 129-FR-008
+  it('sends what was typed and, once deleted, closes as deleted: the sign-out waits until the dialog is gone', async () => {
     await open();
 
     await confirm(' andrei@example.ro ');
@@ -176,27 +194,13 @@ describe('the delete-account dialog', () => {
     expect(remove).toHaveBeenCalledWith({
       body: { confirmation: 'andrei@example.ro' },
     });
-    expect(close).toHaveBeenCalled();
-    expect(revoked).toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith('/');
-    expect(toast).toHaveBeenCalledWith('Contul tău a fost șters');
     expect(await result).toBe(true);
-  });
-
-  // @traces 129-FR-008
-  it("forgets this browser's push device once deleted, and not before", async () => {
-    await open({}, [
-      async () => {
-        throw problem(500, 'internal_error');
-      },
-    ]);
-
-    await confirm();
+    // A navigation started under the dialog would be undone by its step back.
+    expect(revoked).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
     expect(dropped).not.toHaveBeenCalled();
-
-    button('Șterge contul').click();
-    await settle();
-    expect(dropped).toHaveBeenCalledTimes(1);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it('shows a mismatch under the field and stays open', async () => {
@@ -211,7 +215,7 @@ describe('the delete-account dialog', () => {
     await confirm('altcineva@example.ro');
 
     expect(panel().textContent).toContain('Nu se potrivește cu contul');
-    expect(revoked).not.toHaveBeenCalled();
+    expect(panel()).not.toBeNull();
     expect(field(LABEL).value).toBe('altcineva@example.ro');
   });
 
@@ -226,7 +230,7 @@ describe('the delete-account dialog', () => {
 
     expect(gate).toHaveBeenCalledTimes(1);
     expect(remove).toHaveBeenCalledTimes(2);
-    expect(revoked).toHaveBeenCalled();
+    expect(await result).toBe(true);
   });
 
   it('sends only once more after a sign-in the server still finds too old', async () => {
@@ -239,7 +243,6 @@ describe('the delete-account dialog', () => {
 
     expect(gate).toHaveBeenCalledTimes(1);
     expect(remove).toHaveBeenCalledTimes(2);
-    expect(revoked).not.toHaveBeenCalled();
     expect(panel()).not.toBeNull();
   });
 
@@ -254,7 +257,7 @@ describe('the delete-account dialog', () => {
     await confirm();
 
     expect(remove).toHaveBeenCalledTimes(1);
-    expect(revoked).not.toHaveBeenCalled();
+    expect(panel()).not.toBeNull();
   });
 
   it('keeps the dialog and the text after a failure, and a second press retries', async () => {
@@ -268,14 +271,49 @@ describe('the delete-account dialog', () => {
 
     expect(panel().textContent).toContain('Ceva nu a mers la noi.');
     expect(field(LABEL).value).toBe('andrei@example.ro');
-    expect(revoked).not.toHaveBeenCalled();
+    expect(panel()).not.toBeNull();
 
     button('Șterge contul').click();
     await settle();
 
     expect(remove).toHaveBeenCalledTimes(2);
-    expect(revoked).toHaveBeenCalled();
+    expect(await result).toBe(true);
   });
+
+  // @traces 140-FR-013
+  it.each([
+    ['ro', 'Ai o mașină în service. Poți șterge contul după ce o ridici.'],
+    [
+      'en',
+      'One of your cars is in work. You can delete the account after you pick it up.',
+    ],
+  ] as const)(
+    'says, in %s, that a car in the workshop holds the deletion, and stays open',
+    async (language, text) => {
+      await open(
+        {},
+        [
+          async () => {
+            throw problem(409, 'car_in_work');
+          },
+        ],
+        language,
+      );
+
+      const english = language === 'en';
+      type(
+        field(english ? 'Type the e‑mail or phone of the account' : LABEL),
+        'andrei@example.ro',
+      );
+      await settle();
+      button(english ? 'Delete account' : 'Șterge contul').click();
+      await settle();
+
+      expect(panel().textContent).toContain(text);
+      expect(remove).toHaveBeenCalledTimes(1);
+      expect(revoked).not.toHaveBeenCalled();
+    },
+  );
 
   it('closes without sending on "Renunță"', async () => {
     await open();

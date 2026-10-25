@@ -125,6 +125,10 @@ describe('noDockerMessage', () => {
     );
     expect(message).toContain('npx prisma migrate deploy');
     expect(message).toContain('JEST_SUITE=integration npx nx affected -t test');
+    // @traces 456-FR-003
+    const clear = message.indexOf('node scripts/clear-activity-log.ts');
+    expect(clear).toBeGreaterThan(message.indexOf('npx prisma migrate deploy'));
+    expect(clear).toBeLessThan(message.indexOf('JEST_SUITE=integration'));
     expect(message).not.toMatch(/pre-commit|the hook|commit again/);
   });
 });

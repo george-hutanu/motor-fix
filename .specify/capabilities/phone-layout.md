@@ -1,6 +1,6 @@
 ---
 capability: phone-layout
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 286-phone-layout
   - 287-public-tab-bar
@@ -20,6 +20,8 @@ features:
   - 101-verification-progress
   - 208-resubmit-after-more
   - 1351-results-phone-layout
+  - 531-garage-feature-tabs
+  - 1380-dashboard-tab-bar-e2e
 ---
 
 # Capability: Phone layout and installable web app
@@ -120,9 +122,9 @@ _From 287-public-tab-bar._
 
 _From 287-public-tab-bar._
 
-### 288-FR-001 — Each dashboard (driver, garage, admin; the mechanic uses the garage dashboard in release 1) MUST have exactly one ordered list of views, each view with its menu label, its short tab label (the mock's: "Cereri" for "Cereri de ofertă") and, where it has one, the capability it requires.
+### 531-FR-001 — The garage dashboard's view list MUST declare `day_sheets` as the feature the schedule view ("Programări") requires, beside the team view's existing `team_mechanics`; with that switch off for the session's garage, the view MUST be absent from the side menu, the bottom bar and the routes (its address redirects to the dashboard view, 288-FR-003), and present with it on or unset. No other view gains a feature.
 
-_From 288-dashboard-tab-bar._
+_From 531-garage-feature-tabs._
 
 ### 288-FR-002 — Each view MUST have its own language-neutral address under its dashboard (the segments in Clarifications), covering its sub-paths, and the dashboard view MUST be the dashboard's own address.
 
@@ -140,9 +142,9 @@ _From 288-dashboard-tab-bar._
 
 _From 288-dashboard-tab-bar._
 
-### 288-FR-006 — The open view's tab and menu entry MUST be marked as the current page (`aria-current="page"`, amber), and the active tab MUST be scrolled into sight in the bar.
+### 1380-FR-005 — The open view's tab and menu entry MUST be marked as the current page (`aria-current="page"`, amber), and the active tab MUST be scrolled into sight in the bar when the view opens and again whenever the bar's width changes (a phone turned sideways and back).
 
-_From 288-dashboard-tab-bar._
+_From 1380-dashboard-tab-bar-e2e._
 
 ### 288-FR-007 — When the tabs do not fit, the bar MUST scroll sideways on its own; the page MUST never scroll sideways at 320 px.
 
@@ -327,3 +329,5 @@ _From 208-resubmit-after-more._
 - `343-FR-007` — superseded by `344-FR-014` (2026-10-09)
 - `097-FR-008` — superseded by `101-FR-001` (2026-10-21)
 - `228-FR-001` — superseded by `1351-FR-005` (2026-10-23)
+- `288-FR-001` — superseded by `531-FR-001` (2026-10-24)
+- `288-FR-006` — superseded by `1380-FR-005` (2026-10-24)

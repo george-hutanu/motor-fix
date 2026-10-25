@@ -1,11 +1,14 @@
 ---
 capability: garage-team
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 131-invite-garage-staff
   - 389-confirm-booking-lift-mechanic
   - 129-delete-account
+  - 531-garage-feature-tabs
   - 055-team-list
+  - 056-mechanic-dialog
+  - 102-garage-members
 ---
 
 # Capability: Garage team
@@ -54,9 +57,9 @@ _From 131-invite-garage-staff._
 
 _From 131-invite-garage-staff._
 
-### 131-FR-011 — The garage dashboard frame MUST offer "Invită în echipă" to the owner only, opening a dialog with name, e-mail, kind (mechanic, offered only when `team_mechanics` is on; receptionist), the three permission ticks shown only for mechanic and unticked by default, and a send button; it MUST show the field problems before sending and the API's message after, including "Nu am putut trimite invitația" with "Copiază linkul".
+### 531-FR-003 — The invite dialog MUST read `team_mechanics` for its garage from the session's garage entry at open and follow it while open: off → "Mecanic" is not offered, "Recepționer" is preselected, the permission ticks are hidden and no invite of kind `mechanic` is sent; on or unset → unchanged. The server's 404 `feature_off` answer MUST still withdraw "Mecanic" as today, for a session that has not heard of the switch.
 
-_From 131-invite-garage-staff._
+_From 531-garage-feature-tabs._
 
 ### 131-FR-012 — The public acceptance screen at `/{lang}/invite/:token` MUST show "{garage} te invită să te alături echipei ca {rol}." and, for a mechanic, the line about appearing on the garage's public profile; signed out, it MUST offer sign-in and account creation (the existing dialogs, with the invited name and e-mail filled in) and, when the account is created from the link, accept in the same flow; signed in (including after signing in from the link), it MUST accept only on an explicit "Acceptă"; after acceptance it MUST open the garage dashboard in the account's language; an invalid or expired link MUST show "Invitația nu mai este valabilă. Cere service-ului una nouă."
 
@@ -70,17 +73,17 @@ _From 131-invite-garage-staff._
 
 _From 131-invite-garage-staff._
 
-### 389-FR-005 — With `team_mechanics` off, `mechanicId` MUST be refused (400 `validation_failed` naming it), the booking MUST store no `mechanic_id` of its own (the owner counts as every booking's mechanic, and no mechanic overlap is checked), and the JOB MUST carry the owner's own MECHANIC row, looked up by the owner's account (`mechanic.account_id` is unique; one garage per account at launch, X20) and created in the same transaction at this garage's first confirmation when none exists (`account_id` the owner's account, `name` the account's display name, not on the profile); the booking DTO's `mechanic` MUST read that row, so every read sees the owner as the mechanic. A row for the owner's account at another garage answers 409 `mechanic_unavailable`, nothing written.
+### 056-FR-015 — (389-FR-005 modified) Garage creation at the end of the listing form MUST create the owner's MECHANIC row in the same transaction: `is_owner` true, the owner's account and display name, `working_hours` copied from the garage's `hours`, `on_profile` false, the three permissions true, no specialities; the confirm's fallback row (389-FR-005, for garages created before this story) MUST set `is_owner` true too, and the rest of 389-FR-005 holds (with the team off every confirmed booking uses that row and may overlap the owner's other bookings). The step-4 re-save MUST never match, change or delete a row with `is_owner` true. The owner's row can be edited (FR-002) and never removed (FR-006).
 
-_From 389-confirm-booking-lift-mechanic._
+_From 056-mechanic-dialog._
 
-### 055-FR-004 — The account deletion's detach (129-FR-009) MUST, in one transaction, clear the MECHANIC row's `account_id`, set its `on_profile` false, delete the account's receptionist GARAGE_MEMBER rows, and set `removed_at` (a time, null by default) on the row; nothing else writes `removed_at` in this story. The row, its reviews and its bookings' mechanic reference are kept, so the figures are unchanged and the owner reassigns those bookings through the existing mechanic change. A card with `removed_at` set is never offered, matched or assigned again: the team list, the booking's confirm options and mechanic check, the day sheet's lookup, the step-4 re-save and the team switch's count all leave it out. A migration adds the nullable column.
+### 056-FR-014 — (055-FR-004 modified) The account deletion's detach MUST record `mechanic.removed` (payload `from: 'account_deleted'`) instead of `mechanic.updated`, with the same writes; its future confirmed bookings read `toReassign` true (FR-008); reviews stay as they do.
 
-_From 055-team-list._
+_From 056-mechanic-dialog._
 
-### 055-FR-001 — The API MUST offer `GET /api/v1/garages/:garageId/mechanics`, answering 200 with `{ items: [...] }`, each item carrying `id`, `name`, `speciality` (nullable), `onProfile`, `hasAccount`, `rating` (string with one decimal, or null) and `reviewCount`, read from the MECHANIC rows of that garage, ordered by name A–Z with `Intl.Collator('ro', { sensitivity: 'base' })`, equal names by `id` so the order is stable between reads, leaving out the row whose account is the caller's own (the owner's row of 389-FR-005) and every row with `removed_at` set. The DTO lives in the contracts library, the route in the OpenAPI document, and the web app calls it through the regenerated client.
+### 056-FR-011 — (055-FR-001 modified) The list MUST include the owner's row first (`isOwner` true), then the other current rows by name as before, still leaving out every row with `removed_at` set; each item gains `roleTitle` (nullable), `specialties` (array), `certifications` (array), `years` (nullable), `brandIds` (array), `isOwner` and `futureBookings` (the count of that card's `confirmed` bookings starting after now); the answer gains `brands`: the garage's `works_on` brands as `{ id, name }`, by name A–Z, for the dialog's choice. `id`, `name`, `speciality`, `onProfile`, `hasAccount`, `rating` and `reviewCount` are unchanged.
 
-_From 055-team-list._
+_From 056-mechanic-dialog._
 
 ### 055-FR-002 — The read MUST be open to the owner of that garage only: a receptionist or a mechanic of the garage gets 403 `forbidden`; any other actor (another garage's owner, a driver, an admin, a signed-out call's 401 aside) gets 404 `not_found`, as the garage's other owner-only routes do (398-FR-004). The check runs on the server before any row is read.
 
@@ -106,9 +109,9 @@ _From 055-team-list._
 
 _From 055-team-list._
 
-### 055-FR-009 — With no items the panel MUST show the dashboard's empty state (the existing component, icon `wrench`) with "Încă nu ai adăugat mecanici" / "You have not added mechanics yet" and the button "Adaugă un mecanic" / "Add a mechanic", which opens the staff invite dialog (131-FR-011) with kind mechanic chosen.
+### 056-FR-012 — (055-FR-009 modified) The empty state MUST show when the list holds no row other than the owner's, with the same texts, and its "Adaugă un mecanic" MUST open the card dialog (FR-016) for a new card, as the panel header's button does; the staff invite stays in the frame's "Invită în echipă" (131-FR-011). The count line and the panel still render the owner's row when it is the only one: "Echipa nu apare pe profil" is replaced by nothing when only the owner's row (off the profile) exists. Otherwise the owner's row counts in 055-FR-008's line like any row.
 
-_From 055-team-list._
+_From 056-mechanic-dialog._
 
 ### 055-FR-010 — While the first read is in flight the panel MUST show three skeleton rows; a failed first read (any non-2xx or a network error) MUST show "Nu am putut încărca echipa. Reîncearcă." / "We could not load the team. Try again." in a `role="alert"` with a button "Reîncearcă" / "Try again" that reads again; a 404 (the feature switched off meanwhile, or the garage gone) MUST send the view to the dashboard home as the frame's re-read does. A re-read that fails while a list is on screen (a live refresh, the return from offline) MUST keep that list and show no error panel; the next event or the return of the connection reads again.
 
@@ -118,9 +121,9 @@ _From 055-team-list._
 
 _From 055-team-list._
 
-### 055-FR-012 — The view MUST read the list again, without a reload, when the live stream delivers `mechanic.updated`, `invite.accepted` or `rating.updated` for the garage (the dashboard's live view helper, 253-FR-004, 398-FR-008), and on the stream's resync; a row that appears, changes or goes MUST be on screen within 5 seconds of the event.
+### 056-FR-013 — (055-FR-012 modified) The view MUST read the list again on `mechanic.added` and `mechanic.removed` too, with the same 5-second bound.
 
-_From 055-team-list._
+_From 056-mechanic-dialog._
 
 ### 055-FR-013 — Every text of FR-005–FR-011 MUST come from the garage area's translation files in Romanian and English (016-FR-002), with comma-below diacritics; text typed by a person (name, speciality) MUST never be shown as markup (131-FR-013).
 
@@ -138,6 +141,116 @@ _From 055-team-list._
 
 _From 055-team-list._
 
+### 056-FR-001 — The MECHANIC row MUST gain `role_title` (text, null, at most 40 characters), `specialties` (text array, at most 6, each at most 40), `certifications` (text array, at most 10, each at most 80), `years` (integer, null, 0 to 60), `brand_ids` (uuid array, each a brand the garage holds with stance `works_on`), `is_owner` (boolean, default false) and `working_hours` (json, null, the garage's `WeeklyHours` shape), by a migration that backfills `is_owner` true for every existing row whose account is the owner member of its garage and creates the owner's row (as FR-015 makes it) for every existing garage whose owner member has none. `speciality` stays and is written on every add and edit as the specialties joined with ", " (null with none), so every reader of the line is unchanged. No slug, photo, bio or languages column is added.
+
+_From 056-mechanic-dialog._
+
+### 056-FR-002 — The API MUST offer `POST /api/v1/garages/:garageId/mechanics` (201, the card) and `PATCH /api/v1/garages/:garageId/mechanics/:mechanicId` (200, the card; every field optional, only the given ones change: an omitted field is left as it is, `null` clears `roleTitle` or `years`, `[]` clears an array; `name` cannot be cleared), taking `name` (required on add, 2 to 80 characters trimmed), `roleTitle`, `specialties`, `certifications`, `years` and `brandIds` within FR-001's limits and refusing anything outside them, a non-integer `years`, a `brandIds` entry the garage does not take or a duplicate, as the API's validation refusal (`validation_failed`, each field named). The card in the answer carries the list item's shape (FR-011). The DTOs live in the contracts library, the routes in the OpenAPI document, and the web app calls them through the regenerated client.
+
+_From 056-mechanic-dialog._
+
+### 056-FR-003 — The three routes MUST be open to the owner of that garage only, checked on the server before anything else, in the order of 055-FR-002 and 055-FR-003: a receptionist or a mechanic of the garage gets 403 `forbidden`; any other actor 404 `not_found` (a signed-out call 401); then, with `team_mechanics` off, the owner gets 404 `feature_off`; then an unknown card, a card with `removed_at` set or a card of another garage answers 404 `not_found`.
+
+_From 056-mechanic-dialog._
+
+### 056-FR-004 — A body of an add or an edit that carries `photo`, `bio` or `languages` (any of them, with any value) MUST be refused 403 with a named code (`mechanic_owned_field`), before any write and before the other fields are judged (A34: the mechanic's own fields, #342).
+
+_From 056-mechanic-dialog._
+
+### 056-FR-005 — Every add MUST write an audit `create` entry and every edit one `update` entry per field of the request whose value changed (field, old value, new value, an array as its entries joined with ", "; none for an unchanged field; the derived `speciality` gets no entry of its own), each with the actor and the role; `mechanic.added` and `mechanic.updated` (payload naming the changed fields) MUST be recorded in the same transaction as the change, to the garage audience and, for a card on the profile, to `public:garage:{garageId}` and `public:mechanic:{mechanicId}`.
+
+_From 056-mechanic-dialog._
+
+### 056-FR-006 — `DELETE /api/v1/garages/:garageId/mechanics/:mechanicId` MUST answer 204 and, in one transaction: set `removed_at`, set `on_profile` false, clear `account_id`, set every open (`sent`) invite of kind `mechanic` of this garage to the linked account's current e-mail, lower-cased, to `revoked`, write an audit `delete` entry with the actor and role, and record `mechanic.removed` (to the garage audience and, for a card that was on the profile, to the public channels of FR-005). The row, its reviews, its jobs and its bookings' mechanic reference are kept. A card with `is_owner` true MUST answer 409 `owner_row`, nothing written.
+
+_From 056-mechanic-dialog._
+
+### 056-FR-007 — A removed card's linked account MUST lose the garage at once: the account's garage and permissions are read from its card per request, and a detached card gives none, so the next request has no garage dashboard; a later accepted invite makes a new row (the detached row is never matched, as 055-FR-004 holds).
+
+_From 056-mechanic-dialog._
+
+### 056-FR-008 — The garage's booking DTO MUST carry `toReassign` (true for a booking that is `confirmed`, starts after now and whose mechanic has `removed_at` set; false otherwise; no booking column), and every garage booking view that names the mechanic MUST show "de realocat" / "to reassign" beside the name when it is true; the owner reassigns through the existing mechanic change.
+
+_From 056-mechanic-dialog._
+
+### 056-FR-009 — The catalogue MUST gain STAFF_REMOVED (trigger event, channels e-mail and push, no group, transactional: never WhatsApp and never muted), with templates in Romanian and English (bell "Nu mai faci parte din echipa {garage}." / "You are no longer part of the team of {garage}.", e-mail with the same line and a button to the app's home in the account's language; never muted as STAFF_INVITE's e-mail is not, by the same catalogue attribute), sent to the removed card's account after the commit, in the account's language; a card with no account gets nothing.
+
+_From 056-mechanic-dialog._
+
+### 056-FR-010 — The live hub MUST carry `mechanic.added` and `mechanic.removed` as the `garage.team` family carries `mechanic.updated` (`KIND_CAPABILITY`), MUST re-read access on `mechanic.removed` as on `mechanic.updated` (`REREAD_ACCESS`), and MUST let `public:garage:` and `public:mechanic:` streams hear both.
+
+_From 056-mechanic-dialog._
+
+### 056-FR-016 — The Mecanici view MUST open a card dialog, a component in its own folder `apps/web/src/app/dashboard/mechanic-card/`, through the shared Overlays dialog (a bottom sheet on a phone), from the panel header's "Adaugă un mecanic", from the empty state's button (a new card) and from a tap on any row, the owner's included (that card, filled in). It MUST carry: name, role title, specialties and certifications (one comma-separated input each, split into tags on ",", trimmed, empties dropped), years (a whole number) and one tick per brand of the list's `brands`; for a card with an account, a read-only block listing photo, bio and languages marked "Le completează mecanicul" / "The mechanic fills these in".
+
+_From 056-mechanic-dialog._
+
+### 056-FR-017 — The dialog MUST show the field problems under their fields before and after the call: "Numele este obligatoriu" / "The name is required" for a name empty or under 2 characters, "Între 0 și 60 de ani" / "Between 0 and 60 years" for the years, and the limit for the other fields ("Cel mult 80 de caractere" / "At most 80 characters", "Cel mult 6 specialități" / "At most 6 specialties", "Cel mult 10 certificări" / "At most 10 certifications", "Cel mult 40 de caractere pe etichetă" / "At most 40 characters per tag", and under the brand ticks "Marcă pe care service-ul nu o acceptă" / "A brand the garage does not take"); while saving the button shows a spinner and the fields are disabled; a refusal or a network failure keeps the dialog open with the field errors and a toast in the person's language, except a 404 `not_found` on an edit (the card removed elsewhere), which closes the dialog with a toast and the list reads again; a success closes the dialog and the list shows the card at once.
+
+_From 056-mechanic-dialog._
+
+### 056-FR-018 — The edit dialog MUST offer "Elimină" / "Remove" for every card but the owner's (absent, not disabled, for `isOwner`); it opens a confirmation reading "{name} are {n} programări viitoare. Vor trebui realocate." / "{name} has {n} future bookings. They will need reassigning." with Romanian plural rules when `futureBookings` is above 0, else "Elimini pe {name} din echipă?" / "Remove {name} from the team?", with "Elimină" and "Renunță" / "Cancel"; confirming calls FR-006 and closes both on 204, and on a 404 `not_found` (the card already removed) as well; any other refusal shows a toast and keeps the dialog.
+
+_From 056-mechanic-dialog._
+
+### 056-FR-019 — Each row of the list MUST read, under the name, the speciality line as before followed by "· {years} de ani" / "· {years} years" when `years` is above 0 (RO: "1 an", "2 ani", "20 de ani"), and the owner's row MUST read "proprietar" / "owner" beside the name; the lamp and the rating cells are unchanged (055-FR-006, FR-007).
+
+_From 056-mechanic-dialog._
+
+### 056-FR-020 — Every new text MUST come from the garage area's translation files in Romanian and English (016-FR-002), with comma-below diacritics; text typed by a person (name, role title, tags, brand names) MUST never be shown as markup (131-FR-013).
+
+_From 056-mechanic-dialog._
+
+### 056-FR-021 — The dialog MUST lay out phones first: at 320 px and 390 px a bottom sheet with the fields stacked, brand ticks wrapping, no horizontal scroll; from a tablet a centred dialog; light and dark follow the Cockpit theme's tokens; the fields are the Cockpit inputs the invite dialog uses. Every field has a visible label, each problem is tied to its field for assistive technology, the dialog traps focus and closes on Escape as the shared Overlays dialog does, and every control is reachable and operable by keyboard.
+
+_From 056-mechanic-dialog._
+
+### 056-FR-022 — The three routes MUST be listed in `infra/observability/inventory.json` as endpoints with their reason (writes; the API's request-duration histogram labels the route, 876-FR-008; the `api-error-rate` and `api-latency` rules cover them), and the product actions `mechanic.added`, `mechanic.updated`, `mechanic.removed` listed as the invites' actions are; no id reaches a metric label (876-FR-011).
+
+_From 056-mechanic-dialog._
+
+### 056-FR-023 — Tests MUST cover, failing first: Jest on real PostgreSQL for FR-001 (the limits at each bound, `speciality` written from the specialties, the backfill), FR-002/FR-003 (owner 201/200, receptionist and mechanic 403, driver, admin and another owner 404, signed out 401, 404 `feature_off` with the switch off after the access check, 404 for an unknown, removed or foreign card), FR-004 (403 before any write, `photo`, `bio`, `languages` each), FR-005 (one audit entry per changed field with old and new, none for an unchanged one; the events in the same transaction, the public channels only for a card on the profile), FR-006/FR-007 (the row's state, the invite revoked, the account's next request has no garage, a new invite makes a new row, the owner's row 409 `owner_row`), FR-008 (`toReassign` true for a future confirmed booking of a removed card, false for a past, cancelled or current card's), FR-009 (STAFF_REMOVED to the account by e-mail and push, no WhatsApp with the garage's WhatsApp on, nothing for a card with no account), FR-011 (the owner's row first, the new fields, `futureBookings`, `brands`), FR-014 (the deletion records `mechanic.removed`, bookings read `toReassign`, reviews stay), FR-015 (the row at creation with the garage's hours, the fallback marks `is_owner`, the re-save leaves it, two overlapping confirmed bookings with the team off); Jest for the dialog (tags from a comma-separated input, the two messages, the brand ticks, the read-only block, "Elimină" absent for the owner, the confirmation's plurals at 0, 1, 2 and 20, the spinner and the kept dialog on a refusal) and the view (the owner's row first with "proprietar", the years tail, the empty state's button opening the dialog, re-read on the two new kinds); Playwright (`web-e2e`): as an owner add Elena, edit her specialties, remove her, and a past job still shows her name; the PR QA sweep: the dialog at 320 px, 390 px, tablet and desktop, light and dark, RO and EN.
+
+_From 056-mechanic-dialog._
+
+### 102-FR-011 — The API MUST offer `GET /api/v1/garages/:garageId/members` answering 200 with `{ members: [...], invites: [...] }`: each member carries `accountId`, `name`, `role` (`owner`, `receptionist` or `mechanic`), `since` (the membership's joined time; for a mechanic the time their invite was accepted when the system holds it, otherwise null) and, for a mechanic, `permissions` (the three flags; null for the others); each invite carries `id`, `email`, `kind` (`mechanic` or `receptionist`) and `sentAt`, and is listed only while `sent` and not past its expiry (131-FR-003). Members are ordered owner, receptionists, mechanics, each group by name in Romanian collation (as 055-FR-001); invites by `sentAt` ascending. The DTOs live in the contracts library and the web calls it through the generated client (Constitution V).
+
+_From 102-garage-members._
+
+### 102-FR-012 — The read MUST be open to the garage's owner only, through the held `assertGarageOwner` check (`garage-brands.service.ts`): a receptionist or a mechanic of the garage gets 403 `forbidden`; any other actor (another garage's owner, a driver, an admin) gets 404. A call without a session answers 401 `sign_in_required` (the app-wide guard), a `garageId` that is not a UUID answers 400, and a garage that does not exist answers 404. Nothing is written: no audit entry, no event.
+
+_From 102-garage-members._
+
+### 102-FR-013 — The garage's Setări view MUST show, to the owner only (`garage.feature_switches`, under the "Funcții" panel, 398-FR-001), a panel "Persoane cu acces" / "People with access": one row per member "{name} · {role}" with " · din {date}" when `since` is set and, for a mechanic, the names of the ticked permissions joined with ", " after " · " ("poate muta programări", "poate răspunde la cereri", "poate înregistra prețul final" / "can move bookings", "can answer requests", "can record the final price"); then "Invitații în așteptare" / "Pending invites" with one row per invite "{email} · {role} · trimisă {when}" (`when` the relative day: "azi", "ieri", else the date in the viewer's language, `14 oct. 2026` / `Oct 14, 2026`), or "Nicio invitație în așteptare." / "No pending invites." when none. Roles read "proprietar", "recepție", "mecanic" / "owner", "front desk", "mechanic". Revoke, remove and permission actions are not here: they belong to #811, #364, #202 and #10.
+
+_From 102-garage-members._
+
+### 102-FR-014 — While the first read is in flight the panel MUST show three skeleton rows; a failed read (any non-2xx or a network error) MUST show "Nu am putut încărca persoanele cu acces." / "We could not load the people with access." with a "Reîncearcă" / "Try again" button that reads again. The panel MUST read again, without a reload and within 5 seconds of the event (SC-002's figure), when the dashboard's live stream delivers `invite.sent`, `invite.revoked`, `invite.accepted`, `mechanic.updated` or `member.removed` for the garage.
+
+_From 102-garage-members._
+
+### 102-FR-017 — Every new text MUST exist in Romanian and English in the garage and shell translation files (016-FR-002), with comma-below diacritics; names and e-mails typed by a person MUST never be shown back as markup.
+
+_From 102-garage-members._
+
+### 102-FR-018 — The panel MUST lay out phones first: at 320 px and 390 px each row wraps onto its own lines with no horizontal scroll, light and dark; from a tablet (768 px, the `md` breakpoint) the fragments sit on one line. Every control is reachable and operable by keyboard with a visible focus ring, the rows form a list for assistive technology, and the loading, error and lost-access texts are announced (`role="status"` / `role="alert"`); text and controls meet WCAG AA contrast in light and dark.
+
+_From 102-garage-members._
+
+### 102-FR-019 — The members read MUST be listed in `infra/observability/inventory.json` as an endpoint with its reason (a read; the API's request-duration histogram labels the route, 876-FR-008; no panel or alert of its own), and the PR's Notes MUST say so.
+
+_From 102-garage-members._
+
+### 102-FR-020 — Tests MUST be written first and cover: Jest on the table for FR-001–FR-002 (every role × capability "may not", each permission on and off, every view's capability in the table); Jest on `allowedViews` for the three menus of FR-004 and on Panou for FR-005; Jest on real PostgreSQL for FR-007 (403 for same-garage staff, 404 outside, 404 `feature_off` to the owner only), FR-008, FR-009 (no `phone` key in any garage read as a mechanic), FR-011–FR-012; Jest on the live hub for FR-010; Jest on the frame and the panel for FR-013–FR-016; Playwright: a seeded mechanic signs in and sees the limited menu, the owner opens Persoane cu acces and sees the members and a pending invite the test creates through the invite API (`POST …/invites`, held), the seed untouched. The permission-tick half of the brief's end-to-end flow waits for #202, which owns the tick.
+
+_From 102-garage-members._
+
 ## Retired
 
 - `129-FR-009` — superseded by `055-FR-004` (2026-10-24)
+- `131-FR-011` — superseded by `531-FR-003` (2026-10-24)
+- `055-FR-001` — superseded by `056-FR-011` (2026-10-24)
+- `055-FR-009` — superseded by `056-FR-012` (2026-10-24)
+- `055-FR-012` — superseded by `056-FR-013` (2026-10-24)
+- `055-FR-004` — superseded by `056-FR-014` (2026-10-24)
+- `389-FR-005` — superseded by `056-FR-015` (2026-10-24)

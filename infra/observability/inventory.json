@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 173,
+    "count": 193,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -21,7 +21,8 @@
         "api-profile-latency",
         "api-memory",
         "api-rate-limit-surge",
-        "api-account-deletion-failed"
+        "api-account-deletion-failed",
+        "api-admin-account-action-failed"
       ],
       "story": "ST-881"
     },
@@ -73,7 +74,8 @@
         "worker-queue-growing",
         "worker-jobs-failed",
         "worker-cdn-purge-failed",
-        "worker-memory"
+        "worker-memory",
+        "worker-data-export-failed"
       ],
       "story": "ST-881"
     },
@@ -94,7 +96,8 @@
         "api-profile-latency",
         "api-memory",
         "api-rate-limit-surge",
-        "api-account-deletion-failed"
+        "api-account-deletion-failed",
+        "api-admin-account-action-failed"
       ],
       "story": "ST-881"
     },
@@ -110,7 +113,8 @@
         "worker-queue-growing",
         "worker-jobs-failed",
         "worker-cdn-purge-failed",
-        "worker-memory"
+        "worker-memory",
+        "worker-data-export-failed"
       ],
       "story": "ST-881"
     },
@@ -194,6 +198,19 @@
       "story": "ST-297"
     },
     {
+      "kind": "queue",
+      "name": "retention",
+      "source": "libs/domain/src/retention/retention.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "the nightly retention job: one scheduler, retention-nightly, at 04:00 Europe/Bucharest deletes expired sign-in, phone-change, account and refresh tokens and sent invites, notifications past 12 months and legal documents (with their page files) of garages closed 5 years, and anonymises audit entries past their owner's closure; counted by motorfix_jobs_total{job_name,outcome}, one log line per kind with its count and one with the run's duration, a failed sweep failing the job (3 tries) and worker-jobs-failed on the last; worker-jobs-failed (reason overdue) fires when no run completed in 48 hours",
+      "story": "ST-1156"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_rate_limit_refusals_total",
       "source": "libs/domain/src/rate-limit/rate-limit.metrics.ts",
@@ -231,6 +248,15 @@
       "alerts": "none",
       "reason": "counts every live stream the server ended by reason (expired, evicted, shutdown, reconnect, the planned close before Railway's 15-minute HTTP limit); an evicted surge is a client opening too many streams, which the one-stream-per-browser lock prevents, so it is watched on the panel, not paged",
       "story": "ST-1190"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_verification_presence_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "counts verification file presence entries created and removed and every presence store call that failed (store_unavailable), never an account or a file; a failure costs only the banner of who else has the file open, the file opens and decides as before, and an unreachable Valkey already pages through redis-unreachable",
+      "story": "ST-413"
     },
     {
       "kind": "product-counter",
@@ -364,6 +390,19 @@
       ],
       "reason": "one CATALOGUE_JOB_DECIDED to the proposing garage's owner for each catalogue_job.decided event, keyed by the event id; one log line per event with the job id, the decision and how many owners were told, never the reason; no counter of its own, as its pending twin has none: the notifications table holds what was built; the job runs in the worker's queue span; BullMQ's queue metrics on motorfix-queues cover depth, and the shared backlog and failed-job rules alert on a job that fails for good",
       "story": "ST-414"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-brands",
+      "source": "libs/domain/src/catalogue/brands/admin-brands.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/brands and /api/v1/admin/brands/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's brand list with its counts, the add and the edit (rename, retire, bring back), written to PostgreSQL with their audit entries in one transaction, then the cached active list dropped by bumping brands:version; one Brands log line per write naming the brand id and the admin's account id, never the name; a failed cache drop is a warning line; a 409 brand_exists or stale_value is the rule working; the API error-rate and latency rules cover the routes; no outside call",
+      "story": "ST-105"
     },
     {
       "kind": "queue",
@@ -630,7 +669,7 @@
         "web-error-rate",
         "web-latency"
       ],
-      "reason": "the browser's collector; besides the web vitals and errors it receives the prefetch measurement (context path profile, outcome fetched, cancelled, hit, expired or skipped, and a fetch's duration), shown on the web-vitals dashboard's pre-fetch panel; since ST-1191 also the upload measurement (context purpose garage_photo or legal_document, outcome queued, resumed, sent or failed, and a sent upload's duration from its first attempt; no file name, draft id or key), shown on the uploads panel",
+      "reason": "the browser's collector; besides the web vitals and errors it receives the prefetch measurement (context path profile, outcome fetched, cancelled, hit, expired or skipped, and a fetch's duration), shown on the web-vitals dashboard's pre-fetch panel; since ST-1191 also the upload measurement (context purpose garage_photo or legal_document, outcome queued, resumed, sent or failed, and a sent upload's duration from its first attempt; no file name, draft id or key), shown on the uploads panel; since ST-947, under analytics consent only, a per-tab session id and the journey events session_start, session_resume and view_changed (route templates), so Frontend Observability lists sessions and route walks",
       "story": "ST-877"
     },
     {
@@ -852,6 +891,58 @@
     },
     {
       "kind": "endpoint",
+      "name": "garage-members-list",
+      "source": "libs/domain/src/garages/members/members.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/members",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read of what the database already holds, so nothing is audited and no event is owed; its request span and log line carry the route and status, and a 403 forbidden or 404 not_found is the access rule working, not a failure",
+      "story": "ST-102"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanics-add",
+      "source": "libs/domain/src/garages/mechanics/mechanics.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each card added is audited (create, the owner as actor) and recorded as mechanic.added in the outbox in the same transaction; a 403 mechanic_owned_field or a 422 validation_failed is the owner's input refused, not a failure",
+      "story": "ST-56"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanics-edit",
+      "source": "libs/domain/src/garages/mechanics/mechanics.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each changed field is audited (update, old and new value) and recorded as mechanic.updated with the fields; an unchanged save writes nothing; a 404 not_found is a card removed in another tab",
+      "story": "ST-56"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanics-remove",
+      "source": "libs/domain/src/garages/mechanics/mechanics.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each removal is audited (delete) and recorded as mechanic.removed in the same transaction; the STAFF_REMOVED e-mail and push go through the notifications pipeline, whose sends and failures its own entries count, and a failed send is logged as an error with the card id while the removal stays; a 409 owner_row is the rule working",
+      "story": "ST-56"
+    },
+    {
+      "kind": "endpoint",
       "name": "admin-garage-suspension",
       "source": "libs/domain/src/garages/verification/suspension/suspension.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/admin/garages/:id/suspend",
@@ -1043,6 +1134,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_similar_garages_total",
+      "source": "libs/domain/src/search/similar-garages/similar-garages.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each similar-garages answer for a garage no longer listed by outcome (results, none); a count has no failure to alert on: the route's errors and latency are the api-error-rate and api-latency rules",
+      "story": "ST-385"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_sign_ins_total",
       "source": "libs/domain/src/auth/sign-in.service.ts",
       "dashboard": "motorfix-product",
@@ -1176,6 +1276,20 @@
     },
     {
       "kind": "endpoint",
+      "name": "admin-account",
+      "source": "libs/domain/src/admin/admin-accounts/account/account.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/admin/accounts/:id and POST /api/v1/admin/accounts/:id/reset-access, /suspend, /restore and /delete-on-request",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency",
+        "api-admin-account-action-failed"
+      ],
+      "reason": "each action logs one 'admin account action' line with the account, the admin, the action and its outcome (never a name, e-mail or reason), each refusal one 'admin accounts request failed' line with the :id route; outcomes count on motorfix_admin_account_actions_total; spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-3"
+    },
+    {
+      "kind": "endpoint",
       "name": "garage-job-steps",
       "source": "libs/domain/src/workshop/job-steps/job-steps.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garage/jobs/:id/steps, /order, /:stepId and /:stepId/done",
@@ -1239,8 +1353,30 @@
       "alerts": [
         "api-account-deletion-failed"
       ],
-      "reason": "counts each request to delete an account by outcome (deleted, forbidden, refused_owner, reauth_required, mismatch, failed); api-account-deletion-failed fires on any failed deletion",
+      "reason": "counts each request to delete an account by outcome (deleted, forbidden, refused_owner, refused_in_work, reauth_required, mismatch, failed); api-account-deletion-failed fires on any failed deletion",
       "story": "ST-129"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_data_exports_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "worker-data-export-failed"
+      ],
+      "reason": "counts data exports by outcome: requested, too_soon, already_ready, forbidden and downloaded in the api, ready, failed and expired in the worker; worker-data-export-failed fires on any export failed after its last attempt",
+      "story": "ST-140"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_admin_account_actions_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "api-admin-account-action-failed"
+      ],
+      "reason": "counts each admin account action (reset_access, suspend, restore, delete_on_request) by outcome (done, refused, conflict, email_failed, failed); api-admin-account-action-failed fires on any failed action",
+      "story": "ST-3"
     },
     {
       "kind": "endpoint",
@@ -1254,6 +1390,45 @@
       ],
       "reason": "each refusal logs one 'account deletion refused: <outcome>' line, a deletion logs 'account deleted <id>' and a failed farewell e-mail logs 'account deleted e-mail not sent'; outcomes count on motorfix_account_deletions_total; spans come from the HTTP and Prisma auto-instrumentation",
       "story": "ST-129"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-data-export-request",
+      "source": "libs/domain/src/auth/data-export/data-export.controller.ts",
+      "metric": "http.server.request.duration by http.route POST /api/v1/me/data-export",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a request logs 'data export requested <exportId>' and a refusal 'data export refused: <outcome>', ids only; outcomes count on motorfix_data_exports_total; spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-140"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-data-export-state",
+      "source": "libs/domain/src/auth/data-export/data-export.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/me/data-export",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read of the account's own newest export; an assistant's refusal logs 'data export refused: forbidden'; spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-140"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-data-export-download",
+      "source": "libs/domain/src/auth/data-export/data-export.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/me/data-export/download",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a download logs 'data export downloaded <exportId>' and counts downloaded on motorfix_data_exports_total; a store failure answers 503 storage_unavailable, counted by api-error-rate; spans come from the HTTP, S3 and Prisma auto-instrumentation",
+      "story": "ST-140"
     },
     {
       "kind": "endpoint",
@@ -1376,6 +1551,19 @@
       ],
       "reason": "a read with no writes, re-read by the owner's page on each verification event and on reconnect; a 403 or 404 is a caller without access, which the error-rate rule reads with the rest; no counter or alert of its own; no outside call",
       "story": "ST-116"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-profile",
+      "source": "libs/domain/src/garages/garage-profile/garage-profile.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/garages/:garageId/profile",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read with no writes, no event and no audit row, re-read by the owner's profile view on each garage change and on reconnect; it answers through the public profile's cache, so its cache fallbacks count in the API's cache-fallback rule; a 403 is a mechanic or receptionist without the view, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; its spans come from the HTTP, Prisma and Redis auto-instrumentation; no counter or alert of its own; no outside call",
+      "story": "ST-133"
     },
     {
       "kind": "endpoint",
@@ -1665,6 +1853,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "similar-garages",
+      "source": "libs/domain/src/search/similar-garages/similar-garages.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:slug/similar",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "public read for the no-longer-available view, up to 3 approved garages that work on the brand around a suspended garage, read from PostgreSQL with no cache and no write; answers are counted in motorfix_similar_garages_total; the share button itself makes no server call and is counted through the shared_link profile-view and request sources",
+      "story": "ST-385"
+    },
+    {
+      "kind": "endpoint",
       "name": "public-garage-profile",
       "source": "libs/domain/src/garages/public-garages/public-garages.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garages/:slug",
@@ -1870,6 +2071,20 @@
     },
     {
       "kind": "queue",
+      "name": "data-export",
+      "source": "libs/domain/src/auth/data-export/data-export.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed",
+        "worker-data-export-failed"
+      ],
+      "reason": "carries the relay's data_export.requested and account.deleted events and the hourly sweep; log lines 'data export <id>: built <n> files, <bytes> bytes', 'failed after 3 attempts: <ErrorClass>', 'account deleted, expired' and 'data export sweep: expired <n>'; a build is retried with the job (3 tries) and counted by motorfix_data_exports_total; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-140"
+    },
+    {
+      "kind": "queue",
       "name": "car-account-deleted",
       "source": "libs/domain/src/cars/account-deleted/account-deleted.ts",
       "dashboard": "motorfix-queues",
@@ -1982,6 +2197,19 @@
       "story": "ST-25"
     },
     {
+      "kind": "endpoint",
+      "name": "garage-reviews",
+      "source": "libs/domain/src/reviews/reviews.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/reviews/garage/{garageId}",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a public read of a garage's published reviews, 20 a page, with its rating, count and breakdown; it writes nothing, so its failures and latency are the route metric alone",
+      "story": "ST-24"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_reviews_posted_total",
       "source": "libs/domain/src/reviews/reviews.metrics.ts",
@@ -2027,6 +2255,17 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_retention_rows_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-worker",
+      "alerts": [
+        "worker-jobs-failed"
+      ],
+      "reason": "counts the rows each nightly retention run removed or anonymised, by kind (eight fixed kinds, started at 0 in the worker); panel Retention rows per night; a failed run and a run that has not completed in 48 hours are both worker-jobs-failed's (reason failed or overdue)",
+      "story": "ST-1156"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_documents_overdue",
       "source": "libs/domain/src/garages/documents/document-cycle/document-cycle.gauge.ts",
       "dashboard": "motorfix-worker",
@@ -2035,6 +2274,25 @@
       ],
       "reason": "a gauge of yearly document cycles in the overdue state, refreshed by each run of the compliance step and shown on the Documente anuale panel; a run that fails for good leaves it stale and fires worker-jobs-failed, which covers the reminders queue",
       "story": "ST-68"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_notification_channel_choices_total",
+      "source": "libs/domain/src/notifications/preferences/preferences.service.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "a count of channel choices drivers save has no failure to alert on; api-error-rate covers the route that saves them",
+      "story": "ST-142"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_notification_channel_fallbacks_total",
+      "source": "libs/domain/src/notifications/notifications.service.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "notification-fallback-rate"
+      ],
+      "story": "ST-142"
     }
   ]
 }

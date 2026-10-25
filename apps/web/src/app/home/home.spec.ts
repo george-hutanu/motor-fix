@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { HttpErrorResponse } from '@angular/common/http';
+import {
+  HttpErrorResponse,
+  provideHttpClient,
+  withFetch,
+  withInterceptors,
+} from '@angular/common/http';
 import { PLATFORM_ID, signal, TransferState } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -15,6 +20,7 @@ import {
   HomeService,
   type MeDto,
   PlacesService,
+  provideApiConfiguration,
 } from '@motor-fix/data-access';
 import { I18n, LanguageChoice } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
@@ -27,7 +33,9 @@ import { PlaceDialog } from './place/place-dialog/place-dialog';
 import type { Place } from './place/place-store';
 import { Consent } from '../consent/consent';
 import { Session } from '../dashboard/session';
+import { placesAnswered } from '../public/address-field/address-field.testing';
 import { PUBLIC_READ } from '../public-read';
+import { serverTimeoutInterceptor } from '../server-timeout.interceptor';
 
 const NAMES = [
   'BMW',
@@ -152,6 +160,7 @@ async function configure(platform = 'browser') {
       { provide: BrandsService, useValue: tilesApi },
       { provide: HealthService, useValue: healthApi },
       { provide: PlacesService, useValue: placesApi },
+      placesAnswered((asked) => placesApi.placesControllerSearch(asked)),
       { provide: Session, useValue: session },
       { provide: Overlays, useValue: overlays },
       { provide: REDUCED_MOTION, useValue: reduced },
@@ -614,6 +623,75 @@ describe('Home brand picker on the server', () => {
     fixture.detectChanges();
 
     expect(tiles()).toHaveLength(0);
+  });
+});
+
+// The real brand and health reads through the app's HttpClient, against an
+// API that never answers: the cap ends both, and the page renders its
+// fallback instead of waiting.
+// @traces 1188-FR-002
+describe('Home on the server when the API does not answer', () => {
+  beforeEach(async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideHttpClient(
+          withFetch(),
+          withInterceptors([serverTimeoutInterceptor]),
+        ),
+        provideApiConfiguration('http://api.internal:3000'),
+        { provide: HomeService, useValue: homeApi },
+        { provide: PlacesService, useValue: placesApi },
+        { provide: Session, useValue: session },
+        { provide: Overlays, useValue: overlays },
+        { provide: REDUCED_MOTION, useValue: reduced },
+        { provide: PLATFORM_ID, useValue: 'server' },
+        { provide: Consent, useValue: consent },
+      ],
+    });
+    await TestBed.inject(I18n).enter('public');
+    globalThis.fetch = jest.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () =>
+            reject(init.signal?.reason),
+          );
+        }),
+    ) as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, 'fetch');
+  });
+
+  it('renders with no tiles and an unknown status once the 3 s cap ends both reads', async () => {
+    jest.useFakeTimers();
+    fixture = TestBed.createComponent(Home);
+    fixture.detectChanges();
+    let stable = false;
+    void fixture.whenStable().then(() => {
+      stable = true;
+    });
+
+    await jest.advanceTimersByTimeAsync(2_999);
+    expect(stable).toBe(false);
+
+    // The cap, then the render's own scheduling: well inside 4 s.
+    await jest.advanceTimersByTimeAsync(1 + 100);
+    await settle();
+
+    expect(stable).toBe(true);
+    const fetched = (globalThis.fetch as jest.Mock).mock.calls as [
+      string,
+      RequestInit,
+    ][];
+    expect(fetched.map(([url, init]) => [url, init.signal?.aborted])).toEqual([
+      ['http://api.internal:3000/api/v1/brands/popular?limit=16', true],
+      ['http://api.internal:3000/health/ready', true],
+    ]);
+    expect(tiles()).toHaveLength(0);
+    expect(TestBed.inject(TransferState).get(HEALTH, null)).toBeNull();
   });
 });
 

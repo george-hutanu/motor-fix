@@ -8,6 +8,7 @@ import {
   StorageService,
   signAccessToken,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
@@ -26,6 +27,7 @@ const ALL_VOICES_ON =
 // The story that adds an admin route that changes data adds its row here: a
 // body a signed-in admin can send and get a 2xx for. A logged read sets
 // `entries: 1`; every other GET must leave the admin's history unchanged. A
+// call that only says who is looking (presence) sets `entries: 0`. A
 // route with path parameters gives `path`, which makes what it acts on.
 const FIXTURES: Record<
   string,
@@ -35,6 +37,19 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
+  // Who else has the file open: a hint kept for a minute, never recorded.
+  'DELETE /api/v1/admin/verification-files/{id}/presence': {
+    body: () => ({}),
+    entries: 0,
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/presence`,
+  },
+  // @traces 003-FR-005 003-FR-014
+  'GET /api/v1/admin/accounts/{id}': {
+    path: async () => `/api/v1/admin/accounts/${await driver()}`,
+  },
+  // @traces 105-FR-019
+  'GET /api/v1/admin/brands': {},
   // @traces 414-FR-002
   'GET /api/v1/admin/catalogue-jobs': {},
   'GET /api/v1/admin/garages': {
@@ -81,6 +96,11 @@ const FIXTURES: Record<
         return `/api/v1/admin/verification-files/${file}/documents/${id}/pages/1/download-url`;
       },
     },
+  // @traces 105-FR-019
+  'PATCH /api/v1/admin/brands/{id}': {
+    body: () => ({ active: false, seenUpdatedAt: brandSeen }),
+    path: async () => `/api/v1/admin/brands/${await storedBrand()}`,
+  },
   'PATCH /api/v1/admin/copy-voices/{voice}': {
     body: () => ({
       enabled: false,
@@ -101,6 +121,32 @@ const FIXTURES: Record<
       );
       return '/api/v1/admin/platform-rules/maintenance_mode';
     },
+  },
+  'POST /api/v1/admin/accounts/{id}/delete-on-request': {
+    body: () => ({
+      identityChecked: true,
+      receivedOn: '2026-01-15',
+      reference: 'DR-2026-0001',
+    }),
+    path: async () =>
+      `/api/v1/admin/accounts/${await driver()}/delete-on-request`,
+  },
+  'POST /api/v1/admin/accounts/{id}/reset-access': {
+    body: () => ({}),
+    path: async () => `/api/v1/admin/accounts/${await driver()}/reset-access`,
+  },
+  'POST /api/v1/admin/accounts/{id}/restore': {
+    body: () => ({}),
+    path: async () =>
+      `/api/v1/admin/accounts/${await driver('suspended')}/restore`,
+  },
+  'POST /api/v1/admin/accounts/{id}/suspend': {
+    body: () => ({ reason: 'Cereri false, repetate.' }),
+    path: async () => `/api/v1/admin/accounts/${await driver()}/suspend`,
+  },
+  // @traces 105-FR-019
+  'POST /api/v1/admin/brands': {
+    body: () => ({ name: `Marca ${randomUUID().slice(0, 8)}` }),
   },
   // @traces 414-FR-003 414-FR-004 414-FR-007
   'POST /api/v1/admin/catalogue-jobs/{id}/approve': {
@@ -264,12 +310,52 @@ const FIXTURES: Record<
       return `/api/v1/admin/verification-files/${file}/checks/rar`;
     },
   },
+  'PUT /api/v1/admin/verification-files/{id}/presence': {
+    body: () => ({}),
+    entries: 0,
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/presence`,
+  },
   'PUT /api/v1/admin/verification-files/{id}/rar-number': {
     body: () => ({ rarNumber: 'RAR-5678' }),
     path: async () =>
       `/api/v1/admin/verification-files/${await submitted()}/rar-number`,
   },
 };
+
+// An active brand of the loader's, and the value an admin edit sends back.
+let brandSeen = '';
+async function storedBrand() {
+  const key = `audit-${randomUUID()}`;
+  const row = (
+    await db.query(
+      `INSERT INTO brand (id, key, name, slug, updated_at)
+       VALUES (gen_random_uuid(), $1, $1, $1, now())
+       RETURNING id, updated_at`,
+      [key],
+    )
+  ).rows[0] as { id: string; updated_at: Date };
+  brandSeen = row.updated_at.toISOString();
+  return row.id;
+}
+
+// A driver's account for the account actions, suspended when asked.
+async function driver(status: 'active' | 'suspended' = 'active') {
+  const { id } = await app.get(AccountsService).createAccount({
+    consent: CURRENT_CONSENT,
+    identity: { method: 'google', subject: `driver-${randomUUID()}` },
+    name: 'Radu',
+    roles: ['driver'],
+  });
+  if (status === 'suspended') {
+    await db.query(
+      `UPDATE account SET status = 'suspended', suspended_reason = 'Cereri false, repetate.'
+       WHERE id = $1`,
+      [id],
+    );
+  }
+  return id;
+}
 
 // A garage's job waiting for an admin's decision, under a name of its own.
 async function proposedJob() {
@@ -409,7 +495,12 @@ const check = async (route: string) => {
   if (res.status < 200 || res.status > 299) {
     return `${route}: answered ${res.status}`;
   }
-  const expected = changes ? gained >= 1 : gained === (fixture?.entries ?? 0);
+  const expected =
+    fixture?.entries !== undefined
+      ? gained === fixture.entries
+      : changes
+        ? gained >= 1
+        : gained === 0;
   return expected ? undefined : `${route}: left ${gained} entries`;
 };
 
@@ -437,7 +528,7 @@ beforeAll(async () => {
     })
   ).id;
   authorization = `Bearer ${signAccessToken({ accountId: admin, role: 'admin' }, TEST_TOKEN_SECRET, Date.now())}`;
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   // The platform rule fixture switched maintenance on; other suites share the database.
@@ -453,6 +544,7 @@ afterAll(async () => {
   await api.stop();
 });
 
+// @traces 003-FR-020
 describe('every admin route', () => {
   it('leaves an entry by the admin when it changes data, and none when it reads', async () => {
     expect(await callEach()).toEqual([]);

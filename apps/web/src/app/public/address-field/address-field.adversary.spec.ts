@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
-import { PlacesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Observable } from 'rxjs';
 
 import { type AddressChoice, AddressField } from './address-field';
+import { placesAnswered } from './address-field.testing';
 
 @Component({
   imports: [AddressField],
@@ -39,9 +40,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function mount() {
   TestBed.configureTestingModule({
-    providers: [
-      { provide: PlacesService, useValue: { placesControllerSearch: search } },
-    ],
+    providers: [placesAnswered((asked) => search(asked))],
   });
   await TestBed.inject(I18n).enter('public');
   fixture = TestBed.createComponent(Host);
@@ -321,5 +320,102 @@ describe('the address field by location, hostile answers', () => {
     await tap();
 
     expect(located).toHaveLength(1);
+  });
+});
+
+// @traces 1193-FR-007
+describe('the address field under hostile requests', () => {
+  const abortError = () =>
+    new DOMException('The operation was aborted', 'AbortError');
+  const message = () => live();
+
+  it('shows no message when a look-up ends with an abort error', async () => {
+    search.mockImplementationOnce(() => Promise.reject(abortError()));
+    await mount();
+
+    await type('Cluj');
+
+    expect(message()).not.toMatch(/Nu putem|Nu am găsit|cannot|No address/i);
+    expect(options()).toHaveLength(0);
+  });
+
+  it('shows no message when a look-up ends with a status 0 abort from the HTTP client', async () => {
+    search.mockImplementationOnce(() =>
+      Promise.reject(new HttpErrorResponse({ error: abortError(), status: 0 })),
+    );
+    await mount();
+
+    await type('Cluj');
+
+    expect(message()).not.toMatch(/Nu putem|Nu am găsit|cannot|No address/i);
+  });
+
+  it('asks again a text whose look-up was aborted', async () => {
+    search.mockImplementationOnce(() => Promise.reject(abortError()));
+    await mount();
+
+    await type('Cluj');
+    await type('Brașov');
+    await type('Cluj');
+
+    expect(search).toHaveBeenCalledTimes(3);
+    expect(options().map(text)).toEqual([row(1).label]);
+  });
+
+  it('tears down the look-up when the text is cut back under three characters', async () => {
+    const teardown = jest.fn();
+    search.mockImplementationOnce(() => new Observable<never>(() => teardown));
+    await mount();
+
+    await type('Cluj');
+    await type('Cl');
+
+    expect(teardown).toHaveBeenCalledTimes(1);
+    expect(options()).toHaveLength(0);
+  });
+
+  it('shows the kept answer again after Escape without sending a request', async () => {
+    await mount();
+
+    await type('Cluj');
+    await key('Escape');
+    await type('Strada');
+    await type('Cluj');
+
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(options().map(text)).toEqual([row(1).label]);
+  });
+
+  it('sends one request for a burst of ten keystrokes inside the pause', async () => {
+    await mount();
+
+    for (const t of [
+      'Str',
+      'Stra',
+      'Strad',
+      'Strada',
+      'Strada ',
+      'Strada F',
+      'Strada Fa',
+      'Strada Fab',
+      'Strada Fabr',
+    ])
+      await type(t, 20);
+    await wait(350);
+    await settle();
+
+    expect(search.mock.calls).toEqual([[{ lang: 'ro', q: 'Strada Fabr' }]]);
+  });
+
+  it('does not hand the kept list to a later answer by sharing the same array', async () => {
+    await mount();
+
+    await type('Cluj');
+    await key('ArrowDown');
+    await type('Brașov');
+    await type('Cluj');
+
+    expect(options()).toHaveLength(1);
+    expect(root().querySelectorAll('[aria-selected="true"]')).toHaveLength(0);
   });
 });

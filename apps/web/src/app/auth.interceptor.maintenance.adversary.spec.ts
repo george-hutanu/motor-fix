@@ -19,7 +19,12 @@ import { SignInDialog } from './sign-in/sign-in-dialog';
 let controller: HttpTestingController | undefined;
 
 function setup(token: string | null) {
-  const session = { renew: jest.fn(async () => false), token: () => token };
+  const session = {
+    deletingAccount: () => false,
+    epoch: () => 0,
+    renew: jest.fn(async () => false),
+    token: () => token,
+  };
   const gate = jest.fn(async () => false);
   const platformStatus = { on: jest.fn() };
   TestBed.configureTestingModule({

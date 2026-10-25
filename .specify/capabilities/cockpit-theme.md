@@ -1,6 +1,6 @@
 ---
 capability: cockpit-theme
-updated: 2026-10-23
+updated: 2026-10-25
 features:
   - 050-cockpit-theme
   - 158-small-action-sheet
@@ -9,6 +9,7 @@ features:
   - 975-type-scale
   - 517-cockpit-colours-one-source
   - 495-hlm-input-aria-reveal
+  - 1193-fast-nav
 ---
 
 # Capability: Cockpit theme
@@ -57,9 +58,9 @@ _From 050-cockpit-theme._
 
 _From 953-ui-review-checks._
 
-### 050-FR-011 — Michroma MUST be used for labels, headings and numerals, in capitals with 0.14em spacing; Hanken Grotesk for all other text. Both MUST be self-hosted with `font-display: swap`, cover Latin Extended (ă, â, î, ș, ț), and fall back to Hanken Grotesk then the system sans-serif.
+### 1193-FR-009 — A test MUST verify the shipped Michroma font files hold glyphs for U+0218, U+0219, U+021A and U+021B (Ș, ș, Ț, ț with the comma below) in the file whose Unicode range covers them, failing when any is missing. Modifies 050-FR-011 (the Latin Extended coverage becomes a test, not a statement).
 
-_From 050-cockpit-theme._
+_From 1193-fast-nav._
 
 ### 050-FR-012 — Every focusable element MUST show a visible focus ring on keyboard focus in both themes, and in forced-colours mode.
 
@@ -168,8 +169,13 @@ _From 495-hlm-input-aria-reveal._
 
 _From 495-hlm-input-aria-reveal._
 
+### 1193-FR-010 — The rendered HTML head MUST preload exactly one font file: the Michroma file the above-the-fold headline uses in the rendered language (Romanian: the Latin Extended file; English: the Latin file), with `as="font"`, its MIME type and `crossorigin`, so the browser does not download it twice; no other font is preloaded.
+
+_From 1193-fast-nav._
+
 ## Retired
 
 - `050-FR-010` — superseded by `953-FR-021` (2026-10-08)
 - `050-FR-001` — superseded by `954-FR-001` (2026-10-08)
 - `050-FR-002` — superseded by `954-FR-002` (2026-10-08)
+- `050-FR-011` — superseded by `1193-FR-009` (2026-10-25)

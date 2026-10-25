@@ -141,6 +141,21 @@ export class PublicGaragePhotoDto {
   thumbhash?: string;
 }
 
+export class ClosedDayAheadDto {
+  @ApiProperty({
+    description: 'A Bucharest calendar day, "YYYY-MM-DD"',
+    format: 'date',
+  })
+  day!: string;
+
+  @ApiProperty({
+    description:
+      'holiday: a legal holiday, which wins when the garage also closed the day; closed: a day the garage closed',
+    enum: ['holiday', 'closed'],
+  })
+  reason!: 'holiday' | 'closed';
+}
+
 export class PublicGarageDto extends GarageBrandAnswerDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
@@ -258,6 +273,13 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
 
   @ApiProperty({
     description:
+      "The days from today to today + 14 (Bucharest) when the garage is shut, in date order; the closed days' notes stay private",
+    type: [ClosedDayAheadDto],
+  })
+  closedDays!: ClosedDayAheadDto[];
+
+  @ApiProperty({
+    description:
       'The public jobs of the price list, in its order; empty without one',
     type: [PublicJobTypeDto],
   })
@@ -282,4 +304,15 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
     type: [PublicGaragePhotoDto],
   })
   photos!: PublicGaragePhotoDto[];
+}
+
+// The garage's own staff read of its public profile: the public answer as
+// drivers get it, plus the phone the garage saved, which is never public.
+export class GarageProfileDto extends PublicGarageDto {
+  @ApiProperty({
+    description: "The garage's stored phone as saved; never public",
+    nullable: true,
+    type: String,
+  })
+  phone!: string | null;
 }
