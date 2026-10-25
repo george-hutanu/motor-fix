@@ -131,6 +131,20 @@ export class CreateCarDto {
   @IsOptional()
   @calendarDay()
   rovinietaUntil?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'The odometer reading the next oil service is due at: above odometerKm and at most 100,000 km past it',
+    maximum: MAX_KM,
+    minimum: 1,
+    nullable: true,
+    type: 'integer',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_KM)
+  nextServiceKm?: number | null;
 }
 
 // Sent: checked as the add dialog checks it. A field left out keeps its value.
@@ -240,6 +254,20 @@ export class UpdateCarDto {
   @given()
   @calendarDay()
   rovinietaUntil?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Above the odometer and at most 100,000 km past it; null clears it',
+    maximum: MAX_KM,
+    minimum: 1,
+    nullable: true,
+    type: 'integer',
+  })
+  @given()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_KM)
+  nextServiceKm?: number | null;
 }
 
 // The car as its owner sees it; nobody else is ever answered with it.
@@ -269,12 +297,20 @@ export class CarDto {
   odometerKm!: number;
 
   @ApiProperty({
-    description:
-      'The odometer reading the next oil service is due at; read-only',
+    description: 'The odometer reading the next oil service is due at',
     nullable: true,
     type: 'integer',
   })
   nextServiceKm!: number | null;
+
+  @ApiProperty({
+    description:
+      "The estimated day of the next oil service at the car's average mileage; null without nextServiceKm or once it is reached",
+    format: 'date',
+    nullable: true,
+    type: String,
+  })
+  serviceDueOn!: string | null;
 
   @ApiProperty({ example: 'B123ABC', nullable: true, type: String })
   plate!: string | null;

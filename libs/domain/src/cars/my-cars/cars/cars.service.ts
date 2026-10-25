@@ -14,20 +14,32 @@ import { PRISMA } from '../../../auth/prisma';
 import { addYears, localDay } from '../../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
+import { serviceDueOn } from '../../odometer/odometer';
 
 const LIMIT = 20;
 // A request in one of these is still under way, so its car stays.
 const OPEN_REQUEST = ['sent', 'quoted', 'booked', 'in_work'] as const;
 const DATES = ['itpUntil', 'rcaUntil', 'rovinietaUntil'] as const;
 
-const withBrand = { brand: { select: { name: true } } } as const;
+// The readings are what the service estimate is counted from; they are never
+// answered themselves.
+const withBrand = {
+  brand: { select: { name: true } },
+  readings: { select: { createdAt: true, km: true, readOn: true } },
+} as const;
 type CarRow = Prisma.CarGetPayload<{ include: typeof withBrand }>;
+// A next service at most this far past the odometer.
+const SERVICE_REACH_KM = 100_000;
 
 const day = (at: Date | null) => at?.toISOString().slice(0, 10) ?? null;
 const date = (value: string | null | undefined) =>
   value ? new Date(`${value}T00:00:00Z`) : null;
 
 function answer(car: CarRow): CarDto {
+  const readings = car.readings.map((r) => ({
+    ...r,
+    readOn: day(r.readOn) as string,
+  }));
   return {
     brandId: car.brandId,
     brandName: car.brand.name,
@@ -42,6 +54,7 @@ function answer(car: CarRow): CarDto {
     plate: car.plate,
     rcaUntil: day(car.rcaUntil),
     rovinietaUntil: day(car.rovinietaUntil),
+    serviceDueOn: serviceDueOn(car, readings, localDay(new Date())),
     updatedAt: car.updatedAt.toISOString(),
     year: car.year,
   };
@@ -56,6 +69,7 @@ const EDITABLE = [
   'fuel',
   'engine',
   'plate',
+  'nextServiceKm',
   ...DATES,
 ] as const;
 type Editable = (typeof EDITABLE)[number];
@@ -79,6 +93,31 @@ function assertNotTooFar(
     );
   }
 }
+
+// Above the odometer the car leaves with, and within reach of it.
+function assertNextService(nextServiceKm: number, odometerKm: number) {
+  if (nextServiceKm <= odometerKm) {
+    throw invalid(
+      'nextServiceKm',
+      'next_service_not_above_odometer',
+      'The next service is not above the odometer',
+    );
+  }
+  if (nextServiceKm > odometerKm + SERVICE_REACH_KM) {
+    throw invalid(
+      'nextServiceKm',
+      'next_service_too_far',
+      'The next service is more than 100,000 km past the odometer',
+    );
+  }
+}
+
+// The day the kilometres were read: today in Bucharest.
+const readToday = (km: number) => ({
+  km,
+  readOn: date(localDay(new Date())) as Date,
+  source: 'driver' as const,
+});
 
 type Changes = Partial<Pick<UpdateCarDto, Editable>>;
 
@@ -130,6 +169,24 @@ function changes(dto: UpdateCarDto, before: CarDto): Changes {
   return after;
 }
 
+// A new next service is judged against the odometer the edit leaves; new
+// kilometres are a reading of today. A value left as stored is not judged
+// again, so a car driven past it can still be edited.
+async function checkAndRead(
+  tx: Prisma.TransactionClient,
+  car: CarRow,
+  after: Changes,
+) {
+  if (after.nextServiceKm != null) {
+    assertNextService(after.nextServiceKm, after.odometerKm ?? car.odometerKm);
+  }
+  if (after.odometerKm !== undefined) {
+    await tx.odometerReading.create({
+      data: { ...readToday(after.odometerKm), carId: car.id },
+    });
+  }
+}
+
 async function activeBrand(tx: Prisma.TransactionClient, brandId: string) {
   const brand = await tx.brand.findFirst({
     where: { active: true, id: brandId },
@@ -162,6 +219,29 @@ const editEntry = (actor: Actor, carId: string) => ({
   subjectType: 'car',
 });
 
+// The added car's row, with its first reading, so the estimate has a day to
+// count from.
+const newCar = (
+  dto: CreateCarDto,
+  ownerId: string,
+  key: string,
+): Prisma.CarUncheckedCreateInput => ({
+  brandId: dto.brandId,
+  engine: dto.engine || null,
+  fuel: dto.fuel,
+  idempotencyKey: key,
+  itpUntil: date(dto.itpUntil),
+  model: dto.model,
+  nextServiceKm: dto.nextServiceKm ?? null,
+  odometerKm: dto.odometerKm,
+  ownerId,
+  plate: dto.plate ?? null,
+  rcaUntil: date(dto.rcaUntil),
+  readings: { create: readToday(dto.odometerKm) },
+  rovinietaUntil: date(dto.rovinietaUntil),
+  year: dto.year,
+});
+
 // A garage account that is not a driver yet becomes one with its first car.
 const joinsAsDriver = (actor: Actor) =>
   actor.role === 'garage' && !actor.roles.includes('driver');
@@ -181,6 +261,9 @@ export class CarsService {
     const joins = joinsAsDriver(actor);
     if (!joins) requireCapability(actor, 'driver.cars');
     assertNotTooFar(dto);
+    if (dto.nextServiceKm != null) {
+      assertNextService(dto.nextServiceKm, dto.odometerKm);
+    }
     const ownerId = actor.accountId;
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM account WHERE id = ${ownerId}::uuid FOR UPDATE`;
@@ -208,20 +291,7 @@ export class CarsService {
         );
       }
       const car = await tx.car.create({
-        data: {
-          brandId: brand.id,
-          engine: dto.engine || null,
-          fuel: dto.fuel,
-          idempotencyKey: key,
-          itpUntil: date(dto.itpUntil),
-          model: dto.model,
-          odometerKm: dto.odometerKm,
-          ownerId,
-          plate: dto.plate ?? null,
-          rcaUntil: date(dto.rcaUntil),
-          rovinietaUntil: date(dto.rovinietaUntil),
-          year: dto.year,
-        },
+        data: newCar(dto, ownerId, key),
         include: withBrand,
       });
       if (joins) {
@@ -248,7 +318,12 @@ export class CarsService {
         actorId: ownerId,
         actorRole: actor.role,
         carId: car.id,
-        newValue: { ...facts, engine: car.engine, model: car.model },
+        newValue: {
+          ...facts,
+          engine: car.engine,
+          model: car.model,
+          nextServiceKm: car.nextServiceKm,
+        },
         subjectId: car.id,
         subjectType: 'car',
       });
@@ -276,6 +351,7 @@ export class CarsService {
       const changed = Object.keys(after) as Editable[];
       if (changed.length === 0) return before;
       if (after.brandId !== undefined) await activeBrand(tx, after.brandId);
+      await checkAndRead(tx, car, after);
       const saved = answer(
         await tx.car.update({
           data: carData(after, car.updatedAt),
