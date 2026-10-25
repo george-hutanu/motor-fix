@@ -9,8 +9,14 @@ const STYLES = {
   dark: 'https://tiles.openfreemap.org/styles/dark',
   light: 'https://tiles.openfreemap.org/styles/liberty',
 };
+// Where a map opens: its centre as MapLibre takes it, and its zoom.
+export interface MapStart {
+  center: [number, number];
+  zoom: number;
+}
+
 // Romania whole, before anything is placed.
-export const START = { center: [24.97, 45.94] as [number, number], zoom: 5.2 };
+export const START: MapStart = { center: [24.97, 45.94], zoom: 5.2 };
 const KM_PER_DEGREE = 111.32;
 // A map whose style has not loaded by then is given up as unavailable.
 const LOAD_MS = 10_000;
@@ -76,11 +82,13 @@ function mapAssets(document: Document) {
 // A MapLibre map over Romania, answered once its style has loaded. A style
 // failure before that, or no load within 10 s, removes it and rejects (a
 // failed tile does not); once loaded, an error is the caller's to handle. `loaded`
-// runs at the load itself, before any later event can reach the map.
+// runs at the load itself, before any later event can reach the map. It opens
+// at `start`, Romania whole unless a static image showed another view.
 export async function openMapLibre(
   host: HTMLElement,
   style: string,
   loaded?: (map: MapLibre) => void,
+  start: MapStart = START,
 ): Promise<MapLibre> {
   const { workerUrl } = mapAssets(host.ownerDocument);
   const maplibre = await import('maplibre-gl');
@@ -90,7 +98,7 @@ export async function openMapLibre(
     container: host,
     cooperativeGestures: true,
     style,
-    ...START,
+    ...start,
   });
   map.addControl(
     new maplibre.NavigationControl({ showCompass: false }),

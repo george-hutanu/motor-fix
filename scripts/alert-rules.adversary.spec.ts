@@ -105,6 +105,7 @@ describe('alert rule queries', () => {
       'outcome=\\"failed\\"',
       'outcome=\\"fallback\\"',
       'outcome=\\"hit\\"',
+      'outcome=\\"tiles_failed\\"',
       'outcome=\\"warm\\"',
       'store=\\"postgres\\"',
       'store=\\"redis\\"',

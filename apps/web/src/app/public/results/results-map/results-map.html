@@ -4,6 +4,19 @@
   @if (!view() || loading()) {
     <div class="placeholder" aria-hidden="true"></div>
   }
+  @if (stage() !== 'gone' && !failed()) {
+    <mf-static-map
+      [class.leaving]="stage() === 'leaving'"
+      [class.cramped]="phone() && cramped()"
+      [attr.inert]="stage() === 'leaving' ? '' : null"
+      [style.--covered]="covered() + 'px'"
+      [view]="loading() ? undefined : still()"
+      [pins]="pins()"
+      [place]="place()"
+      [lit]="lit()"
+      (activate)="activate()"
+    />
+  }
   @if (cardAt(); as at) {
     <mf-map-card
       #small
