@@ -26,7 +26,7 @@ import { filter, Subject } from 'rxjs';
 import { GarageProfile } from './garage-profile';
 import { Consent } from '../../consent/consent';
 import { PlaceStore } from '../../home/place/place-store';
-import { PUBLIC_READ } from '../../public-read';
+import { FRESH_READ, PUBLIC_READ } from '../../public-read';
 import { PublicLive } from '../live';
 import { ProfilePrefetch } from '../profile-prefetch/profile-prefetch';
 
@@ -855,6 +855,13 @@ describe('the profile read the server render hands over', () => {
     const [query, context] = api.publicGaragesControllerBySlug.mock.calls[0];
     expect(query).toEqual({ brand: 'bmw', slug: 'service-auto-militari' });
     expect(context?.get(PUBLIC_READ)).toBe(true);
+  });
+
+  it('reads the profile past the server render’s transfer cache, so a change heard before the page settles is not answered from it', async () => {
+    await open('/ro/garages/service-auto-militari?brand=bmw');
+
+    const [, context] = api.publicGaragesControllerBySlug.mock.calls[0];
+    expect(context?.get(FRESH_READ)).toBe(true);
   });
 });
 
