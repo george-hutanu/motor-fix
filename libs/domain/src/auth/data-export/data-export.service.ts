@@ -9,9 +9,10 @@ import {
   type DataExportOutcome,
 } from '../../metrics/product-counters';
 import { StorageService } from '../../storage/storage.service';
+import { refusal } from '../http-refusal';
 import type { Actor } from '../policy';
 import { PRISMA } from '../prisma';
-import { refusal, taken } from '../sign-up.service';
+import { taken } from '../sign-up.service';
 
 // One request a day; a failed export does not count.
 const REQUEST_GAP_MS = 24 * 60 * 60_000;
