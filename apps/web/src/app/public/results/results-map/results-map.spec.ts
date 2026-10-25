@@ -330,6 +330,41 @@ describe('ResultsMap, the static map under a phone sheet that moves', () => {
     expect(shown()).toEqual(framed(100, 56));
   });
 
+  // QA lap 4 (second run): at 320 x 568 with the consent bar asking, the
+  // sheet rested over the control and cut it in half.
+  const cramped = () =>
+    element().querySelector('mf-static-map')?.classList.contains('cramped');
+
+  it('tells the static map its control is covered where the sheet rests over it', async () => {
+    await withSheet();
+    sheetTop = 160;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(cramped()).toBe(true);
+  });
+
+  it('keeps the control shown where the sheet clears it by the 8 px gap', async () => {
+    await withSheet();
+    sheetTop = 164;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(cramped()).toBe(false);
+  });
+
+  it('shows the control again once the sheet rests lower', async () => {
+    await withSheet();
+    sheetTop = 140;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+    sheetTop = 400;
+    sheet.dispatchEvent(new Event('transitionend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(cramped()).toBe(false);
+  });
+
   it('ignores the end of a transition inside the sheet', async () => {
     await withSheet();
     const chip = document.createElement('button');

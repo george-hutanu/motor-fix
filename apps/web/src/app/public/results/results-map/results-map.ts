@@ -50,6 +50,9 @@ const EDGE = 8;
 // What a phone's fit keeps of the map between its covers: the pins' 40 px
 // padding on both sides and 40 px to frame them in.
 const ROOM = 120;
+// The gap the sheet leaves under the static map's control on a phone, as
+// --mf-space-2.
+const CONTROL_GAP = 8;
 const GAP = 14;
 // The static map's fade into the interactive one.
 const FADE_MS = 200;
@@ -166,6 +169,9 @@ export class ResultsMap {
   private readonly measured = signal<
     { w: number; h: number; bottom: number; top: number } | undefined
   >(undefined);
+  // On a phone, the sheet rests over the static map's control, short of
+  // the 8 px gap under it: the control hides (static-map.css).
+  protected readonly cramped = signal(false);
   // How far up the static map's corner sits from a tablet up: above the
   // legend. On a phone its control and credit take the interactive map's
   // places (static-map.css), off the sheet.
@@ -309,9 +315,10 @@ export class ResultsMap {
   // Measures the box and what covers it, which frames the static view.
   private measure(): MapView {
     const host = this.host().nativeElement;
-    const { bottom, top } = untracked(this.phone)
+    const { bottom, top, cramped } = untracked(this.phone)
       ? this.phoneCovers()
-      : { bottom: this.legendCover(), top: 0 };
+      : { bottom: this.legendCover(), cramped: false, top: 0 };
+    this.cramped.set(cramped);
     this.measured.set({
       bottom,
       h: host.clientHeight,
@@ -340,24 +347,26 @@ export class ResultsMap {
     const sheet = this.element.nativeElement.parentElement?.querySelector(
       ':scope > mf-results-sheet',
     );
-    if (!map) return { bottom: 0, top: 0 };
+    if (!map) return { bottom: 0, cramped: false, top: 0 };
     const box = map.getBoundingClientRect();
-    const top = Math.max(
-      0,
-      ...[
-        map.querySelector('.legend'),
-        map.querySelector('mf-static-map button'),
-      ].map((above) =>
-        above ? above.getBoundingClientRect().bottom - box.top : 0,
-      ),
+    const [legend, control] = [
+      map.querySelector('.legend'),
+      map.querySelector('mf-static-map button'),
+    ].map((above) =>
+      above ? above.getBoundingClientRect().bottom - box.top : 0,
     );
-    const under = sheet
-      ? Math.max(0, box.bottom - sheet.getBoundingClientRect().top)
-      : 0;
+    const top = Math.max(0, legend, control);
+    const sheetTop = sheet?.getBoundingClientRect().top;
+    const under =
+      sheetTop === undefined ? 0 : Math.max(0, box.bottom - sheetTop);
+    const cramped =
+      sheetTop !== undefined &&
+      control > 0 &&
+      sheetTop - box.top < control + CONTROL_GAP;
     const bottom = Math.max(
       0,
       Math.min(under, box.bottom - box.top - top - ROOM),
     );
-    return { bottom, top };
+    return { bottom, cramped, top };
   }
 }

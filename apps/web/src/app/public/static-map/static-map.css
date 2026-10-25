@@ -64,11 +64,12 @@ img {
   background: var(--mf-green);
 }
 
+/* A solid 2 px amber halo, as the interactive map's text-halo-width 2. */
 .pin.lit {
+  -webkit-text-stroke: 4px var(--mf-amber);
   color: var(--mf-on-amber);
-  text-shadow:
-    0 0 2px var(--mf-amber),
-    0 0 2px var(--mf-amber);
+  paint-order: stroke fill;
+  text-shadow: none;
   z-index: 1;
 }
 
@@ -181,6 +182,23 @@ img {
   z-index: 2;
 }
 
+/* Solid, so no pin's rate or the ground shows through its text. */
+button {
+  background: var(--mf-panel-raised);
+  min-height: var(--mf-tap);
+}
+
+.attribution {
+  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--mf-panel-raised) 80%, transparent);
+  border-radius: var(--mf-radius-chip);
+  color: var(--mf-text);
+  font-size: var(--mf-size-small);
+  margin: 0;
+  padding: var(--mf-space-1) var(--mf-space-2);
+  text-align: right;
+}
+
 /* On a phone the half sheet leaves too short a strip for the legend, the
    control and the credit, so they take the interactive map's places: the
    control at the top right where its zoom buttons sit, in the width the
@@ -203,6 +221,13 @@ img {
     z-index: 2;
   }
 
+  /* Where the sheet rests over it (a stage too short for both, as at
+     320 x 568 while the consent bar asks), it hides as the zoom buttons do
+     rather than be cut by the sheet; a tap on the map still opens it. */
+  :host(.cramped) button {
+    visibility: hidden;
+  }
+
   .attribution {
     bottom: var(--mf-space-3);
     font-size: var(--mf-size-body);
@@ -211,21 +236,4 @@ img {
     right: var(--mf-space-3);
     z-index: 2;
   }
-}
-
-/* Solid, so no pin's rate or the ground shows through its text. */
-button {
-  background: var(--mf-panel-raised);
-  min-height: var(--mf-tap);
-}
-
-.attribution {
-  backdrop-filter: blur(12px);
-  background: color-mix(in srgb, var(--mf-panel-raised) 80%, transparent);
-  border-radius: var(--mf-radius-chip);
-  color: var(--mf-text);
-  font-size: var(--mf-size-small);
-  margin: 0;
-  padding: var(--mf-space-1) var(--mf-space-2);
-  text-align: right;
 }

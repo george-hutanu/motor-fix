@@ -393,6 +393,38 @@ describe('StaticMap, the attribution and the control', () => {
       );
     });
 
+    // QA lap 4 (second run): the plain .attribution rule came after the
+    // phone one and kept the credit at 13 px.
+    it('lets the phone rules come after the plain ones they override', () => {
+      const flat = css.replace(/\/\*[\s\S]*?\*\//g, '');
+      const media = flat.indexOf('@media (max-width: 767.98px)');
+      expect(media).toBeGreaterThan(flat.lastIndexOf('\n.attribution {'));
+      expect(media).toBeGreaterThan(flat.lastIndexOf('\nbutton {'));
+    });
+
+    // QA lap 4 (second run): at 320 x 568 with the consent bar asking, the
+    // strip above the sheet is shorter than the control, which was cut in
+    // half over the sheet's handle.
+    it('hides the control on a phone where the host says the sheet covers it', () => {
+      const phone =
+        css
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/\s+/g, ' ')
+          .match(/@media \(max-width: 767\.98px\) \{(.*?\}) \}/)?.[1] ?? '';
+      expect(phone).toMatch(
+        /:host\(\.cramped\) button \{[^}]*visibility: hidden;/,
+      );
+    });
+
+    // QA lap 4 (second run): a 2 px blurred glow left the lit pin's dark
+    // rate on the dark ground; the interactive map draws a solid halo.
+    it('rings the lit pin’s rate in a solid amber halo, as the interactive map does', () => {
+      const lit = css.match(/\.pin\.lit\s*\{([^}]*)\}/)?.[1] ?? '';
+      expect(lit).toMatch(/-webkit-text-stroke:\s*4px var\(--mf-amber\)/);
+      expect(lit).toMatch(/paint-order:\s*stroke fill/);
+      expect(lit).not.toMatch(/text-shadow:[^;]*2px var\(--mf-amber\)/);
+    });
+
     it('gives the control at least the 44 px of a tap', () => {
       expect(css).toMatch(/button\s*\{[^}]*min-height:\s*var\(--mf-tap\)/);
     });
