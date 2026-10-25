@@ -4,11 +4,11 @@ import { join } from 'node:path';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { PlacesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
 import { PlaceDialog } from './place-dialog';
+import { placesAnswered } from '../../../public/address-field/address-field.testing';
 import type { Place } from '../place-store';
 
 @Component({ template: '' })
@@ -67,9 +67,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function open(language: 'ro' | 'en' = 'ro') {
   TestBed.configureTestingModule({
-    providers: [
-      { provide: PlacesService, useValue: { placesControllerSearch: search } },
-    ],
+    providers: [placesAnswered((asked) => search(asked))],
   });
   const i18n = TestBed.inject(I18n);
   await i18n.enter('public');

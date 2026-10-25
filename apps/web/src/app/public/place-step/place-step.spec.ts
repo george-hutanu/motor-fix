@@ -6,7 +6,6 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { BusinessKind, PlaceSection } from '@motor-fix/contracts';
 import { checkListing } from '@motor-fix/contracts/listing-check';
-import { PlacesService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
 import {
@@ -16,6 +15,7 @@ import {
   type Shown,
 } from './place-map';
 import { PlaceStep } from './place-step';
+import { placesAnswered } from '../address-field/address-field.testing';
 import { forStep } from '../field-watch';
 
 // The page's judgement of the place, as it hands it to the step.
@@ -72,7 +72,7 @@ async function open(
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: PlacesService, useValue: { placesControllerSearch: search } },
+      placesAnswered((asked) => search(asked)),
       { provide: PLACE_MAP, useValue: openMap },
     ],
   });
