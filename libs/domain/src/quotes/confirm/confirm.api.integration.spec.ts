@@ -5,6 +5,7 @@ import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { ConfirmService } from './confirm.service';
 import type { Actor } from '../../auth/policy';
 import { addDays, atLocal, localDay } from '../../bucharest';
+import { heldOpen } from '../../held-open.testing';
 import { quotesApp } from '../quotes-api.testing';
 
 const { bearer, get, post, provider, team, world } = quotesApp();
@@ -1064,6 +1065,29 @@ describe("the mechanic's own hours", () => {
     });
 
     expect(res.body).toMatchObject({ code: 'mechanic_unavailable' });
+  });
+
+  it('waits out a day off being added on that day, then refuses the mechanic', async () => {
+    const t = await team('Atelier Dinamo');
+    await garageOpen(t);
+    const { booking } = await accepted(t);
+    const add = heldOpen(prisma, async (tx) => {
+      await tx.$queryRaw`SELECT id FROM mechanic WHERE id = ${t.plainMechanic.id}::uuid FOR UPDATE`;
+      await tx.$executeRaw`
+        INSERT INTO mechanic_day_off (mechanic_id, first_day, last_day, created_by)
+        VALUES (${t.plainMechanic.id}::uuid, ${DAY}::date, ${DAY}::date, gen_random_uuid())`;
+    });
+    await add.ready;
+
+    // supertest sends on `then`: started now, it meets the held lock.
+    const answer = confirm(booking.id, owner(t), {
+      mechanicId: t.plainMechanic.id,
+    }).then((res) => res);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    add.release();
+    await add.done;
+
+    expect((await answer).body).toMatchObject({ code: 'mechanic_unavailable' });
   });
 
   it('refuses a Saturday while she does not work Saturdays, and confirms it once she does', async () => {

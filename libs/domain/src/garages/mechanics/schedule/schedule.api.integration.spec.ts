@@ -12,6 +12,7 @@ import { AuthModule } from '../../../auth/auth.module';
 import { serialDatabase } from '../../../auth/serial-db.testing';
 import { addDays, atLocal } from '../../../bucharest';
 import { outboxMark } from '../../../events/outbox.testing';
+import { heldOpen } from '../../../held-open.testing';
 import { BrevoMock } from '../../../notifications/brevo/brevo-mock.testing';
 import { NotificationsModule } from '../../../notifications/notifications.module';
 import {
@@ -442,6 +443,32 @@ describe('saving a mechanic week', () => {
 
     expect(codes(closed)).toEqual([['workingHours.sun', 'outside_opening']]);
     expect(open.status).toBe(200);
+  });
+
+  it('judges a week saved during a garage hours save against the hours that save leaves', async () => {
+    const { dinamo, elena, owner } = await world();
+    const narrowing = heldOpen(prisma, (tx) =>
+      tx.garage.update({
+        data: { hours: { ...GARAGE_HOURS, mon: [['10:00', '12:00']] } },
+        where: { id: dinamo.id },
+      }),
+    );
+    await narrowing.ready;
+
+    // supertest sends on `then`: started now, it meets the held lock.
+    const answer = write(
+      dinamo.id,
+      elena.id,
+      { workingHours: week([['08:00', '16:30']]), worksSaturdays: false },
+      owner,
+    ).then((res) => res);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    narrowing.release();
+    await narrowing.done;
+
+    expect(codes(await answer)).toEqual([
+      ['workingHours.mon', 'outside_opening'],
+    ]);
   });
 
   it('refuses working Saturdays while the garage is closed on Saturdays, writing nothing', async () => {
