@@ -181,6 +181,25 @@ img {
   z-index: 2;
 }
 
+/* On a phone the half sheet leaves a short strip: the credit sits at the
+   control's left, in one row, rather than under it. */
+@media (max-width: 767.98px) {
+  .corner {
+    align-items: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  button {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .attribution {
+    line-height: 1.25;
+    min-width: 0;
+  }
+}
+
 /* Solid, so no pin's rate or the ground shows through its text. */
 button {
   background: var(--mf-panel-raised);

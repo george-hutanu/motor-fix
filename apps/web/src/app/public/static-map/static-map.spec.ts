@@ -326,6 +326,14 @@ describe('StaticMap, the attribution and the control', () => {
       );
     });
 
+    // QA lap 2 at 320 x 640: a column of the control over the credit is
+    // taller than the strip a phone's half sheet leaves.
+    it('sets the credit beside the control on a phone, in one row', () => {
+      expect(css.replace(/\s+/g, ' ')).toMatch(
+        /@media \(max-width: 767\.98px\) \{ \.corner \{[^}]*flex-direction: row-reverse;/,
+      );
+    });
+
     it('gives the control at least the 44 px of a tap', () => {
       expect(css).toMatch(/button\s*\{[^}]*min-height:\s*var\(--mf-tap\)/);
     });

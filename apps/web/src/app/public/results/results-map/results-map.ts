@@ -164,9 +164,12 @@ export class ResultsMap {
   );
   // The box and its covered bands as last measured; none on the server.
   private readonly measured = signal<
-    { w: number; h: number; bottom: number; top: number } | undefined
+    | { w: number; h: number; bottom: number; top: number; under: number }
+    | undefined
   >(undefined);
-  protected readonly covered = computed(() => this.measured()?.bottom ?? 0);
+  // How far up the static map's corner sits: above the whole sheet or
+  // legend, even where the pins' framing gets less room than that.
+  protected readonly covered = computed(() => this.measured()?.under ?? 0);
   // The view the static image shows, which the interactive map opens at.
   protected readonly still = computed<MapView | undefined>(() => {
     const at = this.measured();
@@ -304,13 +307,14 @@ export class ResultsMap {
   // Measures the box and what covers it, which frames the static view.
   private measure(): MapView {
     const host = this.host().nativeElement;
-    const { bottom, top } = untracked(this.phone)
+    const { bottom, top, under } = untracked(this.phone)
       ? this.phoneCovers()
-      : { bottom: this.legendCover(), top: 0 };
+      : { bottom: this.legendCover(), top: 0, under: this.legendCover() };
     this.measured.set({
       bottom,
       h: host.clientHeight,
       top,
+      under,
       w: host.clientWidth,
     });
     return untracked(this.still) as MapView;
@@ -335,7 +339,7 @@ export class ResultsMap {
     const sheet = this.element.nativeElement.parentElement?.querySelector(
       ':scope > mf-results-sheet',
     );
-    if (!map) return { bottom: 0, top: 0 };
+    if (!map) return { bottom: 0, top: 0, under: 0 };
     const box = map.getBoundingClientRect();
     const top = key
       ? Math.max(0, key.getBoundingClientRect().bottom - box.top)
@@ -347,6 +351,6 @@ export class ResultsMap {
       0,
       Math.min(under, box.bottom - box.top - top - ROOM),
     );
-    return { bottom, top };
+    return { bottom, top, under };
   }
 }

@@ -280,6 +280,21 @@ describe('ResultsMap, the static map under a phone sheet that moves', () => {
     expect(covered()).toBe('100px');
   });
 
+  // QA lap 2 at 320 x 640: the pins' room clamped the cover, and the corner
+  // went under the sheet.
+  it('keeps the corner above the sheet even where the pins get less room', async () => {
+    await render({ activated: false, on: 'phone' });
+    const parent = (fixture.nativeElement as HTMLElement)
+      .parentElement as HTMLElement;
+    sheet = document.createElement('mf-results-sheet');
+    parent.append(sheet);
+    sheetTop = 150;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(covered()).toBe('550px');
+  });
+
   it('ignores the end of a transition inside the sheet', async () => {
     await render({ activated: false, on: 'phone' });
     const parent = (fixture.nativeElement as HTMLElement)
