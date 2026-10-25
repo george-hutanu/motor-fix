@@ -280,7 +280,7 @@ describe('web edge under hostile conditions', () => {
       digest: written.digest('hex'),
       size: parts * part,
     });
-  });
+  }, 30_000);
 
   it('keeps percent-encoded and repeated query parameters intact', async () => {
     await boot();

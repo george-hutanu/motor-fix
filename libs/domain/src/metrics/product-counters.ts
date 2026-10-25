@@ -43,6 +43,10 @@ import {
   requestDeclines,
 } from '../quotes/quotes/quotes.metrics';
 import {
+  RETENTION_KINDS,
+  type RetentionKind,
+} from '../retention/retention.config';
+import {
   REVIEW_POSTED_OUTCOMES,
   reviewsPosted,
 } from '../reviews/reviews.metrics';
@@ -165,6 +169,11 @@ function counter(name: string, description: string): Counter {
 
 const searches = () =>
   counter('motorfix_searches_total', 'Garage searches, by outcome');
+const retentionRows = () =>
+  counter(
+    'motorfix_retention_rows_total',
+    'Rows the nightly retention job removed or anonymised, by kind',
+  );
 const sortChanges = () =>
   counter('motorfix_sort_changes_total', 'Sort changes on Results, by sort');
 const signIns = () => counter('motorfix_sign_ins_total', 'Sign-ins, by method');
@@ -690,6 +699,7 @@ const STARTS: Record<
       ),
     ],
     [documentCycle, each('step', WORKER_DOCUMENT_CYCLE_STEPS)],
+    [retentionRows, each('kind', RETENTION_KINDS)],
     [channelFallbacks, FALLBACKS],
   ],
 };
@@ -700,6 +710,10 @@ export function initProductCounters(process: 'api' | 'worker') {
     const started = series();
     for (const one of labels) started.add(0, one);
   }
+}
+
+export function countRetention(kind: RetentionKind, rows: number) {
+  retentionRows().add(rows, { kind });
 }
 
 // A maintenance refusal is counted by motorfix_maintenance_refusals_total.
