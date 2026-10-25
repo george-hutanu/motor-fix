@@ -265,7 +265,6 @@ describe('POST /bookings/:id/confirm', () => {
   });
 });
 
-// @traces 389-FR-003
 // @traces 1255-FR-015
 describe('a card invited but not yet accepted', () => {
   it('is given the booking like any mechanic and stays off the profile', async () => {
@@ -299,6 +298,7 @@ describe('a card invited but not yet accepted', () => {
   });
 });
 
+// @traces 389-FR-003
 describe('a confirm that cannot happen', () => {
   it('refuses the same booking a second time, writing nothing', async () => {
     const t = await team('Atelier Dinamo');

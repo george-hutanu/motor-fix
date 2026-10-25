@@ -59,7 +59,7 @@ const EXCEPTIONS: Record<string, string> = {
   'garages/prices/garage-prices/garage-prices.service.ts#saveStarting':
     OWN_NEW_GARAGE,
   'garages/staff-invite/staff-invite.service.ts#check':
-    'an invite names the garage that sent it, approved or not, to the person holding its secret',
+    'an invite names the garage that sent it, approved or not, to the person holding its secret, and, to a signed-in holder, the garage that account works at, which accepting leaves',
   'garages/staff-invite/staff-invite.service.ts#joined':
     'the owners of the garage a new member joined hear its name, approved or not',
   'garages/staff-invite/staff-invite.service.ts#link':

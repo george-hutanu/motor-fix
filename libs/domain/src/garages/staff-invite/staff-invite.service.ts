@@ -21,10 +21,10 @@ import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
-import type {
+import {
   Prisma,
-  PrismaClient,
-  StaffInvite,
+  type PrismaClient,
+  type StaffInvite,
 } from '../../generated/prisma/client';
 import { Brevo } from '../../notifications/brevo/brevo';
 import {
@@ -99,7 +99,7 @@ export class StaffInviteService {
     this.assertOwner(actor, garageId);
     if (dto.kind === 'mechanic') await this.assertMechanics(garageId);
     const card = dto.mechanicId
-      ? await this.invitableCard(garageId, dto.mechanicId)
+      ? await this.invitableCard(this.prisma, garageId, dto.mechanicId)
       : null;
     const address = dto.phone
       ? { phone: dto.phone }
@@ -121,9 +121,12 @@ export class StaffInviteService {
     this.webUrl();
     const { hash, token } = newToken();
     const invite = await this.prisma.$transaction(async (tx) => {
-      // The card's earlier invites have all expired by now: one card, one
-      // live link.
+      // The card's row lock makes a second send for it wait, then find this
+      // one's invite open. Its earlier invites have all expired by now: one
+      // card, one live link.
       if (card) {
+        await tx.$queryRaw`SELECT id FROM mechanic WHERE id = ${card.id}::uuid FOR UPDATE`;
+        await this.invitableCard(tx, garageId, card.id);
         await tx.staffInvite.updateMany({
           data: { status: 'revoked' },
           where: { mechanicId: card.id, status: 'sent' },
@@ -236,8 +239,20 @@ export class StaffInviteService {
 
   // What the link offers, or why it offers nothing; with a session, also the
   // garage the account works at, which accepting a mechanic invite leaves.
+  // The garage's own owner is answered as accept answers him: the link is
+  // not his to use.
   async check(token: string, actor?: Actor): Promise<InviteViewDto> {
     const invite = await this.usable(token);
+    if (actor) {
+      const owner = await this.prisma.garageMember.findFirst({
+        where: {
+          accountId: actor.accountId,
+          garageId: invite.garageId,
+          role: 'owner',
+        },
+      });
+      if (owner) throw invalid();
+    }
     const garage = await this.prisma.garage.findUniqueOrThrow({
       where: { id: invite.garageId },
     });
@@ -281,7 +296,7 @@ export class StaffInviteService {
       throw invalid();
     }
     const by = { id: actor.accountId, role: actor.role };
-    const name = await this.prisma.$transaction(async (tx) => {
+    const accepting = this.prisma.$transaction(async (tx) => {
       // The row lock makes a second accept wait, then find it taken.
       const { count } = await tx.staffInvite.updateMany({
         data: { status: 'accepted' },
@@ -289,10 +304,17 @@ export class StaffInviteService {
       });
       if (count === 0) throw invalid();
       await this.accounts.grantRole(tx, by, actor.accountId, invite.kind);
-      const joinedAs =
-        invite.kind === 'receptionist'
-          ? await this.joinFrontDesk(tx, invite, actor.accountId, account.name)
-          : await this.joinWorkshop(tx, invite, actor.accountId, account.name);
+      let joinedAs = account.name;
+      if (invite.kind === 'receptionist') {
+        await this.joinFrontDesk(tx, invite, actor.accountId);
+      } else {
+        joinedAs = await this.joinWorkshop(
+          tx,
+          invite,
+          actor.accountId,
+          account.name,
+        );
+      }
       await this.audit.record(tx, {
         action: 'update',
         actorId: actor.accountId,
@@ -323,6 +345,17 @@ export class StaffInviteService {
       });
       return joinedAs;
     });
+    // An account with no mechanic row taking two links at once: the second
+    // finds the account linked by the first only at its write.
+    const name = await accepting.catch((error: unknown) => {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw invalid();
+      }
+      throw error;
+    });
     await this.joined(invite, name);
   }
 
@@ -330,13 +363,11 @@ export class StaffInviteService {
     tx: Prisma.TransactionClient,
     invite: StaffInvite,
     accountId: string,
-    name: string,
-  ): Promise<string> {
+  ): Promise<void> {
     await tx.garageMember.createMany({
       data: [{ accountId, garageId: invite.garageId, role: 'receptionist' }],
       skipDuplicates: true,
     });
-    return name;
   }
 
   // The account's mechanic row is read under its lock, after the invite is
@@ -470,9 +501,14 @@ export class StaffInviteService {
   }
 
   // A card of this garage, still on the team, that no account holds and no
-  // live invite names.
-  private async invitableCard(garageId: string, mechanicId: string) {
-    const card = await this.prisma.mechanic.findFirst({
+  // live invite names. Read first to refuse early, then again in the send's
+  // transaction under the card's lock.
+  private async invitableCard(
+    db: PrismaClient | Prisma.TransactionClient,
+    garageId: string,
+    mechanicId: string,
+  ) {
+    const card = await db.mechanic.findFirst({
       where: { garageId, id: mechanicId, removedAt: null },
     });
     if (!card) throw notFound();
@@ -482,7 +518,7 @@ export class StaffInviteService {
     if (card.accountId) {
       throw conflict('card_linked', 'This card already has an account');
     }
-    const open = await this.prisma.staffInvite.findFirst({
+    const open = await db.staffInvite.findFirst({
       where: { expiresAt: { gt: this.now() }, mechanicId, status: 'sent' },
     });
     if (open) {

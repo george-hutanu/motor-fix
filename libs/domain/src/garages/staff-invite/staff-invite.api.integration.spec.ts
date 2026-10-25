@@ -1432,4 +1432,45 @@ describe('two accepts for one account at the same time', () => {
     });
     expect(row.garageId).toBe(second?.garageId);
   });
+
+  // @traces 1255-FR-006
+  it('answers invite_invalid, never a 500, to the second of two card links taken by an account with no row', async () => {
+    const { dinamo, mihai } = await world();
+    const first = await card(dinamo.id);
+    const second = await card(dinamo.id);
+    await send(dinamo.id, bearer(mihai, 'garage'), {
+      email: 'elena@example.test',
+      kind: 'mechanic',
+      mechanicId: first.id,
+    });
+    const toFirst = tokenOf().token;
+    await send(dinamo.id, bearer(mihai, 'garage'), {
+      email: 'elena2@example.test',
+      kind: 'mechanic',
+      mechanicId: second.id,
+    });
+    const toSecond = tokenOf().token;
+    // Already a mechanic by role, so the grant does not line the two up.
+    const ana = await account('ana', ['mechanic']);
+
+    // Holding both cards makes both accepts pass the row check before
+    // either links its card.
+    let answers: Promise<request.Response[]> | undefined;
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM mechanic WHERE id IN (${first.id}::uuid, ${second.id}::uuid) FOR UPDATE`;
+        answers = Promise.all([
+          accept(toFirst, bearer(ana, 'mechanic')),
+          accept(toSecond, bearer(ana, 'mechanic')),
+        ]);
+        await waitingOnLocks(2);
+      },
+      { timeout: 20_000 },
+    );
+
+    const out = (await answers) ?? [];
+    expect(out.map((r) => r.status).sort()).toEqual([204, 410]);
+    expect(out.find((r) => r.status === 410)?.body.code).toBe('invite_invalid');
+    expect(await prisma.mechanic.count({ where: { accountId: ana } })).toBe(1);
+  });
 });
