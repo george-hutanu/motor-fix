@@ -81,6 +81,9 @@ let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let list: jest.Mock;
 let open: jest.Mock;
+// Every other call on the jobs API the section makes: a write, or a read
+// beside the list.
+let others: string[];
 
 async function render(
   answer: () => Promise<{ items: JobSummaryDto[] }> = async () => ({
@@ -96,11 +99,24 @@ async function render(
     ...(await answer()),
   }));
   open = jest.fn(async () => 'cancelled');
+  others = [];
+  const api = new Proxy(
+    { garageJobsControllerList: list } as Record<string | symbol, unknown>,
+    {
+      get: (target, name) =>
+        name in target || typeof name !== 'string' || !name.startsWith('garage')
+          ? target[name]
+          : (...args: unknown[]) => {
+              others.push(name);
+              return Promise.resolve(args);
+            },
+    },
+  );
   TestBed.configureTestingModule({
     providers: [
       {
         provide: GarageJobsService,
-        useValue: { garageJobsControllerList: list },
+        useValue: api,
       },
       { provide: Overlays, useValue: { open } },
       {
@@ -381,6 +397,23 @@ describe("the own jobs' states", () => {
     await settle();
 
     expect(list).toHaveBeenCalledTimes(2);
+  });
+});
+
+// @traces 423-FR-012
+describe('the own jobs write nothing', () => {
+  it('calls nothing on the jobs API but its list read, on load, on a re-read and on a row', async () => {
+    const { element, settle } = await render();
+    await settle();
+    resync.next();
+    await wait(400);
+    await settle();
+    (rows(element)[0].querySelector('button') ?? rows(element)[0]).click();
+    await settle();
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(list).toHaveBeenCalledWith({});
+    expect(others).toEqual([]);
   });
 });
 
