@@ -1,4 +1,4 @@
-// ST-1349: the sweep shoots a Chart.js chart at its final frame, the same on every run, so an unchanged
+// The sweep shoots a Chart.js chart at its final frame, the same on every run, so an unchanged
 // /cockpit never shows as a changed chart. Each mechanism has its own spec in sweep.spec.mjs (reduced motion
 // in contextOptions, settleCanvases, settleFonts); this one drives runSweep itself over a page drawn the way
 // the cockpit's charts are (fixtures/chart/cockpit-chart.html), twice, and compares the shots as the PR QA
@@ -33,7 +33,7 @@ async function probeColour(sharp, shot, scale) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-describe('the sweep shoots a canvas chart finished, the same on every run (ST-1349)', async () => {
+describe('the sweep shoots a canvas chart finished, the same on every run', async () => {
   let ready = true;
   try {
     const { chromium } = await import('@playwright/test');
@@ -63,19 +63,19 @@ describe('the sweep shoots a canvas chart finished, the same on every run (ST-13
   // As run.mjs does: the shots go to <out>/shots, where diffShots reads them.
   const sweep = (name) => runSweep({ baseURL, routes: ['/cockpit-chart.html'], outDir: join(work, name, 'shots'), schemes: ['light'], langs: ['en'], repoRoot: root });
 
-  // @traces 1349-FR-001 @traces 1349-FR-002
+  // @traces 1349-FR-001 1349-FR-002
   it.skipIf(!ready)('two sweeps of an unchanged chart page shoot the same finished chart at every viewport', async () => {
     const first = await sweep('first');
     const second = await sweep('second');
     assert.equal(first.screenshots.length, Object.keys(VIEWPORTS).length);
     assert.equal(second.screenshots.length, first.screenshots.length);
 
-    // FR-001: the visual diff finds nothing between the two runs.
+    // The visual diff finds nothing between the two runs.
     const diff = await diffShots(join(work, 'second'), join(work, 'first'), join(work, 'diff'), { root });
     assert.equal(Object.keys(diff).length, first.screenshots.length);
     for (const [shot, outcome] of Object.entries(diff)) assert.equal(outcome.status, 'identical', `${shot}: ${JSON.stringify(outcome.regions ?? outcome.status)}`);
 
-    // FR-002: every shot holds the chart's final frame, drawn without its entry animation.
+    // Every shot holds the chart's final frame, drawn without its entry animation.
     const sharp = require('sharp');
     const shots = readdirSync(join(work, 'first', 'shots'));
     for (const [viewport, { deviceScaleFactor }] of Object.entries(VIEWPORTS)) {
