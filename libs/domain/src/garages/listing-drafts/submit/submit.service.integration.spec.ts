@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
-import type { ListingDraftData, SurveySection } from '@motor-fix/contracts';
+import {
+  DEFAULT_HOURS,
+  type Interval,
+  type ListingDraftData,
+  type SurveySection,
+} from '@motor-fix/contracts';
 import { HttpException } from '@nestjs/common';
 
 import { ListingSubmitService } from './submit.service';
@@ -507,6 +512,30 @@ describe("the owner's mechanic row", () => {
         working_hours: garage.hours,
       },
     ]);
+  });
+
+  // @traces 058-FR-012
+  it.each<[string, Interval[], boolean]>([
+    ['opens on Saturdays', [['09:00', '13:00']], true],
+    ['stays closed on Saturdays', [], false],
+  ])('works Saturdays as the garage does when it %s', async (_, sat, works) => {
+    const actor = await driver();
+    const data = complete();
+    const place = data.steps?.['5'] ?? {};
+    const { id, token } = await draft({
+      ...data,
+      steps: {
+        ...data.steps,
+        '5': { ...place, hours: { ...DEFAULT_HOURS, sat } },
+      },
+    });
+
+    const sent = await service.submit(actor, id, token, 'key-1');
+
+    const [row] = await prisma.$queryRaw<{ works_saturdays: boolean }[]>`
+      SELECT works_saturdays FROM mechanic
+      WHERE garage_id = ${sent.garageId}::uuid AND is_owner`;
+    expect(row.works_saturdays).toBe(works);
   });
 
   it('is rolled back with the garage when the send fails part-way', async () => {

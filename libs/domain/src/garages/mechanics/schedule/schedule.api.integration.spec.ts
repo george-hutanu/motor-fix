@@ -274,6 +274,20 @@ describe('reading a mechanic schedule', () => {
     expect(res.body).toMatchObject({ isDefault: true, workingHours: week([]) });
   });
 
+  it('reads garage hours stored in another shape as a day with no hours', async () => {
+    const { dinamo, elena, owner } = await world({
+      hours: { mon: 'closed', tue: [['08:00', '16:00']] },
+    });
+
+    const res = await read(dinamo.id, elena.id, owner);
+
+    expect(res.status).toBe(200);
+    expect(res.body.workingHours).toMatchObject({
+      mon: [],
+      tue: [['08:00', '16:00']],
+    });
+  });
+
   it('reads a day stored with two intervals as one stretch, leaving the row as it was', async () => {
     const { dinamo, elena, owner } = await world();
     const stored = week(SPLIT);
@@ -824,6 +838,19 @@ describe('removing a day off', () => {
 
     expect([res.status, res.body.code]).toEqual([409, 'past_day_off']);
     expect(await writesOf(dinamo.id)).toEqual(before);
+  });
+
+  it('answers 204 then 404 to two removes of the same day at once', async () => {
+    const { dinamo, elena, owner } = await world();
+    const id = await dayOff(elena.id, addDays(today(), 4));
+
+    const answers = await Promise.all([
+      removeOff(dinamo.id, elena.id, id, owner),
+      removeOff(dinamo.id, elena.id, id, owner),
+    ]);
+
+    expect(answers.map((r) => r.status).sort()).toEqual([204, 404]);
+    expect(await daysOffOf(elena.id)).toEqual([]);
   });
 
   it("answers 404 to an unknown id and to another mechanic's day off", async () => {

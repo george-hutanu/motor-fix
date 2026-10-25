@@ -21,6 +21,7 @@ import {
   isWeeklyHours,
   PAYMENTS,
   SATURDAY_DEFAULT,
+  storedWeek,
   stretchOf,
   TIMES,
   todayInBucharest,
@@ -595,4 +596,33 @@ describe('the schedule limits', () => {
       expect(isDay(day)).toBe(false);
     },
   );
+});
+
+// @traces 058-FR-002
+describe('storedWeek', () => {
+  it('keeps each day stored as a list of intervals', () => {
+    expect(storedWeek({ mon: [['08:00', '12:00']], sat: [] })).toEqual({
+      mon: [['08:00', '12:00']],
+      sat: [],
+    });
+  });
+
+  it.each([null, 'closed', [], 7])(
+    'reads %p as a week with no days',
+    (value) => {
+      expect(storedWeek(value)).toEqual({});
+    },
+  );
+
+  it('drops a day stored in another shape and a key that is no weekday', () => {
+    expect(
+      storedWeek({
+        fri: [['08:00']],
+        holiday: [['08:00', '12:00']],
+        mon: 'closed',
+        tue: [['08:00', '16:00']],
+        wed: [{ from: '08:00' }],
+      }),
+    ).toEqual({ tue: [['08:00', '16:00']] });
+  });
 });
