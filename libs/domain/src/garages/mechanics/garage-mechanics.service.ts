@@ -591,7 +591,7 @@ export class GarageMechanicsService {
   }
 
   // Who may read or write is checked before the switch.
-  private async access(
+  async access(
     db: Pick<Prisma.TransactionClient, 'garageFeature'>,
     actor: Actor,
     garageId: string,

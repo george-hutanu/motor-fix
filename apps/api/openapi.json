@@ -4113,6 +4113,128 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/reviews": {
+      "get": {
+        "operationId": "GarageReviewsController_read",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageStaffReviewsPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a page not a whole number from 1"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not the caller’s garage, or not an id at all"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage’s published and reported reviews, 20 a page, with its rating, count and breakdown",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/api/v1/reviews/{reviewId}/reports": {
+      "post": {
+        "operationId": "ReviewReportsController_report",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewReportDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a reason outside the list, or a member"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a receptionist or mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found: no such review of the caller’s garage, or one removed or deleted"
+          },
+          "409": {
+            "description": "already_reported; already_kept"
+          },
+          "422": {
+            "description": "validation_failed: the text missing or too long for other, or given with another reason"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Report one of the garage’s reviews to an admin, with a reason",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/api/v1/reviews/eligibility": {
       "get": {
         "operationId": "ReviewsController_eligibility",
@@ -6092,6 +6214,256 @@
           }
         ],
         "summary": "Remove a mechanic from the team, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/mechanics/{mechanicId}/hours": {
+      "get": {
+        "operationId": "MechanicScheduleController_read",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MechanicScheduleDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A mechanic's working week and upcoming days off, for the owner",
+        "tags": [
+          "garages"
+        ]
+      },
+      "put": {
+        "operationId": "MechanicScheduleController_write",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMechanicHoursDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MechanicScheduleDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "422": {
+            "description": "validation_failed: workingHours.<day> invalid, grid, order, count or outside_opening; worksSaturdays invalid or garage_closed_saturday"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Save a mechanic's working week, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/mechanics/{mechanicId}/days-off": {
+      "post": {
+        "operationId": "MechanicScheduleController_addDayOff",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMechanicDayOffDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MechanicScheduleDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "409": {
+            "description": "day_off_overlap; bookings_on_days_off, naming the confirmed bookings, until sent with acknowledgeBookings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DaysOffBookingsRefusalDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "validation_failed: firstDay invalid or past; lastDay invalid, order or too_far; note invalid or too_long"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a day or a range off, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/mechanics/{mechanicId}/days-off/{dayOffId}": {
+      "delete": {
+        "operationId": "MechanicScheduleController_removeDayOff",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dayOffId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "409": {
+            "description": "past_day_off: it already ended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a day off, or end a running one yesterday, for the owner",
         "tags": [
           "garages"
         ]
@@ -13768,7 +14140,7 @@
           },
           "toReassign": {
             "type": "boolean",
-            "description": "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else"
+            "description": "A confirmed booking still ahead whose mechanic's card was taken off the team, or that falls on one of her days off or outside her working hours: the garage gives it to someone else"
           }
         },
         "required": [
@@ -14105,7 +14477,7 @@
           },
           "toReassign": {
             "type": "boolean",
-            "description": "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else"
+            "description": "A confirmed booking still ahead whose mechanic's card was taken off the team, or that falls on one of her days off or outside her working hours: the garage gives it to someone else"
           }
         },
         "required": [
@@ -14790,6 +15162,328 @@
           "declinedAt"
         ]
       },
+      "RatingBreakdownDto": {
+        "type": "object",
+        "properties": {
+          "five": {
+            "type": "number"
+          },
+          "four": {
+            "type": "number"
+          },
+          "three": {
+            "type": "number"
+          },
+          "two": {
+            "type": "number"
+          },
+          "one": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "five",
+          "four",
+          "three",
+          "two",
+          "one"
+        ]
+      },
+      "DriverNameDto": {
+        "type": "object",
+        "properties": {
+          "shortName": {
+            "type": "string",
+            "description": "First name and the last name’s initial"
+          }
+        },
+        "required": [
+          "shortName"
+        ]
+      },
+      "GarageReviewQuoteDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "number"
+          },
+          "toBani": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "fromBani",
+          "toBani"
+        ]
+      },
+      "ReviewMechanicDto": {
+        "type": "object",
+        "properties": {
+          "shortName": {
+            "type": "string",
+            "example": "Costel R."
+          }
+        },
+        "required": [
+          "shortName"
+        ]
+      },
+      "GarageStaffReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "job",
+              "profile"
+            ]
+          },
+          "rating": {
+            "type": "number",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DriverNameDto"
+          },
+          "car": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CarSnapshotDto"
+              }
+            ]
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "quote": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageReviewQuoteDto"
+              }
+            ]
+          },
+          "finalPriceBani": {
+            "type": "number",
+            "nullable": true
+          },
+          "paidBani": {
+            "type": "number",
+            "description": "What the driver says they paid",
+            "nullable": true
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "reported"
+            ]
+          },
+          "mechanic": {
+            "description": "A job review’s mechanic; a profile review names none",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReviewMechanicDto"
+              }
+            ]
+          },
+          "canReply": {
+            "type": "boolean"
+          },
+          "canReport": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "rating",
+          "text",
+          "postedAt",
+          "author",
+          "car",
+          "jobs",
+          "quote",
+          "finalPriceBani",
+          "paidBani",
+          "editedAt",
+          "status",
+          "mechanic",
+          "canReply",
+          "canReport"
+        ]
+      },
+      "GarageStaffReviewsPageDto": {
+        "type": "object",
+        "properties": {
+          "rating": {
+            "type": "number",
+            "description": "The garage's stored rating, as its profile shows it",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number",
+            "description": "The garage's stored review count"
+          },
+          "breakdown": {
+            "description": "Published reviews only, as the profile counts them",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RatingBreakdownDto"
+              }
+            ]
+          },
+          "slug": {
+            "type": "string",
+            "description": "The garage's public profile address"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number",
+            "description": "Published and reported reviews"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageStaffReviewDto"
+            }
+          }
+        },
+        "required": [
+          "rating",
+          "reviewCount",
+          "breakdown",
+          "slug",
+          "page",
+          "pageSize",
+          "total",
+          "items"
+        ]
+      },
+      "ReportReviewDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "insults",
+              "personal_data",
+              "ads",
+              "promotion",
+              "off_topic",
+              "hate",
+              "fake_or_conflicted",
+              "threats_or_legal_accusations",
+              "other"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "description": "Only with the reason other",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "ReviewReportReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "reported",
+              "removed",
+              "deleted_by_author"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ]
+      },
+      "ReviewReportDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "insults",
+              "personal_data",
+              "ads",
+              "promotion",
+              "off_topic",
+              "hate",
+              "fake_or_conflicted",
+              "threats_or_legal_accusations",
+              "other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          },
+          "dueAt": {
+            "type": "string",
+            "description": "When an admin is due to decide",
+            "format": "date-time"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReviewReportReviewDto"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "status",
+          "dueAt",
+          "review"
+        ]
+      },
       "ReviewEligibilityDto": {
         "type": "object",
         "properties": {
@@ -14817,18 +15511,6 @@
           "jobId",
           "offer",
           "reason"
-        ]
-      },
-      "DriverNameDto": {
-        "type": "object",
-        "properties": {
-          "shortName": {
-            "type": "string",
-            "description": "First name and the last name’s initial"
-          }
-        },
-        "required": [
-          "shortName"
         ]
       },
       "MechanicReviewDto": {
@@ -14891,48 +15573,6 @@
           "pageSize",
           "total",
           "items"
-        ]
-      },
-      "RatingBreakdownDto": {
-        "type": "object",
-        "properties": {
-          "five": {
-            "type": "number"
-          },
-          "four": {
-            "type": "number"
-          },
-          "three": {
-            "type": "number"
-          },
-          "two": {
-            "type": "number"
-          },
-          "one": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "five",
-          "four",
-          "three",
-          "two",
-          "one"
-        ]
-      },
-      "GarageReviewQuoteDto": {
-        "type": "object",
-        "properties": {
-          "fromBani": {
-            "type": "number"
-          },
-          "toBani": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "fromBani",
-          "toBani"
         ]
       },
       "GarageReviewDto": {
@@ -17777,6 +18417,189 @@
             "minLength": 2
           }
         }
+      },
+      "MechanicDayOffDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstDay": {
+            "type": "string",
+            "description": "The first day off, a Bucharest day",
+            "format": "date"
+          },
+          "lastDay": {
+            "type": "string",
+            "description": "The last day off, the first one or later",
+            "format": "date"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 120,
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "firstDay",
+          "lastDay",
+          "note"
+        ]
+      },
+      "MechanicScheduleDto": {
+        "type": "object",
+        "properties": {
+          "workingHours": {
+            "type": "object",
+            "additionalProperties": {
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "description": "Each weekday (mon…sun) to the stretch the mechanic works, as one \"HH:MM\" pair, or an empty list; the garage's weekdays while isDefault"
+          },
+          "worksSaturdays": {
+            "type": "boolean",
+            "description": "Whether the Saturday stretch counts"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "True until the owner first saves this mechanic's hours"
+          },
+          "daysOff": {
+            "description": "The days off ending today or later, by first day",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MechanicDayOffDto"
+            }
+          },
+          "garageHours": {
+            "type": "object",
+            "additionalProperties": {
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "description": "The garage's own weekly hours: the bound of every stretch"
+          }
+        },
+        "required": [
+          "workingHours",
+          "worksSaturdays",
+          "isDefault",
+          "daysOff",
+          "garageHours"
+        ]
+      },
+      "UpdateMechanicHoursDto": {
+        "type": "object",
+        "properties": {
+          "workingHours": {
+            "type": "object",
+            "additionalProperties": {
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "description": "All seven weekdays, each an empty list or one \"HH:MM\" pair on the 15-minute grid inside the garage's span of that day"
+          },
+          "worksSaturdays": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "workingHours",
+          "worksSaturdays"
+        ]
+      },
+      "AddMechanicDayOffDto": {
+        "type": "object",
+        "properties": {
+          "firstDay": {
+            "type": "string",
+            "description": "Today or later, a Bucharest day",
+            "format": "date"
+          },
+          "lastDay": {
+            "type": "string",
+            "description": "The first day by default; at most 365 days ahead",
+            "format": "date"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 120,
+            "nullable": true
+          },
+          "acknowledgeBookings": {
+            "type": "boolean",
+            "description": "Save even over confirmed bookings on those days"
+          }
+        },
+        "required": [
+          "firstDay"
+        ]
+      },
+      "DayOffBookingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "startsAt"
+        ]
+      },
+      "DaysOffBookingsRefusalDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "bookings_on_days_off"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "bookings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DayOffBookingDto"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "bookings"
+        ]
       },
       "GarageMemberDto": {
         "type": "object",

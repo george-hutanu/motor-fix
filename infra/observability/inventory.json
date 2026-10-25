@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 195,
+    "count": 201,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -338,6 +338,19 @@
         "worker-jobs-failed"
       ],
       "story": "ST-343"
+    },
+    {
+      "kind": "queue",
+      "name": "review-posted",
+      "source": "libs/domain/src/notifications/review-posted/review-posted.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_review_announced_total (built, muted, skipped) on motorfix-product, with one ReviewPosted log line per event naming the review id; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-74"
     },
     {
       "kind": "queue",
@@ -878,6 +891,15 @@
       "story": "ST-344"
     },
     {
+      "kind": "product-counter",
+      "name": "motorfix_review_announced_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each posted review announced to its garage's owners by outcome (built, muted, skipped), with the fan-out's log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
+      "story": "ST-74"
+    },
+    {
       "kind": "endpoint",
       "name": "garage-features-set",
       "source": "libs/domain/src/garages/features/features.controller.ts",
@@ -954,6 +976,58 @@
       ],
       "reason": "each removal is audited (delete) and recorded as mechanic.removed in the same transaction; the STAFF_REMOVED e-mail and push go through the notifications pipeline, whose sends and failures its own entries count, and a failed send is logged as an error with the card id while the removal stays; a 409 owner_row is the rule working",
       "story": "ST-56"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanic-hours-read",
+      "source": "libs/domain/src/garages/mechanics/schedule/schedule.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId/hours",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read of the card's working week and upcoming days off writes nothing; a 404 not_found is a card removed in another tab or the team switch off",
+      "story": "ST-58"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanic-hours-save",
+      "source": "libs/domain/src/garages/mechanics/schedule/schedule.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId/hours",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each changed day or the Saturday switch is audited (update, old and new value) and recorded as mechanic.updated with the fields in the same transaction; an unchanged save writes nothing; a 422 validation_failed (order, outside_opening, garage_closed_saturday) is the owner's input refused, not a failure",
+      "story": "ST-58"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanic-day-off-add",
+      "source": "libs/domain/src/garages/mechanics/schedule/schedule.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId/days-off",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each day off added is audited (create on mechanic_day_off) and recorded as mechanic.updated with days_off in the same transaction; a 409 day_off_overlap or bookings_on_days_off (until acknowledged) is the rule working; confirmed bookings on those days show as to reassign on the garage's requests",
+      "story": "ST-58"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-mechanic-day-off-remove",
+      "source": "libs/domain/src/garages/mechanics/schedule/schedule.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId/days-off/:dayOffId",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each removal is audited (delete, or update of lastDay when a running day off ends yesterday) and recorded as mechanic.updated with days_off; a 409 past_day_off is the rule working, a 404 not_found a day off already removed in another tab",
+      "story": "ST-58"
     },
     {
       "kind": "endpoint",
@@ -2237,6 +2311,19 @@
       "story": "ST-24"
     },
     {
+      "kind": "endpoint",
+      "name": "garage-staff-reviews",
+      "source": "libs/domain/src/reviews/garage-reviews/garage-reviews.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/{garageId}/reviews",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the garage owner's and receptionist's read of their own published and reported reviews, 20 a page, with the profile's figures; it writes nothing, so its failures and latency are the route metric alone",
+      "story": "ST-74"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_reviews_posted_total",
       "source": "libs/domain/src/reviews/reviews.metrics.ts",
@@ -2351,6 +2438,28 @@
       "alerts": "none",
       "reason": "counts every call refused with consent_required by surface api or mcp, never an account; a surge right after a version bump is the expected shape, not a failure, so it is watched on the panel, not paged",
       "story": "ST-1204"
+    },
+    {
+      "kind": "endpoint",
+      "name": "review-report",
+      "source": "libs/domain/src/reviews/report/report.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/reviews/{reviewId}/reports",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each report counts motorfix_reviews_reported_total by reason, writes the report and the review status audit entries and one review.reported event in one transaction",
+      "story": "ST-76"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_reviews_reported_total",
+      "source": "libs/domain/src/reviews/reviews.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each report a garage owner tries by outcome (the nine reasons, forbidden, already_reported, already_kept, validation_failed) with no identifiers; a refusal is the owner's state, not an outage; the api-error-rate rule covers the endpoint that reports it",
+      "story": "ST-76"
     }
   ]
 }

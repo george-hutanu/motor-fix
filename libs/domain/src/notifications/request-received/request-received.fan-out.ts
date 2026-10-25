@@ -98,6 +98,11 @@ export class RequestReceivedFanOut {
         countRequestReceived('skipped');
         continue;
       }
+      const again = await this.notifications.announced(
+        'REQUEST_RECEIVED',
+        eventId,
+        staff,
+      );
       let queued = 0;
       for (const [language, people] of await this.byLanguage(staff)) {
         queued += await this.notifications.notify({
@@ -110,8 +115,10 @@ export class RequestReceivedFanOut {
         });
       }
       told += staff.length;
-      // Nothing queued: everyone who may answer muted it.
-      countRequestReceived(queued > 0 ? 'built' : 'muted');
+      // Nothing queued: everyone who may answer muted it, unless the event
+      // came again.
+      if (queued > 0) countRequestReceived('built');
+      else if (!again) countRequestReceived('muted');
     }
     this.logger.log(`request ${payload.requestId} announced to ${told} staff`);
   }

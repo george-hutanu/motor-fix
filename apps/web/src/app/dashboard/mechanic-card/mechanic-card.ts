@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -41,12 +42,18 @@ import {
   taskSave,
   toProblem,
 } from '@motor-fix/overlays';
-import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
+import {
+  HlmButton,
+  HlmInput,
+  HlmTabsImports,
+  toast,
+} from '@motor-fix/ui-cockpit';
 
 import {
   InviteStaff,
   type InviteStaffData,
 } from '../invite-staff/invite-staff';
+import { MechanicSchedule } from '../mechanic-schedule/mechanic-schedule';
 import {
   RemoveMechanic,
   type RemoveMechanicData,
@@ -141,6 +148,9 @@ const SERVER: Record<Field, (code: string) => string> = {
   imports: [
     HlmButton,
     HlmInput,
+    HlmTabsImports,
+    MechanicSchedule,
+    NgTemplateOutlet,
     ReactiveFormsModule,
     TaskError,
     TaskSubmit,
@@ -171,6 +181,10 @@ export class MechanicCard {
   protected readonly inviting = signal<'resend' | 'revoke' | null>(null);
   private readonly inviteBlock =
     viewChild<ElementRef<HTMLElement>>('inviteBlock');
+  protected readonly garageId = this.task.data.garageId;
+  // The schedule is read only once its tab is opened: a card edit alone
+  // never waits on it.
+  protected readonly scheduleOpened = signal(false);
 
   protected readonly form = new FormGroup({
     brandIds: new FormGroup(

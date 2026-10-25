@@ -1,0 +1,179 @@
+@if (schedule(); as current) {
+  <form class="week" [formGroup]="hoursForm" (ngSubmit)="saveHours.submit()" novalidate>
+    @if (current.isDefault) {
+      <p class="default">{{ 'garage.mechanicSchedule.default' | t }}</p>
+    }
+    <fieldset formGroupName="workingHours">
+      <legend>{{ 'garage.mechanicSchedule.week' | t }}</legend>
+      @for (day of days; track day) {
+        <div class="day" [formGroupName]="day" [attr.data-day]="day">
+          @if (!bound(day)) {
+            <span class="name">{{ dayNames[day] | t }}</span>
+            <span class="closed">{{ 'garage.mechanicSchedule.closed' | t }}</span>
+          } @else if (day === 'sat') {
+            <span class="name">{{ dayNames.sat | t }}</span>
+          } @else {
+            <label class="name choice">
+              <input
+                type="checkbox"
+                [checked]="working(day)"
+                (change)="toggle(day)"
+                [attr.aria-describedby]="'mf-schedule-' + day + '-error'"
+              />
+              {{ dayNames[day] | t }}
+            </label>
+          }
+          @if (bound(day) && working(day)) {
+            <div class="pickers">
+              <label>
+                <span>{{ 'garage.mechanicSchedule.from' | t }}</span>
+                <select formControlName="from" [attr.aria-describedby]="'mf-schedule-' + day + '-error'">
+                  @for (time of times(day); track time) {
+                    <option [value]="time">{{ time }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                <span>{{ 'garage.mechanicSchedule.to' | t }}</span>
+                <select formControlName="to" [attr.aria-describedby]="'mf-schedule-' + day + '-error'">
+                  @for (time of times(day); track time) {
+                    <option [value]="time">{{ time }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+          }
+          <p class="problem" [id]="'mf-schedule-' + day + '-error'">{{ dayProblem(day) }}</p>
+        </div>
+      }
+    </fieldset>
+    @if (bound('sat') || hoursForm.controls.worksSaturdays.value) {
+      <div class="saturdays">
+        <label for="mf-schedule-saturdays-input">{{ 'garage.mechanicSchedule.saturdays' | t }}</label>
+        <hlm-switch
+          inputId="mf-schedule-saturdays-input"
+          [checked]="hoursForm.controls.worksSaturdays.value"
+          [aria-label]="'garage.mechanicSchedule.saturdays' | t"
+          aria-describedby="mf-schedule-saturdays-error"
+          (checkedChange)="saturdays($event)"
+        />
+        <p class="problem" id="mf-schedule-saturdays-error">
+          {{ problem(hoursForm.controls.worksSaturdays, saveHours) }}
+        </p>
+      </div>
+    }
+    <mf-task-error [save]="saveHours" />
+    <div class="actions">
+      <p class="saved" role="status">
+        @if (saved()) {
+          {{ 'garage.mechanicSchedule.hours.saved' | t }}
+        }
+      </p>
+      <button hlmBtn type="submit" class="submit" [mfTaskSubmit]="saveHours">
+        {{ 'garage.mechanicSchedule.hours.save' | t }}
+      </button>
+    </div>
+  </form>
+
+  <section class="days-off" aria-labelledby="mf-schedule-days-off">
+    <h3 id="mf-schedule-days-off">{{ 'garage.mechanicSchedule.daysOff.title' | t }}</h3>
+    @if (current.daysOff.length) {
+      <ul>
+        @for (dayOff of current.daysOff; track dayOff.id) {
+          <li>
+            <span class="range">
+              {{ range(dayOff) }}
+              @if (dayOff.note) {
+                <span class="note"> · {{ dayOff.note }}</span>
+              }
+            </span>
+            <button
+              hlmBtn
+              variant="ghost"
+              type="button"
+              class="remove"
+              [attr.aria-label]="'garage.mechanicSchedule.daysOff.removeLabel' | t: { days: range(dayOff) }"
+              (click)="removeDayOff(dayOff)"
+            >
+              {{ 'garage.mechanicSchedule.daysOff.remove' | t }}
+            </button>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="hint">{{ 'garage.mechanicSchedule.daysOff.none' | t }}</p>
+    }
+
+    <form class="add" [formGroup]="dayOffForm" (ngSubmit)="addDayOff.submit()" novalidate>
+      <div class="field">
+        <label for="mf-day-off-first">{{ 'garage.mechanicSchedule.dayOff.first' | t }}</label>
+        <input
+          hlmInput
+          id="mf-day-off-first"
+          type="date"
+          formControlName="firstDay"
+          aria-describedby="mf-day-off-first-error"
+        />
+        <p class="problem" id="mf-day-off-first-error">{{ problem(dayOffForm.controls.firstDay) }}</p>
+      </div>
+      <div class="field">
+        <label for="mf-day-off-last">{{ 'garage.mechanicSchedule.dayOff.last' | t }}</label>
+        <input
+          hlmInput
+          id="mf-day-off-last"
+          type="date"
+          formControlName="lastDay"
+          aria-describedby="mf-day-off-last-error"
+        />
+        <p class="problem" id="mf-day-off-last-error">{{ problem(dayOffForm.controls.lastDay) }}</p>
+      </div>
+      <div class="field note-field">
+        <label for="mf-day-off-note">{{ 'garage.mechanicSchedule.dayOff.note' | t }}</label>
+        <input
+          hlmInput
+          id="mf-day-off-note"
+          type="text"
+          autocomplete="off"
+          formControlName="note"
+          aria-describedby="mf-day-off-note-hint mf-day-off-note-error"
+        />
+        <p class="hint" id="mf-day-off-note-hint">
+          {{ 'garage.mechanicSchedule.dayOff.noteCount' | t: { length: dayOffForm.controls.note.value.length, max: noteMax } }}
+        </p>
+        <p class="problem" id="mf-day-off-note-error">{{ problem(dayOffForm.controls.note) }}</p>
+      </div>
+      <div class="warning" role="status">
+        @if (warning(); as bookings) {
+          <div class="bookings">
+          @for (line of warningLines(bookings); track $index) {
+            <p>{{ line }}</p>
+          }
+          <div class="actions">
+            <button hlmBtn type="button" class="anyway" (click)="addAnyway()">
+              {{ 'garage.mechanicSchedule.warning.anyway' | t }}
+            </button>
+            <button hlmBtn variant="ghost" type="button" class="cancel" (click)="warning.set(null)">
+              {{ 'garage.mechanicSchedule.warning.cancel' | t }}
+            </button>
+          </div>
+          </div>
+        }
+      </div>
+      <mf-task-error [save]="addDayOff" />
+      @if (!warning()) {
+        <button hlmBtn variant="secondary" type="submit" class="add-day-off" [mfTaskSubmit]="addDayOff">
+          {{ 'garage.mechanicSchedule.dayOff.add' | t }}
+        </button>
+      }
+    </form>
+  </section>
+} @else if (view.error()) {
+  <div class="state" role="alert">
+    <p>{{ 'garage.mechanicSchedule.error' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" (click)="view.reload()">
+      {{ 'garage.mechanicSchedule.retry' | t }}
+    </button>
+  </div>
+} @else {
+  <p class="state" role="status">{{ 'garage.mechanicSchedule.loading' | t }}</p>
+}

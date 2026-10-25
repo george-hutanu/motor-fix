@@ -261,6 +261,10 @@ export type { ConfirmControllerOptions$Params as ConfirmControllerOptions$Params
 export { confirmControllerOptions as confirmControllerOptions } from './fn/bookings/confirm-controller-options';
 export type { ConfirmControllerConfirm$Params as ConfirmControllerConfirm$Params } from './fn/bookings/confirm-controller-confirm';
 export { confirmControllerConfirm as confirmControllerConfirm } from './fn/bookings/confirm-controller-confirm';
+export type { GarageReviewsControllerRead$Params as GarageReviewsControllerRead$Params } from './fn/reviews/garage-reviews-controller-read';
+export { garageReviewsControllerRead as garageReviewsControllerRead } from './fn/reviews/garage-reviews-controller-read';
+export type { ReviewReportsControllerReport$Params as ReviewReportsControllerReport$Params } from './fn/reviews/review-reports-controller-report';
+export { reviewReportsControllerReport as reviewReportsControllerReport } from './fn/reviews/review-reports-controller-report';
 export type { ReviewsControllerEligibility$Params as ReviewsControllerEligibility$Params } from './fn/reviews/reviews-controller-eligibility';
 export { reviewsControllerEligibility as reviewsControllerEligibility } from './fn/reviews/reviews-controller-eligibility';
 export type { ReviewsControllerForMechanic$Params as ReviewsControllerForMechanic$Params } from './fn/reviews/reviews-controller-for-mechanic';
@@ -315,6 +319,14 @@ export type { GarageMechanicsControllerRemove$Params as GarageMechanicsControlle
 export { garageMechanicsControllerRemove as garageMechanicsControllerRemove } from './fn/garages/garage-mechanics-controller-remove';
 export type { GarageMechanicsControllerEdit$Params as GarageMechanicsControllerEdit$Params } from './fn/garages/garage-mechanics-controller-edit';
 export { garageMechanicsControllerEdit as garageMechanicsControllerEdit } from './fn/garages/garage-mechanics-controller-edit';
+export type { MechanicScheduleControllerRead$Params as MechanicScheduleControllerRead$Params } from './fn/garages/mechanic-schedule-controller-read';
+export { mechanicScheduleControllerRead as mechanicScheduleControllerRead } from './fn/garages/mechanic-schedule-controller-read';
+export type { MechanicScheduleControllerWrite$Params as MechanicScheduleControllerWrite$Params } from './fn/garages/mechanic-schedule-controller-write';
+export { mechanicScheduleControllerWrite as mechanicScheduleControllerWrite } from './fn/garages/mechanic-schedule-controller-write';
+export type { MechanicScheduleControllerAddDayOff$Params as MechanicScheduleControllerAddDayOff$Params } from './fn/garages/mechanic-schedule-controller-add-day-off';
+export { mechanicScheduleControllerAddDayOff as mechanicScheduleControllerAddDayOff } from './fn/garages/mechanic-schedule-controller-add-day-off';
+export type { MechanicScheduleControllerRemoveDayOff$Params as MechanicScheduleControllerRemoveDayOff$Params } from './fn/garages/mechanic-schedule-controller-remove-day-off';
+export { mechanicScheduleControllerRemoveDayOff as mechanicScheduleControllerRemoveDayOff } from './fn/garages/mechanic-schedule-controller-remove-day-off';
 export type { GarageMembersControllerList$Params as GarageMembersControllerList$Params } from './fn/garages/garage-members-controller-list';
 export { garageMembersControllerList as garageMembersControllerList } from './fn/garages/garage-members-controller-list';
 export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';

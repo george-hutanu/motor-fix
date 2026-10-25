@@ -51,9 +51,13 @@ const EXCEPTIONS: Record<string, string> = {
   'garages/garage-settings/write-garage-payments.ts#writeGaragePayments':
     OWN_NEW_GARAGE,
   'garages/listing-drafts/completion/completion.copy.ts#copyOf': OWN_COPY,
+  'garages/listing-drafts/completion/completion.service.ts#writeGarage':
+    OWN_COPY,
   'garages/listing-drafts/listing-drafts.service.ts#cuiHeldElsewhere':
     'a listing whose CUI any garage holds, hidden or not, is told only that it is in use; the names go to the admins on the file',
   'garages/listing-drafts/submit/submit.service.ts#ownerRow': OWN_NEW_GARAGE,
+  'garages/mechanics/schedule/schedule.service.ts#write':
+    "locks the row of the card's own garage, after access has checked the actor is that garage's owner; it reads nothing of it",
   'garages/place/garage-place.service.ts#write': OWN_NEW_GARAGE,
   'garages/prices/garage-prices/garage-prices.service.ts#labourAgain': OWN_COPY,
   'garages/prices/garage-prices/garage-prices.service.ts#saveStarting':

@@ -253,9 +253,80 @@
     "saved": "The card was saved.",
     "specialties": "Specialties",
     "specialtiesHint": "Separate them with commas, at most 6.",
+    "tabs": {
+      "card": "Card",
+      "label": "Card sections",
+      "schedule": "Schedule"
+    },
     "title": "Add a mechanic",
     "titleEdit": "{name}",
     "years": "Years of experience"
+  },
+  "mechanicSchedule": {
+    "closed": "Closed",
+    "dayOff": {
+      "add": "Add a day off",
+      "added": "The day off was added.",
+      "failed": "We could not add the day off. Try again.",
+      "field": {
+        "day_off_overlap": "Overlaps an existing day off",
+        "invalid": "Pick a day from the calendar",
+        "order": "The last day must be after the first",
+        "past": "The day must be today or later",
+        "required": "Pick the first day",
+        "too_far": "At most a year ahead",
+        "too_long": "At most 120 characters"
+      },
+      "first": "First day",
+      "last": "Last day (optional)",
+      "note": "Note (optional)",
+      "noteCount": "{length} of {max} characters",
+      "problem": {
+        "day_off_overlap": "Pick other days."
+      }
+    },
+    "days": {
+      "fri": "Friday",
+      "mon": "Monday",
+      "sat": "Saturday",
+      "sun": "Sunday",
+      "thu": "Thursday",
+      "tue": "Tuesday",
+      "wed": "Wednesday"
+    },
+    "daysOff": {
+      "none": "No days off.",
+      "remove": "Remove",
+      "removeFailed": "We could not remove the day off. Try again.",
+      "removeLabel": "Remove the day off {days}",
+      "title": "Days off"
+    },
+    "default": "The garage's hours until changed",
+    "error": "We could not load the hours.",
+    "from": "From",
+    "hours": {
+      "failed": "We could not save the hours. Try again.",
+      "field": {
+        "garage_closed_saturday": "The garage is not open on Saturdays",
+        "order": "Closing must be after opening",
+        "outside_opening": "Outside the garage's hours"
+      },
+      "save": "Save the hours",
+      "saved": "The hours were saved."
+    },
+    "loading": "Loading the hours.",
+    "retry": "Try again",
+    "saturdays": "Works on Saturdays",
+    "to": "Until",
+    "warning": {
+      "anyway": "Add anyway",
+      "bookings": {
+        "one": "{count} confirmed booking on {day}: {times}. It will need reassigning.",
+        "other": "{count} confirmed bookings on {day}: {times}. They will need reassigning."
+      },
+      "cancel": "Cancel"
+    },
+    "week": "Working days"
   },
   "members": {
     "error": "We could not load the people with access.",
@@ -525,6 +596,28 @@
     "toast": "New request: {car} · {job}",
     "toastCar": "New request: {car}",
     "toReassign": "to reassign"
+  },
+  "reviews": {
+    "breakdownTitle": "Rating breakdown",
+    "deletedAuthor": "MotorFix driver",
+    "edited": "Edited · {day}",
+    "empty": "No reviews yet. They appear here after your first handover.",
+    "figure": {
+      "one": "Rating {rating} from {shown} review",
+      "other": "Rating {rating} from {shown} reviews"
+    },
+    "loadFailed": "We could not load the reviews.",
+    "more": "See more",
+    "moreFailed": "We could not load more reviews.",
+    "new": "New",
+    "notViaMotorfix": "Not through MotorFix",
+    "reported": "Reported · hidden from the profile until an admin decides",
+    "retry": "Try again",
+    "score": "{rating} / 5",
+    "seeAll": "See all",
+    "seeProfile": "See the public profile",
+    "title": "New reviews",
+    "viewTitle": "Reviews"
   },
   "suspended": {
     "next": {

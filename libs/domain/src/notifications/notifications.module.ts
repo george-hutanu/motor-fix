@@ -119,6 +119,11 @@ import {
   RequestReceivedFanOut,
 } from './request-received/request-received.fan-out';
 import {
+  REVIEW_POSTED_QUEUE,
+  type ReviewPostedEvent,
+  ReviewPostedFanOut,
+} from './review-posted/review-posted.fan-out';
+import {
   VERIFICATION_RESULT_QUEUE,
   type VerificationEvent,
   VerificationResultFanOut,
@@ -147,6 +152,7 @@ interface NotificationsOptions {
 const WORKER = Symbol('NOTIFICATIONS_WORKER');
 const NEWS_WORKER = Symbol('NEWS_WORKER');
 const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
+const REVIEW_POSTED_WORKER = Symbol('REVIEW_POSTED_WORKER');
 const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
 const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const QUOTE_DECLINED_WORKER = Symbol('QUOTE_DECLINED_WORKER');
@@ -199,6 +205,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(REQUEST_RECEIVED_WORKER)
     private readonly requestReceivedWorker?: Worker | null,
+    @Optional()
+    @Inject(REVIEW_POSTED_WORKER)
+    private readonly reviewPostedWorker?: Worker | null,
     @Optional()
     @Inject(QUOTE_RECEIVED_WORKER)
     private readonly quoteReceivedWorker?: Worker | null,
@@ -433,6 +442,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             );
             observeWorker(worker);
             logFinalFailure(worker, new Logger('RequestReceived'));
+            return worker;
+          },
+        },
+        ReviewPostedFanOut,
+        {
+          inject: [ReviewPostedFanOut],
+          provide: REVIEW_POSTED_WORKER,
+          useFactory: (fanOut: ReviewPostedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('ReviewPosted').error(
+                'PUBLIC_WEB_URL missing; new review messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<ReviewPostedEvent>(
+              REVIEW_POSTED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('ReviewPosted'));
             return worker;
           },
         },
@@ -821,6 +857,7 @@ export class NotificationsModule implements OnApplicationShutdown {
   async onApplicationShutdown() {
     await this.newsWorker?.close();
     await this.requestReceivedWorker?.close();
+    await this.reviewPostedWorker?.close();
     await this.quoteReceivedWorker?.close();
     await this.quoteAcceptedWorker?.close();
     await this.quoteDeclinedWorker?.close();

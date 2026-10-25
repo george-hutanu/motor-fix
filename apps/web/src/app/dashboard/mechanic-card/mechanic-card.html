@@ -1,3 +1,23 @@
+@if (card; as existing) {
+  <div hlmTabs tab="card" class="tabs" (tabActivated)="$event === 'schedule' && scheduleOpened.set(true)">
+    <div hlmTabsList [attr.aria-label]="'garage.mechanicCard.tabs.label' | t">
+      <button hlmTabsTrigger="card" type="button">{{ 'garage.mechanicCard.tabs.card' | t }}</button>
+      <button hlmTabsTrigger="schedule" type="button">{{ 'garage.mechanicCard.tabs.schedule' | t }}</button>
+    </div>
+    <div hlmTabsContent="card">
+      <ng-container [ngTemplateOutlet]="cardForm" />
+    </div>
+    <div hlmTabsContent="schedule">
+      @if (scheduleOpened()) {
+        <mf-mechanic-schedule [garageId]="garageId" [card]="existing" />
+      }
+    </div>
+  </div>
+} @else {
+  <ng-container [ngTemplateOutlet]="cardForm" />
+}
+
+<ng-template #cardForm>
 <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
   <div class="field">
     <label for="mf-mechanic-name">{{ 'garage.mechanicCard.name' | t }}</label>
@@ -139,3 +159,4 @@
     <button hlmBtn type="submit" class="submit" [mfTaskSubmit]="save">{{ 'garage.mechanicCard.save' | t }}</button>
   </div>
 </form>
+</ng-template>

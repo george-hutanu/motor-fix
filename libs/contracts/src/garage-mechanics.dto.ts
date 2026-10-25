@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Allow } from 'class-validator';
 
+import { DAY_OFF_NOTE_MAX, type WeeklyHours } from './garage-hours';
 import {
   CERTIFICATION_MAX,
   CERTIFICATIONS_MAX,
@@ -157,4 +158,129 @@ export class UpdateMechanicDto extends MechanicCardFieldsDto {
   })
   @Allow()
   name?: string;
+}
+
+const WEEK_SCHEMA = {
+  additionalProperties: {
+    items: {
+      items: { type: 'string' },
+      maxItems: 2,
+      minItems: 2,
+      type: 'array',
+    },
+    type: 'array',
+  },
+  type: 'object',
+} as const;
+
+export class MechanicDayOffDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({
+    description: 'The first day off, a Bucharest day',
+    format: 'date',
+  })
+  firstDay!: string;
+
+  @ApiProperty({
+    description: 'The last day off, the first one or later',
+    format: 'date',
+  })
+  lastDay!: string;
+
+  @ApiProperty({ maxLength: DAY_OFF_NOTE_MAX, nullable: true, type: String })
+  note!: string | null;
+}
+
+export class MechanicScheduleDto {
+  @ApiProperty({
+    ...WEEK_SCHEMA,
+    description:
+      'Each weekday (mon…sun) to the stretch the mechanic works, as one "HH:MM" pair, or an empty list; the garage\'s weekdays while isDefault',
+  })
+  workingHours!: WeeklyHours;
+
+  @ApiProperty({ description: 'Whether the Saturday stretch counts' })
+  worksSaturdays!: boolean;
+
+  @ApiProperty({
+    description: "True until the owner first saves this mechanic's hours",
+  })
+  isDefault!: boolean;
+
+  @ApiProperty({
+    description: 'The days off ending today or later, by first day',
+    type: [MechanicDayOffDto],
+  })
+  daysOff!: MechanicDayOffDto[];
+
+  @ApiProperty({
+    ...WEEK_SCHEMA,
+    description: "The garage's own weekly hours: the bound of every stretch",
+  })
+  garageHours!: WeeklyHours | Record<string, never>;
+}
+
+export class UpdateMechanicHoursDto {
+  @ApiProperty({
+    ...WEEK_SCHEMA,
+    description:
+      'All seven weekdays, each an empty list or one "HH:MM" pair on the 15-minute grid inside the garage\'s span of that day',
+  })
+  @Allow()
+  workingHours!: WeeklyHours;
+
+  @ApiProperty()
+  @Allow()
+  worksSaturdays!: boolean;
+}
+
+export class AddMechanicDayOffDto {
+  @ApiProperty({
+    description: 'Today or later, a Bucharest day',
+    format: 'date',
+  })
+  @Allow()
+  firstDay!: string;
+
+  @ApiPropertyOptional({
+    description: 'The first day by default; at most 365 days ahead',
+    format: 'date',
+  })
+  @Allow()
+  lastDay?: string;
+
+  @ApiPropertyOptional({
+    maxLength: DAY_OFF_NOTE_MAX,
+    nullable: true,
+    type: String,
+  })
+  @Allow()
+  note?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Save even over confirmed bookings on those days',
+  })
+  @Allow()
+  acknowledgeBookings?: boolean;
+}
+
+export class DayOffBookingDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  startsAt!: string;
+}
+
+export class DaysOffBookingsRefusalDto {
+  @ApiProperty({ enum: ['bookings_on_days_off'] })
+  code!: 'bookings_on_days_off';
+
+  @ApiProperty()
+  message!: string;
+
+  @ApiProperty({ type: [DayOffBookingDto] })
+  bookings!: DayOffBookingDto[];
 }
