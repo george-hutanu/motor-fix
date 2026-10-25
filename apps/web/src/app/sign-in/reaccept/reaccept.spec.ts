@@ -98,6 +98,7 @@ describe('the acceptance of new terms', () => {
       expect(panel().textContent).toContain(`${version} 2026-10-12`);
       expect(panel().textContent).toContain(`${version} 2026-10-24`);
       expect(button(acceptLabel).hasAttribute('autofocus')).toBe(true);
+      expect(document.activeElement).toBe(button(acceptLabel));
       expect(button(signOutLabel)).toBeTruthy();
     },
   );

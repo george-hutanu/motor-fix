@@ -636,6 +636,34 @@ describe('a field the task marks autofocus', () => {
   });
 });
 
+@Component({
+  template: `
+    <p>Termenii s-au schimbat.</p>
+    <button id="accept" type="button" autofocus>Accept</button>
+    <button id="leave" type="button">Deconectare</button>
+  `,
+})
+class AutofocusButtonTask {}
+
+// @traces 1204-FR-007
+describe('a button the task marks autofocus', () => {
+  // A button pops up no on-screen keyboard, so it takes the focus everywhere.
+  it.each([
+    ['a phone', false],
+    ['a computer', true],
+  ])('takes the focus on %s', async (_, computer) => {
+    wide = computer;
+    TestBed.createComponent(AutofocusHost);
+    TestBed.inject(Overlays).open(AutofocusButtonTask, {
+      shape: 'dialog',
+      title: 'shell.brand',
+    });
+    await settle();
+
+    expect(document.activeElement?.id).toBe('accept');
+  });
+});
+
 // The form arrives after the panel opened, as one behind a load does.
 @Component({
   template: `

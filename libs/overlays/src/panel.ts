@@ -577,12 +577,16 @@ export class OverlayPanel {
   }
 
   private focusStart() {
-    // A field the task marks autofocus goes before its first field.
+    // A field the task marks autofocus goes before its first field. A button
+    // it marks pops up no on-screen keyboard, so it takes the focus on a
+    // phone too.
     const body = this.body().nativeElement;
+    const marked = body.querySelector<HTMLElement>('[autofocus]');
     const field = this.window?.matchMedia?.(COMPUTER).matches
-      ? (body.querySelector<HTMLElement>('[autofocus]') ??
-        body.querySelector<HTMLElement>(FIELD))
-      : null;
+      ? (marked ?? body.querySelector<HTMLElement>(FIELD))
+      : marked instanceof HTMLButtonElement
+        ? marked
+        : null;
     const target =
       field ??
       this.host.nativeElement.closest<HTMLElement>('[role="dialog"]') ??
