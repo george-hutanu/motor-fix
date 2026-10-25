@@ -6,6 +6,7 @@ import {
   PRIVACY_VERSION,
   TERMS_VERSION,
 } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -15,7 +16,6 @@ import { noEvents } from '../../events/event.port';
 import { signAccessToken } from '../access-token';
 import { AccountsService } from '../accounts.service';
 import { AuthModule } from '../auth.module';
-import type { Role } from '../capabilities';
 import { createPrisma } from '../prisma';
 import { serialDatabase } from '../serial-db.testing';
 
