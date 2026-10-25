@@ -142,7 +142,6 @@ describe('where a garage is, when the answer is read again', () => {
 });
 
 // @traces 1366-FR-007
-// @traces 1366-SC-001
 describe('where a garage is, on a map, under odd answers', () => {
   const link = () => section().querySelector('a.directions');
 

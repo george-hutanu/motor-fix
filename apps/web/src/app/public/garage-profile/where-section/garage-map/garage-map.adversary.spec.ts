@@ -99,14 +99,20 @@ describe('GarageMap, failing in odd orders', () => {
   });
 
   it('says nothing when the opener rejects after the page has gone', async () => {
+    // A destroyed output drops the call and warns NG0953, so the warning is
+    // what shows the component tried to speak.
+    const warn = jest
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
     await render();
     tap();
     fixture.destroy();
     refused(new Error('late'));
-    await Promise.resolve();
-    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve));
 
     expect(gone).not.toHaveBeenCalled();
+    expect(warn.mock.calls.flat().join(' ')).not.toContain('953');
+    warn.mockRestore();
   });
 
   it('does not open the interactive map after the image has failed', async () => {
