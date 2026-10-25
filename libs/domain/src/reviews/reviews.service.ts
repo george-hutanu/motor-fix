@@ -1,6 +1,8 @@
 import {
   DELETED_AUTHOR,
+  type GarageReviewDto,
   type GarageReviewsPageDto,
+  type GarageStaffReviewsPageDto,
   type JobReviewContextDto,
   MECHANIC_REVIEWS_PAGE,
   type MechanicReviewsPageDto,
@@ -9,6 +11,7 @@ import {
   REVIEW_TEXT_MAX,
   type ReviewDto,
   type ReviewEligibilityDto,
+  type ReviewStatus,
 } from '@motor-fix/contracts';
 import {
   HttpStatus,
@@ -26,12 +29,17 @@ import {
 import { recordReviewPosted } from './reviews.metrics';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { refusal } from '../auth/http-refusal';
-import type { Actor } from '../auth/policy';
+import { type Actor, assertGarage, requireCapability } from '../auth/policy';
 import { PRISMA } from '../auth/prisma';
 import { taken } from '../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
 import { publicGarages } from '../garages/public-garages/public-garages';
-import type { Job, PrismaClient, Review } from '../generated/prisma/client';
+import type {
+  Job,
+  Prisma,
+  PrismaClient,
+  Review,
+} from '../generated/prisma/client';
 import { garageRef, jobsOf, shortName, snapshotOf } from '../quotes/reads';
 
 const reviewOf = (review: Review): ReviewDto => ({
@@ -49,6 +57,60 @@ const authorOf = (driver: { name: string; status: string }) =>
   driver.status === 'deleted'
     ? { shortName: DELETED_AUTHOR }
     : { shortName: shortName(driver.name) };
+
+// What a page of a garage's reviews reads of each: the author, the car and
+// the jobs the garage did, and the mechanic.
+const PAGE_INCLUDE = {
+  driver: { select: { name: true, status: true } },
+  job: {
+    include: {
+      booking: {
+        include: {
+          quote: {
+            include: {
+              jobs: {
+                include: { requestJob: { include: { jobType: true } } },
+                orderBy: { requestJob: { position: 'asc' } },
+                where: { included: true },
+              },
+            },
+          },
+          request: true,
+        },
+      },
+    },
+  },
+  mechanic: { select: { name: true } },
+} satisfies Prisma.ReviewInclude;
+
+type PageReview = Prisma.ReviewGetPayload<{ include: typeof PAGE_INCLUDE }>;
+
+// A review as the garage's profile shows it: a profile review has no car or jobs.
+const garageRowOf = (review: PageReview): GarageReviewDto => {
+  const { booking } = review.job;
+  const fromJob = review.source === 'job';
+  return {
+    author: authorOf(review.driver),
+    car: fromJob ? snapshotOf(booking.request) : null,
+    id: review.id,
+    jobs: fromJob
+      ? jobsOf(booking.quote.jobs.map((one) => one.requestJob))
+      : [],
+    postedAt: review.postedAt.toISOString(),
+    rating: review.rating,
+    source: review.source,
+    text: review.text,
+  };
+};
+
+// The garage's stored rating and count, as its profile shows them.
+const figuresOf = (garage: {
+  rating: Prisma.Decimal | null;
+  reviewCount: number;
+}) => ({
+  rating: garage.rating === null ? null : Number(garage.rating),
+  reviewCount: garage.reviewCount,
+});
 
 const dtoOf = ({ jobId, offer, reason }: Verdict): ReviewEligibilityDto => ({
   jobId,
@@ -138,14 +200,80 @@ export class ReviewsService {
     if (!garage) {
       throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
     }
-    const where = { garageId, status: 'published' as const };
+    const { breakdown, reviews, total } = await this.reviewPage(
+      garageId,
+      page,
+      ['published'],
+    );
+    return {
+      breakdown,
+      items: reviews.map(garageRowOf),
+      page,
+      pageSize: MECHANIC_REVIEWS_PAGE,
+      ...figuresOf(garage),
+      total,
+    };
+  }
+
+  // The garage's own reviews as its staff read them: the published and the
+  // reported ones, newest first, each with where it stands and the mechanic;
+  // the figures are the profile's. Only the owner may reply or report.
+  async staffReviews(
+    actor: Actor,
+    garageId: string,
+    page = 1,
+  ): Promise<GarageStaffReviewsPageDto> {
+    assertGarage(actor, garageId);
+    requireCapability(actor, 'garage.reviews');
+    const garage = await this.prisma.garage.findUnique({
+      select: { rating: true, reviewCount: true, slug: true },
+      where: { id: garageId },
+    });
+    if (!garage) {
+      throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
+    }
+    const { breakdown, reviews, total } = await this.reviewPage(
+      garageId,
+      page,
+      ['published', 'reported'],
+    );
+    const owner = actor.role === 'garage';
+    return {
+      breakdown,
+      items: reviews.map((review) => ({
+        ...garageRowOf(review),
+        canReply: owner,
+        canReport: owner,
+        mechanic:
+          review.source === 'job' && review.mechanic
+            ? { shortName: shortName(review.mechanic.name) }
+            : null,
+        status: review.status as 'published' | 'reported',
+      })),
+      page,
+      pageSize: MECHANIC_REVIEWS_PAGE,
+      ...figuresOf(garage),
+      slug: garage.slug,
+      total,
+    };
+  }
+
+  // One page of a garage's reviews in the given states, newest first, with how
+  // many published reviews gave each score and how many reviews the states
+  // hold in all.
+  private async reviewPage(
+    garageId: string,
+    page: number,
+    statuses: ReviewStatus[],
+  ) {
     const scores = await this.prisma.review.groupBy({
       _count: { _all: true },
-      by: ['rating'],
-      where,
+      by: ['rating', 'status'],
+      where: { garageId, status: { in: statuses } },
     });
     const scored = (rating: number) =>
-      scores.find((one) => one.rating === rating)?._count._all ?? 0;
+      scores.find((one) => one.rating === rating && one.status === 'published')
+        ?._count._all ?? 0;
     const breakdown = {
       five: scored(5),
       four: scored(4),
@@ -159,59 +287,14 @@ export class ReviewsService {
     const reviews =
       skip < total
         ? await this.prisma.review.findMany({
-            include: {
-              driver: { select: { name: true, status: true } },
-              job: {
-                include: {
-                  booking: {
-                    include: {
-                      quote: {
-                        include: {
-                          jobs: {
-                            include: {
-                              requestJob: { include: { jobType: true } },
-                            },
-                            orderBy: { requestJob: { position: 'asc' } },
-                            where: { included: true },
-                          },
-                        },
-                      },
-                      request: true,
-                    },
-                  },
-                },
-              },
-            },
+            include: PAGE_INCLUDE,
             orderBy: [{ postedAt: 'desc' }, { id: 'desc' }],
             skip,
             take: MECHANIC_REVIEWS_PAGE,
-            where,
+            where: { garageId, status: { in: statuses } },
           })
         : [];
-    return {
-      breakdown,
-      items: reviews.map((review) => {
-        const { booking } = review.job;
-        const fromJob = review.source === 'job';
-        return {
-          author: authorOf(review.driver),
-          car: fromJob ? snapshotOf(booking.request) : null,
-          id: review.id,
-          jobs: fromJob
-            ? jobsOf(booking.quote.jobs.map((one) => one.requestJob))
-            : [],
-          postedAt: review.postedAt.toISOString(),
-          rating: review.rating,
-          source: review.source,
-          text: review.text,
-        };
-      }),
-      page,
-      pageSize: MECHANIC_REVIEWS_PAGE,
-      rating: garage.rating === null ? null : Number(garage.rating),
-      reviewCount: garage.reviewCount,
-      total,
-    };
+    return { breakdown, reviews, total };
   }
 
   async read(actor: Actor, jobId: string): Promise<JobReviewContextDto> {

@@ -4113,6 +4113,64 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/reviews": {
+      "get": {
+        "operationId": "GarageReviewsController_read",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageStaffReviewsPageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id, or a page not a whole number from 1"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not the caller’s garage"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage’s published and reported reviews, 20 a page, with its rating, count and breakdown",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/api/v1/reviews/eligibility": {
       "get": {
         "operationId": "ReviewsController_eligibility",
@@ -14685,6 +14743,193 @@
           "declinedAt"
         ]
       },
+      "RatingBreakdownDto": {
+        "type": "object",
+        "properties": {
+          "five": {
+            "type": "number"
+          },
+          "four": {
+            "type": "number"
+          },
+          "three": {
+            "type": "number"
+          },
+          "two": {
+            "type": "number"
+          },
+          "one": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "five",
+          "four",
+          "three",
+          "two",
+          "one"
+        ]
+      },
+      "DriverNameDto": {
+        "type": "object",
+        "properties": {
+          "shortName": {
+            "type": "string",
+            "description": "First name and the last name’s initial"
+          }
+        },
+        "required": [
+          "shortName"
+        ]
+      },
+      "ReviewMechanicDto": {
+        "type": "object",
+        "properties": {
+          "shortName": {
+            "type": "string",
+            "example": "Costel R."
+          }
+        },
+        "required": [
+          "shortName"
+        ]
+      },
+      "GarageStaffReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "job",
+              "profile"
+            ]
+          },
+          "rating": {
+            "type": "number",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DriverNameDto"
+          },
+          "car": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CarSnapshotDto"
+              }
+            ]
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJobDto"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "reported"
+            ]
+          },
+          "mechanic": {
+            "description": "A job review’s mechanic; a profile review names none",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReviewMechanicDto"
+              }
+            ]
+          },
+          "canReply": {
+            "type": "boolean"
+          },
+          "canReport": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "rating",
+          "text",
+          "postedAt",
+          "author",
+          "car",
+          "jobs",
+          "status",
+          "mechanic",
+          "canReply",
+          "canReport"
+        ]
+      },
+      "GarageStaffReviewsPageDto": {
+        "type": "object",
+        "properties": {
+          "rating": {
+            "type": "number",
+            "description": "The garage's stored rating, as its profile shows it",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "number",
+            "description": "The garage's stored review count"
+          },
+          "breakdown": {
+            "description": "Published reviews only, as the profile counts them",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RatingBreakdownDto"
+              }
+            ]
+          },
+          "slug": {
+            "type": "string",
+            "description": "The garage's public profile address"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number",
+            "description": "Published and reported reviews"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageStaffReviewDto"
+            }
+          }
+        },
+        "required": [
+          "rating",
+          "reviewCount",
+          "breakdown",
+          "slug",
+          "page",
+          "pageSize",
+          "total",
+          "items"
+        ]
+      },
       "ReviewEligibilityDto": {
         "type": "object",
         "properties": {
@@ -14712,18 +14957,6 @@
           "jobId",
           "offer",
           "reason"
-        ]
-      },
-      "DriverNameDto": {
-        "type": "object",
-        "properties": {
-          "shortName": {
-            "type": "string",
-            "description": "First name and the last name’s initial"
-          }
-        },
-        "required": [
-          "shortName"
         ]
       },
       "MechanicReviewDto": {
@@ -14786,33 +15019,6 @@
           "pageSize",
           "total",
           "items"
-        ]
-      },
-      "RatingBreakdownDto": {
-        "type": "object",
-        "properties": {
-          "five": {
-            "type": "number"
-          },
-          "four": {
-            "type": "number"
-          },
-          "three": {
-            "type": "number"
-          },
-          "two": {
-            "type": "number"
-          },
-          "one": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "five",
-          "four",
-          "three",
-          "two",
-          "one"
         ]
       },
       "GarageReviewDto": {
