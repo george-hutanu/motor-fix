@@ -136,7 +136,7 @@ describe('release workflow', () => {
   // signing in as it failed the release. The seed only adds what is missing.
   // It runs in the api's pre-deploy step, inside the new image: Railway's SSH
   // refused the release's token, so no step reaches into staging any more.
-  // @traces 1370-release-seed-no-ssh-FR-005
+  // @traces 1370-FR-005
   it('hands the deploy the seed password, masked, and runs the core flows after it', () => {
     const block = job('staging');
     const name = "- name: Deploy and wait for each service's health check";
@@ -159,7 +159,7 @@ describe('release workflow', () => {
     expect(setting(block, 'RAILWAY_PROJECT_ID')).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-005
+  // @traces 1370-FR-005
   it('masks nothing when the password is unset, leaving the deploy to name it', () => {
     const { code, out } = stepRun(
       "Deploy and wait for each service's health check",
@@ -175,7 +175,7 @@ describe('release workflow', () => {
     expect(code).not.toBe(0);
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-005
+  // @traces 1370-FR-005
   it('reaches into staging over no SSH and installs no Railway CLI', () => {
     expect(workflow).not.toMatch(
       /railway ssh|@railway\/cli|ssh-keygen|KEY_NAME|\.ssh\//,

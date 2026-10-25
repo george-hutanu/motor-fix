@@ -1,5 +1,6 @@
 // @traces 103-FR-006 103-FR-007 103-FR-008 103-FR-009 103-FR-010 103-FR-013
 // @traces 404-FR-007 404-FR-008 404-FR-010 404-FR-011
+// @traces 1368-FR-001
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -94,6 +95,7 @@ async function open(
       {
         provide: AdminService,
         useValue: {
+          adminBrandsControllerList: async () => ({ items: [] }),
           demandControllerDemand: () => {
             reads += 1;
             return answer();
@@ -324,6 +326,21 @@ describe('AdminDemand, the view', () => {
       jest.useRealTimers();
     }
   });
+
+  it('ends with the brand list under the two reports', async () => {
+    const el = await open();
+
+    const list = el.querySelector('mf-admin-brands');
+    expect(list).not.toBeNull();
+    const last = charts(el).at(-1) as HTMLElement;
+    expect(
+      last.compareDocumentPosition(list as Node) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(list?.querySelector('h2')?.textContent?.trim()).toBe(
+      'Lista de mărci',
+    );
+  });
 });
 
 describe('AdminDemand, the overview panel', () => {
@@ -339,6 +356,7 @@ describe('AdminDemand, the overview panel', () => {
     expect(buttonsNamed(el, 'Vezi toate mărcile')).toHaveLength(0);
     expect(el.querySelector('[role="group"]')).toBeNull();
     expect(el.querySelector('.from')).toBeNull();
+    expect(el.querySelector('mf-admin-brands')).toBeNull();
   });
 
   it('has the same loading, failed and empty states', async () => {

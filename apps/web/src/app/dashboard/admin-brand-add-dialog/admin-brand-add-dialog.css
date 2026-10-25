@@ -1,0 +1,35 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+}
+label {
+  font-weight: 700;
+}
+input {
+  width: 100%;
+  min-height: 44px;
+}
+.hint {
+  margin: 0;
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}
+.exists,
+.failed {
+  margin: 0;
+  color: var(--mf-red-ink);
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+button {
+  width: 100%;
+  min-height: 54px;
+  white-space: normal;
+}

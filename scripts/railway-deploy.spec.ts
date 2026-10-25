@@ -66,7 +66,7 @@ describe('the api pre-deploy step', () => {
     expect(API_PRE_DEPLOY).toEqual(['sh scripts/api-pre-deploy.sh production']);
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-001
+  // @traces 1370-FR-001
   // @traces 1373-FR-001
   it('seeds staging after the migration and the monitor password, inside the new image', () => {
     expect(apiPreDeploy('staging')).toEqual([
@@ -74,13 +74,13 @@ describe('the api pre-deploy step', () => {
     ]);
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-001
+  // @traces 1370-FR-001
   it('keeps production to the migration and the monitor password', () => {
     expect(apiPreDeploy('production')).toEqual(API_PRE_DEPLOY);
     expect(apiPreDeploy('production').join(' ')).not.toMatch(/seed|reset/i);
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-001
+  // @traces 1370-FR-001
   it.each(['', 'Staging', 'staging ', 'prod', 'development'])(
     'refuses to build a pre-deploy step for the environment %p',
     (environment) => {
@@ -92,12 +92,12 @@ describe('the api pre-deploy step', () => {
 });
 
 describe('the seed password a staging release needs', () => {
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it('is read from the environment on staging', () => {
     expect(seedPassword('staging', { SEED_PASSWORD: 'p' })).toBe('p');
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it.each([
     ['unset', {}],
     ['empty', { SEED_PASSWORD: '' }],
@@ -107,7 +107,7 @@ describe('the seed password a staging release needs', () => {
     );
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it('is never read for production', () => {
     const read: string[] = [];
     const env = new Proxy({ SEED_PASSWORD: 'p' } as Record<string, string>, {
@@ -226,7 +226,7 @@ describe('railway deploy', () => {
     );
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-004
+  // @traces 1370-FR-004
   it("names the api's pre-deploy step, seed included, when staging's api deployment fails, and restores it", async () => {
     statuses = ['FAILED'];
     jest.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -660,7 +660,7 @@ describe('the seed password written to the staging api service', () => {
   });
   const target = { projectId: 'project-1', serviceId: 'svc-api' };
 
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it('upserts SEED_PASSWORD on the api service without starting a deploy', async () => {
     await putSeedPassword(options(), 'staging', target, 'parola-x');
 
@@ -679,7 +679,7 @@ describe('the seed password written to the staging api service', () => {
     });
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-002
+  // @traces 1370-FR-002
   it.each(['production', '', 'Staging'])(
     'refuses %p before any call',
     async (environment) => {
@@ -690,7 +690,7 @@ describe('the seed password written to the staging api service', () => {
     },
   );
 
-  // @traces 1370-release-seed-no-ssh-FR-003
+  // @traces 1370-FR-003
   it('keeps the value out of the error when Railway echoes it back', async () => {
     echo = true;
 
@@ -777,7 +777,7 @@ describe('the services each environment deploys', () => {
     expect(notices).toEqual([]);
   });
 
-  // @traces 1370-release-seed-no-ssh-FR-001
+  // @traces 1370-FR-001
   it("never gives production's services the staging seed", () => {
     const list = servicesFor('production', ALL);
 
