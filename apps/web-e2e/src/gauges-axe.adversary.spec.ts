@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { expect, type Page } from '@playwright/test';
 
+import { hydrated } from './accounts.js';
 import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
@@ -22,7 +23,9 @@ async function open(
 ) {
   await page.setViewportSize({ height: 800, width });
   await page.emulateMedia({ colorScheme: scheme, reducedMotion });
-  await page.goto('/cockpit');
+  // Hydrated first: hydration sets every binding again, so an attribute a
+  // test removes before it would be put back.
+  await hydrated(page, '/cockpit');
   await expect(
     page.locator('mf-cockpit-gauges-sample mf-lamp').first(),
   ).toBeVisible();
