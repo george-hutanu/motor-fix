@@ -747,9 +747,21 @@ describe('a task that only its own buttons may close', () => {
     await expect(host.result).resolves.toBe('saved');
   });
 
+  it('gives its header its own top padding on a phone, where no grip sits above it', async () => {
+    await openTask('dialog', false);
+    const header = panel()?.querySelector('.mf-overlay-header');
+
+    expect(panel()?.classList).toContain('mf-overlay-sheet');
+    expect(grip()).toBeNull();
+    expect(header?.classList).toContain('mf-overlay-header-fixed');
+  });
+
   it('stays dismissible when the option is left out', async () => {
     const host = await openTask();
 
+    expect(
+      panel()?.querySelector('.mf-overlay-header')?.classList,
+    ).not.toContain('mf-overlay-header-fixed');
     expect(closeButton()).not.toBeNull();
     expect(
       document.querySelector('.cdk-overlay-backdrop')?.classList,

@@ -124,6 +124,12 @@ function nextEntry(window: Window | null) {
       padding-inline: max(var(--mf-space-6), var(--mf-safe-left))
         max(var(--mf-space-3), var(--mf-safe-right));
     }
+    /* No X to give it height and, on a phone, no grip above it: even
+       padding of its own. */
+    .mf-overlay-header.mf-overlay-header-fixed,
+    :host.mf-overlay-sheet .mf-overlay-header.mf-overlay-header-fixed {
+      padding-block: var(--mf-space-4);
+    }
     .mf-overlay-title {
       min-width: 0;
       margin: 0;
@@ -208,7 +214,10 @@ function nextEntry(window: Window | null) {
         (lostpointercapture)="letGo($event)"
       ></div>
     }
-    <header class="mf-overlay-header">
+    <header
+      class="mf-overlay-header"
+      [class.mf-overlay-header-fixed]="context.dismissible === false"
+    >
       <h2 class="mf-label mf-overlay-title" [id]="context.titleId">
         {{ context.title | t: context.titleParams }}
       </h2>
