@@ -65,9 +65,28 @@ export async function settled(page: Page) {
 // interactive one: a test that drives MapLibre asks for it first, through the
 // map's control, and waits for the static layer to go (it also goes when the
 // interactive map cannot load).
+// On a phone the sheet can rest over the control, which then hides
+// (static-map.css): a tap on whatever part of the image shows still asks.
 export async function openMap(page: Page) {
   const still = page.locator('mf-results-map mf-static-map');
-  await still.getByRole('button').click();
+  const button = still.getByRole('button');
+  await expect(async () => {
+    if (await button.isVisible()) return button.click({ timeout: 1_000 });
+    const spot = await still.evaluate((map) => {
+      const box = map.getBoundingClientRect();
+      const spots = Array.from({ length: Math.ceil(box.height / 8) }, (_, i) =>
+        Array.from({ length: Math.ceil(box.width / 8) }, (_, j) => ({
+          x: 4 + j * 8,
+          y: 4 + i * 8,
+        })),
+      ).flat();
+      return spots.find(({ x, y }) =>
+        map.contains(document.elementFromPoint(box.left + x, box.top + y)),
+      );
+    });
+    expect(spot).toBeDefined();
+    await still.click({ position: spot, timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
   await still.waitFor({ state: 'detached' });
 }
 

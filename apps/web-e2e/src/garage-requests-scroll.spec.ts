@@ -75,6 +75,21 @@ const row = (page: Page, id: string) =>
 const top = (page: Page, id: string) =>
   row(page, id).evaluate((el) => el.getBoundingClientRect().top);
 
+// The page's next re-read of its first page that holds every one of `ids`.
+// Other workers send to this garage too, so the pill's count can rise by as
+// many as were sent before these reach the list; the pill shows only what was
+// read before its click.
+function readWith(page: Page, ids: () => readonly string[]) {
+  return page.waitForResponse(async (res) => {
+    const url = new URL(res.url());
+    if (url.pathname !== '/api/v1/garage/requests') return false;
+    if (url.searchParams.has('cursor') || !res.ok()) return false;
+    const body = await res.text();
+    const wanted = ids();
+    return wanted.length > 0 && wanted.every((id) => body.includes(id));
+  });
+}
+
 // The count on the pill, 0 while there is none.
 async function waiting(page: Page) {
   const pill = page.locator('mf-live-pill button');
@@ -130,7 +145,11 @@ test.describe('a scrolled live list keeps its place @seeded', () => {
     // Other workers send to this garage too: the count rises by at least
     // this one.
     const held = await waiting(page);
+    let sent: string[] = [];
+    const read = readWith(page, () => sent);
     const id = await send();
+    sent = [id];
+    await read;
 
     await expect(pill).toBeInViewport();
     await expect.poll(() => waiting(page)).toBeGreaterThanOrEqual(held + 1);
@@ -154,8 +173,12 @@ test.describe('a scrolled live list keeps its place @seeded', () => {
     const pill = page.locator('mf-live-pill button');
 
     const held = await waiting(page);
+    let sent: string[] = [];
+    const read = readWith(page, () => sent);
     const first = await send();
     const second = await send();
+    sent = [first, second];
+    await read;
 
     await expect(pill).toBeInViewport();
     await expect.poll(() => waiting(page)).toBeGreaterThanOrEqual(held + 2);

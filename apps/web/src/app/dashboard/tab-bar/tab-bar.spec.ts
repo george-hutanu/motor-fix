@@ -25,9 +25,24 @@ class Host {
 
 let scrolled: jest.Mock;
 
+// jsdom lays nothing out: the bar is 199.5 px wide (a phone's fractional
+// pixels) and each tab 80 px, placed by the bar's own horizontal scroll.
+function layout(this: Element): DOMRect {
+  const nav = this.closest('nav');
+  if (this.tagName === 'NAV') return { left: 0, right: 199.5 } as DOMRect;
+  const index = nav
+    ? [...nav.querySelectorAll('a')].indexOf(this as HTMLAnchorElement)
+    : -1;
+  const left = index * 80 - (nav?.scrollLeft ?? 0);
+  return { left, right: left + 80 } as DOMRect;
+}
+
 async function open(url: string) {
   scrolled = jest.fn();
   Element.prototype.scrollIntoView = scrolled;
+  jest
+    .spyOn(Element.prototype, 'getBoundingClientRect')
+    .mockImplementation(layout);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -48,6 +63,8 @@ async function open(url: string) {
 const tabs = (element: HTMLElement) => [
   ...element.querySelectorAll<HTMLAnchorElement>('mf-dashboard-tab-bar nav a'),
 ];
+const bar = (element: HTMLElement) =>
+  element.querySelector('mf-dashboard-tab-bar nav') as HTMLElement;
 const current = (element: HTMLElement) =>
   tabs(element)
     .filter((a) => a.getAttribute('aria-current') === 'page')
@@ -98,17 +115,37 @@ describe('DashboardTabBar', () => {
 
   it('scrolls the current tab into sight without moving the page', async () => {
     const { element, harness } = await open('/app/garage');
-    scrolled.mockClear();
 
     await harness.navigateByUrl('/app/garage/team');
     harness.detectChanges();
     await harness.fixture.whenStable();
 
-    expect(scrolled).toHaveBeenCalledWith({
-      block: 'nearest',
-      inline: 'nearest',
-    });
-    expect(scrolled.mock.contexts.at(-1)).toBe(tabs(element)[4]);
+    // Mecanici, the fifth tab, spans 320-400 px: the bar scrolls by its own
+    // overhang, rounded up to a whole pixel so no sliver stays hidden.
+    expect(bar(element).scrollLeft).toBe(201);
+  });
+
+  it('scrolls the bar back when the current tab sits before its view', async () => {
+    const { element, harness } = await open('/app/garage/team');
+    expect(bar(element).scrollLeft).toBe(201);
+
+    await harness.navigateByUrl('/app/garage');
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+
+    expect(bar(element).scrollLeft).toBe(0);
+  });
+
+  // Chrome's scrollIntoView also moves where Tab starts from, so the first
+  // Tab on a dashboard skipped the skip link for the tab after the current.
+  it('leaves where the keyboard starts from at the top of the page', async () => {
+    const { harness } = await open('/app/garage');
+
+    await harness.navigateByUrl('/app/garage/team');
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+
+    expect(scrolled).not.toHaveBeenCalled();
   });
 
   it('keeps the current tab in sight when a tab before it arrives later', async () => {
@@ -120,7 +157,8 @@ describe('DashboardTabBar', () => {
     host.views.set(all.filter((view) => view.path !== 'schedule'));
     harness.detectChanges();
     await harness.fixture.whenStable();
-    scrolled.mockClear();
+    // Scrolled just far enough to show Mecanici as the fourth tab.
+    bar(element).scrollLeft = 120;
 
     // A garage's feature switches load after the bar marked its tab: the
     // schedule tab lands before Mecanici and would push it out of sight.
@@ -128,11 +166,7 @@ describe('DashboardTabBar', () => {
     harness.detectChanges();
     await harness.fixture.whenStable();
 
-    expect(scrolled).toHaveBeenCalledWith({
-      block: 'nearest',
-      inline: 'nearest',
-    });
-    expect(scrolled.mock.contexts.at(-1)).toBe(tabs(element)[4]);
+    expect(bar(element).scrollLeft).toBe(201);
   });
 
   // @traces 1127-FR-004
