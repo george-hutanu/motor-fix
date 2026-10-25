@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ACCOUNTS, openSignIn, ownMap, ready, signIn } from './accounts.js';
+import { answerConsent } from './consent-bar.js';
 import { test } from './fixtures.js';
 
 // A brand and three garages of this file's own, written straight to
@@ -629,6 +630,8 @@ test.describe('the map beside the results @seeded', () => {
     await ownMap(page);
     await page.setViewportSize({ height: 812, width: 375 });
     await ready(page, `/ro/garages?brand=${brand.slug}&near=${near}`);
+    // The drags land on the handle, not on the consent bar over it.
+    await answerConsent(page);
     const map = page.getByRole('region', { name: 'Harta service‑urilor' });
     const first = page.locator('mf-result-card').first();
 
