@@ -345,6 +345,16 @@ const consentRecords = () =>
     'motorfix_consent_records_total',
     'Analytics consent choices stored, by decision',
   );
+const acceptances = () =>
+  counter(
+    'motorfix_acceptances_total',
+    'Accounts that accepted the terms and privacy notice in force again',
+  );
+const consentRefusals = () =>
+  counter(
+    'motorfix_consent_refusals_total',
+    'Calls refused because the account has not accepted the texts in force, by surface',
+  );
 // The fallbacks the send path can take: a driver's channel it could not use,
 // the row it wrote instead, and why.
 const FALLBACKS = [
@@ -569,6 +579,14 @@ export function countGarageReport(outcome: GarageReportOutcome) {
 // One per analytics choice stored, visitor or signed in.
 export function countConsentRecord(decision: ConsentDecision) {
   consentRecords().add(1, { decision });
+}
+
+export function countAcceptance() {
+  acceptances().add(1);
+}
+
+export function countConsentRefusal(surface: 'api' | 'mcp') {
+  consentRefusals().add(1, { surface });
 }
 
 // One saved change of the account's own details, by field.

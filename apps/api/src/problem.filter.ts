@@ -195,7 +195,8 @@ function detail(message: unknown): string | undefined {
 // The string members of a refused move (`invalid_transition`, and who
 // decided a verification file first), of a garage that cannot receive a
 // request (`garage_cannot_receive`), and the approved job a name clashes with
-// (`exists`).
+// (`exists`), and the texts in force a pending account must accept
+// (`consent_required`).
 const STRING_MEMBERS = [
   'entity',
   'field',
@@ -209,6 +210,8 @@ const STRING_MEMBERS = [
   'decidedAt',
   'jobTypeId',
   'nameRo',
+  'termsVersion',
+  'privacyVersion',
 ] as const;
 
 function stringMembers(

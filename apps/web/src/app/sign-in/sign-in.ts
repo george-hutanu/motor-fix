@@ -90,7 +90,7 @@ export class SignIn {
   private readonly session = inject(Session);
   private readonly task = injectOverlayTask<
     AuthData,
-    'signed-in' | AuthSwitch
+    'signed-in' | AuthSwitch | 'cancelled'
   >();
   private readonly passwordInput =
     viewChild.required<ElementRef<HTMLInputElement>>('passwordInput');
@@ -114,12 +114,14 @@ export class SignIn {
   });
 
   protected readonly save = taskSave({
-    done: () => this.task.close('signed-in'),
+    // No account and no session: the person signed out at the new terms.
+    done: (me) => this.task.close(me ? 'signed-in' : 'cancelled'),
     form: this.form,
     messages: 'public.signIn',
     send: async ({ email = '', password = '', remember = true }) => {
       const me = await this.session.signIn(email.trim(), password, remember);
-      if (!me) throw new Error('signed in without an account');
+      if (!me && this.session.token())
+        throw new Error('signed in without an account');
       return me;
     },
   });

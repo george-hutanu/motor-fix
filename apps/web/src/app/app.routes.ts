@@ -146,6 +146,7 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./public/legal/legal').then((m) => m.Legal),
         path: text,
+        title: () => inject(I18n).t(`public.legal.${text}.title`),
       })),
       {
         loadComponent: () =>

@@ -240,6 +240,15 @@
     "retry": "Try again",
     "title": "Team invitation"
   },
+  "legal": {
+    "privacy": {
+      "title": "Privacy notice · MotorFix"
+    },
+    "terms": {
+      "title": "Terms of use · MotorFix"
+    },
+    "version": "Version"
+  },
   "listing": {
     "askedFor": "Asked by MotorFix",
     "bar": "{n} / 6 · {label}",
@@ -720,6 +729,16 @@
     "apple": "Continue with Apple",
     "google": "Continue with Google",
     "or": "or"
+  },
+  "reaccept": {
+    "accept": "Accept",
+    "error": "We could not save your acceptance. Try again.",
+    "privacy": "Privacy notice",
+    "signOut": "Sign out",
+    "terms": "Terms of use",
+    "text": "We have updated the terms of use and the privacy notice. Accept them to go on.",
+    "title": "New terms",
+    "version": "version {version}"
   },
   "reportGarage": {
     "cancel": "Cancel",

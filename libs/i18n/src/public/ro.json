@@ -246,6 +246,15 @@
     "retry": "Încearcă din nou",
     "title": "Invitație în echipă"
   },
+  "legal": {
+    "privacy": {
+      "title": "Nota de informare privind datele personale · MotorFix"
+    },
+    "terms": {
+      "title": "Termeni de utilizare · MotorFix"
+    },
+    "version": "Versiunea"
+  },
   "listing": {
     "askedFor": "Cerut de MotorFix",
     "bar": "{n} / 6 · {label}",
@@ -734,6 +743,16 @@
     "apple": "Continuă cu Apple",
     "google": "Continuă cu Google",
     "or": "sau"
+  },
+  "reaccept": {
+    "accept": "Accept",
+    "error": "Nu am putut salva acceptarea. Încearcă din nou.",
+    "privacy": "Nota de informare privind datele personale",
+    "signOut": "Deconectare",
+    "terms": "Termenii de utilizare",
+    "text": "Am actualizat termenii de utilizare și nota de informare privind datele personale. Ca să continui, acceptă‑le.",
+    "title": "Termeni noi",
+    "version": "versiunea {version}"
   },
   "reportGarage": {
     "cancel": "Anulează",

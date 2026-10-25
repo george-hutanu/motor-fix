@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
-import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import { AccountsService, PRISMA, signAccessToken } from '@motor-fix/domain';
 import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -86,6 +86,7 @@ const METHODS = ['get', 'post', 'put', 'patch', 'delete'] as const;
 let app: INestApplication;
 let routes: { method: (typeof METHODS)[number]; path: string }[];
 let accountId: string;
+let pendingId: string;
 
 beforeAll(async () => {
   app = await api.start();
@@ -99,6 +100,12 @@ beforeAll(async () => {
     consent: CURRENT_CONSENT,
     identity: { method: 'google', subject: `driver-${randomUUID()}` },
     name: 'Andrei',
+    roles: ['driver'],
+  }));
+  ({ id: pendingId } = await app.get(AccountsService).createAccount({
+    consent: CURRENT_CONSENT,
+    identity: { method: 'google', subject: `pending-${randomUUID()}` },
+    name: 'Ioana',
     roles: ['driver'],
   }));
 }, TURN_WAIT_MS);
@@ -274,4 +281,26 @@ describe("a mechanic's reviews read without a session", () => {
       expect([res.status, res.body.code]).toEqual([400, 'validation_failed']);
     },
   );
+});
+
+// @traces 1204-FR-002
+// @traces 1204-FR-003
+describe('routes for an account whose acceptance is pending', () => {
+  it('refuses every session route but the acceptance with consent_required', async () => {
+    await app.get(PRISMA).accountConsent.updateMany({
+      data: { textVersion: '2026-10-11' },
+      where: { accountId: pendingId },
+    });
+    const authorization = `Bearer ${signAccessToken({ accountId: pendingId, role: 'driver' }, TEST_TOKEN_SECRET)}`;
+    const answered: string[] = [];
+    for (const { method, path } of routes) {
+      const route = `${method.toUpperCase()} ${path}`;
+      if (PUBLIC.includes(route)) continue;
+      const res = await call(method, path, authorization);
+      if (!(res.status === 403 && res.body?.code === 'consent_required'))
+        answered.push(route);
+    }
+
+    expect(answered).toEqual(['POST /api/v1/me/acceptance']);
+  });
 });

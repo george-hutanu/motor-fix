@@ -22,6 +22,7 @@ const problem = (status: number, code?: string) =>
   });
 
 let signIn: jest.Mock;
+let token: jest.Mock;
 let result: Promise<OverlayResult<'signed-in' | AuthSwitch>>;
 let online = true;
 
@@ -38,8 +39,9 @@ async function open(
   phone?: string,
 ) {
   signIn = jest.fn(async () => ({ landing: '/app/driver' }));
+  token = jest.fn(() => 'abc');
   TestBed.configureTestingModule({
-    providers: [{ provide: Session, useValue: { signIn } }],
+    providers: [{ provide: Session, useValue: { signIn, token } }],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const host = TestBed.createComponent(Host);
@@ -337,6 +339,26 @@ describe('sending', () => {
 
     expect(signIn).toHaveBeenCalledWith('andrei@example.ro', 'parola', true);
     await expect(result).resolves.toBe('signed-in');
+  });
+
+  // @traces 1204-FR-007
+  it('closes without an error when the person signed out at the new terms instead', async () => {
+    await open();
+    signIn.mockResolvedValueOnce(null);
+    token.mockReturnValue(null);
+
+    await submit('andrei@example.ro', 'parola');
+
+    await expect(result).resolves.toBe('cancelled');
+  });
+
+  it('says it failed when the sign-in left a session but no account', async () => {
+    await open();
+    signIn.mockResolvedValueOnce(null);
+
+    await submit('andrei@example.ro', 'parola');
+
+    expect(panel().querySelector('[role="alert"]')).toBeTruthy();
   });
 
   it('sends "keep me signed in" unticked when it was unticked', async () => {
