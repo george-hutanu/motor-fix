@@ -269,6 +269,13 @@ describe('where a placed workshop is, on a map and by directions', () => {
     expect(piece.point()).toEqual({ lat: LAT, lng: LNG });
   });
 
+  it('shows the map and the directions when the point is all the workshop has', async () => {
+    await show({ ...PLACED, address: undefined, hours: {} });
+
+    expect(section().hidden).toBe(false);
+    expect(order()).toEqual(['map', 'title', 'directions']);
+  });
+
   it('keeps the directions last when the garage sent no hours', async () => {
     await show({ ...PLACED, hours: {} });
 

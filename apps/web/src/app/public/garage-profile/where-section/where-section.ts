@@ -79,8 +79,13 @@ export class WhereSection {
   });
   // Only the computer's directions open in a new tab.
   protected readonly computer = computed(() => this.platform() === 'computer');
+  // A point alone still gives the map and the directions.
   protected readonly empty = computed(
-    () => !this.address() && !this.area() && this.lines().length === 0,
+    () =>
+      !this.address() &&
+      !this.area() &&
+      this.lines().length === 0 &&
+      !this.point(),
   );
 
   constructor() {
