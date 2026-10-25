@@ -45,27 +45,40 @@ const transitions = (page: Page) =>
         .__transitions,
   );
 
-test.describe('fast navigation on the public pages @seeded', () => {
-  test('returns from a profile to the same results at the same place, with no loading', async ({
-    page,
-  }) => {
-    await page.setViewportSize({ height: 480, width: 390 });
-    await hydrated(page, RESULTS);
-    const view = page.getByRole('link', { name: 'Vezi service‑ul' }).last();
-    await view.scrollIntoViewIfNeeded();
-    const before = await page.evaluate(() => Math.round(window.scrollY));
-    expect(before).toBeGreaterThan(0);
-
-    await view.click();
-    await expect(heading(page)).toBeVisible();
-    await page.goBack();
-
-    await expect(page).toHaveURL(RESULTS);
-    await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
-    await expect
-      .poll(() => page.evaluate(() => Math.round(window.scrollY)))
-      .toBe(before);
+// How far the list is scrolled: inside its sheet on a phone, where the page
+// itself never scrolls, and the page from a tablet up.
+const listScroll = (page: Page) =>
+  page.evaluate(() => {
+    const sheet = document.querySelector('mf-results-sheet .body');
+    return Math.round(
+      window.innerWidth < 768 && sheet ? sheet.scrollTop : window.scrollY,
+    );
   });
+
+test.describe('fast navigation on the public pages @seeded', () => {
+  for (const { height, width } of [
+    { height: 640, width: 390 },
+    { height: 480, width: 1280 },
+  ]) {
+    test(`returns from a profile to the same results at the same place, with no loading, at ${width} px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height, width });
+      await hydrated(page, RESULTS);
+      const view = page.getByRole('link', { name: 'Vezi service‑ul' }).last();
+      await view.scrollIntoViewIfNeeded();
+      const before = await listScroll(page);
+      expect(before).toBeGreaterThan(0);
+
+      await view.click();
+      await expect(heading(page)).toBeVisible();
+      await page.goBack();
+
+      await expect(page).toHaveURL(RESULTS);
+      await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+      await expect.poll(() => listScroll(page)).toBe(before);
+    });
+  }
 
   test('comes back from another page out of the back/forward cache', async ({
     page,
@@ -128,6 +141,7 @@ test.describe('fast navigation on the public pages @seeded', () => {
     await expect(heading(page)).toBeVisible();
 
     const seen = await transitions(page);
+    expect(seen?.started).toBeGreaterThan(0);
     expect(seen?.skipped).toBe(seen?.started);
   });
 
