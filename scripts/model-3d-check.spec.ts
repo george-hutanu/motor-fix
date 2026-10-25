@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -73,5 +73,23 @@ describe('the 3D asset check', () => {
         `volkswagen-golf: missing file ${golf.file}`,
       ]),
     );
+  });
+});
+
+describe('the 3D files themselves', () => {
+  // @traces 1241-FR-005
+  it('are never committed: the repository is public and the files are licensed', () => {
+    expect(
+      execFileSync('git', ['ls-files', '--', '*.glb', '*.gltf'], {
+        cwd: root,
+        encoding: 'utf8',
+      }),
+    ).toBe('');
+    expect(
+      execFileSync('git', ['check-ignore', '--no-index', 'models-3d/car.glb'], {
+        cwd: root,
+        encoding: 'utf8',
+      }).trim(),
+    ).toBe('models-3d/car.glb');
   });
 });
