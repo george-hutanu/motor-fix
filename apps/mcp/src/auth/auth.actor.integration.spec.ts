@@ -1,4 +1,5 @@
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
+import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts';
 import {
   AccountLoader,
   type Actor,
@@ -62,9 +63,30 @@ const auth = (accountId: string): AuthInfo => ({
   token: 'unused',
 });
 
-const newAccount = (status: 'active' | 'suspended' | 'deleted' = 'active') =>
+const accepted = (terms: string, privacy: string) => ({
+  create: [
+    {
+      kind: 'terms' as const,
+      language: 'en' as const,
+      method: 'google' as const,
+      textVersion: terms,
+    },
+    {
+      kind: 'privacy_notice' as const,
+      language: 'en' as const,
+      method: 'google' as const,
+      textVersion: privacy,
+    },
+  ],
+});
+
+const newAccount = (
+  status: 'active' | 'suspended' | 'deleted' = 'active',
+  consents = accepted(TERMS_VERSION, PRIVACY_VERSION),
+) =>
   prisma.account.create({
     data: {
+      consents,
       language: 'en',
       lastRole: 'garage',
       name: 'Maria Pop',
@@ -141,5 +163,47 @@ describe('the actor of an assistant call', () => {
     expect(result.isError).toBe(true);
     expect(result.structuredContent).toMatchObject({ code: 'not_found' });
     expect(seen).toEqual([]);
+  });
+});
+
+// @traces 1204-terms-reaccept-FR-005
+describe('the actor of an assistant call whose owner has not accepted the texts in force', () => {
+  it('is refused with the same consent_required the API answers, before any grant is used', async () => {
+    const { id } = await newAccount(
+      'active',
+      accepted('2026-10-11', '2026-10-11'),
+    );
+
+    const { body, status } = await refusal(actors.caller(auth(id), 'r'));
+
+    expect(status).toBe(403);
+    expect(body).toMatchObject({
+      code: 'consent_required',
+      privacyVersion: PRIVACY_VERSION,
+      termsVersion: TERMS_VERSION,
+    });
+    expect(
+      await prisma.assistantGrant.count({ where: { accountId: id } }),
+    ).toBe(0);
+  });
+
+  it('answers once the owner has accepted them', async () => {
+    const { id } = await newAccount(
+      'active',
+      accepted(TERMS_VERSION, '2026-10-11'),
+    );
+    await prisma.accountConsent.create({
+      data: {
+        accountId: id,
+        kind: 'privacy_notice',
+        language: 'en',
+        method: 'google',
+        textVersion: PRIVACY_VERSION,
+      },
+    });
+
+    const caller = await actors.caller(auth(id), 'request-accepted');
+
+    expect(caller.account.id).toBe(id);
   });
 });
