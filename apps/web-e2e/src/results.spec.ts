@@ -1154,20 +1154,39 @@ test.describe('the map beside the results @seeded', () => {
       )
       .toBeGreaterThan(0);
   }
+  // A point under one of the map's own controls (the zoom buttons sit top
+  // right) would press the control: the map first centres on such a point.
   async function clickAt(page: Page, at: readonly [number, number]) {
-    const spot = await page.evaluate(([lat, lng]) => {
-      const map = (
-        window as unknown as {
-          __MF_MAP: {
-            getCanvas(): HTMLCanvasElement;
-            project(at: [number, number]): { x: number; y: number };
-          };
-        }
-      ).__MF_MAP;
-      const { x, y } = map.project([lng, lat]);
-      const box = map.getCanvas().getBoundingClientRect();
-      return { x: box.left + x, y: box.top + y };
-    }, at);
+    const where = () =>
+      page.evaluate(([lat, lng]) => {
+        const map = (
+          window as unknown as {
+            __MF_MAP: {
+              getCanvas(): HTMLCanvasElement;
+              project(at: [number, number]): { x: number; y: number };
+            };
+          }
+        ).__MF_MAP;
+        const { x, y } = map.project([lng, lat]);
+        const canvas = map.getCanvas();
+        const box = canvas.getBoundingClientRect();
+        const spot = { x: box.left + x, y: box.top + y };
+        const bare = document.elementFromPoint(spot.x, spot.y) === canvas;
+        return { ...spot, bare };
+      }, at);
+    let spot = await where();
+    if (!spot.bare) {
+      await page.evaluate(([lat, lng]) => {
+        (
+          window as unknown as {
+            __MF_MAP: { jumpTo(view: { center: [number, number] }): void };
+          }
+        ).__MF_MAP.jumpTo({ center: [lng, lat] });
+      }, at);
+      await mapSettled(page);
+      spot = await where();
+      expect(spot.bare).toBe(true);
+    }
     await page.mouse.click(spot.x, spot.y);
   }
   const named = (page: Page, i: number) =>
