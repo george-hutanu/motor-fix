@@ -94,6 +94,8 @@ export class PublicLive implements OnDestroy {
   private readonly onPageShow = () => {
     if (!this.suspended) return;
     this.suspended = false;
+    // The page shows again: no sleep to make up for when it turns visible.
+    this.hiddenAt = null;
     if (this.views.length > 0) this.connect();
   };
 
@@ -153,7 +155,8 @@ export class PublicLive implements OnDestroy {
     if (open === Boolean(this.wanted) && query === this.query) return;
     this.query = query;
     if (open) {
-      this.connect();
+      // A page on its way into the cache opens nothing; pageshow does.
+      if (!this.suspended) this.connect();
       return;
     }
     this.wanted?.abort();

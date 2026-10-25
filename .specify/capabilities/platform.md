@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -116,6 +116,7 @@ features:
   - 438-test-suites-projects
   - 471-crlf-harness-tidy
   - 493-watcher-docs
+  - 1193-fast-nav
 ---
 
 # Capability: Platform
@@ -2857,6 +2858,26 @@ _From 438-test-suites-projects._
 ### 493-FR-005 — `merge-main.mjs`'s capability resolution (`unionConflicts`) MUST keep one blank line between the last line of ours and a heading (`#`) of theirs that follows it in the same conflict hunk, so two features appended at the same place never glue a `_From …_` line to the next requirement's heading.
 
 _From 493-watcher-docs._
+
+### 1193-FR-002 — The web app MUST remain eligible for the browser's back/forward cache on the journey search results → garage profile → back: no `unload` or `beforeunload` handler, `Cache-Control: no-store` only on the signed-in and one-person pages (as today), and no connection kept open on `pagehide`. The e2e suite MUST prove the journey with the back/forward cache enabled: on back, `pageshow` reports `persisted` and the browser reports no not-restored reason; the Lighthouse audit of the same journey is shown in the PR.
+
+_From 1193-fast-nav._
+
+### 1193-FR-004 — Navigations to another screen (another path) MUST run as view transitions, with the browser's default cross-fade (no custom duration or easing), when the browser supports them; a same-screen navigation (only the query or fragment changes, or the language rewrite) and the first screen as the page loads MUST NOT; and every transition MUST be skipped entirely when the device asks for reduced motion (read from the kit's shared signal, 053-FR-013); a browser without the API navigates as today, with no error.
+
+_From 1193-fast-nav._
+
+### 1193-FR-006 — The rendered HTML head MUST carry a `preconnect` hint to the image base when it is an origin other than the page's, on every page, and one to the map tiles origin on the pages whose first screen renders a map (today the results page, `/:lang/garages`; no other); the tiles hint carries `crossorigin` (its requests are cross-origin fetches) and the image hint does not (images load without CORS); no hint for the page's own origin, the API, the telemetry collector or a sign-in server; at most four hints in all.
+
+_From 1193-fast-nav._
+
+### 1193-FR-008 — The app MUST drop the deprecated fetch opt-in from its HTTP client configuration (fetch is Angular 22's default) and keep event replay on, with no change in behaviour: requests still use fetch, taps before hydration are still replayed.
+
+_From 1193-fast-nav._
+
+### 1193-FR-011 — Every change MUST hold on a 320 px and a 390 px phone, a tablet and a desktop, light and dark, Romanian and English, with no sideways scroll at 320 px and no motion under `prefers-reduced-motion`; the PR MUST show each item of the story (bfcache, preconnect, transitions, scroll restoration, type-ahead, fonts) as done or already in place.
+
+_From 1193-fast-nav._
 
 ## Retired
 

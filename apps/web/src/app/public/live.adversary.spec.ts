@@ -448,3 +448,167 @@ describe('publicLiveResource under hostile use', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+const pagehide = () => window.dispatchEvent(new Event('pagehide'));
+const pageshow = (persisted = true) => {
+  const shown = new Event('pageshow');
+  Object.defineProperty(shown, 'persisted', { value: persisted });
+  window.dispatchEvent(shown);
+};
+
+// @traces 1193-FR-001
+describe('PublicLive under hostile page lifecycles', () => {
+  it('reopens once when the page is hidden twice and shown once', async () => {
+    const live = setUp();
+    live.register({ garage: 'g-1' });
+    await settle();
+
+    pagehide();
+    pagehide();
+    pageshow();
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(live.state()).toBe('open');
+  });
+
+  it('reopens once when the page is shown twice after one hide', async () => {
+    const live = setUp();
+    live.register({ garage: 'g-1' });
+    await settle();
+
+    pagehide();
+    pageshow();
+    pageshow();
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('announces one resync when the page comes back, and none when it leaves', async () => {
+    const live = setUp();
+    let resyncs = 0;
+    live.resync.subscribe(() => resyncs++);
+    live.register({ garage: 'g-1' });
+    await settle();
+
+    pagehide();
+    await settle();
+    expect(resyncs).toBe(0);
+
+    pageshow();
+    await settle();
+    expect(resyncs).toBe(1);
+  });
+
+  it('opens no request for a view that arrives while the page is hidden', async () => {
+    const live = setUp();
+    live.register({ garage: 'g-1' });
+    await settle();
+
+    pagehide();
+    live.register({ brand: 'b-1' });
+    await elapse(60_000);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(live.state()).toBe('closed');
+  });
+
+  it('reopens for the views that are there at pageshow, not the ones at pagehide', async () => {
+    const live = setUp();
+    const leave = live.register({ garage: 'g-1' });
+    await settle();
+
+    pagehide();
+    leave();
+    live.register({ garage: 'g-2' });
+    await settle();
+    pageshow();
+    await settle();
+
+    expect(urls().at(-1)).toBe('/api/v1/live/public?garages=g-2');
+    expect(signalOf(fetchMock.mock.calls.length - 1).aborted).toBe(false);
+  });
+
+  it('stops retrying when the page is hidden during a back-off', async () => {
+    const live = setUp();
+    answers = ['fail', 'fail', 'fail'];
+    live.register({ garage: 'g-1' });
+    await settle();
+    expect(live.state()).toBe('reconnecting');
+
+    pagehide();
+    await elapse(10 * 60_000);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(live.state()).toBe('closed');
+  });
+
+  it('does not open a stream whose answer arrives after the page was hidden', async () => {
+    const live = setUp();
+    let release: (v: unknown) => void = () => undefined;
+    fetchMock.mockImplementationOnce(
+      (_u: string, init: RequestInit) =>
+        new Promise((resolve, reject) => {
+          init.signal?.addEventListener('abort', () =>
+            reject(new DOMException('aborted', 'AbortError')),
+          );
+          release = resolve;
+        }),
+    );
+    live.register({ garage: 'g-1' });
+    await settle();
+
+    pagehide();
+    release({
+      body: { getReader: () => new Body().reader },
+      ok: true,
+      status: 200,
+    });
+    await elapse(60_000);
+
+    expect(live.state()).toBe('closed');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores the page events once it is destroyed', async () => {
+    const live = setUp();
+    live.register({ garage: 'g-1' });
+    await settle();
+    TestBed.resetTestingModule();
+
+    pagehide();
+    pageshow();
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(signalOf(0).aborted).toBe(true);
+  });
+
+  it('opens nothing on the server when the page events fire', async () => {
+    const live = setUp('server');
+    live.register({ garage: 'g-1' });
+
+    pagehide();
+    pageshow();
+    await settle();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(live.state()).toBe('closed');
+  });
+
+  it('stays closed after a hide when the last view leaves before the page returns', async () => {
+    const live = setUp();
+    const leave = live.register({ garage: 'g-1' });
+    await settle();
+
+    pagehide();
+    leave();
+    await settle();
+    pageshow();
+    pageshow();
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});

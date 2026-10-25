@@ -617,6 +617,41 @@ describe('PublicLive and the back/forward cache', () => {
     expect(live.state()).toBe('open');
   });
 
+  it('opens one stream, not two, when the page turns visible after its pageshow', async () => {
+    const live = setUp();
+    let visibility: DocumentVisibilityState = 'visible';
+    jest
+      .spyOn(document, 'visibilityState', 'get')
+      .mockImplementation(() => visibility);
+    live.register({ garage: 'g-1' });
+    await settle();
+
+    visibility = 'hidden';
+    document.dispatchEvent(new Event('visibilitychange'));
+    pagehide();
+    await elapse(120_000);
+    pageshow(true);
+    visibility = 'visible';
+    document.dispatchEvent(new Event('visibilitychange'));
+    await settle();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(signalOf(1).aborted).toBe(false);
+  });
+
+  it('opens nothing for a view that arrives after the page left', async () => {
+    const live = setUp();
+    live.register({ garage: 'g-1' });
+    await settle();
+
+    pagehide();
+    live.register({ brand: 'b-1' });
+    await elapse(60_000);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(live.state()).toBe('closed');
+  });
+
   it('has its views re-read their data when the page comes back from the cache', async () => {
     setUp();
     const load = jest.fn(async () => ({ name: 'Atelier' }));

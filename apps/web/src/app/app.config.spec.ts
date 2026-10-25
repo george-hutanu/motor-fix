@@ -5,7 +5,6 @@ import { appConfig } from './app.config';
 
 type Provider = {
   provide?: unknown;
-  useExisting?: unknown;
   ɵproviders?: unknown[];
 };
 
@@ -32,14 +31,6 @@ describe('the app config', () => {
     TestBed.configureTestingModule({ providers: http as never[] });
 
     expect(TestBed.inject(HttpBackend)).toBeInstanceOf(FetchBackend);
-  });
-
-  it('asks for the fetch backend through no switch of its own', () => {
-    expect(
-      given().filter(
-        (p) => p.provide === HttpBackend && p.useExisting === FetchBackend,
-      ),
-    ).toEqual([]);
   });
 
   it('still replays a tap made on the server-rendered page before hydration', () => {

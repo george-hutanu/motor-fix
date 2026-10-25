@@ -33,6 +33,13 @@ function listed(folder: string): string[] {
   }
 }
 
+// The origin of an http(s) address, in its one spelling; nothing for a path.
+function webOrigin(address: string | undefined): string | undefined {
+  if (!address || !URL.canParse(address)) return undefined;
+  const url = new URL(address);
+  return /^https?:$/.test(url.protocol) ? url.origin : undefined;
+}
+
 // What the pages hint, worked out once at start-up: the image server's origin
 // when it is not the page's own, and the heading font file of each language.
 export function headHints(given: {
@@ -41,12 +48,10 @@ export function headHints(given: {
   siteOrigin: string | undefined;
 }): HeadHints {
   const media = listed(join(given.distFolder, 'media'));
-  const absolute = URL.canParse(given.imageBase)
-    ? new URL(given.imageBase).origin
-    : undefined;
+  const images = webOrigin(given.imageBase);
   return {
     fonts: { en: fontFile(media, FONTS.en), ro: fontFile(media, FONTS.ro) },
-    images: absolute !== given.siteOrigin ? absolute : undefined,
+    images: images !== webOrigin(given.siteOrigin) ? images : undefined,
   };
 }
 

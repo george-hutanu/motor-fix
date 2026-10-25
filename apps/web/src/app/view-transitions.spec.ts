@@ -1,14 +1,9 @@
 import { ApplicationRef, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import {
-  provideRouter,
-  Router,
-  RouterOutlet,
-  withViewTransitions,
-} from '@angular/router';
+import { provideRouter, Router, RouterOutlet } from '@angular/router';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
-import { skipStillTransitions } from './view-transitions';
+import { screenTransitions } from './view-transitions';
 
 @Component({ template: '' })
 class Page {}
@@ -52,9 +47,7 @@ describe('the view transitions between screens', () => {
             { component: Page, path: 'ro/garages/:garage' },
             { component: Page, path: 'en/garages/:garage' },
           ],
-          withViewTransitions({
-            onViewTransitionCreated: skipStillTransitions,
-          }),
+          screenTransitions(),
         ),
         { provide: REDUCED_MOTION, useValue: reduced.asReadonly() },
       ],
@@ -110,6 +103,24 @@ describe('the view transitions between screens', () => {
     await router.navigateByUrl('/en/garages/atelier-ion', { replaceUrl: true });
 
     expect(started[0]?.skipTransition).toHaveBeenCalled();
+  });
+
+  it('runs a transition when a replaced address leads to another screen, as the return from sign-in does', async () => {
+    boot();
+    await at('/ro/garages');
+
+    await router.navigateByUrl('/ro/garages/atelier-ion', { replaceUrl: true });
+
+    expect(started).toHaveLength(1);
+    expect(started[0]?.skipTransition).not.toHaveBeenCalled();
+  });
+
+  it('starts no transition for the first screen as the page loads', async () => {
+    boot();
+
+    await router.navigateByUrl('/ro/garages');
+
+    expect(started).toEqual([]);
   });
 
   it('skips every transition when the device asks for reduced motion', async () => {

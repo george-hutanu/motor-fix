@@ -174,8 +174,11 @@ export class AddressField {
       lang,
       q,
     }).subscribe({
-      error: () => {
+      error: (error: unknown) => {
         this.lastAsked = '';
+        // A look-up called off is no answer, and no failure either.
+        if (error instanceof DOMException && error.name === 'AbortError')
+          return;
         this.message.set('searchUnavailable');
       },
       next: ({ body }) => {

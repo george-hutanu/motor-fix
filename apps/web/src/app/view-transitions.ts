@@ -1,8 +1,8 @@
 import { inject } from '@angular/core';
 import {
   type ActivatedRouteSnapshot,
-  Router,
   type ViewTransitionInfo,
+  withViewTransitions,
 } from '@angular/router';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
@@ -14,17 +14,22 @@ function pathOf(route: ActivatedRouteSnapshot | null): string {
   return parts.join('/');
 }
 
+// The screen a route tree shows: its path without the language in front, so
+// the language switch, which rewrites the address in place, stays on it.
+const screenOf = (route: ActivatedRouteSnapshot | null) =>
+  pathOf(route).replace(/^(?:ro|en)(?:\/|$)/, '');
+
 // Screens cross-fade into each other, the browser's default. A navigation
-// that keeps the screen (only the query or the fragment changes) or rewrites
-// its address in place (the language) moves nothing, and nothing moves for a
-// person who asked their device for reduced motion.
-export function skipStillTransitions({
-  transition,
-  from,
-  to,
-}: ViewTransitionInfo) {
-  const inPlace =
-    inject(Router).currentNavigation()?.extras.replaceUrl === true;
-  if (inject(REDUCED_MOTION)() || inPlace || pathOf(from) === pathOf(to))
+// that keeps the screen (only the query, the fragment or the language
+// changes) moves nothing, nor does the first screen as the page loads, and
+// nothing moves for a person who asked their device for reduced motion.
+function skipStillTransitions({ transition, from, to }: ViewTransitionInfo) {
+  if (inject(REDUCED_MOTION)() || screenOf(from) === screenOf(to))
     transition.skipTransition();
 }
+
+export const screenTransitions = () =>
+  withViewTransitions({
+    onViewTransitionCreated: skipStillTransitions,
+    skipInitialTransition: true,
+  });
