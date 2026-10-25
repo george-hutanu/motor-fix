@@ -2,8 +2,7 @@
   "brands": {
     "add": {
       "hint": "2 to 40 characters.",
-      "name": "Brand name",
-      "submit": "Add",
+      "name": "Name",
       "title": "Add a brand"
     },
     "bringBack": "Bring back",
@@ -16,7 +15,7 @@
       "name": "Brand",
       "state": "State"
     },
-    "empty": "No brand matches the search.",
+    "empty": "No brand matches",
     "heading": "Brand list",
     "loadFailed": "The brand list could not be read.",
     "loading": "Loading the brands",
@@ -28,8 +27,8 @@
     "retry": "Try again",
     "save": "Save",
     "saveFailed": "Could not save. Try again.",
-    "search": "Search for a brand",
-    "stale": "Another admin changed this brand; the row has been updated.",
+    "search": "Search a brand",
+    "stale": "Another admin changed this brand; the row was refreshed.",
     "state": {
       "active": "active",
       "retired": "retired"

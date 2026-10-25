@@ -43,7 +43,7 @@
             @for (row of rows(); track row.brand.id) {
               @let brand = row.brand;
               @let open = editing() === brand.id;
-              <tr [attr.aria-busy]="busy() === brand.id ? 'true' : null">
+              <tr [attr.data-id]="brand.id" [attr.aria-busy]="busy().has(brand.id) ? 'true' : null">
                 <td class="name">
                   <span data-name [class.sr-only]="open">{{ brand.name }}</span>
                   @if (open) {
@@ -59,14 +59,12 @@
                       />
                       <span class="rename-actions">
                         <button hlmBtn type="submit">{{ 'admin.brands.save' | t }}</button>
-                        <button hlmBtn type="button" variant="ghost" (click)="cancel()">{{ 'admin.brands.cancel' | t }}</button>
+                        <button hlmBtn type="button" variant="ghost" (click)="cancel(brand)">{{ 'admin.brands.cancel' | t }}</button>
                       </span>
                     </form>
                   }
-                  @if (notice(); as note) {
-                    @if (note.id === brand.id) {
-                      <p class="note" [id]="'mf-brand-note-' + brand.id" [attr.role]="note.status ? 'status' : 'alert'">{{ note.text ?? (note.key ?? '' | t) }}</p>
-                    }
+                  @if (notices().get(brand.id); as note) {
+                    <p class="note" [id]="'mf-brand-note-' + brand.id" [attr.role]="note.status ? 'status' : 'alert'">{{ note.text ?? (note.key ?? '' | t) }}</p>
                   }
                 </td>
                 <td [attr.data-label]="'admin.brands.column.state' | t">
@@ -79,7 +77,7 @@
                 <td class="count" data-cars [attr.data-label]="'admin.brands.column.cars' | t">{{ row.cars }}</td>
                 <td class="actions">
                   @if (!open) {
-                    <button hlmBtn type="button" variant="secondary" (click)="startRename(brand)" [attr.aria-label]="'admin.brands.renameNamed' | t: { name: brand.name }">{{ 'admin.brands.rename' | t }}</button>
+                    <button hlmBtn type="button" variant="secondary" data-rename (click)="startRename(brand)" [attr.aria-label]="'admin.brands.renameNamed' | t: { name: brand.name }">{{ 'admin.brands.rename' | t }}</button>
                     @if (brand.state === 'active') {
                       <button hlmBtn type="button" variant="ghost" (click)="setActive(brand, false)" [attr.aria-label]="'admin.brands.retireNamed' | t: { name: brand.name }">{{ 'admin.brands.retire' | t }}</button>
                     } @else {

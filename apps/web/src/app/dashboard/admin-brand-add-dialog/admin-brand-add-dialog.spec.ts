@@ -87,21 +87,33 @@ afterEach(() => {
 });
 
 describe('the add-a-brand dialog', () => {
-  it('asks for the name with one field and an add button', async () => {
+  it('asks for the name with one field, a save and a cancel button', async () => {
     await open();
 
     expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
       'Adaugă o marcă',
     );
-    expect(field('Numele mărcii').type).toBe('text');
-    expect(button('Adaugă')?.type).toBe('submit');
+    expect(field('Nume').type).toBe('text');
+    expect(button('Salvează')?.type).toBe('submit');
+    expect(button('Renunță')?.type).toBe('button');
+  });
+
+  it('closes cancelled on Renunță and sends nothing', async () => {
+    await open();
+    type(field('Nume'), 'Xpeng');
+
+    button('Renunță')?.click();
+    await settle();
+
+    expect(create).not.toHaveBeenCalled();
+    await expect(result).resolves.toBe('cancelled');
   });
 
   it('sends the trimmed name and closes with the new brand', async () => {
     await open();
-    type(field('Numele mărcii'), '  Xpeng ');
+    type(field('Nume'), '  Xpeng ');
 
-    button('Adaugă')?.click();
+    button('Salvează')?.click();
     await settle();
 
     expect(create).toHaveBeenCalledWith({ body: { name: 'Xpeng' } });
@@ -115,10 +127,10 @@ describe('the add-a-brand dialog', () => {
     ['only spaces', '    '],
   ])('refuses %s before sending', async (_, value) => {
     await open();
-    const input = field('Numele mărcii');
+    const input = field('Nume');
     type(input, value);
 
-    button('Adaugă')?.click();
+    button('Salvează')?.click();
     await settle();
 
     expect(create).not.toHaveBeenCalled();
@@ -138,10 +150,10 @@ describe('the add-a-brand dialog', () => {
         status: 409,
       }),
     );
-    const input = field('Brand name');
+    const input = field('Name');
     type(input, 'skoda');
 
-    button('Add')?.click();
+    button('Save')?.click();
     await settle();
 
     const described = (input.getAttribute('aria-describedby') ?? '')
@@ -150,19 +162,19 @@ describe('the add-a-brand dialog', () => {
       .join(' ');
     expect(described).toContain('Marca există deja: Škoda');
     expect(input.value).toBe('skoda');
-    expect(button('Add')).toBeDefined();
+    expect(button('Save')).toBeDefined();
   });
 
   it('says the save failed on any other failure and stays open', async () => {
     await open();
     create.mockRejectedValueOnce(new HttpErrorResponse({ status: 500 }));
-    type(field('Numele mărcii'), 'Xpeng');
+    type(field('Nume'), 'Xpeng');
 
-    button('Adaugă')?.click();
+    button('Salvează')?.click();
     await settle();
 
     expect(text()).toContain('Nu s‑a putut salva. Încearcă din nou.');
-    expect(field('Numele mărcii').value).toBe('Xpeng');
+    expect(field('Nume').value).toBe('Xpeng');
   });
 
   it('reads English', async () => {
@@ -171,6 +183,8 @@ describe('the add-a-brand dialog', () => {
     expect(panel().querySelector('h2')?.textContent?.trim()).toBe(
       'Add a brand',
     );
-    expect(field('Brand name')).toBeDefined();
+    expect(field('Name')).toBeDefined();
+    expect(button('Save')).toBeDefined();
+    expect(button('Cancel')).toBeDefined();
   });
 });

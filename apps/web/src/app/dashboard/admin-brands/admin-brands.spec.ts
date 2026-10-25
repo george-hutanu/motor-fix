@@ -265,11 +265,38 @@ describe('editing a row', () => {
 
     button(el, 'Redenumește Dacia')?.click();
     await settle();
-    button(el, 'Renunță')?.click();
+    button(el, 'Salvează')?.click();
     await settle();
 
+    expect(update).not.toHaveBeenCalled();
     expect(el.querySelector('tbody input')).toBeNull();
     expect(names(el)).toEqual(['Dacia', 'Lada', 'Škoda']);
+  });
+
+  it('moves focus into the field on Rename and back to Rename on Cancel', async () => {
+    const el = await open();
+
+    button(el, 'Redenumește Dacia')?.focus();
+    button(el, 'Redenumește Dacia')?.click();
+    await settle();
+    expect(document.activeElement).toBe(el.querySelector('tbody input'));
+
+    button(el, 'Renunță')?.click();
+    await settle();
+    expect(el.querySelector('tbody input')).toBeNull();
+    expect(document.activeElement).toBe(button(el, 'Redenumește Dacia'));
+  });
+
+  it('returns focus to the row after a saved rename', async () => {
+    const el = await open();
+
+    button(el, 'Redenumește Dacia')?.click();
+    await settle();
+    type(el.querySelector('tbody input') as HTMLInputElement, 'Dacia Nouă');
+    button(el, 'Salvează')?.click();
+    await settle();
+
+    expect(document.activeElement).toBe(button(el, 'Redenumește Dacia Nouă'));
   });
 
   it('keeps the field open with the API message when the name is taken', async () => {
@@ -388,5 +415,97 @@ describe('editing a row', () => {
     expect(
       rowOf(el, 'Dacia').querySelector('mf-lamp')?.textContent?.trim(),
     ).toBe('retrasă');
+  });
+
+  it('lets another row act while one row saves, each keeping its own notice', async () => {
+    let answer: (value: AdminBrandDto) => void = () => {};
+    update
+      .mockImplementationOnce(
+        () =>
+          new Promise<AdminBrandDto>((resolve) => {
+            answer = resolve;
+          }),
+      )
+      .mockRejectedValueOnce(new HttpErrorResponse({ status: 500 }));
+    const el = await open();
+
+    button(el, 'Retrage Dacia')?.click();
+    await settle();
+    button(el, 'Retrage Škoda')?.click();
+    await settle();
+
+    expect(update).toHaveBeenCalledTimes(2);
+    expect(rowOf(el, 'Škoda').textContent).toContain(
+      'Nu s‑a putut salva. Încearcă din nou.',
+    );
+    answer(brand('Dacia', { state: 'retired' }));
+    await settle();
+    expect(rowOf(el, 'Dacia').getAttribute('aria-busy')).toBeNull();
+    expect(rowOf(el, 'Škoda').textContent).toContain(
+      'Nu s‑a putut salva. Încearcă din nou.',
+    );
+  });
+
+  it("keeps another row's open field when a stale answer refreshes this row", async () => {
+    let answer: () => void = () => {};
+    update.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          answer = () =>
+            reject(
+              conflict({
+                brand: brand('Lada', { state: 'active' }),
+                code: 'stale_value',
+              }),
+            );
+        }),
+    );
+    const el = await open();
+
+    button(el, 'Readuce Lada')?.click();
+    await settle();
+    button(el, 'Redenumește Dacia')?.click();
+    await settle();
+    answer();
+    await settle();
+
+    expect(rowOf(el, 'Dacia').querySelector('input')).not.toBeNull();
+    expect(rowOf(el, 'Lada').textContent).toContain(
+      'Alt administrator a modificat marca',
+    );
+  });
+
+  it('says the save failed when a stale answer carries no usable brand', async () => {
+    update.mockRejectedValueOnce(
+      conflict({ brand: { id: 'id-Dacia' }, code: 'stale_value' }),
+    );
+    const el = await open();
+
+    button(el, 'Retrage Dacia')?.click();
+    await settle();
+
+    expect(names(el)).toEqual(['Dacia', 'Lada', 'Škoda']);
+    expect(rowOf(el, 'Dacia').textContent).toContain(
+      'Nu s‑a putut salva. Încearcă din nou.',
+    );
+  });
+
+  it('keeps a brand added while the list was still being read', async () => {
+    let answer: (value: { items: AdminBrandDto[] }) => void = () => {};
+    list.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    openDialog.mockResolvedValueOnce(brand('Xpeng'));
+    const el = await open();
+
+    button(el, 'Adaugă o marcă')?.click();
+    await settle();
+    answer({ items: SEED.map((b) => ({ ...b })) });
+    await settle();
+
+    expect(names(el)).toEqual(['Dacia', 'Lada', 'Škoda', 'Xpeng']);
   });
 });

@@ -48,12 +48,15 @@ test.describe('the admin brand list @seeded @database', () => {
   });
 
   test.afterAll(async () => {
-    const { rows } = await db.query<{ id: string }>(
-      'SELECT id FROM brand WHERE name = $1',
-      [name],
-    );
-    for (const { id } of rows) await deleteBrand(db, id);
-    await db.end();
+    try {
+      const { rows } = await db.query<{ id: string }>(
+        'SELECT id FROM brand WHERE name = $1',
+        [name],
+      );
+      for (const { id } of rows) await deleteBrand(db, id);
+    } finally {
+      await db.end();
+    }
   });
 
   test('adds a brand, retires it and brings it back', async ({ page }) => {
@@ -65,8 +68,8 @@ test.describe('the admin brand list @seeded @database', () => {
 
     await list(page).getByRole('button', { name: 'Adaugă o marcă' }).click();
     const dialog = page.getByRole('dialog', { name: 'Adaugă o marcă' });
-    await dialog.getByLabel('Numele mărcii').fill(name);
-    await dialog.getByRole('button', { exact: true, name: 'Adaugă' }).click();
+    await dialog.getByLabel('Nume', { exact: true }).fill(name);
+    await dialog.getByRole('button', { exact: true, name: 'Salvează' }).click();
     await expect(dialog).toHaveCount(0);
 
     await expect(row(page, name)).toContainText('activă');
@@ -74,6 +77,10 @@ test.describe('the admin brand list @seeded @database', () => {
       .getByRole('button', { name: `Retrage ${name}` })
       .click();
     await expect(row(page, name)).toContainText('retrasă');
+    await expect(row(page, name).locator('mf-lamp')).toHaveAttribute(
+      'data-state',
+      'grey',
+    );
     await row(page, name)
       .getByRole('button', { name: `Readuce ${name}` })
       .click();
@@ -101,10 +108,17 @@ test.describe('the admin brand list @seeded @database', () => {
       step.locator('.results button', { hasText: name }),
     ).toBeVisible();
 
-    await ready(page, `/ro/garages?brand=${slug}`);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      `Cine primește ${name}`,
-    );
+    // Results near Militari, where the seeded garages are. No garage has
+    // said anything about the new brand: none works on it, and every card
+    // carries the red lamp of an unmarked brand (OD-15).
+    await ready(page, `/ro/garages?brand=${slug}&near=44.435,26.015`);
+    const lamps = page.locator('mf-result-card mf-lamp');
+    await expect(lamps.first()).toBeVisible();
+    await expect(
+      page.getByText(`0 lucrează pe ${name}`, { exact: false }).first(),
+    ).toBeVisible();
+    for (const lamp of await lamps.all())
+      await expect(lamp).toHaveAttribute('data-state', 'red');
 
     await ready(page, '/ro');
     await page.getByRole('combobox', { name: 'Caută marca' }).fill(stamp);

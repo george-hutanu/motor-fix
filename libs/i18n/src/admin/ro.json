@@ -2,8 +2,7 @@
   "brands": {
     "add": {
       "hint": "Între 2 și 40 de caractere.",
-      "name": "Numele mărcii",
-      "submit": "Adaugă",
+      "name": "Nume",
       "title": "Adaugă o marcă"
     },
     "bringBack": "Readuce",
@@ -16,7 +15,7 @@
       "name": "Marcă",
       "state": "Stare"
     },
-    "empty": "Nicio marcă nu se potrivește căutării.",
+    "empty": "Nicio marcă nu se potrivește",
     "heading": "Lista de mărci",
     "loadFailed": "Lista de mărci nu a putut fi citită.",
     "loading": "Se încarcă mărcile",

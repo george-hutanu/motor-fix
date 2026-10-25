@@ -1,8 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
+  Injector,
   inject,
   signal,
 } from '@angular/core';
@@ -13,16 +16,31 @@ import { formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, Lamp, Panel } from '@motor-fix/ui-cockpit';
 
-import { visibleText } from '../../characters';
 import {
   AdminBrandAddDialog,
-  BRAND_NAME,
+  brandName,
+  brandNameOf,
 } from '../admin-brand-add-dialog/admin-brand-add-dialog';
 
 const SKELETON_ROWS = [0, 1, 2];
 
 // A row's own message: the API's words for a taken name, or a key.
-type Notice = { id: string; text?: string; key?: string; status?: boolean };
+type Notice = { text?: string; key?: string; status?: boolean };
+
+// The brand a `stale_value` answer carries, checked before it replaces a row.
+const isBrand = (value: unknown, id: string): value is AdminBrandDto => {
+  const b = value as Partial<AdminBrandDto> | null;
+  return (
+    typeof b === 'object' &&
+    b !== null &&
+    b.id === id &&
+    typeof b.name === 'string' &&
+    (b.state === 'active' || b.state === 'retired') &&
+    typeof b.garages === 'number' &&
+    typeof b.cars === 'number' &&
+    typeof b.updatedAt === 'string'
+  );
+};
 
 const byName = (a: AdminBrandDto, b: AdminBrandDto) =>
   fold(a.name).localeCompare(fold(b.name));
@@ -48,18 +66,22 @@ export class AdminBrands {
   private readonly api = inject(AdminService);
   private readonly i18n = inject(I18n);
   private readonly overlays = inject(Overlays);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
+  // Rows this view wrote while a read was on its way: the read keeps them.
+  private readonly written = new Map<string, AdminBrandDto>();
 
   protected readonly skeletonRows = SKELETON_ROWS;
   protected readonly state = signal<'loading' | 'failed' | 'ready'>('loading');
   private readonly brands = signal<AdminBrandDto[]>([]);
   protected readonly query = signal('');
   protected readonly editing = signal<string | null>(null);
-  protected readonly busy = signal<string | null>(null);
-  protected readonly notice = signal<Notice | null>(null);
+  protected readonly busy = signal<ReadonlySet<string>>(new Set());
+  protected readonly notices = signal<ReadonlyMap<string, Notice>>(new Map());
   protected readonly renameForm = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
-      validators: [visibleText(BRAND_NAME)],
+      validators: [brandName],
     }),
   });
   private readonly name = this.renameForm.controls.name;
@@ -83,9 +105,13 @@ export class AdminBrands {
 
   protected async read() {
     this.state.set('loading');
+    this.written.clear();
     try {
       const { items } = await this.api.adminBrandsControllerList();
-      this.brands.set([...items].sort(byName));
+      const read = new Map(items.map((b) => [b.id, b]));
+      for (const [id, b] of this.written) read.set(id, b);
+      this.written.clear();
+      this.brands.set([...read.values()].sort(byName));
       this.state.set('ready');
     } catch {
       this.state.set('failed');
@@ -107,31 +133,67 @@ export class AdminBrands {
   }
 
   protected startRename(brand: AdminBrandDto) {
-    if (this.busy()) return;
-    this.notice.set(null);
+    if (this.busy().has(brand.id)) return;
+    this.note(brand.id, null);
     this.name.reset(brand.name);
     this.editing.set(brand.id);
+    this.focus(brand.id, 'input');
   }
 
-  protected cancel() {
-    this.editing.set(null);
+  protected cancel(brand: AdminBrandDto) {
+    this.close(brand.id);
   }
 
   protected async rename(brand: AdminBrandDto) {
-    if (this.busy()) return;
+    if (this.busy().has(brand.id)) return;
     this.name.markAsTouched();
     if (this.name.invalid) return;
-    const name = this.name.value.trim();
+    const name = brandNameOf(this.name.value);
     if (name === brand.name) {
-      this.editing.set(null);
+      this.close(brand.id);
       return;
     }
-    if (await this.send(brand, { name })) this.editing.set(null);
+    if (await this.send(brand, { name })) this.close(brand.id);
   }
 
   protected async setActive(brand: AdminBrandDto, active: boolean) {
-    if (this.busy()) return;
+    if (this.busy().has(brand.id)) return;
     await this.send(brand, { active });
+  }
+
+  // Closes the row's field, focus back on its Rename button.
+  private close(id: string) {
+    if (this.editing() !== id) return;
+    this.editing.set(null);
+    this.focus(id, 'button[data-rename]');
+  }
+
+  private focus(id: string, selector: string) {
+    afterNextRender(
+      () =>
+        this.host.nativeElement
+          .querySelector<HTMLElement>(`tr[data-id="${id}"] ${selector}`)
+          ?.focus(),
+      { injector: this.injector },
+    );
+  }
+
+  private note(id: string, notice: Notice | null) {
+    this.notices.update((all) => {
+      const next = new Map(all);
+      if (notice) next.set(id, notice);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  private setBusy(id: string, on: boolean) {
+    this.busy.update((all) => {
+      const next = new Set(all);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
   }
 
   // True when the row took the change.
@@ -139,8 +201,8 @@ export class AdminBrands {
     brand: AdminBrandDto,
     change: { name?: string; active?: boolean },
   ) {
-    this.busy.set(brand.id);
-    this.notice.set(null);
+    this.setBusy(brand.id, true);
+    this.note(brand.id, null);
     try {
       const saved = await this.api.adminBrandsControllerUpdate({
         body: { ...change, seenUpdatedAt: brand.updatedAt },
@@ -152,7 +214,7 @@ export class AdminBrands {
       this.refused(brand, failure);
       return false;
     } finally {
-      this.busy.set(null);
+      this.setBusy(brand.id, false);
     }
   }
 
@@ -165,27 +227,24 @@ export class AdminBrands {
         ? (failure.error as {
             code?: string;
             detail?: string;
-            brand?: AdminBrandDto;
+            brand?: unknown;
           } | null)
         : null;
-    if (body?.code === 'stale_value' && body.brand) {
+    if (body?.code === 'stale_value' && isBrand(body.brand, brand.id)) {
       this.put(body.brand);
-      this.editing.set(null);
-      this.notice.set({
-        id: brand.id,
-        key: 'admin.brands.stale',
-        status: true,
-      });
+      this.close(brand.id);
+      this.note(brand.id, { key: 'admin.brands.stale', status: true });
       return;
     }
     if (body?.code === 'brand_exists' && body.detail) {
-      this.notice.set({ id: brand.id, text: body.detail });
+      this.note(brand.id, { text: body.detail });
       return;
     }
-    this.notice.set({ id: brand.id, key: 'admin.brands.saveFailed' });
+    this.note(brand.id, { key: 'admin.brands.saveFailed' });
   }
 
   private put(brand: AdminBrandDto) {
+    if (this.state() === 'loading') this.written.set(brand.id, brand);
     this.brands.update((all) =>
       [...all.filter((b) => b.id !== brand.id), brand].sort(byName),
     );

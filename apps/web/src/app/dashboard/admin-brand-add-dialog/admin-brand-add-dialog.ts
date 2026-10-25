@@ -4,12 +4,18 @@ import {
   computed,
   inject,
 } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import {
+  type AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { type AdminBrandDto, AdminService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import {
   FieldError,
   injectOverlayTask,
+  type OverlayResult,
   TaskSubmit,
   taskSave,
 } from '@motor-fix/overlays';
@@ -19,6 +25,17 @@ import { visibleText } from '../../characters';
 
 // The bound the API keeps on a brand's name: 2 to 40 characters that show.
 export const BRAND_NAME = { max: 40, min: 2 };
+
+// A name as it is sent: composed, so a letter typed with a combining accent
+// ("S" + U+030C) is the one character "Š", and trimmed.
+export const brandNameOf = (value: string) => value.normalize('NFC').trim();
+
+// The API's rule on the composed name, so the field counts letters, not
+// the code points a keyboard happened to type.
+export const brandName = (control: AbstractControl) =>
+  visibleText(BRAND_NAME)({
+    value: brandNameOf(String(control.value ?? '')),
+  } as AbstractControl);
 
 // A new brand, by name. Closes with the brand the API made; a name already
 // taken keeps the dialog open with the API's own message under the field.
@@ -38,12 +55,15 @@ export const BRAND_NAME = { max: 40, min: 2 };
 })
 export class AdminBrandAddDialog {
   private readonly api = inject(AdminService);
-  private readonly task = injectOverlayTask<undefined, AdminBrandDto>();
+  protected readonly task = injectOverlayTask<
+    undefined,
+    OverlayResult<AdminBrandDto>
+  >();
 
   protected readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
-      validators: [visibleText(BRAND_NAME)],
+      validators: [brandName],
     }),
   });
 
@@ -52,7 +72,9 @@ export class AdminBrandAddDialog {
     form: this.form,
     messages: 'admin.brands.add',
     send: ({ name = '' }) =>
-      this.api.adminBrandsControllerCreate({ body: { name: name.trim() } }),
+      this.api.adminBrandsControllerCreate({
+        body: { name: brandNameOf(name) },
+      }),
   });
 
   // The API names the brand that already has this name, in its own words.

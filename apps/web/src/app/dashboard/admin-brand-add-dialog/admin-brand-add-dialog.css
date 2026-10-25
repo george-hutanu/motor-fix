@@ -24,6 +24,10 @@ input {
   color: var(--mf-red-ink);
   overflow-wrap: anywhere;
 }
+.actions {
+  display: grid;
+  gap: var(--mf-space-3);
+}
 button {
   width: 100%;
   min-height: 54px;
