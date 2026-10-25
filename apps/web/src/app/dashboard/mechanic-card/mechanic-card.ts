@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+} from '@angular/core';
 import {
   type AbstractControl,
   FormControl,
@@ -31,8 +37,14 @@ import {
   taskSave,
   toProblem,
 } from '@motor-fix/overlays';
-import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
+import {
+  HlmButton,
+  HlmInput,
+  HlmTabsImports,
+  toast,
+} from '@motor-fix/ui-cockpit';
 
+import { MechanicSchedule } from '../mechanic-schedule/mechanic-schedule';
 import {
   RemoveMechanic,
   type RemoveMechanicData,
@@ -121,6 +133,9 @@ const SERVER: Record<Field, (code: string) => string> = {
   imports: [
     HlmButton,
     HlmInput,
+    HlmTabsImports,
+    MechanicSchedule,
+    NgTemplateOutlet,
     ReactiveFormsModule,
     TaskError,
     TaskSubmit,
@@ -141,6 +156,10 @@ export class MechanicCard {
   protected readonly field = FIELDS;
   protected readonly card = this.task.data.card;
   protected readonly brands = this.task.data.brands;
+  protected readonly garageId = this.task.data.garageId;
+  // The schedule is read only once its tab is opened: a card edit alone
+  // never waits on it.
+  protected readonly scheduleOpened = signal(false);
 
   protected readonly form = new FormGroup({
     brandIds: new FormGroup(

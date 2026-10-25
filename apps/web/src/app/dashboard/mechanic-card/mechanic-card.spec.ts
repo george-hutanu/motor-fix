@@ -577,3 +577,38 @@ describe('the card dialog, editing a card', () => {
     expect(field('Nume').value).toBe('<b>Elena</b>');
   });
 });
+
+// @traces 058-FR-014
+describe("the card dialog's Program tab", () => {
+  const tabs = () => [
+    ...panel().querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+  ];
+
+  it('offers the Card and Program tabs on an existing card, Card first', async () => {
+    await open(card());
+
+    expect(tabs().map((t) => text(t))).toEqual(['Card', 'Program']);
+    expect(tabs()[0].getAttribute('aria-selected')).toBe('true');
+    expect(
+      panel().querySelector('[role="tablist"]')?.getAttribute('aria-label'),
+    ).toBe('Secțiunile cardului');
+    expect(field('Nume').value).toBe('Elena Stan');
+  });
+
+  it('reads the schedule only once the Program tab is opened', async () => {
+    await open(card());
+    http.expectNone(`${MECHANICS}/mechanic-1/hours`);
+
+    tabs()[1].click();
+    await settle();
+
+    http.expectOne({ method: 'GET', url: `${MECHANICS}/mechanic-1/hours` });
+  });
+
+  it('has no tabs while adding a mechanic', async () => {
+    await open();
+
+    expect(tabs()).toHaveLength(0);
+    expect(field('Nume').value).toBe('');
+  });
+});

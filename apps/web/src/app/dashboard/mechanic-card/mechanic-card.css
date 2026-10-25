@@ -110,3 +110,8 @@ p {
     width: 100%;
   }
 }
+.tabs {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}

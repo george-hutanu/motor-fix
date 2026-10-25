@@ -238,9 +238,81 @@
     "saved": "Cardul a fost salvat.",
     "specialties": "Specialități",
     "specialtiesHint": "Separă‑le prin virgulă, cel mult 6.",
+    "tabs": {
+      "card": "Card",
+      "label": "Secțiunile cardului",
+      "schedule": "Program"
+    },
     "title": "Adaugă un mecanic",
     "titleEdit": "{name}",
     "years": "Ani de experiență"
+  },
+  "mechanicSchedule": {
+    "closed": "Închis",
+    "dayOff": {
+      "add": "Adaugă zi liberă",
+      "added": "Ziua liberă a fost adăugată.",
+      "failed": "Nu am putut adăuga ziua liberă. Încearcă din nou.",
+      "field": {
+        "day_off_overlap": "Se suprapune cu o zi liberă existentă",
+        "invalid": "Alege o zi din calendar",
+        "order": "Ultima zi trebuie să fie după prima",
+        "past": "Ziua trebuie să fie azi sau mai târziu",
+        "required": "Alege prima zi",
+        "too_far": "Cel mult un an înainte",
+        "too_long": "Cel mult 120 de caractere"
+      },
+      "first": "Prima zi",
+      "last": "Ultima zi (opțional)",
+      "note": "Notă (opțional)",
+      "noteCount": "{length} din {max} caractere",
+      "problem": {
+        "day_off_overlap": "Alege alte zile."
+      }
+    },
+    "days": {
+      "fri": "Vineri",
+      "mon": "Luni",
+      "sat": "Sâmbătă",
+      "sun": "Duminică",
+      "thu": "Joi",
+      "tue": "Marți",
+      "wed": "Miercuri"
+    },
+    "daysOff": {
+      "none": "Nicio zi liberă.",
+      "remove": "Elimină",
+      "removeFailed": "Nu am putut elimina ziua liberă. Încearcă din nou.",
+      "removeLabel": "Elimină ziua liberă {days}",
+      "title": "Zile libere"
+    },
+    "default": "Programul service‑ului până la prima modificare",
+    "error": "Nu am putut încărca programul.",
+    "from": "De la",
+    "hours": {
+      "failed": "Nu am putut salva programul. Încearcă din nou.",
+      "field": {
+        "garage_closed_saturday": "Service‑ul nu e deschis sâmbăta",
+        "order": "Ora de închidere trebuie să fie după deschidere",
+        "outside_opening": "În afara programului service‑ului"
+      },
+      "save": "Salvează programul",
+      "saved": "Programul a fost salvat."
+    },
+    "loading": "Se încarcă programul.",
+    "retry": "Reîncearcă",
+    "saturdays": "Lucrează sâmbăta",
+    "to": "Până la",
+    "warning": {
+      "anyway": "Adaugă oricum",
+      "bookings": {
+        "few": "{count} programări confirmate pe {day}: {times}. Vor trebui realocate.",
+        "one": "{count} programare confirmată pe {day}: {times}. Va trebui realocată.",
+        "other": "{count} de programări confirmate pe {day}: {times}. Vor trebui realocate."
+      },
+      "cancel": "Renunță"
+    },
+    "week": "Zilele de lucru"
   },
   "members": {
     "error": "Nu am putut încărca persoanele cu acces.",
