@@ -30,13 +30,10 @@ const LONG_DAY = new Intl.DateTimeFormat('ro-RO', {
 
 // Needs the worker on shortened days (REMINDER_DAY_MS, 3000 in CI's E2E job):
 // a reminder day passes in seconds, so both stages arrive within the test.
+// Without it playwright.config.mts leaves @shortened-days out.
 // @traces 094-FR-006
-test.describe('the ITP reminders of a car added by a driver', () => {
+test.describe('the ITP reminders of a car added by a driver @shortened-days', () => {
   test.describe.configure({ retries: 0 });
-  test.skip(
-    !process.env['REMINDER_DAY_MS'],
-    'needs the worker on shortened days (REMINDER_DAY_MS)',
-  );
 
   test('show the 30-day and then the 7-day reminder in the bell', async ({
     page,

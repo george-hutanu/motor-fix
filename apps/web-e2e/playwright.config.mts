@@ -58,12 +58,15 @@ export default defineConfig({
   // flows tagged @assistants the local identity server, and flows tagged
   // @reset need a seeded account the global setup resets, and flows tagged
   // @database write their fixtures straight to PostgreSQL, none of which a
-  // deployed address has.
+  // deployed address has. Flows tagged @shortened-days need the local worker
+  // on shortened reminder days (REMINDER_DAY_MS, 3000 in CI's E2E job).
   grepInvert: deployed
     ? process.env['E2E_PASSWORD']
-      ? /@mailbox|@openid|@assistants|@reset|@database/
-      : /@seeded|@mailbox|@openid|@assistants|@reset|@database/
-    : undefined,
+      ? /@mailbox|@openid|@assistants|@reset|@database|@shortened-days/
+      : /@seeded|@mailbox|@openid|@assistants|@reset|@database|@shortened-days/
+    : process.env['REMINDER_DAY_MS']
+      ? undefined
+      : /@shortened-days/,
   // The price edit, manage and decide flows change the seeded price lists and
   // the catalogue the other flows read: they run after them. The photo flows add an approved garage,
   // which Home's counts would take in: they run after everything else. The platform rules
