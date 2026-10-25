@@ -17,14 +17,19 @@ import type {
   Marker,
 } from 'maplibre-gl';
 
-import { type LatLng, ring, START } from '../../map-libre/map-libre';
+import { type LatLng, ring } from '../../map-libre/map-libre';
+import {
+  boundsOf,
+  fitView,
+  paddingOf,
+  pointsOf,
+} from '../../static-map/fit-view';
+import { CLUSTER_ABOVE } from '../../static-map/overlay';
 
-// Past this many fixed pins, close ones merge into a counted cluster.
-const CLUSTER_ABOVE = 50;
+// Past CLUSTER_ABOVE fixed pins, close ones merge into a counted cluster,
+// on the static map as here.
 const SOURCE = 'pins';
 const AREAS = 'areas';
-const FIT = { animate: false, maxZoom: 15 };
-const PADDING = 40;
 const FONT = ['Noto Sans Bold'];
 // How long the map stays still after the driver's move before it counts.
 const SETTLE_MS = 400;
@@ -304,35 +309,15 @@ export function drawPins(
   let marked = false;
 
   return {
+    // The same view the static image showed for this box, at a whole zoom
+    // and a snapped centre, so the two never disagree.
     fit(place, answer, covered = 0, coveredTop = 0) {
-      const points = [
-        ...(place ? [place] : []),
-        ...fixedOf(answer).map(({ lat, lng }) => ({ lat, lng })),
-      ];
-      if (points.length === 0) {
-        map.jumpTo(START);
-        return;
-      }
-      const lats = points.map((p) => p.lat);
-      const lngs = points.map((p) => p.lng);
-      map.fitBounds(
-        [
-          [Math.min(...lngs), Math.min(...lats)],
-          [Math.max(...lngs), Math.max(...lats)],
-        ],
-        {
-          ...FIT,
-          padding:
-            covered > 0 || coveredTop > 0
-              ? {
-                  bottom: PADDING + covered,
-                  left: PADDING,
-                  right: PADDING,
-                  top: PADDING + coveredTop,
-                }
-              : PADDING,
-        },
+      const { center, zoom } = fitView(
+        boundsOf(pointsOf(place, answer)),
+        { h: host.clientHeight, w: host.clientWidth },
+        paddingOf(covered, coveredTop),
       );
+      map.jumpTo({ center: [center.lng, center.lat], zoom });
     },
     light(id) {
       lit = id ?? '';

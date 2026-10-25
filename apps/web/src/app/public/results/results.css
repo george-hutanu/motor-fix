@@ -228,10 +228,19 @@ mf-brand-chips {
   mf-results-map {
     align-self: start;
     grid-area: map;
-    height: calc(100vh - 2 * var(--mf-space-4));
+    /* Between the sticky site bar and the consent bar while it asks, which
+       lie over the page's top and bottom and would cover the map's edges and
+       its corner. */
+    height: calc(
+      100vh -
+      var(--public-site-bar) -
+      2 *
+      var(--mf-space-4) -
+      var(--consent-bar, 0px)
+    );
     margin-block-end: 0;
     position: sticky;
-    top: var(--mf-space-4);
+    top: calc(var(--public-site-bar) + var(--mf-space-4));
   }
 }
 

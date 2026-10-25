@@ -8,6 +8,7 @@ import {
   faroUrl,
   grafanaUrl,
   imageBaseUrl,
+  mapTilesTileJsonUrl,
   originSecrets,
   outageWebhookToken,
   PLACES_ENV,
@@ -445,6 +446,43 @@ describe('imageBaseUrl', () => {
       expect(() => imageBaseUrl({ IMAGE_BASE_URL: value })).toThrow(
         new Error(
           'IMAGE_BASE_URL must be an http(s) URL or a path starting with /',
+        ),
+      );
+    },
+  );
+});
+
+// @traces 1196-FR-007
+describe('mapTilesTileJsonUrl', () => {
+  it("uses OpenFreeMap's tiles when unset or empty", () => {
+    expect(mapTilesTileJsonUrl({})).toBe(
+      'https://tiles.openfreemap.org/planet',
+    );
+    expect(mapTilesTileJsonUrl({ MAP_TILES_TILEJSON_URL: '' })).toBe(
+      'https://tiles.openfreemap.org/planet',
+    );
+  });
+
+  it('reads off as no provider at all', () => {
+    expect(mapTilesTileJsonUrl({ MAP_TILES_TILEJSON_URL: 'off' })).toBe('off');
+  });
+
+  it('takes another absolute http(s) TileJSON', () => {
+    expect(
+      mapTilesTileJsonUrl({
+        MAP_TILES_TILEJSON_URL: 'http://localhost:8080/planet',
+      }),
+    ).toBe('http://localhost:8080/planet');
+  });
+
+  it.each(['tiles.example/planet', 'ftp://tiles.example/planet', 'OFF '])(
+    'refuses %s, naming the variable',
+    (value) => {
+      expect(() =>
+        mapTilesTileJsonUrl({ MAP_TILES_TILEJSON_URL: value }),
+      ).toThrow(
+        new Error(
+          'MAP_TILES_TILEJSON_URL must be an absolute http(s) URL or off',
         ),
       );
     },

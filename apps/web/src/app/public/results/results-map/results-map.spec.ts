@@ -3,13 +3,21 @@ import { join } from 'node:path';
 
 import { PLATFORM_ID, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
-import { Layout, type LayoutName } from '@motor-fix/ui-cockpit';
+import { Layout, type LayoutName, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import type { MapEvents, MapMove } from './pins-map';
 import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
 import type { MapFake } from '../../place-step/place-step.testing';
+import {
+  boundsOf,
+  fitView,
+  type MapView,
+  paddingOf,
+} from '../../static-map/fit-view';
+import { StaticMap } from '../../static-map/static-map';
 
 jest.mock('maplibre-gl', () =>
   jest.requireActual('../../place-step/place-step.testing'),
@@ -30,7 +38,12 @@ let moved: (move: MapMove) => void;
 let tapped: (id: string | undefined) => void;
 let shifted: () => void;
 const open = jest.fn(
-  (_host: HTMLElement, on: MapEvents, _here: HTMLElement) =>
+  (
+    _host: HTMLElement,
+    on: MapEvents,
+    _here: HTMLElement,
+    _start?: { center: [number, number]; zoom: number },
+  ) =>
     new Promise<ResultsMapView>((resolve, reject) => {
       moved = on.moved;
       tapped = on.picked;
@@ -50,6 +63,10 @@ async function render({
   platform = 'browser',
   loading = false,
   on = 'tablet' as LayoutName,
+  // The interactive map opens on a tap of the static one; most of these
+  // tests look at it open, so they tap first.
+  activated = true,
+  still = false,
 } = {}) {
   layout.set(on);
   TestBed.configureTestingModule({
@@ -57,6 +74,7 @@ async function render({
       { provide: RESULTS_MAP, useValue: open },
       { provide: PLATFORM_ID, useValue: platform },
       { provide: Layout, useValue: { current: layout } },
+      { provide: REDUCED_MOTION, useValue: signal(still) },
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -69,6 +87,13 @@ async function render({
   fixture.componentRef.setInput('pins', undefined);
   fixture.detectChanges();
   await fixture.whenStable();
+  if (activated && platform === 'browser') tap();
+}
+
+// The driver taps the static map's "Hartă interactivă".
+function tap() {
+  element().querySelector<HTMLElement>('mf-static-map button')?.click();
+  fixture.detectChanges();
 }
 
 async function ready() {
@@ -127,7 +152,341 @@ describe('ResultsMap, the map region', () => {
         shifted: expect.any(Function),
       },
       element().querySelector('.here'),
+      { center: expect.any(Array), zoom: expect.any(Number) },
     );
+  });
+});
+
+// @traces 1196-FR-010 1196-FR-011 1196-FR-020
+describe('ResultsMap, the static map first', () => {
+  const still = () =>
+    element().querySelector('mf-static-map') as HTMLElement | null;
+  beforeEach(() => {
+    jest
+      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockReturnValue(800);
+    jest
+      .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
+      .mockReturnValue(600);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('shows the static map and loads no MapLibre on render, pins, place or scheme', async () => {
+    await render({ activated: false });
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.componentRef.setInput('place', { lat: 44.5, lng: 26.2 });
+    fixture.componentInstance.fit();
+    fixture.detectChanges();
+    window.dispatchEvent(new Event('resize'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(still()).not.toBeNull();
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('frames the static view with the same function as the first fit, the covered bands included', async () => {
+    await render({ activated: false });
+    fixture.componentRef.setInput('legend', false);
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
+    fixture.componentInstance.fit();
+    fixture.detectChanges();
+
+    expect(still()?.querySelector('img')?.getAttribute('src')).toBeTruthy();
+    const { center, zoom } = fitView(
+      boundsOf([PLACE, PINS.pins[0]]),
+      { h: 600, w: 800 },
+      paddingOf(0),
+    );
+    expect(still()?.querySelector('img')?.getAttribute('src')).toContain(
+      `z=${zoom}&lat=${center.lat}&lng=${center.lng}`,
+    );
+  });
+
+  it('draws the picture only once the search has settled', async () => {
+    await render({ activated: false, loading: true });
+    fixture.componentInstance.fit();
+    fixture.detectChanges();
+
+    expect(still()?.querySelector('img')).toBeNull();
+  });
+
+  it('renders no static image on the server', async () => {
+    await render({ platform: 'server' });
+
+    expect(still()?.querySelector('img')).toBeFalsy();
+    expect(open).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 1196-FR-014
+// QA lap 2: measured while the phone's sheet still slid in, the corner's
+// credit sat under the sheet once it came to rest.
+describe('ResultsMap, the static map under a phone sheet that moves', () => {
+  let sheetTop = 700;
+  let sheet: HTMLElement;
+  const covered = () =>
+    (
+      element().querySelector('mf-static-map') as HTMLElement | null
+    )?.style.getPropertyValue('--covered');
+  const shown = () =>
+    fixture.debugElement
+      .query(By.directive(StaticMap))
+      ?.componentInstance.view() as MapView | undefined;
+  // The view a 390 x 600 map frames with these covers.
+  const framed = (bottom: number, top: number) =>
+    fitView(
+      boundsOf([PLACE, PINS.pins[0]]),
+      { h: 600, w: 390 },
+      paddingOf(bottom, top),
+    );
+  // Where each measured element runs, top to bottom: the map's box 100 to
+  // 700, the static map's control at its top right 112 to 156, the sheet
+  // from its top.
+  const band = (el: HTMLElement): [number, number] => {
+    if (el.classList.contains('map')) return [100, 700];
+    if (el.tagName === 'MF-RESULTS-SHEET') return [sheetTop, sheetTop];
+    if (el.tagName === 'BUTTON' && el.closest('mf-static-map'))
+      return [112, 156];
+    return [0, 0];
+  };
+  beforeEach(() => {
+    sheetTop = 700;
+    jest
+      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockReturnValue(390);
+    jest
+      .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
+      .mockReturnValue(600);
+    jest
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const [top, bottom] = band(this);
+        return {
+          bottom,
+          height: bottom - top,
+          left: 0,
+          right: 390,
+          toJSON: () => ({}),
+          top,
+          width: 390,
+          x: 0,
+          y: top,
+        } as DOMRect;
+      });
+  });
+
+  afterEach(() => {
+    sheet?.remove();
+    jest.restoreAllMocks();
+  });
+
+  async function withSheet() {
+    await render({ activated: false, on: 'phone' });
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
+    const parent = (fixture.nativeElement as HTMLElement)
+      .parentElement as HTMLElement;
+    sheet = document.createElement('mf-results-sheet');
+    parent.append(sheet);
+    return sheet;
+  }
+
+  // QA lap 3 at 320 x 640: above the half sheet the corner had no room
+  // beside the legend, so on a phone it no longer rides on the sheet.
+  it('leaves the corner where the map’s own edges put it, whatever the sheet covers', async () => {
+    await withSheet();
+    sheetTop = 400;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(covered()).toBe('0px');
+  });
+
+  it('frames the pins below the control at the top right, as below the zoom buttons', async () => {
+    await withSheet();
+    sheetTop = 400;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(shown()).toEqual(framed(300, 56));
+    expect(shown()).not.toEqual(framed(300, 0));
+  });
+
+  it('measures the sheet again once it comes to rest', async () => {
+    await withSheet();
+    sheetTop = 400;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(shown()).toEqual(framed(300, 56));
+
+    sheetTop = 600;
+    sheet.dispatchEvent(new Event('transitionend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(shown()).toEqual(framed(100, 56));
+  });
+
+  // QA lap 4 (second run): at 320 x 568 with the consent bar asking, the
+  // sheet rested over the control and cut it in half.
+  const cramped = () =>
+    element().querySelector('mf-static-map')?.classList.contains('cramped');
+
+  it('tells the static map its control is covered where the sheet rests over it', async () => {
+    await withSheet();
+    sheetTop = 160;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(cramped()).toBe(true);
+  });
+
+  it('keeps the control shown where the sheet clears it by the 8 px gap', async () => {
+    await withSheet();
+    sheetTop = 164;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(cramped()).toBe(false);
+  });
+
+  it('shows the control again once the sheet rests lower', async () => {
+    await withSheet();
+    sheetTop = 140;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+    sheetTop = 400;
+    sheet.dispatchEvent(new Event('transitionend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(cramped()).toBe(false);
+  });
+
+  // QA lap 5: under reduced motion the sheet moves with no transition, so no
+  // transitionend ever came and the control stayed cut at 320 x 568 (en).
+  it('measures again when the sheet moves with no transition, under reduced motion', async () => {
+    await withSheet();
+    sheetTop = 140;
+    sheet.setAttribute('data-position', 'half');
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(cramped()).toBe(true);
+    expect(shown()).toEqual(framed(424, 56));
+
+    sheetTop = 400;
+    sheet.setAttribute('style', '--sheet-top: 90px;');
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(cramped()).toBe(false);
+  });
+
+  it('ignores the end of a transition inside the sheet', async () => {
+    await withSheet();
+    const chip = document.createElement('button');
+    sheet.append(chip);
+    sheetTop = 400;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+    sheetTop = 650;
+    chip.dispatchEvent(new Event('transitionend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(shown()).toEqual(framed(300, 56));
+  });
+});
+
+// @traces 1196-FR-015 1196-FR-016 1196-FR-019
+describe('ResultsMap, the hand-over to the interactive map', () => {
+  const still = () =>
+    element().querySelector('mf-static-map') as HTMLElement | null;
+
+  it('opens the interactive map at the static view on a tap', async () => {
+    await render({ activated: false });
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.componentInstance.fit();
+    fixture.detectChanges();
+    tap();
+
+    const shown = fitView(
+      boundsOf([PLACE, PINS.pins[0]]),
+      { h: 0, w: 0 },
+      paddingOf(0),
+    );
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0][3]).toEqual({
+      center: [shown.center.lng, shown.center.lat],
+      zoom: shown.zoom,
+    });
+  });
+
+  it('opens it from a tap anywhere on the static map too', async () => {
+    await render({ activated: false });
+    still()?.click();
+
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing on a second tap while the map loads', async () => {
+    await render({ activated: false });
+    tap();
+    tap();
+    still()?.click();
+
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('then shows, lights and marks as before', async () => {
+    await render();
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.componentRef.setInput('lit', 'g-1');
+    fixture.detectChanges();
+    await ready();
+
+    expect(view.show).toHaveBeenLastCalledWith(PINS);
+    expect(view.light).toHaveBeenLastCalledWith('g-1');
+    expect(view.mark).toHaveBeenLastCalledWith(PLACE);
+  });
+
+  it('fades the static map out once the style has loaded, taking its control out of reach at once', async () => {
+    await render();
+    await ready();
+
+    expect(still()?.classList.contains('leaving')).toBe(true);
+    expect(still()?.hasAttribute('inert')).toBe(true);
+  });
+
+  it('removes the static map after the fade', async () => {
+    await render();
+    await ready();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    fixture.detectChanges();
+
+    expect(still()).toBeNull();
+    expect(element().querySelector('button')).toBeNull();
+  });
+
+  it('swaps at once under reduced motion', async () => {
+    await render({ still: true });
+    await ready();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+
+    expect(still()).toBeNull();
+  });
+
+  it('drops the static map for the grey one when the interactive map cannot open', async () => {
+    await render();
+    failed(new Error('style 500'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(still()).toBeNull();
+    expect(element().querySelector('.placeholder')).not.toBeNull();
   });
 });
 
@@ -192,6 +551,16 @@ describe('ResultsMap, the legend on a phone', () => {
     expect(phone).toMatch(/--zoom-room: calc\(var\(--mf-tap\) \+ \d+px\);/);
     // The padding counts inside the width, or the legend runs 24 px further.
     expect(phone).toMatch(/\.legend \{[^}]*box-sizing: border-box;/);
+  });
+
+  // 1196: the static map's control takes the zoom buttons' place, wider.
+  it('leaves the static map’s control at its right free while it shows', () => {
+    const all = readFileSync(join(__dirname, 'results-map.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    expect(all).toMatch(
+      /@media \(max-width: 767\.98px\) \{ \.map \{ --static-control: [^;]+; \} \.map:has\(> mf-static-map:not\(\.leaving\)\) \{ --zoom-room: calc\( ?var\(--static-control\) \+ var\(--mf-space-3\) \+ var\(--mf-space-2\) ?\); \} \}/,
+    );
   });
 
   it('gives way to the zoom hint there', () => {
@@ -560,6 +929,7 @@ describe('RESULTS_MAP, the map while it loads', () => {
         shifted: jest.fn(),
       },
       document.createElement('div'),
+      { center: [26.1, 44.43], zoom: 12 },
     );
     // The opener awaits MapLibre's import before it builds the map.
     await new Promise((resolve) => setTimeout(resolve));
@@ -571,6 +941,35 @@ describe('RESULTS_MAP, the map while it loads', () => {
     await Promise.resolve();
 
     expect(canvas.hasAttribute('tabindex')).toBe(false);
+    host.remove();
+  });
+
+  // @traces 1196-FR-015
+  it('leaves no map and no watcher behind when the pins cannot be drawn on it', async () => {
+    const { Map: Built } = jest.requireMock<{
+      Map: { prototype: { addSource(): void } };
+    }>('maplibre-gl');
+    jest.spyOn(Built.prototype, 'addSource').mockImplementationOnce(() => {
+      throw new Error('source');
+    });
+    const host = document.createElement('div');
+    document.body.append(host);
+
+    await expect(
+      TestBed.inject(RESULTS_MAP)(
+        host,
+        { moved: jest.fn(), picked: jest.fn(), shifted: jest.fn() },
+        document.createElement('div'),
+        { center: [26.1, 44.43], zoom: 12 },
+      ),
+    ).rejects.toThrow('source');
+    const canvas = document.createElement('canvas');
+    canvas.tabIndex = 0;
+    host.append(canvas);
+    await Promise.resolve();
+
+    expect(fake.map.remove).toHaveBeenCalled();
+    expect(canvas.getAttribute('tabindex')).toBe('0');
     host.remove();
   });
 });
