@@ -4,9 +4,9 @@
 export interface InviteViewDto {
 
   /**
-   * The invited address
+   * The invited e-mail
    */
-  email: string;
+  email: string | null;
 
   /**
    * The garage name, as typed by its owner
@@ -15,7 +15,17 @@ export interface InviteViewDto {
   kind: 'mechanic' | 'receptionist';
 
   /**
+   * The garage the signed-in account works at, which accepting leaves; null signed out or when it works nowhere else
+   */
+  leaving: string | null;
+
+  /**
    * The invitee's name, as the owner typed it
    */
   name: string;
+
+  /**
+   * The invited phone, E.164
+   */
+  phone: string | null;
 }

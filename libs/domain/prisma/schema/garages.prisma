@@ -242,6 +242,7 @@ model Mechanic {
   garage              Garage    @relation(fields: [garageId], references: [id], onDelete: Cascade)
   account             Account?  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   bookings            Booking[]
+  invites             StaffInvite[]
   jobs                Job[]
   reviews             Review[]
 
@@ -298,7 +299,11 @@ model StaffInvite {
   garageId            String            @map("garage_id") @db.Uuid
   kind                StaffInviteKind
   name                String
-  email               String
+  email               String?
+  // E.164; exactly one of email and phone is set (`staff_invite_one_address`).
+  phone               String?
+  // The card the invite was sent for; accepting it links the account to it.
+  mechanicId          String?           @map("mechanic_id") @db.Uuid
   canMoveBookings     Boolean           @default(false) @map("can_move_bookings")
   canAnswerQuotes     Boolean           @default(false) @map("can_answer_quotes")
   canRecordFinalPrice Boolean           @default(false) @map("can_record_final_price")
@@ -307,8 +312,10 @@ model StaffInvite {
   expiresAt           DateTime          @map("expires_at") @db.Timestamptz(3)
   createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   garage              Garage            @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  mechanic            Mechanic?         @relation(fields: [mechanicId], references: [id], onDelete: Cascade)
 
   @@index([garageId, email])
+  @@index([mechanicId])
   @@map("staff_invite")
 }
 

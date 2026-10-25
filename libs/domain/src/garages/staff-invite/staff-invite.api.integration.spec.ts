@@ -19,6 +19,8 @@ import {
   fixtures,
   redisUrlFor,
   testConfig,
+  testPhone,
+  testPhoneConfig,
 } from '../../notifications/notifications.testing';
 import { UNUSED_STORAGE } from '../../storage/s3-test-store';
 import { StorageModule } from '../../storage/storage.module';
@@ -42,10 +44,16 @@ beforeAll(async () => {
   await brevo.start();
   email = testConfig(brevo.url);
   const auth = AuthModule.register({ databaseUrl, redisUrl, tokenSecret });
-  const notifications = NotificationsModule.register(
-    { databaseUrl, email, redisUrl },
-    auth,
-  );
+  const options = {
+    databaseUrl,
+    email,
+    phone: testPhoneConfig({
+      WHATSAPP_TEMPLATES:
+        'motorfix_staff_invite_ro=31,motorfix_staff_invite_en=32',
+    }),
+    redisUrl,
+  };
+  const notifications = NotificationsModule.register(options, auth);
   const moduleRef = await Test.createTestingModule({
     imports: [
       auth,
@@ -360,6 +368,7 @@ describe('sending an invite', () => {
   });
 
   // @traces 131-FR-003
+  // @traces 1255-FR-004
   it('refuses a person who already holds that kind at the garage, and the owner himself', async () => {
     const { dinamo, mihai } = await world();
 
@@ -382,7 +391,7 @@ describe('sending an invite', () => {
     expect(mechanic.body.code).toBe('already_in_team');
     expect(receptionist.body.code).toBe('already_in_team');
     expect(owner.status).toBe(409);
-    expect(owner.body.code).toBe('already_in_team');
+    expect(owner.body.code).toBe('self_invite');
   });
 
   it('lets the receptionist of the garage be invited as its mechanic', async () => {
@@ -421,6 +430,7 @@ describe('opening and accepting a link', () => {
   }
 
   // @traces 131-FR-006
+  // @traces 1255-FR-009
   it('names the garage, the kind and the invitee without a session', async () => {
     const { token } = await invited();
 
@@ -431,7 +441,9 @@ describe('opening and accepting a link', () => {
       email: 'elena@example.test',
       garage: 'Atelier Dinamo',
       kind: 'mechanic',
+      leaving: null,
       name: 'Elena Stan',
+      phone: null,
     });
   });
 
@@ -837,5 +849,587 @@ describe('a garage with its team switched off', () => {
     await features(dinamo.id, true);
 
     expect((await send(dinamo.id, bearer(mihai, 'garage'))).status).toBe(201);
+  });
+});
+
+// Elena's card at a garage: saved by the owner, with no account yet.
+function card(
+  garageId: string,
+  extra: { accountId?: string; isOwner?: boolean; removedAt?: Date } = {},
+) {
+  return prisma.mechanic.create({
+    data: {
+      garageId,
+      name: 'Elena Stan',
+      roleTitle: 'Electrician auto',
+      specialties: ['Electrică'],
+      years: 6,
+      ...extra,
+    },
+  });
+}
+
+// The token of the last WhatsApp message Brevo was asked to send.
+function whatsappToken() {
+  const body = brevo.whatsapp().at(-1)?.body as
+    | { params: string[] }
+    | undefined;
+  const link = body?.params.find((param) => param.includes('/invite/'));
+  if (!link) throw new Error('no invite link in the WhatsApp message');
+  return link.split('/').at(-1) as string;
+}
+
+const listed = async (garageId: string, auth: string, mechanicId: string) => {
+  const res = await http()
+    .get(`/garages/${garageId}/mechanics`)
+    .set('Authorization', auth);
+  return res.body.items.find((item: { id: string }) => item.id === mechanicId);
+};
+
+// Waits until `count` statements wait on a row lock.
+async function waitingOnLocks(count: number) {
+  for (let tries = 0; tries < 200; tries += 1) {
+    const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`
+      SELECT count(*)::int AS waiting FROM pg_stat_activity
+      WHERE wait_event_type = 'Lock' AND datname = current_database()`;
+    if (waiting >= count) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`fewer than ${count} statements wait on a lock`);
+}
+
+const phoneOf = (accountId: string, phone: string) =>
+  prisma.account.update({ data: { phone }, where: { id: accountId } });
+
+describe('sending an invite from a card', () => {
+  // @traces 1255-FR-001 1255-FR-002
+  it("stores the card with the card's name and the permissions off, and e-mails the link", async () => {
+    const { dinamo, mihai } = await world();
+    const elenaCard = await card(dinamo.id);
+
+    const res = await send(dinamo.id, bearer(mihai, 'garage'), {
+      email: 'elena@example.test',
+      kind: 'mechanic',
+      mechanicId: elenaCard.id,
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ emailSent: true, id: expect.any(String) });
+    const row = await prisma.staffInvite.findUniqueOrThrow({
+      where: { id: res.body.id },
+    });
+    expect(row).toMatchObject({
+      canAnswerQuotes: false,
+      canMoveBookings: false,
+      canRecordFinalPrice: false,
+      email: 'elena@example.test',
+      kind: 'mechanic',
+      mechanicId: elenaCard.id,
+      name: 'Elena Stan',
+      phone: null,
+      status: 'sent',
+    });
+    expect(brevo.emails()).toHaveLength(1);
+  });
+
+  // @traces 1255-FR-001 1255-FR-005
+  it('sends the link by WhatsApp to a phone, in the owner language, never by SMS', async () => {
+    const { dinamo, mihai } = await world();
+    const elenaCard = await card(dinamo.id);
+
+    const res = await send(dinamo.id, bearer(mihai, 'garage'), {
+      kind: 'mechanic',
+      mechanicId: elenaCard.id,
+      phone: '0710 000 001',
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ emailSent: true, id: expect.any(String) });
+    const row = await prisma.staffInvite.findUniqueOrThrow({
+      where: { id: res.body.id },
+    });
+    expect(row).toMatchObject({ email: null, phone: testPhone(1) });
+    expect(brevo.whatsapp().map((call) => call.body)).toEqual([
+      {
+        contactNumbers: ['40710000001'],
+        params: [
+          'Atelier Dinamo',
+          expect.stringMatching(
+            /^https:\/\/motorfix\.test\/ro\/invite\/[A-Za-z0-9_-]{43}$/,
+          ),
+        ],
+        senderNumber: '40700000099',
+        templateId: 31,
+      },
+    ]);
+    expect(brevo.sms()).toHaveLength(0);
+    expect(brevo.emails()).toHaveLength(0);
+    expect((await check(whatsappToken())).status).toBe(200);
+  });
+
+  // @traces 1255-FR-005
+  it.each([
+    ['the number is not allowed outside production', '+40722999999', false],
+    ['the provider refuses the message', testPhone(1), true],
+  ])(
+    'keeps the invite and answers the link when %s',
+    async (_, phone, refused) => {
+      const { dinamo, mihai } = await world();
+      const elenaCard = await card(dinamo.id);
+      if (refused)
+        brevo.answer({ body: { code: 'invalid_parameter' }, status: 400 });
+
+      const res = await send(dinamo.id, bearer(mihai, 'garage'), {
+        kind: 'mechanic',
+        mechanicId: elenaCard.id,
+        phone,
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.emailSent).toBe(false);
+      expect(res.body.link).toMatch(
+        /^https:\/\/motorfix\.test\/ro\/invite\/[A-Za-z0-9_-]{43}$/,
+      );
+      expect((await check(res.body.link.split('/').at(-1))).status).toBe(200);
+      expect(brevo.sms()).toHaveLength(0);
+      const row = await prisma.staffInvite.findUniqueOrThrow({
+        where: { id: res.body.id },
+      });
+      expect(row.status).toBe('sent');
+    },
+  );
+
+  // @traces 1255-FR-003
+  it("refuses the owner's row, a card with an account, and a card already invited", async () => {
+    const { dinamo, mihai, vlad } = await world();
+    const ownerRow = await card(dinamo.id, { accountId: mihai, isOwner: true });
+    const vladCard = await prisma.mechanic.findUniqueOrThrow({
+      where: { accountId: vlad },
+    });
+    const elenaCard = await card(dinamo.id);
+    const to = (mechanicId: string, address = 'elena@example.test') =>
+      send(dinamo.id, bearer(mihai, 'garage'), {
+        email: address,
+        kind: 'mechanic',
+        mechanicId,
+      });
+    const first = await to(elenaCard.id);
+
+    const owner = await to(ownerRow.id);
+    const linked = await to(vladCard.id);
+    const open = await to(elenaCard.id, 'elena.stan@example.test');
+
+    expect([owner.status, owner.body.code]).toEqual([409, 'owner_row']);
+    expect([linked.status, linked.body.code]).toEqual([409, 'card_linked']);
+    expect(open.status).toBe(409);
+    expect(open.body).toMatchObject({
+      code: 'invite_open',
+      inviteId: first.body.id,
+    });
+    expect(brevo.emails()).toHaveLength(1);
+  });
+
+  // @traces 1255-FR-003
+  it("answers 404 for another garage's card and a removed card", async () => {
+    const { dinamo, mihai, sorinRow } = await world();
+    const removed = await card(dinamo.id, { removedAt: new Date() });
+
+    for (const mechanicId of [sorinRow.id, removed.id, randomUUID()]) {
+      const res = await send(dinamo.id, bearer(mihai, 'garage'), {
+        email: 'elena@example.test',
+        kind: 'mechanic',
+        mechanicId,
+      });
+      expect([res.status, res.body.code]).toEqual([404, 'not_found']);
+    }
+    expect(await prisma.staffInvite.count()).toBe(0);
+  });
+
+  // @traces 1255-FR-003
+  it("revokes the card's expired invite when a new one is sent", async () => {
+    const { dinamo, mihai } = await world();
+    const elenaCard = await card(dinamo.id);
+    const body = {
+      email: 'elena@example.test',
+      kind: 'mechanic',
+      mechanicId: elenaCard.id,
+    };
+    const old = await send(dinamo.id, bearer(mihai, 'garage'), body);
+    invites.now = () => new Date(Date.now() + 8 * DAY);
+
+    const res = await send(dinamo.id, bearer(mihai, 'garage'), {
+      ...body,
+      email: 'elena.stan@example.test',
+    });
+
+    expect(res.status).toBe(201);
+    const rows = await prisma.staffInvite.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+    expect(rows.map(({ id, status }) => ({ id, status }))).toEqual([
+      { id: old.body.id, status: 'revoked' },
+      { id: res.body.id, status: 'sent' },
+    ]);
+  });
+
+  // @traces 1255-FR-004
+  it("refuses the owner's own phone, compared normalised", async () => {
+    const { dinamo, mihai } = await world();
+    await phoneOf(mihai, testPhone(2));
+    const elenaCard = await card(dinamo.id);
+
+    const res = await send(dinamo.id, bearer(mihai, 'garage'), {
+      kind: 'mechanic',
+      mechanicId: elenaCard.id,
+      phone: '0710 000 002',
+    });
+
+    expect([res.status, res.body.code]).toEqual([409, 'self_invite']);
+    expect(brevo.whatsapp()).toHaveLength(0);
+  });
+
+  // @traces 1255-FR-003
+  it('refuses by phone a person who is already a mechanic here', async () => {
+    const { dinamo, mihai, vlad } = await world();
+    await phoneOf(vlad, testPhone(3));
+
+    const res = await send(dinamo.id, bearer(mihai, 'garage'), {
+      kind: 'mechanic',
+      name: 'Vlad',
+      phone: testPhone(3),
+    });
+
+    expect([res.status, res.body.code]).toEqual([409, 'already_in_team']);
+  });
+
+  // @traces 1255-FR-002
+  it('answers 400 to both an e-mail and a phone, and to a card for a receptionist', async () => {
+    const { dinamo, mihai } = await world();
+    const elenaCard = await card(dinamo.id);
+
+    const both = await send(dinamo.id, bearer(mihai, 'garage'), {
+      email: 'elena@example.test',
+      kind: 'mechanic',
+      mechanicId: elenaCard.id,
+      phone: testPhone(1),
+    });
+    const receptionist = await send(dinamo.id, bearer(mihai, 'garage'), {
+      email: 'elena@example.test',
+      kind: 'receptionist',
+      mechanicId: elenaCard.id,
+    });
+
+    expect(both.status).toBe(400);
+    expect(receptionist.status).toBe(400);
+    expect(await prisma.staffInvite.count()).toBe(0);
+  });
+
+  // @traces 1255-FR-018
+  it("answers 403 to the garage's staff, 404 to another owner, and feature_off", async () => {
+    const { dinamo, ioana, mihai, radu } = await world();
+    const elenaCard = await card(dinamo.id);
+    const body = {
+      email: 'elena@example.test',
+      kind: 'mechanic',
+      mechanicId: elenaCard.id,
+    };
+
+    const staff = await send(dinamo.id, bearer(ioana, 'receptionist'), body);
+    const other = await send(dinamo.id, bearer(radu, 'garage'), body);
+    await features(dinamo.id, false);
+    const off = await send(dinamo.id, bearer(mihai, 'garage'), body);
+
+    expect(staff.status).toBe(403);
+    expect(other.status).toBe(404);
+    expect([off.status, off.body.code]).toEqual([404, 'feature_off']);
+    expect(await prisma.staffInvite.count()).toBe(0);
+  });
+});
+
+describe('accepting an invite from a card', () => {
+  async function invited(body: Record<string, unknown> = {}) {
+    const w = await world();
+    const elenaCard = await card(w.dinamo.id);
+    const res = await send(w.dinamo.id, bearer(w.mihai, 'garage'), {
+      canAnswerQuotes: true,
+      email: 'elena@example.test',
+      kind: 'mechanic',
+      mechanicId: elenaCard.id,
+      ...body,
+    });
+    return {
+      ...w,
+      elenaCard,
+      id: res.body.id as string,
+      token: body['phone'] ? whatsappToken() : tokenOf().token,
+    };
+  }
+
+  // @traces 1255-FR-006 1255-FR-008
+  it('links the card to the account, puts it on the profile and keeps its fields', async () => {
+    const { dinamo, elenaCard, id, mihai, token } = await invited();
+    const ana = await account('ana', ['driver']);
+
+    const res = await accept(token, bearer(ana, 'driver'));
+
+    expect(res.status).toBe(204);
+    const row = await prisma.mechanic.findUniqueOrThrow({
+      where: { id: elenaCard.id },
+    });
+    expect(row).toMatchObject({
+      accountId: ana,
+      canAnswerQuotes: true,
+      canMoveBookings: false,
+      canRecordFinalPrice: false,
+      garageId: dinamo.id,
+      name: 'Elena Stan',
+      onProfile: true,
+      roleTitle: 'Electrician auto',
+      specialties: ['Electrică'],
+      years: 6,
+    });
+    expect(
+      await prisma.mechanic.count({ where: { garageId: dinamo.id } }),
+    ).toBe(2);
+    const roles = await prisma.accountRole.findMany({
+      where: { accountId: ana },
+    });
+    expect(roles.map((r) => r.role).sort()).toEqual(['driver', 'mechanic']);
+    expect(
+      (await prisma.staffInvite.findUniqueOrThrow({ where: { id } })).status,
+    ).toBe('accepted');
+    const [linked] = await outbox('mechanic.updated');
+    expect(linked).toMatchObject({
+      payload: expect.objectContaining({
+        fields: ['account'],
+        mechanicId: elenaCard.id,
+      }),
+      subjectId: elenaCard.id,
+    });
+    expect(linked.audience).toEqual(
+      expect.arrayContaining([
+        `garage:${dinamo.id}`,
+        `public:garage:${dinamo.id}`,
+        `public:mechanic:${elenaCard.id}`,
+      ]),
+    );
+    expect(await outbox('invite.accepted')).toHaveLength(1);
+    const [entry] = await audit('invite_accepted', dinamo.id);
+    expect(entry).toMatchObject({ field: 'status', oldValue: 'sent' });
+    expect(entry.newValue).toEqual({
+      kind: 'mechanic',
+      mechanicId: elenaCard.id,
+      name: 'Elena Stan',
+      permissions: {
+        canAnswerQuotes: true,
+        canMoveBookings: false,
+        canRecordFinalPrice: false,
+      },
+    });
+    const joined = await prisma.notification.findMany({
+      where: { accountId: mihai, kind: 'STAFF_JOINED' },
+    });
+    expect(joined.length).toBeGreaterThan(0);
+  });
+
+  // @traces 1255-FR-006
+  it('refuses a mechanic of another garage with move_required, changing nothing', async () => {
+    const { elenaCard, id, nord, sorin, sorinRow, token } = await invited();
+
+    const res = await accept(token, bearer(sorin, 'mechanic'));
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({
+      code: 'move_required',
+      garage: 'Atelier Nord',
+    });
+    expect(
+      await prisma.mechanic.findUniqueOrThrow({ where: { id: elenaCard.id } }),
+    ).toMatchObject({ accountId: null, onProfile: false });
+    expect(
+      await prisma.mechanic.findUniqueOrThrow({ where: { id: sorinRow.id } }),
+    ).toMatchObject({ garageId: nord.id });
+    expect(
+      (await prisma.staffInvite.findUniqueOrThrow({ where: { id } })).status,
+    ).toBe('sent');
+    expect(await outbox('mechanic.updated')).toHaveLength(0);
+  });
+
+  // @traces 1255-FR-006
+  it('answers invite_invalid for a card removed after the send', async () => {
+    const removedCase = await invited();
+    await prisma.mechanic.update({
+      data: { removedAt: new Date() },
+      where: { id: removedCase.elenaCard.id },
+    });
+    const ana = await account('ana', ['driver']);
+
+    const removed = await accept(removedCase.token, bearer(ana, 'driver'));
+
+    expect([removed.status, removed.body.code]).toEqual([
+      410,
+      'invite_invalid',
+    ]);
+    expect(await prisma.mechanic.count({ where: { accountId: ana } })).toBe(0);
+  });
+
+  // @traces 1255-FR-006
+  it('answers invite_invalid to an account that already has a row at the garage', async () => {
+    const { elenaCard, id, token, vlad } = await invited();
+
+    const res = await accept(token, bearer(vlad, 'mechanic'));
+
+    expect([res.status, res.body.code]).toEqual([410, 'invite_invalid']);
+    expect(
+      await prisma.mechanic.findUniqueOrThrow({ where: { id: elenaCard.id } }),
+    ).toMatchObject({ accountId: null });
+    expect(
+      (await prisma.staffInvite.findUniqueOrThrow({ where: { id } })).status,
+    ).toBe('sent');
+  });
+
+  // @traces 1255-FR-009
+  it('names the phone, and the garage a signed-in mechanic would leave', async () => {
+    const { sorin, token } = await invited({
+      email: undefined,
+      phone: testPhone(1),
+    });
+    const ana = await account('ana', ['driver']);
+
+    const anonymous = await check(token);
+    const driver = await check(token).set(
+      'Authorization',
+      bearer(ana, 'driver'),
+    );
+    const leaving = await check(token).set(
+      'Authorization',
+      bearer(sorin, 'mechanic'),
+    );
+
+    expect(anonymous.status).toBe(200);
+    expect(anonymous.body).toEqual({
+      email: null,
+      garage: 'Atelier Dinamo',
+      kind: 'mechanic',
+      leaving: null,
+      name: 'Elena Stan',
+      phone: testPhone(1),
+    });
+    expect(driver.body.leaving).toBeNull();
+    expect(leaving.body.leaving).toBe('Atelier Nord');
+  });
+});
+
+describe('resending, revoking and expiry from a card', () => {
+  async function byPhone() {
+    const w = await world();
+    const elenaCard = await card(w.dinamo.id);
+    const res = await send(w.dinamo.id, bearer(w.mihai, 'garage'), {
+      kind: 'mechanic',
+      mechanicId: elenaCard.id,
+      phone: testPhone(1),
+    });
+    return {
+      ...w,
+      elenaCard,
+      id: res.body.id as string,
+      token: whatsappToken(),
+    };
+  }
+
+  // @traces 1255-FR-005
+  it('resends by WhatsApp and voids the old link', async () => {
+    const { dinamo, id, mihai, token } = await byPhone();
+
+    const res = await resend(dinamo.id, id, bearer(mihai, 'garage'));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ emailSent: true, id });
+    expect(brevo.whatsapp()).toHaveLength(2);
+    expect(brevo.emails()).toHaveLength(0);
+    const fresh = whatsappToken();
+    expect(fresh).not.toBe(token);
+    expect((await check(token)).body.code).toBe('invite_invalid');
+    expect((await check(fresh)).status).toBe(200);
+  });
+
+  // @traces 1255-FR-011
+  it("clears the card's invite on revoke", async () => {
+    const { dinamo, elenaCard, id, mihai } = await byPhone();
+    const auth = bearer(mihai, 'garage');
+    expect((await listed(dinamo.id, auth, elenaCard.id)).invite).toMatchObject({
+      email: null,
+      id,
+      phone: testPhone(1),
+    });
+
+    expect((await revoke(dinamo.id, id, auth)).status).toBe(204);
+
+    expect((await listed(dinamo.id, auth, elenaCard.id)).invite).toBeNull();
+  });
+
+  // @traces 1255-FR-011
+  it('lists an expired invite with its date and refuses to accept it', async () => {
+    const { dinamo, elenaCard, id, mihai, token } = await byPhone();
+    invites.now = () => new Date(Date.now() + 8 * DAY);
+    const ana = await account('ana', ['driver']);
+
+    const res = await accept(token, bearer(ana, 'driver'));
+
+    expect([res.status, res.body.code]).toEqual([410, 'invite_expired']);
+    const { invite } = await listed(
+      dinamo.id,
+      bearer(mihai, 'garage'),
+      elenaCard.id,
+    );
+    expect(invite.id).toBe(id);
+    expect(new Date(invite.expiresAt).getTime()).toBeLessThan(
+      invites.now().getTime(),
+    );
+  });
+});
+
+describe('two accepts for one account at the same time', () => {
+  // @traces 1255-FR-007
+  it('records each move from the garage the row was really in', async () => {
+    const { dinamo, mihai, nord, sorin, sorinRow } = await world();
+    const sud = await prisma.garage.create({
+      data: { name: 'Atelier Sud', slug: `sud-${randomUUID()}` },
+    });
+    const ilie = await account('ilie', ['garage']);
+    await prisma.garageMember.create({
+      data: { accountId: ilie, garageId: sud.id, role: 'owner' },
+    });
+    await send(dinamo.id, bearer(mihai, 'garage'));
+    const toDinamo = tokenOf().token;
+    await send(sud.id, bearer(ilie, 'garage'));
+    const toSud = tokenOf().token;
+
+    // Holding the row makes both accepts reach it before either moves it.
+    let answers: Promise<request.Response[]> | undefined;
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM mechanic WHERE id = ${sorinRow.id}::uuid FOR UPDATE`;
+        answers = Promise.all([
+          accept(toDinamo, bearer(sorin, 'mechanic')),
+          accept(toSud, bearer(sorin, 'mechanic')),
+        ]);
+        await waitingOnLocks(2);
+      },
+      { timeout: 20_000 },
+    );
+
+    expect((await answers)?.map((r) => r.status)).toEqual([204, 204]);
+    const moves = (await outbox('mechanic.updated')).map(
+      (event) => event.payload as { from: string; garageId: string },
+    );
+    expect(moves).toHaveLength(2);
+    const first = moves.find((move) => move.from === nord.id);
+    const second = moves.find((move) => move !== first);
+    expect(second?.from).toBe(first?.garageId);
+    const row = await prisma.mechanic.findUniqueOrThrow({
+      where: { id: sorinRow.id },
+    });
+    expect(row.garageId).toBe(second?.garageId);
   });
 });

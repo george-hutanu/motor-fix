@@ -86,7 +86,7 @@ import {
 } from './notifications.service';
 import { OutageController } from './outage/outage.controller';
 import { OUTAGE_WEBHOOK_TOKEN, OutageService } from './outage/outage.service';
-import { PHONE_CONFIG, type PhoneConfig } from './phone-config';
+import { PHONE_CONFIG, type PhoneConfig, phoneConfig } from './phone-config';
 import { NotificationPreferencesController } from './preferences/preferences.controller';
 import { NotificationPreferencesService } from './preferences/preferences.service';
 import { PUSH_SENDER, PushSender } from './push/push';
@@ -140,6 +140,8 @@ interface NotificationsOptions {
   push?: PushConfig | null;
   // Grafana's outage webhook bearer; unset refuses every call (API only).
   outageWebhookToken?: string;
+  // WhatsApp for the API's direct sends (a staff invite); unset sends none.
+  phone?: PhoneConfig;
 }
 
 const WORKER = Symbol('NOTIFICATIONS_WORKER');
@@ -258,7 +260,7 @@ export class NotificationsModule implements OnApplicationShutdown {
         OutageController,
         PushSubscriptionsController,
       ],
-      exports: [NotificationsService],
+      exports: [NotificationsService, PHONE_CONFIG],
       imports: [auth],
       module: NotificationsModule,
       // One PostgreSQL pool per API process: the one AuthModule opened.
@@ -276,6 +278,10 @@ export class NotificationsModule implements OnApplicationShutdown {
           useValue: options.outageWebhookToken ?? '',
         },
         PushSubscriptionsService,
+        {
+          provide: PHONE_CONFIG,
+          useValue: options.phone ?? phoneConfig('test', {}),
+        },
       ],
     };
   }

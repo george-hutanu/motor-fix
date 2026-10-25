@@ -5589,10 +5589,10 @@
             "description": "forbidden: staff of this garage"
           },
           "404": {
-            "description": "not_found; feature_off"
+            "description": "not_found: the garage, or the card; feature_off"
           },
           "409": {
-            "description": "invite_open (with inviteId); already_in_team"
+            "description": "owner_row; card_linked; invite_open (with inviteId); self_invite; already_in_team"
           }
         },
         "security": [
@@ -6306,6 +6306,9 @@
           },
           "404": {
             "description": "feature_off"
+          },
+          "409": {
+            "description": "move_required (with garage): the invite is for a card and the account works at another garage"
           },
           "410": {
             "description": "invite_expired; invite_invalid"
@@ -16910,16 +16913,27 @@
       "StaffInviteDto": {
         "type": "object",
         "properties": {
+          "mechanicId": {
+            "type": "string",
+            "description": "The card the invite is for; accepting links the account to it",
+            "format": "uuid"
+          },
           "name": {
             "type": "string",
-            "description": "Trimmed",
+            "description": "Trimmed; required without mechanicId, ignored with it",
             "maxLength": 80,
             "minLength": 2
           },
           "email": {
             "type": "string",
-            "description": "Trimmed; stored and compared in lower case",
+            "description": "Trimmed; stored and compared in lower case. Exactly one of email and phone",
             "maxLength": 254
+          },
+          "phone": {
+            "type": "string",
+            "description": "For a mechanic; as typed, read as in the phone sign-in, must then be E.164. Exactly one of email and phone",
+            "example": "0722 123 456",
+            "maxLength": 20
           },
           "kind": {
             "type": "string",
@@ -16942,8 +16956,6 @@
           }
         },
         "required": [
-          "name",
-          "email",
           "kind"
         ]
       },
@@ -17515,6 +17527,38 @@
           "features"
         ]
       },
+      "StaffInviteOnCardDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "phone",
+          "sentAt",
+          "expiresAt"
+        ]
+      },
       "GarageMechanicDto": {
         "type": "object",
         "properties": {
@@ -17575,6 +17619,15 @@
           },
           "reviewCount": {
             "type": "number"
+          },
+          "invite": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StaffInviteOnCardDto"
+              }
+            ]
           }
         },
         "required": [
@@ -17591,7 +17644,8 @@
           "onProfile",
           "hasAccount",
           "rating",
-          "reviewCount"
+          "reviewCount",
+          "invite"
         ]
       },
       "GarageBrandOptionDto": {
@@ -17780,7 +17834,12 @@
             ]
           },
           "email": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
           },
           "sentAt": {
             "type": "string",
@@ -17791,6 +17850,7 @@
           "id",
           "kind",
           "email",
+          "phone",
           "sentAt"
         ]
       },
@@ -17888,14 +17948,27 @@
           },
           "email": {
             "type": "string",
-            "description": "The invited address"
+            "description": "The invited e-mail",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "description": "The invited phone, E.164",
+            "nullable": true
+          },
+          "leaving": {
+            "type": "string",
+            "description": "The garage the signed-in account works at, which accepting leaves; null signed out or when it works nowhere else",
+            "nullable": true
           }
         },
         "required": [
           "garage",
           "kind",
           "name",
-          "email"
+          "email",
+          "phone",
+          "leaving"
         ]
       },
       "LegalCheckRecheckDto": {

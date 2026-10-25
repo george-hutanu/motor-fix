@@ -248,6 +248,25 @@ const invite = (
     },
   });
 
+// An invite sent from a card, open for a day unless `expiresAt` says else.
+const cardInvite = (
+  garageId: string,
+  mechanicId: string,
+  extra: { createdAt?: Date; expiresAt?: Date; status?: 'revoked' } = {},
+) =>
+  prisma.staffInvite.create({
+    data: {
+      email: 'elena@example.test',
+      expiresAt: new Date(Date.now() + 24 * HOUR),
+      garageId,
+      kind: 'mechanic',
+      mechanicId,
+      name: 'Elena Stan',
+      tokenHash: randomUUID(),
+      ...extra,
+    },
+  });
+
 const inviteStatus = async (id: string) =>
   (await prisma.staffInvite.findUniqueOrThrow({ where: { id } })).status;
 
@@ -288,6 +307,7 @@ const blank = {
   certifications: [],
   futureBookings: 0,
   hasAccount: false,
+  invite: null,
   isOwner: false,
   onProfile: false,
   rating: null,
@@ -431,6 +451,42 @@ describe("reading the garage's team", () => {
 });
 
 // @traces 055-FR-002 055-FR-003 055-FR-016
+// @traces 1255-FR-011
+describe("a card's invite in the team list", () => {
+  it("carries the card's newest sent invite, expired or not, and null for the rest", async () => {
+    const { dinamo, mihai } = await world({ ownerRow: true });
+    const elena = await card(dinamo.id, 'Elena Stan');
+    const ion = await card(dinamo.id, 'Ion Pop');
+    const dan = await card(dinamo.id, 'Dan Matei');
+    await cardInvite(dinamo.id, elena.id, {
+      createdAt: new Date(Date.now() - 10 * 24 * HOUR),
+      expiresAt: new Date(Date.now() - 3 * 24 * HOUR),
+    });
+    const open = await cardInvite(dinamo.id, elena.id);
+    const expired = await cardInvite(dinamo.id, ion.id, {
+      expiresAt: new Date(Date.now() - HOUR),
+    });
+    await cardInvite(dinamo.id, dan.id, { status: 'revoked' });
+
+    const res = await team(dinamo.id, bearer(mihai, 'garage'));
+
+    const inviteOf = (id: string) =>
+      res.body.items.find((item: { id: string }) => item.id === id).invite;
+    expect(inviteOf(elena.id)).toEqual({
+      email: 'elena@example.test',
+      expiresAt: open.expiresAt.toISOString(),
+      id: open.id,
+      phone: null,
+      sentAt: open.createdAt.toISOString(),
+    });
+    expect(inviteOf(ion.id)).toMatchObject({
+      expiresAt: expired.expiresAt.toISOString(),
+      id: expired.id,
+    });
+    expect(inviteOf(dan.id)).toBeNull();
+  });
+});
+
 describe('who reads the team', () => {
   it('answers the garage staff 403 forbidden', async () => {
     const { dinamo, ioana, vlad } = await world();
@@ -1213,7 +1269,7 @@ describe('removing a card', () => {
     expect(await inviteStatus(someoneElse.id)).toBe('sent');
   });
 
-  it('touches no invite when the card has no account', async () => {
+  it('touches no invite by e-mail when the card has no account', async () => {
     const { dinamo, mihai } = await world({ ownerRow: true });
     const elena = await card(dinamo.id, 'Elena Pop');
     const open = await invite(dinamo.id, 'elena@example.test');
@@ -1222,6 +1278,25 @@ describe('removing a card', () => {
 
     expect(res.status).toBe(204);
     expect(await inviteStatus(open.id)).toBe('sent');
+  });
+
+  // @traces 1255-FR-014
+  it('revokes every sent invite naming the card, and no other card', async () => {
+    const { dinamo, mihai } = await world({ ownerRow: true });
+    const elena = await card(dinamo.id, 'Elena Pop');
+    const ion = await card(dinamo.id, 'Ion Pop');
+    const expired = await cardInvite(dinamo.id, elena.id, {
+      expiresAt: new Date(Date.now() - HOUR),
+    });
+    const open = await cardInvite(dinamo.id, elena.id);
+    const other = await cardInvite(dinamo.id, ion.id);
+
+    const res = await remove(dinamo.id, elena.id, bearer(mihai, 'garage'));
+
+    expect(res.status).toBe(204);
+    expect(await inviteStatus(expired.id)).toBe('revoked');
+    expect(await inviteStatus(open.id)).toBe('revoked');
+    expect(await inviteStatus(other.id)).toBe('sent');
   });
 
   it('records who removed the card', async () => {

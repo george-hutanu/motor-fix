@@ -35,18 +35,25 @@ const invite = (
 });
 
 // The invitee may have no account yet: these go to the typed address only.
-export const STAFF_INVITE_MECHANIC = invite(
-  {
-    as: 'ca mecanic',
-    extra:
-      'Dacă accepți, vei apărea pe profilul public al service-ului; poți fi ascuns mai târziu.',
+// A mechanic may be invited by phone, through WhatsApp's approved template.
+export const STAFF_INVITE_MECHANIC: Template = {
+  ...invite(
+    {
+      as: 'ca mecanic',
+      extra:
+        'Dacă accepți, vei apărea pe profilul public al service-ului; poți fi ascuns mai târziu.',
+    },
+    {
+      as: 'as a mechanic',
+      extra:
+        "If you accept, you will appear on the garage's public profile; you can be hidden later.",
+    },
+  ),
+  whatsapp: {
+    en: { name: 'motorfix_staff_invite_en', slots: ['{garage}', '{link}'] },
+    ro: { name: 'motorfix_staff_invite_ro', slots: ['{garage}', '{link}'] },
   },
-  {
-    as: 'as a mechanic',
-    extra:
-      "If you accept, you will appear on the garage's public profile; you can be hidden later.",
-  },
-);
+};
 
 export const STAFF_INVITE_RECEPTIONIST = invite(
   {

@@ -292,6 +292,7 @@ export type { SimilarGaragesDto } from './models/similar-garages-dto';
 export type { SmsUsageDto } from './models/sms-usage-dto';
 export type { StaffChannelDto } from './models/staff-channel-dto';
 export type { StaffInviteDto } from './models/staff-invite-dto';
+export type { StaffInviteOnCardDto } from './models/staff-invite-on-card-dto';
 export type { StaffInviteSentDto } from './models/staff-invite-sent-dto';
 export type { StaffNotificationsDto } from './models/staff-notifications-dto';
 export type { StaffNotificationTypeDto } from './models/staff-notification-type-dto';

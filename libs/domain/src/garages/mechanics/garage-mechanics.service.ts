@@ -38,6 +38,18 @@ const CARD_SELECT = {
   brandIds: true,
   certifications: true,
   id: true,
+  invites: {
+    orderBy: { createdAt: 'desc' },
+    select: {
+      createdAt: true,
+      email: true,
+      expiresAt: true,
+      id: true,
+      phone: true,
+    },
+    take: 1,
+    where: { status: 'sent' },
+  },
   isOwner: true,
   name: true,
   onProfile: true,
@@ -53,12 +65,22 @@ type CardRow = Prisma.MechanicGetPayload<{ select: typeof CARD_SELECT }>;
 
 // A card as the team list answers it.
 function itemOf(row: CardRow, futureBookings: number): GarageMechanicDto {
+  const [invite] = row.invites;
   return {
     brandIds: row.brandIds,
     certifications: row.certifications,
     futureBookings,
     hasAccount: row.accountId !== null,
     id: row.id,
+    invite: invite
+      ? {
+          email: invite.email,
+          expiresAt: invite.expiresAt.toISOString(),
+          id: invite.id,
+          phone: invite.phone,
+          sentAt: invite.createdAt.toISOString(),
+        }
+      : null,
     isOwner: row.isOwner,
     name: row.name,
     onProfile: row.onProfile,
@@ -234,7 +256,7 @@ const shown = (value: unknown) =>
 const joined = (specialties: string[]) => specialties.join(', ') || null;
 
 // The live audience of a card: its public pages only while it is on the profile.
-const cardAudience = (
+export const cardAudience = (
   garageId: string,
   card: { id: string; onProfile: boolean },
 ) => ({
@@ -512,17 +534,20 @@ export class GarageMechanicsService {
             })
           ).email
         : null;
-      if (email) {
-        await tx.staffInvite.updateMany({
-          data: { status: 'revoked' },
-          where: {
-            email: { equals: email, mode: 'insensitive' },
-            garageId,
-            kind: 'mechanic',
-            status: 'sent',
-          },
-        });
-      }
+      await tx.staffInvite.updateMany({
+        data: { status: 'revoked' },
+        where: {
+          garageId,
+          kind: 'mechanic',
+          OR: [
+            { mechanicId: card.id },
+            ...(email
+              ? [{ email: { equals: email, mode: 'insensitive' as const } }]
+              : []),
+          ],
+          status: 'sent',
+        },
+      });
       await this.audit.record(tx, {
         action: 'delete',
         actorId: actor.accountId,
