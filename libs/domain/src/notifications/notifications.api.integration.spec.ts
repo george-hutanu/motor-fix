@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Queue } from 'bullmq';
@@ -15,7 +16,6 @@ import {
 } from './notifications.testing';
 import { signAccessToken } from '../auth/access-token';
 import { AuthModule } from '../auth/auth.module';
-import type { Role } from '../auth/capabilities';
 import { serialDatabase } from '../auth/serial-db.testing';
 
 const redisUrl = redisUrlFor(13);

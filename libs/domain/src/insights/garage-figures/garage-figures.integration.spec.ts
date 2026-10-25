@@ -254,6 +254,7 @@ describe('the garage figures read', () => {
     expect(figures.period).toEqual({ from: '2025-10-02', to: '2026-10-02' });
   });
 
+  // @traces 102-FR-007
   it('gives the receptionist the same numbers and refuses a mechanic or a driver', async () => {
     const t = await team('Atelier Dinamo');
     await twoWeeks(t);
@@ -267,7 +268,7 @@ describe('the garage figures read', () => {
     expect(desk.current).toEqual(THIS_WEEK);
     await expect(
       service.get(garageActor(t.plain, t.garage.id, 'mechanic'), {}, NOW),
-    ).rejects.toMatchObject({ status: 404 });
+    ).rejects.toMatchObject({ response: { code: 'forbidden' }, status: 403 });
     await expect(
       service.get(
         garageActor(t.plain, t.garage.id, 'mechanic', {
@@ -277,7 +278,7 @@ describe('the garage figures read', () => {
         {},
         NOW,
       ),
-    ).rejects.toMatchObject({ status: 404 });
+    ).rejects.toMatchObject({ response: { code: 'forbidden' }, status: 403 });
     await expect(
       service.get(garageActor(t.owner, t.garage.id, 'driver'), {}, NOW),
     ).rejects.toMatchObject({ status: 404 });

@@ -57,6 +57,7 @@ async function render(
         useValue: {
           current: account,
           ended: new Subject<void>(),
+          garageGone: () => false,
           shown: account,
           token: () => 'access',
         },

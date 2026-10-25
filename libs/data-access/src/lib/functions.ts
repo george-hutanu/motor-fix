@@ -311,6 +311,8 @@ export type { GarageMechanicsControllerRemove$Params as GarageMechanicsControlle
 export { garageMechanicsControllerRemove as garageMechanicsControllerRemove } from './fn/garages/garage-mechanics-controller-remove';
 export type { GarageMechanicsControllerEdit$Params as GarageMechanicsControllerEdit$Params } from './fn/garages/garage-mechanics-controller-edit';
 export { garageMechanicsControllerEdit as garageMechanicsControllerEdit } from './fn/garages/garage-mechanics-controller-edit';
+export type { GarageMembersControllerList$Params as GarageMembersControllerList$Params } from './fn/garages/garage-members-controller-list';
+export { garageMembersControllerList as garageMembersControllerList } from './fn/garages/garage-members-controller-list';
 export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';
 export { getImageVariant as getImageVariant } from './fn/garages/get-image-variant';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';

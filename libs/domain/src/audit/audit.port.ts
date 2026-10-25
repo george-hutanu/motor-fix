@@ -1,4 +1,5 @@
-import type { Role } from '../auth/capabilities';
+import type { Role } from '@motor-fix/contracts/capabilities';
+
 import type { Prisma } from '../generated/prisma/client';
 
 // A garage acting as itself is recorded as its owner.

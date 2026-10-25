@@ -192,7 +192,7 @@ describe('the garage schedule read', () => {
     ).toEqual([]);
   });
 
-  it('lets the receptionist read it and no mechanic or driver', async () => {
+  it('lets the receptionist read it and no driver', async () => {
     const t = await team('Atelier Dinamo');
     await booked(t, '2026-10-09T06:00:00Z');
 
@@ -204,18 +204,50 @@ describe('the garage schedule read', () => {
 
     expect(desk.entries).toHaveLength(1);
     await expect(
-      service.list(
-        garageActor(t.answering, t.garage.id, 'mechanic', {
-          canAnswerQuotes: true,
-        }),
-        {},
-        NOW,
-      ),
-    ).rejects.toMatchObject({ status: 404 });
-    await expect(
       service.list(garageActor(t.owner, t.garage.id, 'driver'), {}, NOW),
     ).rejects.toMatchObject({ status: 404 });
   });
+
+  // @traces 102-FR-008
+  it.each([
+    ['without', false],
+    ['with', true],
+  ])(
+    'shows a mechanic only her own bookings, %s the right to answer quotes',
+    async (_, canAnswerQuotes) => {
+      const t = await team('Atelier Dinamo');
+      const hers = await booked(t, '2026-10-09T06:00:00Z', 'confirmed', {
+        mechanicId: t.answeringMechanic.id,
+      });
+      await booked(t, '2026-10-09T08:00:00Z', 'confirmed', {
+        mechanicId: t.plainMechanic.id,
+      });
+      await booked(t, '2026-10-09T10:00:00Z');
+      const mechanic = garageActor(t.answering, t.garage.id, 'mechanic', {
+        canAnswerQuotes,
+      });
+
+      const answer = await service.list(mechanic, {}, NOW);
+
+      expect(ids(answer)).toEqual([hers.id]);
+      expect(JSON.stringify(answer)).not.toContain('phone');
+      expect(
+        ids(
+          await service.list(
+            mechanic,
+            { mechanicId: t.answeringMechanic.id },
+            NOW,
+          ),
+        ),
+      ).toEqual([hers.id]);
+      await expect(
+        service.list(mechanic, { mechanicId: t.plainMechanic.id }, NOW),
+      ).rejects.toMatchObject({
+        response: { code: 'forbidden' },
+        status: 403,
+      });
+    },
+  );
 
   it('shows no plate and changes nothing', async () => {
     const t = await team('Atelier Dinamo');

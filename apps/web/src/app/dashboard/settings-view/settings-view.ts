@@ -3,6 +3,7 @@ import { Component, computed, inject } from '@angular/core';
 import { CopyVoices } from '../copy-voices/copy-voices';
 import { DeleteAccount } from '../delete-account/delete-account';
 import { FeatureSwitches } from '../feature-switches/feature-switches';
+import { GarageMembers } from '../garage-members/garage-members';
 import { NotificationSettings } from '../notification-settings/notification-settings';
 import { PlatformRules } from '../platform-rules/platform-rules';
 import { PrivacyPanel } from '../privacy-panel/privacy-panel';
@@ -20,6 +21,7 @@ import { Session } from '../session';
     CopyVoices,
     DeleteAccount,
     FeatureSwitches,
+    GarageMembers,
     NotificationSettings,
     PlatformRules,
     PrivacyPanel,

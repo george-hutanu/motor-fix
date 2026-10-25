@@ -17,7 +17,7 @@ const OWNER = [
   'garage.audit_history',
 ];
 
-// The capabilities "who am I" gives each seeded role (libs/domain/src/auth/capabilities.ts).
+// The capabilities "who am I" gives each seeded role (libs/contracts/src/capabilities.ts).
 const DASHBOARDS = [
   {
     capabilities: [

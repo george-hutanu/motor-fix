@@ -66,6 +66,7 @@ async function render(url: string) {
         useValue: {
           current,
           ended: new Subject<void>(),
+          garageGone: () => false,
           reload,
           shown: current,
           signOut: jest.fn(),

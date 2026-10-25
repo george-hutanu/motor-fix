@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
-import { type Actor, requireCapability } from '../../auth/policy';
+import { type Actor, forbidden, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import {
   addDays,
@@ -159,6 +159,15 @@ function median(values: number[]): number | null {
 
 // The garage's own numbers over whole Bucharest days: what reached it, what it
 // quoted and won, what it worked on and how fast it answered.
+// A mechanic of the garage is told no; one with no garage is told there is
+// nothing here.
+function refuseMechanic(actor: Actor) {
+  if (actor.role !== 'mechanic') return;
+  if (actor.garageId)
+    throw forbidden("A mechanic does not read the garage's figures");
+  throw new NotFoundException();
+}
+
 @Injectable()
 export class GarageFiguresService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
@@ -170,7 +179,7 @@ export class GarageFiguresService {
   ): Promise<Figures> {
     // The owner's and the desk's numbers: a mechanic's permissions do not
     // reach them.
-    if (actor.role === 'mechanic') throw new NotFoundException();
+    refuseMechanic(actor);
     requireCapability(actor, 'garage.requests');
     const garageId = actor.garageId as string;
     const [period, before] = periodsOf(query, localDay(now));
@@ -190,7 +199,7 @@ export class GarageFiguresService {
     actor: Actor,
     query: ViewsQuery,
   ): Promise<{ buckets: ViewsBucket[] }> {
-    if (actor.role === 'mechanic') throw new NotFoundException();
+    refuseMechanic(actor);
     requireCapability(actor, 'garage.requests');
     const { from, to } = viewsSpan(query);
     const rows = await this.prisma.garageDailyFigures.findMany({

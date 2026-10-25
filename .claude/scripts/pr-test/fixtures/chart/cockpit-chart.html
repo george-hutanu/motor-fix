@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cockpit chart</title>
+    <!-- The cockpit's charts (libs/ui-cockpit/src/lib/chart.ts) in miniature: Chart.js from this checkout, a
+         1000 ms easeOutQuart entry animation that reduced motion turns off (chart-config.ts). -->
+    <script src="/chart.umd.js"></script>
+    <style>
+      body { margin: 0; font: 16px/1.5 sans-serif; background: #ffffff; color: #111111; }
+      /* The probe: one bar that fills its canvas once drawn to the end, so its top row is coloured only then:
+         red when the page saw reduced motion, blue when it did not. */
+      #probe-box { position: absolute; top: 0; left: 0; width: 120px; height: 120px; }
+      #spend-box { position: relative; margin: 160px 16px 16px; height: 200px; }
+    </style>
+  </head>
+  <body>
+    <div id="probe-box"><canvas id="probe" role="img" aria-label="Probe bar"></canvas></div>
+    <main>
+      <h1>Spend over 12 months</h1>
+      <div id="spend-box"><canvas id="spend" role="img" aria-label="Spend per month"></canvas></div>
+    </main>
+    <script>
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const animation = reduced ? false : { duration: 1000, easing: "easeOutQuart" };
+      new Chart(document.getElementById("probe"), {
+        type: "bar",
+        data: { labels: ["x"], datasets: [{ data: [100], backgroundColor: reduced ? "#ff0000" : "#0000ff", barPercentage: 1, categoryPercentage: 1 }] },
+        options: {
+          animation,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } },
+        },
+      });
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      new Chart(document.getElementById("spend"), {
+        type: "bar",
+        data: { labels: months, datasets: [{ data: [320, 0, 1250, 480, 0, 2100, 640, 0, 930, 150, 1800, 520], backgroundColor: "#8a4b00" }] },
+        options: { animation, maintainAspectRatio: false, plugins: { legend: { display: false } } },
+      });
+    </script>
+  </body>
+</html>

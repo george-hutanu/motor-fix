@@ -1,6 +1,6 @@
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { Inject, Injectable } from '@nestjs/common';
 
-import type { Role } from './capabilities';
 import { type Consent, consentRequired, isCurrentConsent } from './consent';
 import type { Actor } from './policy';
 import { PRISMA } from './prisma';

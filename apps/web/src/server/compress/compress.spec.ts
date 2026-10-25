@@ -161,7 +161,10 @@ describe('web compression', () => {
   it('streams a relayed event before the API has finished', async () => {
     const response = await fetch(`${base}/api/v1/stream`, { headers: gzip });
     const reader = response.body?.getReader();
-    const first = await reader?.read();
+    // A loaded runner can hand over an empty chunk first; the event is the first chunk with bytes.
+    let first = await reader?.read();
+    while (first && !first.done && !first.value?.length)
+      first = await reader?.read();
 
     expect(response.headers.get('content-encoding')).toBeNull();
     expect(new TextDecoder().decode(first?.value)).toBe('data: first\n\n');

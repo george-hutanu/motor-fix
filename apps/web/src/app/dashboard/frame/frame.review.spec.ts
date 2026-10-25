@@ -64,6 +64,7 @@ async function render(url: string, role = 'driver') {
         useValue: {
           current: account,
           ended: new Subject<void>(),
+          garageGone: () => false,
           reload: jest.fn(async () => undefined),
           shown: account,
           token: () => 'access',
