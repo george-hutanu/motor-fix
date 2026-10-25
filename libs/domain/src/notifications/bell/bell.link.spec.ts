@@ -49,6 +49,7 @@ const GARAGE_KINDS = [
 ];
 const PROFILE_KINDS = ['GARAGE_REPORT_DECIDED'];
 const PRICES_KINDS = ['CATALOGUE_JOB_DECIDED'];
+const GARAGE_REVIEW_KINDS = ['REVIEW_POSTED'];
 const REVIEW_KINDS = [
   'REVIEW_INVITE',
   'REVIEW_REPLIED',
@@ -93,6 +94,13 @@ describe('the view a bell row opens', () => {
     ).toBe('/app/garage/prices');
   });
 
+  // @traces 074-FR-013
+  it.each(GARAGE_REVIEW_KINDS)("opens %s on the garage's Recenzii", (kind) => {
+    expect(bellLink({ kind, params: {}, subjectId: CAR })).toBe(
+      '/app/garage/reviews',
+    );
+  });
+
   it('maps exactly the kinds named, each one a catalogue type', () => {
     expect(Object.keys(VIEW_OF_KIND).sort()).toEqual(
       [
@@ -102,6 +110,7 @@ describe('the view a bell row opens', () => {
         ...GARAGE_KINDS,
         ...PROFILE_KINDS,
         ...PRICES_KINDS,
+        ...GARAGE_REVIEW_KINDS,
       ].sort(),
     );
     for (const kind of Object.keys(VIEW_OF_KIND))

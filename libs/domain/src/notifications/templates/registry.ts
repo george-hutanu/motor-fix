@@ -52,6 +52,7 @@ import {
 } from './request-cancelled';
 import { REQUEST_DECLINED } from './request-declined';
 import { REQUEST_RECEIVED } from './request-received';
+import { REVIEW_POSTED_JOB, REVIEW_POSTED_PROFILE } from './review-posted';
 import { SIGN_IN_CODE } from './sign-in-code';
 import {
   STAFF_INVITE_MECHANIC,
@@ -117,6 +118,8 @@ export const TEMPLATES: Registry = {
   'REQUEST_CANCELLED.account_closed': REQUEST_CANCELLED_CLOSED,
   REQUEST_DECLINED,
   REQUEST_RECEIVED,
+  'REVIEW_POSTED.job': REVIEW_POSTED_JOB,
+  'REVIEW_POSTED.profile': REVIEW_POSTED_PROFILE,
   SIGN_IN_CODE,
   'STAFF_INVITE.mechanic': STAFF_INVITE_MECHANIC,
   'STAFF_INVITE.receptionist': STAFF_INVITE_RECEPTIONIST,
