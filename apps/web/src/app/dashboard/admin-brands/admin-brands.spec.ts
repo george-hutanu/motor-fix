@@ -257,7 +257,13 @@ describe('editing a row', () => {
     await settle();
 
     expect(update).not.toHaveBeenCalled();
-    expect(el.querySelector('tbody input')).not.toBeNull();
+    const input = el.querySelector('tbody input') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    const error = (input.getAttribute('aria-describedby') ?? '')
+      .split(' ')
+      .map((id) => document.getElementById(id))
+      .find((node) => node?.getAttribute('role') === 'alert');
+    expect(error?.textContent?.trim()).toBe('Între 2 și 40 de caractere.');
   });
 
   it('closes the field with nothing sent when the name is unchanged', async () => {
@@ -297,6 +303,40 @@ describe('editing a row', () => {
     await settle();
 
     expect(document.activeElement).toBe(button(el, 'Redenumește Dacia Nouă'));
+  });
+
+  it("keeps focus on the row's state action as it turns from Retire to Bring back", async () => {
+    const el = await open();
+
+    button(el, 'Retrage Dacia')?.focus();
+    button(el, 'Retrage Dacia')?.click();
+    await settle();
+
+    expect(document.activeElement).toBe(button(el, 'Readuce Dacia'));
+  });
+
+  it('reads a taken-name answer that arrives as text', async () => {
+    update.mockRejectedValueOnce(
+      new HttpErrorResponse({
+        error: JSON.stringify({
+          code: 'brand_exists',
+          detail: 'Marca există deja: Škoda',
+          status: 409,
+        }),
+        status: 409,
+      }),
+    );
+    const el = await open();
+
+    button(el, 'Redenumește Dacia')?.click();
+    await settle();
+    type(el.querySelector('tbody input') as HTMLInputElement, 'skoda');
+    button(el, 'Salvează')?.click();
+    await settle();
+
+    expect(rowOf(el, 'Dacia').textContent).toContain(
+      'Marca există deja: Škoda',
+    );
   });
 
   it('keeps the field open with the API message when the name is taken', async () => {

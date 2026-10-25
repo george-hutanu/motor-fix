@@ -55,12 +55,13 @@
                         formControlName="name"
                         [attr.aria-label]="'admin.brands.newName' | t: { name: brand.name }"
                         [attr.aria-invalid]="renameForm.controls.name.touched && renameForm.controls.name.invalid ? 'true' : null"
-                        [attr.aria-describedby]="'mf-brand-note-' + brand.id"
+                        [aria-describedby]="'mf-brand-rename-error mf-brand-note-' + brand.id"
                       />
                       <span class="rename-actions">
                         <button hlmBtn type="submit">{{ 'admin.brands.save' | t }}</button>
-                        <button hlmBtn type="button" variant="ghost" (click)="cancel(brand)">{{ 'admin.brands.cancel' | t }}</button>
+                        <button hlmBtn type="button" variant="ghost" (click)="close(brand.id)">{{ 'admin.brands.cancel' | t }}</button>
                       </span>
+                      <p id="mf-brand-rename-error" class="note mf-message" role="alert">@if (nameRefused()) {{{ 'admin.brands.add.hint' | t }}}</p>
                     </form>
                   }
                   @if (notices().get(brand.id); as note) {
@@ -79,9 +80,9 @@
                   @if (!open) {
                     <button hlmBtn type="button" variant="secondary" data-rename (click)="startRename(brand)" [attr.aria-label]="'admin.brands.renameNamed' | t: { name: brand.name }">{{ 'admin.brands.rename' | t }}</button>
                     @if (brand.state === 'active') {
-                      <button hlmBtn type="button" variant="ghost" (click)="setActive(brand, false)" [attr.aria-label]="'admin.brands.retireNamed' | t: { name: brand.name }">{{ 'admin.brands.retire' | t }}</button>
+                      <button hlmBtn type="button" variant="ghost" data-state-action (click)="setActive(brand, false)" [attr.aria-label]="'admin.brands.retireNamed' | t: { name: brand.name }">{{ 'admin.brands.retire' | t }}</button>
                     } @else {
-                      <button hlmBtn type="button" variant="ghost" (click)="setActive(brand, true)" [attr.aria-label]="'admin.brands.bringBackNamed' | t: { name: brand.name }">{{ 'admin.brands.bringBack' | t }}</button>
+                      <button hlmBtn type="button" variant="ghost" data-state-action (click)="setActive(brand, true)" [attr.aria-label]="'admin.brands.bringBackNamed' | t: { name: brand.name }">{{ 'admin.brands.bringBack' | t }}</button>
                     }
                   }
                 </td>

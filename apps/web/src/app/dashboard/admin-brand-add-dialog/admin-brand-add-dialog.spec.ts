@@ -1,4 +1,7 @@
 // @traces 1368-FR-003 1368-FR-004
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -6,7 +9,7 @@ import { type AdminBrandDto, AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
-import { AdminBrandAddDialog } from './admin-brand-add-dialog';
+import { AdminBrandAddDialog, BRAND_NAME } from './admin-brand-add-dialog';
 
 @Component({ template: '' })
 class Host {
@@ -87,6 +90,15 @@ afterEach(() => {
 });
 
 describe('the add-a-brand dialog', () => {
+  it("keeps the bound the API publishes for a new brand's name", () => {
+    const openapi = JSON.parse(
+      readFileSync(join(__dirname, '../../../../../api/openapi.json'), 'utf8'),
+    );
+    const name = openapi.components.schemas.CreateBrandDto.properties.name;
+
+    expect(BRAND_NAME).toEqual({ max: name.maxLength, min: name.minLength });
+  });
+
   it('asks for the name with one field, a save and a cancel button', async () => {
     await open();
 

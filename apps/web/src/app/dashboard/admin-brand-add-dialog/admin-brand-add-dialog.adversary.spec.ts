@@ -5,7 +5,7 @@ import { type AdminBrandDto, AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
-import { AdminBrandAddDialog, BRAND_NAME } from './admin-brand-add-dialog';
+import { AdminBrandAddDialog } from './admin-brand-add-dialog';
 
 @Component({ template: '' })
 class Host {
@@ -76,11 +76,6 @@ afterEach(() => {
 });
 
 describe('the add-a-brand dialog under hostile input', () => {
-  // @traces 1368-FR-003
-  it('exports the API bounds 2 to 40', () => {
-    expect(BRAND_NAME).toEqual({ max: 40, min: 2 });
-  });
-
   // @traces 1368-FR-003
   it.each([
     ['exactly 2 characters', 'Ab', 'Ab'],

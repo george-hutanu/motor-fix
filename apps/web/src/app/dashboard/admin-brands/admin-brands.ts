@@ -13,7 +13,7 @@ import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { fold } from '@motor-fix/contracts/fold';
 import { type AdminBrandDto, AdminService } from '@motor-fix/data-access';
 import { formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
-import { Overlays } from '@motor-fix/overlays';
+import { Overlays, toProblem } from '@motor-fix/overlays';
 import { HlmButton, HlmInput, Lamp, Panel } from '@motor-fix/ui-cockpit';
 
 import {
@@ -26,6 +26,20 @@ const SKELETON_ROWS = [0, 1, 2];
 
 // A row's own message: the API's words for a taken name, or a key.
 type Notice = { text?: string; key?: string; status?: boolean };
+
+// The brand a `stale_value` answer carries, in a body read as JSON or text.
+const brandIn = (failure: unknown): unknown => {
+  if (!(failure instanceof HttpErrorResponse)) return undefined;
+  let body: unknown = failure.error;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      return undefined;
+    }
+  }
+  return (body as { brand?: unknown } | null)?.brand;
+};
 
 // The brand a `stale_value` answer carries, checked before it replaces a row.
 const isBrand = (value: unknown, id: string): value is AdminBrandDto => {
@@ -78,6 +92,8 @@ export class AdminBrands {
   protected readonly editing = signal<string | null>(null);
   protected readonly busy = signal<ReadonlySet<string>>(new Set());
   protected readonly notices = signal<ReadonlyMap<string, Notice>>(new Map());
+  // The open field's name was refused by the 2-40 rule at the last save.
+  protected readonly nameRefused = signal(false);
   protected readonly renameForm = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
@@ -135,18 +151,16 @@ export class AdminBrands {
   protected startRename(brand: AdminBrandDto) {
     if (this.busy().has(brand.id)) return;
     this.note(brand.id, null);
+    this.nameRefused.set(false);
     this.name.reset(brand.name);
     this.editing.set(brand.id);
     this.focus(brand.id, 'input');
   }
 
-  protected cancel(brand: AdminBrandDto) {
-    this.close(brand.id);
-  }
-
   protected async rename(brand: AdminBrandDto) {
     if (this.busy().has(brand.id)) return;
     this.name.markAsTouched();
+    this.nameRefused.set(this.name.invalid);
     if (this.name.invalid) return;
     const name = brandNameOf(this.name.value);
     if (name === brand.name) {
@@ -159,10 +173,11 @@ export class AdminBrands {
   protected async setActive(brand: AdminBrandDto, active: boolean) {
     if (this.busy().has(brand.id)) return;
     await this.send(brand, { active });
+    this.focus(brand.id, 'button[data-state-action]');
   }
 
   // Closes the row's field, focus back on its Rename button.
-  private close(id: string) {
+  protected close(id: string) {
     if (this.editing() !== id) return;
     this.editing.set(null);
     this.focus(id, 'button[data-rename]');
@@ -222,22 +237,16 @@ export class AdminBrands {
   // taken name keeps the field open with the API's words; anything else
   // leaves the row as it was.
   private refused(brand: AdminBrandDto, failure: unknown) {
-    const body =
-      failure instanceof HttpErrorResponse
-        ? (failure.error as {
-            code?: string;
-            detail?: string;
-            brand?: unknown;
-          } | null)
-        : null;
-    if (body?.code === 'stale_value' && isBrand(body.brand, brand.id)) {
-      this.put(body.brand);
+    const { code, detail } = toProblem(failure);
+    const current = code === 'stale_value' ? brandIn(failure) : undefined;
+    if (current && isBrand(current, brand.id)) {
+      this.put(current);
       this.close(brand.id);
       this.note(brand.id, { key: 'admin.brands.stale', status: true });
       return;
     }
-    if (body?.code === 'brand_exists' && body.detail) {
-      this.note(brand.id, { text: body.detail });
+    if (code === 'brand_exists' && detail) {
+      this.note(brand.id, { text: detail });
       return;
     }
     this.note(brand.id, { key: 'admin.brands.saveFailed' });
