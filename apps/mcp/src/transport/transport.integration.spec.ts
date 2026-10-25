@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { AuditService, createPrisma, ROUTE_LIMITS } from '@motor-fix/domain';
-import { databaseTurn } from '@motor-fix/domain/testing';
+import { databaseTurn, TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import { catalogue, defineTool } from '@motor-fix/mcp-tools';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { type INestApplication, Logger } from '@nestjs/common';
@@ -63,9 +63,7 @@ beforeAll(async () => {
   await app.listen(0, '127.0.0.1');
   const address = (app.getHttpServer() as Server).address() as AddressInfo;
   base = `http://127.0.0.1:${address.port}`;
-  // The turn waits out the longest holder, as serialDatabase does (360 s),
-  // then the app boots.
-}, 420_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   await app?.close();

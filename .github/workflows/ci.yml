@@ -214,9 +214,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || inputs.integration
     runs-on: ubuntu-latest
     # The suite alone takes 27 to 29 minutes (domain's run takes 27), so 30
-    # cancelled it at the edge of a finished run; it has since grown past 45
-    # (dispatch 40134884002 was cancelled with api and domain still running).
-    timeout-minutes: 75
+    # cancelled it at the edge of a finished run.
+    timeout-minutes: 45
     services: &services
       # The repository's own image (infra/postgres), as compose and staging:
       # it preloads pg_stat_statements, which the data-store specs read.
@@ -251,9 +250,16 @@ jobs:
         run: docker compose up -d --wait storage
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
-      # Every spec takes its turn on one advisory lock in one database, so
-      # projects run one at a time rather than queue behind each other's
-      # turns. Named spec files run alone, one Jest run after another.
+      # Every spec that empties the account tables waits on one advisory lock
+      # (database-turn.testing.ts), so a stall shows here as the lock's holder
+      # and its waiters. Sampled every 20 s; Database waits prints all but the
+      # turn's queue.
+      - name: Watch the database
+        run: |
+          while sleep 20; do
+            psql "$DATABASE_URL" -XAtq -c "SELECT now()::time(0), a.pid, a.application_name, CASE WHEN l.granted THEN 'HOLDS' WHEN l.pid IS NOT NULL THEN 'turn' ELSE 'busy' END, pg_blocking_pids(a.pid), a.state, a.wait_event_type || ':' || a.wait_event, a.backend_start::time(0), a.state_change::time(0), left(regexp_replace(a.query, '\s+', ' ', 'g'), 140) FROM pg_stat_activity a LEFT JOIN pg_locks l ON l.pid = a.pid AND l.locktype = 'advisory' AND l.objid = 79079 WHERE a.datname = current_database() AND a.pid <> pg_backend_pid() AND (a.state <> 'idle' OR l.granted) ORDER BY l.granted DESC NULLS LAST, a.xact_start" >> "$RUNNER_TEMP/db-waits.txt" 2>&1
+          done &
+      # Named spec files run alone, one Jest run after another.
       - name: Integration tests
         env:
           JEST_SUITE: integration
@@ -261,7 +267,7 @@ jobs:
           REPEAT: ${{ inputs.repeat }}
         run: |
           if [ -z "$SPECS" ]; then
-            npx nx $NX_SCOPE -t test --passWithNoTests --parallel=1
+            npx nx $NX_SCOPE -t test --passWithNoTests
             exit
           fi
           [ "$REPEAT" -ge 1 ] 2>/dev/null || { echo "::error::repeat must be 1 or more, got '$REPEAT'"; exit 1; }
@@ -271,6 +277,9 @@ jobs:
             echo "Run $run of $REPEAT"
             npx jest --ci --runInBand $files
           done
+      - name: Database waits
+        if: ${{ always() }}
+        run: grep -v '|turn|' "$RUNNER_TEMP/db-waits.txt" 2>/dev/null || echo "no samples"
 
   # The full end-to-end suite, on demand only (workflow_dispatch): neither a
   # PR nor a release runs it here. Its report is uploaded whatever the result.

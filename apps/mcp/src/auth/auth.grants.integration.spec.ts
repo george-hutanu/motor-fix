@@ -7,7 +7,7 @@ import {
   createPrisma,
   outbox,
 } from '@motor-fix/domain';
-import { databaseTurn } from '@motor-fix/domain/testing';
+import { databaseTurn, TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import { HttpException } from '@nestjs/common';
 
 import { McpActorService } from './auth.actor';
@@ -20,8 +20,7 @@ const turn = databaseTurn(databaseUrl);
 const grants = new AssistantGrants(prisma, new AuditService(), outbox);
 const actors = new McpActorService(new AccountLoader(prisma), grants);
 
-// Waits out the longest holder, as serialDatabase does.
-beforeAll(turn.take, 360_000);
+beforeAll(turn.take, TURN_WAIT_MS);
 afterAll(async () => {
   await prisma.$disconnect();
   await turn.release();

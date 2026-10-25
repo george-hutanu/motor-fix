@@ -13,8 +13,8 @@ import {
 import type { SearchPoint } from '@motor-fix/contracts/search-place';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
+import { refusal } from '../../auth/http-refusal';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import { CacheService, cacheKey, type Filled } from '../../cache/cache.service';
 import {
   type BusinessKind,

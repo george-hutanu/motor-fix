@@ -19,8 +19,8 @@ import type { Request, Response } from 'express';
 import { LIVE_HEADERS, LiveHub } from './live/live.hub';
 import { OpenInMaintenance, Public } from '../auth/actor.guard';
 import { clientOf } from '../auth/attempts';
+import { refusal } from '../auth/http-refusal';
 import { PRISMA } from '../auth/prisma';
-import { refusal } from '../auth/sign-up.service';
 import { publicGarages } from '../garages/public-garages/public-garages';
 import type { PrismaClient } from '../generated/prisma/client';
 

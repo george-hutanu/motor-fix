@@ -8,6 +8,7 @@ import {
   StorageService,
   signAccessToken,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
@@ -26,8 +27,8 @@ const ALL_VOICES_ON =
 // The story that adds an admin route that changes data adds its row here: a
 // body a signed-in admin can send and get a 2xx for. A logged read sets
 // `entries: 1`; every other GET must leave the admin's history unchanged. A
-// route with path parameters gives `path`, which makes what it acts on. A
-// call that is no change (a heartbeat) sets `entries: 0`.
+// call that only says who is looking (presence) sets `entries: 0`. A
+// route with path parameters gives `path`, which makes what it acts on.
 const FIXTURES: Record<
   string,
   {
@@ -36,8 +37,7 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
-  // @traces 413-FR-001
-  // The drawer closing leaves its presence: a hint, not a change, so no entry.
+  // Who else has the file open: a hint kept for a minute, never recorded.
   'DELETE /api/v1/admin/verification-files/{id}/presence': {
     body: () => ({}),
     entries: 0,
@@ -48,6 +48,8 @@ const FIXTURES: Record<
   'GET /api/v1/admin/accounts/{id}': {
     path: async () => `/api/v1/admin/accounts/${await driver()}`,
   },
+  // @traces 105-FR-019
+  'GET /api/v1/admin/brands': {},
   // @traces 414-FR-002
   'GET /api/v1/admin/catalogue-jobs': {},
   'GET /api/v1/admin/garages': {
@@ -94,6 +96,11 @@ const FIXTURES: Record<
         return `/api/v1/admin/verification-files/${file}/documents/${id}/pages/1/download-url`;
       },
     },
+  // @traces 105-FR-019
+  'PATCH /api/v1/admin/brands/{id}': {
+    body: () => ({ active: false, seenUpdatedAt: brandSeen }),
+    path: async () => `/api/v1/admin/brands/${await storedBrand()}`,
+  },
   'PATCH /api/v1/admin/copy-voices/{voice}': {
     body: () => ({
       enabled: false,
@@ -136,6 +143,10 @@ const FIXTURES: Record<
   'POST /api/v1/admin/accounts/{id}/suspend': {
     body: () => ({ reason: 'Cereri false, repetate.' }),
     path: async () => `/api/v1/admin/accounts/${await driver()}/suspend`,
+  },
+  // @traces 105-FR-019
+  'POST /api/v1/admin/brands': {
+    body: () => ({ name: `Marca ${randomUUID().slice(0, 8)}` }),
   },
   // @traces 414-FR-003 414-FR-004 414-FR-007
   'POST /api/v1/admin/catalogue-jobs/{id}/approve': {
@@ -299,8 +310,6 @@ const FIXTURES: Record<
       return `/api/v1/admin/verification-files/${file}/checks/rar`;
     },
   },
-  // @traces 413-FR-001
-  // The heartbeat of the open drawer: a hint, not a change, so no entry.
   'PUT /api/v1/admin/verification-files/{id}/presence': {
     body: () => ({}),
     entries: 0,
@@ -313,6 +322,22 @@ const FIXTURES: Record<
       `/api/v1/admin/verification-files/${await submitted()}/rar-number`,
   },
 };
+
+// An active brand of the loader's, and the value an admin edit sends back.
+let brandSeen = '';
+async function storedBrand() {
+  const key = `audit-${randomUUID()}`;
+  const row = (
+    await db.query(
+      `INSERT INTO brand (id, key, name, slug, updated_at)
+       VALUES (gen_random_uuid(), $1, $1, $1, now())
+       RETURNING id, updated_at`,
+      [key],
+    )
+  ).rows[0] as { id: string; updated_at: Date };
+  brandSeen = row.updated_at.toISOString();
+  return row.id;
+}
 
 // A driver's account for the account actions, suspended when asked.
 async function driver(status: 'active' | 'suspended' = 'active') {
@@ -471,9 +496,11 @@ const check = async (route: string) => {
     return `${route}: answered ${res.status}`;
   }
   const expected =
-    changes && fixture?.entries === undefined
-      ? gained >= 1
-      : gained === (fixture?.entries ?? 0);
+    fixture?.entries !== undefined
+      ? gained === fixture.entries
+      : changes
+        ? gained >= 1
+        : gained === 0;
   return expected ? undefined : `${route}: left ${gained} entries`;
 };
 
@@ -501,7 +528,7 @@ beforeAll(async () => {
     })
   ).id;
   authorization = `Bearer ${signAccessToken({ accountId: admin, role: 'admin' }, TEST_TOKEN_SECRET, Date.now())}`;
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   // The platform rule fixture switched maintenance on; other suites share the database.

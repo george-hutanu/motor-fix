@@ -261,7 +261,9 @@ describe('web edge proxy failures and retries', () => {
       );
       expect(seen).toHaveLength(40);
       expect(entries()).toEqual([]);
-    });
+      // Forty sockets opened and cut take well under a second alone, but past
+      // Jest's 5 s default when the affected suites share the machine.
+    }, 20_000);
 
     it('is not retried when the upstream answered an error status', async () => {
       behave = (_req, res) => {
@@ -457,6 +459,7 @@ describe('web edge proxy failures and retries', () => {
 
       expect(seen).toHaveLength(20);
       expect(entries()).toEqual([]);
-    });
+      // Twenty sockets under a full parallel run, as the retry case above.
+    }, 20_000);
   });
 });

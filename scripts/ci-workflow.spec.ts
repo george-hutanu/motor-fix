@@ -323,6 +323,26 @@ describe('ci workflow', () => {
     expect(setting(step(job(id), name), 'JEST_SUITE')).toBe(suite);
   });
 
+  // A suite that stalls under the turn lock names its holder and its waiters:
+  // the database's busy sessions are sampled each minute while the suite runs
+  // and printed after it, timed out or not.
+  it('prints what the database waited on, even when the suite times out', () => {
+    const block = job('integration');
+    const watch = step(block, 'Watch the database');
+    const report = step(block, 'Database waits');
+
+    expect(block.indexOf('- name: Watch the database')).toBeLessThan(
+      block.indexOf('- name: Integration tests'),
+    );
+    expect(watch).toContain('pg_stat_activity');
+    expect(watch).toContain('pg_blocking_pids');
+    expect(watch).toMatch(/&\s*$/m);
+    expect(setting(report, 'if')).toBe(gh('always()'));
+    expect(block.indexOf('- name: Database waits')).toBeGreaterThan(
+      block.indexOf('- name: Integration tests'),
+    );
+  });
+
   it('migrates the database before the integration tests', () => {
     const block = job('integration');
 
@@ -330,18 +350,6 @@ describe('ci workflow', () => {
     expect(block.indexOf('prisma migrate deploy')).toBeGreaterThan(0);
     expect(block.indexOf('prisma migrate deploy')).toBeLessThan(
       block.indexOf('- name: Integration tests'),
-    );
-  });
-
-  // Every integration spec waits on one advisory lock in one database, so
-  // projects run side by side only queue behind each other: mcp's specs timed
-  // out waiting while domain and api held the turn (dispatch 40134884002).
-  it('runs the integration projects one at a time, within an hour and a quarter', () => {
-    const block = job('integration');
-
-    expect(block).toContain('timeout-minutes: 75\n');
-    expect(step(block, 'Integration tests')).toContain(
-      'npx nx $NX_SCOPE -t test --passWithNoTests --parallel=1',
     );
   });
 
@@ -436,7 +444,7 @@ describe('ci workflow', () => {
 
     it('runs every suite as before when no file is named', () => {
       expect(run('integration', 'Integration tests', {})).toEqual([
-        'nx run-many -t test --passWithNoTests --parallel=1',
+        'nx run-many -t test --passWithNoTests',
       ]);
       expect(run('e2e', 'E2E tests', {})).toEqual(['nx run-many -t e2e']);
     });

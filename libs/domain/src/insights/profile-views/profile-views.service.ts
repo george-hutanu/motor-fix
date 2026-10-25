@@ -9,9 +9,9 @@ import type { Redis } from 'ioredis';
 
 import { recordView, type ViewOutcome } from './profile-views.metrics';
 import { AUTH_REDIS, clientOf } from '../../auth/attempts';
+import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import { addDays, atLocal, localDay } from '../../bucharest';
 import { publicGarages } from '../../garages/public-garages/public-garages';
 import type { PrismaClient } from '../../generated/prisma/client';

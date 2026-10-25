@@ -343,7 +343,7 @@ describe('building the file', () => {
       { accountId: a.id, exportId: row.id },
     ]);
     const mails = await prisma.notification.findMany({
-      where: { accountId: a.id, kind: 'DATA_EXPORT_READY' },
+      where: { accountId: a.id, channel: 'email', kind: 'DATA_EXPORT_READY' },
     });
     expect(mails).toEqual([
       expect.objectContaining({
@@ -366,7 +366,9 @@ describe('building the file', () => {
     await builder.onEvent(requested(a.id, row.id));
 
     expect(
-      await prisma.notification.count({ where: { kind: 'DATA_EXPORT_READY' } }),
+      await prisma.notification.count({
+        where: { accountId: a.id, channel: 'email', kind: 'DATA_EXPORT_READY' },
+      }),
     ).toBe(1);
   });
 
@@ -378,7 +380,9 @@ describe('building the file', () => {
 
     expect(row.status).toBe('ready');
     expect(
-      await prisma.notification.count({ where: { kind: 'DATA_EXPORT_READY' } }),
+      await prisma.notification.count({
+        where: { accountId: driverId, kind: 'DATA_EXPORT_READY' },
+      }),
     ).toBe(0);
     expect(log).toHaveBeenCalledWith(
       `data export ${row.id}: no e-mail address, ready e-mail skipped`,

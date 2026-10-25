@@ -46,6 +46,7 @@ features:
   - 500-req-ip-behind-proxy
   - 140-account-delete-export
   - 500-trust-railway-edge
+  - 105-brand-list-admin
   - 1370-release-seed-no-ssh
   - 1372-seed-restores-accounts
   - 947-faro-consent-journeys
@@ -1235,6 +1236,10 @@ _From 500-trust-railway-edge._
 ### 500-FR-010 — A request arriving from a public socket address MUST resolve its caller to that socket address whatever forwarded-for header it carries.
 
 _From 500-trust-railway-edge._
+
+### 105-FR-016 — `refusal` MUST live in a shared module of the auth library (`libs/domain/src/auth/http-refusal.ts`), re-exported where the existing imports expect it or every import updated; after the change no file outside `libs/domain/src/auth/` imports `auth/sign-up.service` for it (`git grep` shows none). (#568)
+
+_From 105-brand-list-admin._
 
 ### 003-FR-001 — `GET /api/v1/admin/accounts/{id}` MUST answer, for a MotorFix admin, the account's: name, e-mail, phone, language, roles (in the list's order), the linked garage when the account owns one, is receptionist at one or holds a mechanic card at one (id, name, status), joined time, last active time, status, the suspension reason when `suspended`, counts (cars, quote requests, reviews), sign-in methods (`password`, `google`, `apple`, `whatsapp_phone`, as a list of methods only), whether the account holds `admin` (so no action is offered) and, for a garage owner, the garage's legal documents (ids and titles) the page can open. The answer MUST carry no password hash, no sign-in subject and no token.
 
