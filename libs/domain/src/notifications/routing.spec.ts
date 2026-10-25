@@ -9,6 +9,7 @@ const withDevice = { ...everyone, push: true };
 const driverChose = (type: string, channel: OutsideChannel) =>
   mutedChannels(type, [{ channel, enabled: true, garageId: null, type }]);
 
+// @traces 094-FR-010
 describe('the outside channels of a driver message', () => {
   it('is e-mail when nothing is saved', () => {
     expect(
@@ -234,7 +235,7 @@ describe('push for staff', () => {
   });
 });
 
-// @traces 142-FR-008
+// @traces 142-FR-008 094-FR-010
 describe('the channel a driver message changes to when it is built', () => {
   it('names push without a device going by e-mail', () => {
     expect(

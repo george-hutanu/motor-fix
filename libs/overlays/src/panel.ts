@@ -124,6 +124,12 @@ function nextEntry(window: Window | null) {
       padding-inline: max(var(--mf-space-6), var(--mf-safe-left))
         max(var(--mf-space-3), var(--mf-safe-right));
     }
+    /* No X to give it height and, on a phone, no grip above it: even
+       padding of its own. */
+    .mf-overlay-header.mf-overlay-header-fixed,
+    :host.mf-overlay-sheet .mf-overlay-header.mf-overlay-header-fixed {
+      padding-block: var(--mf-space-4);
+    }
     .mf-overlay-title {
       min-width: 0;
       margin: 0;
@@ -197,7 +203,7 @@ function nextEntry(window: Window | null) {
     }
   `,
   template: `
-    @if (context.sheet) {
+    @if (context.sheet && context.dismissible !== false) {
       <div
         class="mf-overlay-grip"
         aria-hidden="true"
@@ -208,10 +214,14 @@ function nextEntry(window: Window | null) {
         (lostpointercapture)="letGo($event)"
       ></div>
     }
-    <header class="mf-overlay-header">
+    <header
+      class="mf-overlay-header"
+      [class.mf-overlay-header-fixed]="context.dismissible === false"
+    >
       <h2 class="mf-label mf-overlay-title" [id]="context.titleId">
         {{ context.title | t: context.titleParams }}
       </h2>
+      @if (context.dismissible !== false) {
       <button
         type="button"
         class="spartan-button spartan-button-variant-ghost mf-overlay-close"
@@ -231,6 +241,7 @@ function nextEntry(window: Window | null) {
           <path d="M18 6 6 18M6 6l12 12" />
         </svg>
       </button>
+      }
     </header>
     <div
       #body
@@ -389,8 +400,9 @@ export class OverlayPanel {
         return;
       }
       if (!this.asking()) this.dismiss();
-      // Asking instead of closing: the entry comes back, so Back asks again.
-      if (this.asking()) mark();
+      // Asking or staying instead of closing: the entry comes back, so Back
+      // asks again.
+      if (this.asking() || this.context.dismissible === false) mark();
     };
     // A page nobody has touched yet: Chrome skips an entry pushed now when
     // Back is pressed, so the entry waits for the first touch or key.
@@ -530,6 +542,7 @@ export class OverlayPanel {
 
   // X, Escape, a click outside and a drag down: ask first when a field changed.
   protected dismiss() {
+    if (this.context.dismissible === false) return;
     if (!this.changed || this.context.confirmDiscard === false) {
       this.close();
       return;
@@ -564,12 +577,16 @@ export class OverlayPanel {
   }
 
   private focusStart() {
-    // A field the task marks autofocus goes before its first field.
+    // A field the task marks autofocus goes before its first field. A button
+    // it marks pops up no on-screen keyboard, so it takes the focus on a
+    // phone too.
     const body = this.body().nativeElement;
+    const marked = body.querySelector<HTMLElement>('[autofocus]');
     const field = this.window?.matchMedia?.(COMPUTER).matches
-      ? (body.querySelector<HTMLElement>('[autofocus]') ??
-        body.querySelector<HTMLElement>(FIELD))
-      : null;
+      ? (marked ?? body.querySelector<HTMLElement>(FIELD))
+      : marked instanceof HTMLButtonElement
+        ? marked
+        : null;
     const target =
       field ??
       this.host.nativeElement.closest<HTMLElement>('[role="dialog"]') ??

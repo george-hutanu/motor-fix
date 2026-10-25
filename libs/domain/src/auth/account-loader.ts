@@ -5,8 +5,17 @@ import type { Actor } from './policy';
 import { PRISMA } from './prisma';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
 
+const INCLUDE = {
+  consents: {
+    select: { acceptedAt: true, kind: true, textVersion: true },
+  },
+  mechanic: true,
+  memberships: true,
+  roles: true,
+} as const satisfies Prisma.AccountInclude;
+
 export type LoadedAccount = Prisma.AccountGetPayload<{
-  include: { mechanic: true; memberships: true; roles: true };
+  include: typeof INCLUDE;
 }>;
 
 export const signInRequired = () =>
@@ -23,7 +32,7 @@ export class AccountLoader {
 
   async activeAccount(id: string): Promise<LoadedAccount> {
     const account = await this.prisma.account.findUnique({
-      include: { mechanic: true, memberships: true, roles: true },
+      include: INCLUDE,
       where: { id },
     });
     if (!account || account.status === 'deleted') throw signInRequired();

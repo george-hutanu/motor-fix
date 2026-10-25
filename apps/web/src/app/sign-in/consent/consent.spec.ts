@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, reflectComponentType } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { I18n } from '@motor-fix/i18n';
@@ -58,34 +58,17 @@ describe('the consent tick in any account form', () => {
     expect(element.textContent).not.toContain('Bifează pentru a continua.');
   });
 
-  it('gives two ticks on one page their own error message', async () => {
-    @Component({
-      imports: [Consent],
-      template: `
-        <mf-consent [control]="first" [save]="save" />
-        <mf-consent [control]="second" [save]="save" errorId="second-consent-error" />
-      `,
-    })
-    class TwoTicks {
-      readonly first = consentControl();
-      readonly second = consentControl();
-      readonly save = taskSave({
-        form: new FormGroup({ first: this.first, second: this.second }),
-        send: async () => 'ok',
-      });
-    }
-    await TestBed.inject(I18n).enter('public');
-    const fixture = TestBed.createComponent(TwoTicks);
-    fixture.autoDetectChanges();
-    await fixture.whenStable();
-    const element = fixture.nativeElement as HTMLElement;
+  // @traces 1204-FR-012
+  it('ties its error line to the box by one fixed id, which no input changes', async () => {
+    const { box, element, submit } = await render();
+    await submit();
 
-    const described = [...element.querySelectorAll('input')].map((box) =>
-      box.getAttribute('aria-describedby'),
+    expect(box.getAttribute('aria-describedby')).toBe('mf-consent-error');
+    expect(element.querySelector('#mf-consent-error')?.textContent).toContain(
+      'Bifează pentru a continua.',
     );
-    expect(new Set(described).size).toBe(2);
-    for (const id of described) {
-      expect(element.querySelectorAll(`[id="${id}"]`)).toHaveLength(1);
-    }
+    expect(
+      reflectComponentType(Consent)?.inputs.map((input) => input.propName),
+    ).not.toContain('errorId');
   });
 });
