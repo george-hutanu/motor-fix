@@ -279,6 +279,9 @@ export class ConfirmService {
     mechanic: Mechanic,
     booking: Booking & { garage: { hours: Prisma.JsonValue } },
   ) {
+    // Waits out a day off being added, which holds this row: the read below
+    // then sees it, and the add sees this booking.
+    await tx.$queryRaw`SELECT id FROM mechanic WHERE id = ${mechanic.id}::uuid FOR SHARE`;
     const day = new Date(`${localDay(booking.startsAt)}T00:00:00Z`);
     const daysOff = await tx.mechanicDayOff.findMany({
       select: { firstDay: true, lastDay: true },

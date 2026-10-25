@@ -17,6 +17,7 @@ export { HlmRadio, HlmRadioGroup } from './lib/helm/radio-group';
 export { HlmSheetImports } from './lib/helm/sheet';
 export { HlmSwitch } from './lib/helm/switch';
 export { HlmTableImports } from './lib/helm/table';
+// HlmTabsImports' directives too, for the same reason (NG3004 otherwise).
 export {
   HlmTabs,
   HlmTabsContent,

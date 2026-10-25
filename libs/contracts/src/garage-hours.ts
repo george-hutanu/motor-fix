@@ -123,6 +123,20 @@ export function isWeeklyHours(value: unknown): value is WeeklyHours {
   );
 }
 
+// A week read back from a jsonb column, keeping only the days stored as a
+// list of intervals: anything else reads as a day with no hours.
+export function storedWeek(
+  value: unknown,
+): Partial<Record<Weekday, Interval[]>> {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    WEEKDAYS.flatMap((day) => {
+      const list = value[day];
+      return Array.isArray(list) && list.every(isInterval) ? [[day, list]] : [];
+    }),
+  );
+}
+
 export const isDay = (value: unknown): value is string => {
   if (typeof value !== 'string') return false;
   const match = DAY.exec(value);

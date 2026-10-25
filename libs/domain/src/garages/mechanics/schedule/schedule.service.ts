@@ -5,9 +5,11 @@ import {
   isDay,
   isTime,
   type MechanicScheduleDto,
+  storedWeek,
   stretchOf,
   todayInBucharest,
   WEEKDAYS,
+  type Weekday,
   type WeeklyHours,
 } from '@motor-fix/contracts';
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
@@ -56,11 +58,10 @@ const SCHEDULE_SELECT = {
 
 // The garage's span of a weekday, or null when it is closed that day. A
 // garage that set no hours bounds nothing.
-const boundOf = (garageHours: unknown, day: string): Interval | null =>
-  stretchOf(((garageHours as Record<string, Interval[]>)?.[day] ?? []) as []);
+const boundOf = (garageHours: unknown, day: Weekday): Interval | null =>
+  stretchOf(storedWeek(garageHours)[day] ?? []);
 
-const unset = (hours: unknown) =>
-  !isRecord(hours) || Object.keys(hours).length === 0;
+const unset = (hours: unknown) => Object.keys(storedWeek(hours)).length === 0;
 
 const isIntervalList = (list: unknown): list is Interval[] =>
   Array.isArray(list) &&
@@ -75,7 +76,7 @@ const isIntervalList = (list: unknown): list is Interval[] =>
 function dayProblem(
   list: unknown,
   garageHours: unknown,
-  day: string,
+  day: Weekday,
 ): string | null {
   if (!isIntervalList(list)) return 'invalid';
   if (list.length === 0) return null;
@@ -110,6 +111,26 @@ function judgeWeek(
     : (Object.fromEntries(
         WEEKDAYS.map((day) => [day, value[day]]),
       ) as WeeklyHours);
+}
+
+// The week and Saturday switch the owner sends, or a 422 naming each field.
+function judgeSchedule(
+  body: unknown,
+  garageHours: unknown,
+): { workingHours: WeeklyHours; worksSaturdays: boolean } {
+  const fields = isRecord(body) ? body : {};
+  const errors: FieldProblem[] = [];
+  const week = judgeWeek(fields['workingHours'], garageHours, errors);
+  const saturdays = fields['worksSaturdays'];
+  if (typeof saturdays !== 'boolean') {
+    errors.push({ code: 'invalid', field: 'worksSaturdays' });
+  } else if (saturdays && !unset(garageHours) && !boundOf(garageHours, 'sat')) {
+    errors.push({ code: 'garage_closed_saturday', field: 'worksSaturdays' });
+  }
+  if (errors.length > 0 || !week || typeof saturdays !== 'boolean') {
+    throw invalid(errors, "The mechanic's hours cannot be saved");
+  }
+  return { workingHours: week, worksSaturdays: saturdays };
 }
 
 interface DayOffFields {
@@ -200,41 +221,22 @@ export class MechanicScheduleService {
     body: unknown,
   ): Promise<MechanicScheduleDto> {
     await this.mechanics.access(db, actor, garageId);
-    const card = await cardOf(db, garageId, mechanicId);
-    const fields = isRecord(body) ? body : {};
-    const errors: FieldProblem[] = [];
-    const week = judgeWeek(fields['workingHours'], card.garage.hours, errors);
-    const saturdays = fields['worksSaturdays'];
-    if (typeof saturdays !== 'boolean') {
-      errors.push({ code: 'invalid', field: 'worksSaturdays' });
-    } else if (
-      saturdays &&
-      !unset(card.garage.hours) &&
-      !boundOf(card.garage.hours, 'sat')
-    ) {
-      errors.push({ code: 'garage_closed_saturday', field: 'worksSaturdays' });
-    }
-    if (errors.length > 0 || !week) {
-      throw invalid(errors, "The mechanic's hours cannot be saved");
-    }
-    const workingHours = Object.fromEntries(
-      WEEKDAYS.map((day) => [day, week[day]]),
-    ) as WeeklyHours;
-    const before = {
-      workingHours: card.workingHours,
-      worksSaturdays: card.worksSaturdays,
-    };
-    const after = { workingHours, worksSaturdays: saturdays as boolean };
-    const changed = (['workingHours', 'worksSaturdays'] as const).filter(
-      (key) => !same(before[key], after[key]),
-    );
-    if (changed.length === 0) return this.scheduleOf(db, garageId, mechanicId);
     await db.$transaction(async (tx) => {
-      const { count } = await tx.mechanic.updateMany({
-        data: after,
-        where: { id: card.id, removedAt: null },
-      });
-      if (count === 0) throw notFound();
+      // The garage's row first, as a save of its hours takes it before it
+      // clips the cards: the week is judged against hours no save is changing.
+      await tx.$queryRaw`SELECT id FROM garage WHERE id = ${garageId}::uuid FOR SHARE`;
+      await lockCard(tx, garageId, mechanicId);
+      const card = await cardOf(tx, garageId, mechanicId);
+      const after = judgeSchedule(body, card.garage.hours);
+      const before = {
+        workingHours: card.workingHours,
+        worksSaturdays: card.worksSaturdays,
+      };
+      const changed = (['workingHours', 'worksSaturdays'] as const).filter(
+        (key) => !same(before[key], after[key]),
+      );
+      if (changed.length === 0) return;
+      await tx.mechanic.update({ data: after, where: { id: card.id } });
       await this.audit.recordChanges(
         tx,
         {
@@ -279,10 +281,7 @@ export class MechanicScheduleService {
     const off = judgeDayOff(body, today);
     await db.$transaction(async (tx) => {
       // Serialises the adds of one mechanic, so two at once cannot overlap.
-      const locked = await tx.$queryRaw<{ id: string }[]>`
-        SELECT id FROM mechanic
-        WHERE id = ${card.id}::uuid AND removed_at IS NULL FOR UPDATE`;
-      if (locked.length === 0) throw notFound();
+      await lockCard(tx, garageId, card.id);
       const overlap = await tx.mechanicDayOff.findFirst({
         select: { id: true },
         where: {
@@ -361,6 +360,8 @@ export class MechanicScheduleService {
     const card = await cardOf(db, garageId, mechanicId);
     const today = todayInBucharest();
     await db.$transaction(async (tx) => {
+      // Two removes of one day at once: the second finds it gone, a 404.
+      await lockCard(tx, garageId, card.id);
       const row = await tx.mechanicDayOff.findFirst({
         where: { id: dayOffId, mechanicId: card.id },
       });
@@ -433,7 +434,7 @@ export class MechanicScheduleService {
         mechanicId: card.id,
       },
     });
-    const garageHours = (card.garage.hours ?? {}) as WeeklyHours;
+    const garageHours = storedWeek(card.garage.hours) as WeeklyHours;
     return {
       daysOff: daysOff.map((d) => ({ id: d.id, ...shownDayOff(d) })),
       garageHours,
@@ -442,6 +443,21 @@ export class MechanicScheduleService {
       worksSaturdays: card.worksSaturdays,
     };
   }
+}
+
+// Holds the card's row to the end of the transaction, or 404 once it left
+// the team.
+async function lockCard(
+  tx: Prisma.TransactionClient,
+  garageId: string,
+  mechanicId: string,
+) {
+  const locked = await tx.$queryRaw<{ id: string }[]>`
+    SELECT id FROM mechanic
+    WHERE id = ${mechanicId}::uuid AND garage_id = ${garageId}::uuid
+      AND removed_at IS NULL
+    FOR UPDATE`;
+  if (locked.length === 0) throw notFound();
 }
 
 // A card of the garage still on its team, with its garage's hours, or 404.

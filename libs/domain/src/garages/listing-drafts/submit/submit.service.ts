@@ -5,6 +5,8 @@ import {
   type ListingDraftData,
   type ListingSubmittedDto,
   MECHANIC_CARD_NAME_MAX,
+  storedWeek,
+  stretchOf,
   stripCui,
   submitTimeoutMs,
   surveyComplete,
@@ -331,6 +333,8 @@ export class ListingSubmitService {
         name,
         onProfile: false,
         workingHours: garage.hours as Prisma.InputJsonValue,
+        // Her week is the garage's, so she works the Saturdays it opens.
+        worksSaturdays: stretchOf(storedWeek(garage.hours).sat ?? []) !== null,
       },
     });
     await this.audit.record(tx, {

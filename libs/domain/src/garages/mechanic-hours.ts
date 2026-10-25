@@ -1,5 +1,7 @@
 import {
   type Interval,
+  isDay,
+  storedWeek,
   stretchOf,
   WEEKDAYS,
   type Weekday,
@@ -30,10 +32,8 @@ interface GarageCalendar {
 
 const WORKDAYS: readonly Weekday[] = ['mon', 'tue', 'wed', 'thu', 'fri'];
 
-const listOf = (hours: unknown, day: Weekday): Interval[] => {
-  const value = (hours as Hours | null)?.[day];
-  return Array.isArray(value) ? value : [];
-};
+const listOf = (hours: unknown, day: Weekday): Interval[] =>
+  storedWeek(hours)[day] ?? [];
 
 // The stretch a mechanic works each weekday, as a week of zero or one interval
 // a day. With no hours of her own: the garage's weekdays, each from its first
@@ -81,7 +81,7 @@ export function mechanicOwnAtWork(
   startsAt: Date,
   durationMinutes: number,
 ): boolean {
-  if (Number.isNaN(startsAt.getTime())) return false;
+  if (Number.isNaN(startsAt.getTime()) || !(durationMinutes >= 0)) return false;
   const start = wall(startsAt);
   if (isDayOff(schedule.daysOff, start.day)) return false;
   if (schedule.workingHours == null && unset(garageHours)) return true;
@@ -118,6 +118,7 @@ export function plannedMinutes(
   day: string,
 ): number {
   if (
+    !isDay(day) ||
     isDayOff(schedule.daysOff, day) ||
     garage.closedDays.has(day) ||
     garage.holidays.has(day)

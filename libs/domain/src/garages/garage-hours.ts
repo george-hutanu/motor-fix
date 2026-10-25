@@ -4,6 +4,7 @@ import {
   type Interval,
   isHoursSection,
   lastClosedDay,
+  storedWeek,
   stretchOf,
   WEEKDAYS,
 } from '@motor-fix/contracts';
@@ -175,7 +176,7 @@ function clipOf(
     worksSaturdays: card.worksSaturdays,
   };
   const after = {
-    workingHours: clippedWeek(card.workingHours as Week, garage),
+    workingHours: clippedWeek(storedWeek(card.workingHours), garage),
     worksSaturdays:
       card.worksSaturdays && stretchOf(garage['sat'] ?? []) !== null,
   };
@@ -197,7 +198,7 @@ async function clipMechanics(
   change: Omit<AuditChange, 'subjectType'>,
   { audit, events }: { audit: AuditPort; events: EventPort },
 ): Promise<string[]> {
-  const garage = (hours ?? {}) as Week;
+  const garage: Week = storedWeek(hours);
   const cards = await tx.mechanic.findMany({
     orderBy: { name: 'asc' },
     select: {
