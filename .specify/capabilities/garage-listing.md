@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-23
+updated: 2026-10-24
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -37,6 +37,7 @@ features:
   - 009-copy-voice-analytics
   - 1192-photo-variants
   - 067-restore-suspended-garage
+  - 1185-accent-search
 ---
 
 # Capability: Garage listing
@@ -1220,6 +1221,22 @@ _From 1192-photo-variants._
 ### 1192-FR-010 — The worker MUST process at most one photo job per CPU at once by default (the configuration of FR-011), each sharp pipeline single-threaded.
 
 _From 1192-photo-variants._
+
+### 1185-FR-001 — On every insert or update of a garage, the stored `name`, `address`, `seat_address` and `city_name` MUST hold the comma-below letters ș ț Ș Ț wherever the written value held the cedilla letters ş ţ Ş Ţ, whatever path wrote it (listing submit, owner profile edit, admin, seed, direct SQL); every other character of the value is stored unchanged, so a value with no cedilla letter is stored byte-for-byte and nothing changes its length.
+
+_From 1185-accent-search._
+
+### 1185-FR-002 — A one-off step at deployment MUST convert the cedilla letters in the four columns of every existing garage row to the comma forms, touching no row that holds none.
+
+_From 1185-accent-search._
+
+### 1185-FR-004 — Nothing else changes: no index, search screen, text-search configuration or collation is added; `slug`, `city_key` and every other column are untouched; the existing length checks on the four columns keep holding.
+
+_From 1185-accent-search._
+
+### 1185-FR-005 — Tests MUST cover, on the real database: the conversion on insert and on update for each of the four columns through the Prisma client every application write path uses, the byte-for-byte storage of a value without cedillas, the one-off conversion of pre-existing rows, and the `f_unaccent` value of FR-003 together with its capitals; the suite that proves the image (`libs/domain/src/database-image.integration.spec.ts` or a sibling) is where the image assertion lives.
+
+_From 1185-accent-search._
 
 ## Retired
 
