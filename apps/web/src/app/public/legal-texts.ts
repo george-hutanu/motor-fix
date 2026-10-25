@@ -16,11 +16,6 @@ type LegalDocument = {
   sections: readonly Section[];
 };
 
-export const LEGAL_LABELS = {
-  en: { version: 'Version' },
-  ro: { version: 'Versiunea' },
-} as const;
-
 export const LEGAL_TEXTS: Record<
   'ro' | 'en',
   Record<LegalText, LegalDocument>

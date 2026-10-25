@@ -14,6 +14,7 @@ import { firstValueFrom } from 'rxjs';
 import { authInterceptor } from './auth.interceptor';
 import { Session } from './dashboard/session';
 import { PlatformStatus } from './maintenance/platform-status';
+import { ReacceptDialog } from './sign-in/reaccept/reaccept-dialog';
 import { SignInDialog } from './sign-in/sign-in-dialog';
 
 let controller: HttpTestingController | undefined;
@@ -42,6 +43,11 @@ function setup(
     };
   });
   const gate = jest.fn(() => outcome);
+  let decide: (accepted: boolean) => void = () => undefined;
+  const reaccepted = new Promise<boolean>((resolve) => {
+    decide = resolve;
+  });
+  const reaccept = jest.fn(() => reaccepted);
   const platformStatus = { on: jest.fn() };
   TestBed.configureTestingModule({
     providers: [
@@ -50,11 +56,13 @@ function setup(
       { provide: Session, useValue: session },
       { provide: PlatformStatus, useValue: platformStatus },
       { provide: SignInDialog, useValue: { gate } },
+      { provide: ReacceptDialog, useValue: { gate: reaccept } },
       { provide: PLATFORM_ID, useValue: platform },
     ],
   });
   controller = TestBed.inject(HttpTestingController);
   return {
+    accept: () => decide(true),
     close: () => settle(false),
     // A sign-out, or the server revoking the session (an account deleted).
     end: () => {
@@ -64,9 +72,11 @@ function setup(
     gate,
     http: TestBed.inject(HttpClient),
     platformStatus,
+    reaccept,
     server: controller,
     session,
     signIn: () => settle(signsIn),
+    signOut: () => decide(false),
   };
 }
 
@@ -425,6 +435,120 @@ describe('authInterceptor', () => {
       await expect(answer).rejects.toMatchObject({ status: 401 });
       expect(gate).not.toHaveBeenCalled();
     });
+  });
+});
+
+// @traces 1204-FR-007
+describe('authInterceptor when the account must accept new texts', () => {
+  const versions = { privacyVersion: '2026-10-24', termsVersion: '2026-10-12' };
+  const pending = {
+    body: { code: 'consent_required', message: 'Accept', ...versions },
+    options: { status: 403, statusText: 'Forbidden' },
+  };
+
+  it('asks for the acceptance, then sends the call once more with the session token', async () => {
+    const { accept, gate, http, reaccept, server, session } = setup('abc');
+
+    const answer = firstValueFrom(http.get('/api/v1/me/saved-garages'));
+    server
+      .expectOne('/api/v1/me/saved-garages')
+      .flush(pending.body, pending.options);
+    await tick();
+    expect(reaccept).toHaveBeenCalledWith(versions);
+    server.expectNone('/api/v1/me/saved-garages');
+
+    accept();
+    await tick();
+    const retry = server.expectOne('/api/v1/me/saved-garages');
+    expect(retry.request.headers.get('Authorization')).toBe('Bearer abc');
+    retry.flush({ saved: [] });
+
+    expect(await answer).toEqual({ saved: [] });
+    expect(session.renew).not.toHaveBeenCalled();
+    expect(gate).not.toHaveBeenCalled();
+  });
+
+  it('asks for it on the sign-in\'s own "who am I"', async () => {
+    const { accept, http, reaccept, server } = setup('abc');
+
+    const answer = firstValueFrom(http.get('/api/v1/me'));
+    server.expectOne('/api/v1/me').flush(pending.body, pending.options);
+    await tick();
+    expect(reaccept).toHaveBeenCalledTimes(1);
+
+    accept();
+    await tick();
+    server.expectOne('/api/v1/me').flush({ id: 'a' });
+    expect(await answer).toEqual({ id: 'a' });
+  });
+
+  it('passes the refusal on when the person signs out instead', async () => {
+    const { http, server, signOut } = setup('abc');
+
+    const answer = firstValueFrom(http.get('/api/v1/me/saved-garages'));
+    server
+      .expectOne('/api/v1/me/saved-garages')
+      .flush(pending.body, pending.options);
+    await tick();
+    signOut();
+
+    await expect(answer).rejects.toMatchObject({
+      error: { code: 'consent_required' },
+      status: 403,
+    });
+    server.expectNone('/api/v1/me/saved-garages');
+  });
+
+  it('opens no dialog on the server', async () => {
+    const { http, reaccept, server } = setup('abc', null, {
+      platform: 'server',
+    });
+
+    const answer = firstValueFrom(http.get('/api/v1/me/saved-garages'));
+    server
+      .expectOne('/api/v1/me/saved-garages')
+      .flush(pending.body, pending.options);
+
+    await expect(answer).rejects.toMatchObject({ status: 403 });
+    expect(reaccept).not.toHaveBeenCalled();
+  });
+
+  it('opens no dialog for a call whose session ended while it was out', async () => {
+    const { end, http, reaccept, server } = setup('abc');
+
+    const answer = firstValueFrom(http.get('/api/v1/me/saved-garages'));
+    end();
+    server
+      .expectOne('/api/v1/me/saved-garages')
+      .flush(pending.body, pending.options);
+
+    await expect(answer).rejects.toMatchObject({ status: 403 });
+    expect(reaccept).not.toHaveBeenCalled();
+  });
+
+  it('opens no dialog for a call that carries no session', async () => {
+    const { http, reaccept, server } = setup('abc');
+
+    const answer = firstValueFrom(http.post('/api/v1/auth/sign-in', {}));
+    server
+      .expectOne('/api/v1/auth/sign-in')
+      .flush(pending.body, pending.options);
+
+    await expect(answer).rejects.toMatchObject({ status: 403 });
+    expect(reaccept).not.toHaveBeenCalled();
+  });
+
+  it('takes a consent_required 400 for what it is: the answer to a stale acceptance', async () => {
+    const { http, reaccept, server } = setup('abc');
+
+    const answer = firstValueFrom(http.post('/api/v1/me/acceptance', {}));
+    server.expectOne('/api/v1/me/acceptance').flush(pending.body, {
+      status: 400,
+      statusText: 'Bad Request',
+    });
+
+    await expect(answer).rejects.toMatchObject({ status: 400 });
+    expect(reaccept).not.toHaveBeenCalled();
   });
 });
 

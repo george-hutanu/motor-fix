@@ -4,6 +4,7 @@ import type { AddressInfo } from 'node:net';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts';
 import { AuditService, createPrisma, ROUTE_LIMITS } from '@motor-fix/domain';
 import { databaseTurn, TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import { catalogue, defineTool } from '@motor-fix/mcp-tools';
@@ -73,9 +74,27 @@ afterAll(async () => {
   await turn.release();
 });
 
-const newAccount = () =>
+const accepted = (version?: string) => ({
+  create: [
+    {
+      kind: 'terms' as const,
+      language: 'ro' as const,
+      method: 'google' as const,
+      textVersion: version ?? TERMS_VERSION,
+    },
+    {
+      kind: 'privacy_notice' as const,
+      language: 'ro' as const,
+      method: 'google' as const,
+      textVersion: version ?? PRIVACY_VERSION,
+    },
+  ],
+});
+
+const newAccount = (acceptedVersion?: string) =>
   prisma.account.create({
     data: {
+      consents: accepted(acceptedVersion),
       language: 'ro',
       lastRole: 'driver',
       name: 'Ioana Marin',
@@ -94,6 +113,7 @@ async function newOwner() {
   });
   const account = await prisma.account.create({
     data: {
+      consents: accepted(),
       language: 'ro',
       lastRole: 'garage',
       name: 'Mihai Dobre',
@@ -289,6 +309,37 @@ describe('the MCP endpoint', () => {
     expect(res.status).toBe(403);
     expect(res.headers.get('www-authenticate')).toBeNull();
     expect(await res.json()).toMatchObject({ code: 'account_suspended' });
+  });
+
+  // @traces 1204-FR-005
+  it('refuses an owner who has not accepted the texts in force with 403 and no challenge, then answers once they have', async () => {
+    const { id } = await newAccount('2026-10-11');
+    const token = await tokenFor(id);
+
+    const refused = await initialize(token);
+
+    expect(refused.status).toBe(403);
+    expect(refused.headers.get('www-authenticate')).toBeNull();
+    expect(await refused.json()).toMatchObject({
+      code: 'consent_required',
+      privacyVersion: PRIVACY_VERSION,
+      termsVersion: TERMS_VERSION,
+    });
+    expect(
+      await prisma.assistantGrant.count({ where: { accountId: id } }),
+    ).toBe(0);
+
+    await prisma.accountConsent.updateMany({
+      data: { textVersion: TERMS_VERSION },
+      where: { accountId: id, kind: 'terms' },
+    });
+    await prisma.accountConsent.updateMany({
+      data: { textVersion: PRIVACY_VERSION },
+      where: { accountId: id, kind: 'privacy_notice' },
+    });
+    const client = await connect(token);
+    expect((await client.listTools()).tools.length).toBeGreaterThan(0);
+    await client.close();
   });
 
   it.each(['GET', 'DELETE'])('answers %s with 405', async (method) => {
