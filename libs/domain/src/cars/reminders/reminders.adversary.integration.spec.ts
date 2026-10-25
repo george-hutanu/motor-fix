@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
@@ -16,7 +14,7 @@ import {
 } from '../../notifications/notifications.testing';
 
 const redisUrl = redisUrlFor(3);
-const { account, prisma, reset } = fixtures();
+const { account, car, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
 const queue = new Queue('notifications', { connection: { url: redisUrl } });
@@ -25,26 +23,6 @@ const publisher = new Redis(redisUrl);
 let notifications: NotificationsService;
 let reminders: RemindersService;
 let driver: string;
-
-const car = async (ownerId: string, model = 'Logan') => {
-  const brand = await prisma.brand.upsert({
-    create: { key: 'test-dacia', name: 'Dacia', slug: 'test-dacia' },
-    update: {},
-    where: { name: 'Dacia' },
-  });
-  const { id } = await prisma.car.create({
-    data: {
-      brandId: brand.id,
-      fuel: 'petrol',
-      idempotencyKey: randomUUID(),
-      model,
-      odometerKm: 90000,
-      ownerId,
-      year: 2018,
-    },
-  });
-  return id;
-};
 
 type Kind = 'itp' | 'rca' | 'rovinieta';
 const reminder = (carId: string, kind: Kind = 'itp') =>

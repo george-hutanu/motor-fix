@@ -483,30 +483,71 @@ describe('the bell text', () => {
   });
 });
 
-// @traces 032-FR-006
-describe('the ITP bell text', () => {
-  const params = { car: 'Dacia Logan', dueOn: '2026-12-10' };
+// @traces 094-FR-013 094-FR-014
+describe('the ITP reminder texts', () => {
+  const CARS = 'https://motorfix.test/app/driver/cars';
+  const params = { car: 'BMW 320d', cars: CARS, dueOn: '2026-11-13', left: 30 };
 
-  it('names the car and the day its ITP is due, in each language', () => {
+  it('names the car, the long day and the days left in the bell', () => {
     expect(bellText('DUE_ITP', 'ro', params)).toBe(
-      'ITP-ul la Dacia Logan expiră pe 10 dec. 2026',
+      'ITP-ul la BMW 320d expiră pe 13 noiembrie 2026, peste 30 de zile.',
     );
     expect(bellText('DUE_ITP', 'en', params)).toBe(
-      'The ITP of your Dacia Logan is due on 10 Dec 2026',
+      'The ITP on your BMW 320d expires on 13 November 2026, in 30 days.',
     );
   });
 
-  it('writes the day in Bucharest, whatever the hour of the instant', () => {
+  it.each([
+    [1, 'ro', 'peste o zi.'],
+    [7, 'ro', 'peste 7 zile.'],
+    [19, 'ro', 'peste 19 zile.'],
+    [20, 'ro', 'peste 20 de zile.'],
+    [1, 'en', 'in 1 day.'],
+    [7, 'en', 'in 7 days.'],
+  ])('counts %p days left in %s', (left, language, ending) => {
+    expect(bellText('DUE_ITP', language, { ...params, left })).toMatch(
+      new RegExp(`${ending.replace('.', '\\.')}$`),
+    );
+  });
+
+  it('sends the e-mail with the sentence, the advice and Mașinile mele', () => {
+    const ro = render('DUE_ITP', 'email', 'ro', params);
+    expect(ro.subject).toBe('ITP-ul expiră pe 13 noiembrie 2026');
+    expect(ro.text).toContain(
+      'ITP-ul la BMW 320d expiră pe 13 noiembrie 2026, peste 30 de zile.',
+    );
+    expect(ro.text).toContain('Programează inspecția din timp.');
+    expect(ro.text).toContain(`Vezi mașinile mele: ${CARS}`);
+    const en = render('DUE_ITP', 'email', 'en', params);
+    expect(en.subject).toBe('Your ITP expires on 13 November 2026');
+    expect(en.text).toContain('Book the inspection in time.');
+    expect(en.text).toContain(`See my cars: ${CARS}`);
+  });
+
+  it('sends the push with the sentence and the link to the cars', () => {
+    expect(render('DUE_ITP', 'push', 'en', params)).toEqual({
+      body: 'The ITP on your BMW 320d expires on 13 November 2026, in 30 days. Book the inspection in time.',
+      link: CARS,
+      title: 'Your ITP expires soon',
+    });
+    expect(render('DUE_ITP', 'push', 'ro', params).body).toBe(
+      'ITP-ul la BMW 320d expiră pe 13 noiembrie 2026, peste 30 de zile. Programează inspecția din timp.',
+    );
+  });
+
+  it('never shows the plate', () => {
+    const withPlate = { ...params, plate: 'B 123 ABC' };
+    expect(bellText('DUE_ITP', 'ro', withPlate)).not.toContain('B 123 ABC');
+    expect(render('DUE_ITP', 'email', 'en', withPlate).text).not.toContain(
+      'B 123 ABC',
+    );
+  });
+
+  it('is the generic text when a value is missing or the day is not real', () => {
     expect(
-      bellText('DUE_ITP', 'en', { ...params, dueOn: '2026-12-09T23:30:00Z' }),
-    ).toBe('The ITP of your Dacia Logan is due on 10 Dec 2026');
-  });
-
-  it('is the generic text when the car or the day is missing', () => {
-    expect(bellText('DUE_ITP', 'ro', { dueOn: '2026-12-10' })).toBe(
-      'Ai o notificare nouă',
-    );
-    expect(bellText('DUE_ITP', 'en', { car: 'Dacia Logan' })).toBe(
+      bellText('DUE_ITP', 'ro', { car: 'BMW 320d', dueOn: '2026-11-13' }),
+    ).toBe('Ai o notificare nouă');
+    expect(bellText('DUE_ITP', 'en', { ...params, dueOn: '2026-02-30' })).toBe(
       'You have a new notification',
     );
   });

@@ -1,21 +1,62 @@
 import type { Template } from '../templates';
 
-// The phone texts and the bell's; the e-mail is still the generic one. The
-// bell names the car and the day; a row sent before it had the car falls back
-// to the generic text. Each WhatsApp name is a template registered with
-// Brevo, one per language.
+// The car by brand and model, never its plate, the day the ITP expires and
+// the days left on the day it is sent. A row sent before it had these values
+// falls back to the generic text. Each WhatsApp name is a template registered
+// with Brevo, one per language.
 export const DUE_ITP: Template = {
   audience: 'driver',
   bell: {
-    en: 'The ITP of your {car} is due on {dueOn}',
-    ro: 'ITP-ul la {car} expiră pe {dueOn}',
+    en: 'The ITP on your {car} expires on {dueOn}, in {left}.',
+    ro: 'ITP-ul la {car} expiră pe {dueOn}, peste {left}.',
   },
-  example: { car: 'Dacia Logan', dueOn: '2026-11-09' },
+  email: {
+    en: {
+      button: { label: 'See my cars', link: 'cars' },
+      lines: [
+        'The ITP on your {car} expires on {dueOn}, in {left}.',
+        'Book the inspection in time.',
+      ],
+      reason:
+        "You get this e-mail because you chose to be told about your cars' due dates. You can change that in Settings › Notifications.",
+      subject: 'Your ITP expires on {dueOn}',
+    },
+    ro: {
+      button: { label: 'Vezi mașinile mele', link: 'cars' },
+      lines: [
+        'ITP-ul la {car} expiră pe {dueOn}, peste {left}.',
+        'Programează inspecția din timp.',
+      ],
+      reason:
+        'Primești acest e-mail pentru că ai ales să fii anunțat despre scadențele mașinilor tale. Poți schimba asta din Setări › Notificări.',
+      subject: 'ITP-ul expiră pe {dueOn}',
+    },
+  },
+  example: {
+    car: 'BMW 320d',
+    cars: 'https://motorfix.example/app/driver/cars',
+    dueOn: '2026-11-13',
+    left: 30,
+  },
+  push: {
+    en: {
+      body: 'The ITP on your {car} expires on {dueOn}, in {left}. Book the inspection in time.',
+      link: 'cars',
+      shorten: 'car',
+      title: 'Your ITP expires soon',
+    },
+    ro: {
+      body: 'ITP-ul la {car} expiră pe {dueOn}, peste {left}. Programează inspecția din timp.',
+      link: 'cars',
+      shorten: 'car',
+      title: 'ITP-ul expiră curând',
+    },
+  },
   sms: {
     en: "MotorFix: your car's ITP is due soon. Details in the app.",
     ro: 'MotorFix: ITP-ul mașinii tale expiră curând. Detalii în aplicație.',
   },
-  values: { car: 'text', dueOn: 'day' },
+  values: { car: 'text', cars: 'link', dueOn: 'date', left: 'days' },
   whatsapp: {
     en: { name: 'motorfix_due_itp_en', slots: [] },
     ro: { name: 'motorfix_due_itp_ro', slots: [] },

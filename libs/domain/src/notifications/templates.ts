@@ -4,6 +4,7 @@ import {
   formatDay,
   formatLei,
   formatLeiRange,
+  formatMonthYear,
   formatNum,
 } from '@motor-fix/i18n/formats';
 
@@ -22,6 +23,8 @@ type Format =
   | 'lei'
   | 'when'
   | 'day'
+  | 'date'
+  | 'days'
   | 'reason';
 
 interface EmailText {
@@ -117,10 +120,28 @@ function realDay(value: unknown): boolean {
   return new Date(`${value}T00:00:00Z`).toISOString().startsWith(value);
 }
 
+// A number of days with its noun: "o zi", "7 zile", "30 de zile".
+function days(value: unknown, language: Language): string {
+  if (language === 'en')
+    return `${formatNum(value, language)} ${value === 1 ? 'day' : 'days'}`;
+  return value === 1 ? 'o zi' : `${count(value, language)} zile`;
+}
+
+// A calendar day with its month in full: "13 noiembrie 2026".
+function longDay(value: unknown, language: Language): string {
+  const month = formatMonthYear(value, language);
+  if (month === '—') throw new Error(`not a day: ${String(value)}`);
+  return `${Number(String(value).slice(8))} ${month}`;
+}
+
 function format(kind: Format, value: unknown, language: Language): string {
   switch (kind) {
     case 'count':
       return count(value, language);
+    case 'days':
+      return days(value, language);
+    case 'date':
+      return longDay(value, language);
     case 'num':
       return formatNum(value, language);
     case 'lei':

@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { type Job, Queue } from 'bullmq';
@@ -27,28 +25,8 @@ import { bucharestDaily, type DailyClock } from '../../scheduler/daily';
 import { until } from '../../waits.testing';
 
 const redisUrl = redisUrlFor(4);
-const { account, prisma, reset } = fixtures();
+const { account, car, prisma, reset } = fixtures();
 
-// A reminder's car must exist (the foreign key); any car of the account will do.
-const car = async (ownerId: string) => {
-  const brand = await prisma.brand.upsert({
-    create: { key: 'test-dacia', name: 'Dacia', slug: 'test-dacia' },
-    update: {},
-    where: { name: 'Dacia' },
-  });
-  const { id } = await prisma.car.create({
-    data: {
-      brandId: brand.id,
-      fuel: 'petrol',
-      idempotencyKey: randomUUID(),
-      model: 'Logan',
-      odometerKm: 90000,
-      ownerId,
-      year: 2018,
-    },
-  });
-  return id;
-};
 serialDatabase(databaseUrl);
 
 const queue = new Queue(REMINDERS_QUEUE, { connection: { url: redisUrl } });
@@ -288,6 +266,51 @@ describe('the reminders worker with shortened days', () => {
 
 // @traces 092-FR-006
 describe('the reminders worker and the car events', () => {
+  // @traces 094-FR-001
+  it('sets the ITP reminder of a car added with an ITP date', async () => {
+    const notifications = NotificationsModule.registerWorker({
+      databaseUrl,
+      email: testConfig('http://127.0.0.1:9', { EMAIL_SENDING: 'off' }),
+      phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
+      redisUrl,
+    });
+    const app = await Test.createTestingModule({
+      imports: [
+        RemindersModule.registerWorker({
+          dayMs: 250,
+          notifications,
+          redisUrl,
+          webUrl: 'https://motorfix.test',
+        }),
+      ],
+    }).compile();
+    await app.init();
+
+    const driver = await account('teodora', ['driver'], { email: null });
+    const carId = await car(driver);
+    await prisma.car.update({
+      data: { itpUntil: new Date('2030-03-01T00:00:00Z') },
+      where: { id: carId },
+    });
+    await queue.add(
+      'event',
+      {
+        id: '40',
+        kind: 'car.added',
+        payload: { brandId: 'b', carId, fuel: 'petrol', ownerId: driver },
+        subjectId: carId,
+      },
+      { ...CAR_REMINDERS_CONSUMER.jobs, jobId: 'event-40' },
+    );
+    await until(
+      'the ITP reminder of the added car',
+      async () =>
+        (await prisma.reminder.count({ where: { carId, kind: 'itp' } })) === 1,
+      20_000,
+    );
+    await app.close();
+  });
+
   it('takes a relayed car event to the reminders, beside the daily run', async () => {
     const notifications = NotificationsModule.registerWorker({
       databaseUrl,
@@ -306,6 +329,7 @@ describe('the reminders worker and the car events', () => {
     const carId = await car(driver);
     const run = jest.spyOn(app.get(RemindersService), 'run');
     expect(CAR_REMINDERS_CONSUMER.kinds).toEqual([
+      'car.added',
       'car.updated',
       'car.removed',
     ]);
