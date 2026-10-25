@@ -46,7 +46,7 @@ async function answerQuotes(db: Client, mechanicId: string, on: boolean) {
       [
         mechanicId,
         JSON.stringify({ fields: ['canAnswerQuotes'], garageId, mechanicId }),
-        [`garage:${garageId}`],
+        [`garage:${garageId}`, `mechanic:${mechanicId}`],
       ],
     );
     await db.query('COMMIT');

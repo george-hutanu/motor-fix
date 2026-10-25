@@ -260,13 +260,14 @@ describe('audienceOf a mechanic card', () => {
   it("sends a card on the profile to the garage's staff, its public page and the mechanic's page", () => {
     expect(card(true)).toEqual([
       'garage:g1',
+      'mechanic:m1',
       'public:garage:g1',
       'public:mechanic:m1',
     ]);
   });
 
-  it("keeps a card off the profile with the garage's staff", () => {
-    expect(card(false)).toEqual(['garage:g1']);
+  it("keeps a card off the profile with the garage's staff and the mechanic herself", () => {
+    expect(card(false)).toEqual(['garage:g1', 'mechanic:m1']);
   });
 
   it('never reaches the search results', () => {
