@@ -83,6 +83,23 @@ describe('installs without lifecycle scripts', () => {
   });
 
   // @traces 1179-FR-002
+  it('rebuilds sharp only where photo-processing runs: CI Checks opts out, the test jobs keep it', () => {
+    const rebuild = setup.runs.steps.find((s) => /npm rebuild sharp/.test(s.run ?? ''));
+    assert.ok(rebuild, 'the setup action has its own sharp rebuild step');
+    assert.equal(rebuild.if, "inputs.sharp != 'false'");
+    assert.equal(setup.inputs?.sharp?.default, 'true');
+    assert.equal(setupStep(steps(workflows.ci, 'checks'))?.with?.sharp, 'false');
+    for (const [workflow, job] of [
+      [workflows.ci, 'unit'],
+      [workflows.ci, 'integration'],
+      [workflows.ci, 'e2e'],
+      [workflows.restoreDrill, 'drill'],
+    ]) {
+      assert.notEqual(setupStep(steps(workflow, job))?.with?.sharp, 'false', job);
+    }
+  });
+
+  // @traces 1179-FR-002
   it("the images' production install skips scripts and rebuilds only the Prisma engine and sharp", () => {
     const line = read('Dockerfile')
       .split('\n')
