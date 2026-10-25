@@ -5,11 +5,12 @@ import { PLATFORM_ID, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
-import { Layout, type LayoutName } from '@motor-fix/ui-cockpit';
+import { Layout, type LayoutName, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import type { MapEvents, MapMove } from './pins-map';
 import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
 import type { MapFake } from '../../place-step/place-step.testing';
+import { boundsOf, fitView, paddingOf } from '../../static-map/fit-view';
 
 jest.mock('maplibre-gl', () =>
   jest.requireActual('../../place-step/place-step.testing'),
@@ -30,7 +31,12 @@ let moved: (move: MapMove) => void;
 let tapped: (id: string | undefined) => void;
 let shifted: () => void;
 const open = jest.fn(
-  (_host: HTMLElement, on: MapEvents, _here: HTMLElement) =>
+  (
+    _host: HTMLElement,
+    on: MapEvents,
+    _here: HTMLElement,
+    _start?: { center: [number, number]; zoom: number },
+  ) =>
     new Promise<ResultsMapView>((resolve, reject) => {
       moved = on.moved;
       tapped = on.picked;
@@ -50,6 +56,10 @@ async function render({
   platform = 'browser',
   loading = false,
   on = 'tablet' as LayoutName,
+  // The interactive map opens on a tap of the static one; most of these
+  // tests look at it open, so they tap first.
+  activated = true,
+  still = false,
 } = {}) {
   layout.set(on);
   TestBed.configureTestingModule({
@@ -57,6 +67,7 @@ async function render({
       { provide: RESULTS_MAP, useValue: open },
       { provide: PLATFORM_ID, useValue: platform },
       { provide: Layout, useValue: { current: layout } },
+      { provide: REDUCED_MOTION, useValue: signal(still) },
     ],
   });
   const i18n = TestBed.inject(I18n);
@@ -69,6 +80,13 @@ async function render({
   fixture.componentRef.setInput('pins', undefined);
   fixture.detectChanges();
   await fixture.whenStable();
+  if (activated && platform === 'browser') tap();
+}
+
+// The driver taps the static map's "Hartă interactivă".
+function tap() {
+  element().querySelector<HTMLElement>('mf-static-map button')?.click();
+  fixture.detectChanges();
 }
 
 async function ready() {
@@ -127,7 +145,162 @@ describe('ResultsMap, the map region', () => {
         shifted: expect.any(Function),
       },
       element().querySelector('.here'),
+      { center: expect.any(Array), zoom: expect.any(Number) },
     );
+  });
+});
+
+// @traces 1196-FR-010 1196-FR-011 1196-FR-020
+describe('ResultsMap, the static map first', () => {
+  const still = () =>
+    element().querySelector('mf-static-map') as HTMLElement | null;
+  beforeEach(() => {
+    jest
+      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockReturnValue(800);
+    jest
+      .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
+      .mockReturnValue(600);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('shows the static map and loads no MapLibre on render, pins, place or scheme', async () => {
+    await render({ activated: false });
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.componentRef.setInput('place', { lat: 44.5, lng: 26.2 });
+    fixture.componentInstance.fit();
+    fixture.detectChanges();
+    window.dispatchEvent(new Event('resize'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(still()).not.toBeNull();
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('frames the static view with the same function as the first fit, the covered bands included', async () => {
+    await render({ activated: false });
+    fixture.componentRef.setInput('legend', false);
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
+    fixture.componentInstance.fit();
+    fixture.detectChanges();
+
+    expect(still()?.querySelector('img')?.getAttribute('src')).toBeTruthy();
+    const { center, zoom } = fitView(
+      boundsOf([PLACE, PINS.pins[0]]),
+      { h: 600, w: 800 },
+      paddingOf(0),
+    );
+    expect(still()?.querySelector('img')?.getAttribute('src')).toContain(
+      `z=${zoom}&lat=${center.lat}&lng=${center.lng}`,
+    );
+  });
+
+  it('draws the picture only once the search has settled', async () => {
+    await render({ activated: false, loading: true });
+    fixture.componentInstance.fit();
+    fixture.detectChanges();
+
+    expect(still()?.querySelector('img')).toBeNull();
+  });
+
+  it('renders no static image on the server', async () => {
+    await render({ platform: 'server' });
+
+    expect(still()?.querySelector('img')).toBeFalsy();
+    expect(open).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 1196-FR-015 1196-FR-016 1196-FR-019
+describe('ResultsMap, the hand-over to the interactive map', () => {
+  const still = () =>
+    element().querySelector('mf-static-map') as HTMLElement | null;
+
+  it('opens the interactive map at the static view on a tap', async () => {
+    await render({ activated: false });
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.componentInstance.fit();
+    fixture.detectChanges();
+    tap();
+
+    const shown = fitView(
+      boundsOf([PLACE, PINS.pins[0]]),
+      { h: 0, w: 0 },
+      paddingOf(0),
+    );
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0][3]).toEqual({
+      center: [shown.center.lng, shown.center.lat],
+      zoom: shown.zoom,
+    });
+  });
+
+  it('opens it from a tap anywhere on the static map too', async () => {
+    await render({ activated: false });
+    still()?.click();
+
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing on a second tap while the map loads', async () => {
+    await render({ activated: false });
+    tap();
+    tap();
+    still()?.click();
+
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('then shows, lights and marks as before', async () => {
+    await render();
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.componentRef.setInput('lit', 'g-1');
+    fixture.detectChanges();
+    await ready();
+
+    expect(view.show).toHaveBeenLastCalledWith(PINS);
+    expect(view.light).toHaveBeenLastCalledWith('g-1');
+    expect(view.mark).toHaveBeenLastCalledWith(PLACE);
+  });
+
+  it('fades the static map out once the style has loaded, taking its control out of reach at once', async () => {
+    await render();
+    await ready();
+
+    expect(still()?.classList.contains('leaving')).toBe(true);
+    expect(still()?.hasAttribute('inert')).toBe(true);
+  });
+
+  it('removes the static map after the fade', async () => {
+    await render();
+    await ready();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    fixture.detectChanges();
+
+    expect(still()).toBeNull();
+    expect(element().querySelector('button')).toBeNull();
+  });
+
+  it('swaps at once under reduced motion', async () => {
+    await render({ still: true });
+    await ready();
+    await new Promise((resolve) => setTimeout(resolve));
+    fixture.detectChanges();
+
+    expect(still()).toBeNull();
+  });
+
+  it('drops the static map for the grey one when the interactive map cannot open', async () => {
+    await render();
+    failed(new Error('style 500'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(still()).toBeNull();
+    expect(element().querySelector('.placeholder')).not.toBeNull();
   });
 });
 
@@ -560,6 +733,7 @@ describe('RESULTS_MAP, the map while it loads', () => {
         shifted: jest.fn(),
       },
       document.createElement('div'),
+      { center: [26.1, 44.43], zoom: 12 },
     );
     // The opener awaits MapLibre's import before it builds the map.
     await new Promise((resolve) => setTimeout(resolve));

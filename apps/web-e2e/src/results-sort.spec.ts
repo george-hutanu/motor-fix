@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ready } from './accounts.js';
+import { openMap, ready } from './accounts.js';
 import { violations } from './axe.js';
 import { test } from './fixtures.js';
 
@@ -188,6 +188,7 @@ test.describe('sorting the Results page @seeded @database', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await ready(page, opened());
     await expect(cards(page)).toHaveCount(3);
+    await openMap(page);
     const handle = page.locator('mf-results-sheet button.handle');
     const zoomOut = page.locator('.maplibregl-ctrl-zoom-out');
     await expect(zoomOut).toHaveCount(1);

@@ -804,6 +804,8 @@
     "locating": "Finding your location…",
     "locationFailed": "We could not get your location.",
     "map": {
+      "attribution": "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors",
+      "interactive": "Interactive map",
       "label": "Map of garages",
       "mobile": "Mobile mechanic · service area",
       "rate": "lei per hour",

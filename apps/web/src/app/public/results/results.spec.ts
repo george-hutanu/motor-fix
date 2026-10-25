@@ -245,6 +245,16 @@ async function open(
     localStorage.getItem('mf-place') === null;
   await harness.navigateByUrl(placed && bare ? `${url}&near=${NEAR}` : url);
   await settle();
+  await interactive();
+}
+
+// The map shows a static image until the driver taps it; these tests drive
+// the interactive map, so they ask for it as a driver would.
+async function interactive() {
+  const ask = page().querySelector<HTMLElement>('mf-static-map button');
+  if (!ask) return;
+  ask.click();
+  await settle();
 }
 
 const page = () => harness.routeNativeElement as HTMLElement;

@@ -1,0 +1,196 @@
+:host {
+  cursor: pointer;
+  display: block;
+  inset: 0;
+  overflow: hidden;
+  position: absolute;
+}
+
+.blank,
+.overlay {
+  inset: 0;
+  position: absolute;
+}
+
+/* The grey map until the image arrives, and when it cannot. */
+.blank {
+  background: var(--mf-line);
+}
+
+/* The image is the bucket's size, larger than the box or equal to it:
+   cropped centred, never scaled, so the ground stays under its pins. */
+img {
+  height: 100%;
+  inset: 0;
+  object-fit: none;
+  object-position: center;
+  position: absolute;
+  width: 100%;
+}
+
+.overlay {
+  pointer-events: none;
+}
+
+/* The interactive map's pins: a lamp-coloured dot with its rate at its
+   right, ringed in the panel colour. */
+.pin {
+  align-items: center;
+  color: var(--mf-text);
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 6px;
+  position: absolute;
+  text-shadow:
+    0 0 2px var(--mf-panel),
+    0 0 2px var(--mf-panel);
+  transform: translate(-7px, -50%);
+  white-space: nowrap;
+}
+
+.pin::before {
+  background: var(--mf-red);
+  border: 2px solid var(--mf-panel);
+  border-radius: 50%;
+  box-sizing: border-box;
+  content: "";
+  flex: none;
+  height: 14px;
+  width: 14px;
+}
+
+.pin.takes::before {
+  background: var(--mf-green);
+}
+
+.pin.lit {
+  color: var(--mf-on-amber);
+  text-shadow:
+    0 0 2px var(--mf-amber),
+    0 0 2px var(--mf-amber);
+  z-index: 1;
+}
+
+.pin.lit::before {
+  background: var(--mf-amber);
+  height: 16px;
+  width: 16px;
+}
+
+.cluster {
+  align-items: center;
+  background: var(--mf-green);
+  border: 2px solid var(--mf-panel);
+  border-radius: 50%;
+  box-sizing: border-box;
+  color: var(--mf-panel);
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  height: 28px;
+  justify-content: center;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 28px;
+}
+
+/* A mobile mechanic's area, its rate at its middle. */
+.area {
+  --lamp: var(--mf-red);
+  align-items: center;
+  background: color-mix(in srgb, var(--lamp) 12%, transparent);
+  border: 1.5px solid var(--lamp);
+  border-radius: 50%;
+  box-sizing: border-box;
+  color: var(--mf-text);
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  height: calc(2 * var(--r));
+  justify-content: center;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: calc(2 * var(--r));
+}
+
+.area.takes {
+  --lamp: var(--mf-green);
+}
+
+.area.lit {
+  background: color-mix(in srgb, var(--mf-amber) 30%, transparent);
+  border: 2.5px solid var(--mf-amber);
+}
+
+/* "You are here", as on the interactive map. */
+.here {
+  background: var(--mf-amber);
+  border: 3px solid var(--mf-on-amber);
+  border-radius: 50%;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--mf-amber) 80%, transparent);
+  box-sizing: border-box;
+  height: 14px;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 14px;
+}
+
+.here::before {
+  border: 1.5px solid var(--mf-amber);
+  border-radius: 50%;
+  box-sizing: border-box;
+  content: "";
+  height: 18px;
+  left: 50%;
+  margin: -9px 0 0 -9px;
+  position: absolute;
+  top: 50%;
+  width: 18px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .here::before {
+    animation: mf-ring 2.2s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  }
+}
+
+@keyframes mf-ring {
+  from {
+    opacity: 0.9;
+    transform: scale(0.8);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(2.8);
+  }
+}
+
+/* The button and the tiles' credit at the bottom right, above whatever the
+   host says covers the map's bottom edge (the legend, a phone's sheet). */
+.corner {
+  align-items: flex-end;
+  bottom: calc(var(--covered, 0px) + var(--mf-space-3));
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-1);
+  max-width: calc(100% - 2 * var(--mf-space-3));
+  position: absolute;
+  right: var(--mf-space-3);
+}
+
+button {
+  min-height: var(--mf-tap);
+}
+
+.attribution {
+  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--mf-panel-raised) 80%, transparent);
+  border-radius: var(--mf-radius-chip);
+  color: var(--mf-text);
+  font-size: var(--mf-size-small);
+  margin: 0;
+  padding: 2px var(--mf-space-2);
+  text-align: right;
+}

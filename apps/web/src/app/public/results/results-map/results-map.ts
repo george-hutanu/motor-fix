@@ -23,7 +23,7 @@ import type {
   ListedGarageDto,
 } from '@motor-fix/data-access';
 import { TranslatePipe } from '@motor-fix/i18n';
-import { Layout } from '@motor-fix/ui-cockpit';
+import { Layout, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { MapCard } from './map-card/map-card';
 import { drawPins, type MapEvents, type MapMove } from './pins-map';
@@ -31,9 +31,18 @@ import {
   closeMapLibre,
   keepOutOfTabOrder,
   type LatLng,
+  type MapStart,
   openMapLibre,
   styleFor,
 } from '../../map-libre/map-libre';
+import {
+  boundsOf,
+  fitView,
+  type MapView,
+  paddingOf,
+  pointsOf,
+} from '../../static-map/fit-view';
+import { StaticMap } from '../../static-map/static-map';
 
 // The small card keeps 8 px below the map's top and 14 px above its pin;
 // results-map.css keeps the same 8 px at its sides.
@@ -42,6 +51,8 @@ const EDGE = 8;
 // padding on both sides and 40 px to frame them in.
 const ROOM = 120;
 const GAP = 14;
+// The static map's fade into the interactive one.
+const FADE_MS = 200;
 
 export interface ResultsMapView {
   destroy(): void;
@@ -67,20 +78,22 @@ type OpenResultsMap = (
   host: HTMLElement,
   on: MapEvents,
   here: HTMLElement,
+  start: MapStart,
 ) => Promise<ResultsMapView>;
 
-// Opens the results map in the browser; the component never sees MapLibre,
-// which is fetched only once the page has rendered.
+// Opens the results map in the browser at the static map's view; the
+// component never sees MapLibre, which is fetched only once the driver asks
+// for the interactive map.
 export const RESULTS_MAP = new InjectionToken<OpenResultsMap>('RESULTS_MAP', {
   factory: () => {
     const document = inject(DOCUMENT);
-    return async (host, on, here) => {
+    return async (host, on, here, start) => {
       // From the start: MapLibre adds its focusable canvas while the style
       // is still loading, under the grey placeholder.
       const stop = keepOutOfTabOrder(host);
       let map: Awaited<ReturnType<typeof openMapLibre>>;
       try {
-        map = await openMapLibre(host, styleFor(document));
+        map = await openMapLibre(host, styleFor(document), undefined, start);
       } catch (error) {
         stop();
         throw error;
@@ -98,11 +111,12 @@ export const RESULTS_MAP = new InjectionToken<OpenResultsMap>('RESULTS_MAP', {
   },
 });
 
-// The garages of the search on a map beside the list. The map is not the
+// The garages of the search on a map beside the list: a static image first,
+// the interactive map once the driver asks for it. The map is not the
 // accessible path: the list carries every garage, so the canvas stays out
 // of the keyboard order and away from assistive technology.
 @Component({
-  imports: [MapCard, TranslatePipe],
+  imports: [MapCard, StaticMap, TranslatePipe],
   selector: 'mf-results-map',
   styleUrl: './results-map.css',
   templateUrl: './results-map.html',
@@ -139,6 +153,30 @@ export class ResultsMap {
   private readonly here = viewChild.required<ElementRef<HTMLElement>>('here');
   protected readonly view = signal<ResultsMapView | undefined>(undefined);
   private fitWanted = false;
+  // The static map until the driver asks for the interactive one, which then
+  // loads; once it has, the static map fades and goes.
+  protected readonly stage = signal<'static' | 'loading' | 'leaving' | 'gone'>(
+    'static',
+  );
+  // The box and its covered bands as last measured; none on the server.
+  private readonly measured = signal<
+    { w: number; h: number; bottom: number; top: number } | undefined
+  >(undefined);
+  protected readonly covered = computed(() => this.measured()?.bottom ?? 0);
+  // The view the static image shows, which the interactive map opens at.
+  protected readonly still = computed<MapView | undefined>(() => {
+    const at = this.measured();
+    if (!at) return undefined;
+    return fitView(
+      boundsOf(pointsOf(this.place(), this.pins())),
+      at,
+      paddingOf(at.bottom, at.top),
+    );
+  });
+  private readonly reduced = inject(REDUCED_MOTION);
+  private readonly open = inject(RESULTS_MAP);
+  private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
+  private closed = false;
   // Bumped on every move of the map, so the small card follows its pin.
   private readonly shifts = signal(0);
   // The small card's own height once drawn, to keep it inside the map.
@@ -161,31 +199,20 @@ export class ResultsMap {
   });
 
   constructor() {
-    const open = inject(RESULTS_MAP);
-    const browser = isPlatformBrowser(inject(PLATFORM_ID));
-    let closed = false;
-    inject(DestroyRef).onDestroy(() => {
-      closed = true;
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(() => {
+      this.closed = true;
       untracked(this.view)?.destroy();
     });
     afterNextRender(() => {
-      if (!browser) return;
-      open(
-        this.host().nativeElement,
-        {
-          moved: (move) => this.follow(move),
-          picked: (id) => this.picked.emit(id),
-          shifted: () => this.shifts.update((n) => n + 1),
-        },
-        this.here().nativeElement,
-      ).then(
-        (view) => {
-          if (closed) return view.destroy();
-          this.view.set(view);
-          if (this.fitWanted) this.fit();
-        },
-        () => this.failure.set(true),
-      );
+      if (!this.browser) return;
+      this.measure();
+      if (typeof ResizeObserver === 'undefined') return;
+      const resized = new ResizeObserver(() => {
+        if (!untracked(this.view)) this.measure();
+      });
+      resized.observe(this.host().nativeElement);
+      destroyRef.onDestroy(() => resized.disconnect());
     });
     effect(() => this.view()?.show(this.pins()));
     effect(() => this.view()?.light(this.lit()));
@@ -196,6 +223,36 @@ export class ResultsMap {
       const small = this.small()?.nativeElement;
       if (small) this.smallHeight.set(small.offsetHeight);
     });
+  }
+
+  // The driver asked for the interactive map: it opens at the static view,
+  // and a second ask while it loads does nothing.
+  protected activate() {
+    if (!this.browser || untracked(this.stage) !== 'static') return;
+    this.stage.set('loading');
+    const still = untracked(this.still) ?? this.measure();
+    this.open(
+      this.host().nativeElement,
+      {
+        moved: (move) => this.follow(move),
+        picked: (id) => this.picked.emit(id),
+        shifted: () => this.shifts.update((n) => n + 1),
+      },
+      this.here().nativeElement,
+      { center: [still.center.lng, still.center.lat], zoom: still.zoom },
+    ).then(
+      (view) => {
+        if (this.closed) return view.destroy();
+        this.view.set(view);
+        if (this.fitWanted) this.fit();
+        this.stage.set('leaving');
+        setTimeout(
+          () => this.stage.set('gone'),
+          untracked(this.reduced) ? 0 : FADE_MS,
+        );
+      },
+      () => this.failure.set(true),
+    );
   }
 
   private follow(move: MapMove) {
@@ -210,16 +267,35 @@ export class ResultsMap {
     const view = untracked(this.view);
     this.fitWanted = !view;
     this.tooWide.set(false);
+    if (!view) {
+      this.measure();
+      return;
+    }
     const place = untracked(this.place);
     const pins = untracked(this.pins);
     if (untracked(this.phone)) {
       const { bottom, top } = this.phoneCovers();
-      view?.fit(place, pins, bottom, top);
-    } else view?.fit(place, pins, this.covered());
+      view.fit(place, pins, bottom, top);
+    } else view.fit(place, pins, this.legendCover());
+  }
+
+  // Measures the box and what covers it, which frames the static view.
+  private measure(): MapView {
+    const host = this.host().nativeElement;
+    const { bottom, top } = untracked(this.phone)
+      ? this.phoneCovers()
+      : { bottom: this.legendCover(), top: 0 };
+    this.measured.set({
+      bottom,
+      h: host.clientHeight,
+      top,
+      w: host.clientWidth,
+    });
+    return untracked(this.still) as MapView;
   }
 
   // How far up the map's bottom edge the legend reaches, in pixels.
-  private covered() {
+  private legendCover() {
     const map = this.host().nativeElement.parentElement;
     const key = map?.querySelector('.legend');
     if (!map || !key) return 0;

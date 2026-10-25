@@ -22,6 +22,18 @@
   background: var(--mf-line);
 }
 
+/* Once the interactive map has drawn, the static one fades off it. */
+mf-static-map.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  mf-static-map {
+    transition: opacity 200ms var(--mf-motion-ease);
+  }
+}
+
 .legend {
   align-items: center;
   backdrop-filter: blur(12px);

@@ -1,0 +1,26 @@
+<div class="blank" aria-hidden="true"></div>
+@if (src(); as src) {
+  @if (!broken()) {
+    <img [src]="src" alt="" (error)="broken.set(true)" />
+  }
+}
+@if (overlay(); as drawn) {
+  <div class="overlay" aria-hidden="true">
+    @for (area of drawn.circles; track area.id) {
+      <span class="area" [class.takes]="area.takes" [class.lit]="area.id === lit()" [style.left.px]="area.x" [style.top.px]="area.y" [style.--r]="area.r + 'px'">{{ area.rate }}</span>
+    }
+    @for (cluster of drawn.clusters; track $index) {
+      <span class="cluster" [style.left.px]="cluster.x" [style.top.px]="cluster.y">{{ cluster.count }}</span>
+    }
+    @for (pin of drawn.pins; track pin.id) {
+      <span class="pin" [class.takes]="pin.takes" [class.lit]="pin.id === lit()" [style.left.px]="pin.x" [style.top.px]="pin.y">{{ pin.rate }}</span>
+    }
+    @if (drawn.marker; as marker) {
+      <span class="here" [style.left.px]="marker.x" [style.top.px]="marker.y"></span>
+    }
+  </div>
+}
+<div class="corner">
+  <button hlmBtn variant="secondary" type="button">{{ 'public.results.map.interactive' | t }}</button>
+  <p class="attribution">{{ 'public.results.map.attribution' | t }}</p>
+</div>
