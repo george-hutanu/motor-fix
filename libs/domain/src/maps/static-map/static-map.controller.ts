@@ -30,7 +30,11 @@ import type { Request, Response } from 'express';
 import { catchError, type Observable, tap, throwError } from 'rxjs';
 
 import { recordRender } from './static-map.metrics';
-import { MapTilesUnavailable, StaticMapRenderer } from './static-map.renderer';
+import {
+  isBlank,
+  MapTilesUnavailable,
+  StaticMapRenderer,
+} from './static-map.renderer';
 import { Public } from '../../auth/actor.guard';
 import { refusal } from '../../auth/http-refusal';
 import { RateLimits } from '../../rate-limit/rate-limit.service';
@@ -107,7 +111,9 @@ export class StaticMapController {
       z: query.z,
       ...centre,
     });
-    res.setHeader('Cache-Control', STATIC_MAP_CACHE_CONTROL);
+    // A blank view keeps the interceptor's no-store.
+    if (!isBlank(image))
+      res.setHeader('Cache-Control', STATIC_MAP_CACHE_CONTROL);
     res.setHeader('X-Map-Lat', String(centre.lat));
     res.setHeader('X-Map-Lng', String(centre.lng));
     return new StreamableFile(image, { type: 'image/webp' });

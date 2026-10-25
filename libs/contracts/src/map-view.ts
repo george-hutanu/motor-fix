@@ -29,7 +29,7 @@ export interface StaticMapView extends LatLng {
 
 // MapLibre's world: 512 pixels across at zoom 0, so a point projected here
 // lands where the interactive map draws it at the same centre and zoom.
-export const WORLD = 512;
+const WORLD = 512;
 export const worldSize = (z: number) => WORLD * 2 ** z;
 
 export function project({ lat, lng }: LatLng, z: number): WorldPoint {

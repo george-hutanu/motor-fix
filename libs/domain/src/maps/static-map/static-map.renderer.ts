@@ -68,6 +68,12 @@ const FILLS: {
 ];
 const ROAD_ORDER: RoadGroup[] = ['path', 'minor', 'major'];
 
+// Images drawn from tiles that all answered 404. A whole view with no data
+// is rather an address gone stale than the open sea: the controller keeps
+// such an image out of the caches, and the address is read again.
+const BLANK = new WeakSet<Buffer>();
+export const isBlank = (image: Buffer) => BLANK.has(image);
+
 const tracer = () => trace.getTracer('motorfix');
 
 // Draws one view of the map as WebP from the provider's vector tiles, in the
@@ -116,11 +122,18 @@ export class StaticMapRenderer {
         'map.zoom': view.z,
       });
       try {
-        const tiles = off ? [] : await this.tilesWithin(tz, xs, ys);
-        const svg = draw(view, tiles, { left, scale, top });
-        return await sharp(Buffer.from(svg))
-          .webp({ quality: WEBP_QUALITY })
-          .toBuffer();
+        return await this.within(async (signal) => {
+          const tiles = off ? [] : await this.tilesWithin(tz, xs, ys, signal);
+          const svg = draw(view, tiles, { left, scale, top });
+          const image = await sharp(Buffer.from(svg))
+            .webp({ quality: WEBP_QUALITY })
+            .toBuffer();
+          if (tiles.length > 0 && tiles.every((tile) => tile.data === null)) {
+            this.tileUrl = null;
+            BLANK.add(image);
+          }
+          return image;
+        });
       } catch (error) {
         span.setStatus({ code: SpanStatusCode.ERROR });
         if (error instanceof MapTilesUnavailable) {
@@ -135,35 +148,39 @@ export class StaticMapRenderer {
     });
   }
 
-  private async tilesWithin(
-    tz: number,
-    xs: number[],
-    ys: number[],
-  ): Promise<Tile[]> {
+  // The whole image, tiles and drawing, within its own limit; the tiles
+  // still being read are dropped when it passes.
+  private async within<T>(work: (signal: AbortSignal) => Promise<T>) {
     const abort = new AbortController();
     let timer: NodeJS.Timeout | undefined;
     const expired = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
         abort.abort();
-        reject(new MapTilesUnavailable('the tiles took too long'));
+        reject(new MapTilesUnavailable('the image took too long'));
       }, this.renderTimeoutMs);
     });
     try {
-      const work = (async () => {
-        const template = await this.template(abort.signal);
-        const count = 2 ** tz;
-        return Promise.all(
-          xs.flatMap((x) =>
-            ys
-              .filter((y) => y >= 0 && y < count)
-              .map((y) => this.tile(template, tz, x, y, count, abort.signal)),
-          ),
-        );
-      })();
-      return await Promise.race([work, expired]);
+      return await Promise.race([work(abort.signal), expired]);
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  private async tilesWithin(
+    tz: number,
+    xs: number[],
+    ys: number[],
+    signal: AbortSignal,
+  ): Promise<Tile[]> {
+    const template = await this.template(signal);
+    const count = 2 ** tz;
+    return Promise.all(
+      xs.flatMap((x) =>
+        ys
+          .filter((y) => y >= 0 && y < count)
+          .map((y) => this.tile(template, tz, x, y, count, signal)),
+      ),
+    );
   }
 
   // The tile address from the provider's TileJSON, kept an hour: the

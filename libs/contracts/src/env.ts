@@ -169,7 +169,7 @@ export function grafanaUrl(
 // The vector tiles the static map image is drawn from, as a TileJSON
 // address; `off` calls no provider and draws the ground colour only, which
 // the end-to-end and QA runs use so no test fetches a tile.
-export const MAP_TILES_DEFAULT = 'https://tiles.openfreemap.org/planet';
+const MAP_TILES_DEFAULT = 'https://tiles.openfreemap.org/planet';
 
 export function mapTilesTileJsonUrl(
   source: Record<string, string | undefined> = process.env,

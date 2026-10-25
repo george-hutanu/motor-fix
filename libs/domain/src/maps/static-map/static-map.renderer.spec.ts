@@ -7,6 +7,7 @@ import sharp from 'sharp';
 
 import { PALETTES } from './static-map.palette';
 import {
+  isBlank,
   MapTilesUnavailable,
   RENDER_TIMEOUT_MS,
   StaticMapRenderer,
@@ -163,6 +164,42 @@ describe('rendering a static map', () => {
     );
   });
 
+  it('marks a view whose tiles all answered 404 as blank, and reads the tile address again', async () => {
+    const { calls, fetch } = provider(
+      async () => new Response('', { status: 404 }),
+    );
+    const renderer = new StaticMapRenderer(TILEJSON, { fetch });
+
+    const image = await renderer.render(view('light'));
+    await renderer.render(view('light'));
+
+    expect(isBlank(image)).toBe(true);
+    expect(calls.filter((url) => url === TILEJSON)).toHaveLength(2);
+  });
+
+  it('marks no view drawn from a tile with data as blank', async () => {
+    const { calls, fetch } = provider();
+    const renderer = new StaticMapRenderer(TILEJSON, { fetch });
+
+    const image = await renderer.render(view('light'));
+    await renderer.render(view('light'));
+
+    expect(isBlank(image)).toBe(false);
+    expect(calls.filter((url) => url === TILEJSON)).toHaveLength(1);
+  });
+
+  it('fails when drawing the image passes the whole limit', async () => {
+    const { fetch } = provider();
+    const renderer = new StaticMapRenderer(TILEJSON, {
+      fetch,
+      renderTimeoutMs: 1,
+    });
+
+    await expect(renderer.render(view('light'))).rejects.toBeInstanceOf(
+      MapTilesUnavailable,
+    );
+  });
+
   it('draws the same ground in the dark palette', async () => {
     const { fetch } = provider();
     const image = await new StaticMapRenderer(TILEJSON, { fetch }).render(
@@ -296,7 +333,8 @@ describe('rendering a static map', () => {
     const { fetch } = provider(() => new Promise(() => undefined));
     const renderer = new StaticMapRenderer(TILEJSON, {
       fetch,
-      renderTimeoutMs: 1000,
+      // Past Jest's own limit: only the tile's 20 ms can end this.
+      renderTimeoutMs: 60_000,
       tileTimeoutMs: 20,
     });
 

@@ -49,7 +49,6 @@ export * from './listing-submit.dto';
 export * from './listing-survey';
 export * from './listing-verification';
 export * from './live.dto';
-export * from './map-view';
 export * from './marked-brands';
 export * from './me.dto';
 export * from './near.dto';
