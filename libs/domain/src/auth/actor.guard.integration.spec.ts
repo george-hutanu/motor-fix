@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { metrics } from '@opentelemetry/api';
@@ -15,7 +16,6 @@ import {
   Public,
 } from './actor.guard';
 import { AuthModule } from './auth.module';
-import type { Role } from './capabilities';
 import { MAINTENANCE } from './maintenance';
 import type { Actor } from './policy';
 import { createPrisma } from './prisma';

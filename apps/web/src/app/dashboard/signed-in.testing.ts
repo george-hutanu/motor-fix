@@ -1,4 +1,4 @@
-import type { Provider } from '@angular/core';
+import type { EnvironmentProviders, Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AuthService, type MeDto, MeService } from '@motor-fix/data-access';
 import { I18n, LanguageChoice } from '@motor-fix/i18n';
@@ -56,7 +56,7 @@ export function setup<
 }: {
   auth?: A;
   me?: M;
-  providers?: Provider[];
+  providers?: (Provider | EnvironmentProviders)[];
 } = {}) {
   const me = { ...meStubs(), ...meOverrides } as Merged<
     ReturnType<typeof meStubs>,

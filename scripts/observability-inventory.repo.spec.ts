@@ -522,3 +522,29 @@ describe('the browser monitoring records', () => {
     expect(readme).not.toMatch(/only once the analytics consent gate\s+ships/);
   });
 });
+
+// @traces 102-FR-019
+describe('the garage members read route', () => {
+  it('is an OpenAPI operation the inventory lists with its metric, alerts and reason', () => {
+    const route = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).paths['/api/v1/garages/{garageId}/members'];
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: {
+      name?: string;
+      metric?: string;
+      alerts?: string[];
+      reason?: string;
+    }[] = Object.values(inventory).flatMap((each) =>
+      Array.isArray(each) ? each : [],
+    );
+    const members = entries.find((each) => each.name === 'garage-members-list');
+
+    expect(Object.keys(route)).toContain('get');
+    expect(members?.metric).toMatch(/\/api\/v1\/garages\/:garageId\/members$/);
+    expect(members?.alerts?.length).toBeGreaterThan(0);
+    expect(members?.reason).toBeTruthy();
+  });
+});

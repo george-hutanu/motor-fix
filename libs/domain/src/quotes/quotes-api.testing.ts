@@ -1,3 +1,4 @@
+import type { Role } from '@motor-fix/contracts/capabilities';
 import {
   type DynamicModule,
   type INestApplication,
@@ -11,7 +12,6 @@ import { QuotesModule } from './quotes.module';
 import { databaseUrl, quotesWorld } from './quotes.testing';
 import { signAccessToken } from '../auth/access-token';
 import { AuthModule } from '../auth/auth.module';
-import type { Role } from '../auth/capabilities';
 import { PRISMA } from '../auth/prisma';
 import { serialDatabase } from '../auth/serial-db.testing';
 import type { PrismaClient } from '../generated/prisma/client';

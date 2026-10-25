@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import type { Capability } from '@motor-fix/contracts/capabilities';
 import { FACILITIES } from '@motor-fix/contracts/garage-hours';
 import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
 import { type GarageProfileDto, GaragesService } from '@motor-fix/data-access';
@@ -84,6 +85,13 @@ export class ProfileView {
       resync: this.live.resync,
       retryAfter: 60_000,
     },
+  );
+  // The legal check and its upload are the owner's (her switches' row); the
+  // receptionist reads the profile alone.
+  protected readonly legalCheck = computed(() =>
+    (this.session.shown()?.capabilities ?? []).includes(
+      'garage.feature_switches' satisfies Capability,
+    ),
   );
   protected readonly profile = computed(() =>
     this.suspended() ? undefined : this.view.value(),

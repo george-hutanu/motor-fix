@@ -1,3 +1,4 @@
+import type { Role } from '@motor-fix/contracts/capabilities';
 import {
   type BeforeApplicationShutdown,
   Injectable,
@@ -5,7 +6,6 @@ import {
 } from '@nestjs/common';
 
 import { AccountLoader, actorOf } from '../../auth/account-loader';
-import type { Role } from '../../auth/capabilities';
 import type { Actor } from '../../auth/policy';
 import type { HomeWarmer } from '../../auth/sign-in.service';
 import { CarsService } from '../../cars/my-cars/cars/cars.service';

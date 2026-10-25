@@ -41,6 +41,7 @@ async function render(language: 'ro' | 'en' = 'ro') {
   const session = {
     current,
     ended: new Subject<void>(),
+    garageGone: () => false,
     reload: jest.fn(async () => undefined),
     shown: current,
     signOut: jest.fn(),

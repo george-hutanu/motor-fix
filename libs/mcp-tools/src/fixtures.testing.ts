@@ -129,11 +129,11 @@ export const fixtureTools: ToolDefinition[] = [
   defineTool({
     acts: true,
     annotations: write,
-    capability: 'garage.reviews',
-    description: 'Replies to a review.',
+    capability: 'garage.prices',
+    description: 'Changes a price on the price list.',
     handler: ok,
-    inputSchema: { reviewId: z.string(), text: z.string().min(1) },
-    name: 'reply_to_review',
+    inputSchema: { jobId: z.string(), price: z.number().min(0) },
+    name: 'update_price',
     roles: ['garage', 'receptionist'],
   }),
   defineTool({

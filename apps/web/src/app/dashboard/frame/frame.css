@@ -236,6 +236,30 @@ main {
   font-size: var(--mf-size-small);
   overflow-wrap: anywhere;
 }
+.access-status {
+  margin: 0 0 var(--mf-space-3);
+  padding: var(--mf-space-2) var(--mf-space-4);
+  border-block: 1px solid var(--mf-line-strong);
+  color: var(--mf-text);
+  font-size: var(--mf-size-small);
+  overflow-wrap: anywhere;
+}
+.gone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  padding: var(--mf-space-4);
+}
+.gone p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.gone a {
+  align-self: flex-start;
+  min-height: var(--mf-tap);
+  display: inline-flex;
+  align-items: center;
+}
 .live-status {
   margin: var(--mf-space-2) 0 0;
   padding: 0;

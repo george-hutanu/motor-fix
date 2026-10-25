@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 import { AuditHistoryService } from './audit-history.service';
-import type { Role } from '../../auth/capabilities';
 import type { Actor } from '../../auth/policy';
 import { createPrisma, prismaAdapter } from '../../auth/prisma';
 import { serialDatabase } from '../../auth/serial-db.testing';
