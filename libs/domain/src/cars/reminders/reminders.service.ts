@@ -7,6 +7,7 @@ import {
   NOTIFICATIONS_PRISMA,
   NotificationsService,
 } from '../../notifications/notifications.service';
+import { serviceDueOn } from '../odometer/odometer';
 
 type DueKind = 'itp' | 'service' | 'rca' | 'rovinieta';
 const DUE_KINDS: DueKind[] = ['itp', 'service', 'rca', 'rovinieta'];
@@ -98,6 +99,35 @@ export class RemindersService {
                  OR EXCLUDED.sent_7`;
   }
 
+  // The oil service is keyed by the kilometres it is due at, not its day: the
+  // day is an estimate that moves with every reading, and a moved estimate
+  // keeps the reminder's id and what it sent. A new value takes a new id and
+  // starts again. A stage behind `today` counts as sent, as for a date.
+  async setServiceDue(input: {
+    accountId: string;
+    carId: string;
+    dueKm: number;
+    dueOn: string;
+    today: string;
+  }): Promise<void> {
+    await this.prisma.$executeRaw`
+      INSERT INTO reminder (id, account_id, car_id, kind, due_on, due_km, sent_30, sent_7)
+      VALUES (gen_random_uuid(), ${input.accountId}::uuid, ${input.carId}::uuid,
+              'service', ${input.dueOn}::date, ${input.dueKm},
+              ${input.dueOn}::date - 30 < ${input.today}::date,
+              ${input.dueOn}::date - 7 < ${input.today}::date)
+      ON CONFLICT (car_id, kind) DO UPDATE SET
+        id = CASE WHEN reminder.due_km = EXCLUDED.due_km THEN reminder.id
+                  ELSE EXCLUDED.id END,
+        account_id = EXCLUDED.account_id,
+        due_on = EXCLUDED.due_on,
+        due_km = EXCLUDED.due_km,
+        sent_30 = (reminder.sent_30 AND reminder.due_km = EXCLUDED.due_km)
+                  OR EXCLUDED.sent_30,
+        sent_7 = (reminder.sent_7 AND reminder.due_km = EXCLUDED.due_km)
+                 OR EXCLUDED.sent_7`;
+  }
+
   // A relayed car event: an added car's dates set their reminders, an edit's
   // changed dates move, set or cancel theirs; a removal deletes them all. The dates are read from the car,
   // not the event, so a retried older edit cannot move a reminder back or
@@ -109,7 +139,10 @@ export class RemindersService {
     const car = await this.prisma.car.findUnique({
       select: {
         itpUntil: true,
+        nextServiceKm: true,
+        odometerKm: true,
         rcaUntil: true,
+        readings: { select: { createdAt: true, km: true, readOn: true } },
         removedAt: true,
         rovinietaUntil: true,
       },
@@ -118,9 +151,12 @@ export class RemindersService {
     if (!car || car.removedAt) return;
     const today = localDay(this.notifications.now());
     const payload = event.payload as CarUpdated;
+    // A field an added car has, or an edit changed.
+    const touched = (...fields: string[]) =>
+      event.kind === 'car.added' ||
+      fields.some((f) => payload.changed?.includes(f));
     for (const [field, kind] of CAR_DATES) {
-      const all = event.kind === 'car.added';
-      if (!all && !payload.changed?.includes(field)) continue;
+      if (!touched(field)) continue;
       const dueOn = day(car[field]);
       if (dueOn === null) {
         await this.prisma.reminder.deleteMany({ where: { carId, kind } });
@@ -134,6 +170,41 @@ export class RemindersService {
         });
       }
     }
+    if (touched('nextServiceKm', 'odometerKm')) {
+      await this.onServiceChange(carId, payload.ownerId, car, today);
+    }
+  }
+
+  // The estimate is read from the car's readings as they stand; past its
+  // value, or with none, the car has no service reminder.
+  private async onServiceChange(
+    carId: string,
+    accountId: string,
+    car: {
+      nextServiceKm: number | null;
+      odometerKm: number;
+      readings: { createdAt: Date; km: number; readOn: Date }[];
+    },
+    today: string,
+  ): Promise<void> {
+    const readings = car.readings.map((r) => ({
+      ...r,
+      readOn: day(r.readOn) as string,
+    }));
+    const dueOn = serviceDueOn(car, readings, today);
+    if (dueOn === null || car.nextServiceKm === null) {
+      await this.prisma.reminder.deleteMany({
+        where: { carId, kind: 'service' },
+      });
+      return;
+    }
+    await this.setServiceDue({
+      accountId,
+      carId,
+      dueKm: car.nextServiceKm,
+      dueOn,
+      today,
+    });
   }
 
   async setTyres(input: { accountId: string; carId: string }): Promise<void> {
@@ -214,16 +285,21 @@ export class RemindersService {
     // A car removed since the run read its reminders is told nothing.
     if (reminder.carId && (await this.removed(reminder.carId))) return false;
     await this.notifications.notify({
-      eventId: `reminder:${reminder.id}:${due.stage}:${dueOn ?? today.slice(0, 4)}`,
+      eventId: `reminder:${reminder.id}:${due.stage}:${reminder.dueKm ?? dueOn ?? today.slice(0, 4)}`,
       kind: due.type,
       params: this.params(reminder, dueOn, today),
       recipients: [reminder.accountId],
       subjectId: reminder.carId ?? reminder.bookingId,
     });
-    // Only for the date it was sent for: a date changed meanwhile keeps its reset.
+    // Only for the date it was sent for: a date changed meanwhile keeps its
+    // reset. A service reminder's day moves with the odometer under the same
+    // id, and a new value takes a new id, so its id alone is the value.
     await this.prisma.reminder.updateMany({
       data: sentFlags(due.stage, today, this.notifications.now()),
-      where: { dueOn: reminder.dueOn, id: reminder.id },
+      where:
+        reminder.kind === 'service'
+          ? { id: reminder.id }
+          : { dueOn: reminder.dueOn, id: reminder.id },
     });
     return true;
   }
