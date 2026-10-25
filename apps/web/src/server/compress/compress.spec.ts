@@ -21,8 +21,8 @@ import { mountEdge } from '../edge';
 
 const listen = (server: Server) =>
   new Promise<string>((resolve) =>
-    server.listen(0, () =>
-      resolve(`http://localhost:${(server.address() as AddressInfo).port}`),
+    server.listen(0, '127.0.0.1', () =>
+      resolve(`http://127.0.0.1:${(server.address() as AddressInfo).port}`),
     ),
   );
 

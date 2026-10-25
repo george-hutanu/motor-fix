@@ -195,6 +195,64 @@ test.describe('on a phone, every task is a bottom sheet', () => {
   });
 });
 
+// The dialog element itself carries the box its panel draws, so a check of
+// getByRole('dialog') sees the task the person sees (ST-1127).
+async function dialogMatchesPanel(page: Page) {
+  await expect(task(page)).toBeVisible();
+  const outer = await task(page).boundingBox();
+  const inner = await box(page);
+  if (!outer) throw new Error('the dialog has no box');
+  for (const side of ['x', 'y', 'width', 'height'] as const)
+    expect(Math.abs(outer[side] - inner[side])).toBeLessThanOrEqual(1);
+  return outer;
+}
+
+test.describe('the dialog element has the box of its task', () => {
+  for (const [width, height] of [
+    [320, 640],
+    [390, 844],
+  ] as const) {
+    // @traces 1127-FR-001, 1127-FR-003
+    test(`at ${width} × ${height} the dialog is the sheet for every shape`, async ({
+      page,
+    }) => {
+      await openCockpit(page, width, height);
+
+      for (const key of SHAPES) {
+        await open(page, key);
+        const found = await dialogMatchesPanel(page);
+        expect(Math.round(found.width)).toBe(width);
+        expect(Math.round(found.y + found.height)).toBe(height);
+        await page.keyboard.press('Escape');
+        await expect(task(page)).toHaveCount(0);
+      }
+    });
+  }
+
+  // @traces 1127-FR-002, 1127-FR-006
+  test('at 1280 × 900 the dialog is the drawer, the wide drawer and the centred dialog', async ({
+    page,
+  }) => {
+    await openCockpit(page, 1280, 900);
+
+    for (const [key, width, height] of [
+      [SHAPES[0], 480, undefined],
+      [SHAPES[1], 480, 900],
+      [SHAPES[2], 720, 900],
+    ] as const) {
+      await open(page, key);
+      const found = await dialogMatchesPanel(page);
+      expect(Math.round(found.width)).toBe(width);
+      if (height) {
+        expect(Math.round(found.height)).toBe(height);
+        expect(Math.round(found.x + found.width)).toBe(1280);
+      }
+      await page.keyboard.press('Escape');
+      await expect(task(page)).toHaveCount(0);
+    }
+  });
+});
+
 test.describe('closing a sheet', () => {
   for (const [how, close] of [
     [

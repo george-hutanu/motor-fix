@@ -72,6 +72,15 @@ function nextEntry(window: Window | null) {
       padding: 0;
       overflow: hidden;
     }
+    /* The kit fixes a sheet to the viewport, which leaves the pane and the
+       dialog element around it with no box. In flow, the pane (sized by the
+       position strategy) and the dialog take the panel's box. */
+    :host.spartan-sheet-content[data-side] {
+      position: relative;
+    }
+    :host.spartan-sheet-content[data-side='right'] {
+      height: 100%;
+    }
     :host.mf-overlay-dialog {
       max-height: calc(100dvh - 48px);
     }

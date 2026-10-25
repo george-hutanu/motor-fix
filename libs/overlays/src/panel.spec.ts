@@ -582,6 +582,20 @@ describe('the sheet styles', () => {
       rule(':host.mf-overlay-sheet.mf-overlay-dragging[data-side]'),
     ).toMatch(/transition:\s*none/);
   });
+
+  // @traces 1127-FR-001
+  it('keeps the sheet and the drawer in flow, so the dialog around them has their box', () => {
+    expect(rule(':host.spartan-sheet-content[data-side]')).toMatch(
+      /position:\s*relative/,
+    );
+  });
+
+  // @traces 1127-FR-002
+  it('stretches the drawer to the full height of its pane', () => {
+    expect(rule(":host.spartan-sheet-content[data-side='right']")).toMatch(
+      /height:\s*100%/,
+    );
+  });
 });
 
 @Component({
