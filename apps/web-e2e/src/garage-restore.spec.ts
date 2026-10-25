@@ -233,11 +233,14 @@ test.describe('putting a suspended garage back on the map @seeded @database', ()
       `Ultima verificare: ${roDay(bucharestToday())}.`,
     );
 
+    // The file opens over the garages list, whose suspended rows (other
+    // specs' garages too) carry restore buttons of their own: only the file's.
     await page.goto(fileLink);
-    await expect(page.locator('[data-part="suspension"]')).toContainText(
+    const file = page.locator('mf-verification-file');
+    await expect(file.locator('[data-part="suspension"]')).toContainText(
       /^Suspendat .+ – .+ · repus pe hartă de .+/,
     );
-    await expect(page.locator('[data-part="restore"]')).toHaveCount(0);
+    await expect(file.locator('[data-part="restore"]')).toHaveCount(0);
     await ownerContext.close();
     await visitorContext.close();
   });
