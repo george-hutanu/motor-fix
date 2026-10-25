@@ -82,7 +82,7 @@ export function assertGarage(actor: Actor, garageId: string) {
   if (!actor.garageId || actor.garageId !== garageId) throw notFound();
 }
 
-export interface Customer {
+interface Customer {
   firstName: string;
   car: string;
   phone: string;
