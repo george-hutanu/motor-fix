@@ -17,9 +17,9 @@ import {
   hashToken,
   newToken,
 } from '../../auth/email-confirmation/email-confirmation';
+import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { PrismaClient, StaffInvite } from '../../generated/prisma/client';
 import { Brevo } from '../../notifications/brevo/brevo';

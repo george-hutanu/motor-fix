@@ -117,6 +117,9 @@ features:
   - 471-crlf-harness-tidy
   - 493-watcher-docs
   - 456-activity-log-test-cleanup
+  - 1185-accent-search
+  - 1188-tail-latency
+  - 1156-retention-job
 ---
 
 # Capability: Platform
@@ -2835,6 +2838,10 @@ _From 1376-pr-test-local-boot._
 
 _From 1376-pr-test-local-boot._
 
+### 1185-FR-003 — The database MUST offer one immutable function `f_unaccent(text)` that maps the Romanian diacritics ș ş ț ţ ă â î and their capitals Ș Ş Ț Ţ Ă Â Î to the base letters s t a i (and S T A I), NFC-composing the whole string first, leaving every other character and the case unchanged, with no dependency on a database extension; `account_fold` MUST become `lower(f_unaccent($1))`, so the map exists once and `account_fold`'s values (and its trigram index) do not change; `f_unaccent('ș ş ț ţ ă â î')` MUST equal `'s s t t a a i'` on the repository's own PostgreSQL image.
+
+_From 1185-accent-search._
+
 ### 1377-FR-002 — Any other refusal, an HTTP 422 such as "commit_id is not part of the pull request" included, posts no COMMENT review, is reported as `reviewError` with GitHub's message, and post.mjs exits 1.
 
 _From 1377-own-pr-422-fallback._
@@ -2854,6 +2861,66 @@ _From 438-test-suites-projects._
 ### 438-FR-003 — The 435-FR-008 guard MUST report a spec, run by Jest and not named `*.integration.spec.ts`, whose source reads `DATABASE_URL` or `REDIS_URL` from `process.env` in any of: the bracket form (`process.env['DATABASE_URL']`, either quote), the dot form (`process.env.DATABASE_URL`), or a destructuring from `process.env` whose braces name the key in key position, alone, among other keys, renamed (`DATABASE_URL: url`), with a default (`DATABASE_URL = 'x'`) or across lines; and a source that names `seed.ts` as a file (quoted, or inside a command such as `tsx prisma/seed.ts`). It MUST NOT report a longer identifier (`DATABASE_URL_TEST`, `DATABASE_URL$x`, `DATABASE_URLé`: any identifier character, `$` and non-ASCII letters included, continues the name), another variable, an assignment (`process.env.DATABASE_URL = 'x'`) or `delete`, the name in value position (`{ url: DATABASE_URL }`), or the bare name outside a `process.env` expression; a comment holding the whole expression is reported (raw text, no comment stripping). A `delete` separated from `process.env` by any whitespace, newlines included, is not a read. The guard decides any source in time linear in its length (no backtracking blow-up on unclosed braces).
 
 _From 438-test-suites-projects._
+
+### 1188-FR-001 — The web server's HTTP client MUST send every server-side API call (to `API_INTERNAL_URL`, `apps/web/src/api-url.ts`, as today) through one keep-alive connection pool shared by all renders of the process (Node's one global fetch dispatcher, an undici `Agent` created once per process and pooling connections per origin, behind `provideHttpClient(withFetch())`, `apps/web/src/app/app.config.ts`; no `undici` dependency is added), so that connections are reused across calls and renders; the browser's client is unchanged. The smallest change: one pool, created once, no per-route configuration, proven by a test (plan R1).
+
+_From 1188-tail-latency._
+
+### 1188-FR-002 — Every server-side API call MUST end within 3 s of being sent; when the cap is reached the call fails as a timeout, the render still completes, and the component that asked renders its existing empty or error state (unit test: a never-answering API, the server HTML within the cap plus margin). No new `@defer` block is added. A call that answers or fails earlier is unchanged.
+
+_From 1188-tail-latency._
+
+### 1188-FR-003 — Every image (web, api, worker, mcp) MUST start Node with the compile cache on (`NODE_COMPILE_CACHE` pointing at a directory the `node` user can write, set in the Dockerfile's runtime stages), and MUST still start when the directory cannot be written.
+
+_From 1188-tail-latency._
+
+### 1188-FR-004 — Every image MUST size the heap at 75% of the container's memory limit through the container-aware option (`--max-old-space-size-percentage=75` in `NODE_OPTIONS`, both the `web` and the `node-app` targets of `Dockerfile`), never a fixed megabyte figure; `--enable-source-maps` of the `node-app` target stays; the build stage runs `node --max-old-space-size-percentage=75 -e 0` so a flag the image's Node does not accept fails the build.
+
+_From 1188-tail-latency._
+
+### 1188-FR-005 — Each replica MUST stay one Node process: no cluster, fork or process pool for request handling in `apps/*/src/main.ts` or the web server (true today); a guard test MUST fail when one is introduced.
+
+_From 1188-tail-latency._
+
+### 1188-FR-006 — The image build MUST prove in the build stage, after `npm ci --omit=dev` of the pruned `dist/apps/<APP>` dependencies, that the image-processing library (`sharp`, used by `libs/domain/src/garages/photos/photo-processing.ts`) loads for an image whose dependencies list it, and fail the build otherwise; no from-source rebuild (the library ships prebuilt binaries for the image's Node).
+
+_From 1188-tail-latency._
+
+### 1188-FR-007 — Every Redis client that sends commands MUST have a 2 s `commandTimeout`: the one command-client factory, `borrowStore` in `libs/domain/src/store/store.ts`, already sets it, and every publisher (`LIVE_PUBLISHER` in `libs/domain/src/notifications/notifications.module.ts`, `AUTH_REDIS` in `libs/domain/src/auth/auth.module.ts`, the other `borrowStore` callers) is that client — `libs/domain/src/events/events.module.ts` creates no publisher, only the subscriber (plan R6, a correction of the earlier wording); a test asserts the option (`store.spec.ts`); the callers' existing error handling covers the timeout error. BullMQ-managed connections (blocking pops by design) and the pub/sub subscriber (`SUBSCRIBE` only, `connectTimeout` already set) are excluded.
+
+_From 1188-tail-latency._
+
+### 1188-FR-009 — No request-scoped or transient provider (`Scope.REQUEST`, `Scope.TRANSIENT`) MUST exist under `apps/*/src` or `libs/*/src` (none exists today; user context goes through the existing async-local storage in `logging.ts`); a guard test MUST fail when one is introduced.
+
+_From 1188-tail-latency._
+
+### 1188-FR-010 — The PR body MUST carry, per image (web, api, worker, mcp), the size before and after this change, and the staging SSR → API p95 for the public pages (home, a garage profile) before and after over 24 h each, the target being below 400 ms after; the image baseline is the same image built from `origin/main` at the merge base on the same machine; a figure that cannot be measured is written as "not measured" with the reason. These are measurements for the PR, not code.
+
+_From 1188-tail-latency._
+
+### 1188-FR-011 — FR-001, FR-002, FR-005, FR-007, FR-008 and FR-009 MUST have failing-first tests beside the code they exercise; FR-003 and FR-004 a test that reads the Dockerfile's runtime stages; FR-006 is proven by the build itself (Constitution II).
+
+_From 1188-tail-latency._
+
+### 1156-FR-001 — One configuration module (`libs/domain/src/retention/retention.config.ts`, beside the sweeps that read it) MUST hold every retention period the privacy notice states, named by what it covers: legal documents and audit history 5 years after the garage or account closes; media (photos, clips, recordings, request and reply photos) 90 days; day-sheet PDFs 30 days; notifications 12 months. Each period MUST carry what it covers and the date of the owner's decision (T10, 2026-10-16) beside it, and nothing else in the product MUST state those periods as numbers of its own.
+
+_From 1156-retention-job._
+
+### 1156-FR-002 — A unit test MUST fail when any retention sweep source holds a numeric literal other than 0 and 1 (every period and the batch size are read from the configuration); the test reads the sweep sources, and passes on the shipped code. Every period in the configuration is a whole number of days.
+
+_From 1156-retention-job._
+
+### 1156-FR-003 — A nightly job in the worker MUST run once per night across every worker instance (one repeatable job under a fixed scheduler id, Europe/Bucharest, as the system-log purge is scheduled) and run every sweep below in turn; a sweep that fails MUST NOT stop the others, and a run with any failed sweep MUST end as a failed job, retried with the system-log purge job's attempts and backoff and, on final failure, reported like the worker's other jobs.
+
+_From 1156-retention-job._
+
+### 1156-FR-013 — The job MUST delete in bounded batches per kind until nothing is due, so one night's run never holds one statement over a whole table, and a run that removes nothing is a normal success.
+
+_From 1156-retention-job._
+
+### 1156-FR-014 — Integration tests (real PostgreSQL) MUST exist before the implementation and MUST seed, for every kind the job sweeps today (each token and code kind, invites, notifications, legal documents, audit entries by account closure, by garage closure and by own time), one row just inside and one just outside its limit, and show after one run that only the outside one was removed or anonymised, that the counts match, and that the database still refuses a delete and any non-anonymising update of an audit entry.
+
+_From 1156-retention-job._
 
 ### 493-FR-005 — `merge-main.mjs`'s capability resolution (`unionConflicts`) MUST keep one blank line between the last line of ours and a heading (`#`) of theirs that follows it in the same conflict hunk, so two features appended at the same place never glue a `_From …_` line to the next requirement's heading.
 

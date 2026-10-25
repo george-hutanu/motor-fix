@@ -33,8 +33,8 @@ import { AcceptService } from './accept.service';
 import { type AcceptOwner, acceptKey } from './accept.warm';
 import { CurrentActor } from '../../auth/actor.guard';
 import { JsonOnly } from '../../auth/auth.controller';
+import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
-import { refusal } from '../../auth/sign-up.service';
 import { CacheService } from '../../cache/cache.service';
 import { recordQuoteAccept } from '../quotes/quotes.metrics';
 

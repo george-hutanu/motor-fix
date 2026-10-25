@@ -11,6 +11,7 @@ import {
   PlatformRulesModule,
   signAccessToken,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
@@ -83,7 +84,7 @@ beforeAll(async () => {
       };
     }),
   );
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   try {

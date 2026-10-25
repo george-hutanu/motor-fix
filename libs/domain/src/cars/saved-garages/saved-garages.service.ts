@@ -22,9 +22,9 @@ import {
   type AuditEntry,
   type AuditPort,
 } from '../../audit/audit.port';
+import { refusal } from '../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import {
   type DomainEvent,
   EVENT_PORT,

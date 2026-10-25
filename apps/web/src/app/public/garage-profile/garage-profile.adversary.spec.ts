@@ -4,12 +4,30 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
-import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
+import {
+  GaragesService,
+  type PublicGarageDto,
+  ReviewsService,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
 import { GarageProfile } from './garage-profile';
 import { PublicLive } from '../live';
+
+// The reviews section's read: a garage nobody reviewed yet.
+const reviewsStub = {
+  reviewsControllerForGarage: () =>
+    Promise.resolve({
+      breakdown: { five: 0, four: 0, one: 0, three: 0, two: 0 },
+      items: [],
+      page: 1,
+      pageSize: 20,
+      rating: null,
+      reviewCount: 0,
+      total: 0,
+    }),
+};
 
 const FIXED: PublicGarageDto = {
   address: 'Bulevardul Iuliu Maniu 100, București',
@@ -101,6 +119,7 @@ beforeEach(async () => {
     providers: [
       routes(),
       { provide: GaragesService, useValue: api },
+      { provide: ReviewsService, useValue: reviewsStub },
       { provide: PublicLive, useValue: live },
       { provide: PLATFORM_ID, useValue: 'browser' },
       { provide: RESPONSE_INIT, useValue: response },
@@ -426,6 +445,7 @@ describe('the profile rendered on the server', () => {
       providers: [
         routes(),
         { provide: GaragesService, useValue: api },
+        { provide: ReviewsService, useValue: reviewsStub },
         { provide: PublicLive, useValue: live },
         { provide: PLATFORM_ID, useValue: 'server' },
         { provide: RESPONSE_INIT, useValue: serverResponse },

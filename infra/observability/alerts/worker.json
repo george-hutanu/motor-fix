@@ -233,7 +233,7 @@
         },
         {
           "uid": "worker-jobs-failed",
-          "title": "Worker jobs failed",
+          "title": "Worker jobs failed or overdue",
           "condition": "B",
           "for": "0s",
           "noDataState": "OK",
@@ -242,21 +242,21 @@
             "service": "worker"
           },
           "annotations": {
-            "summary": "A job on queue {{ $labels.queue }} failed for the last time in the last 15 minutes ({{ $labels.deployment_environment }}).",
+            "summary": "A job on the {{ $labels.queue }} queue {{ if eq $labels.reason \"overdue\" }}has not completed in 48 hours of worker uptime: the nightly retention job, so data past its stated retention period is being kept{{ else }}failed for good in the last 15 minutes{{ end }} ({{ $labels.deployment_environment }}).",
             "dashboard_uid": "motorfix-worker",
-            "runbook": "Read the worker logs and traces for the failed job on this queue, fix the cause, and retry the job from the queue if its work is still needed."
+            "runbook": "Read the worker logs and traces for the failed job on this queue, fix the cause, and retry the job from the queue if its work is still needed. Overdue (queue retention): Open the Queues dashboard for the retention queue's failed jobs and the system log's job_failed entry for the retention-nightly job; fix the cause and restart the worker, which re-arms the nightly scheduler at boot. The next night's run catches up on everything due."
           },
           "data": [
             {
               "refId": "A",
               "datasourceUid": "grafanacloud-prom",
               "relativeTimeRange": {
-                "from": 900,
+                "from": 172800,
                 "to": 0
               },
               "model": {
                 "refId": "A",
-                "expr": "sum by (deployment_environment, queue) (increase(motorfix_jobs_total{outcome=\"failed\", queue!=\"verification-result\"}[15m]))",
+                "expr": "label_replace(sum by (deployment_environment, queue) (increase(motorfix_jobs_total{outcome=\"failed\", queue!=\"verification-result\"}[15m])), \"reason\", \"failed\", \"\", \"\") or label_replace(label_replace(max by (deployment_environment) (count_over_time(target_info{service_name=\"worker\"}[1h] offset 47h)) unless sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"retention\", job_name=\"retention-nightly\", outcome=\"completed\"}[48h])) > 0, \"queue\", \"retention\", \"\", \"\"), \"reason\", \"overdue\", \"\", \"\")",
                 "instant": true,
                 "intervalMs": 60000,
                 "maxDataPoints": 43200
@@ -391,6 +391,62 @@
                       "type": "gt",
                       "params": [
                         0.85
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "uid": "worker-data-export-failed",
+          "title": "Worker data exports failing",
+          "condition": "B",
+          "for": "0m",
+          "noDataState": "OK",
+          "execErrState": "Error",
+          "labels": {
+            "service": "worker"
+          },
+          "annotations": {
+            "summary": "A data export failed after its last attempt in the last 15 minutes ({{ $labels.deployment_environment }}).",
+            "dashboard_uid": "motorfix-worker",
+            "runbook": "Someone asked for a copy of their data and its build failed three times; the export is marked failed and the person can ask again at once. Read the worker logs for 'data export' and 'failed after 3 attempts' at that time, then the object store and PostgreSQL dashboards. The motorfix-product dashboard's Data exports row shows the outcomes."
+          },
+          "data": [
+            {
+              "refId": "A",
+              "datasourceUid": "grafanacloud-prom",
+              "relativeTimeRange": {
+                "from": 900,
+                "to": 0
+              },
+              "model": {
+                "refId": "A",
+                "expr": "sum by (deployment_environment) (increase(motorfix_data_exports_total{service_name=\"worker\", outcome=\"failed\"}[15m]))",
+                "instant": true,
+                "intervalMs": 60000,
+                "maxDataPoints": 43200
+              }
+            },
+            {
+              "refId": "B",
+              "datasourceUid": "__expr__",
+              "relativeTimeRange": {
+                "from": 0,
+                "to": 0
+              },
+              "model": {
+                "refId": "B",
+                "type": "threshold",
+                "expression": "A",
+                "conditions": [
+                  {
+                    "evaluator": {
+                      "type": "gt",
+                      "params": [
+                        0
                       ]
                     }
                   }
