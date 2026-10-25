@@ -1,3 +1,4 @@
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -18,11 +19,18 @@ import {
   PLACE_SEARCH_MIN,
   PLACE_SUGGESTIONS_MAX,
 } from '@motor-fix/contracts/place-section';
-import { type PlaceSuggestionDto, PlacesService } from '@motor-fix/data-access';
+import {
+  ApiConfiguration,
+  type PlaceSuggestionDto,
+  placesControllerSearch,
+} from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { HlmInput, HlmLabel } from '@motor-fix/ui-cockpit';
+import type { Subscription } from 'rxjs';
 
 const SEARCH_AFTER_MS = 300;
+// Answers kept for texts asked again, the oldest forgotten first.
+const ANSWERS_KEPT = 20;
 const LOCATE_TIMEOUT_MS = 10_000;
 
 type Message = 'locationFailed' | 'nothingFound' | 'searchUnavailable';
@@ -74,16 +82,19 @@ export class AddressField {
   readonly chosen = output<AddressChoice>();
   readonly left = output<void>();
 
-  private readonly places = inject(PlacesService);
+  private readonly http = inject(HttpClient);
+  private readonly api = inject(ApiConfiguration);
   private readonly i18n = inject(I18n);
   private readonly destroyRef = inject(DestroyRef);
   private readonly field =
     viewChild.required<ElementRef<HTMLInputElement>>('field');
   private timer: ReturnType<typeof setTimeout> | undefined;
-  // Each look-up and each key counts, so only the answer to the latest text
-  // is shown.
-  private asked = 0;
+  // The look-up on its way, dropped by the next key so only the answer to the
+  // latest text is shown.
+  private inFlight: Subscription | undefined;
   private lastAsked = '';
+  // By language and text; a failed look-up keeps nothing.
+  private readonly answers = new Map<string, PlaceSuggestionDto[]>();
 
   protected readonly addressMax = ADDRESS_MAX;
   protected readonly geolocation =
@@ -105,7 +116,7 @@ export class AddressField {
   constructor() {
     this.destroyRef.onDestroy(() => {
       clearTimeout(this.timer);
-      this.asked++;
+      this.inFlight?.unsubscribe();
     });
     afterNextRender(() => {
       if (this.autofocus()) this.focus();
@@ -153,22 +164,39 @@ export class AddressField {
     this.timer = setTimeout(() => this.search(q), SEARCH_AFTER_MS);
   }
 
-  private async search(q: string) {
-    const asked = ++this.asked;
+  private search(q: string) {
+    const lang = this.i18n.language();
+    const key = `${lang}:${q}`;
     this.lastAsked = q;
-    try {
-      const { items } = await this.places.placesControllerSearch({
-        lang: this.i18n.language(),
-        q,
-      });
-      if (asked !== this.asked) return;
-      this.suggestions.set(items.slice(0, PLACE_SUGGESTIONS_MAX));
-      if (items.length === 0) this.message.set('nothingFound');
-    } catch {
-      if (asked !== this.asked) return;
-      this.lastAsked = '';
-      this.message.set('searchUnavailable');
-    }
+    const kept = this.answers.get(key);
+    if (kept) return this.show(kept);
+    this.inFlight = placesControllerSearch(this.http, this.api.rootUrl, {
+      lang,
+      q,
+    }).subscribe({
+      error: (error: unknown) => {
+        this.lastAsked = '';
+        // A look-up called off is no answer, and no failure either; the HTTP
+        // client wraps the browser's abort in its own error.
+        const cause = error instanceof HttpErrorResponse ? error.error : error;
+        if (cause instanceof DOMException && cause.name === 'AbortError')
+          return;
+        this.message.set('searchUnavailable');
+      },
+      next: ({ body }) => {
+        this.answers.delete(key);
+        this.answers.set(key, body.items);
+        const oldest = this.answers.keys().next().value;
+        if (this.answers.size > ANSWERS_KEPT && oldest !== undefined)
+          this.answers.delete(oldest);
+        this.show(body.items);
+      },
+    });
+  }
+
+  private show(items: readonly PlaceSuggestionDto[]) {
+    this.suggestions.set(items.slice(0, PLACE_SUGGESTIONS_MAX));
+    if (items.length === 0) this.message.set('nothingFound');
   }
 
   protected choose({ label, lat, lng, locality }: PlaceSuggestionDto) {
@@ -203,10 +231,10 @@ export class AddressField {
     }
   }
 
-  // Closes the list and forgets any look-up still on its way.
+  // Closes the list and drops any look-up still on its way.
   private close() {
     clearTimeout(this.timer);
-    this.asked++;
+    this.inFlight?.unsubscribe();
     this.lastAsked = '';
     this.suggestions.set([]);
     this.active.set(-1);
