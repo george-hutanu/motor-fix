@@ -566,6 +566,7 @@ describe('the sweep of held rows whose job was lost', () => {
   });
 });
 
+// @traces 094-FR-012
 describe('when Brevo fails', () => {
   it('retries after 1, 5, 15, 60 and 240 minutes', () => {
     expect([0, 1, 2, 3, 4].map(retryDelay)).toEqual(
@@ -754,6 +755,7 @@ describe('a grouping window', () => {
   });
 });
 
+// @traces 094-FR-011
 describe('releasing a held message at 08:00', () => {
   const NIGHT = '2026-10-04T20:10:00Z';
   const MORNING = '2026-10-05T05:00:00Z';

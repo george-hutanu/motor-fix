@@ -51,6 +51,9 @@ export function addMonths(day: string, n: number): string {
   return iso(Date.UTC(year, month - 1 + n, Math.min(date, last)));
 }
 
+// `n` years on, the same day: 29 February on a year without one is the 28th.
+export const addYears = (day: string, n: number) => addMonths(day, 12 * n);
+
 export const daysBetween = (from: string, to: string) =>
   Math.round((Date.parse(to) - Date.parse(from)) / DAY);
 

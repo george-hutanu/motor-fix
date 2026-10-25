@@ -10,7 +10,7 @@ import { CarsModule } from './cars.module';
 import { signAccessToken } from '../../../auth/access-token';
 import { AuthModule } from '../../../auth/auth.module';
 import { serialDatabase } from '../../../auth/serial-db.testing';
-import { addDays, localDay } from '../../../bucharest';
+import { addDays, addYears, localDay } from '../../../bucharest';
 import { outboxMark } from '../../../events/outbox.testing';
 import {
   databaseUrl,
@@ -64,8 +64,8 @@ const bearer = (accountId: string, role: Role) =>
   `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
 
 const today = localDay(new Date());
-const yearsAhead = (n: number) =>
-  `${Number(today.slice(0, 4)) + n}${today.slice(4)}`;
+// @traces 094-FR-008
+const yearsAhead = (n: number) => addYears(today, n);
 
 async function brand(name: string, active = true) {
   const key = `test-${name.toLowerCase()}`;

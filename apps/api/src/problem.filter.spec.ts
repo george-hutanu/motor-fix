@@ -1,4 +1,5 @@
-import { systemLog } from '@motor-fix/domain';
+import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts';
+import { consentPending, systemLog } from '@motor-fix/domain';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import {
   type ArgumentsHost,
@@ -152,6 +153,23 @@ describe('ProblemFilter', () => {
       inviteId: 'invite-9',
     });
     expect(res.body).not.toHaveProperty('internal');
+  });
+
+  // @traces 1204-FR-002 1204-FR-007
+  it('keeps the versions in force a pending account is refused with', () => {
+    const res = send(
+      consentPending({
+        privacyVersion: PRIVACY_VERSION,
+        termsVersion: TERMS_VERSION,
+      }),
+    );
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toMatchObject({
+      code: 'consent_required',
+      privacyVersion: PRIVACY_VERSION,
+      termsVersion: TERMS_VERSION,
+    });
   });
 
   it('drops an extension member that is not a string', () => {

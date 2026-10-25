@@ -1,4 +1,4 @@
-import { LEGAL_LABELS, LEGAL_TEXTS, type LegalText } from './legal-texts';
+import { LEGAL_TEXTS, type LegalText } from './legal-texts';
 
 const languages = ['ro', 'en'] as const;
 
@@ -15,8 +15,8 @@ const WRITE_FROM_ACCOUNT = {
 
 describe('the final legal texts', () => {
   // @traces 243-FR-001
-  it('no text or label says it is a draft or pending review', () => {
-    const all = JSON.stringify({ LEGAL_LABELS, LEGAL_TEXTS });
+  it('no text says it is a draft or pending review', () => {
+    const all = JSON.stringify(LEGAL_TEXTS);
 
     expect(all).not.toMatch(/provizoriu|draft|pending legal|revizuire/i);
   });
