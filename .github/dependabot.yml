@@ -10,7 +10,18 @@ updates:
       # accepts v6.
       - dependency-name: webpack-dev-server
         update-types: ["version-update:semver-major"]
+      # Prisma 8 is in release candidates and `latest` points at it; 7 stays
+      # supported for 18 months after 8 ships. Move to 8 as its own story.
+      - dependency-name: prisma
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@prisma/*"
+        update-types: ["version-update:semver-major"]
+    # A release pulled or patched within hours of publishing never reaches us.
+    cooldown:
+      default-days: 3
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 3

@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 199,
+    "count": 200,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -338,6 +338,19 @@
         "worker-jobs-failed"
       ],
       "story": "ST-343"
+    },
+    {
+      "kind": "queue",
+      "name": "review-posted",
+      "source": "libs/domain/src/notifications/review-posted/review-posted.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_review_announced_total (built, muted, skipped) on motorfix-product, with one ReviewPosted log line per event naming the review id; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-74"
     },
     {
       "kind": "queue",
@@ -876,6 +889,15 @@
       "alerts": "none",
       "reason": "counts each sent quote announced to its driver by outcome (built, muted), with the fan-out's log line naming the quote id; also on motorfix-product; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-344"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_announced_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each posted review announced to its garage's owners by outcome (built, muted, skipped), with the fan-out's log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
+      "story": "ST-74"
     },
     {
       "kind": "endpoint",
@@ -2287,6 +2309,19 @@
       ],
       "reason": "a public read of a garage's published reviews, 20 a page, with its rating, count and breakdown; it writes nothing, so its failures and latency are the route metric alone",
       "story": "ST-24"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-staff-reviews",
+      "source": "libs/domain/src/reviews/garage-reviews/garage-reviews.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/{garageId}/reviews",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the garage owner's and receptionist's read of their own published and reported reviews, 20 a page, with the profile's figures; it writes nothing, so its failures and latency are the route metric alone",
+      "story": "ST-74"
     },
     {
       "kind": "product-counter",

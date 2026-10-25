@@ -115,6 +115,7 @@ const GARAGE_REPORT_OUTCOMES = [
 export type GarageReportOutcome = (typeof GARAGE_REPORT_OUTCOMES)[number];
 const ACCOUNT_FIELDS = ['name', 'city', 'email', 'phone', 'password'] as const;
 const REQUEST_RECEIVED_OUTCOMES = ['built', 'muted', 'skipped'] as const;
+const REVIEW_ANNOUNCED_OUTCOMES = ['built', 'muted', 'skipped'] as const;
 const VERIFICATION_RESULT_OUTCOMES = ['built', 'skipped'] as const;
 const SUSPENDED_NOTICE_OUTCOMES = ['built', 'skipped'] as const;
 const RESTORED_NOTICE_OUTCOMES = ['built', 'skipped'] as const;
@@ -297,6 +298,11 @@ const requestsReceived = () =>
   counter(
     'motorfix_request_received_total',
     'Garages a new request was announced to, by outcome',
+  );
+const reviewsAnnounced = () =>
+  counter(
+    'motorfix_review_announced_total',
+    'Posted reviews announced to garage owners, by outcome',
   );
 const verificationResults = () =>
   counter(
@@ -525,6 +531,14 @@ export function countRequestReceived(
   requestsReceived().add(1, { outcome });
 }
 
+// A posted review told to the garage's owners, one they all muted, or one
+// with nobody to tell.
+export function countReviewAnnounced(
+  outcome: (typeof REVIEW_ANNOUNCED_OUTCOMES)[number],
+) {
+  reviewsAnnounced().add(1, { outcome });
+}
+
 // A verification decision told to the garage's owners, or one with nobody
 // or nothing to tell.
 export function countVerificationResult(
@@ -689,6 +703,7 @@ const STARTS: Record<
     [notifications, [{ channel: 'push' }, { channel: 'in-app' }]],
     [quotes, [{}]],
     [requestsReceived, each('outcome', REQUEST_RECEIVED_OUTCOMES)],
+    [reviewsAnnounced, each('outcome', REVIEW_ANNOUNCED_OUTCOMES)],
     [verificationResults, each('outcome', VERIFICATION_RESULT_OUTCOMES)],
     [suspendedNotices, each('outcome', SUSPENDED_NOTICE_OUTCOMES)],
     [restoredNotices, each('outcome', RESTORED_NOTICE_OUTCOMES)],

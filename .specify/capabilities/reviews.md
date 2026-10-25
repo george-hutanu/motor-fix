@@ -8,6 +8,7 @@ features:
   - 129-delete-account
   - 182-review-rules
   - 024-garage-reviews
+  - 074-garage-reviews
   - 1367-review-price-marks
 ---
 
@@ -312,6 +313,62 @@ _From 024-garage-reviews._
 ### 024-FR-023 — Tests MUST be written first: Jest on real PostgreSQL for the read (the breakdown's counts and sum, the stored figures, the page order and size, 404 cases, 400 page, the past-last page, hidden statuses excluded from the list and the breakdown, the profile-source item with `car` null and `jobs` `[]`, the deleted author); Jest component tests for the section (the summary and the empty state in both languages, name formatting, the month, paging, skeleton and error states, the re-read on a live message); Playwright end to end: a visitor opens a profile and sees the breakdown and a review, and a second browser posts a review that the first sees appear without a reload. Every test file names its requirements in a `// @traces` line.
 
 _From 024-garage-reviews._
+
+### 074-FR-001 — The garage dashboard home MUST show, for the owner and the receptionist of an approved or suspended garage, a "Recenzii noi" / "New reviews" panel listing the garage's newest 5 listed reviews (FR-005) newest first, with the link "Vezi profilul public" / "See the public profile" to the garage's public profile page and, whenever at least one review is listed, "Vezi toate" / "See all" to the Recenzii view. A `draft` garage's home (the verification progress) has no panel. With no listed review it shows "Încă nu ai recenzii. Apar aici după prima lucrare predată." / "No reviews yet. They appear here after your first handover." A mechanic's home MUST NOT show it.
+
+_From 074-garage-reviews._
+
+### 074-FR-002 — The Recenzii view (`garage.reviews`, today's placeholder) MUST show the heading figure "Nota 4,9 din 212 recenzii" / "Rating 4.9 from 212 reviews" (the stored rating in the shared rating format, "—" when null; the count in the shared number format with the Romanian plural rules), under it "Distribuția notelor" / "Rating breakdown" with five rows from "5 / 5" to "1 / 5", each with its count and a bar whose width is its count's share of the largest count (the largest bar full width, as the mock), and under it the same list as the panel, 20 a page, with "Vezi mai multe" / "See more" appending the next page as the profile section does (024-FR-010). With no listed review it shows FR-001's empty text and no figures.
+
+_From 074-garage-reviews._
+
+### 074-FR-003 — Each row MUST show: for `source` `job`, the car ("BMW 320d": the request's brand and model) and the included jobs' names in the reader's language joined with " · " (024-FR-004's label); for `source` `profile`, "Nu prin MotorFix" / "Not through MotorFix" in their place; the score as the shared rating format with " / 5" ("5,0 / 5", "5.0 / 5"); the text, when any, shown whole and wrapped (never truncated, no sideways scroll at 320 px); the author's short name (024-FR-007, "Șofer MotorFix" / "MotorFix driver" for a deleted account); the time with the shared `relativeTime` unchanged ("acum 5 minute", "acum 2 ore", "acum 3 zile", "2 hours ago") under 7 days and the shared day format ("13 oct. 2026", "13 Oct 2026") from 7 days, in Europe/Bucharest; the mechanic's short name (first name plus surname initial, `MECHANIC.name`) when the review has one, whether or not the mechanic is on the profile, else nothing; the tag "Nou" / "New" when posted less than 7 × 24 h ago (the same bound); "Editată · 12 oct." / "Edited · 12 Oct" (the shared day-and-month format) exactly when the review's edited date is set; and, for `status` `reported`, "Raportată · ascunsă de pe profil până decide un admin" / "Reported · hidden from the profile until an admin decides".
+
+_From 074-garage-reviews._
+
+### 074-FR-004 — The rating and the count MUST be the garage's stored figures (the same the public profile shows), and the breakdown MUST be counted over the garage's `published` reviews only; a `reported` review counts in none of the three until an admin decides (X24a).
+
+_From 074-garage-reviews._
+
+### 074-FR-005 — The panel, the view and the read MUST list the garage's reviews in `status` `published` or `reported`, ordered by posted date then id, newest first; `removed` and `deleted_by_author` reviews MUST never be listed.
+
+_From 074-garage-reviews._
+
+### 074-FR-007 — On the web, the owner and the receptionist MUST see the panel and the view (the receptionist with no Răspunde or Raportează control: none is drawn here for anyone; #111 and #11 draw theirs from FR-009's flags); a mechanic MUST have neither (the capability table already leaves `garage.reviews` out of the mechanic's); a driver, an admin or a visitor has no garage area.
+
+_From 074-garage-reviews._
+
+### 074-FR-008 — The system MUST expose `GET /api/v1/garages/{garageId}/reviews?page=` requiring a session: the owner and the receptionist of that garage get 200; a mechanic of that garage 403 `forbidden`; a member of another garage, a driver, an admin or any other signed-in account 404 `not_found` with one body for every case; no session 401 `sign_in_required`. `page` below 1 or not an integer MUST answer 400 `validation_failed`; a missing `page` is page 1; a page past the last answers an empty list with the figures. A `garageId` that is not a valid id answers the same 404 `not_found` body. The read answers by capability alone, whatever the garage's status.
+
+_From 074-garage-reviews._
+
+### 074-FR-009 — The answer MUST carry the stored `rating` (null when none), `reviewCount`, the `breakdown` (five counts over `published`), `page`, `pageSize` 20, `total` (listed rows: `published` and `reported`) and `items`, each with the review's id, `source`, `status` (`published` or `reported`), rating, text (null when none), posted date, edited date (null when none), the author's short name, for a job review the car (brand, model) and the included jobs' names in both languages (car null and jobs empty for a profile review), the mechanic's short name (null when none), and `canReply` and `canReport`, both true for the owner and false for the receptionist.
+
+_From 074-garage-reviews._
+
+### 074-FR-010 — The read MUST never expose the author's plate, phone, e-mail, account id or full surname, nor the mechanic's account, phone or e-mail, nor any `removed` or `deleted_by_author` review.
+
+_From 074-garage-reviews._
+
+### 074-FR-011 — The read performs no write, emits no event and records no audit history, and no operation MUST let a garage edit, hide or delete a review (MF-17): the API's description holds no such operation (a test lists every reviews operation a garage role may call and asserts only reads).
+
+_From 074-garage-reviews._
+
+### 074-FR-014 — Every new text MUST exist in Romanian and English in the interface files (the garage area's and the notification's); the panel and the view MUST render at 320 px, 390 px, tablet and desktop, light and dark, with no text under 12 px and no sideways scroll; each tag and each breakdown bar carries its meaning in text (the label, the count), never in colour alone, and the controls are reachable by keyboard with a visible focus.
+
+_From 074-garage-reviews._
+
+### 074-FR-015 — While the first read is pending the panel and the view MUST show the dashboard shell's loading state; when it fails (network or 5xx) its error line with a retry; a failed "Vezi mai multe" keeps the loaded pages with the error and the retry in the button's place (024-FR-012).
+
+_From 074-garage-reviews._
+
+### 074-FR-016 — The read and the new queue MUST ship with their observability: the read's request metrics by route template, the worker's job and queue metrics for the new queue, their logs, a dashboard panel and an alert each (the read's 5xx rate, the queue's failed jobs, as the existing ones), each listed in `infra/observability/inventory.json`, and named in the PR's Notes.
+
+_From 074-garage-reviews._
+
+### 074-FR-017 — Tests MUST be written first: Jest on real PostgreSQL for the read (owner 200 with `canReply` and `canReport` true; receptionist 200 with both false; mechanic 403; another garage's member, a driver and an admin 404 with one body; 401 with no session; the `reported` row listed with its status and left out of the count and breakdown; `removed` and `deleted_by_author` absent; the profile row with no car, jobs or mechanic; a hidden mechanic still named; the edited date carried; the page order, size, 400 and past-last page; no personal data in the whole answer) and the fan-out (one REVIEW_POSTED per `review.posted` to the owner only; none when muted; none twice for one event id; the job and profile texts; the missing-review and no-owner cases); the hub filter letting the review kinds and `rating.updated` through to the owner and the receptionist and not the mechanic; web unit tests for the panel and the view (rows, tags, relative time, figures and bars, empty, loading, error and retry, "Vezi toate", "Vezi profilul public", the re-read on each kind and on resync, no action controls for either role, both languages); and Playwright: the owner keeps the dashboard open, a driver posts a review, it appears without a reload with the mechanic's name and the figures change.
+
+_From 074-garage-reviews._
 
 ### 1367-FR-002 — The quote part MUST read "Ofertă {range}" / "Quote {range}", the range being both ends in the shared lei format joined by " – " (space, en dash, space: "3.800 – 4.400 lei" / "3,800 – 4,400 lei"), or one amount when the ends are equal ("Ofertă 4.200 lei"). The final part MUST read "Final {amount}" / "Final {amount}". Every other screen that shows a lei range today keeps its text unchanged.
 

@@ -52,6 +52,7 @@ features:
   - 142-notification-channels
   - 140-account-delete-export
   - 094-itp-reminders
+  - 074-garage-reviews
 ---
 
 # Capability: Notifications
@@ -919,6 +920,14 @@ _From 094-itp-reminders._
 ### 094-FR-012 — When the sending provider fails, the outside send MUST be retried on the notifications queue's own schedule (5 retries at 1, 5, 15, 60 and 240 minutes); then a failed push or WhatsApp MUST fall back once to e-mail, and a send with no fallback left MUST be `failed`, the bell MUST still list it, and the reminder's stage MUST count as sent so the next run does not repeat it. Sending a reminder MUST write no audit entry: the message row is its record.
 
 _From 094-itp-reminders._
+
+### 074-FR-012 — On `review.posted`, a background job (a new outbox-relay consumer queue in the worker, as the `quote-received` fan-out) MUST send REVIEW_POSTED to every owner member of the garage, through the garage staff preferences (the `reviews` group: e-mail, push or WhatsApp by the owner's choice, the no-device fallback, never SMS), with the text "Recenzie nouă de {rating} de la {author} pentru {car}" / "New {rating}-star review from {author} for a {car}" for a job review and "Recenzie nouă de {rating} de la {author}" / "New {rating}-star review from {author}" for a profile review, the author as FR-003's short name and the car as the request's brand and model. A receptionist and a mechanic MUST get none. The text is in the recipient's interface language.
+
+_From 074-garage-reviews._
+
+### 074-FR-013 — REVIEW_POSTED MUST be sent at most once per owner per review: the outbox event id and the recipient key the notification so a retry or a second relay writes nothing more; when the owner's reviews group is off at send time nothing is sent; when the review no longer exists or the garage has no owner the job logs it and ends without writing. The bell row of a REVIEW_POSTED MUST open the garage's Recenzii view.
+
+_From 074-garage-reviews._
 
 ## Retired
 

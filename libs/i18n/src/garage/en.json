@@ -581,6 +581,28 @@
     "toastCar": "New request: {car}",
     "toReassign": "to reassign"
   },
+  "reviews": {
+    "breakdownTitle": "Rating breakdown",
+    "deletedAuthor": "MotorFix driver",
+    "edited": "Edited · {day}",
+    "empty": "No reviews yet. They appear here after your first handover.",
+    "figure": {
+      "one": "Rating {rating} from {shown} review",
+      "other": "Rating {rating} from {shown} reviews"
+    },
+    "loadFailed": "We could not load the reviews.",
+    "more": "See more",
+    "moreFailed": "We could not load more reviews.",
+    "new": "New",
+    "notViaMotorfix": "Not through MotorFix",
+    "reported": "Reported · hidden from the profile until an admin decides",
+    "retry": "Try again",
+    "score": "{rating} / 5",
+    "seeAll": "See all",
+    "seeProfile": "See the public profile",
+    "title": "New reviews",
+    "viewTitle": "Reviews"
+  },
   "suspended": {
     "next": {
       "documents_overdue": "Upload the yearly documents.",

@@ -28,6 +28,7 @@ import { DriverSettingsView } from './driver-settings-view/driver-settings-view'
 import { GarageHome } from './garage-requests/garage-home/garage-home';
 import { GarageRequestsFeed } from './garage-requests/garage-requests-feed';
 import { GarageRequestsView } from './garage-requests/garage-requests-view/garage-requests-view';
+import { GarageReviewsPanel } from './garage-reviews/garage-reviews-panel/garage-reviews-panel';
 import { JobsView } from './jobs-view/jobs-view';
 import { Live } from './live';
 import { PricesView } from './prices-view/prices-view';
@@ -194,6 +195,16 @@ describe('the dashboard view lists', () => {
     expect(await home.load?.()).toBe(GarageHome);
     expect(await requests.load?.()).toBe(GarageRequestsView);
     expect(requests.counter).toBe('requestsWaiting');
+  });
+
+  // @traces 074-FR-002
+  it('loads the reviews panel as the garage Recenzii view', async () => {
+    const reviews = DASHBOARDS.garage.views.find(
+      (view) => view.path === 'reviews',
+    );
+
+    expect(reviews?.capability).toBe('garage.reviews');
+    expect(await reviews?.load?.()).toBe(GarageReviewsPanel);
   });
 
   it('gives the garage and admin dashboards their addresses in menu order', () => {

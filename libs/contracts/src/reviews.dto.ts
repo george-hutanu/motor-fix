@@ -310,3 +310,63 @@ export class GarageReviewsPageDto {
   @ApiProperty({ type: [GarageReviewDto] })
   items!: GarageReviewDto[];
 }
+
+// A mechanic as a review names them on the garage's own page: by short name.
+export class ReviewMechanicDto {
+  @ApiProperty({ example: 'Costel R.' })
+  shortName!: string;
+}
+
+// A review as the garage's own staff read it: the public row plus where it
+// stands, the mechanic who did the job, and whether the caller may reply to it
+// or report it.
+export class GarageStaffReviewDto extends GarageReviewDto {
+  @ApiProperty({ enum: ['published', 'reported'] })
+  status!: 'published' | 'reported';
+
+  @ApiProperty({
+    description: 'A job review’s mechanic; a profile review names none',
+    nullable: true,
+    type: ReviewMechanicDto,
+  })
+  mechanic!: ReviewMechanicDto | null;
+
+  @ApiProperty()
+  canReply!: boolean;
+
+  @ApiProperty()
+  canReport!: boolean;
+}
+
+export class GarageStaffReviewsPageDto {
+  @ApiProperty({
+    description: "The garage's stored rating, as its profile shows it",
+    nullable: true,
+    type: Number,
+  })
+  rating!: number | null;
+
+  @ApiProperty({ description: "The garage's stored review count" })
+  reviewCount!: number;
+
+  @ApiProperty({
+    description: 'Published reviews only, as the profile counts them',
+    type: RatingBreakdownDto,
+  })
+  breakdown!: RatingBreakdownDto;
+
+  @ApiProperty({ description: "The garage's public profile address" })
+  slug!: string;
+
+  @ApiProperty()
+  page!: number;
+
+  @ApiProperty()
+  pageSize!: number;
+
+  @ApiProperty({ description: 'Published and reported reviews' })
+  total!: number;
+
+  @ApiProperty({ type: [GarageStaffReviewDto] })
+  items!: GarageStaffReviewDto[];
+}

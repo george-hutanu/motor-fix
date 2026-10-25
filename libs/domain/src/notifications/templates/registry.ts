@@ -47,6 +47,7 @@ import { QUOTE_DECLINED_BY_DRIVER } from './quote-declined-by-driver';
 import { QUOTE_RECEIVED, QUOTE_RECEIVED_GROUPED } from './quote-received';
 import { REQUEST_DECLINED } from './request-declined';
 import { REQUEST_RECEIVED } from './request-received';
+import { REVIEW_POSTED_JOB, REVIEW_POSTED_PROFILE } from './review-posted';
 import { SIGN_IN_CODE } from './sign-in-code';
 import {
   STAFF_INVITE_MECHANIC,
@@ -109,6 +110,8 @@ export const TEMPLATES: Registry = {
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
   REQUEST_DECLINED,
   REQUEST_RECEIVED,
+  'REVIEW_POSTED.job': REVIEW_POSTED_JOB,
+  'REVIEW_POSTED.profile': REVIEW_POSTED_PROFILE,
   SIGN_IN_CODE,
   'STAFF_INVITE.mechanic': STAFF_INVITE_MECHANIC,
   'STAFF_INVITE.receptionist': STAFF_INVITE_RECEPTIONIST,

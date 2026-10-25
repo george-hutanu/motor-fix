@@ -585,6 +585,29 @@
     "toastCar": "Cerere nouă: {car}",
     "toReassign": "de realocat"
   },
+  "reviews": {
+    "breakdownTitle": "Distribuția notelor",
+    "deletedAuthor": "Șofer MotorFix",
+    "edited": "Editată · {day}",
+    "empty": "Încă nu ai recenzii. Apar aici după prima lucrare predată.",
+    "figure": {
+      "few": "Nota {rating} din {shown} recenzii",
+      "one": "Nota {rating} din {shown} recenzie",
+      "other": "Nota {rating} din {shown} de recenzii"
+    },
+    "loadFailed": "Nu am putut încărca recenziile.",
+    "more": "Vezi mai multe",
+    "moreFailed": "Nu am putut încărca mai multe recenzii.",
+    "new": "Nou",
+    "notViaMotorfix": "Nu prin MotorFix",
+    "reported": "Raportată · ascunsă de pe profil până decide un admin",
+    "retry": "Încearcă din nou",
+    "score": "{rating} / 5",
+    "seeAll": "Vezi toate",
+    "seeProfile": "Vezi profilul public",
+    "title": "Recenzii noi",
+    "viewTitle": "Recenzii"
+  },
   "suspended": {
     "next": {
       "documents_overdue": "Încarcă documentele anuale.",
