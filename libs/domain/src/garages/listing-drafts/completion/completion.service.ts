@@ -237,6 +237,9 @@ export class CompletionService {
     data: ListingDraftData,
     sizes: PhotoSize[],
   ): Promise<{ cuiChanged: boolean; dropped: string[] }> {
+    // The garage's row before any card's, the order a mechanic's week save
+    // takes them in, so the two cannot deadlock.
+    await tx.$queryRaw`SELECT id FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
     const live = await copyOf(tx, garageId);
     const steps = data.steps ?? {};
     const was = live.steps ?? {};
