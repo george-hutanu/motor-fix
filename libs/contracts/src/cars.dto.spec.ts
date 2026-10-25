@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
-import { CarDto, UpdateCarDto } from './cars.dto';
+import { CarDto, CreateCarDto, UpdateCarDto } from './cars.dto';
 
 const problems = (dto: object) =>
   validateSync(dto, { forbidNonWhitelisted: true, whitelist: true }).map(
@@ -123,5 +123,38 @@ describe('CarDto', () => {
       updatedAt: version,
     } as Partial<CarDto>);
     expect(car.updatedAt).toBe(version);
+  });
+});
+
+// @traces 091-FR-003
+describe('nextServiceKm on a save and an edit', () => {
+  it.each([
+    ['a whole number', 152_000, []],
+    ['null', null, []],
+    ['1', 1, []],
+    ['the odometer ceiling', 2_000_000, []],
+    ['0', 0, ['nextServiceKm']],
+    ['above the ceiling', 2_000_001, ['nextServiceKm']],
+    ['a decimal', 152_000.5, ['nextServiceKm']],
+    ['a numeric string', '152000', ['nextServiceKm']],
+  ])('takes %s on an edit', (_, nextServiceKm, expected) => {
+    expect(problems(patch({ nextServiceKm }))).toEqual(expected);
+  });
+
+  it.each([
+    ['absent', undefined, []],
+    ['null', null, []],
+    ['0', 0, ['nextServiceKm']],
+    ['a decimal', 1.5, ['nextServiceKm']],
+  ])('takes it %s on a save', (_, nextServiceKm, expected) => {
+    const dto = plainToInstance(CreateCarDto, {
+      brandId: '3f2b8c1e-5d4a-4b6f-8a7c-1d2e3f4a5b6c',
+      fuel: 'diesel',
+      model: '320d',
+      nextServiceKm,
+      odometerKm: 148_200,
+      year: 2019,
+    });
+    expect(problems(dto)).toEqual(expected);
   });
 });
