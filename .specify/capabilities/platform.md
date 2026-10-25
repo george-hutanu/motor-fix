@@ -2894,6 +2894,7 @@ _From 1188-tail-latency._
 ### 1188-FR-011 — FR-001, FR-002, FR-005, FR-007, FR-008 and FR-009 MUST have failing-first tests beside the code they exercise; FR-003 and FR-004 a test that reads the Dockerfile's runtime stages; FR-006 is proven by the build itself (Constitution II).
 
 _From 1188-tail-latency._
+
 ### 493-FR-005 — `merge-main.mjs`'s capability resolution (`unionConflicts`) MUST keep one blank line between the last line of ours and a heading (`#`) of theirs that follows it in the same conflict hunk, so two features appended at the same place never glue a `_From …_` line to the next requirement's heading.
 
 _From 493-watcher-docs._
