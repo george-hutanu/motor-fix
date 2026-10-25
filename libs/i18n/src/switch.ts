@@ -27,6 +27,7 @@ export class LanguageChoice {
   // Languages tapped on the switch; the address, another tab and the session
   // choose without a tap.
   readonly taps = this.tapped.asObservable();
+  private holds = 0;
 
   pick(language: string): Promise<void> {
     const chosen = this.choose(language);
@@ -50,12 +51,25 @@ export class LanguageChoice {
     return saved && isLanguage(saved) ? saved : null;
   }
 
+  // While any hold is open, another tab's choice is ignored; this tab's own
+  // choices still apply. The returned release is safe to call twice.
+  hold(): () => void {
+    this.holds++;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.holds--;
+    };
+  }
+
   restore(): () => void {
     const saved = this.saved();
     if (saved) void this.i18n.use(saved);
     // Another tab's choice; the tab that wrote the value gets no event.
     const follow = ({ key, newValue }: StorageEvent) => {
-      if (key === KEY && newValue) void this.i18n.use(newValue);
+      if (key === KEY && newValue && this.holds === 0)
+        void this.i18n.use(newValue);
     };
     this.window?.addEventListener('storage', follow);
     return () => this.window?.removeEventListener('storage', follow);
