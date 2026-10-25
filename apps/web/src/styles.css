@@ -30,13 +30,15 @@
 }
 
 /* The static map's control sits where the zoom buttons do on a phone
-   (static-map.css), and gives way to the keyboard and the sheet as they do. */
+   (static-map.css) and gives way to the keyboard as they do, and to a full
+   sheet. A half sheet over the zoom buttons' column still clears the one
+   control (320 x 568), which stays the keyboard's way into the map. */
 @media (max-width: 767px) {
   mf-results:has(mf-results-sheet.typing) mf-results-map mf-static-map button {
     visibility: hidden;
   }
 
-  mf-results:has(mf-results-sheet.over-zoom)
+  mf-results:has(mf-results-sheet[data-position="full"])
     mf-results-map
     mf-static-map
     button {

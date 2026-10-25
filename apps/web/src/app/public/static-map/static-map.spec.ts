@@ -371,6 +371,28 @@ describe('StaticMap, the attribution and the control', () => {
       });
     });
 
+    // QA lap 4: the sweep measures spacing on the 4 px grid.
+    it('spaces a pin’s rate from its dot on the 4 px grid', () => {
+      expect(css).toMatch(/\.pin\s*\{[^}]*gap:\s*var\(--mf-space-1\)/);
+    });
+
+    it('pads the credit on the 4 px grid', () => {
+      expect(css).toMatch(
+        /\.attribution\s*\{[^}]*padding:\s*var\(--mf-space-1\) var\(--mf-space-2\)/,
+      );
+    });
+
+    it('reads the credit at a phone’s 16 px body size there', () => {
+      const phone =
+        css
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/\s+/g, ' ')
+          .match(/@media \(max-width: 767\.98px\) \{(.*?\}) \}/)?.[1] ?? '';
+      expect(phone).toMatch(
+        /\.attribution \{[^}]*font-size: var\(--mf-size-body\);/,
+      );
+    });
+
     it('gives the control at least the 44 px of a tap', () => {
       expect(css).toMatch(/button\s*\{[^}]*min-height:\s*var\(--mf-tap\)/);
     });

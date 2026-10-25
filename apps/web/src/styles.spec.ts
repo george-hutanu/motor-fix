@@ -136,17 +136,27 @@ describe('the map’s zoom buttons while Results takes text on a phone', () => {
 // 1196: on a phone the static map's control sits where the zoom buttons do,
 // and gives way to the sheet and the keyboard as they do.
 describe('the static map’s control on a phone', () => {
-  it.each(['typing', 'over-zoom'])(
-    'hides it while the sheet is %s',
-    (state) => {
-      const body = rule(
-        `mf-results:has(mf-results-sheet.${state}) mf-results-map mf-static-map button`,
-      );
+  it.each([
+    'mf-results-sheet.typing',
+    'mf-results-sheet[data-position="full"]',
+  ])('hides it under %s', (sheet) => {
+    const body = rule(
+      `mf-results:has(${sheet}) mf-results-map mf-static-map button`,
+    );
 
-      expect(body).toBeDefined();
-      expect(body).toMatch(/visibility:\s*hidden/);
-    },
-  );
+    expect(body).toBeDefined();
+    expect(body).toMatch(/visibility:\s*hidden/);
+  });
+
+  // QA lap 4 at 320 x 568: the half sheet lies over the two zoom buttons'
+  // column but clears the one control, which stays the keyboard's way in.
+  it('keeps it where the half sheet only covers the zoom buttons', () => {
+    expect(
+      rule(
+        'mf-results:has(mf-results-sheet.over-zoom) mf-results-map mf-static-map button',
+      ),
+    ).toBeUndefined();
+  });
 });
 
 // The sheet's top edge over the zoom buttons (full, or any rest of a stage
