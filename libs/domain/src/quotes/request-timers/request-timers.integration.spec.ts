@@ -791,6 +791,23 @@ describe('expiring a request at the end of its seven days', () => {
     expect(await messages('REQUEST_EXPIRED', driverId)).toEqual([]);
   });
 
+  it('still expires a quote with no web address set, but sends no notice', async () => {
+    const [dinamo, berceni] = [
+      await staffed('Dinamo'),
+      await staffed('Berceni'),
+    ];
+    const { request } = await sent([dinamo, berceni]);
+    const quote = await quoted(request.id, dinamo);
+    await quoted(request.id, berceni, new Date(QUOTE_EXPIRES.getTime() + HOUR));
+    const { timers } = await start(QUOTE_EXPIRES, '');
+
+    await fire(timers, 'quote-expiry', quote.id);
+    await relay(timers, 'quote.expired');
+
+    expect((await quoteOf(quote.id)).status).toBe('expired');
+    expect(await prisma.notification.count()).toBe(0);
+  });
+
   it('tells each person exactly once when a notice fails partway and the job is retried', async () => {
     const [dinamo, berceni] = [
       await staffed('Dinamo'),

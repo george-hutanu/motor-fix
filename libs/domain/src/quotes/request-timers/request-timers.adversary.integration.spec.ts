@@ -1,13 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
-import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { type Job, Queue } from 'bullmq';
 
 import { REQUEST_TIMERS_QUEUE, RequestTimers } from './request-timers';
 import { RequestTimersModule } from './request-timers.module';
-import type { Actor } from '../../auth/policy';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type {
   QuoteRequestStatus,
@@ -29,17 +27,8 @@ const { account, prisma, reset } = fixtures();
 const world = quotesWorld(prisma);
 serialDatabase(databaseUrl);
 
-const reader = countedMetrics();
-const _counted = (step: string, sweep: boolean) =>
-  counterTotal(reader, 'motorfix_request_timers_total', {
-    step,
-    sweep: String(sweep),
-  });
-
 const jobs = new Queue(REQUEST_TIMERS_QUEUE, { connection: { url: redisUrl } });
 
-const MINUTE = 60_000;
-const _HOUR = 60 * MINUTE;
 const WEB = 'https://motorfix.test';
 // Monday 10:00 in Bucharest; day 2 is Wednesday, day 5 Saturday, the
 // seventh day ends the next Monday, all at 10:00.
@@ -236,19 +225,6 @@ const requestOf = (id: string) =>
 const quoteOf = (id: string) =>
   prisma.quote.findUniqueOrThrow({ where: { id } });
 
-const _driverActor = (accountId: string): Actor => ({
-  accountId,
-  garageId: null,
-  language: 'ro',
-  permissions: {
-    canAnswerQuotes: false,
-    canMoveBookings: false,
-    canRecordFinalPrice: false,
-  },
-  role: 'driver',
-  roles: ['driver'],
-});
-
 const muteRequests = (accountId: string, garageId: string) =>
   prisma.notificationPreference.createMany({
     data: (['email', 'push', 'whatsapp'] as const).map((channel) => ({
@@ -305,14 +281,13 @@ describe('reminders under hostile timing and state', () => {
     'never reminds a recipient that is %s',
     async (status) => {
       const dinamo = await staffed('Dinamo');
-      const { driverId, request } = await sent([]);
+      const { request } = await sent([]);
       const row = await world.recipient(
         request.id,
         dinamo.garage.id,
         status,
         status === 'declined' ? dinamo.owner : undefined,
       );
-      expect(driverId).toBeTruthy();
       const { timers } = await start(DAY5);
 
       await fire(timers, 'request-reminder-2', request.id);
