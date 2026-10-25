@@ -68,3 +68,16 @@ jobs:
         env:
           SANDBOX_ID: ${{ steps.sandbox.outputs.id }}
         run: node scripts/railway-sandbox.ts close "$SANDBOX_ID"
+      # The reset is only done when a seed account can sign in again: the
+      # seeded driver, at staging's public address. The password goes to curl
+      # on stdin, inside the JSON jq builds from the environment.
+      - name: Check a seeded sign-in
+        env:
+          SEED_PASSWORD: ${{ secrets.SEED_PASSWORD }}
+          PUBLIC_WEB_URL: ${{ vars.PUBLIC_WEB_URL }}
+        run: |
+          [ -n "$PUBLIC_WEB_URL" ] || { echo 'The staging environment has no PUBLIC_WEB_URL variable.' >&2; exit 1; }
+          jq -n --arg email sofer@example.test '{email: $email, password: env.SEED_PASSWORD, remember: false}' |
+            curl --fail --max-time 60 -sS -o /dev/null -X POST "${PUBLIC_WEB_URL%/}/api/v1/auth/sign-in" \
+              -H 'Content-Type: application/json' --data-binary @-
+          echo 'A seeded account (sofer@example.test) signs in on staging after the reset.' >> "$GITHUB_STEP_SUMMARY"

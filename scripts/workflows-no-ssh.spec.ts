@@ -97,6 +97,41 @@ describe('reset-staging.yml', () => {
     expect(text).not.toMatch(/inputs:/);
     expect(text).not.toMatch(/production/i);
   });
+
+  // A reset that empties staging but leaves the seed accounts unable to sign
+  // in would pass without this: the run proves one sign-in itself.
+  describe('the seeded sign-in check', () => {
+    const all = steps(text, 'reset');
+    const index = all.findIndex((s) =>
+      /- name: Check a seeded sign-in/.test(s),
+    );
+    const step = all[index] ?? '';
+
+    it('runs after the sandbox is closed, and only when the reset passed', () => {
+      expect(index).toBeGreaterThan(
+        all.findIndex((s) => /- name: Close the sandbox/.test(s)),
+      );
+      expect(step).not.toMatch(/\n {8}if:/);
+    });
+
+    it("signs in as the seeded driver at staging's public address", () => {
+      expect(step).toContain('PUBLIC_WEB_URL: ${{ vars.PUBLIC_WEB_URL }}');
+      expect(step).toContain('/api/v1/auth/sign-in');
+      expect(step).toContain('sofer@example.test');
+      expect(step).toMatch(/curl --fail/);
+    });
+
+    it('hands the seed password to curl on stdin, never as an argument', () => {
+      expect(step).toContain('SEED_PASSWORD: ${{ secrets.SEED_PASSWORD }}');
+      expect(step).toContain('env.SEED_PASSWORD');
+      expect(step).not.toMatch(/\$\{?SEED_PASSWORD/);
+      expect(step).toContain('--data-binary @-');
+    });
+
+    it('fails with a named reason when the address is not set', () => {
+      expect(step).toMatch(/\[ -n "\$PUBLIC_WEB_URL" \] \|\|/);
+    });
+  });
 });
 
 // The service ids and plain settings are GitHub variables an agent may set
