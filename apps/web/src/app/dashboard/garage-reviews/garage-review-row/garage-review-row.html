@@ -7,7 +7,7 @@
   <span class="score" data-score>{{ score() }}</span>
 </div>
 @if (fresh() || edited() || review().status === 'reported') {
-  <p class="tags">
+  <div class="tags">
     @if (fresh()) {
       <span class="tag new" data-new>{{ 'garage.reviews.new' | t }}</span>
     }
@@ -17,7 +17,7 @@
     @if (review().status === 'reported') {
       <span class="tag reported" data-reported>{{ 'garage.reviews.reported' | t }}</span>
     }
-  </p>
+  </div>
 }
 @if (review().text; as said) {
   <p class="text" data-text>{{ said }}</p>

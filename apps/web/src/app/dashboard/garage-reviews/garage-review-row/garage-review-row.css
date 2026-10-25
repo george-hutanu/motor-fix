@@ -40,7 +40,7 @@ p {
   gap: var(--mf-space-1) var(--mf-space-2);
 }
 .tag {
-  padding: 2px var(--mf-space-2);
+  padding: var(--mf-space-1) var(--mf-space-2);
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-chip);
   font-size: var(--mf-size-small);

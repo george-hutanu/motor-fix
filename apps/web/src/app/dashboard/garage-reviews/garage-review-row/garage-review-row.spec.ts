@@ -66,6 +66,16 @@ describe('a review row on the garage dashboard', () => {
     expect(cell(old, 'new')).toBeNull();
   });
 
+  it('sets its marks as labels, outside the running text', async () => {
+    const row = await render(
+      staffReview({ editedAt: '2026-10-12T09:00:00.000Z', status: 'reported' }),
+    );
+
+    for (const name of ['new', 'edited', 'reported']) {
+      expect(cell(row, name)?.closest('p')).toBeNull();
+    }
+  });
+
   it('marks an edited review with the day it was edited', async () => {
     const ro = await render(
       staffReview({ editedAt: '2026-10-12T09:00:00.000Z' }),
