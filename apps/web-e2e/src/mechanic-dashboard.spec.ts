@@ -12,7 +12,8 @@ import { test } from './fixtures.js';
 // worker relays to her stream. It runs after the chromium project
 // (playwright.config.mts), so no flow beside it reads her menu or the seeded
 // job's steps while it changes them. A deployed address, whose run has no
-// DATABASE_URL, skips the file.
+// database, leaves @database out (playwright.config.mts); every other run has
+// DATABASE_URL, so the flow fails without it.
 
 // Signs in at the width the site bar shows its button at, then goes back to
 // the phone.
@@ -57,11 +58,6 @@ async function answerQuotes(db: Client, mechanicId: string, on: boolean) {
 
 // @traces 423-FR-006 423-FR-010
 test.describe("a mechanic's Panou on a phone @seeded @database", () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'saves the permission straight to PostgreSQL, which needs DATABASE_URL',
-  );
-
   let db: Client;
   let mechanicId = '';
 
