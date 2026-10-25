@@ -20,7 +20,7 @@ import {
 import type { Request, Response } from 'express';
 
 import { Public } from '../../../auth/actor.guard';
-import { refusal } from '../../../auth/sign-up.service';
+import { refusal } from '../../../auth/http-refusal';
 import { StorageService } from '../../../storage/storage.service';
 import { PublicGaragesService } from '../public-garages';
 

@@ -33,8 +33,8 @@ import {
   hashToken,
   newToken,
 } from '../../auth/email-confirmation/email-confirmation';
+import { refusal } from '../../auth/http-refusal';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import type {
   ListingDraft,
   Prisma,

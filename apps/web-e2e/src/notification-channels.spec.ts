@@ -3,6 +3,7 @@ import { Client } from 'pg';
 
 import { headers, ready, signIn, signUpDriver } from './accounts.js';
 import { test } from './fixtures.js';
+import { keepSeededLanguage } from './seeded-language.js';
 
 const SETTINGS = '/app/driver/settings';
 const PREFERENCES = '/api/v1/notification-preferences';
@@ -25,7 +26,10 @@ async function restore(request: APIRequestContext) {
   expect(saved.ok(), await saved.text()).toBe(true);
 }
 
+// The language taps below must not save on cerere@example.test, which every
+// worker shares.
 async function settings(page: Page, email: string) {
+  await keepSeededLanguage(page);
   await ready(page, '/ro');
   await page
     .getByRole('banner')

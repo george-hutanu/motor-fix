@@ -206,8 +206,9 @@ describe('asking for a copy of my data', () => {
       expect(await exportsOf(driverId)).toHaveLength(1);
       expect(await exportsCounted('too_soon')).toBe(before + 1);
       expect(
+        // This driver's only: the log keeps other specs' entries.
         await prisma.activityLog.count({
-          where: { kind: 'data_export_requested' },
+          where: { kind: 'data_export_requested', subjectId: driverId },
         }),
       ).toBe(0);
     },
@@ -252,10 +253,12 @@ describe('asking for a copy of my data', () => {
     const answers = await Promise.all([ask(driverId), ask(driverId)]);
 
     expect(answers.map((a) => a.status).sort()).toEqual([201, 429]);
-    expect(await exportsOf(driverId)).toHaveLength(1);
+    const exports = await exportsOf(driverId);
+    expect(exports).toHaveLength(1);
+    // This export's only: the outbox keeps other specs' events.
     expect(
       await prisma.outboxEvent.count({
-        where: { kind: 'data_export.requested' },
+        where: { kind: 'data_export.requested', subjectId: exports[0]?.id },
       }),
     ).toBe(1);
   });

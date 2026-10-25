@@ -123,6 +123,12 @@ export type { AccountControllerRestore$Params as AccountControllerRestore$Params
 export { accountControllerRestore as accountControllerRestore } from './fn/admin/account-controller-restore';
 export type { AccountControllerDeleteOnRequest$Params as AccountControllerDeleteOnRequest$Params } from './fn/admin/account-controller-delete-on-request';
 export { accountControllerDeleteOnRequest as accountControllerDeleteOnRequest } from './fn/admin/account-controller-delete-on-request';
+export type { AdminBrandsControllerList$Params as AdminBrandsControllerList$Params } from './fn/admin/admin-brands-controller-list';
+export { adminBrandsControllerList as adminBrandsControllerList } from './fn/admin/admin-brands-controller-list';
+export type { AdminBrandsControllerCreate$Params as AdminBrandsControllerCreate$Params } from './fn/admin/admin-brands-controller-create';
+export { adminBrandsControllerCreate as adminBrandsControllerCreate } from './fn/admin/admin-brands-controller-create';
+export type { AdminBrandsControllerUpdate$Params as AdminBrandsControllerUpdate$Params } from './fn/admin/admin-brands-controller-update';
+export { adminBrandsControllerUpdate as adminBrandsControllerUpdate } from './fn/admin/admin-brands-controller-update';
 export type { JobDecisionsControllerQueue$Params as JobDecisionsControllerQueue$Params } from './fn/admin/job-decisions-controller-queue';
 export { jobDecisionsControllerQueue as jobDecisionsControllerQueue } from './fn/admin/job-decisions-controller-queue';
 export type { JobDecisionsControllerApprove$Params as JobDecisionsControllerApprove$Params } from './fn/admin/job-decisions-controller-approve';

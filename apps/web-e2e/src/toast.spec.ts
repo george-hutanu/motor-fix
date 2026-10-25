@@ -75,6 +75,18 @@ test.describe('the toast on a dashboard', () => {
           .filter({ hasText: 'Am trimis un link nou pe e‑mail.' });
         await expect(item).toBeVisible();
         await expect(item).toHaveAttribute('aria-live', 'polite');
+        // @traces 248-FR-001
+        // On a phone the toast stays clear of the tab bar, whose tabs stay
+        // tappable while it shows.
+        if (size.width < 768) {
+          const toast = await item.boundingBox();
+          const bar = await page
+            .getByRole('navigation', { name: 'Panou șofer' })
+            .boundingBox();
+          expect((toast?.y ?? 0) + (toast?.height ?? 0)).toBeLessThanOrEqual(
+            bar?.y ?? 0,
+          );
+        }
 
         expect(await toasterViolations(page)).toEqual([]);
       });
