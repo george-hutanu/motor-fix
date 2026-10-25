@@ -53,6 +53,7 @@ describe('GET /quote-requests/:id/quotes', () => {
     expect(res.body.code).toBe('sign_in_required');
   });
 
+  // @traces 223-FR-009
   it('gives the driver the request, the rows and the garages behind them', async () => {
     const { andrei, dinamo, quote, request } = await quoted();
     await prisma.garage.update({
