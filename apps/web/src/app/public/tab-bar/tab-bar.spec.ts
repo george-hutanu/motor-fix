@@ -308,6 +308,18 @@ describe('the public tab bar', () => {
     expect(await focus('submit')).toBe(false);
   });
 
+  // Drawn over the page, a see-through bar takes the colour of what scrolls
+  // under it: over Cere ofertă's amber the current tab's amber label fell
+  // below 4.5:1 at 320 px.
+  it('draws the bar on the solid page colour, whatever scrolls under it', () => {
+    const css = styles().replace(/\s+/g, ' ');
+    const host = /:host \{([^}]*)\}/.exec(css)?.[1] ?? '';
+
+    expect(host).toMatch(/background: var\(--mf-bg\);/);
+    expect(css).not.toMatch(/backdrop-filter/);
+    expect(css).not.toMatch(/transparent/);
+  });
+
   it('spaces the bar and its tabs on the 4 px grid', () => {
     const css = styles().replace(/\s+/g, ' ');
     const nav = /nav \{[^}]*padding: ([^;]+);/.exec(css)?.[1] ?? '';

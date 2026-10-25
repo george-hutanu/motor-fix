@@ -7,9 +7,9 @@
   z-index: 10;
   margin-top: auto;
   border-top: 1px solid var(--mf-line);
-  background: color-mix(in srgb, var(--mf-bg) 74%, transparent);
-  -webkit-backdrop-filter: saturate(160%) blur(18px);
-  backdrop-filter: saturate(160%) blur(18px);
+  /* Solid: a see-through bar takes the colour of what scrolls under it, and
+     over an amber button the current tab's amber label lost its contrast. */
+  background: var(--mf-bg);
 }
 :host([hidden]) {
   display: none;
@@ -17,13 +17,6 @@
 @media (min-width: 768px) {
   :host {
     display: none;
-  }
-}
-@media (prefers-reduced-transparency: reduce) {
-  :host {
-    background: var(--mf-bg);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
   }
 }
 nav {
