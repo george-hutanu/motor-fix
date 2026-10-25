@@ -5,7 +5,11 @@ import { HttpException, Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { type Job, Queue } from 'bullmq';
 
-import { REQUEST_TIMERS_QUEUE, RequestTimers } from './request-timers';
+import {
+  REQUEST_TIMERS_CONSUMER,
+  REQUEST_TIMERS_QUEUE,
+  RequestTimers,
+} from './request-timers';
 import { RequestTimersModule } from './request-timers.module';
 import { AuditService } from '../../audit/audit.service';
 import type { Actor } from '../../auth/policy';
@@ -47,6 +51,8 @@ const WEB = 'https://motorfix.test';
 // Monday 10:00 in Bucharest; day 2 is Wednesday, day 5 Saturday, the
 // seventh day ends the next Monday, all at 10:00.
 const CREATED = new Date('2026-11-09T08:00:00Z');
+const DAY2 = new Date('2026-11-11T08:00:00Z');
+const DAY5 = new Date('2026-11-14T08:00:00Z');
 const EXPIRES = new Date('2026-11-16T08:00:00Z');
 // Tuesday 15:00 in Bucharest, seven days after a quote sent the Tuesday before.
 const QUOTE_EXPIRES = new Date('2026-11-17T13:00:00Z');
@@ -190,6 +196,14 @@ const event = (kind: string, payload: Record<string, unknown>) => ({
   },
 });
 
+const delays = async () =>
+  Object.fromEntries(
+    (await jobs.getJobs(['delayed', 'waiting'])).map((j) => [
+      j.id,
+      j.opts.delay,
+    ]),
+  );
+
 const fire = (timers: RequestTimers, name: string, id: string) =>
   timers.timers.handle({ data: { id }, name } as Job<{ id?: string }>);
 
@@ -240,6 +254,299 @@ const driverActor = (accountId: string): Actor => ({
   },
   role: 'driver',
   roles: ['driver'],
+});
+
+const muteRequests = (accountId: string, garageId: string) =>
+  prisma.notificationPreference.createMany({
+    data: (['email', 'push', 'whatsapp'] as const).map((channel) => ({
+      accountId,
+      channel,
+      enabled: false,
+      garageId,
+      type: 'REQUEST_RECEIVED',
+    })),
+  });
+
+// @traces 1257-FR-010 1257-FR-011
+describe('setting and clearing a request’s timers', () => {
+  it('takes the request’s and the quote’s events on its own queue', () => {
+    expect(REQUEST_TIMERS_CONSUMER).toMatchObject({
+      kinds: [
+        'request.created',
+        'quote.sent',
+        'quote.accepted',
+        'request.cancelled',
+        'quote.withdrawn',
+        'quote.declined_by_driver',
+        'request.expired',
+        'quote.expired',
+      ],
+      queue: 'request-timers',
+    });
+  });
+
+  it('sets the day-2 and day-5 reminders and the expiry as the request is sent', async () => {
+    const { event: created, request } = await sent([await staffed('Dinamo')]);
+    const { timers } = await start(CREATED);
+
+    await timers.onEvent(created);
+
+    expect(await delays()).toEqual({
+      [`request-expiry-${request.id}`]: EXPIRES.getTime() - CREATED.getTime(),
+      [`request-reminder-2-${request.id}`]: DAY2.getTime() - CREATED.getTime(),
+      [`request-reminder-5-${request.id}`]: DAY5.getTime() - CREATED.getTime(),
+    });
+  });
+
+  it('sets no reminder whose day has already passed, and replaces rather than doubles', async () => {
+    const { event: created, request } = await sent([await staffed('Dinamo')]);
+    const late = new Date(DAY2.getTime() + MINUTE);
+    const { timers } = await start(late);
+
+    await timers.onEvent(created);
+    await timers.onEvent(created);
+
+    expect(Object.keys(await delays()).sort()).toEqual([
+      `request-expiry-${request.id}`,
+      `request-reminder-5-${request.id}`,
+    ]);
+  });
+
+  it('sets the quote’s expiry as it is sent', async () => {
+    const dinamo = await staffed('Dinamo');
+    const { driverId, request } = await sent([dinamo]);
+    const quote = await quoted(request.id, dinamo);
+    const now = new Date(QUOTE_EXPIRES.getTime() - 7 * 24 * HOUR);
+    const { timers } = await start(now);
+
+    await timers.onEvent(
+      event('quote.sent', {
+        driverId,
+        garageId: dinamo.garage.id,
+        quoteId: quote.id,
+        requestId: request.id,
+      }),
+    );
+
+    expect(await delays()).toEqual({
+      [`quote-expiry-${quote.id}`]: 7 * 24 * HOUR,
+    });
+  });
+
+  it('clears all three request timers when the request is cancelled', async () => {
+    const { event: created, request } = await sent([await staffed('Dinamo')]);
+    const { timers } = await start(CREATED);
+    await timers.onEvent(created);
+
+    await timers.onEvent(event('request.cancelled', { requestId: request.id }));
+
+    expect(await delays()).toEqual({});
+  });
+
+  it('clears the reminders and the accepted quote’s expiry, keeping the request’s expiry, when a quote is accepted', async () => {
+    const dinamo = await staffed('Dinamo');
+    const { driverId, event: created, request } = await sent([dinamo]);
+    const quote = await quoted(request.id, dinamo);
+    const { timers } = await start(CREATED);
+    await timers.onEvent(created);
+    await timers.onEvent(
+      event('quote.sent', {
+        driverId,
+        garageId: dinamo.garage.id,
+        quoteId: quote.id,
+        requestId: request.id,
+      }),
+    );
+
+    await timers.onEvent(
+      event('quote.accepted', {
+        bookingId: randomUUID(),
+        quoteId: quote.id,
+        requestId: request.id,
+      }),
+    );
+
+    expect(Object.keys(await delays())).toEqual([
+      `request-expiry-${request.id}`,
+    ]);
+  });
+
+  it.each(['quote.withdrawn', 'quote.declined_by_driver'])(
+    'clears the quote’s expiry on %s',
+    async (kind) => {
+      const dinamo = await staffed('Dinamo');
+      const { driverId, request } = await sent([dinamo]);
+      const quote = await quoted(request.id, dinamo);
+      const { timers } = await start(CREATED);
+      await timers.onEvent(
+        event('quote.sent', {
+          driverId,
+          garageId: dinamo.garage.id,
+          quoteId: quote.id,
+          requestId: request.id,
+        }),
+      );
+
+      await timers.onEvent(
+        event(kind, { quoteId: quote.id, requestId: request.id }),
+      );
+
+      expect(await delays()).toEqual({});
+    },
+  );
+});
+
+// @traces 1257-FR-001 1257-FR-002 1257-FR-003 1257-FR-012 1257-FR-013
+describe('reminding the garages still waiting', () => {
+  it('tells the staff who may answer at each waiting garage once on day 2, and not the garage that quoted', async () => {
+    const [dinamo, berceni, militari] = [
+      await staffed('Dinamo'),
+      await staffed('Berceni'),
+      await staffed('Militari'),
+    ];
+    const { recipients, request } = await sent([dinamo, berceni, militari]);
+    await quoted(request.id, militari);
+    const { timers } = await start(DAY2);
+    const before = await counted('reminder_sent', false);
+
+    await fire(timers, 'request-reminder-2', request.id);
+    await fire(timers, 'request-reminder-2', request.id);
+    await timers.timers.sweep(DAY2);
+
+    for (const garage of [dinamo, berceni]) {
+      for (const person of [garage.owner, garage.desk, garage.fixer]) {
+        const [bell, ...more] = await bells('REQUEST_REMINDER', person);
+        expect(more).toEqual([]);
+        expect(bell.params).toMatchObject({
+          car: 'Mini Cooper S',
+          driver: 'Andrei M.',
+        });
+        expect(bell.subjectId).toBe(request.id);
+      }
+      expect(await messages('REQUEST_REMINDER', garage.silent)).toEqual([]);
+    }
+    for (const person of [militari.owner, militari.desk, militari.fixer]) {
+      expect(await messages('REQUEST_REMINDER', person)).toEqual([]);
+    }
+    const [first, second, third] = await Promise.all(
+      recipients.map((r) => recipientOf(r.id)),
+    );
+    expect(first.remindedDay2At).toEqual(DAY2);
+    expect(second.remindedDay2At).toEqual(DAY2);
+    expect(third.remindedDay2At).toBeNull();
+    expect(first.remindedDay5At).toBeNull();
+    expect(await counted('reminder_sent', false)).toBe(before + 2);
+  });
+
+  it('reminds again on day 5, recorded apart from day 2', async () => {
+    const dinamo = await staffed('Dinamo');
+    const { recipients, request } = await sent([dinamo]);
+    const { at, timers } = await start(DAY2);
+    await fire(timers, 'request-reminder-2', request.id);
+
+    at(DAY5);
+    await fire(timers, 'request-reminder-5', request.id);
+
+    expect(await bells('REQUEST_REMINDER', dinamo.owner)).toHaveLength(2);
+    expect(await recipientOf(recipients[0].id)).toMatchObject({
+      remindedDay2At: DAY2,
+      remindedDay5At: DAY5,
+    });
+  });
+
+  it('sends nothing outside to a garage that muted new requests, still writes the bell and marks the day; unmuted, it gets day 5', async () => {
+    const dinamo = await staffed('Dinamo');
+    for (const person of [dinamo.owner, dinamo.desk, dinamo.fixer]) {
+      await muteRequests(person, dinamo.garage.id);
+    }
+    const { recipients, request } = await sent([dinamo]);
+    const { at, timers } = await start(DAY2);
+    const before = await counted('reminder_muted', false);
+
+    await fire(timers, 'request-reminder-2', request.id);
+
+    expect(
+      (await messages('REQUEST_REMINDER', dinamo.owner)).map((m) => m.channel),
+    ).toEqual(['in_app']);
+    expect((await recipientOf(recipients[0].id)).remindedDay2At).toEqual(DAY2);
+    expect(await counted('reminder_muted', false)).toBe(before + 1);
+
+    await prisma.notificationPreference.deleteMany();
+    at(DAY5);
+    await fire(timers, 'request-reminder-5', request.id);
+
+    expect(
+      (await messages('REQUEST_REMINDER', dinamo.owner)).map((m) => m.channel),
+    ).toContain('email');
+  });
+
+  it('holds a reminder built at 23:00 in Bucharest until 08:00', async () => {
+    const dinamo = await staffed('Dinamo');
+    const late = new Date('2026-11-09T21:00:00Z');
+    const { request } = await sent([dinamo], { createdAt: late });
+    const { timers } = await start(new Date('2026-11-11T21:00:00Z'));
+
+    await fire(timers, 'request-reminder-2', request.id);
+
+    const [email] = (await messages('REQUEST_REMINDER', dinamo.owner)).filter(
+      (m) => m.channel === 'email',
+    );
+    expect(email).toMatchObject({
+      sendAfter: new Date('2026-11-12T06:00:00Z'),
+      status: 'held',
+    });
+  });
+
+  it('sends nothing once the request’s seven days have ended', async () => {
+    const dinamo = await staffed('Dinamo');
+    const { recipients, request } = await sent([dinamo]);
+    const { timers } = await start(EXPIRES);
+
+    await fire(timers, 'request-reminder-5', request.id);
+
+    expect(await messages('REQUEST_REMINDER')).toEqual([]);
+    expect((await recipientOf(recipients[0].id)).remindedDay5At).toBeNull();
+  });
+
+  it.each(['booked', 'closed'] as const)(
+    'sends nothing for a request %s',
+    async (status) => {
+      const dinamo = await staffed('Dinamo');
+      const { request } = await sent([dinamo], { status });
+      const { timers } = await start(DAY2);
+
+      await fire(timers, 'request-reminder-2', request.id);
+      await timers.timers.sweep(DAY2);
+
+      expect(await messages('REQUEST_REMINDER')).toEqual([]);
+    },
+  );
+
+  it('does nothing when its timer fires before the day has come', async () => {
+    const dinamo = await staffed('Dinamo');
+    const { recipients, request } = await sent([dinamo]);
+    const { timers } = await start(new Date(DAY2.getTime() - MINUTE));
+
+    await fire(timers, 'request-reminder-2', request.id);
+
+    expect(await messages('REQUEST_REMINDER')).toEqual([]);
+    expect((await recipientOf(recipients[0].id)).remindedDay2At).toBeNull();
+  });
+
+  it('sends a reminder whose timer was lost once, from the sweep', async () => {
+    const dinamo = await staffed('Dinamo');
+    const { request } = await sent([dinamo]);
+    const now = new Date(DAY2.getTime() + 10 * MINUTE);
+    const { timers } = await start(now);
+    const before = await counted('reminder_sent', true);
+
+    await timers.timers.sweep(now);
+    await timers.timers.sweep(now);
+    await fire(timers, 'request-reminder-2', request.id);
+
+    expect(await bells('REQUEST_REMINDER', dinamo.owner)).toHaveLength(1);
+    expect(await counted('reminder_sent', true)).toBe(before + 1);
+  });
 });
 
 // @traces 1257-FR-004 1257-FR-005 1257-FR-010 1257-FR-012 1257-FR-013

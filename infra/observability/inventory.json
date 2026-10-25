@@ -2114,9 +2114,9 @@
         "worker-queue-backlog",
         "worker-queue-growing",
         "worker-jobs-failed",
-        "request-timers-sweep-late"
+        "booking-lapse-sweep-late"
       ],
-      "reason": "carries the relay request and quote events, each sent request day-2 and day-5 reminders and its day-7 expiry, each sent quote expiry, and the request.expired and quote.expired notices, with the 5-minute sweep for a lost timer; one RequestTimers log line per fired timer naming the request or quote id and the step; steps counted by motorfix_request_timers_total; BullMQ queue metrics cover depth and failures; request-timers-sweep-late fires when the sweep expires more than 10 in an hour (lost timers)",
+      "reason": "carries the relay request and quote events, each sent request day-2 and day-5 reminders and its day-7 expiry, each sent quote expiry, and the request.expired and quote.expired notices, with the 5-minute sweep for a lost timer; one RequestTimers log line per fired timer naming the request or quote id and the step; steps counted by motorfix_request_timers_total; BullMQ queue metrics cover depth and failures; booking-lapse-sweep-late, shared with the booking lapse under the free tier alert cap, fires when the sweep runs more than 10 in an hour (lost timers)",
       "story": "ST-1257"
     },
     {
@@ -2125,9 +2125,9 @@
       "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": [
-        "request-timers-sweep-late"
+        "booking-lapse-sweep-late"
       ],
-      "reason": "counts what the request and quote timers did by step (reminder_sent, reminder_muted, recipient_expired, request_closed, quote_expired, quote_held) and whether the timer or the sweep ran it, with no identifiers; a rising sweep share means lost timers, which request-timers-sweep-late watches",
+      "reason": "counts what the request and quote timers did by step (reminder_sent, reminder_muted, recipient_expired, request_closed, quote_expired, quote_held) and whether the timer or the sweep ran it, with no identifiers; a rising sweep share means lost timers, which booking-lapse-sweep-late watches with the booking lapses",
       "story": "ST-1257"
     },
     {

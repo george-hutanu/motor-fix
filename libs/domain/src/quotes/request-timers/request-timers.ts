@@ -3,16 +3,21 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions, Queue } from 'bullmq';
 
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
+import { addLocalDays } from '../../bucharest';
 import { noEvents, outbox } from '../../events/event.port';
 import { loadGarageAccess } from '../../events/garage-access';
-import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 import {
   NOTIFICATIONS_PRISMA,
   NotificationsService,
 } from '../../notifications/notifications.service';
 import { ObjectTimers } from '../../scheduler/timers';
 import type { TransitionActor } from '../../transitions';
-import { recordRequestTimer } from '../quotes/quotes.metrics';
+import {
+  type RequestTimerStep,
+  recordRequestTimer,
+} from '../quotes/quotes.metrics';
+import { REQUEST_REMINDER_DAYS } from '../quotes-config';
 import { shortName } from '../reads';
 import { moveQuote, moveRecipient, moveRequest } from '../transitions';
 
@@ -22,6 +27,12 @@ export const REQUEST_TIMERS_URL = Symbol('REQUEST_TIMERS_URL');
 
 const EXPIRY = 'request-expiry';
 const QUOTE_EXPIRY = 'quote-expiry';
+const reminder = (day: number) => `request-reminder-${day}`;
+// The column that records each reminder day was sent, so it goes once.
+const REMINDED: Record<number, string> = {
+  2: 'reminded_day2_at',
+  5: 'reminded_day5_at',
+};
 
 // A failed job is tried 5 more times, 1, 2, 4, 8 and 16 minutes later; the
 // sweep runs a timer that was lost for good.
@@ -36,12 +47,12 @@ export const REQUEST_TIMERS_CONSUMER = {
   jobs: REQUEST_TIMERS_RUN,
   kinds: [
     'request.created',
-    'request.cancelled',
-    'request.expired',
     'quote.sent',
     'quote.accepted',
+    'request.cancelled',
     'quote.withdrawn',
     'quote.declined_by_driver',
+    'request.expired',
     'quote.expired',
   ] as readonly EventKind[],
   queue: REQUEST_TIMERS_QUEUE,
@@ -72,13 +83,19 @@ interface ExpiringQuote {
   requestStatus: string;
 }
 
+interface Reminding {
+  id: string;
+  garageId: string;
+}
+
 interface Closed {
   garageIds: string[];
   closed: boolean;
 }
 
-// A sent request's timers, its expiry at the end of the seventh day, and
-// each waiting quote's expiry seven days after it was sent. Each
+// A sent request's timers, its reminders on day 2 and day 5 and its expiry
+// at the end of the seventh day, and each waiting quote's expiry seven days
+// after it was sent. Each
 // re-reads its object under a lock, so a late, early or repeated timer and
 // the sweep do nothing once the state or the time no longer fits.
 @Injectable()
@@ -97,6 +114,11 @@ export class RequestTimers {
   ) {
     this.access = loadGarageAccess(prisma);
     this.timers = new ObjectTimers(queue, [
+      ...REQUEST_REMINDER_DAYS.map((day) => ({
+        fire: (id: string, sweep: boolean) => this.remind(day, id, sweep),
+        name: reminder(day),
+        overdue: (now: Date) => this.overdueReminders(day, now),
+      })),
       {
         fire: (id, sweep) => this.expireRequest(id, sweep),
         name: EXPIRY,
@@ -118,6 +140,7 @@ export class RequestTimers {
       case 'request.created':
         return this.setRequest(requestId);
       case 'request.cancelled':
+        await this.clearReminders(requestId);
         await this.timers.clear(EXPIRY, requestId);
         return;
       case 'request.expired':
@@ -128,6 +151,9 @@ export class RequestTimers {
       case 'quote.sent':
         return this.setQuote(quoteId);
       case 'quote.accepted':
+        await this.clearReminders(requestId);
+        await this.timers.clear(QUOTE_EXPIRY, quoteId);
+        return;
       case 'quote.withdrawn':
       case 'quote.declined_by_driver':
         await this.timers.clear(QUOTE_EXPIRY, quoteId);
@@ -142,11 +168,112 @@ export class RequestTimers {
 
   private async setRequest(requestId: string): Promise<void> {
     const request = await this.prisma.quoteRequest.findUnique({
-      select: { expiresAt: true, status: true },
+      select: { createdAt: true, expiresAt: true, status: true },
       where: { id: requestId },
     });
-    if (request?.status !== 'sent') return;
-    await this.timers.set(EXPIRY, requestId, request.expiresAt, this.now());
+    // A retried or late job may find the request quoted already.
+    if (!request || !['sent', 'quoted'].includes(request.status)) return;
+    const now = this.now();
+    for (const day of REQUEST_REMINDER_DAYS) {
+      const at = addLocalDays(request.createdAt, day);
+      if (at > now && at < request.expiresAt)
+        await this.timers.set(reminder(day), requestId, at, now);
+    }
+    await this.timers.set(EXPIRY, requestId, request.expiresAt, now);
+  }
+
+  private async clearReminders(requestId: string): Promise<void> {
+    for (const day of REQUEST_REMINDER_DAYS)
+      await this.timers.clear(reminder(day), requestId);
+  }
+
+  private async overdueReminders(day: number, now: Date): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT r.id FROM quote_request r
+      WHERE r.status IN ('sent', 'quoted') AND r.expires_at > ${now}
+        AND ((r.created_at AT TIME ZONE 'Europe/Bucharest')
+          + make_interval(days => ${day}::int))
+          AT TIME ZONE 'Europe/Bucharest' <= ${now}
+        AND EXISTS (${this.unreminded(day)} AND rr.request_id = r.id)
+      ORDER BY r.created_at, r.id`;
+    return rows.map((row) => row.id);
+  }
+
+  // A garage still waiting, not suspended, and not yet reminded that day.
+  private unreminded(day: number) {
+    return Prisma.sql`
+      SELECT rr.id, rr.garage_id AS "garageId" FROM request_recipient rr
+      JOIN garage g ON g.id = rr.garage_id
+      WHERE rr.status = 'waiting' AND g.status <> 'suspended'
+        AND rr.${Prisma.raw(REMINDED[day] ?? '')} IS NULL`;
+  }
+
+  private async remind(day: number, id: string, sweep: boolean) {
+    const now = this.now();
+    const request = await this.prisma.quoteRequest.findUnique({
+      select: {
+        carBrand: true,
+        carModel: true,
+        createdAt: true,
+        driver: { select: { name: true } },
+        expiresAt: true,
+        status: true,
+      },
+      where: { id },
+    });
+    const due =
+      request &&
+      this.webUrl &&
+      ['sent', 'quoted'].includes(request.status) &&
+      now >= addLocalDays(request.createdAt, day) &&
+      now < request.expiresAt;
+    if (!due) {
+      this.logger.log(`request ${id} reminder ${day}: nothing to do`);
+      return;
+    }
+    const waiting = await this.prisma.$queryRaw<Reminding[]>`
+      ${this.unreminded(day)} AND rr.request_id = ${id}::uuid
+      ORDER BY rr.id`;
+    const params = {
+      car: `${request.carBrand} ${request.carModel}`,
+      driver: shortName(request.driver.name),
+      link: `${this.webUrl}/app/garage/requests`,
+    };
+    for (const recipient of waiting) {
+      const step = await this.remindGarage(day, id, recipient, params, now);
+      if (step) recordRequestTimer(step, sweep);
+    }
+    this.logger.log(
+      `request ${id} reminder ${day}${sweep ? ' (sweep)' : ''}: ${waiting.length} garages`,
+    );
+  }
+
+  // The notice's event id is the garage's and the day's, so a repeated
+  // timer, the sweep and a retry build it once; the day is marked after.
+  private async remindGarage(
+    day: number,
+    requestId: string,
+    recipient: Reminding,
+    params: Record<string, string>,
+    now: Date,
+  ): Promise<RequestTimerStep | null> {
+    const staff = await this.answering(recipient.garageId);
+    const queued = staff.length
+      ? await this.notifications.notify({
+          eventId: `${reminder(day)}-${recipient.id}`,
+          garageId: recipient.garageId,
+          kind: 'REQUEST_REMINDER',
+          params,
+          recipients: staff,
+          subjectId: requestId,
+        })
+      : 0;
+    const column = Prisma.raw(REMINDED[day] ?? '');
+    const marked = await this.prisma.$executeRaw`
+      UPDATE request_recipient SET ${column} = ${now}
+      WHERE id = ${recipient.id}::uuid AND ${column} IS NULL`;
+    if (marked === 0 || staff.length === 0) return null;
+    return queued > 0 ? 'reminder_sent' : 'reminder_muted';
   }
 
   private async setQuote(quoteId: string): Promise<void> {
@@ -453,6 +580,14 @@ export class RequestTimers {
     this.logger.log(
       `quote ${quoteId} expiry told to ${staff.length + 1} people, ${queued} queued`,
     );
+  }
+
+  private async answering(garageId: string): Promise<string[]> {
+    const { mechanics, owners, receptionists } = await this.access(garageId);
+    const answering = [...mechanics]
+      .filter(([, permissions]) => permissions.canAnswerQuotes)
+      .map(([accountId]) => accountId);
+    return [...new Set([...owners, ...receptionists, ...answering])];
   }
 
   private async desk(garageId: string): Promise<string[]> {
