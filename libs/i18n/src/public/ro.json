@@ -91,6 +91,21 @@
       "one": "{count} recenzie",
       "other": "{count} de recenzii"
     },
+    "reviewsSection": {
+      "deletedAuthor": "Șofer MotorFix",
+      "empty": "Încă nu are recenzii.",
+      "failed": "Nu am putut încărca recenziile",
+      "label": "Recenzii după notă",
+      "more": "Vezi mai multe",
+      "retry": "Încearcă din nou",
+      "score": "{rating} / 5",
+      "stars": {
+        "few": "{count} stele",
+        "one": "{count} stea",
+        "other": "{count} de stele"
+      },
+      "title": "Ce spun șoferii"
+    },
     "share": "Distribuie",
     "shareCopied": "Link copiat",
     "shareCopyBelow": "Copiază linkul de mai jos",

@@ -2184,6 +2184,19 @@
       "story": "ST-25"
     },
     {
+      "kind": "endpoint",
+      "name": "garage-reviews",
+      "source": "libs/domain/src/reviews/reviews.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/reviews/garage/{garageId}",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a public read of a garage's published reviews, 20 a page, with its rating, count and breakdown; it writes nothing, so its failures and latency are the route metric alone",
+      "story": "ST-24"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_reviews_posted_total",
       "source": "libs/domain/src/reviews/reviews.metrics.ts",

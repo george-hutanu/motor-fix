@@ -16,6 +16,7 @@ import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import {
   GaragesService,
   type PublicGarageDto,
+  ReviewsService,
   SearchService,
   type SimilarGaragesDto,
 } from '@motor-fix/data-access';
@@ -28,6 +29,20 @@ import { PlaceStore } from '../../home/place/place-store';
 import { PUBLIC_READ } from '../../public-read';
 import { PublicLive } from '../live';
 import { ProfilePrefetch } from '../profile-prefetch/profile-prefetch';
+
+// The reviews section's read: a garage nobody reviewed yet.
+const reviewsStub = {
+  reviewsControllerForGarage: () =>
+    Promise.resolve({
+      breakdown: { five: 0, four: 0, one: 0, three: 0, two: 0 },
+      items: [],
+      page: 1,
+      pageSize: 20,
+      rating: null,
+      reviewCount: 0,
+      total: 0,
+    }),
+};
 
 const MOBILE: PublicGarageDto = {
   brandNote: null,
@@ -187,6 +202,7 @@ beforeEach(async () => {
         { children: [], path: ':lang/garages' },
       ]),
       { provide: GaragesService, useValue: api },
+      { provide: ReviewsService, useValue: reviewsStub },
       { provide: SearchService, useValue: search },
       { provide: PublicLive, useValue: live },
       { provide: Consent, useValue: consent },
@@ -351,11 +367,26 @@ describe('the garage profile', () => {
 
     const slots = [
       ...page().querySelectorAll<HTMLElement>(
-        'section[data-slot]:not([data-slot="prices"]):not([data-slot="where"])',
+        'section[data-slot]:not([data-slot="prices"]):not([data-slot="where"]):not([data-slot="reviews"])',
       ),
     ];
     expect(slots.length).toBeGreaterThan(0);
     for (const slot of slots) expect(slot.textContent?.trim()).toBe('');
+  });
+
+  // @traces 024-FR-001
+  it('fills the reviews slot with the reviews section, named by its heading', async () => {
+    await open('/ro/garages/service-auto-militari');
+    await reads[0]?.answer(FIXED);
+    await settle();
+
+    const slot = page().querySelector<HTMLElement>(
+      'section[data-slot="reviews"]',
+    );
+    const heading = slot?.querySelector('h2');
+    expect(heading?.textContent?.trim()).toBe('Ce spun șoferii');
+    expect(slot?.getAttribute('aria-label')).toBe('Ce spun șoferii');
+    expect(slot?.textContent).toContain('Încă nu are recenzii.');
   });
 
   it('fills the photos slot with a tile per photo when the garage has photos', async () => {
@@ -856,6 +887,7 @@ describe('the answer the server render drew', () => {
           { component: GarageProfile, path: ':lang/garages/:garage' },
         ]),
         { provide: GaragesService, useValue: api },
+        { provide: ReviewsService, useValue: reviewsStub },
         { provide: SearchService, useValue: search },
         { provide: PublicLive, useValue: live },
         { provide: Consent, useValue: consent },
@@ -1436,6 +1468,7 @@ describe('the profile view', () => {
           { component: GarageProfile, path: ':lang/garages/:garage' },
         ]),
         { provide: GaragesService, useValue: api },
+        { provide: ReviewsService, useValue: reviewsStub },
         { provide: SearchService, useValue: search },
         { provide: PublicLive, useValue: live },
         { provide: Consent, useValue: consent },

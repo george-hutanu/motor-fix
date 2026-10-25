@@ -48,6 +48,7 @@ import { PriceSelection } from './price-selection/price-selection';
 import { PricesSection } from './prices-section/prices-section';
 import { ReportGarageLink } from './report-garage-link/report-garage-link';
 import { RequestQuoteButton } from './request-quote-button/request-quote-button';
+import { ReviewsSection } from './reviews-section/reviews-section';
 import { ShareButton } from './share-button/share-button';
 import { sourceOf } from './view-source';
 import { WhereSection } from './where-section/where-section';
@@ -110,6 +111,7 @@ const OPENED_FROM: Partial<Record<ReturnType<typeof sourceOf>, string>> = {
     RatingDial,
     ReportGarageLink,
     RequestQuoteButton,
+    ReviewsSection,
     SaveGarageButton,
     RouterLink,
     ShareButton,

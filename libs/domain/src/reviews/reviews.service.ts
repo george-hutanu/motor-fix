@@ -1,4 +1,6 @@
 import {
+  DELETED_AUTHOR,
+  type GarageReviewsPageDto,
   type JobReviewContextDto,
   MECHANIC_REVIEWS_PAGE,
   type MechanicReviewsPageDto,
@@ -28,6 +30,7 @@ import type { Actor } from '../auth/policy';
 import { PRISMA } from '../auth/prisma';
 import { taken } from '../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
+import { publicGarages } from '../garages/public-garages/public-garages';
 import type { Job, PrismaClient, Review } from '../generated/prisma/client';
 import { garageRef, jobsOf, shortName, snapshotOf } from '../quotes/reads';
 
@@ -44,7 +47,7 @@ const reviewOf = (review: Review): ReviewDto => ({
 // A deleted account's name is gone; its reviews stay under a stand-in.
 const authorOf = (driver: { name: string; status: string }) =>
   driver.status === 'deleted'
-    ? { shortName: 'Șofer MotorFix' }
+    ? { shortName: DELETED_AUTHOR }
     : { shortName: shortName(driver.name) };
 
 const dtoOf = ({ jobId, offer, reason }: Verdict): ReviewEligibilityDto => ({
@@ -118,6 +121,95 @@ export class ReviewsService {
       })),
       page,
       pageSize: MECHANIC_REVIEWS_PAGE,
+      total,
+    };
+  }
+
+  // A garage's published reviews, 20 a page, with its stored rating and count
+  // and how many published reviews gave each score; the scores sum to total.
+  async garageReviews(
+    garageId: string,
+    page = 1,
+  ): Promise<GarageReviewsPageDto> {
+    const garage = await this.prisma.garage.findFirst({
+      select: { rating: true, reviewCount: true },
+      where: { id: garageId, ...publicGarages() },
+    });
+    if (!garage) {
+      throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
+    }
+    const where = { garageId, status: 'published' as const };
+    const scores = await this.prisma.review.groupBy({
+      _count: { _all: true },
+      by: ['rating'],
+      where,
+    });
+    const scored = (rating: number) =>
+      scores.find((one) => one.rating === rating)?._count._all ?? 0;
+    const breakdown = {
+      five: scored(5),
+      four: scored(4),
+      one: scored(1),
+      three: scored(3),
+      two: scored(2),
+    };
+    const total = scores.reduce((sum, one) => sum + one._count._all, 0);
+    const skip = (page - 1) * MECHANIC_REVIEWS_PAGE;
+    // A page past the last reads nothing, however large its number.
+    const reviews =
+      skip < total
+        ? await this.prisma.review.findMany({
+            include: {
+              driver: { select: { name: true, status: true } },
+              job: {
+                include: {
+                  booking: {
+                    include: {
+                      quote: {
+                        include: {
+                          jobs: {
+                            include: {
+                              requestJob: { include: { jobType: true } },
+                            },
+                            orderBy: { requestJob: { position: 'asc' } },
+                            where: { included: true },
+                          },
+                        },
+                      },
+                      request: true,
+                    },
+                  },
+                },
+              },
+            },
+            orderBy: [{ postedAt: 'desc' }, { id: 'desc' }],
+            skip,
+            take: MECHANIC_REVIEWS_PAGE,
+            where,
+          })
+        : [];
+    return {
+      breakdown,
+      items: reviews.map((review) => {
+        const { booking } = review.job;
+        const fromJob = review.source === 'job';
+        return {
+          author: authorOf(review.driver),
+          car: fromJob ? snapshotOf(booking.request) : null,
+          id: review.id,
+          jobs: fromJob
+            ? jobsOf(booking.quote.jobs.map((one) => one.requestJob))
+            : [],
+          postedAt: review.postedAt.toISOString(),
+          rating: review.rating,
+          source: review.source,
+          text: review.text,
+        };
+      }),
+      page,
+      pageSize: MECHANIC_REVIEWS_PAGE,
+      rating: garage.rating === null ? null : Number(garage.rating),
+      reviewCount: garage.reviewCount,
       total,
     };
   }

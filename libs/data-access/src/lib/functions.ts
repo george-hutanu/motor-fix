@@ -263,6 +263,8 @@ export type { ReviewsControllerEligibility$Params as ReviewsControllerEligibilit
 export { reviewsControllerEligibility as reviewsControllerEligibility } from './fn/reviews/reviews-controller-eligibility';
 export type { ReviewsControllerForMechanic$Params as ReviewsControllerForMechanic$Params } from './fn/reviews/reviews-controller-for-mechanic';
 export { reviewsControllerForMechanic as reviewsControllerForMechanic } from './fn/reviews/reviews-controller-for-mechanic';
+export type { ReviewsControllerForGarage$Params as ReviewsControllerForGarage$Params } from './fn/reviews/reviews-controller-for-garage';
+export { reviewsControllerForGarage as reviewsControllerForGarage } from './fn/reviews/reviews-controller-for-garage';
 export type { ReviewsControllerForJob$Params as ReviewsControllerForJob$Params } from './fn/reviews/reviews-controller-for-job';
 export { reviewsControllerForJob as reviewsControllerForJob } from './fn/reviews/reviews-controller-for-job';
 export type { ReviewsControllerPublish$Params as ReviewsControllerPublish$Params } from './fn/reviews/reviews-controller-publish';

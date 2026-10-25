@@ -333,6 +333,12 @@ export class Session {
     return this.deleting;
   }
 
+  // Bumped by every sign-out and revoke: a call sent before the bump is
+  // answered for a session that is gone.
+  epoch(): number {
+    return this.generation;
+  }
+
   // Whether a "sessions ended" word may be this tab's own password change.
   keepsThroughRevoke(): boolean {
     return Date.now() < this.keepUntil;

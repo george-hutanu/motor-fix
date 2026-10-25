@@ -3,6 +3,7 @@ import { type APIRequestContext, expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ACCOUNTS, ready, signIn, signInAsAdmin2 } from './accounts.js';
+import { deleteBrand } from './delete-brand.js';
 import { test } from './fixtures.js';
 
 // Garages of this file's own, written due straight to PostgreSQL: recording
@@ -182,12 +183,11 @@ test.describe('the monthly RAR re-check @seeded @database', () => {
 
   test.afterAll(async () => {
     await db.query('DELETE FROM account WHERE email = $1', [owner.email]);
-    await db.query('DELETE FROM search_log WHERE brand_id = $1', [brandId]);
     await db.query('DELETE FROM verification_file WHERE garage_id = ANY($1)', [
       garageIds,
     ]);
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [garageIds]);
-    await db.query('DELETE FROM brand WHERE id = $1', [brandId]);
+    await deleteBrand(db, brandId);
     await db.end();
   });
 
