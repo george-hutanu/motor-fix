@@ -240,13 +240,20 @@ test.describe('the tab bar under the sign-in sheet', () => {
     const behind = await page.evaluate(() => window.scrollY);
     const last = dialog.getByRole('button').last();
     // The sheet stops at 92% of the screen; its own body scrolls the rest in.
-    await last.evaluate((button) => {
-      let box = button.parentElement;
-      while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) {
-        box = box.parentElement;
-      }
-      if (box) box.scrollTop = box.scrollHeight;
-    });
+    // It is scrolled again until the button is in: the sheet may still be
+    // sliding up or filling in when the first scroll lands.
+    const bottom = async () => {
+      await last.evaluate((button) => {
+        let box = button.parentElement;
+        while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) {
+          box = box.parentElement;
+        }
+        if (box) box.scrollTop = box.scrollHeight;
+      });
+      const box = await last.boundingBox();
+      return box ? box.y + box.height : Number.POSITIVE_INFINITY;
+    };
+    await expect.poll(bottom).toBeLessThanOrEqual(640);
     const at = await last.boundingBox();
     expect(at).not.toBeNull();
     expect(at?.y ?? -1).toBeGreaterThanOrEqual(0);
