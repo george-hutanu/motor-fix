@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 253-live-connection
   - 254-live-audience
@@ -29,6 +29,7 @@ features:
   - 588-live-changed-gone
   - 587-live-list-e2e
   - 413-verification-file-presence
+  - 102-garage-members
 ---
 
 # Capability: Live updates
@@ -105,9 +106,9 @@ _From 419-live-garage-updates._
 
 _From 254-live-audience._
 
-### 398-FR-008 — Whether an event kind reaches a garage-staff stream that met it only on `garage:{garageId}` MUST be derived from the connection role's capabilities through one table of kind families: `price_list.*` → `garage.prices`; `member.*`, `mechanic.*`, `invite.*` → `garage.team`; `garage.settings_changed` → `garage.feature_switches`; `garage.updated` → `garage.profile`; `review.*` → `garage.reviews`; `request.*`, `message.*` → `garage.requests`; `booking.move*` → `garage.schedule`. For an owner or a receptionist still that garage's staff in that role, a kind in a mapped family MUST reach the stream only when the role holds its capability, and a kind in no family MUST reach it. For a mechanic, a kind MUST reach the stream through the garage channel only when it is in a mapped family whose capability the mechanic holds through their permissions (`can_answer_quotes` → `request.*`, `message.*`; `can_move_bookings` → every kind starting `booking.move`), and a kind in no family MUST NOT; the mechanic's own channel, the staff-membership check and the feature-switch rules are unchanged. The one exception, and the hub's only other list of kinds: `garage.features_changed` is in no family and MUST reach every staff stream of the garage, the owner, a receptionist and a mechanic alike, after the membership check; the hub's cached access for the garage is still dropped on it (254-FR-006). (Restates 574-FR-001, 574-FR-002 and 574-FR-003 with that exception.)
+### 102-FR-010 — The live filter of `garage:{garageId}` MUST keep deriving from the shared table (398-FR-008): owner and receptionist receive every garage event their row allows, a mechanic receives their own bookings and jobs (the `mechanic:` channel) plus the inbox kinds only with `can_answer_quotes`, everyone receives `garage.features_changed` and `mechanic.updated` about themselves, and `invite.*` and `member.removed` reach the owner only. The `booking.move*` family MUST map to `garage.move_bookings`. A test MUST show a mechanic receiving nothing about another mechanic's booking and an owner receiving it.
 
-_From 398-garage-feature-switches._
+_From 102-garage-members._
 
 ### 254-FR-004 — A garage-staff connection MUST receive through `garage:{garageId}` or `mechanic:{mechanicId}` only while its account is still that garage's staff in the role of the connection (owner or receptionist membership, or the mechanic record).
 
@@ -501,3 +502,4 @@ _From 413-verification-file-presence._
 - `049-FR-007` — superseded by `067-FR-007` (2026-10-23)
 - `256-FR-006` — superseded by `588-FR-004` (2026-10-24)
 - `256-FR-004` — superseded by `588-FR-006` (2026-10-24)
+- `398-FR-008` — superseded by `102-FR-010` (2026-10-25)
