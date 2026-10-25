@@ -111,12 +111,28 @@ const SUBMIT_TIMEOUT_MS = 30_000;
 export function submitTimeoutMs(
   source: Record<string, string | undefined> = process.env,
 ): number {
-  const value = source['LISTING_SUBMIT_TX_TIMEOUT_MS'];
-  if (!value) return SUBMIT_TIMEOUT_MS;
+  return wholeMs('LISTING_SUBMIT_TX_TIMEOUT_MS', SUBMIT_TIMEOUT_MS, source);
+}
+
+const BRAND_LOAD_TIMEOUT_MS = 60_000;
+
+// How long the brand load's transaction may run: BRAND_LOAD_TIMEOUT_MS, in
+// milliseconds, or 60 seconds when it is not set.
+export function brandLoadTimeoutMs(
+  source: Record<string, string | undefined> = process.env,
+): number {
+  return wholeMs('BRAND_LOAD_TIMEOUT_MS', BRAND_LOAD_TIMEOUT_MS, source);
+}
+
+function wholeMs(
+  name: string,
+  fallback: number,
+  source: Record<string, string | undefined>,
+): number {
+  const value = source[name];
+  if (!value) return fallback;
   if (!/^[1-9]\d*$/.test(value)) {
-    throw new Error(
-      'LISTING_SUBMIT_TX_TIMEOUT_MS must be a positive whole number',
-    );
+    throw new Error(`${name} must be a positive whole number`);
   }
   return Number(value);
 }

@@ -13,6 +13,8 @@ features:
   - 1352-catalogue-job-visibility
   - 129-delete-account
   - 469-activity-log-at-index
+  - 105-brand-list-admin
+  - 140-account-delete-export
   - 003-admin-account-actions
 ---
 
@@ -229,6 +231,14 @@ _From 469-activity-log-at-index._
 ### 469-FR-005 — The story MUST change no API, contract, screen or answer: the endpoint, its parameters, its page shape, the masking and the ordering stay as 391 states them.
 
 _From 469-activity-log-at-index._
+
+### 105-FR-010 — Every create, rename, retirement and bring-back MUST write its audit entries through the shared writer inside the same transaction (390-FR-001, 164-FR-001): subject type `brand`, subject id the brand, actor the admin (role `admin`), a `create` entry with the new values for an add and one `update` entry per changed field (`name`, `slug`, `active`) with old and new values for the rest, so the history shows admin, time, brand, old and new values. Popularity is never written here.
+
+_From 105-brand-list-admin._
+
+### 140-FR-011 — The request's transaction MUST write one audit entry through the audit writer: action `create`, subject `account` = the driver, kind `data_export_requested`, with the time; it is kept under the audit retention rule.
+
+_From 140-account-delete-export._
 
 ### 003-FR-005 — Reading the page or its history MUST write no audit entry. Opening a garage owner's legal document from the page MUST write one audit entry through the shared writer (action `open`, subject the document, actor the admin, garage id set, no personal value), through the same recording the garage's own legal panel uses where one exists.
 

@@ -8,9 +8,10 @@ import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { type ChangeAction, recordChange } from './changes.metrics';
 import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
 import { firstName } from '../../../audit/audit.service';
+import { refusal } from '../../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
-import { refusal, taken } from '../../../auth/sign-up.service';
+import { taken } from '../../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type {
   PlatformRuleChange,

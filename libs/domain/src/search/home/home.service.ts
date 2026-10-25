@@ -6,8 +6,8 @@ import {
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
+import { refusal } from '../../auth/http-refusal';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import { type CacheRead, cacheKey } from '../../cache/cache.service';
 import { publicGarages } from '../../garages/public-garages/public-garages';
 import type {

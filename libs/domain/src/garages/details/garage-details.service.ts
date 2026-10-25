@@ -12,7 +12,8 @@ import {
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
-import { refusal, taken } from '../../auth/sign-up.service';
+import { refusal } from '../../auth/http-refusal';
+import { taken } from '../../auth/sign-up.service';
 import type { Prisma } from '../../generated/prisma/client';
 import { uniqueSlug } from '../garage-slug';
 import { isRecord, plainText } from '../plain-text';

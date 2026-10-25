@@ -1,3 +1,4 @@
+import { brandLoadTimeoutMs } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 
@@ -6,13 +7,12 @@ import {
   type BrandRecord,
   slugOf,
   validateFile,
-} from './brands';
+} from './brands/brands';
+import { dropActiveBrands } from './brands/brands.service';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { AUTH_REDIS } from '../auth/attempts';
 import { PRISMA } from '../auth/prisma';
 import type { Brand, Prisma, PrismaClient } from '../generated/prisma/client';
-
-export const ACTIVE_BRANDS_KEY = 'brands:active';
 
 const SYSTEM = { actorId: null, actorRole: 'system' } as const;
 
@@ -36,13 +36,11 @@ export class BrandLoader {
         return this.apply(tx, records);
       },
       // The full list is a few hundred brands, each audited on its first load.
-      { timeout: 60_000 },
+      { timeout: brandLoadTimeoutMs() },
     );
     this.logger.log(`brands loaded: ${changed} changed`);
     if (changed > 0) {
-      await this.redis.del(ACTIVE_BRANDS_KEY).catch((error: unknown) => {
-        this.logger.warn(`brand cache not dropped: ${String(error)}`);
-      });
+      await dropActiveBrands(this.redis, this.logger);
     }
     return { changed };
   }
@@ -51,11 +49,30 @@ export class BrandLoader {
     tx: Prisma.TransactionClient,
     records: readonly BrandRecord[],
   ) {
-    const stored = await tx.brand.findMany();
-    refuseHeldNames(stored, records);
+    // A brand an admin changed is the admin's: the file neither updates nor
+    // retires it, and a record that would collide with it is skipped.
+    const all = await tx.brand.findMany();
+    const owned = all.filter((brand) => brand.updatedBy !== null);
+    const stored = all.filter((brand) => brand.updatedBy === null);
+    const kept = records.filter((record) => {
+      const slug = slugOf(record.name);
+      const holder = owned.find(
+        (brand) =>
+          brand.key === record.key ||
+          brand.name === record.name ||
+          brand.slug === slug,
+      );
+      if (holder) {
+        this.logger.warn(
+          `brand ${record.key} skipped: held by the admin-changed brand ${holder.key}`,
+        );
+      }
+      return !holder;
+    });
+    refuseHeldNames(stored, kept);
     const byKey = new Map(stored.map((brand) => [brand.key, brand]));
     let changed = 0;
-    for (const record of records) {
+    for (const record of kept) {
       const brand = byKey.get(record.key);
       // The file's rank seeds a new brand or a stored one with no rank; a rank
       // already held is the nightly ranking's and stays.
