@@ -26,7 +26,8 @@ const ALL_VOICES_ON =
 // The story that adds an admin route that changes data adds its row here: a
 // body a signed-in admin can send and get a 2xx for. A logged read sets
 // `entries: 1`; every other GET must leave the admin's history unchanged. A
-// route with path parameters gives `path`, which makes what it acts on.
+// route with path parameters gives `path`, which makes what it acts on. A
+// call that is no change (a heartbeat) sets `entries: 0`.
 const FIXTURES: Record<
   string,
   {
@@ -35,6 +36,14 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
+  // @traces 413-FR-001
+  // The drawer closing leaves its presence: a hint, not a change, so no entry.
+  'DELETE /api/v1/admin/verification-files/{id}/presence': {
+    body: () => ({}),
+    entries: 0,
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/presence`,
+  },
   // @traces 003-FR-005 003-FR-014
   'GET /api/v1/admin/accounts/{id}': {
     path: async () => `/api/v1/admin/accounts/${await driver()}`,
@@ -290,6 +299,14 @@ const FIXTURES: Record<
       return `/api/v1/admin/verification-files/${file}/checks/rar`;
     },
   },
+  // @traces 413-FR-001
+  // The heartbeat of the open drawer: a hint, not a change, so no entry.
+  'PUT /api/v1/admin/verification-files/{id}/presence': {
+    body: () => ({}),
+    entries: 0,
+    path: async () =>
+      `/api/v1/admin/verification-files/${await submitted()}/presence`,
+  },
   'PUT /api/v1/admin/verification-files/{id}/rar-number': {
     body: () => ({ rarNumber: 'RAR-5678' }),
     path: async () =>
@@ -453,7 +470,10 @@ const check = async (route: string) => {
   if (res.status < 200 || res.status > 299) {
     return `${route}: answered ${res.status}`;
   }
-  const expected = changes ? gained >= 1 : gained === (fixture?.entries ?? 0);
+  const expected =
+    changes && fixture?.entries === undefined
+      ? gained >= 1
+      : gained === (fixture?.entries ?? 0);
   return expected ? undefined : `${route}: left ${gained} entries`;
 };
 
