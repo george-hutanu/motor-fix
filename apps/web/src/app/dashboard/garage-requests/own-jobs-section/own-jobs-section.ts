@@ -46,15 +46,14 @@ export class OwnJobsSection {
       .filter((job) => job.status !== 'cancelled' && todayOrLive(job))
       .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
   );
-  // The earliest job still to start, done and cancelled ones aside.
+  // The earliest job still to do that starts after now: one already in work
+  // or paused has begun, whatever its booked time.
   protected readonly next = computed(() => {
     const now = Date.now();
     return (this.view.value()?.items ?? [])
       .filter(
         (job) =>
-          job.status !== 'done' &&
-          job.status !== 'cancelled' &&
-          new Date(job.startsAt).getTime() > now,
+          job.status === 'to_do' && new Date(job.startsAt).getTime() > now,
       )
       .reduce<JobSummaryDto | null>(
         (first, job) => (!first || job.startsAt < first.startsAt ? job : first),

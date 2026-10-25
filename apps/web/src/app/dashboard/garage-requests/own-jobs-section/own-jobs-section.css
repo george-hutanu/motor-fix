@@ -22,6 +22,7 @@ h2 {
   font-family: var(--mf-font-label);
   font-weight: 400;
   letter-spacing: var(--mf-label-tracking);
+  font-size: var(--mf-size-label);
   text-transform: uppercase;
 }
 .muted {
@@ -66,9 +67,6 @@ h2 {
 
 /* Body size on a phone, the smaller tokens from a tablet up. */
 @media (min-width: 768px) {
-  h2 {
-    font-size: var(--mf-size-label);
-  }
   .muted {
     font-size: var(--mf-size-small);
   }

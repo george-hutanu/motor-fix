@@ -231,6 +231,31 @@ describe("a mechanic's own jobs on Panou", () => {
     );
   });
 
+  it('never names a job already in work or paused as her next booking', async () => {
+    const { element, settle } = await render(async () => ({
+      items: [
+        // Started early: in work and paused, though booked for later.
+        job({ id: 'early', startsAt: '2026-10-09T08:00:00.000Z' }),
+        job({
+          id: 'held',
+          startsAt: '2026-10-09T08:30:00.000Z',
+          status: 'paused',
+        }),
+        job({
+          car: { ...job().car, brand: 'Skoda', model: 'Octavia' },
+          id: 'noon',
+          startsAt: '2026-10-09T09:00:00.000Z',
+          status: 'to_do',
+        }),
+      ],
+    }));
+    await settle();
+
+    expect(text(element.querySelector('[data-next]'))).toBe(
+      'Următoarea programare: 12:00 · Skoda Octavia',
+    );
+  });
+
   it("names a later day's booking with its day", async () => {
     const { element, settle } = await render(async () => ({
       items: [
@@ -490,10 +515,14 @@ describe('the own jobs on a phone', () => {
     expect(stylesheet).not.toMatch(/white-space: nowrap/);
   });
 
-  it('sets no text under the body size on a phone', () => {
+  it('sets no text under the body size on a phone but the card title, at the label size', () => {
     const at = stylesheet.indexOf('@media (min-width: 768px)');
     const phone = at < 0 ? stylesheet : stylesheet.slice(0, at);
-    expect(phone).not.toMatch(/font-size: var\(--mf-size-(small|label)\)/);
+    expect(phone).not.toMatch(/font-size: var\(--mf-size-small\)/);
+    expect(
+      phone.match(/font-size: var\(--mf-size-label\)/g) ?? [],
+    ).toHaveLength(1);
+    expect(phone).toMatch(/\nh2 \{[^}]*font-size: var\(--mf-size-label\)/);
     expect(stylesheet).not.toMatch(/font-size: \d+px/);
   });
 });
