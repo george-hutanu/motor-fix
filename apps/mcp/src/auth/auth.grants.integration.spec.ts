@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
+import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts/consent';
 import {
   AccountLoader,
   AuditService,
@@ -31,6 +32,22 @@ const CLAUDE = 'https://claude.ai/oauth/mcp-client';
 const newAccount = async () =>
   prisma.account.create({
     data: {
+      consents: {
+        create: [
+          {
+            kind: 'terms' as const,
+            language: 'ro',
+            method: 'password' as const,
+            textVersion: TERMS_VERSION,
+          },
+          {
+            kind: 'privacy_notice' as const,
+            language: 'ro',
+            method: 'password' as const,
+            textVersion: PRIVACY_VERSION,
+          },
+        ],
+      },
       lastRole: 'driver',
       name: 'Andrei Ionescu',
       roles: { create: [{ role: 'driver' }] },

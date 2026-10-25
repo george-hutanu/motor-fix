@@ -23,6 +23,7 @@ export const ACCOUNTS = {
   mechanic: 'mecanic@example.test',
   otherDriver: 'sofer2@example.test',
   receptionist: 'receptie@example.test',
+  staleDriver: 'termeni-vechi@example.test',
   suspended: 'suspendat@example.test',
   switcher: 'comutare@example.test',
   twoRoles: 'doua-roluri@example.test',
@@ -58,6 +59,16 @@ export async function settled(page: Page) {
   }
   await page.waitForLoadState('load');
   await page.waitForFunction(() => !document.querySelector('[ngh]'));
+}
+
+// The results map shows a static image until the driver asks for the
+// interactive one: a test that drives MapLibre asks for it first, through the
+// map's control, and waits for the static layer to go (it also goes when the
+// interactive map cannot load).
+export async function openMap(page: Page) {
+  const still = page.locator('mf-results-map mf-static-map');
+  await still.getByRole('button').click();
+  await still.waitFor({ state: 'detached' });
 }
 
 // The place step's map reads the app's own empty style: no outside tiles, and

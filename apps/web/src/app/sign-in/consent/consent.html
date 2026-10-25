@@ -2,7 +2,7 @@
   <input
     type="checkbox"
     [formControl]="control()"
-    [attr.aria-describedby]="errorId()"
+    aria-describedby="mf-consent-error"
     [attr.aria-invalid]="invalid() || null"
   />
   <span
@@ -11,4 +11,4 @@
     >{{ 'public.consent.after' | t }}</span
   >
 </label>
-<p [id]="errorId()" class="error mf-message">@if (invalid()) {{{ 'public.consent.required' | t }}}</p>
+<p id="mf-consent-error" class="error mf-message">@if (invalid()) {{{ 'public.consent.required' | t }}}</p>

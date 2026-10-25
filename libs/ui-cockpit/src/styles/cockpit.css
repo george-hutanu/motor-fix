@@ -426,6 +426,10 @@ button.spartan-switch[data-disabled="true"] {
   background: var(--mf-mask);
 }
 
+.spartan-dialog-overlay.mf-overlay-veil {
+  background: var(--mf-bg);
+}
+
 .spartan-dialog-content,
 .spartan-sheet-content,
 .spartan-popover-content {

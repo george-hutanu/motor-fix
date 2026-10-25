@@ -389,7 +389,7 @@ describe('the account module', () => {
         );
     });
 
-  it("exposes no route that writes anything but a session, a new driver account, my language, my role in use, an assistant's sign-in code or an analytics consent choice", () => {
+  it("exposes no route that writes anything but a session, a new driver account, my language, my role in use, an assistant's sign-in code, an analytics consent choice or an acceptance of new texts", () => {
     const controllers =
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret }).controllers ??
       [];
@@ -410,6 +410,7 @@ describe('the account module', () => {
       'auth/sign-out-everywhere',
       'auth/sign-up',
       'me//',
+      'me/acceptance',
     ]);
   });
 });

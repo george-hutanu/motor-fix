@@ -10,7 +10,7 @@ class FakeMap {
   readonly fitBounds = jest.fn();
   readonly jumpTo = jest.fn();
   readonly remove = jest.fn();
-  constructor() {
+  constructor(readonly options?: Record<string, unknown>) {
     fake.map = this;
   }
   addControl() {}

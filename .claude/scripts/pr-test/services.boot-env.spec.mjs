@@ -80,6 +80,11 @@ describe('the boot environment with no .env', () => {
     assert.notEqual(env.STORAGE_SECRET_ACCESS_KEY, 'real-key');
   });
 
+  // @traces 1196-FR-007
+  it('boots the api with the tile provider off, so QA never fetches a map tile', () => {
+    assert.equal(bootEnv({ ports, base: { MAP_TILES_TILEJSON_URL: 'https://tiles.example/planet' } }).MAP_TILES_TILEJSON_URL, 'off');
+  });
+
   it('reads no .env: a file in the working directory changes nothing', () => {
     const dir = mkdtempSync(join(tmpdir(), 'mf-bootenv-'));
     const cwd = process.cwd();

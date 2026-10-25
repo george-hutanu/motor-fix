@@ -61,6 +61,8 @@ export type { MeControllerMe$Params as MeControllerMe$Params } from './fn/me/me-
 export { meControllerMe as meControllerMe } from './fn/me/me-controller-me';
 export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './fn/me/me-controller-update';
 export { meControllerUpdate as meControllerUpdate } from './fn/me/me-controller-update';
+export type { AcceptanceControllerAccept$Params as AcceptanceControllerAccept$Params } from './fn/me/acceptance-controller-accept';
+export { acceptanceControllerAccept as acceptanceControllerAccept } from './fn/me/acceptance-controller-accept';
 export type { EmailChangeControllerRequest$Params as EmailChangeControllerRequest$Params } from './fn/me/email-change-controller-request';
 export { emailChangeControllerRequest as emailChangeControllerRequest } from './fn/me/email-change-controller-request';
 export type { MeEmailConfirmationControllerAskAgain$Params as MeEmailConfirmationControllerAskAgain$Params } from './fn/me/me-email-confirmation-controller-ask-again';
@@ -285,6 +287,8 @@ export type { JobStepsControllerTick$Params as JobStepsControllerTick$Params } f
 export { jobStepsControllerTick as jobStepsControllerTick } from './fn/garage-jobs/job-steps-controller-tick';
 export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } from './fn/places/places-controller-search';
 export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
+export type { StaticMapControllerRender$Params as StaticMapControllerRender$Params } from './fn/maps/static-map-controller-render';
+export { staticMapControllerRender as staticMapControllerRender } from './fn/maps/static-map-controller-render';
 export type { ProfileViewsControllerRecord$Params as ProfileViewsControllerRecord$Params } from './fn/garages/profile-views-controller-record';
 export { profileViewsControllerRecord as profileViewsControllerRecord } from './fn/garages/profile-views-controller-record';
 export type { CatalogueJobsControllerPropose$Params as CatalogueJobsControllerPropose$Params } from './fn/garages/catalogue-jobs-controller-propose';

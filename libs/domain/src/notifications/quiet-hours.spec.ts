@@ -2,6 +2,7 @@ import { isQuiet, nextMorning } from './quiet-hours';
 
 // Bucharest is UTC+3 in summer and UTC+2 after the clocks go back at 04:00 on
 // 25 October 2026.
+// @traces 094-FR-011
 describe('quiet hours in Bucharest', () => {
   it.each([
     ['2026-10-04T18:59:59Z', false],

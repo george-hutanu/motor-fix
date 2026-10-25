@@ -34,12 +34,14 @@ class FieldTask {
 class Host {
   private readonly overlays = inject(Overlays);
   shape: OverlayShape = 'dialog';
+  dismissible?: boolean;
   result?: Promise<OverlayResult<'saved'>>;
 
   open() {
     this.result = this.overlays.open<'saved'>(FieldTask, {
       shape: this.shape,
       title: 'shell.brand',
+      ...(this.dismissible !== undefined && { dismissible: this.dismissible }),
     });
   }
 }
@@ -95,9 +97,10 @@ async function settle() {
   }
 }
 
-async function openTask(shape: OverlayShape = 'dialog') {
+async function openTask(shape: OverlayShape = 'dialog', dismissible?: boolean) {
   const fixture = TestBed.createComponent(Host);
   fixture.componentInstance.shape = shape;
+  fixture.componentInstance.dismissible = dismissible;
   fixture.detectChanges();
   document.querySelector<HTMLButtonElement>('#opener')?.click();
   await settle();
@@ -633,6 +636,34 @@ describe('a field the task marks autofocus', () => {
   });
 });
 
+@Component({
+  template: `
+    <p>Termenii s-au schimbat.</p>
+    <button id="accept" type="button" autofocus>Accept</button>
+    <button id="leave" type="button">Deconectare</button>
+  `,
+})
+class AutofocusButtonTask {}
+
+// @traces 1204-FR-007
+describe('a button the task marks autofocus', () => {
+  // A button pops up no on-screen keyboard, so it takes the focus everywhere.
+  it.each([
+    ['a phone', false],
+    ['a computer', true],
+  ])('takes the focus on %s', async (_, computer) => {
+    wide = computer;
+    TestBed.createComponent(AutofocusHost);
+    TestBed.inject(Overlays).open(AutofocusButtonTask, {
+      shape: 'dialog',
+      title: 'shell.brand',
+    });
+    await settle();
+
+    expect(document.activeElement?.id).toBe('accept');
+  });
+});
+
 // The form arrives after the panel opened, as one behind a load does.
 @Component({
   template: `
@@ -708,5 +739,65 @@ describe('a task whose autofocus field arrives late', () => {
     await settle();
 
     expect(document.activeElement?.id).toBe('other');
+  });
+});
+
+// @traces 1204-FR-007
+describe('a task that only its own buttons may close', () => {
+  const closeButton = () =>
+    panel()?.querySelector<HTMLButtonElement>('.mf-overlay-close');
+
+  it('shows no X and no grip, and stays up on Escape, a click outside, a drag down and Back', async () => {
+    history.pushState({ page: 'here' }, '');
+    const host = await openTask('dialog', false);
+    let settled = false;
+    host.result?.then(() => {
+      settled = true;
+    });
+
+    expect(closeButton()).toBeNull();
+    expect(grip()).toBeNull();
+    expect(
+      document.querySelector('.cdk-overlay-backdrop')?.classList,
+    ).toContain('mf-overlay-veil');
+    pressEscape();
+    document
+      .querySelector<HTMLElement>('.cdk-overlay-backdrop')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await settle();
+    history.back();
+    await settle();
+
+    expect(open()).toBe(1);
+    expect(settled).toBe(false);
+    document.querySelector<HTMLButtonElement>('#done')?.click();
+    await settle();
+    await expect(host.result).resolves.toBe('saved');
+  });
+
+  it('gives its header its own top padding on a phone, where no grip sits above it', async () => {
+    await openTask('dialog', false);
+    const header = panel()?.querySelector('.mf-overlay-header');
+
+    expect(panel()?.classList).toContain('mf-overlay-sheet');
+    expect(grip()).toBeNull();
+    expect(header?.classList).toContain('mf-overlay-header-fixed');
+  });
+
+  it('stays dismissible when the option is left out', async () => {
+    const host = await openTask();
+
+    expect(
+      panel()?.querySelector('.mf-overlay-header')?.classList,
+    ).not.toContain('mf-overlay-header-fixed');
+    expect(closeButton()).not.toBeNull();
+    expect(
+      document.querySelector('.cdk-overlay-backdrop')?.classList,
+    ).not.toContain('mf-overlay-veil');
+    pressEscape();
+    await settle();
+
+    expect(open()).toBe(0);
+    await expect(host.result).resolves.toBe('cancelled');
   });
 });

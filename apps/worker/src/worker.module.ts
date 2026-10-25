@@ -128,6 +128,7 @@ export function workerModule(
         dayMs: reminderDayMs(env.APP_ENV, process.env),
         notifications,
         redisUrl: env.REDIS_URL,
+        webUrl: email.webUrl,
       }),
       // Closes a deleted or suspended driver's requests and bookings.
       AccountClosedModule.registerWorker({
