@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 079-account-model
   - 082-sign-in
@@ -53,6 +53,7 @@ features:
   - 003-admin-account-actions
   - 1373-seed-status-identity
   - 1156-retention-job
+  - 1204-terms-reaccept
 ---
 
 # Capability: Accounts
@@ -429,13 +430,13 @@ _From 132-sign-up-consent._
 
 _From 132-sign-up-consent._
 
-### 132-FR-007 — The tick MUST be one component that any form creating an account can place above its main button as a form control.
+### 1204-FR-012 — The tick MUST be one component that any form creating an account can place above its main button as a form control, tying its error line to its control by the fixed id `mf-consent-error` and taking no `errorId` input; the sign-up, provider sign-up and phone sign-in forms keep linking the error by `aria-describedby` (modifies 132-FR-007 by fixing the id).
 
-_From 132-sign-up-consent._
+_From 1204-terms-reaccept._
 
-### 243-FR-013 — The texts MUST live in code with the pages that show them, not in the interface language files, add no dependency, and change no page layout: `/{lang}/terms` and `/{lang}/privacy` show the text in the address's language to anyone without an account, rendered on the server and listed in the sitemap for both languages; the page shows the title, the version label and date, and the sections (132-FR-008's layout minus the draft note), and MUST NOT scroll sideways on a 320 px phone in either language.
+### 1204-FR-010 — The legal texts MUST live in code with the pages that show them, add no dependency, and change no page layout: `/{lang}/terms` and `/{lang}/privacy` show the text in the address's language to anyone without an account, rendered on the server and listed in the sitemap for both languages; the page shows the title, the version label and date, and the sections (132-FR-008's layout minus the draft note), and MUST NOT scroll sideways on a 320 px phone in either language. The pages' two interface labels MUST come from the interface language files under `public.legal.*` — the version label ("Versiunea" / "Version") and, for each text, the page title key ("Termeni de utilizare · MotorFix", "Nota de informare privind datele personale · MotorFix" / "Terms of use · MotorFix", "Privacy notice · MotorFix") — with `LEGAL_LABELS` removed from the legal-texts module, and the key-parity check stays green (modifies 243-FR-013's source of those labels only).
 
-_From 243-terms-privacy._
+_From 1204-terms-reaccept._
 
 ### 563-FR-001 — The route sweep MUST call every route outside the public list with an access token that is genuine in every respect (signed with the application's secret, for an existing active account, with a valid role) except that its expiry is in the past; its role is `driver`, a role the account holds.
 
@@ -689,9 +690,9 @@ _From 244-analytics-news-consent._
 
 _From 244-analytics-news-consent._
 
-### 244-FR-013 — A record the server did not accept (network error, 5xx, 429) MUST be kept as pending in the browser with the choice and sent again on the next page load, at most once per load, until it is accepted; a 4xx other than 429 drops it.
+### 1204-FR-008 — A record the server did not accept (network error, 5xx, 429, or 403 `consent_required`) MUST be kept as pending in the browser with the choice and sent again on the next page load, at most once per load, until it is accepted; any other 4xx drops it. A signed-in record (`POST /api/v1/me/consents`) refused with `consent_required` is first resent once by the dialog's resend after "Accept" (FR-007), and stays pending only when that call still ends refused (no acceptance followed, or the resend failed), then goes again after acceptance or on the next page load (modifies 244-FR-013, which dropped every 4xx other than 429).
 
-_From 244-analytics-news-consent._
+_From 1204-terms-reaccept._
 
 ### 244-FR-014 — Every text of the bar and the dialog MUST exist in Romanian and in English through the app's translation files, and the stored record's `language` MUST be the page's language at the time of the choice.
 
@@ -1358,6 +1359,54 @@ _From 1373-seed-status-identity._
 
 _From 1156-retention-job._
 
+### 1204-FR-001 — An account's acceptance MUST be "pending" when its latest stored `terms` acceptance version differs from the terms version in force, or its latest stored `privacy_notice` acceptance version differs from the privacy-notice version in force, or either kind has no row at all; the versions in force are the two version constants in the contracts library (`TERMS_VERSION`, `PRIVACY_VERSION`), read at call time, never copied.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-002 — Every API route that needs a session MUST, once the actor is admitted (valid token, active and not suspended account, role in use), refuse a pending account with 403 and body `{ code: "consent_required", message, termsVersion, privacyVersion }` naming the versions in force, before the route's body is validated or run; this holds for every role, every sign-in method and the admin area. A public route, with or without an optional actor, is unaffected.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-003 — Exactly two session routes MUST stay open to a pending account: the new acceptance route (FR-004) and `POST /api/v1/auth/sign-out`; token renewal (`POST /api/v1/auth/refresh`) keeps working as it needs no actor check. Sign-in, OAuth and phone sign-in keep issuing tokens unchanged: pending is signalled on the calls that follow, never by refusing the sign-in.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-004 — `POST /api/v1/me/acceptance` MUST take `{ termsVersion, privacyVersion }` validated at the edge; when both equal the versions in force it MUST write, in one transaction, one acceptance row per kind whose latest version differs from the one in force (version in force, the account's language, the method of the account's first identity in `SignInMethod` order, since the session does not carry its sign-in method (research R2), and the acceptance time), keep every earlier row, record one "consent given" audit entry by the account (field `consent`, value both versions) and answer 204; when either version differs from the one in force it MUST answer 400 `consent_required` (the existing refusal shape of sign-up, which gains the two fields `termsVersion` and `privacyVersion` naming the versions in force, additive for sign-up) and write nothing. A call with no acceptance pending MUST answer 204 and write nothing.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-006 — Notifications MUST be produced and sent for a pending account exactly as for an accepted one, on every channel the account chose (`JOB_READY`, reminders, every other message); no notification path checks the acceptance.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-007 — The web app MUST show a blocking dialog, in the page's language, whenever a signed-in call answers `consent_required` and right after a sign-in whose first call answers it: title and one sentence saying the terms of use and the privacy notice changed, the two texts' titles linked to `/{lang}/terms` and `/{lang}/privacy` in a new tab each followed by its version date from the refusal, one main button "Accept" ("Accept" in both languages' sense: RO "Accept", EN "Accept") and a secondary "Deconectare" / "Sign out"; it has no close control, Escape and a click outside do nothing, focus is trapped in it and starts on "Accept", "Accept" is disabled while the acceptance is being sent (one request per press), and the dashboard content behind it is not shown. "Accept" sends FR-004, then the refused call once more, then the dashboard of the role in use opens; a failed acceptance shows an error line and leaves the dialog up; "Sign out" signs out and goes to Home.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-009 — A pending analytics choice bound to an account (made while signed out after a sign-out, or left pending at sign-out) MUST be sent to that account's consent route in the first reconciliation after that account signs in, exactly once, and MUST never be stored without the account or under another account: when a different account signs in, the choice bound to the first account is dropped; a unit test covers sign-out → choice → sign-in → one record (OD-33, 2026-10-16; modifies 244-FR-013 by naming the sign-in as a resend moment).
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-011 — `/ro/terms`, `/ro/privacy`, `/en/terms` and `/en/privacy` MUST each set the document title from its `public.legal.*` title key, in the page's language; the route definitions carry the title; a test asserts each title key begins with the matching legal document's own title and a check (unit or end-to-end) reads the document title on each of the four addresses.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-013 — At 320 px and 390 px in the dashboard frame (one rule for every dashboard route: the bar is offset by the tab bar's height plus the safe area), while the analytics consent bar is unanswered, its "Accept" and "Refuz" buttons MUST be fully visible, not overlapped by the dashboard tab bar, each at least 44×44 px; after an answer the bar is gone and the tab bar sits at the bottom edge with nothing under it; when the bar shows, the first Tab from the document start lands in the bar, and the focus ring of its buttons is never hidden by the tab bar. A Playwright check at 320 px clicks both buttons on `/app/garage/requests` and `/app/driver`.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-014 — The development and test seed MUST write current-version `terms` and `privacy_notice` acceptance rows for every seeded account except one new seeded driver whose rows carry version `2026-10-11` for both kinds, so every existing end-to-end and QA flow keeps signing in without the dialog and the stale account proves it.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-015 — Failing-first tests MUST cover: the pending rule (older row, missing row, current rows) and the 403 on a gated route for each role; the two open routes; the acceptance write (rows per pending kind, earlier rows kept, audit entry, 400 on stale versions, 204 idempotent); the MCP 403 and recovery after the owner accepts; a notification produced for a pending account; the dialog (shows on `consent_required`, no dismissal, Accept then resend, Sign out, error state) in both languages; FR-008 and FR-009 in the browser consent service; the legal titles and labels; the tick's fixed id; the bar at 320 px (Playwright); and an end-to-end test that signs in as the stale seeded account at 390 px and on desktop, sees the dialog, accepts and reaches the dashboard. The `// @traces` comments name `1204-FR-<n>`, the only form the trace matrix reads (it keys a feature by its number; 1204-hours-row-live-regions shares it).
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-016 — The new route ships with its observability in the same PR: request-duration by route for `POST /api/v1/me/acceptance`, one product counter of acceptances recorded (no account id, labels from fixed sets) and one counter of `consent_required` refusals by surface (`api`, `mcp`), each listed with its panel and alert in `infra/observability/inventory.json`.
+
+_From 1204-terms-reaccept._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -1400,3 +1449,6 @@ _From 1156-retention-job._
 - `500-FR-008` — superseded by `500-FR-016` (2026-10-24)
 - `500-FR-009` — superseded by `500-FR-017` (2026-10-24)
 - `1372-FR-005` — superseded by `1373-FR-006` (2026-10-24)
+- `244-FR-013` — superseded by `1204-FR-008` (2026-10-25)
+- `243-FR-013` — superseded by `1204-FR-010` (2026-10-25)
+- `132-FR-007` — superseded by `1204-FR-012` (2026-10-25)
