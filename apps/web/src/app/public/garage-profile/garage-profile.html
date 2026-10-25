@@ -41,7 +41,7 @@
         </span>
       </div>
       <div class="name-row">
-        <h1>{{ garage.name }}</h1>
+        <h1 [style.view-transition-name]="'garage-' + garage.id">{{ garage.name }}</h1>
         <mf-share-button [name]="garage.name" [slug]="garage.slug" [brand]="garage.brand?.slug" />
       </div>
       @let mobileArea =

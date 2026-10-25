@@ -26,6 +26,7 @@ features:
   - 067-restore-suspended-garage
   - 1196-static-map-first
   - 385-share-garage-link
+  - 1193-fast-nav
 ---
 
 # Capability: Garage search
@@ -516,9 +517,9 @@ _From 1356-results-load-more._
 
 _From 1356-results-load-more._
 
-### 1356-FR-008 — The loaded pages, the cursor, the scroll position and the search's logged mark MUST be kept in the tab's memory when the driver leaves Results and shown at once when Results opens again for the same search (same brand, place, radius or box) in the same tab, only the last search being kept and nothing expiring but the tab (a profile opened from a card and the browser's back); the first page is then read again without `log=1` and applied in place to the kept cards, and no later page is requested. A different search, a reload or a new tab starts from the first page.
+### 1193-FR-003 — Going back to the results list MUST land at the scroll position the user left, with the list showing the same items (loaded pages included, 1356-FR-008) and no loading state in between, whether the page comes from the back/forward cache or is re-entered through the router; the app's scroll rule MUST restore, on a back or forward button navigation, the position the router recorded for that history entry, while its existing cases (new screen at the top; same screen, address rewrite and fragment navigations keep their place) stays as it is; an end-to-end test proves it. Modifies 1356-FR-008 (the back button's restored position is the router's, proven end to end).
 
-_From 1356-results-load-more._
+_From 1193-fast-nav._
 
 ### 1356-FR-010 — A page read MUST write no search-log row and MUST carry no new-search mark (267-FR-007 unchanged: `log=1` is the first page's only); a cursor the API refuses (`invalid_cursor`, 043-FR-006) MUST make the page start the list again from the top as "Reîncarcă" does (the first page in place of the list, the first card selected), silently and without a search-log row.
 
@@ -700,6 +701,10 @@ _From 1196-static-map-first._
 
 _From 1196-static-map-first._
 
+### 1193-FR-005 — The garage card in the results and the profile's heading MUST carry one shared transition name per garage (the garage's identity, so two cards never share a name), applied on the element the two screens have in common; the name is inert without the API or under reduced motion.
+
+_From 1193-fast-nav._
+
 ### 385-FR-012 — `GET /api/v1/garages/{slug}/similar?brand={slug}` MUST live in the `search` module, be marked public (no session) and be listed in `apps/api/src/public-routes.integration.spec.ts`; it answers 200 only for a garage that was approved at least once and is now `suspended`, and 404 `not_found` with no data for every other slug (unknown, never public, or still approved); a `brand` slug naming no brand answers 404 `not_found` (as 267-FR-004); any other query parameter answers `validation_failed`. "Suspended" is the status alone, today's 410 verdict; no approval timestamp is read.
 
 _From 385-share-garage-link._
@@ -754,3 +759,4 @@ _From 385-share-garage-link._
 - `269-FR-012` — superseded by `1196-FR-011` (2026-10-25)
 - `269-FR-013` — superseded by `1196-FR-012` (2026-10-25)
 - `269-FR-011` — superseded by `1196-FR-016` (2026-10-25)
+- `1356-FR-008` — superseded by `1193-FR-003` (2026-10-25)
