@@ -49,7 +49,7 @@ class FakeMap {
 
 class FakeMarker {
   readonly remove = jest.fn();
-  constructor() {
+  constructor(readonly options?: Record<string, unknown>) {
     fake.marker = this;
   }
   addTo() {
