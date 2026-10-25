@@ -1,6 +1,6 @@
 ---
 capability: overlays
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 157-dialog-drawer
   - 159-form-saving
@@ -12,6 +12,7 @@ features:
   - 1181-rate-limits
   - 495-hlm-input-aria-reveal
   - 532-lost-session-home
+  - 1127-bottom-sheet-size
 ---
 
 # Capability: overlays
@@ -28,9 +29,9 @@ _From 491-back-closes-task._
 
 _From 158-small-action-sheet._
 
-### 158-FR-011 — On a window at least 768 px wide when the task opens, the `drawer` and `drawer-wide` shapes MUST be anchored to the right edge at full height, `min(480px, 100%)` and `min(720px, 100%)` wide, on the kit's right-hand sheet surface; the header stays while the body scrolls. Below 768 px they are the sheet of 158-FR-001. (Replaces 157-FR-003.)
+### 1127-FR-002 — On a window at least 768 px wide, the `drawer` and `drawer-wide` shapes' `role="dialog"` element MUST have the drawer's own box (right edge, full height, `min(480px, 100%)` or `min(720px, 100%)` wide); the centred `dialog` shape's element keeps its box.
 
-_From 158-small-action-sheet._
+_From 1127-bottom-sheet-size._
 
 ### 157-FR-004 — While any task is open, the page behind MUST be covered by the theme's mask and MUST NOT scroll; after the last task closes, the scroll position MUST be the one before opening.
 
@@ -52,9 +53,9 @@ _From 157-dialog-drawer._
 
 _From 157-dialog-drawer._
 
-### 157-FR-009 — A task MUST be exposed as a modal dialog (`role="dialog"`, `aria-modal="true"`) named by its title; its close button MUST be named "Închide" / "Close".
+### 1127-FR-001 — On a phone (a window narrower than 768 px when the task opens), the open sheet's `role="dialog"` element MUST have the sheet's own box: the width of the window, the sheet's height, at the sheet's place, for every shape (`dialog`, `drawer`, `drawer-wide`), so that it is reported visible (a non-empty, in-viewport box) and announced as the modal dialog named by its title. The sheet itself keeps its place at the viewport's bottom edge and its size.
 
-_From 157-dialog-drawer._
+_From 1127-bottom-sheet-size._
 
 ### 157-FR-010 — When a field inside a task has changed, closing it by X, Escape or outside MUST first ask "Renunți la modificări?" / "Discard your changes?" with "Renunță" / "Discard" and "Continuă editarea" / "Keep editing" *(proposed)*; the question replaces the task's body inside the same panel; keeping (or Escape) returns to the task with its text, discarding closes it with `cancelled`; a click outside while it asks does nothing; a task that closes itself with a result, was not changed, was marked unchanged again by the task, or was opened with the question switched off MUST NOT ask.
 
@@ -133,10 +134,6 @@ _From 159-form-saving._
 _From 159-form-saving._
 
 ### 158-FR-001 — When the window is narrower than 768 px as a task opens, the overlay service MUST show it as a bottom sheet whatever its shape (`dialog`, `drawer`, `drawer-wide`); at 768 px and wider it MUST show the asked-for shape. The callers' options do not change; the shape is chosen when the task opens and kept until it closes.
-
-_From 158-small-action-sheet._
-
-### 158-FR-002 — The sheet MUST be anchored to the bottom edge, the full width of the window, on the kit's sheet surface with its bottom edge (`data-side="bottom"`: top border, `--mf-radius-panel` on the top corners), at most 92 % of the visible height, with the header (title, X) fixed and the body scrolling inside.
 
 _From 158-small-action-sheet._
 
@@ -264,6 +261,14 @@ _From 532-lost-session-home._
 
 _From 532-lost-session-home._
 
+### 1127-FR-003 — A test MUST fail on today's 0×0 element and pass after the fix: an end-to-end check at 320 px and 390 px asserts that `getByRole('dialog', { name: <title> })` is visible and that its box equals the panel's box within 1 px once the open motion has finished; a check at 1280 px asserts the same for the drawer and the wide drawer.
+
+_From 1127-bottom-sheet-size._
+
+### 1127-FR-008 — Every other behaviour of the sheet, the drawer and the dialog MUST stay as the overlays capability states it (mask, scroll lock, the three closes and Back, focus kept and returned, discard question, drag, motion, keyboard, stacking, 320 px without sideways scroll, axe clean in light and dark, Romanian and English).
+
+_From 1127-bottom-sheet-size._
+
 ## Retired
 
 - `157-FR-002` — superseded by `158-FR-010` (2026-10-04)
@@ -275,3 +280,6 @@ _From 532-lost-session-home._
 - `159-FR-005` — superseded by `496-FR-001` (2026-10-07)
 - `159-FR-006` — superseded by `496-FR-002` (2026-10-07)
 - `159-FR-002` — superseded by `495-FR-001` (2026-10-23)
+- `157-FR-009` — superseded by `1127-FR-001` (2026-10-25)
+- `158-FR-002` — superseded by `1127-FR-001` (2026-10-25)
+- `158-FR-011` — superseded by `1127-FR-002` (2026-10-25)
