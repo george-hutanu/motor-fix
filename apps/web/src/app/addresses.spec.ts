@@ -405,17 +405,40 @@ describe('language addresses', () => {
   });
 
   // @traces 468-FR-002
-  it('moves a first visit off / within two seconds even while the app never becomes stable', async () => {
+  it('moves a first visit off / within two seconds even while the app never becomes stable, with no new history entry', async () => {
     await RouterTestingHarness.create();
+    const router = TestBed.inject(Router);
     const release = TestBed.inject(PendingTasks).add();
     try {
-      await TestBed.inject(Router).navigateByUrl('/');
+      await router.navigateByUrl('/');
+      const navigate = jest.spyOn(router, 'navigateByUrl');
 
       expect(url()).toBe('/');
 
       await new Promise((resolve) => setTimeout(resolve, 2_100));
 
       expect(url()).toBe('/ro');
+      expect(navigate).toHaveBeenCalledWith(expect.anything(), {
+        replaceUrl: true,
+      });
+    } finally {
+      release();
+    }
+  });
+
+  // @traces 468-FR-002
+  it('moves a first visit to the language tapped before two seconds while the app never becomes stable', async () => {
+    await RouterTestingHarness.create();
+    const release = TestBed.inject(PendingTasks).add();
+    try {
+      await TestBed.inject(Router).navigateByUrl('/');
+      await TestBed.inject(LanguageChoice).pick('en');
+
+      expect(url()).toBe('/');
+
+      await new Promise((resolve) => setTimeout(resolve, 2_100));
+
+      expect(url()).toBe('/en');
     } finally {
       release();
     }
