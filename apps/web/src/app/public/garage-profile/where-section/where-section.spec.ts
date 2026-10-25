@@ -248,6 +248,8 @@ async function on(agent: string, platform = 'browser') {
 
 // @traces 1366-FR-001
 // @traces 1366-FR-008
+// @traces 1366-FR-010
+// @traces 1366-FR-012
 // @traces 1366-FR-013
 describe('where a placed workshop is, on a map and by directions', () => {
   afterEach(() => jest.restoreAllMocks());
@@ -318,6 +320,18 @@ describe('where a placed workshop is, on a map and by directions', () => {
     await show({ ...PLACED, address: 'Bd. Nou 1, Cluj' });
 
     expect(link()?.getAttribute('href')).toBe(GOOGLE);
+  });
+
+  it('is a real link, after the map’s one control in the keyboard order', async () => {
+    await show(PLACED);
+    const focusable = [
+      ...section().querySelectorAll<HTMLElement>('a[href], button'),
+    ];
+
+    expect(focusable.map((el) => el.tagName)).toEqual(['BUTTON', 'A']);
+    expect(link()?.querySelector('svg')?.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
   });
 
   it('is a row a finger can take', () => {
