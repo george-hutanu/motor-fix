@@ -123,6 +123,7 @@ features:
   - 1185-accent-search
   - 1188-tail-latency
   - 1349-cockpit-chart-settle
+  - 1257-quote-reminders
 ---
 
 # Capability: Platform
@@ -2972,6 +2973,10 @@ _From 1349-cockpit-chart-settle._
 ### 1349-FR-002 — The same spec MUST fail when the chart in a shot is not at its final frame: the page did not see reduced motion, or the tallest bar's top is not drawn in the shot.
 
 _From 1349-cockpit-chart-settle._
+
+### 1257-FR-013 — Tests MUST exist before the code (Principle II). In Jest on real PostgreSQL and Valkey, with the clock injected (`now`, as BookingTimers has it) and the steps and the sweep called directly, plus one test of the delayed jobs' ids and delays: the day-2 and day-5 reminders to the waiting garages only, skipped when muted and still marked, never twice, held to 08:00 in quiet hours; the request expiry with no open quote (recipients, request, both sides told, link) and with an open quote (request stays `quoted`); the quote expiry with another quote open, as the last quote (request closes, driver told REQUEST_EXPIRED), and held while a booking awaits confirmation; the accept of an expired quote refused; every timer and the sweep idempotent (a second fire writes and sends nothing); the timers cleared when the object leaves its state; the templates in both languages for every channel. No new end-to-end flow: the driver's request page already shows a closed request, and the other-garages screen is ST-317.
+
+_From 1257-quote-reminders._
 
 ## Retired
 

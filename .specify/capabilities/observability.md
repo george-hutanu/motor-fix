@@ -51,6 +51,7 @@ features:
   - 056-mechanic-dialog
   - 1156-retention-job
   - 1366-garage-map-directions
+  - 1257-quote-reminders
 ---
 
 # Capability: Observability
@@ -922,6 +923,10 @@ _From 1156-retention-job._
 ### 1366-FR-011 — A directions tap (a `click` on the anchor, a keyboard activation and a tap included; a context-menu copy is not) MUST be a product action observed as the repo observes a browser-only action: the consent-gated analytics event `directions_opened` with the one property `platform` (`ios` | `android` | `computer`), added to the closed event set (`apps/web/src/app/consent/analytics-events.ts`) and sent through `Consent.track`, so it leaves the browser only under a valid analytics choice and never carries the garage or the coordinates; no server counter, metric, panel or alert rule (the free tier's 50 rules stay; the image service's own `motorfix_static_map_renders_total` already counts the profile's renders); the PR's Observability section says so.
 
 _From 1366-garage-map-directions._
+
+### 1257-FR-012 — Observability MUST ship with the change: the new queue or timer kinds listed in `infra/observability/inventory.json` with one log line per fired timer naming the object and what it did, a counter of reminders sent, recipients expired, requests closed and quotes expired by timer or sweep, BullMQ's queue metrics for depth and failures, and a sweep-late alert on the sweep doing the work of lost timers. The alert counts the expiry steps the sweep ran (`recipient_expired`, `request_closed`, `quote_expired`) and leaves reminders out, because after a booking lapse the sweep is their expected sender; it is the shipped `booking-lapse-sweep-late`, widened to this counter, as Grafana's free tier caps the alert rules at 50.
+
+_From 1257-quote-reminders._
 
 ## Retired
 
