@@ -7,6 +7,9 @@ const skippedOutside = [
   'libs/ui-cockpit',
   'libs/data-access/src/lib',
   'libs/domain/src/generated',
+  // The API draws the static map in the tile provider's own colours, into an
+  // image; no theme token reaches a picture made on the server.
+  'libs/domain/src/maps/static-map/static-map.palette.ts',
 ];
 
 const colourLiteral =

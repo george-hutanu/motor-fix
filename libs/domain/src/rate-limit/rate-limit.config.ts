@@ -53,6 +53,14 @@ export const ROUTE_LIMITS = {
     per: 'address',
     windowSeconds: 15 * MINUTE,
   },
+  // Static map images per address: a search page asks for one or two.
+  staticMap: {
+    key: 'limit:static-map',
+    limit: 120,
+    name: 'StaticMapLimit',
+    per: 'address',
+    windowSeconds: MINUTE,
+  },
   // Upload addresses per listing draft, photos and document pages together.
   uploadUrl: {
     key: 'limit:upload-url',

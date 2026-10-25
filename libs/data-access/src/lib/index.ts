@@ -360,6 +360,7 @@ export { BookingsService } from './services/bookings.service';
 export { ReviewsService } from './services/reviews.service';
 export { GarageJobsService } from './services/garage-jobs.service';
 export { PlacesService } from './services/places.service';
+export { MapsService } from './services/maps.service';
 export { GaragesService } from './services/garages.service';
 export { SupportService } from './services/support.service';
 export { InvitesService } from './services/invites.service';
@@ -648,6 +649,8 @@ export type { JobStepsControllerTick$Params as JobStepsControllerTick$Params } f
 export { jobStepsControllerTick as jobStepsControllerTick } from './fn/garage-jobs/job-steps-controller-tick';
 export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } from './fn/places/places-controller-search';
 export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
+export type { StaticMapControllerRender$Params as StaticMapControllerRender$Params } from './fn/maps/static-map-controller-render';
+export { staticMapControllerRender as staticMapControllerRender } from './fn/maps/static-map-controller-render';
 export type { ProfileViewsControllerRecord$Params as ProfileViewsControllerRecord$Params } from './fn/garages/profile-views-controller-record';
 export { profileViewsControllerRecord as profileViewsControllerRecord } from './fn/garages/profile-views-controller-record';
 export type { CatalogueJobsControllerPropose$Params as CatalogueJobsControllerPropose$Params } from './fn/garages/catalogue-jobs-controller-propose';
