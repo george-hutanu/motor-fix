@@ -4113,6 +4113,54 @@
         ]
       }
     },
+    "/api/v1/quote-requests/{id}/cancel": {
+      "post": {
+        "operationId": "CancelRequestController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not the driver’s request"
+          },
+          "409": {
+            "description": "invalid_transition: the request is booked, in work, done or closed (its currentStatus named), with a message in the caller’s language"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a request not yet booked; every garage still answering is told",
+        "tags": [
+          "quote-requests"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/reviews": {
       "get": {
         "operationId": "GarageReviewsController_read",
@@ -13250,6 +13298,15 @@
             ],
             "nullable": true
           },
+          "cancelNote": {
+            "type": "string",
+            "description": "What the driver wrote when cancelling, if anything",
+            "nullable": true
+          },
+          "lateCancellation": {
+            "type": "boolean",
+            "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
+          },
           "noShowAt": {
             "type": "string",
             "format": "date-time",
@@ -13277,6 +13334,8 @@
           "cancelledAt",
           "cancelledBySide",
           "cancelReason",
+          "cancelNote",
+          "lateCancellation",
           "noShowAt",
           "completedAt",
           "createdAt"
@@ -14107,6 +14166,15 @@
             ],
             "nullable": true
           },
+          "cancelNote": {
+            "type": "string",
+            "description": "What the driver wrote when cancelling, if anything",
+            "nullable": true
+          },
+          "lateCancellation": {
+            "type": "boolean",
+            "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
+          },
           "noShowAt": {
             "type": "string",
             "format": "date-time",
@@ -14151,13 +14219,6 @@
           "historyShared": {
             "type": "boolean"
           },
-          "cancelNote": {
-            "type": "string",
-            "nullable": true
-          },
-          "lateCancellation": {
-            "type": "boolean"
-          },
           "toReassign": {
             "type": "boolean",
             "description": "A confirmed booking still ahead whose mechanic's card was taken off the team: the garage gives it to someone else"
@@ -14174,6 +14235,8 @@
           "cancelledAt",
           "cancelledBySide",
           "cancelReason",
+          "cancelNote",
+          "lateCancellation",
           "noShowAt",
           "completedAt",
           "createdAt",
@@ -14183,8 +14246,6 @@
           "lift",
           "moveCount",
           "historyShared",
-          "cancelNote",
-          "lateCancellation",
           "toReassign"
         ]
       },

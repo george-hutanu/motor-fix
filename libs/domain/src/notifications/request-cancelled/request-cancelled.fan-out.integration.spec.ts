@@ -83,14 +83,14 @@ async function staffed(name: string) {
 }
 
 // Andrei's request, closed when his account closed, and the event it left.
-async function cancelled() {
+async function cancelled(reason = 'account_closed') {
   const driverId = await account('Andrei Ion Marin', ['driver']);
   const dinamo = await staffed('Atelier Dinamo');
   const nord = await staffed('Service Nord');
   const request = await world.request(driverId, { status: 'closed' });
   const payload = {
     garageIds: [dinamo.garage.id, nord.garage.id],
-    reason: 'account_closed',
+    reason,
     requestId: request.id,
   };
   const event = await prisma.outboxEvent.create({
@@ -179,5 +179,25 @@ describe('telling the garages a closed account’s request is cancelled', () => 
 
     expect(once).toBeGreaterThan(0);
     expect(await count()).toBe(once);
+  });
+});
+
+// @traces 1258-driver-cancel-FR-007
+describe('telling the garages the driver cancelled the request', () => {
+  it('tells each owner and receptionist of every garage once, with the reason driver, and no mechanic', async () => {
+    const { dinamo, driverId, job, nord } = await cancelled('driver');
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+    await fanOut.handle(job);
+
+    for (const person of [dinamo.owner, dinamo.desk, nord.owner, nord.desk]) {
+      const mine = await bells(person);
+      expect(mine).toHaveLength(1);
+      expect(mine[0].params).toMatchObject({ reason: 'driver' });
+    }
+    for (const person of [dinamo.fixer, nord.fixer, driverId]) {
+      expect(await bells(person)).toEqual([]);
+    }
   });
 });

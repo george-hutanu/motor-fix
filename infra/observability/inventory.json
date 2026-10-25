@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 196,
+    "count": 197,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -2386,6 +2386,28 @@
       "alerts": "none",
       "reason": "counts every call refused with consent_required by surface api or mcp, never an account; a surge right after a version bump is the expected shape, not a failure, so it is watched on the panel, not paged",
       "story": "ST-1204"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_cancellations_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts the cancels drivers try by kind (request, booking), outcome (cancelled, refused: the 409s) and late (true, false), with no identifiers, with one RequestCancel or BookingCancel log line per try naming the request or booking id; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-1258"
+    },
+    {
+      "kind": "endpoint",
+      "name": "request-cancel",
+      "source": "libs/domain/src/quotes/cancel-request/cancel-request.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/quote-requests/:id/cancel",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "one RequestCancel log line per cancel naming the request id and the outcome; the count by outcome is the motorfix_cancellations_total entry",
+      "story": "ST-1258"
     }
   ]
 }

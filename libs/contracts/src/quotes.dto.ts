@@ -274,6 +274,19 @@ export class BookingDto {
   @ApiProperty({ enum: BOOKING_CANCEL_REASONS, nullable: true })
   cancelReason!: BookingCancelReasonCode | null;
 
+  @ApiProperty({
+    description: 'What the driver wrote when cancelling, if anything',
+    nullable: true,
+    type: String,
+  })
+  cancelNote!: string | null;
+
+  @ApiProperty({
+    description:
+      'Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty',
+  })
+  lateCancellation!: boolean;
+
   @ApiProperty(NULLABLE_TIME)
   noShowAt!: string | null;
 
@@ -432,12 +445,6 @@ export class GarageBookingDto extends OmitType(BookingDto, [
 
   @ApiProperty()
   historyShared!: boolean;
-
-  @ApiProperty({ nullable: true, type: String })
-  cancelNote!: string | null;
-
-  @ApiProperty()
-  lateCancellation!: boolean;
 
   @ApiProperty({
     description:

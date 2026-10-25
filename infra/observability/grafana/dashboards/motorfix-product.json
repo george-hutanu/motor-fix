@@ -5454,6 +5454,38 @@
         "defaults": {},
         "overrides": []
       }
+    },
+    {
+      "id": 189,
+      "type": "timeseries",
+      "title": "Cancellations by kind and late",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 247
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind, outcome, late) (increase(motorfix_cancellations_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{kind}} {{outcome}} late={{late}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
     }
   ]
 }

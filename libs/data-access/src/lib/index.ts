@@ -632,6 +632,8 @@ export type { QuoteRequestsControllerCandidates$Params as QuoteRequestsControlle
 export { quoteRequestsControllerCandidates as quoteRequestsControllerCandidates } from './fn/quote-requests/quote-requests-controller-candidates';
 export type { CompareControllerGet$Params as CompareControllerGet$Params } from './fn/quote-requests/compare-controller-get';
 export { compareControllerGet as compareControllerGet } from './fn/quote-requests/compare-controller-get';
+export type { CancelRequestControllerCancel$Params as CancelRequestControllerCancel$Params } from './fn/quote-requests/cancel-request-controller-cancel';
+export { cancelRequestControllerCancel as cancelRequestControllerCancel } from './fn/quote-requests/cancel-request-controller-cancel';
 export type { QuotesControllerSend$Params as QuotesControllerSend$Params } from './fn/quotes/quotes-controller-send';
 export { quotesControllerSend as quotesControllerSend } from './fn/quotes/quotes-controller-send';
 export type { AcceptControllerAccept$Params as AcceptControllerAccept$Params } from './fn/quotes/accept-controller-accept';
