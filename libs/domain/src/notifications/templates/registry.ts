@@ -46,6 +46,10 @@ import { QUOTE_ACCEPTED } from './quote-accepted';
 import { QUOTE_DECLINED_BY_DRIVER } from './quote-declined-by-driver';
 import { QUOTE_LOST } from './quote-lost';
 import { QUOTE_RECEIVED, QUOTE_RECEIVED_GROUPED } from './quote-received';
+import {
+  REQUEST_CANCELLED,
+  REQUEST_CANCELLED_CLOSED,
+} from './request-cancelled';
 import { REQUEST_DECLINED } from './request-declined';
 import { REQUEST_RECEIVED } from './request-received';
 import { SIGN_IN_CODE } from './sign-in-code';
@@ -109,6 +113,8 @@ export const TEMPLATES: Registry = {
   QUOTE_LOST,
   QUOTE_RECEIVED,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
+  REQUEST_CANCELLED,
+  'REQUEST_CANCELLED.account_closed': REQUEST_CANCELLED_CLOSED,
   REQUEST_DECLINED,
   REQUEST_RECEIVED,
   SIGN_IN_CODE,

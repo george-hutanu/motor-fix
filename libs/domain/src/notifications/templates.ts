@@ -298,6 +298,7 @@ const BY_PARAM: Record<string, [param: string, values: ReadonlySet<unknown>]> =
   {
     ADMIN_VERIFICATION_QUEUED: ['item', new Set(['documents'])],
     GARAGE_REPORT_DECIDED: ['decision', REPORT_DECISION_SET],
+    REQUEST_CANCELLED: ['reason', new Set(['account_closed'])],
     VERIFICATION_RESULT: ['decision', DECISIONS],
   };
 
