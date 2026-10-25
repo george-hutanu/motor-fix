@@ -344,3 +344,41 @@ export class GaragePinsDto {
   })
   total!: number;
 }
+
+export class SimilarGaragesQueryDto {
+  @ApiPropertyOptional({
+    description:
+      'The brand, by its catalogue slug; without it, every brand the garage worked on',
+    example: 'bmw',
+    pattern: '^[a-z0-9-]{1,80}$',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-z0-9-]{1,80}$/)
+  brand?: string;
+}
+
+export class SimilarGarageDto extends ListedGarageDto {
+  @ApiProperty({
+    description:
+      'The brand it was matched for: the asked one, or the first brand both garages work on, most popular first',
+    type: BrandRefDto,
+  })
+  brand!: BrandRefDto;
+}
+
+export class SimilarGaragesDto {
+  @ApiProperty({
+    description: 'The asked brand; null when none was asked',
+    nullable: true,
+    type: BrandRefDto,
+  })
+  brand!: BrandRefDto | null;
+
+  @ApiProperty({
+    description:
+      'Approved garages that work on the brand around the garage that is gone: fixed ones within 25 km, mobile mechanics whose area holds its place; by rating, unrated last, then reviews, name and id; 3 at most',
+    type: [SimilarGarageDto],
+  })
+  items!: SimilarGarageDto[];
+}

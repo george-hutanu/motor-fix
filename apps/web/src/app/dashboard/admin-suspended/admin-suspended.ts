@@ -22,6 +22,8 @@ import { liveResource, pagedRead } from '../live';
 
 const SKELETON_ROWS = [0, 1, 2];
 
+type RestoreRow = Omit<AdminRestoreGarageData, 'today'>;
+
 // "Service-uri suspendate": every suspended garage, the most recent
 // suspension first, with why and since when; a page more at each press, as
 // one read of every row shown, the way the queue above it reads.
@@ -80,13 +82,16 @@ export class AdminSuspended {
 
   // The restore dialog over the row: the list reads again once the garage
   // left it or moved under the admin; a cancel hands the focus back.
-  async openRestore(data: AdminRestoreGarageData, event: Event) {
+  async openRestore(row: RestoreRow, event: Event) {
     const button = event.currentTarget as HTMLButtonElement;
     const result = await this.overlays.open<
       RestoreResult,
       AdminRestoreGarageData
     >(AdminRestoreGarage, {
-      data,
+      // Today is read at the press, not with the rows: a list left open past
+      // midnight still opens the dialog on the right day, and a read of 230
+      // rows builds no date formatter per row.
+      data: { ...row, today: bucharestToday() },
       shape: 'dialog',
       title: 'admin.restore.dialog',
     });
@@ -137,8 +142,7 @@ export class AdminSuspended {
               name: row.name,
               rarVerdict: row.rarVerdict ?? null,
               reason: row.reason ?? null,
-              today: bucharestToday(),
-            } satisfies AdminRestoreGarageData,
+            } satisfies RestoreRow,
             label: this.t('restore.buttonNamed', { name: row.name }),
           }
         : undefined,

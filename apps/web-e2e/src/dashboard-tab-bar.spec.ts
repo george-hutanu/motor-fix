@@ -135,9 +135,16 @@ test.describe('the dashboard tab bar on a 375 px phone', () => {
     await page.setViewportSize({ height: 812, width: 375 });
   });
 
+  // @traces 1380-FR-006
   for (const { capabilities, landing, name, role, tabs } of DASHBOARDS) {
     test(`takes a ${role} to every view of the dashboard`, async ({ page }) => {
       await signInAs(page, role, landing, [...capabilities]);
+      // The stubbed garage account has no garage, and the profile view leaves
+      // for the dashboard on its 404, racing the check that Profil is the
+      // current tab: an outage keeps the view on Profil.
+      await page.route('**/api/v1/garages/*/profile', (route) =>
+        route.fulfill({ status: 503 }),
+      );
       await open(page, landing);
       const bar = page.getByRole('navigation', { name });
 
@@ -222,42 +229,58 @@ test.describe('the side menu and the bar', () => {
   });
 });
 
+// The bar's last view, Istoric, reads nothing, so the stub session keeps it
+// open; it is the tab the bar has to scroll farthest to reveal.
+const SMALL_PHONE_BAR = {
+  en: { bar: 'Garage dashboard', first: 'Home', last: 'History' },
+  ro: { bar: 'Panou service', first: 'Panou', last: 'Istoric' },
+} as const;
+
+// @traces 1380-FR-001 1380-FR-002 1380-FR-003 1380-FR-004
 test.describe('the bar on the smallest phones', () => {
   for (const width of [320, 390]) {
-    test(`shows whole labels and scrolls itself, not the page, at ${width} px`, async ({
-      page,
-    }) => {
-      await signInAs(page, 'garage', '/app/garage', OWNER);
-      await page.setViewportSize({ height: 640, width });
-      // Istoric, the last tab: a view that reads nothing of a garage this
-      // stubbed session lacks (Profil leaves for the dashboard without one).
-      await open(page, '/app/garage/history');
-      const bar = page.getByRole('navigation', { name: 'Panou service' });
+    for (const language of ['ro', 'en'] as const) {
+      test(`shows whole labels and scrolls itself, not the page, at ${width} px in ${language}`, async ({
+        page,
+      }) => {
+        const names = SMALL_PHONE_BAR[language];
+        await signInAs(page, 'garage', '/app/garage', OWNER, language);
+        await page.setViewportSize({ height: 640, width });
+        await open(page, '/app/garage/history');
+        await expect(page).toHaveURL('/app/garage/history');
+        const bar = page.getByRole('navigation', { name: names.bar });
+        const last = bar.getByRole('link', { exact: true, name: names.last });
 
-      expect(await sideways(page)).toBeLessThanOrEqual(width);
-      const tabs = await bar.getByRole('link').evaluateAll((links) =>
-        links.map((a) => {
-          const label = a.lastElementChild as HTMLElement;
-          return {
-            cut: label.scrollWidth > label.clientWidth,
-            height: a.getBoundingClientRect().height,
-            size: Number.parseFloat(getComputedStyle(label).fontSize),
-          };
-        }),
-      );
-      expect(tabs).toHaveLength(10);
-      expect(tabs.filter((t) => t.cut)).toEqual([]);
-      expect(tabs.filter((t) => t.height < 44)).toEqual([]);
-      expect(tabs.filter((t) => t.size < 12)).toEqual([]);
-      const scroller = await bar.evaluate((nav) => ({
-        client: nav.clientWidth,
-        scroll: nav.scrollWidth,
-      }));
-      expect(scroller.scroll).toBeGreaterThan(scroller.client);
-      await expect(
-        bar.getByRole('link', { exact: true, name: 'Istoric' }),
-      ).toBeInViewport();
-    });
+        for (const colorScheme of ['light', 'dark'] as const) {
+          await page.emulateMedia({ colorScheme });
+          expect(await sideways(page)).toBeLessThanOrEqual(width);
+          const tabs = await bar.getByRole('link').evaluateAll((links) =>
+            links.map((a) => {
+              const label = a.lastElementChild as HTMLElement;
+              return {
+                cut: label.scrollWidth > label.clientWidth,
+                height: a.getBoundingClientRect().height,
+                size: Number.parseFloat(getComputedStyle(label).fontSize),
+              };
+            }),
+          );
+          expect(tabs).toHaveLength(10);
+          expect(tabs.filter((t) => t.cut)).toEqual([]);
+          expect(tabs.filter((t) => t.height < 44)).toEqual([]);
+          expect(tabs.filter((t) => t.size < 12)).toEqual([]);
+          const scroller = await bar.evaluate((nav) => ({
+            client: nav.clientWidth,
+            scroll: nav.scrollWidth,
+          }));
+          expect(scroller.scroll).toBeGreaterThan(scroller.client);
+          await expect(last).toHaveAttribute('aria-current', 'page');
+          await expect(last).toBeInViewport();
+          await expect(
+            bar.getByRole('link', { exact: true, name: names.first }),
+          ).not.toBeInViewport();
+        }
+      });
+    }
   }
 
   test('sits above the home indicator', async ({ page }) => {

@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 190,
+    "count": 192,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1121,6 +1121,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_similar_garages_total",
+      "source": "libs/domain/src/search/similar-garages/similar-garages.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each similar-garages answer for a garage no longer listed by outcome (results, none); a count has no failure to alert on: the route's errors and latency are the api-error-rate and api-latency rules",
+      "story": "ST-385"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_sign_ins_total",
       "source": "libs/domain/src/auth/sign-in.service.ts",
       "dashboard": "motorfix-product",
@@ -1831,6 +1840,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "similar-garages",
+      "source": "libs/domain/src/search/similar-garages/similar-garages.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:slug/similar",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "public read for the no-longer-available view, up to 3 approved garages that work on the brand around a suspended garage, read from PostgreSQL with no cache and no write; answers are counted in motorfix_similar_garages_total; the share button itself makes no server call and is counted through the shared_link profile-view and request sources",
+      "story": "ST-385"
+    },
+    {
+      "kind": "endpoint",
       "name": "public-garage-profile",
       "source": "libs/domain/src/garages/public-garages/public-garages.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garages/:slug",
@@ -2160,6 +2182,19 @@
       ],
       "reason": "a public read of a mechanic's published reviews, 20 a page; it writes nothing, so its failures and latency are the route metric alone",
       "story": "ST-25"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-reviews",
+      "source": "libs/domain/src/reviews/reviews.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/reviews/garage/{garageId}",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a public read of a garage's published reviews, 20 a page, with its rating, count and breakdown; it writes nothing, so its failures and latency are the route metric alone",
+      "story": "ST-24"
     },
     {
       "kind": "product-counter",

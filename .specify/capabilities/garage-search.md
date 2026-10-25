@@ -25,6 +25,7 @@ features:
   - 1351-results-phone-layout
   - 067-restore-suspended-garage
   - 1193-fast-nav
+  - 385-share-garage-link
 ---
 
 # Capability: Garage search
@@ -630,6 +631,26 @@ _From 1351-results-phone-layout._
 ### 1193-FR-005 — The garage card in the results and the profile's heading MUST carry one shared transition name per garage (the garage's identity, so two cards never share a name), applied on the element the two screens have in common; the name is inert without the API or under reduced motion.
 
 _From 1193-fast-nav._
+
+### 385-FR-012 — `GET /api/v1/garages/{slug}/similar?brand={slug}` MUST live in the `search` module, be marked public (no session) and be listed in `apps/api/src/public-routes.integration.spec.ts`; it answers 200 only for a garage that was approved at least once and is now `suspended`, and 404 `not_found` with no data for every other slug (unknown, never public, or still approved); a `brand` slug naming no brand answers 404 `not_found` (as 267-FR-004); any other query parameter answers `validation_failed`. "Suspended" is the status alone, today's 410 verdict; no approval timestamp is read.
+
+_From 385-share-garage-link._
+
+### 385-FR-013 — The answer MUST carry `items`: at most 3 `approved` garages whose stance for the brand is `works_on`, within the search's area of the old garage's stored location (a fixed garage within 25 km, the default search radius; a mobile mechanic whose service area covers that location, 229-FR-010, 229-FR-011, through the one shared area query), in the search's default order within the works-on group (267-FR-001 with `rating`), never the old garage itself; each item in the listed-garage shape of 267-FR-003, placed as the search places it (a fixed garage with its distance from the old garage's location, a mobile mechanic with its "comes to you" line and no distance), plus the brand it was matched for (id, name, slug). The answer also carries a top-level `brand` (`{id, name, slug}`, or `null` when the link has no brand) for the empty state. With no `brand`, the brand is each of the old garage's `works_on` brands: a garage qualifies when it works on at least one of them, is listed once, and names the first shared brand in catalogue order (most popular first, then name, then id). The answer MUST carry nothing about the old garage beyond the brands it worked on and, through the distances, its position; the old garage with no stored location answers an empty `items`.
+
+_From 385-share-garage-link._
+
+### 385-FR-014 — The route's DTOs MUST come from the contracts library, be documented in the OpenAPI document and the generated web client regenerated from it (Principle V); the read is not cached and writes nothing (no search log, no audit entry, no event).
+
+_From 385-share-garage-link._
+
+### 385-FR-015 — Observability: the PR MUST list the new endpoint in `infra/observability/inventory.json` (covered by the API's request latency and error-rate panels and alerts, as the other public reads) and state in its Observability section that the share action makes no server call of its own, is counted through the `shared_link` profile-view source and request source already in place, and that the Plausible "profile shared" event is deferred (Assumptions).
+
+_From 385-share-garage-link._
+
+### 385-FR-016 — Tests MUST exist before the code (Principle II) and name this feature's ids in whole-line `// @traces` comments. Jest on real PostgreSQL and Redis: `similar` answers at most 3 approved works-on garages within 25 km in the search's order, never the suspended one and never a draft or `does_not_take` garage; a fixed garage at 30 km is out and a mobile mechanic at 30 km whose area covers the location is in; the no-brand case lists a garage sharing any of the old garage's brands once; 404 for a never-public, unknown or approved slug and for an unknown brand; the route is in the public-routes list. Jest for the web: the button calls the share menu with the garage's name and the address of FR-002 (with and without `brand`, in `ro` and `en`); without a menu it copies and toasts; a refused copy shows the selected field; a dismissed menu does nothing; the 410 view renders the heading, up to 3 cards and the search link in both empty cases, and no card for a 404. Playwright: with the share menu stubbed the button calls it with the profile's address and brand, and on a desktop viewport the address is copied; a suspended garage's link shows the message and up to 3 similar garages at 320 px and desktop.
+
+_From 385-share-garage-link._
 
 ## Retired
 

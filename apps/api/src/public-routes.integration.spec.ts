@@ -18,6 +18,7 @@ const api = apiBoot();
 // @traces 1183-FR-009
 // @traces 1192-FR-006
 // @traces 025-FR-011
+// @traces 385-FR-012
 const PUBLIC = [
   'DELETE /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/documents/00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000',
   'DELETE /api/v1/listing-drafts/00000000-0000-4000-8000-000000000000/photos/00000000-0000-4000-8000-000000000000',
@@ -31,6 +32,7 @@ const PUBLIC = [
   'GET /api/v1/brands/popular',
   'GET /api/v1/copy-voices',
   'GET /api/v1/garages/00000000-0000-4000-8000-000000000000',
+  'GET /api/v1/garages/00000000-0000-4000-8000-000000000000/similar',
   'GET /api/v1/home',
   'GET /api/v1/images/g/00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000',
   'GET /api/v1/job-types',
@@ -40,6 +42,7 @@ const PUBLIC = [
   'GET /api/v1/places',
   'GET /api/v1/platform-status',
   'GET /api/v1/public-holidays',
+  'GET /api/v1/reviews/garage/00000000-0000-4000-8000-000000000000',
   'GET /api/v1/reviews/mechanic/00000000-0000-4000-8000-000000000000',
   'GET /api/v1/search/garages',
   'GET /api/v1/search/garages/pins',
@@ -224,6 +227,30 @@ function walk(
   for (const child of Object.values(record))
     walk(child, schemas, reached, properties);
 }
+
+// @traces 024-FR-016
+// @traces 024-FR-018
+describe("a garage's reviews read without a session", () => {
+  const reviews = (id: string, page?: string) =>
+    request(app.getHttpServer()).get(
+      `/api/v1/reviews/garage/${id}${page === undefined ? '' : `?page=${page}`}`,
+    );
+
+  it('answers 404 not_found for a garage no profile shows', async () => {
+    const res = await reviews(randomUUID());
+
+    expect([res.status, res.body.code]).toEqual([404, 'not_found']);
+  });
+
+  it.each(['0', 'x', ''])(
+    'refuses page %p with 400 validation_failed',
+    async (page) => {
+      const res = await reviews(randomUUID(), page);
+
+      expect([res.status, res.body.code]).toEqual([400, 'validation_failed']);
+    },
+  );
+});
 
 // @traces 025-FR-011
 // @traces 025-FR-012

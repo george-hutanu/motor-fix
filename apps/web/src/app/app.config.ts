@@ -19,16 +19,25 @@ import { routes } from './app.routes';
 import { authInterceptor } from './auth.interceptor';
 import { PlatformStatus } from './maintenance/platform-status';
 import { provideViewScrolling } from './scrolling';
+import { serverTimeoutInterceptor } from './server-timeout.interceptor';
 import { provideServiceWorkerRecovery } from './service-worker-recovery';
 import { screenTransitions } from './view-transitions';
 import { provideHomeVisit } from './voice/home-visit/home-visit';
 import { provideVoiceRead } from './voice/voice';
 
+// The fetch backend is the default since Angular 21: on the server every API
+// call goes through Node's global fetch, whose one undici dispatcher keeps its
+// connections alive between calls.
+export const apiHttpClient = () =>
+  provideHttpClient(
+    withInterceptors([authInterceptor, serverTimeoutInterceptor]),
+  );
+
 export const appConfig: ApplicationConfig = {
   providers: [
     // A tap on the server-rendered page before hydration is replayed, not lost.
     provideClientHydration(withEventReplay()),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    apiHttpClient(),
     provideRouter(routes, withInMemoryScrolling(), screenTransitions()),
     provideViewScrolling(),
     provideI18n(),

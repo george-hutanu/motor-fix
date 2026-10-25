@@ -3,6 +3,7 @@ import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ready, signIn } from './accounts.js';
+import { deleteBrand } from './delete-brand.js';
 import { test } from './fixtures.js';
 import { accessToken } from './platform-rules.js';
 
@@ -92,9 +93,8 @@ test.describe('suspending a garage @seeded', () => {
 
   test.afterAll(async () => {
     await db.query('DELETE FROM account WHERE email = $1', [owner.email]);
-    await db.query('DELETE FROM search_log WHERE brand_id = $1', [brandId]);
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [garageIds]);
-    await db.query('DELETE FROM brand WHERE id = $1', [brandId]);
+    await deleteBrand(db, brandId);
     await db.end();
   });
 

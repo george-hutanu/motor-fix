@@ -4,7 +4,7 @@ const ESCAPES: Record<string, string> = {
   '<': '&lt;',
   '>': '&gt;',
 };
-const attribute = (value: string) =>
+export const attribute = (value: string) =>
   value.replace(/["&<>]/g, (char) => ESCAPES[char] ?? char);
 
 const HEAD_END = /<\/head>/i;
