@@ -2,11 +2,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { MeService } from '@motor-fix/data-access';
+import { type AcceptanceDto, MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
-import { Reaccept, type Versions } from './reaccept';
+import { Reaccept } from './reaccept';
 import { Session } from '../../dashboard/session';
 
 @Component({ template: '' })
@@ -14,7 +14,7 @@ class Host {
   readonly overlays = inject(Overlays);
 }
 
-const VERSIONS: Versions = {
+const VERSIONS: AcceptanceDto = {
   privacyVersion: '2026-10-24',
   termsVersion: '2026-10-12',
 };

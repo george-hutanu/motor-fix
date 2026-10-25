@@ -7,6 +7,7 @@ import {
   type HttpRequest,
 } from '@angular/common/http';
 import { inject, PLATFORM_ID } from '@angular/core';
+import type { AcceptanceDto } from '@motor-fix/data-access';
 import { toProblem } from '@motor-fix/overlays';
 import {
   catchError,
@@ -20,7 +21,7 @@ import {
 import { Session } from './dashboard/session';
 import { PlatformStatus } from './maintenance/platform-status';
 import { PUBLIC_READ } from './public-read';
-import type { Versions } from './sign-in/reaccept/reaccept';
+import { versionsOf } from './sign-in/reaccept/reaccept';
 import { ReacceptDialog } from './sign-in/reaccept/reaccept-dialog';
 import { SignInDialog } from './sign-in/sign-in-dialog';
 
@@ -56,16 +57,10 @@ const signInRequired = (error: unknown) => {
 };
 
 // The account must accept the texts now in force; the refusal names them.
-const pendingVersions = (error: unknown): Versions | null => {
-  if (!(error instanceof HttpErrorResponse) || error.status !== 403)
-    return null;
-  const body = error.error as Partial<Versions> & { code?: unknown };
-  return body?.code === 'consent_required' &&
-    typeof body.termsVersion === 'string' &&
-    typeof body.privacyVersion === 'string'
-    ? { privacyVersion: body.privacyVersion, termsVersion: body.termsVersion }
+const pendingVersions = (error: unknown) =>
+  error instanceof HttpErrorResponse && error.status === 403
+    ? versionsOf(error.error)
     : null;
-};
 
 // A wrong password is the answer, not an expired token: sending it again
 // would count a second wrong try.
@@ -136,7 +131,7 @@ export const authInterceptor: HttpInterceptorFn = (
   // Accepted: the same session goes on, so the call goes once more. Signed
   // out instead: the refusal is the answer. "Who am I" asks too, since the
   // sign-in reads it first. Not for a session that has since ended.
-  const accept = (refusal: unknown, versions: Versions) =>
+  const accept = (refusal: unknown, versions: AcceptanceDto) =>
     !onServer && session.epoch() === epoch
       ? from(reaccept.gate(versions).catch(() => false)).pipe(
           switchMap((accepted) => repeat(accepted, refusal)),

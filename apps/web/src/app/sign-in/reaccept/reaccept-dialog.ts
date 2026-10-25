@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
+import type { AcceptanceDto } from '@motor-fix/data-access';
 import { Overlays } from '@motor-fix/overlays';
 
-import type { Versions } from './reaccept';
 import { Session } from '../../dashboard/session';
 
 // An API call refused while the account's acceptance is pending waits on this
@@ -12,10 +12,10 @@ export class ReacceptDialog {
   private readonly session = inject(Session);
   private open: Promise<boolean> | null = null;
 
-  gate(versions: Versions): Promise<boolean> {
+  gate(versions: AcceptanceDto): Promise<boolean> {
     this.open ??= this.session
       .keepShownWhile(
-        this.overlays.open<'accepted' | 'signed-out', Versions>(
+        this.overlays.open<'accepted' | 'signed-out', AcceptanceDto>(
           () => import('./reaccept').then((m) => m.Reaccept),
           {
             data: versions,

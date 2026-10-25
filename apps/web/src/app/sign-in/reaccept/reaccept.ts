@@ -5,21 +5,28 @@ import {
   signal,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { MeService } from '@motor-fix/data-access';
+import { type AcceptanceDto, MeService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
-import { injectOverlayTask, toProblem } from '@motor-fix/overlays';
+import { injectOverlayTask } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { Session } from '../../dashboard/session';
 
-export interface Versions {
-  termsVersion: string;
-  privacyVersion: string;
-}
-
-const isVersions = (body: unknown): body is Versions =>
-  typeof (body as Versions | null)?.termsVersion === 'string' &&
-  typeof (body as Versions | null)?.privacyVersion === 'string';
+// The versions in force a consent_required refusal names, or null.
+export const versionsOf = (body: unknown): AcceptanceDto | null => {
+  const refusal = body as
+    | (Partial<AcceptanceDto> & { code?: unknown })
+    | null
+    | undefined;
+  return refusal?.code === 'consent_required' &&
+    typeof refusal.termsVersion === 'string' &&
+    typeof refusal.privacyVersion === 'string'
+    ? {
+        privacyVersion: refusal.privacyVersion,
+        termsVersion: refusal.termsVersion,
+      }
+    : null;
+};
 
 // The texts changed since the account accepted them: accept the ones in force,
 // or sign out. Nothing else closes it, and nothing behind it answers until then.
@@ -36,7 +43,7 @@ export class Reaccept {
   private readonly router = inject(Router);
   private readonly i18n = inject(I18n);
   private readonly task = injectOverlayTask<
-    Versions,
+    AcceptanceDto,
     'accepted' | 'signed-out'
   >();
 
@@ -58,13 +65,8 @@ export class Reaccept {
       this.task.close('accepted');
     } catch (error) {
       // Another version came into force while the dialog was up.
-      const body = (error as { error?: unknown }).error;
-      const problem = toProblem(error);
-      if (problem.code === 'consent_required' && isVersions(body))
-        this.versions.set({
-          privacyVersion: body.privacyVersion,
-          termsVersion: body.termsVersion,
-        });
+      const versions = versionsOf((error as { error?: unknown }).error);
+      if (versions) this.versions.set(versions);
       else this.failed.set(true);
     } finally {
       this.sending.set(false);
