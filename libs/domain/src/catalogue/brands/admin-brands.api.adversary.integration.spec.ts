@@ -1,4 +1,6 @@
 // @traces 105-FR-001 105-FR-004 105-FR-005 105-FR-006 105-FR-009 105-FR-012 105-FR-014
+
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
@@ -6,7 +8,6 @@ import request from 'supertest';
 
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
-import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import {
   databaseUrl,

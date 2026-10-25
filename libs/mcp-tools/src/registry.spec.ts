@@ -21,21 +21,21 @@ describe('tool visibility', () => {
         'book_service',
         'list_my_cars',
         'list_quote_requests',
-        'reply_to_review',
         'send_quote',
         'show_day_sheet',
         'show_latest_review',
+        'update_price',
       ].sort(),
     );
   });
 
-  it('hides reply_to_review from a receptionist', async () => {
+  it('hides update_price from a receptionist', async () => {
     const listed = await names(
       fixtureTools,
       caller({ roles: ['receptionist'] }),
       context(),
     );
-    expect(listed).not.toContain('reply_to_review');
+    expect(listed).not.toContain('update_price');
     expect(listed).toContain('send_quote');
   });
 

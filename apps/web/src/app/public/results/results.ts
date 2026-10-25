@@ -233,6 +233,9 @@ export class Results {
   private sortNext = false;
   // Where the page was scrolled to when the kept results were shown again.
   private scrollBack: { inSheet: boolean; y: number } | undefined;
+  // Where the list was as the last navigation started: by the time the page
+  // is torn down its list is gone and the scroll with it.
+  private leftAt: number | undefined;
   private popped = false;
   // The kept results were shown again: the stream then opens for them, and
   // their one first-page read covers that opening (1356-FR-008).
@@ -587,6 +590,7 @@ export class Results {
       )
       .subscribe((event) => {
         this.popped = event.navigationTrigger === 'popstate';
+        this.leftAt = this.scrolled();
       });
     // The new brand's answer is said as the summary shows it, and its list
     // starts at its top when the driver had scrolled past it.
@@ -648,10 +652,36 @@ export class Results {
       if (this.state() !== 'list' || this.scrollBack === undefined) return;
       const { inSheet, y } = this.scrollBack;
       this.scrollBack = undefined;
-      // On a phone the list scrolls inside its sheet, not the page.
-      if (inSheet) this.sheet().scrollBack(y);
-      else window.scrollTo({ top: y });
+      untracked(() => this.scrollTo(inSheet, y));
     });
+  }
+
+  // On a phone the list scrolls inside its sheet, not the page. The page may
+  // still change under the list as it settles (a row still to come clamps
+  // the first scroll short, a line growing above it shifts the place), so
+  // the place is set again on the next frames until it holds, unless the
+  // driver has taken the scroll in hand.
+  private scrollTo(inSheet: boolean, y: number) {
+    const at = () => (inSheet ? this.sheet().scrolled() : window.scrollY);
+    const go = () =>
+      inSheet ? this.sheet().scrollBack(y) : window.scrollTo({ top: y });
+    const touched = ['keydown', 'pointerdown', 'touchstart', 'wheel'];
+    let frames = 30;
+    let frame = 0;
+    const stop = () => {
+      cancelAnimationFrame(frame);
+      for (const kind of touched) removeEventListener(kind, stop, true);
+    };
+    for (const kind of touched)
+      addEventListener(kind, stop, { capture: true, passive: true });
+    this.destroyRef.onDestroy(stop);
+    const settle = () => {
+      if (Math.abs(at() - y) > 1) go();
+      if (frames-- > 0) frame = requestAnimationFrame(settle);
+      else stop();
+    };
+    go();
+    frame = requestAnimationFrame(settle);
   }
 
   private searchOf(
@@ -691,9 +721,17 @@ export class Results {
         inSheet,
         logged: this.logged,
         page: { ...shown.page, items },
-        scrollY: inSheet ? untracked(this.sheet).scrolled() : window.scrollY,
+        scrollY: this.leftAt ?? this.scrolled(),
       });
     });
+  }
+
+  // How far the list is scrolled: inside its sheet on a phone, where the
+  // page never scrolls, and the page from a tablet up.
+  private scrolled() {
+    return untracked(this.phone)
+      ? untracked(this.sheet).scrolled()
+      : window.scrollY;
   }
 
   // The card three from the end coming into view asks for the next page; so

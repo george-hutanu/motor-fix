@@ -33,6 +33,7 @@ import { PlaceDialog } from './place/place-dialog/place-dialog';
 import type { Place } from './place/place-store';
 import { Consent } from '../consent/consent';
 import { Session } from '../dashboard/session';
+import { placesAnswered } from '../public/address-field/address-field.testing';
 import { PUBLIC_READ } from '../public-read';
 import { serverTimeoutInterceptor } from '../server-timeout.interceptor';
 
@@ -159,6 +160,7 @@ async function configure(platform = 'browser') {
       { provide: BrandsService, useValue: tilesApi },
       { provide: HealthService, useValue: healthApi },
       { provide: PlacesService, useValue: placesApi },
+      placesAnswered((asked) => placesApi.placesControllerSearch(asked)),
       { provide: Session, useValue: session },
       { provide: Overlays, useValue: overlays },
       { provide: REDUCED_MOTION, useValue: reduced },

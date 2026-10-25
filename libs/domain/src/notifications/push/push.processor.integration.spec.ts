@@ -4,6 +4,7 @@ import { createServer, type IncomingMessage, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import type { OutsideChannel } from '@motor-fix/contracts';
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
@@ -12,7 +13,6 @@ import { generateVAPIDKeys } from 'web-push';
 import { PushSender } from './push';
 import { plainAgent } from './push.testing';
 import { AuditService } from '../../audit/audit.service';
-import type { Role } from '../../auth/capabilities';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { Brevo } from '../brevo/brevo';
 import { BrevoMock } from '../brevo/brevo-mock.testing';

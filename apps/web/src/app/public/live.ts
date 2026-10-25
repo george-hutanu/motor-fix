@@ -66,6 +66,9 @@ export class PublicLive implements OnDestroy {
   private query = '';
   private wanted: AbortController | null = null;
   private hiddenAt: number | null = null;
+  // Dropped as the page left: the browser keeps no page with an open stream
+  // in its back/forward cache.
+  private suspended = false;
 
   // A tab that slept may hold a stream that died without a word; open anew.
   private readonly onVisibility = () => {
@@ -79,15 +82,36 @@ export class PublicLive implements OnDestroy {
     if (slept && this.wanted) this.connect();
   };
 
+  private readonly onPageHide = () => {
+    if (!this.wanted) return;
+    this.wanted.abort();
+    this.wanted = null;
+    this.status.set('closed');
+    this.suspended = true;
+  };
+
+  // Back from the cache, the views still there read anew what they missed.
+  private readonly onPageShow = () => {
+    if (!this.suspended) return;
+    this.suspended = false;
+    // The page shows again: no sleep to make up for when it turns visible.
+    this.hiddenAt = null;
+    if (this.views.length > 0) this.connect();
+  };
+
   constructor() {
-    if (this.browser)
-      document.addEventListener('visibilitychange', this.onVisibility);
+    if (!this.browser) return;
+    document.addEventListener('visibilitychange', this.onVisibility);
+    window.addEventListener('pagehide', this.onPageHide);
+    window.addEventListener('pageshow', this.onPageShow);
   }
 
   ngOnDestroy() {
     this.wanted?.abort();
-    if (this.browser)
-      document.removeEventListener('visibilitychange', this.onVisibility);
+    if (!this.browser) return;
+    document.removeEventListener('visibilitychange', this.onVisibility);
+    window.removeEventListener('pagehide', this.onPageHide);
+    window.removeEventListener('pageshow', this.onPageShow);
   }
 
   // Answers the call that takes the view away again.
@@ -131,7 +155,8 @@ export class PublicLive implements OnDestroy {
     if (open === Boolean(this.wanted) && query === this.query) return;
     this.query = query;
     if (open) {
-      this.connect();
+      // A page on its way into the cache opens nothing; pageshow does.
+      if (!this.suspended) this.connect();
       return;
     }
     this.wanted?.abort();

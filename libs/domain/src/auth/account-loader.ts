@@ -1,12 +1,21 @@
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import type { Role } from './capabilities';
 import type { Actor } from './policy';
 import { PRISMA } from './prisma';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
 
+const INCLUDE = {
+  consents: {
+    select: { acceptedAt: true, kind: true, textVersion: true },
+  },
+  mechanic: true,
+  memberships: true,
+  roles: true,
+} as const satisfies Prisma.AccountInclude;
+
 export type LoadedAccount = Prisma.AccountGetPayload<{
-  include: { mechanic: true; memberships: true; roles: true };
+  include: typeof INCLUDE;
 }>;
 
 export const signInRequired = () =>
@@ -23,7 +32,7 @@ export class AccountLoader {
 
   async activeAccount(id: string): Promise<LoadedAccount> {
     const account = await this.prisma.account.findUnique({
-      include: { mechanic: true, memberships: true, roles: true },
+      include: INCLUDE,
       where: { id },
     });
     if (!account || account.status === 'deleted') throw signInRequired();
@@ -43,7 +52,9 @@ export function actorOf(account: LoadedAccount, role: Role): Actor {
       (role === 'garage' && m.role === 'owner') ||
       (role === 'receptionist' && m.role === 'receptionist'),
   );
-  const mechanic = role === 'mechanic' ? account.mechanic : null;
+  // A removed card no longer places its account in the garage.
+  const card = role === 'mechanic' ? account.mechanic : null;
+  const mechanic = card?.removedAt ? null : card;
   return {
     accountId: account.id,
     garageId: membership?.garageId ?? mechanic?.garageId ?? null,

@@ -29,6 +29,9 @@ interface Person {
   roles: Role[];
   lastRole: Role;
   status?: 'suspended';
+  // The versions of the terms and privacy notice this account last accepted,
+  // when not the ones in force.
+  accepted?: string;
   // A verified number, for the sign-in by WhatsApp code.
   phone?: string;
   // The seeded garage this account works at, and how; a mechanic may also
@@ -377,7 +380,50 @@ const PEOPLE: Person[] = [
     roles: ['driver'],
     status: 'suspended',
   },
+  // Accepted texts older than the ones in force: asked to accept them again.
+  {
+    accepted: '2026-10-11',
+    email: 'termeni-vechi@example.test',
+    lastRole: 'driver',
+    name: 'Dan Termeni',
+    roles: ['driver'],
+  },
 ];
+
+// The versions in force, as in libs/contracts/src/consent.ts; the seed spec
+// fails when the two part.
+const TERMS_VERSION = '2026-10-12';
+const PRIVACY_VERSION = '2026-10-24';
+
+// The account holds exactly one acceptance of each text, at the versions it is
+// seeded with, given with its password in Romanian.
+async function accepted(db: Client, id: string, person: Person) {
+  const want = [
+    ['terms', person.accepted ?? TERMS_VERSION],
+    ['privacy_notice', person.accepted ?? PRIVACY_VERSION],
+  ];
+  await db.query(
+    `DELETE FROM account_consent
+     WHERE account_id = $1
+       AND (kind::text, text_version, language::text, method::text) NOT IN
+           (($2, $3, 'ro', 'password'), ($4, $5, 'ro', 'password'))`,
+    [id, ...want.flat()],
+  );
+  await db.query(
+    `DELETE FROM account_consent c USING account_consent d
+     WHERE c.account_id = $1 AND d.account_id = $1
+       AND c.kind = d.kind AND c.id > d.id`,
+    [id],
+  );
+  for (const [kind, version] of want) {
+    await db.query(
+      `INSERT INTO account_consent (id, account_id, kind, text_version, language, method)
+       SELECT gen_random_uuid(), $1, $2::consent_kind, $3, 'ro', 'password'
+       WHERE NOT EXISTS (SELECT 1 FROM account_consent WHERE account_id = $1 AND kind = $2::consent_kind)`,
+      [id, kind, version],
+    );
+  }
+}
 
 function derive(
   secret: string,
@@ -583,6 +629,7 @@ async function add(
   }
   const { password, extra } = await onePassword(db, id, person.email, secret);
   const linked = await link(db, id, person);
+  await accepted(db, id, person);
   if (!existed) return;
   restored.password += Number(password);
   restored.status += status.rowCount ?? 0;

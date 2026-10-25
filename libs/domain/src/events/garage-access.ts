@@ -1,4 +1,5 @@
-import type { Permissions } from '../auth/capabilities';
+import type { Permissions } from '@motor-fix/contracts/capabilities';
+
 import type { PrismaClient } from '../generated/prisma/client';
 
 // Who may hear a garage's events, as one API copy last read it.

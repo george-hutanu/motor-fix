@@ -115,6 +115,7 @@ async function render(
         useValue: {
           current,
           ended: new Subject<void>(),
+          garageGone: () => false,
           reload,
           shown,
           signOut,
@@ -1303,22 +1304,42 @@ describe('the garage header', () => {
   });
 });
 
-// @traces 244-FR-002
+// @traces 244-FR-002 1204-FR-013
 describe('Frame consent bar', () => {
-  it("sits after the view and before the tab bar, on the tab bar's height on a phone", async () => {
+  // First in the frame, so the first Tab after the skip link lands in it; the
+  // style sheet then draws it last, on the tab bar on a phone and at the foot
+  // of the view from a tablet up.
+  it('comes first in the frame and is drawn last, on the tab bar on a phone', async () => {
     const { element } = await render('driver', '/app/driver', []);
 
-    const order = [...(element.querySelector('.view')?.children ?? [])].map(
+    const frame = element.querySelector('aside')?.parentElement;
+    const top = [...(frame?.children ?? [])].map((child) =>
+      child.tagName.toLowerCase(),
+    );
+    expect(top.slice(0, 3)).toEqual(['mf-consent-bar', 'aside', 'div']);
+    const view = [...(element.querySelector('.view')?.children ?? [])].map(
       (child) => child.tagName.toLowerCase(),
     );
-    expect(order.slice(order.indexOf('main'))).toEqual([
+    expect(view.slice(view.indexOf('main'))).toEqual([
       'main',
-      'mf-consent-bar',
       'mf-dashboard-tab-bar',
     ]);
-    const css = readFileSync(join(__dirname, 'frame.css'), 'utf8');
+    const css = readFileSync(join(__dirname, 'frame.css'), 'utf8').replace(
+      /\s+/g,
+      ' ',
+    );
     expect(css).toMatch(
-      /@media \(max-width: 767\.98px\)\s*\{\s*:host\s*\{\s*--tab-bar:/,
+      /@media \(max-width: 767\.98px\) \{ :host \{ --tab-bar:/,
+    );
+    expect(css).toMatch(/mf-consent-bar \{[^}]*order: 1;/);
+    expect(css).toMatch(/mf-dashboard-tab-bar \{[^}]*order: 2;/);
+    expect(css).toMatch(
+      /@media \(min-width: 768px\) \{.*mf-consent-bar \{[^}]*grid-area: 1 \/ 2;[^}]*align-self: end;/,
+    );
+    // The bar's own height is any number of pixels: the room kept for it
+    // rounds up to the 4 px grid.
+    expect(css).toMatch(
+      /\.view \{[^}]*padding-bottom: round\(up, var\(--consent-bar, 0px\), 4px\);/,
     );
   });
 });

@@ -27,8 +27,6 @@ export const consentControl = () =>
 export class Consent {
   readonly control = input.required<FormControl<boolean>>();
   readonly save = input.required<TaskSave<unknown>>();
-  // A page holding two ticks gives each its own.
-  readonly errorId = input('mf-consent-error');
 
   protected readonly lang = inject(I18n).language;
   protected readonly invalid = computed(

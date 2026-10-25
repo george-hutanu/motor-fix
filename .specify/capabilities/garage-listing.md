@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -37,6 +37,7 @@ features:
   - 009-copy-voice-analytics
   - 1192-photo-variants
   - 067-restore-suspended-garage
+  - 1193-fast-nav
   - 1185-accent-search
 ---
 
@@ -524,9 +525,9 @@ _From 885-restored-draft-check._
 
 _From 111-garage-address-map._
 
-### 111-FR-002 — From the third character typed, 300 ms after the last keystroke, the field MUST ask the API's address look-up for suggestions and show at most 5 as buttons reachable by keyboard, each the suggestion's text; fewer than three characters show none and ask nothing; a newer text's answer always replaces an older one, never the other way round. Choosing a suggestion MUST fill the field with its text and set the position to the suggestion's point; a text with no suggestion shows a line saying nothing was found and offers the manual pin.
+### 1193-FR-007 — The address field MUST keep its 300 ms wait after the last keystroke so three quick keystrokes send one request (for the final text), MUST abort the in-flight request when a new question is asked, MUST treat an abort as no result (no message, no error), and MUST reuse the answer of a question already answered in the field's life (same language, same trimmed text; the last 20 questions are kept) without sending a request; a failed question is asked again. Modifies 111-FR-002 (a newer text now cancels the older request instead of only outranking its answer, and a repeated text is answered from the field's memory).
 
-_From 111-garage-address-map._
+_From 1193-fast-nav._
 
 ### 959-FR-004 — For a garage that is not `mobile`, the map MUST centre on the pin at street zoom 16 (`PLACE_ZOOM`, the constant of 111-FR-003) on the first placement and whenever the pin lands outside the current viewport, and MUST NOT otherwise change the view.
 
@@ -1264,3 +1265,4 @@ _From 1185-accent-search._
 - `885-FR-004` — superseded by `1359-FR-008` (2026-10-20)
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
 - `049-FR-012` — superseded by `067-FR-007` (2026-10-23)
+- `111-FR-002` — superseded by `1193-FR-007` (2026-10-25)

@@ -8,6 +8,7 @@ import {
   isDocumentKind,
   type ListingDraftData,
 } from '@motor-fix/contracts';
+import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import {
   HttpStatus,
   Inject,
@@ -17,7 +18,6 @@ import {
 import { isUUID } from 'class-validator';
 
 import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
-import { capabilitiesOf } from '../../../auth/capabilities';
 import { refusal } from '../../../auth/http-refusal';
 import type { Actor } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';

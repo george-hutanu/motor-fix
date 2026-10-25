@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 079-account-model
   - 082-sign-in
@@ -53,6 +53,8 @@ features:
   - 003-admin-account-actions
   - 1373-seed-status-identity
   - 1156-retention-job
+  - 1204-terms-reaccept
+  - 102-garage-members
 ---
 
 # Capability: Accounts
@@ -97,9 +99,9 @@ _From 079-account-model._
 
 _From 079-account-model._
 
-### 079-FR-010 — The capabilities of each role MUST be one table on the server, with a test for every "may not" (every role × capability not granted). It holds the capabilities this epic's frames and scenarios name, read from the Security page's "Capabilities by role": driver — `driver.requests`, `driver.cars`, `driver.reviews`, `driver.saved_garages`, `driver.settings`; garage side — `garage.requests` (owner, receptionist; mechanic with `can_answer_quotes`), `garage.schedule` (owner, receptionist; mechanic with `can_move_bookings`), `garage.final_price` (owner, receptionist; mechanic with `can_record_final_price`), `garage.own_jobs` (owner, receptionist, mechanic), `garage.reviews`, `garage.team`, `garage.prices`, `garage.profile`, `garage.feature_switches` (owner only); admin — `admin.garages`, `admin.users`, `admin.reviews`, `admin.catalogue`, `admin.settings`. Later epics add rows. The web app gets the actor's capabilities through "who am I", never a copy of the table.
+### 102-FR-002 — The rows MUST be: owner (role `garage`) every `garage.*` capability; receptionist `garage.requests`, `garage.schedule`, `garage.move_bookings`, `garage.final_price`, `garage.own_jobs`, `garage.reviews`, `garage.profile`, `garage.audit_history`; mechanic `garage.own_jobs`, `garage.schedule`, `garage.audit_history`, plus `garage.requests` with `can_answer_quotes`, `garage.move_bookings` (new) with `can_move_bookings`, `garage.final_price` with `can_record_final_price`. Admin and driver rows are unchanged. A test MUST cover every role × capability pair not granted ("may not"), as 079-FR-010 asks, and every permission on and off for the mechanic.
 
-_From 079-account-model._
+_From 102-garage-members._
 
 ### 130-FR-001 — The API MUST check the actor on every route by default; a route MUST be explicitly marked public to be reachable without a session. Without a valid access token a gated route MUST answer 401 `sign_in_required` before its body is validated (modifies 079-FR-011).
 
@@ -109,9 +111,9 @@ _From 130-sign-in-gate._
 
 _From 079-account-model._
 
-### 079-FR-013 — The policy MUST answer 404 when the actor's role lacks the capability or the resource belongs to another account or garage; it MUST be callable from use cases, not only from controllers.
+### 102-FR-007 — `requireCapability` MUST answer 403 `forbidden` when the actor is garage staff of a garage (a `garage`, `receptionist` or `mechanic` role with a `garageId`) and lacks the capability, and 404 when the actor holds no garage or the capability is not a `garage.*` one; `assertGarage` MUST keep answering 404 for another garage (A31/A34, decided 2026-10-16: 403 within one garage's staff, 404 across garages and between drivers). The garage figures' mechanic refusal (`garage-figures.service.ts`) MUST become the same 403. Every existing test asserting 404 for same-garage staff is updated to 403; the feature-off 404 stays.
 
-_From 079-account-model._
+_From 102-garage-members._
 
 ### 079-FR-014 — A mechanic capability that depends on a permission (`can_move_bookings`, `can_answer_quotes`, `can_record_final_price`) MUST be allowed only when that permission is on.
 
@@ -301,10 +303,6 @@ _From 139-edit-my-details._
 
 _From 130-sign-in-gate._
 
-### 130-FR-003 — The suspended (403 `account_suspended`) and capability (404) answers of the actor check MUST stay as they are for gated routes.
-
-_From 130-sign-in-gate._
-
 ### 130-FR-005 — When the person signs in, or switches to sign-up and creates an account, in a dialog opened by FR-004, the dialog MUST close without navigating and the refused call MUST be sent again once with the new access token, its answer going to the code that made the call; a repeated call that is refused again fails with that answer and opens no further dialog.
 
 _From 130-sign-in-gate._
@@ -429,13 +427,13 @@ _From 132-sign-up-consent._
 
 _From 132-sign-up-consent._
 
-### 132-FR-007 — The tick MUST be one component that any form creating an account can place above its main button as a form control.
+### 1204-FR-012 — The tick MUST be one component that any form creating an account can place above its main button as a form control, tying its error line to its control by the fixed id `mf-consent-error` and taking no `errorId` input; the sign-up, provider sign-up and phone sign-in forms keep linking the error by `aria-describedby` (modifies 132-FR-007 by fixing the id).
 
-_From 132-sign-up-consent._
+_From 1204-terms-reaccept._
 
-### 243-FR-013 — The texts MUST live in code with the pages that show them, not in the interface language files, add no dependency, and change no page layout: `/{lang}/terms` and `/{lang}/privacy` show the text in the address's language to anyone without an account, rendered on the server and listed in the sitemap for both languages; the page shows the title, the version label and date, and the sections (132-FR-008's layout minus the draft note), and MUST NOT scroll sideways on a 320 px phone in either language.
+### 1204-FR-010 — The legal texts MUST live in code with the pages that show them, add no dependency, and change no page layout: `/{lang}/terms` and `/{lang}/privacy` show the text in the address's language to anyone without an account, rendered on the server and listed in the sitemap for both languages; the page shows the title, the version label and date, and the sections (132-FR-008's layout minus the draft note), and MUST NOT scroll sideways on a 320 px phone in either language. The pages' two interface labels MUST come from the interface language files under `public.legal.*` — the version label ("Versiunea" / "Version") and, for each text, the page title key ("Termeni de utilizare · MotorFix", "Nota de informare privind datele personale · MotorFix" / "Terms of use · MotorFix", "Privacy notice · MotorFix") — with `LEGAL_LABELS` removed from the legal-texts module, and the key-parity check stays green (modifies 243-FR-013's source of those labels only).
 
-_From 243-terms-privacy._
+_From 1204-terms-reaccept._
 
 ### 563-FR-001 — The route sweep MUST call every route outside the public list with an access token that is genuine in every respect (signed with the application's secret, for an existing active account, with a valid role) except that its expiry is in the past; its role is `driver`, a role the account holds.
 
@@ -689,9 +687,9 @@ _From 244-analytics-news-consent._
 
 _From 244-analytics-news-consent._
 
-### 244-FR-013 — A record the server did not accept (network error, 5xx, 429) MUST be kept as pending in the browser with the choice and sent again on the next page load, at most once per load, until it is accepted; a 4xx other than 429 drops it.
+### 1204-FR-008 — A record the server did not accept (network error, 5xx, 429, or 403 `consent_required`) MUST be kept as pending in the browser with the choice and sent again on the next page load, at most once per load, until it is accepted; any other 4xx drops it. A signed-in record (`POST /api/v1/me/consents`) refused with `consent_required` is first resent once by the dialog's resend after "Accept" (FR-007), and stays pending only when that call still ends refused (no acceptance followed, or the resend failed), then goes again after acceptance or on the next page load (modifies 244-FR-013, which dropped every 4xx other than 429).
 
-_From 244-analytics-news-consent._
+_From 1204-terms-reaccept._
 
 ### 244-FR-014 — Every text of the bar and the dialog MUST exist in Romanian and in English through the app's translation files, and the stored record's `language` MUST be the page's language at the time of the choice.
 
@@ -1358,6 +1356,90 @@ _From 1373-seed-status-identity._
 
 _From 1156-retention-job._
 
+### 1204-FR-001 — An account's acceptance MUST be "pending" when its latest stored `terms` acceptance version differs from the terms version in force, or its latest stored `privacy_notice` acceptance version differs from the privacy-notice version in force, or either kind has no row at all; the versions in force are the two version constants in the contracts library (`TERMS_VERSION`, `PRIVACY_VERSION`), read at call time, never copied.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-002 — Every API route that needs a session MUST, once the actor is admitted (valid token, active and not suspended account, role in use), refuse a pending account with 403 and body `{ code: "consent_required", message, termsVersion, privacyVersion }` naming the versions in force, before the route's body is validated or run; this holds for every role, every sign-in method and the admin area. A public route, with or without an optional actor, is unaffected.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-003 — Exactly two session routes MUST stay open to a pending account: the new acceptance route (FR-004) and `POST /api/v1/auth/sign-out`; token renewal (`POST /api/v1/auth/refresh`) keeps working as it needs no actor check. Sign-in, OAuth and phone sign-in keep issuing tokens unchanged: pending is signalled on the calls that follow, never by refusing the sign-in.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-004 — `POST /api/v1/me/acceptance` MUST take `{ termsVersion, privacyVersion }` validated at the edge; when both equal the versions in force it MUST write, in one transaction, one acceptance row per kind whose latest version differs from the one in force (version in force, the account's language, the method of the account's first identity in `SignInMethod` order, since the session does not carry its sign-in method (research R2), and the acceptance time), keep every earlier row, record one "consent given" audit entry by the account (field `consent`, value both versions) and answer 204; when either version differs from the one in force it MUST answer 400 `consent_required` (the existing refusal shape of sign-up, which gains the two fields `termsVersion` and `privacyVersion` naming the versions in force, additive for sign-up) and write nothing. A call with no acceptance pending MUST answer 204 and write nothing.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-006 — Notifications MUST be produced and sent for a pending account exactly as for an accepted one, on every channel the account chose (`JOB_READY`, reminders, every other message); no notification path checks the acceptance.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-007 — The web app MUST show a blocking dialog, in the page's language, whenever a signed-in call answers `consent_required` and right after a sign-in whose first call answers it: title and one sentence saying the terms of use and the privacy notice changed, the two texts' titles linked to `/{lang}/terms` and `/{lang}/privacy` in a new tab each followed by its version date from the refusal, one main button "Accept" ("Accept" in both languages' sense: RO "Accept", EN "Accept") and a secondary "Deconectare" / "Sign out"; it has no close control, Escape and a click outside do nothing, focus is trapped in it and starts on "Accept", "Accept" is disabled while the acceptance is being sent (one request per press), and the dashboard content behind it is not shown. "Accept" sends FR-004, then the refused call once more, then the dashboard of the role in use opens; a failed acceptance shows an error line and leaves the dialog up; "Sign out" signs out and goes to Home.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-009 — A pending analytics choice bound to an account (made while signed out after a sign-out, or left pending at sign-out) MUST be sent to that account's consent route in the first reconciliation after that account signs in, exactly once, and MUST never be stored without the account or under another account: when a different account signs in, the choice bound to the first account is dropped; a unit test covers sign-out → choice → sign-in → one record (OD-33, 2026-10-16; modifies 244-FR-013 by naming the sign-in as a resend moment).
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-011 — `/ro/terms`, `/ro/privacy`, `/en/terms` and `/en/privacy` MUST each set the document title from its `public.legal.*` title key, in the page's language; the route definitions carry the title; a test asserts each title key begins with the matching legal document's own title and a check (unit or end-to-end) reads the document title on each of the four addresses.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-013 — At 320 px and 390 px in the dashboard frame (one rule for every dashboard route: the bar is offset by the tab bar's height plus the safe area), while the analytics consent bar is unanswered, its "Accept" and "Refuz" buttons MUST be fully visible, not overlapped by the dashboard tab bar, each at least 44×44 px; after an answer the bar is gone and the tab bar sits at the bottom edge with nothing under it; when the bar shows, the first Tab from the document start lands in the bar, and the focus ring of its buttons is never hidden by the tab bar. A Playwright check at 320 px clicks both buttons on `/app/garage/requests` and `/app/driver`.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-014 — The development and test seed MUST write current-version `terms` and `privacy_notice` acceptance rows for every seeded account except one new seeded driver whose rows carry version `2026-10-11` for both kinds, so every existing end-to-end and QA flow keeps signing in without the dialog and the stale account proves it.
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-015 — Failing-first tests MUST cover: the pending rule (older row, missing row, current rows) and the 403 on a gated route for each role; the two open routes; the acceptance write (rows per pending kind, earlier rows kept, audit entry, 400 on stale versions, 204 idempotent); the MCP 403 and recovery after the owner accepts; a notification produced for a pending account; the dialog (shows on `consent_required`, no dismissal, Accept then resend, Sign out, error state) in both languages; FR-008 and FR-009 in the browser consent service; the legal titles and labels; the tick's fixed id; the bar at 320 px (Playwright); and an end-to-end test that signs in as the stale seeded account at 390 px and on desktop, sees the dialog, accepts and reaches the dashboard. The `// @traces` comments name `1204-FR-<n>`, the only form the trace matrix reads (it keys a feature by its number; 1204-hours-row-live-regions shares it).
+
+_From 1204-terms-reaccept._
+
+### 1204-FR-016 — The new route ships with its observability in the same PR: request-duration by route for `POST /api/v1/me/acceptance`, one product counter of acceptances recorded (no account id, labels from fixed sets) and one counter of `consent_required` refusals by surface (`api`, `mcp`), each listed with its panel and alert in `infra/observability/inventory.json`.
+
+_From 1204-terms-reaccept._
+
+### 102-FR-001 — The capabilities table (`ROLES`, `CAPABILITIES`, `Permissions`, the role rows and `capabilitiesOf`) MUST live in one browser-safe module of the contracts library (`libs/contracts/src/capabilities.ts`, imported as `@motor-fix/contracts/capabilities`), read by the API's policy, the live filter and the web app; the domain library re-exports it so no existing import path breaks. The web's view list MUST type each view's `capability` with the table's `Capability` type, and a test MUST fail on a view naming a capability the table does not hold.
+
+_From 102-garage-members._
+
+### 102-FR-003 — Whether a person sees a view, a Panou section or an action, and whether the server lets them call it, MUST be decided in this order: a feature switched off removes it for everyone (404 `feature_off` on the server, 398-FR-007), then the role's row, then the mechanic's permissions. `allowedViews` already applies this order for the menu; on the server the held order stays role first, then feature (055-FR-003, `garage-mechanics.service.ts` "so staff and strangers never learn whether the team is on"): same-garage staff outside their row get 403 whatever the switch, and the owner of a garage with the feature off gets 404 `feature_off`.
+
+_From 102-garage-members._
+
+### 102-FR-004 — The garage menu, tab bar and routes MUST keep coming from `allowedViews` over the table (160-FR-007), so that with the rows of FR-002 a mechanic without permissions sees Panou, Lucrări, Programări, Setări and Istoric modificări; a receptionist sees Panou, Cereri de ofertă, Programări, Lucrări, Recenzii, Profilul service-ului, Setări and Istoric modificări; the owner sees everything released. Setări stays for every role because it holds the person's own device and notification choices (198-FR-001, ST-142); its owner-only panels are gated inside it (FR-013).
+
+_From 102-garage-members._
+
+### 102-FR-005 — Panou (`garage-home`) MUST decide each section by a capability of the table read from the session, never by a role string: the legal-check panel needs `garage.feature_switches`, the verified strip and its re-check line need `garage.profile`, the requests panel needs `garage.requests` (as its feed already does). A new section added by a later story declares its capability the same way; a mechanic without permissions sees no section but one status line, "Lucrările tale vor apărea aici." / "Your jobs will appear here." (proposed wording; no such text exists on `main`), until #208 builds the own-jobs sections.
+
+_From 102-garage-members._
+
+### 102-FR-006 — The views Recenzii and Profilul service-ului, now reachable by the receptionist, MUST show no "Răspunde" and no "Modifică profilul" to her: neither button exists on `main` today, and the story that adds one MUST gate it on an owner-only capability of the table, not on the view capability. The garage profile read (`GET /api/v1/garages/:garageId/profile`) MUST answer the receptionist as it answers the owner.
+
+_From 102-garage-members._
+
+### 102-FR-008 — The schedule read (`GET /api/v1/garages/:garageId/schedule` and the day sheet, `garage.schedule`) MUST, for a mechanic, return only bookings whose mechanic card is the mechanic's own (`BOOKING.mechanic_id` = their MECHANIC id); a `mechanicId` query naming any id other than her own MUST answer 403 `forbidden` without a lookup, and bookings with no mechanic (`mechanic_id` null) are not hers. Jobs already follow this rule (`garage-jobs.service.ts` `scope`).
+
+_From 102-garage-members._
+
+### 102-FR-009 — No response to a mechanic MUST carry a driver's phone, and a plate MUST appear only on the mechanic's own bookings and jobs (079-FR-015 holds; the schedule rows of FR-008 and the request reads MUST go through `describeCustomer` or an equivalent that a test proves by walking every field of every garage read's answer as a mechanic for a `phone` key).
+
+_From 102-garage-members._
+
+### 102-FR-015 — When the account re-read that follows `mechanic.updated` or `garage.features_changed` (531-FR-002) no longer allows the view on screen, the frame MUST open Panou (it already leaves the view) and show, once, the short message "Nu mai ai acces la această secțiune." / "You no longer have access to this section." on the dashboard's status line.
+
+_From 102-garage-members._
+
+### 102-FR-016 — When a call under the signed-in garage's own path answers 404, the garage dashboard MUST read the account again, once per such 404 and coalesced while a re-read is in flight, counting only calls under `/api/v1/garages/{garageId}/` of the signed-in garage; when `garageAccess` no longer holds that garage, the dashboard body MUST show "Nu mai ai acces la acest service" / "You no longer have access to this garage" with a link "Spre pagina principală" / "To the home page", and the garage menu MUST show no view. A 404 while the garage is still held changes nothing (a feature off, a resource that is gone).
+
+_From 102-garage-members._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -1400,3 +1482,9 @@ _From 1156-retention-job._
 - `500-FR-008` — superseded by `500-FR-016` (2026-10-24)
 - `500-FR-009` — superseded by `500-FR-017` (2026-10-24)
 - `1372-FR-005` — superseded by `1373-FR-006` (2026-10-24)
+- `244-FR-013` — superseded by `1204-FR-008` (2026-10-25)
+- `243-FR-013` — superseded by `1204-FR-010` (2026-10-25)
+- `132-FR-007` — superseded by `1204-FR-012` (2026-10-25)
+- `079-FR-010` — superseded by `102-FR-002` (2026-10-25)
+- `079-FR-013` — superseded by `102-FR-007` (2026-10-25)
+- `130-FR-003` — superseded by `102-FR-007` (2026-10-25)

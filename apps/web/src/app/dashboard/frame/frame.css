@@ -221,6 +221,13 @@ main {
   .view {
     display: contents;
   }
+  /* First in the frame for the keyboard, drawn last: on the tab bar. */
+  mf-consent-bar {
+    order: 1;
+  }
+  mf-dashboard-tab-bar {
+    order: 2;
+  }
 }
 .chip-skeleton {
   width: 20px;
@@ -236,6 +243,30 @@ main {
   font-size: var(--mf-size-small);
   overflow-wrap: anywhere;
 }
+.access-status {
+  margin: 0 0 var(--mf-space-3);
+  padding: var(--mf-space-2) var(--mf-space-4);
+  border-block: 1px solid var(--mf-line-strong);
+  color: var(--mf-text);
+  font-size: var(--mf-size-small);
+  overflow-wrap: anywhere;
+}
+.gone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  padding: var(--mf-space-4);
+}
+.gone p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.gone a {
+  align-self: flex-start;
+  min-height: var(--mf-tap);
+  display: inline-flex;
+  align-items: center;
+}
 .live-status {
   margin: var(--mf-space-2) 0 0;
   padding: 0;
@@ -245,6 +276,19 @@ main {
 @media (min-width: 768px) {
   :host {
     grid-template: 1fr / minmax(0, 16rem) minmax(0, 1fr);
+  }
+  aside {
+    grid-area: 1 / 1;
+  }
+  /* The bar shares the view's cell, at its foot, so it sticks to the bottom
+     of the window as it did inside the view; the view keeps its height free. */
+  .view {
+    grid-area: 1 / 2;
+    padding-bottom: round(up, var(--consent-bar, 0px), 4px);
+  }
+  mf-consent-bar {
+    grid-area: 1 / 2;
+    align-self: end;
   }
   aside nav {
     display: flex;

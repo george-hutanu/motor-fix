@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-24
+updated: 2026-10-25
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -115,11 +115,13 @@ features:
   - 1377-own-pr-422-fallback
   - 438-test-suites-projects
   - 471-crlf-harness-tidy
+  - 1156-retention-job
   - 493-watcher-docs
+  - 1193-fast-nav
   - 456-activity-log-test-cleanup
   - 1185-accent-search
   - 1188-tail-latency
-  - 1156-retention-job
+  - 1349-cockpit-chart-settle
 ---
 
 # Capability: Platform
@@ -2926,9 +2928,37 @@ _From 1156-retention-job._
 
 _From 493-watcher-docs._
 
+### 1193-FR-002 — The web app MUST remain eligible for the browser's back/forward cache on the journey search results → garage profile → back: no `unload` or `beforeunload` handler, `Cache-Control: no-store` only on the signed-in and one-person pages (as today), and no connection kept open on `pagehide`. The e2e suite MUST prove the journey with the back/forward cache enabled: on back, `pageshow` reports `persisted` and the browser reports no not-restored reason; the Lighthouse audit of the same journey is shown in the PR.
+
+_From 1193-fast-nav._
+
+### 1193-FR-004 — Navigations to another screen (another path) MUST run as view transitions, with the browser's default cross-fade (no custom duration or easing), when the browser supports them; a same-screen navigation (only the query or fragment changes, or the language rewrite) and the first screen as the page loads MUST NOT; and every transition MUST be skipped entirely when the device asks for reduced motion (read from the kit's shared signal, 053-FR-013); a browser without the API navigates as today, with no error.
+
+_From 1193-fast-nav._
+
+### 1193-FR-006 — The rendered HTML head MUST carry a `preconnect` hint to the image base when it is an origin other than the page's, on every page, and one to the map tiles origin on the pages whose first screen renders a map (today the results page, `/:lang/garages`; no other); the tiles hint carries `crossorigin` (its requests are cross-origin fetches) and the image hint does not (images load without CORS); no hint for the page's own origin, the API, the telemetry collector or a sign-in server; at most four hints in all.
+
+_From 1193-fast-nav._
+
+### 1193-FR-008 — The app MUST drop the deprecated fetch opt-in from its HTTP client configuration (fetch is Angular 22's default) and keep event replay on, with no change in behaviour: requests still use fetch, taps before hydration are still replayed.
+
+_From 1193-fast-nav._
+
+### 1193-FR-011 — Every change MUST hold on a 320 px and a 390 px phone, a tablet and a desktop, light and dark, Romanian and English, with no sideways scroll at 320 px and no motion under `prefers-reduced-motion`; the PR MUST show each item of the story (bfcache, preconnect, transitions, scroll restoration, type-ahead, fonts) as done or already in place.
+
+_From 1193-fast-nav._
+
 ### 456-FR-005 — The change MUST add no endpoint, queue, outside call, product action, schema migration or user-facing text; production and staging deploys keep their current role and connection string.
 
 _From 456-activity-log-test-cleanup._
+
+### 1349-FR-001 — A harness spec MUST run the sweep twice over a Chart.js chart page that animates unless reduced motion is asked, and fail when `diffShots` finds any changed region between the two runs' shots.
+
+_From 1349-cockpit-chart-settle._
+
+### 1349-FR-002 — The same spec MUST fail when the chart in a shot is not at its final frame: the page did not see reduced motion, or the tallest bar's top is not drawn in the shot.
+
+_From 1349-cockpit-chart-settle._
 
 ## Retired
 

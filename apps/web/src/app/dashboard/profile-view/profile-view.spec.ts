@@ -6,6 +6,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
+import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import {
   type GarageProfileDto,
   GaragesService,
@@ -94,10 +95,22 @@ const LEGAL: LegalCheckDto = {
   status: 'approved',
 };
 
-const me = {
+const NONE = {
+  canAnswerQuotes: false,
+  canMoveBookings: false,
+  canRecordFinalPrice: false,
+};
+const OWNER = {
+  capabilities: capabilitiesOf('garage', NONE),
   garageAccess: [{ garageId: GARAGE, role: 'owner' }],
   garageId: GARAGE,
 } as unknown as MeDto;
+const RECEPTIONIST = {
+  capabilities: capabilitiesOf('receptionist', NONE),
+  garageAccess: [{ garageId: GARAGE, role: 'receptionist' }],
+  garageId: GARAGE,
+} as unknown as MeDto;
+let me = OWNER;
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
@@ -900,5 +913,28 @@ describe('Profilul service-ului: type and alignment on a phone', () => {
     expect(css).toMatch(
       /\.public-link \{[^}]*margin-inline-start: calc\(-1 \* var\(--mf-space-5\) - 1px\)/,
     );
+  });
+});
+
+// @traces 102-FR-006
+describe('Profilul service-ului for the receptionist', () => {
+  afterEach(() => {
+    me = OWNER;
+    TestBed.resetTestingModule();
+  });
+
+  it('shows her the profile as the owner reads it, with no legal check and no action button', async () => {
+    me = RECEPTIONIST;
+    const { element, settle } = await render();
+    await settle();
+
+    expect(read).toHaveBeenCalledWith({ garageId: GARAGE });
+    expect(text(line(element, 'name'))).toContain('Service Auto Militari');
+    expect(element.querySelector('mf-garage-legal-check')).toBeNull();
+    expect(legal).not.toHaveBeenCalled();
+    const buttons = all(element, 'button').map(text);
+    expect(buttons).not.toContain('Modifică profilul');
+    expect(buttons).not.toContain('Răspunde');
+    expect(buttons).toEqual([]);
   });
 });

@@ -1,0 +1,38 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+ul {
+  display: grid;
+  gap: var(--mf-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+li {
+  display: grid;
+  gap: var(--mf-space-1);
+}
+a {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+li span {
+  color: var(--mf-text-secondary);
+}
+.error {
+  color: var(--mf-red-ink);
+}
+.actions {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+button {
+  width: 100%;
+  min-height: 44px;
+  white-space: normal;
+}

@@ -12,6 +12,7 @@ import {
   type Shown,
 } from './place-map';
 import { PlaceStep } from './place-step';
+import { placesAnswered } from '../address-field/address-field.testing';
 
 type Suggestion = { label: string; lat: number; lng: number };
 
@@ -55,7 +56,7 @@ async function open(
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: PlacesService, useValue: { placesControllerSearch: search } },
+      placesAnswered((asked) => search(asked)),
       { provide: PLACE_MAP, useValue: openMap },
     ],
   });
