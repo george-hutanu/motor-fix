@@ -28,16 +28,13 @@ const SKELETON_ROWS = [0, 1, 2];
 type Notice = { text?: string; key?: string; status?: boolean };
 
 // The brand a `stale_value` answer carries, in a body read as JSON or text.
+// Only called once toProblem has read that code, so a text body parses.
 const brandIn = (failure: unknown): unknown => {
   if (!(failure instanceof HttpErrorResponse)) return undefined;
-  let body: unknown = failure.error;
-  if (typeof body === 'string') {
-    try {
-      body = JSON.parse(body);
-    } catch {
-      return undefined;
-    }
-  }
+  const body: unknown =
+    typeof failure.error === 'string'
+      ? JSON.parse(failure.error)
+      : failure.error;
   return (body as { brand?: unknown } | null)?.brand;
 };
 
