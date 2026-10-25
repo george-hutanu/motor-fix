@@ -47,7 +47,8 @@ export class AccountDeletionController {
   })
   @ApiForbiddenResponse({ description: 'forbidden: an assistant session' })
   @ApiConflictResponse({
-    description: 'deletion_not_allowed: the account owns a garage',
+    description:
+      'deletion_not_allowed: the account owns a garage; car_in_work: a car of the account is in work or paused at a garage',
   })
   async deleteAccount(
     @CurrentActor() actor: Actor,

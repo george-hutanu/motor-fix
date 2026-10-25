@@ -89,6 +89,7 @@ export type { CreateListingDraftDto } from './models/create-listing-draft-dto';
 export type { CreateMechanicDto } from './models/create-mechanic-dto';
 export type { CreateQuoteRequestDto } from './models/create-quote-request-dto';
 export type { CreateSupportMessageDto } from './models/create-support-message-dto';
+export type { DataExportDto } from './models/data-export-dto';
 export type { DecidedDocumentDto } from './models/decided-document-dto';
 export type { DeclinedGarageDto } from './models/declined-garage-dto';
 export type { DeclinedQuoteDto } from './models/declined-quote-dto';
