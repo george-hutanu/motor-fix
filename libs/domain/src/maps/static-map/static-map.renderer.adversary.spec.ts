@@ -1,6 +1,3 @@
-/**
- * @jest-environment node
- */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -176,10 +173,14 @@ describe('StaticMapRenderer, dependencies failing', () => {
         ? json({ tiles: [TILE_URL] })
         : hang(null, init),
     ) as unknown as typeof fetch;
+    // The whole-image limit is set far off, so only the tile limit can end it.
+    const r = new StaticMapRenderer(TILEJSON, {
+      fetch: fn,
+      renderTimeoutMs: 60_000,
+      tileTimeoutMs: 200,
+    });
 
-    await expect(renderer(fn).render(VIEW)).rejects.toBeInstanceOf(
-      MapTilesUnavailable,
-    );
+    await expect(r.render(VIEW)).rejects.toBeInstanceOf(MapTilesUnavailable);
   });
 
   it('refuses one failing tile among good ones instead of painting a partial image', async () => {
