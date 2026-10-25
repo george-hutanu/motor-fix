@@ -214,6 +214,32 @@ export class NotificationsService {
     return queued;
   }
 
+  // Whether every recipient it would write to already holds this event's bell
+  // row: a redelivered event, which builds nothing and is no one's mute. A
+  // deleted account gets no row, so it is left out of the count.
+  async announced(
+    kind: NotifyInput['kind'],
+    eventId: string,
+    recipients: readonly string[],
+  ): Promise<boolean> {
+    const live = await this.prisma.account.findMany({
+      select: { id: true },
+      where: {
+        id: { in: [...new Set(recipients)] },
+        status: { not: 'deleted' },
+      },
+    });
+    const held = await this.prisma.notification.count({
+      where: {
+        accountId: { in: live.map((account) => account.id) },
+        channel: 'in_app',
+        eventId,
+        kind,
+      },
+    });
+    return live.length > 0 && held === live.length;
+  }
+
   // `to` sends to an address the account does not hold yet: the link of an
   // e-mail change goes to the new address.
   async sendAccountEmail(input: {

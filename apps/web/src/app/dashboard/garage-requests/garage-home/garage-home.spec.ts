@@ -10,6 +10,7 @@ import {
   GarageRequestsService,
   GaragesService,
   type MeDto,
+  ReviewsService,
 } from '@motor-fix/data-access';
 
 import { GarageHome } from './garage-home';
@@ -35,6 +36,7 @@ const ANSWERING_MECHANIC = rowOf('mechanic', {
 const MECHANIC = rowOf('mechanic');
 
 let list: jest.Mock;
+let reviews: jest.Mock;
 
 // The membership's role string follows the row unless a test sets it, so a
 // test can prove a section follows the capabilities and not the role.
@@ -81,6 +83,8 @@ async function render(
   list = jest.fn(({ status: filter }: { status: string }) =>
     filter === 'waiting' ? answer() : Promise.resolve(listOf([])),
   );
+  // The reviews panel has its own spec; here it waits.
+  reviews = jest.fn(() => new Promise(() => undefined));
   const me = signal(account(capabilities, status, role));
   TestBed.configureTestingModule({
     providers: [
@@ -91,6 +95,10 @@ async function render(
       {
         provide: GarageRequestsService,
         useValue: { garageRequestsControllerList: list },
+      },
+      {
+        provide: ReviewsService,
+        useValue: { garageReviewsControllerRead: reviews },
       },
       // The legal check has its own spec; here the garage has no file.
       {
@@ -215,6 +223,17 @@ describe('the garage Panou for each role', () => {
 
     expect(panel(element)).toBeNull();
     expect(element.querySelector('[role="alert"]')).toBeNull();
+    expect(text(element)).toBe('Profil verificat Recenzii noi');
+  });
+
+  it('keeps the coming-soon line for a role with neither requests nor reviews', async () => {
+    const element = await render(
+      OWNER.filter((c) => c !== 'garage.reviews'),
+      {
+        answer: () => Promise.reject(new HttpErrorResponse({ status: 404 })),
+      },
+    );
+
     expect(text(element)).toBe(
       'Profil verificat Aici vei vedea ce se întâmplă azi în service.',
     );
@@ -290,6 +309,53 @@ describe('the garage Panou sections, each behind a capability of the table', () 
     );
 
     expect(en.home.mechanic).toBe('Your jobs will appear here.');
+  });
+});
+
+// @traces 074-FR-001 074-FR-007
+describe('Recenzii noi on Panou', () => {
+  const reviewsPanel = (element: HTMLElement) =>
+    element.querySelector('mf-garage-reviews-panel');
+
+  it.each([
+    ['the owner', OWNER],
+    ['the receptionist', RECEPTIONIST],
+  ])(
+    'shows %s the newest reviews under the requests',
+    async (_, capabilities) => {
+      const element = await render(capabilities);
+
+      expect(reviewsPanel(element)).not.toBeNull();
+      expect(reviews).toHaveBeenCalledWith({ garageId: 'garage-1', page: 1 });
+      expect(
+        panel(element)?.compareDocumentPosition(
+          reviewsPanel(element) as Element,
+        ),
+      ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    },
+  );
+
+  it.each([
+    ['a mechanic', MECHANIC],
+    ['a mechanic who may answer quotes', ANSWERING_MECHANIC],
+  ])('shows %s no reviews and reads none', async (_, capabilities) => {
+    const element = await render(capabilities);
+
+    expect(reviewsPanel(element)).toBeNull();
+    expect(reviews).not.toHaveBeenCalled();
+  });
+
+  it('shows a draft garage no reviews', async () => {
+    const element = await render(OWNER, { status: 'draft' });
+
+    expect(reviewsPanel(element)).toBeNull();
+    expect(reviews).not.toHaveBeenCalled();
+  });
+
+  it('shows a suspended garage its reviews', async () => {
+    const element = await render(OWNER, { status: 'suspended' });
+
+    expect(reviewsPanel(element)).not.toBeNull();
   });
 });
 

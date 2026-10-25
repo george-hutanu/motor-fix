@@ -1,0 +1,65 @@
+<section class="panel" [attr.aria-busy]="view.isLoading() || null">
+  <header>
+    @if (home()) {
+      <h2>{{ 'garage.reviews.title' | t }}</h2>
+    } @else {
+      <h2>{{ 'garage.reviews.viewTitle' | t }}</h2>
+    }
+    @if (profileHref(); as href) {
+      <a class="link" data-profile [routerLink]="href">{{ 'garage.reviews.seeProfile' | t }}</a>
+    }
+  </header>
+  @if (view.value(); as page) {
+    @if (!home()) {
+      @if (figure(); as said) {
+        <p class="figure" data-figure>{{ said }}</p>
+      }
+      @if (page.total > 0) {
+        <div class="breakdown">
+          <h3 data-breakdown-title>{{ 'garage.reviews.breakdownTitle' | t }}</h3>
+          <ul data-breakdown>
+            @for (bar of bars(); track bar.score) {
+              <li>
+                <span class="label" data-label>{{ bar.label }}</span>
+                <span class="track" aria-hidden="true"><span data-bar [style.width.%]="bar.share"></span></span>
+                <span class="count" data-count>{{ bar.count }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    }
+    @if (reviews().length) {
+      <div class="rows">
+        @for (review of reviews(); track review.id) {
+          <article mf-garage-review-row [review]="review" [now]="now()" [attr.data-live-id]="review.id"></article>
+        }
+      </div>
+      @if (home()) {
+        <a class="link all" data-all routerLink="/app/garage/reviews">{{ 'garage.reviews.seeAll' | t }}</a>
+      }
+    } @else {
+      <p class="empty" data-empty>{{ 'garage.reviews.empty' | t }}</p>
+    }
+    @if (moreFailed()) {
+      <div class="problem" role="alert">
+        <p>{{ 'garage.reviews.moreFailed' | t }}</p>
+        <button hlmBtn variant="secondary" type="button" (click)="more()">{{ 'garage.reviews.retry' | t }}</button>
+      </div>
+    } @else if (hasMore()) {
+      <button hlmBtn variant="secondary" type="button" class="more" [disabled]="loadingMore()" (click)="more()">
+        {{ 'garage.reviews.more' | t }}
+      </button>
+    }
+  } @else if (view.error()) {
+    <div class="problem" role="alert">
+      <p>{{ 'garage.reviews.loadFailed' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" (click)="view.reload()">{{ 'garage.reviews.retry' | t }}</button>
+    </div>
+  } @else {
+    <div class="rows" data-loading aria-hidden="true">
+      <span class="skeleton"></span>
+      <span class="skeleton"></span>
+    </div>
+  }
+</section>
