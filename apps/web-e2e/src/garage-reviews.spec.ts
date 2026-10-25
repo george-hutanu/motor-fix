@@ -151,6 +151,9 @@ test.describe('a reviewed garage’s profile @seeded', () => {
   });
 
   test('shows a review’s change without a reload', async ({ page }) => {
+    // A stream that failed a few times in a row waits 1, 2, 5 and 10 s
+    // (live/stream.ts) before its resync shows the change: past 30 s.
+    test.slow();
     // The stream is open once its answer has come back: a request alone may
     // still be refused (the visitors' streams share one address here) and
     // retried after the message has gone out, which Redis does not replay.
@@ -197,7 +200,7 @@ test.describe('a reviewed garage’s profile @seeded', () => {
         await expect(reviews.getByText(changed)).toBeVisible({
           timeout: 3_000,
         });
-      }).toPass({ intervals: [0], timeout: 15_000 });
+      }).toPass({ intervals: [0], timeout: 40_000 });
     } finally {
       redis.disconnect();
     }
