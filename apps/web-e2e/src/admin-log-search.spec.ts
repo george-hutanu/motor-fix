@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
@@ -49,7 +51,9 @@ test.describe('searching the whole log @seeded', () => {
 
   let db: Client;
   const ids: string[] = [];
-  const word = `disk${Date.now().toString(36)}`;
+  // Each worker writes its own entries: a word from the clock alone is the
+  // same in two workers that load this file in the same millisecond.
+  const word = `disk${randomUUID().replaceAll('-', '').slice(0, 12)}`;
 
   const write = async (
     daysAgo: number,
