@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import { type Actor, forbidden, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -71,14 +71,16 @@ export class GarageScheduleService {
     return { entries, from, lifts, to };
   }
 
-  // A mechanic reads her own card's bookings only, and asks for no other.
+  // A mechanic reads her own card's bookings only, and asks for no other. A
+  // removed card is no longer hers to read.
   private async mechanicOf(actor: Actor, asked?: string) {
     if (actor.role !== 'mechanic') return asked;
     const own = await this.prisma.mechanic.findUnique({
-      select: { id: true },
+      select: { id: true, removedAt: true },
       where: { accountId: actor.accountId },
     });
-    if (!own || (asked !== undefined && asked !== own.id))
+    if (!own || own.removedAt) throw new NotFoundException();
+    if (asked !== undefined && asked !== own.id)
       throw forbidden('A mechanic reads only her own schedule');
     return own.id;
   }

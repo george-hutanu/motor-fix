@@ -1,6 +1,6 @@
+import type { Role } from '@motor-fix/contracts/capabilities';
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import type { Role } from './capabilities';
 import type { Actor } from './policy';
 import { PRISMA } from './prisma';
 import type { Prisma, PrismaClient } from '../generated/prisma/client';
@@ -43,7 +43,9 @@ export function actorOf(account: LoadedAccount, role: Role): Actor {
       (role === 'garage' && m.role === 'owner') ||
       (role === 'receptionist' && m.role === 'receptionist'),
   );
-  const mechanic = role === 'mechanic' ? account.mechanic : null;
+  // A removed card no longer places its account in the garage.
+  const card = role === 'mechanic' ? account.mechanic : null;
+  const mechanic = card?.removedAt ? null : card;
   return {
     accountId: account.id,
     garageId: membership?.garageId ?? mechanic?.garageId ?? null,

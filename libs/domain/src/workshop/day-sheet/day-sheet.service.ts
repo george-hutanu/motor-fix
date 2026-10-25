@@ -7,7 +7,8 @@ import type { PrismaClient } from '../../generated/prisma/client';
 import { bookedInclude, bookedOf } from '../../quotes/reads';
 
 interface DaySheetQuery {
-  mechanic: string;
+  // Absent: a mechanic's own sheet.
+  mechanic?: string;
   day?: string;
 }
 
@@ -61,26 +62,29 @@ export class DaySheetService {
     };
   }
 
-  // A mechanic reads her own sheet only, asked by her id, full name or
-  // first name; anything else is refused without naming the others.
-  private async ownCard(actor: Actor, asked: string) {
-    const own = await this.prisma.mechanic.findUnique({
-      select: { id: true, name: true },
+  // A mechanic reads her own sheet only, asked by nothing, her id, full name
+  // or first name; anything else is refused without naming the others. A
+  // removed card is no longer hers to read.
+  private async ownCard(actor: Actor, asked: string | undefined) {
+    const card = await this.prisma.mechanic.findUnique({
+      select: { id: true, name: true, removedAt: true },
       where: { accountId: actor.accountId },
     });
+    if (!card || card.removedAt) throw new NotFoundException();
+    const own = { id: card.id, name: card.name };
+    if (asked === undefined) return own;
     const wanted = plain(asked);
     const hers =
-      own &&
-      (own.id === asked ||
-        plain(own.name) === wanted ||
-        plain(own.name).split(' ')[0] === wanted);
+      own.id === asked.toLowerCase() ||
+      plain(own.name) === wanted ||
+      plain(own.name).split(' ')[0] === wanted;
     if (!hers) throw forbidden('A mechanic reads only her own day sheet');
     return own;
   }
 
   // By id, full name or first name. A name that matches no one or more than
   // one is answered with the garage's mechanics, so the caller can ask which.
-  private async mechanicOf(garageId: string, asked: string) {
+  private async mechanicOf(garageId: string, asked = '') {
     const mechanics = await this.prisma.mechanic.findMany({
       orderBy: { name: 'asc' },
       select: { id: true, name: true },

@@ -94,7 +94,8 @@ export function capabilitiesOf(
   permissions: Permissions,
 ): Capability[] {
   // A role outside the table (the system's own actor) holds nothing.
-  if (role !== 'mechanic') return [...(TABLE[role] ?? [])];
+  if (role !== 'mechanic')
+    return Object.hasOwn(TABLE, role) ? [...TABLE[role]] : [];
   return [
     ...TABLE.mechanic,
     ...MECHANIC_PERMISSIONS.filter(([p]) => permissions?.[p] === true).map(
