@@ -2,7 +2,7 @@ import type { Template } from '../templates';
 
 // The car by brand and model, never its plate, the day the ITP expires and
 // the days left on the day it is sent. A row sent before it had these values
-// falls back to the generic text. Each WhatsApp name is a template registered
+// falls back to the generic text, its e-mail too. Each WhatsApp name is a template registered
 // with Brevo, one per language.
 export const DUE_ITP: Template = {
   audience: 'driver',
@@ -38,6 +38,7 @@ export const DUE_ITP: Template = {
     dueOn: '2026-11-13',
     left: 30,
   },
+  genericEmailWhenMissing: true,
   push: {
     en: {
       body: 'The ITP on your {car} expires on {dueOn}, in {left}. Book the inspection in time.',

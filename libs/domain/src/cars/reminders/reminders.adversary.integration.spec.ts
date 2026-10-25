@@ -104,7 +104,7 @@ beforeEach(async () => {
   driver = await account('ana');
 });
 
-// @traces 092-FR-008
+// @traces 092-FR-008 094-FR-003
 describe('the stage days of a date set on 8 October 2026', () => {
   const today = '2026-10-08';
 
@@ -168,7 +168,7 @@ describe('the stage days of a date set on 8 October 2026', () => {
   });
 });
 
-// @traces 092-FR-008
+// @traces 092-FR-008 094-FR-003
 describe('a date changed after a stage went out', () => {
   it('keeps the stage sent when the same date is set again, so a redelivery sends nothing', async () => {
     const carId = await car(driver);
@@ -205,7 +205,7 @@ describe('a date changed after a stage went out', () => {
   });
 });
 
-// @traces 092-FR-006
+// @traces 092-FR-006 094-FR-004
 describe('a removal beside other cars', () => {
   it('cancels every reminder of the car and none of another car of the same driver', async () => {
     const gone = await car(driver, 'Logan');

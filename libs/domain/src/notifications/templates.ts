@@ -63,6 +63,9 @@ export interface Template {
   push?: Texts<PushText>;
   sms?: Texts<string>;
   whatsapp?: Texts<WhatsAppText>;
+  // Its e-mail used to be the generic one: a row stored before its values
+  // existed still gets that, rather than failing.
+  genericEmailWhenMissing?: true;
 }
 
 interface Rendered {
@@ -209,6 +212,11 @@ export function render<C extends Channel>(
   };
   const fill = (source: string) =>
     source.replace(PLACEHOLDER, (_, key: string) => value(key));
+  const older =
+    channel === 'email' &&
+    template.genericEmailWhenMissing &&
+    Object.keys(template.values).some((key) => params[key] == null);
+  if (older) return render('GENERIC', channel, languageCode, params, registry);
   return renderText(channel, text, fill, value, language, fail) as Rendered[C];
 }
 

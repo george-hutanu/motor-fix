@@ -86,6 +86,7 @@ async function runOn(day: string, clock = MORNING) {
   return reminders.run(day);
 }
 
+// @traces 094-FR-002 094-FR-003 094-FR-004 094-FR-005 094-FR-009
 describe('an ITP reminder due on 10 December 2026', () => {
   let driver: string;
   let carId: string;
@@ -239,6 +240,7 @@ describe('an ITP reminder due on 10 December 2026', () => {
     expect(await prisma.reminder.count({ where: { carId } })).toBe(1);
   });
 
+  // @traces 094-FR-011
   it('writes the bell at once at 23:15 and holds the e-mail until 08:00', async () => {
     expect(await runOn('2026-11-10', NIGHT)).toBe(1);
 
@@ -258,8 +260,45 @@ describe('an ITP reminder due on 10 December 2026', () => {
     expect(await rows('DUE_ITP')).toHaveLength(0);
     expect(await reminder(carId)).toMatchObject({ sent30: true });
   });
+
+  it('writes only the bell while the due-date messages are switched off', async () => {
+    await prisma.notificationPreference.create({
+      data: {
+        accountId: driver,
+        channel: 'email',
+        enabled: false,
+        type: 'DUE_ITP',
+      },
+    });
+    await runOn('2026-11-10');
+    expect(await rows('DUE_ITP')).toHaveLength(1);
+    expect(
+      await prisma.notification.count({
+        where: { channel: { not: 'in_app' }, kind: 'DUE_ITP' },
+      }),
+    ).toBe(0);
+  });
+
+  // @traces 094-FR-012
+  it('does not send again a stage whose e-mail ended failed', async () => {
+    await runOn('2026-11-10');
+    await prisma.notification.updateMany({
+      data: { status: 'failed' },
+      where: { channel: 'email', kind: 'DUE_ITP' },
+    });
+    expect(await runOn('2026-11-11')).toBe(0);
+    expect(await rows('DUE_ITP', 'email')).toHaveLength(1);
+  });
+
+  // @traces 094-FR-012
+  it('writes no audit entry for a reminder it sends', async () => {
+    const before = await prisma.activityLog.count();
+    await runOn('2026-11-10');
+    expect(await prisma.activityLog.count()).toBe(before);
+  });
 });
 
+// @traces 094-FR-002
 describe('a run that fails part-way', () => {
   it('fails, keeps what it sent, and a retry sends the rest once', async () => {
     const driver = await account('george');
@@ -397,7 +436,7 @@ describe('the tyre reminders', () => {
   });
 });
 
-// @traces 092-FR-008
+// @traces 092-FR-008 094-FR-003
 describe('a date set by an edit', () => {
   let driver: string;
   let carId: string;
@@ -686,7 +725,7 @@ describe('the car events', () => {
   });
 });
 
-// @traces 092-FR-007
+// @traces 092-FR-007 094-FR-004
 describe('the daily run and a removed car', () => {
   let driver: string;
   let carId: string;

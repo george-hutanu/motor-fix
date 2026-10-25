@@ -552,6 +552,20 @@ describe('the ITP reminder texts', () => {
     );
   });
 
+  // A row stored before the days left and the link existed: the e-mail it
+  // was going to get, the generic one.
+  it('sends the generic e-mail for a row without its values', () => {
+    const old = render('DUE_ITP', 'email', 'ro', {
+      app: APP,
+      car: 'BMW 320d',
+      dueOn: '2026-11-13',
+    });
+    expect(old).toEqual(render('GENERIC', 'email', 'ro', { app: APP }));
+    expect(() =>
+      render('DUE_ITP', 'push', 'en', { car: 'BMW 320d', dueOn: '2026-11-13' }),
+    ).toThrow(TemplateError);
+  });
+
   it('keeps the phone texts it had', () => {
     expect(render('DUE_ITP', 'sms', 'ro', params)).toBe(
       'MotorFix: ITP-ul mașinii tale expiră curând. Detalii în aplicație.',
