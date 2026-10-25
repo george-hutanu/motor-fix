@@ -330,6 +330,19 @@
     },
     {
       "kind": "queue",
+      "name": "review-posted",
+      "source": "libs/domain/src/notifications/review-posted/review-posted.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_review_announced_total (built, muted, skipped) on motorfix-queues, with one ReviewPosted log line per event naming the review id; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-74"
+    },
+    {
+      "kind": "queue",
       "name": "verification-result",
       "source": "libs/domain/src/notifications/verification-result/verification-result.fan-out.ts",
       "dashboard": "motorfix-queues",
@@ -862,6 +875,15 @@
       "alerts": "none",
       "reason": "counts each sent quote announced to its driver by outcome (built, muted), with the fan-out's log line naming the quote id; also on motorfix-product; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-344"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_announced_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": "none",
+      "reason": "counts each posted review announced to its garage's owners by outcome (built, muted, skipped), with the fan-out's log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
+      "story": "ST-74"
     },
     {
       "kind": "endpoint",
