@@ -4,18 +4,24 @@ import {
   COURTESY_PRICE_MAX_BANI,
   COURTESY_PRICE_MIN_BANI,
   COURTESY_PRICE_STEP_BANI,
+  clipStretch,
   closedDayError,
   closedDaysError,
+  DAY_OFF_DAYS_AHEAD,
+  DAY_OFF_NOTE_MAX,
   DEFAULT_HOURS,
   FACILITIES,
   FACILITIES_NOTE_MAX,
   hoursComplete,
   intervalsError,
+  isDay,
   isFacilitiesNote,
   isHoursSection,
   isTime,
   isWeeklyHours,
   PAYMENTS,
+  SATURDAY_DEFAULT,
+  stretchOf,
   TIMES,
   todayInBucharest,
   WEEKDAYS,
@@ -501,4 +507,92 @@ describe("today's date in Bucharest", () => {
       '2026-01-16',
     );
   });
+});
+
+// @traces 058-FR-001 058-FR-002
+describe("a mechanic's stretch of a day", () => {
+  it('reads one interval as itself', () => {
+    expect(stretchOf([['08:00', '16:30']])).toEqual(['08:00', '16:30']);
+  });
+
+  it('reads two intervals as the first opening to the last closing', () => {
+    expect(
+      stretchOf([
+        ['08:00', '12:00'],
+        ['13:00', '17:00'],
+      ]),
+    ).toEqual(['08:00', '17:00']);
+  });
+
+  it('reads no interval as none', () => {
+    expect(stretchOf([])).toBeNull();
+  });
+});
+
+// @traces 058-FR-013 058-FR-014
+describe('a stretch clipped to a bound', () => {
+  it.each([
+    [
+      ['07:00', '18:00'],
+      ['08:00', '17:00'],
+      ['08:00', '17:00'],
+    ],
+    [
+      ['09:00', '18:00'],
+      ['08:00', '16:00'],
+      ['09:00', '16:00'],
+    ],
+    [
+      ['09:00', '14:00'],
+      ['08:00', '17:00'],
+      ['09:00', '14:00'],
+    ],
+    [
+      ['09:00', '14:00'],
+      ['10:00', '12:00'],
+      ['10:00', '12:00'],
+    ],
+  ] as const)('clips %j to %j as %j', (stretch, bound, clipped) => {
+    expect(clipStretch([...stretch], [...bound])).toEqual(clipped);
+  });
+
+  it.each([
+    [
+      ['14:00', '18:00'],
+      ['08:00', '14:00'],
+    ],
+    [
+      ['06:00', '08:00'],
+      ['08:00', '17:00'],
+    ],
+  ] as const)('reads %j with no overlap of %j as none', (stretch, bound) => {
+    expect(clipStretch([...stretch], [...bound])).toBeNull();
+  });
+
+  it('reads a stretch with no bound, or no stretch, as none', () => {
+    expect(clipStretch(['08:00', '12:00'], null)).toBeNull();
+    expect(clipStretch(null, ['08:00', '12:00'])).toBeNull();
+  });
+});
+
+// @traces 058-FR-004 058-FR-014
+describe('the schedule limits', () => {
+  it('fills Saturday with 09:00 to 14:00', () => {
+    expect(SATURDAY_DEFAULT).toEqual(['09:00', '14:00']);
+  });
+
+  it('keeps a note to 120 characters and a day off within 365 days', () => {
+    expect([DAY_OFF_NOTE_MAX, DAY_OFF_DAYS_AHEAD]).toEqual([120, 365]);
+  });
+
+  it.each(['2027-05-12', '2028-02-29'])('takes the day %s', (day) => {
+    expect(isDay(day)).toBe(true);
+  });
+
+  it.each(['2027-02-30', '2027-13-01', '12.05.2027', 20270512, null])(
+    'refuses %j as a day',
+    (day) => {
+      expect(isDay(day)).toBe(false);
+    },
+  );
 });
