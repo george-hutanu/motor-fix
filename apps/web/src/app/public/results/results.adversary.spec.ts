@@ -128,6 +128,7 @@ const overlays = {
 const messages = new Subject<LiveMessage>();
 const resync = new Subject<void>();
 const live = {
+  names: jest.fn((_view: unknown) => true),
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
   register: jest.fn((_view: unknown) => () => undefined),

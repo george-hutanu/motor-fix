@@ -290,6 +290,26 @@ describe('PublicLive', () => {
     },
   );
 
+  it('tells whether the stream open now names a view, never one still opening, lost or opened for another', async () => {
+    const live = setUp();
+    expect(live.names({ garage: 'g-1' })).toBe(false);
+
+    live.register({ brand: 'b-1', garages: ['g-1', 'g-2'] });
+    await settle();
+    expect(live.names({ brand: 'b-1', garages: ['g-1', 'g-2'] })).toBe(true);
+    expect(live.names({ brand: 'b-1', garages: ['g-1'] })).toBe(false);
+    expect(live.names({ garage: 'g-3' })).toBe(false);
+
+    answers = ['fail'];
+    live.register({ garage: 'g-3' });
+    await settle();
+    expect(live.names({ garage: 'g-3' })).toBe(false);
+    expect(live.names({ brand: 'b-1', garages: ['g-1', 'g-2'] })).toBe(false);
+
+    await elapse(1_100);
+    expect(live.names({ garage: 'g-3' })).toBe(true);
+  });
+
   it('passes on the events of its stream, filtered by kind', async () => {
     const live = setUp();
     const seen: string[] = [];

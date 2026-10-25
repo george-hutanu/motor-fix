@@ -152,6 +152,7 @@ const overlays = {
 const messages = new Subject<LiveMessage>();
 const resync = new Subject<void>();
 const live = {
+  names: jest.fn((_view: unknown) => true),
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
   register: jest.fn((_view: unknown) => () => undefined),
@@ -224,6 +225,7 @@ beforeEach(() => {
   mapView.light.mockClear();
   overlays.open.mockClear();
   live.register.mockClear();
+  live.names.mockReset().mockImplementation(() => true);
   reduced.set(false);
   layout.set('phone');
 });
@@ -3862,6 +3864,47 @@ describe('Results loading more', () => {
       ]);
     },
   );
+
+  // @traces 1356-FR-008
+  it('reads nothing more on the way back for streams opened for another view before the one naming the list shown, and re-reads on a later re-open', async () => {
+    await loaded();
+    await scrolledToEnd();
+    await reads[1]?.answer(
+      pageOf({ items: garages(20, 20), nextCursor: 'c2' }),
+    );
+    await harness.navigateByUrl('/ro/elsewhere');
+    await settle();
+    await harness.navigateByUrl(`/ro/garages?brand=bmw&near=${NEAR}`);
+    await settle();
+    await reads[2]?.answer(first());
+    await settle();
+    pinsApi.mockClear();
+
+    // The profile's stream, and one opened before the list was named.
+    live.names.mockReturnValue(false);
+    resync.next();
+    await settle();
+    resync.next();
+    await settle();
+    live.names.mockReturnValue(true);
+    resync.next();
+    await settle();
+
+    expect(searches().slice(2)).toEqual([{ brand: 'bmw', near: NEAR }]);
+    expect(pinsApi).not.toHaveBeenCalled();
+    expect(live.names).toHaveBeenLastCalledWith({
+      brand: 'b-bmw',
+      garages: Array.from({ length: 20 }, (_, i) => `g${i}`),
+    });
+
+    resync.next();
+    await settle();
+    await reads[3]?.answer(first());
+    await settle();
+
+    expect(pinsApi).toHaveBeenCalledTimes(1);
+    expect(searches()).toHaveLength(5);
+  });
 
   // @traces 1356-FR-008
   it('starts another search from its first page, logged', async () => {

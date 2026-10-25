@@ -436,6 +436,11 @@ export class Results {
     source: this.searched,
   });
   private readonly found = viewChild<ElementRef<HTMLElement>>('found');
+  // What the live stream is asked to name for this list.
+  private readonly view = computed(() => ({
+    brand: this.answer()?.brand.id,
+    garages: this.loaded(),
+  }));
   private readonly loaded = computed(
     () => {
       const shown = new Set(this.answer()?.items.map((garage) => garage.id));
@@ -612,10 +617,7 @@ export class Results {
       if (!kept || this.bar().get('near')) return;
       untracked(() => void this.write({ near: nearOf(kept) }));
     });
-    followPublicView(() => ({
-      brand: this.answer()?.brand.id,
-      garages: this.loaded(),
-    }));
+    followPublicView(() => this.view());
     this.live
       .on(KINDS)
       .pipe(takeUntilDestroyed())
@@ -623,8 +625,11 @@ export class Results {
     // The stream may have missed events while it was closed.
     this.live.resync.pipe(takeUntilDestroyed()).subscribe(() => {
       if (!untracked(this.answer)) return;
+      // The kept list's one read covers every stream opened until the one
+      // naming it; one opened for the profile left, or before the list was
+      // named, says nothing of it.
       if (this.restored) {
-        this.restored = false;
+        if (this.live.names(untracked(this.view))) this.restored = false;
         return;
       }
       for (const id of untracked(this.loaded)) this.wanted.add(id);
