@@ -49,6 +49,7 @@ async function render(role: string, capabilities: string[]) {
         useValue: {
           current: account,
           ended: new Subject<void>(),
+          garageGone: () => false,
           shown: account,
           token: () => 'access',
         },

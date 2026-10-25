@@ -1,7 +1,8 @@
 import { EventEmitter } from 'node:events';
 
+import type { Role } from '@motor-fix/contracts/capabilities';
+
 import { LiveHub } from './live.hub';
-import type { Role } from '../../auth/capabilities';
 import type { GarageAccess } from '../garage-access';
 
 class Sink extends EventEmitter {

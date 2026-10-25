@@ -115,6 +115,7 @@ async function render(
         useValue: {
           current,
           ended: new Subject<void>(),
+          garageGone: () => false,
           reload,
           shown,
           signOut,
