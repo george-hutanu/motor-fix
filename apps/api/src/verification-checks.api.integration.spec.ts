@@ -2,15 +2,16 @@ import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 
 // @traces 300-FR-003 300-FR-009 300-FR-010 300-FR-011
 
-const api = fileApi();
+const api = apiBoot();
 let app: INestApplication;
 let db: Client;
 
@@ -61,7 +62,7 @@ beforeAll(async () => {
       process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres',
   });
   await db.connect();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 beforeEach(async () => {
   admin = bearer(await account('admin'), 'admin');

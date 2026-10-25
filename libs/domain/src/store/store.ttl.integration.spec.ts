@@ -6,6 +6,7 @@ import {
   AdminAccountsService,
   SUMMARY_KEY,
 } from '../admin/admin-accounts/admin-accounts.service';
+import { AuditService } from '../audit/audit.service';
 import { assistantThrottle } from '../auth/assistant/assistant.service';
 import { Attempts, AUTH_REDIS } from '../auth/attempts';
 import { ConsentThrottle } from '../auth/consents/consents.throttle';
@@ -24,7 +25,7 @@ import { serialDatabase } from '../auth/serial-db.testing';
 import { CacheService, cacheKey, lockKey } from '../cache/cache.service';
 import { purgeTags } from '../cache/purge';
 import { warmCache } from '../cache/warm-up/warm-up';
-import { BrandsService } from '../catalogue/brands.service';
+import { BrandsService } from '../catalogue/brands/brands.service';
 import { ListingDraftThrottle } from '../garages/listing-drafts/listing-drafts.throttle';
 import { ProfileViewsService } from '../insights/profile-views/profile-views.service';
 import { ProfileViewsThrottle } from '../insights/profile-views/profile-views.throttle';
@@ -226,6 +227,7 @@ const steps: [string, () => Promise<unknown>][] = [
       new BrandsService(
         { brand: { findMany: async () => [] } } as never,
         store,
+        new AuditService(),
       ).search(),
   ],
   [

@@ -7,18 +7,21 @@ import {
   type Maintenance,
   signAccessToken,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
 
-const api = fileApi();
+const api = apiBoot();
 
 const KNOWN = [
   'GET /api/v1/admin/accounts',
   'GET /api/v1/admin/accounts/summary',
+  // @traces 105-FR-019
+  'GET /api/v1/admin/brands',
   // @traces 103-FR-002 404-FR-006
   'GET /api/v1/admin/demand',
   // @traces 066-FR-005
@@ -32,7 +35,9 @@ const KNOWN = [
   'GET /api/v1/admin/system-log',
   'GET /api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url',
   'GET /api/v1/admin/verification-queue',
+  'PATCH /api/v1/admin/brands/{id}',
   'PATCH /api/v1/admin/platform-rules/{key}',
+  'POST /api/v1/admin/brands',
   'POST /api/v1/admin/garages/{id}/suspend',
   'POST /api/v1/admin/live/test',
   'POST /api/v1/admin/news',
@@ -82,7 +87,7 @@ beforeAll(async () => {
         path,
       })),
     );
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(() => api.stop());
 

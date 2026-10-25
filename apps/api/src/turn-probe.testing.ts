@@ -13,7 +13,7 @@ export async function expectTurnFree(databaseUrl: string) {
     leaked,
   ]);
   clearTimeout(timer);
-  // release() also ends a take still waiting, so it never hangs here.
+  // A take still asking for the turn stops once released.
   await probe.release();
   expect(outcome).toBe('free');
 }

@@ -469,6 +469,36 @@ describe("the garage's team read route", () => {
   });
 });
 
+// @traces 105-FR-018
+describe('the admin brand list routes', () => {
+  repoIt(
+    'are OpenAPI operations the inventory lists with its metric and alerts',
+    () => {
+      const paths = JSON.parse(
+        readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+      ).paths;
+      const inventory = JSON.parse(
+        readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+      );
+      const entries: { name?: string; metric?: string; alerts?: string[] }[] =
+        Object.values(inventory).flatMap((each) =>
+          Array.isArray(each) ? each : [],
+        );
+      const brands = entries.find((each) => each.name === 'admin-brands');
+
+      expect(Object.keys(paths['/api/v1/admin/brands'])).toEqual(
+        expect.arrayContaining(['get', 'post']),
+      );
+      expect(Object.keys(paths['/api/v1/admin/brands/{id}'])).toEqual([
+        'patch',
+      ]);
+      expect(brands?.metric).toMatch(/\/api\/v1\/admin\/brands\/:id/);
+      expect(brands?.alerts).toEqual(['api-error-rate', 'api-latency']);
+      expect(checkInventory(root)).toEqual([]);
+    },
+  );
+});
+
 describe('the browser monitoring records', () => {
   const inventory = JSON.parse(
     readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),

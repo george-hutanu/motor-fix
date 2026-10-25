@@ -1,3 +1,4 @@
-// The domain's environment, named under this project's <rootDir> so its Jest
-// config can name it on one line (Stryker reads the config without a preset).
+// The domain's Jest environment, which gives a database turn back once the
+// whole file is done (apiBoot hands it its stop). Named here so the config
+// keeps it on the one line Stryker reads (scripts/mutation.ts).
 module.exports = require('../../libs/domain/src/auth/database-turn.environment.cjs');

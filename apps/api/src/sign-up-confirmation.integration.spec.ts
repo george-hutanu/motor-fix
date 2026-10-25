@@ -2,12 +2,13 @@ import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { NotificationsService } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-import { fileApi } from './api-boot.testing';
+import { apiBoot } from './api-boot.testing';
 
-const api = fileApi();
+const api = apiBoot();
 const webUrl = process.env['PUBLIC_WEB_URL'];
 
 let app: INestApplication;
@@ -19,7 +20,7 @@ beforeAll(async () => {
     .spyOn(NotificationsService.prototype, 'sendAccountEmail')
     .mockResolvedValue(undefined);
   app = await api.start();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   try {

@@ -2,13 +2,14 @@ import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
 
-const api = fileApi();
+const api = apiBoot();
 
 // @traces 365-FR-013
 // @traces 206-FR-005
@@ -98,7 +99,7 @@ beforeAll(async () => {
     name: 'Andrei',
     roles: ['driver'],
   }));
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(() => api.stop());
 

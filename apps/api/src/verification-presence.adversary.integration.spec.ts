@@ -2,15 +2,16 @@ import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 
 // @traces 413-FR-002 413-FR-003 413-FR-004 413-FR-005
 
-const api = fileApi();
+const api = apiBoot();
 let app: INestApplication;
 let db: Client;
 
@@ -62,7 +63,7 @@ beforeAll(async () => {
       process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres',
   });
   await db.connect();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   await db.end();

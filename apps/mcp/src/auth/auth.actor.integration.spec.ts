@@ -6,7 +6,7 @@ import {
   createPrisma,
   outbox,
 } from '@motor-fix/domain';
-import { databaseTurn } from '@motor-fix/domain/testing';
+import { databaseTurn, TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import { callTool, defineTool, type ToolContext } from '@motor-fix/mcp-tools';
 import { HttpException } from '@nestjs/common';
 
@@ -23,9 +23,7 @@ const actors = new McpActorService(
   new AssistantGrants(prisma, new AuditService(), outbox),
 );
 
-// Waits out the longest holder, as serialDatabase does: the audit history's
-// million-row case in domain holds the turn for minutes.
-beforeAll(turn.take, 360_000);
+beforeAll(turn.take, TURN_WAIT_MS);
 afterAll(async () => {
   await prisma.$disconnect();
   await turn.release();

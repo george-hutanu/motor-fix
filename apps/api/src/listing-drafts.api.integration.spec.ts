@@ -1,14 +1,15 @@
 import { createHash, randomBytes } from 'node:crypto';
 
 import { NotificationsService, ROUTE_LIMITS } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import request from 'supertest';
 
-import { fileApi } from './api-boot.testing';
+import { apiBoot } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
 
-const api = fileApi();
+const api = apiBoot();
 const webUrl = process.env['PUBLIC_WEB_URL'];
 
 let app: INestApplication;
@@ -20,7 +21,7 @@ beforeAll(async () => {
     .spyOn(NotificationsService.prototype, 'sendToDraft')
     .mockResolvedValue(undefined);
   app = await api.start();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   try {

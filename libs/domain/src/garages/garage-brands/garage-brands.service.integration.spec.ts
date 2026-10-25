@@ -104,12 +104,14 @@ const history = (w: World) =>
   });
 
 describe('GarageBrandsService', () => {
+  // @traces 039-FR-017
   it('answers unstated for a brand the garage has said nothing about', async () => {
     const w = await world();
 
     expect(await brands.stanceFor(w.garage, w.dacia)).toBe('unstated');
   });
 
+  // @traces 039-FR-017
   it('answers works_on and does_not_take as the garage set them', async () => {
     const w = await world();
     await setStance(w, w.dacia, 'works_on');
@@ -119,6 +121,7 @@ describe('GarageBrandsService', () => {
     expect(await brands.stanceFor(w.garage, w.tesla)).toBe('does_not_take');
   });
 
+  // @traces 039-FR-014
   it('ticks the four fuels on a brand first marked as worked on', async () => {
     const w = await world();
 
@@ -132,6 +135,7 @@ describe('GarageBrandsService', () => {
     });
   });
 
+  // @traces 039-FR-014
   it('keeps no fuel ticked on a brand the garage does not take', async () => {
     const w = await world();
 
@@ -145,6 +149,7 @@ describe('GarageBrandsService', () => {
     });
   });
 
+  // @traces 039-FR-014
   it('refuses a fuel tick on a brand the garage does not take', async () => {
     const w = await world();
     await setStance(w, w.tesla, 'does_not_take');
@@ -157,6 +162,7 @@ describe('GarageBrandsService', () => {
     ).rejects.toThrow(/garage_brand_fuel_check/);
   });
 
+  // @traces 039-FR-013
   it('keeps one row per garage and brand', async () => {
     const w = await world();
     await setStance(w, w.dacia, 'works_on');
@@ -167,6 +173,7 @@ describe('GarageBrandsService', () => {
     ).toBe(1);
   });
 
+  // @traces 039-FR-014
   it('clears the fuels and the jobs of a brand the garage stops taking', async () => {
     const w = await world();
     await setStance(w, w.dacia, 'works_on');
@@ -299,6 +306,7 @@ describe('garage limits', () => {
     data: { brandNote?: string; refusalPhrase?: string },
   ) => prisma.garage.update({ data, where: { id: garageId } });
 
+  // @traces 039-FR-016
   it('keeps a brand note of 140 characters and a refusal phrase of 60', async () => {
     const w = await world();
 
@@ -315,6 +323,7 @@ describe('garage limits', () => {
     });
   });
 
+  // @traces 039-FR-016
   it.each([
     ['a brand note of 141 characters', { brandNote: 'a'.repeat(141) }],
     ['a blank brand note', { brandNote: '   ' }],

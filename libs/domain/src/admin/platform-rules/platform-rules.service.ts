@@ -6,10 +6,10 @@ import type {
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
+import { refusal } from '../../auth/http-refusal';
 import { MAINTENANCE, type Maintenance } from '../../auth/maintenance';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { refusal } from '../../auth/sign-up.service';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type {
   PlatformRule,
@@ -23,7 +23,7 @@ export interface PlatformRulesOptions {
   webUrl?: string;
 }
 
-export type ReviewPolicy =
+type ReviewPolicy =
   | { mode: 'job_only' }
   | { mode: 'profile_allowed'; source: 'profile' };
 

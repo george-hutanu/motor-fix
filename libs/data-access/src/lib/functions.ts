@@ -65,6 +65,12 @@ export type { EmailChangeControllerRequest$Params as EmailChangeControllerReques
 export { emailChangeControllerRequest as emailChangeControllerRequest } from './fn/me/email-change-controller-request';
 export type { MeEmailConfirmationControllerAskAgain$Params as MeEmailConfirmationControllerAskAgain$Params } from './fn/me/me-email-confirmation-controller-ask-again';
 export { meEmailConfirmationControllerAskAgain as meEmailConfirmationControllerAskAgain } from './fn/me/me-email-confirmation-controller-ask-again';
+export type { DataExportControllerLatest$Params as DataExportControllerLatest$Params } from './fn/me/data-export-controller-latest';
+export { dataExportControllerLatest as dataExportControllerLatest } from './fn/me/data-export-controller-latest';
+export type { DataExportControllerRequest$Params as DataExportControllerRequest$Params } from './fn/me/data-export-controller-request';
+export { dataExportControllerRequest as dataExportControllerRequest } from './fn/me/data-export-controller-request';
+export type { DataExportControllerDownload$Params as DataExportControllerDownload$Params } from './fn/me/data-export-controller-download';
+export { dataExportControllerDownload as dataExportControllerDownload } from './fn/me/data-export-controller-download';
 export type { PhoneChangeControllerRequest$Params as PhoneChangeControllerRequest$Params } from './fn/me/phone-change-controller-request';
 export { phoneChangeControllerRequest as phoneChangeControllerRequest } from './fn/me/phone-change-controller-request';
 export type { PhoneChangeControllerConfirm$Params as PhoneChangeControllerConfirm$Params } from './fn/me/phone-change-controller-confirm';
@@ -117,6 +123,12 @@ export type { AccountControllerRestore$Params as AccountControllerRestore$Params
 export { accountControllerRestore as accountControllerRestore } from './fn/admin/account-controller-restore';
 export type { AccountControllerDeleteOnRequest$Params as AccountControllerDeleteOnRequest$Params } from './fn/admin/account-controller-delete-on-request';
 export { accountControllerDeleteOnRequest as accountControllerDeleteOnRequest } from './fn/admin/account-controller-delete-on-request';
+export type { AdminBrandsControllerList$Params as AdminBrandsControllerList$Params } from './fn/admin/admin-brands-controller-list';
+export { adminBrandsControllerList as adminBrandsControllerList } from './fn/admin/admin-brands-controller-list';
+export type { AdminBrandsControllerCreate$Params as AdminBrandsControllerCreate$Params } from './fn/admin/admin-brands-controller-create';
+export { adminBrandsControllerCreate as adminBrandsControllerCreate } from './fn/admin/admin-brands-controller-create';
+export type { AdminBrandsControllerUpdate$Params as AdminBrandsControllerUpdate$Params } from './fn/admin/admin-brands-controller-update';
+export { adminBrandsControllerUpdate as adminBrandsControllerUpdate } from './fn/admin/admin-brands-controller-update';
 export type { JobDecisionsControllerQueue$Params as JobDecisionsControllerQueue$Params } from './fn/admin/job-decisions-controller-queue';
 export { jobDecisionsControllerQueue as jobDecisionsControllerQueue } from './fn/admin/job-decisions-controller-queue';
 export type { JobDecisionsControllerApprove$Params as JobDecisionsControllerApprove$Params } from './fn/admin/job-decisions-controller-approve';

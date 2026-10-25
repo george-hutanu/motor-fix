@@ -2,16 +2,17 @@ import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 
 // @traces 298-FR-001 298-FR-003 298-FR-014
 // @traces 299-FR-001 299-FR-003 299-FR-004 299-FR-005 299-FR-018
 
-const api = fileApi();
+const api = apiBoot();
 let app: INestApplication;
 let db: Client;
 let admin: string;
@@ -77,7 +78,7 @@ beforeAll(async () => {
       process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres',
   });
   await db.connect();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 beforeEach(async () => {
   await db.query('DELETE FROM system_log_entry WHERE at >= $1', [FUTURE]);

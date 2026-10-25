@@ -7,15 +7,16 @@ import {
   type Maintenance,
   signAccessToken,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 
 // @traces 066-FR-001 066-FR-002 066-FR-003 066-FR-005 066-FR-010
 
-const api = fileApi();
+const api = apiBoot();
 let app: INestApplication;
 let db: Client;
 let admin: string;
@@ -45,7 +46,7 @@ beforeAll(async () => {
     roles: ['admin'],
   });
   admin = bearer(account.id);
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   await db.end();

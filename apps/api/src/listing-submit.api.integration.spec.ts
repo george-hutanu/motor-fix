@@ -1,16 +1,17 @@
 import { PRISMA } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 
-import { fileApi } from './api-boot.testing';
+import { apiBoot } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
 import { completeDraft, signedIn, submit } from './listing-submit.testing';
 
-const api = fileApi();
+const api = apiBoot();
 let app: INestApplication;
 
 beforeAll(async () => {
   app = await api.start();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(() => api.stop());
 

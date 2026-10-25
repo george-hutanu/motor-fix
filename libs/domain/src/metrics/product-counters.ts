@@ -43,6 +43,10 @@ import {
   requestDeclines,
 } from '../quotes/quotes/quotes.metrics';
 import {
+  RETENTION_KINDS,
+  type RetentionKind,
+} from '../retention/retention.config';
+import {
   REVIEW_POSTED_OUTCOMES,
   reviewsPosted,
 } from '../reviews/reviews.metrics';
@@ -66,9 +70,21 @@ export type AccountDeletionOutcome =
   | 'deleted'
   | 'forbidden'
   | 'refused_owner'
+  | 'refused_in_work'
   | 'reauth_required'
   | 'mismatch'
   | 'failed';
+// Not started at 0 either: the requests and the download are the API's, the
+// build and the expiry the worker's.
+export type DataExportOutcome =
+  | 'requested'
+  | 'too_soon'
+  | 'already_ready'
+  | 'forbidden'
+  | 'ready'
+  | 'failed'
+  | 'expired'
+  | 'downloaded';
 // Not started at 0 either, for the same cap.
 export type AdminAccountAction =
   | 'reset_access'
@@ -153,6 +169,11 @@ function counter(name: string, description: string): Counter {
 
 const searches = () =>
   counter('motorfix_searches_total', 'Garage searches, by outcome');
+const retentionRows = () =>
+  counter(
+    'motorfix_retention_rows_total',
+    'Rows the nightly retention job removed or anonymised, by kind',
+  );
 const sortChanges = () =>
   counter('motorfix_sort_changes_total', 'Sort changes on Results, by sort');
 const signIns = () => counter('motorfix_sign_ins_total', 'Sign-ins, by method');
@@ -172,6 +193,11 @@ const accountDeletions = () =>
   counter(
     'motorfix_account_deletions_total',
     'Account deletions asked for, by outcome',
+  );
+const dataExports = () =>
+  counter(
+    'motorfix_data_exports_total',
+    'Copies of their data people asked for, by outcome',
   );
 const adminAccountActions = () =>
   counter(
@@ -382,6 +408,10 @@ export function countCompletionOpened() {
 
 export function countAccountDeletion(outcome: AccountDeletionOutcome) {
   accountDeletions().add(1, { outcome });
+}
+
+export function countDataExport(outcome: DataExportOutcome, by = 1) {
+  dataExports().add(by, { outcome });
 }
 
 export function countAdminAccountAction(
@@ -669,6 +699,7 @@ const STARTS: Record<
       ),
     ],
     [documentCycle, each('step', WORKER_DOCUMENT_CYCLE_STEPS)],
+    [retentionRows, each('kind', RETENTION_KINDS)],
     [channelFallbacks, FALLBACKS],
   ],
 };
@@ -679,6 +710,10 @@ export function initProductCounters(process: 'api' | 'worker') {
     const started = series();
     for (const one of labels) started.add(0, one);
   }
+}
+
+export function countRetention(kind: RetentionKind, rows: number) {
+  retentionRows().add(rows, { kind });
 }
 
 // A maintenance refusal is counted by motorfix_maintenance_refusals_total.

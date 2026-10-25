@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
 import { PRISMA } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-import { fileApi } from './api-boot.testing';
+import { apiBoot } from './api-boot.testing';
 
-const api = fileApi();
+const api = apiBoot();
 
 const PUBLIC_POLICY =
   'public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400';
@@ -23,7 +24,7 @@ beforeAll(async () => {
       status: 'approved',
     },
   });
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(() => api.stop());
 

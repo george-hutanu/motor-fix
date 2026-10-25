@@ -4,13 +4,14 @@ import type { AddressInfo } from 'node:net';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { AccountsService, PRISMA, signAccessToken } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
 
-const api = fileApi();
+const api = apiBoot();
 
 const PUBLIC_POLICY =
   'public, max-age=60, s-maxage=300, stale-while-revalidate=86400, stale-if-error=86400';
@@ -51,7 +52,7 @@ beforeAll(async () => {
     '/api/v1/job-types',
     '/api/v1/public-holidays?year=2026',
   ];
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(() => api.stop());
 

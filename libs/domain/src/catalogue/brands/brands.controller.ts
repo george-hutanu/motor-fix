@@ -3,8 +3,8 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
 import { BrandsService } from './brands.service';
-import { Public } from '../auth/actor.guard';
-import { PublicCache } from '../cache/http-cache/http-cache.interceptor';
+import { Public } from '../../auth/actor.guard';
+import { PublicCache } from '../../cache/http-cache/http-cache.interceptor';
 
 @ApiTags('brands')
 @Controller('brands')

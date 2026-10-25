@@ -1202,6 +1202,16 @@ async function seed(db: Client, secret: string): Promise<string> {
   }
   for (const garage of LISTED) await list(db, garage);
   for (const person of PEOPLE) await add(db, person, secret, restored);
+  // Saab, retired by the admin, so the admin's brand list shows a retired
+  // brand and the loader leaves it retired.
+  await db.query(
+    `INSERT INTO brand (id, key, name, slug, ro_possessive, active, updated_at, updated_by)
+     SELECT gen_random_uuid(), 'saab', 'Saab', 'saab', 'Saabul tău', false, now(), a.id
+     FROM account a WHERE a.email = 'admin@example.test'
+     ON CONFLICT (key) DO UPDATE SET active = false, updated_at = now(),
+       updated_by = EXCLUDED.updated_by
+     WHERE brand.updated_by IS NULL`,
+  );
   // The day the suspended driver was suspended, as an admin's change records
   // it; added apart from the account so a database seeded before has it too.
   await db.query(

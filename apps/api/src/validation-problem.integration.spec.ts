@@ -4,14 +4,15 @@ import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { AccountsService, signAccessToken } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
-import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 
 // Signed-in 400s through the app as production sets it up, ProblemFilter
 // included, so the answer's code is checked and not only its status.
-const api = fileApi();
+const api = apiBoot();
 
 let app: INestApplication;
 let bearer: string;
@@ -25,7 +26,7 @@ beforeAll(async () => {
     roles: ['garage', 'driver'],
   });
   bearer = `Bearer ${signAccessToken({ accountId: id, role: 'garage' }, TEST_TOKEN_SECRET, Date.now())}`;
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(() => api.stop());
 

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
 import { PASSWORD, ready, signIn } from './accounts.js';
+import { bucharestDay } from './bucharest-day.js';
 import { test } from './fixtures.js';
 import { type OwnDriver, ownDriver } from './own-driver.js';
 import { keepSeededLanguage } from './seeded-language.js';
@@ -48,14 +49,7 @@ async function sendRequest(request: APIRequestContext, own: OwnDriver) {
 // Tomorrow's date in Bucharest, as a date field takes it, and an instant's
 // Bucharest wall time.
 const BUCHAREST = { timeZone: 'Europe/Bucharest' } as const;
-// The next calendar day after today's in Bucharest: 24 hours on from just
-// after midnight on the day the clocks go back is still the same day.
-const tomorrow = () => {
-  const today = new Intl.DateTimeFormat('en-CA', BUCHAREST).format(new Date());
-  const next = new Date(`${today}T12:00:00Z`);
-  next.setUTCDate(next.getUTCDate() + 1);
-  return next.toISOString().slice(0, 10);
-};
+const tomorrow = () => bucharestDay(1);
 const wallTime = (instant: string) =>
   new Intl.DateTimeFormat('sv-SE', {
     ...BUCHAREST,

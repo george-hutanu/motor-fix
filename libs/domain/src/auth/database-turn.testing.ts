@@ -1,97 +1,81 @@
+import { basename } from 'node:path';
+
+import { PrismaPg } from '@prisma/adapter-pg';
 import { Client } from 'pg';
 
-// Jest runs test files in parallel workers against one database; files that
-// empty the account tables take turns by holding one advisory lock on a
-// dedicated connection that never idles out.
-//
-// A take queues on the lock, so the turn goes to the files in the order they
-// asked. A beforeAll that runs out of time leaves its take queued behind, and
-// release() cancels it on the server: left there, it took the turn once its
-// holder let go and never gave it back.
+import { PrismaClient } from '../generated/prisma/client';
+
+type JestGlobal = { expect?: { getState(): { testPath?: string } } };
+
+// Shown in pg_stat_activity, so CI's Database waits step names the holder.
+function holderName() {
+  const path = (globalThis as JestGlobal).expect?.getState().testPath;
+  return `turn ${path ? basename(path) : 'outside jest'}`.slice(0, 63);
+}
+
+// How long a take may wait: the turn goes out in order, so a file waits for
+// every file queued before it across the api, domain and mcp suites.
+export const TURN_WAIT_MS = 20 * 60_000;
+
+// One spec file at a time touches the shared tables. A take queues on the
+// lock, so the turn goes out in the order it was asked for. A queued
+// pg_advisory_lock outlives a hook that timed out on it, so release() calls
+// off a take still waiting before it closes the session: the take never holds
+// the turn once its spec file is done.
 export function databaseTurn(databaseUrl: string) {
-  const lock = new Client({ connectionString: databaseUrl });
-  let backend: Promise<number> | undefined;
-  let asking: Promise<unknown> | undefined;
-  let held = false;
+  const lock = new PrismaClient({
+    adapter: new PrismaPg({
+      application_name: holderName(),
+      connectionString: databaseUrl,
+      idleTimeoutMillis: 0,
+      max: 1,
+    }),
+  });
   let released = false;
-  let releasing: Promise<void> | undefined;
-
-  const connect = () => {
-    backend ??= lock.connect().then(async () => {
-      const { rows } = await lock.query<{ pid: number }>(
-        'SELECT pg_backend_pid() AS pid',
-      );
-      return rows[0].pid;
-    });
-    return backend;
-  };
-
-  const cancelAsk = async (pid: number) => {
-    const canceller = new Client({ connectionString: databaseUrl });
-    await canceller.connect();
+  let waiting:
+    | { caller: Client; done: Promise<unknown>; pid: number }
+    | undefined;
+  const callOff = async ({ caller, pid }: { caller: Client; pid: number }) => {
+    await caller.connect();
     try {
-      await canceller.query('SELECT pg_cancel_backend($1)', [pid]);
+      await caller.query('SELECT pg_cancel_backend($1)', [pid]);
     } finally {
-      await canceller.end();
+      await caller.end();
     }
   };
-
-  // A cancel can reach the server before the ask it is meant for, so it is
-  // sent again until the ask ends.
-  const cancelUntilSettled = async (ask: Promise<unknown>, pid: number) => {
-    let settled = false;
-    const ended = ask.then(
-      () => {
-        settled = true;
-      },
-      () => {
-        settled = true;
-      },
-    );
-    while (!settled) {
-      await cancelAsk(pid);
-      let timer: NodeJS.Timeout | undefined;
-      await Promise.race([
-        ended,
-        new Promise((resolve) => {
-          timer = setTimeout(resolve, 250);
-        }),
-      ]);
-      clearTimeout(timer);
-    }
-  };
-
-  const giveBack = async () => {
-    released = true;
-    if (!backend) return;
-    const pid = await backend.catch(() => undefined);
-    if (asking && pid !== undefined) await cancelUntilSettled(asking, pid);
-    // Closing the session gives the turn back if it was held.
-    await lock.end().catch(() => undefined);
-  };
-
   return {
-    // Gives the turn back, or ends a take still queued; once is enough.
-    release: () => {
-      releasing ??= giveBack();
-      return releasing;
+    release: async () => {
+      released = true;
+      const pending = waiting;
+      try {
+        if (pending) {
+          await callOff(pending);
+          await pending.done.catch(() => undefined);
+        }
+      } finally {
+        // Closing the session also drops a take the call-off missed.
+        await lock.$disconnect();
+      }
     },
-    // Resolves once the turn is held (at once when it already is), or,
-    // without it, once release() ran.
     take: async () => {
-      if (held || released) return;
-      asking = connect().then(() =>
-        lock.query('SELECT pg_advisory_lock(79079)'),
+      if (released) return;
+      const [session] = await lock.$queryRaw<{ pid: number }[]>`
+        SELECT pg_backend_pid() AS pid`;
+      // Started once here: a Prisma query runs again on every then().
+      const done = Promise.resolve(
+        lock.$queryRaw`SELECT 1 AS taken FROM pg_advisory_lock(79079)`,
       );
-      // A take cancelled by release() ends without the turn.
-      held = await asking.then(
-        () => true,
-        (error: unknown) => {
-          if (!released) throw error;
-          return false;
-        },
-      );
-      asking = undefined;
+      // Made before the wait: release() may run in the file's teardown, where
+      // a new client can no longer load the socket module it needs.
+      const caller = new Client({ connectionString: databaseUrl });
+      waiting = { caller, done, pid: Number(session?.pid) };
+      try {
+        await done;
+      } catch (error) {
+        if (!released) throw error;
+      } finally {
+        waiting = undefined;
+      }
     },
   };
 }

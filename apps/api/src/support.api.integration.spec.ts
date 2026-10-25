@@ -7,13 +7,14 @@ import {
   type Maintenance,
   signAccessToken,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 
 // @traces 280-FR-010 280-FR-011 280-FR-012 280-FR-013 280-FR-020 280-FR-022
 
@@ -22,7 +23,7 @@ const reader = countedMetrics();
 const outcome = (name: string) =>
   counterTotal(reader, 'motorfix_support_messages_total', { outcome: name });
 
-const api = fileApi();
+const api = apiBoot();
 let app: INestApplication;
 let db: Client;
 let saved: string | undefined;
@@ -83,7 +84,7 @@ beforeAll(async () => {
   const keys = await redis.keys('support:*');
   if (keys.length > 0) await redis.del(...keys);
   await redis.quit();
-}, 120_000);
+}, TURN_WAIT_MS);
 
 beforeEach(() => db.query('TRUNCATE support_message, support_reference'));
 

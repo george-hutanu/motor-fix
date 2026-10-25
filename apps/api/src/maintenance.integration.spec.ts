@@ -11,16 +11,17 @@ import {
   PlatformRulesModule,
   signAccessToken,
 } from '@motor-fix/domain';
+import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import { Client } from 'pg';
 import request from 'supertest';
 
-import { fileApi, TEST_TOKEN_SECRET } from './api-boot.testing';
+import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
 
-const api = fileApi();
+const api = apiBoot();
 
 // Every route that answers as usual while the platform is in maintenance.
 // Sign-up and the password reset refuse a valid request from anyone but an
@@ -83,7 +84,7 @@ beforeAll(async () => {
       };
     }),
   );
-}, 120_000);
+}, TURN_WAIT_MS);
 
 afterAll(async () => {
   try {

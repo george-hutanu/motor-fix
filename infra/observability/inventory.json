@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 185,
+    "count": 191,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -74,7 +74,8 @@
         "worker-queue-growing",
         "worker-jobs-failed",
         "worker-cdn-purge-failed",
-        "worker-memory"
+        "worker-memory",
+        "worker-data-export-failed"
       ],
       "story": "ST-881"
     },
@@ -112,7 +113,8 @@
         "worker-queue-growing",
         "worker-jobs-failed",
         "worker-cdn-purge-failed",
-        "worker-memory"
+        "worker-memory",
+        "worker-data-export-failed"
       ],
       "story": "ST-881"
     },
@@ -194,6 +196,19 @@
       ],
       "reason": "the system_log_entry table's purge: one scheduler, system-log-purge, at 03:30 Europe/Bucharest deletes system log entries older than 90 days, counted by motorfix_jobs_total{job_name,outcome}, logging the rows deleted and once on its final failure, which worker-jobs-failed alerts; each new entry also publishes system_log.added to the admin live channel straight to Redis, a failed publish logging one SystemLog warning",
       "story": "ST-297"
+    },
+    {
+      "kind": "queue",
+      "name": "retention",
+      "source": "libs/domain/src/retention/retention.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "the nightly retention job: one scheduler, retention-nightly, at 04:00 Europe/Bucharest deletes expired sign-in, phone-change, account and refresh tokens and sent invites, notifications past 12 months and legal documents (with their page files) of garages closed 5 years, and anonymises audit entries past their owner's closure; counted by motorfix_jobs_total{job_name,outcome}, one log line per kind with its count and one with the run's duration, a failed sweep failing the job (3 tries) and worker-jobs-failed on the last; worker-jobs-failed (reason overdue) fires when no run completed in 48 hours",
+      "story": "ST-1156"
     },
     {
       "kind": "product-counter",
@@ -375,6 +390,19 @@
       ],
       "reason": "one CATALOGUE_JOB_DECIDED to the proposing garage's owner for each catalogue_job.decided event, keyed by the event id; one log line per event with the job id, the decision and how many owners were told, never the reason; no counter of its own, as its pending twin has none: the notifications table holds what was built; the job runs in the worker's queue span; BullMQ's queue metrics on motorfix-queues cover depth, and the shared backlog and failed-job rules alert on a job that fails for good",
       "story": "ST-414"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-brands",
+      "source": "libs/domain/src/catalogue/brands/admin-brands.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/brands and /api/v1/admin/brands/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's brand list with its counts, the add and the edit (rename, retire, bring back), written to PostgreSQL with their audit entries in one transaction, then the cached active list dropped by bumping brands:version; one Brands log line per write naming the brand id and the admin's account id, never the name; a failed cache drop is a warning line; a 409 brand_exists or stale_value is the rule working; the API error-rate and latency rules cover the routes; no outside call",
+      "story": "ST-105"
     },
     {
       "kind": "queue",
@@ -1303,8 +1331,19 @@
       "alerts": [
         "api-account-deletion-failed"
       ],
-      "reason": "counts each request to delete an account by outcome (deleted, forbidden, refused_owner, reauth_required, mismatch, failed); api-account-deletion-failed fires on any failed deletion",
+      "reason": "counts each request to delete an account by outcome (deleted, forbidden, refused_owner, refused_in_work, reauth_required, mismatch, failed); api-account-deletion-failed fires on any failed deletion",
       "story": "ST-129"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_data_exports_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "worker-data-export-failed"
+      ],
+      "reason": "counts data exports by outcome: requested, too_soon, already_ready, forbidden and downloaded in the api, ready, failed and expired in the worker; worker-data-export-failed fires on any export failed after its last attempt",
+      "story": "ST-140"
     },
     {
       "kind": "product-counter",
@@ -1329,6 +1368,45 @@
       ],
       "reason": "each refusal logs one 'account deletion refused: <outcome>' line, a deletion logs 'account deleted <id>' and a failed farewell e-mail logs 'account deleted e-mail not sent'; outcomes count on motorfix_account_deletions_total; spans come from the HTTP and Prisma auto-instrumentation",
       "story": "ST-129"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-data-export-request",
+      "source": "libs/domain/src/auth/data-export/data-export.controller.ts",
+      "metric": "http.server.request.duration by http.route POST /api/v1/me/data-export",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a request logs 'data export requested <exportId>' and a refusal 'data export refused: <outcome>', ids only; outcomes count on motorfix_data_exports_total; spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-140"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-data-export-state",
+      "source": "libs/domain/src/auth/data-export/data-export.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/me/data-export",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read of the account's own newest export; an assistant's refusal logs 'data export refused: forbidden'; spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-140"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-data-export-download",
+      "source": "libs/domain/src/auth/data-export/data-export.controller.ts",
+      "metric": "http.server.request.duration by http.route GET /api/v1/me/data-export/download",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a download logs 'data export downloaded <exportId>' and counts downloaded on motorfix_data_exports_total; a store failure answers 503 storage_unavailable, counted by api-error-rate; spans come from the HTTP, S3 and Prisma auto-instrumentation",
+      "story": "ST-140"
     },
     {
       "kind": "endpoint",
@@ -1958,6 +2036,20 @@
     },
     {
       "kind": "queue",
+      "name": "data-export",
+      "source": "libs/domain/src/auth/data-export/data-export.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed",
+        "worker-data-export-failed"
+      ],
+      "reason": "carries the relay's data_export.requested and account.deleted events and the hourly sweep; log lines 'data export <id>: built <n> files, <bytes> bytes', 'failed after 3 attempts: <ErrorClass>', 'account deleted, expired' and 'data export sweep: expired <n>'; a build is retried with the job (3 tries) and counted by motorfix_data_exports_total; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-140"
+    },
+    {
+      "kind": "queue",
       "name": "car-account-deleted",
       "source": "libs/domain/src/cars/account-deleted/account-deleted.ts",
       "dashboard": "motorfix-queues",
@@ -2125,6 +2217,17 @@
       "alerts": "none",
       "reason": "counts each step of the yearly document cycle (reminders, overdue, uploads, acceptances, refusals); a count has no failure to alert on; the api-error-rate and worker-jobs-failed rules cover the services that report it",
       "story": "ST-68"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_retention_rows_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-worker",
+      "alerts": [
+        "worker-jobs-failed"
+      ],
+      "reason": "counts the rows each nightly retention run removed or anonymised, by kind (eight fixed kinds, started at 0 in the worker); panel Retention rows per night; a failed run and a run that has not completed in 48 hours are both worker-jobs-failed's (reason failed or overdue)",
+      "story": "ST-1156"
     },
     {
       "kind": "product-counter",
