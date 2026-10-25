@@ -178,9 +178,12 @@ img {
   max-width: calc(100% - 2 * var(--mf-space-3));
   position: absolute;
   right: var(--mf-space-3);
+  z-index: 2;
 }
 
+/* Solid, so no pin's rate or the ground shows through its text. */
 button {
+  background: var(--mf-panel-raised);
   min-height: var(--mf-tap);
 }
 

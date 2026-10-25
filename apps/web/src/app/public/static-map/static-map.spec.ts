@@ -309,6 +309,23 @@ describe('StaticMap, the attribution and the control', () => {
       expect(css).toMatch(/img\s*\{[^}]*object-fit:\s*none/);
     });
 
+    // QA lap 2: the pins' rates drew over the control's text on a phone.
+    it('draws the control and the credit above every pin, a lit one too', () => {
+      const lit = Number(
+        css.match(/\.pin\.lit\s*\{[^}]*z-index:\s*(\d+)/)?.[1] ?? 0,
+      );
+      const corner = Number(
+        css.match(/\.corner\s*\{[^}]*z-index:\s*(\d+)/)?.[1] ?? 0,
+      );
+      expect(corner).toBeGreaterThan(lit);
+    });
+
+    it('gives the control a solid panel, so no pin or ground shows through its text', () => {
+      expect(css).toMatch(
+        /button\s*\{[^}]*background:\s*var\(--mf-panel-raised\)/,
+      );
+    });
+
     it('gives the control at least the 44 px of a tap', () => {
       expect(css).toMatch(/button\s*\{[^}]*min-height:\s*var\(--mf-tap\)/);
     });

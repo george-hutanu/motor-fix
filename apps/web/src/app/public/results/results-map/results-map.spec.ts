@@ -214,6 +214,91 @@ describe('ResultsMap, the static map first', () => {
   });
 });
 
+// @traces 1196-FR-014
+// QA lap 2: measured while the phone's sheet still slid in, the corner's
+// credit sat under the sheet once it came to rest.
+describe('ResultsMap, the static map under a phone sheet that moves', () => {
+  let sheetTop = 700;
+  let sheet: HTMLElement;
+  const covered = () =>
+    (
+      element().querySelector('mf-static-map') as HTMLElement | null
+    )?.style.getPropertyValue('--covered');
+  beforeEach(() => {
+    sheetTop = 700;
+    jest
+      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockReturnValue(390);
+    jest
+      .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
+      .mockReturnValue(600);
+    jest
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const top =
+          this.tagName === 'MF-RESULTS-SHEET'
+            ? sheetTop
+            : this.classList.contains('map')
+              ? 100
+              : 0;
+        const bottom = this.classList.contains('map') ? 700 : top;
+        return {
+          bottom,
+          height: bottom - top,
+          left: 0,
+          right: 390,
+          toJSON: () => ({}),
+          top,
+          width: 390,
+          x: 0,
+          y: top,
+        } as DOMRect;
+      });
+  });
+
+  afterEach(() => {
+    sheet?.remove();
+    jest.restoreAllMocks();
+  });
+
+  it('measures the sheet again once it comes to rest, and moves the credit above it', async () => {
+    await render({ activated: false, on: 'phone' });
+    const parent = (fixture.nativeElement as HTMLElement)
+      .parentElement as HTMLElement;
+    sheet = document.createElement('mf-results-sheet');
+    parent.append(sheet);
+    sheetTop = 400;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(covered()).toBe('300px');
+
+    sheetTop = 600;
+    sheet.dispatchEvent(new Event('transitionend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(covered()).toBe('100px');
+  });
+
+  it('ignores the end of a transition inside the sheet', async () => {
+    await render({ activated: false, on: 'phone' });
+    const parent = (fixture.nativeElement as HTMLElement)
+      .parentElement as HTMLElement;
+    sheet = document.createElement('mf-results-sheet');
+    const chip = document.createElement('button');
+    sheet.append(chip);
+    parent.append(sheet);
+    sheetTop = 400;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+    sheetTop = 650;
+    chip.dispatchEvent(new Event('transitionend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(covered()).toBe('300px');
+  });
+});
+
 // @traces 1196-FR-015 1196-FR-016 1196-FR-019
 describe('ResultsMap, the hand-over to the interactive map', () => {
   const still = () =>

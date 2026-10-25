@@ -218,6 +218,24 @@ export class ResultsMap {
       resized.observe(this.host().nativeElement);
       destroyRef.onDestroy(() => resized.disconnect());
     });
+    // A phone's sheet slides in, and between its rests, after the first
+    // measure: once it stops, the static map's view and its corner follow.
+    afterNextRender(() => {
+      const around = this.element.nativeElement.parentElement;
+      if (!this.browser || !around) return;
+      const settled = (event: Event) => {
+        const target = event.target as Element | null;
+        if (target?.tagName !== 'MF-RESULTS-SHEET' || untracked(this.view))
+          return;
+        if (untracked(this.phone)) this.measure();
+      };
+      around.addEventListener('animationend', settled);
+      around.addEventListener('transitionend', settled);
+      destroyRef.onDestroy(() => {
+        around.removeEventListener('animationend', settled);
+        around.removeEventListener('transitionend', settled);
+      });
+    });
     effect(() => this.view()?.show(this.pins()));
     effect(() => this.view()?.light(this.lit()));
     effect(() => this.view()?.mark(this.place()));
