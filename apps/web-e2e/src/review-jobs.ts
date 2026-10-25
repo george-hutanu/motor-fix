@@ -69,3 +69,19 @@ export async function removeJob(db: Client, jobId: string) {
     [jobId],
   );
 }
+
+// garage-reviews.spec.ts and garage-reviews-dashboard.spec.ts post reviews on
+// Atelier Test, read its counts and put its stored figures back: each of
+// their tests holds this lock on its own connection, so one file's review
+// never lands in the other's counts or above its review.
+export async function holdReviews(db: Client, garageId: string) {
+  await db.query("SELECT pg_advisory_lock(hashtext('reviews:' || $1))", [
+    garageId,
+  ]);
+}
+
+export async function releaseReviews(db: Client, garageId: string) {
+  await db.query("SELECT pg_advisory_unlock(hashtext('reviews:' || $1))", [
+    garageId,
+  ]);
+}
