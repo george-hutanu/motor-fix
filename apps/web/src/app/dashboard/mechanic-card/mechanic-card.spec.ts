@@ -145,7 +145,7 @@ const labelOf = (b: HTMLButtonElement) =>
   [...b.childNodes]
     .filter((n) =>
       n instanceof HTMLElement
-        ? !n.matches('.mf-task-sending')
+        ? !n.matches('.mf-task-sending, .sr-only')
         : n.nodeType === Node.TEXT_NODE,
     )
     .map((n) => n.textContent ?? '')
@@ -734,7 +734,7 @@ describe('the card dialog, inviting the mechanic', () => {
       await settle();
 
       expect(button(name)?.getAttribute('aria-busy')).toBe('true');
-      expect(button(name)?.querySelector('.mf-task-sending')).not.toBeNull();
+      expect(button(name)?.querySelector('.sr-only')).not.toBeNull();
       expect(button('Retrimite')?.disabled).toBe(true);
       expect(button('Anulează invitația')?.disabled).toBe(true);
       const other = name === 'Retrimite' ? 'Anulează invitația' : 'Retrimite';

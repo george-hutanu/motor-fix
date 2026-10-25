@@ -109,13 +109,10 @@ p {
   border-radius: 50%;
   animation: spin 800ms linear infinite;
 }
-.mf-task-sending {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
 }
 @keyframes spin {
   to {

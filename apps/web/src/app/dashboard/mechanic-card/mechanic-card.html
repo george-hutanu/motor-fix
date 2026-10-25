@@ -110,14 +110,14 @@
           <button hlmBtn variant="secondary" type="button" [disabled]="!!inviting()" [attr.aria-busy]="inviting() === 'resend' || null" (click)="resend(invite.id)">
             @if (inviting() === 'resend') {
               <span class="spinner" aria-hidden="true"></span>
-              <span class="mf-task-sending">{{ 'shell.form.sending' | t }}</span>
+              <span class="sr-only">{{ 'shell.form.sending' | t }}</span>
             }
             {{ 'garage.mechanicCard.invite.resend' | t }}
           </button>
           <button hlmBtn variant="ghost" type="button" [disabled]="!!inviting()" [attr.aria-busy]="inviting() === 'revoke' || null" (click)="revoke(invite.id)">
             @if (inviting() === 'revoke') {
               <span class="spinner" aria-hidden="true"></span>
-              <span class="mf-task-sending">{{ 'shell.form.sending' | t }}</span>
+              <span class="sr-only">{{ 'shell.form.sending' | t }}</span>
             }
             {{ 'garage.mechanicCard.invite.cancel' | t }}
           </button>

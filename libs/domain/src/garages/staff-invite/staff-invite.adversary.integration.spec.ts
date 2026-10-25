@@ -196,6 +196,18 @@ async function cardAndInvite(extra: Record<string, unknown> = {}) {
   return { ...w, elenaCard, res };
 }
 
+// Waits until `count` statements wait on a row lock.
+async function waitingOnLocks(count: number) {
+  for (let tries = 0; tries < 200; tries += 1) {
+    const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`
+      SELECT count(*)::int AS waiting FROM pg_stat_activity
+      WHERE wait_event_type = 'Lock' AND datname = current_database()`;
+    if (waiting >= count) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`fewer than ${count} statements wait on a lock`);
+}
+
 describe('sending from a card under hostile input', () => {
   it('ignores a name sent beside the card', async () => {
     const { res } = await cardAndInvite({ name: 'Someone Else' });
@@ -296,12 +308,20 @@ describe('sending from a card under hostile input', () => {
         mechanicId: elenaCard.id,
       });
 
-    const [a, b] = await Promise.all([
-      go('a1@example.test'),
-      go('a2@example.test'),
-    ]);
+    // Holding the card makes both sends wait on its row lock together, so
+    // neither has seen the other's invite before it takes the lock.
+    let answers: Promise<request.Response[]> | undefined;
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM mechanic WHERE id = ${elenaCard.id}::uuid FOR UPDATE`;
+        answers = Promise.all([go('a1@example.test'), go('a2@example.test')]);
+        await waitingOnLocks(2);
+      },
+      { timeout: 20_000 },
+    );
 
-    expect([a.status, b.status].sort()).toEqual([201, 409]);
+    const out = (await answers) ?? [];
+    expect(out.map((r) => r.status).sort()).toEqual([201, 409]);
     expect(
       await prisma.staffInvite.count({
         where: { mechanicId: elenaCard.id, status: 'sent' },
