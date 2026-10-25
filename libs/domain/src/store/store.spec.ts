@@ -21,6 +21,7 @@ describe('the store connection', () => {
   beforeEach(() => constructed.mockClear());
 
   // @traces 1175-FR-007
+  // @traces 1188-FR-007
   it('opens one pipelined command connection per address, whoever asks', async () => {
     const first = borrowStore('redis://store:6379');
     const second = borrowStore('redis://store:6379');

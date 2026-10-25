@@ -106,6 +106,10 @@
       },
       "title": "Ce spun șoferii"
     },
+    "share": "Distribuie",
+    "shareCopied": "Link copiat",
+    "shareCopyBelow": "Copiază linkul de mai jos",
+    "shareName": "Distribuie {name}",
     "status": {
       "break": "Pauză până la {start}",
       "closedDay": "Închis azi · deschide {when} la {start}",
@@ -124,8 +128,10 @@
     "works": "Lucrează pe {brand}"
   },
   "gone": {
-    "home": "Mergi la pagina principală",
-    "title": "Acest service nu mai este disponibil"
+    "search": "Caută un service",
+    "searchBrand": "Caută un service pentru {brand}",
+    "similar": "Service‑uri similare în apropiere",
+    "title": "Acest service nu mai este disponibil pe MotorFix."
   },
   "home": {
     "cards": {

@@ -51,7 +51,7 @@
     "express": "5.2.1",
     "heic-decode": "2.1.0",
     "ioredis": "6.0.0",
-    "jose": "6.2.12",
+    "jose": "6.2.13",
     "maplibre-gl": "6.13.0",
     "pbf": "5.1.2",
     "reflect-metadata": "0.2.2",

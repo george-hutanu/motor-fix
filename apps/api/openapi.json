@@ -3311,6 +3311,53 @@
         ]
       }
     },
+    "/api/v1/garages/{slug}/similar": {
+      "get": {
+        "operationId": "SimilarGaragesController_forGarage",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "The brand, by its catalogue slug; without it, every brand the garage worked on",
+            "schema": {
+              "pattern": "^[a-z0-9-]{1,80}$",
+              "example": "bmw",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimilarGaragesDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad brand slug or another parameter"
+          },
+          "404": {
+            "description": "not_found: no garage with that slug that was listed and is no longer, or no brand with that slug"
+          }
+        },
+        "tags": [
+          "search"
+        ]
+      }
+    },
     "/api/v1/requests": {
       "get": {
         "operationId": "RequestsController_list",
@@ -12603,6 +12650,155 @@
           "preview",
           "total",
           "takers"
+        ]
+      },
+      "SimilarGarageDto": {
+        "type": "object",
+        "properties": {
+          "worksOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "doesNotTake": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "brandNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "refusalPhrase": {
+            "type": "string",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Service Auto Nord"
+          },
+          "slug": {
+            "type": "string",
+            "example": "service-auto-nord"
+          },
+          "stance": {
+            "type": "string",
+            "description": "The garage's answer for the brand; unstated when it has not marked it",
+            "enum": [
+              "works_on",
+              "does_not_take",
+              "unstated"
+            ]
+          },
+          "distanceKm": {
+            "type": "number",
+            "description": "Km from the place, one decimal; null for a mobile mechanic. Only with near",
+            "nullable": true
+          },
+          "comesToYou": {
+            "type": "boolean",
+            "description": "True for a mobile mechanic whose area holds the place. Only with near"
+          },
+          "rating": {
+            "type": "number",
+            "description": "Out of 5, one decimal; null until reviewed",
+            "nullable": true
+          },
+          "reviewCount": {
+            "type": "integer"
+          },
+          "labourFromLei": {
+            "type": "integer",
+            "description": "The hourly labour rate it starts from, in whole lei",
+            "nullable": true
+          },
+          "businessKind": {
+            "type": "string",
+            "enum": [
+              "company",
+              "pfa",
+              "ii",
+              "mobile"
+            ],
+            "nullable": true
+          },
+          "city": {
+            "type": "string",
+            "description": "The address's city; never for a mobile mechanic",
+            "example": "Militari"
+          },
+          "serviceRadiusKm": {
+            "type": "integer",
+            "description": "A mobile mechanic's area, in km; only for one"
+          },
+          "facilities": {
+            "type": "array",
+            "description": "The facilities it lists, in catalogue order",
+            "items": {
+              "type": "string",
+              "enum": [
+                "courtesy_car",
+                "pickup_dropoff",
+                "waiting_area"
+              ]
+            }
+          },
+          "brand": {
+            "description": "The brand it was matched for: the asked one, or the first brand both garages work on, most popular first",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BrandRefDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "worksOn",
+          "doesNotTake",
+          "brandNote",
+          "refusalPhrase",
+          "id",
+          "name",
+          "slug",
+          "stance",
+          "rating",
+          "reviewCount",
+          "labourFromLei",
+          "businessKind",
+          "facilities",
+          "brand"
+        ]
+      },
+      "SimilarGaragesDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "description": "The asked brand; null when none was asked",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BrandRefDto"
+              }
+            ]
+          },
+          "items": {
+            "description": "Approved garages that work on the brand around the garage that is gone: fixed ones within 25 km, mobile mechanics whose area holds its place; by rating, unrated last, then reviews, name and id; 3 at most",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimilarGarageDto"
+            }
+          }
+        },
+        "required": [
+          "brand",
+          "items"
         ]
       },
       "CarSnapshotDto": {
