@@ -326,12 +326,49 @@ describe('StaticMap, the attribution and the control', () => {
       );
     });
 
-    // QA lap 2 at 320 x 640: a column of the control over the credit is
-    // taller than the strip a phone's half sheet leaves.
-    it('sets the credit beside the control on a phone, in one row', () => {
-      expect(css.replace(/\s+/g, ' ')).toMatch(
-        /@media \(max-width: 767\.98px\) \{ \.corner \{[^}]*flex-direction: row-reverse;/,
-      );
+    // QA lap 3 at 320 x 640: the strip a phone's half sheet leaves cannot
+    // hold the legend, the control and the credit, so on a phone they take
+    // the interactive map's places: the control where its zoom buttons sit,
+    // the credit at the map's own bottom edge, under the sheet.
+    describe('on a phone', () => {
+      const phone =
+        css
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/\s+/g, ' ')
+          .match(/@media \(max-width: 767\.98px\) \{(.*?\}) \}/)?.[1] ?? '';
+      const body = (selector: string) =>
+        phone.match(new RegExp(`(?:^| )${selector} \\{([^}]*)\\}`))?.[1] ?? '';
+
+      it('lets the control and the credit stand apart from the corner', () => {
+        expect(body('\\.corner')).toMatch(/display: contents;/);
+      });
+
+      it('sets the control at the top right, where the zoom buttons sit', () => {
+        const button = body('button');
+        expect(button).toMatch(/position: absolute;/);
+        expect(button).toMatch(/top: var\(--mf-space-3\);/);
+        expect(button).toMatch(/right: var\(--mf-space-3\);/);
+        expect(button).toMatch(/width: var\(--static-control\);/);
+        expect(button).not.toMatch(/--covered/);
+      });
+
+      it('sets the credit at the map’s bottom right, under the sheet as the interactive map’s is', () => {
+        const credit = body('\\.attribution');
+        expect(credit).toMatch(/position: absolute;/);
+        expect(credit).toMatch(/bottom: var\(--mf-space-3\);/);
+        expect(credit).toMatch(/right: var\(--mf-space-3\);/);
+        expect(credit).not.toMatch(/--covered/);
+      });
+
+      it('keeps both above every pin', () => {
+        const lit = Number(
+          css.match(/\.pin\.lit\s*\{[^}]*z-index:\s*(\d+)/)?.[1] ?? 0,
+        );
+        for (const selector of ['button', '\\.attribution']) {
+          const z = Number(body(selector).match(/z-index: (\d+);/)?.[1] ?? 0);
+          expect(z).toBeGreaterThan(lit);
+        }
+      });
     });
 
     it('gives the control at least the 44 px of a tap', () => {

@@ -133,6 +133,22 @@ describe('the map’s zoom buttons while Results takes text on a phone', () => {
   });
 });
 
+// 1196: on a phone the static map's control sits where the zoom buttons do,
+// and gives way to the sheet and the keyboard as they do.
+describe('the static map’s control on a phone', () => {
+  it.each(['typing', 'over-zoom'])(
+    'hides it while the sheet is %s',
+    (state) => {
+      const body = rule(
+        `mf-results:has(mf-results-sheet.${state}) mf-results-map mf-static-map button`,
+      );
+
+      expect(body).toBeDefined();
+      expect(body).toMatch(/visibility:\s*hidden/);
+    },
+  );
+});
+
 // The sheet's top edge over the zoom buttons (full, or any rest of a stage
 // too short to clear them): they hide rather than lie under its handle.
 describe('the map’s zoom buttons under the Results sheet on a phone', () => {

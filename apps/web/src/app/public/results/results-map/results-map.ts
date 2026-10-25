@@ -164,12 +164,14 @@ export class ResultsMap {
   );
   // The box and its covered bands as last measured; none on the server.
   private readonly measured = signal<
-    | { w: number; h: number; bottom: number; top: number; under: number }
-    | undefined
+    { w: number; h: number; bottom: number; top: number } | undefined
   >(undefined);
-  // How far up the static map's corner sits: above the whole sheet or
-  // legend, even where the pins' framing gets less room than that.
-  protected readonly covered = computed(() => this.measured()?.under ?? 0);
+  // How far up the static map's corner sits from a tablet up: above the
+  // legend. On a phone its control and credit take the interactive map's
+  // places (static-map.css), off the sheet.
+  protected readonly covered = computed(() =>
+    this.phone() ? 0 : (this.measured()?.bottom ?? 0),
+  );
   // The view the static image shows, which the interactive map opens at.
   protected readonly still = computed<MapView | undefined>(() => {
     const at = this.measured();
@@ -307,14 +309,13 @@ export class ResultsMap {
   // Measures the box and what covers it, which frames the static view.
   private measure(): MapView {
     const host = this.host().nativeElement;
-    const { bottom, top, under } = untracked(this.phone)
+    const { bottom, top } = untracked(this.phone)
       ? this.phoneCovers()
-      : { bottom: this.legendCover(), top: 0, under: this.legendCover() };
+      : { bottom: this.legendCover(), top: 0 };
     this.measured.set({
       bottom,
       h: host.clientHeight,
       top,
-      under,
       w: host.clientWidth,
     });
     return untracked(this.still) as MapView;
@@ -331,19 +332,25 @@ export class ResultsMap {
     );
   }
 
-  // On a phone the legend sits at the map's top and the results sheet, the
-  // map's sibling, over its lower part; the pins are framed between them.
+  // On a phone the legend and the static map's control sit at the map's
+  // top and the results sheet, the map's sibling, over its lower part; the
+  // pins are framed between them.
   private phoneCovers() {
     const map = this.host().nativeElement.parentElement;
-    const key = map?.querySelector('.legend');
     const sheet = this.element.nativeElement.parentElement?.querySelector(
       ':scope > mf-results-sheet',
     );
-    if (!map) return { bottom: 0, top: 0, under: 0 };
+    if (!map) return { bottom: 0, top: 0 };
     const box = map.getBoundingClientRect();
-    const top = key
-      ? Math.max(0, key.getBoundingClientRect().bottom - box.top)
-      : 0;
+    const top = Math.max(
+      0,
+      ...[
+        map.querySelector('.legend'),
+        map.querySelector('mf-static-map button'),
+      ].map((above) =>
+        above ? above.getBoundingClientRect().bottom - box.top : 0,
+      ),
+    );
     const under = sheet
       ? Math.max(0, box.bottom - sheet.getBoundingClientRect().top)
       : 0;
@@ -351,6 +358,6 @@ export class ResultsMap {
       0,
       Math.min(under, box.bottom - box.top - top - ROOM),
     );
-    return { bottom, top, under };
+    return { bottom, top };
   }
 }

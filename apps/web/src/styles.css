@@ -29,6 +29,21 @@
   }
 }
 
+/* The static map's control sits where the zoom buttons do on a phone
+   (static-map.css), and gives way to the keyboard and the sheet as they do. */
+@media (max-width: 767px) {
+  mf-results:has(mf-results-sheet.typing) mf-results-map mf-static-map button {
+    visibility: hidden;
+  }
+
+  mf-results:has(mf-results-sheet.over-zoom)
+    mf-results-map
+    mf-static-map
+    button {
+    visibility: hidden;
+  }
+}
+
 /* The legend at the map's top goes with them: a sheet over the zoom buttons
    would cut its lower rows, so it hides whole and shows again at low. */
 @media (max-width: 767px) {

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import { PLATFORM_ID, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Layout, type LayoutName, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
@@ -10,7 +11,13 @@ import { Layout, type LayoutName, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import type { MapEvents, MapMove } from './pins-map';
 import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
 import type { MapFake } from '../../place-step/place-step.testing';
-import { boundsOf, fitView, paddingOf } from '../../static-map/fit-view';
+import {
+  boundsOf,
+  fitView,
+  type MapView,
+  paddingOf,
+} from '../../static-map/fit-view';
+import { StaticMap } from '../../static-map/static-map';
 
 jest.mock('maplibre-gl', () =>
   jest.requireActual('../../place-step/place-step.testing'),
@@ -224,6 +231,27 @@ describe('ResultsMap, the static map under a phone sheet that moves', () => {
     (
       element().querySelector('mf-static-map') as HTMLElement | null
     )?.style.getPropertyValue('--covered');
+  const shown = () =>
+    fixture.debugElement
+      .query(By.directive(StaticMap))
+      ?.componentInstance.view() as MapView | undefined;
+  // The view a 390 x 600 map frames with these covers.
+  const framed = (bottom: number, top: number) =>
+    fitView(
+      boundsOf([PLACE, PINS.pins[0]]),
+      { h: 600, w: 390 },
+      paddingOf(bottom, top),
+    );
+  // Where each measured element runs, top to bottom: the map's box 100 to
+  // 700, the static map's control at its top right 112 to 156, the sheet
+  // from its top.
+  const band = (el: HTMLElement): [number, number] => {
+    if (el.classList.contains('map')) return [100, 700];
+    if (el.tagName === 'MF-RESULTS-SHEET') return [sheetTop, sheetTop];
+    if (el.tagName === 'BUTTON' && el.closest('mf-static-map'))
+      return [112, 156];
+    return [0, 0];
+  };
   beforeEach(() => {
     sheetTop = 700;
     jest
@@ -235,13 +263,7 @@ describe('ResultsMap, the static map under a phone sheet that moves', () => {
     jest
       .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
       .mockImplementation(function (this: HTMLElement) {
-        const top =
-          this.tagName === 'MF-RESULTS-SHEET'
-            ? sheetTop
-            : this.classList.contains('map')
-              ? 100
-              : 0;
-        const bottom = this.classList.contains('map') ? 700 : top;
+        const [top, bottom] = band(this);
         return {
           bottom,
           height: bottom - top,
@@ -261,48 +283,57 @@ describe('ResultsMap, the static map under a phone sheet that moves', () => {
     jest.restoreAllMocks();
   });
 
-  it('measures the sheet again once it comes to rest, and moves the credit above it', async () => {
+  async function withSheet() {
     await render({ activated: false, on: 'phone' });
+    fixture.componentRef.setInput('pins', PINS);
+    fixture.detectChanges();
     const parent = (fixture.nativeElement as HTMLElement)
       .parentElement as HTMLElement;
     sheet = document.createElement('mf-results-sheet');
     parent.append(sheet);
+    return sheet;
+  }
+
+  // QA lap 3 at 320 x 640: above the half sheet the corner had no room
+  // beside the legend, so on a phone it no longer rides on the sheet.
+  it('leaves the corner where the map’s own edges put it, whatever the sheet covers', async () => {
+    await withSheet();
     sheetTop = 400;
     sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
     fixture.detectChanges();
 
-    expect(covered()).toBe('300px');
+    expect(covered()).toBe('0px');
+  });
+
+  it('frames the pins below the control at the top right, as below the zoom buttons', async () => {
+    await withSheet();
+    sheetTop = 400;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(shown()).toEqual(framed(300, 56));
+    expect(shown()).not.toEqual(framed(300, 0));
+  });
+
+  it('measures the sheet again once it comes to rest', async () => {
+    await withSheet();
+    sheetTop = 400;
+    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(shown()).toEqual(framed(300, 56));
 
     sheetTop = 600;
     sheet.dispatchEvent(new Event('transitionend', { bubbles: true }));
     fixture.detectChanges();
 
-    expect(covered()).toBe('100px');
-  });
-
-  // QA lap 2 at 320 x 640: the pins' room clamped the cover, and the corner
-  // went under the sheet.
-  it('keeps the corner above the sheet even where the pins get less room', async () => {
-    await render({ activated: false, on: 'phone' });
-    const parent = (fixture.nativeElement as HTMLElement)
-      .parentElement as HTMLElement;
-    sheet = document.createElement('mf-results-sheet');
-    parent.append(sheet);
-    sheetTop = 150;
-    sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
-    fixture.detectChanges();
-
-    expect(covered()).toBe('550px');
+    expect(shown()).toEqual(framed(100, 56));
   });
 
   it('ignores the end of a transition inside the sheet', async () => {
-    await render({ activated: false, on: 'phone' });
-    const parent = (fixture.nativeElement as HTMLElement)
-      .parentElement as HTMLElement;
-    sheet = document.createElement('mf-results-sheet');
+    await withSheet();
     const chip = document.createElement('button');
     sheet.append(chip);
-    parent.append(sheet);
     sheetTop = 400;
     sheet.dispatchEvent(new Event('animationend', { bubbles: true }));
     fixture.detectChanges();
@@ -310,7 +341,7 @@ describe('ResultsMap, the static map under a phone sheet that moves', () => {
     chip.dispatchEvent(new Event('transitionend', { bubbles: true }));
     fixture.detectChanges();
 
-    expect(covered()).toBe('300px');
+    expect(shown()).toEqual(framed(300, 56));
   });
 });
 
@@ -465,6 +496,16 @@ describe('ResultsMap, the legend on a phone', () => {
     expect(phone).toMatch(/--zoom-room: calc\(var\(--mf-tap\) \+ \d+px\);/);
     // The padding counts inside the width, or the legend runs 24 px further.
     expect(phone).toMatch(/\.legend \{[^}]*box-sizing: border-box;/);
+  });
+
+  // 1196: the static map's control takes the zoom buttons' place, wider.
+  it('leaves the static map’s control at its right free while it shows', () => {
+    const all = readFileSync(join(__dirname, 'results-map.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    expect(all).toMatch(
+      /@media \(max-width: 767\.98px\) \{ \.map \{ --static-control: [^;]+; \} \.map:has\(> mf-static-map:not\(\.leaving\)\) \{ --zoom-room: calc\( ?var\(--static-control\) \+ var\(--mf-space-3\) \+ var\(--mf-space-2\) ?\); \} \}/,
+    );
   });
 
   it('gives way to the zoom hint there', () => {

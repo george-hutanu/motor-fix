@@ -672,11 +672,11 @@ _From 1196-static-map-first._
 
 _From 1196-static-map-first._
 
-### 1196-FR-014 — The attribution "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors" MUST show on the static image, in the interactive map's compact-attribution corner, in the theme's small text, readable in both schemes (the sweep's contrast check), as a text that is not a tab stop.
+### 1196-FR-014 — The attribution "© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors" MUST show on the static image, in the interactive map's compact-attribution corner (the map's bottom right: on a phone that lies under the results sheet, as MapLibre's own does), in the theme's small text, readable in both schemes (the sweep's contrast check), as a text that is not a tab stop.
 
 _From 1196-static-map-first._
 
-### 1196-FR-015 — A tap or a click anywhere on the static map, or activating the visible control "Hartă interactivă" / "Interactive map" (a button in the map's corner, at least 44 px tall, in the keyboard order, the one focusable element the map adds), MUST load MapLibre and open the interactive map at the static view's centre and zoom (FR-011) with the same pins, circles and marker; a second activation while loading does nothing; once the style has loaded the static image and the overlay are removed and the control is hidden.
+### 1196-FR-015 — A tap or a click anywhere on the static map, or activating the visible control "Hartă interactivă" / "Interactive map" (a button at the map's bottom right, above the legend, from a tablet up, and on a phone at its top right where the interactive map's zoom buttons sit, at least 44 px tall, in the keyboard order, the one focusable element the map adds), MUST load MapLibre and open the interactive map at the static view's centre and zoom (FR-011) with the same pins, circles and marker; a second activation while loading does nothing; once the style has loaded the static image and the overlay are removed and the control is hidden.
 
 _From 1196-static-map-first._
 

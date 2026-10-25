@@ -181,22 +181,34 @@ img {
   z-index: 2;
 }
 
-/* On a phone the half sheet leaves a short strip: the credit sits at the
-   control's left, in one row, rather than under it. */
+/* On a phone the half sheet leaves too short a strip for the legend, the
+   control and the credit, so they take the interactive map's places: the
+   control at the top right where its zoom buttons sit, in the width the
+   legend leaves it (results-map.css), and the credit at the map's own
+   bottom right, under the sheet, as MapLibre's compact one is. */
 @media (max-width: 767.98px) {
   .corner {
-    align-items: flex-end;
-    flex-direction: row-reverse;
+    display: contents;
   }
 
   button {
-    flex: none;
-    white-space: nowrap;
+    height: auto;
+    line-height: 1.25;
+    padding-inline: var(--mf-space-3);
+    position: absolute;
+    right: var(--mf-space-3);
+    top: var(--mf-space-3);
+    white-space: normal;
+    width: var(--static-control);
+    z-index: 2;
   }
 
   .attribution {
-    line-height: 1.25;
-    min-width: 0;
+    bottom: var(--mf-space-3);
+    max-width: calc(100% - 2 * var(--mf-space-3));
+    position: absolute;
+    right: var(--mf-space-3);
+    z-index: 2;
   }
 }
 
