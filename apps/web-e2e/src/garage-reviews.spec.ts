@@ -4,7 +4,12 @@ import { Client } from 'pg';
 
 import { ACCOUNTS, headers } from './accounts.js';
 import { test } from './fixtures.js';
-import { doneJob, removeJob } from './review-jobs.js';
+import {
+  doneJob,
+  holdReviews,
+  releaseReviews,
+  removeJob,
+} from './review-jobs.js';
 
 // @traces 024-FR-001
 // @traces 024-FR-002
@@ -68,6 +73,9 @@ test.describe('a reviewed garage’s profile @seeded', () => {
     garageId = seeded.garage;
     reviewId = seeded.review;
   });
+
+  test.beforeEach(() => holdReviews(db, garageId));
+  test.afterEach(() => releaseReviews(db, garageId));
 
   test.afterAll(async () => {
     await db.query('UPDATE review SET text = $2 WHERE id = $1', [
