@@ -144,6 +144,7 @@ export type { GarageRequestListDto } from './models/garage-request-list-dto';
 export type { GarageRequestSummaryDto } from './models/garage-request-summary-dto';
 export type { GarageRestoredDto } from './models/garage-restored-dto';
 export type { GarageReviewDto } from './models/garage-review-dto';
+export type { GarageReviewQuoteDto } from './models/garage-review-quote-dto';
 export type { GarageReviewsPageDto } from './models/garage-reviews-page-dto';
 export type { GarageRowBookingDto } from './models/garage-row-booking-dto';
 export type { GarageSearchPageDto } from './models/garage-search-page-dto';

@@ -23,6 +23,7 @@ export {
   formatKm,
   formatLei,
   formatLeiRange,
+  formatLeiSpan,
   formatMonthYear,
   formatNum,
   formatPct,

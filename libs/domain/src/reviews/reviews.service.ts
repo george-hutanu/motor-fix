@@ -50,6 +50,24 @@ const authorOf = (driver: { name: string; status: string }) =>
     ? { shortName: DELETED_AUTHOR }
     : { shortName: shortName(driver.name) };
 
+// The job's prices under a review: a profile review carries none of them.
+const amountsOf = (
+  fromJob: boolean,
+  job: {
+    finalPriceBani: number | null;
+    booking: { quote: { fromBani: number; toBani: number } };
+  },
+  paidBani: number | null,
+) => {
+  if (!fromJob) return { finalPriceBani: null, paidBani: null, quote: null };
+  const { fromBani, toBani } = job.booking.quote;
+  return {
+    finalPriceBani: job.finalPriceBani,
+    paidBani,
+    quote: { fromBani, toBani },
+  };
+};
+
 const dtoOf = ({ jobId, offer, reason }: Verdict): ReviewEligibilityDto => ({
   jobId,
   offer,
@@ -196,10 +214,12 @@ export class ReviewsService {
         return {
           author: authorOf(review.driver),
           car: fromJob ? snapshotOf(booking.request) : null,
+          editedAt: review.editedAt?.toISOString() ?? null,
           id: review.id,
           jobs: fromJob
             ? jobsOf(booking.quote.jobs.map((one) => one.requestJob))
             : [],
+          ...amountsOf(fromJob, review.job, review.paidBani),
           postedAt: review.postedAt.toISOString(),
           rating: review.rating,
           source: review.source,

@@ -14764,6 +14764,21 @@
           "one"
         ]
       },
+      "GarageReviewQuoteDto": {
+        "type": "object",
+        "properties": {
+          "fromBani": {
+            "type": "number"
+          },
+          "toBani": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "fromBani",
+          "toBani"
+        ]
+      },
       "GarageReviewDto": {
         "type": "object",
         "properties": {
@@ -14808,6 +14823,29 @@
             "items": {
               "$ref": "#/components/schemas/RequestJobDto"
             }
+          },
+          "quote": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageReviewQuoteDto"
+              }
+            ]
+          },
+          "finalPriceBani": {
+            "type": "number",
+            "nullable": true
+          },
+          "paidBani": {
+            "type": "number",
+            "description": "What the driver says they paid",
+            "nullable": true
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "required": [
@@ -14818,7 +14856,11 @@
           "postedAt",
           "author",
           "car",
-          "jobs"
+          "jobs",
+          "quote",
+          "finalPriceBani",
+          "paidBani",
+          "editedAt"
         ]
       },
       "GarageReviewsPageDto": {
