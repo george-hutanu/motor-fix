@@ -257,7 +257,7 @@ describe('the mechanic’s day sheet read', () => {
   );
 
   // @traces 1381-FR-002
-  it('leaves a booking no mechanic holds off her sheet, and answers 404 once her card is removed', async () => {
+  it('leaves a booking no mechanic holds off her sheet, and answers 404 when she is in no garage', async () => {
     const t = await team('Atelier Dinamo');
     const at = '2026-10-09T06:00:00Z';
     const hers = await world.booked(t.garage.id, at, 'confirmed', {

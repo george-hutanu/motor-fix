@@ -124,7 +124,7 @@ async function garage() {
     },
   });
   const plain = await world.account('Costel Hand', ['mechanic']);
-  const plainCard = await prisma.mechanic.create({
+  await prisma.mechanic.create({
     data: { accountId: plain, garageId: garage.id, name: 'Costel' },
   });
   const driver = await world.account('Andrei Ion Marin');
@@ -137,7 +137,6 @@ async function garage() {
     garage,
     owner,
     plain,
-    plainCard,
   };
 }
 
