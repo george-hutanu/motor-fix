@@ -480,7 +480,7 @@ describe('the automatic pause', () => {
     expect((await requestOf(s.job.id)).status).toBe('in_work');
   });
 
-  it('leaves at most one job of a mechanic in work when two of their paused jobs resume at once', async () => {
+  it('moves both and leaves one job of a mechanic in work when two of their paused jobs resume at once', async () => {
     const s = await setting('paused');
     const second = await jobOf(s.dinamo, s.andrei, 'paused');
 
@@ -489,15 +489,15 @@ describe('the automatic pause', () => {
       stage(second.id, 'resume', s.hand),
     ]);
 
-    expect(answers.every((r) => r.status < 500)).toBe(true);
+    expect(answers.map((r) => r.status)).toEqual([200, 200]);
     const states = [
       (await reread(s.job.id)).status,
       (await reread(second.id)).status,
     ];
-    expect(states.filter((x) => x === 'in_work').length).toBeLessThanOrEqual(1);
+    expect([...states].sort()).toEqual(['in_work', 'paused']);
   });
 
-  it('leaves at most one job of a mechanic in work when two of their to_do jobs start at once', async () => {
+  it('moves both and leaves one job of a mechanic in work when two of their to_do jobs start at once', async () => {
     const s = await setting();
     const second = await jobOf(s.dinamo, s.andrei, 'to_do');
 
@@ -506,12 +506,12 @@ describe('the automatic pause', () => {
       stage(second.id, 'start', s.hand),
     ]);
 
-    expect(answers.every((r) => r.status < 500)).toBe(true);
+    expect(answers.map((r) => r.status)).toEqual([200, 200]);
     const states = [
       (await reread(s.job.id)).status,
       (await reread(second.id)).status,
     ];
-    expect(states.filter((x) => x === 'in_work').length).toBeLessThanOrEqual(1);
+    expect([...states].sort()).toEqual(['in_work', 'paused']);
   });
 
   it('pauses the same mechanic’s other jobs of a garage and none of another garage', async () => {
