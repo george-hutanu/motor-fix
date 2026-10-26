@@ -249,6 +249,27 @@ describe('the garage schedule read', () => {
     },
   );
 
+  // @traces 1381-FR-002
+  it('answers a mechanic 403 for another garage’s mechanic, and 404 once her card is removed', async () => {
+    const t = await team('Atelier Dinamo');
+    const other = await team('Service Militari');
+    await booked(t, '2026-10-09T06:00:00Z', 'confirmed', {
+      mechanicId: t.answeringMechanic.id,
+    });
+    const mechanic = garageActor(t.answering, t.garage.id, 'mechanic');
+
+    await expect(
+      service.list(mechanic, { mechanicId: other.plainMechanic.id }, NOW),
+    ).rejects.toMatchObject({ status: 403 });
+    await prisma.mechanic.update({
+      data: { removedAt: new Date() },
+      where: { id: t.answeringMechanic.id },
+    });
+    await expect(service.list(mechanic, {}, NOW)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
   it('shows no plate and changes nothing', async () => {
     const t = await team('Atelier Dinamo');
     await booked(t, '2026-10-09T06:00:00Z');
