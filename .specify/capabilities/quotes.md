@@ -23,6 +23,7 @@ features:
   - 223-request-act-notifications
   - 058-mechanic-hours
   - 1257-quote-reminders
+  - 1258-driver-cancel
 ---
 
 # Capability: Quotes
@@ -790,6 +791,30 @@ _From 1257-quote-reminders._
 ### 1257-FR-011 — A request's reminder and expiry timers are set in the request send's transaction commit path (as the booking timers are set on `quote.accepted`: through the relay's existing events, `request.created` for the request and `quote.sent` for the quote), never by a new endpoint or a change to the API's contracts.
 
 _From 1257-quote-reminders._
+
+### 1258-FR-001 — `POST /api/v1/quote-requests/:id/cancel` MUST let the request's driver (a session in the `driver` role holding `driver.requests`; an AI assistant acting through the driver's tools uses the same endpoint) close a request that is `sent` or `quoted` with no body: in one transaction the request moves to `closed` with `closed_reason` `cancelled` and `closed_at`, every `waiting` quote moves to `lost`, every `waiting` recipient moves to `closed`, each move writing its audit entry and the one outbox event `request.cancelled` (subject the request, payload `{ requestId, garageIds, reason: 'driver' }`, audience the driver's account and the recipient garages) through the existing transition service (quotes 220-FR-008, 220-FR-011). It answers 200 with the request as the driver reads it. Another driver's request, a missing one, or a caller without the capability answers 404; a request in any other status answers 409 `invalid_transition` with the current status (220-FR-015).
+
+_From 1258-driver-cancel._
+
+### 1258-FR-002 — `POST /api/v1/bookings/:id/cancel` MUST let the booking's driver (same session rule as FR-001) cancel a booking that is `awaiting_confirmation` or `confirmed`, with a body of `reason` ∈ `plans_changed`, `found_another_garage`, `problem_solved`, `other` (the driver's list of CANCEL_REASONS, which already exists in the quotes config) and an optional `note` of at most 500 characters (counted after trimming; an empty result is no note), accepted with any of the four reasons; any other reason, a garage or system reason included, or a longer note answers 400 `validation_failed` naming the field. The DTO lives in the contracts library and the OpenAPI document and generated client are regenerated. Another driver's booking or a missing one answers 404.
+
+_From 1258-driver-cancel._
+
+### 1258-FR-003 — The booking cancel MUST be refused with 409 `invalid_transition` carrying the booking's current status, and write nothing, when `starts_at` is not ahead of now, when the booking's job exists and is not `to_do`, or when the booking is in any status other than `awaiting_confirmation` or `confirmed`.
+
+_From 1258-driver-cancel._
+
+### 1258-FR-004 — A booking cancel MUST, in one transaction: move the booking to `cancelled` through the existing booking transition with `cancelled_by_side` `driver`, `cancelled_by` the driver's account, `cancel_reason`, `cancel_note` and `late_cancellation` = now is later than `starts_at` − FREE_CANCEL_CUTOFF_HOURS (2, the existing constant); file the cancellation key change in the audit history as the transition already does (reason and note, old and new values); move the booking's job, when one exists, from `to_do` to `cancelled` through the workshop module's transition; move the accepted quote to `lost`; and move the request: from `booked` to `quoted` when another quote of the request is still `waiting`, else to `closed` with `closed_reason` `booking_cancelled`. The one outbox event is `booking.cancelled` with payload `{ bookingId, requestId, garageId, side: 'driver', reason, late }` (never the note), audience the driver's account, the garage and the booking's mechanic, so `account:{accountId}`, `garage:{garageId}` and `mechanic:{mechanicId}` refresh. There is no penalty, fee or strike of any kind: `late_cancellation` is a recorded fact only. It answers 200 with the booking as the driver reads it (the existing booking DTO, which already carries `cancelReason`; it MUST gain `cancelNote` and `lateCancellation` for the driver's own read).
+
+_From 1258-driver-cancel._
+
+### 1258-FR-011 — The two endpoints MUST be listed in `infra/observability/inventory.json` with the quotes module's panel and alerts; the module MUST emit one counter of cancellations with attributes `kind` (`request`, `booking`), `outcome` (`cancelled`, `refused` — a 409 from the state check only; a 400 or 404 never reaches the use case and is not counted) and, for a booking, `late` (true/false), and one structured log line per cancel naming the ids and the outcome, never the note; the PR's Observability section names them and says why no new alert is added (no agreed threshold) or adds one.
+
+_From 1258-driver-cancel._
+
+### 1258-FR-012 — Tests MUST cover, in Jest on real PostgreSQL where rows are written: the request cancel in `sent` and in `quoted` (quotes `lost`, recipients `closed`, the event and audit entries in the same transaction), 409 in `booked`, `in_work`, `done` and `closed`, 404 for another driver and for a garage-role session; the booking cancel at 3 hours (free) and at 1 hour 30 (late), after `starts_at` (409, for a `confirmed` and for an `awaiting_confirmation` booking), with the job `in_work` (409), from `awaiting_confirmation` with and without another open quote (request `quoted`, else `closed` as `booking_cancelled`), the job moved to `cancelled`, the accepted quote `lost`, 400 for a garage reason and for a 501-character note, 404 for another driver; the BOOKING_CANCELLED fan-out's recipients (owner, receptionists, the mechanic with an account; none for the driver; built once when the event is delivered twice) and both languages' texts with and without the note and the late line; REQUEST_CANCELLED once per owner and receptionist with reason `driver`; the confirm reminder and lapse timers doing nothing on a cancelled booking. The web rows, the dialogs and the Playwright end to end are ST-1385's (Split). Every test file carries its `// @traces 1258-driver-cancel-FR-<n>` line.
+
+_From 1258-driver-cancel._
 
 ## Retired
 

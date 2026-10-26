@@ -62,7 +62,13 @@ async function start() {
 // Andrei's confirmed booking at Atelier Dinamo, cancelled when his account
 // closed, with Fixer on it when `mechanic` has an account.
 async function cancelled(
-  options: { mechanicAccount?: boolean; reason?: string } = {},
+  options: {
+    mechanicAccount?: boolean;
+    reason?: string;
+    side?: 'driver';
+    late?: boolean;
+    note?: string;
+  } = {},
 ) {
   const driverId = await account('Andrei Ion Marin', ['driver']);
   const garage = await world.garage('Atelier Dinamo');
@@ -88,7 +94,14 @@ async function cancelled(
     request: 'closed',
   });
   await prisma.booking.update({
-    data: { mechanicId: mechanic.id },
+    data: {
+      mechanicId: mechanic.id,
+      ...(options.side && {
+        cancelledBy: driverId,
+        cancelNote: options.note ?? null,
+        lateCancellation: options.late ?? false,
+      }),
+    },
     where: { id: booking.id },
   });
   const payload = {
@@ -96,6 +109,7 @@ async function cancelled(
     garageId: garage.id,
     reason: options.reason ?? 'driver_account_closed',
     requestId: request.id,
+    ...(options.side && { late: options.late ?? false, side: options.side }),
   };
   const event = await prisma.outboxEvent.create({
     data: {
@@ -184,6 +198,86 @@ describe('telling the garage a closed account’s booking is cancelled', () => {
   // @traces 428-FR-007
   it('builds each message once when the same event is handled twice', async () => {
     const { job } = await cancelled();
+    const fanOut = await start();
+    const count = () =>
+      prisma.notification.count({ where: { kind: 'BOOKING_CANCELLED' } });
+
+    await fanOut.handle(job);
+    const once = await count();
+    await fanOut.handle(job);
+
+    expect(once).toBeGreaterThan(0);
+    expect(await count()).toBe(once);
+  });
+});
+
+// @traces 1258-driver-cancel-FR-005
+describe('telling the garage the driver cancelled the booking', () => {
+  const byDriver = (over: { late?: boolean; note?: string } = {}) =>
+    cancelled({ reason: 'plans_changed', side: 'driver', ...over });
+
+  it('tells each owner, receptionist and the booking’s mechanic once, and not the driver', async () => {
+    const { desk, driverId, fixer, job, owner } = await byDriver();
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+
+    for (const person of [owner, desk, fixer]) {
+      const mine = await bells(person);
+      expect(mine).toHaveLength(1);
+      expect(mine[0].params).toMatchObject({
+        reason: 'plans_changed',
+        variant: 'driver',
+      });
+    }
+    expect(await bells(driverId)).toEqual([]);
+  });
+
+  it('tells no mechanic when the booking’s mechanic has no account', async () => {
+    const { fixer, job, owner } = await cancelled({
+      mechanicAccount: false,
+      reason: 'other',
+      side: 'driver',
+    });
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+
+    expect(await bells(owner)).toHaveLength(1);
+    expect(await bells(fixer)).toEqual([]);
+  });
+
+  it('picks the late text for a late cancel and carries the note from the booking', async () => {
+    const { job, owner } = await byDriver({
+      late: true,
+      note: 'Am găsit un loc mai aproape',
+    });
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+
+    const [bell] = await bells(owner);
+    expect(bell.params).toMatchObject({
+      note: 'Am găsit un loc mai aproape',
+      variant: 'driver_late',
+    });
+  });
+
+  it('holds nothing for the night', async () => {
+    const { job } = await byDriver();
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+
+    expect(
+      await prisma.notification.count({
+        where: { kind: 'BOOKING_CANCELLED', status: 'held' },
+      }),
+    ).toBe(0);
+  });
+
+  it('builds each message once when the same event is handled twice', async () => {
+    const { job } = await byDriver();
     const fanOut = await start();
     const count = () =>
       prisma.notification.count({ where: { kind: 'BOOKING_CANCELLED' } });
