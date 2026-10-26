@@ -20,6 +20,7 @@ async function signedIn(page: Page, email: string, landing: string) {
 test.describe('cancelling a booking from Cererile mele @seeded', () => {
   // @traces 1385-FR-009
   test('the driver cancels with a reason, the row reads Anulată de tine and Militari’s bell tells it', async ({
+    browser,
     page,
     request,
   }) => {
@@ -85,5 +86,18 @@ test.describe('cancelling a booking from Cererile mele @seeded', () => {
       true,
     );
     expect(told?.text).toContain(`${car?.brand} ${car?.model}`);
+
+    // And on screen: Militari's owner opens the bell and reads the same line.
+    const context = await browser.newContext();
+    try {
+      const ownerPage = await context.newPage();
+      await ownerPage.setViewportSize({ height: 900, width: 1440 });
+      await signedIn(ownerPage, MILITARI, '/app/garage');
+      await ownerPage.getByRole('button', { name: /^Notificări/ }).click();
+      const bell = ownerPage.getByRole('dialog', { name: 'Notificări' });
+      await expect(bell.getByText(told?.text ?? '')).toBeVisible();
+    } finally {
+      await context.close();
+    }
   });
 });
