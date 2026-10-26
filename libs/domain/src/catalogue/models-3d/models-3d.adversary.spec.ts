@@ -143,9 +143,7 @@ describe('the 3D asset check, attacked', () => {
     const first = checkModels3d(files, catalogue);
     const second = checkModels3d(files, catalogue);
 
-    expect(first).toEqual([
-      'car.' + before[0].split('.')[1] + '.glb: missing body',
-    ]);
+    expect(first).toEqual([`car.${before[0].split('.')[1]}.glb: missing body`]);
     expect(second).toEqual(first);
     expect([...files.keys()]).toEqual(before);
   });

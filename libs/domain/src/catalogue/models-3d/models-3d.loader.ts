@@ -116,7 +116,7 @@ export class Models3dLoader {
   ) {
     const byKey = new Map(stored.map((row) => [keyOf(row), row]));
     let changed = 0;
-    // Deletes first, so a key or position a withdrawn row held is free.
+    // Deletes first, so a file key a withdrawn row held is free.
     const keys = new Set(write.rows.map(keyOf));
     for (const row of stored.filter((r) => !keys.has(keyOf(r)))) {
       await write.delete(row.id);
