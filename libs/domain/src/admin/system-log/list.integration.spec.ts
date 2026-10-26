@@ -413,9 +413,13 @@ describe('the indexes a narrowed read uses', () => {
       { from: since(80).toISOString(), ...query },
       NOW,
     );
-    const rows = await prisma.$queryRaw<
-      { 'QUERY PLAN': string }[]
-    >`EXPLAIN ${sent}`;
+    // ANALYZE samples the table, so on a sample that puts the range at a few
+    // rows the planner may walk it instead: with sequential scans off it
+    // still has to show the index answers the query's own expression.
+    const rows = await prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe('SET LOCAL enable_seqscan = off');
+      return tx.$queryRaw<{ 'QUERY PLAN': string }[]>`EXPLAIN ${sent}`;
+    });
     return rows.map((row) => row['QUERY PLAN']).join('\n');
   };
 
