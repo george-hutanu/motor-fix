@@ -52,7 +52,7 @@ const SUMMARY = {
       },
     },
   },
-  car: { select: { plate: true } },
+  car: { select: { odometerKm: true, plate: true } },
   driver: { select: { name: true } },
   mechanic: { select: { name: true } },
   steps: { select: { doneAt: true } },
@@ -68,7 +68,7 @@ type SummaryRow = Job & {
   booking: Booking & {
     request: QuoteRequest & { jobs: (RequestJob & { jobType: JobType })[] };
   };
-  car: Pick<Car, 'plate'>;
+  car: Pick<Car, 'odometerKm' | 'plate'>;
   driver: Pick<Account, 'name'>;
   mechanic: Pick<Mechanic, 'name'> | null;
   steps: Pick<JobStep, 'doneAt'>[];
@@ -82,6 +82,7 @@ function summaryOf(row: SummaryRow): JobSummaryDto {
     car: {
       ...snapshotOf(row.booking.request),
       ...plateOf(row.car.plate, true),
+      odometerKm: row.car.odometerKm,
     },
     createdAt: row.createdAt.toISOString(),
     driver: { shortName: shortName(row.driver.name) },
@@ -92,12 +93,15 @@ function summaryOf(row: SummaryRow): JobSummaryDto {
     jobs: jobsOf(row.booking.request.jobs),
     mechanicId: row.mechanicId,
     mechanicName: row.mechanic?.name ?? null,
+    odometerKm: row.odometerKm,
     pausedAt: iso(row.pausedAt),
+    receivedAt: iso(row.receivedAt),
     startedAt: iso(row.startedAt),
     startsAt: row.booking.startsAt.toISOString(),
     status: row.status,
     stepsDone: row.steps.filter((step) => step.doneAt).length,
     stepsTotal: row.steps.length,
+    workedSeconds: row.workedSeconds,
   };
 }
 
@@ -161,8 +165,10 @@ export class GarageJobsService {
       stages: row.stages.map((stage) => ({
         actorRole: stage.actorRole,
         at: stage.at.toISOString(),
+        auto: stage.auto,
         fromStatus: stage.fromStatus,
         id: stage.id,
+        mechanicId: stage.mechanicId,
         text: stage.text,
         toStatus: stage.toStatus,
       })),

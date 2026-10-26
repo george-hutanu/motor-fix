@@ -770,7 +770,8 @@ async function send(
                - make_interval(hours => $4),
              now() + interval '7 days', $5 || gen_random_uuid()::text)
      RETURNING id`,
-    [who.driverId, who.carId, booked ? 'booked' : 'sent', hours, OWN_KEY],
+    // The booked one's job is in work, so the request is in work with it.
+    [who.driverId, who.carId, booked ? 'in_work' : 'sent', hours, OWN_KEY],
   );
   const requestId = request.rows[0]?.id;
   await db.query(

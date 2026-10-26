@@ -4,6 +4,8 @@ import { ActiveRequestController } from './active-request/active-request.control
 import { ActiveRequestService } from './active-request/active-request.service';
 import { GarageJobsController } from './garage-jobs/garage-jobs.controller';
 import { GarageJobsService } from './garage-jobs/garage-jobs.service';
+import { JobStagesController } from './job-stages/job-stages.controller';
+import { JobStagesService } from './job-stages/job-stages.service';
 import { JobStepsController } from './job-steps/job-steps.controller';
 import { JobStepsService } from './job-steps/job-steps.service';
 import { ScheduleService } from './schedule/schedule.service';
@@ -17,12 +19,14 @@ import { AuditService } from '../audit/audit.service';
   controllers: [
     ActiveRequestController,
     GarageJobsController,
+    JobStagesController,
     JobStepsController,
   ],
   exports: [ScheduleService],
   providers: [
     ActiveRequestService,
     GarageJobsService,
+    JobStagesService,
     JobStepsService,
     ScheduleService,
     { provide: AUDIT_PORT, useClass: AuditService },

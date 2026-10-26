@@ -4,8 +4,18 @@
 export interface JobStageEntryDto {
   actorRole: 'driver' | 'owner' | 'receptionist' | 'mechanic' | 'admin' | 'system';
   at: string;
+
+  /**
+   * A pause the platform made when the mechanic started another job
+   */
+  auto: boolean;
   fromStatus: ('to_do' | 'in_work' | 'paused' | 'done' | 'cancelled') | null;
   id: string;
+
+  /**
+   * The job's mechanic when the move was made
+   */
+  mechanicId: string | null;
   text: string | null;
   toStatus: 'to_do' | 'in_work' | 'paused' | 'done' | 'cancelled';
 }
