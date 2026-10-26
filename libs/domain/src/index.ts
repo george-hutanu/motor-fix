@@ -57,14 +57,12 @@ export {
   type BodyStyle,
   BRANDS,
 } from './catalogue/brands/brands';
-export {
-  CAR_MODELS,
-  type CarForBrand,
-  carForBrand,
-} from './catalogue/car-models';
+export { type CarForBrand, carForBrand } from './catalogue/car-models';
 export { CatalogueModule } from './catalogue/catalogue.module';
 export { JobTypeLoader } from './catalogue/job-types/job-type-loader';
 export { JOB_TYPES } from './catalogue/job-types/job-types';
+export { CAR_MODELS } from './catalogue/models-3d/models-3d';
+export { Models3dLoader } from './catalogue/models-3d/models-3d.loader';
 export { EVENT_PORT, type EventPort, outbox } from './events/event.port';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay/outbox-relay.module';
@@ -135,6 +133,7 @@ export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-re
 export { REQUEST_CANCELLED_CONSUMER } from './notifications/request-cancelled/request-cancelled.fan-out';
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
 export { REVIEW_POSTED_CONSUMER } from './notifications/review-posted/review-posted.fan-out';
+export { REVIEW_REPLIED_CONSUMER } from './notifications/review-replied/review-replied.fan-out';
 export { VERIFICATION_RESULT_CONSUMER } from './notifications/verification-result/verification-result.fan-out';
 export { PlacesModule, placesConfig } from './places/places.module';
 export { ACCOUNT_CLOSED_CONSUMER } from './quotes/account-closed/account-closed';

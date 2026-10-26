@@ -86,7 +86,7 @@ import {
 } from './notifications.service';
 import { OutageController } from './outage/outage.controller';
 import { OUTAGE_WEBHOOK_TOKEN, OutageService } from './outage/outage.service';
-import { PHONE_CONFIG, type PhoneConfig } from './phone-config';
+import { PHONE_CONFIG, type PhoneConfig, phoneConfig } from './phone-config';
 import { NotificationPreferencesController } from './preferences/preferences.controller';
 import { NotificationPreferencesService } from './preferences/preferences.service';
 import { PUSH_SENDER, PushSender } from './push/push';
@@ -129,6 +129,11 @@ import {
   ReviewPostedFanOut,
 } from './review-posted/review-posted.fan-out';
 import {
+  REVIEW_REPLIED_QUEUE,
+  type ReviewRepliedEvent,
+  ReviewRepliedFanOut,
+} from './review-replied/review-replied.fan-out';
+import {
   VERIFICATION_RESULT_QUEUE,
   type VerificationEvent,
   VerificationResultFanOut,
@@ -150,12 +155,15 @@ interface NotificationsOptions {
   push?: PushConfig | null;
   // Grafana's outage webhook bearer; unset refuses every call (API only).
   outageWebhookToken?: string;
+  // WhatsApp for the API's direct sends (a staff invite); unset sends none.
+  phone?: PhoneConfig;
 }
 
 const WORKER = Symbol('NOTIFICATIONS_WORKER');
 const NEWS_WORKER = Symbol('NEWS_WORKER');
 const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
 const REVIEW_POSTED_WORKER = Symbol('REVIEW_POSTED_WORKER');
+const REVIEW_REPLIED_WORKER = Symbol('REVIEW_REPLIED_WORKER');
 const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
 const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const QUOTE_DECLINED_WORKER = Symbol('QUOTE_DECLINED_WORKER');
@@ -212,6 +220,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(REVIEW_POSTED_WORKER)
     private readonly reviewPostedWorker?: Worker | null,
+    @Optional()
+    @Inject(REVIEW_REPLIED_WORKER)
+    private readonly reviewRepliedWorker?: Worker | null,
     @Optional()
     @Inject(QUOTE_RECEIVED_WORKER)
     private readonly quoteReceivedWorker?: Worker | null,
@@ -276,7 +287,7 @@ export class NotificationsModule implements OnApplicationShutdown {
         OutageController,
         PushSubscriptionsController,
       ],
-      exports: [NotificationsService],
+      exports: [NotificationsService, PHONE_CONFIG],
       imports: [auth],
       module: NotificationsModule,
       // One PostgreSQL pool per API process: the one AuthModule opened.
@@ -294,6 +305,10 @@ export class NotificationsModule implements OnApplicationShutdown {
           useValue: options.outageWebhookToken ?? '',
         },
         PushSubscriptionsService,
+        {
+          provide: PHONE_CONFIG,
+          useValue: options.phone ?? phoneConfig('test', {}),
+        },
       ],
     };
   }
@@ -472,6 +487,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             );
             observeWorker(worker);
             logFinalFailure(worker, new Logger('ReviewPosted'));
+            return worker;
+          },
+        },
+        ReviewRepliedFanOut,
+        {
+          inject: [ReviewRepliedFanOut],
+          provide: REVIEW_REPLIED_WORKER,
+          useFactory: (fanOut: ReviewRepliedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('ReviewReplied').error(
+                'PUBLIC_WEB_URL missing; review reply messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<ReviewRepliedEvent>(
+              REVIEW_REPLIED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('ReviewReplied'));
             return worker;
           },
         },
@@ -888,6 +930,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.newsWorker?.close();
     await this.requestReceivedWorker?.close();
     await this.reviewPostedWorker?.close();
+    await this.reviewRepliedWorker?.close();
     await this.quoteReceivedWorker?.close();
     await this.quoteAcceptedWorker?.close();
     await this.quoteDeclinedWorker?.close();

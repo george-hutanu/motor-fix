@@ -6,6 +6,7 @@ import { DriverNameDto } from '../models/driver-name-dto';
 import { GarageReviewQuoteDto } from '../models/garage-review-quote-dto';
 import { RequestJobDto } from '../models/request-job-dto';
 import { ReviewMechanicDto } from '../models/review-mechanic-dto';
+import { ReviewReplyDto } from '../models/review-reply-dto';
 export interface GarageStaffReviewDto {
   author: DriverNameDto;
   canReply: boolean;
@@ -31,6 +32,12 @@ export interface GarageStaffReviewDto {
   quote: (GarageReviewQuoteDto & {
 }) | null;
   rating: number;
+
+  /**
+   * The reply, published or reported; a removed one is null
+   */
+  reply: (ReviewReplyDto & {
+}) | null;
   source: 'job' | 'profile';
   status: 'published' | 'reported';
   text: string | null;

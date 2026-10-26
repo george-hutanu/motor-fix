@@ -6,9 +6,11 @@ import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import {
   BRANDS,
   BrandLoader,
+  CAR_MODELS,
   initProductCounters,
   JOB_TYPES,
   JobTypeLoader,
+  Models3dLoader,
   warmCache,
 } from '@motor-fix/domain';
 import { NestFactory } from '@nestjs/core';
@@ -40,6 +42,7 @@ async function bootstrap() {
   }
   await app.get(BrandLoader).load(BRANDS);
   await app.get(JobTypeLoader).load(JOB_TYPES);
+  await app.get(Models3dLoader).load(CAR_MODELS);
   app.enableShutdownHooks();
   // API_PORT first: a worktree's port set (scripts/test-services.ts ports) gives
   // PORT to the web dev server, which reads nothing else.
@@ -50,7 +53,7 @@ async function bootstrap() {
   void warmCache(app, env.RELEASE_SHA);
 }
 
-// A brand or job file that cannot load stops the process before it serves.
+// A brand, job or 3D catalogue file that cannot load stops the process before it serves.
 bootstrap().catch((error: unknown) => {
   console.error(error);
   process.exit(1);

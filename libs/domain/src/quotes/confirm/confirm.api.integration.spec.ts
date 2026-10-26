@@ -276,6 +276,39 @@ describe('POST /bookings/:id/confirm', () => {
   });
 });
 
+// @traces 1255-FR-015
+describe('a card invited but not yet accepted', () => {
+  it('is given the booking like any mechanic and stays off the profile', async () => {
+    const t = await team('Atelier Dinamo');
+    const elena = await prisma.mechanic.create({
+      data: { garageId: t.garage.id, name: 'Elena Stan' },
+    });
+    await prisma.staffInvite.create({
+      data: {
+        email: 'elena@example.test',
+        expiresAt: new Date(Date.now() + 24 * HOUR),
+        garageId: t.garage.id,
+        kind: 'mechanic',
+        mechanicId: elena.id,
+        name: 'Elena Stan',
+        tokenHash: randomUUID(),
+      },
+    });
+    const { booking } = await accepted(t);
+
+    const res = await confirm(booking.id, owner(t), { mechanicId: elena.id });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      mechanic: { id: elena.id, name: 'Elena Stan' },
+      status: 'confirmed',
+    });
+    expect(
+      await prisma.mechanic.findUniqueOrThrow({ where: { id: elena.id } }),
+    ).toMatchObject({ accountId: null, onProfile: false });
+  });
+});
+
 // @traces 389-FR-003
 describe('a confirm that cannot happen', () => {
   it('refuses the same booking a second time, writing nothing', async () => {

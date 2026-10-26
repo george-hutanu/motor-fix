@@ -46,6 +46,8 @@ export class TeamView {
       'mechanic.added',
       'mechanic.updated',
       'mechanic.removed',
+      'invite.sent',
+      'invite.revoked',
       'invite.accepted',
       'rating.updated',
     ],
@@ -78,6 +80,15 @@ export class TeamView {
     });
   }
 
+  // Why a card with no account is off the profile.
+  protected waiting(mechanic: GarageMechanicDto) {
+    const invite = mechanic.invite;
+    if (!invite) return 'garage.team.state.noAccount';
+    return Date.parse(invite.expiresAt) <= Date.now()
+      ? 'garage.team.state.inviteExpired'
+      : 'garage.team.state.inviteSent';
+  }
+
   protected years(mechanic: GarageMechanicDto) {
     return mechanic.years
       ? this.i18n.t('garage.team.years', { count: mechanic.years })
@@ -91,7 +102,9 @@ export class TeamView {
       'saved' | 'removed',
       MechanicCardData
     >(MechanicCard, {
-      data: card ? { brands, card, garageId } : { brands, garageId },
+      data: card
+        ? { brands, card, garageId, refresh: () => this.reread(card.id) }
+        : { brands, garageId },
       shape: 'dialog',
       ...(card
         ? {
@@ -101,5 +114,10 @@ export class TeamView {
         : { title: 'garage.mechanicCard.title' }),
     });
     if (outcome === 'saved' || outcome === 'removed') this.view.reload();
+  }
+
+  private async reread(id: string) {
+    await this.view.reload();
+    return this.view.value()?.items.find((item) => item.id === id);
   }
 }

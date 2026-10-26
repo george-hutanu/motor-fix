@@ -35,9 +35,12 @@ export class GarageMemberInviteDto {
   @ApiProperty({ enum: INVITE_KINDS })
   kind!: (typeof INVITE_KINDS)[number];
 
-  // The address the owner typed.
-  @ApiProperty()
-  email!: string;
+  // The address the owner typed: an e-mail or, for a mechanic, a phone.
+  @ApiProperty({ nullable: true, type: String })
+  email!: string | null;
+
+  @ApiProperty({ nullable: true, type: String })
+  phone!: string | null;
 
   @ApiProperty({ format: 'date-time' })
   sentAt!: string;

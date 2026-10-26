@@ -38,3 +38,7 @@ coverage/
 /.specs-link-*
 /.specs-adopt
 /specs
+
+# 3D car files live in object storage under models-3d/ (licensed; this repo is public).
+*.glb
+*.gltf

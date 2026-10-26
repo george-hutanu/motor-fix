@@ -1,10 +1,10 @@
 import { BRANDS } from './brands/brands';
 import {
-  CAR_MODELS,
   CarModelFileError,
   carForBrand,
   validateCarModels,
 } from './car-models';
+import { CAR_MODELS } from './models-3d/models-3d';
 
 type LicensedCarModel = (typeof CAR_MODELS)[number];
 
@@ -13,7 +13,15 @@ const car = (
   brand: string,
   rank: number,
   fuel: LicensedCarModel['fuel'] = 'petrol',
-): LicensedCarModel => ({ brand, fuel, key, model: key, rank });
+): LicensedCarModel => ({
+  bodyStyle: 'saloon',
+  brand,
+  file: `${key}.0000000000000000.glb`,
+  fuel,
+  key,
+  model: key,
+  rank,
+});
 
 describe('the shipped car models', () => {
   // @traces 405-FR-001 405-FR-002
@@ -65,6 +73,38 @@ describe('the shipped car models', () => {
     ).toBe(true);
   });
 
+  // @traces 1241-FR-002
+  // @traces 1241-FR-004
+  it('gives each family its body shape and the key of its 3D file', () => {
+    expect(
+      Object.fromEntries(CAR_MODELS.map((m) => [m.key, m.bodyStyle])),
+    ).toEqual({
+      'audi-a4': 'saloon',
+      'audi-a6': 'saloon',
+      'bmw-seria-3': 'saloon',
+      'bmw-seria-5': 'saloon',
+      'dacia-duster': 'suv',
+      'dacia-logan': 'saloon',
+      'dacia-sandero': 'hatchback',
+      'ford-fiesta': 'hatchback',
+      'ford-focus': 'hatchback',
+      'opel-astra': 'hatchback',
+      'opel-corsa': 'hatchback',
+      'renault-clio': 'hatchback',
+      'renault-megane': 'hatchback',
+      'skoda-fabia': 'hatchback',
+      'skoda-octavia': 'estate',
+      'volkswagen-golf': 'hatchback',
+      'volkswagen-passat': 'estate',
+      'volkswagen-polo': 'hatchback',
+      'volkswagen-tiguan': 'suv',
+      'volkswagen-touran': 'estate',
+    });
+    for (const { file, key } of CAR_MODELS) {
+      expect(file).toMatch(new RegExp(`^${key}\\.[0-9a-f]{16}\\.glb$`));
+    }
+  });
+
   // @traces 405-FR-004
   it('passes its own validator', () => {
     expect(() => validateCarModels(CAR_MODELS)).not.toThrow();
@@ -85,7 +125,9 @@ describe('the shipped car models', () => {
   it('carries no licence, seller, cost or renewal', () => {
     for (const model of CAR_MODELS) {
       expect(Object.keys(model).sort()).toEqual([
+        'bodyStyle',
         'brand',
+        'file',
         'fuel',
         'key',
         'model',

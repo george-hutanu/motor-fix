@@ -70,6 +70,7 @@ const REVIEW: GarageReviewDto = {
   postedAt: '2026-03-14T10:00:00.000Z',
   quote: null,
   rating: 5,
+  reply: null,
   source: 'job',
   text: 'Treabă curată, <b>la timp</b>.',
 };

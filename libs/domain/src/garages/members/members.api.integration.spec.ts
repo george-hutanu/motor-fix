@@ -277,13 +277,42 @@ describe('reading who has access to the garage', () => {
         email: 'elena@example.test',
         id: first.id,
         kind: 'mechanic',
+        phone: null,
         sentAt: first.createdAt.toISOString(),
       },
       {
         email: 'andrei@example.test',
         id: second.id,
         kind: 'receptionist',
+        phone: null,
         sentAt: second.createdAt.toISOString(),
+      },
+    ]);
+  });
+
+  // @traces 1255-FR-001
+  it('lists an invite sent to a phone by its number', async () => {
+    const w = await world();
+    const sent = await prisma.staffInvite.create({
+      data: {
+        expiresAt: new Date(Date.now() + 7 * DAY),
+        garageId: w.dinamo.id,
+        kind: 'mechanic',
+        name: 'Elena Stan',
+        phone: '+40722000111',
+        tokenHash: randomUUID(),
+      },
+    });
+
+    const res = await members(w.dinamo.id, bearer(w.mihai, 'garage'));
+
+    expect(res.body.invites).toEqual([
+      {
+        email: null,
+        id: sent.id,
+        kind: 'mechanic',
+        phone: '+40722000111',
+        sentAt: sent.createdAt.toISOString(),
       },
     ]);
   });

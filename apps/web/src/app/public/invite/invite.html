@@ -21,6 +21,12 @@
         @if (invite.kind === 'mechanic') {
           <p>{{ 'public.invite.profile' | t }}</p>
         }
+        @if (invite.leaving; as leaving) {
+          <p role="alert">{{ 'public.invite.leaving' | t: { garage: leaving } }}</p>
+        }
+        @if (moveRequired()) {
+          <p role="alert">{{ 'public.invite.moveRequired' | t }}</p>
+        }
         @if (failed()) {
           <p role="alert">{{ 'public.invite.acceptFailed' | t }}</p>
         }

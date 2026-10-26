@@ -5520,6 +5520,70 @@
       }
     },
     {
+      "id": 194,
+      "type": "stat",
+      "title": "Replies to reviews, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 247
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_reviews_replied_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 195,
+      "type": "stat",
+      "title": "Replies to reviews, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 247
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_reviews_replied_total{deployment_environment=\"$env\"}[24h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
       "id": 191,
       "type": "stat",
       "title": "Request timers, last hour",
@@ -5616,7 +5680,71 @@
       }
     },
     {
-      "id": 194,
+      "id": 196,
+      "type": "stat",
+      "title": "Replies announced to review authors, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 263
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_review_reply_announced_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 197,
+      "type": "stat",
+      "title": "Replies announced to review authors, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 263
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_review_reply_announced_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 198,
       "type": "row",
       "title": "Job stage moves",
       "collapsed": false,
@@ -5624,12 +5752,12 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 263
+        "y": 267
       },
       "panels": []
     },
     {
-      "id": 195,
+      "id": 199,
       "type": "stat",
       "title": "Job stage moves, last hour",
       "datasource": {
@@ -5640,7 +5768,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 264
+        "y": 268
       },
       "targets": [
         {
@@ -5661,7 +5789,7 @@
       }
     },
     {
-      "id": 196,
+      "id": 200,
       "type": "stat",
       "title": "Job stage moves, last 24 hours",
       "datasource": {
@@ -5672,7 +5800,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 264
+        "y": 268
       },
       "targets": [
         {
@@ -5693,7 +5821,7 @@
       }
     },
     {
-      "id": 197,
+      "id": 201,
       "type": "timeseries",
       "title": "Job stage moves per hour, by action and outcome",
       "datasource": {
@@ -5704,7 +5832,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 264
+        "y": 268
       },
       "targets": [
         {

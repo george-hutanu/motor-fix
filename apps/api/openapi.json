@@ -4277,6 +4277,132 @@
         ]
       }
     },
+    "/api/v1/reviews/{reviewId}/reply": {
+      "post": {
+        "operationId": "ReviewRepliesController_post",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyToReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewReplyDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: the text not a string, or another member"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a receptionist or mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found: no such review of the caller’s garage (an edit: or no reply on it)"
+          },
+          "409": {
+            "description": "review_not_public; reply_removed; already_replied"
+          },
+          "422": {
+            "description": "validation_failed: the text is empty or over 1,000 characters after the trim"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reply in public to one of the garage’s reviews",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "patch": {
+        "operationId": "ReviewRepliesController_edit",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyToReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewReplyDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: the text not a string, or another member"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a receptionist or mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found: no such review of the caller’s garage (an edit: or no reply on it)"
+          },
+          "409": {
+            "description": "review_not_public; reply_not_public; reply_removed"
+          },
+          "422": {
+            "description": "validation_failed: the text is empty or over 1,000 characters after the trim"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit the garage’s reply to one of its reviews",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/api/v1/reviews/{reviewId}/reports": {
       "post": {
         "operationId": "ReviewReportsController_report",
@@ -6055,10 +6181,10 @@
             "description": "forbidden: staff of this garage"
           },
           "404": {
-            "description": "not_found; feature_off"
+            "description": "not_found: the garage, or the card; feature_off"
           },
           "409": {
-            "description": "invite_open (with inviteId); already_in_team"
+            "description": "owner_row; card_linked; invite_open (with inviteId); self_invite; already_in_team"
           }
         },
         "security": [
@@ -7022,6 +7148,9 @@
           },
           "404": {
             "description": "feature_off"
+          },
+          "409": {
+            "description": "move_required (with garage): the invite is for a card and the account works at another garage"
           },
           "410": {
             "description": "invite_expired; invite_invalid"
@@ -15614,6 +15743,42 @@
           "toBani"
         ]
       },
+      "ReviewReplyDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "reported",
+              "removed"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "postedAt",
+          "editedAt",
+          "status"
+        ]
+      },
       "ReviewMechanicDto": {
         "type": "object",
         "properties": {
@@ -15694,6 +15859,16 @@
             "format": "date-time",
             "nullable": true
           },
+          "reply": {
+            "description": "The reply, published or reported; a removed one is null",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReviewReplyDto"
+              }
+            ]
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -15731,6 +15906,7 @@
           "finalPriceBani",
           "paidBani",
           "editedAt",
+          "reply",
           "status",
           "mechanic",
           "canReply",
@@ -15787,6 +15963,19 @@
           "pageSize",
           "total",
           "items"
+        ]
+      },
+      "ReplyToReviewDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "1 to 1,000 characters after the trim",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "text"
         ]
       },
       "ReportReviewDto": {
@@ -15911,6 +16100,28 @@
           "reason"
         ]
       },
+      "PublicReviewReplyDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "text",
+          "postedAt",
+          "editedAt"
+        ]
+      },
       "MechanicReviewDto": {
         "type": "object",
         "properties": {
@@ -15936,6 +16147,16 @@
           },
           "garage": {
             "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "reply": {
+            "description": "The garage's published reply",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicReviewReplyDto"
+              }
+            ]
           }
         },
         "required": [
@@ -15944,7 +16165,8 @@
           "text",
           "postedAt",
           "author",
-          "garage"
+          "garage",
+          "reply"
         ]
       },
       "MechanicReviewsPageDto": {
@@ -16040,6 +16262,16 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "reply": {
+            "description": "The garage's published reply",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicReviewReplyDto"
+              }
+            ]
           }
         },
         "required": [
@@ -16054,7 +16286,8 @@
           "quote",
           "finalPriceBani",
           "paidBani",
-          "editedAt"
+          "editedAt",
+          "reply"
         ]
       },
       "GarageReviewsPageDto": {
@@ -18055,16 +18288,27 @@
       "StaffInviteDto": {
         "type": "object",
         "properties": {
+          "mechanicId": {
+            "type": "string",
+            "description": "The card the invite is for; accepting links the account to it",
+            "format": "uuid"
+          },
           "name": {
             "type": "string",
-            "description": "Trimmed",
+            "description": "Trimmed; required without mechanicId, ignored with it",
             "maxLength": 80,
             "minLength": 2
           },
           "email": {
             "type": "string",
-            "description": "Trimmed; stored and compared in lower case",
+            "description": "Trimmed; stored and compared in lower case. Exactly one of email and phone",
             "maxLength": 254
+          },
+          "phone": {
+            "type": "string",
+            "description": "For a mechanic; as typed, read as in the phone sign-in, must then be E.164. Exactly one of email and phone",
+            "example": "0722 123 456",
+            "maxLength": 20
           },
           "kind": {
             "type": "string",
@@ -18087,8 +18331,6 @@
           }
         },
         "required": [
-          "name",
-          "email",
           "kind"
         ]
       },
@@ -18660,6 +18902,38 @@
           "features"
         ]
       },
+      "StaffInviteOnCardDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "phone",
+          "sentAt",
+          "expiresAt"
+        ]
+      },
       "GarageMechanicDto": {
         "type": "object",
         "properties": {
@@ -18720,6 +18994,15 @@
           },
           "reviewCount": {
             "type": "number"
+          },
+          "invite": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StaffInviteOnCardDto"
+              }
+            ]
           }
         },
         "required": [
@@ -18736,7 +19019,8 @@
           "onProfile",
           "hasAccount",
           "rating",
-          "reviewCount"
+          "reviewCount",
+          "invite"
         ]
       },
       "GarageBrandOptionDto": {
@@ -19108,7 +19392,12 @@
             ]
           },
           "email": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
           },
           "sentAt": {
             "type": "string",
@@ -19119,6 +19408,7 @@
           "id",
           "kind",
           "email",
+          "phone",
           "sentAt"
         ]
       },
@@ -19216,14 +19506,27 @@
           },
           "email": {
             "type": "string",
-            "description": "The invited address"
+            "description": "The invited e-mail",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "description": "The invited phone, E.164",
+            "nullable": true
+          },
+          "leaving": {
+            "type": "string",
+            "description": "The garage the signed-in account works at, which accepting leaves; null signed out or when it works nowhere else",
+            "nullable": true
           }
         },
         "required": [
           "garage",
           "kind",
           "name",
-          "email"
+          "email",
+          "phone",
+          "leaving"
         ]
       },
       "LegalCheckRecheckDto": {

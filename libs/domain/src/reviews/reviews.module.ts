@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 
 import { ReviewEligibility } from './eligibility/eligibility';
 import { GarageReviewsController } from './garage-reviews/garage-reviews.controller';
+import { ReviewRepliesController } from './reply/reply.controller';
+import { ReviewRepliesService } from './reply/reply.service';
 import { ReviewReportsController } from './report/report.controller';
 import { ReviewReportsService } from './report/report.service';
 import { ReviewsController } from './reviews.controller';
@@ -14,12 +16,14 @@ import { AuditService } from '../audit/audit.service';
 @Module({
   controllers: [
     GarageReviewsController,
+    ReviewRepliesController,
     ReviewReportsController,
     ReviewsController,
   ],
   providers: [
     ReviewEligibility,
     ReviewsService,
+    ReviewRepliesService,
     ReviewReportsService,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],

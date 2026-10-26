@@ -104,25 +104,44 @@ export class SignInDialog {
   }
 
   // From an invite link: account creation with the invited name and e-mail
-  // filled in, with sign-in one switch away. Says which way the person got a
-  // session, or null when they closed it; no dashboard opens.
+  // filled in, with sign-in one switch away; an invite sent to a phone opens
+  // the phone sign-in with its number instead. Says which way the person got
+  // a session, or null when they closed it; no dashboard opens.
   async join(invited: {
-    email: string;
+    email?: string;
     name: string;
+    phone?: string;
   }): Promise<'signed-in' | 'signed-up' | null> {
-    let from: 'sign-in' | 'sign-up' = 'sign-up';
-    let result = await this.signUp(invited);
+    const { name, phone } = invited;
+    const joined = phone
+      ? await this.follow(
+          await this.lap({ email: '', phone, switchTo: 'phone' }, false),
+          name,
+          'sign-in',
+        )
+      : await this.follow(await this.signUp(invited), name, 'sign-up');
+    return this.session.current() === null ? null : joined;
+  }
+
+  // Follows the switches between sign-in and account creation to the dialog
+  // that closes; the last of the two the person used is how they got a session.
+  private async follow(
+    result: Answer,
+    name: string,
+    from: 'sign-in' | 'sign-up',
+  ): Promise<'signed-in' | 'signed-up' | null> {
+    let last = from;
     while (isSwitch(result)) {
       if (result.switchTo === 'sign-up') {
-        from = 'sign-up';
-        result = await this.signUp({ email: result.email, name: invited.name });
+        last = 'sign-up';
+        result = await this.signUp({ email: result.email, name });
       } else {
-        if (result.switchTo !== 'reset') from = 'sign-in';
+        if (result.switchTo !== 'reset') last = 'sign-in';
         result = await this.lap(result, false);
       }
     }
-    if (result !== 'signed-in' || this.session.current() === null) return null;
-    return from === 'sign-up' ? 'signed-up' : 'signed-in';
+    if (result !== 'signed-in') return null;
+    return last === 'sign-up' ? 'signed-up' : 'signed-in';
   }
 
   private dialog(reason: boolean): Promise<boolean> {

@@ -137,6 +137,9 @@ describe('a receptionist through the garage channel', () => {
     'booking.mover',
     'quote.sent',
     'review.posted',
+    // @traces 075-FR-010
+    'review.replied',
+    'review.reply_edited',
     'review.',
     'garage.updated',
   ])(

@@ -267,6 +267,10 @@ export type { CancelBookingControllerCancel$Params as CancelBookingControllerCan
 export { cancelBookingControllerCancel as cancelBookingControllerCancel } from './fn/bookings/cancel-booking-controller-cancel';
 export type { GarageReviewsControllerRead$Params as GarageReviewsControllerRead$Params } from './fn/reviews/garage-reviews-controller-read';
 export { garageReviewsControllerRead as garageReviewsControllerRead } from './fn/reviews/garage-reviews-controller-read';
+export type { ReviewRepliesControllerPost$Params as ReviewRepliesControllerPost$Params } from './fn/reviews/review-replies-controller-post';
+export { reviewRepliesControllerPost as reviewRepliesControllerPost } from './fn/reviews/review-replies-controller-post';
+export type { ReviewRepliesControllerEdit$Params as ReviewRepliesControllerEdit$Params } from './fn/reviews/review-replies-controller-edit';
+export { reviewRepliesControllerEdit as reviewRepliesControllerEdit } from './fn/reviews/review-replies-controller-edit';
 export type { ReviewReportsControllerReport$Params as ReviewReportsControllerReport$Params } from './fn/reviews/review-reports-controller-report';
 export { reviewReportsControllerReport as reviewReportsControllerReport } from './fn/reviews/review-reports-controller-report';
 export type { ReviewsControllerEligibility$Params as ReviewsControllerEligibility$Params } from './fn/reviews/reviews-controller-eligibility';

@@ -279,6 +279,7 @@ describe('what a mechanic’s page holds', () => {
       'id',
       'postedAt',
       'rating',
+      'reply',
       'text',
     ]);
   });

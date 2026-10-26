@@ -121,6 +121,7 @@ model Garage {
   bookings                   Booking[]
   jobs                       Job[]
   reviews                    Review[]
+  reviewReplies              ReviewReply[]
   responseStats              GarageResponseStats?
   dailyFigures               GarageDailyFigures[]
   suspensions                GarageSuspension[]
@@ -212,39 +213,40 @@ model GarageMember {
 // accepted. CHECKs in the migration: a name of 2 to 80 characters (an
 // invite's), a speciality of at most 80.
 model Mechanic {
-  id                  String    @id @default(uuid()) @db.Uuid
-  garageId            String    @map("garage_id") @db.Uuid
-  accountId           String?   @unique @map("account_id") @db.Uuid
+  id                  String           @id @default(uuid()) @db.Uuid
+  garageId            String           @map("garage_id") @db.Uuid
+  accountId           String?          @unique @map("account_id") @db.Uuid
   name                String
   // The specialties joined with ", ", kept for the readers of one line.
   speciality          String?
   // The card's own fields, the owner's to write (migration CHECKs).
-  roleTitle           String?   @map("role_title")
-  specialties         String[]  @default([])
-  certifications      String[]  @default([])
+  roleTitle           String?          @map("role_title")
+  specialties         String[]         @default([])
+  certifications      String[]         @default([])
   years               Int?
   // The garage's works_on brands the mechanic works on; no foreign key.
-  brandIds            String[]  @default([]) @map("brand_ids") @db.Uuid
+  brandIds            String[]         @default([]) @map("brand_ids") @db.Uuid
   // The garage owner's own row: never removed, created with the garage.
-  isOwner             Boolean   @default(false) @map("is_owner")
+  isOwner             Boolean          @default(false) @map("is_owner")
   // One stretch a weekday at most; null keeps the garage's weekdays.
-  workingHours        Json?     @map("working_hours")
+  workingHours        Json?            @map("working_hours")
   // Whether the Saturday stretch counts.
-  worksSaturdays      Boolean   @default(false) @map("works_saturdays")
-  onProfile           Boolean   @default(false) @map("on_profile")
-  canMoveBookings     Boolean   @default(false) @map("can_move_bookings")
-  canAnswerQuotes     Boolean   @default(false) @map("can_answer_quotes")
-  canRecordFinalPrice Boolean   @default(false) @map("can_record_final_price")
+  worksSaturdays      Boolean          @default(false) @map("works_saturdays")
+  onProfile           Boolean          @default(false) @map("on_profile")
+  canMoveBookings     Boolean          @default(false) @map("can_move_bookings")
+  canAnswerQuotes     Boolean          @default(false) @map("can_answer_quotes")
+  canRecordFinalPrice Boolean          @default(false) @map("can_record_final_price")
   // Over the published reviews naming the mechanic, at every garage; the
   // garage's rules (migration CHECKs).
-  rating              Decimal?  @db.Decimal(2, 1)
-  reviewCount         Int       @default(0) @map("review_count")
+  rating              Decimal?         @db.Decimal(2, 1)
+  reviewCount         Int              @default(0) @map("review_count")
   // Set when the account was deleted: the card stays for its reviews and
   // bookings, and leaves the team list.
-  removedAt           DateTime? @map("removed_at") @db.Timestamptz(3)
-  garage              Garage    @relation(fields: [garageId], references: [id], onDelete: Cascade)
-  account             Account?  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  removedAt           DateTime?        @map("removed_at") @db.Timestamptz(3)
+  garage              Garage           @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  account             Account?         @relation(fields: [accountId], references: [id], onDelete: Cascade)
   bookings            Booking[]
+  invites             StaffInvite[]
   jobs                Job[]
   stageEntries        JobStageEntry[]
   reviews             Review[]
@@ -321,7 +323,11 @@ model StaffInvite {
   garageId            String            @map("garage_id") @db.Uuid
   kind                StaffInviteKind
   name                String
-  email               String
+  email               String?
+  // E.164; exactly one of email and phone is set (`staff_invite_one_address`).
+  phone               String?
+  // The card the invite was sent for; accepting it links the account to it.
+  mechanicId          String?           @map("mechanic_id") @db.Uuid
   canMoveBookings     Boolean           @default(false) @map("can_move_bookings")
   canAnswerQuotes     Boolean           @default(false) @map("can_answer_quotes")
   canRecordFinalPrice Boolean           @default(false) @map("can_record_final_price")
@@ -330,8 +336,10 @@ model StaffInvite {
   expiresAt           DateTime          @map("expires_at") @db.Timestamptz(3)
   createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   garage              Garage            @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  mechanic            Mechanic?         @relation(fields: [mechanicId], references: [id], onDelete: Cascade)
 
   @@index([garageId, email])
+  @@index([mechanicId])
   @@map("staff_invite")
 }
 
