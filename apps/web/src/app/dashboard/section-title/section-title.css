@@ -27,3 +27,8 @@ a:focus-visible {
   outline: var(--mf-focus-width) solid var(--mf-focus);
   outline-offset: var(--mf-focus-offset);
 }
+@media (max-width: 767.98px) {
+  h2 {
+    font-size: var(--mf-size-body);
+  }
+}

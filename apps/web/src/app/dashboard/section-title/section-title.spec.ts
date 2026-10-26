@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -79,5 +82,13 @@ describe('a section title on Panou', () => {
     fixture.detectChanges();
 
     expect(element.querySelector('a')).toBeNull();
+  });
+
+  it('sets its link at body size on a phone, where a label-size link is too small to read', () => {
+    const css = readFileSync(join(__dirname, 'section-title.css'), 'utf8');
+    const phone =
+      /@media \(max-width: 767\.98px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+
+    expect(phone).toMatch(/h2 \{[^}]*font-size: var\(--mf-size-body\)/);
   });
 });
