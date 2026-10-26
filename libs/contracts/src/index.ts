@@ -91,4 +91,5 @@ export * from './verification-presence.dto';
 export * from './verification-queue';
 export * from './verification-status.dto';
 export * from './verification-target';
+export * from './video-sessions.dto';
 export * from './visible-text';

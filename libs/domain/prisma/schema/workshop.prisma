@@ -26,6 +26,11 @@ model Job {
   handedOverAt   DateTime?       @map("handed_over_at") @db.Timestamptz(3)
   etaAt          DateTime?       @map("eta_at") @db.Timestamptz(3)
   finalPriceBani Int?            @map("final_price_bani")
+  // Set by the first reception; a later one corrects the reading only.
+  receivedAt     DateTime?       @map("received_at") @db.Timestamptz(3)
+  odometerKm     Int?            @map("odometer_km")
+  // Time in work, added on every move out of in_work.
+  workedSeconds  Int             @default(0) @map("worked_seconds")
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
   booking        Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   garage         Garage          @relation(fields: [garageId], references: [id], onDelete: Cascade)
@@ -35,6 +40,7 @@ model Job {
   steps          JobStep[]
   stages         JobStageEntry[]
   reviews        Review[]
+  liveSessions   LiveSession[]
 
   @@index([garageId, createdAt(sort: Desc)])
   @@index([mechanicId])
@@ -71,11 +77,17 @@ model JobStageEntry {
   actorRole  AuditActorRole @map("actor_role")
   // The garage's own words for the driver.
   text       String?
+  // The job's mechanic when the move was made.
+  mechanicId String?        @map("mechanic_id") @db.Uuid
+  // A pause the platform made when the mechanic started another job.
+  auto       Boolean        @default(false)
   at         DateTime       @default(now()) @db.Timestamptz(3)
   job        Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
   actor      Account?       @relation("JobStageActor", fields: [actorId], references: [id], onDelete: SetNull)
+  mechanic   Mechanic?      @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
 
   @@index([jobId, at])
+  @@index([mechanicId])
   @@map("job_stage_entry")
 }
 

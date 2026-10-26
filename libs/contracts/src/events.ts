@@ -123,6 +123,7 @@ export const EVENT_KINDS = [
   'review.posted',
   'review.replied',
   'review.reply_edited',
+  'review.report_closed',
   'review.reported',
   'saved_garage.added',
   'saved_garage.removed',

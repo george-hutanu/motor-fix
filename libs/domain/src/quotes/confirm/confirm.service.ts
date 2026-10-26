@@ -410,6 +410,7 @@ export class ConfirmService {
             actorId: actor.accountId,
             actorRole: recordedRole(actor.role),
             fromStatus: null,
+            mechanicId,
             toStatus: 'to_do',
           },
         },

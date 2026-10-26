@@ -280,6 +280,9 @@ test.describe('every voice on a 320 px phone @seeded', () => {
   test('a hyphenated brand is never split across lines, in any voice or language', async ({
     browser,
   }) => {
+    // Ten Home loads, five fresh contexts, one 320 px phone each: on a loaded
+    // runner that walk outlasts the default 30 s with nothing wrong.
+    test.slow();
     for (const voice of VOICES)
       await visiting(browser, voice, async (page) => {
         for (const language of LANGUAGES) {

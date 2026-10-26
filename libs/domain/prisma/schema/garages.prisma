@@ -122,6 +122,7 @@ model Garage {
   bookingSegments            BookingSegment[]
   jobs                       Job[]
   reviews                    Review[]
+  liveSessions               LiveSession[]
   reviewReplies              ReviewReply[]
   responseStats              GarageResponseStats?
   dailyFigures               GarageDailyFigures[]
@@ -250,6 +251,7 @@ model Mechanic {
   bookingSegments     BookingSegment[]
   invites             StaffInvite[]
   jobs                Job[]
+  stageEntries        JobStageEntry[]
   reviews             Review[]
   daysOff             MechanicDayOff[]
 

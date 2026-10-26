@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 209,
+    "count": 217,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -633,6 +633,32 @@
     },
     {
       "kind": "outside-service",
+      "name": "cloudflare-stream",
+      "host": "api.cloudflare.com",
+      "source": "libs/domain/src/live-video/providers/cloudflare-live-video.provider.ts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "opens and closes a live input per live session, 5 s timeout, in a live-video.create_input or live-video.close_input span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees",
+      "story": "ST-1250"
+    },
+    {
+      "kind": "outside-service",
+      "name": "cloudflare-stream-playback",
+      "host": "cloudflarestream.com",
+      "source": "libs/domain/src/live-video/providers/cloudflare-live-video.provider.ts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the api never calls it: it signs the viewing link (customer-<code>.cloudflarestream.com, five minutes) and the viewer's player fetches it; issued links are counted in motorfix_live_view_tokens_total{outcome}, and a link that cannot be signed fails the view-token call, which the API error-rate rule sees",
+      "story": "ST-1250"
+    },
+    {
+      "kind": "outside-service",
       "name": "public-web",
       "source": "libs/domain/src/status/probes/probes.ts",
       "dashboard": "motorfix-worker",
@@ -975,6 +1001,19 @@
       ],
       "reason": "each change of a switch is audited with the owner, the feature and the old and new state, and recorded as a garage.features_changed event in the same transaction; a 409 mechanics_on_team is the rule working, not a failure",
       "story": "ST-398"
+    },
+    {
+      "kind": "endpoint",
+      "name": "live-sessions",
+      "source": "libs/domain/src/live-video/sessions/sessions.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/jobs/:id/live and /api/v1/live-sessions/:id/view-token",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a start writes the live_session row, its audit entry and the live.started event in one transaction after the provider opened the input, counted in motorfix_live_sessions_total{outcome}; a view writes nothing and is counted in motorfix_live_view_tokens_total{outcome}; a refusal logs one LiveSessions warning line with its code and the job or session id, never a name; a 409 live_already_on, job_closed or live_ended is the rule working",
+      "story": "ST-1250"
     },
     {
       "kind": "endpoint",
@@ -1454,6 +1493,19 @@
       "story": "ST-424"
     },
     {
+      "kind": "endpoint",
+      "name": "garage-job-stages",
+      "source": "libs/domain/src/workshop/job-stages/job-stages.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garage/jobs/:id/start, /pause, /resume, /finish and /receive",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each move locks the job and writes its stage, the request's move, the audit entries and the events in one PostgreSQL transaction; a start pauses the mechanic's other job in work in the same one; each refusal logs one 'job stage refused' line with the job id and its code; the counter motorfix_job_stage_moves_total counts every call by action and outcome; no outside call",
+      "story": "ST-276"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_job_steps_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
@@ -1461,6 +1513,15 @@
       "alerts": "none",
       "reason": "counts step changes by action (added, renamed, reordered, removed, ticked, unticked); a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-424"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_job_stage_moves_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts a job's stage moves and receptions by action (start, pause, resume, finish, receive) and outcome (ok, refused); a refusal is the rule working, and the api-error-rate rule covers the service that reports it",
+      "story": "ST-276"
     },
     {
       "kind": "product-counter",
@@ -2658,6 +2719,50 @@
       ],
       "reason": "one BookingCancel log line per cancel naming the booking id, the reason and whether it came late, never the note; the count by outcome and lateness is the motorfix_cancellations_total entry",
       "story": "ST-1258"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-review-reports",
+      "source": "libs/domain/src/reviews/report-queue/report-queue.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/review-reports",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admins' queue of pending review reports with the facts, read from PostgreSQL in a fixed number of queries per page and written nowhere; reading it is not logged or audited; a 400 on a bad page or a 404 for a non-admin is the rule working; the API error-rate and latency rules cover the route; no outside call",
+      "story": "ST-177"
+    },
+    {
+      "kind": "queue",
+      "name": "moderation-timers",
+      "source": "libs/domain/src/reviews/moderation-timers/moderation-timers.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "carries the relay's review.reported, review.decided and review.deleted events and each pending report's 48-hour reminder, with the 5-minute sweep for a lost reminder; one ModerationTimers log line per event and per fired reminder naming the report or review id and the step, never a text or a name; alerts and reminders counted by motorfix_review_report_alerts_total and motorfix_review_report_reminders_total; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-177"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_report_alerts_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each review report told to the active admins by outcome (built, muted, skipped), with the consumer's log line naming the report id; a count has no failure to alert on; the worker-jobs-failed rule covers the queue that reports it",
+      "story": "ST-177"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_report_reminders_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each 48-hour reminder of a pending review report by outcome (sent, skipped), with the reminder's log line naming the report id; a count has no failure to alert on; the worker-jobs-failed rule covers the queue that reports it",
+      "story": "ST-177"
     }
   ]
 }

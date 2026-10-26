@@ -44,6 +44,7 @@ import {
   readGrowth,
   snapshotActiveDrivers,
 } from '../insights/platform-figures';
+import { countReportQueue } from '../reviews/report-queue/report-queue';
 
 // The overview's link to the Grafana overview dashboard, built by the API
 // from GRAFANA_URL and its own environment.
@@ -99,15 +100,19 @@ export class AdminOverviewController {
       figures,
       activeDriversMonthStart,
       activeDriversPeriodStart,
+      reports,
     ] = await Promise.all([
       this.verification.countWaiting(this.prisma),
       whole ? undefined : this.verification.countWaiting(this.prisma, city),
       countPlatformFigures(this.prisma, now, { city, period }),
       whole ? monthStartSnapshot(this.prisma, now) : undefined,
       start ? snapshotActiveDrivers(this.prisma, start.firstDay) : undefined,
+      countReportQueue(this.prisma, now),
     ]);
     return {
       garagesWaiting,
+      reportsOverdue: reports.overdue,
+      reportsPending: reports.pending,
       ...(cityGaragesWaiting !== undefined && { cityGaragesWaiting }),
       ...figures,
       ...(activeDriversMonthStart !== undefined && { activeDriversMonthStart }),

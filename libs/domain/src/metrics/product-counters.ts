@@ -107,6 +107,12 @@ const STEP_ACTIONS = [
   'unticked',
 ] as const;
 export type JobStepAction = (typeof STEP_ACTIONS)[number];
+export type JobStageAction =
+  | 'start'
+  | 'pause'
+  | 'resume'
+  | 'finish'
+  | 'receive';
 const GARAGE_REPORT_OUTCOMES = [
   'created',
   'already_reported',
@@ -300,6 +306,11 @@ const notifications = () =>
   );
 const jobSteps = () =>
   counter('motorfix_job_steps_total', "Changes to a job's steps, by action");
+const jobStageMoves = () =>
+  counter(
+    'motorfix_job_stage_moves_total',
+    "Calls to move a job's stage or record its reception, by action and outcome",
+  );
 const requestsReceived = () =>
   counter(
     'motorfix_request_received_total',
@@ -309,6 +320,16 @@ const reviewsAnnounced = () =>
   counter(
     'motorfix_review_announced_total',
     'Posted reviews announced to garage owners, by outcome',
+  );
+const reviewReportAlerts = () =>
+  counter(
+    'motorfix_review_report_alerts_total',
+    'Review reports told to the admins, by outcome',
+  );
+const reviewReportReminders = () =>
+  counter(
+    'motorfix_review_report_reminders_total',
+    'Reminders of review reports waiting 48 hours, by outcome',
   );
 const reviewRepliesAnnounced = () =>
   counter(
@@ -543,6 +564,13 @@ export function countJobStep(action: JobStepAction) {
   jobSteps().add(1, { action });
 }
 
+export function countJobStageMove(
+  action: JobStageAction,
+  outcome: 'ok' | 'refused',
+) {
+  jobStageMoves().add(1, { action, outcome });
+}
+
 export function countRequestReceived(
   outcome: (typeof REQUEST_RECEIVED_OUTCOMES)[number],
 ) {
@@ -555,6 +583,20 @@ export function countReviewAnnounced(
   outcome: (typeof REVIEW_ANNOUNCED_OUTCOMES)[number],
 ) {
   reviewsAnnounced().add(1, { outcome });
+}
+
+// A review report told to the active admins, one they all muted, or one
+// with nobody or nothing to tell.
+export function countReviewReportAlert(
+  outcome: (typeof REVIEW_ANNOUNCED_OUTCOMES)[number],
+) {
+  reviewReportAlerts().add(1, { outcome });
+}
+
+// A pending report's 48-hour reminder sent to the admins, or one that found
+// the report decided, closed or gone.
+export function countReviewReportReminder(outcome: 'sent' | 'skipped') {
+  reviewReportReminders().add(1, { outcome });
 }
 
 // A garage's reply told to the review's author, one they muted, or one

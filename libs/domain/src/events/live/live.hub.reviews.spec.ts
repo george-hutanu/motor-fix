@@ -99,3 +99,43 @@ describe("the garage channel's review messages", () => {
     expect(mechanic.kinds()).toEqual([]);
   });
 });
+
+// @traces 177-FR-010
+describe("the admin channel's review messages", () => {
+  const admin = () => {
+    const sink = new Sink();
+    hub.open(sink, {
+      accountId: 'ana',
+      channels: ['account:ana', 'system', 'admin'],
+      expiresAt: NOW + 15 * MINUTE,
+      garageId: null,
+      role: 'admin',
+    });
+    return sink;
+  };
+
+  const toEveryone = (kind: string) =>
+    hub.deliver(
+      JSON.stringify({
+        audience: ['admin', 'garage:g1', 'account:d1'],
+        event: { at: new Date(NOW).toISOString(), id: kind, kind },
+      }),
+    );
+
+  it('carry only what moves the reported reviews queue', async () => {
+    const ana = admin();
+
+    for (const kind of KINDS) await toEveryone(kind);
+    await toEveryone('review.report_closed');
+    await toEveryone('verification.decided');
+
+    expect(ana.kinds()).toEqual([
+      'review.deleted',
+      'review.reported',
+      'review.decided',
+      'rating.updated',
+      'review.report_closed',
+      'verification.decided',
+    ]);
+  });
+});

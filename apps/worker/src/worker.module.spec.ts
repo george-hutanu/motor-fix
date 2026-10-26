@@ -1,11 +1,13 @@
 import {
   BOOKING_TIMERS_CONSUMER,
+  MODERATION_TIMERS_CONSUMER,
   OutboxRelayModule,
   QUOTE_ACCEPTED_CONSUMER,
   QUOTE_LOST_CONSUMER,
   QUOTE_RECEIVED_CONSUMER,
   REQUEST_RECEIVED_CONSUMER,
   REQUEST_TIMERS_CONSUMER,
+  REVIEW_RATINGS_CONSUMER,
 } from '@motor-fix/domain';
 
 import { workerModule } from './worker.module';
@@ -48,4 +50,19 @@ describe('the outbox consumers of the worker', () => {
       expected.map((c: Consumer) => c.queue).sort(),
     );
   });
+});
+
+// @traces 177-FR-011 177-FR-012 177-FR-013
+describe('the moderation timers in the worker', () => {
+  it.each(['review.reported', 'review.decided', 'review.deleted'])(
+    'hand %s to the moderation timers beside the ratings',
+    (kind) => {
+      const taking = consumers().filter((c) => c.kinds.includes(kind));
+      expect(taking.map((c) => c.queue).sort()).toEqual(
+        [MODERATION_TIMERS_CONSUMER, REVIEW_RATINGS_CONSUMER]
+          .map((c: Consumer) => c.queue)
+          .sort(),
+      );
+    },
+  );
 });

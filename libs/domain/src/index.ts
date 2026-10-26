@@ -95,6 +95,10 @@ export { DemandModule } from './insights/demand/demand.module';
 export { GarageFiguresService } from './insights/garage-figures/garage-figures.service';
 export { InsightsModule } from './insights/insights.module';
 export { ProfileViewsModule } from './insights/profile-views/profile-views.module';
+export {
+  LiveVideoModule,
+  liveVideoConfig,
+} from './live-video/live-video.module';
 export * from './logging';
 export { MapsModule } from './maps/maps.module';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
@@ -153,6 +157,8 @@ export { ROUTE_LIMITS } from './rate-limit/rate-limit.config';
 export { countRateLimitRefusal } from './rate-limit/rate-limit.metrics';
 export { RateLimits } from './rate-limit/rate-limit.service';
 export { RetentionModule } from './retention/retention.module';
+export { MODERATION_TIMERS_CONSUMER } from './reviews/moderation-timers/moderation-timers';
+export { ModerationTimersModule } from './reviews/moderation-timers/moderation-timers.module';
 export { REVIEW_RATINGS_CONSUMER } from './reviews/ratings/ratings';
 export { ReviewRatingsModule } from './reviews/ratings/ratings.module';
 export { ReviewsModule } from './reviews/reviews.module';

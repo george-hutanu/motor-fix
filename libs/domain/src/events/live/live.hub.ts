@@ -53,7 +53,7 @@ export const KIND_CAPABILITY: [RegExp, Capability][] = [
   [/^(request|message)\./, 'garage.requests'],
   [/^booking\.move/, 'garage.move_bookings'],
 ];
-const FEATURES: [RegExp, string][] = [[/^media\./, 'live_media']];
+const FEATURES: [RegExp, string][] = [[/^(media|live)\./, 'live_media']];
 const REREAD_ACCESS = new Set([
   'member.removed',
   'mechanic.updated',
@@ -61,6 +61,19 @@ const REREAD_ACCESS = new Set([
   'garage.features_changed',
 ]);
 const ENDS_ACCOUNT = new Set(['account.suspended', 'account.deleted']);
+
+// The review kinds the admin channel carries: those that move the reported
+// reviews queue. The review audience names the admins for every kind.
+const ADMIN_REVIEW_KINDS = new Set([
+  'review.reported',
+  'review.decided',
+  'review.deleted',
+  'review.report_closed',
+]);
+const adminHears = (key: string, kind: string) =>
+  key !== 'admin' ||
+  !kind.startsWith('review.') ||
+  ADMIN_REVIEW_KINDS.has(kind);
 
 const REVIEW_KINDS = [
   'review.posted',
@@ -379,9 +392,11 @@ export class LiveHub {
     const out = outgoing(event, message.position);
     const { id, kind } = out.message;
     this.follow(kind, id, keys);
-    const open = PRIVATE.test(kind)
-      ? keys.filter((key) => !key.startsWith('public:'))
-      : keys;
+    const open = keys.filter(
+      (key) =>
+        !(PRIVATE.test(kind) && key.startsWith('public:')) &&
+        adminHears(key, kind),
+    );
     const staff: Promise<void>[] = [];
     for (const connection of this.connections.values()) {
       const met = open.filter((key) => connection.channels.has(key));

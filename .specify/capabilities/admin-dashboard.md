@@ -28,6 +28,7 @@ features:
   - 003-admin-account-actions
   - 1368-admin-brand-list
   - 1263-admin-dashboard-customise
+  - 177-reported-reviews
 ---
 
 # Capability: Admin dashboard
@@ -861,6 +862,10 @@ _From 1263-admin-dashboard-customise._
 ### 1263-FR-015 — Tests MUST cover, in Jest on the admin panel: the press opening and the second press closing the tip, focus alone opening nothing, Escape closing it, the accessibility snapshot with the tip closed (no reason anywhere but the hidden tip; the button named "De ce?" / "Why?") and open (the reason in the tile's name); and in a `web-e2e` Playwright spec (jsdom does no layout): the tip's box against the button's and the number's at 320 px, 768 px and 1280 px, the tiles' computed inset equal to the header controls' at 1280 px, and the header's first row at 768 px.
 
 _From 1263-admin-dashboard-customise._
+
+### 177-FR-004 — The count of pending items MUST be answered by the overview read (`GET /api/v1/admin/overview`) as `reportsPending`, together with `reportsOverdue`, so the one call that feeds the admin shell feeds the menu counter and the tile (161-FR-008).
+
+_From 177-reported-reviews._
 
 ## Retired
 
