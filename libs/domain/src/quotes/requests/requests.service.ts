@@ -11,6 +11,7 @@ import type {
   Booking,
   Garage,
   GarageResponseStats,
+  Job,
   JobType,
   PrismaClient,
   QuoteRequest,
@@ -38,13 +39,20 @@ import {
 
 const SUMMARY = {
   _count: { select: { quotes: true } },
-  bookings: { orderBy: NEWEST_FIRST, take: 1 },
+  bookings: {
+    include: { garage: true, job: { select: { status: true } } },
+    orderBy: NEWEST_FIRST,
+    take: 1,
+  },
   jobs: { include: { jobType: true }, orderBy: { position: 'asc' as const } },
 };
 
 type SummaryRow = QuoteRequest & {
   _count: { quotes: number };
-  bookings: Booking[];
+  bookings: (Booking & {
+    garage: Garage;
+    job: Pick<Job, 'status'> | null;
+  })[];
   jobs: (RequestJob & { jobType: JobType })[];
 };
 
@@ -52,7 +60,16 @@ const summaryOf = ({
   bookings: [booking],
   ...row
 }: SummaryRow): RequestSummaryDto => ({
-  booking: booking ? rowBookingOf(booking) : null,
+  booking: booking
+    ? {
+        ...rowBookingOf(booking),
+        cancelledBySide: booking.cancelledBySide,
+        garage: garageRef(booking.garage),
+        id: booking.id,
+        jobStarted: booking.job !== null && booking.job.status !== 'to_do',
+        lateCancellation: booking.lateCancellation,
+      }
+    : null,
   car: snapshotOf(row),
   closedAt: iso(row.closedAt),
   closedReason: row.closedReason,
@@ -96,11 +113,6 @@ export class RequestsService {
     const row = await this.prisma.quoteRequest.findFirst({
       include: {
         ...SUMMARY,
-        bookings: {
-          include: { garage: true },
-          orderBy: NEWEST_FIRST,
-          take: 1,
-        },
         quotes: {
           include: { garage: true, jobs: true },
           orderBy: { sentAt: 'asc' },

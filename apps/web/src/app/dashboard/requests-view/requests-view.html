@@ -16,9 +16,6 @@
             <span aria-hidden="true">·</span>
             <time>{{ row.when }}</time>
           </p>
-          @if (row.quoted) {
-            <a class="compare" [routerLink]="['/app', 'driver', 'requests']" [queryParams]="{ request: row.id }">{{ 'driver.requests.compare' | t }}</a>
-          }
           @if (row.waiting; as left) {
             <p class="waiting">{{ 'driver.requests.waitingGarage' | t: { left } }}</p>
           }
@@ -27,6 +24,24 @@
           }
           @if (row.lapsed) {
             <p class="lapsed">{{ 'driver.requests.lapsed' | t }}</p>
+          }
+          @if (row.cancelledByYou; as cancelled) {
+            <p class="cancelled">{{ 'driver.requests.cancelledByYou' | t }}@if (cancelled.late) {<span> · {{ 'driver.requests.lateCancellation' | t }}</span>}</p>
+          }
+          @if (row.reopened) {
+            <p class="reopened">{{ 'driver.requests.bookingCancelled' | t }}</p>
+          }
+          @if (row.quoted || row.cancel) {
+            <div class="actions">
+              @if (row.quoted) {
+                <a class="compare" [routerLink]="['/app', 'driver', 'requests']" [queryParams]="{ request: row.id }">{{ 'driver.requests.compare' | t }}</a>
+              }
+              @if (row.cancel?.kind === 'booking') {
+                <button hlmBtn variant="secondary" type="button" class="cancel" (click)="cancel(row)">{{ 'driver.requests.cancelBooking' | t }}</button>
+              } @else if (row.cancel) {
+                <button hlmBtn variant="secondary" type="button" class="cancel" (click)="cancel(row)">{{ 'driver.requests.cancelRequest' | t }}</button>
+              }
+            </div>
           }
         </li>
       }

@@ -725,7 +725,16 @@ describe('the panels’ states', () => {
 describe('Panou’s quotes panel', () => {
   const booked = (status: 'awaiting_confirmation' | 'confirmed') =>
     ({
+      cancelledBySide: null,
       confirmBy: '2026-10-18T10:00:00.000Z',
+      garage: {
+        id: 'garage-1',
+        name: 'Service Auto Militari',
+        slug: 'service-auto-militari',
+      },
+      id: 'booking-1',
+      jobStarted: false,
+      lateCancellation: false,
       startsAt: '2026-10-20T06:00:00.000Z',
       status,
     }) as const;
@@ -837,6 +846,22 @@ describe('Panou once a quote is accepted', () => {
     expect(requestsList).toHaveBeenCalledTimes(2);
     expect(carsList).toHaveBeenCalledTimes(1);
   });
+
+  // @traces 1385-FR-008
+  it.each(['request.cancelled', 'booking.cancelled'] as const)(
+    'reads the requests again on a cancel, %s',
+    async (kind) => {
+      const { settle } = await render({
+        requests: [request({ quotesCount: 2 })],
+      });
+
+      events.next({ at: new Date().toISOString(), id: 'req-1', kind });
+      await new Promise((r) => setTimeout(r, 400));
+      await settle();
+
+      expect(requestsList).toHaveBeenCalledTimes(2);
+    },
+  );
 
   // @traces 389-FR-016
   it.each(['booking.confirmed', 'booking.lapsed'] as const)(
