@@ -10,6 +10,8 @@ export interface Reading {
 const DAYS_A_MONTH = 30.44;
 const DEFAULT_MONTHLY_KM = 1000;
 const MIN_SPAN_DAYS = 30;
+// An estimate past ten years is shown as ten years: the date stays a real day.
+const HORIZON_DAYS = 3650;
 
 const order = (a: Reading, b: Reading) =>
   a.readOn.localeCompare(b.readOn) ||
@@ -46,5 +48,5 @@ export function serviceDueOn(
   if (left <= 0) return null;
   const perDay = monthlyAverageKm(readings, today) / DAYS_A_MONTH;
   const newest = [...readings].sort(order).at(-1)?.readOn ?? today;
-  return addDays(newest, Math.round(left / perDay));
+  return addDays(newest, Math.min(Math.round(left / perDay), HORIZON_DAYS));
 }

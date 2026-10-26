@@ -143,7 +143,6 @@ export class CreateCarDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(MAX_KM)
   nextServiceKm?: number | null;
 }
 
@@ -266,7 +265,6 @@ export class UpdateCarDto {
   @given()
   @IsInt()
   @Min(1)
-  @Max(MAX_KM)
   nextServiceKm?: number | null;
 }
 

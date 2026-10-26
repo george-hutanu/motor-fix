@@ -249,9 +249,10 @@ describe('the next oil service on a car', () => {
     const { auth } = await driver();
     const car = await saved(auth, { odometerKm: 1_950_000 });
 
-    const res = await edit(auth, car, { nextServiceKm: 2_000_001 });
-
-    expect(res.status).toBe(400);
+    refusedWith(
+      await edit(auth, car, { nextServiceKm: 2_000_001 }),
+      'next_service_too_far',
+    );
   });
 
   it('is refused when the car is added with it at its odometer', async () => {

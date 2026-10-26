@@ -134,7 +134,7 @@ describe('nextServiceKm on a save and an edit', () => {
     ['1', 1, []],
     ['the odometer ceiling', 2_000_000, []],
     ['0', 0, ['nextServiceKm']],
-    ['above the ceiling', 2_000_001, ['nextServiceKm']],
+    ['above the ceiling, left to the API', 2_000_001, []],
     ['a decimal', 152_000.5, ['nextServiceKm']],
     ['a numeric string', '152000', ['nextServiceKm']],
   ])('takes %s on an edit', (_, nextServiceKm, expected) => {

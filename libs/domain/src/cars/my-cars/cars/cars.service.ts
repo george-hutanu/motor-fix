@@ -4,6 +4,7 @@ import type {
   CreateCarDto,
   UpdateCarDto,
 } from '@motor-fix/contracts';
+import { MAX_KM } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { AUDIT_PORT, type AuditPort } from '../../../audit/audit.port';
@@ -103,7 +104,7 @@ function assertNextService(nextServiceKm: number, odometerKm: number) {
       'The next service is not above the odometer',
     );
   }
-  if (nextServiceKm > odometerKm + SERVICE_REACH_KM) {
+  if (nextServiceKm > Math.min(odometerKm + SERVICE_REACH_KM, MAX_KM)) {
     throw invalid(
       'nextServiceKm',
       'next_service_too_far',

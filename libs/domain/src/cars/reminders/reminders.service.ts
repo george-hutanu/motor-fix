@@ -103,7 +103,7 @@ export class RemindersService {
   // day is an estimate that moves with every reading, and a moved estimate
   // keeps the reminder's id and what it sent. A new value takes a new id and
   // starts again. A stage behind `today` counts as sent, as for a date.
-  async setServiceDue(input: {
+  private async setServiceDue(input: {
     accountId: string;
     carId: string;
     dueKm: number;
@@ -192,7 +192,8 @@ export class RemindersService {
       readOn: day(r.readOn) as string,
     }));
     const dueOn = serviceDueOn(car, readings, today);
-    if (dueOn === null || car.nextServiceKm === null) {
+    const dueKm = car.nextServiceKm;
+    if (dueOn === null || dueKm === null) {
       await this.prisma.reminder.deleteMany({
         where: { carId, kind: 'service' },
       });
@@ -201,7 +202,7 @@ export class RemindersService {
     await this.setServiceDue({
       accountId,
       carId,
-      dueKm: car.nextServiceKm,
+      dueKm,
       dueOn,
       today,
     });

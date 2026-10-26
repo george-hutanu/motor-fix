@@ -72,6 +72,13 @@ describe('the estimated day of the next oil service', () => {
     expect(serviceDueOn(car(149_700), YEAR, TODAY)).toBe('2026-11-11');
   });
 
+  it('stops at ten years when the average is a kilometre in 300 days', () => {
+    const crawl = [at('2026-01-01', 100_000), at('2026-10-28', 100_001)];
+    expect(serviceDueOn(car(200_000, 100_001), crawl, '2026-10-28')).toBe(
+      '2036-10-25',
+    );
+  });
+
   it('is 116 days away at the 1,000 km default', () => {
     expect(serviceDueOn(car(152_000), [at(TODAY, 148_200)], TODAY)).toBe(
       '2027-02-01',
