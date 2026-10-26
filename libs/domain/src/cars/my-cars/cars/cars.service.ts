@@ -108,7 +108,7 @@ function assertNextService(nextServiceKm: number, odometerKm: number) {
     throw invalid(
       'nextServiceKm',
       'next_service_too_far',
-      'The next service is more than 100,000 km past the odometer',
+      'The next service is more than 100,000 km past the odometer or above its ceiling',
     );
   }
 }

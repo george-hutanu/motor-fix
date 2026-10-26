@@ -172,7 +172,7 @@ describe('the next oil service value from outside', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.nextServiceKm).toBe(148_201);
-    expect(typeof res.body.serviceDueOn).toBe('string');
+    expect(res.body.serviceDueOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it('answers a calendar day shaped YYYY-MM-DD in serviceDueOn', async () => {
