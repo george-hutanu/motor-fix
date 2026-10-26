@@ -13,6 +13,7 @@ features:
   - 076-report-review
   - 075-review-reply
   - 099-overview-sections
+  - 177-reported-reviews
 ---
 
 # Capability: Reviews
@@ -464,6 +465,34 @@ _From 075-review-reply._
 ### 075-FR-013 — Tests MUST be written first: Jest on real PostgreSQL for the operations (owner 201 with the row, the audit entry and the event in one transaction, and the rollback when one write fails; the edit's 200 with `edited_at`, the audit's old and new text and the event; 409 `already_replied` on a second POST and under two concurrent POSTs exactly one row; 403 for the receptionist and the mechanic; 404 with one body for another garage's member, a driver, an admin, a missing review and a bad id; 401 with no session; 409 `review_not_public` for `reported`, `removed` and `deleted_by_author` reviews; 409 `reply_not_public` for an edit of a `reported` reply; 409 `reply_removed` for POST after a `removed` reply; 422 for empty, blank and 1,001-code-point texts and 201 at 1,000; a review without a mechanic; the deleted author), the fan-out (one REVIEW_REPLIED per `review.replied`, the bell only when muted, none twice for one event id, none on `review.reply_edited`, none for a deleted author), the reads (the staff read's `reply` and `canReply` per state; the public reads carrying a `published` reply only, nothing of a `reported` or `removed` one, no personal data), the hub filter; web unit tests for the row (both buttons, the disabled state, each mark, both languages), the dialog (subtitle with and without mechanic, counter and disabled button at the limits, the confirmation, each refusal keeping the text, the retry) and the public reply block; and Playwright: the owner replies from the dashboard, a visitor with the profile open sees the reply without a reload, and the driver sees a new bell item.
 
 _From 075-review-reply._
+
+### 177-FR-001 — The system MUST expose an admin-only read of the reported-reviews queue, `GET /api/v1/admin/review-reports?page=`, answering the pending items oldest first (by the report's creation time, then id), 20 a page, with the page's items, the total of pending items, the number of overdue items and the oldest pending report's creation time `oldestCreatedAt` (ISO, null when none; the client formats the age); access follows the `admin/*` policy (161-FR-003): an admin 200, any other role 404 `not_found`, no session 401 `sign_in_required`, a suspended admin 403 `account_suspended`; the route joins the admin-route guard test. `page` is an integer of 1 or more (default 1): `0`, a negative or a non-integer value is refused 400 `validation_failed`, and a page past the last answers an empty `items` with the same totals. A report is overdue when the time of the read is at or after its `dueAt`; the flag, `reportsOverdue` (FR-004) and the mark of FR-009 use that one rule.
+
+_From 177-reported-reviews._
+
+### 177-FR-002 — Each item MUST carry: the report (id, target `review` or `reply`, reason, text when the reason is `other`, source `garage`, `author` or `automatic`, created at, due at, overdue flag), the garage (id, name), the review (id, score, text, source `job` or `profile`, posted at, author's public name as the public reads show it), and the facts of FR-003; for a reply report also the reply (id, text, posted at, edited at, who posted it as the garage's name). An item MUST never carry the author's e-mail, phone, plate or account id.
+
+_From 177-reported-reviews._
+
+### 177-FR-003 — The facts MUST be computed when the queue is read (nothing stored): (a) the job: when the review's source is `job`, "confirmed job" with the accepted quote's work names in the admin's language joined with " · ", the car's brand and model and the job's handover date (omitted when none), or "no job: written from the profile" for source `profile`; (b) the author's account creation date, or "account deleted" when the account is gone; (c) the number of other reviews by the same author, at any garage and in any status except `deleted_by_author`, whose trimmed text equals this review's trimmed text exactly (case-sensitive; 0 when the review has no text); (d) the garage's report history: n, the reports with source `garage` on this garage's reviews created before this report (any status), and k, those of them with decision `kept`.
+
+_From 177-reported-reviews._
+
+### 177-FR-013 — When the author deletes a review that has a pending report (`review.deleted`), a consumer of that event MUST set the report `closed` (decision empty, decided-at the event's time) with its audit entry and a `review.report_closed` event on the `admin` channel in the same transaction, idempotently on a redelivered event, so the item leaves the queue and the counts drop; the review's existing deletion rules are unchanged.
+
+_From 177-reported-reviews._
+
+### 177-FR-014 — The queue read and the overview's two new counts MUST never count `decided` or `closed` reports, and the reporting garage, the reason and the facts MUST appear on no read a non-admin can make (076-FR-010 holds).
+
+_From 177-reported-reviews._
+
+### 177-FR-017 — The new read, the new queue and the fan-out MUST ship with their observability: request metrics by route template for the read, a product counter of reminders sent and of alerts sent, the queue's existing BullMQ metrics, their logs (ids, steps and outcomes only: no review, reply or report text, no names and no e-mail in a log line or a metric label), a dashboard panel and an alert, each listed in `infra/observability/inventory.json` in the same change (the existing `api-error-rate` and `api-latency` rules cover the route).
+
+_From 177-reported-reviews._
+
+### 177-FR-018 — Tests MUST be written first: Jest on real PostgreSQL and Redis for the read (an admin's 200 with the item's fields and the four facts for a job review, the "no job" fact for a profile review, the identical-reviews count, the garage's history counts, oldest-first order and the 20-item page, the overdue count and flag, 404 for each other role, 401 and 403; a reply report as its own item with its facts; `decided` and `closed` rows excluded; the overview's `reportsPending` and `reportsOverdue`), for the fan-out (one notification per active admin per event, none for a suspended admin, none twice on a redelivered event, the three texts, e-mail and push only), for the reminder (scheduled at the due time; sent once when still pending; nothing when decided or closed; the job removed on a decision), for the closing on the author's deletion, and for the admin channel carrying the four kinds; component tests for the item in both forms, the lamp texts, the oldest-wait line, the empty, loading and error states, the overdue mark crossing while shown, the counter and the tile; a Playwright flow in which a garage owner reports a review and an admin's open view shows the item with its facts without a reload. FR-015 to FR-017 are proven by the i18n key-parity check, the QA sweep with its axe pass and the observability inventory check, which run in CI. Every test names its requirement ids in one whole-line `// @traces` comment.
+
+_From 177-reported-reviews._
 
 ## Retired
 
