@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 203,
+    "count": 205,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -351,6 +351,19 @@
       ],
       "reason": "counted by motorfix_review_announced_total (built, muted, skipped) on motorfix-product, with one ReviewPosted log line per event naming the review id; BullMQ's queue metrics cover depth and failures",
       "story": "ST-74"
+    },
+    {
+      "kind": "queue",
+      "name": "review-replied",
+      "source": "libs/domain/src/notifications/review-replied/review-replied.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_review_reply_announced_total (built, muted, skipped) on motorfix-product, with one ReviewReplied log line per event naming the review id; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-75"
     },
     {
       "kind": "queue",
@@ -931,6 +944,15 @@
       "alerts": "none",
       "reason": "counts each posted review announced to its garage's owners by outcome (built, muted, skipped), with the fan-out's log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-74"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_reply_announced_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each garage reply announced to the review's author by outcome (built, muted, skipped), with the fan-out's log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
+      "story": "ST-75"
     },
     {
       "kind": "endpoint",
@@ -2531,6 +2553,41 @@
       "alerts": "none",
       "reason": "counts each report a garage owner tries by outcome (the nine reasons, forbidden, already_reported, already_kept, validation_failed) with no identifiers; a refusal is the owner's state, not an outage; the api-error-rate rule covers the endpoint that reports it",
       "story": "ST-76"
+    },
+    {
+      "kind": "endpoint",
+      "name": "review-reply",
+      "source": "libs/domain/src/reviews/reply/reply.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/reviews/{reviewId}/reply",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each reply counts motorfix_reviews_replied_total by outcome, writes the reply, its audit entry and one review.replied event in one transaction",
+      "story": "ST-75"
+    },
+    {
+      "kind": "endpoint",
+      "name": "review-reply-edit",
+      "source": "libs/domain/src/reviews/reply/reply.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/reviews/{reviewId}/reply",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each edit counts motorfix_reviews_replied_total (edited or the refusal), writes the text, its audit entry and one review.reply_edited event in one transaction under a row lock",
+      "story": "ST-75"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_reviews_replied_total",
+      "source": "libs/domain/src/reviews/reviews.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each reply or edit a garage owner tries by outcome (published, edited, forbidden, review_not_public, already_replied, reply_not_public, reply_removed, validation_failed) with no identifiers; a refusal is the owner's state, not an outage; the api-error-rate rule covers the endpoint that reports it",
+      "story": "ST-75"
     },
     {
       "kind": "product-counter",

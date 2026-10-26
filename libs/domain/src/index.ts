@@ -133,6 +133,7 @@ export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-re
 export { REQUEST_CANCELLED_CONSUMER } from './notifications/request-cancelled/request-cancelled.fan-out';
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
 export { REVIEW_POSTED_CONSUMER } from './notifications/review-posted/review-posted.fan-out';
+export { REVIEW_REPLIED_CONSUMER } from './notifications/review-replied/review-replied.fan-out';
 export { VERIFICATION_RESULT_CONSUMER } from './notifications/verification-result/verification-result.fan-out';
 export { PlacesModule, placesConfig } from './places/places.module';
 export { ACCOUNT_CLOSED_CONSUMER } from './quotes/account-closed/account-closed';

@@ -39,6 +39,7 @@ model Review {
   garage     Garage         @relation(fields: [garageId], references: [id], onDelete: Cascade)
   mechanic   Mechanic?      @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
   reports    ReviewReport[]
+  reply      ReviewReply?
 
   @@index([mechanicId])
   @@map("review")
@@ -113,4 +114,41 @@ model ReviewReport {
 
   @@index([reviewId])
   @@map("review_report")
+}
+
+enum ReviewReplyStatus {
+  published
+  reported
+  removed
+
+  @@map("review_reply_status")
+}
+
+enum ReviewReplyRemovedCause {
+  report_upheld
+
+  @@map("review_reply_removed_cause")
+}
+
+// The garage's one public reply to a review, posted and edited by its owner.
+// Reported and removed are written by the moderation stories.
+model ReviewReply {
+  id           String                   @id @default(uuid()) @db.Uuid
+  reviewId     String                   @unique @map("review_id") @db.Uuid
+  garageId     String                   @map("garage_id") @db.Uuid
+  // Stored trimmed, 1-1,000 characters.
+  text         String
+  postedAt     DateTime                 @default(now()) @map("posted_at") @db.Timestamptz(3)
+  // Nullable so the reply outlives the owner's account.
+  postedById   String?                  @map("posted_by") @db.Uuid
+  // Set by every edit; empty until the first one.
+  editedAt     DateTime?                @map("edited_at") @db.Timestamptz(3)
+  status       ReviewReplyStatus        @default(published)
+  removedAt    DateTime?                @map("removed_at") @db.Timestamptz(3)
+  removedCause ReviewReplyRemovedCause? @map("removed_cause")
+  review       Review                   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  garage       Garage                   @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  postedBy     Account?                 @relation("ReviewReplyAuthor", fields: [postedById], references: [id], onDelete: SetNull)
+
+  @@map("review_reply")
 }

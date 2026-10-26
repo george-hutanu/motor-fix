@@ -83,6 +83,7 @@ model Account {
   reviews                 Review[]                 @relation("ReviewDriver")
   reviewReports           ReviewReport[]           @relation("ReviewReporter")
   reviewDecisions         ReviewReport[]           @relation("ReviewReportDecider")
+  reviewReplies           ReviewReply[]            @relation("ReviewReplyAuthor")
   supportMessages         SupportMessage[]
   decidedJobTypes         JobType[]                @relation("JobTypeDecider")
   dataExports             DataExport[]
