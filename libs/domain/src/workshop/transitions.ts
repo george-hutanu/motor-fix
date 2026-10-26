@@ -1,6 +1,7 @@
 import { recordedRole } from '../audit/audit.port';
 import type { Prisma } from '../generated/prisma/client';
 import type { JobStatus } from '../generated/prisma/enums';
+import { stopLiveSessions } from '../live-video/stop-sessions';
 import {
   applyTransition,
   type LockedRow,
@@ -76,6 +77,8 @@ export async function moveJob(
       where: { id: move.id },
     });
   }
+  if (move.to === 'done' || move.to === 'cancelled')
+    await stopLiveSessions(tx, ports.audit, { jobId: move.id }, 'job_closed');
   await tx.jobStageEntry.create({
     data: {
       actorId: move.actor.accountId,

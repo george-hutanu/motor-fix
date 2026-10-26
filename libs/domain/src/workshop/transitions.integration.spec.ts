@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { HttpException } from '@nestjs/common';
 
 import { JOB_MOVES, moveJob } from './transitions';
@@ -299,5 +301,94 @@ describe('the time a job spends in work', () => {
     expect(
       await prisma.job.findUniqueOrThrow({ where: { id: job.id } }),
     ).toMatchObject({ finishedAt: expect.any(Date), status: 'done' });
+  });
+});
+
+const liveOn = (jobId: string) =>
+  prisma.liveSession.create({
+    data: {
+      garageId,
+      jobId,
+      provider: 'fake',
+      providerInputId: randomUUID(),
+    },
+  });
+
+// @traces 1250-FR-006
+describe('moveJob and a live stream', () => {
+  it.each([
+    ['in_work', 'done'],
+    ['to_do', 'cancelled'],
+  ] as const)(
+    'ends the live stream when a job moves from %s to %s',
+    async (from, to) => {
+      const job = await jobIn(from);
+      const session = await liveOn(job.id);
+
+      await move(job.id, to);
+
+      expect(
+        await prisma.liveSession.findUniqueOrThrow({
+          where: { id: session.id },
+        }),
+      ).toMatchObject({
+        stoppedAt: expect.any(Date),
+        stopReason: 'job_closed',
+      });
+    },
+  );
+
+  it.each([
+    ['to_do', 'in_work'],
+    ['in_work', 'paused'],
+    ['paused', 'in_work'],
+  ] as const)(
+    'keeps the stream live on a move from %s to %s',
+    async (from, to) => {
+      const job = await jobIn(from);
+      const session = await liveOn(job.id);
+
+      await move(job.id, to);
+
+      expect(
+        await prisma.liveSession.findUniqueOrThrow({
+          where: { id: session.id },
+        }),
+      ).toMatchObject({ stoppedAt: null, stopReason: null });
+    },
+  );
+
+  it('keeps the stream live when the move rolls back', async () => {
+    const job = await jobIn('in_work');
+    const session = await liveOn(job.id);
+
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await moveJob(tx, ports, {
+          actor: { accountId: owner, role: 'garage' },
+          event: {
+            audience: {
+              driverAccountId: driver,
+              garageId,
+              mechanicId: null,
+              type: 'job',
+            },
+            kind: 'job.done',
+          },
+          id: job.id,
+          to: 'done',
+        });
+        throw new Error('the next write failed');
+      }),
+    ).rejects.toThrow('the next write failed');
+
+    expect(
+      await prisma.liveSession.findUniqueOrThrow({ where: { id: session.id } }),
+    ).toMatchObject({ stoppedAt: null });
+    expect(
+      await prisma.outboxEvent.count({
+        where: { kind: 'live.stopped', subjectId: job.id },
+      }),
+    ).toBe(0);
   });
 });
