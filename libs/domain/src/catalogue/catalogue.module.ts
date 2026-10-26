@@ -9,6 +9,7 @@ import { JobDecisionsService } from './job-decisions/job-decisions.service';
 import { JobTypeLoader } from './job-types/job-type-loader';
 import { JobTypesController } from './job-types/job-types.controller';
 import { JobTypesService } from './job-types/job-types.service';
+import { Models3dLoader } from './models-3d/models-3d.loader';
 import { PublicHolidaysController } from './public-holidays.controller';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
@@ -29,6 +30,7 @@ import { EVENT_PORT, outbox } from '../events/event.port';
     JobDecisionsService,
     JobTypeLoader,
     JobTypesService,
+    Models3dLoader,
     { provide: AUDIT_PORT, useClass: AuditService },
     { provide: EVENT_PORT, useValue: outbox },
   ],

@@ -271,6 +271,32 @@ describe('building the file', () => {
     expect(text).not.toContain(mechanic.id);
   });
 
+  // @traces 091-FR-014
+  it("lists each car's odometer readings, oldest first, with their day and source", async () => {
+    const builder = await start();
+    const { a } = await twoDrivers();
+    const car = await prisma.car.findFirstOrThrow({ where: { ownerId: a.id } });
+    const reading = (km: number, readOn: string) => ({
+      carId: car.id,
+      km,
+      readOn: new Date(`${readOn}T00:00:00Z`),
+      source: 'driver' as const,
+    });
+    await prisma.odometerReading.createMany({
+      data: [reading(149_000, '2026-10-08'), reading(131_900, '2025-10-08')],
+    });
+
+    const { files } = await built(builder, a.id);
+
+    const [exported] = json(files, 'cars.json') as {
+      readings: Record<string, unknown>[];
+    }[];
+    expect(exported.readings).toEqual([
+      { km: 131_900, readOn: '2025-10-08T00:00:00.000Z', source: 'driver' },
+      { km: 149_000, readOn: '2026-10-08T00:00:00.000Z', source: 'driver' },
+    ]);
+  });
+
   it('lists push subscriptions without their keys', async () => {
     const builder = await start();
     const { a } = await twoDrivers();

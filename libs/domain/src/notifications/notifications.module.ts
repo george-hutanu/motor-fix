@@ -104,6 +104,11 @@ import {
   QuoteDeclinedFanOut,
 } from './quote-declined/quote-declined.fan-out';
 import {
+  QUOTE_LOST_QUEUE,
+  type QuoteClosedEvent,
+  QuoteLostFanOut,
+} from './quote-lost/quote-lost.fan-out';
+import {
   QUOTE_RECEIVED_QUEUE,
   QuoteReceivedFanOut,
   type QuoteSentEvent,
@@ -123,6 +128,11 @@ import {
   type ReviewPostedEvent,
   ReviewPostedFanOut,
 } from './review-posted/review-posted.fan-out';
+import {
+  REVIEW_REPLIED_QUEUE,
+  type ReviewRepliedEvent,
+  ReviewRepliedFanOut,
+} from './review-replied/review-replied.fan-out';
 import {
   VERIFICATION_RESULT_QUEUE,
   type VerificationEvent,
@@ -151,9 +161,11 @@ const WORKER = Symbol('NOTIFICATIONS_WORKER');
 const NEWS_WORKER = Symbol('NEWS_WORKER');
 const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
 const REVIEW_POSTED_WORKER = Symbol('REVIEW_POSTED_WORKER');
+const REVIEW_REPLIED_WORKER = Symbol('REVIEW_REPLIED_WORKER');
 const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
 const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const QUOTE_DECLINED_WORKER = Symbol('QUOTE_DECLINED_WORKER');
+const QUOTE_LOST_WORKER = Symbol('QUOTE_LOST_WORKER');
 const BOOKING_CONFIRMED_WORKER = Symbol('BOOKING_CONFIRMED_WORKER');
 const BOOKING_LAPSED_WORKER = Symbol('BOOKING_LAPSED_WORKER');
 const REQUEST_CANCELLED_WORKER = Symbol('REQUEST_CANCELLED_WORKER');
@@ -207,6 +219,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Inject(REVIEW_POSTED_WORKER)
     private readonly reviewPostedWorker?: Worker | null,
     @Optional()
+    @Inject(REVIEW_REPLIED_WORKER)
+    private readonly reviewRepliedWorker?: Worker | null,
+    @Optional()
     @Inject(QUOTE_RECEIVED_WORKER)
     private readonly quoteReceivedWorker?: Worker | null,
     @Optional()
@@ -215,6 +230,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(QUOTE_DECLINED_WORKER)
     private readonly quoteDeclinedWorker?: Worker | null,
+    @Optional()
+    @Inject(QUOTE_LOST_WORKER)
+    private readonly quoteLostWorker?: Worker | null,
     @Optional()
     @Inject(BOOKING_CONFIRMED_WORKER)
     private readonly bookingConfirmedWorker?: Worker | null,
@@ -466,6 +484,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        ReviewRepliedFanOut,
+        {
+          inject: [ReviewRepliedFanOut],
+          provide: REVIEW_REPLIED_WORKER,
+          useFactory: (fanOut: ReviewRepliedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('ReviewReplied').error(
+                'PUBLIC_WEB_URL missing; review reply messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<ReviewRepliedEvent>(
+              REVIEW_REPLIED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('ReviewReplied'));
+            return worker;
+          },
+        },
         QuoteReceivedFanOut,
         {
           inject: [QuoteReceivedFanOut],
@@ -544,6 +589,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             );
             observeWorker(worker);
             logFinalFailure(worker, new Logger('QuoteDeclined'));
+            return worker;
+          },
+        },
+        QuoteLostFanOut,
+        {
+          inject: [QuoteLostFanOut],
+          provide: QUOTE_LOST_WORKER,
+          useFactory: (fanOut: QuoteLostFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('QuoteLost').error(
+                'PUBLIC_WEB_URL missing; lost quote messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<QuoteClosedEvent>(
+              QUOTE_LOST_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('QuoteLost'));
             return worker;
           },
         },
@@ -852,9 +924,11 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.newsWorker?.close();
     await this.requestReceivedWorker?.close();
     await this.reviewPostedWorker?.close();
+    await this.reviewRepliedWorker?.close();
     await this.quoteReceivedWorker?.close();
     await this.quoteAcceptedWorker?.close();
     await this.quoteDeclinedWorker?.close();
+    await this.quoteLostWorker?.close();
     await this.bookingConfirmedWorker?.close();
     await this.bookingLapsedWorker?.close();
     await this.requestCancelledWorker?.close();

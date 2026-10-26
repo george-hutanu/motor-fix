@@ -317,10 +317,6 @@ _From 270-card-pin-link._
 
 _From 270-card-pin-link._
 
-### 271-FR-001 — Results opened in the browser with no `near` in the address bar and no kept place (a `bbox` alone is not a place) MUST ask the browser's location once on load (the existing 10 s timeout); while the request is open it MUST show its loading state and a polite status "Se caută locația…" / "Finding your location…" and run no search; a position inside Romania becomes the kept place (origin location, rounded as 229-FR-008), is written into the bar as `near` and starts one logged search. With `near` in the bar or a kept place it MUST search at once and ask nothing (267-FR-012 otherwise unchanged).
-
-_From 271-garage-distance._
-
 ### 271-FR-002 — On a refusal, a browser error, no geolocation in the browser, a point outside Romania, or no answer within 10 s, Results MUST show an address field labelled "Introdu o adresă" / "Enter an address" at the top of the page, above the map, with focus, and MUST assume no city and run no search; the map shows no pins and the list no cards until a place exists. Choosing a suggestion makes it the kept place (origin address), writes `near` into the bar and starts one logged search; the field then gives way to the summary line of 267-FR-013. An empty answer, a failed or rate-limited look-up and a text under three characters behave as 229-FR-004 ("Nu am găsit adresa", "Nu putem căuta adrese acum", nothing); a place from a link or from the browser keeps working while the geocoding service is down.
 
 _From 271-garage-distance._
@@ -342,10 +338,6 @@ _From 271-garage-distance._
 _From 271-garage-distance._
 
 ### 271-FR-008 — Every new text MUST live in the shared i18n files in Romanian and English; the page with the status line, the address field and the marker MUST hold at 320 px, 390 px, tablet and desktop, light and dark, with no sideways scroll.
-
-_From 271-garage-distance._
-
-### 271-FR-010 — The area membership and the distance (229-FR-010, 229-FR-011, 229-FR-013, 269-FR-004, 269-FR-005: the 25 or 50 km radius for a fixed garage, the service radius for a mobile mechanic, the box in visible-area mode) MUST be computed by the database's spatial functions over that column on the sphere, except the visible-area box, which stays a latitude and longitude range over the stored coordinates (`contracts/area-sql.md`) (`use_spheroid => false`, the values of today's haversine), and shown to one decimal rounded half away from zero as today (a value on a tie such as 3.25 reads 3.3), in the one shared place of the `search` module, and the plan of the area query MUST use the GiST index; the PR carries the `EXPLAIN` showing it.
 
 _From 271-garage-distance._
 
@@ -425,10 +417,6 @@ _From 1355-results-brand-chips._
 
 _From 1355-results-brand-chips._
 
-### 1358-FR-001 — Below 768 px (the shared `phone` layout, 286-FR-008) Results MUST lay out as: a summary bar at the top, the map under it filling the screen down to the public tab bar, and a sheet over the lower part of the map holding the list; from 768 px the layout built today is unchanged (the map above the list on a tablet, beside it from 1024 px). The decision uses the same breakpoint as the stylesheet, so the two never disagree.
-
-_From 1358-results-phone-map-list._
-
 ### 1358-FR-002 — The summary bar MUST show the brand (the page's title), the place line (the area, or the "în zona hărții" counts in visible-area mode) and the total found, plus the actions the summary carries today ("Schimbă locul", "Înapoi la 25 km", the "Reîncarcă" chip when a newer answer exists), in both languages with the texts that exist; the title stays the page's one heading. While the place is unknown it holds the address field, and while locating, the status line, as the header does today.
 
 _From 1358-results-phone-map-list._
@@ -449,19 +437,11 @@ _From 1351-results-phone-layout._
 
 _From 1358-results-phone-map-list._
 
-### 1358-FR-007 — A tap on a pin whose garage is in the list MUST, besides selecting it (270-FR-004), raise the sheet from low to half (keeping half or full where it already is) and scroll the list inside the sheet so the card is in view (the nearest edge, smooth unless reduced motion); a tap on a pin whose garage is not in the list opens the small card on the map (270-FR-010) and moves the sheet nowhere.
-
-_From 1358-results-phone-map-list._
-
 ### 1358-FR-008 — A brand, place, sort or filter change MUST keep the sheet's position; the list goes to its top inside the sheet with the first card selected (1355-FR-006); the brand-change loading state (1355-FR-011: the dimmed cards and the progress bar) shows inside the sheet. A live update, a pins re-read and a map move MUST keep the sheet's position and the list's scroll.
 
 _From 1358-results-phone-map-list._
 
 ### 1358-FR-009 — Reaching the full position by the visitor's own act (a drag or the handle's button) MUST add one step to the browser's history at the same address, carrying a sheet marker the page recognises, never a router navigation; a full forced by a failed map (FR-010) adds no step; the back gesture or button from full returns the sheet to half without leaving the page and without recording a search (the page already treats a history step as no new search); leaving full by hand MUST consume that step, so a later back leaves the page as before. The sheet adds no step for low or half. A history step carrying the marker that the visitor reaches again by going forward, or after a reload, leaves the sheet at half (the position is never restored from history), and a back over it then leaves the page as before.
-
-_From 1358-results-phone-map-list._
-
-### 1358-FR-010 — When the map's style failed to load (269-FR-017's condition), the sheet MUST rest at full and the summary bar MUST carry the existing text "Harta nu este disponibilă acum" / "The map is not available now" in a polite live region; the list is unchanged, and the visitor may still drag the sheet down.
 
 _From 1358-results-phone-map-list._
 

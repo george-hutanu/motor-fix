@@ -36,7 +36,7 @@ import {
 
 import { LiveChange } from '../../../dashboard/live-in-place/live-in-place';
 import { type LiveView, liveView } from '../../../live/view';
-import { publicRead } from '../../../public-read';
+import { freshPublicRead, publicRead } from '../../../public-read';
 import { PublicLive } from '../../live';
 
 // Any change to a review or to the garage's rating reads the first page again.
@@ -249,7 +249,7 @@ export class ReviewsSection implements OnInit {
     const garageId = untracked(this.garageId);
     const done = this.pending.add();
     return this.api
-      .reviewsControllerForGarage({ garageId, page: 1 }, publicRead())
+      .reviewsControllerForGarage({ garageId, page: 1 }, freshPublicRead())
       .then((answer) => {
         if (generation === this.generation) {
           this.extra.set([]);

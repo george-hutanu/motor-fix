@@ -40,6 +40,7 @@ export const staffReview = (
   postedAt: hoursAgo(2),
   quote: { fromBani: 150_000, toBani: 200_000 },
   rating: 5,
+  reply: null,
   source: 'job',
   status: 'published',
   text: 'Lucrare curată, predată la timp.',

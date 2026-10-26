@@ -8,6 +8,7 @@ import {
 import {
   provideClientHydration,
   withEventReplay,
+  withHttpTransferCacheOptions,
 } from '@angular/platform-browser';
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -19,6 +20,7 @@ import { routes } from './app.routes';
 import { authInterceptor } from './auth.interceptor';
 import { garageGoneInterceptor } from './dashboard/garage-gone.interceptor';
 import { PlatformStatus } from './maintenance/platform-status';
+import { transferCacheFilter } from './public-read';
 import { provideViewScrolling } from './scrolling';
 import { serverTimeoutInterceptor } from './server-timeout.interceptor';
 import { provideServiceWorkerRecovery } from './service-worker-recovery';
@@ -41,7 +43,10 @@ export const apiHttpClient = () =>
 export const appConfig: ApplicationConfig = {
   providers: [
     // A tap on the server-rendered page before hydration is replayed, not lost.
-    provideClientHydration(withEventReplay()),
+    provideClientHydration(
+      withEventReplay(),
+      withHttpTransferCacheOptions({ filter: transferCacheFilter }),
+    ),
     apiHttpClient(),
     provideRouter(routes, withInMemoryScrolling(), screenTransitions()),
     provideViewScrolling(),

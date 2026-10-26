@@ -55,6 +55,7 @@ features:
   - 1156-retention-job
   - 1204-terms-reaccept
   - 102-garage-members
+  - 423-mechanic-garage-dashboard
 ---
 
 # Capability: Accounts
@@ -294,10 +295,6 @@ _From 020-account-language._
 ### 020-FR-004 — The saved language MUST be the one `GET /api/v1/me` returns afterwards; an account that never chose has `ro`.
 
 _From 020-account-language._
-
-### 139-FR-004 — `PATCH /api/v1/me` MUST also accept `name` (2 to 80 characters once trimmed, no control characters) and `city` (null, or 2 to 60 characters once trimmed, no control characters; a blank city after trimming is stored as null), each optional, beside `language`; it MUST save the given fields in one transaction with one audit entry per field whose value changed (field, old value, new value, by the account in the role it is using) and one `account.updated` event naming the account and the changed fields, and answer "who am I"; a body with no change writes nothing (modifies 020-FR-001, 020-FR-005).
-
-_From 139-edit-my-details._
 
 ### 130-FR-002 — The public list MUST be exactly: `POST /api/v1/auth/sign-in`, `POST /api/v1/auth/sign-up`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/sign-out`, `GET /health/live`, `GET /health/ready` (outside the `/api/v1` prefix), `POST /api/v1/webhooks/brevo`, which checks Brevo's own bearer secret and is left out of the OpenAPI document (it arrived with ST-194; its own integration spec boots the app-wide check), and the two cookie-authenticated routes added since, `POST /api/v1/auth/sign-out-everywhere` (128-FR-001) and `POST /api/v1/auth/roles/switch` (394-FR-001); a test MUST enumerate every route the API serves, call each without a token, and fail when the set of routes not answering 401 `sign_in_required` differs from this list.
 
@@ -711,14 +708,6 @@ _From 139-edit-my-details._
 
 _From 139-edit-my-details._
 
-### 139-FR-003 — `GET /api/v1/me` MUST also return `phone`, `phoneConfirmed`, `pendingEmail` (the address of a live e-mail change, else null) and `hasPassword` (whether a `password` identity exists), so the panel can show the pending line, "Neconfirmat" and "Setează o parolă" without another call (modifies 097-FR-005).
-
-_From 139-edit-my-details._
-
-### 139-FR-004 — `PATCH /api/v1/me` MUST also accept `name` (2 to 80 characters once trimmed, no control characters) and `city` (null, or 2 to 60 characters once trimmed, no control characters; a blank city after trimming is stored as null), each optional, beside `language`; it MUST save the given fields in one transaction with one audit entry per field whose value changed (field, old value, new value, by the account in the role it is using) and one `account.updated` event naming the account and the changed fields, and answer "who am I"; a body with no change writes nothing (modifies 020-FR-001, 020-FR-005).
-
-_From 139-edit-my-details._
-
 ### 139-FR-005 — A name or city out of range, with control characters, or any unknown field MUST answer 400 `validation_failed` naming the field, and nothing is saved; the panel shows the problem as a Romanian and English text per rule (name or city too short, too long, or with a disallowed character).
 
 _From 139-edit-my-details._
@@ -818,10 +807,6 @@ _From 366-assistant-privacy._
 ### 243-FR-014 — The news consent (#834) and the analytics consent (#150) texts MUST be referred to from the privacy notice as separate, withdrawable consents, and the notice MUST say where each is changed (the account's notification settings or the link in each news e-mail for news, where the product changes it today; the cookie settings for analytics).
 
 _From 243-terms-privacy._
-
-### 1203-FR-001 — The privacy notice's first section, "Who runs MotorFix and how to reach us" (EN) / "Cine se ocupă de MotorFix și cum ne contactezi" (RO), MUST name HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ as the controller of the personal data in the service, with CUI 55178146, trade register number (Nr. ordine în Registrul Comerțului) F2026034954005, EUID ROONRC.F2026034954005, and the professional seat București, Sector 1, Bd. Bucureștii Noi nr. 136, parter, ap. 5, in both languages. The legal name and the seat are written verbatim in Romanian in both languages (a legal name and a postal address are not translated); the English text may add a short gloss saying the operator is a sole trader registered in Romania.
-
-_From 1203-legal-operator._
 
 ### 1203-FR-002 — The same section MUST give hutanugeorge40@gmail.com as the e-mail for anything about the reader's data, including data-protection requests and exercising the rights this notice describes (the phrase covers "anything in this notice"), stating that no account is needed, and MUST keep writing from the account as a second way; the sentence telling a reader without an account to create one in order to write MUST be removed, in both languages.
 
@@ -1041,10 +1026,6 @@ _From 005-data-requests._
 _From 005-data-requests._
 
 ### 005-FR-013 — The issues of ST-3 (george-hutanu/motor-fix-specs#84) and ST-129 (#235) and the feature page `docs/reference/features/admin/mf-46-users-accounts-overview.md` MUST link to the procedure page; MF-46's stale lawyer lines ("Lawyer, still open" on retention and the download, "agreed with the lawyer") and MF-28's download-format NEEDS CLARIFICATION MUST be replaced by a pointer to the page and the owner's 2026-10-16 sign-off.
-
-_From 005-data-requests._
-
-### 005-FR-014 — Every paragraph of the privacy notice in `apps/web/src/app/public/legal-texts.ts` that says how to use a right (closing the account or erasure, objecting to the profile-view count, "Your rights" / "Drepturile tale") MUST point to the e-mail address of the first section ("the e-mail address above" / "adresa de e‑mail de mai sus", worded so it cannot be read as the postal seat) as well as the account, in both languages, so it agrees with the contact paragraph and the procedure; the address itself stays written once per notice (1203-FR-010, `legal-texts.operator.adversary.spec.ts`); the terms of use are unchanged. It carries 1203-FR-010's rule forward: no legal fact beyond 1203-FR-001, 1203-FR-002 and 1203-FR-004 is added to the operator details (no DPO appointment, no other address, telephone number or supervisory-authority wording), and no section changes beyond these paragraphs.
 
 _From 005-data-requests._
 
@@ -1416,9 +1397,9 @@ _From 102-garage-members._
 
 _From 102-garage-members._
 
-### 102-FR-005 — Panou (`garage-home`) MUST decide each section by a capability of the table read from the session, never by a role string: the legal-check panel needs `garage.feature_switches`, the verified strip and its re-check line need `garage.profile`, the requests panel needs `garage.requests` (as its feed already does). A new section added by a later story declares its capability the same way; a mechanic without permissions sees no section but one status line, "Lucrările tale vor apărea aici." / "Your jobs will appear here." (proposed wording; no such text exists on `main`), until #208 builds the own-jobs sections.
+### 423-FR-001 — Panou (`/app/garage`) MUST show a person whose capabilities hold `garage.own_jobs` but neither `garage.profile` nor `garage.feature_switches` (a mechanic, with or without `can_answer_quotes`) an own-jobs section in place of the placeholder line of 102-FR-005: a list of the jobs the existing jobs read returns for them whose start falls on today's Bucharest day or that are `in_work` or `paused`, ordered by start time, each row carrying the start time (HH:MM), the car's brand and model, the plate when the read carries one, the job names and the stage label of Lucrări; a next-booking line with the start (day and HH:MM) and the car of the earliest own job starting after now, absent when there is none; and a load line, n counting the rows shown and m those whose stage is done, "{n} lucrări azi · {m} terminate" / "{n} jobs today · {m} done" with the Romanian count forms of the shared formatter. The section declares its capability as 102-FR-005 asks, never a role string; a mechanic with `can_answer_quotes` sees the requests panel above it, as today, and nobody sees figures, demand or reviews on it who does not today.
 
-_From 102-garage-members._
+_From 423-mechanic-garage-dashboard._
 
 ### 102-FR-006 — The views Recenzii and Profilul service-ului, now reachable by the receptionist, MUST show no "Răspunde" and no "Modifică profilul" to her: neither button exists on `main` today, and the story that adds one MUST gate it on an owner-only capability of the table, not on the view capability. The garage profile read (`GET /api/v1/garages/:garageId/profile`) MUST answer the receptionist as it answers the owner.
 
@@ -1439,6 +1420,30 @@ _From 102-garage-members._
 ### 102-FR-016 — When a call under the signed-in garage's own path answers 404, the garage dashboard MUST read the account again, once per such 404 and coalesced while a re-read is in flight, counting only calls under `/api/v1/garages/{garageId}/` of the signed-in garage; when `garageAccess` no longer holds that garage, the dashboard body MUST show "Nu mai ai acces la acest service" / "You no longer have access to this garage" with a link "Spre pagina principală" / "To the home page", and the garage menu MUST show no view. A 404 while the garage is still held changes nothing (a feature off, a resource that is gone).
 
 _From 102-garage-members._
+
+### 423-FR-003 — Panou MUST show, above the own-jobs section, a link "Foaia mea de zi" / "My day sheet" to the Programări view (`/app/garage/schedule`) when the garage's `day_sheets` switch is on and the person's capabilities hold `garage.schedule`; absent otherwise. The view itself stays ST-263's: until it ships, the link opens the view's coming text.
+
+_From 423-mechanic-garage-dashboard._
+
+### 423-FR-005 — The mechanic's menu and routes MUST keep coming from the capability table and the switches (102-FR-004): with no permission ticked the garage menu holds Panou, Lucrări, Istoric modificări and Setări, plus Programări when `day_sheets` is on; Cereri de ofertă appears with `can_answer_quotes`; Echipa, Prețuri, Recenzii and Profilul service-ului never; a typed address of a view she lacks lands on Panou; the Setări view shows a mechanic only her own device and notification choices (102-FR-013 holds).
+
+_From 423-mechanic-garage-dashboard._
+
+### 423-FR-006 — A permission change MUST reach an open dashboard within 5 seconds of the owner's save answer, without a reload: `mechanic.updated` re-reads the account, the menu, the tab bar and Panou's sections follow the new capabilities, and a view no longer allowed is left for Panou with "Nu mai ai acces la această secțiune." (102-FR-015 holds); the permissions are read from the mechanic card on every call, never from the sign-in token, so the server enforces the change on the next call.
+
+_From 423-mechanic-garage-dashboard._
+
+### 423-FR-010 — Tests MUST prove that `allowedViews` yields the menu of FR-005 for each permission on and off, and that the web's job lists re-read on `job.mechanic_changed` (FR-002); the Playwright suite MUST add, on a phone viewport, a mechanic who signs in, sees only her job on Panou, opens it and ticks a step, while `can_answer_quotes` is saved as the owner's save writes it (the mechanic's column and its `mechanic.updated` event in one transaction) and Cereri de ofertă appears for her without a reload, then goes when it is unticked. The odometer reading at reception and the owner's permission screen are not built yet (ST-276 #163 and ST-399 #202, both open); each brings its own end-to-end step with it (decision taken for the owner on 2026-10-25, see Clarifications). The landing per role and the role used last are ST-1381's tests.
+
+_From 423-mechanic-garage-dashboard._
+
+### 423-FR-011 — The mechanic's Panou MUST be phone-first: readable at 320 px and 390 px, a tablet and a desktop, light and dark, Romanian and English, with no sideways scroll at 320 px and no text under 12 px; its texts MUST be in the garage translation files in both languages.
+
+_From 423-mechanic-garage-dashboard._
+
+### 423-FR-012 — This story MUST write nothing on the server beyond FR-004, add no endpoint, no event emitter and no audit entry (reading the dashboard is not recorded); the own-jobs section is built from the existing jobs read, and `job.mechanic_changed` keeps its emitter with the story that lets an owner reassign a job.
+
+_From 423-mechanic-garage-dashboard._
 
 ## Retired
 
@@ -1488,3 +1493,4 @@ _From 102-garage-members._
 - `079-FR-010` — superseded by `102-FR-002` (2026-10-25)
 - `079-FR-013` — superseded by `102-FR-007` (2026-10-25)
 - `130-FR-003` — superseded by `102-FR-007` (2026-10-25)
+- `102-FR-005` — superseded by `423-FR-001` (2026-10-25)

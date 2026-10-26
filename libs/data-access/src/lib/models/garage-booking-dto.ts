@@ -3,6 +3,10 @@
 
 import { BookingMechanicDto } from '../models/booking-mechanic-dto';
 export interface GarageBookingDto {
+
+  /**
+   * What the driver wrote when cancelling, if anything
+   */
   cancelNote: string | null;
   cancelReason: ('plans_changed' | 'found_another_garage' | 'problem_solved' | 'no_mechanic_free' | 'parts_not_available' | 'closed_that_day' | 'driver_asked' | 'other' | 'garage_suspended' | 'driver_account_closed') | null;
   cancelledAt: string | null;
@@ -15,6 +19,10 @@ export interface GarageBookingDto {
   durationMinutes: number;
   historyShared: boolean;
   id: string;
+
+  /**
+   * Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty
+   */
   lateCancellation: boolean;
   lift: number | null;
 

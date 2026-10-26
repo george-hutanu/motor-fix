@@ -304,6 +304,11 @@ const reviewsAnnounced = () =>
     'motorfix_review_announced_total',
     'Posted reviews announced to garage owners, by outcome',
   );
+const reviewRepliesAnnounced = () =>
+  counter(
+    'motorfix_review_reply_announced_total',
+    'Garage replies announced to the review’s author, by outcome',
+  );
 const verificationResults = () =>
   counter(
     'motorfix_verification_result_total',
@@ -539,6 +544,14 @@ export function countReviewAnnounced(
   reviewsAnnounced().add(1, { outcome });
 }
 
+// A garage's reply told to the review's author, one they muted, or one
+// with nobody to tell.
+export function countReviewReplyAnnounced(
+  outcome: (typeof REVIEW_ANNOUNCED_OUTCOMES)[number],
+) {
+  reviewRepliesAnnounced().add(1, { outcome });
+}
+
 // A verification decision told to the garage's owners, or one with nobody
 // or nothing to tell.
 export function countVerificationResult(
@@ -704,6 +717,7 @@ const STARTS: Record<
     [quotes, [{}]],
     [requestsReceived, each('outcome', REQUEST_RECEIVED_OUTCOMES)],
     [reviewsAnnounced, each('outcome', REVIEW_ANNOUNCED_OUTCOMES)],
+    [reviewRepliesAnnounced, each('outcome', REVIEW_ANNOUNCED_OUTCOMES)],
     [verificationResults, each('outcome', VERIFICATION_RESULT_OUTCOMES)],
     [suspendedNotices, each('outcome', SUSPENDED_NOTICE_OUTCOMES)],
     [restoredNotices, each('outcome', RESTORED_NOTICE_OUTCOMES)],

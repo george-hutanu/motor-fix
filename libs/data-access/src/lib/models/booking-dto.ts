@@ -3,6 +3,11 @@
 
 import { GarageRefDto } from '../models/garage-ref-dto';
 export interface BookingDto {
+
+  /**
+   * What the driver wrote when cancelling, if anything
+   */
+  cancelNote: string | null;
   cancelReason: ('plans_changed' | 'found_another_garage' | 'problem_solved' | 'no_mechanic_free' | 'parts_not_available' | 'closed_that_day' | 'driver_asked' | 'other' | 'garage_suspended' | 'driver_account_closed') | null;
   cancelledAt: string | null;
   cancelledBySide: ('driver' | 'garage' | 'system') | null;
@@ -13,6 +18,11 @@ export interface BookingDto {
   durationMinutes: number;
   garage: GarageRefDto;
   id: string;
+
+  /**
+   * Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty
+   */
+  lateCancellation: boolean;
   noShowAt: string | null;
   quoteId: string;
   startsAt: string;

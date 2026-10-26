@@ -1,6 +1,6 @@
 ---
 capability: cars
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 089-add-a-car
   - 090-itp-status-lamp
@@ -11,6 +11,7 @@ features:
   - 291-saved-garages
   - 129-delete-account
   - 094-itp-reminders
+  - 091-oil-service-due
 ---
 
 # Capability: Cars
@@ -19,13 +20,9 @@ The cars a driver keeps on their account: adding one, the owner's own list and c
 
 ## Requirements
 
-### 089-FR-001 — The system MUST store a car with: id, owner account, brand (a catalogue brand), model (text), year, fuel (`petrol`, `diesel`, `hybrid`, `electric`), engine (optional text), odometer in km, plate (optional), ITP, RCA and rovinietă expiry dates (optional, dates without time), next service km (optional, written by a later story), removed time (optional, written by a later story) and creation time. The existing reminder's `car_id` MUST reference it.
+### 091-FR-003 — The owner MUST be able to set, change or clear (`null`) `nextServiceKm` through the existing `PATCH /api/v1/cars/:id` and, optionally, when adding a car through `POST /api/v1/cars` (judged against the new car's odometer), as one more editable field (092-FR-001's merge patch, version check and 404 for another account's car unchanged). It MUST be a whole number greater than the car's odometer and at most 100,000 km above it and never above the odometer ceiling the kilometres field already has (a value over it is refused as `next_service_too_far`), judged against the odometer the same request leaves (new or unchanged), and checked only when the patch carries `nextServiceKm` with a value different from the stored one (an odometer raised past a kept value saves, and the line turns red); otherwise 400 with codes `next_service_not_above_odometer` and `next_service_too_far` and nothing saved. (Modifies 029-FR-006: `nextServiceKm` is no longer read-only; modifies 092-FR-001: the editable fields gain it; modifies 089-FR-001: this is the later story that writes next service km.)
 
-_From 089-add-a-car._
-
-### 029-FR-006 — The car answer of `GET /api/v1/cars` (and the other car answers) MUST carry `nextServiceKm` (a whole number or null), read-only: no endpoint of this story writes it. 089-FR-002's rules (own cars only, not removed, newest first) and 089-FR-011's 404 for another account's car MUST hold unchanged and be covered by this story's tests.
-
-_From 029-overview-panels-own-data._
+_From 091-oil-service-due._
 
 ### 094-FR-008 — The cars service's "at most five years ahead" check and the adversary helper that builds a date five years ahead MUST compute it with one shared rule, so that on 29 February they land on the same day (29 February + 5 years = 28 February of that year, the last day the month has); a fixed-clock test on 2028-02-29 MUST pass for both (#630). (Modifies 089-FR-003: the five-years limit now says what day it falls on in a leap year.)
 
@@ -83,10 +80,6 @@ _From 029-overview-panels-own-data._
 
 _From 090-itp-status-lamp._
 
-### 092-FR-001 — The system MUST let the owner of a car change any of its fields through `PATCH /api/v1/cars/:id` in the `cars` module (a merge patch: an omitted field is unchanged, an explicit `null` clears the plate, the engine or a date): brand, model, year, fuel, engine, odometer, plate, ITP, RCA and rovinietă dates, each with the add story's validation (089-FR-003; a refused body answers 400 `validation_failed` with the fields, 472-FR-001); it MUST require the capability `driver.cars`, answer 200 with the car as the owner sees it, and answer 404 for a car another account owns, a car already removed, or an unknown id (079-FR-013), and 400 `validation_failed` for an id that is not a UUID. The plate MAY be added, changed or cleared and stays the owner's alone (089-FR-011). A MotorFix admin does not edit cars.
-
-_From 092-edit-remove-car._
-
 ### 092-FR-002 — The car MUST carry an update time (`updated_at`, set on creation and on every change), returned to the owner in every car answer as its version; an edit MUST send the version it loaded as a required `version` body field, and a mismatch MUST answer 409 `stale_version` and change nothing. The dialog then reloads the car, shows scenario 6's message and keeps the dialog open with the current values.
 
 _From 092-edit-remove-car._
@@ -103,9 +96,9 @@ _From 092-edit-remove-car._
 
 _From 092-edit-remove-car._
 
-### 092-FR-006 — The worker MUST, on `car.updated` with a changed ITP, RCA or rovinietă date, set that car's reminder of that kind to the date the car holds when the event is handled (creating the row when there is none) with its 30-day and 7-day sent flags reset when the date moved, and cancel that kind's reminder when the car's date is cleared; the dates are read from the car, not the event, so an older event retried after a later edit cannot move a reminder back or recreate one cleared since; on `car.removed`, it MUST cancel every reminder of the car (ITP, RCA, rovinietă, tyres, service). A change of any other field leaves the reminders untouched. The worker's handling MUST be idempotent (an event may be delivered more than once), and a `car.updated` that arrives for a car already removed MUST change nothing, so a late event never recreates a reminder. The reminders service's `setCarDue` and `removeCar` are the hooks.
+### 091-FR-010 — The worker MUST, on `car.added` and on `car.updated` with `nextServiceKm` or `odometerKm` changed, set the car's `service` reminder from the car as it is when the event is handled: `due_on` = the estimated date of FR-005, `due_km` = the car's next-service value; when `nextServiceKm` changed (or the car was added with one), the row takes a new id with both sent flags reset (a stage whose day is already past is marked sent, 094-FR-003's rule); when only `odometerKm` changed, `due_on` moves and the flags and id stay, so a stage already sent for this value is not sent again, and a stage whose day the move put in the past is marked sent, not caught up; the row is upserted, so when none exists (cancelled earlier) it is created with a new id and flags reset; with no next-service value, or a null estimate (due now or passed), the `service` reminder is cancelled (its row deleted). A retried or out-of-order event MUST reach the same rows (092-FR-006's rule). (Modifies 092-FR-006: the worker's car events now also drive the `service` kind.)
 
-_From 092-edit-remove-car._
+_From 091-oil-service-due._
 
 ### 092-FR-007 — A removed car MUST get no reminder from the daily run: its rows are gone (FR-006), and the run MUST also skip any reminder whose car has `removed_at` set, so a removal that commits between a run's read and its send sends nothing.
 
@@ -182,14 +175,6 @@ _From 290-save-garage._
 
 _From 029-overview-panels-own-data._
 
-### 029-FR-006 — The car answer of `GET /api/v1/cars` (and the other car answers) MUST carry `nextServiceKm` (a whole number or null), read-only: no endpoint of this story writes it. 089-FR-002's rules (own cars only, not removed, newest first) and 089-FR-011's 404 for another account's car MUST hold unchanged and be covered by this story's tests.
-
-_From 029-overview-panels-own-data._
-
-### 029-FR-007 — The view Mașinile mele's card MUST show the oil-service line (FR-003) after the rovinietă line when the car has a next-service km, and no line otherwise.
-
-_From 029-overview-panels-own-data._
-
 ### 291-FR-001 — `GET /api/v1/me/saved-garages?near={lat},{lng}&cursor=` in the `cars` module MUST answer the actor's own saved garages, 20 a page, ordered by `saved_at` newest first then garage id, with `nextCursor` (opaque; the last row's saved time and id) when more follow; a cursor this list never gave out answers 400 `invalid_cursor`. The read covers every row whatever the garage's status; a driver with no saved garage answers an empty page. The answer is private: `Cache-Control: no-store`. The account whose list is read is always the actor's own: the route takes no account id, so another person's list cannot be asked for (the brief's 404 is moot). An account whose role in use is not `driver` answers 403 `driver_role_required` as 290-FR-006; a visitor 401 `sign_in_required`.
 
 _From 291-saved-garages._
@@ -246,6 +231,42 @@ _From 094-itp-reminders._
 
 _From 094-itp-reminders._
 
+### 091-FR-001 — The system MUST store a car's odometer readings in one table, ODOMETER_READING: id, car, km (a whole number), read_on (a calendar day), source (`driver`, `reception` or `repair`), source_id (optional, the record the reading came from: none for `driver`), creation time; a reading is removed with its car's row. It MUST be modelled for the later sources too: a `reception` row (#163) or a `repair` row (#62, #103) MUST be usable by this story's average and odometer rule without a change to them.
+
+_From 091-oil-service-due._
+
+### 091-FR-002 — A `driver` reading MUST be written when a car is added (its odometer, today) and whenever an edit changes `odometer_km` (the new value, today), in the same transaction as the car; an edit that leaves the kilometres unchanged writes none. `CAR.odometer_km` MUST equal the car's newest reading (by `read_on`, then creation time). A migration MUST back-fill one `driver` reading per existing car (its current `odometer_km`, `read_on` the day of its `updated_at`), so every car has at least one reading.
+
+_From 091-oil-service-due._
+
+### 091-FR-004 — The average monthly mileage of a car MUST be computed from its readings with `read_on` on or after the same calendar day 12 months before today (so a reading exactly 12 months old counts and one a day older does not; today included): (newest km − oldest km) ÷ days between them × 30.44, when the newest and oldest are 30 or more days apart and the difference in km is positive; otherwise 1,000 km a month. One pure rule in the domain library MUST compute it, used by the API answer and by the worker alike (Principle V).
+
+_From 091-oil-service-due._
+
+### 091-FR-005 — The estimated due date MUST be the newest reading's `read_on` + round(distance left ÷ daily average) days in Europe/Bucharest (for a reading taken today, today + the days), where distance left = `next_service_km` − `odometer_km` and daily average = monthly average ÷ 30.44; it MUST be null when the car has no next-service value or when distance left is 0 or below (the service is due now or passed). Every car answer MUST carry it as `serviceDueOn` (a calendar day or null) beside `nextServiceKm`. For the brief's car, 3,800 km left on an average of ≈ 44.7 km a day is 85 days, 1 January 2027 (± 1 day); 1,500 km is 34 days; the default average makes 3,800 km 116 days, as today.
+
+_From 091-oil-service-due._
+
+### 091-FR-009 — In the same transaction as the change, the audit entries of 092-FR-004 MUST cover `nextServiceKm` and `odometerKm` with old and new value; a reading row writes no audit entry of its own (it is derived from the car's change); `car.updated` MUST name `nextServiceKm` or `odometerKm` among the changed fields (092-FR-005), never the plate or the model.
+
+_From 091-oil-service-due._
+
+### 091-FR-013 — The API MUST answer 404 for a car of another account on every read and write this story touches (092-FR-001), and the readings MUST never be listed to anyone but through the car's own answers (no readings endpoint in this story).
+
+_From 091-oil-service-due._
+
+### 091-FR-014 — The driver's account data export (140) MUST include each car's readings (km, read_on, source); the account deletion's cascade MUST remove them with the car rows, and a removed car's readings are hidden with the car (092-FR-012's rule).
+
+_From 091-oil-service-due._
+
+### 091-FR-015 — `infra/observability/inventory.json` MUST list the `odometer_reading` table with the cars module and SERVICE_DUE under the reminders job where the inventory lists the job's types; the existing cars endpoints, the reminders job and the notifications queue carry the change with their metrics, logs and traces, and the PR's Observability section says no new service, queue, outside call, endpoint or panel is needed.
+
+_From 091-oil-service-due._
+
+### 091-FR-017 — Tests MUST cover, with a `// @traces` line per spec file: the average with two readings a year apart, with one reading, with readings under 30 days apart, with a reading older than 12 months and with a lowered odometer; the estimated date and lamp at 3,800 km (green, 85 days from the brief's readings), 1,500 km (amber), 0 and −200 km (red, null date) and at the 60/61 and 7/8 day boundaries; the field refused at, below and more than 100,000 km above the odometer by the API, and an unchanged stored value not rechecked; a reading on add, on each change and none on an unchanged odometer; the back-fill; `serviceDueOn` in the car answers and null without a value; the audit entries and the event's changed fields; the worker's new id and reset on a new value, the moved date with kept flags on an odometer change, the cancel on null or passed; SERVICE_DUE at 30 and 7 days once each, the reset on a new value, the skipped past stage, no send for a removed car, a deleted account or a muted group, a send held from 22:00–08:00 to 08:00, the templates in both languages.
+
+_From 091-oil-service-due._
+
 ## Retired
 
 - `089-FR-008` — superseded by `090-FR-006` (2026-10-08)
@@ -254,3 +275,7 @@ _From 094-itp-reminders._
 - `092-FR-009` — superseded by `029-FR-007` (2026-10-17)
 - `092-FR-008` — superseded by `094-FR-003` (2026-10-25)
 - `089-FR-003` — superseded by `094-FR-008` (2026-10-25)
+- `029-FR-006` — superseded by `091-FR-003` (2026-10-26)
+- `092-FR-001` — superseded by `091-FR-003` (2026-10-26)
+- `089-FR-001` — superseded by `091-FR-003` (2026-10-26)
+- `092-FR-006` — superseded by `091-FR-010` (2026-10-26)

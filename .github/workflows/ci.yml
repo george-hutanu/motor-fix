@@ -130,6 +130,11 @@ jobs:
       - name: Structure
         if: ${{ !cancelled() }}
         run: node scripts/structure-check.ts ${{ github.event_name == 'pull_request' && format('--base origin/{0}', github.base_ref) || '' }}
+      # The 3D car files against the catalogue's data file (placeholders until
+      # the real files are uploaded).
+      - name: 3D assets
+        if: ${{ !cancelled() }}
+        run: node scripts/model-3d-check.ts
       # The PR tester's layout and sweep specs measure fixture pages in a real
       # browser and fail in CI without one. The headless shell is enough, and
       # the runner image already carries Chrome's system libraries. A PR that
