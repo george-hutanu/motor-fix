@@ -35,6 +35,7 @@ model Job {
   steps          JobStep[]
   stages         JobStageEntry[]
   reviews        Review[]
+  liveSessions   LiveSession[]
 
   @@index([garageId, createdAt(sort: Desc)])
   @@index([mechanicId])

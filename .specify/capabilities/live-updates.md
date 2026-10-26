@@ -32,6 +32,7 @@ features:
   - 102-garage-members
   - 1193-fast-nav
   - 074-garage-reviews
+  - 1250-live-video-provider
   - 177-reported-reviews
 ---
 
@@ -117,9 +118,9 @@ _From 102-garage-members._
 
 _From 254-live-audience._
 
-### 254-FR-005 — An event of a feature the garage switched off MUST NOT be forwarded to that garage's staff connections: `media.*` kinds belong to `live_media`; a garage with no row for a feature has it on.
+### 1250-FR-013 — An event of a feature the garage switched off MUST NOT be forwarded to that garage's staff connections: `media.*` and `live.*` kinds belong to `live_media`; a garage with no row for a feature has it on.
 
-_From 254-live-audience._
+_From 1250-live-video-provider._
 
 ### 254-FR-006 — Each API copy MUST read a garage's staff, mechanic permissions and feature switches once and keep them for 60 seconds, and MUST drop them at once when `member.removed`, `mechanic.updated` or `garage.features_changed` for that garage passes through it.
 
@@ -515,3 +516,4 @@ _From 177-reported-reviews._
 - `256-FR-004` — superseded by `588-FR-006` (2026-10-24)
 - `398-FR-008` — superseded by `102-FR-010` (2026-10-25)
 - `419-FR-008` — superseded by `1193-FR-001` (2026-10-25)
+- `254-FR-005` — superseded by `1250-FR-013` (2026-10-26)

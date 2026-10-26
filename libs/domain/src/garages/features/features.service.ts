@@ -12,6 +12,7 @@ import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import { stopLiveSessions } from '../../live-video/stop-sessions';
 import {
   assertGarageOwner,
   notFound,
@@ -75,6 +76,8 @@ export class GarageFeaturesService {
         update: { enabled },
         where: { garageId_key: { garageId, key } },
       });
+      if (key === 'live_media' && !enabled)
+        await stopLiveSessions(tx, this.audit, { garageId }, 'feature_off');
       await this.audit.record(tx, {
         action: 'update',
         actorId: actor.accountId,

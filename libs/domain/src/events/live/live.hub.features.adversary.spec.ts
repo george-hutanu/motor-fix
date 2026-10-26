@@ -75,6 +75,7 @@ const fanOut = (audience: string[], kind: string, id = 'e1') =>
   );
 
 // @traces 398-FR-008
+// @traces 1250-FR-004 1250-FR-013
 describe('the feature switch event', () => {
   it('reaches a mechanic holding no permission at all', async () => {
     const mechanic = open('elena', 'mechanic', ['garage:g1', 'mechanic:m1']);
@@ -144,5 +145,17 @@ describe('the feature switch event', () => {
 
     expect(owner.kinds()).toEqual(['media.added', 'garage.features_changed']);
     expect(mechanic.kinds()).toContain('garage.features_changed');
+  });
+
+  it('drops live stream events for the staff while live media is off', async () => {
+    const mechanic = open('elena', 'mechanic', ['garage:g1', 'mechanic:m1']);
+    const owner = open('ion', 'garage', ['garage:g1']);
+    load.mockResolvedValue(access({ off: new Set(['live_media']) }));
+
+    await fanOut(['garage:g1', 'mechanic:m1'], 'live.started', 'a');
+    await fanOut(['garage:g1', 'mechanic:m1'], 'live.stopped', 'b');
+
+    expect(owner.kinds()).toEqual([]);
+    expect(mechanic.kinds()).toEqual([]);
   });
 });
