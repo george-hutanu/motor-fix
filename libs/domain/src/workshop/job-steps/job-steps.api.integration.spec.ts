@@ -466,6 +466,7 @@ describe('ticking a step', () => {
 });
 
 // @traces 424-FR-002
+// @traces 1381-FR-002
 describe('who may write the steps', () => {
   // The five writes, one after the other, each on the job as it then is.
   async function everyWrite(
@@ -528,6 +529,22 @@ describe('who may write the steps', () => {
     expect(
       (await add(`/garage/jobs/${randomUUID()}/steps`, s.owner, 'Pas')).status,
     ).toBe(404);
+  });
+
+  it('answers 404 to the job’s mechanic once her card is removed', async () => {
+    const s = await setting('in_work');
+    const [id] = await five(s);
+    await prisma.mechanic.update({
+      data: { removedAt: new Date() },
+      where: { id: s.dinamo.plainMechanic.id },
+    });
+
+    expect((await add(s.steps, s.hand, 'Încă unul')).status).toBe(404);
+    expect(
+      (await send('put', `${s.steps}/${id}/done`, s.hand, { done: true }))
+        .status,
+    ).toBe(404);
+    expect(await written(s.job.id)).toHaveLength(5);
   });
 
   it('lets the owner write a job no mechanic holds', async () => {
