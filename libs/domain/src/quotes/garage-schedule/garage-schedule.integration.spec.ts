@@ -268,13 +268,20 @@ describe('the garage schedule read', () => {
     const mechanic = garageActor(t.answering, t.garage.id, 'mechanic');
 
     await expect(
-      service.list(mechanic, { mechanicId: other.plainMechanic.id }, NOW),
+      service.list(
+        mechanic,
+        t.garage.id,
+        { mechanicId: other.plainMechanic.id },
+        NOW,
+      ),
     ).rejects.toMatchObject({ status: 403 });
     await prisma.mechanic.update({
       data: { removedAt: new Date() },
       where: { id: t.answeringMechanic.id },
     });
-    await expect(service.list(mechanic, {}, NOW)).rejects.toMatchObject({
+    await expect(
+      service.list(mechanic, t.garage.id, {}, NOW),
+    ).rejects.toMatchObject({
       status: 404,
     });
   });
