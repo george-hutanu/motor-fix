@@ -59,10 +59,7 @@ export class StaffInviteDto {
     maxLength: 80,
     minLength: 2,
   })
-  @ValidateIf(
-    (dto: StaffInviteDto) =>
-      dto.mechanicId === undefined || dto.name !== undefined,
-  )
+  @ValidateIf((dto: StaffInviteDto) => dto.mechanicId === undefined)
   @Transform(trimmed)
   @IsString()
   @Length(2, 80)

@@ -74,30 +74,22 @@ describe('StaffInviteDto for a card and a phone', () => {
     expect(problems(make(body)).length).toBeGreaterThan(0);
   });
 
-  it('refuses a card name that is present but one character long', () => {
+  // 1255-FR-002: beside a card the name is ignored, whatever is sent.
+  it.each([
+    ['one character long', 'E'],
+    ['null', null],
+    ['holding a control character', 'El\u0000ena'],
+  ])('ignores a card name that is %s', (_, name) => {
     expect(
       problems(
         make({
           email: 'a@b.ro',
           kind: 'mechanic',
           mechanicId: UUID,
-          name: 'E',
+          name,
         }),
       ),
-    ).toEqual(['name']);
-  });
-
-  it('refuses a null name beside a card', () => {
-    expect(
-      problems(
-        make({
-          email: 'a@b.ro',
-          kind: 'mechanic',
-          mechanicId: UUID,
-          name: null,
-        }),
-      ),
-    ).toEqual(['name']);
+    ).toEqual([]);
   });
 
   it('refuses a phone with a control character', () => {
