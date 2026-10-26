@@ -33,12 +33,16 @@ import { CarTransfersService } from './transfers.service';
 import { CurrentActor, Public, Requires } from '../../auth/actor.guard';
 import { JsonOnly } from '../../auth/auth.controller';
 import type { Actor } from '../../auth/policy';
+import { CacheService, cacheKey } from '../../cache/cache.service';
 
 @ApiTags('cars')
 @ApiBearerAuth()
 @Controller('cars')
 export class CarSaleController {
-  constructor(private readonly transfers: CarTransfersService) {}
+  constructor(
+    private readonly transfers: CarTransfersService,
+    private readonly cache: CacheService,
+  ) {}
 
   @Get(':id/sale')
   @Requires('driver.cars')
@@ -83,7 +87,7 @@ export class CarSaleController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: CreateCarTransferDto,
   ): Promise<CarTransferSentDto> {
-    return this.transfers.send(actor, id, body);
+    return this.forgetList(actor, this.transfers.send(actor, id, body));
   }
 
   @Post(':id/transfers/:transferId/cancel')
@@ -103,7 +107,15 @@ export class CarSaleController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Param('transferId', new ParseUUIDPipe()) transferId: string,
   ): Promise<void> {
-    return this.transfers.cancel(actor, id, transferId);
+    return this.forgetList(actor, this.transfers.cancel(actor, id, transferId));
+  }
+
+  // The sign-in's warm car list, taken by the first read, shows each car's
+  // transfer as it was before this write.
+  private async forgetList<T>(actor: Actor, write: Promise<T>): Promise<T> {
+    const done = await write;
+    await this.cache.forget(cacheKey('driver-home', actor.accountId, 'cars'));
+    return done;
   }
 }
 

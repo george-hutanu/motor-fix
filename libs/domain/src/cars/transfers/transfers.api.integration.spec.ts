@@ -11,6 +11,7 @@ import {
   WEB_URL,
 } from './transfers.testing';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { CacheService, cacheKey } from '../../cache/cache.service';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
 import { databaseUrl } from '../../notifications/notifications.testing';
 
@@ -537,6 +538,50 @@ describe('the cars list', () => {
     const later = await http().get('/cars').set('Authorization', auth);
     expect(
       later.body.items.find((c: { id: string }) => c.id === car.id).transfer,
+    ).toBeNull();
+  });
+
+  // The sign-in's warm copy of the list is read once and then dropped; a
+  // send or a cancel before that read must not leave it answering the old list.
+  async function warmed(accountId: string, items: unknown[]) {
+    await app.get(CacheService, { strict: false }).read({
+      key: cacheKey('driver-home', accountId, 'cars'),
+      read: async () => ({ tags: [], value: { items } }),
+      soft: 90,
+      stale: false,
+    });
+  }
+
+  it('answers a send at the next read, though the sign-in warmed the list before it', async () => {
+    const { auth, car, id } = await seller();
+    await warmed(id, [{ id: car.id, transfer: null }]);
+    const sent = await send(auth, car.id, { buyerPhone: BUYER, repairIds: [] });
+    expect(sent.status).toBe(201);
+
+    const res = await http().get('/cars').set('Authorization', auth);
+
+    expect(
+      res.body.items.find((c: { id: string }) => c.id === car.id).transfer,
+    ).toEqual({
+      expiresAt: sent.body.transfer.expiresAt,
+      id: sent.body.transfer.id,
+    });
+  });
+
+  it('answers a cancel at the next read, though the sign-in warmed the list before it', async () => {
+    const { auth, car, id } = await seller();
+    const sent = await send(auth, car.id, { buyerPhone: BUYER, repairIds: [] });
+    const line = {
+      expiresAt: sent.body.transfer.expiresAt,
+      id: sent.body.transfer.id,
+    };
+    await warmed(id, [{ id: car.id, transfer: line }]);
+    expect((await cancel(auth, car.id, line.id)).status).toBe(204);
+
+    const res = await http().get('/cars').set('Authorization', auth);
+
+    expect(
+      res.body.items.find((c: { id: string }) => c.id === car.id).transfer,
     ).toBeNull();
   });
 });
