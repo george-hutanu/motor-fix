@@ -11,13 +11,9 @@ import { test } from './fixtures.js';
 // A garage and its owner of this file's own: the first-steps card shows only
 // while the garage has no request and no review, and switching lift_schedule
 // off on a seeded garage would reach every other spec running beside this one.
-// A deployed address, whose run has no DATABASE_URL, skips the file.
+// A deployed address, which has no DATABASE_URL, leaves @database out
+// (playwright.config.mts grepInvert).
 test.describe('the sections of Panou @seeded @database', () => {
-  test.skip(
-    !process.env['DATABASE_URL'],
-    'writes its garage and owner straight to PostgreSQL, which needs DATABASE_URL',
-  );
-
   const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const owner = {
     email: `sectiuni-${stamp}@example.test`,
