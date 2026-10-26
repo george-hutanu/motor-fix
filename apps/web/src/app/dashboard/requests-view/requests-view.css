@@ -81,4 +81,5 @@ p {
   display: inline-flex;
   align-items: center;
   font-weight: 600;
+  color: var(--mf-amber-ink);
 }
