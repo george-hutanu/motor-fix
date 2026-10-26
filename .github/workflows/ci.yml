@@ -209,6 +209,9 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      # The media worker's clip specs spawn ffmpeg; they fail without it.
+      - name: ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       # JEST_SUITE is an input of the test target (nx.json), so the two
       # suites never answer each other from the Nx cache.
       - name: Unit tests
@@ -258,6 +261,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      - name: ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Object storage
         run: docker compose up -d --wait storage
       - name: Migrate the test database

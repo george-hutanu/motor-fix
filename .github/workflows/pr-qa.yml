@@ -184,7 +184,9 @@ jobs:
       - name: Install
         working-directory: pr
         # No install scripts; the booted api loads sharp, rebuilt explicitly.
+        # The booted worker converts clips with ffmpeg.
         run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
           npm ci --ignore-scripts
           npx prisma generate --config libs/domain/prisma.config.ts
           npm rebuild sharp
