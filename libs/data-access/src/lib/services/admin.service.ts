@@ -98,6 +98,9 @@ import { RecheckDueListDto } from '../models/recheck-due-list-dto';
 import { RecheckRecordedDto } from '../models/recheck-recorded-dto';
 import { reportDecisionControllerDecide } from '../fn/admin/report-decision-controller-decide';
 import { ReportDecisionControllerDecide$Params } from '../fn/admin/report-decision-controller-decide';
+import { reportQueueControllerList } from '../fn/admin/report-queue-controller-list';
+import { ReportQueueControllerList$Params } from '../fn/admin/report-queue-controller-list';
+import { ReportQueueDto } from '../models/report-queue-dto';
 import { suspensionControllerRestore } from '../fn/admin/suspension-controller-restore';
 import { SuspensionControllerRestore$Params } from '../fn/admin/suspension-controller-restore';
 import { suspensionControllerSuspend } from '../fn/admin/suspension-controller-suspend';
@@ -458,6 +461,39 @@ export class AdminService extends BaseService {
   jobDecisionsControllerReject(params: JobDecisionsControllerReject$Params, context?: HttpContext): Promise<CatalogueJobDecisionDto> {
     const resp = this.jobDecisionsControllerReject$Response(params, context);
     return resp.then((r: StrictHttpResponse<CatalogueJobDecisionDto>): CatalogueJobDecisionDto => r.body);
+  }
+
+  /** Path part for operation `reportQueueControllerList()` */
+  static readonly ReportQueueControllerListPath = '/api/v1/admin/review-reports';
+
+  /**
+   * The pending review reports, oldest first, 20 a page.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `reportQueueControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  reportQueueControllerList$Response(params?: ReportQueueControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<ReportQueueDto>> {
+    const obs = reportQueueControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The pending review reports, oldest first, 20 a page.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `reportQueueControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  reportQueueControllerList(params?: ReportQueueControllerList$Params, context?: HttpContext): Promise<ReportQueueDto> {
+    const resp = this.reportQueueControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ReportQueueDto>): ReportQueueDto => r.body);
   }
 
   /** Path part for operation `demandControllerDemand()` */

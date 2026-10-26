@@ -181,7 +181,8 @@ describe('audienceOf', () => {
     },
   );
 
-  it('puts a review to the garage, the author and both public feeds', () => {
+  // @traces 177-FR-010
+  it('puts a review to the admins, the garage, the author and both public feeds', () => {
     expect(
       sorted({
         authorAccountId: 'a1',
@@ -191,6 +192,7 @@ describe('audienceOf', () => {
       }),
     ).toEqual([
       'account:a1',
+      'admin',
       'garage:g1',
       'public:garage:g1',
       'public:mechanic:m1',

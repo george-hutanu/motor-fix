@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 211,
+    "count": 212,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -2658,6 +2658,50 @@
       ],
       "reason": "one BookingCancel log line per cancel naming the booking id, the reason and whether it came late, never the note; the count by outcome and lateness is the motorfix_cancellations_total entry",
       "story": "ST-1258"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-review-reports",
+      "source": "libs/domain/src/reviews/report-queue/report-queue.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/review-reports",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admins' queue of pending review reports with the facts, read from PostgreSQL in a fixed number of queries per page and written nowhere; reading it is not logged or audited; a 400 on a bad page or a 404 for a non-admin is the rule working; the API error-rate and latency rules cover the route; no outside call",
+      "story": "ST-177"
+    },
+    {
+      "kind": "queue",
+      "name": "moderation-timers",
+      "source": "libs/domain/src/reviews/moderation-timers/moderation-timers.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "carries the relay's review.reported, review.decided and review.deleted events and each pending report's 48-hour reminder, with the 5-minute sweep for a lost reminder; one ModerationTimers log line per event and per fired reminder naming the report or review id and the step, never a text or a name; alerts and reminders counted by motorfix_review_report_alerts_total and motorfix_review_report_reminders_total; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-177"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_report_alerts_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each review report told to the active admins by outcome (built, muted, skipped), with the consumer's log line naming the report id; a count has no failure to alert on; the worker-jobs-failed rule covers the queue that reports it",
+      "story": "ST-177"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_report_reminders_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each 48-hour reminder of a pending review report by outcome (sent, skipped), with the reminder's log line naming the report id; a count has no failure to alert on; the worker-jobs-failed rule covers the queue that reports it",
+      "story": "ST-177"
     }
   ]
 }

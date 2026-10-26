@@ -87,7 +87,8 @@ describe('audienceOf', () => {
     ).toEqual(['account:d1', 'garage:g1', 'mechanic:m1']);
   });
 
-  it("sends a review to the garage, its author, the garage's public page and its mechanic's public page", () => {
+  // @traces 177-FR-010
+  it("sends a review to the admins, the garage, its author, the garage's public page and its mechanic's public page", () => {
     expect(
       audienceOf({
         authorAccountId: driver,
@@ -96,6 +97,7 @@ describe('audienceOf', () => {
         type: 'review',
       }),
     ).toEqual([
+      'admin',
       'garage:g1',
       'account:d1',
       'public:garage:g1',
@@ -111,7 +113,7 @@ describe('audienceOf', () => {
         mechanicId: null,
         type: 'review',
       }),
-    ).toEqual(['garage:g1', 'account:d1', 'public:garage:g1']);
+    ).toEqual(['admin', 'garage:g1', 'account:d1', 'public:garage:g1']);
   });
 
   it('sends a message to the driver and the garage', () => {
