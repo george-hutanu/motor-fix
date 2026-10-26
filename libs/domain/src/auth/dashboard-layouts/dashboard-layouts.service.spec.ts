@@ -1,10 +1,10 @@
 import {
   checkPanels,
   mergeLayout,
-  PANEL_KEYS,
+  panelKeysOf,
 } from './dashboard-layouts.panels';
 
-const ADMIN = PANEL_KEYS.admin;
+const ADMIN = panelKeysOf('admin') ?? [];
 const all = (keys: readonly string[]) =>
   keys.map((key) => ({ key, visible: true }));
 
@@ -21,7 +21,9 @@ describe('the admin section list', () => {
   });
 
   it('serves no other role yet', () => {
-    expect(Object.keys(PANEL_KEYS)).toEqual(['admin']);
+    for (const role of ['driver', 'garage', 'owner', 'mechanic']) {
+      expect(panelKeysOf(role)).toBeUndefined();
+    }
   });
 });
 

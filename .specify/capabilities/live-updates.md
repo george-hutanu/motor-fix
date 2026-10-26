@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 253-live-connection
   - 254-live-audience
@@ -32,6 +32,7 @@ features:
   - 102-garage-members
   - 1193-fast-nav
   - 074-garage-reviews
+  - 1263-admin-dashboard-customise
 ---
 
 # Capability: Live updates
@@ -485,6 +486,10 @@ _From 413-verification-file-presence._
 ### 074-FR-006 — The panel and the view MUST re-read, without a reload and without issuing any scroll-to-top, on any `review.posted`, `review.edited`, `review.deleted`, `review.replied`, `review.reply_edited`, `review.reported`, `review.decided`, `review.appeal_decided` or `rating.updated` message for the garage on `garage:{garageId}`, which the owner's and the receptionist's connections MUST receive, and on the live client's reconnect resync; the view re-reads its first page and drops the extra pages (024-FR-011). One read at a time, coalesced as 419-FR-009. The hub already lets these kinds through `garage:{garageId}` to the owner and the receptionist and to no mechanic (`live.hub.ts` `KIND_CAPABILITY`, 102-FR-010 unchanged); FR-017 proves it.
 
 _From 074-garage-reviews._
+
+### 1263-FR-007 — A save (FR-004) and a reset (FR-005) MUST write the `dashboard_layout.updated` event (`accountId`, `role`) in the same transaction as the record (the outbox, Principle VI), with the audience `account:{accountId}` only, so the person's other open tabs and devices receive it on their signed-in stream; nobody is notified, and no audit entry is written (a personal view preference, as MF-32).
+
+_From 1263-admin-dashboard-customise._
 
 ## Retired
 

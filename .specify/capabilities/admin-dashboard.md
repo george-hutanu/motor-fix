@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -27,6 +27,7 @@ features:
   - 067-restore-suspended-garage
   - 003-admin-account-actions
   - 1368-admin-brand-list
+  - 1263-admin-dashboard-customise
 ---
 
 # Capability: Admin dashboard
@@ -103,13 +104,13 @@ _From 163-figures-period-city._
 
 _From 161-headline-numbers._
 
-### 161-FR-012 — Below 768 px the tiles MUST wrap two to a row; at 320 px the page MUST NOT scroll sideways; from 768 px to 1023 px they lay out three to a row, and from 1024 px six in one row.
+### 1263-FR-012 — Below 768 px the tiles MUST wrap two to a row; at 320 px the page MUST NOT scroll sideways; from 768 px to 1023 px they lay out three to a row, and from 1024 px six in one row whose left and right edges sit at the same x as the header's controls above it (equal computed inset on both sides), never at the window's edge (modifies 161-FR-012; #612).
 
-_From 161-headline-numbers._
+_From 1263-admin-dashboard-customise._
 
-### 161-FR-013 — Each tile MUST have one accessible name made of its label, its number and its line (for example "Service‑uri listate, 214, +9 luna asta"; an unreleased tile "Cereri de ofertă azi, în curând"), with the info tip's text joining the name when it shows, and the info tip MUST be reachable by keyboard focus and by touch, not by hover alone.
+### 1263-FR-011 — Each tile MUST have one accessible name made of its label, its number and its line (for example "Service‑uri listate, 214, +9 luna asta"; an unreleased tile "Cereri de ofertă azi, în curând"), with the info tip's text joining the name only while the tip shows; the failed tile's info button MUST be named "De ce?" / "Why?" and MUST NOT carry the reason as its own label: the reason lives in the tip alone, announced when it shows. The tip MUST stay reachable by keyboard (a focusable button pressed with Enter or Space) and by touch, not by hover alone (modifies 161-FR-013; #611).
 
-_From 161-headline-numbers._
+_From 1263-admin-dashboard-customise._
 
 ### 161-FR-014 — Tests MUST cover, against seeded data on a real database: each figure's count, a suspended garage excluded from listed and from the month's approvals, the month boundary in Europe/Bucharest, the 30-day edge for an active driver, an account without the `driver` role excluded, a `deleted` account excluded, the snapshot's one-row-per-day rule, the month-start delta with and without a snapshot row, and 404 for each non-admin role; an end-to-end check opens "Panou" as the seeded admin and reads the six tiles, their lines and the "în curând" tiles, on a phone and a desktop, in both languages.
 
@@ -813,6 +814,54 @@ _From 003-admin-account-actions._
 
 _From 003-admin-account-actions._
 
+### 1263-FR-001 — The system MUST keep one dashboard layout per account and role, holding the account, the role, the ordered list of sections as `{ key, visible }` pairs, and when it was last changed; it MUST NOT hold a garage: a person's layout is theirs on every device and in every garage (owner, 2026-10-16, #89). Nothing about the layout is kept in persistent browser storage (localStorage, sessionStorage, IndexedDB, cookies); the page may hold the server's answer in memory for the visit.
+
+_From 1263-admin-dashboard-customise._
+
+### 1263-FR-002 — The admin section keys and their default order MUST be `numbers` (the platform numbers, the six tiles), `verification` (Service‑uri de verificat), `growth` (Creștere, ultimele 12 luni), `demand` (Cereri pe marcă, 30 de zile) and `log` (Jurnal): the sections the admin overview draws today, in the brief's order. `performance`, `system` and `reported` MUST be added to the list, in the brief's place (`performance` after `numbers`, `system` after `verification`, `reported` after `demand`), by the story that ships each section, and MUST NOT be accepted before then. The list lives in one place on the server, and its order is the default layout.
+
+_From 1263-admin-dashboard-customise._
+
+### 1263-FR-003 — `GET /api/v1/me/dashboard-layouts/:role` MUST answer the caller's layout for that role as `{ role, panels: [{ key, visible }], updatedAt }` (`updatedAt` an ISO 8601 UTC timestamp, or null): with no saved layout, the default (every key visible in the default order, `updatedAt` null); with one, the saved layout merged on read: known keys in the saved order with their saved visibility, then every key of the current list the record lacks appended visible in the list's order, and every key the list no longer holds left out.
+
+_From 1263-admin-dashboard-customise._
+
+### 1263-FR-004 — `PUT /api/v1/me/dashboard-layouts/:role` with `{ panels: [{ key, visible }] }` MUST replace the caller's whole layout for that role (no partial change) and answer the merged layout as FR-003 does, with the new `updatedAt`. It MUST refuse with 400 `validation_failed`, writing nothing, a key that is not in the role's current list, a key listed twice, a missing or non-boolean `visible`, or a body that is not that shape; a list that lacks some current keys is accepted (they are appended visible on read). Keys are compared exactly, case and all. The later of two saves wins: the record is overwritten, never merged with the previous save.
+
+_From 1263-admin-dashboard-customise._
+
+### 1263-FR-005 — `DELETE /api/v1/me/dashboard-layouts/:role` MUST remove the caller's layout for that role, whether or not one is saved, and answer 200 with the default layout as FR-003 answers it with no record.
+
+_From 1263-admin-dashboard-customise._
+
+### 1263-FR-006 — The three routes MUST be signed-in routes (no `@Public()`), take the account from the session and never from the request, serve `admin` only for now, and answer 404 `not_found` for any other role in the path and for a role the caller does not hold; 401 `sign_in_required` without a session and 403 `account_suspended` for a suspended account as every signed-in route, checked before the role (a suspended account gets 403 whatever role is in the path). `driver` and `garage` join the served roles with ST-1262 and #88, each with its own key list.
+
+_From 1263-admin-dashboard-customise._
+
+### 1263-FR-008 — The three routes MUST be listed in `infra/observability/inventory.json` with their metrics, logs and traces and the panel and alert that cover them; a save, a reset and a refused save MUST each be counted by role and outcome: a key refusal (unknown or repeated key) on the layout counter, a shape refusal (answered 400 by the request validation before the service runs) on the route's request metric by status code.
+
+_From 1263-admin-dashboard-customise._
+
+### 1263-FR-009 — Tests MUST cover, in Jest: unit, the merge of FR-003 (saved order kept, missing key appended visible in list order, unknown key left out, empty saved list gives the default) and the validation of FR-004 (unknown key, duplicate key, bad shape); against a real database, a saved layout read back by the same account from a second session, another account's layout never returned, 404 for a non-admin and for `driver`/`garage`/an unknown role, 401 without a session, the later of two saves returned, the reset returning the default, and the event written in the save's transaction to `account:{accountId}` only.
+
+_From 1263-admin-dashboard-customise._
+
+### 1263-FR-010 — On a failed tile (161-FR-007), the open info tip MUST cover neither the info button nor the tile's "—": at 320 px, 768 px and 1280 px the tip's box MUST NOT overlap the button's or the number's box, and the page MUST NOT scroll sideways at 320 px. The button MUST stay pressable while the tip shows: the tip opens only on a press (Enter, Space, click or tap) and a press on it while open closes it, so a second press is possible; focus alone opens nothing; Escape and focus leaving the tile close it (#610).
+
+_From 1263-admin-dashboard-customise._
+
+### 1263-FR-013 — At 768 px, in both languages and both themes, the admin header MUST keep the RO/EN switch and the bell on its first row, to the right of the period and city filters; the filters MUST NOT push the tools under the title (#953). Checked by the QA screenshot `app-admin-as-admin-tablet-light-ro`.
+
+_From 1263-admin-dashboard-customise._
+
+### 1263-FR-014 — The texts this story adds ("De ce?" / "Why?") MUST exist in Romanian and English in the shared i18n files; every tile text keeps 161-FR-011's rule.
+
+_From 1263-admin-dashboard-customise._
+
+### 1263-FR-015 — Tests MUST cover, in Jest on the admin panel: the press opening and the second press closing the tip, focus alone opening nothing, Escape closing it, the accessibility snapshot with the tip closed (no reason anywhere but the hidden tip; the button named "De ce?" / "Why?") and open (the reason in the tile's name); and in a `web-e2e` Playwright spec (jsdom does no layout): the tip's box against the button's and the number's at 320 px, 768 px and 1280 px, the tiles' computed inset equal to the header controls' at 1280 px, and the header's first row at 768 px.
+
+_From 1263-admin-dashboard-customise._
+
 ## Retired
 
 - `160-FR-001` — superseded by `161-FR-001` (2026-10-07)
@@ -843,3 +892,5 @@ _From 003-admin-account-actions._
 - `066-FR-007` — superseded by `067-FR-009` (2026-10-23)
 - `001-FR-008` — superseded by `003-FR-017` (2026-10-24)
 - `404-FR-007` — superseded by `1368-FR-001` (2026-10-25)
+- `161-FR-013` — superseded by `1263-FR-011` (2026-10-26)
+- `161-FR-012` — superseded by `1263-FR-012` (2026-10-26)

@@ -193,6 +193,21 @@ describe('saving a layout', () => {
     ['panels that are not a list', { panels: 'log' }, false],
     ['no panels', {}, false],
     ['an extra field', { panels: [], role: 'driver' }, false],
+    [
+      'more than twenty panels',
+      {
+        panels: Array.from({ length: 21 }, () => ({
+          key: 'log',
+          visible: true,
+        })),
+      },
+      false,
+    ],
+    [
+      'a key longer than forty characters',
+      { panels: [{ key: 'x'.repeat(41), visible: true }] },
+      false,
+    ],
   ])('refuses %s and writes nothing', async (_, body, coded) => {
     const { auth, id } = await admin();
     await save(auth, { panels: MINE });

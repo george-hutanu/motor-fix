@@ -5,7 +5,7 @@ import type { Role } from '@motor-fix/contracts/capabilities';
 // its list with the story that ships it (performance after numbers, system
 // after verification, reported after demand); driver and garage join with
 // their own dashboards.
-export const PANEL_KEYS = {
+const PANEL_KEYS = {
   admin: ['numbers', 'verification', 'growth', 'demand', 'log'],
 } as const satisfies Partial<Record<Role, readonly string[]>>;
 

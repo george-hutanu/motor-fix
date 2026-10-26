@@ -296,9 +296,9 @@ main {
   .line {
     font-size: var(--mf-size-small);
   }
-  /* The title shrinks beside the tools, its filters wrapping inside it, so
-     the language switch and the bell keep the first row. */
-  header .title {
+  /* The admin title shrinks beside the tools, its filters wrapping inside it,
+     so the language switch and the bell keep the first row. */
+  header .title.admin {
     flex: 1 1 0;
   }
 }
