@@ -130,8 +130,9 @@ jobs:
       - name: Structure
         if: ${{ !cancelled() }}
         run: node scripts/structure-check.ts ${{ github.event_name == 'pull_request' && format('--base origin/{0}', github.base_ref) || '' }}
-      # The 3D car files against the catalogue's data file (placeholders until
-      # the real files are uploaded).
+      # The 3D car files against the catalogue's data file: the generic body
+      # shapes as scripts/models-3d-generic.ts generates them, the licensed
+      # models' placeholders until their real files are uploaded.
       - name: 3D assets
         if: ${{ !cancelled() }}
         run: node scripts/model-3d-check.ts

@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -10,8 +10,9 @@ import {
   placeholders,
 } from '../libs/domain/src/catalogue/models-3d/models-3d.ts';
 
-// The 3D asset check as CI runs it: over the placeholder set when given no
-// directory, over a directory of .glb files when given one.
+// The 3D asset check as CI runs it: over the licensed models' placeholders and
+// the generated generic files when given no directory, over a directory of
+// .glb files when given one.
 const root = join(__dirname, '..');
 
 const check = (...args: string[]) =>
@@ -20,10 +21,23 @@ const check = (...args: string[]) =>
     encoding: 'utf8',
   });
 
+let generic: string;
 let dir: string;
+
+beforeAll(() => {
+  generic = mkdtempSync(join(tmpdir(), 'model-3d-check-generic-'));
+  execFileSync(process.execPath, ['scripts/models-3d-generic.ts', generic], {
+    cwd: root,
+  });
+}, 60_000);
+
+afterAll(() => {
+  rmSync(generic, { force: true, recursive: true });
+});
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'model-3d-check-'));
+  cpSync(generic, dir, { recursive: true });
   for (const [file, bytes] of placeholders()) {
     writeFileSync(join(dir, file), bytes);
   }
@@ -36,7 +50,7 @@ afterEach(() => {
 describe('the 3D asset check', () => {
   // @traces 1241-FR-006
   // @traces 1241-FR-007
-  it('passes the placeholder set when it is given no directory', () => {
+  it('passes the placeholders and the generated generic files when it is given no directory', () => {
     const run = check();
 
     expect(run.stdout).toBe('');
