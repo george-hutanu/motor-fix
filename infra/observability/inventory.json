@@ -1433,6 +1433,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_job_stage_moves_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts a job's stage moves and receptions by action (start, pause, resume, finish, receive) and outcome (ok, refused); a refusal is the rule working, and the api-error-rate rule covers the service that reports it",
+      "story": "ST-276"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_account_changes_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",

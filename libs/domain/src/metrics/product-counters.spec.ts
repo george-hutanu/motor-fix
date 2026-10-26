@@ -24,6 +24,7 @@ import {
   countEmail,
   countGarageReport,
   countGarageSignUp,
+  countJobStageMove,
   countJobStep,
   countListingSubmission,
   countMoreRequest,
@@ -45,6 +46,11 @@ import {
 } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
 
+const STAGE_MOVES = (
+  ['start', 'pause', 'resume', 'finish', 'receive'] as const
+).flatMap((action) =>
+  (['ok', 'refused'] as const).map((outcome) => [action, outcome] as const),
+);
 const STEP_ACTIONS = [
   'added',
   'renamed',
@@ -108,6 +114,7 @@ const total = (name: string, labels?: Record<string, string>) =>
 // @traces 879-FR-009 879-FR-010 879-FR-011
 // @traces 424-FR-017
 // @traces 312-FR-016
+// @traces 276-FR-016
 const ACCOUNT_FIELDS = ['name', 'city', 'email', 'phone', 'password'] as const;
 
 const SEVEN_COUNTERS = [
@@ -173,6 +180,9 @@ function countEverySeries() {
   countChannelSeries();
   STEP_ACTIONS.forEach((action) => {
     countJobStep(action);
+  });
+  STAGE_MOVES.forEach(([action, outcome]) => {
+    countJobStageMove(action, outcome);
   });
   GARAGE_REPORT_OUTCOMES.forEach((outcome) => {
     countGarageReport(outcome);
@@ -355,6 +365,14 @@ describe('the product counters', () => {
           () => countJobStep(action),
           'motorfix_job_steps_total',
           { action },
+        ] as const,
+    ),
+    ...STAGE_MOVES.map(
+      ([action, outcome]) =>
+        [
+          () => countJobStageMove(action, outcome),
+          'motorfix_job_stage_moves_total',
+          { action, outcome },
         ] as const,
     ),
     ...ACCOUNT_FIELDS.map(

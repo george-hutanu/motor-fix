@@ -36,6 +36,7 @@ export const PRODUCT_COUNTERS = [
   'motorfix_notification_channel_choices_total',
   'motorfix_notification_channel_fallbacks_total',
   'motorfix_job_steps_total',
+  'motorfix_job_stage_moves_total',
   'motorfix_request_received_total',
   'motorfix_retention_rows_total',
   'motorfix_review_announced_total',

@@ -115,6 +115,7 @@ async function snapshot(bookingId: string) {
 
 // @traces 389-FR-001
 // @traces 389-FR-002
+// @traces 276-FR-004
 describe('POST /bookings/:id/confirm', () => {
   it('confirms the booking with its mechanic and lift, opens the job and closes the rest of the request in one go', async () => {
     const t = await team('Atelier Dinamo');
@@ -160,7 +161,9 @@ describe('POST /bookings/:id/confirm', () => {
       expect.objectContaining({
         actorId: t.owner,
         actorRole: 'owner',
+        auto: false,
         fromStatus: null,
+        mechanicId: t.answeringMechanic.id,
         toStatus: 'to_do',
       }),
     ]);

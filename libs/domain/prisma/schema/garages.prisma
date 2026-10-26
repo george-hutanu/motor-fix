@@ -246,6 +246,7 @@ model Mechanic {
   account             Account?  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   bookings            Booking[]
   jobs                Job[]
+  stageEntries        JobStageEntry[]
   reviews             Review[]
   daysOff             MechanicDayOff[]
 
