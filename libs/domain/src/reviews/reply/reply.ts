@@ -45,16 +45,16 @@ interface ReplyRow {
 
 // The reply as the garage's staff read it: published or reported; a removed
 // one is gone for them too.
+export const replyShapeOf = (reply: ReplyRow) => ({
+  editedAt: reply.editedAt?.toISOString() ?? null,
+  id: reply.id,
+  postedAt: reply.postedAt.toISOString(),
+  status: reply.status,
+  text: reply.text,
+});
+
 export const staffReplyOf = (reply: ReplyRow | null) =>
-  reply && reply.status !== 'removed'
-    ? {
-        editedAt: reply.editedAt?.toISOString() ?? null,
-        id: reply.id,
-        postedAt: reply.postedAt.toISOString(),
-        status: reply.status,
-        text: reply.text,
-      }
-    : null;
+  reply && reply.status !== 'removed' ? replyShapeOf(reply) : null;
 
 // The reply as the public reads it: published only, and nothing of who
 // posted it.

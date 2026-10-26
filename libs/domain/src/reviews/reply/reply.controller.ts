@@ -63,7 +63,7 @@ export class ReviewRepliesController {
     @Body() body: ReplyToReviewDto,
   ): Promise<ReviewReplyDto> {
     // A bad id answers as an absent review, so it tells nothing apart.
-    if (!isUUID(reviewId)) throw notFound();
+    if (!isUUID(reviewId)) throw notFound(actor);
     return this.service.post(actor, reviewId, body);
   }
 
@@ -79,7 +79,7 @@ export class ReviewRepliesController {
     @Param('reviewId') reviewId: string,
     @Body() body: ReplyToReviewDto,
   ): Promise<ReviewReplyDto> {
-    if (!isUUID(reviewId)) throw notFound();
+    if (!isUUID(reviewId)) throw notFound(actor);
     return this.service.edit(actor, reviewId, body);
   }
 }

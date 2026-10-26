@@ -131,7 +131,7 @@ enum ReviewReplyRemovedCause {
 }
 
 // The garage's one public reply to a review, posted and edited by its owner.
-// Reported and removed are written by the moderation stories (#1245, #11).
+// Reported and removed are written by the moderation stories.
 model ReviewReply {
   id           String                   @id @default(uuid()) @db.Uuid
   reviewId     String                   @unique @map("review_id") @db.Uuid

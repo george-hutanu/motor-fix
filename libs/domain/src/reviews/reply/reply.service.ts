@@ -5,7 +5,7 @@ import type {
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import { replyRefusalOf, replyTextProblemOf, staffReplyOf } from './reply';
+import { replyRefusalOf, replyShapeOf, replyTextProblemOf } from './reply';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { refusal } from '../../auth/http-refusal';
 import { type Actor, forbidden } from '../../auth/policy';
@@ -20,7 +20,7 @@ import type {
 import { recordReviewReplied } from '../reviews.metrics';
 
 const MESSAGES: Record<
-  ReplyRefusal | 'forbidden' | 'validation_failed',
+  ReplyRefusal | 'forbidden' | 'not_found' | 'validation_failed',
   { en: string; ro: string }
 > = {
   already_replied: {
@@ -30,6 +30,10 @@ const MESSAGES: Record<
   forbidden: {
     en: 'Only the owner can reply to a review.',
     ro: 'Doar proprietarul poate răspunde la o recenzie.',
+  },
+  not_found: {
+    en: 'No such review.',
+    ro: 'Recenzia nu există.',
   },
   reply_not_public: {
     en: 'The reply is reported and hidden until an admin decides.',
@@ -110,7 +114,7 @@ export class ReviewRepliesService {
       );
     }
     recordReviewReplied('published');
-    return staffReplyOf(reply) as ReviewReplyDto;
+    return replyShapeOf(reply);
   }
 
   async edit(
@@ -164,7 +168,7 @@ export class ReviewRepliesService {
       throw this.refusal(actor, 'reply_not_public');
     }
     recordReviewReplied('edited');
-    return staffReplyOf(reply) as ReviewReplyDto;
+    return replyShapeOf(reply);
   }
 
   private scope(
@@ -231,13 +235,13 @@ export class ReviewRepliesService {
             where: { garageId: actor.garageId, id: reviewId },
           })
         : null;
-    if (!review) throw notFound();
+    if (!review) throw notFound(actor);
     if (actor.role !== 'garage') {
       recordReviewReplied('forbidden');
       throw forbidden(MESSAGES.forbidden[languageOf(actor)]);
     }
     const refused = replyRefusalOf(review, review.reply, mode);
-    if (refused === 'not_found') throw notFound();
+    if (refused === 'not_found') throw notFound(actor);
     if (refused) throw this.refusal(actor, refused);
     const problem = replyTextProblemOf(dto.text);
     if (problem) {
@@ -265,7 +269,11 @@ export class ReviewRepliesService {
 class Moved extends Error {}
 
 // One body for every review the caller cannot reach, so none is told apart.
-export const notFound = () =>
-  refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such review');
+export const notFound = (actor: Actor) =>
+  refusal(
+    HttpStatus.NOT_FOUND,
+    'not_found',
+    MESSAGES.not_found[languageOf(actor)],
+  );
 
 const languageOf = (actor: Actor) => (actor.language === 'en' ? 'en' : 'ro');

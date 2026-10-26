@@ -25,6 +25,10 @@ const MESSAGES = {
     en: 'Only the owner can reply to a review.',
     ro: 'Doar proprietarul poate răspunde la o recenzie.',
   },
+  not_found: {
+    en: 'No such review.',
+    ro: 'Recenzia nu există.',
+  },
   reply_not_public: {
     en: 'The reply is reported and hidden until an admin decides.',
     ro: 'Răspunsul e raportat și ascuns până decide un admin.',
@@ -331,6 +335,26 @@ describe('who may reply', () => {
     expect(new Set(answers.map((a) => JSON.stringify(a.body))).size).toBe(1);
     expect(JSON.stringify(answers[0].body)).not.toContain(s.review.id);
     expect(await prisma.reviewReply.count()).toBe(0);
+    expect(answers[0].body).toEqual({
+      code: 'not_found',
+      message: MESSAGES.not_found.ro,
+    });
+  });
+
+  it('answers the 404 in the caller’s language', async () => {
+    const s = await setting();
+    await english(s.dinamo.owner);
+
+    const [unknown, malformed] = await Promise.all([
+      post(s.owner, randomUUID(), { text: TEXT }),
+      edit(s.owner, 'not-a-uuid', { text: TEXT }),
+    ]);
+
+    expect(unknown.body).toEqual({
+      code: 'not_found',
+      message: MESSAGES.not_found.en,
+    });
+    expect(malformed.body).toEqual(unknown.body);
   });
 
   it('needs a session', async () => {
