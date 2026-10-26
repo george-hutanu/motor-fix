@@ -5333,6 +5333,102 @@
         ]
       }
     },
+    "/api/v1/jobs/{id}/live": {
+      "post": {
+        "operationId": "LiveSessionsController_start",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveSessionStartedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The job id is not a uuid"
+          },
+          "404": {
+            "description": "not_found: no such job, another garage’s, live media off, or not the owner or the job’s mechanic"
+          },
+          "409": {
+            "description": "live_already_on or job_closed"
+          },
+          "503": {
+            "description": "live_unavailable: send photos and clips instead"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Go live on a job, video only",
+        "tags": [
+          "live-sessions"
+        ]
+      }
+    },
+    "/api/v1/live-sessions/{id}/view-token": {
+      "post": {
+        "operationId": "LiveSessionsController_view",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveViewCredentialDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The session id is not a uuid"
+          },
+          "404": {
+            "description": "not_found: no such session, live media off, or not the job’s driver, owner or mechanic"
+          },
+          "409": {
+            "description": "live_ended"
+          },
+          "503": {
+            "description": "live_unavailable: the link cannot be signed now"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A short-lived link to watch a live session",
+        "tags": [
+          "live-sessions"
+        ]
+      }
+    },
     "/api/v1/maps/static": {
       "get": {
         "operationId": "StaticMapController_render",
@@ -17555,6 +17651,100 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "LiveVideoConstraintsDto": {
+        "type": "object",
+        "properties": {
+          "maxHeight": {
+            "type": "number",
+            "example": 720
+          },
+          "maxBitrateKbps": {
+            "type": "number",
+            "example": 1500
+          }
+        },
+        "required": [
+          "maxHeight",
+          "maxBitrateKbps"
+        ]
+      },
+      "LivePublishConstraintsDto": {
+        "type": "object",
+        "properties": {
+          "audio": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "video": {
+            "$ref": "#/components/schemas/LiveVideoConstraintsDto"
+          }
+        },
+        "required": [
+          "audio",
+          "video"
+        ]
+      },
+      "LivePublishCredentialDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The WHIP URL the sender publishes to"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/LivePublishConstraintsDto"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt",
+          "constraints"
+        ]
+      },
+      "LiveSessionStartedDto": {
+        "type": "object",
+        "properties": {
+          "liveSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "publish": {
+            "$ref": "#/components/schemas/LivePublishCredentialDto"
+          }
+        },
+        "required": [
+          "liveSessionId",
+          "startedAt",
+          "publish"
+        ]
+      },
+      "LiveViewCredentialDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The signed low-latency HLS manifest URL"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
         ]
       },
       "ProfileViewDto": {

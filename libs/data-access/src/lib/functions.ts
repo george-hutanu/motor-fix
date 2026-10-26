@@ -367,6 +367,10 @@ export type { JobStepsControllerTick$Params as JobStepsControllerTick$Params } f
 export { jobStepsControllerTick as jobStepsControllerTick } from './fn/garage-jobs/job-steps-controller-tick';
 export type { PlacesControllerSearch$Params as PlacesControllerSearch$Params } from './fn/places/places-controller-search';
 export { placesControllerSearch as placesControllerSearch } from './fn/places/places-controller-search';
+export type { LiveSessionsControllerStart$Params as LiveSessionsControllerStart$Params } from './fn/live-sessions/live-sessions-controller-start';
+export { liveSessionsControllerStart as liveSessionsControllerStart } from './fn/live-sessions/live-sessions-controller-start';
+export type { LiveSessionsControllerView$Params as LiveSessionsControllerView$Params } from './fn/live-sessions/live-sessions-controller-view';
+export { liveSessionsControllerView as liveSessionsControllerView } from './fn/live-sessions/live-sessions-controller-view';
 export type { StaticMapControllerRender$Params as StaticMapControllerRender$Params } from './fn/maps/static-map-controller-render';
 export { staticMapControllerRender as staticMapControllerRender } from './fn/maps/static-map-controller-render';
 export type { SupportContactControllerContact$Params as SupportContactControllerContact$Params } from './fn/support/support-contact-controller-contact';
