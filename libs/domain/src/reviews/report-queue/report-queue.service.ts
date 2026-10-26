@@ -7,12 +7,12 @@ import {
 } from '@motor-fix/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 
-import { countReportQueue } from './report-queue';
+import { countReportQueue, type ReportCounts } from './report-queue';
 import { PRISMA } from '../../auth/prisma';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { shortName } from '../../quotes/reads';
 
-export type QueueLanguage = 'ro' | 'en';
+type QueueLanguage = 'ro' | 'en';
 
 // What an item reads of its report: the review, its author's name, status
 // and age, the garage, the reply, and the job the review is about. Never an
@@ -96,7 +96,7 @@ const accountFact = (review: Review): ReportQueueFactsDto['account'] =>
 export class ReportQueueService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
-  counts(now = new Date()) {
+  counts(now = new Date()): Promise<ReportCounts> {
     return countReportQueue(this.prisma, now);
   }
 

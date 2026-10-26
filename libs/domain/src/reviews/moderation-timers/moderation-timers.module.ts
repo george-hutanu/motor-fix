@@ -23,7 +23,7 @@ import {
 import { logFinalFailure } from '../../job-failures';
 import { inJob } from '../../logging';
 
-export const MODERATION_TIMERS_WORKER = Symbol('MODERATION_TIMERS_WORKER');
+const MODERATION_TIMERS_WORKER = Symbol('MODERATION_TIMERS_WORKER');
 
 interface ModerationTimersOptions {
   redisUrl: string;
