@@ -81,16 +81,13 @@ describe('a view’s own empty state', () => {
 });
 
 // @traces 101-FR-011
+// @traces 099-FR-006
 describe('the dashboard view of a draft garage', () => {
-  it('keeps the plain line: the verification page is the dashboard’s own', async () => {
-    const element = await render('garage', '', 'ro', {
-      garageAccess: [
-        { features: {}, garageId: 'garage-1', role: 'owner', status: 'draft' },
-      ],
-      garageId: 'garage-1',
-    } as unknown as Partial<MeDto>);
+  it('is Panou itself, with no plain line: the verification page is the dashboard’s own', () => {
+    const home = viewOf('garage', '');
 
-    expect(text(element)).toBe('Aici vei vedea ce se întâmplă azi în service.');
+    expect(home.load).toBeDefined();
+    expect(home.empty).toBeUndefined();
   });
 });
 
