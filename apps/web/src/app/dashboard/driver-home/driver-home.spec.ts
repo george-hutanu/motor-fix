@@ -725,7 +725,16 @@ describe('the panels’ states', () => {
 describe('Panou’s quotes panel', () => {
   const booked = (status: 'awaiting_confirmation' | 'confirmed') =>
     ({
+      cancelledBySide: null,
       confirmBy: '2026-10-18T10:00:00.000Z',
+      garage: {
+        id: 'garage-1',
+        name: 'Service Auto Militari',
+        slug: 'service-auto-militari',
+      },
+      id: 'booking-1',
+      jobStarted: false,
+      lateCancellation: false,
       startsAt: '2026-10-20T06:00:00.000Z',
       status,
     }) as const;

@@ -194,7 +194,16 @@ describe('GET /requests once a quote is accepted', () => {
     const res = await get('/requests', bearer(andrei, 'driver'));
 
     expect(res.body.items[0].booking).toEqual({
+      cancelledBySide: null,
       confirmBy: newest.confirmBy.toISOString(),
+      garage: {
+        id: militari.garage.id,
+        name: militari.garage.name,
+        slug: militari.garage.slug,
+      },
+      id: newest.id,
+      jobStarted: false,
+      lateCancellation: false,
       startsAt: newest.startsAt.toISOString(),
       status: 'confirmed',
     });
@@ -234,6 +243,57 @@ describe('GET /requests once a quote is accepted', () => {
       status: 'awaiting_confirmation',
     });
     expect(res.body.booking.garage).toBeDefined();
+  });
+});
+
+// @traces 1385-cancel-from-requests-FR-001
+// @traces 1385-cancel-from-requests-FR-010
+describe('GET /requests: what a row needs to offer a cancel', () => {
+  it('says the job started only once it left to do', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const { garage } = await team('Atelier Dinamo');
+    const { booking } = await world.chain(andrei, garage.id, {
+      booking: 'confirmed',
+    });
+    const read = async () =>
+      (await get('/requests', bearer(andrei, 'driver'))).body.items[0].booking;
+
+    expect(await read()).toMatchObject({ id: booking.id, jobStarted: false });
+    const job = await world.job(booking.id, 'to_do');
+    expect(await read()).toMatchObject({ jobStarted: false });
+    await prisma.job.update({
+      data: { status: 'in_work' },
+      where: { id: job.id },
+    });
+    expect(await read()).toMatchObject({ jobStarted: true });
+  });
+
+  it('carries who cancelled the booking and whether it was late, as saved', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const { garage } = await team('Atelier Dinamo');
+    const { booking } = await world.chain(andrei, garage.id, {
+      booking: 'confirmed',
+    });
+    await prisma.booking.update({
+      data: {
+        cancelledAt: new Date(),
+        cancelledBySide: 'driver',
+        cancelReason: 'plans_changed',
+        lateCancellation: true,
+        status: 'cancelled',
+      },
+      where: { id: booking.id },
+    });
+
+    const res = await get('/requests', bearer(andrei, 'driver'));
+
+    expect(res.body.items[0].booking).toMatchObject({
+      cancelledBySide: 'driver',
+      garage: { id: garage.id, name: garage.name },
+      id: booking.id,
+      lateCancellation: true,
+      status: 'cancelled',
+    });
   });
 });
 

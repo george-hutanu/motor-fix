@@ -1,6 +1,7 @@
 import {
   DECLINE_REASON_CODES,
   DECLINE_REASON_TEXTS,
+  FREE_CANCEL_CUTOFF_HOURS,
   GARAGE_CLOSE_REASON_LABELS,
   GARAGE_CLOSE_REASONS,
   REQUEST_STATUS_LABELS,
@@ -134,5 +135,12 @@ describe('the reasons a garage declines', () => {
         },
       },
     });
+  });
+});
+
+// @traces 1385-cancel-from-requests-FR-001
+describe('the free cancel cutoff', () => {
+  it('is the two hours the server judges a late cancel by, shared with the dialog', () => {
+    expect(FREE_CANCEL_CUTOFF_HOURS).toBe(2);
   });
 });

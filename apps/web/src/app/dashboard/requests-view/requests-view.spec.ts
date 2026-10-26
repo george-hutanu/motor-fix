@@ -135,7 +135,16 @@ describe('Cererile mele once a quote is accepted', () => {
   const booked = (confirmIn: number, status = 'awaiting_confirmation') =>
     row({
       booking: {
+        cancelledBySide: null,
         confirmBy: new Date(Date.now() + confirmIn).toISOString(),
+        garage: {
+          id: 'garage-1',
+          name: 'Service Auto Militari',
+          slug: 'service-auto-militari',
+        },
+        id: 'booking-1',
+        jobStarted: false,
+        lateCancellation: false,
         startsAt: '2026-10-20T06:00:00.000Z',
         status: status as 'awaiting_confirmation',
       },
@@ -248,7 +257,16 @@ describe('Cererile mele’s clock after an acceptance', () => {
         [
           row({
             booking: {
+              cancelledBySide: null,
               confirmBy,
+              garage: {
+                id: 'garage-1',
+                name: 'Service Auto Militari',
+                slug: 'service-auto-militari',
+              },
+              id: 'booking-1',
+              jobStarted: false,
+              lateCancellation: false,
               startsAt: '2026-10-20T06:00:00.000Z',
               status: 'awaiting_confirmation',
             },
@@ -288,7 +306,16 @@ describe('Cererile mele once the garage confirms or lets the booking lapse', () 
   ) =>
     row({
       booking: {
+        cancelledBySide: null,
         confirmBy: new Date(Date.now() + HOUR).toISOString(),
+        garage: {
+          id: 'garage-1',
+          name: 'Service Auto Militari',
+          slug: 'service-auto-militari',
+        },
+        id: 'booking-1',
+        jobStarted: false,
+        lateCancellation: false,
         startsAt: STARTS,
         status,
       },
@@ -355,7 +382,16 @@ describe('Cererile mele once the garage confirms or lets the booking lapse', () 
         [
           row({
             booking: {
+              cancelledBySide: null,
               confirmBy: new Date(Date.now() + HOUR).toISOString(),
+              garage: {
+                id: 'garage-1',
+                name: 'Service Auto Militari',
+                slug: 'service-auto-militari',
+              },
+              id: 'booking-1',
+              jobStarted: false,
+              lateCancellation: false,
               startsAt: STARTS,
               status: 'awaiting_confirmation',
             },
