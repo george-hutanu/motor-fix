@@ -95,6 +95,8 @@ export class RequestsView {
   private readonly overlays = inject(Overlays);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
+  // A cancel dialog is up: the row actions open no second one.
+  private cancelling = false;
   protected readonly language = this.i18n.language;
   protected readonly list = liveResource(
     () => this.api.requestsControllerList(),
@@ -164,29 +166,11 @@ export class RequestsView {
   // action is gone.
   protected async cancel(row: Row) {
     const offer = row.cancel;
-    if (!offer) return;
-    const result =
-      offer.kind === 'booking'
-        ? await this.overlays.open<CancelBookingResult, CancelBookingData>(
-            CancelBookingDialog,
-            {
-              data: {
-                bookingId: offer.bookingId,
-                garage: offer.garage,
-                startsAt: offer.startsAt,
-              },
-              shape: 'dialog',
-              title: 'driver.requests.cancelBookingDialog.title',
-            },
-          )
-        : await this.overlays.open<CancelRequestResult, CancelRequestData>(
-            CancelRequestDialog,
-            {
-              data: { car: row.car, requestId: row.id, what: row.what },
-              shape: 'dialog',
-              title: 'driver.requests.cancelRequestDialog.title',
-            },
-          );
+    if (!offer || this.cancelling) return;
+    this.cancelling = true;
+    const result = await this.ask(row, offer).finally(() => {
+      this.cancelling = false;
+    });
     if (result === 'done' || result === 'refused') await this.list.reload();
     afterNextRender(
       () => {
@@ -200,6 +184,30 @@ export class RequestsView {
       },
       { injector: this.injector },
     );
+  }
+
+  private ask(row: Row, offer: NonNullable<Row['cancel']>) {
+    return offer.kind === 'booking'
+      ? this.overlays.open<CancelBookingResult, CancelBookingData>(
+          CancelBookingDialog,
+          {
+            data: {
+              bookingId: offer.bookingId,
+              garage: offer.garage,
+              startsAt: offer.startsAt,
+            },
+            shape: 'dialog',
+            title: 'driver.requests.cancelBookingDialog.title',
+          },
+        )
+      : this.overlays.open<CancelRequestResult, CancelRequestData>(
+          CancelRequestDialog,
+          {
+            data: { car: row.car, requestId: row.id, what: row.what },
+            shape: 'dialog',
+            title: 'driver.requests.cancelRequestDialog.title',
+          },
+        );
   }
 
   private row(item: RequestSummaryDto, language: 'ro' | 'en', now: Date): Row {
@@ -232,7 +240,11 @@ export class RequestsView {
         booking?.status === 'lapsed' && { lapsed: true as const }),
       ...cancelOf(item, now),
       ...(byDriver(item) && {
-        cancelledByYou: { late: item.booking?.lateCancellation === true },
+        cancelledByYou: {
+          late:
+            item.closedReason === 'booking_cancelled' &&
+            item.booking?.lateCancellation === true,
+        },
       }),
       ...(item.status === 'quoted' &&
         booking?.status === 'cancelled' &&
@@ -241,7 +253,7 @@ export class RequestsView {
   }
 }
 
-// The cancel a request offers now (FR-002): the request while it is sent or
+// The cancel a request offers now: the request while it is sent or
 // quoted; the booking while it waits or is confirmed, starts after now and
 // its job has not started; nothing otherwise.
 function cancelOf(item: RequestSummaryDto, now: Date): Pick<Row, 'cancel'> {
@@ -254,7 +266,8 @@ function cancelOf(item: RequestSummaryDto, now: Date): Pick<Row, 'cancel'> {
     (booking.status !== 'awaiting_confirmation' &&
       booking.status !== 'confirmed') ||
     booking.jobStarted ||
-    new Date(booking.startsAt).getTime() <= now.getTime()
+    // An unreadable start (NaN) is not ahead of now either.
+    !(new Date(booking.startsAt).getTime() > now.getTime())
   )
     return {};
   return {
