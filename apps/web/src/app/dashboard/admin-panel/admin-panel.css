@@ -2,17 +2,17 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--mf-space-3);
+  /* The tiles start and end where the header's title and tools do, at every width. */
+  padding-inline: var(--mf-space-4);
 }
 @media (min-width: 768px) {
   :host {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
-/* The six tiles start and end where the header's title and tools do. */
 @media (min-width: 1024px) {
   :host {
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    padding-inline: var(--mf-space-4);
   }
   /* Growth and the brand demand side by side, growth's charts stacked. */
   mf-admin-growth {

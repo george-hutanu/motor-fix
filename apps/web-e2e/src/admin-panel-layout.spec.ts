@@ -96,30 +96,35 @@ test.describe('the admin panel layout', () => {
     });
   }
 
-  test('lines the six tiles up with the header controls at 1280 px', async ({
-    page,
-  }) => {
-    await page.setViewportSize({ height: 900, width: 1280 });
-    await stubFailedAdmin(page);
-    await page.goto('/app/admin');
-    await expect(
-      panel(page).getByRole('button', { name: 'De ce?' }).first(),
-    ).toBeVisible();
+  // The header's side inset at every width, as both boards draw it: on a
+  // phone and a tablet too, the tiles never sit on the window's edge.
+  for (const width of [320, 390, 768, 1280]) {
+    test(`lines the tiles up with the header controls at ${width} px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ height: 900, width });
+      await stubFailedAdmin(page);
+      await page.goto('/app/admin');
+      await expect(
+        panel(page).getByRole('button', { name: 'De ce?' }).first(),
+      ).toBeVisible();
 
-    const edges = await panel(page)
-      .getByRole('group')
-      .evaluateAll((all) => {
-        const boxes = all.map((t) => t.getBoundingClientRect());
-        return {
-          left: Math.min(...boxes.map((b) => b.left)),
-          right: Math.max(...boxes.map((b) => b.right)),
-        };
-      });
-    const title = await box(header(page).locator('.title'));
-    const tools = await box(header(page).locator('.tools'));
-    expect(Math.abs(edges.left - title.x)).toBeLessThan(1);
-    expect(Math.abs(edges.right - (tools.x + tools.width))).toBeLessThan(1);
-  });
+      const edges = await panel(page)
+        .getByRole('group')
+        .evaluateAll((all) => {
+          const boxes = all.map((t) => t.getBoundingClientRect());
+          return {
+            left: Math.min(...boxes.map((b) => b.left)),
+            right: Math.max(...boxes.map((b) => b.right)),
+          };
+        });
+      const title = await box(header(page).locator('.title'));
+      const tools = await box(header(page).locator('.tools'));
+      expect(title.x).toBeGreaterThan(0);
+      expect(Math.abs(edges.left - title.x)).toBeLessThan(1);
+      expect(Math.abs(edges.right - (tools.x + tools.width))).toBeLessThan(1);
+    });
+  }
 
   test('keeps the language switch and the bell on the first header row at 768 px', async ({
     page,
