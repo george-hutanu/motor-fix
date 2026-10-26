@@ -552,6 +552,25 @@ describe('a write before the home read it', () => {
     );
   });
 
+  it('answers a car edited after sign-in at the next read, before the relay runs', async () => {
+    const andrei = await driver();
+    const auth = bearer(andrei.id, 'driver');
+    await signIn(andrei.email);
+    await stored(...driverKeys(andrei.id));
+
+    const edit = await request(app.getHttpServer())
+      .patch(`/cars/${andrei.car.id}`)
+      .set('Authorization', auth)
+      .send({ model: 'Clubman', version: andrei.car.updatedAt.toISOString() });
+    expect(edit.status).toBe(200);
+
+    const cars = await get('/cars', auth);
+    expect(
+      cars.body.items.find((car: { id: string }) => car.id === andrei.car.id)
+        .model,
+    ).toBe('Clubman');
+  });
+
   it('answers a car removed after sign-in at the next read, before the relay runs', async () => {
     const andrei = await person(['driver']);
     const spare = await world.car(andrei.id, 'B99XYZ');
