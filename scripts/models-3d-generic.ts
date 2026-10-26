@@ -1,4 +1,4 @@
-// The six generic body-shape 3D files (ST-1242): one GLB per body style,
+// The six generic body-shape 3D files: one GLB per body style,
 // generated from code alone, so the files are an original work with no
 // third-party content. The shapes are the design mock's procedural car
 // (docs/reference/design/Main.dc.html) without paint, grille or badge.
@@ -18,7 +18,7 @@ import { MeshoptEncoder } from 'meshoptimizer';
 
 type V3 = [number, number, number];
 
-export const GENERIC_STYLES = [
+const GENERIC_STYLES = [
   'crossover',
   'estate',
   'fastback',
@@ -26,10 +26,10 @@ export const GENERIC_STYLES = [
   'saloon',
   'suv',
 ] as const;
-export type GenericStyle = (typeof GENERIC_STYLES)[number];
+type GenericStyle = (typeof GENERIC_STYLES)[number];
 
-/** The petrol and diesel systems, in the catalogue's order (ST-1241). */
-export const GENERIC_SYSTEMS = [
+/** The petrol and diesel systems, in the catalogue's order. */
+const GENERIC_SYSTEMS = [
   'engine',
   'brakes',
   'suspension',
@@ -42,8 +42,8 @@ export const GENERIC_SYSTEMS = [
 ] as const;
 type System = (typeof GENERIC_SYSTEMS)[number];
 
-export const GENERATOR = 'motor-fix scripts/models-3d-generic.ts';
-export const COPYRIGHT =
+const GENERATOR = 'motor-fix scripts/models-3d-generic.ts';
+const COPYRIGHT =
   'MotorFix original work, generated from code by scripts/models-3d-generic.ts ' +
   'in the motor-fix repository; no third-party content (no outside model, ' +
   'image, logo or text). Licence: owned by MotorFix, usable by MotorFix ' +
@@ -954,12 +954,7 @@ function document(style: GenericStyle): Document {
   doc.getRoot().getAsset().generator = GENERATOR;
   doc.getRoot().getAsset().copyright = COPYRIGHT;
   doc.createBuffer();
-  doc
-    .createExtension(EXTMeshoptCompression)
-    .setRequired(true)
-    .setEncoderOptions({
-      method: EXTMeshoptCompression.EncoderMethod.QUANTIZE,
-    });
+  doc.createExtension(EXTMeshoptCompression).setRequired(true);
   const shell = doc
     .createMaterial('shell')
     .setBaseColorFactor([0.78, 0.8, 0.84, 0.35])
@@ -997,14 +992,14 @@ function document(style: GenericStyle): Document {
   return doc;
 }
 
-export interface GenericFile {
+interface GenericFile {
   style: GenericStyle;
   name: string;
   bytes: Uint8Array;
 }
 
 /** The six files, in style order, each named by the first 16 hex of its SHA-256. */
-export async function generateGeneric(): Promise<GenericFile[]> {
+async function generateGeneric(): Promise<GenericFile[]> {
   await MeshoptEncoder.ready;
   const io = new NodeIO()
     .registerExtensions([EXTMeshoptCompression])
