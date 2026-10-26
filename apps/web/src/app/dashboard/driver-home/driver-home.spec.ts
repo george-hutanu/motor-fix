@@ -847,6 +847,22 @@ describe('Panou once a quote is accepted', () => {
     expect(carsList).toHaveBeenCalledTimes(1);
   });
 
+  // @traces 1385-cancel-from-requests-FR-008
+  it.each(['request.cancelled', 'booking.cancelled'] as const)(
+    'reads the requests again on a cancel, %s',
+    async (kind) => {
+      const { settle } = await render({
+        requests: [request({ quotesCount: 2 })],
+      });
+
+      events.next({ at: new Date().toISOString(), id: 'req-1', kind });
+      await new Promise((r) => setTimeout(r, 400));
+      await settle();
+
+      expect(requestsList).toHaveBeenCalledTimes(2);
+    },
+  );
+
   // @traces 389-FR-016
   it.each(['booking.confirmed', 'booking.lapsed'] as const)(
     'reads the requests again on %s',

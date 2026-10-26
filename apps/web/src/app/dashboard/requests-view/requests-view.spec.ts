@@ -11,8 +11,11 @@ import {
   RequestsService,
 } from '@motor-fix/data-access';
 import { formatSlot, I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
+import { CancelBookingDialog } from './cancel-booking-dialog/cancel-booking-dialog';
+import { CancelRequestDialog } from './cancel-request-dialog/cancel-request-dialog';
 import { RequestsView } from './requests-view';
 import { Live } from '../live';
 
@@ -893,4 +896,373 @@ describe('Cererea activă at the top of Cererile mele', () => {
 
     expect(active).toHaveBeenCalledTimes(2);
   });
+});
+
+const HOURS = 3_600_000;
+const GARAGE = {
+  id: 'garage-1',
+  name: 'Service Auto Militari',
+  slug: 'service-auto-militari',
+};
+type Booking = NonNullable<RequestSummaryDto['booking']>;
+const booking = (over: Partial<Booking> = {}): Booking => ({
+  cancelledBySide: null,
+  confirmBy: new Date(Date.now() + HOURS).toISOString(),
+  garage: GARAGE,
+  id: 'booking-1',
+  jobStarted: false,
+  lateCancellation: false,
+  startsAt: new Date(Date.now() + 24 * HOURS).toISOString(),
+  status: 'confirmed',
+  ...over,
+});
+const actionsOf = (element: HTMLElement) =>
+  [...element.querySelectorAll<HTMLElement>('[data-request] .actions > *')].map(
+    text,
+  );
+const lineOf = (element: HTMLElement, name: string) => {
+  const found = element.querySelector(`[data-request] .${name}`);
+  return found ? text(found) : null;
+};
+const cancelButton = (element: HTMLElement) =>
+  element.querySelector<HTMLButtonElement>('[data-request] .actions button');
+
+// The dialogs' own behaviour is their specs'; here only what the row hands
+// them and what it does with the answer.
+let opened: jest.Mock;
+const dialogs = (answer: string) => {
+  opened = jest.fn(async () => answer);
+  TestBed.overrideProvider(Overlays, { useValue: { open: opened } });
+};
+
+// @traces 1385-cancel-from-requests-FR-002
+// @traces 1385-cancel-from-requests-FR-010
+describe('Cererile mele: which cancel a row offers', () => {
+  it.each([
+    ['sent', 0, null],
+    ['quoted', 2, null],
+    ['quoted', 2, booking({ status: 'lapsed' })],
+    ['quoted', 2, booking({ cancelledBySide: 'garage', status: 'cancelled' })],
+  ] as const)(
+    'offers Anulează cererea on a %s request (%s quotes)',
+    async (status, quotesCount, held) => {
+      const { element } = await render([
+        [row({ booking: held, quotesCount, status })],
+      ]);
+
+      const expected = quotesCount
+        ? ['Compară ofertele', 'Anulează cererea']
+        : ['Anulează cererea'];
+      expect(actionsOf(element)).toEqual(expected);
+      expect(element.querySelectorAll('[data-request] .actions')).toHaveLength(
+        1,
+      );
+    },
+  );
+
+  it.each(['awaiting_confirmation', 'confirmed'] as const)(
+    'offers Anulează programarea on a booked request whose booking is %s',
+    async (bookingStatus) => {
+      const { element } = await render([
+        [
+          row({
+            booking: booking({ status: bookingStatus }),
+            quotesCount: 2,
+            status: 'booked',
+          }),
+        ],
+      ]);
+
+      expect(actionsOf(element)).toEqual([
+        'Compară ofertele',
+        'Anulează programarea',
+      ]);
+    },
+  );
+
+  it('writes the actions in English', async () => {
+    const { element } = await render(
+      [
+        [
+          row({ id: 'a', status: 'sent' }),
+          row({
+            booking: booking(),
+            id: 'b',
+            quotesCount: 1,
+            status: 'booked',
+          }),
+        ],
+      ],
+      'en',
+    );
+
+    expect(actionsOf(element)).toEqual([
+      'Cancel the request',
+      'Compare the quotes',
+      'Cancel the booking',
+    ]);
+  });
+
+  it.each(['in_work', 'done', 'closed'] as const)(
+    'offers no cancel on a %s request',
+    async (status) => {
+      const { element } = await render([
+        [row({ booking: booking(), quotesCount: 0, status })],
+      ]);
+
+      expect(cancelButton(element)).toBeNull();
+    },
+  );
+});
+
+// @traces 1385-cancel-from-requests-FR-003
+describe('Cererile mele: the lines a cancel leaves', () => {
+  it('says Anulată de tine on a request the driver cancelled', async () => {
+    const { element } = await render([
+      [row({ closedReason: 'cancelled', status: 'closed' })],
+    ]);
+
+    expect(lineOf(element, 'cancelled')).toBe('Anulată de tine');
+  });
+
+  it('says Anulată de tine on a booking the driver cancelled, late when it was', async () => {
+    const { element } = await render([
+      [
+        row({
+          booking: booking({
+            cancelledBySide: 'driver',
+            lateCancellation: true,
+            status: 'cancelled',
+          }),
+          closedReason: 'booking_cancelled',
+          status: 'closed',
+        }),
+      ],
+    ]);
+
+    expect(lineOf(element, 'cancelled')).toBe(
+      'Anulată de tine · Anulare târzie',
+    );
+  });
+
+  it('writes the closed lines in English', async () => {
+    const { element } = await render(
+      [
+        [
+          row({
+            booking: booking({
+              cancelledBySide: 'driver',
+              lateCancellation: true,
+              status: 'cancelled',
+            }),
+            closedReason: 'booking_cancelled',
+            status: 'closed',
+          }),
+        ],
+      ],
+      'en',
+    );
+
+    expect(lineOf(element, 'cancelled')).toBe(
+      'Cancelled by you · Late cancellation',
+    );
+  });
+
+  it.each(['garage', 'system'] as const)(
+    'says nothing of the driver for a booking the %s cancelled',
+    async (side) => {
+      const { element } = await render([
+        [
+          row({
+            booking: booking({ cancelledBySide: side, status: 'cancelled' }),
+            closedReason: 'booking_cancelled',
+            id: 'closed',
+            status: 'closed',
+          }),
+          row({
+            booking: booking({ cancelledBySide: side, status: 'cancelled' }),
+            id: 'quoted',
+            quotesCount: 2,
+            status: 'quoted',
+          }),
+        ],
+      ]);
+
+      expect(lineOf(element, 'cancelled')).toBeNull();
+      expect(lineOf(element, 'reopened')).toBeNull();
+    },
+  );
+
+  it('asks for another quote after the driver cancelled the booking', async () => {
+    const { element } = await render([
+      [
+        row({
+          booking: booking({ cancelledBySide: 'driver', status: 'cancelled' }),
+          quotesCount: 2,
+          status: 'quoted',
+        }),
+      ],
+    ]);
+
+    expect(lineOf(element, 'reopened')).toBe(
+      'Ai anulat programarea. Poți alege altă ofertă.',
+    );
+    expect(actionsOf(element)).toEqual([
+      'Compară ofertele',
+      'Anulează cererea',
+    ]);
+  });
+});
+
+// @traces 1385-cancel-from-requests-FR-002
+// @traces 1385-cancel-from-requests-FR-006
+// @traces 1385-cancel-from-requests-FR-010
+describe('Cererile mele: opening a cancel', () => {
+  it('hands the booking dialog the booking, its garage and its slot, then re-reads', async () => {
+    dialogs('done');
+    const held = booking();
+    const { element, settle } = await render([
+      [row({ booking: held, quotesCount: 2, status: 'booked' })],
+      [
+        row({
+          booking: { ...held, cancelledBySide: 'driver', status: 'cancelled' },
+          closedReason: 'booking_cancelled',
+          quotesCount: 2,
+          status: 'closed',
+        }),
+      ],
+    ]);
+
+    cancelButton(element)?.click();
+    await settle();
+    await settle();
+
+    expect(opened).toHaveBeenCalledWith(CancelBookingDialog, {
+      data: {
+        bookingId: 'booking-1',
+        garage: 'Service Auto Militari',
+        startsAt: held.startsAt,
+      },
+      shape: 'dialog',
+      title: 'driver.requests.cancelBookingDialog.title',
+    });
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(lineOf(element, 'cancelled')).toBe('Anulată de tine');
+    expect(document.activeElement).toBe(
+      element.querySelector('[data-request="req-1"]'),
+    );
+  });
+
+  it('hands the request dialog the car and the jobs', async () => {
+    dialogs('cancelled');
+    const { element, settle } = await render([[row({ status: 'sent' })]]);
+
+    cancelButton(element)?.click();
+    await settle();
+
+    expect(opened).toHaveBeenCalledWith(CancelRequestDialog, {
+      data: {
+        car: 'Dacia Logan 2017',
+        requestId: 'req-1',
+        what: 'Schimb ulei',
+      },
+      shape: 'dialog',
+      title: 'driver.requests.cancelRequestDialog.title',
+    });
+  });
+
+  it('keeps the request and puts the focus back on its action', async () => {
+    dialogs('cancelled');
+    const { element, settle } = await render([[row({ status: 'sent' })]]);
+
+    cancelButton(element)?.click();
+    await settle();
+    await settle();
+
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(cancelButton(element));
+  });
+
+  it('re-reads the list after a refused cancel', async () => {
+    dialogs('refused');
+    const { element, settle } = await render([
+      [row({ booking: booking(), quotesCount: 1, status: 'booked' })],
+      [row({ booking: booking(), quotesCount: 1, status: 'in_work' })],
+    ]);
+
+    cancelButton(element)?.click();
+    await settle();
+    await settle();
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(cancelButton(element)).toBeNull();
+    expect(document.activeElement).toBe(
+      element.querySelector('[data-request="req-1"]'),
+    );
+  });
+});
+
+// @traces 1385-cancel-from-requests-FR-002
+// @traces 1385-cancel-from-requests-FR-008
+// @traces 1385-cancel-from-requests-FR-010
+describe('Cererile mele: a cancel no longer possible', () => {
+  it.each([
+    [
+      'a passed start',
+      booking({ startsAt: new Date(Date.now() - 60_000).toISOString() }),
+    ],
+    ['a started job', booking({ jobStarted: true })],
+    ['a lapsed booking', booking({ status: 'lapsed' })],
+    ['a cancelled booking', booking({ status: 'cancelled' })],
+    ['a completed booking', booking({ status: 'completed' })],
+  ])('offers no cancel for a booked request with %s', async (_, held) => {
+    const { element } = await render([
+      [row({ booking: held, quotesCount: 0, status: 'booked' })],
+    ]);
+
+    expect(cancelButton(element)).toBeNull();
+  });
+
+  it('takes the action away once the minute tick passes the start', async () => {
+    jest.useFakeTimers({ advanceTimers: true });
+    try {
+      const { element, settle } = await render([
+        [
+          row({
+            booking: booking({
+              startsAt: new Date(Date.now() + 90_000).toISOString(),
+            }),
+            quotesCount: 0,
+            status: 'booked',
+          }),
+        ],
+      ]);
+      expect(cancelButton(element)).not.toBeNull();
+
+      jest.advanceTimersByTime(120_000);
+      await settle();
+
+      expect(cancelButton(element)).toBeNull();
+      expect(list).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it.each<EventKind>(['request.cancelled', 'booking.cancelled'])(
+    'reads the list again on %s',
+    async (kind) => {
+      const { element, settle } = await render([
+        [row({ status: 'sent' })],
+        [row({ closedReason: 'cancelled', status: 'closed' })],
+      ]);
+
+      events.next({ at: new Date().toISOString(), id: 'req-1', kind });
+      await wait(400);
+      await settle();
+
+      expect(list).toHaveBeenCalledTimes(2);
+      expect(lineOf(element, 'cancelled')).toBe('Anulată de tine');
+    },
+  );
 });

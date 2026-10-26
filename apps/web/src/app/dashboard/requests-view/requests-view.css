@@ -62,8 +62,21 @@ p {
   color: var(--mf-amber-ink);
   font-weight: 600;
 }
+.cancelled,
+.reopened {
+  font-weight: 600;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-3);
+}
+.cancel {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
 .compare {
-  align-self: flex-start;
   min-height: var(--mf-tap);
   display: inline-flex;
   align-items: center;

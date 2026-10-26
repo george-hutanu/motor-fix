@@ -1,0 +1,34 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-4);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.subject {
+  color: var(--mf-text-secondary);
+}
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+.error {
+  color: var(--mf-red-ink);
+  font-size: var(--mf-size-small);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+.danger {
+  border-color: var(--mf-red);
+  color: var(--mf-red-ink);
+}

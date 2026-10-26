@@ -1,0 +1,12 @@
+<p class="subject">{{ subject }}</p>
+<p>{{ 'driver.requests.cancelRequestDialog.body' | t }}</p>
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <mf-task-error [save]="save" />
+  @if (!online()) {
+    <p class="error" role="status">{{ 'shell.form.problem.offline' | t }}</p>
+  }
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'driver.requests.cancelRequestDialog.keep' | t }}</button>
+    <button hlmBtn variant="secondary" type="submit" class="danger" [mfTaskSubmit]="save" [disabled]="!online()">{{ 'driver.requests.cancelRequestDialog.confirm' | t }}</button>
+  </div>
+</form>
