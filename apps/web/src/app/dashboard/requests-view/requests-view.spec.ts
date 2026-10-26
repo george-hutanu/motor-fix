@@ -935,8 +935,8 @@ const dialogs = (answer: string) => {
   TestBed.overrideProvider(Overlays, { useValue: { open: opened } });
 };
 
-// @traces 1385-cancel-from-requests-FR-002
-// @traces 1385-cancel-from-requests-FR-010
+// @traces 1385-FR-002
+// @traces 1385-FR-010
 describe('Cererile mele: which cancel a row offers', () => {
   it.each([
     ['sent', 0, null],
@@ -1015,7 +1015,7 @@ describe('Cererile mele: which cancel a row offers', () => {
   );
 });
 
-// @traces 1385-cancel-from-requests-FR-003
+// @traces 1385-FR-003
 describe('Cererile mele: the lines a cancel leaves', () => {
   it('says Anulată de tine on a request the driver cancelled', async () => {
     const { element } = await render([
@@ -1114,9 +1114,9 @@ describe('Cererile mele: the lines a cancel leaves', () => {
   });
 });
 
-// @traces 1385-cancel-from-requests-FR-002
-// @traces 1385-cancel-from-requests-FR-006
-// @traces 1385-cancel-from-requests-FR-010
+// @traces 1385-FR-002
+// @traces 1385-FR-006
+// @traces 1385-FR-010
 describe('Cererile mele: opening a cancel', () => {
   it('hands the booking dialog the booking, its garage and its slot, then re-reads', async () => {
     dialogs('done');
@@ -1202,9 +1202,9 @@ describe('Cererile mele: opening a cancel', () => {
   });
 });
 
-// @traces 1385-cancel-from-requests-FR-002
-// @traces 1385-cancel-from-requests-FR-008
-// @traces 1385-cancel-from-requests-FR-010
+// @traces 1385-FR-002
+// @traces 1385-FR-008
+// @traces 1385-FR-010
 describe('Cererile mele: a cancel no longer possible', () => {
   it.each([
     [

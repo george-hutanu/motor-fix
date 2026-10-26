@@ -138,7 +138,7 @@ describe('the reasons a garage declines', () => {
   });
 });
 
-// @traces 1385-cancel-from-requests-FR-001
+// @traces 1385-FR-001
 describe('the free cancel cutoff', () => {
   it('is the two hours the server judges a late cancel by, shared with the dialog', () => {
     expect(FREE_CANCEL_CUTOFF_HOURS).toBe(2);

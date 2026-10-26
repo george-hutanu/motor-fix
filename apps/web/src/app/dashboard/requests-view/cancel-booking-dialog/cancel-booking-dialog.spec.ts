@@ -122,7 +122,7 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 1385-cancel-from-requests-FR-005
+// @traces 1385-FR-005
 describe('the cancel booking dialog: what it asks', () => {
   it('asks to cancel, naming the garage and the slot under the title', async () => {
     await open();
@@ -205,7 +205,7 @@ describe('the cancel booking dialog: what it asks', () => {
   });
 });
 
-// @traces 1385-cancel-from-requests-FR-005
+// @traces 1385-FR-005
 describe('the cancel booking dialog: the late warning', () => {
   it('says nothing three hours ahead', async () => {
     await open({ startsIn: 3 * HOUR });
@@ -258,8 +258,8 @@ describe('the cancel booking dialog: the late warning', () => {
   });
 });
 
-// @traces 1385-cancel-from-requests-FR-006
-// @traces 1385-cancel-from-requests-FR-010
+// @traces 1385-FR-006
+// @traces 1385-FR-010
 describe('the cancel booking dialog: cancelling', () => {
   it('sends the reason and the trimmed details, then closes with Programare anulată', async () => {
     await open();

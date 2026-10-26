@@ -246,8 +246,8 @@ describe('GET /requests once a quote is accepted', () => {
   });
 });
 
-// @traces 1385-cancel-from-requests-FR-001
-// @traces 1385-cancel-from-requests-FR-010
+// @traces 1385-FR-001
+// @traces 1385-FR-010
 describe('GET /requests: what a row needs to offer a cancel', () => {
   it('says the job started only once it left to do', async () => {
     const andrei = await world.account('Andrei Marin');

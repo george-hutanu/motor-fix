@@ -91,7 +91,8 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 1385-cancel-from-requests-FR-004
+// @traces 1385-FR-004
+// @traces 1385-FR-007
 describe('the cancel request dialog: what it asks', () => {
   it('asks to cancel, naming the car and the jobs, with what follows', async () => {
     await open();
@@ -143,8 +144,8 @@ describe('the cancel request dialog: what it asks', () => {
   });
 });
 
-// @traces 1385-cancel-from-requests-FR-006
-// @traces 1385-cancel-from-requests-FR-010
+// @traces 1385-FR-006
+// @traces 1385-FR-010
 describe('the cancel request dialog: cancelling', () => {
   it('cancels the request, then closes with Cerere anulată', async () => {
     await open();

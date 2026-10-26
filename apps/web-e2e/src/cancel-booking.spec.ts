@@ -18,7 +18,7 @@ async function signedIn(page: Page, email: string, landing: string) {
 
 // @seeded: the seeded driver cancels a booking Militari confirmed.
 test.describe('cancelling a booking from Cererile mele @seeded', () => {
-  // @traces 1385-cancel-from-requests-FR-009
+  // @traces 1385-FR-009
   test('the driver cancels with a reason, the row reads Anulată de tine and Militari’s bell tells it', async ({
     page,
     request,

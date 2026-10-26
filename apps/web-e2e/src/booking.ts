@@ -37,11 +37,14 @@ async function freeSlot(request: APIRequestContext) {
     timeZone: 'Europe/Bucharest',
   });
   const minute = Math.floor(Date.now() / MINUTE);
-  for (;;) {
+  // A random slot lands on a holiday rarely; 50 draws all landing on one
+  // means the holiday list is wrong, so the helper says so instead of looping.
+  for (let draw = 0; draw < 50; draw++) {
     const ahead = 3 * 24 * 60 + randomInt(300 * 24 * 60);
     const slot = new Date((minute + ahead) * MINUTE);
     if (!holidays.has(bucharestDay.format(slot))) return slot.toISOString();
   }
+  throw new Error('freeSlot: 50 random slots all fell on a holiday');
 }
 
 // One request of the driver's, quoted by Militari and accepted by the driver,
