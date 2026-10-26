@@ -812,7 +812,7 @@
       "alerts": [
         "mcp-tool-errors"
       ],
-      "reason": "on the MCP dashboard panel \"Assistant confirmations by tool and outcome\" (id 34), counts each step of an assistant action the person must confirm by tool and outcome (opened, confirmed, refused, expired, mismatch, void, replayed, failed), with no identifiers in the labels; one AssistantConfirmations log line per step naming the confirmation, grant and tool, never the summary or the arguments, and the motorfix.confirmation.outcome attribute on the call span; mcp-confirmation-failures fires when failed and mismatch pass 20% of at least 5 steps in 15 minutes",
+      "reason": "on the MCP dashboard panel \"Assistant confirmations by tool and outcome\" (id 34), counts each step of an assistant action the person must confirm by tool and outcome (opened, confirmed, refused, expired, mismatch, void, replayed, failed), with no identifiers in the labels; one AssistantConfirmations log line per step naming the confirmation, grant and tool, never the summary or the arguments, and the motorfix.confirmation.outcome attribute on the call span; mcp-tool-errors fires when failed and mismatch pass 20% of at least 5 steps in 10 minutes",
       "story": "ST-1253"
     },
     {
