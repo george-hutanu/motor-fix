@@ -4,6 +4,7 @@
 import { CarSnapshotDto } from '../models/car-snapshot-dto';
 import { DriverNameDto } from '../models/driver-name-dto';
 import { GarageReviewQuoteDto } from '../models/garage-review-quote-dto';
+import { PublicReviewReplyDto } from '../models/public-review-reply-dto';
 import { RequestJobDto } from '../models/request-job-dto';
 export interface GarageReviewDto {
   author: DriverNameDto;
@@ -22,6 +23,12 @@ export interface GarageReviewDto {
   quote: (GarageReviewQuoteDto & {
 }) | null;
   rating: number;
+
+  /**
+   * The garage's published reply
+   */
+  reply: (PublicReviewReplyDto & {
+}) | null;
   source: 'job' | 'profile';
   text: string | null;
 }
