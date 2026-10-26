@@ -204,10 +204,6 @@ _From 226-best-rated-brand-dial._
 
 _From 226-best-rated-brand-dial._
 
-### 227-FR-010 — The dial preview (ST-226) MUST render as the board's one panel: the Cockpit surface with a 1 px line and the panel radius token (`--mf-radius-panel`), no hard-coded radius anywhere in its styles; each row at least 64 px tall, consecutive rows split by a 1 px separator; on the left the lamp dot and the garage's name with the status words under the name; on the right the rating over the rate, right-aligned with tabular numerals; a phone keeps the rows full width under the dial. The row's link, lamp, copy and states of 226-FR-002 to 226-FR-005 are unchanged.
-
-_From 227-garage-cards-home._
-
 ### 226-FR-012 — The development seed MUST give the eight listed garages ratings, review counts and labour-from prices such that, near Bucharest with Dacia selected, the dial names one known garage, the preview holds two known takers and one known refuser, two takers share a rating and differ by reviews, and one taker has no reviews; the Cluj-Napoca mobile mechanic takes Dacia, so a place in Cluj-Napoca names it on the dial with "Mecanic mobil · vine la tine".
 
 _From 226-best-rated-brand-dial._
@@ -259,10 +255,6 @@ _From 227-garage-cards-home._
 ### 227-FR-014 — Accessibility: the section is a landmark-free `section` named by its `h2`; each card's accessible name is the garage's name followed by its stance words and its rating (the dial's number is not announced a second time, and the lamp's colour is never the only carrier of the stance); the error message is announced when it appears (`role="alert"`), the busy state is exposed as `aria-busy`, skeleton cards carry no text for assistive technology, text meets WCAG AA contrast in both themes, and any shimmer or hover motion stops under `prefers-reduced-motion`.
 
 _From 227-garage-cards-home._
-
-### 271-FR-005 — One shared address field component MUST serve the place dialog, the listing's place step and the Results field: a combobox with the suggestion list, the look-up from the third character 300 ms after the last key with the page's language, only the latest answer shown, Arrow keys and Enter to walk and choose, Escape to close the list, rows at least 44 px tall, its messages in a polite live region (229-FR-004, 111 unchanged in behaviour). The two older copies are deleted, and their existing unit tests pass against the shared component.
-
-_From 271-garage-distance._
 
 ### 228-FR-005 — Home MUST show a "Cum funcționează" section with a headline and three benefits, each a short text and a small example: brand chips taken and refused; a rolling counter with one garage's hourly rate in lei; a sample review with the car, the job, a quote and the author "Andrei M.".
 
@@ -328,10 +320,6 @@ _From 006-copy-voice-rotation._
 
 _From 006-copy-voice-rotation._
 
-### 010-FR-010 — The voice taken at the start of a visit (006-FR-002, 006-FR-005) MUST come only from the voices that are on, using the device's last read copy of the settings (all five on, none pinned, when it has none or when the stored copy is unreadable or inconsistent: no voice on, a pinned voice that is off): a stored round skips voices that are off; with a voice pinned, a visit that would take a new voice takes the pinned one, stores it as the visit's voice with the time, and leaves the stored round as it was; a visit that keeps its stored voice keeps it only while that voice is on (else it takes a new voice as above).
-
-_From 010-copy-voice-switch._
-
 ### 009-FR-001 — Under a valid granted analytics consent, each Home page load in the browser that takes the visit's voice (006-FR-002, 010-FR-010: a new voice off the round, or the pinned one) MUST send exactly one analytics event `home_visit` with the property `voice` (1–5) = the voice taken. The page-head script marks such a load (`data-voice-new`) and the app reads that mark once; a Home load that keeps the voice under the 2.5-second rule (006-FR-004), a load on any other page (006-FR-005, also when storage is blocked) and the server render carry no mark and MUST send none. When consent is granted later in the same page session (on any page of the app), the event is sent at that moment, once, with the voice in force then; it is never sent twice for one load.
 
 _From 009-copy-voice-analytics._
@@ -343,10 +331,6 @@ _From 009-copy-voice-analytics._
 ### 009-FR-011 — Nothing of this story MUST run on the server render of a page or write to the device: the voice is read from the visit's one voice source, the consent from the consent service, and the "opened from Home" fact is known from the page load itself.
 
 _From 009-copy-voice-analytics._
-### 007-FR-001 — In voice 4 the Romanian headline MUST use the brand's "your" form in place of the plain name: "Dacia ta merită mai mult decât „merge și așa”.", "BMW‑ul tău merită mai mult decât „merge și așa”.", "Fordul tău merită…"; the English headline stays "Your {brand} deserves better than “it’ll do”.".
-
-_From 007-brand-headline._
-
 ### 007-FR-002 — When the brand changes in any voice, the voice MUST stay and only the brand part of the headline text MUST change (the wording around it is the same voice's), with the mock's swap animation (a 520 ms blur-in of the headline) in every voice, one code path (none under reduced motion).
 
 _From 007-brand-headline._
@@ -383,15 +367,7 @@ _From 007-brand-headline._
 
 _From 007-brand-headline._
 
-### 007-FR-012 — A garage that refuses the chosen brand, or has not marked it, MUST carry a red lamp whose label is the visit's voice's wording with the brand: 1 "Nu primește {brand}", 2 "Nu lucrează pe {brand}", 3 "Incompatibil: {brand}", 4 "La {brand} zice „pas”", 5 "Nu lucrează pe {brand}" (and their English forms: 1 "Doesn’t take {brand}", 2 and 5 "Doesn’t work on {brand}", 3 "Not compatible: {brand}", 4 "Says “pass” on {brand}").
-
-_From 007-brand-headline._
-
 ### 007-FR-013 — The red-lamp label MUST be the same text on Home's preview rows, Home's cards, and the Results list and map cards for the same voice and brand, and MUST name the new brand as soon as the brand changes.
-
-_From 007-brand-headline._
-
-### 007-FR-014 — For a signed-in driver with cars, Home's tiles MUST start with the brands of the driver's cars that are not removed and still active in the catalogue, in car order (the order the driver added them, oldest first), then the most popular brands, 8 tiles in all with no brand twice; with more than 8 such brands the first 8 by car order and no popular brand.
 
 _From 007-brand-headline._
 

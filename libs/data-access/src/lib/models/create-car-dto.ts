@@ -19,6 +19,11 @@ export interface CreateCarDto {
    * Trimmed
    */
   model: string;
+
+  /**
+   * The odometer reading the next oil service is due at: above odometerKm and at most 100,000 km past it
+   */
+  nextServiceKm?: number | null;
   odometerKm: number;
 
   /**

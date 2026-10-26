@@ -608,6 +608,7 @@ describe('the warmed car list', () => {
         'plate',
         'rcaUntil',
         'rovinietaUntil',
+        'serviceDueOn',
         'updatedAt',
         'year',
       ].sort(),

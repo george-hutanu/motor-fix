@@ -296,10 +296,6 @@ _From 020-account-language._
 
 _From 020-account-language._
 
-### 139-FR-004 — `PATCH /api/v1/me` MUST also accept `name` (2 to 80 characters once trimmed, no control characters) and `city` (null, or 2 to 60 characters once trimmed, no control characters; a blank city after trimming is stored as null), each optional, beside `language`; it MUST save the given fields in one transaction with one audit entry per field whose value changed (field, old value, new value, by the account in the role it is using) and one `account.updated` event naming the account and the changed fields, and answer "who am I"; a body with no change writes nothing (modifies 020-FR-001, 020-FR-005).
-
-_From 139-edit-my-details._
-
 ### 130-FR-002 — The public list MUST be exactly: `POST /api/v1/auth/sign-in`, `POST /api/v1/auth/sign-up`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/sign-out`, `GET /health/live`, `GET /health/ready` (outside the `/api/v1` prefix), `POST /api/v1/webhooks/brevo`, which checks Brevo's own bearer secret and is left out of the OpenAPI document (it arrived with ST-194; its own integration spec boots the app-wide check), and the two cookie-authenticated routes added since, `POST /api/v1/auth/sign-out-everywhere` (128-FR-001) and `POST /api/v1/auth/roles/switch` (394-FR-001); a test MUST enumerate every route the API serves, call each without a token, and fail when the set of routes not answering 401 `sign_in_required` differs from this list.
 
 _From 130-sign-in-gate._
@@ -712,14 +708,6 @@ _From 139-edit-my-details._
 
 _From 139-edit-my-details._
 
-### 139-FR-003 — `GET /api/v1/me` MUST also return `phone`, `phoneConfirmed`, `pendingEmail` (the address of a live e-mail change, else null) and `hasPassword` (whether a `password` identity exists), so the panel can show the pending line, "Neconfirmat" and "Setează o parolă" without another call (modifies 097-FR-005).
-
-_From 139-edit-my-details._
-
-### 139-FR-004 — `PATCH /api/v1/me` MUST also accept `name` (2 to 80 characters once trimmed, no control characters) and `city` (null, or 2 to 60 characters once trimmed, no control characters; a blank city after trimming is stored as null), each optional, beside `language`; it MUST save the given fields in one transaction with one audit entry per field whose value changed (field, old value, new value, by the account in the role it is using) and one `account.updated` event naming the account and the changed fields, and answer "who am I"; a body with no change writes nothing (modifies 020-FR-001, 020-FR-005).
-
-_From 139-edit-my-details._
-
 ### 139-FR-005 — A name or city out of range, with control characters, or any unknown field MUST answer 400 `validation_failed` naming the field, and nothing is saved; the panel shows the problem as a Romanian and English text per rule (name or city too short, too long, or with a disallowed character).
 
 _From 139-edit-my-details._
@@ -819,10 +807,6 @@ _From 366-assistant-privacy._
 ### 243-FR-014 — The news consent (#834) and the analytics consent (#150) texts MUST be referred to from the privacy notice as separate, withdrawable consents, and the notice MUST say where each is changed (the account's notification settings or the link in each news e-mail for news, where the product changes it today; the cookie settings for analytics).
 
 _From 243-terms-privacy._
-
-### 1203-FR-001 — The privacy notice's first section, "Who runs MotorFix and how to reach us" (EN) / "Cine se ocupă de MotorFix și cum ne contactezi" (RO), MUST name HUȚANU GEORGE-DRAGOȘ PERSOANĂ FIZICĂ AUTORIZATĂ as the controller of the personal data in the service, with CUI 55178146, trade register number (Nr. ordine în Registrul Comerțului) F2026034954005, EUID ROONRC.F2026034954005, and the professional seat București, Sector 1, Bd. Bucureștii Noi nr. 136, parter, ap. 5, in both languages. The legal name and the seat are written verbatim in Romanian in both languages (a legal name and a postal address are not translated); the English text may add a short gloss saying the operator is a sole trader registered in Romania.
-
-_From 1203-legal-operator._
 
 ### 1203-FR-002 — The same section MUST give hutanugeorge40@gmail.com as the e-mail for anything about the reader's data, including data-protection requests and exercising the rights this notice describes (the phrase covers "anything in this notice"), stating that no account is needed, and MUST keep writing from the account as a second way; the sentence telling a reader without an account to create one in order to write MUST be removed, in both languages.
 
@@ -1042,10 +1026,6 @@ _From 005-data-requests._
 _From 005-data-requests._
 
 ### 005-FR-013 — The issues of ST-3 (george-hutanu/motor-fix-specs#84) and ST-129 (#235) and the feature page `docs/reference/features/admin/mf-46-users-accounts-overview.md` MUST link to the procedure page; MF-46's stale lawyer lines ("Lawyer, still open" on retention and the download, "agreed with the lawyer") and MF-28's download-format NEEDS CLARIFICATION MUST be replaced by a pointer to the page and the owner's 2026-10-16 sign-off.
-
-_From 005-data-requests._
-
-### 005-FR-014 — Every paragraph of the privacy notice in `apps/web/src/app/public/legal-texts.ts` that says how to use a right (closing the account or erasure, objecting to the profile-view count, "Your rights" / "Drepturile tale") MUST point to the e-mail address of the first section ("the e-mail address above" / "adresa de e‑mail de mai sus", worded so it cannot be read as the postal seat) as well as the account, in both languages, so it agrees with the contact paragraph and the procedure; the address itself stays written once per notice (1203-FR-010, `legal-texts.operator.adversary.spec.ts`); the terms of use are unchanged. It carries 1203-FR-010's rule forward: no legal fact beyond 1203-FR-001, 1203-FR-002 and 1203-FR-004 is added to the operator details (no DPO appointment, no other address, telephone number or supervisory-authority wording), and no section changes beyond these paragraphs.
 
 _From 005-data-requests._
 

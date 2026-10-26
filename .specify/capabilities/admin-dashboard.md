@@ -59,10 +59,6 @@ _From 163-figures-period-city._
 
 _From 160-admin-dashboard-menu._
 
-### 163-FR-007 — The admin header MUST show the chosen city in its line in place of the fixed "București" (160-FR-008; "Toată țara" / "Whole country" for `all`), with its waiting count from `cityGaragesWaiting` for a city and `garagesWaiting` for `all`; the "Service‑uri" counter (160-FR-010) MUST keep counting every garage waiting on the platform.
-
-_From 163-figures-period-city._
-
 ### 161-FR-007 — While the first overview read is on its way, each tile MUST show a skeleton in place of its number and line; when a read fails, including a re-read after numbers were shown, every computed tile MUST read "—" with the same info tip "Cifrele nu au putut fi citite" / "The figures could not be read", never 0 and never the last number, until a later read succeeds (ST-160's rule for the counters, applied to the tiles).
 
 _From 161-headline-numbers._
@@ -166,14 +162,6 @@ _From 258-platform-rules-switches._
 ### 258-FR-013 — Each switch MUST be operable by keyboard and carry its rule's name as its accessible name; while its change is in flight the switch MUST ignore a second change of the same rule. While the rules are first being read, the block MUST show its heading and line with the four rule lines as placeholders, and no control is operable.
 
 _From 258-platform-rules-switches._
-
-### 163-FR-001 — The overview read (`GET /api/v1/admin/overview`) and the growth read (`GET /api/v1/admin/growth`) MUST accept two optional query parameters: `city` (a city key from the list of FR-003, or `all` for the whole country; the default for both reads is `all`) and, on the overview only, `period` (`default`, `today`, `7d`, `30d`, `month`, `12m`; default `default`); an unknown value answers 400 `validation_failed`. The DTOs live in the contracts library and the generated client is regenerated. Both reads keep the `admin/*` access policy (161-FR-003), and nothing in an answer is personal data.
-
-_From 163-figures-period-city._
-
-### 163-FR-006 — The daily snapshot (161-FR-009) MUST be keyed by day and city: each night it writes the `all` row and one row per city with at least one approved garage, each holding that city's `garagesListed` and `garagesApprovedThisMonth` as FR-004 counts them and no `activeDrivers` value (only the `all` row holds one); existing rows become `all` rows; the one-schedule rule (161-FR-010) is unchanged. The growth read for a city reads that city's rows with 162-FR-002's month-end rule and computes the current month live for the city.
-
-_From 163-figures-period-city._
 
 ### 162-FR-003 — The growth read MUST follow the `admin/*` access policy (161-FR-003): an admin reads it, any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`; the route joins the admin-route guard test's list of known routes. A failure inside the read answers the API's standard error body (no partial answer, no figures), which the panel treats as a failed read (FR-008).
 
@@ -295,10 +283,6 @@ _From 001-admin-recent-accounts._
 
 _From 001-admin-recent-accounts._
 
-### 001-FR-006 — The admin "Utilizatori" view (`users`, capability `admin.users`) MUST be released (its "în curând" mark removed) and get its body: the three totals as the body's first line, directly under the view header (the admin frame renders no per-view subtitle; research.md D7), then a two-column grid (the list panel wider than the growth panel, as design.md records) that stacks into one column below 900 px.
-
-_From 001-admin-recent-accounts._
-
 ### 001-FR-007 — The subtitle MUST read the three totals joined by " · " (drivers, garages, mechanics), each phrase in its number's plural form (the rules below win; every Romanian "service‑uri" uses U+2011 as FR-013 says) (Romanian `one` "1 șofer activ" / "1 service" / "1 mecanic", `few` "{n} șoferi activi" / "{n} service‑uri" / "{n} mecanici", `other` "{n} de șoferi activi" / "{n} de service‑uri" / "{n} de mecanici"; English `one` "1 active driver" / "1 garage" / "1 mechanic", `other` "{n} active drivers" / "{n} garages" / "{n} mechanics"), numbers grouped by the language (locale-formats: "12.480" / "12,480"). While the totals load the subtitle shows a skeleton line; when the read fails it reads "—" with the overview's info tip (161-FR-007), never 0 and never a number kept from an earlier failed read.
 
 _From 001-admin-recent-accounts._
@@ -387,10 +371,6 @@ _From 260-rule-off-confirm._
 
 _From 260-rule-off-confirm._
 
-### 163-FR-001 — The overview read (`GET /api/v1/admin/overview`) and the growth read (`GET /api/v1/admin/growth`) MUST accept two optional query parameters: `city` (a city key from the list of FR-003, or `all` for the whole country; the default for both reads is `all`) and, on the overview only, `period` (`default`, `today`, `7d`, `30d`, `month`, `12m`; default `default`); an unknown value answers 400 `validation_failed`. The DTOs live in the contracts library and the generated client is regenerated. Both reads keep the `admin/*` access policy (161-FR-003), and nothing in an answer is personal data.
-
-_From 163-figures-period-city._
-
 ### 163-FR-002 — With a period other than `default`, the overview MUST compute, over the Europe/Bucharest range the period names (`today` from 00:00 today; `7d` and `30d` the 7 and 30 calendar days ending with today, today included, starting six and twenty-nine days before it; `month` from the 1st of the month; `12m` the 12 calendar months ending with the current one, starting on the 1st of the month eleven months back; each range ends now), `garagesApprovedInPeriod` (garages first approved in the range, counted as 161-FR-001 counts the month's approvals) and `activeDriversPeriodStart` (the active drivers from the snapshot row of the range's first day, absent when that row does not exist and always absent for `today`); `garagesListed`, `garagesWaiting` and `activeDrivers` (30 days ending on the range's last day) stay counts of now; the figures of 161-FR-002 join the period's rules when their entities exist (requests created in the range, the answer rate over the range, bookings confirmed in the range). With `default`, the answer is 161-FR-001's, unchanged.
 
 _From 163-figures-period-city._
@@ -407,14 +387,6 @@ _From 163-figures-period-city._
 
 _From 163-figures-period-city._
 
-### 163-FR-006 — The daily snapshot (161-FR-009) MUST be keyed by day and city: each night it writes the `all` row and one row per city with at least one approved garage, each holding that city's `garagesListed` and `garagesApprovedThisMonth` as FR-004 counts them and no `activeDrivers` value (only the `all` row holds one); existing rows become `all` rows; the one-schedule rule (161-FR-010) is unchanged. The growth read for a city reads that city's rows with 162-FR-002's month-end rule and computes the current month live for the city.
-
-_From 163-figures-period-city._
-
-### 163-FR-007 — The admin header MUST show the chosen city in its line in place of the fixed "București" (160-FR-008; "Toată țara" / "Whole country" for `all`), with its waiting count from `cityGaragesWaiting` for a city and `garagesWaiting` for `all`; the "Service‑uri" counter (160-FR-010) MUST keep counting every garage waiting on the platform.
-
-_From 163-figures-period-city._
-
 ### 163-FR-008 — From 768 px the header's city name MUST be a drop-down listing the cities of FR-003 ("Toată țara" first, each city with its name), the current one marked, and a segmented period control to its right with the six periods in order: "Implicit", "Azi", "Ultimele 7 zile", "Ultimele 30 de zile", "Luna aceasta", "Ultimele 12 luni" (English "Default", "Today", "Last 7 days", "Last 30 days", "This month", "Last 12 months"); below 768 px the header MUST show one filter button, whose accessible name names the current city and period, opening the shared bottom sheet (`overlays`) with the same city list and period choice. The drop-down and the sheet are reachable by keyboard, the periods are a radio group, and Escape closes without a change, focus returning to the control that opened it.
 
 _From 163-figures-period-city._
@@ -424,10 +396,6 @@ _From 163-figures-period-city._
 _From 163-figures-period-city._
 
 ### 163-FR-010 — Changing a choice MUST re-read the overview and the growth with the new parameters, showing the tiles' skeletons (161-FR-007) and the charts' skeletons (162-FR-008) while the reads are on their way, the rest of the page, the menu and the controls unchanged, the figures region marked busy for assistive technology until the reads settle; only the answer to the latest choice is shown (an older, slower answer is dropped); a failed read keeps 161-FR-007's "—" with the info tip and 162-FR-008's retry; the shell's live re-read (160-FR-012) carries the current choice. With no data for the choice each computed tile reads 0 and each chart "Încă nu sunt date" / "No data yet".
-
-_From 163-figures-period-city._
-
-### 163-FR-011 — In a period other than `default`, the garages tile's line MUST read "+{n} {period}" / "+{n} {period}" from `garagesApprovedInPeriod` with the period's line form ("azi", "în ultimele 7 zile", "în ultimele 30 de zile", "luna asta", "în ultimele 12 luni" / "today", "in the last 7 days", "in the last 30 days", "this month", "in the last 12 months"), and the active-drivers tile's line the change since `activeDriversPeriodStart` with 161-FR-005's sign rule, absent when that figure is absent; the tiles' accessible names (161-FR-013) carry the new lines.
 
 _From 163-figures-period-city._
 
@@ -471,10 +439,6 @@ _From 384-response-rate._
 
 _From 384-response-rate._
 
-### 002-FR-001 — `GET /api/v1/admin/accounts` MUST accept, beside `cursor`, the optional query parameters `q` (the search text), `role` (one or more of `driver`, `garage`, `receptionist`, `mechanic`, `admin`, repeated or comma-separated) and `status` (one of `active`, `watch`, `suspended`), and answer the accounts that satisfy every given one, with ST-1's order (newest first by creation time, then id), page size (20), cursor and item shape unchanged (001-FR-001, 001-FR-002); `nextCursor` chains within the same search and filters. A deleted account MUST never be answered, whatever it once held, for any search or filter.
-
-_From 002-find-account-search._
-
 ### 002-FR-002 — `q` MUST be trimmed and its inner whitespace collapsed to one space; after that, a `q` of fewer than 2 characters MUST be treated as absent, and one longer than 80 characters MUST answer 400 `invalid_query`. A `role` value outside the five, a `status` outside the three, or a repeated `status` MUST answer 400 `invalid_filter`. Every error is RFC 9457 problem details with a `code`, as the route already does.
 
 _From 002-find-account-search._
@@ -508,10 +472,6 @@ _From 002-find-account-search._
 _From 002-find-account-search._
 
 ### 002-FR-010 — The search text and the filters MUST live in the view's address as `q`, `role` (comma-separated) and `status`, written as the admin changes them (a history entry per applied change: each filter apply and each search text committed after the 300 ms wait, so the browser's back button restores the previous state), without touching the shell's other address values; opening the view with them in the address MUST fill the controls and read the narrowed list; an unknown `role` or `status` value in the address MUST be dropped from the address and not sent. The view MUST keep the first 80 characters of a longer search text.
-
-_From 002-find-account-search._
-
-### 002-FR-011 — With a search or a filter in force the panel MUST show, above the rows, the count line from `total` in the number's plural form (Romanian `one` "1 cont găsit", `few` "{n} conturi găsite", `other` "{n} de conturi găsite"; English `one` "1 account found", `other` "{n} accounts found"; numbers grouped by the language), in a live region so a screen reader hears each new result; with neither, no count line and the panel exactly as ST-1 built it (001-FR-008 to 001-FR-011: rows, scroll paging, loading, empty "Niciun cont încă.", failure with "Reîncearcă").
 
 _From 002-find-account-search._
 

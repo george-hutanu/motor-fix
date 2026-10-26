@@ -140,9 +140,9 @@ describe('CreateCarDto under hostile input', () => {
 
   it('refuses a field the contract does not name', () => {
     expect(problems(car({ ownerId: 'x' }))).toEqual(['ownerId']);
-    expect(problems(car({ nextServiceKm: 5, removedAt: null })).sort()).toEqual(
-      ['nextServiceKm', 'removedAt'],
-    );
+    expect(
+      problems(car({ idempotencyKey: 'k', removedAt: null })).sort(),
+    ).toEqual(['idempotencyKey', 'removedAt']);
   });
 
   it('refuses an empty body with every required field', () => {

@@ -62,7 +62,7 @@ export class CarsController {
   @ApiCreatedResponse({ type: CarDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: a bad field, unknown_brand, too_far_ahead or a missing key',
+      'validation_failed: a bad field, unknown_brand, too_far_ahead, next_service_not_above_odometer, next_service_too_far or a missing key',
   })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiNotFoundResponse({ description: 'not_found: this account adds no car' })
@@ -108,7 +108,7 @@ export class CarsController {
   @ApiOkResponse({ type: CarDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: a bad field or id, unknown_brand, too_far_ahead or a missing version',
+      'validation_failed: a bad field or id, unknown_brand, too_far_ahead, next_service_not_above_odometer, next_service_too_far or a missing version',
   })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiNotFoundResponse({
