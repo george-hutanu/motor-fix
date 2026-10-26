@@ -70,6 +70,9 @@ const VERBS: Record<
   },
 };
 
+// Today in Bucharest, as a reading's day is stored.
+const today = () => new Date(`${localDay(new Date())}T00:00:00Z`);
+
 const CLOSED: readonly JobStatus[] = ['done', 'cancelled'];
 const SYSTEM: TransitionActor = { accountId: null, role: 'system' };
 const TEAM = 'team_mechanics';
@@ -157,8 +160,8 @@ export class JobStagesService {
     }
   }
 
-  // A reading at the reception: the job keeps the latest, the car keeps its
-  // own unless this one is higher, and every reading is kept on the car.
+  // A reading at the reception: the job keeps the latest, every reading is
+  // kept on the car, and the car shows its newest, a lower one included.
   receive(actor: Actor, jobId: string, km: number): Promise<JobDto> {
     return this.write(actor, jobId, 'receive', async (tx, job) => {
       const desk = actor.role === 'garage' || actor.role === 'receptionist';
@@ -181,11 +184,13 @@ export class JobStagesService {
         data: { odometerKm: km, receivedAt: job.received_at ?? new Date() },
         where: { id: job.id },
       });
+      // The car is locked before its reading is written, as a driver's edit does.
+      await this.followCar(tx, by, job.car_id, km);
       await tx.odometerReading.create({
         data: {
           carId: job.car_id,
           km,
-          readOn: new Date(`${localDay(new Date())}T00:00:00Z`),
+          readOn: today(),
           source: 'reception',
           sourceId: job.id,
         },
@@ -206,11 +211,12 @@ export class JobStagesService {
         payload: { odometerKm: km },
         subjectId: job.id,
       });
-      await this.raiseCar(tx, by, job.car_id, km);
     });
   }
 
-  private async raiseCar(
+  // The car's odometer is its newest reading, by day then creation: today's
+  // reception is it unless the driver dated one later.
+  private async followCar(
     tx: Tx,
     by: { actorId: string; actorRole: Actor['role']; garageId: string },
     carId: string,
@@ -220,7 +226,10 @@ export class JobStagesService {
       { odometer_km: number; owner_id: string }[]
     >`
       SELECT odometer_km, owner_id FROM car WHERE id = ${carId}::uuid FOR UPDATE`;
-    if (!car || km <= car.odometer_km) return;
+    const later = await tx.odometerReading.count({
+      where: { carId, readOn: { gt: today() } },
+    });
+    if (!car || later > 0 || km === car.odometer_km) return;
     await tx.car.update({ data: { odometerKm: km }, where: { id: carId } });
     await this.audit.record(tx, {
       ...by,

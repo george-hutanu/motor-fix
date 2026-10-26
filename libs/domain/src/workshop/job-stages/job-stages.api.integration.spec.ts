@@ -597,13 +597,52 @@ describe('receiving the car', () => {
     });
   });
 
-  it('saves a reading below the car’s odometer as entered, leaving the car’s', async () => {
+  it('saves a reading below the car’s odometer as entered, the car following its newest reading', async () => {
     const s = await setting('to_do', { received: false });
 
     const res = await receive(s.job.id, s.owner, { odometerKm: 1_200 });
 
     expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ car: { odometerKm: 1_200 } });
     expect(await reread(s.job.id)).toMatchObject({ odometerKm: 1_200 });
+    expect(
+      await prisma.activityLog.findMany({ where: { subjectId: s.job.carId } }),
+    ).toEqual([
+      expect.objectContaining({
+        field: 'odometerKm',
+        newValue: 1_200,
+        oldValue: 84_000,
+      }),
+    ]);
+  });
+
+  it('leaves the car alone when it already shows the reading', async () => {
+    const s = await setting('to_do', { received: false });
+
+    await receive(s.job.id, s.owner, { odometerKm: 84_000 });
+
+    expect(
+      await prisma.activityLog.findMany({ where: { subjectId: s.job.carId } }),
+    ).toEqual([]);
+    expect(await events(s.job.carId)).toEqual([]);
+    expect(
+      await prisma.odometerReading.count({ where: { carId: s.job.carId } }),
+    ).toBe(1);
+  });
+
+  it('leaves the car on a reading dated after today', async () => {
+    const s = await setting('to_do', { received: false });
+    await prisma.odometerReading.create({
+      data: {
+        carId: s.job.carId,
+        km: 90_000,
+        readOn: new Date('2099-01-01T00:00:00Z'),
+        source: 'driver',
+      },
+    });
+
+    await receive(s.job.id, s.owner, { odometerKm: 86_500 });
+
     expect(
       await prisma.car.findUniqueOrThrow({ where: { id: s.job.carId } }),
     ).toMatchObject({ odometerKm: 84_000 });
