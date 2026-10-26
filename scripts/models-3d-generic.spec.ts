@@ -1,8 +1,16 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import {
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { GENERIC_FILES } from '../libs/domain/src/catalogue/models-3d/models-3d.ts';
 
 // The six generic body-shape files as the generator writes them. The
 // generator and three.js are ES modules only, so both run in a child Node
@@ -259,6 +267,41 @@ describe('the generic body-shape files', () => {
       expect(pkg.devDependencies[name]).toMatch(/^\d+\.\d+\.\d+$/);
     }
   });
+
+  // @traces 1242-FR-007
+  it('are the files the catalogue names for the six body styles', () => {
+    expect([...files.keys()]).toEqual(Object.values(GENERIC_FILES).sort());
+  });
+
+  // @traces 1242-FR-007
+  // @traces 1242-FR-008
+  it('pass the 3D asset check as CI runs it, and fail it on one changed byte', () => {
+    const asCi = spawnSync(process.execPath, ['scripts/model-3d-check.ts'], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+    expect(asCi.stdout).toBe('');
+    expect(asCi.status).toBe(0);
+
+    const name = GENERIC_FILES.saloon;
+    const bytes = Buffer.from(files.get(name) as Buffer);
+    bytes[bytes.length - 1] ^= 0xff;
+    const only = mkdtempSync(join(tmpdir(), 'models-3d-generic-check-'));
+    try {
+      for (const [file, content] of files) {
+        writeFileSync(join(only, file), file === name ? bytes : content);
+      }
+      const run = spawnSync(
+        process.execPath,
+        ['scripts/model-3d-check.ts', only],
+        { cwd: root, encoding: 'utf8' },
+      );
+      expect(run.status).toBe(1);
+      expect(run.stdout).toContain(`${name}: hash mismatch`);
+    } finally {
+      rmSync(only, { force: true, recursive: true });
+    }
+  }, 60_000);
 
   it('refuses to run without an output directory', () => {
     const bare = spawnSync(process.execPath, ['scripts/models-3d-generic.ts'], {
