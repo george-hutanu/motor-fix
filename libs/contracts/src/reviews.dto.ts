@@ -405,6 +405,28 @@ const REVIEW_REPORT_REASONS = [
 ] as const;
 export type ReviewReportReason = (typeof REVIEW_REPORT_REASONS)[number];
 
+// Each report reason as the admins read it, in both languages.
+export const REVIEW_REPORT_REASON_TEXTS: Record<
+  ReviewReportReason,
+  { en: string; ro: string }
+> = {
+  ads: { en: 'Advertising', ro: 'Reclamă' },
+  fake_or_conflicted: {
+    en: 'Fake or conflict of interest',
+    ro: 'Falsă sau în conflict de interese',
+  },
+  hate: { en: 'Hate or discrimination', ro: 'Ură sau discriminare' },
+  insults: { en: 'Insults', ro: 'Insulte' },
+  off_topic: { en: 'Off topic', ro: 'În afara subiectului' },
+  other: { en: 'Other', ro: 'Altceva' },
+  personal_data: { en: 'Personal data', ro: 'Date personale' },
+  promotion: { en: 'Promoting another garage', ro: 'Promovarea altui service' },
+  threats_or_legal_accusations: {
+    en: 'Threats or legal accusations',
+    ro: 'Amenințări sau acuzații legale',
+  },
+};
+
 // Why a review may not be reported again.
 export type ReportRefusal = 'already_reported' | 'already_kept';
 
