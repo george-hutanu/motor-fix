@@ -47,6 +47,36 @@ describe('the confirm in the OpenAPI document', () => {
       'liftCount',
       'mechanics',
       'mechanicRequired',
+      'needsLift',
     ]);
+  });
+});
+
+// @traces 150-FR-011
+describe('the placement in the OpenAPI document', () => {
+  const post = doc.paths['/api/v1/bookings/{id}/confirm'].post;
+
+  it('documents the lost race and the reason a refusal carries', () => {
+    const said = post.responses['409'].description;
+
+    expect(said).toContain('slot_taken');
+    for (const reason of [
+      'reason',
+      'ends_early',
+      'day_off',
+      'saturday_off',
+      'not_working',
+      'public_holiday',
+      'closed_day',
+      'outside_opening',
+    ])
+      expect(said).toContain(reason);
+  });
+
+  it('says whether the quote needs a lift, last of the confirm options', () => {
+    const options = doc.components.schemas.ConfirmOptionsDto;
+
+    expect(options.required.at(-1)).toBe('needsLift');
+    expect(options.properties.needsLift.type).toBe('boolean');
   });
 });

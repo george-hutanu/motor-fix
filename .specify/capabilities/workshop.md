@@ -1,11 +1,12 @@
 ---
 capability: workshop
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 220-requests-quotes-bookings
   - 424-job-steps
   - 389-confirm-booking-lift-mechanic
   - 274-request-stages
+  - 150-add-booking
   - 423-mechanic-garage-dashboard
 ---
 
@@ -174,6 +175,18 @@ _From 274-request-stages._
 ### 274-FR-021 — Every text MUST exist in Romanian and English, and the panel MUST fit 320 px wide with no sideways scroll, in light and dark.
 
 _From 274-request-stages._
+
+### 150-FR-002 — The `workshop` module MUST offer one internal use case, `ScheduleService.assertPlaceable({ garageId, mechanicId: uuid | null, lift: integer | null, startsAt, durationMinutes })`, run inside the caller's transaction, that computes the segments of FR-003, reads the overlaps of each segment against BOOKING_SEGMENT (for the mechanic where set, for the garage's lift where set) and either returns the segments (each with `startsAt`, `endsAt`, `mechanicId`, `lift`) or throws the 409 of FR-006 naming the first cause met, in this order: the garage's time causes (`public_holiday`, `closed_day`, `outside_opening`), then the mechanic's (`day_off`, `saturday_off`, `not_working`, `ends_early`), then the overlaps segment by segment in time order, inside one segment the mechanic's before the lift's. The confirm (FR-004) is its first caller; the time blocks (#211) and the free slots (#21) reuse it and add nothing to the confirm. No TIME_BLOCK column, table or parameter is added here.
+
+_From 150-add-booking._
+
+### 150-FR-005 — A BOOKING_SEGMENT exclusion violation raised at the write (a confirm of another booking committed between the read and the write) MUST be answered 409 `slot_taken` with the message "Locul tocmai a fost ocupat" / "The slot was just taken", never 500 and never the shipped mapping to `lift_busy` / `mechanic_busy`; two confirms racing for one place MUST end with exactly one `confirmed`. The deadlock retry stays; when the retry reads the other's segments it answers the named 409 of FR-006.
+
+_From 150-add-booking._
+
+### 150-FR-008 — With `team_mechanics` off the segments MUST carry no `mechanic_id`, so only the lift constraint and the garage's opening intervals limit the owner's bookings and two may overlap in time unless they share a lift (X04); nothing pauses or refuses a booking because the owner's jobs overlap.
+
+_From 150-add-booking._
 
 ### 423-FR-002 — While the first read is in flight the section MUST show three skeleton rows marked busy; with no row and no next booking it MUST say "Nicio lucrare azi" / "No jobs today"; when the read fails it MUST show the shared problem line with a retry button; tapping a row MUST open the job as Lucrări opens it; the section MUST re-read on the job event kinds Lucrări listens to (`job.mechanic_changed` included), on `booking.confirmed`, `booking.moved` and `booking.cancelled`, and when the stream reconnects.
 

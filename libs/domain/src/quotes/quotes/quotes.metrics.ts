@@ -124,6 +124,7 @@ export const BOOKING_CONFIRM_OUTCOMES = [
   'outside_hours',
   'mechanic_unavailable',
   'invalid_transition',
+  'slot_taken',
   'refused',
 ] as const;
 export type BookingConfirmOutcome = (typeof BOOKING_CONFIRM_OUTCOMES)[number];
@@ -133,9 +134,13 @@ export const bookingConfirms = () =>
     description: 'Bookings garages tried to confirm, by outcome',
   });
 
-// One count per confirmation a garage tries, by outcome; never who or which.
-export function recordBookingConfirm(outcome: BookingConfirmOutcome) {
-  bookingConfirms().add(1, { outcome });
+// One count per confirmation a garage tries, by outcome and, for a refusal
+// that names its cause, by its reason; never who or which.
+export function recordBookingConfirm(
+  outcome: BookingConfirmOutcome,
+  reason?: string,
+) {
+  bookingConfirms().add(1, reason ? { outcome, reason } : { outcome });
 }
 
 // Whether the request went back to `quoted` or closed with no quote left.

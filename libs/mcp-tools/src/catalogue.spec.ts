@@ -65,6 +65,7 @@ describe('catalogue', () => {
     );
     expect(list).toHaveBeenCalledWith(
       expect.objectContaining({ garageId: 'garage-7', role: 'garage' }),
+      'garage-7',
       {},
     );
   });

@@ -13,14 +13,17 @@ const entry = (id: string, more: Record<string, unknown> = {}): Entry =>
   ({
     car: { brand: 'Dacia', model: 'Logan', year: 2019 },
     confirmBy: null,
+    customer: 'Dan V.',
     durationMinutes: 90,
     id,
+    jobStatus: null,
     jobs: ['Schimb ulei'],
     lift: 1,
     mechanic: null,
     minutesLeft: null,
+    segments: [],
     startsAt: '2026-10-09T06:00:00.000Z',
-    state: 'confirmed',
+    status: 'confirmed',
     ...more,
   }) as Entry;
 
@@ -119,7 +122,7 @@ describe('get_schedule under hostile calls', () => {
   it('hands over exactly seven days and a lift of one', async () => {
     const list = scheduleOf();
     await call({ from: '2026-10-01', lift: 1, to: '2026-10-07' }, list);
-    expect(list).toHaveBeenCalledWith(expect.anything(), {
+    expect(list).toHaveBeenCalledWith(expect.anything(), 'garage-1', {
       from: '2026-10-01',
       lift: 1,
       to: '2026-10-07',
@@ -144,7 +147,7 @@ describe('get_schedule under hostile calls', () => {
   it('never forwards a garage id from the input', async () => {
     const list = scheduleOf();
     await call({ garageId: 'garage-2' }, list);
-    expect(list).toHaveBeenCalledWith(expect.anything(), {});
+    expect(list).toHaveBeenCalledWith(expect.anything(), 'garage-1', {});
   });
 
   it('answers a database outage with service_unavailable', async () => {
@@ -249,7 +252,7 @@ describe('get_schedule answers', () => {
           state === 'awaiting_confirmation' ? '2026-10-09T05:00:00.000Z' : null,
         mechanic: i % 2 ? { id: 'm-1', name: 'Vlad Stan' } : null,
         minutesLeft: state === 'awaiting_confirmation' ? 0 : null,
-        state,
+        status: state,
       }),
     );
     for (const lifts of [true, false]) {

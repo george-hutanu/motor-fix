@@ -5,6 +5,7 @@ import type { Role } from '@motor-fix/contracts/capabilities';
 import { Logger } from '@nestjs/common';
 
 import { KIND_CAPABILITY, LiveHub } from './live.hub';
+import { audienceOf } from '../audience';
 import type { GarageAccess } from '../garage-access';
 
 class Sink extends EventEmitter {
@@ -474,6 +475,47 @@ describe('what each garage role hears through the garage channel', () => {
     await fanOut(['garage:g1', 'mechanic:m1'], 'booking.confirmed');
 
     expect(mechanic.kinds()).toEqual(['job.started', 'booking.confirmed']);
+  });
+});
+
+// @traces 150-FR-010
+describe('a booking the garage confirms, cancels or lets lapse', () => {
+  const booking = (mechanicId: string | null) =>
+    audienceOf({
+      driverAccountId: 'andrei',
+      garageId: 'g1',
+      mechanicId,
+      type: 'booking',
+    });
+
+  it('reaches the driver, the garage and the mechanic it was given to, never a colleague', async () => {
+    const andrei = open('andrei', 'driver', []);
+    const owner = staff('ion', 'garage');
+    const elena = staff('elena', 'mechanic', 'm1');
+    const mihai = staff('mihai', 'mechanic', 'm2');
+
+    expect(booking('m1').sort()).toEqual(
+      ['account:andrei', 'garage:g1', 'mechanic:m1'].sort(),
+    );
+    await fanOut(booking('m1'), 'booking.confirmed', 'e1');
+    await fanOut(booking('m1'), 'booking.cancelled', 'e2');
+
+    for (const sink of [andrei, owner, elena])
+      expect(sink.kinds()).toEqual(['booking.confirmed', 'booking.cancelled']);
+    expect(mihai.kinds()).toEqual([]);
+  });
+
+  it('tells a lapse, which has no mechanic yet, to the driver and the garage only', async () => {
+    const andrei = open('andrei', 'driver', []);
+    const owner = staff('ion', 'garage');
+    const elena = staff('elena', 'mechanic', 'm1');
+
+    expect(booking(null).sort()).toEqual(['account:andrei', 'garage:g1']);
+    await fanOut(booking(null), 'booking.lapsed');
+
+    expect(andrei.kinds()).toEqual(['booking.lapsed']);
+    expect(owner.kinds()).toEqual(['booking.lapsed']);
+    expect(elena.kinds()).toEqual([]);
   });
 });
 

@@ -70,7 +70,7 @@ export class ConfirmController {
   @ApiNotFoundResponse({ description: 'not_found: not this garage’s booking' })
   @ApiConflictResponse({
     description:
-      'invalid_transition: the booking is not awaiting confirmation, or has lapsed; mechanic_unavailable; outside_hours; mechanic_busy; lift_busy',
+      'invalid_transition: the booking is not awaiting confirmation, or has lapsed; mechanic_unavailable; outside_hours; mechanic_busy; lift_busy; slot_taken: another confirm took the time first. An outside_hours or mechanic_unavailable refusal names its cause in reason: public_holiday, closed_day or outside_opening for the garage; day_off, saturday_off, not_working or ends_early for the mechanic',
   })
   confirm(
     @CurrentActor() actor: Actor,

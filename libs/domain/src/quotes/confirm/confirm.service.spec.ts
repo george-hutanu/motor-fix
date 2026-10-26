@@ -20,6 +20,7 @@ const serviceWith = (transaction: jest.Mock) =>
     { $transaction: transaction } as never,
     {} as never,
     {} as never,
+    {} as never,
   );
 
 describe('ConfirmService.confirm on a deadlock', () => {
