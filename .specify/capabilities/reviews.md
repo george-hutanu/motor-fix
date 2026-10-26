@@ -12,6 +12,7 @@ features:
   - 1367-review-price-marks
   - 076-report-review
   - 075-review-reply
+  - 099-overview-sections
   - 177-reported-reviews
 ---
 
@@ -317,9 +318,9 @@ _From 024-garage-reviews._
 
 _From 024-garage-reviews._
 
-### 074-FR-001 — The garage dashboard home MUST show, for the owner and the receptionist of an approved or suspended garage, a "Recenzii noi" / "New reviews" panel listing the garage's newest 5 listed reviews (FR-005) newest first, with the link "Vezi profilul public" / "See the public profile" to the garage's public profile page and, whenever at least one review is listed, "Vezi toate" / "See all" to the Recenzii view. A `draft` garage's home (the verification progress) has no panel. With no listed review it shows "Încă nu ai recenzii. Apar aici după prima lucrare predată." / "No reviews yet. They appear here after your first handover." A mechanic's home MUST NOT show it.
+### 099-FR-015 — The "Recenzii noi" / "New reviews" section of 074-FR-001 MUST keep its content — for the owner and the receptionist of an approved or suspended garage, the garage's newest 5 listed reviews newest first, "Vezi profilul public" / "See the public profile" to the public profile page and, whenever at least one review is listed, "Vezi toate" / "See all" to the Recenzii view; with no listed review "Încă nu ai recenzii. Apar aici după prima lucrare predată." / "No reviews yet. They appear here after your first handover."; no panel for a `draft` garage or a mechanic — and MUST take the `reviews` place of FR-001, last, its heading being the section title link of FR-003. Modifies 074-FR-001 (the heading becomes the title link and the place is the frame's).
 
-_From 074-garage-reviews._
+_From 099-overview-sections._
 
 ### 074-FR-002 — The Recenzii view (`garage.reviews`, today's placeholder) MUST show the heading figure "Nota 4,9 din 212 recenzii" / "Rating 4.9 from 212 reviews" (the stored rating in the shared rating format, "—" when null; the count in the shared number format with the Romanian plural rules), under it "Distribuția notelor" / "Rating breakdown" with five rows from "5 / 5" to "1 / 5", each with its count and a bar whose width is its count's share of the largest count (the largest bar full width, as the mock), and under it the same list as the panel, 20 a page, with "Vezi mai multe" / "See more" appending the next page as the profile section does (024-FR-010). With no listed review it shows FR-001's empty text and no figures.
 
@@ -507,3 +508,4 @@ _From 177-reported-reviews._
 - `024-FR-017` — superseded by `1367-FR-004` (2026-10-25)
 - `024-FR-020` — superseded by `1367-FR-011` (2026-10-25)
 - `074-FR-009` — superseded by `075-FR-009` (2026-10-26)
+- `074-FR-001` — superseded by `099-FR-015` (2026-10-26)

@@ -244,7 +244,6 @@ export const DASHBOARDS: Record<
     views: [
       {
         ...HOME,
-        empty: 'shell.frame.coming.garage.dashboard',
         load: () =>
           import('./garage-requests/garage-home/garage-home').then(
             (m) => m.GarageHome,

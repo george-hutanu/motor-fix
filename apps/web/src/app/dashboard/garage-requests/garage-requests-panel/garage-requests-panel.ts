@@ -21,6 +21,7 @@ import {
   LivePill,
   liveRows,
 } from '../../live-in-place/live-in-place';
+import { SectionTitle } from '../../section-title/section-title';
 import { GarageRequestRow } from '../garage-request-row/garage-request-row';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 
@@ -38,6 +39,7 @@ const AGE_TICK_MS = 60_000;
     LiveChange,
     LivePill,
     RouterLink,
+    SectionTitle,
     TranslatePipe,
   ],
   selector: 'mf-garage-requests-panel',

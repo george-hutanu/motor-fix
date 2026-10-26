@@ -535,7 +535,7 @@ describe('the dashboard view lists', () => {
   });
 
   // @traces 097-FR-002 097-FR-003 097-FR-004
-  it('gives every garage view a title, every one but Panou a subtitle, and every one but Setări an empty state, in both languages', async () => {
+  it('gives every garage view a title, every one but Panou a subtitle, and every one but Panou and Setări an empty state, in both languages', async () => {
     const views = DASHBOARDS.garage.views;
     const keys = views
       .flatMap((v) => [v.label, v.tab, v.title, v.subtitle, v.empty])
@@ -548,6 +548,7 @@ describe('the dashboard view lists', () => {
       'assistant',
     ]);
     expect(views.filter((v) => !v.empty).map((v) => v.path)).toEqual([
+      '',
       'assistant',
       'settings',
     ]);
@@ -1039,7 +1040,8 @@ describe('the dashboard view routes', () => {
   });
 
   // @traces 097-FR-006 097-FR-008
-  it('shows the empty state, not the check line, when the session’s garage matches no membership', async () => {
+  // @traces 099-FR-006
+  it('shows no section and no check line when the session’s garage matches no membership', async () => {
     requestList = () => Promise.reject(new HttpErrorResponse({ status: 404 }));
     const { element, harness } = await open('/app/garage', OWNER, 'garage', [
       { ...access('draft')[0], garageId: 'another-garage' },
@@ -1051,9 +1053,8 @@ describe('the dashboard view routes', () => {
       harness.detectChanges();
     }
 
-    expect(element.textContent).toContain(
-      'Aici vei vedea ce se întâmplă azi în service.',
-    );
+    expect(element.querySelector('[data-section]')).toBeNull();
+    expect(element.querySelector('[data-verified-pill]')).toBeNull();
     expect(element.querySelector('mf-verification-progress')).toBeNull();
   });
 

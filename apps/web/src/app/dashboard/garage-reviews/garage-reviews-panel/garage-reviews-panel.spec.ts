@@ -22,7 +22,9 @@ const SLUG = 'service-auto-militari';
 const me = (role: 'owner' | 'receptionist' = 'owner') =>
   ({
     capabilities: ['garage.reviews'],
-    garageAccess: [{ garageId: GARAGE, role, status: 'approved' }],
+    garageAccess: [
+      { features: {}, garageId: GARAGE, role, status: 'approved' },
+    ],
     garageId: GARAGE,
   }) as unknown as MeDto;
 
@@ -172,6 +174,25 @@ describe('Recenzii noi on the garage home', () => {
     );
     expect(link(element, 'all')).toBeNull();
     expect(link(element, 'profile')).not.toBeNull();
+  });
+
+  // @traces 099-FR-003
+  // @traces 099-FR-014
+  it('makes its title the one link to Recenzii, and keeps the view title plain', async () => {
+    const home = await render({ limit: 5 });
+    await home.settle();
+
+    expect(home.element.querySelectorAll('h2')).toHaveLength(1);
+    expect(home.element.querySelector('h2 > a')?.getAttribute('href')).toBe(
+      '/app/garage/reviews',
+    );
+    expect(text(home.element.querySelector('h2 > a'))).toBe('Recenzii noi');
+    TestBed.resetTestingModule();
+
+    const view = await render();
+    await view.settle();
+
+    expect(view.element.querySelector('h2 > a')).toBeNull();
   });
 
   it('writes its texts in English', async () => {

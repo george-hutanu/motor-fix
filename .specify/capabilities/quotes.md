@@ -27,6 +27,7 @@ features:
   - 1258-driver-cancel
   - 1253-assistant-confirm
   - 1385-cancel-from-requests
+  - 099-overview-sections
 ---
 
 # Capability: Quotes
@@ -179,9 +180,9 @@ _From 343-live-quote-requests._
 
 _From 347-read-request._
 
-### 343-FR-006 — Panou MUST gain a section "Cereri de ofertă" / "Quote requests" above its empty state, replacing that empty state once the section exists: its heading, the counter "N fără răspuns" / "N unanswered", the four newest waiting rows and, when there are more than four, a link "Vezi toate" / "See all" to the Cereri de ofertă view. The section is present for the owner, the receptionist and a mechanic with `can_answer_quotes` (the session's `garageAccess` permissions, 097-FR-005), absent for a mechanic without it, and absent while the garage is `draft` (097-FR-008's line stays).
+### 099-FR-014 — The "Cereri de ofertă" section of 343-FR-006 MUST keep its content — its counter "N fără răspuns" / "N unanswered", the four newest waiting rows and, when there are more than four, "Vezi toate" / "See all" to the Cereri de ofertă view; present for the owner, the receptionist and a mechanic with `can_answer_quotes`, absent for a mechanic without it and while the garage is `draft` — and MUST take the `req` place of FR-001, its heading being the section title link of FR-003. Modifies 343-FR-006 (the heading becomes the title link and the place is the frame's).
 
-_From 343-live-quote-requests._
+_From 099-overview-sections._
 
 ### 343-FR-007 — The Cereri de ofertă view MUST replace its empty-state placeholder with the waiting rows, newest first, 20 at a time, the next page loading when the list's end comes into view until `nextCursor` is null, and the closed rows of the last 24 hours greyed under the waiting rows loaded so far, each with its FR-004 label; the closed rows come from one `closed` read (its first page, not paged further) made with the first waiting read and re-read on the same events. Its title and subtitle stay as 097-FR-003 gives them. The view's menu entry and bottom tab MUST show the FR-001 count in the counter slot 097-FR-001 reserved, with no number at zero.
 
@@ -880,3 +881,4 @@ _From 1385-cancel-from-requests._
 - `389-FR-008` — superseded by `150-FR-003` (2026-10-26)
 - `058-FR-012` — superseded by `150-FR-004` (2026-10-26)
 - `345-FR-017` — superseded by `1253-FR-008` (2026-10-26)
+- `343-FR-006` — superseded by `099-FR-014` (2026-10-26)
