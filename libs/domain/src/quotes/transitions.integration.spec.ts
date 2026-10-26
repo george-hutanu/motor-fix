@@ -475,6 +475,101 @@ describe('moveBooking', () => {
   });
 });
 
+// @traces 150-FR-001
+describe('a booking that stops holding its place', () => {
+  const HOUR_MS = 3_600_000;
+  let at = Date.UTC(2027, 2, 1, 7);
+
+  // A booking in `status` holding lift 2 for an hour, each at its own time.
+  async function holding(status: BookingStatus) {
+    const { booking } = await world.chain(driver, garageId, {
+      booking: status,
+    });
+    at += 2 * HOUR_MS;
+    const startsAt = new Date(at);
+    await prisma.bookingSegment.create({
+      data: {
+        bookingId: booking.id,
+        endsAt: new Date(startsAt.getTime() + HOUR_MS),
+        garageId,
+        lift: 2,
+        startsAt,
+      },
+    });
+    return { id: booking.id, startsAt };
+  }
+
+  const segmentsOf = (bookingId: string) =>
+    prisma.bookingSegment.count({ where: { bookingId } });
+
+  const move = (id: string, to: BookingStatus) =>
+    prisma.$transaction((tx) =>
+      moveBooking(tx, ports, {
+        actor: byGarage(),
+        cancellation: { reason: 'parts_not_available', side: 'garage' },
+        event: {
+          audience: {
+            driverAccountId: driver,
+            garageId,
+            mechanicId: null,
+            type: 'booking',
+          },
+          kind: 'booking.cancelled',
+        },
+        id,
+        to,
+      }),
+    );
+
+  it.each([
+    ['confirmed', 'cancelled'],
+    ['confirmed', 'no_show'],
+    ['awaiting_confirmation', 'lapsed'],
+    ['awaiting_confirmation', 'cancelled'],
+  ] as const)(
+    'deletes the segments of a %s booking moved to %s, freeing its place',
+    async (from, to) => {
+      const held = await holding(from);
+
+      await move(held.id, to);
+
+      expect(await segmentsOf(held.id)).toBe(0);
+      const { booking: next } = await world.chain(driver, garageId, {
+        booking: 'confirmed',
+      });
+      await expect(
+        prisma.bookingSegment.create({
+          data: {
+            bookingId: next.id,
+            endsAt: new Date(held.startsAt.getTime() + HOUR_MS),
+            garageId,
+            lift: 2,
+            startsAt: held.startsAt,
+          },
+        }),
+      ).resolves.toMatchObject({ lift: 2 });
+    },
+  );
+
+  it('keeps the segments of a completed booking, as the record of the work', async () => {
+    const held = await holding('confirmed');
+
+    await move(held.id, 'completed');
+
+    expect(await segmentsOf(held.id)).toBe(1);
+  });
+
+  it('keeps the segments when the move is refused', async () => {
+    const held = await holding('completed');
+
+    await expect(move(held.id, 'cancelled')).rejects.toBeInstanceOf(
+      HttpException,
+    );
+
+    expect(await segmentsOf(held.id)).toBe(1);
+  });
+});
+
 describe('a move that needs its reason', () => {
   it('will not compile a close, a decline or a cancellation without its reason', () => {
     const event = {

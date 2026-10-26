@@ -78,3 +78,24 @@ model JobStageEntry {
   @@index([jobId, at])
   @@map("job_stage_entry")
 }
+
+// The places a confirmed booking holds: one row per working stretch it
+// fills, each half-open [starts_at, ends_at). The exclusion constraints in the
+// migration keep one mechanic, and one lift of a garage, to one booking at a
+// time; a booking leaves its rows when it is cancelled, lapses or is missed.
+model BookingSegment {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bookingId  String    @map("booking_id") @db.Uuid
+  garageId   String    @map("garage_id") @db.Uuid
+  mechanicId String?   @map("mechanic_id") @db.Uuid
+  lift       Int?
+  startsAt   DateTime  @map("starts_at") @db.Timestamptz(3)
+  endsAt     DateTime  @map("ends_at") @db.Timestamptz(3)
+  booking    Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  garage     Garage    @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  mechanic   Mechanic? @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
+
+  @@index([bookingId])
+  @@index([garageId, startsAt])
+  @@map("booking_segment")
+}

@@ -246,6 +246,7 @@ describe('record', () => {
   });
 
   // @traces 220-FR-018
+  // @traces 150-FR-004
   it.each([
     ['quote', 'from_bani'],
     ['quote', 'to_bani'],
@@ -254,6 +255,7 @@ describe('record', () => {
     ['job', 'eta_at'],
     ['booking', 'starts_at'],
     ['booking', 'mechanic_id'],
+    ['booking', 'placement'],
     ['booking', 'cancel_reason'],
   ])('marks %s.%s as a key change', async (subjectType, field) => {
     const subjectId = randomUUID();

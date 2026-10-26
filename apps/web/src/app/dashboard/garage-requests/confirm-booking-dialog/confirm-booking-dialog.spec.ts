@@ -69,6 +69,7 @@ const TEAM: ConfirmOptionsDto = {
     { id: 'mech-1', name: 'Ion Popescu' },
     { id: 'mech-2', name: 'Maria Ionescu' },
   ],
+  needsLift: false,
 };
 
 let confirm: jest.Mock;
@@ -254,7 +255,12 @@ describe('the confirm panel: what it shows', () => {
 describe('the confirm panel: which choices it offers', () => {
   it('has no mechanic select when the garage works without a team', async () => {
     await open({
-      offered: { liftCount: 2, mechanicRequired: false, mechanics: [] },
+      offered: {
+        liftCount: 2,
+        mechanicRequired: false,
+        mechanics: [],
+        needsLift: false,
+      },
     });
 
     expect(select('Mecanic')).toBeNull();
@@ -270,7 +276,12 @@ describe('the confirm panel: which choices it offers', () => {
 
   it('confirms with nothing to choose when both are off', async () => {
     await open({
-      offered: { liftCount: 0, mechanicRequired: false, mechanics: [] },
+      offered: {
+        liftCount: 0,
+        mechanicRequired: false,
+        mechanics: [],
+        needsLift: false,
+      },
     });
 
     expect(panel().querySelector('select')).toBeNull();
@@ -289,6 +300,7 @@ describe('the confirm panel: a team with no mechanic yet', () => {
     liftCount: 2,
     mechanicRequired: true,
     mechanics: [],
+    needsLift: false,
   };
 
   it('shows the required mechanic select with nothing to pick and says to add one first', async () => {
