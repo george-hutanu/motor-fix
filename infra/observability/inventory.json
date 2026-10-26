@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 209,
+    "count": 213,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -2719,6 +2719,72 @@
       "alerts": "none",
       "reason": "counts each 48-hour reminder of a pending review report by outcome (sent, skipped), with the reminder's log line naming the report id; a count has no failure to alert on; the worker-jobs-failed rule covers the queue that reports it",
       "story": "ST-177"
+    },
+    {
+      "kind": "endpoint",
+      "name": "car-sale",
+      "source": "libs/domain/src/cars/transfers/transfers.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/cars/:id/sale",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the sell dialog reads the car's repairs, whether a sale may start and the transfer sent; a read changes nothing, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-415"
+    },
+    {
+      "kind": "endpoint",
+      "name": "car-transfers",
+      "source": "libs/domain/src/cars/transfers/transfers.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/cars/:id/transfers and /api/v1/cars/:id/transfers/:transferId/cancel",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a send and a cancel show on the request-duration metric by route and status code; each step is an audit row and a car_transfer.sent or car_transfer.cancelled event; the send's outcomes are motorfix_car_transfer_sends_total and its WhatsApp message motorfix_car_transfer_whatsapp_total",
+      "story": "ST-415"
+    },
+    {
+      "kind": "endpoint",
+      "name": "car-transfer-link",
+      "source": "libs/domain/src/cars/transfers/transfers.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/car-transfers/:token",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "public, without a session: the link's status alone, 404 for an unknown token and 410 for an ended transfer, read from the status codes; the route label carries :token, never the token",
+      "story": "ST-415"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_car_transfer_sends_total",
+      "source": "libs/domain/src/cars/transfers/transfers.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each send by outcome (sent, open_request) with no car, seller or phone label; the other refusals read from the request-duration metric by route and status; a count has no failure to alert on; the api-error-rate rule covers the service",
+      "story": "ST-415"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_car_transfer_whatsapp_total",
+      "source": "libs/domain/src/cars/transfers/transfers.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts the link's WhatsApp message by outcome (sent, failed) and kind (none or the provider's reason); a failed one logs one CarTransfers warn line with the transfer id and the kind only, and the seller still has the link to copy",
+      "story": "ST-415"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_car_transfer_expiries_total",
+      "source": "libs/domain/src/cars/transfers/expiry-sweep/expiry-sweep.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts the sent transfers the daily sweep expired, with one CarTransferExpirySweep log line per run and an error line per transfer that failed, by id; the link already answers transfer_expired past its time, so a late sweep loses nothing",
+      "story": "ST-415"
     }
   ]
 }

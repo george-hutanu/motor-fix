@@ -39,6 +39,7 @@ const stored: CarDto = {
   rcaUntil: null,
   rovinietaUntil: '2027-01-31',
   serviceDueOn: null,
+  transfer: null,
   updatedAt: '2026-10-08T07:00:00.000Z',
   year: 2019,
 };

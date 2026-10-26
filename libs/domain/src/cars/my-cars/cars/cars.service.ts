@@ -16,10 +16,11 @@ import { addYears, localDay } from '../../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { serviceDueOn } from '../../odometer/odometer';
+import { cancelSentTransfer, isLive } from '../../transfers/transfers';
 
 const LIMIT = 20;
 // A request in one of these is still under way, so its car stays.
-const OPEN_REQUEST = ['sent', 'quoted', 'booked', 'in_work'] as const;
+export const OPEN_REQUEST = ['sent', 'quoted', 'booked', 'in_work'] as const;
 const DATES = ['itpUntil', 'rcaUntil', 'rovinietaUntil'] as const;
 
 // The readings are what the service estimate is counted from; they are never
@@ -27,6 +28,10 @@ const DATES = ['itpUntil', 'rcaUntil', 'rovinietaUntil'] as const;
 const withBrand = {
   brand: { select: { name: true } },
   readings: { select: { createdAt: true, km: true, readOn: true } },
+  transfers: {
+    select: { expiresAt: true, id: true },
+    where: { status: 'sent' },
+  },
 } as const;
 type CarRow = Prisma.CarGetPayload<{ include: typeof withBrand }>;
 // A next service at most this far past the odometer.
@@ -35,6 +40,12 @@ const SERVICE_REACH_KM = 100_000;
 const day = (at: Date | null) => at?.toISOString().slice(0, 10) ?? null;
 const date = (value: string | null | undefined) =>
   value ? new Date(`${value}T00:00:00Z`) : null;
+
+// The car's sent transfer while within its time.
+function transferLine(sent: CarRow['transfers']) {
+  const live = sent.find((t) => isLive(t.expiresAt, new Date()));
+  return live ? { expiresAt: live.expiresAt.toISOString(), id: live.id } : null;
+}
 
 function answer(car: CarRow): CarDto {
   const readings = car.readings.map((r) => ({
@@ -56,6 +67,7 @@ function answer(car: CarRow): CarDto {
     rcaUntil: day(car.rcaUntil),
     rovinietaUntil: day(car.rovinietaUntil),
     serviceDueOn: serviceDueOn(car, readings, localDay(new Date())),
+    transfer: transferLine(car.transfers),
     updatedAt: car.updatedAt.toISOString(),
     year: car.year,
   };
@@ -123,7 +135,7 @@ const readToday = (km: number) => ({
 type Changes = Partial<Pick<UpdateCarDto, Editable>>;
 
 // The caller's own car, not removed, locked until the transaction ends.
-async function ownCar(
+export async function ownCar(
   tx: Prisma.TransactionClient,
   id: string,
   ownerId: string,
@@ -409,6 +421,12 @@ export class CarsService {
           'The car has a request under way',
         );
       }
+      await cancelSentTransfer(
+        tx,
+        { audit: this.audit, events: this.events },
+        id,
+        { accountId: ownerId, role: actor.role },
+      );
       await tx.car.update({ data: { removedAt: new Date() }, where: { id } });
       await this.audit.record(tx, {
         ...editEntry(actor, id),
