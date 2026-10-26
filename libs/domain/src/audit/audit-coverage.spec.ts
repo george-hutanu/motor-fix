@@ -127,6 +127,9 @@ const NOT_CHANGES = new Set([
   'AssistantService.exchange',
   // The role in use is a view preference.
   'SignInService.switchRole',
+  // A person's dashboard layout is a view preference too, never audited.
+  'DashboardLayoutsService.reset',
+  'DashboardLayoutsService.save',
   // A notification's delivery records, not a change to anyone's data.
   'NotificationsService.build',
   'NotificationsService.dispatch',

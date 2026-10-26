@@ -10,6 +10,7 @@ export { NotificationsService } from './services/notifications.service';
 export { AdminService } from './services/admin.service';
 export { CarsService } from './services/cars.service';
 export { SavedGaragesService } from './services/saved-garages.service';
+export { DashboardLayoutsService } from './services/dashboard-layouts.service';
 export { BrandsService } from './services/brands.service';
 export { CatalogueService } from './services/catalogue.service';
 export { PublicHolidaysService } from './services/public-holidays.service';

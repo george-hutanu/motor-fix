@@ -5742,6 +5742,70 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 198,
+      "type": "stat",
+      "title": "Dashboard layout writes, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 267
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (role, outcome) (increase(motorfix_dashboard_layout_writes_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{role}} {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 199,
+      "type": "timeseries",
+      "title": "Dashboard layout writes per hour, by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 267
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (role, outcome) (increase(motorfix_dashboard_layout_writes_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{role}} {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
     }
   ]
 }

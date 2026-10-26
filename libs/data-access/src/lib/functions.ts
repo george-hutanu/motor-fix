@@ -217,6 +217,12 @@ export type { SavedGaragesControllerList$Params as SavedGaragesControllerList$Pa
 export { savedGaragesControllerList as savedGaragesControllerList } from './fn/saved-garages/saved-garages-controller-list';
 export type { SavedGaragesControllerIds$Params as SavedGaragesControllerIds$Params } from './fn/saved-garages/saved-garages-controller-ids';
 export { savedGaragesControllerIds as savedGaragesControllerIds } from './fn/saved-garages/saved-garages-controller-ids';
+export type { DashboardLayoutsControllerRead$Params as DashboardLayoutsControllerRead$Params } from './fn/dashboard-layouts/dashboard-layouts-controller-read';
+export { dashboardLayoutsControllerRead as dashboardLayoutsControllerRead } from './fn/dashboard-layouts/dashboard-layouts-controller-read';
+export type { DashboardLayoutsControllerSave$Params as DashboardLayoutsControllerSave$Params } from './fn/dashboard-layouts/dashboard-layouts-controller-save';
+export { dashboardLayoutsControllerSave as dashboardLayoutsControllerSave } from './fn/dashboard-layouts/dashboard-layouts-controller-save';
+export type { DashboardLayoutsControllerReset$Params as DashboardLayoutsControllerReset$Params } from './fn/dashboard-layouts/dashboard-layouts-controller-reset';
+export { dashboardLayoutsControllerReset as dashboardLayoutsControllerReset } from './fn/dashboard-layouts/dashboard-layouts-controller-reset';
 export type { BrandsControllerSearch$Params as BrandsControllerSearch$Params } from './fn/brands/brands-controller-search';
 export { brandsControllerSearch as brandsControllerSearch } from './fn/brands/brands-controller-search';
 export type { PopularBrandsControllerTiles$Params as PopularBrandsControllerTiles$Params } from './fn/brands/popular-brands-controller-tiles';

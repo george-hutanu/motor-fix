@@ -2608,6 +2608,153 @@
         ]
       }
     },
+    "/api/v1/me/dashboard-layouts/{role}": {
+      "get": {
+        "operationId": "DashboardLayoutsController_read",
+        "parameters": [
+          {
+            "name": "role",
+            "required": true,
+            "in": "path",
+            "description": "admin only for now",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardLayoutDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "account_suspended"
+          },
+          "404": {
+            "description": "not_found: a role with no dashboard layout yet, or one the caller does not hold"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's dashboard sections for the role: saved, or the default",
+        "tags": [
+          "dashboard-layouts"
+        ]
+      },
+      "put": {
+        "operationId": "DashboardLayoutsController_save",
+        "parameters": [
+          {
+            "name": "role",
+            "required": true,
+            "in": "path",
+            "description": "admin only for now",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutDashboardLayoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardLayoutDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a key not in the role list, a key twice, or a bad shape; nothing written"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "account_suspended"
+          },
+          "404": {
+            "description": "not_found: a role with no dashboard layout yet, or one the caller does not hold"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace the caller's whole dashboard layout for the role",
+        "tags": [
+          "dashboard-layouts"
+        ]
+      },
+      "delete": {
+        "operationId": "DashboardLayoutsController_reset",
+        "parameters": [
+          {
+            "name": "role",
+            "required": true,
+            "in": "path",
+            "description": "admin only for now",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardLayoutDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "account_suspended"
+          },
+          "404": {
+            "description": "not_found: a role with no dashboard layout yet, or one the caller does not hold"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Put the caller's dashboard for the role back to the default",
+        "tags": [
+          "dashboard-layouts"
+        ]
+      }
+    },
     "/api/v1/admin/brands": {
       "get": {
         "operationId": "AdminBrandsController_list",
@@ -12624,6 +12771,72 @@
         },
         "required": [
           "ids"
+        ]
+      },
+      "DashboardPanelDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "A section key of the role's list",
+            "example": "log"
+          },
+          "visible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "visible"
+        ]
+      },
+      "DashboardLayoutDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "garage",
+              "receptionist",
+              "mechanic",
+              "admin"
+            ]
+          },
+          "panels": {
+            "description": "The saved order and visibility, then the role's newer sections, visible",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardPanelDto"
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "UTC; null while the default is shown",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "role",
+          "panels",
+          "updatedAt"
+        ]
+      },
+      "PutDashboardLayoutDto": {
+        "type": "object",
+        "properties": {
+          "panels": {
+            "description": "The whole layout in the order shown; a key left out comes back visible at the end",
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardPanelDto"
+            }
+          }
+        },
+        "required": [
+          "panels"
         ]
       },
       "AdminBrandDto": {

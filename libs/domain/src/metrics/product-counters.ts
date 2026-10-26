@@ -215,6 +215,12 @@ const suspensions = () =>
     'motorfix_garage_suspensions_total',
     'Garages taken off the map, by cause',
   );
+// Not started at 0: a few a month, and the API stays under 150 series.
+const dashboardLayoutWrites = () =>
+  counter(
+    'motorfix_dashboard_layout_writes_total',
+    'Dashboard layout saves, resets and refused saves, by role and outcome',
+  );
 // Not started at 0: a handful a month, and the API stays under 150 series.
 const restores = () =>
   counter(
@@ -448,6 +454,13 @@ export function countApproval(outcome: (typeof APPROVAL_OUTCOMES)[number]) {
 
 export function countGarageSuspension(cause: SuspensionCause) {
   suspensions().add(1, { cause });
+}
+
+export function countDashboardLayoutWrite(
+  role: string,
+  outcome: 'refused' | 'reset' | 'saved',
+) {
+  dashboardLayoutWrites().add(1, { outcome, role });
 }
 
 export function countGarageRestore(cause: SuspensionCause) {

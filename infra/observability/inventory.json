@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 206,
+    "count": 209,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -911,6 +911,15 @@
     },
     {
       "kind": "product-counter",
+      "name": "motorfix_dashboard_layout_writes_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each dashboard layout save, reset and refused key by role and outcome (saved, reset, refused); not started at 0, so the API stays under its 150 series; a refused shape is a 400 on the endpoint entry's request metric; a count has no failure to alert on, the me-dashboard-layouts endpoint entry owns the error and latency alerts",
+      "story": "ST-1263"
+    },
+    {
+      "kind": "product-counter",
       "name": "motorfix_garage_restores_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
@@ -1598,6 +1607,19 @@
       ],
       "reason": "a read only: it changes nothing, so no product counter or audit row; its refusals and latency show on the request-duration metric by route and status code, each refusal writes one LegalCheck warn line with its code and the actor's role, its spans come from the HTTP and Prisma auto-instrumentation, and the API-wide error and latency rules cover it",
       "story": "ST-210"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-dashboard-layouts",
+      "source": "libs/domain/src/auth/dashboard-layouts/dashboard-layouts.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/dashboard-layouts/:role",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "GET, PUT and DELETE show on the request-duration metric by route and status code; each save and reset writes a dashboard_layout.updated event and is counted by the motorfix_dashboard_layout_writes_total entry, a refused key logged once as a warn with the role and the problem; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-1263"
     },
     {
       "kind": "endpoint",
