@@ -41,7 +41,7 @@ export function mergeLayout(
   return panels;
 }
 
-export type PanelsProblem = 'duplicate_key' | 'unknown_key';
+type PanelsProblem = 'duplicate_key' | 'unknown_key';
 
 // Why a save's panels cannot be kept, or null; keys compare exactly.
 export function checkPanels(
