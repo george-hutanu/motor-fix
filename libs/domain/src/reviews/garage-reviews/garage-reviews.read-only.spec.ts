@@ -27,7 +27,7 @@ describe('what a garage may do to its reviews through the API', () => {
   });
 
   // The owner's report (ST-76) hides a review only until an admin decides;
-  // her reply (ST-75) sits under the review and changes nothing in it.
+  // her reply sits under the review and changes nothing in it.
   // @traces 075-FR-004
   it('holds no edit, hide or delete, and no write but the driver’s post, the owner’s report and her reply', () => {
     const writes = operations.filter((op) => !op.startsWith('GET '));
