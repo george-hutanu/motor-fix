@@ -2,8 +2,12 @@ import { randomUUID } from 'node:crypto';
 
 import { quotesApp } from '../../quotes/quotes-api.testing';
 import { LiveVideoModule } from '../live-video.module';
+import {
+  LIVE_VIDEO_PROVIDER,
+  type LiveVideoProvider,
+} from '../providers/live-video.provider';
 
-const { bearer, send, team, world } = quotesApp([
+const { bearer, provider, send, team, world } = quotesApp([
   LiveVideoModule.register({ provider: 'fake' }),
 ]);
 const { prisma } = world;
@@ -108,6 +112,21 @@ describe('a view that is refused', () => {
 
     expect(res.status).toBe(409);
     expect(res.body).toMatchObject({ code: 'live_ended' });
+    expect(res.body.url).toBeUndefined();
+  });
+
+  it('answers 503 live_unavailable when the provider can no longer sign a link', async () => {
+    const s = await setting();
+    jest
+      .spyOn(provider<LiveVideoProvider>(LIVE_VIDEO_PROVIDER), 'viewUrl')
+      .mockImplementation(() => {
+        throw new Error('live video is not configured');
+      });
+
+    const res = await view(s.view, s.driver);
+
+    expect(res.status).toBe(503);
+    expect(res.body).toMatchObject({ code: 'live_unavailable' });
     expect(res.body.url).toBeUndefined();
   });
 

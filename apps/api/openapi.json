@@ -5363,6 +5363,9 @@
           },
           "409": {
             "description": "live_ended"
+          },
+          "503": {
+            "description": "live_unavailable: the link cannot be signed now"
           }
         },
         "security": [

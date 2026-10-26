@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import { Logger } from '@nestjs/common';
 
+import { LiveSessionsService } from './sessions.service';
+import type { AuditPort } from '../../audit/audit.port';
 import type { JobStatus } from '../../generated/prisma/enums';
 import { quotesApp } from '../../quotes/quotes-api.testing';
 import { LiveVideoModule } from '../live-video.module';
@@ -245,6 +247,7 @@ describe('a start that is refused', () => {
 
   it('keeps one session when two starts race, and closes the loser’s input', async () => {
     const s = await setting();
+    const create = jest.spyOn(fake(), 'createInput');
     const close = jest.spyOn(fake(), 'closeInput');
 
     const answers = await Promise.all([
@@ -260,8 +263,73 @@ describe('a start that is refused', () => {
     expect(rows).toHaveLength(1);
     expect(await events(s.job.id)).toHaveLength(1);
     expect(await audits(s.job.id)).toHaveLength(1);
-    for (const [inputId] of close.mock.calls)
-      expect(inputId).not.toBe(rows[0]?.providerInputId);
+    const opened = await Promise.all(
+      create.mock.results.map(
+        async (r) => (await r.value) as { inputId: string },
+      ),
+    );
+    expect(close.mock.calls.map(([inputId]) => inputId)).toEqual(
+      opened
+        .map((input) => input.inputId)
+        .filter((inputId) => inputId !== rows[0]?.providerInputId),
+    );
+  });
+
+  it('closes the input and writes nothing when the session cannot be saved, logging an input it could not close', async () => {
+    const s = await setting();
+    const warn = jest.mocked(Logger.prototype.warn);
+    const service = provider(LiveSessionsService) as unknown as {
+      audit: AuditPort;
+    };
+    jest
+      .spyOn(service.audit, 'record')
+      .mockRejectedValueOnce(new Error('audit down'));
+    const create = jest.spyOn(fake(), 'createInput');
+    jest
+      .spyOn(fake(), 'closeInput')
+      .mockRejectedValueOnce(new Error('close failed'));
+
+    const res = await start(s.live, s.costel);
+
+    expect(res.status).toBe(500);
+    await nothingWritten(s.job.id);
+    const input = (await create.mock.results[0]?.value) as { inputId: string };
+    expect(warn).toHaveBeenCalledWith(
+      `live input not closed: ${input.inputId} Error`,
+    );
+  });
+
+  it('is not left live when live media is switched off while it starts', async () => {
+    const s = await setting();
+    const garageId = s.dinamo.garage.id;
+    let locked!: () => void;
+    let release!: () => void;
+    const isLocked = new Promise<void>((resolve) => {
+      locked = resolve;
+    });
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const switching = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
+        locked();
+        await held;
+        await tx.garageFeature.create({
+          data: { enabled: false, garageId, key: 'live_media' },
+        });
+      },
+      { timeout: 10_000 },
+    );
+    await isLocked;
+
+    const answer = start(s.live, s.costel);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    release();
+    await switching;
+
+    expect((await answer).status).toBe(404);
+    expect(await sessions(s.job.id)).toEqual([]);
   });
 
   it.each([

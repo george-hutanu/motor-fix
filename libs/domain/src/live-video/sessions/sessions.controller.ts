@@ -61,6 +61,9 @@ export class LiveSessionsController {
       'not_found: no such session, live media off, or not the job’s driver, owner or mechanic',
   })
   @ApiConflictResponse({ description: 'live_ended' })
+  @ApiServiceUnavailableResponse({
+    description: 'live_unavailable: the link cannot be signed now',
+  })
   view(
     @CurrentActor() actor: Actor,
     @Param('id', new ParseUUIDPipe()) id: string,

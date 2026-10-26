@@ -20,7 +20,7 @@ import { LiveSessionsService } from './sessions/sessions.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 
-export type LiveVideoConfig =
+type LiveVideoConfig =
   | { provider: 'cloudflare'; secrets: LiveVideoSecrets }
   | { provider: 'fake' }
   | { provider: 'none' };

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import {
+  LIVE_PROVIDER_TIMEOUT_MS,
   LIVE_PUBLISH_CONSTRAINTS,
   LIVE_PUBLISH_WINDOW_MS,
   LIVE_VIEW_TOKEN_TTL_MS,
@@ -29,6 +30,7 @@ import type { JobStatus } from '../../generated/prisma/enums';
 import { said } from '../../quotes/refusals';
 import {
   LIVE_VIDEO_PROVIDER,
+  type LiveInput,
   type LiveVideoProvider,
 } from '../providers/live-video.provider';
 
@@ -170,11 +172,23 @@ export class LiveSessionsService {
       throw refused(HttpStatus.CONFLICT, 'live_ended', LIVE_ENDED, actor);
     }
     const expiresAt = new Date(Date.now() + LIVE_VIEW_TOKEN_TTL_MS);
+    let url: string;
+    try {
+      url = this.provider.viewUrl(session.provider_input_id, expiresAt);
+    } catch (error) {
+      countViewToken('unavailable');
+      this.logger.warn(
+        `live view refused: live_unavailable ${error instanceof Error ? error.name : 'error'} session ${liveSessionId}`,
+      );
+      throw refused(
+        HttpStatus.SERVICE_UNAVAILABLE,
+        'live_unavailable',
+        UNAVAILABLE,
+        actor,
+      );
+    }
     countViewToken('issued');
-    return {
-      expiresAt: expiresAt.toISOString(),
-      url: this.provider.viewUrl(session.provider_input_id, expiresAt),
-    };
+    return { expiresAt: expiresAt.toISOString(), url };
   }
 
   // Locks the job so starts on it run one after the other, and says why the
@@ -186,12 +200,11 @@ export class LiveSessionsService {
       FROM job j LEFT JOIN mechanic m ON m.id = j.mechanic_id
       WHERE j.id = ${jobId}::uuid
       FOR UPDATE OF j`;
-    if (
-      !job ||
-      job.garage_id !== actor.garageId ||
-      !(await featureOn(tx, job.garage_id, FEATURE)) ||
-      !mayStart(actor, job)
-    )
+    if (!job || job.garage_id !== actor.garageId) throw new NotFoundException();
+    // Holds off the live media switch, which locks the garage before it stops
+    // the garage's sessions, until this start is committed and can be seen.
+    await tx.$queryRaw`SELECT id FROM garage WHERE id = ${job.garage_id}::uuid FOR KEY SHARE`;
+    if (!(await featureOn(tx, job.garage_id, FEATURE)) || !mayStart(actor, job))
       throw new NotFoundException();
     if (job.status === 'done' || job.status === 'cancelled')
       throw refused(HttpStatus.CONFLICT, 'job_closed', JOB_CLOSED, actor);
@@ -200,12 +213,26 @@ export class LiveSessionsService {
     return job;
   }
 
+  // A provider that has not answered in time is a refusal; an input it opens
+  // later is closed again.
   private async openInput(actor: Actor, id: string, jobId: string) {
-    const input = await this.provider
+    const pending: Promise<LiveInput> = this.provider
       .createInput({ id })
       .catch((error: unknown) => ({
         unavailable: error instanceof Error ? error.name : 'error',
       }));
+    const timedOut = { unavailable: 'timeout' };
+    let timer: NodeJS.Timeout | undefined;
+    const input = await Promise.race([
+      pending,
+      new Promise<LiveInput>((resolve) => {
+        timer = setTimeout(() => resolve(timedOut), LIVE_PROVIDER_TIMEOUT_MS);
+      }),
+    ]).finally(() => clearTimeout(timer));
+    if (input === timedOut)
+      void pending.then(async (late) => {
+        if ('inputId' in late) await this.close(late.inputId);
+      });
     if (!('unavailable' in input)) return input;
     countLiveSession(
       input.unavailable === 'not_configured'

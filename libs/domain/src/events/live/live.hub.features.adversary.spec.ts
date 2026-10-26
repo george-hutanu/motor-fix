@@ -75,7 +75,7 @@ const fanOut = (audience: string[], kind: string, id = 'e1') =>
   );
 
 // @traces 398-FR-008
-// @traces 1250-FR-004
+// @traces 1250-FR-004 1250-FR-013
 describe('the feature switch event', () => {
   it('reaches a mechanic holding no permission at all', async () => {
     const mechanic = open('elena', 'mechanic', ['garage:g1', 'mechanic:m1']);

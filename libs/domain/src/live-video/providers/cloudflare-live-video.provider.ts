@@ -18,15 +18,19 @@ const base64url = (value: object) =>
   Buffer.from(JSON.stringify(value)).toString('base64url');
 
 // Cloudflare's keys API hands the PEM out base64-encoded, one line that fits
-// an environment variable; a raw PEM is taken as it is.
+// an environment variable; a raw PEM is taken as it is, its line breaks
+// pasted as `\n` too. Only an RSA key signs the RS256 view token.
 export function signingKey(value: string): KeyObject {
-  const pem = value.startsWith('-----BEGIN')
-    ? value
-    : Buffer.from(value, 'base64').toString('utf8');
-  return createPrivateKey(pem);
+  const text = value.replaceAll('\\n', '\n');
+  const pem = text.startsWith('-----BEGIN')
+    ? text
+    : Buffer.from(text, 'base64').toString('utf8');
+  const key = createPrivateKey(pem);
+  if (key.asymmetricKeyType !== 'rsa') throw new Error('not an RSA key');
+  return key;
 }
 
-type Call = { status?: number; body?: unknown; failed?: string };
+type Call = { body?: unknown; failed?: string };
 
 // Cloudflare Stream Live: a WHIP input per session, recorded, played back
 // only through a token this adapter signs itself. Its log lines and answers
@@ -57,7 +61,12 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     if (body?.success === false) return this.unavailable('rejected');
     const inputId = body?.result?.uid;
     const publishUrl = body?.result?.webRTC?.url;
-    if (typeof inputId !== 'string' || typeof publishUrl !== 'string')
+    if (
+      typeof inputId !== 'string' ||
+      !inputId ||
+      typeof publishUrl !== 'string' ||
+      !publishUrl.startsWith('https://')
+    )
       return this.unavailable('malformed');
     return { inputId, publishUrl };
   }
@@ -131,6 +140,8 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
           ...(body && { 'Content-Type': 'application/json' }),
         },
         method,
+        // A redirect would carry the token to wherever it points.
+        redirect: 'manual',
         signal: AbortSignal.timeout(LIVE_PROVIDER_TIMEOUT_MS),
       });
     } catch (error) {
@@ -142,11 +153,11 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     if (!response.ok) {
       span.setStatus({ code: SpanStatusCode.ERROR });
       await response.body?.cancel();
-      return { failed: String(response.status), status: response.status };
+      return { failed: String(response.status) };
     }
     const json: unknown = await response.json().catch(() => null);
     if (json === null) return { failed: 'malformed' };
-    return { body: json, status: response.status };
+    return { body: json };
   }
 
   private unavailable(reason: string): LiveInput {

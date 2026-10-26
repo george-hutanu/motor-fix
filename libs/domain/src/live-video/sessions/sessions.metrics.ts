@@ -1,7 +1,7 @@
 import { metrics } from '@opentelemetry/api';
 
 type StartOutcome = 'started' | 'refused' | 'provider_failed' | 'unavailable';
-type ViewOutcome = 'issued' | 'refused' | 'ended';
+type ViewOutcome = 'issued' | 'refused' | 'ended' | 'unavailable';
 type Operation = 'create_input' | 'close_input';
 
 // Looked up on every count: an instrument kept from before the meter provider
