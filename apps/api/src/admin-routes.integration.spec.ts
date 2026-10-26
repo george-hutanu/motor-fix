@@ -31,6 +31,8 @@ const KNOWN = [
   'GET /api/v1/admin/overview',
   'GET /api/v1/admin/platform-rule-changes',
   'GET /api/v1/admin/platform-rules',
+  // @traces 177-FR-001 177-FR-018
+  'GET /api/v1/admin/review-reports',
   // @traces 298-FR-002
   'GET /api/v1/admin/system-log',
   'GET /api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url',

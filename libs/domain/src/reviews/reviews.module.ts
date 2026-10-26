@@ -6,6 +6,8 @@ import { ReviewRepliesController } from './reply/reply.controller';
 import { ReviewRepliesService } from './reply/reply.service';
 import { ReviewReportsController } from './report/report.controller';
 import { ReviewReportsService } from './report/report.service';
+import { ReportQueueController } from './report-queue/report-queue.controller';
+import { ReportQueueService } from './report-queue/report-queue.service';
 import { ReviewsController } from './reviews.controller';
 import { ReviewsService } from './reviews.service';
 import { AUDIT_PORT } from '../audit/audit.port';
@@ -16,15 +18,18 @@ import { AuditService } from '../audit/audit.service';
 @Module({
   controllers: [
     GarageReviewsController,
+    ReportQueueController,
     ReviewRepliesController,
     ReviewReportsController,
     ReviewsController,
   ],
+  exports: [ReportQueueService],
   providers: [
     ReviewEligibility,
     ReviewsService,
     ReviewRepliesService,
     ReviewReportsService,
+    ReportQueueService,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],
 })
