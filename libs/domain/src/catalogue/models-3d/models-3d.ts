@@ -4,8 +4,9 @@ import { createHash } from 'node:crypto';
 // the generic body shapes, each pointing at its GLB in object storage under
 // models-3d/ by a key that names its content (<key>.<16 hex of SHA-256>.glb),
 // so a key is never overwritten and is served immutable. The real files come
-// from the 3D asset stories; until then the keys are those of the placeholders
-// below. No workspace import, not even of a type: scripts/model-3d-check.ts
+// from the 3D asset stories; until then a licensed model's key is that of its
+// placeholder below. The generic body shapes are generated, never drawn from
+// an outside model: scripts/models-3d-generic.ts writes them and their keys. No workspace import, not even of a type: scripts/model-3d-check.ts
 // runs and typechecks this file on its own, so the fuel and body-style unions
 // are restated here and models-3d.spec.ts holds them equal to the originals.
 
@@ -160,14 +161,16 @@ export const CAR_MODELS: readonly LicensedCarModel[] = [
 ];
 
 // The generic car of each body shape, shown for a brand with no licensed
-// model; it holds the parts of a petrol car whatever the driver's fuel.
+// model; it holds the parts of a petrol car whatever the driver's fuel. The
+// names are those scripts/models-3d-generic.ts prints; a change to the
+// generator or its encoder brings new ones.
 export const GENERIC_FILES: Readonly<Record<BodyStyle, string>> = {
-  crossover: 'generic-crossover.2ce0e84d7428741a.glb',
-  estate: 'generic-estate.85d30f114d353a88.glb',
-  fastback: 'generic-fastback.845df5a7f01a1ad7.glb',
-  hatchback: 'generic-hatchback.c488c5030005c2f6.glb',
-  saloon: 'generic-saloon.b0a89639c822ab36.glb',
-  suv: 'generic-suv.1a5c3c6515fc37bd.glb',
+  crossover: 'generic-crossover.45703efc593be7bc.glb',
+  estate: 'generic-estate.0fb94975aa30fb30.glb',
+  fastback: 'generic-fastback.44e5eb974722173f.glb',
+  hatchback: 'generic-hatchback.12331bb55ad2ff5b.glb',
+  saloon: 'generic-saloon.e3f72b5cf23fad67.glb',
+  suv: 'generic-suv.a37e99fb3c4a7078.glb',
 };
 
 interface Model3dFile {
@@ -221,13 +224,10 @@ export function glb(nodeNames: readonly string[], label?: string): Uint8Array {
   return bytes;
 }
 
-// One placeholder per catalogue file, under the key the catalogue holds.
+// One placeholder per licensed model, under the key the catalogue holds.
 export function placeholders(): Map<string, Uint8Array> {
   return new Map(
-    MODEL_3D_FILES.map(({ file, fuel, key }) => [
-      file,
-      glb(partsFor(fuel), key),
-    ]),
+    CAR_MODELS.map(({ file, fuel, key }) => [file, glb(partsFor(fuel), key)]),
   );
 }
 
