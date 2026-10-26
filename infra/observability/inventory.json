@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 203,
+    "count": 208,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1421,6 +1421,19 @@
       ],
       "reason": "each refusal logs one 'job step refused' line with ids and its code",
       "story": "ST-424"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-job-stages",
+      "source": "libs/domain/src/workshop/job-stages/job-stages.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garage/jobs/:id/start, /pause, /resume, /finish and /receive",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each move locks the job and writes its stage, the request's move, the audit entries and the events in one PostgreSQL transaction; a start pauses the mechanic's other job in work in the same one; each refusal logs one 'job stage refused' line with the job id and its code; the counter motorfix_job_stage_moves_total counts every call by action and outcome; no outside call",
+      "story": "ST-276"
     },
     {
       "kind": "product-counter",
