@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -21,6 +21,7 @@ features:
   - 428-close-on-account-closed
   - 292-saved-garage-quote
   - 058-mechanic-hours
+  - 150-add-booking
 ---
 
 # Capability: Quotes
@@ -565,29 +566,25 @@ _From 313-compare-quotes._
 
 _From 389-confirm-booking-lift-mechanic._
 
-### 389-FR-002 — The confirm MUST lock the booking row (`SELECT … FOR UPDATE`), then, in that one transaction, check in this order: the booking is `awaiting_confirmation` (else 409 `invalid_transition` with the entity `booking` and its state), `confirm_by` is after now (else 409 `invalid_transition` with the state `lapsed`, the row left to the lapse timer), the switches and the fields agree (FR-004, FR-005), the mechanic is one of the garage's (FR-004), the lift is within 1 … the garage's lift count (FR-006), the slot lies inside the opening hours (FR-008), and the mechanic and the lift are free (FR-007); then set `status` `confirmed`, `confirmed_at`, `confirmed_by` (the actor), `mechanic_id`, `lift`; create one JOB `to_do` for the booking (garage, the request's car, the driver, the mechanic of FR-005) with its first JOB_STAGE_ENTRY (no from-status, to `to_do`, the actor); move every other `waiting` quote of the request to `lost` and every `waiting` recipient to `closed` through the transition service; record the audit entries: the booking's `stage` (`awaiting_confirmation` → `confirmed`), `mechanic_id` and `lift` (old null), the job's creation; write the outbox events `booking.confirmed` `{ bookingId, requestId, quoteId, startsAt, durationMinutes, mechanicId, lift }` to the audiences `account:{driverId}`, `garage:{garageId}` and, when the platform routes one, `mechanic:{mechanicId}`, and one `quote.closed` `{ quoteIds, requestId }` to the driver's account and each losing garage; and clear the booking's three timers (FR-010) after the commit. The request stays `booked`. Nothing is written when any check fails.
+### 150-FR-004 — (389-FR-002 and 058-FR-012 modified) The confirm MUST, after the state, `confirm_by`, switch, membership and lift-range checks it already runs, call `assertPlaceable` with the booking's garage, the mechanic (null with the team off), the lift (null when none is given), `starts_at` and `duration_minutes`, in place of its own `slotInsideHours`, `mechanicOwnAtWork` and overlap reads, and write the returned segments in the same transaction before the JOB; the booking is saved with no lift when none is given whatever `needsLift` says. The confirmation's audit MUST record mechanic, lift, start and duration in one entry on the booking (field `placement`, old null, new `{ mechanicId, lift, startsAt, durationMinutes }`), replacing the two `mechanic_id` and `lift` entries; the `stage` entry, the JOB, the other quotes, the timers and the events stay as 389-FR-002 says. Nothing is written when any check fails.
 
-_From 389-confirm-booking-lift-mechanic._
+_From 150-add-booking._
 
-### 389-FR-003 — The refusals MUST use the platform's problem details (220-FR-015): 409 `invalid_transition` as FR-002 says, carrying the booking's current state so the web can word it (`confirmed` "Programarea e deja confirmată", `lapsed` "Programarea a expirat", `cancelled` "Programarea a fost anulată"); 409 `mechanic_busy` with the message "<mechanic name> e ocupat la ora asta" / "<mechanic name> is busy at this time"; 409 `lift_busy` "Elevatorul <n> e ocupat la ora asta" / "Lift <n> is busy at this time"; 409 `outside_hours` "În afara programului" / "Outside opening hours"; 409 `mechanic_unavailable` "Mecanicul nu e disponibil" / "The mechanic is not available"; two concurrent confirmations of one booking MUST end with exactly one `confirmed` and the other refused as `invalid_transition` `confirmed`.
+### 150-FR-006 — (389-FR-003 modified) The placement's refusals MUST keep their codes and gain a `reason` field in the problem details where the cause is not the code itself, with these messages, times on the Bucharest wall clock (HH:MM) and, for a segment on a day other than the booking's start day, the weekday and time ("miercuri 08:00–09:00" / "Wednesday 08:00–09:00"): 409 `lift_busy` "Elevatorul <n> e ocupat <from>–<to> (<brand> <model>)" / "Lift <n> is busy <from>–<to> (<brand> <model>)" naming the first overlapping segment's booking; 409 `mechanic_busy` "<name> are o programare <from>–<to>" / "<name> has a booking <from>–<to>"; 409 `mechanic_unavailable` with reason `ends_early` "<name> lucrează până la <to> în ziua aceea" / "<name> works until <to> that day", `day_off` "<name> e liberă în ziua aceea" / "<name> is off that day", `saturday_off` "<name> nu lucrează sâmbăta" / "<name> does not work on Saturdays", `not_working` "<name> nu lucrează în ziua aceea" / "<name> does not work that day" (a weekday with no stretch), and no reason with the shipped text for a mechanic not of the garage; 409 `outside_hours` with reason `public_holiday` "<day> e sărbătoare legală" / "<day> is a legal holiday" (the day as "1 decembrie" / "1 December"), `closed_day` "Service-ul e închis în ziua aceea" / "The garage is closed that day", `outside_opening` "În afara programului (<intervals>)" / "Outside opening hours (<intervals>)" with the garage's intervals of that weekday ("08:00–12:00, 13:00–17:00"), or "Service-ul e închis în ziua aceea" when it has none. `invalid_transition` and the 400s are unchanged. The web shows these messages where it shows today's (389-FR-014); nothing of the web changes here.
 
-_From 389-confirm-booking-lift-mechanic._
-
-### 058-FR-012 — (389-FR-004 modified) With the garage's `team_mechanics` on, `mechanicId` MUST be required and MUST name a MECHANIC row of this garage that is at work over the booking's span by FR-011's rule (else 409 `mechanic_unavailable`); the dialog MUST offer every mechanic row of the garage by name, through one read the plan names. The predicate "offered mechanics" stays one place.
-
-_From 058-mechanic-hours._
+_From 150-add-booking._
 
 ### 389-FR-006 — GARAGE MUST gain `lift_count` (integer, 0 or more, default 0), backfilled once by the migration from the garage's survey answer (`1` → 1, `2-3` → 2, `4+` → 4, `0` or no survey → 0); with `lift_schedule` on (a missing row is on) `lift` MUST be optional and, when given, an integer from 1 to `lift_count` (else 400 `validation_failed` naming `lift`); with `lift_schedule` off `lift` MUST be refused (400) and stay empty. The schedule read's `lifts` flag is unchanged.
 
 _From 389-confirm-booking-lift-mechanic._
 
-### 389-FR-007 — The database MUST refuse an overlap with two exclusion constraints on BOOKING over the half-open range [`starts_at`, `starts_at` + `duration_minutes`): one on (`mechanic_id`, range) where `status` = `confirmed` and `mechanic_id` is set, one on (`garage_id`, `lift`, range) where `status` = `confirmed` and `lift` is set (the `btree_gist` extension, added by the migration); the confirm MUST read the same overlaps first so the 409 names the mechanic or the lift, and MUST answer a constraint violation that slips past the read as the same 409, never 500. A range ending exactly where another starts is no overlap. The same transaction's own checks are the only mechanic check; nothing pauses or refuses a booking because the owner's jobs overlap (`team_mechanics` off).
+### 150-FR-001 — A new table BOOKING_SEGMENT MUST hold, per booking, one row per working stretch the booking occupies: `id`, `booking_id` (not null, cascade), `garage_id`, `mechanic_id` (nullable; a removed card is soft-removed and its segments stay until #134 reassigns them), `lift` (nullable), `starts_at`, `ends_at` (timestamptz, `ends_at` > `starts_at`, the span half-open). Two exclusion constraints on it (`btree_gist`) MUST replace the two on BOOKING, which the migration drops: one on (`mechanic_id`, [`starts_at`, `ends_at`)) where `mechanic_id` is set, one on (`garage_id`, `lift`, [`starts_at`, `ends_at`)) where `lift` is set. The migration MUST backfill one segment per `confirmed` booking from its `starts_at`, `duration_minutes`, `mechanic_id`, `lift` and `garage_id`. Segments are written only by the placement (FR-004) and by the backfill; the booking transition service MUST delete a booking's segments in the same transaction as its move to `cancelled`, `lapsed` or `no_show`, so every present and future cancel path (the account-closed cancel today, #203 and the no-show later) frees the place; a move to `completed` keeps them. An `awaiting_confirmation` booking has none.
 
-_From 389-confirm-booking-lift-mechanic._
+_From 150-add-booking._
 
-### 389-FR-008 — The confirm MUST refuse a slot whose [start, end) does not lie inside one interval of the garage's `hours` for the slot's Bucharest weekday, or whose Bucharest day is a GARAGE_CLOSED_DAY of the garage or a PUBLIC_HOLIDAY (409 `outside_hours`); a garage whose `hours` is `{}` passes the hours part. One pure function, in the domain next to the garage hours, MUST answer whether a span is inside the hours, so the plan and the tests share it.
+### 150-FR-003 — (389-FR-008 and 058-FR-011 extended) A booking's working stretches MUST be, with `team_mechanics` on, the mechanic's effective stretch for each Bucharest day (058-FR-002, Saturday only with `works_saturdays`, none on a day off, a GARAGE_CLOSED_DAY or a PUBLIC_HOLIDAY) intersected with the garage's opening intervals of that weekday (389-FR-008's `hours`; a day with two intervals gives two stretches); with `team_mechanics` off, the garage's opening intervals on such days. The start MUST lie inside a stretch (at or after its start, before its end), else the refusal names the cause (FR-006). When `durationMinutes` is at most the length of that stretch, the booking MUST end inside it (else `mechanic_unavailable` `ends_early` when the mechanic's own stretch ends first, `outside_hours` `outside_opening` when the garage's interval ends first or the team is off) and is one segment; when `durationMinutes` is longer than that stretch, the booking MUST fill the stretch from its start and continue from the start of each following stretch (the same day's next interval, then the following days, skipping days off, closed days, holidays, weekdays without a stretch and Saturdays without the switch) until its minutes are used, every segment on the same mechanic and the same lift. Stretches are searched at most 30 Bucharest days (the free-slot search horizon of #21) from the start; when the minutes are not used by then the booking is refused 409 `outside_hours`, reason `outside_opening`. Minutes are counted on the instant clock; stretch bounds are Bucharest wall-clock times, so a stretch keeps its wall-clock bounds on the last Sundays of March and October (the change at 03:00 or 04:00 falls outside an 08:00–16:00 stretch, which stays 8 real hours). `duration_minutes` stays the quote's total working minutes (389-FR-002's field, unchanged). The pure parts of this rule (the stretch list of a day, the segmentation) live beside 058-FR-011's rule and share its inputs.
 
-_From 389-confirm-booking-lift-mechanic._
+_From 150-add-booking._
 
 ### 389-FR-010 — Three timers per booking MUST exist as object-timer kinds (`scheduler/timers.ts`: a stable job id per kind and object, replaced when set again): `booking-confirm-reminder-12h` at `accepted_at` + 12 h, `booking-confirm-reminder-2h` at `confirm_by` − 2 h, `booking-lapse` at `confirm_by`, set by the worker's consumer of `quote.accepted` when the booking is created (a repeated delivery replaces them); a reminder is set only when its time is after now and before `confirm_by` (so a slot under 12 h away gets no 12 h reminder), the lapse always, cleared by the confirm (no booking cancellation exists in the code yet; #203 and the driver's cancel clear them when they are built, and a timer that fires on a cancelled booking does nothing), and run by the 5-minute sweep when their own job was lost; each kind's `fire` MUST re-read the booking and do nothing unless it is still `awaiting_confirmation` (and, for a reminder, `confirm_by` is still ahead), so a late or repeated timer is harmless.
 
@@ -765,6 +762,22 @@ _From 428-close-on-account-closed._
 
 _From 292-saved-garage-quote._
 
+### 150-FR-009 — The API MUST offer `GET /api/v1/garages/:garageId/schedule?from&to` (`from` and `to` Bucharest dates, `to` defaulting to `from`, `from` to today, 1 to 7 days inclusive, else 400 `validation_failed`), reusing `GarageScheduleService.list` so the MCP tool keeps working: the owner and a receptionist of that garage read every booking of the garage over those days that is not `lapsed` or `cancelled` (a day in the past is allowed, `from` only defaults to today), the day rule being the segments' for a booking that has them and `starts_at` for one that has none (an `awaiting_confirmation` booking, a `no_show` one whose segments were deleted, a `completed` one from before this story), so the board keeps what was done or missed as it shows it today; a mechanic reads only bookings whose mechanic is her card, or all of them while her card has `can_move_bookings`; the staff of another garage, a driver, an admin and an unknown garage answer 404 `not_found`, a visitor 401 `sign_in_required`. Each entry MUST carry `id`, `car` (brand, model, year), `jobs` (names in the caller's language), `customer` (the driver's short name, "Dan V."), `mechanic` (id and name, or null), `lift` (only while `lift_schedule` is on; the answer's `lifts` flag as today), `startsAt`, `durationMinutes`, `status` (the booking's), `confirmBy` and `minutesLeft` while awaiting, `jobStatus` (the JOB's, or null before one exists) and `segments` (each `startsAt`, `endsAt`, `mechanicId`, `lift`; empty while awaiting). A booking whose segments touch a day in the range appears on that day's read even when it started earlier. The `lift` and `mechanicId` filters stay, and a mechanic with `can_move_bookings` may filter by another card; the MCP tool reads through the same service and gets the same day rule (Principle V). The DTO comes from the contracts library.
+
+_From 150-add-booking._
+
+### 150-FR-010 — `booking.confirmed` and `booking.cancelled` of a booking with a mechanic MUST reach `garage:{garageId}` and `mechanic:{mechanicId}` (and the driver's account), as `audienceOf` already resolves the `booking` subject; this story verifies it by test and adds no event, channel or payload field; `booking.lapsed` keeps its driver-and-garage audience (a lapsed booking has no mechanic).
+
+_From 150-add-booking._
+
+### 150-FR-011 — The OpenAPI document and the generated client MUST carry the schedule operation, its DTOs, `needsLift` on the confirm options, the `reason` field on the 409 problem details and the `slot_taken` code (`npx nx run data-access:generate`, never edited by hand).
+
+_From 150-add-booking._
+
+### 150-FR-013 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids. In Jest on real PostgreSQL and Redis: US1-1 (segments and the `placement` audit entry), US1-2 to US1-5 (the named refusals, the half-open touch, the race ending with one `confirmed` and one `slot_taken`, proven with two concurrent transactions on one lift and on one mechanic), US2-1 to US2-6 (each reason and message in both languages), US3-1 to US3-7 (the spill over a day, a day off, a weekend, the two-interval day with the team off, the refusal of a shorter job past the stretch, a busy later stretch, the March and October clock changes), US4-1 to US4-4 (`needsLift`, the lift-less confirm, `lift_schedule` off), US5-1 to US5-7 (the roles, the 404s and 401, the day range, the lifts flag, a multi-day booking on its second day, `jobStatus` and `segments`), US6-1 and US6-2 (the audiences; the segments deleted by the cancel), the migration's backfill (one segment per confirmed booking, none for the others, the BOOKING constraints gone), the segments deleted on a move to `cancelled` through the transition service, the 30-day limit, a garage with `hours` `{}` with the team on and off; the MCP schedule tool's spec updated to the segment day filter. In Jest, pure: the stretch list of a day and the segmentation (one interval, two intervals, a day off, a holiday, Saturday on and off, DST). No Playwright test here: the end-to-end flow is the second story's (Split).
+
+_From 150-add-booking._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -790,3 +803,8 @@ _From 292-saved-garage-quote._
 - `222-FR-006` — superseded by `389-FR-016` (2026-10-21)
 - `221-FR-016` — superseded by `292-FR-006` (2026-10-23)
 - `389-FR-004` — superseded by `058-FR-012` (2026-10-25)
+- `389-FR-007` — superseded by `150-FR-001` (2026-10-26)
+- `389-FR-002` — superseded by `150-FR-004` (2026-10-26)
+- `389-FR-003` — superseded by `150-FR-006` (2026-10-26)
+- `389-FR-008` — superseded by `150-FR-003` (2026-10-26)
+- `058-FR-012` — superseded by `150-FR-004` (2026-10-26)

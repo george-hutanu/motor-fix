@@ -1,6 +1,6 @@
 ---
 capability: garage-team
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 131-invite-garage-staff
   - 389-confirm-booking-lift-mechanic
@@ -10,6 +10,7 @@ features:
   - 056-mechanic-dialog
   - 102-garage-members
   - 058-mechanic-hours
+  - 150-add-booking
 ---
 
 # Capability: Garage team
@@ -282,9 +283,9 @@ _From 058-mechanic-hours._
 
 _From 058-mechanic-hours._
 
-### 058-FR-011 — One pure rule, in the domain next to the garage hours rule (389-FR-008), MUST answer whether a mechanic is at work over a span: the span lies inside the garage's hours and is on no closed day or legal holiday (389-FR-008), and inside the mechanic's effective stretch for the span's Bucharest weekday (FR-002's default when no hours are set; Saturday only with `worksSaturdays`), and the span's day is in none of the mechanic's days off; and a second pure function MUST answer the mechanic's planned minutes for a Bucharest day (the effective stretch's length, 0 for a day off, a closed day, a holiday or no stretch; 08:00–16:30 reads 510). The load (#133), the schedule and the free slots (#21) read these two functions and nothing else.
+### 150-FR-003 — (389-FR-008 and 058-FR-011 extended) A booking's working stretches MUST be, with `team_mechanics` on, the mechanic's effective stretch for each Bucharest day (058-FR-002, Saturday only with `works_saturdays`, none on a day off, a GARAGE_CLOSED_DAY or a PUBLIC_HOLIDAY) intersected with the garage's opening intervals of that weekday (389-FR-008's `hours`; a day with two intervals gives two stretches); with `team_mechanics` off, the garage's opening intervals on such days. The start MUST lie inside a stretch (at or after its start, before its end), else the refusal names the cause (FR-006). When `durationMinutes` is at most the length of that stretch, the booking MUST end inside it (else `mechanic_unavailable` `ends_early` when the mechanic's own stretch ends first, `outside_hours` `outside_opening` when the garage's interval ends first or the team is off) and is one segment; when `durationMinutes` is longer than that stretch, the booking MUST fill the stretch from its start and continue from the start of each following stretch (the same day's next interval, then the following days, skipping days off, closed days, holidays, weekdays without a stretch and Saturdays without the switch) until its minutes are used, every segment on the same mechanic and the same lift. Stretches are searched at most 30 Bucharest days (the free-slot search horizon of #21) from the start; when the minutes are not used by then the booking is refused 409 `outside_hours`, reason `outside_opening`. Minutes are counted on the instant clock; stretch bounds are Bucharest wall-clock times, so a stretch keeps its wall-clock bounds on the last Sundays of March and October (the change at 03:00 or 04:00 falls outside an 08:00–16:00 stretch, which stays 8 real hours). `duration_minutes` stays the quote's total working minutes (389-FR-002's field, unchanged). The pure parts of this rule (the stretch list of a day, the segmentation) live beside 058-FR-011's rule and share its inputs.
 
-_From 058-mechanic-hours._
+_From 150-add-booking._
 
 ### 058-FR-013 — When the garage's weekly hours are written (the listing's submit and completion, #804), every mechanic of the garage with explicit `working_hours` MUST have each stretch clipped to the new span of that weekday in the same transaction (a day the garage closes, or a stretch with no overlap with the new span, empties the stretch; Saturday closed also sets `worksSaturdays` false), each change audited and evented as FR-010; a mechanic with null hours is untouched. The write MUST return the names of the mechanics changed, for the caller's log.
 
@@ -332,3 +333,4 @@ _From 058-mechanic-hours._
 - `055-FR-004` — superseded by `056-FR-014` (2026-10-24)
 - `389-FR-005` — superseded by `056-FR-015` (2026-10-24)
 - `056-FR-008` — superseded by `058-FR-007` (2026-10-25)
+- `058-FR-011` — superseded by `150-FR-003` (2026-10-26)

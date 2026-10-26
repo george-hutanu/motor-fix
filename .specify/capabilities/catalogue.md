@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -22,6 +22,7 @@ features:
   - 105-brand-list-admin
   - 309-open-now-directions
   - 1368-admin-brand-list
+  - 150-add-booking
 ---
 
 # Capability: Catalogue
@@ -437,6 +438,10 @@ _From 1368-admin-brand-list._
 ### 1368-FR-010 — Tests MUST come before the code (Principle II): component specs for FR-001–FR-008 (rows, states and counts from a seeded list; the fold filter on accent and case; the empty-search line; add and the new row; `brand_exists` in the dialog and at a row; rename, retire and bring back with `seenUpdatedAt`; `stale_value` re-read and notice; the busy row; the read failure and retry), and one Playwright flow: the seeded admin adds a brand on screen; the garage form's brand step offers it unmarked; the garage results filtered by it show the red lamp of a brand with no stance; a visitor types it in Home's brand search and is offered it.
 
 _From 1368-admin-brand-list._
+
+### 150-FR-007 — JOB_TYPE MUST gain `needs_lift` (boolean, not null, default false), a catalogue default set by MotorFix: the migration sets it true for the shipped keys `oil-service`, `front-brakes`, `timing-chain` and `suspension-alignment` and leaves `diagnosis`, `ac-regas` and every garage-proposed job false; the job-type loader (`job-types.ts`) carries the flag so a reload keeps it. The confirm options read (`ConfirmOptionsDto`) MUST return `needsLift`, true when any of the quote's jobs has `needs_lift`. The flag advises the dialog only: the confirm accepts a lift or none whatever it says (FR-004).
+
+_From 150-add-booking._
 
 ## Retired
 
