@@ -1,0 +1,38 @@
+// live video models: a stream from the workshop on a job. Only the live
+// video module writes them.
+
+enum LiveStopReason {
+  job_closed
+  feature_off
+
+  @@map("live_stop_reason")
+}
+
+enum LiveProvider {
+  cloudflare
+  fake
+
+  @@map("live_provider")
+}
+
+// One live session (stoppedAt null) per job: the migration's partial unique
+// index live_session_one_live, which Prisma cannot declare.
+model LiveSession {
+  id              String          @id @default(uuid()) @db.Uuid
+  jobId           String          @map("job_id") @db.Uuid
+  // The job's garage, kept here so a garage's sessions stop in one statement.
+  garageId        String          @map("garage_id") @db.Uuid
+  startedBy       String?         @map("started_by") @db.Uuid
+  startedAt       DateTime        @default(now()) @map("started_at") @db.Timestamptz(3)
+  stoppedAt       DateTime?       @map("stopped_at") @db.Timestamptz(3)
+  stopReason      LiveStopReason? @map("stop_reason")
+  provider        LiveProvider
+  providerInputId String          @map("provider_input_id")
+  job             Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  garage          Garage          @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  starter         Account?        @relation("LiveSessionStarter", fields: [startedBy], references: [id], onDelete: SetNull)
+
+  @@index([garageId])
+  @@index([jobId])
+  @@map("live_session")
+}

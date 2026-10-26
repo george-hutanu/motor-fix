@@ -69,6 +69,8 @@ const EXCEPTIONS: Record<string, string> = {
   'garages/staff-invite/staff-invite.service.ts#link':
     'a mechanic asked to move is told the name of the garage they work at, approved or not',
   'garages/verification/verification.service.ts#autoApprove': OWN_NEW_GARAGE,
+  'live-video/sessions/sessions.service.ts#judge':
+    "locks the row of the job's own garage, after checking the actor works there, so the live media switch waits for the start; it reads nothing of it",
   'quotes/quote-requests/quote-requests.service.ts#assertRouted':
     'reads the garages a driver picked only to refuse the request, naming why a hidden one cannot take it; it sends to none of them',
   'search/garage-search/garage-search.service.ts#after':

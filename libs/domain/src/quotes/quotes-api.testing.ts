@@ -128,7 +128,8 @@ export function quotesApp(modules: (Type | DynamicModule)[] = []) {
   const client = () => app.get<PrismaClient>(PRISMA, { strict: false });
 
   // A provider of the running app, to call a service as a given actor.
-  const provider = <T>(token: new (...args: never[]) => T) => app.get(token);
+  const provider = <T>(token: (new (...args: never[]) => T) | symbol) =>
+    app.get<T>(token);
 
   return { bearer, client, get, post, provider, send, team, world };
 }

@@ -1439,6 +1439,86 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 40,
+      "type": "timeseries",
+      "title": "Live sessions and view tokens",
+      "description": "Live stream starts by outcome (started, refused, provider_failed, unavailable) and viewing links by outcome (issued, refused, ended), per second over 5 minutes. A provider_failed or unavailable rise is the video provider down or not configured: the workshop is told to send photos and clips.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 108
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (rate(motorfix_live_sessions_total{service_name=\"api\", deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "start {{outcome}}"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (rate(motorfix_live_view_tokens_total{service_name=\"api\", deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "view {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Live video provider p95",
+      "description": "How long the live video provider took to open or close an input, 95th percentile over 5 minutes; a call is cut off at 5 s.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 108
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(motorfix_live_provider_duration_seconds_bucket{service_name=\"api\", deployment_environment=\"$env\"}[5m])))",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     }
   ]
 }
