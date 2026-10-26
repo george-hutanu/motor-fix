@@ -14,6 +14,7 @@ import {
   ADMIN_OUTAGE_ALERT_DOWN,
 } from './admin-outage-alert';
 import { ADMIN_RECHECK_DUE } from './admin-recheck-due';
+import { ADMIN_REVIEW_REPORTED_TEMPLATES } from './admin-review-reported';
 import { ADMIN_RULE_APPROVAL_NEEDED } from './admin-rule';
 import {
   ADMIN_VERIFICATION_QUEUED,
@@ -93,6 +94,7 @@ export const TEMPLATES: Registry = {
   'ACCOUNT_EMAIL.password_reset': PASSWORD_RESET,
   ADMIN_CATALOGUE_JOB_PENDING,
   ADMIN_GARAGE_REPORTED,
+  ...ADMIN_REVIEW_REPORTED_TEMPLATES,
   'ADMIN_OUTAGE_ALERT.back': ADMIN_OUTAGE_ALERT_BACK,
   'ADMIN_OUTAGE_ALERT.down': ADMIN_OUTAGE_ALERT_DOWN,
   ADMIN_RECHECK_DUE,

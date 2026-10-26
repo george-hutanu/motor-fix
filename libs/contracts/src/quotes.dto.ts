@@ -312,6 +312,31 @@ export class RequestBookingDto {
   startsAt!: string;
 }
 
+// The driver's row also needs what its cancel turns on: the booking to call,
+// the garage the dialog names, who cancelled it, whether late, and whether
+// its job has started.
+export class DriverRowBookingDto extends RequestBookingDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ type: GarageRefDto })
+  garage!: GarageRefDto;
+
+  @ApiProperty({ enum: CANCELLED_BY_SIDES, nullable: true })
+  cancelledBySide!: CancelledBySide | null;
+
+  @ApiProperty({
+    description:
+      'Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty',
+  })
+  lateCancellation!: boolean;
+
+  @ApiProperty({
+    description: 'The booking’s job exists and has left to do',
+  })
+  jobStarted!: boolean;
+}
+
 export class RequestSummaryDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
@@ -351,12 +376,12 @@ export class RequestSummaryDto {
   @ApiProperty({
     description: 'The request’s newest booking',
     nullable: true,
-    type: RequestBookingDto,
+    type: DriverRowBookingDto,
   })
-  booking!: RequestBookingDto | null;
+  booking!: DriverRowBookingDto | null;
 }
 
-export class RequestDto extends RequestSummaryDto {
+export class RequestDto extends OmitType(RequestSummaryDto, ['booking']) {
   @ApiProperty({ type: [RecipientDto] })
   recipients!: RecipientDto[];
 
