@@ -1,4 +1,8 @@
-import { DECLINE_REASON_TEXTS, isDeclineReason } from '@motor-fix/contracts';
+import {
+  CANCEL_REASON_TEXTS,
+  DECLINE_REASON_TEXTS,
+  isDeclineReason,
+} from '@motor-fix/contracts';
 import {
   formatClock,
   formatDay,
@@ -25,7 +29,8 @@ type Format =
   | 'day'
   | 'date'
   | 'days'
-  | 'reason';
+  | 'reason'
+  | 'cancel_reason';
 
 interface EmailText {
   subject: string;
@@ -104,6 +109,7 @@ const PUSH_BODY = 120;
 // Romanian diacritics force UCS-2, whose single SMS holds 70 characters.
 const SMS = 70;
 const PLACEHOLDER = /\{(\w*)\}/g;
+const SEGMENT = ' · ';
 
 // Romanian numerals ending in 20–99 or 00 take "de": "20 de oferte".
 function count(value: unknown, language: Language): string {
@@ -142,6 +148,27 @@ function longDay(value: unknown, language: Language): string {
   return `${Number(String(value).slice(8))} ${month}`;
 }
 
+// A decline's reason code reads as the clause after the garage's name; a
+// driver's cancel reason as the label the driver picked.
+function reasonText(
+  kind: 'reason' | 'cancel_reason',
+  value: unknown,
+  language: Language,
+): string {
+  if (kind === 'reason') {
+    if (!isDeclineReason(value)) {
+      throw new Error(`unknown decline reason ${String(value)}`);
+    }
+    return DECLINE_REASON_TEXTS[value].clause[language];
+  }
+  if (!Object.hasOwn(CANCEL_REASON_TEXTS, String(value))) {
+    throw new Error(`unknown cancel reason ${String(value)}`);
+  }
+  return CANCEL_REASON_TEXTS[value as keyof typeof CANCEL_REASON_TEXTS].label[
+    language
+  ];
+}
+
 function format(kind: Format, value: unknown, language: Language): string {
   switch (kind) {
     case 'count':
@@ -169,12 +196,9 @@ function format(kind: Format, value: unknown, language: Language): string {
       const day = formatDay(value, language);
       return day === '—' ? day : `${day}, ${formatClock(value)}`;
     }
-    // A decline's reason code, as the clause after the garage's name.
     case 'reason':
-      if (!isDeclineReason(value)) {
-        throw new Error(`unknown decline reason ${String(value)}`);
-      }
-      return DECLINE_REASON_TEXTS[value].clause[language];
+    case 'cancel_reason':
+      return reasonText(kind, value, language);
     default:
       return String(value);
   }
@@ -255,8 +279,11 @@ function renderText(
   switch (channel) {
     case 'email': {
       const mail = text as EmailText;
-      const subject = fill(mail.subject);
-      const lines = mail.lines.map(fill);
+      // A subject is one line, whatever a filled-in name holds.
+      const subject = fill(mail.subject).replace(/[\r\n]+/g, ' ');
+      // A line made of an optional value alone, such as a note, is left out
+      // when that value is empty.
+      const lines = mail.lines.map(fill).filter((line) => line !== '');
       const button = {
         href: safeHref(value(mail.button.link), 'button', fail),
         label: fill(mail.button.label),
@@ -296,9 +323,21 @@ function renderText(
       const whatsapp = text as WhatsAppText;
       return { name: whatsapp.name, params: whatsapp.slots.map(fill) };
     }
+    case 'bell':
+      return bellLine(text as string, fill);
     default:
       return fill(text as string);
   }
+}
+
+// A bell line is segments joined by " · "; a segment whose value is empty,
+// such as a note the driver did not write, is left out with its separator.
+function bellLine(source: string, fill: (source: string) => string): string {
+  return source
+    .split(SEGMENT)
+    .map(fill)
+    .filter((part) => part !== '')
+    .join(SEGMENT);
 }
 
 // The push body, its `shorten` value cut at a whole character and closed
@@ -331,7 +370,9 @@ function pushBody(
 const BY_PARAM: Record<string, [param: string, values: ReadonlySet<unknown>]> =
   {
     ADMIN_VERIFICATION_QUEUED: ['item', new Set(['documents'])],
+    BOOKING_CANCELLED: ['variant', new Set(['driver', 'driver_late'])],
     GARAGE_REPORT_DECIDED: ['decision', REPORT_DECISION_SET],
+    REQUEST_CANCELLED: ['reason', new Set(['account_closed'])],
     VERIFICATION_RESULT: ['decision', DECISIONS],
   };
 
@@ -342,6 +383,8 @@ const TWO_WAY = new Map<string, [param: string, first: string, second: string]>(
     ['ADMIN_OUTAGE_ALERT', ['state', 'back', 'down']],
     ['BOOKING_LAPSED', ['side', 'garage', 'driver']],
     ['CATALOGUE_JOB_DECIDED', ['decision', 'approved', 'rejected']],
+    ['QUOTE_EXPIRED', ['side', 'garage', 'driver']],
+    ['REQUEST_EXPIRED', ['side', 'garage', 'driver']],
     ['REVIEW_POSTED', ['source', 'profile', 'job']],
   ],
 );
@@ -375,7 +418,7 @@ const ACCOUNT_PURPOSES = new Set([
   'account_suspended',
 ]);
 
-// A suspension with no support address set names none (FR-022).
+// A suspension with no support address set names none.
 function accountEmailName(params: Params): string {
   const purpose = params['purpose'];
   if (purpose === 'account_suspended' && typeof params['support'] !== 'string')

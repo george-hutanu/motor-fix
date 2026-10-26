@@ -597,6 +597,95 @@ describe('the ITP reminder texts', () => {
   });
 });
 
+// @traces 091-FR-012 091-FR-016
+describe('the oil service reminder texts', () => {
+  const CARS = 'https://motorfix.test/app/driver/cars';
+  const params = { car: 'BMW 320d', cars: CARS, dueOn: '2027-01-01', left: 30 };
+
+  it('names the car, the estimated day and the days left in the bell', () => {
+    expect(bellText('SERVICE_DUE', 'ro', params)).toBe(
+      'Schimbul de ulei la BMW 320d este estimat pe 1 ianuarie 2027, peste 30 de zile.',
+    );
+    expect(bellText('SERVICE_DUE', 'en', params)).toBe(
+      'The oil service on your BMW 320d is estimated for 1 January 2027, in 30 days.',
+    );
+  });
+
+  it.each([
+    [1, 'ro', 'peste o zi.'],
+    [7, 'ro', 'peste 7 zile.'],
+    [0, 'ro', 'astăzi.'],
+    [1, 'en', 'in 1 day.'],
+    [7, 'en', 'in 7 days.'],
+    [0, 'en', 'today.'],
+  ])('counts %p days left in %s', (left, language, ending) => {
+    expect(bellText('SERVICE_DUE', language, { ...params, left })).toMatch(
+      new RegExp(`${ending.replace('.', '\\.')}$`),
+    );
+  });
+
+  it('sends the e-mail with the sentence, the advice and Mașinile mele', () => {
+    const ro = render('SERVICE_DUE', 'email', 'ro', params);
+    expect(ro.subject).toBe('Schimbul de ulei este estimat pe 1 ianuarie 2027');
+    expect(ro.text).toContain(
+      'Schimbul de ulei la BMW 320d este estimat pe 1 ianuarie 2027, peste 30 de zile.',
+    );
+    expect(ro.text).toContain('Programează schimbul de ulei din timp.');
+    expect(ro.text).toContain(`Vezi mașinile mele: ${CARS}`);
+    const en = render('SERVICE_DUE', 'email', 'en', params);
+    expect(en.subject).toBe('Your oil service is estimated for 1 January 2027');
+    expect(en.text).toContain('Book the oil service in time.');
+    expect(en.text).toContain(`See my cars: ${CARS}`);
+  });
+
+  it('sends the push with the sentence, the advice and the link to the cars', () => {
+    expect(render('SERVICE_DUE', 'push', 'en', params)).toEqual({
+      body: 'The oil service on your BMW 320d is estimated for 1 January 2027, in 30 days. Book the oil service in time.',
+      link: CARS,
+      title: 'Your oil service is coming up',
+    });
+    expect(render('SERVICE_DUE', 'push', 'ro', params).body).toBe(
+      'Schimbul de ulei la BMW 320d este estimat pe 1 ianuarie 2027, peste 30 de zile. Programează schimbul de ulei din timp.',
+    );
+  });
+
+  it('keeps the SMS within 70 characters, naming no car', () => {
+    for (const language of ['ro', 'en']) {
+      const sms = render('SERVICE_DUE', 'sms', language, params) as string;
+      expect(sms.length).toBeLessThanOrEqual(70);
+      expect(sms).not.toContain('BMW');
+    }
+    expect(render('SERVICE_DUE', 'sms', 'ro', params)).toBe(
+      'MotorFix: schimbul de ulei se apropie. Detalii în aplicație.',
+    );
+  });
+
+  it('gives WhatsApp its approved name per language, with no slots', () => {
+    expect(render('SERVICE_DUE', 'whatsapp', 'ro', params)).toEqual({
+      name: 'motorfix_service_due_ro',
+      params: [],
+    });
+    expect(render('SERVICE_DUE', 'whatsapp', 'en', params)).toEqual({
+      name: 'motorfix_service_due_en',
+      params: [],
+    });
+  });
+
+  it('never shows the plate', () => {
+    const withPlate = { ...params, plate: 'B 123 ABC' };
+    expect(bellText('SERVICE_DUE', 'ro', withPlate)).not.toContain('B 123 ABC');
+    expect(render('SERVICE_DUE', 'email', 'en', withPlate).text).not.toContain(
+      'B 123 ABC',
+    );
+  });
+
+  it('sends the generic e-mail for a row without its values', () => {
+    expect(
+      render('SERVICE_DUE', 'email', 'ro', { app: APP, car: 'BMW 320d' }),
+    ).toEqual(render('GENERIC', 'email', 'ro', { app: APP }));
+  });
+});
+
 describe('the push texts of the test messages', () => {
   it.each([
     ['TEST_MESSAGE', 'en', 'MotorFix test message'],

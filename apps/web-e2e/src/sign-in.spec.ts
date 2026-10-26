@@ -63,14 +63,19 @@ test.describe('signing in for real @seeded', () => {
     await expect(dialog(page)).toHaveCount(0);
   });
 
-  test('a receptionist sees no settings, prices or team', async ({ page }) => {
+  // @traces 102-FR-004
+  test('a receptionist sees the profile but no prices or team', async ({
+    page,
+  }) => {
     await ready(page, '/ro');
     await openFromHeader(page);
     await signIn(page, ACCOUNTS.receptionist);
 
     const menu = page.getByRole('navigation', { name: 'Meniu' });
-    await expect(menu.getByRole('link', { name: 'Programări' })).toBeVisible();
-    for (const hidden of ['Mecanici', 'Prețuri', 'Profilul service‑ului']) {
+    for (const shown of ['Programări', 'Recenzii', 'Profilul service‑ului']) {
+      await expect(menu.getByRole('link', { name: shown })).toBeVisible();
+    }
+    for (const hidden of ['Mecanici', 'Prețuri']) {
       await expect(menu.getByRole('link', { name: hidden })).toHaveCount(0);
     }
   });

@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 194-email-sending
   - 195-message-templates
@@ -53,6 +53,10 @@ features:
   - 140-account-delete-export
   - 094-itp-reminders
   - 074-garage-reviews
+  - 1257-quote-reminders
+  - 091-oil-service-due
+  - 223-request-act-notifications
+  - 1258-driver-cancel
 ---
 
 # Capability: Notifications
@@ -765,10 +769,6 @@ _From 279-email-inbox._
 
 _From 069-report-decision._
 
-### 1351-FR-008 — The worker MUST, every day at 09:00 Europe/Bucharest through the existing daily mechanism (bucharestDaily), count the due garages and, when the count is above zero, queue one ADMIN_RECHECK_DUE per admin with the count; once per day whatever restarts happen. With a count of zero it MUST send nothing. The type's catalogue entry is timer, e-mail and push (narrowed from the proposed e-mail, push and WhatsApp), mutable.
-
-_From 1351-rar-monthly-recheck._
-
 ### 1351-FR-009 — The system MUST carry a Romanian and an English ADMIN_RECHECK_DUE template for e-mail and push reading "{n} service-uri de reverificat în registrul RAR" / "{n} garages to re-check in the RAR register" ("1 service" / "1 garage" for one), linking to the admin list, holding no other data, and passing the existing template checks (195-FR-009).
 
 _From 1351-rar-monthly-recheck._
@@ -792,13 +792,13 @@ _From 389-confirm-booking-lift-mechanic._
 
 _From 428-close-on-account-closed._
 
-### 428-FR-010 — The notifications module MUST react to `booking.cancelled` with reason `driver_account_closed` with a fan-out that sends BOOKING_CANCELLED once to every owner and receptionist of the booking's garage and to the booking's mechanic when that mechanic has an account, keyed by the outbox event id; the driver is not told. A `booking.cancelled` with another reason (the cancellation stories' own) is left to its owning story.
+### 1258-FR-005 — The notifications module MUST react to `booking.cancelled` with side `driver` (modifying 428-FR-010, whose fan-out today handles `driver_account_closed` only and logs every other reason as not its own) by sending BOOKING_CANCELLED once per outbox event to every owner and receptionist of the booking's garage and to the booking's mechanic when that mechanic has an account; the driver is not told (the driver did it). The type keeps its catalogue entry (event; e-mail, push, WhatsApp; `bookings` group; always sent, so its e-mail is locked and push and WhatsApp follow the recipient's choices), and quiet hours do not hold it: a booking change goes at any time.
 
-_From 428-close-on-account-closed._
+_From 1258-driver-cancel._
 
-### 428-FR-011 — REQUEST_CANCELLED and BOOKING_CANCELLED render through the existing templates; where the owning story (#147 for REQUEST_CANCELLED; #1258 and #203 for BOOKING_CANCELLED) has not written texts yet, the generic bell and e-mail text fills in, as 195-FR-010 allows. The garages are told at any time: quiet hours do not hold a booking change.
+### 223-FR-005 — REQUEST_CANCELLED MUST render through FR-003's template from the fan-out's existing `driver` and `reason` params; the generic text no longer fills in for it (428-FR-011 keeps the generic fallback for BOOKING_CANCELLED only).
 
-_From 428-close-on-account-closed._
+_From 223-request-act-notifications._
 
 ### 414-FR-009 — On every `catalogue_job.decided` event, the proposing garage's owner MUST get CATALOGUE_JOB_DECIDED (already registered: e-mail, push and bell; mutable, so a muted owner keeps the bell entry only) from a template in the templates folder with two variants: approved — bell and push "Lucrarea „{job}” a fost aprobată și apare pe profilul tău." / "The job "{job}" was approved and is on your profile.", e-mail subject "Lucrarea {job} a fost aprobată" / "The job {job} was approved"; rejected — "Lucrarea „{job}” a fost respinsă: {reason}" / "The job "{job}" was rejected: {reason}", e-mail subject "Lucrarea {job} a fost respinsă" / "The job {job} was rejected". `{job}` is the catalogue's Romanian name in Romanian and English name in English (the proposed text on a rejection, where both are the same); the button and link open Prețuri; the template carries its example values. No notice goes out when the garage no longer exists; the garage's other staff get none (the staff list already says owner). The rejection reason is admin-typed text: every channel renders it as plain, escaped text and never as markup. The push body is limited to 120 characters, so the push is the short form, "„{job}” e acum pe profilul tău." / "„{job}”: motivul e în Prețuri." (and their English twins), the reason left to the bell and the e-mail, as DOCUMENT_REFUSED does. A `{job}` that would take the push body past 120 characters (UTF-16 units) is shortened with "…" there; the bell and the e-mail carry it whole.
 
@@ -909,6 +909,62 @@ _From 142-notification-channels._
 
 _From 142-notification-channels._
 
+### 223-FR-001 — The system MUST carry a QUOTE_LOST template in Romanian and English for the bell, push, e-mail and WhatsApp, passing the existing template check: bell and push "Clientul a ales alt service." / "The customer chose another garage.", the e-mail with the same line and a link to the garage's requests view (the one garage requests screen, `/app/garage/requests`; no separate Oferte trimise route exists), the WhatsApp a template name that ST-1278 submits to Brevo for approval (the name is declared here, the approval is out of scope); the template uses no plate, phone or driver value; the bell and e-mail may name the car (brand and model) so the garage knows which request it was.
+
+_From 223-request-act-notifications._
+
+### 223-FR-002 — `quote.closed` MUST have one registered consumer in the notifications worker which, per event, builds one QUOTE_LOST per closed quote (subject the quote) for each owner and receptionist of that quote's garage (the catalogue's staff list, never a mechanic), with the garage as the message's garage so each person's own mute for that garage applies per channel (198-FR-009), on the channels the catalogue allows (e-mail, push, WhatsApp; never SMS), WhatsApp only while the garage's `whatsapp` feature is on, push falling back to e-mail for a person with no device; keyed by the existing (type, recipient, channel, outbox event id) dedupe so a retry or a second relay builds nothing twice; a failed run is retried with exponential backoff like the other fan-outs.
+
+_From 223-request-act-notifications._
+
+### 223-FR-003 — The system MUST carry a REQUEST_CANCELLED template in Romanian and English for the bell, push, e-mail and WhatsApp, passing the template check, in two wordings picked by the `reason` param: `account_closed` renders "Cererea a fost închisă." / "The request was closed."; any other value renders "{driver} a anulat cererea." / "{driver} cancelled the request." with `driver` the driver's short name ("Andrei M."); the e-mail links to the same garage requests view; no plate or phone value.
+
+_From 223-request-act-notifications._
+
+### 223-FR-006 — The new consumer MUST be registered where the other fan-outs are (the notifications module, the worker's consumer list, the domain export) and its queue listed in the observability inventory with its panel and alert, as every queue is.
+
+_From 223-request-act-notifications._
+
+### 223-FR-007 — *(verification)* REQUEST_RECEIVED, QUOTE_RECEIVED and QUOTE_ACCEPTED MUST keep their shipped templates and fan-outs unchanged, and `request.created`, `quote.sent` and `quote.accepted` MUST each have exactly one notifications fan-out consumer in the worker (another kind of consumer, such as the booking timers on `quote.accepted`, may listen beside it).
+
+_From 223-request-act-notifications._
+
+### 223-FR-008 — *(verification)* A garage member's per-channel mute of REQUEST_RECEIVED for a garage MUST silence that channel for both REQUEST_RECEIVED and REQUEST_REMINDER of that garage; the other channels follow their own switches and the bell row is written whatever is muted.
+
+_From 223-request-act-notifications._
+
+### 223-FR-009 — *(verification)* A driver who muted the group Ofertă nouă MUST get QUOTE_RECEIVED on no outside channel; the bell row is written and the request's quotes still show in the driver's panel.
+
+_From 223-request-act-notifications._
+
+### 223-FR-010 — *(verification)* While a garage's `whatsapp` feature is off, none of its staff MUST get WhatsApp for REQUEST_RECEIVED, QUOTE_ACCEPTED, QUOTE_LOST or REQUEST_CANCELLED (QUOTE_RECEIVED goes to the driver, whose WhatsApp follows his own choice); e-mail and push are unaffected.
+
+_From 223-request-act-notifications._
+
+### 223-FR-011 — *(verification)* None of the five types MUST ever be sent by SMS, and no rendered text of them MUST hold the car's number plate or the driver's phone; the driver is named by first name and surname initial.
+
+_From 223-request-act-notifications._
+
+### 223-FR-012 — *(verification)* QUOTE_LOST and REQUEST_CANCELLED MUST stay urgent: one built between 22:00 and 08:00 Europe/Bucharest goes at once, not held to 08:00.
+
+_From 223-request-act-notifications._
+
+### 223-FR-013 — *(verification)* The same event delivered twice MUST leave each recipient with one row per type, subject and channel and send no second message, for QUOTE_LOST and REQUEST_CANCELLED.
+
+_From 223-request-act-notifications._
+
+### 223-FR-014 — *(verification)* When the e-mail provider fails for good, the `email` row of QUOTE_LOST or REQUEST_CANCELLED MUST be `failed` after the existing retries and the `in_app` row MUST remain and show in the bell.
+
+_From 223-request-act-notifications._
+
+### 223-FR-015 — *(verification)* A recipient whose language is English MUST get QUOTE_LOST and REQUEST_CANCELLED in English on every channel, including the bell.
+
+_From 223-request-act-notifications._
+
+### 223-FR-016 — Tests MUST exist before the code (Principle II), in Jest: the two templates render in both languages on every channel, both REQUEST_CANCELLED wordings by `reason`, and the template check passes with no plate or phone value (FR-001, FR-003, FR-005, FR-011, FR-015); the `quote.closed` fan-out's recipients per quote (owner and receptionist yes, mechanic and the winning garage no), its muted channel, the garage `whatsapp` off, no SMS, no second row on a replayed event, the urgent flag (FR-002, FR-010, FR-012, FR-013); the account-closed audience with a waiting, a quoted-waiting, a declined and a quoted-ended recipient on real PostgreSQL (FR-004); the single consumer per earlier event, the REQUEST_RECEIVED mute covering REQUEST_REMINDER, the driver's Ofertă nouă mute, and the failed e-mail with the surviving bell row (FR-007, FR-008, FR-009, FR-014); each test file carrying a whole-line `// @traces` comment naming its `223-FR-<n>` ids.
+
+_From 223-request-act-notifications._
+
 ### 094-FR-010 — A DUE_ITP MUST go on the channel the driver chose for DUE_ITP (e-mail, push, SMS or WhatsApp); an SMS beyond the driver's 5 SMS in the calendar month (Europe/Bucharest) MUST go by WhatsApp and count as the fallback it is; a push with no device that allows push MUST go by e-mail; an SMS or WhatsApp with no confirmed phone MUST go by e-mail.
 
 _From 094-itp-reminders._
@@ -928,6 +984,46 @@ _From 074-garage-reviews._
 ### 074-FR-013 — REVIEW_POSTED MUST be sent at most once per owner per review: the outbox event id and the recipient key the notification so a retry or a second relay writes nothing more; when the owner's reviews group is off at send time nothing is sent; when the review no longer exists or the garage has no owner the job logs it and ends without writing. The bell row of a REVIEW_POSTED MUST open the garage's Recenzii view.
 
 _From 074-garage-reviews._
+
+### 1257-FR-002 — REQUEST_REMINDER MUST go to the people REQUEST_RECEIVED goes to for that garage (owners, receptionists and the mechanics allowed to answer quotes), on the catalogue's channels, with each person's mute of REQUEST_RECEIVED covering it (the shipped mapping, `rowsType` in libs/domain/src/notifications/preferences/preferences.ts); a garage whose every recipient is muted gets no outside message (the bell entry is written, as `NotificationsService` mutes outside channels only), and the recipient's reminder timestamp MUST still be set so it is never retried.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-003 — REQUEST_REMINDER MUST stay a non-urgent type in the catalogue, so one built between 22:00 and 08:00 Europe/Bucharest is held and sent at 08:00 by the shipped quiet-hours rule; the timer itself is set at the reminder's own time.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-005 — Each garage whose recipient was expired by FR-004 MUST get one REQUEST_EXPIRED (owners and receptionists), and the driver of a request closed `expired` by FR-004 or FR-007 MUST get one REQUEST_EXPIRED whose link opens the driver's request page (`/app/driver/requests/<id>`) and whose text carries the call to action "Cere oferte de la alte service-uri" / "Ask other garages for quotes"; both through the shipped notification service, on the catalogue's channels, with the person's mute honoured and the quiet-hours rule of each type's shipped catalogue flag (no new flag is added; a type the catalogue marks urgent goes at once).
+
+_From 1257-quote-reminders._
+
+### 1257-FR-008 — A quote expired by FR-006 MUST tell the driver and the garage's owners and receptionists with one QUOTE_EXPIRED each, through the shipped notification service, on the catalogue's channels, with the person's mute honoured; a quote the lapse path expires (reason `booking_lapsed` or `held_past_validity`) is not told again here (BOOKING_LAPSED already tells both sides).
+
+_From 1257-quote-reminders._
+
+### 1257-FR-009 — REQUEST_REMINDER, REQUEST_EXPIRED and QUOTE_EXPIRED MUST have registered templates in Romanian and English for e-mail, push and WhatsApp that name the car and the garage (the driver's REQUEST_EXPIRED names the request's car and carries FR-005's call to action and link; the garage's name the car and the driver's short name), hold no personal data beyond that, and pass the existing template tests; the bell entry of each MUST open the request on the reader's side (the driver's request page); the garage's bell entry carries no link, as the shipped bell gives none to any garage row (`bell.service.ts`, REQUEST_RECEIVED included).
+
+_From 1257-quote-reminders._
+
+### 091-FR-011 — The daily run (09:00 Europe/Bucharest) MUST send SERVICE_DUE for a `service` reminder exactly as it sends DUE_ITP (094-FR-001, 002, 004, 005, 010, 011, 012): 30 and 7 days before `due_on`, once each per reminder id, caught up after a missed run, none for a removed car or a deleted account, on the channel chosen for SERVICE_DUE with the SMS cap and WhatsApp fallback, muted by the Scadențe group (the bell row still written), non-urgent so an outside send in quiet hours waits until 08:00, retried on the queue's own schedule.
+
+_From 091-oil-service-due._
+
+### 091-FR-012 — SERVICE_DUE MUST have templates in Romanian and English for e-mail, push, SMS, WhatsApp and the bell, passing the templates' CI check (195-FR-009): the bell, the push and the e-mail read "Schimbul de ulei la <brand> <model> este estimat pe <long date>, peste <n> zile." / "The oil service on your <brand> <model> is estimated for <long date>, in <n> days." with the days rendered as 094-FR-013 renders them (Romanian "o zi" / "de zile", "astăzi" / "today" on the day itself); the e-mail and the push add "Programează schimbul de ulei din timp." / "Book the oil service in time." and link to Mașinile mele; the SMS keeps a text within 70 characters that names no car; the WhatsApp template renders its approved name and ordered parameters; no text shows the plate. The reminder MUST hand the message the car's brand and model, the due date and the days left (094-FR-014's parameters), so every channel renders.
+
+_From 091-oil-service-due._
+
+### 091-FR-016 — Every SERVICE_DUE text this story sends MUST exist in both Romanian and English; the kilometres and dates in them MUST use the recipient's formats.
+
+_From 091-oil-service-due._
+
+### 1258-FR-006 — BOOKING_CANCELLED MUST get the driver-cancel texts this story owns (428-FR-011), in Romanian and English, from a template in the templates folder with its example values: bell and push "<driver> a anulat programarea · <car> · <slot>" / "<driver> cancelled the booking · <car> · <slot>", e-mail subject "Programare anulată: <car>, <slot>" / "Booking cancelled: <car>, <slot>", the e-mail body naming the driver (short name), the car, the slot, the reason's label ("Mi s-au schimbat planurile", "Am găsit alt service", "S-a rezolvat problema", "Altceva" / "Plans changed", "Found another garage", "Problem solved", "Other"), the note when there is one (rendered as plain, escaped text, never as markup; the bell carries it whole, the push never), and the line "Anulare târzie (sub 2 ore înainte), fără penalizare." / "Late cancellation (under 2 hours before), no penalty." when `late` is true; opening one lands on Oferte trimise. The account-closed variant's text is unchanged.
+
+_From 1258-driver-cancel._
+
+### 1258-FR-007 — REQUEST_CANCELLED for a driver's cancel MUST reach every owner and receptionist of each recipient garage once through the existing `request.cancelled` fan-out (428-FR-009), with `reason` `driver`; the fan-out needs no change beyond the test for this reason. Its texts stay #147's: until that story writes them the generic bell and e-mail text fills in, as 428-FR-011 allows.
+
+_From 1258-driver-cancel._
 
 ## Retired
 
@@ -953,5 +1049,7 @@ _From 074-garage-reviews._
 - `138-FR-001` — superseded by `142-FR-001` (2026-10-24)
 - `196-FR-007` — superseded by `142-FR-005` (2026-10-24)
 - `138-FR-012` — superseded by `142-FR-007` (2026-10-24)
+- `428-FR-011` — superseded by `223-FR-005` (2026-10-25)
 - `032-FR-006` — superseded by `094-FR-013` (2026-10-25)
 - `032-FR-007` — superseded by `094-FR-014` (2026-10-25)
+- `428-FR-010` — superseded by `1258-FR-005` (2026-10-25)

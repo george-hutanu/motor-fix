@@ -67,6 +67,7 @@ const car = (id: string, model: string, year: number): CarDto => ({
   plate: null,
   rcaUntil: null,
   rovinietaUntil: null,
+  serviceDueOn: null,
   updatedAt: '2026-10-01T09:00:00.000Z',
   year,
 });

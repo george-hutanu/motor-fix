@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 201,
+    "count": 203,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -289,7 +289,7 @@
         "worker-jobs-failed"
       ],
       "story": "ST-881",
-      "reason": "its 09:00 Europe/Bucharest daily job also runs the listing draft sweep and the RAR re-check count, which tells every admin once a day through ADMIN_RECHECK_DUE and logs one RecheckDue line per run; since ST-68 the same daily job runs the yearly documents compliance step before the RAR re-check: it sends DOCUMENT_DUE at 30, 7 and 0 days and turns a cycle overdue the day after its due date with DOCUMENT_OVERDUE (both always e-mail and push), writes document.due and document.overdue events, counts motorfix_document_cycle_total{step} and refreshes the motorfix_documents_overdue gauge, logs one DocumentCycle line per run (day, reminders per stage, cycles turned overdue) and one on its final failure; shown on the worker dashboard's Documente anuale panel; a failed run fires worker-jobs-failed within 15 minutes, as any reminders job does"
+      "reason": "its 09:00 Europe/Bucharest daily job also runs the listing draft sweep and the RAR re-check count, which tells every admin once a day through ADMIN_RECHECK_DUE and logs one RecheckDue line per run; since ST-68 the same daily job runs the yearly documents compliance step before the RAR re-check: it sends DOCUMENT_DUE at 30, 7 and 0 days and turns a cycle overdue the day after its due date with DOCUMENT_OVERDUE (both always e-mail and push), writes document.due and document.overdue events, counts motorfix_document_cycle_total{step} and refreshes the motorfix_documents_overdue gauge, logs one DocumentCycle line per run (day, reminders per stage, cycles turned overdue) and one on its final failure; shown on the worker dashboard's Documente anuale panel; a failed run fires worker-jobs-failed within 15 minutes, as any reminders job does; since ST-91 the same run sends SERVICE_DUE from each car's `service` row, due on the day the car's odometer readings estimate for its next service (the cars module's `odometer_reading` table, written in the cars endpoints' own transaction, carries no metric of its own), through the notifications pipeline and its metrics, logs and traces"
     },
     {
       "kind": "queue",
@@ -482,6 +482,19 @@
     },
     {
       "kind": "queue",
+      "name": "quote-lost",
+      "source": "libs/domain/src/notifications/quote-lost/quote-lost.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one QuoteLost log line per job naming the request id, how many lost quotes and how many staff were told; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-223"
+    },
+    {
+      "kind": "queue",
       "name": "quote-received",
       "source": "libs/domain/src/notifications/quote-received/quote-received.fan-out.ts",
       "dashboard": "motorfix-queues",
@@ -639,6 +652,26 @@
       "alerts": "none",
       "reason": "a link the admin opens in a new tab to look a company up by hand; neither the browser app nor the API calls it, and the check the admin records is counted by motorfix_verification_checks_total",
       "story": "ST-203"
+    },
+    {
+      "kind": "outside-service",
+      "name": "apple-maps",
+      "host": "maps.apple.com",
+      "source": "apps/web/src/app/public/garage-profile/where-section/directions.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "the garage profile's directions link on an Apple device, which the driver's maps app opens; neither the browser app nor the API calls it, and the tap is the consent-gated directions_opened analytics event",
+      "story": "ST-1366"
+    },
+    {
+      "kind": "outside-service",
+      "name": "google-maps",
+      "host": "www.google.com",
+      "source": "apps/web/src/app/public/garage-profile/where-section/directions.ts",
+      "dashboard": "none",
+      "alerts": "none",
+      "reason": "the garage profile's directions link on a computer, opened in a new tab; neither the browser app nor the API calls it, and the tap is the consent-gated directions_opened analytics event",
+      "story": "ST-1366"
     },
     {
       "kind": "outside-service",
@@ -1558,6 +1591,19 @@
       "story": "ST-290, ST-291"
     },
     {
+      "kind": "endpoint",
+      "name": "cars",
+      "source": "libs/domain/src/cars/my-cars/cars/cars.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/cars and /api/v1/cars/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "POST, GET, PATCH and DELETE of the driver's cars show on the request-duration metric by route and status code; since ST-91 an add and each odometer change write a row of the cars module's odometer_reading table in the same transaction, nextServiceKm is refused with next_service_not_above_odometer or next_service_too_far as a 400, and every car answer carries serviceDueOn; each write is an audit row and a car.added, car.updated or car.removed event, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-91"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_garage_reports_total",
       "source": "libs/domain/src/garages/verification/garage-reports/garage-reports.service.ts",
@@ -2159,6 +2205,31 @@
     },
     {
       "kind": "queue",
+      "name": "request-timers",
+      "source": "libs/domain/src/quotes/request-timers/request-timers.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed",
+        "booking-lapse-sweep-late"
+      ],
+      "reason": "carries the relay request and quote events, each sent request day-2 and day-5 reminders and its day-7 expiry, each sent quote expiry, and the request.expired and quote.expired notices, with the 5-minute sweep for a lost timer; one RequestTimers log line per fired timer naming the request or quote id and the step; steps counted by motorfix_request_timers_total; BullMQ queue metrics cover depth and failures; booking-lapse-sweep-late, shared with the booking lapse under the free tier alert cap, fires when the sweep runs more than 10 in an hour (lost timers)",
+      "story": "ST-1257"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_request_timers_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "booking-lapse-sweep-late"
+      ],
+      "reason": "counts what the request and quote timers did by step (reminder_sent, reminder_muted, recipient_expired, request_closed, quote_expired, quote_held) and whether the timer or the sweep ran it, with no identifiers; a rising sweep share means lost timers, which booking-lapse-sweep-late watches with the booking lapses",
+      "story": "ST-1257"
+    },
+    {
+      "kind": "queue",
       "name": "account-closed",
       "source": "libs/domain/src/quotes/account-closed/account-closed.module.ts",
       "dashboard": "motorfix-queues",
@@ -2460,6 +2531,41 @@
       "alerts": "none",
       "reason": "counts each report a garage owner tries by outcome (the nine reasons, forbidden, already_reported, already_kept, validation_failed) with no identifiers; a refusal is the owner's state, not an outage; the api-error-rate rule covers the endpoint that reports it",
       "story": "ST-76"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_cancellations_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts the cancels drivers try by kind (request, booking), outcome (cancelled, refused: the 409s) and late (true, false), with no identifiers, with one RequestCancel or BookingCancel log line per try naming the request or booking id; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "story": "ST-1258"
+    },
+    {
+      "kind": "endpoint",
+      "name": "request-cancel",
+      "source": "libs/domain/src/quotes/cancel-request/cancel-request.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/quote-requests/:id/cancel",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "one RequestCancel log line per cancel naming the request id and the outcome; the count by outcome is the motorfix_cancellations_total entry",
+      "story": "ST-1258"
+    },
+    {
+      "kind": "endpoint",
+      "name": "booking-cancel",
+      "source": "libs/domain/src/quotes/cancel-booking/cancel-booking.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/bookings/:id/cancel",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "one BookingCancel log line per cancel naming the booking id, the reason and whether it came late, never the note; the count by outcome and lateness is the motorfix_cancellations_total entry",
+      "story": "ST-1258"
     }
   ]
 }

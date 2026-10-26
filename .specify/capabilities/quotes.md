@@ -20,7 +20,10 @@ features:
   - 009-copy-voice-analytics
   - 428-close-on-account-closed
   - 292-saved-garage-quote
+  - 223-request-act-notifications
   - 058-mechanic-hours
+  - 1257-quote-reminders
+  - 1258-driver-cancel
 ---
 
 # Capability: Quotes
@@ -121,14 +124,6 @@ _From 221-quote-request._
 
 _From 049-garage-suspension._
 
-### 221-FR-008 — The send MUST be idempotent per driver: a QUOTE_REQUEST stores the key (a new column, unique with the driver), and a second call with the same key and driver MUST answer the same status and body as the first without writing anything; a different key creates a new request. The replay is by key alone: a second call with the same key and a different body still answers the first answer and writes nothing. A refused call (400, 404, 429) stores nothing, so its key stays free and a retry with it is judged afresh. The web app sends the key the form-saving helper issues per dialog, and a retry after a network failure reuses it.
-
-_From 221-quote-request._
-
-### 221-FR-009 — A driver MUST be able to send at most 20 requests per Bucharest calendar day; the 21st MUST be refused with 429 `too_many_requests` and nothing written. The count MUST read the driver's stored requests of that day in the same transaction as the insert, after locking the driver's account row and after the idempotency look-up (a replay answers its first answer, never 429) (PostgreSQL is the truth; no Redis counter), and the limit MUST be a named constant of the `quotes` config module (220-FR-010).
-
-_From 221-quote-request._
-
 ### 221-FR-010 — A successful send MUST write, in one transaction: one QUOTE_REQUEST (driver, car, car snapshot copied from the car: brand name, model, year, fuel, engine; description; status `sent`; `created_at`; `expires_at` = `created_at` + REQUEST_VALIDITY_DAYS Bucharest days, as 220-FR-001; the idempotency key), one REQUEST_JOB per job type in the order of `jobTypeIds` (position 1..n), one REQUEST_RECIPIENT per garage with status `waiting` and its `source`; the audit entry of FR-012 and the event of FR-011. When any write fails, nothing of the send remains.
 
 _From 221-quote-request._
@@ -161,10 +156,6 @@ _From 292-saved-garage-quote._
 
 _From 221-quote-request._
 
-### 221-FR-018 — The two new endpoints MUST be listed in `infra/observability/inventory.json`; the send (a product action) MUST emit one counter of requests sent with the outcome (`sent`, `cannot_receive`, `limit`, `invalid`) and the recipients count as a histogram or attribute, its dashboard panel added by the dashboards story (ST-879) while the repository holds no dashboard file (the inventory entry records `dashboard: none` with that reason), and one structured log line per send with the outcome and the request id, never the description, the plate or a phone (SC-006); the PR's Observability section names them and says why no alert is added (no agreed threshold yet) or adds one.
-
-_From 221-quote-request._
-
 ### 221-FR-019 — Tests MUST cover, in Jest on real PostgreSQL where rows are written: routing for a refused brand, no brand row, fuel not ticked, some jobs ticked, no job ticked, a suspended garage, a request with no job; idempotency (two calls with one key, one request; a different key, two); six garage ids, zero, and a repeated id refused; `source` stored per recipient as given; an unconfirmed e-mail may send; no job and no description, a 10-character floor, a 1,001-character description, another driver's car (404), a removed car (404), a garage-role actor (404); the 20-a-day limit at the boundary; the audit entry and the outbox event written in the same transaction and both absent after a forced rollback; the candidates read's distance, mobile-mechanic and routing filters; the public-routes list unchanged; the dialog's disabled states and the confirmation texts in both languages; the Cererile mele row and its live re-read. End to end (Playwright): sign in as a seeded driver with a Dacia, open an approved garage's profile, switch on a job, send, read the confirmation, open Cererile mele and see the request as Trimisă; then, as that garage's owner, read it through the garage requests endpoint (the garage inbox screen is another story's).
 
 _From 221-quote-request._
@@ -180,10 +171,6 @@ _From 345-decline-request._
 ### 343-FR-003 — Each garage-side request summary MUST mark, per job, whether the garage does that job on the request's car brand (`offered`: GARAGE_BRAND_JOB has the job type ticked for that brand), so the screen can show "nu faceți" / "not offered" on the others. A request with no jobs has nothing to mark.
 
 _From 343-live-quote-requests._
-
-### 345-FR-012 — `GET /api/v1/garage/requests?status=closed` MUST also answer the garage's recipients `declined` within the last 24 hours (close time `declined_at`), with the close reason `declined` added to the typed set of 343-FR-004, label "Refuzată" / "Declined", taking precedence over the request's own close reasons (rows stay ordered by close time); the `waiting` read never answers a `declined` recipient (unchanged); the `quoted` read is unchanged. A `declined` row carries its `declineReason` as the shipped `GarageRecipientDto` does.
-
-_From 345-decline-request._
 
 ### 347-FR-008 — The detail read MUST answer 403 `forbidden` to a mechanic of a recipient garage who lacks `can_answer_quotes` (today 404, 343-FR-005; the decline and the send already answer 403 to that mechanic, 344-FR-002), and 404 `not_found` to every other caller without a recipient row for their garage, another recipient garage's staff included, and to a caller with no garage; the list read is unchanged. The web MUST show "Nu ai dreptul să citești cererile" / "You are not allowed to read requests" on 403 and "Cererea nu mai este disponibilă" / "The request is no longer available" on 404 and 400, with no request data.
 
@@ -246,10 +233,6 @@ _From 344-send-quote._
 _From 344-send-quote._
 
 ### 344-FR-006 — The API MUST answer 201 with the quote as the garage reads it, the shipped `GarageQuoteDto`: id, request id, the range in bani (`fromBani`, `toBani`, integer bani, VAT included, as every garage-side read returns money; the screen shows lei), `durationMinutes`, `slot`, `note`, status, `sentAt`, `expiresAt` and the jobs with their `included` flags; errors MUST follow the platform's problem details (421-FR-008) with the codes of FR-001, FR-002 and FR-004 and their Romanian and English messages.
-
-_From 344-send-quote._
-
-### 344-FR-007 — `GET /api/v1/garage/requests/:id` MUST gain, per job, the garage's pre-fill (`price`: `fromBani`, `toBani` (nullable), `durationMinutes` (nullable), in bani like the price list's own reads, or null when the garage has no row for the job): the GARAGE_PRICE row for the job and the car's brand where one exists, else the job's default row (no brand), else null; a row not `visible` counts the same as a visible one. The shape is unchanged otherwise; the read's policy (343-FR-005) is unchanged.
 
 _From 344-send-quote._
 
@@ -729,9 +712,9 @@ _From 428-close-on-account-closed._
 
 _From 428-close-on-account-closed._
 
-### 428-FR-003 — The same transaction MUST record one `request.cancelled` outbox event, subject the request, payload `{ requestId, reason: 'account_closed', garageIds }` where `garageIds` are the garages whose recipient was `waiting` or `quoted` at the close, audience the request's driver and those garages (`garage:{garageId}` live updates). When `garageIds` is empty (no recipient was `waiting` or `quoted`), the event is still recorded and FR-009 sends nothing.
+### 223-FR-004 — The account-closed close (428-FR-003) MUST set the `request.cancelled` payload `garageIds` (what the fan-out reads; the event's live-stream audience keeps every `waiting` or `quoted` recipient) to the garages whose recipient is still `waiting` plus the garages holding a `waiting` quote on the request, at the close; a garage that declined, or whose quote is `withdrawn`, `expired`, `lost`, `accepted` or `declined_by_driver`, is not in it; the booked garage is told by its booking's cancellation only. An empty `garageIds` is still recorded (the request's own close and the driver's live stream need the event) and sends nothing; this differs on purpose from `quote.closed`, which the confirm skips when empty.
 
-_From 428-close-on-account-closed._
+_From 223-request-act-notifications._
 
 ### 428-FR-004 — A booking is cancellable when its status is `awaiting_confirmation` or `confirmed`, its `starts_at` is after now, and it has no job or a job in `to_do`; the handler MUST cancel it in the request's transaction: booking to `cancelled` with `cancelled_by_side` = `system` and `cancel_reason` = `driver_account_closed`, its `to_do` job to `cancelled`, and one `booking.cancelled` outbox event, subject the booking, payload `{ bookingId, requestId, garageId, reason: 'driver_account_closed' }`, audience the booking's driver, garage and mechanic.
 
@@ -765,6 +748,54 @@ _From 428-close-on-account-closed._
 
 _From 292-saved-garage-quote._
 
+### 1257-FR-001 — On each reminder day N in REQUEST_REMINDER_DAYS (2 and 5), at `created_at` + N Bucharest calendar days (the same day arithmetic as the stored `expires_at`), the system MUST, while `now` is before the request's `expires_at`, for every REQUEST_RECIPIENT of that request that is `waiting` while the request is `sent` or `quoted`, build one REQUEST_REMINDER for the garage through the shipped notification service and set `reminded_day2_at` (N = 2) or `reminded_day5_at` (N = 5) to now: notify first under the per-recipient event id `request-reminder-<N>-<recipientId>` (the notification service dedupes on it), then set the stamp, so a retry never sends twice; a recipient whose timestamp for that day is already set MUST be skipped.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-004 — At a request's `expires_at` (due when `now` is at or after it; FR-001's reminder is due only while `now` is before it), while the request is `sent` or `quoted`, the system MUST, in one transaction: move every `waiting` recipient to `expired` through the transition tables (220-FR-008), with an audit entry per recipient (actor system); then, when no QUOTE of the request is `waiting`, move the request to `closed` with `closed_reason` `expired`, `closed_at` now, its audit entry. The run records one `request.expired` event naming the expired recipients' garages and whether the request closed (none when it did neither). A request with a `waiting` quote MUST stay `quoted` after its recipients expire.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-006 — At a quote's `expires_at`, while the quote is `waiting` and its request holds no booking `awaiting_confirmation`, the system MUST, in one transaction, move the quote to `expired` through the transition tables with the audit entry (`expired_reason` `time`) and `quote.expired` (reason `time`) as the lapse path records them today; while the request holds a booking `awaiting_confirmation` the quote MUST stay `waiting` and be left to the shipped lapse and confirmation paths.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-007 — In the same transaction as FR-006, when the expired quote was the request's last `waiting` quote and the request is `quoted` (so it holds no open booking), the system MUST move the request to `closed` with `closed_reason` `expired`, `closed_at` now, its audit entry, after first expiring the request's still `waiting` recipients exactly as FR-004 does, with one `request.expired` event naming those garages and the close; when another quote is `waiting` the request stays `quoted`.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-010 — The reminders and expiries MUST be timers of the shipped object-timer helper (one job per object under a stable id, set when the request is sent (`request.created`) or the quote is sent (`quote.sent`), replaced when set again, cleared when the object leaves the state the timer serves: a quoted or declined recipient's reminders are not cleared per recipient, the request's reminders are cleared when the request leaves `sent`/`quoted`, the request's expiry when it closes, the quote's expiry when the quote leaves `waiting`), with the helper's 5-minute sweep listing the overdue objects (a request past a reminder day with a `waiting` recipient lacking that day's timestamp; a request past `expires_at` still `sent`/`quoted`; a quote past `expires_at` still `waiting` on a request without a booking `awaiting_confirmation`); every step re-reads the object's state and time inside its transaction, so a late, early or repeated timer and the sweep do nothing a previous run did.
+
+_From 1257-quote-reminders._
+
+### 1257-FR-011 — A request's reminder and expiry timers are set in the request send's transaction commit path (as the booking timers are set on `quote.accepted`: through the relay's existing events, `request.created` for the request and `quote.sent` for the quote), never by a new endpoint or a change to the API's contracts.
+
+_From 1257-quote-reminders._
+
+### 1258-FR-001 — `POST /api/v1/quote-requests/:id/cancel` MUST let the request's driver (a session in the `driver` role holding `driver.requests`; an AI assistant acting through the driver's tools uses the same endpoint) close a request that is `sent` or `quoted` with no body: in one transaction the request moves to `closed` with `closed_reason` `cancelled` and `closed_at`, every `waiting` quote moves to `lost`, every `waiting` recipient moves to `closed`, each move writing its audit entry and the one outbox event `request.cancelled` (subject the request, payload `{ requestId, garageIds, reason: 'driver' }`, audience the driver's account and the recipient garages) through the existing transition service (quotes 220-FR-008, 220-FR-011). It answers 200 with the request as the driver reads it. Another driver's request, a missing one, or a caller without the capability answers 404; a request in any other status answers 409 `invalid_transition` with the current status (220-FR-015).
+
+_From 1258-driver-cancel._
+
+### 1258-FR-002 — `POST /api/v1/bookings/:id/cancel` MUST let the booking's driver (same session rule as FR-001) cancel a booking that is `awaiting_confirmation` or `confirmed`, with a body of `reason` ∈ `plans_changed`, `found_another_garage`, `problem_solved`, `other` (the driver's list of CANCEL_REASONS, which already exists in the quotes config) and an optional `note` of at most 500 characters (counted after trimming; an empty result is no note), accepted with any of the four reasons; any other reason, a garage or system reason included, or a longer note answers 400 `validation_failed` naming the field. The DTO lives in the contracts library and the OpenAPI document and generated client are regenerated. Another driver's booking or a missing one answers 404.
+
+_From 1258-driver-cancel._
+
+### 1258-FR-003 — The booking cancel MUST be refused with 409 `invalid_transition` carrying the booking's current status, and write nothing, when `starts_at` is not ahead of now, when the booking's job exists and is not `to_do`, or when the booking is in any status other than `awaiting_confirmation` or `confirmed`.
+
+_From 1258-driver-cancel._
+
+### 1258-FR-004 — A booking cancel MUST, in one transaction: move the booking to `cancelled` through the existing booking transition with `cancelled_by_side` `driver`, `cancelled_by` the driver's account, `cancel_reason`, `cancel_note` and `late_cancellation` = now is later than `starts_at` − FREE_CANCEL_CUTOFF_HOURS (2, the existing constant); file the cancellation key change in the audit history as the transition already does (reason and note, old and new values); move the booking's job, when one exists, from `to_do` to `cancelled` through the workshop module's transition; move the accepted quote to `lost`; and move the request: from `booked` to `quoted` when another quote of the request is still `waiting`, else to `closed` with `closed_reason` `booking_cancelled`. The one outbox event is `booking.cancelled` with payload `{ bookingId, requestId, garageId, side: 'driver', reason, late }` (never the note), audience the driver's account, the garage and the booking's mechanic, so `account:{accountId}`, `garage:{garageId}` and `mechanic:{mechanicId}` refresh. There is no penalty, fee or strike of any kind: `late_cancellation` is a recorded fact only. It answers 200 with the booking as the driver reads it (the existing booking DTO, which already carries `cancelReason`; it MUST gain `cancelNote` and `lateCancellation` for the driver's own read).
+
+_From 1258-driver-cancel._
+
+### 1258-FR-011 — The two endpoints MUST be listed in `infra/observability/inventory.json` with the quotes module's panel and alerts; the module MUST emit one counter of cancellations with attributes `kind` (`request`, `booking`), `outcome` (`cancelled`, `refused` — a 409 from the state check only; a 400 or 404 never reaches the use case and is not counted) and, for a booking, `late` (true/false), and one structured log line per cancel naming the ids and the outcome, never the note; the PR's Observability section names them and says why no new alert is added (no agreed threshold) or adds one.
+
+_From 1258-driver-cancel._
+
+### 1258-FR-012 — Tests MUST cover, in Jest on real PostgreSQL where rows are written: the request cancel in `sent` and in `quoted` (quotes `lost`, recipients `closed`, the event and audit entries in the same transaction), 409 in `booked`, `in_work`, `done` and `closed`, 404 for another driver and for a garage-role session; the booking cancel at 3 hours (free) and at 1 hour 30 (late), after `starts_at` (409, for a `confirmed` and for an `awaiting_confirmation` booking), with the job `in_work` (409), from `awaiting_confirmation` with and without another open quote (request `quoted`, else `closed` as `booking_cancelled`), the job moved to `cancelled`, the accepted quote `lost`, 400 for a garage reason and for a 501-character note, 404 for another driver; the BOOKING_CANCELLED fan-out's recipients (owner, receptionists, the mechanic with an account; none for the driver; built once when the event is delivered twice) and both languages' texts with and without the note and the late line; REQUEST_CANCELLED once per owner and receptionist with reason `driver`; the confirm reminder and lapse timers doing nothing on a cancelled booking. The web rows, the dialogs and the Playwright end to end are ST-1385's (Split). Every test file carries its `// @traces 1258-driver-cancel-FR-<n>` line.
+
+_From 1258-driver-cancel._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -789,4 +820,5 @@ _From 292-saved-garage-quote._
 - `222-FR-005` — superseded by `389-FR-009` (2026-10-21)
 - `222-FR-006` — superseded by `389-FR-016` (2026-10-21)
 - `221-FR-016` — superseded by `292-FR-006` (2026-10-23)
+- `428-FR-003` — superseded by `223-FR-004` (2026-10-25)
 - `389-FR-004` — superseded by `058-FR-012` (2026-10-25)

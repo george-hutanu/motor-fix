@@ -1154,20 +1154,39 @@ test.describe('the map beside the results @seeded', () => {
       )
       .toBeGreaterThan(0);
   }
+  // A point under one of the map's own controls (the zoom buttons sit top
+  // right) would press the control: the map first centres on such a point.
   async function clickAt(page: Page, at: readonly [number, number]) {
-    const spot = await page.evaluate(([lat, lng]) => {
-      const map = (
-        window as unknown as {
-          __MF_MAP: {
-            getCanvas(): HTMLCanvasElement;
-            project(at: [number, number]): { x: number; y: number };
-          };
-        }
-      ).__MF_MAP;
-      const { x, y } = map.project([lng, lat]);
-      const box = map.getCanvas().getBoundingClientRect();
-      return { x: box.left + x, y: box.top + y };
-    }, at);
+    const where = () =>
+      page.evaluate(([lat, lng]) => {
+        const map = (
+          window as unknown as {
+            __MF_MAP: {
+              getCanvas(): HTMLCanvasElement;
+              project(at: [number, number]): { x: number; y: number };
+            };
+          }
+        ).__MF_MAP;
+        const { x, y } = map.project([lng, lat]);
+        const canvas = map.getCanvas();
+        const box = canvas.getBoundingClientRect();
+        const spot = { x: box.left + x, y: box.top + y };
+        const bare = document.elementFromPoint(spot.x, spot.y) === canvas;
+        return { ...spot, bare };
+      }, at);
+    let spot = await where();
+    if (!spot.bare) {
+      await page.evaluate(([lat, lng]) => {
+        (
+          window as unknown as {
+            __MF_MAP: { jumpTo(view: { center: [number, number] }): void };
+          }
+        ).__MF_MAP.jumpTo({ center: [lng, lat] });
+      }, at);
+      await mapSettled(page);
+      spot = await where();
+      expect(spot.bare).toBe(true);
+    }
     await page.mouse.click(spot.x, spot.y);
   }
   const named = (page: Page, i: number) =>
@@ -1550,6 +1569,9 @@ test.describe('Results measured from where the driver is @seeded', () => {
       await expect(
         page.locator('mf-result-card').filter({ hasText: 'Service Mărăști' }),
       ).toContainText(km);
+      // The live map draws the marker once asked for; the static image's own
+      // marker goes with it.
+      await openMap(page);
 
       const marker = page.locator('.here');
       await expect(marker).toHaveCount(1);
@@ -1605,7 +1627,8 @@ test.describe('Results measured from where the driver is @seeded', () => {
     await ownMap(answered);
     await answered.setViewportSize({ height: 800, width: 320 });
     await answered.goto('/en/garages?brand=dacia');
-    await expect(answered.locator('.here')).toBeVisible();
+    // The static image marks the place until the live map is asked for.
+    await expect(answered.locator('mf-static-map .here')).toBeVisible();
     expect(
       await answered.evaluate(() => document.documentElement.scrollWidth > 320),
     ).toBe(false);
@@ -1654,8 +1677,8 @@ test.describe('Results with the location refused @seeded', () => {
     await expect(field).toBeVisible();
     await expect(field).toBeFocused();
     await expect(page.locator('mf-result-card')).toHaveCount(0);
-    // The "you are here" marker waits off the map, hidden, until a place is known.
-    await expect(page.locator('.here')).toBeHidden();
+    // The static image marks no place until one is known.
+    await expect(page.locator('mf-static-map .here')).toHaveCount(0);
     expect(page.url()).not.toContain('near=');
 
     await field.fill('Cluj');
@@ -1665,7 +1688,7 @@ test.describe('Results with the location refused @seeded', () => {
     await expect(
       page.locator('mf-result-card').filter({ hasText: 'Service Mărăști' }),
     ).toContainText('1,0 km');
-    await expect(page.locator('.here')).toBeVisible();
+    await expect(page.locator('mf-static-map .here')).toBeVisible();
     await expect(page.locator('.summary .area')).toHaveText(
       'în 25 km de Cluj-Napoca',
     );

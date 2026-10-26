@@ -137,6 +137,7 @@ export const bookingOf = (
 ): BookingDto => ({
   cancelledAt: iso(booking.cancelledAt),
   cancelledBySide: booking.cancelledBySide,
+  cancelNote: booking.cancelNote,
   cancelReason: booking.cancelReason,
   completedAt: iso(booking.completedAt),
   confirmBy: booking.confirmBy.toISOString(),
@@ -145,6 +146,7 @@ export const bookingOf = (
   durationMinutes: booking.durationMinutes,
   garage: garageRef(booking.garage),
   id: booking.id,
+  lateCancellation: booking.lateCancellation,
   noShowAt: iso(booking.noShowAt),
   quoteId: booking.quoteId,
   startsAt: booking.startsAt.toISOString(),

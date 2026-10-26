@@ -157,6 +157,31 @@ export function recordBookingLapse(
   bookingLapses().add(1, { request, sweep: String(sweep) });
 }
 
+// What a request's or a quote's timer did: a reminder sent or muted, a
+// garage's wait expired, a request closed, a quote expired or held by a
+// booking awaiting confirmation.
+const REQUEST_TIMER_STEPS = [
+  'reminder_sent',
+  'reminder_muted',
+  'recipient_expired',
+  'request_closed',
+  'quote_expired',
+  'quote_held',
+] as const;
+export type RequestTimerStep = (typeof REQUEST_TIMER_STEPS)[number];
+
+const requestTimers = () =>
+  meter().createCounter('motorfix_request_timers_total', {
+    description:
+      'What the request and quote timers did, by step and whether the sweep ran them',
+  });
+
+// One count per step, by whether the sweep ran it, a lost timer's sign;
+// never which request, garage or quote.
+export function recordRequestTimer(step: RequestTimerStep, sweep: boolean) {
+  requestTimers().add(1, { step, sweep: String(sweep) });
+}
+
 // Each request or booking a closed account's clean-up found open, by what
 // happened to it; never whose.
 export const ACCOUNT_CLOSED_SERIES = [
@@ -178,4 +203,23 @@ export function recordAccountClosedCleanup<
   K extends AccountClosedSeries['kind'],
 >(kind: K, outcome: Extract<AccountClosedSeries, { kind: K }>['outcome']) {
   accountClosedCleanups().add(1, { kind, outcome });
+}
+
+// Each cancel a driver tries, by what was cancelled, whether it went through
+// and whether it came late; never who or which.
+type CancellationKind = 'request' | 'booking';
+type CancellationOutcome = 'cancelled' | 'refused';
+
+const cancellations = () =>
+  meter().createCounter('motorfix_cancellations_total', {
+    description:
+      'Requests and bookings drivers tried to cancel, by kind, outcome and lateness',
+  });
+
+export function recordCancellation(
+  kind: CancellationKind,
+  outcome: CancellationOutcome,
+  late: boolean,
+) {
+  cancellations().add(1, { kind, late: String(late), outcome });
 }
