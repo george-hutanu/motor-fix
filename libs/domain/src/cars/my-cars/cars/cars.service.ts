@@ -12,7 +12,7 @@ import { AccountsService } from '../../../auth/accounts.service';
 import { refusal } from '../../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../../auth/policy';
 import { PRISMA } from '../../../auth/prisma';
-import { addYears, localDay } from '../../../bucharest';
+import { addYears, localDay, today } from '../../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { serviceDueOn } from '../../odometer/odometer';
@@ -128,7 +128,7 @@ function assertNextService(nextServiceKm: number, odometerKm: number) {
 // The day the kilometres were read: today in Bucharest.
 const readToday = (km: number) => ({
   km,
-  readOn: date(localDay(new Date())) as Date,
+  readOn: today(),
   source: 'driver' as const,
 });
 

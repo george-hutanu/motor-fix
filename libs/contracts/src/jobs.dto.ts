@@ -6,14 +6,18 @@ import {
   ArrayUnique,
   IsArray,
   IsBoolean,
+  IsInt,
   IsISO8601,
   IsOptional,
   IsString,
   IsUUID,
   Length,
   Matches,
+  Max,
+  Min,
 } from 'class-validator';
 
+import { MAX_KM } from './plate';
 import {
   DriverNameDto,
   GarageCarDto,
@@ -33,6 +37,12 @@ const ACTOR_ROLES = [
   'system',
 ] as const;
 
+// The job's car, with its current odometer so a lower reading can be told.
+export class JobCarDto extends GarageCarDto {
+  @ApiProperty({ description: "The car's current odometer, in km" })
+  odometerKm!: number;
+}
+
 export class JobSummaryDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
@@ -46,11 +56,27 @@ export class JobSummaryDto {
   @ApiProperty({ type: DriverNameDto })
   driver!: DriverNameDto;
 
-  @ApiProperty({ type: GarageCarDto })
-  car!: GarageCarDto;
+  @ApiProperty({ type: JobCarDto })
+  car!: JobCarDto;
 
   @ApiProperty({ format: 'uuid', nullable: true, type: String })
   mechanicId!: string | null;
+
+  @ApiProperty({
+    description: 'When the car was first received',
+    ...NULLABLE_TIME,
+  })
+  receivedAt!: string | null;
+
+  @ApiProperty({
+    description: 'The reading taken at reception, in km',
+    nullable: true,
+    type: Number,
+  })
+  odometerKm!: number | null;
+
+  @ApiProperty({ description: 'Whole seconds spent in work' })
+  workedSeconds!: number;
 
   @ApiProperty(NULLABLE_TIME)
   startedAt!: string | null;
@@ -127,8 +153,35 @@ export class JobStageEntryDto {
   @ApiProperty({ nullable: true, type: String })
   text!: string | null;
 
+  @ApiProperty({
+    description: "The job's mechanic when the move was made",
+    format: 'uuid',
+    nullable: true,
+    type: String,
+  })
+  mechanicId!: string | null;
+
+  @ApiProperty({
+    description:
+      'A pause the platform made when the mechanic started another job',
+  })
+  auto!: boolean;
+
   @ApiProperty({ format: 'date-time' })
   at!: string;
+}
+
+export class ReceiveJobDto {
+  @ApiProperty({
+    description: 'The odometer reading, in km',
+    maximum: MAX_KM,
+    minimum: 0,
+    type: 'integer',
+  })
+  @IsInt()
+  @Min(0)
+  @Max(MAX_KM)
+  odometerKm!: number;
 }
 
 export class JobDto extends JobSummaryDto {

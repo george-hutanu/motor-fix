@@ -13,6 +13,7 @@ features:
   - 094-itp-reminders
   - 091-oil-service-due
   - 415-car-transfer-link
+  - 276-job-start-done
 ---
 
 # Capability: Cars
@@ -236,9 +237,9 @@ _From 094-itp-reminders._
 
 _From 091-oil-service-due._
 
-### 091-FR-002 — A `driver` reading MUST be written when a car is added (its odometer, today) and whenever an edit changes `odometer_km` (the new value, today), in the same transaction as the car; an edit that leaves the kilometres unchanged writes none. `CAR.odometer_km` MUST equal the car's newest reading (by `read_on`, then creation time). A migration MUST back-fill one `driver` reading per existing car (its current `odometer_km`, `read_on` the day of its `updated_at`), so every car has at least one reading.
+### 276-FR-008 — The API MUST offer `POST /api/v1/garage/jobs/:id/receive` with `{ odometerKm }`, a whole number 0 … 2,000,000 (else a validation failure), allowed to the owner, a receptionist and the job's mechanic of the garage (403 to another mechanic of the garage, 404 outside it), while the job is `to_do` or `in_work` (409 `job_closed` otherwise; a `paused` job is answered 409 `invalid_state`). It MUST, in one transaction locking the job row: set `JOB.odometer_km` and, when not yet set, `JOB.received_at` = now; write one ODOMETER_READING (the job's car, the reading, today in Europe/Bucharest, source `reception`, `source_id` = the job); set `CAR.odometer_km` to the reading when the new row is the car's newest (091-FR-002's invariant) with the car's `odometerKm` audit entry and `car.updated` naming `odometerKm` as 091-FR-009 asks, so the service-due estimate follows; record the job's audit entry (`job.odometer_km`, old and new value, the actor and role; a repeat is the brief's audited correction); and emit `job.received` `{ odometerKm }` with the `job` audience. It answers the job.
 
-_From 091-oil-service-due._
+_From 276-job-start-done._
 
 ### 091-FR-004 — The average monthly mileage of a car MUST be computed from its readings with `read_on` on or after the same calendar day 12 months before today (so a reading exactly 12 months old counts and one a day older does not; today included): (newest km − oldest km) ÷ days between them × 30.44, when the newest and oldest are 30 or more days apart and the difference in km is positive; otherwise 1,000 km a month. One pure rule in the domain library MUST compute it, used by the API answer and by the worker alike (Principle V).
 
@@ -344,3 +345,4 @@ _From 415-car-transfer-link._
 - `092-FR-001` — superseded by `091-FR-003` (2026-10-26)
 - `089-FR-001` — superseded by `091-FR-003` (2026-10-26)
 - `092-FR-006` — superseded by `091-FR-010` (2026-10-26)
+- `091-FR-002` — superseded by `276-FR-008` (2026-10-26)

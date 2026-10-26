@@ -21,6 +21,7 @@ const job = (over: Partial<JobSummaryDto> = {}): JobSummaryDto => ({
     engine: '1.5 dCi',
     fuel: 'diesel',
     model: 'Logan',
+    odometerKm: 84000,
     plate: 'B 101 QAT',
     year: 2018,
   },
@@ -41,13 +42,16 @@ const job = (over: Partial<JobSummaryDto> = {}): JobSummaryDto => ({
   ],
   mechanicId: 'mechanic-1',
   mechanicName: 'Mihai Dumitru',
+  odometerKm: null,
   pausedAt: null,
+  receivedAt: null,
   startedAt: '2026-10-09T06:30:00.000Z',
   // 09:30 in Bucharest.
   startsAt: '2026-10-09T06:30:00.000Z',
   status: 'in_work',
   stepsDone: 1,
   stepsTotal: 3,
+  workedSeconds: 0,
   ...over,
 });
 

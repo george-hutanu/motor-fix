@@ -15,6 +15,16 @@ import { garageJobsControllerList } from '../fn/garage-jobs/garage-jobs-controll
 import { GarageJobsControllerList$Params } from '../fn/garage-jobs/garage-jobs-controller-list';
 import { JobDto } from '../models/job-dto';
 import { JobListDto } from '../models/job-list-dto';
+import { jobStagesControllerFinish } from '../fn/garage-jobs/job-stages-controller-finish';
+import { JobStagesControllerFinish$Params } from '../fn/garage-jobs/job-stages-controller-finish';
+import { jobStagesControllerPause } from '../fn/garage-jobs/job-stages-controller-pause';
+import { JobStagesControllerPause$Params } from '../fn/garage-jobs/job-stages-controller-pause';
+import { jobStagesControllerReceive } from '../fn/garage-jobs/job-stages-controller-receive';
+import { JobStagesControllerReceive$Params } from '../fn/garage-jobs/job-stages-controller-receive';
+import { jobStagesControllerResume } from '../fn/garage-jobs/job-stages-controller-resume';
+import { JobStagesControllerResume$Params } from '../fn/garage-jobs/job-stages-controller-resume';
+import { jobStagesControllerStart } from '../fn/garage-jobs/job-stages-controller-start';
+import { JobStagesControllerStart$Params } from '../fn/garage-jobs/job-stages-controller-start';
 import { JobStepDto } from '../models/job-step-dto';
 import { jobStepsControllerAdd } from '../fn/garage-jobs/job-steps-controller-add';
 import { JobStepsControllerAdd$Params } from '../fn/garage-jobs/job-steps-controller-add';
@@ -88,6 +98,171 @@ export class GarageJobsService extends BaseService {
    */
   garageJobsControllerGet(params: GarageJobsControllerGet$Params, context?: HttpContext): Promise<JobDto> {
     const resp = this.garageJobsControllerGet$Response(params, context);
+    return resp.then((r: StrictHttpResponse<JobDto>): JobDto => r.body);
+  }
+
+  /** Path part for operation `jobStagesControllerStart()` */
+  static readonly JobStagesControllerStartPath = '/api/v1/garage/jobs/{id}/start';
+
+  /**
+   * Start the work, pausing the mechanic’s other job in work.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStagesControllerStart()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobStagesControllerStart$Response(params: JobStagesControllerStart$Params, context?: HttpContext): Promise<StrictHttpResponse<JobDto>> {
+    const obs = jobStagesControllerStart(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Start the work, pausing the mechanic’s other job in work.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStagesControllerStart$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobStagesControllerStart(params: JobStagesControllerStart$Params, context?: HttpContext): Promise<JobDto> {
+    const resp = this.jobStagesControllerStart$Response(params, context);
+    return resp.then((r: StrictHttpResponse<JobDto>): JobDto => r.body);
+  }
+
+  /** Path part for operation `jobStagesControllerPause()` */
+  static readonly JobStagesControllerPausePath = '/api/v1/garage/jobs/{id}/pause';
+
+  /**
+   * Pause the work.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStagesControllerPause()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobStagesControllerPause$Response(params: JobStagesControllerPause$Params, context?: HttpContext): Promise<StrictHttpResponse<JobDto>> {
+    const obs = jobStagesControllerPause(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Pause the work.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStagesControllerPause$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobStagesControllerPause(params: JobStagesControllerPause$Params, context?: HttpContext): Promise<JobDto> {
+    const resp = this.jobStagesControllerPause$Response(params, context);
+    return resp.then((r: StrictHttpResponse<JobDto>): JobDto => r.body);
+  }
+
+  /** Path part for operation `jobStagesControllerResume()` */
+  static readonly JobStagesControllerResumePath = '/api/v1/garage/jobs/{id}/resume';
+
+  /**
+   * Resume the work, pausing the mechanic’s other job in work.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStagesControllerResume()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobStagesControllerResume$Response(params: JobStagesControllerResume$Params, context?: HttpContext): Promise<StrictHttpResponse<JobDto>> {
+    const obs = jobStagesControllerResume(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Resume the work, pausing the mechanic’s other job in work.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStagesControllerResume$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobStagesControllerResume(params: JobStagesControllerResume$Params, context?: HttpContext): Promise<JobDto> {
+    const resp = this.jobStagesControllerResume$Response(params, context);
+    return resp.then((r: StrictHttpResponse<JobDto>): JobDto => r.body);
+  }
+
+  /** Path part for operation `jobStagesControllerFinish()` */
+  static readonly JobStagesControllerFinishPath = '/api/v1/garage/jobs/{id}/finish';
+
+  /**
+   * Mark the work done.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStagesControllerFinish()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobStagesControllerFinish$Response(params: JobStagesControllerFinish$Params, context?: HttpContext): Promise<StrictHttpResponse<JobDto>> {
+    const obs = jobStagesControllerFinish(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Mark the work done.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStagesControllerFinish$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  jobStagesControllerFinish(params: JobStagesControllerFinish$Params, context?: HttpContext): Promise<JobDto> {
+    const resp = this.jobStagesControllerFinish$Response(params, context);
+    return resp.then((r: StrictHttpResponse<JobDto>): JobDto => r.body);
+  }
+
+  /** Path part for operation `jobStagesControllerReceive()` */
+  static readonly JobStagesControllerReceivePath = '/api/v1/garage/jobs/{id}/receive';
+
+  /**
+   * Record the odometer at the reception; a repeat corrects it.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStagesControllerReceive()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStagesControllerReceive$Response(params: JobStagesControllerReceive$Params, context?: HttpContext): Promise<StrictHttpResponse<JobDto>> {
+    const obs = jobStagesControllerReceive(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Record the odometer at the reception; a repeat corrects it.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStagesControllerReceive$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStagesControllerReceive(params: JobStagesControllerReceive$Params, context?: HttpContext): Promise<JobDto> {
+    const resp = this.jobStagesControllerReceive$Response(params, context);
     return resp.then((r: StrictHttpResponse<JobDto>): JobDto => r.body);
   }
 

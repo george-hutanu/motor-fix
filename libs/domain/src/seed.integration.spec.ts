@@ -1136,7 +1136,7 @@ describe('seed of a request through to a job', () => {
         ],
         quotes: [{ status: 'accepted' }],
         recipients: [{ garage: { slug: 'atelier-test' }, status: 'quoted' }],
-        status: 'booked',
+        status: 'in_work',
       },
     ]);
   });

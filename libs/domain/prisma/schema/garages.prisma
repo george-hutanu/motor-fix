@@ -252,6 +252,7 @@ model Mechanic {
   bookingSegments     BookingSegment[]
   invites             StaffInvite[]
   jobs                Job[]
+  stageEntries        JobStageEntry[]
   reviews             Review[]
   daysOff             MechanicDayOff[]
 
