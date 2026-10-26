@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 206,
+    "count": 208,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -633,6 +633,32 @@
     },
     {
       "kind": "outside-service",
+      "name": "cloudflare-stream",
+      "host": "api.cloudflare.com",
+      "source": "libs/domain/src/live-video/providers/cloudflare-live-video.provider.ts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "opens and closes a live input per live session, 5 s timeout, in a live-video.create_input or live-video.close_input span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees",
+      "story": "ST-1250"
+    },
+    {
+      "kind": "outside-service",
+      "name": "cloudflare-stream-playback",
+      "host": "cloudflarestream.com",
+      "source": "libs/domain/src/live-video/providers/cloudflare-live-video.provider.ts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the api never calls it: it signs the viewing link (customer-<code>.cloudflarestream.com, five minutes) and the viewer's player fetches it; issued links are counted in motorfix_live_view_tokens_total{outcome}, and a link that cannot be signed fails the view-token call, which the API error-rate rule sees",
+      "story": "ST-1250"
+    },
+    {
+      "kind": "outside-service",
       "name": "public-web",
       "source": "libs/domain/src/status/probes/probes.ts",
       "dashboard": "motorfix-worker",
@@ -966,6 +992,19 @@
       ],
       "reason": "each change of a switch is audited with the owner, the feature and the old and new state, and recorded as a garage.features_changed event in the same transaction; a 409 mechanics_on_team is the rule working, not a failure",
       "story": "ST-398"
+    },
+    {
+      "kind": "endpoint",
+      "name": "live-sessions",
+      "source": "libs/domain/src/live-video/sessions/sessions.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/jobs/:id/live and /api/v1/live-sessions/:id/view-token",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a start writes the live_session row, its audit entry and the live.started event in one transaction after the provider opened the input, counted in motorfix_live_sessions_total{outcome}; a view writes nothing and is counted in motorfix_live_view_tokens_total{outcome}; a refusal logs one LiveSessions warning line with its code and the job or session id, never a name; a 409 live_already_on, job_closed or live_ended is the rule working",
+      "story": "ST-1250"
     },
     {
       "kind": "endpoint",
