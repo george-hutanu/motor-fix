@@ -432,10 +432,6 @@ _From 251-monitoring-backups._
 
 _From 879-dashboards._
 
-### 879-FR-012 — `infra/observability/inventory.json` MUST list each counter as a `product-counter` entry (`source` the file that increments it, `dashboard` `motorfix-product`, `alerts` `"none"` with the reason that ST-880 adds them, `story` ST-879), and every existing entry whose `"none"` reason named this story MUST point at its dashboard uid as the Clarifications table says (apps and Railway services at their service's dashboard; queues at `motorfix-queues`; PostgreSQL and Redis at theirs; an outside service at the dashboard of the service that calls it; grafana-faro at `motorfix-web-vitals`); `web-e2e` and `openfreemap` stay `"none"` with their own reasons. `node scripts/observability-inventory.ts` MUST pass.
-
-_From 879-dashboards._
-
 ### 879-FR-013 — The release workflow MUST push every file under the dashboards folder to Grafana Cloud through Grafana's dashboard HTTP API, overwriting by uid, after the images are built and before the staging deploy, using the secret `GRAFANA_SA_TOKEN` and the repository variable `GRAFANA_URL`; when the secret or the variable is not set the step MUST be skipped with a notice naming the missing one and the release MUST go on, as the Faro source-map steps do. A refused push MUST fail the step without printing the token.
 
 _From 879-dashboards._
@@ -445,10 +441,6 @@ _From 879-dashboards._
 _From 879-dashboards._
 
 ### 879-FR-015 — A dashboard check MUST run in CI's Checks job beside the inventory check and locally from the repository root, failing with the file and the rule for: invalid JSON, missing `uid` or `title`, a datasource referenced by display name or without a uid or variable, the literal `staging` or `production` in a query, title or link, no `env` variable, no `deploy` annotation, a uid no inventory entry lists, a title not starting "MotorFix", a file that is a symbolic link or holds no JSON object, or an overview with no row titled for one of the services FR-005 names. It MUST have a colocated spec with a fixture per rule and MUST pass on this repository.
-
-_From 879-dashboards._
-
-### 879-FR-016 — `infra/observability/README.md` MUST name the dashboards folder, the ten uids, the push and annotation steps and their secret and variable (names only), and that a change made only in Grafana's UI is overwritten by the next release.
 
 _From 879-dashboards._
 

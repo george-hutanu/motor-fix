@@ -161,6 +161,7 @@ describe('POST /cars', () => {
       plate: 'B123ABC',
       rcaUntil: null,
       rovinietaUntil: null,
+      serviceDueOn: null,
       updatedAt: res.body.createdAt,
       year: 2019,
     });
@@ -792,34 +793,5 @@ describe('the next service in the car answers', () => {
 
     expect(items.map((c: { id: string }) => c.id)).toEqual([kept.body.id]);
     expect(reached.status).toBe(404);
-  });
-
-  it('refuses nextServiceKm on a save and on an edit', async () => {
-    const { auth, id } = await driver();
-    const { id: brandId } = await brand('BMW');
-
-    const created = await add(
-      auth,
-      bmw320d(brandId, { nextServiceKm: 152000 }),
-    );
-    const saved = await add(auth, bmw320d(brandId));
-    const edited = await edit(auth, saved.body.id, {
-      nextServiceKm: 152000,
-      version: saved.body.updatedAt,
-    });
-
-    expect(created.status).toBe(400);
-    expect(created.body.message).toEqual([
-      'property nextServiceKm should not exist',
-    ]);
-    expect(edited.status).toBe(400);
-    expect(edited.body.message).toEqual([
-      'property nextServiceKm should not exist',
-    ]);
-    expect(await cars(id)).toBe(1);
-    expect(
-      (await prisma.car.findUniqueOrThrow({ where: { id: saved.body.id } }))
-        .nextServiceKm,
-    ).toBeNull();
   });
 });

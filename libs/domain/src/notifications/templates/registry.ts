@@ -64,6 +64,7 @@ import { REQUEST_RECEIVED } from './request-received';
 import { REQUEST_REMINDER } from './request-reminder';
 import { REVIEW_POSTED_JOB, REVIEW_POSTED_PROFILE } from './review-posted';
 import { REVIEW_REPLIED } from './review-replied';
+import { SERVICE_DUE } from './service-due';
 import { SIGN_IN_CODE } from './sign-in-code';
 import {
   STAFF_INVITE_MECHANIC,
@@ -139,6 +140,7 @@ export const TEMPLATES: Registry = {
   'REVIEW_POSTED.job': REVIEW_POSTED_JOB,
   'REVIEW_POSTED.profile': REVIEW_POSTED_PROFILE,
   REVIEW_REPLIED,
+  SERVICE_DUE,
   SIGN_IN_CODE,
   'STAFF_INVITE.mechanic': STAFF_INVITE_MECHANIC,
   'STAFF_INVITE.receptionist': STAFF_INVITE_RECEPTIONIST,

@@ -12,34 +12,61 @@ enum Fuel {
 // The limits are CHECKs in the migration as well; the 20-car limit is counted
 // under the account row's lock, so a removed car frees a place.
 model Car {
-  id             String         @id @default(uuid()) @db.Uuid
-  ownerId        String         @map("owner_id") @db.Uuid
-  brandId        String         @map("brand_id") @db.Uuid
+  id             String            @id @default(uuid()) @db.Uuid
+  ownerId        String            @map("owner_id") @db.Uuid
+  brandId        String            @map("brand_id") @db.Uuid
   model          String
   year           Int
   fuel           Fuel
   engine         String?
-  odometerKm     Int            @map("odometer_km")
+  odometerKm     Int               @map("odometer_km")
   // Private to the owner: never in an event, a log or another's answer.
   plate          String?
-  itpUntil       DateTime?      @map("itp_until") @db.Date
-  rcaUntil       DateTime?      @map("rca_until") @db.Date
-  rovinietaUntil DateTime?      @map("rovinieta_until") @db.Date
-  nextServiceKm  Int?           @map("next_service_km")
-  idempotencyKey String         @map("idempotency_key")
-  removedAt      DateTime?      @map("removed_at") @db.Timestamptz(3)
-  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  itpUntil       DateTime?         @map("itp_until") @db.Date
+  rcaUntil       DateTime?         @map("rca_until") @db.Date
+  rovinietaUntil DateTime?         @map("rovinieta_until") @db.Date
+  nextServiceKm  Int?              @map("next_service_km")
+  idempotencyKey String            @map("idempotency_key")
+  removedAt      DateTime?         @map("removed_at") @db.Timestamptz(3)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   // The version an edit sends back: a save on an older one is refused.
-  updatedAt      DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
-  owner          Account        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  brand          Brand          @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  updatedAt      DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner          Account           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  brand          Brand             @relation(fields: [brandId], references: [id], onDelete: Restrict)
   reminders      Reminder[]
+  readings       OdometerReading[]
   quoteRequests  QuoteRequest[]
   jobs           Job[]
 
   @@unique([ownerId, idempotencyKey])
   @@index([ownerId, createdAt])
   @@map("car")
+}
+
+enum OdometerSource {
+  driver
+  reception
+  repair
+
+  @@map("odometer_source")
+}
+
+// The kilometres a car showed on a Bucharest day. The car's odometer_km is
+// its newest reading, by day then creation time; km >= 0 is a CHECK in the
+// migration. source_id names the reception or repair record, with no key, as
+// each later source has its own table.
+model OdometerReading {
+  id        String         @id @default(uuid()) @db.Uuid
+  carId     String         @map("car_id") @db.Uuid
+  km        Int
+  readOn    DateTime       @map("read_on") @db.Date
+  source    OdometerSource
+  sourceId  String?        @map("source_id") @db.Uuid
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  car       Car            @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  @@index([carId, readOn(sort: Desc), createdAt(sort: Desc)])
+  @@map("odometer_reading")
 }
 
 enum ReminderKind {
@@ -68,6 +95,8 @@ model Reminder {
   sent7      Boolean      @default(false) @map("sent_7")
   seasonYear Int?         @map("season_year")
   sentAt     DateTime?    @map("sent_at") @db.Timestamptz(3)
+  // The next-service km a service row was estimated for; null for the rest.
+  dueKm      Int?         @map("due_km")
   createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
   account    Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
   car        Car?         @relation(fields: [carId], references: [id], onDelete: Cascade)

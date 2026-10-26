@@ -76,8 +76,8 @@ const FILES: Record<string, { ro: string; en: string }> = {
     ro: 'programările tale, lucrările la mașinile tale și istoricul lor',
   },
   'cars.json': {
-    en: 'your cars, with their dates and reminders',
-    ro: 'mașinile tale, cu termenele și mementourile lor',
+    en: 'your cars, with their dates, readings and reminders',
+    ro: 'mașinile tale, cu termenele, kilometrajele citite și mementourile lor',
   },
   'consents.json': {
     en: 'the consents you gave',
@@ -454,6 +454,11 @@ export class DataExportBuilder {
         odometerKm: true,
         plate: true,
         rcaUntil: true,
+        // Every reading the car kept, oldest first.
+        readings: {
+          orderBy: [{ readOn: 'asc' }, { createdAt: 'asc' }],
+          select: { km: true, readOn: true, source: true },
+        },
         reminders: {
           orderBy: { dueOn: 'asc' },
           select: {

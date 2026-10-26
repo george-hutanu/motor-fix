@@ -289,7 +289,7 @@
         "worker-jobs-failed"
       ],
       "story": "ST-881",
-      "reason": "its 09:00 Europe/Bucharest daily job also runs the listing draft sweep and the RAR re-check count, which tells every admin once a day through ADMIN_RECHECK_DUE and logs one RecheckDue line per run; since ST-68 the same daily job runs the yearly documents compliance step before the RAR re-check: it sends DOCUMENT_DUE at 30, 7 and 0 days and turns a cycle overdue the day after its due date with DOCUMENT_OVERDUE (both always e-mail and push), writes document.due and document.overdue events, counts motorfix_document_cycle_total{step} and refreshes the motorfix_documents_overdue gauge, logs one DocumentCycle line per run (day, reminders per stage, cycles turned overdue) and one on its final failure; shown on the worker dashboard's Documente anuale panel; a failed run fires worker-jobs-failed within 15 minutes, as any reminders job does"
+      "reason": "its 09:00 Europe/Bucharest daily job also runs the listing draft sweep and the RAR re-check count, which tells every admin once a day through ADMIN_RECHECK_DUE and logs one RecheckDue line per run; since ST-68 the same daily job runs the yearly documents compliance step before the RAR re-check: it sends DOCUMENT_DUE at 30, 7 and 0 days and turns a cycle overdue the day after its due date with DOCUMENT_OVERDUE (both always e-mail and push), writes document.due and document.overdue events, counts motorfix_document_cycle_total{step} and refreshes the motorfix_documents_overdue gauge, logs one DocumentCycle line per run (day, reminders per stage, cycles turned overdue) and one on its final failure; shown on the worker dashboard's Documente anuale panel; a failed run fires worker-jobs-failed within 15 minutes, as any reminders job does; since ST-91 the same run sends SERVICE_DUE from each car's `service` row, due on the day the car's odometer readings estimate for its next service (the cars module's `odometer_reading` table, written in the cars endpoints' own transaction, carries no metric of its own), through the notifications pipeline and its metrics, logs and traces"
     },
     {
       "kind": "queue",
@@ -1611,6 +1611,19 @@
       ],
       "reason": "PUT, DELETE, GET ids and the GET list (ST-291) show on the request-duration metric by route and status code; each save and removal is an audit row and a saved_garage.added or saved_garage.removed event, and reading the list changes nothing, so no product counter is added; the list's spans come from the HTTP and Prisma auto-instrumentation",
       "story": "ST-290, ST-291"
+    },
+    {
+      "kind": "endpoint",
+      "name": "cars",
+      "source": "libs/domain/src/cars/my-cars/cars/cars.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/cars and /api/v1/cars/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "POST, GET, PATCH and DELETE of the driver's cars show on the request-duration metric by route and status code; since ST-91 an add and each odometer change write a row of the cars module's odometer_reading table in the same transaction, nextServiceKm is refused with next_service_not_above_odometer or next_service_too_far as a 400, and every car answer carries serviceDueOn; each write is an audit row and a car.added, car.updated or car.removed event, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-91"
     },
     {
       "kind": "product-counter",

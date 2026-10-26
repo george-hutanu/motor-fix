@@ -2250,7 +2250,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: a bad field, unknown_brand, too_far_ahead or a missing key"
+            "description": "validation_failed: a bad field, unknown_brand, too_far_ahead, next_service_not_above_odometer, next_service_too_far or a missing key"
           },
           "401": {
             "description": "sign_in_required"
@@ -2339,7 +2339,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: a bad field or id, unknown_brand, too_far_ahead or a missing version"
+            "description": "validation_failed: a bad field or id, unknown_brand, too_far_ahead, next_service_not_above_odometer, next_service_too_far or a missing version"
           },
           "401": {
             "description": "sign_in_required"
@@ -12167,6 +12167,13 @@
             "type": "string",
             "description": "At most five years ahead",
             "format": "date"
+          },
+          "nextServiceKm": {
+            "type": "integer",
+            "description": "The odometer reading the next oil service is due at: above odometerKm and at most 100,000 km past it",
+            "maximum": 2000000,
+            "minimum": 1,
+            "nullable": true
           }
         },
         "required": [
@@ -12217,7 +12224,13 @@
           },
           "nextServiceKm": {
             "type": "integer",
-            "description": "The odometer reading the next oil service is due at; read-only",
+            "description": "The odometer reading the next oil service is due at",
+            "nullable": true
+          },
+          "serviceDueOn": {
+            "type": "string",
+            "description": "The estimated day of the next oil service at the car's average mileage; null without nextServiceKm or once it is reached",
+            "format": "date",
             "nullable": true
           },
           "plate": {
@@ -12260,6 +12273,7 @@
           "engine",
           "odometerKm",
           "nextServiceKm",
+          "serviceDueOn",
           "plate",
           "itpUntil",
           "rcaUntil",
@@ -12348,6 +12362,13 @@
             "type": "string",
             "description": "At most five years ahead; null clears it",
             "format": "date",
+            "nullable": true
+          },
+          "nextServiceKm": {
+            "type": "integer",
+            "description": "Above the odometer and at most 100,000 km past it; null clears it",
+            "maximum": 2000000,
+            "minimum": 1,
             "nullable": true
           }
         },
