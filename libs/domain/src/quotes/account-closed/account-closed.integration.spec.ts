@@ -358,6 +358,27 @@ describe('cancelling the future bookings of a closed account', () => {
     });
   });
 
+  // @traces 150-FR-001
+  it('frees the place a cancelled booking held', async () => {
+    const { booking, driverId, fixer, garage } = await bookedAt();
+    await prisma.bookingSegment.create({
+      data: {
+        bookingId: booking.id,
+        endsAt: new Date(booking.startsAt.getTime() + 3_600_000),
+        garageId: garage.id,
+        mechanicId: fixer.id,
+        startsAt: booking.startsAt,
+      },
+    });
+    const handler = await start();
+
+    await handler.onEvent(closing(driverId));
+
+    expect(
+      await prisma.bookingSegment.count({ where: { bookingId: booking.id } }),
+    ).toBe(0);
+  });
+
   it('cancels a booking still waiting for the garage’s confirmation', async () => {
     const { booking, driverId } = await bookedAt({
       booking: 'awaiting_confirmation',

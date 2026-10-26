@@ -243,6 +243,12 @@ type BookingMove =
 
 // A cancellation also files its reason, which the driver's short history
 // shows next to the status.
+const RELEASES_PLACE: ReadonlySet<BookingStatus> = new Set<BookingStatus>([
+  'cancelled',
+  'lapsed',
+  'no_show',
+]);
+
 export async function moveBooking(
   tx: Tx,
   ports: TransitionPorts,
@@ -254,6 +260,10 @@ export async function moveBooking(
     scope: inGarage,
     set: () => bookingColumns(move.to, move.actor.accountId, cancellation),
   });
+  // A booking that will not happen gives its place back in the same
+  // transaction; a completed one keeps its segments as the record of the work.
+  if (RELEASES_PLACE.has(move.to))
+    await tx.bookingSegment.deleteMany({ where: { bookingId: move.id } });
   if (move.to === 'cancelled' && cancellation) {
     await ports.audit.record(tx, {
       action: 'update',
