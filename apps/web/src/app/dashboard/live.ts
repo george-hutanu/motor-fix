@@ -496,6 +496,8 @@ export const REQUEST_EVENTS: readonly EventKind[] = [
   'quote.accepted',
   'booking.confirmed',
   'booking.lapsed',
+  'request.cancelled',
+  'booking.cancelled',
 ];
 
 // A view's data, read through the API and read again when an event of these

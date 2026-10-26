@@ -72,8 +72,10 @@ export function audienceOf(subject: LiveSubject): string[] {
         garage(subject.garageId),
         ...(subject.mechanicId ? [`mechanic:${subject.mechanicId}`] : []),
       ];
+    // The admins too: a report, a decision or a deletion moves their queue.
     case 'review':
       return [
+        'admin',
         garage(subject.garageId),
         account(subject.authorAccountId),
         `public:garage:${subject.garageId}`,

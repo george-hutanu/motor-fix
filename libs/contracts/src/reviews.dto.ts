@@ -405,6 +405,28 @@ const REVIEW_REPORT_REASONS = [
 ] as const;
 export type ReviewReportReason = (typeof REVIEW_REPORT_REASONS)[number];
 
+// Each report reason as the admins read it, in both languages.
+export const REVIEW_REPORT_REASON_TEXTS: Record<
+  ReviewReportReason,
+  { en: string; ro: string }
+> = {
+  ads: { en: 'Advertising', ro: 'Reclamă' },
+  fake_or_conflicted: {
+    en: 'Fake or conflict of interest',
+    ro: 'Falsă sau în conflict de interese',
+  },
+  hate: { en: 'Hate or discrimination', ro: 'Ură sau discriminare' },
+  insults: { en: 'Insults', ro: 'Insulte' },
+  off_topic: { en: 'Off topic', ro: 'În afara subiectului' },
+  other: { en: 'Other', ro: 'Altceva' },
+  personal_data: { en: 'Personal data', ro: 'Date personale' },
+  promotion: { en: 'Promoting another garage', ro: 'Promovarea altui service' },
+  threats_or_legal_accusations: {
+    en: 'Threats or legal accusations',
+    ro: 'Amenințări sau acuzații legale',
+  },
+};
+
 // Why a review may not be reported again.
 export type ReportRefusal = 'already_reported' | 'already_kept';
 
@@ -524,4 +546,222 @@ export class GarageStaffReviewsPageDto {
 
   @ApiProperty({ type: [GarageStaffReviewDto] })
   items!: GarageStaffReviewDto[];
+}
+
+// The admins' queue of pending review reports: oldest first, 20 a
+// page. Nothing in it names an account's e-mail, phone, plate or id.
+export const REVIEW_REPORT_QUEUE_PAGE = 20;
+
+const REVIEW_REPORT_SOURCES = ['garage', 'author', 'automatic'] as const;
+type ReviewReportSource = (typeof REVIEW_REPORT_SOURCES)[number];
+
+export class ReportQueueQueryDto {
+  @ApiPropertyOptional({ default: 1, minimum: 1, type: 'integer' })
+  @IsOptional()
+  @Transform(toQueryNumber)
+  @IsInt()
+  @Min(1)
+  page?: number;
+}
+
+export class ReportQueueReportDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ enum: ['review', 'reply'] })
+  target!: 'review' | 'reply';
+
+  @ApiProperty({ enum: REVIEW_REPORT_REASONS })
+  reason!: ReviewReportReason;
+
+  @ApiPropertyOptional({
+    description: 'What the reporter wrote; only with the reason other',
+    nullable: true,
+    type: String,
+  })
+  text?: string | null;
+
+  @ApiProperty({ enum: REVIEW_REPORT_SOURCES })
+  source!: ReviewReportSource;
+
+  @ApiProperty({ format: 'date-time' })
+  createdAt!: string;
+
+  @ApiProperty({
+    description: 'When an admin is due to decide',
+    format: 'date-time',
+  })
+  dueAt!: string;
+
+  @ApiProperty({ description: 'Due already: now is at or past dueAt' })
+  overdue!: boolean;
+}
+
+export class ReportQueueGarageDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  name!: string;
+}
+
+export class ReportQueueReviewDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ maximum: 5, minimum: 1, type: 'integer' })
+  score!: number;
+
+  @ApiProperty({ nullable: true, type: String })
+  text!: string | null;
+
+  @ApiProperty({ enum: ['job', 'profile'] })
+  source!: 'job' | 'profile';
+
+  @ApiProperty({ format: 'date-time' })
+  postedAt!: string;
+
+  @ApiProperty({
+    description: `The author's public short name, or "${DELETED_AUTHOR}"; never an identifier`,
+  })
+  author!: string;
+}
+
+export class ReportQueueReplyDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  text!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  postedAt!: string;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  editedAt!: string | null;
+
+  @ApiProperty({ description: "The garage's name" })
+  postedBy!: string;
+}
+
+export class ReportQueueJobFactDto {
+  @ApiProperty({
+    description:
+      'confirmed: a review of a job done; none: written from the profile',
+    enum: ['confirmed', 'none'],
+  })
+  kind!: 'confirmed' | 'none';
+
+  @ApiPropertyOptional({
+    description:
+      "The accepted quote's work names in the reader's language, joined with ' · '; only when confirmed",
+  })
+  work?: string;
+
+  @ApiPropertyOptional({ description: 'Brand and model; only when confirmed' })
+  car?: string;
+
+  @ApiPropertyOptional({
+    description: 'When the car was handed over; null when it was not',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  handedOverAt?: string | null;
+}
+
+export class ReportQueueAccountFactDto {
+  @ApiProperty({ description: "The author's account is deleted" })
+  deleted!: boolean;
+
+  @ApiPropertyOptional({
+    description: 'When the account was created; absent when deleted',
+    format: 'date-time',
+  })
+  createdAt?: string;
+}
+
+export class ReportQueueGarageReportsDto {
+  @ApiProperty({
+    description:
+      'Reports by this garage on its reviews created before this one, any status',
+    minimum: 0,
+    type: 'integer',
+  })
+  earlier!: number;
+
+  @ApiProperty({
+    description: 'Of those, the ones an admin kept',
+    minimum: 0,
+    type: 'integer',
+  })
+  kept!: number;
+}
+
+export class ReportQueueFactsDto {
+  @ApiProperty({ type: ReportQueueJobFactDto })
+  job!: ReportQueueJobFactDto;
+
+  @ApiProperty({ type: ReportQueueAccountFactDto })
+  account!: ReportQueueAccountFactDto;
+
+  @ApiProperty({
+    description:
+      "The author's other reviews, at any garage and not deleted by the author, with the same trimmed text",
+    minimum: 0,
+    type: 'integer',
+  })
+  identicalReviews!: number;
+
+  @ApiProperty({ type: ReportQueueGarageReportsDto })
+  garageReports!: ReportQueueGarageReportsDto;
+}
+
+export class ReportQueueItemDto {
+  @ApiProperty({ type: ReportQueueReportDto })
+  report!: ReportQueueReportDto;
+
+  @ApiProperty({ type: ReportQueueGarageDto })
+  garage!: ReportQueueGarageDto;
+
+  @ApiProperty({ type: ReportQueueReviewDto })
+  review!: ReportQueueReviewDto;
+
+  @ApiPropertyOptional({
+    description: 'Only when the report is on the reply',
+    type: ReportQueueReplyDto,
+  })
+  reply?: ReportQueueReplyDto;
+
+  @ApiProperty({ type: ReportQueueFactsDto })
+  facts!: ReportQueueFactsDto;
+}
+
+export class ReportQueueDto {
+  @ApiProperty({ type: [ReportQueueItemDto] })
+  items!: ReportQueueItemDto[];
+
+  @ApiProperty({ description: 'Pending reports', minimum: 0, type: 'integer' })
+  total!: number;
+
+  @ApiProperty({
+    description: 'Of those, past their dueAt',
+    minimum: 0,
+    type: 'integer',
+  })
+  overdue!: number;
+
+  @ApiProperty({
+    description: 'When the oldest pending report was made; null when none',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  oldestCreatedAt!: string | null;
+
+  @ApiProperty({ minimum: 1, type: 'integer' })
+  page!: number;
+
+  @ApiProperty({ enum: [REVIEW_REPORT_QUEUE_PAGE], type: 'integer' })
+  pageSize!: number;
 }

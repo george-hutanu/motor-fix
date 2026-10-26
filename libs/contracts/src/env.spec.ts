@@ -2,12 +2,15 @@
 // @traces 879-FR-017 244-FR-004
 // @traces 430-FR-004 430-FR-007
 // @traces 1192-FR-008 1192-FR-011
+// @traces 1250-FR-001 1250-FR-012
 import {
   brandLoadTimeoutMs,
   bunnyConfig,
   faroUrl,
   grafanaUrl,
   imageBaseUrl,
+  LIVE_VIDEO_ENV,
+  liveVideoSecrets,
   mapTilesTileJsonUrl,
   originSecrets,
   outageWebhookToken,
@@ -487,4 +490,33 @@ describe('mapTilesTileJsonUrl', () => {
       );
     },
   );
+});
+
+describe('liveVideoSecrets', () => {
+  const all = {
+    CLOUDFLARE_STREAM_ACCOUNT_ID: ' acct ',
+    CLOUDFLARE_STREAM_API_TOKEN: 'token',
+    CLOUDFLARE_STREAM_CUSTOMER_CODE: 'code',
+    CLOUDFLARE_STREAM_SIGNING_KEY_ID: 'kid',
+    CLOUDFLARE_STREAM_SIGNING_KEY_PEM: 'pem',
+  };
+
+  it('reads all five live video values, trimmed', () => {
+    expect(liveVideoSecrets(all)).toEqual({
+      ...all,
+      CLOUDFLARE_STREAM_ACCOUNT_ID: 'acct',
+    });
+  });
+
+  it.each(Object.keys(all))(
+    'is undefined when %s is missing or blank, so the api still boots',
+    (name) => {
+      expect(liveVideoSecrets({ ...all, [name]: undefined })).toBeUndefined();
+      expect(liveVideoSecrets({ ...all, [name]: '  ' })).toBeUndefined();
+    },
+  );
+
+  it('names the five variables it reads', () => {
+    expect([...LIVE_VIDEO_ENV].sort()).toEqual(Object.keys(all).sort());
+  });
 });

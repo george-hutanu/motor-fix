@@ -91,6 +91,16 @@ describe('the notification catalogue', () => {
     });
   });
 
+  // @traces 177-FR-011
+  it('sends the review report alert on the event, by e-mail and push, and lets an admin mute it', () => {
+    expect(NOTIFICATION_TYPES['ADMIN_REVIEW_REPORTED']).toMatchObject({
+      alwaysSent: false,
+      channels: ['email', 'push'],
+      transactional: false,
+      trigger: 'event',
+    });
+  });
+
   it('gives every type a trigger, channels, its flags, a group and a template key', () => {
     for (const name of names) {
       const type = NOTIFICATION_TYPES[name];

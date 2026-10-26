@@ -1,96 +1,9 @@
-import { randomInt, randomUUID } from 'node:crypto';
+import { expect, type Page } from '@playwright/test';
 
-import { type APIRequestContext, expect, type Page } from '@playwright/test';
-
-import { PASSWORD, ready, signIn } from './accounts.js';
+import { ready, signIn } from './accounts.js';
+import { accepted, DRIVER, MILITARI } from './booking.js';
 import { test } from './fixtures.js';
 import { keepSeededLanguage } from './seeded-language.js';
-
-// The seeded driver with a Dacia Logan, and the owner of Service Auto
-// Militari, the approved seeded garage with mechanics and two lifts.
-const DRIVER = 'cerere@example.test';
-const MILITARI = 'militari@example.test';
-const MINUTE = 60_000;
-
-async function accessToken(request: APIRequestContext, email: string) {
-  const res = await request.post('/api/v1/auth/sign-in', {
-    data: { email, password: PASSWORD, remember: false },
-  });
-  expect(res.ok()).toBe(true);
-  return ((await res.json()) as { accessToken: string }).accessToken;
-}
-
-const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
-
-// A slot days ahead, drawn from 300 days of minutes, so a run on a database
-// an earlier run left (or a parallel one) finds the mechanic and the lift
-// free: two hour-long slots overlap about once in 3,600 draws. A Bucharest
-// public holiday is drawn again: confirming refuses it as outside the hours.
-async function freeSlot(request: APIRequestContext) {
-  const year = new Date().getFullYear();
-  const holidays = new Set<string>();
-  for (const one of [year, year + 1, year + 2]) {
-    const res = await request.get(`/api/v1/public-holidays?year=${one}`);
-    expect(res.ok()).toBe(true);
-    for (const { day } of (await res.json()) as { day: string }[])
-      holidays.add(day);
-  }
-  const bucharestDay = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Bucharest',
-  });
-  const minute = Math.floor(Date.now() / MINUTE);
-  for (;;) {
-    const ahead = 3 * 24 * 60 + randomInt(300 * 24 * 60);
-    const slot = new Date((minute + ahead) * MINUTE);
-    if (!holidays.has(bucharestDay.format(slot))) return slot.toISOString();
-  }
-}
-
-// One request of the driver's, quoted by Militari and accepted by the driver,
-// so its booking waits for the garage's confirmation.
-async function accepted(request: APIRequestContext) {
-  const militari = await accessToken(request, MILITARI);
-  const me = await request.get('/api/v1/me', { headers: bearer(militari) });
-  const { garageId } = (await me.json()) as { garageId: string };
-  const jobs = await request.get('/api/v1/job-types?keys=oil-service');
-  const [oil] = ((await jobs.json()) as { items: { id: string }[] }).items;
-  const driver = await accessToken(request, DRIVER);
-  const cars = await request.get('/api/v1/cars', { headers: bearer(driver) });
-  const { items } = (await cars.json()) as {
-    items: { id: string; model: string }[];
-  };
-  const car = items.find((item) => item.model === 'Logan') ?? items[0];
-  const sent = await request.post('/api/v1/quote-requests', {
-    data: {
-      carId: car.id,
-      description: `Schimb de ulei și filtre ${randomUUID().slice(0, 8)}`,
-      garageIds: [garageId],
-      jobTypeIds: [oil.id],
-      sources: ['profile_direct'],
-    },
-    headers: { ...bearer(driver), 'Idempotency-Key': randomUUID() },
-  });
-  expect(sent.status()).toBe(201);
-  const requestId = ((await sent.json()) as { id: string }).id;
-  const quote = await request.post('/api/v1/quotes', {
-    data: {
-      durationMinutes: 60,
-      fromLei: 300,
-      requestId,
-      slot: await freeSlot(request),
-      toLei: 400,
-    },
-    headers: { ...bearer(militari), 'Idempotency-Key': randomUUID() },
-  });
-  expect(quote.status()).toBe(201);
-  const quoteId = ((await quote.json()) as { id: string }).id;
-  const accept = await request.post(`/api/v1/quotes/${quoteId}/accept`, {
-    data: { historyShared: false },
-    headers: { ...bearer(driver), 'Idempotency-Key': randomUUID() },
-  });
-  expect(accept.status()).toBe(201);
-  return requestId;
-}
 
 async function signedIn(page: Page, email: string, landing: string) {
   await keepSeededLanguage(page);

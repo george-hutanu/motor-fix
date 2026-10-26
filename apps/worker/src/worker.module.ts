@@ -26,6 +26,8 @@ import {
   HealthModule,
   InsightsModule,
   ListingPhotosWorkerModule,
+  MODERATION_TIMERS_CONSUMER,
+  ModerationTimersModule,
   NEWS_CONSUMER,
   NotificationsModule,
   OutboxRelayModule,
@@ -114,6 +116,7 @@ export function workerModule(
           GARAGE_REPORT_DECIDED_CONSUMER,
           GARAGE_RESTORED_CONSUMER,
           GARAGE_SUSPENDED_CONSUMER,
+          MODERATION_TIMERS_CONSUMER,
           NEWS_CONSUMER,
           QUOTE_RECEIVED_CONSUMER,
           QUOTE_ACCEPTED_CONSUMER,
@@ -170,6 +173,13 @@ export function workerModule(
       // Reminds the garages a request still waits on, and expires requests
       // and quotes at the end of their seven days.
       RequestTimersModule.registerWorker({
+        notifications,
+        redisUrl: env.REDIS_URL,
+        webUrl: email.webUrl,
+      }),
+      // Tells the admins of a reported review, reminds them after 48 hours,
+      // and closes a report whose review its author deleted.
+      ModerationTimersModule.registerWorker({
         notifications,
         redisUrl: env.REDIS_URL,
         webUrl: email.webUrl,

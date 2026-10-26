@@ -4363,6 +4363,56 @@
         ]
       }
     },
+    "/api/v1/admin/review-reports": {
+      "get": {
+        "operationId": "ReportQueueController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportQueueDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: page is not a positive integer"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "account_suspended"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The pending review reports, oldest first, 20 a page",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/reviews/{reviewId}/reply": {
       "post": {
         "operationId": "ReviewRepliesController_post",
@@ -5280,6 +5330,102 @@
         },
         "tags": [
           "places"
+        ]
+      }
+    },
+    "/api/v1/jobs/{id}/live": {
+      "post": {
+        "operationId": "LiveSessionsController_start",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveSessionStartedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The job id is not a uuid"
+          },
+          "404": {
+            "description": "not_found: no such job, another garage’s, live media off, or not the owner or the job’s mechanic"
+          },
+          "409": {
+            "description": "live_already_on or job_closed"
+          },
+          "503": {
+            "description": "live_unavailable: send photos and clips instead"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Go live on a job, video only",
+        "tags": [
+          "live-sessions"
+        ]
+      }
+    },
+    "/api/v1/live-sessions/{id}/view-token": {
+      "post": {
+        "operationId": "LiveSessionsController_view",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveViewCredentialDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The session id is not a uuid"
+          },
+          "404": {
+            "description": "not_found: no such session, live media off, or not the job’s driver, owner or mechanic"
+          },
+          "409": {
+            "description": "live_ended"
+          },
+          "503": {
+            "description": "live_unavailable: the link cannot be signed now"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A short-lived link to watch a live session",
+        "tags": [
+          "live-sessions"
         ]
       }
     },
@@ -13677,7 +13823,27 @@
           "position"
         ]
       },
-      "RequestBookingDto": {
+      "GarageRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "DriverRowBookingDto": {
         "type": "object",
         "properties": {
           "status": {
@@ -13698,12 +13864,41 @@
           "startsAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "cancelledBySide": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "garage",
+              "system"
+            ],
+            "nullable": true
+          },
+          "lateCancellation": {
+            "type": "boolean",
+            "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
+          },
+          "jobStarted": {
+            "type": "boolean",
+            "description": "The booking’s job exists and has left to do"
           }
         },
         "required": [
           "status",
           "confirmBy",
-          "startsAt"
+          "startsAt",
+          "id",
+          "garage",
+          "cancelledBySide",
+          "lateCancellation",
+          "jobStarted"
         ]
       },
       "RequestSummaryDto": {
@@ -13772,7 +13967,7 @@
             "type": "object",
             "allOf": [
               {
-                "$ref": "#/components/schemas/RequestBookingDto"
+                "$ref": "#/components/schemas/DriverRowBookingDto"
               }
             ]
           }
@@ -13813,140 +14008,6 @@
           "items",
           "nextCursor",
           "total"
-        ]
-      },
-      "GarageRefDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug"
-        ]
-      },
-      "BookingDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "quoteId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "garage": {
-            "$ref": "#/components/schemas/GarageRefDto"
-          },
-          "startsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "durationMinutes": {
-            "type": "number"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "awaiting_confirmation",
-              "confirmed",
-              "lapsed",
-              "cancelled",
-              "no_show",
-              "completed"
-            ]
-          },
-          "confirmBy": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "confirmedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "cancelledAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "cancelledBySide": {
-            "type": "string",
-            "enum": [
-              "driver",
-              "garage",
-              "system"
-            ],
-            "nullable": true
-          },
-          "cancelReason": {
-            "type": "string",
-            "enum": [
-              "plans_changed",
-              "found_another_garage",
-              "problem_solved",
-              "no_mechanic_free",
-              "parts_not_available",
-              "closed_that_day",
-              "driver_asked",
-              "other",
-              "garage_suspended",
-              "driver_account_closed"
-            ],
-            "nullable": true
-          },
-          "cancelNote": {
-            "type": "string",
-            "description": "What the driver wrote when cancelling, if anything",
-            "nullable": true
-          },
-          "lateCancellation": {
-            "type": "boolean",
-            "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
-          },
-          "noShowAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "completedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "quoteId",
-          "garage",
-          "startsAt",
-          "durationMinutes",
-          "status",
-          "confirmBy",
-          "confirmedAt",
-          "cancelledAt",
-          "cancelledBySide",
-          "cancelReason",
-          "cancelNote",
-          "lateCancellation",
-          "noShowAt",
-          "completedAt",
-          "createdAt"
         ]
       },
       "RecipientDto": {
@@ -14107,6 +14168,120 @@
           "jobs"
         ]
       },
+      "BookingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quoteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_confirmation",
+              "confirmed",
+              "lapsed",
+              "cancelled",
+              "no_show",
+              "completed"
+            ]
+          },
+          "confirmBy": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "confirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelledBySide": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "garage",
+              "system"
+            ],
+            "nullable": true
+          },
+          "cancelReason": {
+            "type": "string",
+            "enum": [
+              "plans_changed",
+              "found_another_garage",
+              "problem_solved",
+              "no_mechanic_free",
+              "parts_not_available",
+              "closed_that_day",
+              "driver_asked",
+              "other",
+              "garage_suspended",
+              "driver_account_closed"
+            ],
+            "nullable": true
+          },
+          "cancelNote": {
+            "type": "string",
+            "description": "What the driver wrote when cancelling, if anything",
+            "nullable": true
+          },
+          "lateCancellation": {
+            "type": "boolean",
+            "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
+          },
+          "noShowAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "quoteId",
+          "garage",
+          "startsAt",
+          "durationMinutes",
+          "status",
+          "confirmBy",
+          "confirmedAt",
+          "cancelledAt",
+          "cancelledBySide",
+          "cancelReason",
+          "cancelNote",
+          "lateCancellation",
+          "noShowAt",
+          "completedAt",
+          "createdAt"
+        ]
+      },
       "RequestDto": {
         "type": "object",
         "properties": {
@@ -14167,16 +14342,6 @@
             "description": "As the driver wrote it; the list shows its first line when there is no job",
             "nullable": true
           },
-          "booking": {
-            "description": "The request’s newest booking",
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/BookingDto"
-              }
-            ]
-          },
           "recipients": {
             "type": "array",
             "items": {
@@ -14188,6 +14353,15 @@
             "items": {
               "$ref": "#/components/schemas/QuoteDto"
             }
+          },
+          "booking": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingDto"
+              }
+            ]
           }
         },
         "required": [
@@ -14201,9 +14375,9 @@
           "closedAt",
           "quotesCount",
           "description",
-          "booking",
           "recipients",
-          "quotes"
+          "quotes",
+          "booking"
         ]
       },
       "GarageCarDto": {
@@ -15979,6 +16153,327 @@
           "items"
         ]
       },
+      "ReportQueueReportDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "target": {
+            "type": "string",
+            "enum": [
+              "review",
+              "reply"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "insults",
+              "personal_data",
+              "ads",
+              "promotion",
+              "off_topic",
+              "hate",
+              "fake_or_conflicted",
+              "threats_or_legal_accusations",
+              "other"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "description": "What the reporter wrote; only with the reason other",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "garage",
+              "author",
+              "automatic"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dueAt": {
+            "type": "string",
+            "description": "When an admin is due to decide",
+            "format": "date-time"
+          },
+          "overdue": {
+            "type": "boolean",
+            "description": "Due already: now is at or past dueAt"
+          }
+        },
+        "required": [
+          "id",
+          "target",
+          "reason",
+          "source",
+          "createdAt",
+          "dueAt",
+          "overdue"
+        ]
+      },
+      "ReportQueueGarageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "ReportQueueReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "score": {
+            "type": "integer",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "job",
+              "profile"
+            ]
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "author": {
+            "type": "string",
+            "description": "The author's public short name, or \"Șofer MotorFix\"; never an identifier"
+          }
+        },
+        "required": [
+          "id",
+          "score",
+          "text",
+          "source",
+          "postedAt",
+          "author"
+        ]
+      },
+      "ReportQueueReplyDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "postedBy": {
+            "type": "string",
+            "description": "The garage's name"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "postedAt",
+          "editedAt",
+          "postedBy"
+        ]
+      },
+      "ReportQueueJobFactDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "confirmed: a review of a job done; none: written from the profile",
+            "enum": [
+              "confirmed",
+              "none"
+            ]
+          },
+          "work": {
+            "type": "string",
+            "description": "The accepted quote's work names in the reader's language, joined with ' · '; only when confirmed"
+          },
+          "car": {
+            "type": "string",
+            "description": "Brand and model; only when confirmed"
+          },
+          "handedOverAt": {
+            "type": "string",
+            "description": "When the car was handed over; null when it was not",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "ReportQueueAccountFactDto": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "The author's account is deleted"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the account was created; absent when deleted",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "deleted"
+        ]
+      },
+      "ReportQueueGarageReportsDto": {
+        "type": "object",
+        "properties": {
+          "earlier": {
+            "type": "integer",
+            "description": "Reports by this garage on its reviews created before this one, any status",
+            "minimum": 0
+          },
+          "kept": {
+            "type": "integer",
+            "description": "Of those, the ones an admin kept",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "earlier",
+          "kept"
+        ]
+      },
+      "ReportQueueFactsDto": {
+        "type": "object",
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/ReportQueueJobFactDto"
+          },
+          "account": {
+            "$ref": "#/components/schemas/ReportQueueAccountFactDto"
+          },
+          "identicalReviews": {
+            "type": "integer",
+            "description": "The author's other reviews, at any garage and not deleted by the author, with the same trimmed text",
+            "minimum": 0
+          },
+          "garageReports": {
+            "$ref": "#/components/schemas/ReportQueueGarageReportsDto"
+          }
+        },
+        "required": [
+          "job",
+          "account",
+          "identicalReviews",
+          "garageReports"
+        ]
+      },
+      "ReportQueueItemDto": {
+        "type": "object",
+        "properties": {
+          "report": {
+            "$ref": "#/components/schemas/ReportQueueReportDto"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/ReportQueueGarageDto"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReportQueueReviewDto"
+          },
+          "reply": {
+            "description": "Only when the report is on the reply",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReportQueueReplyDto"
+              }
+            ]
+          },
+          "facts": {
+            "$ref": "#/components/schemas/ReportQueueFactsDto"
+          }
+        },
+        "required": [
+          "report",
+          "garage",
+          "review",
+          "facts"
+        ]
+      },
+      "ReportQueueDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportQueueItemDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Pending reports",
+            "minimum": 0
+          },
+          "overdue": {
+            "type": "integer",
+            "description": "Of those, past their dueAt",
+            "minimum": 0
+          },
+          "oldestCreatedAt": {
+            "type": "string",
+            "description": "When the oldest pending report was made; null when none",
+            "format": "date-time",
+            "nullable": true
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pageSize": {
+            "type": "integer",
+            "enum": [
+              20
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "overdue",
+          "oldestCreatedAt",
+          "page",
+          "pageSize"
+        ]
+      },
       "ReplyToReviewDto": {
         "type": "object",
         "properties": {
@@ -17158,6 +17653,100 @@
           "items"
         ]
       },
+      "LiveVideoConstraintsDto": {
+        "type": "object",
+        "properties": {
+          "maxHeight": {
+            "type": "number",
+            "example": 720
+          },
+          "maxBitrateKbps": {
+            "type": "number",
+            "example": 1500
+          }
+        },
+        "required": [
+          "maxHeight",
+          "maxBitrateKbps"
+        ]
+      },
+      "LivePublishConstraintsDto": {
+        "type": "object",
+        "properties": {
+          "audio": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "video": {
+            "$ref": "#/components/schemas/LiveVideoConstraintsDto"
+          }
+        },
+        "required": [
+          "audio",
+          "video"
+        ]
+      },
+      "LivePublishCredentialDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The WHIP URL the sender publishes to"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/LivePublishConstraintsDto"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt",
+          "constraints"
+        ]
+      },
+      "LiveSessionStartedDto": {
+        "type": "object",
+        "properties": {
+          "liveSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "publish": {
+            "$ref": "#/components/schemas/LivePublishCredentialDto"
+          }
+        },
+        "required": [
+          "liveSessionId",
+          "startedAt",
+          "publish"
+        ]
+      },
+      "LiveViewCredentialDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "The signed low-latency HLS manifest URL"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
+        ]
+      },
       "ProfileViewDto": {
         "type": "object",
         "properties": {
@@ -17399,6 +17988,16 @@
             "description": "Verification files submitted or in review, on the whole platform",
             "minimum": 0
           },
+          "reportsPending": {
+            "type": "integer",
+            "description": "Review reports waiting for an admin, on the whole platform",
+            "minimum": 0
+          },
+          "reportsOverdue": {
+            "type": "integer",
+            "description": "Of those, the ones past their due time",
+            "minimum": 0
+          },
           "cityGaragesWaiting": {
             "type": "integer",
             "description": "Verification files submitted or in review of garages in the chosen city; only with a city",
@@ -17465,6 +18064,8 @@
         },
         "required": [
           "garagesWaiting",
+          "reportsPending",
+          "reportsOverdue",
           "garagesListed",
           "garagesApprovedThisMonth",
           "activeDrivers",

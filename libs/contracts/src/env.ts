@@ -62,6 +62,30 @@ export function placesApiKey(
   return source[key]?.trim() || undefined;
 }
 
+// The five values the live video provider needs. Any one missing or blank
+// leaves live video off, so the api still boots.
+export const LIVE_VIDEO_ENV = [
+  'CLOUDFLARE_STREAM_ACCOUNT_ID',
+  'CLOUDFLARE_STREAM_API_TOKEN',
+  'CLOUDFLARE_STREAM_CUSTOMER_CODE',
+  'CLOUDFLARE_STREAM_SIGNING_KEY_ID',
+  'CLOUDFLARE_STREAM_SIGNING_KEY_PEM',
+] as const;
+
+export type LiveVideoSecrets = Record<(typeof LIVE_VIDEO_ENV)[number], string>;
+
+export function liveVideoSecrets(
+  source: Record<string, string | undefined> = process.env,
+): LiveVideoSecrets | undefined {
+  const secrets = {} as LiveVideoSecrets;
+  for (const name of LIVE_VIDEO_ENV) {
+    const value = source[name]?.trim();
+    if (!value) return undefined;
+    secrets[name] = value;
+  }
+  return secrets;
+}
+
 // The values the CDN may send in X-Origin-Secret, comma-separated so a new
 // one can be added before the old one goes. Empty: the web answers everyone.
 export function originSecrets(
