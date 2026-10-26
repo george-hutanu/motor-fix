@@ -2,7 +2,7 @@ import { ScheduleService } from './schedule.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { atLocal } from '../../bucharest';
 import type { Prisma } from '../../generated/prisma/client';
-import { heldOpen } from '../../held-open.testing';
+import { heldOpen, lockWaited } from '../../held-open.testing';
 import { databaseUrl, quotesWorld } from '../../quotes/quotes.testing';
 
 const world = quotesWorld();
@@ -156,7 +156,7 @@ describe('placing a booking on PostgreSQL', () => {
       const second = prisma.$transaction(async (tx) => {
         await write(tx, await place(tx, { ...extra, startsAt: at(10, 30) }));
       });
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await lockWaited(prisma);
       first.release();
       await first.done;
 

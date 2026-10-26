@@ -5,7 +5,7 @@ import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { ConfirmService } from './confirm.service';
 import type { Actor } from '../../auth/policy';
 import { addDays, atLocal, localDay } from '../../bucharest';
-import { heldOpen } from '../../held-open.testing';
+import { heldOpen, lockWaited } from '../../held-open.testing';
 import { quotesApp } from '../quotes-api.testing';
 
 const { bearer, get, post, provider, team, world } = quotesApp();
@@ -1119,7 +1119,7 @@ describe("the mechanic's own hours", () => {
     const answer = confirm(booking.id, owner(t), {
       mechanicId: t.plainMechanic.id,
     }).then((res) => res);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await lockWaited(prisma);
     add.release();
     await add.done;
 
@@ -1353,7 +1353,7 @@ describe('the placement a confirm writes', () => {
         { mechanicId: t.plainMechanic.id },
         language,
       );
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await lockWaited(prisma);
       taking.release();
       await taking.done;
 

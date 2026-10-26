@@ -47,6 +47,7 @@ function refused(call: () => unknown) {
 }
 
 // @traces 150-FR-003
+// @traces 150-FR-013
 describe('placing a job on the working stretches', () => {
   const days: [Date, Date][] = [
     [at(MON, 8), at(MON, 16)],

@@ -335,6 +335,7 @@ describe('the garage lift count', () => {
 });
 
 // @traces 150-FR-001
+// @traces 150-FR-013
 describe('the segments of confirmed bookings', () => {
   // 09:00 in Bucharest; every booking the world makes lasts 90 minutes.
   const NINE = Date.parse('2026-11-12T07:00:00Z');

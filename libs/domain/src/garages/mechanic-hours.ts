@@ -126,8 +126,7 @@ export function plannedMinutes(
   ) {
     return 0;
   }
-  const weekday = WEEKDAYS[(new Date(day).getUTCDay() + 6) % 7];
-  const stretch = stretchOn(schedule, garage.hours, weekday);
+  const stretch = stretchOn(schedule, garage.hours, weekdayOf(day));
   return stretch ? minuteOf(stretch[1]) - minuteOf(stretch[0]) : 0;
 }
 
@@ -135,7 +134,7 @@ const weekdayOf = (day: string): Weekday =>
   WEEKDAYS[(new Date(day).getUTCDay() + 6) % 7];
 
 // The instant the Bucharest clock reads `time` ("HH:MM") on `day`.
-export const wallAt = (day: string, time: string): Date =>
+const wallAt = (day: string, time: string): Date =>
   new Date(
     atLocal(day, Number(time.slice(0, 2))).getTime() +
       Number(time.slice(3, 5)) * 60_000,
@@ -155,7 +154,7 @@ function clipped(intervals: readonly Interval[], [from, to]: Interval) {
 // stretch alone while the garage has set no hours); with none, the garage's
 // intervals. Nothing on a closed day, a holiday or, for her, a day off, a
 // Saturday without the switch or a weekday she has no stretch on.
-export function dayIntervals(
+function dayIntervals(
   schedule: MechanicSchedule | null,
   garage: GarageCalendar,
   day: string,

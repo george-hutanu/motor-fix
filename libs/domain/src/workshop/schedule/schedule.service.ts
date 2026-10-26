@@ -431,8 +431,7 @@ export class ScheduleService {
           model: row.booking.request.carModel,
         },
         endsAt: row.endsAt,
-        // A lift of another garage is not this one's.
-        lift: row.garageId === garageId ? row.lift : null,
+        lift: row.lift,
         mechanicId: row.mechanicId,
         startsAt: row.startsAt,
       })),

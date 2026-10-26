@@ -241,13 +241,14 @@ type BookingMove =
     })
   | (Base<'cancelled'> & { cancellation: Cancellation });
 
-// A cancellation also files its reason, which the driver's short history
-// shows next to the status.
 const RELEASES_PLACE: ReadonlySet<BookingStatus> = new Set<BookingStatus>([
   'cancelled',
   'lapsed',
   'no_show',
 ]);
+
+// A cancellation also files its reason, which the driver's short history
+// shows next to the status.
 
 export async function moveBooking(
   tx: Tx,
