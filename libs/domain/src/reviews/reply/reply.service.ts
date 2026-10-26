@@ -72,6 +72,11 @@ export class ReviewRepliesService {
     let reply: Awaited<ReturnType<PrismaClient['reviewReply']['create']>>;
     try {
       reply = await this.prisma.$transaction(async (tx) => {
+        // The review held still until the reply lands, so a removal cannot
+        // slip in between the check and the write.
+        const [held] = await tx.$queryRaw<{ status: ReviewStatus }[]>`
+          SELECT status FROM review WHERE id = ${review.id}::uuid FOR UPDATE`;
+        if (held?.status !== 'published') throw new Moved();
         const row = await tx.reviewReply.create({
           data: {
             garageId: review.garageId,
@@ -95,11 +100,14 @@ export class ReviewRepliesService {
         return row;
       });
     } catch (error) {
-      // The loser of two replies at once reads the review as the winner left
-      // it, and is refused for that.
-      if (!taken(error)) throw error;
+      // The loser of two replies at once, or a reply to a review removed
+      // since the read, is refused for what the review is now.
+      if (!(error instanceof Moved) && !taken(error)) throw error;
       await this.refuse(actor, reviewId, dto, 'post');
-      throw this.refusal(actor, 'already_replied');
+      throw this.refusal(
+        actor,
+        error instanceof Moved ? 'review_not_public' : 'already_replied',
+      );
     }
     recordReviewReplied('published');
     return staffReplyOf(reply) as ReviewReplyDto;

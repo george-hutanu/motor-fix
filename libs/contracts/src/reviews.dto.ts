@@ -184,11 +184,7 @@ export class MechanicReviewsQueryDto {
   page?: number;
 }
 
-export const REVIEW_REPLY_STATUSES = [
-  'published',
-  'reported',
-  'removed',
-] as const;
+const REVIEW_REPLY_STATUSES = ['published', 'reported', 'removed'] as const;
 export type ReviewReplyStatus = (typeof REVIEW_REPLY_STATUSES)[number];
 
 // Why the owner may not post or edit a reply; an edit of a review with no
