@@ -10,8 +10,8 @@ import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
 import {
   cancelSentTransfer,
+  cancelTransfer,
   isLive,
-  recordStep,
   TRANSFER_SENDING,
   type TransferSending,
   transferEvent,
@@ -254,15 +254,10 @@ export class CarTransfersService {
           'The transfer is no longer sent',
         );
       }
-      await tx.carTransfer.update({
-        data: { status: 'cancelled' },
-        where: { id: transfer.id },
-      });
-      await recordStep(
+      await cancelTransfer(
         tx,
         { audit: this.audit, events: this.events },
         transfer,
-        'cancelled',
         { accountId: sellerId, role: actor.role },
       );
     });

@@ -16,10 +16,10 @@ export interface TransferSending {
 }
 export const TRANSFER_SENDING = Symbol('TRANSFER_SENDING');
 
-export type TransferStatus = 'sent' | 'cancelled' | 'expired' | 'accepted';
+type TransferStatus = 'sent' | 'cancelled' | 'expired' | 'accepted';
 
 // Who moved a transfer: the seller, or the system for an expiry.
-export interface TransferActor {
+interface TransferActor {
   accountId: string | null;
   role: Role | 'system';
 }
@@ -95,10 +95,19 @@ export async function cancelSentTransfer(
     select: { carId: true, id: true, sellerId: true },
     where: { carId, status: 'sent' },
   });
-  if (!sent) return;
+  if (sent) await cancelTransfer(tx, ports, sent, actor);
+}
+
+// Cancels a sent transfer, with its entry and event.
+export async function cancelTransfer(
+  tx: Prisma.TransactionClient,
+  ports: { audit: AuditPort; events: EventPort },
+  transfer: TransferRow,
+  actor: TransferActor,
+) {
   await tx.carTransfer.update({
     data: { status: 'cancelled' },
-    where: { id: sent.id },
+    where: { id: transfer.id },
   });
-  await recordStep(tx, ports, sent, 'cancelled', actor);
+  await recordStep(tx, ports, transfer, 'cancelled', actor);
 }
