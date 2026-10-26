@@ -22,10 +22,12 @@ const view = (
   kind: 'mechanic' | 'receptionist',
   garage = 'Atelier Dinamo',
 ) => ({
-  email: 'elena@example.ro',
+  email: 'elena@example.ro' as string | null,
   garage,
   kind,
+  leaving: null as string | null,
   name: 'Elena Stan',
+  phone: null as string | null,
 });
 
 const gone = (code: string, status = 410) =>
@@ -280,5 +282,146 @@ describe('the invite link page', () => {
     await flush(fixture);
 
     expect(check).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 1255-FR-010 1255-FR-016
+describe('the invite link page, for a card', () => {
+  const BY_PHONE = { ...view('mechanic'), email: null, phone: '+40722000111' };
+  const LEAVING = 'Vei părăsi echipa Atelier Nord';
+  const MOVE = 'Mutarea la alt service nu este disponibilă încă.';
+  const alerts = (fixture: { nativeElement: unknown }) =>
+    [...element(fixture).querySelectorAll('[role="alert"]')].map(
+      (alert) => alert.textContent?.trim() ?? '',
+    );
+
+  it('opens the phone sign-in with the number for an invite by phone', async () => {
+    const { fixture, join } = setup({ answer: BY_PHONE, joined: 'signed-in' });
+    await flush(fixture);
+
+    accept(fixture)?.click();
+    await flush(fixture);
+
+    expect(join).toHaveBeenCalledWith({
+      name: 'Elena Stan',
+      phone: '+40722000111',
+    });
+    expect(join.mock.calls[0]).toEqual([
+      expect.not.objectContaining({ email: expect.anything() }),
+    ]);
+  });
+
+  it('warns above Acceptă that a mechanic of another garage leaves it', async () => {
+    const { fixture } = setup({
+      answer: { ...view('mechanic'), leaving: 'Atelier Nord' },
+      signedIn: MECHANIC,
+    });
+    await flush(fixture);
+
+    expect(alerts(fixture)).toContain(LEAVING);
+    const warning = [
+      ...element(fixture).querySelectorAll('[role="alert"]'),
+    ].find((alert) => alert.textContent?.includes(LEAVING)) as Element;
+    expect(
+      warning.compareDocumentPosition(accept(fixture) as HTMLButtonElement) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('loads the session from the cookie before reading the link, so a signed-in visitor opening it fresh is warned before "Acceptă" accepts', async () => {
+    const { acceptInvite, check, fixture, load } = setup();
+    // The server names the garage left only when the call carries the
+    // session, which exists once it is loaded from the cookie.
+    let bearer = false;
+    load.mockImplementation(async () => {
+      bearer = true;
+      return MECHANIC;
+    });
+    check.mockImplementation(async () => ({
+      ...view('mechanic'),
+      leaving: bearer ? 'Atelier Nord' : null,
+    }));
+    await flush(fixture);
+
+    expect(load).toHaveBeenCalledWith({ keepLanguage: true });
+    expect(load.mock.invocationCallOrder[0]).toBeLessThan(
+      check.mock.invocationCallOrder[0],
+    );
+    expect(alerts(fixture)).toContain(LEAVING);
+    expect(acceptInvite).not.toHaveBeenCalled();
+
+    accept(fixture)?.click();
+    await flush(fixture);
+
+    expect(acceptInvite).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not accept on the first press when the session appeared after the link was read', async () => {
+    const { acceptInvite, check, fixture, load } = setup();
+    let bearer = false;
+    load.mockImplementation(async () => (bearer ? MECHANIC : null));
+    check.mockImplementation(async () => ({
+      ...view('mechanic'),
+      leaving: bearer ? 'Atelier Nord' : null,
+    }));
+    await flush(fixture);
+    expect(text(fixture)).not.toContain(LEAVING);
+    bearer = true;
+
+    accept(fixture)?.click();
+    await flush(fixture);
+
+    expect(acceptInvite).not.toHaveBeenCalled();
+    expect(alerts(fixture)).toContain(LEAVING);
+  });
+
+  it('reads the link again after a sign-in, to learn what the person would leave', async () => {
+    const { check, fixture } = setup({ joined: 'signed-in' });
+    await flush(fixture);
+    expect(text(fixture)).not.toContain(LEAVING);
+    check.mockResolvedValueOnce({
+      ...view('mechanic'),
+      leaving: 'Atelier Nord',
+    });
+
+    accept(fixture)?.click();
+    await flush(fixture);
+
+    expect(check).toHaveBeenCalledTimes(2);
+    expect(text(fixture)).toContain(LEAVING);
+  });
+
+  it('says a move is not available yet and keeps the page on move_required', async () => {
+    const { acceptInvite, fixture, navigate } = setup({ signedIn: MECHANIC });
+    acceptInvite.mockRejectedValueOnce(
+      new HttpErrorResponse({
+        error: {
+          code: 'move_required',
+          garage: 'Atelier Nord',
+          message: 'move',
+        },
+        status: 409,
+      }),
+    );
+    await flush(fixture);
+
+    accept(fixture)?.click();
+    await flush(fixture);
+
+    expect(alerts(fixture)).toContain(MOVE);
+    expect(text(fixture)).not.toContain(INVALID);
+    expect(accept(fixture)).toBeDefined();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('reads English', async () => {
+    const { fixture } = setup({
+      answer: { ...view('mechanic'), leaving: 'Atelier Nord' },
+      signedIn: MECHANIC,
+    });
+    await TestBed.inject(I18n).use('en');
+    await flush(fixture);
+
+    expect(text(fixture)).toContain('You will leave the team of Atelier Nord');
   });
 });

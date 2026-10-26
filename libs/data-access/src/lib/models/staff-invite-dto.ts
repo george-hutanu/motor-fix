@@ -10,13 +10,23 @@ export interface StaffInviteDto {
 };
 
   /**
-   * Trimmed; stored and compared in lower case
+   * Trimmed; stored and compared in lower case. Exactly one of email and phone
    */
-  email: string;
+  email?: string;
   kind: 'mechanic' | 'receptionist';
 
   /**
-   * Trimmed
+   * The card the invite is for; accepting links the account to it
    */
-  name: string;
+  mechanicId?: string;
+
+  /**
+   * Trimmed; required without mechanicId, ignored with it
+   */
+  name?: string;
+
+  /**
+   * For a mechanic; as typed, read as in the phone sign-in, must then be E.164. Exactly one of email and phone
+   */
+  phone?: string;
 }

@@ -29,6 +29,7 @@ const mechanic = (
   futureBookings: 0,
   hasAccount: true,
   id: 'mechanic-1',
+  invite: null,
   isOwner: false,
   name: 'Andrei Popescu',
   onProfile: true,
@@ -385,21 +386,19 @@ describe('Mecanici, states under failure', () => {
 
 // @traces 055-FR-012
 describe('Mecanici, live events that must not refresh', () => {
-  it.each([
-    'invite.sent',
-    'invite.revoked',
-    'review.posted',
-    'booking.created',
-  ])('does not read again on %s', async (kind) => {
-    const { settle } = await render();
-    await settle();
+  it.each(['review.posted', 'booking.created'])(
+    'does not read again on %s',
+    async (kind) => {
+      const { settle } = await render();
+      await settle();
 
-    events.next(message(kind));
-    await wait(350);
-    await settle();
+      events.next(message(kind));
+      await wait(350);
+      await settle();
 
-    expect(list).toHaveBeenCalledTimes(1);
-  });
+      expect(list).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('reads once, not many times, for a burst of fifty events', async () => {
     const { settle } = await render();

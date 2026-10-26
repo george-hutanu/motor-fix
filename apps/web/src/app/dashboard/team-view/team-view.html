@@ -41,7 +41,7 @@
                   } @else if (mechanic.hasAccount) {
                     {{ 'garage.team.state.off' | t }}
                   } @else {
-                    {{ 'garage.team.state.off' | t }} · {{ 'garage.team.state.noAccount' | t }}
+                    {{ 'garage.team.state.off' | t }} · {{ waiting(mechanic) | t }}
                   }
                 </span>
               </span>

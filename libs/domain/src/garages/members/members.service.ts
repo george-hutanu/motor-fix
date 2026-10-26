@@ -67,6 +67,7 @@ export class GarageMembersService {
         email: invite.email,
         id: invite.id,
         kind: invite.kind,
+        phone: invite.phone,
         sentAt: invite.createdAt.toISOString(),
       })),
       members,

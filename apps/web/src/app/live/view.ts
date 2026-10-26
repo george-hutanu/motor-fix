@@ -26,7 +26,8 @@ export interface LiveView<T> {
   readonly failed: Signal<boolean>;
   // How many reads have succeeded: moves even when a read equals the last one.
   readonly reads: Signal<number>;
-  reload(): void;
+  // Resolves once the data is read again, the read already running included.
+  reload(): Promise<void>;
 }
 
 interface LiveViewOptions<T> {
@@ -59,6 +60,7 @@ export function liveView<T>(
   const firstRead = computed(() => isLoading() && value() === undefined);
   const destroyRef = inject(DestroyRef);
   let again = false;
+  let running: Promise<void> | undefined;
   let retry: ReturnType<typeof setTimeout> | undefined;
 
   const failed = (failure: unknown) => {
@@ -95,16 +97,25 @@ export function liveView<T>(
     }
   };
   // One read at a time: events during a read make one more after it.
-  const read = async () => {
-    if (destroyRef.destroyed) return;
-    if (isLoading()) {
+  const read = (): Promise<void> => {
+    if (destroyRef.destroyed) return Promise.resolve();
+    if (running) {
       again = true;
-      return;
+      return running;
     }
-    do {
-      again = false;
-      await readOnce();
-    } while (again && !destroyRef.destroyed);
+    // Cleared in the same turn the loop ends: a read asked for after that
+    // starts its own instead of joining one that will not run again.
+    running = (async () => {
+      try {
+        do {
+          again = false;
+          await readOnce();
+        } while (again && !destroyRef.destroyed);
+      } finally {
+        running = undefined;
+      }
+    })();
+    return running;
   };
 
   changes
@@ -119,7 +130,7 @@ export function liveView<T>(
     gone: gone.asReadonly(),
     isLoading: firstRead,
     reads: reads.asReadonly(),
-    reload: () => void read(),
+    reload: read,
     value: value.asReadonly(),
   };
 }

@@ -179,6 +179,11 @@ const NOT_CHANGES = new Set([
   // Runs inside the activities check's record, whose one entry carries the
   // list before and after.
   'VerificationChecksService.writeActivities',
+  // Run inside an invite's accept, whose one entry carries the role, the
+  // name, the permissions and the card the account joined with.
+  'StaffInviteService.joinFrontDesk',
+  'StaffInviteService.joinWorkshop',
+  'StaffInviteService.link',
   // A visitor's search, counted for the Demand view: no account and no
   // change to anyone's data, so no audit entry by the search's rule.
   'SearchLogService.record',
