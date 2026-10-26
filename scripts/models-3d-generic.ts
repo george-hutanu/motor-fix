@@ -887,18 +887,18 @@ function system(code: System, S: Profile): Shape {
   return m;
 }
 
-/** Where each system's pin sits (mock coordinates). */
-const PINS: Record<System, V3> = {
-  aircon: [0.74, 0.93, 0],
-  bodywork: [0, 0.75, 0.95],
+/** Where each system's pin sits (mock coordinates): on its own part, nearer it than any other. */
+const pins = (S: Profile): Record<System, V3> => ({
+  aircon: [0.87, 0.87, 0.1],
+  bodywork: [0, S.floor + 0.33, S.w * 0.9 + 0.02],
   brakes: [1.35, 0.42, 0.8],
   electrics: [1.16, 0.82, -0.47],
   engine: [1.43, 0.8, 0],
-  exhaust: [-1.8, 0.31, 0.1],
+  exhaust: [-1.8, 0.4, 0.1],
   gearbox: [1.45, 0.5, -0.66],
   suspension: [-1.33, 0.66, 0.5],
   tyres: [-1.35, 0.68, 0.8],
-};
+});
 
 /* ---------- the GLB ---------- */
 
@@ -991,7 +991,7 @@ function document(style: GenericStyle): Document {
   }
   for (const code of GENERIC_SYSTEMS) {
     scene.addChild(
-      doc.createNode(`pin_${code}`).setTranslation(toGltf(PINS[code])),
+      doc.createNode(`pin_${code}`).setTranslation(toGltf(pins(S)[code])),
     );
   }
   return doc;
