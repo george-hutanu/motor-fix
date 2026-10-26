@@ -1,11 +1,12 @@
 ---
 capability: workshop
-updated: 2026-10-21
+updated: 2026-10-25
 features:
   - 220-requests-quotes-bookings
   - 424-job-steps
   - 389-confirm-booking-lift-mechanic
   - 274-request-stages
+  - 423-mechanic-garage-dashboard
 ---
 
 # Capability: Workshop
@@ -173,6 +174,10 @@ _From 274-request-stages._
 ### 274-FR-021 — Every text MUST exist in Romanian and English, and the panel MUST fit 320 px wide with no sideways scroll, in light and dark.
 
 _From 274-request-stages._
+
+### 423-FR-002 — While the first read is in flight the section MUST show three skeleton rows marked busy; with no row and no next booking it MUST say "Nicio lucrare azi" / "No jobs today"; when the read fails it MUST show the shared problem line with a retry button; tapping a row MUST open the job as Lucrări opens it; the section MUST re-read on the job event kinds Lucrări listens to (`job.mechanic_changed` included), on `booking.confirmed`, `booking.moved` and `booking.cancelled`, and when the stream reconnects.
+
+_From 423-mechanic-garage-dashboard._
 
 ## Retired
 

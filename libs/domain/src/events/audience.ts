@@ -96,8 +96,10 @@ export function audienceOf(subject: LiveSubject): string[] {
     case 'garage':
       return subject.garageIds.map(garage);
     case 'mechanic':
+      // The mechanic herself too: her own card decides what she may do.
       return [
         garage(subject.garageId),
+        `mechanic:${subject.mechanicId}`,
         ...when(
           subject.public,
           `public:garage:${subject.garageId}`,

@@ -138,6 +138,12 @@ export class JobSteps {
     effect(() => {
       if (this.view.gone()) untracked(() => this.task.close());
     });
+    // Each write is sent at once, so only a step still being typed or renamed
+    // can be lost: with neither field open, closing asks nothing.
+    effect(() => {
+      if (this.adding() === null && this.editing() === null)
+        untracked(() => this.task.markUnchanged());
+    });
   }
 
   protected isDone(step: JobStepDto) {
