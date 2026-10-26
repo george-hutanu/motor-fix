@@ -217,7 +217,10 @@ describe('saving a layout', () => {
     const res = await save(auth, body);
 
     expect(res.status).toBe(400);
+    // A shape refusal comes from the request validation, never the service's
+    // key check, so the service's coded answer cannot stand in for it.
     if (coded) expect(res.body.code).toBe('validation_failed');
+    else expect(res.body.code).not.toBe('validation_failed');
     expect(await stored(id)).toEqual(before);
     expect(await events()).toHaveLength(0);
   });
