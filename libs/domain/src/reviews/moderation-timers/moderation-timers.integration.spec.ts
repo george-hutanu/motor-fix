@@ -10,6 +10,7 @@ import {
   ModerationTimers,
 } from './moderation-timers';
 import { ModerationTimersModule } from './moderation-timers.module';
+import { AuditService } from '../../audit/audit.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type {
   ReviewReportSource,
@@ -535,6 +536,41 @@ describe('closing the report when its author deletes the review', () => {
       payload: { reportId: report.id, reviewId: one.id },
       subjectId: report.id,
     });
+  });
+
+  it('closes nothing when its audit entry cannot be written, and closes on the next delivery', async () => {
+    const { report, review: one } = await setting();
+    const timers = await start();
+    jest
+      .spyOn(AuditService.prototype, 'record')
+      .mockRejectedValueOnce(new Error('audit down'));
+    const event = await deleted(one.id, NOW);
+
+    await expect(timers.onEvent(event)).rejects.toThrow('audit down');
+
+    expect(
+      await prisma.reviewReport.findUniqueOrThrow({
+        where: { id: report.id },
+      }),
+    ).toMatchObject({ status: 'pending' });
+    expect(
+      await prisma.outboxEvent.count({
+        where: { kind: 'review.report_closed' },
+      }),
+    ).toBe(0);
+
+    await timers.onEvent(event);
+
+    expect(
+      await prisma.reviewReport.findUniqueOrThrow({
+        where: { id: report.id },
+      }),
+    ).toMatchObject({ status: 'closed' });
+    expect(
+      await prisma.outboxEvent.count({
+        where: { kind: 'review.report_closed' },
+      }),
+    ).toBe(1);
   });
 
   it('changes nothing on a second delivery', async () => {

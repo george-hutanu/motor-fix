@@ -30,7 +30,7 @@ const reminderEvent = (reportId: string) => `${REMINDER}:${reportId}`;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const uuidOf = (value: unknown) =>
   typeof value === 'string' && UUID.test(value) ? value : null;
-// An outbox row's id: a bigint, at most 19 digits.
+// An outbox row's id: a bigint; 18 digits always fit one.
 const OUTBOX_ID = /^\d{1,18}$/;
 
 // A failed job is tried 5 more times, 1, 2, 4, 8 and 16 minutes later; the
