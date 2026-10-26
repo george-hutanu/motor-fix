@@ -90,7 +90,7 @@ export class WhoAmI {
         orderBy: { joinedAt: 'asc' },
         where: { accountId },
       }),
-      this.prisma.mechanic.findUnique({
+      this.prisma.mechanic.findFirst({
         include: { garage },
         where: { accountId, removedAt: null },
       }),

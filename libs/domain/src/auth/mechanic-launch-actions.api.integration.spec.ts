@@ -232,7 +232,7 @@ describe('the quote actions, only with the right to answer quotes', () => {
 });
 
 describe('the owner’s actions, never a mechanic’s', () => {
-  it('answers 403 to a mechanic holding every permission', async () => {
+  it('answers 403 to a mechanic holding every permission, and to one holding none', async () => {
     const g = await garage();
     await prisma.mechanic.update({
       data: ALL,
@@ -247,33 +247,36 @@ describe('the owner’s actions, never a mechanic’s', () => {
     const oil = await world.jobType('Schimb ulei');
     const at = `/garages/${g.garage.id}`;
 
-    const answers = {
-      confirm: await call('post', `/bookings/${waiting.id}/confirm`, elena, {
-        mechanicId: g.answeringCard.id,
-      }),
-      confirmOptions: await call(
-        'get',
-        `/bookings/${waiting.id}/confirm-options`,
-        elena,
-      ),
-      feature: await call('put', `${at}/features/team_mechanics`, elena, {
-        enabled: false,
-      }),
-      prices: await call('get', `${at}/prices`, elena),
-      priceWrite: await call('post', `${at}/prices`, elena, {
-        durationMinutes: 45,
-        fromBani: 28_000,
-        jobTypeId: oil.id,
-        toBani: 36_000,
-      }),
-      settings: await call('patch', at, elena, {
-        paymentMethods: { card: true, cash: true, transfer: false },
-      }),
-      team: await call('get', `${at}/members`, elena),
-    };
+    // The plain mechanic holds none of the three permissions.
+    for (const who of [elena, bearer(g.plain, 'mechanic')]) {
+      const answers = {
+        confirm: await call('post', `/bookings/${waiting.id}/confirm`, who, {
+          mechanicId: g.answeringCard.id,
+        }),
+        confirmOptions: await call(
+          'get',
+          `/bookings/${waiting.id}/confirm-options`,
+          who,
+        ),
+        feature: await call('put', `${at}/features/team_mechanics`, who, {
+          enabled: false,
+        }),
+        prices: await call('get', `${at}/prices`, who),
+        priceWrite: await call('post', `${at}/prices`, who, {
+          durationMinutes: 45,
+          fromBani: 28_000,
+          jobTypeId: oil.id,
+          toBani: 36_000,
+        }),
+        settings: await call('patch', at, who, {
+          paymentMethods: { card: true, cash: true, transfer: false },
+        }),
+        team: await call('get', `${at}/members`, who),
+      };
 
-    for (const [action, res] of Object.entries(answers)) {
-      expect([action, res.status]).toEqual([action, 403]);
+      for (const [action, res] of Object.entries(answers)) {
+        expect([action, res.status]).toEqual([action, 403]);
+      }
     }
     await expect(
       figures.get(

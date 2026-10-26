@@ -302,7 +302,7 @@ describe('a mechanic’s own-jobs scope', () => {
     expect(answers.map((r) => r.status)).toEqual([404, 404, 404]);
   });
 
-  it('answers 403 on the colleague’s job once her own card is the only difference from a removed one', async () => {
+  it('answers 404, not 403, on the colleague’s job once her own card is removed', async () => {
     const w = await world2();
     await prisma.mechanic.update({
       data: { removedAt: new Date() },
