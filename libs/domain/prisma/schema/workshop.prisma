@@ -36,6 +36,7 @@ model Job {
   stages         JobStageEntry[]
   reviews        Review[]
   liveSessions   LiveSession[]
+  repair         Repair?
 
   @@index([garageId, createdAt(sort: Desc)])
   @@index([mechanicId])

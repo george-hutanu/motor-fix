@@ -37,6 +37,8 @@ model Car {
   readings       OdometerReading[]
   quoteRequests  QuoteRequest[]
   jobs           Job[]
+  repairs        Repair[]
+  transfers      CarTransfer[]
 
   @@unique([ownerId, idempotencyKey])
   @@index([ownerId, createdAt])
@@ -117,4 +119,79 @@ model SavedGarage {
 
   @@id([accountId, garageId])
   @@map("saved_garage")
+}
+
+enum RepairSource {
+  motorfix
+  logged
+
+  @@map("repair_source")
+}
+
+// A repair in a car's history: done through MotorFix (its job set) or logged
+// by the owner by hand. `(source = 'motorfix') = (job_id IS NOT NULL)` is a
+// CHECK in the migration. A soft-deleted repair is never shown.
+model Repair {
+  id         String              @id @default(uuid()) @db.Uuid
+  carId      String              @map("car_id") @db.Uuid
+  jobId      String?             @unique @map("job_id") @db.Uuid
+  source     RepairSource
+  what       String
+  garageName String              @map("garage_name")
+  garageId   String?             @map("garage_id") @db.Uuid
+  doneOn     DateTime            @map("done_on") @db.Date
+  deletedAt  DateTime?           @map("deleted_at") @db.Timestamptz(3)
+  createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  car        Car                 @relation(fields: [carId], references: [id], onDelete: Cascade)
+  job        Job?                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  garage     Garage?             @relation(fields: [garageId], references: [id], onDelete: SetNull)
+  transfers  CarTransferRepair[]
+
+  @@index([carId, doneOn(sort: Desc), createdAt(sort: Desc)])
+  @@map("repair")
+}
+
+enum CarTransferStatus {
+  sent
+  accepted
+  cancelled
+  expired
+
+  @@map("car_transfer_status")
+}
+
+// A car handed to a buyer by a link. Only the token's hash is stored; the
+// phone is E.164 and never leaves this row. A car has at most one `sent`
+// transfer (a partial unique index), and `expires_at > sent_at` and the
+// phone's shape are CHECKs in the migration.
+model CarTransfer {
+  id         String              @id @default(uuid()) @db.Uuid
+  carId      String              @map("car_id") @db.Uuid
+  sellerId   String              @map("seller_id") @db.Uuid
+  buyerPhone String              @map("buyer_phone")
+  tokenHash  String              @unique @map("token_hash")
+  status     CarTransferStatus   @default(sent)
+  sentAt     DateTime            @default(now()) @map("sent_at") @db.Timestamptz(3)
+  expiresAt  DateTime            @map("expires_at") @db.Timestamptz(3)
+  buyerId    String?             @map("buyer_id") @db.Uuid
+  saleDate   DateTime?           @map("sale_date") @db.Date
+  car        Car                 @relation(fields: [carId], references: [id], onDelete: Cascade)
+  seller     Account             @relation("TransferSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  buyer      Account?            @relation("TransferBuyer", fields: [buyerId], references: [id], onDelete: SetNull)
+  repairs    CarTransferRepair[]
+
+  @@index([status, expiresAt])
+  @@index([sellerId])
+  @@map("car_transfer")
+}
+
+// A repair the seller ticked to pass on with the car.
+model CarTransferRepair {
+  transferId String      @map("transfer_id") @db.Uuid
+  repairId   String      @map("repair_id") @db.Uuid
+  transfer   CarTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  repair     Repair      @relation(fields: [repairId], references: [id], onDelete: Cascade)
+
+  @@id([transferId, repairId])
+  @@map("car_transfer_repair")
 }
