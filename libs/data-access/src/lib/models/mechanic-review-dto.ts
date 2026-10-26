@@ -3,11 +3,18 @@
 
 import { DriverNameDto } from '../models/driver-name-dto';
 import { GarageRefDto } from '../models/garage-ref-dto';
+import { PublicReviewReplyDto } from '../models/public-review-reply-dto';
 export interface MechanicReviewDto {
   author: DriverNameDto;
   garage: GarageRefDto;
   id: string;
   postedAt: string;
   rating: number;
+
+  /**
+   * The garage's published reply
+   */
+  reply: (PublicReviewReplyDto & {
+}) | null;
   text: string | null;
 }

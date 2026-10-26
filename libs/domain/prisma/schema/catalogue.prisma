@@ -10,6 +10,8 @@ model Brand {
   popularity   Int?
   roPossessive String?       @map("ro_possessive")
   active       Boolean       @default(true)
+  // The generic 3D car shown for a brand with no licensed model.
+  bodyStyle    BodyStyle     @default(saloon) @map("body_style")
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
   // The admin who last changed the brand; the loader leaves such a brand alone.
@@ -19,9 +21,58 @@ model Brand {
   cars         Car[]
   prices       GaragePrice[]
   searchLogs   SearchLog[]
+  models3d     CarModel3d[]
 
   @@index([active, popularity, name])
   @@map("brand")
+}
+
+enum BodyStyle {
+  saloon
+  hatchback
+  suv
+  crossover
+  estate
+  fastback
+
+  @@map("body_style")
+}
+
+// The systems the 3D car can light, one part and one pin each in its file.
+// Owned by the data file: the loader writes them at start.
+model CarSystem {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique
+  fuelTypes Fuel[]   @map("fuel_types")
+  nameRo    String   @map("name_ro")
+  nameEn    String   @map("name_en")
+  position  Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("car_system")
+}
+
+// A licensed car model and the key of its 3D file in object storage. Owned by
+// the data file: the loader writes them at start and deletes a withdrawn one.
+model CarModel3d {
+  id         String    @id @default(uuid()) @db.Uuid
+  key        String    @unique
+  brandId    String    @map("brand_id") @db.Uuid
+  brand      Brand     @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  model      String
+  fileKey    String    @unique @map("file_key")
+  // Within the brand; 1 is the car shown when only the brand is picked.
+  popularity Int
+  fuel       Fuel
+  bodyStyle  BodyStyle @map("body_style")
+  // The licence record, kept once the licence is bought.
+  licenceRef String?   @map("licence_ref")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([brandId, popularity])
+  @@map("car_model_3d")
 }
 
 enum JobTypeStatus {

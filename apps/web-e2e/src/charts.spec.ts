@@ -28,9 +28,12 @@ async function open(
 const GROWTH = 1000;
 const FRAME = 16;
 
+// The installed clock runs until it is paused, and pausing never goes back:
+// it is installed a minute early, so the pause always lands at `start`
+// however long the runner takes between the two calls.
 async function pauseClock(page: Page) {
   const start = new Date('2027-01-01T08:00:00');
-  await page.clock.install({ time: start });
+  await page.clock.install({ time: start.getTime() - 60_000 });
   await page.clock.pauseAt(start);
 }
 

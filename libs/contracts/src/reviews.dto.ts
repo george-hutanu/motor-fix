@@ -4,14 +4,22 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
-import { DELETED_AUTHOR, PAID_BANI_MAX, REVIEW_TEXT_MAX } from './lei-text';
+import {
+  DELETED_AUTHOR,
+  PAID_BANI_MAX,
+  REVIEW_REPLY_TEXT_MAX,
+  REVIEW_REPORT_TEXT_MAX,
+  REVIEW_TEXT_MAX,
+} from './lei-text';
 import {
   CarSnapshotDto,
   DriverNameDto,
@@ -176,6 +184,63 @@ export class MechanicReviewsQueryDto {
   page?: number;
 }
 
+const REVIEW_REPLY_STATUSES = ['published', 'reported', 'removed'] as const;
+export type ReviewReplyStatus = (typeof REVIEW_REPLY_STATUSES)[number];
+
+// Why the owner may not post or edit a reply; an edit of a review with no
+// reply is a 404.
+export type ReplyRefusal =
+  | 'review_not_public'
+  | 'reply_removed'
+  | 'already_replied'
+  | 'reply_not_public';
+
+// Only the type is checked here: the length is the service's 422, after the
+// 409s.
+export class ReplyToReviewDto {
+  @ApiProperty({
+    description: '1 to 1,000 characters after the trim',
+    maxLength: REVIEW_REPLY_TEXT_MAX,
+  })
+  // PostgreSQL cannot store a NUL character, so it goes before the trim.
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.replaceAll('\u0000', '').trim() : value,
+  )
+  @IsString()
+  text!: string;
+}
+
+// The garage's reply to a review as the garage's own staff read it.
+export class ReviewReplyDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  text!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  postedAt!: string;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  editedAt!: string | null;
+
+  @ApiProperty({ enum: REVIEW_REPLY_STATUSES })
+  status!: ReviewReplyStatus;
+}
+
+// The garage's reply as the public reads it: published only, and nothing of
+// who posted it.
+export class PublicReviewReplyDto {
+  @ApiProperty()
+  text!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  postedAt!: string;
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  editedAt!: string | null;
+}
+
 // A published review on a mechanic's page: the author by short name only.
 export class MechanicReviewDto {
   @ApiProperty({ format: 'uuid' })
@@ -196,6 +261,13 @@ export class MechanicReviewDto {
   // The garage the job was done at, which may not be the mechanic's now.
   @ApiProperty({ type: GarageRefDto })
   garage!: GarageRefDto;
+
+  @ApiProperty({
+    description: "The garage's published reply",
+    nullable: true,
+    type: PublicReviewReplyDto,
+  })
+  reply!: PublicReviewReplyDto | null;
 }
 
 export class MechanicReviewsPageDto {
@@ -282,6 +354,13 @@ export class GarageReviewDto {
 
   @ApiProperty({ format: 'date-time', nullable: true, type: String })
   editedAt!: string | null;
+
+  @ApiProperty({
+    description: "The garage's published reply",
+    nullable: true,
+    type: PublicReviewReplyDto,
+  })
+  reply!: PublicReviewReplyDto | null;
 }
 
 export class GarageReviewsPageDto {
@@ -311,6 +390,75 @@ export class GarageReviewsPageDto {
   items!: GarageReviewDto[];
 }
 
+// The reasons a garage may report a review for, in the order the task lists
+// them.
+const REVIEW_REPORT_REASONS = [
+  'insults',
+  'personal_data',
+  'ads',
+  'promotion',
+  'off_topic',
+  'hate',
+  'fake_or_conflicted',
+  'threats_or_legal_accusations',
+  'other',
+] as const;
+export type ReviewReportReason = (typeof REVIEW_REPORT_REASONS)[number];
+
+// Why a review may not be reported again.
+export type ReportRefusal = 'already_reported' | 'already_kept';
+
+// Only the types are checked here: whether the text fits the reason is the
+// service's 422, after the 409s.
+export class ReportReviewDto {
+  @ApiProperty({ enum: REVIEW_REPORT_REASONS })
+  @IsIn(REVIEW_REPORT_REASONS)
+  reason!: ReviewReportReason;
+
+  @ApiPropertyOptional({
+    description: 'Only with the reason other',
+    maxLength: REVIEW_REPORT_TEXT_MAX,
+  })
+  // Absent is fine; null is a malformed body (400), as any other non-string.
+  @ValidateIf((_, value) => value !== undefined)
+  // PostgreSQL cannot store a NUL character, so it goes before the trim.
+  @Transform(({ value }) =>
+    typeof value === 'string'
+      ? value.replaceAll('\u0000', '').trim() || undefined
+      : value,
+  )
+  @IsString()
+  text?: string;
+}
+
+export class ReviewReportReviewDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ enum: REVIEW_STATUSES })
+  status!: ReviewStatus;
+}
+
+export class ReviewReportDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ enum: REVIEW_REPORT_REASONS })
+  reason!: ReviewReportReason;
+
+  @ApiProperty({ enum: ['pending'] })
+  status!: 'pending';
+
+  @ApiProperty({
+    description: 'When an admin is due to decide',
+    format: 'date-time',
+  })
+  dueAt!: string;
+
+  @ApiProperty({ type: ReviewReportReviewDto })
+  review!: ReviewReportReviewDto;
+}
+
 // A mechanic as a review names them on the garage's own page: by short name.
 export class ReviewMechanicDto {
   @ApiProperty({ example: 'Costel R.' })
@@ -330,6 +478,13 @@ export class GarageStaffReviewDto extends GarageReviewDto {
     type: ReviewMechanicDto,
   })
   mechanic!: ReviewMechanicDto | null;
+
+  @ApiProperty({
+    description: 'The reply, published or reported; a removed one is null',
+    nullable: true,
+    type: ReviewReplyDto,
+  })
+  override reply: ReviewReplyDto | null = null;
 
   @ApiProperty()
   canReply!: boolean;

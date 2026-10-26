@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { OVERLAY_TASK } from '@motor-fix/overlays';
 
 import {
   api,
@@ -243,6 +244,34 @@ describe('writing the steps', () => {
     expect(text(element.querySelector('[role="alert"]'))).toBe(
       'Cel mult 20 de pași',
     );
+  });
+
+  // Escape asks before dropping what was typed, and only that: once the step
+  // is saved or the field cancelled, nothing is left to lose.
+  it('closes without asking once a typed step is saved or cancelled, and asks while one is still being typed', async () => {
+    const { element, settle } = await render();
+    const markUnchanged = TestBed.inject(OVERLAY_TASK)
+      .markUnchanged as jest.Mock;
+
+    button(element, 'Adaugă un pas')?.click();
+    await settle();
+    markUnchanged.mockClear();
+    type(input(element) as HTMLInputElement, 'Probă pe drum');
+    await settle();
+    expect(markUnchanged).not.toHaveBeenCalled();
+
+    button(element, 'Adaugă')?.click();
+    await settle();
+    expect(markUnchanged).toHaveBeenCalled();
+
+    button(element, 'Adaugă un pas')?.click();
+    await settle();
+    type(input(element) as HTMLInputElement, 'Alt pas');
+    await settle();
+    markUnchanged.mockClear();
+    button(element, 'Anulează')?.click();
+    await settle();
+    expect(markUnchanged).toHaveBeenCalled();
   });
 
   it('cancels an add without sending it', async () => {

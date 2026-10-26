@@ -20,7 +20,16 @@ import { Live } from '../live';
 import { Session } from '../session';
 
 const GARAGE = '0f9c2a54-6a1e-4f43-9d2b-2f5a3c1d7e10';
-const DAY = 86_400_000;
+// Midday yesterday in Bucharest: 24 hours back from now is still today on
+// the evening the clocks go back.
+const YESTERDAY = (() => {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Bucharest',
+  }).format(new Date());
+  const at = new Date(`${today}T10:00:00Z`);
+  at.setUTCDate(at.getUTCDate() - 1);
+  return at.toISOString();
+})();
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const member = (over: Partial<GarageMemberDto> = {}): GarageMemberDto => ({
@@ -37,6 +46,7 @@ const invite = (
   email: 'andrei@example.test',
   id: 'invite-1',
   kind: 'mechanic',
+  phone: null,
   sentAt: new Date().toISOString(),
   ...over,
 });
@@ -48,7 +58,7 @@ const SEEDED: GarageMembersDto = {
       email: 'elena@example.test',
       id: 'invite-2',
       kind: 'receptionist',
-      sentAt: new Date(Date.now() - DAY).toISOString(),
+      sentAt: YESTERDAY,
     }),
     invite({
       email: 'dan@example.test',
@@ -173,6 +183,19 @@ describe('Persoane cu acces, the rows', () => {
       'andrei@example.test · mecanic · trimisă azi',
       'elena@example.test · recepție · trimisă ieri',
       'dan@example.test · mecanic · trimisă 14 oct. 2026',
+    ]);
+  });
+
+  // @traces 1255-FR-001
+  it('lists an invite sent to a phone by its number', async () => {
+    const { element, settle } = await render(async () => ({
+      ...SEEDED,
+      invites: [invite({ email: null, phone: '+40722000111' })],
+    }));
+    await settle();
+
+    expect(inviteRows(element)).toEqual([
+      '+40722000111 · mecanic · trimisă azi',
     ]);
   });
 

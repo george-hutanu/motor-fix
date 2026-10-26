@@ -150,14 +150,17 @@ const NOT_CHANGES = new Set([
   'GarageRequestsService.get',
   // Comparing a request's quotes notes when the driver first saw each one.
   'CompareService.get',
-  // Reminders follow a car's or a booking's dates: the stories that change
-  // those audit the change, and sending a reminder is not one.
+  // Reminders follow a car's or a booking's dates, and a car's next service
+  // and kilometres: the stories that change those audit the change, and
+  // sending a reminder is not one.
   'RemindersService.cancelBooking',
   'RemindersService.onCarEvent',
+  'RemindersService.onServiceChange',
   'RemindersService.removeCar',
   'RemindersService.send',
   'RemindersService.setBooking',
   'RemindersService.setCarDue',
+  'RemindersService.setServiceDue',
   'RemindersService.setTyres',
   // A visitor's draft has no account to audit against; the history starts
   // when the listing is sent.
@@ -176,6 +179,11 @@ const NOT_CHANGES = new Set([
   // Runs inside the activities check's record, whose one entry carries the
   // list before and after.
   'VerificationChecksService.writeActivities',
+  // Run inside an invite's accept, whose one entry carries the role, the
+  // name, the permissions and the card the account joined with.
+  'StaffInviteService.joinFrontDesk',
+  'StaffInviteService.joinWorkshop',
+  'StaffInviteService.link',
   // A visitor's search, counted for the Demand view: no account and no
   // change to anyone's data, so no audit entry by the search's rule.
   'SearchLogService.record',

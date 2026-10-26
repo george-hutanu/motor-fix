@@ -69,11 +69,13 @@ export class AppModule {
       tokenSecret: env.AUTH_TOKEN_SECRET,
     });
     const email = emailConfig(env.APP_ENV, process.env);
+    const phone = phoneConfig(env.APP_ENV, process.env);
     const notifications = NotificationsModule.register(
       {
         databaseUrl: env.DATABASE_URL,
         email,
         outageWebhookToken: outageWebhookToken(process.env),
+        phone,
         push: pushConfig(process.env),
         redisUrl: env.REDIS_URL,
       },
@@ -107,7 +109,7 @@ export class AppModule {
         DataExportModule.register(),
         PhoneSignInModule.register({
           brevo: { apiKey: email.apiKey ?? '', apiUrl: email.apiUrl },
-          phone: phoneConfig(env.APP_ENV, process.env),
+          phone,
         }),
         AdminAccountsModule,
         AdminAccountModule.register(

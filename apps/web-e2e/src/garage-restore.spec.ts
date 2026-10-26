@@ -159,6 +159,8 @@ test.describe('putting a suspended garage back on the map @seeded @database', ()
     browser,
     page,
   }) => {
+    // Three browsers, a suspension, a restore and four pages read after it.
+    test.slow();
     await signInFromHeader(page, ACCOUNTS.admin);
     await expect(page).toHaveURL('/app/admin');
     await page.goto('/app/admin/garages');
@@ -237,7 +239,11 @@ test.describe('putting a suspended garage back on the map @seeded @database', ()
     await expect(page.locator('[data-part="suspension"]')).toContainText(
       /^Suspendat .+ – .+ · repus pe hartă de .+/,
     );
-    await expect(page.locator('[data-part="restore"]')).toHaveCount(0);
+    // The file is a drawer over the garages page, whose list of suspended
+    // garages keeps the restore buttons of other tests' garages.
+    await expect(
+      page.locator('[data-section="header"] [data-part="restore"]'),
+    ).toHaveCount(0);
     await ownerContext.close();
     await visitorContext.close();
   });

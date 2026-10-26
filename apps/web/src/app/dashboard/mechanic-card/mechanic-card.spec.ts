@@ -39,6 +39,7 @@ const card = (over: Partial<GarageMechanicDto> = {}): GarageMechanicDto => ({
   futureBookings: 0,
   hasAccount: false,
   id: 'mechanic-1',
+  invite: null,
   isOwner: false,
   name: 'Elena Stan',
   onProfile: false,
@@ -59,6 +60,7 @@ const me = {
 
 let http: HttpTestingController;
 let result: Promise<OverlayResult<'saved' | 'removed'>>;
+let refresh: jest.Mock<Promise<GarageMechanicDto | undefined>, []>;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -84,12 +86,13 @@ async function open(
   await TestBed.inject(I18n).enter('garage');
   if (language === 'en') await TestBed.inject(I18n).use('en');
   http = TestBed.inject(HttpTestingController);
+  refresh = jest.fn(async () => existing);
   const host = TestBed.createComponent(Host);
   result = host.componentInstance.overlays.open<
     'saved' | 'removed',
     MechanicCardData
   >(MechanicCard, {
-    data: { brands: BRANDS, card: existing, garageId: 'garage-1' },
+    data: { brands: BRANDS, card: existing, garageId: 'garage-1', refresh },
     shape: 'dialog',
     title: 'garage.mechanicCard.title',
   });
@@ -145,7 +148,7 @@ const labelOf = (b: HTMLButtonElement) =>
   [...b.childNodes]
     .filter((n) =>
       n instanceof HTMLElement
-        ? !n.matches('.mf-task-sending')
+        ? !n.matches('.mf-task-sending, .sr-only')
         : n.nodeType === Node.TEXT_NODE,
     )
     .map((n) => n.textContent ?? '')
@@ -578,6 +581,224 @@ describe('the card dialog, editing a card', () => {
 
     expect(panel().querySelector('b, i')).toBeNull();
     expect(field('Nume').value).toBe('<b>Elena</b>');
+  });
+});
+
+const INVITES = '/api/v1/garages/garage-1/invites';
+const NOW = Date.parse('2026-10-25T12:00:00.000Z');
+const invited = (
+  over: Partial<NonNullable<GarageMechanicDto['invite']>> = {},
+) =>
+  card({
+    invite: {
+      email: 'elena@example.ro',
+      expiresAt: '2026-11-01T12:00:00.000Z',
+      id: 'invite-1',
+      phone: null,
+      sentAt: '2026-10-25T11:00:00.000Z',
+      ...over,
+    },
+  });
+
+// @traces 1255-FR-013 1255-FR-016
+describe('the card dialog, inviting the mechanic', () => {
+  beforeEach(() => {
+    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('offers Invită on a saved card with no account and no invite', async () => {
+    await open(card());
+
+    expect(button('Invită')).toBeDefined();
+  });
+
+  it('puts Invită in the footer, just before Salvează', async () => {
+    await open(card());
+
+    const invite = button('Invită');
+    expect(invite?.closest('.actions')).not.toBeNull();
+    expect(invite?.nextElementSibling).toBe(button('Salvează'));
+  });
+
+  it.each([
+    ['a new card', undefined],
+    ['a card with an account', card({ hasAccount: true })],
+    [
+      "the owner's own card",
+      card({ id: 'owner-row', isOwner: true, name: 'Mihai Ionescu' }),
+    ],
+  ])('offers no Invită on %s', async (_, existing) => {
+    await open(existing);
+
+    expect(button('Invită')).toBeUndefined();
+  });
+
+  it('opens the invite dialog for the card, by name', async () => {
+    await open(card());
+
+    button('Invită')?.click();
+    await settle();
+
+    const dialog = panels()[1] as HTMLElement;
+    expect(dialog.querySelector('h2')?.textContent?.trim()).toBe(
+      'Invită pe Elena Stan',
+    );
+    expect(button('Trimite invitația', dialog)).toBeDefined();
+  });
+
+  it('shows the open invite with its address and date, and Retrimite and Anulează invitația', async () => {
+    await open(invited());
+
+    expect(text()).toContain(
+      'Invitație trimisă pe elena@example.ro · expiră 01.11.2026',
+    );
+    expect(button('Invită')).toBeUndefined();
+    expect(button('Retrimite')).toBeDefined();
+    expect(button('Anulează invitația')).toBeDefined();
+  });
+
+  it('names the phone of an invite sent by WhatsApp', async () => {
+    await open(invited({ email: null, phone: '+40722000111' }));
+
+    expect(text()).toContain('Invitație trimisă pe +40722000111');
+  });
+
+  it('says an invite past its date has expired, keeping both buttons', async () => {
+    await open(invited({ expiresAt: '2026-10-24T12:00:00.000Z' }));
+
+    expect(text()).toContain('a expirat');
+    expect(text()).not.toContain('expiră');
+    expect(button('Retrimite')).toBeDefined();
+    expect(button('Anulează invitația')).toBeDefined();
+  });
+
+  it('resends, keeping the dialog open, and refreshes the card', async () => {
+    await open(invited());
+
+    button('Retrimite')?.click();
+    await settle();
+    expect(button('Retrimite')?.disabled).toBe(true);
+    button('Retrimite')?.click();
+    await settle();
+    const req = http.expectOne({
+      method: 'POST',
+      url: `${INVITES}/invite-1/resend`,
+    });
+    req.flush({ emailSent: true, id: 'invite-1' });
+    await settle();
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(panels()).toHaveLength(1);
+    expect(document.activeElement).toBe(button('Retrimite'));
+  });
+
+  it('cancels the invite and offers Invită again once refreshed', async () => {
+    await open(invited());
+    refresh.mockResolvedValueOnce(card());
+
+    button('Anulează invitația')?.click();
+    await settle();
+    http
+      .expectOne({ method: 'POST', url: `${INVITES}/invite-1/revoke` })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(button('Anulează invitația')).toBeUndefined();
+    expect(button('Invită')).toBeDefined();
+  });
+
+  it('refreshes and says so when the invite was answered elsewhere meanwhile', async () => {
+    await open(invited());
+
+    button('Anulează invitația')?.click();
+    await settle();
+    const { body, opts } = refusal(409, {
+      code: 'invite_invalid',
+      title: 'gone',
+    });
+    http
+      .expectOne({ method: 'POST', url: `${INVITES}/invite-1/revoke` })
+      .flush(body, opts);
+    await settle();
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith(
+      expect.not.stringMatching(/^(garage|shell)\./),
+    );
+  });
+
+  // @traces 1255-FR-013
+  it.each([
+    ['Retrimite', 'resend'],
+    ['Anulează invitația', 'revoke'],
+  ])(
+    'shows %s busy while in flight, with both buttons disabled',
+    async (name, path) => {
+      await open(invited());
+
+      button(name)?.click();
+      await settle();
+
+      expect(button(name)?.getAttribute('aria-busy')).toBe('true');
+      expect(button(name)?.querySelector('.sr-only')).not.toBeNull();
+      expect(button('Retrimite')?.disabled).toBe(true);
+      expect(button('Anulează invitația')?.disabled).toBe(true);
+      const other = name === 'Retrimite' ? 'Anulează invitația' : 'Retrimite';
+      expect(button(other)?.getAttribute('aria-busy')).toBeNull();
+      http
+        .expectOne({ method: 'POST', url: `${INVITES}/invite-1/${path}` })
+        .flush(path === 'resend' ? { emailSent: true, id: 'invite-1' } : null, {
+          status: path === 'resend' ? 201 : 204,
+          statusText: 'OK',
+        });
+      await settle();
+
+      expect(button(name)?.getAttribute('aria-busy') ?? null).toBeNull();
+    },
+  );
+
+  // @traces 1255-FR-016
+  it('focus returns to Retrimite, enabled again, after a resend', async () => {
+    await open(invited());
+
+    button('Retrimite')?.click();
+    await settle();
+    http
+      .expectOne({ method: 'POST', url: `${INVITES}/invite-1/resend` })
+      .flush({ emailSent: true, id: 'invite-1' });
+    await settle();
+
+    const resend = button('Retrimite');
+    expect(resend?.disabled).toBe(false);
+    expect(document.activeElement).toBe(resend);
+  });
+
+  // @traces 1255-FR-016
+  it('focus returns to Invită after a revoke removes the invite block', async () => {
+    await open(invited());
+    refresh.mockResolvedValueOnce(card());
+
+    button('Anulează invitația')?.click();
+    await settle();
+    http
+      .expectOne({ method: 'POST', url: `${INVITES}/invite-1/revoke` })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+
+    expect(document.activeElement).toBe(button('Invită'));
+  });
+
+  it('reads English', async () => {
+    await open(invited(), 'en');
+
+    expect(text()).toContain('Invite sent to elena@example.ro · expires');
+    expect(button('Resend')).toBeDefined();
+    expect(button('Cancel the invite')).toBeDefined();
   });
 });
 

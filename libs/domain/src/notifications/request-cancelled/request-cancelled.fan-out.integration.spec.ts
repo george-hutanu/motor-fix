@@ -14,8 +14,10 @@ import {
   fixtures,
   redisUrlFor,
   testConfig,
+  testPhone,
   testPhoneConfig,
 } from '../notifications.testing';
+import { bellText } from '../templates';
 
 const redisUrl = redisUrlFor(9);
 const { account, prisma, reset } = fixtures();
@@ -83,14 +85,14 @@ async function staffed(name: string) {
 }
 
 // Andrei's request, closed when his account closed, and the event it left.
-async function cancelled() {
+async function cancelled(reason = 'account_closed') {
   const driverId = await account('Andrei Ion Marin', ['driver']);
   const dinamo = await staffed('Atelier Dinamo');
   const nord = await staffed('Service Nord');
   const request = await world.request(driverId, { status: 'closed' });
   const payload = {
     garageIds: [dinamo.garage.id, nord.garage.id],
-    reason: 'account_closed',
+    reason,
     requestId: request.id,
   };
   const event = await prisma.outboxEvent.create({
@@ -166,7 +168,7 @@ describe('telling the garages a closed account’s request is cancelled', () => 
     ).toBe(0);
   });
 
-  // @traces 428-FR-007
+  // @traces 428-FR-007 223-FR-013
   it('builds each message once when the same event is handled twice', async () => {
     const { job } = await cancelled();
     const fanOut = await start();
@@ -179,5 +181,111 @@ describe('telling the garages a closed account’s request is cancelled', () => 
 
     expect(once).toBeGreaterThan(0);
     expect(await count()).toBe(once);
+  });
+});
+
+// @traces 1258-driver-cancel-FR-007
+describe('telling the garages the driver cancelled the request', () => {
+  it('tells each owner and receptionist of every garage once, with the reason driver, and no mechanic', async () => {
+    const { dinamo, driverId, job, nord } = await cancelled('driver');
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+    await fanOut.handle(job);
+
+    for (const person of [dinamo.owner, dinamo.desk, nord.owner, nord.desk]) {
+      const mine = await bells(person);
+      expect(mine).toHaveLength(1);
+      expect(mine[0].params).toMatchObject({ reason: 'driver' });
+    }
+    for (const person of [dinamo.fixer, nord.fixer, driverId]) {
+      expect(await bells(person)).toEqual([]);
+    }
+  });
+});
+
+// Each owner has a confirmed phone and chose WhatsApp for this garage.
+async function onWhatsApp(
+  ...garages: { garage: { id: string }; owner: string }[]
+) {
+  for (const [n, { garage, owner }] of garages.entries()) {
+    await prisma.account.update({
+      data: {
+        phone: testPhone(n + 1),
+        phoneVerifiedAt: new Date('2026-09-01T00:00:00Z'),
+      },
+      where: { id: owner },
+    });
+    await prisma.notificationPreference.create({
+      data: {
+        accountId: owner,
+        channel: 'whatsapp',
+        enabled: true,
+        garageId: garage.id,
+        type: 'REQUEST_CANCELLED',
+      },
+    });
+  }
+}
+
+// @traces 223-FR-005 223-FR-010
+describe('the cancelled request’s own wording', () => {
+  it('reads that the request was closed when the account closed', async () => {
+    const { dinamo, job } = await cancelled('account_closed');
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+
+    const [bell] = await bells(dinamo.owner);
+    const params = bell.params as Record<string, unknown>;
+    expect(bellText(bell.kind, 'ro', params)).toBe(
+      'Cererea a fost închisă · Mini Cooper S',
+    );
+    expect(bellText(bell.kind, 'en', params)).toBe(
+      'The request was closed · Mini Cooper S',
+    );
+  });
+
+  it('names the driver who cancelled for any other reason', async () => {
+    const { nord, job } = await cancelled('cancelled');
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+
+    const [bell] = await bells(nord.desk);
+    const params = bell.params as Record<string, unknown>;
+    expect(bellText(bell.kind, 'ro', params)).toBe(
+      'Andrei M. a anulat cererea · Mini Cooper S',
+    );
+    expect(bellText(bell.kind, 'en', params)).toBe(
+      'Andrei M. cancelled the request · Mini Cooper S',
+    );
+  });
+
+  it('sends no WhatsApp for a garage whose WhatsApp is off, and no SMS', async () => {
+    const { dinamo, job, nord } = await cancelled();
+    await onWhatsApp(dinamo, nord);
+    await prisma.garageFeature.create({
+      data: { enabled: false, garageId: dinamo.garage.id, key: 'whatsapp' },
+    });
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+
+    const channels = async (accountId: string) =>
+      (
+        await prisma.notification.findMany({
+          where: { accountId, fallbackOf: null, kind: 'REQUEST_CANCELLED' },
+        })
+      )
+        .map((r) => r.channel)
+        .sort();
+    expect(await channels(dinamo.owner)).toEqual(['email', 'in_app']);
+    expect(await channels(nord.owner)).toEqual(['email', 'in_app', 'whatsapp']);
+    expect(
+      await prisma.notification.count({
+        where: { channel: 'sms', kind: 'REQUEST_CANCELLED' },
+      }),
+    ).toBe(0);
   });
 });

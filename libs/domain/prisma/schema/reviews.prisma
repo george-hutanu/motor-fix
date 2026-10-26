@@ -20,25 +20,135 @@ enum ReviewStatus {
 // One live review (published, reported or removed) per job: the migration's
 // partial unique index review_one_live, which Prisma cannot declare.
 model Review {
-  id         String       @id @default(uuid()) @db.Uuid
-  source     ReviewSource @default(job)
-  jobId      String       @map("job_id") @db.Uuid
-  driverId   String       @map("driver_id") @db.Uuid
-  garageId   String       @map("garage_id") @db.Uuid
-  mechanicId String?      @map("mechanic_id") @db.Uuid
+  id         String         @id @default(uuid()) @db.Uuid
+  source     ReviewSource   @default(job)
+  jobId      String         @map("job_id") @db.Uuid
+  driverId   String         @map("driver_id") @db.Uuid
+  garageId   String         @map("garage_id") @db.Uuid
+  mechanicId String?        @map("mechanic_id") @db.Uuid
   rating     Int
   text       String?
-  paidBani   Int?         @map("paid_bani")
-  status     ReviewStatus @default(published)
-  postedAt   DateTime     @default(now()) @map("posted_at") @db.Timestamptz(3)
+  paidBani   Int?           @map("paid_bani")
+  status     ReviewStatus   @default(published)
+  postedAt   DateTime       @default(now()) @map("posted_at") @db.Timestamptz(3)
   // Set by an edit of the review; empty until the first one.
-  editedAt   DateTime?    @map("edited_at") @db.Timestamptz(3)
-  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  job        Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  driver     Account      @relation("ReviewDriver", fields: [driverId], references: [id], onDelete: Cascade)
-  garage     Garage       @relation(fields: [garageId], references: [id], onDelete: Cascade)
-  mechanic   Mechanic?    @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
+  editedAt   DateTime?      @map("edited_at") @db.Timestamptz(3)
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  job        Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  driver     Account        @relation("ReviewDriver", fields: [driverId], references: [id], onDelete: Cascade)
+  garage     Garage         @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  mechanic   Mechanic?      @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
+  reports    ReviewReport[]
+  reply      ReviewReply?
 
   @@index([mechanicId])
   @@map("review")
+}
+
+enum ReviewReportTarget {
+  review
+  reply
+
+  @@map("review_report_target")
+}
+
+enum ReviewReportReason {
+  insults
+  personal_data
+  ads
+  promotion
+  off_topic
+  hate
+  fake_or_conflicted
+  threats_or_legal_accusations
+  other
+
+  @@map("review_report_reason")
+}
+
+enum ReviewReportSource {
+  garage
+  author
+  automatic
+
+  @@map("review_report_source")
+}
+
+enum ReviewReportStatus {
+  pending
+  decided
+  closed
+
+  @@map("review_report_status")
+}
+
+enum ReviewReportDecision {
+  kept
+  removed
+
+  @@map("review_report_decision")
+}
+
+// A report of a review, decided by an admin. At most one pending report per
+// review: the migration's partial unique index review_report_one_pending,
+// which Prisma cannot declare.
+model ReviewReport {
+  id          String                @id @default(uuid()) @db.Uuid
+  reviewId    String                @map("review_id") @db.Uuid
+  target      ReviewReportTarget    @default(review)
+  reason      ReviewReportReason
+  // 1-500 characters, only with the reason other; null otherwise.
+  text        String?
+  source      ReviewReportSource
+  // Nullable so the record outlives the accounts it names.
+  reporterId  String?               @map("reporter_id") @db.Uuid
+  status      ReviewReportStatus    @default(pending)
+  decision    ReviewReportDecision?
+  decidedById String?               @map("decided_by_id") @db.Uuid
+  decidedAt   DateTime?             @map("decided_at") @db.Timestamptz(3)
+  dueAt       DateTime              @map("due_at") @db.Timestamptz(3)
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  review      Review                @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reporter    Account?              @relation("ReviewReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  decidedBy   Account?              @relation("ReviewReportDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([reviewId])
+  @@map("review_report")
+}
+
+enum ReviewReplyStatus {
+  published
+  reported
+  removed
+
+  @@map("review_reply_status")
+}
+
+enum ReviewReplyRemovedCause {
+  report_upheld
+
+  @@map("review_reply_removed_cause")
+}
+
+// The garage's one public reply to a review, posted and edited by its owner.
+// Reported and removed are written by the moderation stories.
+model ReviewReply {
+  id           String                   @id @default(uuid()) @db.Uuid
+  reviewId     String                   @unique @map("review_id") @db.Uuid
+  garageId     String                   @map("garage_id") @db.Uuid
+  // Stored trimmed, 1-1,000 characters.
+  text         String
+  postedAt     DateTime                 @default(now()) @map("posted_at") @db.Timestamptz(3)
+  // Nullable so the reply outlives the owner's account.
+  postedById   String?                  @map("posted_by") @db.Uuid
+  // Set by every edit; empty until the first one.
+  editedAt     DateTime?                @map("edited_at") @db.Timestamptz(3)
+  status       ReviewReplyStatus        @default(published)
+  removedAt    DateTime?                @map("removed_at") @db.Timestamptz(3)
+  removedCause ReviewReplyRemovedCause? @map("removed_cause")
+  review       Review                   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  garage       Garage                   @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  postedBy     Account?                 @relation("ReviewReplyAuthor", fields: [postedById], references: [id], onDelete: SetNull)
+
+  @@map("review_reply")
 }

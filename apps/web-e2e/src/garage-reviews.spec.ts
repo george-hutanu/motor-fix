@@ -4,7 +4,12 @@ import { Client } from 'pg';
 
 import { ACCOUNTS, headers } from './accounts.js';
 import { test } from './fixtures.js';
-import { doneJob, removeJob } from './review-jobs.js';
+import {
+  doneJob,
+  holdReviews,
+  releaseReviews,
+  removeJob,
+} from './review-jobs.js';
 
 // @traces 024-FR-001
 // @traces 024-FR-002
@@ -68,6 +73,9 @@ test.describe('a reviewed garage’s profile @seeded', () => {
     garageId = seeded.garage;
     reviewId = seeded.review;
   });
+
+  test.beforeEach(() => holdReviews(db, garageId));
+  test.afterEach(() => releaseReviews(db, garageId));
 
   test.afterAll(async () => {
     await db.query('UPDATE review SET text = $2 WHERE id = $1', [
@@ -152,6 +160,9 @@ test.describe('a reviewed garage’s profile @seeded', () => {
   });
 
   test('shows a review’s change without a reload', async ({ page }) => {
+    // A stream that failed a few times in a row waits 1, 2, 5 and 10 s
+    // (live/stream.ts) before its resync shows the change: past 30 s.
+    test.slow();
     // The stream is open once its answer has come back: a request alone may
     // still be refused (the visitors' streams share one address here) and
     // retried after the message has gone out, which Redis does not replay.
@@ -175,9 +186,13 @@ test.describe('a reviewed garage’s profile @seeded', () => {
       reviewId,
       changed,
     ]);
+    // Redis hands a message only to the streams open as it goes out; one
+    // that re-opened in between learns of the change from its resync, after
+    // a backoff that can outlast one wait. So the edit is announced again
+    // until the page shows it, as a second edit would be.
     const redis = new Redis(process.env['REDIS_URL'] as string);
-    try {
-      await redis.publish(
+    const announce = () =>
+      redis.publish(
         'live:events',
         JSON.stringify({
           audience: [`public:garage:${garageId}`],
@@ -188,11 +203,16 @@ test.describe('a reviewed garage’s profile @seeded', () => {
           },
         }),
       );
+    try {
+      await expect(async () => {
+        await announce();
+        await expect(reviews.getByText(changed)).toBeVisible({
+          timeout: 3_000,
+        });
+      }).toPass({ intervals: [0], timeout: 40_000 });
     } finally {
       redis.disconnect();
     }
-
-    await expect(reviews.getByText(changed)).toBeVisible({ timeout: 5_000 });
     expect(reloads).toBe(0);
   });
 });

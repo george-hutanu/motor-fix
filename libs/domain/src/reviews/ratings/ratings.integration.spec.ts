@@ -1,5 +1,9 @@
 import { REVIEW_RATINGS_CONSUMER } from './ratings';
 import { ratingsHarness } from './ratings.testing';
+import { AuditService } from '../../audit/audit.service';
+import { outbox } from '../../events/event.port';
+import { garageActor } from '../../quotes/quotes.testing';
+import { ReviewReportsService } from '../report/report.service';
 
 const h = ratingsHarness();
 const {
@@ -290,5 +294,40 @@ describe('an event the recalculation cannot act on', () => {
       ],
       queue: 'review-ratings',
     });
+  });
+});
+
+// @traces 076-FR-011
+describe('a review its garage reports', () => {
+  it('leaves the garage’s and the mechanic’s figures on the event the report writes', async () => {
+    const g = await world.garage('Atelier Dinamo');
+    const m = await elena(g.id);
+    const owner = await world.account('Mihai Dinamo', ['garage']);
+    const [first, , worst] = await reviews(
+      { garageId: g.id, mechanicId: m.id },
+      [5, 4, 1],
+    );
+    await run(first.id);
+    expect(await garageFigures(g.id)).toEqual({ count: 3, rating: 3.3 });
+
+    await new ReviewReportsService(prisma, new AuditService(), outbox).report(
+      garageActor(owner, g.id),
+      worst.id,
+      { reason: 'insults' },
+    );
+    const event = await prisma.outboxEvent.findFirstOrThrow({
+      where: { kind: 'review.reported', subjectId: worst.id },
+    });
+    await h.handler.onEvent({
+      data: {
+        id: event.id.toString(),
+        kind: event.kind,
+        payload: event.payload as Record<string, unknown>,
+        subjectId: event.subjectId,
+      },
+    });
+
+    expect(await garageFigures(g.id)).toEqual({ count: 2, rating: 4.5 });
+    expect(await mechanicFigures(m.id)).toEqual({ count: 2, rating: 4.5 });
   });
 });

@@ -35,6 +35,7 @@ const card = (over: Partial<GarageMechanicDto> = {}): GarageMechanicDto => ({
   futureBookings: 0,
   hasAccount: false,
   id: 'mechanic-1',
+  invite: null,
   isOwner: false,
   name: 'Elena Stan',
   onProfile: false,
@@ -140,7 +141,7 @@ const labelOf = (b: HTMLButtonElement) =>
   [...b.childNodes]
     .filter((n) =>
       n instanceof HTMLElement
-        ? !n.matches('.mf-task-sending')
+        ? !n.matches('.mf-task-sending, .sr-only')
         : n.nodeType === Node.TEXT_NODE,
     )
     .map((n) => n.textContent ?? '')

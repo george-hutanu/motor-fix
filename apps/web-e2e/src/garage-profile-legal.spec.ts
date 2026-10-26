@@ -205,8 +205,9 @@ test.describe('the legal check on the garage profile view @seeded @database', ()
 });
 
 // @traces 136-FR-006
+// @traces 102-FR-004
 test.describe('the legal check stays the owner’s on the profile view @seeded', () => {
-  test("keeps the view, and so the panel, from the garage's receptionist", async ({
+  test("shows the garage's receptionist the profile without the panel", async ({
     page,
   }) => {
     await keepSeededLanguage(page);
@@ -219,10 +220,12 @@ test.describe('the legal check stays the owner’s on the profile view @seeded',
     await expect(page).toHaveURL('/app/garage');
     const menu = page.getByRole('navigation', { name: 'Meniu' });
 
+    await menu.getByRole('link', { name: 'Profilul service‑ului' }).click();
+    await expect(page).toHaveURL('/app/garage/profile');
     await expect(
-      menu.getByRole('link', { name: 'Profilul service‑ului' }),
-    ).toHaveCount(0);
-    await page.goto('/app/garage/profile');
-    await expect(page).toHaveURL('/app/garage');
+      page.getByRole('heading', { level: 1, name: 'Profilul service‑ului' }),
+    ).toBeVisible();
+    await expect(page.locator('[data-line="name"]')).toBeVisible();
+    await expect(legal(page)).toHaveCount(0);
   });
 });

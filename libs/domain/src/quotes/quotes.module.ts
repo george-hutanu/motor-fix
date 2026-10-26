@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 
 import { AcceptController } from './accept/accept.controller';
 import { AcceptService } from './accept/accept.service';
+import { CancelBookingController } from './cancel-booking/cancel-booking.controller';
+import { CancelBookingService } from './cancel-booking/cancel-booking.service';
+import { CancelRequestController } from './cancel-request/cancel-request.controller';
+import { CancelRequestService } from './cancel-request/cancel-request.service';
 import { CompareController } from './compare/compare.controller';
 import { CompareService } from './compare/compare.service';
 import { ConfirmController } from './confirm/confirm.controller';
@@ -36,6 +40,8 @@ import { WorkshopModule } from '../workshop/workshop.module';
     CompareController,
     ConfirmController,
     DeclineQuoteController,
+    CancelRequestController,
+    CancelBookingController,
     GarageScheduleController,
   ],
   exports: [DeclineService, GarageRequestsService, RequestsService],
@@ -50,6 +56,8 @@ import { WorkshopModule } from '../workshop/workshop.module';
     CompareService,
     ConfirmService,
     DeclineQuoteService,
+    CancelRequestService,
+    CancelBookingService,
     GarageScheduleService,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],

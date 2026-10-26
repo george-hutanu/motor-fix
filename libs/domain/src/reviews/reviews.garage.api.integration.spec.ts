@@ -160,6 +160,7 @@ describe('what a garage’s review shows', () => {
       postedAt: one.postedAt.toISOString(),
       quote: { fromBani: 45_000, toBani: 60_000 },
       rating: 5,
+      reply: null,
       source: 'job',
       text: 'Treabă curată.',
     });

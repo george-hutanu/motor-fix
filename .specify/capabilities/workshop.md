@@ -7,6 +7,7 @@ features:
   - 389-confirm-booking-lift-mechanic
   - 274-request-stages
   - 150-add-booking
+  - 423-mechanic-garage-dashboard
 ---
 
 # Capability: Workshop
@@ -186,6 +187,10 @@ _From 150-add-booking._
 ### 150-FR-008 — With `team_mechanics` off the segments MUST carry no `mechanic_id`, so only the lift constraint and the garage's opening intervals limit the owner's bookings and two may overlap in time unless they share a lift (X04); nothing pauses or refuses a booking because the owner's jobs overlap.
 
 _From 150-add-booking._
+
+### 423-FR-002 — While the first read is in flight the section MUST show three skeleton rows marked busy; with no row and no next booking it MUST say "Nicio lucrare azi" / "No jobs today"; when the read fails it MUST show the shared problem line with a retry button; tapping a row MUST open the job as Lucrări opens it; the section MUST re-read on the job event kinds Lucrări listens to (`job.mechanic_changed` included), on `booking.confirmed`, `booking.moved` and `booking.cancelled`, and when the stream reconnects.
+
+_From 423-mechanic-garage-dashboard._
 
 ## Retired
 

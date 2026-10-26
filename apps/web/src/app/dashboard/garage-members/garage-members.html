@@ -20,7 +20,7 @@
       <ul class="rows">
         @for (invite of list.invites; track invite.id) {
           <li data-invite class="row">
-            <span class="name">{{ invite.email }}</span>
+            <span class="name">{{ invite.email ?? invite.phone }}</span>
             <span><span class="sep"> · </span>{{ role(invite.kind) }}</span>
             <span class="meta"><span class="sep"> · </span>{{ sent(invite) }}</span>
           </li>

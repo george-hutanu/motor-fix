@@ -161,9 +161,17 @@ export class AccountClosed {
       });
     }
     const waiting = await tx.quote.findMany({
-      select: { id: true },
+      select: { garageId: true, id: true },
       where: { requestId, status: 'waiting' },
     });
+    const told = [
+      ...new Set([
+        ...recipients
+          .filter((r) => r.status === 'waiting')
+          .map((r) => r.garageId),
+        ...waiting.map((q) => q.garageId),
+      ]),
+    ];
     for (const quote of waiting) {
       await moveQuote(tx, silent, {
         actor: SYSTEM,
@@ -182,7 +190,7 @@ export class AccountClosed {
     });
     await outbox.record(tx, {
       ...requestEvent,
-      payload: { garageIds, reason: 'account_closed', requestId },
+      payload: { garageIds: told, reason: 'account_closed', requestId },
       subjectId: requestId,
     });
     return {

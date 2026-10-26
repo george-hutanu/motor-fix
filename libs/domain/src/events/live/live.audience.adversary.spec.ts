@@ -430,6 +430,32 @@ describe('who still counts as staff', () => {
   });
 });
 
+// @traces 423-FR-010
+describe("a mechanic's own card", () => {
+  it.each([true, false])(
+    'tells the mechanic her card changed, on the profile or not (%s), and no other mechanic',
+    async (onProfile) => {
+      const elena = staff('elena', 'mechanic', 'm1');
+      const quoter = staff('quoter', 'mechanic', 'm2');
+      const owner = staff('ion', 'garage');
+
+      await fanOut(
+        audienceOf({
+          garageId: 'g1',
+          mechanicId: 'm1',
+          public: onProfile,
+          type: 'mechanic',
+        }),
+        'mechanic.updated',
+      );
+
+      expect(elena.kinds()).toEqual(['mechanic.updated']);
+      expect(quoter.kinds()).toEqual([]);
+      expect(owner.kinds()).toEqual(['mechanic.updated']);
+    },
+  );
+});
+
 describe('garage feature switches', () => {
   it.each(['media.added', 'media.removed', 'media.anything'])(
     'keeps %s from every staff role when live_media is off',

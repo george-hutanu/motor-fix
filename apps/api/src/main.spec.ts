@@ -29,7 +29,11 @@ jest.mock('@motor-fix/contracts', () => ({
 jest.mock('@motor-fix/domain', () => ({
   BRANDS: ['the brand file'],
   BrandLoader: class BrandLoader {},
+  CAR_MODELS: ['the car model file'],
   initProductCounters: jest.fn(),
+  JOB_TYPES: ['the job file'],
+  JobTypeLoader: class JobTypeLoader {},
+  Models3dLoader: class Models3dLoader {},
   warmCache: (...args: unknown[]) => mockWarm(...args),
 }));
 jest.mock('@nestjs/core', () => ({
@@ -148,6 +152,24 @@ describe('api entry point', () => {
     expect(loader.name).toBe('BrandLoader');
     expect(mockLoad).toHaveBeenCalledWith(['the brand file']);
     expect(mockLoad.mock.invocationCallOrder[0]).toBeLessThan(
+      mockApp.listen.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  // @traces 1241-FR-002
+  it('loads the 3D car catalogue after the brands and the jobs, before it serves', async () => {
+    await run([]);
+
+    const loaders = (mockApp.get.mock.calls as [{ name: string }][]).map(
+      ([loader]) => loader.name,
+    );
+    expect(loaders.slice(0, 3)).toEqual([
+      'BrandLoader',
+      'JobTypeLoader',
+      'Models3dLoader',
+    ]);
+    expect(mockLoad).toHaveBeenNthCalledWith(3, ['the car model file']);
+    expect(mockLoad.mock.invocationCallOrder[2]).toBeLessThan(
       mockApp.listen.mock.invocationCallOrder[0] ?? 0,
     );
   });

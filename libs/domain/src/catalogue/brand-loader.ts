@@ -74,15 +74,7 @@ export class BrandLoader {
     let changed = 0;
     for (const record of kept) {
       const brand = byKey.get(record.key);
-      // The file's rank seeds a new brand or a stored one with no rank; a rank
-      // already held is the nightly ranking's and stays.
-      const after = {
-        active: true,
-        name: record.name,
-        popularity: brand?.popularity ?? record.popularity ?? null,
-        roPossessive: record.roPossessive ?? null,
-        slug: slugOf(record.name),
-      };
+      const after = fieldsOf(record, brand);
       const wrote = brand
         ? await this.update(tx, brand, after)
         : await this.create(tx, record.key, after);
@@ -101,7 +93,7 @@ export class BrandLoader {
     key: string,
     fields: Pick<
       Brand,
-      'active' | 'name' | 'popularity' | 'roPossessive' | 'slug'
+      'active' | 'bodyStyle' | 'name' | 'popularity' | 'roPossessive' | 'slug'
     >,
   ) {
     const created = await tx.brand.create({ data: { ...fields, key } });
@@ -120,7 +112,10 @@ export class BrandLoader {
     tx: Prisma.TransactionClient,
     brand: Brand,
     after: Partial<
-      Pick<Brand, 'active' | 'name' | 'popularity' | 'roPossessive' | 'slug'>
+      Pick<
+        Brand,
+        'active' | 'bodyStyle' | 'name' | 'popularity' | 'roPossessive' | 'slug'
+      >
     >,
   ) {
     const fields = Object.fromEntries(
@@ -138,6 +133,19 @@ export class BrandLoader {
     );
     return true;
   }
+}
+
+// What the file sets on a brand. The file's rank seeds a new brand or a stored
+// one with no rank; a rank already held is the nightly ranking's and stays.
+function fieldsOf(record: BrandRecord, brand: Brand | undefined) {
+  return {
+    active: true,
+    bodyStyle: record.bodyStyle ?? 'saloon',
+    name: record.name,
+    popularity: brand?.popularity ?? record.popularity ?? null,
+    roPossessive: record.roPossessive ?? null,
+    slug: slugOf(record.name),
+  };
 }
 
 // A name or slug of the file held by a stored brand under another key, active

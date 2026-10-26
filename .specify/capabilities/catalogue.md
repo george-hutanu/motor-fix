@@ -23,6 +23,7 @@ features:
   - 309-open-now-directions
   - 1368-admin-brand-list
   - 150-add-booking
+  - 1241-3d-catalogue-seed
 ---
 
 # Capability: Catalogue
@@ -134,10 +135,6 @@ _From 357-public-price-jobs._
 ### 357-FR-012 — The reason codes MUST be the vocabulary the view will label (`no_top_price` "ascuns · fără preț maxim", `hidden_by_garage` "ascuns de tine", `not_authorised` "ascuns · nu e în autorizația RAR", `awaiting_approval` "ascuns · așteaptă aprobarea", `rejected` "respins"); the API returns the codes only, the labels belong to specs issue #139.
 
 _From 357-public-price-jobs._
-
-### 386-FR-011 — The owner's read (`GET /api/v1/garages/{garageId}/prices`, 357-FR-007) MUST carry on each item `brandRanges`, the job's brand rows in catalogue order (popularity rank, then name), each `{ brandId, name, fromBani, toBani }` — the brand's id and catalogue name and both ends in bani (a row with no top is listed with `toBani` absent); `[]` when the job has none. Nothing else in the item changes.
-
-_From 386-brand-price-range._
 
 ### 172-FR-006 — The owner's read MUST carry the garage's hourly labour range, `labour: { fromBani, toBani }`, present only when both ends are set (the shape the public profile's `labour` already has), so the view shows under the list the note "Manoperă: {range} / oră. Minimul e mașina mică și simplă, maximul e cea mare sau dificilă." / "Labour: {range} / hour. The low end is the small, easy car; the high end is the big or awkward one.", `{range}` the whole-lei range ("180–240 lei"); the note is absent when `labour` is. Nothing else in the read changes; the DTO is in the contracts library, the OpenAPI file and the generated client are regenerated (Principle V). Extends the read of 386-FR-011, which stays.
 
@@ -270,10 +267,6 @@ _From 1357-rar-covered-jobs._
 ### 1357-FR-007 — Tests MUST exist before the code (Principle II), tagged with this feature's ids. In Jest: the loader writes each job's kind on create and reconciles a stored job's differing kind on update (null to a code, a code to another, a code to null for a job the list maps to none), records the change in the audit as it does for a name, and leaves an unchanged job untouched (job-type-loader integration spec); every mapped code is in `rar_activity` after the migrations and the load; the owner's read gives `not_authorised` to a listed, both-ends-set `ac-regas` of a garage whose list lacks `air_con`, and the public profile omits it, while a garage with an empty list and a job with no kind are both covered (price-list API integration spec); recording the activities with `air_con` makes it public on the next read and saves `price_list.updated` in the same transaction, and an `ok` re-check without it hides it and saves the event (verification-checks and recheck integration specs); Prețuri renders the `not_authorised` label with an amber lamp, and re-reads when a `price_list.*` event arrives, the row turning to "pe profil" once the job is covered (prices-view spec), as does the open public profile (garage-profile spec, tagged 1353-FR-003 where it already exists); the verification file renders the activities row ok, and as a warning naming the uncovered job from its evidence (verification-file spec). In Playwright, one flow on an approved garage of the flow's own whose recorded activities lack `brakes` (the admin's recording is pinned by the verification-checks spec and the verification-file flow, and recording on the seeded Atelier Dinamo would move it under every flow beside this one): signed in as its owner, Prețuri shows "Plăcuțe și discuri de frână față" as "ascuns · nu e în autorizația RAR" and the public profile does not list it.
 
 _From 1357-rar-covered-jobs._
-
-### 007-FR-004 — Every brand in the catalogue's list MUST carry a Romanian "your" form, held on the brand row and loaded with the catalogue: the mock's eight ("BMW‑ul tău", "VW‑ul tău", "Mercedesul tău", "Fordul tău", "Dacia ta", "Toyota ta", "Škoda ta", "Tesla ta") and the rest by the rule in Assumptions; the end-to-end seed sets it for every brand row.
-
-_From 007-brand-headline._
 
 ### 414-FR-002 — The API MUST serve `GET /api/v1/admin/catalogue-jobs` to admins alone, with the other admin routes' refusals (160-FR, 298-FR-002: every other signed-in role 404 `not_found`, no session 401 `sign_in_required`, a suspended admin 403 `account_suspended`), answering `{ items, rarActivities }`: `rarActivities` every row of the RAR activity list `{ code, nameRo, nameEn }` by Romanian name (the approve dialog's choices); `items` every `pending` catalogue job, oldest proposal first (`created_at`, then id), each `{ id, name, garage, fromBani, toBani, durationMinutes, proposedAt }`: `name` the Romanian text as proposed, `garage` `{ id, name, slug }` of the proposing garage or absent when it no longer exists, `fromBani`, `toBani` and `durationMinutes` from the proposing garage's default price row of the job (each absent when unset or when the row is gone), `proposedAt` the row's creation time. No paging: the queue is read whole (ST-174 caps each garage at 50 jobs; no number in the repo says the queue grows past one page).
 
@@ -442,6 +435,42 @@ _From 1368-admin-brand-list._
 ### 150-FR-007 — JOB_TYPE MUST gain `needs_lift` (boolean, not null, default false), a catalogue default set by MotorFix: the migration sets it true for the shipped keys `oil-service`, `front-brakes`, `timing-chain` and `suspension-alignment` and leaves `diagnosis`, `ac-regas` and every garage-proposed job false; the job-type loader (`job-types.ts`) carries the flag so a reload keeps it. The confirm options read (`ConfirmOptionsDto`) MUST return `needsLift`, true when any of the quote's jobs has `needs_lift`. The flag advises the dialog only: the confirm accepts a lift or none whatever it says (FR-004).
 
 _From 150-add-booking._
+
+### 1241-FR-001 — The product MUST keep the car systems in a data file beside the licensed model list: exactly the eleven codes `engine`, `brakes`, `suspension`, `aircon`, `exhaust`, `gearbox`, `electrics`, `tyres`, `bodywork`, `electric_motor`, `battery`; each with its fuel types (petrol and diesel: the nine; electric: `electric_motor`, `battery`, `brakes`, `suspension`, `aircon`, `electrics`, `tyres`, `bodywork`; hybrid: the nine plus `battery` and `electric_motor`), its names Motor / Engine, Frâne / Brakes, Suspensie / Suspension, Climă / Air-con, Evacuare / Exhaust, Cutie de viteze / Gearbox, Electrică / Electrics, Anvelope / Tyres, Caroserie / Bodywork, Motor electric / Electric motor, Baterie / Battery, and a display position (the order listed).
+
+_From 1241-3d-catalogue-seed._
+
+### 1241-FR-002 — A Prisma migration MUST create CAR_SYSTEM and CAR_MODEL_3D and add `brand.body_style`. At API boot a loader MUST write CAR_SYSTEM (code, fuel_types, name_ro, name_en, position) from that file and CAR_MODEL_3D (key, brand, model, file_key, popularity = the model's rank within its brand, 1 the most popular, fuel, body_style, licence_ref null) from the licensed model list, as the brand loader writes BRAND: in one transaction under an advisory lock, writing and auditing only the fields that differ (a second run changes no row and writes no audit entry), deleting (audited) a model row whose key left the list (nothing references it), logging one line with the count changed.
+
+_From 1241-3d-catalogue-seed._
+
+### 1241-FR-003 — Every BRAND row MUST carry a `body_style` (saloon, hatchback, suv, crossover, estate, fastback; a NOT NULL column defaulting to `saloon`), written by the brand loader from the brand list's `bodyStyle` on the brands the file owns; a brand an admin changed keeps its stored style, as it keeps its other fields.
+
+_From 1241-3d-catalogue-seed._
+
+### 1241-FR-004 — Every CAR_MODEL_3D row MUST name a file key of the form `<model-key>.<hash>.glb`, where `<hash>` is the first 16 hex characters of the file's SHA-256, and the generic body shapes MUST have keys `generic-<style>.<hash>.glb`; a stored file is never overwritten, a new version has a new key.
+
+_From 1241-3d-catalogue-seed._
+
+### 1241-FR-005 — The decision MUST be recorded (PR body and the `catalogue` capability): the 3D files are held in the product's object storage under `models-3d/`, served with `Cache-Control: public, max-age=31536000, immutable`, a stored key never overwritten; no `.glb` file is committed to the repository (public; the files are licensed). Uploading and serving are ST-1242/ST-1243's.
+
+_From 1241-3d-catalogue-seed._
+
+### 1241-FR-006 — Until the real files arrive (ST-1242 generic shapes, ST-1243 licensed models), the catalogue MUST point at placeholder files the product generates itself (a `body` node plus every `sys_<code>` and `pin_<code>` node the model's fuel needs), generated byte-for-byte deterministically at check time into a temporary directory and never committed, whose content-hashed keys are in the catalogue data (the licensed list and a map of the six generic styles to their keys), so every row points at a file the check accepts.
+
+_From 1241-3d-catalogue-seed._
+
+### 1241-FR-007 — An asset check (a script under `scripts/`, run in CI's Checks job) MUST, given a directory of files, fail naming the file and the part when a file misses a `sys_<code>` or `pin_<code>` its fuel needs, holds a `sys_` or `pin_` node its fuel forbids, lacks `body`, is not a readable GLB, is larger than 2 MiB (2,097,152 bytes; equal passes), or its name's hash does not match its content; fail naming the row when a catalogue row (each licensed model, each generic style) has no file; and fail naming the file when a file matches no row. It reads the catalogue from the data files, never the database. With no directory it checks the placeholder set.
+
+_From 1241-3d-catalogue-seed._
+
+### 1241-FR-008 — The check MUST take a file's fuel from the catalogue by its key; a `generic-<style>` file is held to the petrol/diesel nine.
+
+_From 1241-3d-catalogue-seed._
+
+### 1241-FR-009 — Unit tests MUST cover the check on a good file and on one file per fault (missing part, forbidden part, no body, not a GLB, over 2 MiB, hash mismatch, missing row, unknown file), and the loader's idempotence and every CAR_MODEL_3D row's file key on a real database over the real data files.
+
+_From 1241-3d-catalogue-seed._
 
 ## Retired
 

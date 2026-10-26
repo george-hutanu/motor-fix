@@ -91,10 +91,6 @@ _From 300-verification-checks._
 
 _From 203-company-caen-check._
 
-### 1351-FR-006 — An `ok` record MUST, in one transaction: store the re-check; set the garage's date of last check to the date checked; set the garage's authorised activities to the recorded set; write one audit entry on the garage by the admin with the result, the date, the activities before and after, and the detail; write one `recheck.recorded` outbox row (garageId, result); and, when the set narrowed, one `price_list.updated` outbox row for the garage. It MUST NOT itself hide, show or touch any price-list job: the hiding is #242's rule, owned by #228 on this trigger.
-
-_From 1351-rar-monthly-recheck._
-
 ### 204-FR-013 — The five seeded RAR activity codes (mechanics, brakes, steering, suspension, air_con) stand until the lawyer's later review (owner, 2026-10-16, under the 2026-10-11 rule; a follow-up, not a gate, #578). The capability spec records that a migration replacing them must map or report every stored `GARAGE.rar_activities` value, and a migration test proves, after the migrations run, that the catalogue holds exactly those five codes and that every stored value is one of them. The seed migration's `TODO` comment stays: that migration is applied, and editing it would change its checksum on every deployed database.
 
 _From 204-rar-activities-check._
@@ -646,14 +642,6 @@ _From 1351-rar-monthly-recheck._
 _From 1351-rar-monthly-recheck._
 
 ### 1351-FR-005 — The record MUST be refused with 409, nothing written, checking in this order (the garage row locked for the whole check): first a carried date of last check that differs from the garage's (`recheck_conflict` or `recheck_stale`, so a second admin learns who recorded), then a garage not approved or not due (FR-001, `recheck_not_due`). When a valid (`ok`) re-check newer than the carried date exists, the 409 (code `recheck_conflict`) MUST name its recorder (first name and initial, as the audit does) and its time in Europe/Bucharest, with the date added when it was not today, so the client shows "Deja reverificat de {name} la {time}" or "… pe {date} la {time}"; when none exists (the date moved some other way), a plain 409 with code `recheck_stale` and "Datele service-ului s-au schimbat. Reîncarcă lista." / "The garage's details changed. Reload the list.".
-
-_From 1351-rar-monthly-recheck._
-
-### 1351-FR-006 — An `ok` record MUST, in one transaction: store the re-check; set the garage's date of last check to the date checked; set the garage's authorised activities to the recorded set; write one audit entry on the garage by the admin with the result, the date, the activities before and after, and the detail; write one `recheck.recorded` outbox row (garageId, result); and, when the set narrowed, one `price_list.updated` outbox row for the garage. It MUST NOT itself hide, show or touch any price-list job: the hiding is #242's rule, owned by #228 on this trigger.
-
-_From 1351-rar-monthly-recheck._
-
-### 1351-FR-007 — A `failed` record MUST, in one transaction: store the re-check and suspend the garage through the existing suspension use case (049-FR-002) with cause `recheck_failed` and the reason "Autorizație RAR expirată · {detail}" (or "suspendată", "retrasă"), trimmed to 200 characters, so its SUSPENSION, status change, audit entry, `garage.suspended` row and everything downstream (#97, #204) happen as defined there; write the re-check's own audit entry and `recheck.recorded` row. It MUST NOT move the date of last check or the activities. A refusal by the suspension (409) MUST roll back the re-check, while the suspension's own refused-attempt audit entry is still written, as #97 defines.
 
 _From 1351-rar-monthly-recheck._
 

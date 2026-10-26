@@ -32,7 +32,22 @@
     "title": "Features"
   },
   "home": {
-    "mechanic": "Your jobs will appear here."
+    "ownJobs": {
+      "daySheet": "My day sheet",
+      "load": {
+        "done": {
+          "one": "{count} done",
+          "other": "{count} done"
+        },
+        "jobs": {
+          "one": "{count} job today",
+          "other": "{count} jobs today"
+        }
+      },
+      "next": "Next booking: {when} · {car}",
+      "none": "No jobs today",
+      "title": "My jobs"
+    }
   },
   "invite": {
     "canAnswerQuotes": "Can answer quote requests",
@@ -45,6 +60,7 @@
     "done": "Done",
     "email": "Email",
     "field": {
+      "invalid": "Enter a valid e‑mail or phone number.",
       "pattern": "That email address doesn't look right."
     },
     "kind": "Role",
@@ -55,16 +71,22 @@
     "permissions": "What they can do",
     "problem": {
       "already_in_team": "This person is already in the team.",
+      "card_linked": "We couldn't send the invite.",
       "feature_off": "Inviting mechanics isn't available right now.",
       "forbidden": "Only the garage's owner can invite.",
-      "invite_open": "This address already has an open invite."
+      "invite_open": "This address already has an open invite.",
+      "not_found": "We couldn't send the invite.",
+      "owner_row": "We couldn't send the invite.",
+      "self_invite": "You can't invite yourself."
     },
     "receptionist": "Receptionist",
     "resend": "Send again",
     "sent": "The invite was sent.",
     "sentLine": "The link is valid for 7 days.",
     "submit": "Send the invite",
-    "title": "Invite to the team"
+    "title": "Invite to the team",
+    "titleCard": "Invite {name}",
+    "to": "E‑mail or phone"
   },
   "jobs": {
     "noMechanic": "No mechanic",
@@ -214,6 +236,15 @@
       "years": "Between 0 and 60 years"
     },
     "gone": "The card was removed in the meantime.",
+    "invite": {
+      "button": "Invite",
+      "cancel": "Cancel the invite",
+      "expired": "Invite sent to {to} · expired",
+      "failed": "We couldn't update the invite.",
+      "gone": "The invite is no longer open.",
+      "resend": "Resend",
+      "sent": "Invite sent to {to} · expires {date}"
+    },
     "name": "Name",
     "noBrands": "The garage has no brands it works on yet.",
     "owned": {
@@ -628,6 +659,8 @@
       "other": "{rating} · {count} reviews"
     },
     "state": {
+      "inviteExpired": "invite expired",
+      "inviteSent": "invite sent",
       "noAccount": "no account",
       "off": "not on the profile",
       "on": "on the profile"

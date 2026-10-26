@@ -690,3 +690,68 @@ describe('the shipped file', () => {
     });
   });
 });
+
+describe('the body style of a brand', () => {
+  const styles = async () =>
+    Object.fromEntries(
+      (
+        await prisma.brand.findMany({ select: { bodyStyle: true, key: true } })
+      ).map(({ bodyStyle, key }) => [key, bodyStyle]),
+    );
+
+  // @traces 1241-FR-003
+  it('is the one the brand list names, and a saloon for a brand it names none', async () => {
+    await loader.load(BRANDS);
+
+    const stored = await styles();
+    expect(stored).toMatchObject({
+      dacia: 'suv',
+      ford: 'fastback',
+      skoda: 'estate',
+      toyota: 'crossover',
+      volkswagen: 'hatchback',
+    });
+    for (const { bodyStyle, key } of BRANDS) {
+      if (bodyStyle === undefined) expect(stored[key]).toBe('saloon');
+    }
+  });
+
+  // @traces 1241-FR-003
+  it('of a brand stored before the styles, follows the list on the next load, recorded once', async () => {
+    await loader.load(BRANDS);
+    await prisma.brand.update({
+      data: { bodyStyle: 'saloon' },
+      where: { key: 'dacia' },
+    });
+    const dacia = await prisma.brand.findUniqueOrThrow({
+      where: { key: 'dacia' },
+    });
+
+    expect((await loader.load(BRANDS)).changed).toBe(1);
+    expect((await loader.load(BRANDS)).changed).toBe(0);
+    expect(
+      (await history()).filter((entry) => entry.action === 'update'),
+    ).toEqual([
+      expect.objectContaining({
+        actorRole: 'system',
+        field: 'bodyStyle',
+        newValue: 'suv',
+        oldValue: 'saloon',
+        subjectId: dacia.id,
+      }),
+    ]);
+  });
+
+  // @traces 1241-FR-003
+  it('of a brand an admin changed, stays the stored one', async () => {
+    await loader.load(BRANDS);
+    await prisma.brand.update({
+      data: { bodyStyle: 'estate', updatedBy: randomUUID() },
+      where: { key: 'volkswagen' },
+    });
+
+    await loader.load(BRANDS);
+
+    expect((await styles())['volkswagen']).toBe('estate');
+  });
+});

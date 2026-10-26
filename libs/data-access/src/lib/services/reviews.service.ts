@@ -17,6 +17,14 @@ import { JobReviewContextDto } from '../models/job-review-context-dto';
 import { MechanicReviewsPageDto } from '../models/mechanic-reviews-page-dto';
 import { ReviewDto } from '../models/review-dto';
 import { ReviewEligibilityDto } from '../models/review-eligibility-dto';
+import { reviewRepliesControllerEdit } from '../fn/reviews/review-replies-controller-edit';
+import { ReviewRepliesControllerEdit$Params } from '../fn/reviews/review-replies-controller-edit';
+import { reviewRepliesControllerPost } from '../fn/reviews/review-replies-controller-post';
+import { ReviewRepliesControllerPost$Params } from '../fn/reviews/review-replies-controller-post';
+import { ReviewReplyDto } from '../models/review-reply-dto';
+import { ReviewReportDto } from '../models/review-report-dto';
+import { reviewReportsControllerReport } from '../fn/reviews/review-reports-controller-report';
+import { ReviewReportsControllerReport$Params } from '../fn/reviews/review-reports-controller-report';
 import { reviewsControllerEligibility } from '../fn/reviews/reviews-controller-eligibility';
 import { ReviewsControllerEligibility$Params } from '../fn/reviews/reviews-controller-eligibility';
 import { reviewsControllerForGarage } from '../fn/reviews/reviews-controller-for-garage';
@@ -65,6 +73,105 @@ export class ReviewsService extends BaseService {
   garageReviewsControllerRead(params: GarageReviewsControllerRead$Params, context?: HttpContext): Promise<GarageStaffReviewsPageDto> {
     const resp = this.garageReviewsControllerRead$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageStaffReviewsPageDto>): GarageStaffReviewsPageDto => r.body);
+  }
+
+  /** Path part for operation `reviewRepliesControllerPost()` */
+  static readonly ReviewRepliesControllerPostPath = '/api/v1/reviews/{reviewId}/reply';
+
+  /**
+   * Reply in public to one of the garage’s reviews.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `reviewRepliesControllerPost()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reviewRepliesControllerPost$Response(params: ReviewRepliesControllerPost$Params, context?: HttpContext): Promise<StrictHttpResponse<ReviewReplyDto>> {
+    const obs = reviewRepliesControllerPost(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Reply in public to one of the garage’s reviews.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `reviewRepliesControllerPost$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reviewRepliesControllerPost(params: ReviewRepliesControllerPost$Params, context?: HttpContext): Promise<ReviewReplyDto> {
+    const resp = this.reviewRepliesControllerPost$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ReviewReplyDto>): ReviewReplyDto => r.body);
+  }
+
+  /** Path part for operation `reviewRepliesControllerEdit()` */
+  static readonly ReviewRepliesControllerEditPath = '/api/v1/reviews/{reviewId}/reply';
+
+  /**
+   * Edit the garage’s reply to one of its reviews.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `reviewRepliesControllerEdit()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reviewRepliesControllerEdit$Response(params: ReviewRepliesControllerEdit$Params, context?: HttpContext): Promise<StrictHttpResponse<ReviewReplyDto>> {
+    const obs = reviewRepliesControllerEdit(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Edit the garage’s reply to one of its reviews.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `reviewRepliesControllerEdit$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reviewRepliesControllerEdit(params: ReviewRepliesControllerEdit$Params, context?: HttpContext): Promise<ReviewReplyDto> {
+    const resp = this.reviewRepliesControllerEdit$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ReviewReplyDto>): ReviewReplyDto => r.body);
+  }
+
+  /** Path part for operation `reviewReportsControllerReport()` */
+  static readonly ReviewReportsControllerReportPath = '/api/v1/reviews/{reviewId}/reports';
+
+  /**
+   * Report one of the garage’s reviews to an admin, with a reason.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `reviewReportsControllerReport()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reviewReportsControllerReport$Response(params: ReviewReportsControllerReport$Params, context?: HttpContext): Promise<StrictHttpResponse<ReviewReportDto>> {
+    const obs = reviewReportsControllerReport(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Report one of the garage’s reviews to an admin, with a reason.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `reviewReportsControllerReport$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reviewReportsControllerReport(params: ReviewReportsControllerReport$Params, context?: HttpContext): Promise<ReviewReportDto> {
+    const resp = this.reviewReportsControllerReport$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ReviewReportDto>): ReviewReportDto => r.body);
   }
 
   /** Path part for operation `reviewsControllerEligibility()` */

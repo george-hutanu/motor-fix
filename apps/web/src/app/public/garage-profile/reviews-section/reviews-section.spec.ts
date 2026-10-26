@@ -21,7 +21,7 @@ import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
 import { ReviewsSection } from './reviews-section';
-import { PUBLIC_READ } from '../../../public-read';
+import { FRESH_READ, PUBLIC_READ } from '../../../public-read';
 import { PublicLive } from '../../live';
 
 // @traces 024-FR-001
@@ -70,6 +70,7 @@ const REVIEW: GarageReviewDto = {
   postedAt: '2026-03-14T10:00:00.000Z',
   quote: null,
   rating: 5,
+  reply: null,
   source: 'job',
   text: 'Treabă curată, <b>la timp</b>.',
 };
@@ -225,6 +226,12 @@ describe('the reviews section on a garage profile', () => {
     expect(reads[0]?.params).toEqual({ garageId: 'g-1', page: 1 });
     expect(reads[0]?.context?.get(PUBLIC_READ)).toBe(true);
     expect(live.register).not.toHaveBeenCalled();
+  });
+
+  it('reads past the server render’s transfer cache, so a change heard before the page settles is not answered from it', async () => {
+    await open();
+
+    expect(reads[0]?.context?.get(FRESH_READ)).toBe(true);
   });
 
   it('heads itself “Ce spun șoferii” and names the section by it', async () => {

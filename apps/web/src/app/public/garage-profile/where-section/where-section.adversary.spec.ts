@@ -3,7 +3,9 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
+import { GARAGE_MAP } from './garage-map/garage-map';
 import { WhereSection } from './where-section';
+import { Consent } from '../../../consent/consent';
 
 const OPEN = [['08:00', '19:00']];
 const GARAGE: PublicGarageDto = {
@@ -52,7 +54,12 @@ class Host {
 let fixture: ComponentFixture<Host>;
 
 beforeEach(async () => {
-  TestBed.configureTestingModule({});
+  TestBed.configureTestingModule({
+    providers: [
+      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: GARAGE_MAP, useValue: jest.fn() },
+    ],
+  });
   await TestBed.inject(I18n).enter('public');
   await TestBed.inject(I18n).use('ro');
   fixture = TestBed.createComponent(Host);
@@ -131,5 +138,57 @@ describe('where a garage is, when the answer is read again', () => {
     expect(text(section().querySelector('.address'))).toBe(
       'Str. Atelierului 14, București',
     );
+  });
+});
+
+// @traces 1366-FR-007
+describe('where a garage is, on a map, under odd answers', () => {
+  const link = () => section().querySelector('a.directions');
+
+  it('shows a mobile mechanic that carries a point no map and no directions', async () => {
+    await show({
+      address: undefined,
+      businessKind: 'mobile',
+      latitude: 44.43,
+      longitude: 26.1,
+      serviceRadiusKm: 35,
+    });
+
+    expect(section().querySelector('mf-garage-map')).toBeNull();
+    expect(link()).toBeNull();
+  });
+
+  it('treats a null coordinate as none', async () => {
+    await show({
+      latitude: null as unknown as undefined,
+      longitude: 26.1,
+    });
+
+    expect(section().querySelector('mf-garage-map')).toBeNull();
+    expect(link()).toBeNull();
+  });
+
+  it('keeps a point at zero degrees, a real number, in the address', async () => {
+    await show({ latitude: 44.5, longitude: 0 });
+
+    expect(link()?.getAttribute('href')).toBe(
+      'https://www.google.com/maps/dir/?api=1&destination=44.5,0',
+    );
+  });
+
+  it('writes a long coordinate in full, never rounded, with no NaN or undefined', async () => {
+    await show({ latitude: 44.123456789, longitude: 26.987654321 });
+    const href = link()?.getAttribute('href') ?? '';
+
+    expect(href).toContain('44.123456789,26.987654321');
+    expect(href).not.toMatch(/NaN|undefined|null/);
+  });
+
+  it('writes the coordinates with a dot in English too', async () => {
+    await show({ latitude: 44.43, longitude: 26.1 });
+    await TestBed.inject(I18n).use('en');
+    await settle();
+
+    expect(link()?.getAttribute('href')).toContain('44.43,26.1');
   });
 });

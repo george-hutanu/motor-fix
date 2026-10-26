@@ -110,6 +110,7 @@ describe('POST /quotes/:id/accept', () => {
     expect(res.body).toEqual({
       cancelledAt: null,
       cancelledBySide: null,
+      cancelNote: null,
       cancelReason: null,
       completedAt: null,
       confirmBy: booking.confirmBy.toISOString(),
@@ -122,6 +123,7 @@ describe('POST /quotes/:id/accept', () => {
         slug: dinamo.garage.slug,
       },
       id: booking.id,
+      lateCancellation: false,
       noShowAt: null,
       quoteId: quote.id,
       startsAt: quote.slot.toISOString(),

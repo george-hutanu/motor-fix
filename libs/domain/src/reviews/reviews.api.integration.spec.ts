@@ -615,6 +615,7 @@ describe("reading a mechanic's reviews", () => {
       id: written[0].id,
       postedAt: written[0].postedAt.toISOString(),
       rating: written[0].rating,
+      reply: null,
       text: 'Recenzia 0',
     });
     expect(first.body.items[1].text).toBeNull();

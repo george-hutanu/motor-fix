@@ -187,6 +187,7 @@ describe('PATCH /cars/:id', () => {
       plate: 'CJ12ABC',
       rcaUntil: '2027-01-20',
       rovinietaUntil: '2027-06-01',
+      serviceDueOn: null,
       updatedAt: expect.any(String),
       year: 2020,
     });

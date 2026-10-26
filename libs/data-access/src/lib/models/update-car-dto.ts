@@ -19,6 +19,11 @@ export interface UpdateCarDto {
    * Trimmed
    */
   model?: string;
+
+  /**
+   * Above the odometer and at most 100,000 km past it; null clears it
+   */
+  nextServiceKm?: number | null;
   odometerKm?: number;
 
   /**

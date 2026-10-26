@@ -387,10 +387,6 @@ _From 109-garage-details-prices._
 
 _From 109-garage-details-prices._
 
-### 115-FR-007 — The step list (108-FR-004) and its phone bar MUST show, on each step, a tick when the rule set has no error on it (steps 2 and 6 gain theirs; 108-FR-010 and the three-step tick of 109-FR-012 are superseded), and a red dot when the step has an error and either sending has been asked for on this page since the error appeared or the step holds a shown field error. Each mark MUST be named for assistive technology ("complet" / "complete", "lipsesc date" / "incomplete") and never be colour alone. Step 4 shows a tick whenever it has no error, an empty step 4 included.
-
-_From 115-listing-checklist._
-
 ### 109-FR-013 — The `garages` module MUST provide one write that creates the garage from a step-1 section inside a transaction the caller owns, taking the transaction, the actor (the owner account created in it) and the section: it MUST trim the texts, check the lengths of FR-001 (code `length` on the field), normalise the phone and refuse one that is not `+40` and nine digits (code `romanian` on `phone`), require the kind of business and, for `mobile`, the legal form (code `required`), and create the garage with `status = draft`, `name`, a unique `slug` derived from the name (lower case, accents dropped, non-letters as hyphens, a numeric suffix when taken), `phone`, `known_for`, `business_kind`, `mobile_legal_form` (null unless mobile); a refusal is the 422 field-error refusal the other writes raise and writes nothing. It MUST record one `create` audit entry (subject type `garage`, the stored values as the new value, actor the owner) and emit no event. The garage row gains `phone`, `known_for`, `business_kind` (`company`, `pfa`, `ii`, `mobile`) and `mobile_legal_form` (`pfa`, `company`), all empty for garages that exist today.
 
 _From 109-garage-details-prices._
@@ -513,10 +509,6 @@ _From 1359-signup-survey._
 ### 885-FR-002 — A stored entry whose data fails that rule MUST be treated as no browser copy at all: the page opens as it would with nothing stored (an empty form at step 1; a continue link still takes the server copy), its token is not used, and nothing is thrown to the owner.
 
 _From 885-restored-draft-check._
-
-### 1359-FR-008 — The draft's `survey` section MUST be typed and guarded in the contracts library as an object with at most the keys `mechanicsCount` ∈ `0`, `1-2`, `3-5`, `6+`; `liftsCount` ∈ `0`, `1`, `2-3`, `4+`; `wantsLiveMedia` and `wantsDaySheets` boolean; `foundVia` ∈ `google`, `client`, `garage`, `social`, `other`; every key optional (answers arrive one at a time); any other key or value MUST fail the shared draft-data rule (885-FR-001, 885-FR-004), so the server refuses the save with 400 and the browser restores nothing from such a copy.
-
-_From 1359-signup-survey._
 
 ### 885-FR-005 — Tests MUST cover, in colocated Jest specs: each refused shape of FR-001 (an extra envelope key, an unknown step key, a step section failing its guard, bad `files`, a non-object `survey`) restoring nothing and throwing nothing; a passing draft, a dirty passing draft with a token and an empty `{}` data restoring as today; and the same fixtures judged alike by the browser restore and the server rule (FR-004).
 
@@ -822,10 +814,6 @@ _From 412-brand-job-ticks._
 _From 412-brand-job-ticks._
 
 ### 115-FR-001 — One rule set MUST decide whether a draft can be sent: a pure function in the contracts library that takes the draft's data (`ListingDraftData`) and returns the errors and the warnings, each a field problem (`FieldProblem`: `code`, `field`) whose `field` is the draft path of the value, `email` for the draft's address (which lives on the draft's row, not in `data`; the browser passes the keeper's, the server the row's, and it is judged only when passed) and the paths of the draft's data, among them (`steps.1.name`, `steps.1.phone`, `steps.1.knownFor`, `steps.2.brands`, `steps.3.labour.to`, `steps.3.jobs`, `steps.3.jobs[2].to`, `steps.4.mechanics[1].name`, `steps.5.place.address`, `steps.5.hours`, `steps.5.payments`, `steps.5.courtesyCar.pricePerDayBani`, `files`, `steps.6.cui`, `steps.6.rarNumber`, `documents.onrc_certificate`, `documents.rar_authorisation`, `declaration`). The form and the server read this one function; neither holds a rule of its own. The existing per-section completeness functions stay and MUST agree with it: a step is complete exactly when the rule set has no error on that step (a test holds them together).
-
-_From 115-listing-checklist._
-
-### 115-FR-002 — The rule set MUST require, with one error per missing or wrong value: step 1 the garage name (2–80 characters after trimming), a Romanian phone (109-FR-002), the e-mail (114-FR-001), "La ce sunteți cei mai buni" (1–160 characters) and the kind of business, plus PFA or company for a mobile mechanic; step 2 at least one brand marked taken; step 3 the labour range with both ends good by the shared range check (354-FR-006), at least one job without a brand (`steps.3.jobs`) and a top on every job (`steps.3.jobs[n].to`), as `pricesComplete` judges, every job row passing the range check and a typed name within 2–80 characters; step 5 a position inside Romania with an address (111-FR-007), at least one confirmed photo (110-FR-017), at least one day with an open interval, at least one payment method and a courtesy price of 1–2,000 lei when the courtesy car is ticked and paid (397-FR-004); step 6 a valid CUI, a RAR number of at least 3 characters, and the declaration (the tick and a declared name of 2–80 characters, 206-FR-009). A missing value carries the code `required`; the codes of a wrong value are the owning rule's own (`invalid` for a CUI, a RAR number, a name or a phone, and the range check's `integer`, `min`, `max`, `below_from`), and the warning codes are `wide_range`, `no_requests`, `document_missing` and `cui_in_use`; no other code is raised. A value that fails a step story's own rule (a phone that is not Romanian, a range refused by the range check) MUST reuse that rule's code, never a second judgement.
 
 _From 115-listing-checklist._
 

@@ -3,7 +3,12 @@ import { Client } from 'pg';
 
 import { ACCOUNTS, headers, openSignIn, ready, signIn } from './accounts.js';
 import { test } from './fixtures.js';
-import { doneJob, removeJob } from './review-jobs.js';
+import {
+  doneJob,
+  holdReviews,
+  releaseReviews,
+  removeJob,
+} from './review-jobs.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
 // @traces 074-FR-001
@@ -43,6 +48,9 @@ test.describe('new reviews on the garage dashboard @seeded', () => {
     if (!garage) throw new Error('the seeded garage atelier-test is missing');
     garageId = garage.id;
   });
+
+  test.beforeEach(() => holdReviews(db, garageId));
+  test.afterEach(() => releaseReviews(db, garageId));
 
   test.afterAll(async () => {
     await db.end();

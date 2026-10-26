@@ -1,6 +1,6 @@
 ---
 capability: reviews
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 022-review-drawer
   - 023-review-confirmed-job
@@ -10,6 +10,8 @@ features:
   - 024-garage-reviews
   - 074-garage-reviews
   - 1367-review-price-marks
+  - 076-report-review
+  - 075-review-reply
 ---
 
 # Capability: Reviews
@@ -342,9 +344,9 @@ _From 074-garage-reviews._
 
 _From 074-garage-reviews._
 
-### 074-FR-009 — The answer MUST carry the stored `rating` (null when none), `reviewCount`, the `breakdown` (five counts over `published`), `page`, `pageSize` 20, `total` (listed rows: `published` and `reported`) and `items`, each with the review's id, `source`, `status` (`published` or `reported`), rating, text (null when none), posted date, edited date (null when none), the author's short name, for a job review the car (brand, model) and the included jobs' names in both languages (car null and jobs empty for a profile review), the mechanic's short name (null when none), and `canReply` and `canReport`, both true for the owner and false for the receptionist.
+### 075-FR-009 — Reads. ST-74's staff read (`GET /api/v1/garages/{garageId}/reviews`) MUST carry on each item `reply`: null, or `{ id, text, postedAt, editedAt, status }` for `published` and `reported` replies (never a `removed` one), and `canReply` MUST be false when the review has a `removed` reply or is not `published`; the public reads (`GET /api/v1/reviews/garage/{garageId}`, 024-FR-016, and `GET /api/v1/reviews/mechanic/{mechanicId}`, 025-FR-011) MUST carry on each item `reply`: null, or `{ text, postedAt, editedAt }` only when the reply is `published` — nothing of a `reported` or `removed` reply, nothing of who posted it. No read carries the owner's account id, name or any report.
 
-_From 074-garage-reviews._
+_From 075-review-reply._
 
 ### 074-FR-010 — The read MUST never expose the author's plate, phone, e-mail, account id or full surname, nor the mechanic's account, phone or e-mail, nor any `removed` or `deleted_by_author` review.
 
@@ -394,6 +396,74 @@ _From 1367-review-price-marks._
 
 _From 1367-review-price-marks._
 
+### 076-FR-006 — The system MUST expose `POST /api/v1/reviews/{reviewId}/reports` in the reviews module, taking `{ reason, text? }` through a DTO in the contracts library validated at the edge: `reason` one of the nine codes of FR-003 and `text` a string, anything else or any other member 400 `validation_failed`; `reviewId` not a UUID 404 `not_found` (as the other review reads answer a bad id to a non-owner, one body). It MUST require a session (401 `sign_in_required`) and the `garage.reviews` capability, and MUST answer 403 `forbidden` ("Doar proprietarul poate raporta o recenzie." / "Only the owner can report a review.") to a receptionist or a mechanic of the review's garage, and 404 `not_found` with one body and no review data to every other caller: another garage's staff, a driver, an admin, an account with no garage. The owner is the actor whose garage is the review's garage and whose role in use is the owner's.
+
+_From 076-report-review._
+
+### 076-FR-007 — After the session check, the pipe's 400 and the access rule, the operation MUST run its checks in this order and answer with the first that fails: 404 `not_found` when the review does not exist, belongs to another garage, or is `removed` or `deleted_by_author`; 409 `already_reported` ("Recenzia e deja raportată." / "This review is already reported.") when it is `reported`; 409 `already_kept` (the FR-002 words) when it is `published` and its newest report in status `decided` was decided at or after the review's last edit (`editedAt` null counts as never edited); 422 `validation_failed` naming `text` when `reason` is `other` and the trimmed text is empty or over 500 characters, or when `reason` is not `other` and a text is given. Every refusal body MUST be `{ code, message }`, the message in the caller's language.
+
+_From 076-report-review._
+
+### 076-FR-008 — An accepted report MUST be stored as a review report row holding: id, the review, `target` `review`, `reason`, `text` (null unless `other`; the trimmed text, never rendered as markup), `source` `garage`, the reporter's account id, status `pending`, `dueAt` = the report time + 48 hours, and the report time in UTC; `decision`, `decidedBy` and `decidedAt` exist and stay empty for the stories that decide. The row's `status` is `pending`, `decided` or `closed`; its `decision` `kept` or `removed`; its `source` `garage`, `author` or `automatic` (only `garage` is written here).
+
+_From 076-report-review._
+
+### 076-FR-009 — In one transaction with the row, the system MUST set the review's status from `published` to `reported`, write two audit entries by the reporter (actor role `owner`, garage id and, for a job review, job id and car id set): `create` on subject `review_report` holding the row's fields except nothing about the author, and `update` on subject `review`, field `status`, old `published`, new `reported`; and write one `review.reported` event with the review audience (the garage's staff, the author, the mechanic's and the garage's public channels, as `review.posted` does) and the payload `{ reviewId, reportId, garageId, mechanicId, driverId, jobId, reason, source: 'garage', target: 'review' }`; none of the four may exist without the others. At most one `pending` report per review MUST hold under concurrent calls, guaranteed by the database (the loser answers 409 `already_reported`), and the 201 body MUST carry `{ id, reason, status, dueAt, review: { id, status } }` and nothing about the author.
+
+_From 076-report-review._
+
+### 076-FR-010 — The public reads and the driver's reads MUST carry nothing of a report (no reporter, no reason, no refusal); the refusal flag on ST-74's staff read is ST-1382's (FR-010a below), computed with this story's rule.
+
+_From 076-report-review._
+
+### 076-FR-011 — A `reported` review MUST leave the garage's and the mechanic's stored rating and review count: the existing recomputation consumes the `review.reported` event (025-FR-007) and counts `published` reviews only; this story proves it on a real event and writes no second path. The public profile reads (024-FR-016, 025-FR-011) already list `published` reviews only and MUST stay so.
+
+_From 076-report-review._
+
+### 076-FR-012 — Every new API text (the three refusal messages) MUST exist in Romanian and English in the API's messages and follow the caller's language; for ST-1382, every web text (the button, the hint, the task's title, subtitle, reasons, field, counter, note and buttons, the toast) MUST exist in Romanian and English in the garage area's interface files and the API's messages and follow the owner's language; the task MUST render at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll and no text under 12 px, and pass the QA sweep's accessibility checks.
+
+_From 076-report-review._
+
+### 076-FR-013 — The new operation MUST ship with its observability: its request metrics by route template, a product counter of reports by reason and of refusals by code, its logs, a dashboard panel and an alert: the existing `api-error-rate` rule (the API's 5xx share, `infra/observability/alerts/api.json`) and `api-latency` cover the route through its metrics, as they cover the other review operations, so no new alert rule is added and the product counter's inventory entry states why it carries none (a refusal is the owner's state, not an outage), each listed in `infra/observability/inventory.json` with its reason; the PR's Notes list them.
+
+_From 076-report-review._
+
+### 076-FR-014 — Tests MUST be written first: Jest on real PostgreSQL for the operation (the owner's 201 with the row, the status change, the two audit entries and the event in one transaction, and the rollback of all four when one write fails; `other` with and without text; 422 cases; 409 `already_reported`; 409 `already_kept` before and 201 after an author edit; two concurrent reports giving one 201 and one 409; 403 receptionist and mechanic; 404 for another garage's owner, a driver, an admin, a bad id, a `removed` and a `deleted_by_author` review; 401 with no session; the staff read's `reportRefusal` in each state; the public and driver reads carrying no report data; the ratings job dropping the review on the real event), and component tests for the button and its three states, the task's options, the `other` field and counter, the disabled send, the discard question, the 201 toast and row update, the 409 toast and the network error with the kept values, in both languages.
+
+_From 076-report-review._
+
+### 075-FR-004 — The system MUST expose `POST /api/v1/reviews/{reviewId}/reply` (create, 201) and `PATCH /api/v1/reviews/{reviewId}/reply` (edit, 200) in the reviews module, each taking `{ text }` through a DTO in the contracts library validated at the edge (`text` a string; anything else or any other member 400 `validation_failed`), requiring a session (401 `sign_in_required`), `reviewId` not a UUID 404 `not_found`. Both MUST answer the reply as `ReviewReplyDto` `{ id, text, postedAt, editedAt, status }` (the staff shape, which FR-009's staff `reply` reuses).
+
+_From 075-review-reply._
+
+### 075-FR-005 — After the session check and the pipe's 400, each operation MUST run its checks in this order and answer with the first that fails: 404 `not_found` with one body when the review does not exist or the caller has no member row and is not a mechanic at the review's garage (another garage's member, a driver, an admin); 403 `forbidden` when the caller is a receptionist or a mechanic of the review's garage (only the owner passes, A31, W10); 409 `review_not_public` when the review's status is not `published`; then for POST: 409 `reply_removed` when the review's reply is `removed`, 409 `already_replied` when it has any other reply; for PATCH: 404 `not_found` when the review has no reply, 409 `reply_not_public` when the reply is `reported`, 409 `reply_removed` when it is `removed`; then 422 `validation_failed` (`[{ code: 'length', field: 'text' }]`) when the trimmed text has 0 or more than 1,000 code points. Every refusal body is `{ code, message }`, the message in the caller's language.
+
+_From 075-review-reply._
+
+### 075-FR-006 — A reply MUST be stored as one review reply row per review (a unique index on the review): id, the review, the garage, the trimmed `text`, `posted_at`, `posted_by` (the owner's account id, nullable so the row outlives the account), `edited_at` (null until the first edit), `status` (`published`, `reported`, `removed`; default `published`), `removed_at` and `removed_cause` (null; written by the moderation stories). The text is stored and shown as written: plain text, never rendered as markup, never translated, links not made clickable.
+
+_From 075-review-reply._
+
+### 075-FR-007 — In one transaction with the row, POST MUST write an audit entry `create` on subject `review_reply` (the row's fields: text, status, review id) by the owner (actor role `owner`, garage id, and for a job review the job id and car id) and the outbox event `review.replied` (`reviewId`, `replyId`, `garageId`, `authorId`); PATCH MUST set `text` and `edited_at`, write an audit `update` on subject `review_reply`, field `text`, old and new text, and the event `review.reply_edited` (same payload). A failure of any write rolls back all of them (VI).
+
+_From 075-review-reply._
+
+### 075-FR-008 — The driver's notification: a fan-out MUST send REVIEW_REPLIED (the existing catalogue entry: event; e-mail, push, WhatsApp; group `reviews_history`; can be muted) once per `review.replied` event to the review's author, "{garage} ți-a răspuns la recenzie." / "{garage} replied to your review." with the garage's name, linking to the driver's reviews as the bell does today; never twice for one event id; nothing for `review.reply_edited`, nothing when the author's account is deleted, and an author who muted it gets no e-mail, push or WhatsApp message, only the bell row every type keeps (an `in_app` row is always written, 343-FR-014). Delivery failure is retried by the existing processor.
+
+_From 075-review-reply._
+
+### 075-FR-011 — The new reply row and its reads MUST ship with observability: request metrics by route template for the two operations, a product counter of replies and of refusals by code, their logs, a dashboard panel and an alert (the existing `api-error-rate` and `api-latency` rules cover the routes through their metrics, as for the other review operations), each listed in `infra/observability/inventory.json` and named in the PR's Notes.
+
+_From 075-review-reply._
+
+### 075-FR-012 — Every new text (the buttons, the dialog's title, subtitle parts, field, counter, hint, confirmation, the marks, the public label, the notification, the refusal messages) MUST exist in Romanian and English in the web's interface files and the API's messages and follow the reader's language; the row, the dialog and the profile's reply MUST render at 320 px, 390 px, tablet and desktop, light and dark, with no text under 12 px, no sideways scroll, every mark carried in text (never colour alone), and every control reachable by keyboard with a visible focus. The dialog moves focus to its field on open and returns it to the button that opened it on close; a refusal and the confirmation are announced to assistive technology (a live region), and the counter's limit state is carried in text, not colour.
+
+_From 075-review-reply._
+
+### 075-FR-013 — Tests MUST be written first: Jest on real PostgreSQL for the operations (owner 201 with the row, the audit entry and the event in one transaction, and the rollback when one write fails; the edit's 200 with `edited_at`, the audit's old and new text and the event; 409 `already_replied` on a second POST and under two concurrent POSTs exactly one row; 403 for the receptionist and the mechanic; 404 with one body for another garage's member, a driver, an admin, a missing review and a bad id; 401 with no session; 409 `review_not_public` for `reported`, `removed` and `deleted_by_author` reviews; 409 `reply_not_public` for an edit of a `reported` reply; 409 `reply_removed` for POST after a `removed` reply; 422 for empty, blank and 1,001-code-point texts and 201 at 1,000; a review without a mechanic; the deleted author), the fan-out (one REVIEW_REPLIED per `review.replied`, the bell only when muted, none twice for one event id, none on `review.reply_edited`, none for a deleted author), the reads (the staff read's `reply` and `canReply` per state; the public reads carrying a `published` reply only, nothing of a `reported` or `removed` one, no personal data), the hub filter; web unit tests for the row (both buttons, the disabled state, each mark, both languages), the dialog (subtitle with and without mechanic, counter and disabled button at the limits, the confirmation, each refusal keeping the text, the retry) and the public reply block; and Playwright: the owner replies from the dashboard, a visitor with the profile open sees the reply without a reload, and the driver sees a new bell item.
+
+_From 075-review-reply._
+
 ## Retired
 
 - `022-FR-012` — superseded by `023-FR-015` (2026-10-21)
@@ -407,3 +477,4 @@ _From 1367-review-price-marks._
 - `024-FR-004` — superseded by `1367-FR-007` (2026-10-25)
 - `024-FR-017` — superseded by `1367-FR-004` (2026-10-25)
 - `024-FR-020` — superseded by `1367-FR-011` (2026-10-25)
+- `074-FR-009` — superseded by `075-FR-009` (2026-10-26)

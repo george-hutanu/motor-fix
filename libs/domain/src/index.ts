@@ -57,14 +57,12 @@ export {
   type BodyStyle,
   BRANDS,
 } from './catalogue/brands/brands';
-export {
-  CAR_MODELS,
-  type CarForBrand,
-  carForBrand,
-} from './catalogue/car-models';
+export { type CarForBrand, carForBrand } from './catalogue/car-models';
 export { CatalogueModule } from './catalogue/catalogue.module';
 export { JobTypeLoader } from './catalogue/job-types/job-type-loader';
 export { JOB_TYPES } from './catalogue/job-types/job-types';
+export { CAR_MODELS } from './catalogue/models-3d/models-3d';
+export { Models3dLoader } from './catalogue/models-3d/models-3d.loader';
 export { EVENT_PORT, type EventPort, outbox } from './events/event.port';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay/outbox-relay.module';
@@ -130,10 +128,12 @@ export { phoneConfig } from './notifications/phone-config';
 export { pushConfig } from './notifications/push/push-config';
 export { QUOTE_ACCEPTED_CONSUMER } from './notifications/quote-accepted/quote-accepted.fan-out';
 export { QUOTE_DECLINED_CONSUMER } from './notifications/quote-declined/quote-declined.fan-out';
+export { QUOTE_LOST_CONSUMER } from './notifications/quote-lost/quote-lost.fan-out';
 export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-received.fan-out';
 export { REQUEST_CANCELLED_CONSUMER } from './notifications/request-cancelled/request-cancelled.fan-out';
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
 export { REVIEW_POSTED_CONSUMER } from './notifications/review-posted/review-posted.fan-out';
+export { REVIEW_REPLIED_CONSUMER } from './notifications/review-replied/review-replied.fan-out';
 export { VERIFICATION_RESULT_CONSUMER } from './notifications/verification-result/verification-result.fan-out';
 export { PlacesModule, placesConfig } from './places/places.module';
 export { ACCOUNT_CLOSED_CONSUMER } from './quotes/account-closed/account-closed';
@@ -146,6 +146,8 @@ export { DeclineWindowModule } from './quotes/decline-window/decline-window.modu
 export { GarageRequestsService } from './quotes/garage-requests/garage-requests.service';
 export { GarageScheduleService } from './quotes/garage-schedule/garage-schedule.service';
 export { QuotesModule } from './quotes/quotes.module';
+export { REQUEST_TIMERS_CONSUMER } from './quotes/request-timers/request-timers';
+export { RequestTimersModule } from './quotes/request-timers/request-timers.module';
 export { ROUTE_LIMITS } from './rate-limit/rate-limit.config';
 export { countRateLimitRefusal } from './rate-limit/rate-limit.metrics';
 export { RateLimits } from './rate-limit/rate-limit.service';

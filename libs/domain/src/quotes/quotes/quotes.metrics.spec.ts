@@ -9,6 +9,7 @@ import {
   BOOKING_CONFIRM_OUTCOMES,
   recordBookingConfirm,
   recordBookingLapse,
+  recordCancellation,
   recordDeclineWindow,
   recordQuoteAccept,
   recordQuoteSend,
@@ -180,5 +181,37 @@ describe('counting booking confirmations and lapses', () => {
       { request: 'quoted', sweep: 'false', value: 2 },
       { request: 'closed', sweep: 'true', value: 1 },
     ]);
+  });
+});
+
+// @traces 1258-driver-cancel-FR-011
+describe('counting cancellations', () => {
+  it('adds one per cancel by kind, outcome and late, with no identifiers', async () => {
+    recordCancellation('request', 'cancelled', false);
+    recordCancellation('request', 'refused', false);
+    recordCancellation('booking', 'cancelled', false);
+    recordCancellation('booking', 'cancelled', true);
+    recordCancellation('booking', 'cancelled', true);
+    recordCancellation('booking', 'refused', false);
+
+    const counted = await points('motorfix_cancellations_total');
+    expect(counted).toEqual(
+      expect.arrayContaining([
+        { kind: 'request', late: 'false', outcome: 'cancelled', value: 1 },
+        { kind: 'request', late: 'false', outcome: 'refused', value: 1 },
+        { kind: 'booking', late: 'false', outcome: 'cancelled', value: 1 },
+        { kind: 'booking', late: 'true', outcome: 'cancelled', value: 2 },
+        { kind: 'booking', late: 'false', outcome: 'refused', value: 1 },
+      ]),
+    );
+    expect(counted).toHaveLength(5);
+    for (const point of counted) {
+      expect(Object.keys(point).sort()).toEqual([
+        'kind',
+        'late',
+        'outcome',
+        'value',
+      ]);
+    }
   });
 });

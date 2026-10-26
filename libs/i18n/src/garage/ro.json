@@ -32,7 +32,24 @@
     "title": "Funcții"
   },
   "home": {
-    "mechanic": "Lucrările tale vor apărea aici."
+    "ownJobs": {
+      "daySheet": "Foaia mea de zi",
+      "load": {
+        "done": {
+          "few": "{count} terminate",
+          "one": "{count} terminată",
+          "other": "{count} de terminate"
+        },
+        "jobs": {
+          "few": "{count} lucrări azi",
+          "one": "{count} lucrare azi",
+          "other": "{count} de lucrări azi"
+        }
+      },
+      "next": "Următoarea programare: {when} · {car}",
+      "none": "Nicio lucrare azi",
+      "title": "Lucrările mele"
+    }
   },
   "invite": {
     "canAnswerQuotes": "Poate răspunde la cererile de ofertă",
@@ -45,6 +62,7 @@
     "done": "Gata",
     "email": "E‑mail",
     "field": {
+      "invalid": "Introdu un e‑mail sau un număr de telefon valid.",
       "pattern": "Adresa de e‑mail nu pare corectă."
     },
     "kind": "Rol",
@@ -55,16 +73,22 @@
     "permissions": "Ce poate face",
     "problem": {
       "already_in_team": "Persoana face deja parte din echipă.",
+      "card_linked": "Nu am putut trimite invitația.",
       "feature_off": "Invitarea mecanicilor nu este disponibilă acum.",
       "forbidden": "Doar proprietarul service‑ului poate invita.",
-      "invite_open": "Această adresă are deja o invitație deschisă."
+      "invite_open": "Această adresă are deja o invitație deschisă.",
+      "not_found": "Nu am putut trimite invitația.",
+      "owner_row": "Nu am putut trimite invitația.",
+      "self_invite": "Nu te poți invita pe tine."
     },
     "receptionist": "Recepționer",
     "resend": "Trimite din nou",
     "sent": "Invitația a fost trimisă.",
     "sentLine": "Linkul este valabil 7 zile.",
     "submit": "Trimite invitația",
-    "title": "Invită în echipă"
+    "title": "Invită în echipă",
+    "titleCard": "Invită pe {name}",
+    "to": "E‑mail sau telefon"
   },
   "jobs": {
     "noMechanic": "Fără mecanic",
@@ -214,6 +238,15 @@
       "years": "Între 0 și 60 de ani"
     },
     "gone": "Cardul a fost eliminat între timp.",
+    "invite": {
+      "button": "Invită",
+      "cancel": "Anulează invitația",
+      "expired": "Invitație trimisă pe {to} · a expirat",
+      "failed": "Nu am putut actualiza invitația.",
+      "gone": "Invitația nu mai este deschisă.",
+      "resend": "Retrimite",
+      "sent": "Invitație trimisă pe {to} · expiră {date}"
+    },
     "name": "Nume",
     "noBrands": "Service‑ul nu are încă mărci pe care lucrează.",
     "owned": {
@@ -635,6 +668,8 @@
       "other": "{rating} · {count} de recenzii"
     },
     "state": {
+      "inviteExpired": "invitație expirată",
+      "inviteSent": "invitație trimisă",
       "noAccount": "fără cont",
       "off": "nu apare pe profil",
       "on": "pe profil"

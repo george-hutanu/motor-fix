@@ -1,0 +1,41 @@
+:host {
+  --static-control: 7.5rem;
+  display: block;
+  height: 200px;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas {
+  inset: 0;
+  position: absolute;
+}
+
+/* Once the interactive map has drawn, the static one fades off it. */
+mf-static-map.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  mf-static-map {
+    transition: opacity 200ms var(--mf-motion-ease);
+  }
+}
+
+/* The garage's marker, as the static map draws it, moved onto the map by
+   MapLibre; hidden until then. */
+.pin {
+  background: var(--mf-amber);
+  border: 3px solid var(--mf-on-amber);
+  border-radius: 50%;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--mf-amber) 80%, transparent);
+  box-sizing: border-box;
+  height: 14px;
+  pointer-events: none;
+  width: 14px;
+}
+
+:host > .pin {
+  display: none;
+}

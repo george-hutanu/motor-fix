@@ -26,9 +26,17 @@ describe('what a garage may do to its reviews through the API', () => {
     expect(operations).toContain('GET /api/v1/garages/{garageId}/reviews');
   });
 
-  it('holds no edit, hide or delete, and no write but the driver’s post', () => {
+  // The owner's report (ST-76) hides a review only until an admin decides;
+  // her reply sits under the review and changes nothing in it.
+  // @traces 075-FR-004
+  it('holds no edit, hide or delete, and no write but the driver’s post, the owner’s report and her reply', () => {
     const writes = operations.filter((op) => !op.startsWith('GET '));
 
-    expect(writes).toEqual(['POST /api/v1/reviews']);
+    expect(writes.sort()).toEqual([
+      'PATCH /api/v1/reviews/{reviewId}/reply',
+      'POST /api/v1/reviews',
+      'POST /api/v1/reviews/{reviewId}/reply',
+      'POST /api/v1/reviews/{reviewId}/reports',
+    ]);
   });
 });

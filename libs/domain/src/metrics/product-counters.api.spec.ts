@@ -32,6 +32,7 @@ const WORKER_ONLY = [
   'motorfix_emails_sent_total',
   'motorfix_request_received_total',
   'motorfix_review_announced_total',
+  'motorfix_review_reply_announced_total',
   'motorfix_verification_result_total',
   'motorfix_quote_received_total',
   'motorfix_decline_windows_closed_total',
