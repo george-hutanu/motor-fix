@@ -366,6 +366,7 @@ describe('reminding the garage to confirm', () => {
     expect(await reminders()).toEqual([]);
   });
 
+  // @traces 1258-driver-cancel-FR-012
   it.each(['confirmed', 'cancelled'] as const)(
     'tells nobody once the booking is %s',
     async (status) => {
@@ -568,6 +569,45 @@ describe('lapsing an unconfirmed booking', () => {
       (await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } }))
         .status,
     ).toBe('confirmed');
+    expect(await prisma.outboxEvent.count()).toBe(0);
+  });
+
+  // @traces 1258-driver-cancel-FR-012
+  it('does nothing for a booking the driver cancelled before its timer fired', async () => {
+    const { booking, driverId, now, request } = await overdue(null);
+    await prisma.booking.update({
+      data: {
+        cancelledAt: now,
+        cancelledBy: driverId,
+        cancelledBySide: 'driver',
+        cancelReason: 'plans_changed',
+        status: 'cancelled',
+      },
+      where: { id: booking.id },
+    });
+    await prisma.quoteRequest.update({
+      data: {
+        closedAt: now,
+        closedReason: 'booking_cancelled',
+        status: 'closed',
+      },
+      where: { id: request.id },
+    });
+    const timers = await start(now);
+
+    await fire(timers, 'booking-lapse', booking.id);
+
+    expect(
+      (await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } }))
+        .status,
+    ).toBe('cancelled');
+    expect(
+      (
+        await prisma.quoteRequest.findUniqueOrThrow({
+          where: { id: request.id },
+        })
+      ).closedReason,
+    ).toBe('booking_cancelled');
     expect(await prisma.outboxEvent.count()).toBe(0);
   });
 

@@ -304,6 +304,56 @@ describe('closing the open requests of a closed account', () => {
   });
 });
 
+// @traces 223-FR-004
+describe('telling only the garages still waiting', () => {
+  it('names the waiting recipient and the waiting quote’s garage, not the declined one nor the ended quote’s', async () => {
+    const driverId = await account('Andrei Ion Marin', ['driver']);
+    const [waits, quoted, declined, ended] = await Promise.all(
+      ['Atelier Dinamo', 'Service Nord', 'Garaj Sud', 'Service Vest'].map((n) =>
+        world.garage(n),
+      ),
+    );
+    const request = await world.request(driverId, { status: 'quoted' });
+    await world.recipient(request.id, waits.id);
+    await world.quote(request.id, quoted.id, 'waiting');
+    await world.recipient(request.id, declined.id, 'declined');
+    await world.quote(request.id, ended.id, 'expired');
+    const handler = await start();
+    const mark = await outboxMark(prisma);
+
+    await handler.onEvent(closing(driverId));
+
+    const [event] = (await newEvents(mark)).filter(
+      (e) => e.kind === 'request.cancelled',
+    );
+    const payload = event.payload as { garageIds: string[] };
+    expect([...payload.garageIds].sort()).toEqual([waits.id, quoted.id].sort());
+    expect(event.audience).toEqual(
+      expect.arrayContaining(
+        [waits, quoted, ended].map((g) => `garage:${g.id}`),
+      ),
+    );
+  });
+
+  it('still records the event with no garage when none waits', async () => {
+    const driverId = await account('Andrei Ion Marin', ['driver']);
+    const garage = await world.garage('Service Vest');
+    const request = await world.request(driverId, { status: 'quoted' });
+    await world.quote(request.id, garage.id, 'expired');
+    const handler = await start();
+    const mark = await outboxMark(prisma);
+
+    await handler.onEvent(closing(driverId));
+
+    const [event] = await newEvents(mark);
+    expect(event.kind).toBe('request.cancelled');
+    expect(event.payload).toMatchObject({
+      garageIds: [],
+      requestId: request.id,
+    });
+  });
+});
+
 // @traces 428-FR-004 428-FR-006
 describe('cancelling the future bookings of a closed account', () => {
   it('cancels a confirmed booking as the system, with its waiting job and accepted quote', async () => {

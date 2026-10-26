@@ -225,6 +225,7 @@ describe('Lucrări', () => {
   });
 
   // @traces 424-FR-015
+  // @traces 423-FR-010
   it.each([
     'job.step_done',
     'job.step_undone',

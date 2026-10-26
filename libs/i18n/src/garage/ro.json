@@ -32,7 +32,24 @@
     "title": "Funcții"
   },
   "home": {
-    "mechanic": "Lucrările tale vor apărea aici."
+    "ownJobs": {
+      "daySheet": "Foaia mea de zi",
+      "load": {
+        "done": {
+          "few": "{count} terminate",
+          "one": "{count} terminată",
+          "other": "{count} de terminate"
+        },
+        "jobs": {
+          "few": "{count} lucrări azi",
+          "one": "{count} lucrare azi",
+          "other": "{count} de lucrări azi"
+        }
+      },
+      "next": "Următoarea programare: {when} · {car}",
+      "none": "Nicio lucrare azi",
+      "title": "Lucrările mele"
+    }
   },
   "invite": {
     "canAnswerQuotes": "Poate răspunde la cererile de ofertă",

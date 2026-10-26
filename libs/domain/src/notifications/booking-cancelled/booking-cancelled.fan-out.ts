@@ -1,4 +1,8 @@
-import type { EventKind } from '@motor-fix/contracts';
+import {
+  DRIVER_CANCEL_REASONS,
+  type DriverCancelReasonCode,
+  type EventKind,
+} from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions } from 'bullmq';
 
@@ -32,17 +36,22 @@ export const BOOKING_CANCELLED_CONSUMER = {
 // A job as the relay queues it: `id` is the outbox event's.
 export interface BookingCancelledEvent {
   id: string;
-  payload: { bookingId: string; reason?: unknown };
+  payload: { bookingId: string; reason?: unknown; side?: unknown };
 }
 
-// The cancellations this fan-out announces; the driver's and the garage's
-// own are their stories', which write their own texts.
-const ANNOUNCED = 'driver_account_closed';
+// A closed account's cancellation; the garage's own is its story's, which
+// writes its own texts.
+const ACCOUNT_CLOSED = 'driver_account_closed';
+
+// The driver's reason as the event carries it; anything unknown reads as other.
+const driverReason = (reason: unknown): DriverCancelReasonCode =>
+  DRIVER_CANCEL_REASONS.find((code) => code === reason) ?? 'other';
 
 // Tells the garage's owners and receptionists, and the booking's mechanic
-// when the mechanic has an account, that a closed account's booking is
-// cancelled; the driver is never told. The outbox event id keeps a retry or a
-// second relay from building anything twice.
+// when the mechanic has an account, that a booking is cancelled, either
+// because the driver's account closed or because the driver cancelled it; the
+// driver is never told. The outbox event id keeps a retry or a second relay
+// from building anything twice.
 @Injectable()
 export class BookingCancelledFanOut {
   private readonly logger = new Logger('BookingCancelled');
@@ -58,7 +67,8 @@ export class BookingCancelledFanOut {
 
   async handle(job: Pick<Job<BookingCancelledEvent>, 'data'>): Promise<void> {
     const { id: eventId, payload } = job.data;
-    if (payload.reason !== ANNOUNCED) {
+    const byDriver = payload.side === 'driver';
+    if (!byDriver && payload.reason !== ACCOUNT_CLOSED) {
       this.logger.log(
         `booking ${payload.bookingId} cancelled for ${payload.reason}: not this fan-out's`,
       );
@@ -66,8 +76,10 @@ export class BookingCancelledFanOut {
     }
     const booking = await this.prisma.booking.findUnique({
       select: {
+        cancelNote: true,
         driver: { select: { name: true } },
         garageId: true,
+        lateCancellation: true,
         mechanic: { select: { accountId: true } },
         request: { select: { carBrand: true, carModel: true } },
         startsAt: true,
@@ -95,9 +107,8 @@ export class BookingCancelledFanOut {
           params: {
             car: `${booking.request.carBrand} ${booking.request.carModel}`,
             driver: shortName(booking.driver.name),
-            link: `${this.config.webUrl}/app/garage/schedule`,
-            reason: ANNOUNCED,
             slot: booking.startsAt.toISOString(),
+            ...this.why(byDriver, payload.reason, booking),
           },
           recipients,
           subjectId: payload.bookingId,
@@ -106,5 +117,26 @@ export class BookingCancelledFanOut {
     this.logger.log(
       `booking ${payload.bookingId} cancellation told to ${recipients.length} people, ${queued} queued`,
     );
+  }
+
+  // The driver's own cancel sends the garage to its requests with the reason,
+  // the note and the late text; a closed account's to its schedule.
+  private why(
+    byDriver: boolean,
+    reason: unknown,
+    booking: { cancelNote: string | null; lateCancellation: boolean },
+  ) {
+    if (!byDriver) {
+      return {
+        link: `${this.config.webUrl}/app/garage/schedule`,
+        reason: ACCOUNT_CLOSED,
+      };
+    }
+    return {
+      link: `${this.config.webUrl}/app/garage/requests`,
+      note: booking.cancelNote ?? '',
+      reason: driverReason(reason),
+      variant: booking.lateCancellation ? 'driver_late' : 'driver',
+    };
   }
 }

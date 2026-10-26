@@ -204,3 +204,22 @@ export function recordAccountClosedCleanup<
 >(kind: K, outcome: Extract<AccountClosedSeries, { kind: K }>['outcome']) {
   accountClosedCleanups().add(1, { kind, outcome });
 }
+
+// Each cancel a driver tries, by what was cancelled, whether it went through
+// and whether it came late; never who or which.
+type CancellationKind = 'request' | 'booking';
+type CancellationOutcome = 'cancelled' | 'refused';
+
+const cancellations = () =>
+  meter().createCounter('motorfix_cancellations_total', {
+    description:
+      'Requests and bookings drivers tried to cancel, by kind, outcome and lateness',
+  });
+
+export function recordCancellation(
+  kind: CancellationKind,
+  outcome: CancellationOutcome,
+  late: boolean,
+) {
+  cancellations().add(1, { kind, late: String(late), outcome });
+}

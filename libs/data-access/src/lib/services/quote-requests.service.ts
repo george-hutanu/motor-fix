@@ -9,6 +9,8 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { cancelRequestControllerCancel } from '../fn/quote-requests/cancel-request-controller-cancel';
+import { CancelRequestControllerCancel$Params } from '../fn/quote-requests/cancel-request-controller-cancel';
 import { CandidateGarageListDto } from '../models/candidate-garage-list-dto';
 import { compareControllerGet } from '../fn/quote-requests/compare-controller-get';
 import { CompareControllerGet$Params } from '../fn/quote-requests/compare-controller-get';
@@ -114,6 +116,39 @@ export class QuoteRequestsService extends BaseService {
   compareControllerGet(params: CompareControllerGet$Params, context?: HttpContext): Promise<QuoteComparisonDto> {
     const resp = this.compareControllerGet$Response(params, context);
     return resp.then((r: StrictHttpResponse<QuoteComparisonDto>): QuoteComparisonDto => r.body);
+  }
+
+  /** Path part for operation `cancelRequestControllerCancel()` */
+  static readonly CancelRequestControllerCancelPath = '/api/v1/quote-requests/{id}/cancel';
+
+  /**
+   * Cancel a request not yet booked; every garage still answering is told.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `cancelRequestControllerCancel()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  cancelRequestControllerCancel$Response(params: CancelRequestControllerCancel$Params, context?: HttpContext): Promise<StrictHttpResponse<RequestDto>> {
+    const obs = cancelRequestControllerCancel(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Cancel a request not yet booked; every garage still answering is told.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `cancelRequestControllerCancel$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  cancelRequestControllerCancel(params: CancelRequestControllerCancel$Params, context?: HttpContext): Promise<RequestDto> {
+    const resp = this.cancelRequestControllerCancel$Response(params, context);
+    return resp.then((r: StrictHttpResponse<RequestDto>): RequestDto => r.body);
   }
 
 }

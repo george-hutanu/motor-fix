@@ -35,13 +35,15 @@ jest.mock('@motor-fix/ui-cockpit', () => ({
 
 const FILE = 'file-1';
 const NOW = new Date();
+
 // A calendar day `n` days before today in Bucharest, counted in calendar
-// days: a 25-hour day must not make 24 hours ago read as today.
+// days: `n` times 24 hours back lands on the same day in the evening the
+// clocks go back.
 const daysAgo = (n: number) => {
   const today = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Bucharest',
   }).format(NOW);
-  const day = new Date(`${today}T00:00:00.000Z`);
+  const day = new Date(`${today}T00:00:00Z`);
   day.setUTCDate(day.getUTCDate() - n);
   return day.toISOString().slice(0, 10);
 };

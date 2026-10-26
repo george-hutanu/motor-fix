@@ -2250,7 +2250,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: a bad field, unknown_brand, too_far_ahead or a missing key"
+            "description": "validation_failed: a bad field, unknown_brand, too_far_ahead, next_service_not_above_odometer, next_service_too_far or a missing key"
           },
           "401": {
             "description": "sign_in_required"
@@ -2339,7 +2339,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: a bad field or id, unknown_brand, too_far_ahead or a missing version"
+            "description": "validation_failed: a bad field or id, unknown_brand, too_far_ahead, next_service_not_above_odometer, next_service_too_far or a missing version"
           },
           "401": {
             "description": "sign_in_required"
@@ -4113,6 +4113,112 @@
         ]
       }
     },
+    "/api/v1/quote-requests/{id}/cancel": {
+      "post": {
+        "operationId": "CancelRequestController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not the driver’s request"
+          },
+          "409": {
+            "description": "invalid_transition: the request is booked, in work, done or closed (its currentStatus named), with a message in the caller’s language"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a request not yet booked; every garage still answering is told",
+        "tags": [
+          "quote-requests"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/cancel": {
+      "post": {
+        "operationId": "CancelBookingController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelBookingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id, a reason the driver may not give, a note past its length"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not the driver’s booking"
+          },
+          "409": {
+            "description": "invalid_transition: the booking has ended, its time has come or its job has started (its currentStatus named), with a message in the caller’s language"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a booking that has not started, with a reason; late inside the free-cancel cutoff, never a penalty",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/reviews": {
       "get": {
         "operationId": "GarageReviewsController_read",
@@ -4166,6 +4272,132 @@
           }
         ],
         "summary": "The garage’s published and reported reviews, 20 a page, with its rating, count and breakdown",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/api/v1/reviews/{reviewId}/reply": {
+      "post": {
+        "operationId": "ReviewRepliesController_post",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyToReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewReplyDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: the text not a string, or another member"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a receptionist or mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found: no such review of the caller’s garage (an edit: or no reply on it)"
+          },
+          "409": {
+            "description": "review_not_public; reply_removed; already_replied"
+          },
+          "422": {
+            "description": "validation_failed: the text is empty or over 1,000 characters after the trim"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reply in public to one of the garage’s reviews",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "patch": {
+        "operationId": "ReviewRepliesController_edit",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyToReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewReplyDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: the text not a string, or another member"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a receptionist or mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found: no such review of the caller’s garage (an edit: or no reply on it)"
+          },
+          "409": {
+            "description": "review_not_public; reply_not_public; reply_removed"
+          },
+          "422": {
+            "description": "validation_failed: the text is empty or over 1,000 characters after the trim"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit the garage’s reply to one of its reviews",
         "tags": [
           "reviews"
         ]
@@ -11938,6 +12170,13 @@
             "type": "string",
             "description": "At most five years ahead",
             "format": "date"
+          },
+          "nextServiceKm": {
+            "type": "integer",
+            "description": "The odometer reading the next oil service is due at: above odometerKm and at most 100,000 km past it",
+            "maximum": 2000000,
+            "minimum": 1,
+            "nullable": true
           }
         },
         "required": [
@@ -11988,7 +12227,13 @@
           },
           "nextServiceKm": {
             "type": "integer",
-            "description": "The odometer reading the next oil service is due at; read-only",
+            "description": "The odometer reading the next oil service is due at",
+            "nullable": true
+          },
+          "serviceDueOn": {
+            "type": "string",
+            "description": "The estimated day of the next oil service at the car's average mileage; null without nextServiceKm or once it is reached",
+            "format": "date",
             "nullable": true
           },
           "plate": {
@@ -12031,6 +12276,7 @@
           "engine",
           "odometerKm",
           "nextServiceKm",
+          "serviceDueOn",
           "plate",
           "itpUntil",
           "rcaUntil",
@@ -12119,6 +12365,13 @@
             "type": "string",
             "description": "At most five years ahead; null clears it",
             "format": "date",
+            "nullable": true
+          },
+          "nextServiceKm": {
+            "type": "integer",
+            "description": "Above the odometer and at most 100,000 km past it; null clears it",
+            "maximum": 2000000,
+            "minimum": 1,
             "nullable": true
           }
         },
@@ -13567,6 +13820,15 @@
             ],
             "nullable": true
           },
+          "cancelNote": {
+            "type": "string",
+            "description": "What the driver wrote when cancelling, if anything",
+            "nullable": true
+          },
+          "lateCancellation": {
+            "type": "boolean",
+            "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
+          },
           "noShowAt": {
             "type": "string",
             "format": "date-time",
@@ -13594,6 +13856,8 @@
           "cancelledAt",
           "cancelledBySide",
           "cancelReason",
+          "cancelNote",
+          "lateCancellation",
           "noShowAt",
           "completedAt",
           "createdAt"
@@ -14424,6 +14688,15 @@
             ],
             "nullable": true
           },
+          "cancelNote": {
+            "type": "string",
+            "description": "What the driver wrote when cancelling, if anything",
+            "nullable": true
+          },
+          "lateCancellation": {
+            "type": "boolean",
+            "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
+          },
           "noShowAt": {
             "type": "string",
             "format": "date-time",
@@ -14468,13 +14741,6 @@
           "historyShared": {
             "type": "boolean"
           },
-          "cancelNote": {
-            "type": "string",
-            "nullable": true
-          },
-          "lateCancellation": {
-            "type": "boolean"
-          },
           "toReassign": {
             "type": "boolean",
             "description": "A confirmed booking still ahead whose mechanic's card was taken off the team, or that falls on one of her days off or outside her working hours: the garage gives it to someone else"
@@ -14491,6 +14757,8 @@
           "cancelledAt",
           "cancelledBySide",
           "cancelReason",
+          "cancelNote",
+          "lateCancellation",
           "noShowAt",
           "completedAt",
           "createdAt",
@@ -14500,8 +14768,6 @@
           "lift",
           "moveCount",
           "historyShared",
-          "cancelNote",
-          "lateCancellation",
           "toReassign"
         ]
       },
@@ -15162,6 +15428,29 @@
           "declinedAt"
         ]
       },
+      "CancelBookingDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "plans_changed",
+              "found_another_garage",
+              "problem_solved",
+              "other"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "Counted after trimming; whitespace alone is no note",
+            "maxLength": 500,
+            "nullable": true
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
       "RatingBreakdownDto": {
         "type": "object",
         "properties": {
@@ -15214,6 +15503,42 @@
         "required": [
           "fromBani",
           "toBani"
+        ]
+      },
+      "ReviewReplyDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "reported",
+              "removed"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "postedAt",
+          "editedAt",
+          "status"
         ]
       },
       "ReviewMechanicDto": {
@@ -15296,6 +15621,16 @@
             "format": "date-time",
             "nullable": true
           },
+          "reply": {
+            "description": "The reply, published or reported; a removed one is null",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReviewReplyDto"
+              }
+            ]
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -15333,6 +15668,7 @@
           "finalPriceBani",
           "paidBani",
           "editedAt",
+          "reply",
           "status",
           "mechanic",
           "canReply",
@@ -15389,6 +15725,19 @@
           "pageSize",
           "total",
           "items"
+        ]
+      },
+      "ReplyToReviewDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "1 to 1,000 characters after the trim",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "text"
         ]
       },
       "ReportReviewDto": {
@@ -15513,6 +15862,28 @@
           "reason"
         ]
       },
+      "PublicReviewReplyDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "postedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "text",
+          "postedAt",
+          "editedAt"
+        ]
+      },
       "MechanicReviewDto": {
         "type": "object",
         "properties": {
@@ -15538,6 +15909,16 @@
           },
           "garage": {
             "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "reply": {
+            "description": "The garage's published reply",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicReviewReplyDto"
+              }
+            ]
           }
         },
         "required": [
@@ -15546,7 +15927,8 @@
           "text",
           "postedAt",
           "author",
-          "garage"
+          "garage",
+          "reply"
         ]
       },
       "MechanicReviewsPageDto": {
@@ -15642,6 +16024,16 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "reply": {
+            "description": "The garage's published reply",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PublicReviewReplyDto"
+              }
+            ]
           }
         },
         "required": [
@@ -15656,7 +16048,8 @@
           "quote",
           "finalPriceBani",
           "paidBani",
-          "editedAt"
+          "editedAt",
+          "reply"
         ]
       },
       "GarageReviewsPageDto": {

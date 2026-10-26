@@ -7,11 +7,13 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { capabilitiesOf, type Role } from '@motor-fix/contracts/capabilities';
 import {
+  GarageJobsService,
   GarageRequestsService,
   GaragesService,
   type MeDto,
   ReviewsService,
 } from '@motor-fix/data-access';
+import { Overlays } from '@motor-fix/overlays';
 
 import { GarageHome } from './garage-home';
 import { Live } from '../../live';
@@ -36,6 +38,7 @@ const ANSWERING_MECHANIC = rowOf('mechanic', {
 const MECHANIC = rowOf('mechanic');
 
 let list: jest.Mock;
+let jobs: jest.Mock;
 let reviews: jest.Mock;
 
 // The membership's role string follows the row unless a test sets it, so a
@@ -48,12 +51,13 @@ const account = (
     : capabilities.includes('garage.profile')
       ? 'receptionist'
       : 'mechanic',
+  features: Record<string, boolean> = {},
 ) =>
   ({
     capabilities,
     garageAccess: [
       {
-        features: {},
+        features,
         garageId: 'garage-1',
         name: 'Atelier Test',
         permissions: {
@@ -72,10 +76,12 @@ async function render(
   capabilities: string[],
   {
     answer = () => Promise.resolve(listOf([requestRow()])),
+    features,
     role,
     status = 'approved',
   }: {
     answer?: () => Promise<unknown>;
+    features?: Record<string, boolean>;
     role?: string;
     status?: 'draft' | 'approved' | 'suspended';
   } = {},
@@ -83,9 +89,10 @@ async function render(
   list = jest.fn(({ status: filter }: { status: string }) =>
     filter === 'waiting' ? answer() : Promise.resolve(listOf([])),
   );
+  jobs = jest.fn(async () => ({ items: [], nextCursor: null, total: 0 }));
   // The reviews panel has its own spec; here it waits.
   reviews = jest.fn(() => new Promise(() => undefined));
-  const me = signal(account(capabilities, status, role));
+  const me = signal(account(capabilities, status, role, features));
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -96,6 +103,12 @@ async function render(
         provide: GarageRequestsService,
         useValue: { garageRequestsControllerList: list },
       },
+      // The own jobs have their own spec; here the mechanic has none today.
+      {
+        provide: GarageJobsService,
+        useValue: { garageJobsControllerList: jobs },
+      },
+      { provide: Overlays, useValue: { open: jest.fn() } },
       {
         provide: ReviewsService,
         useValue: { garageReviewsControllerRead: reviews },
@@ -125,6 +138,12 @@ const text = (el: Element | null) =>
   (el?.textContent ?? '').replace(/\s+/g, ' ').trim();
 const panel = (element: HTMLElement) =>
   element.querySelector('mf-garage-requests-panel');
+const ownJobs = (element: HTMLElement) =>
+  element.querySelector('mf-own-jobs-section');
+const daySheet = (element: HTMLElement) =>
+  [...element.querySelectorAll<HTMLAnchorElement>('a')].find(
+    (a) => text(a) === 'Foaia mea de zi',
+  );
 
 afterEach(() => TestBed.resetTestingModule());
 
@@ -205,15 +224,16 @@ describe('the garage Panou for each role', () => {
   });
 
   // @traces 102-FR-005
-  it('shows a mechanic without the permission no panel, makes no call, and says her jobs will appear', async () => {
+  // @traces 423-FR-001
+  it('shows a mechanic without the permission no panel and no request call, but her own jobs', async () => {
     const element = await render(MECHANIC);
 
     expect(panel(element)).toBeNull();
     expect(list).not.toHaveBeenCalled();
-    expect(text(element)).toBe('Lucrările tale vor apărea aici.');
-    expect(text(element.querySelector('[role="status"]'))).toBe(
-      'Lucrările tale vor apărea aici.',
-    );
+    expect(ownJobs(element)).not.toBeNull();
+    expect(jobs).toHaveBeenCalledTimes(1);
+    expect(text(element)).not.toContain('Lucrările tale vor apărea aici.');
+    expect(text(element)).toContain('Nicio lucrare azi');
   });
 
   it('shows nothing of the requests, and no error, when the server answers 404', async () => {
@@ -245,31 +265,66 @@ describe('the garage Panou for each role', () => {
 describe('the garage Panou sections, each behind a capability of the table', () => {
   const sections = (element: HTMLElement) => ({
     legal: element.querySelector('mf-garage-legal-check') !== null,
+    ownJobs: ownJobs(element) !== null,
     requests: panel(element) !== null,
-    status: element.querySelector('[role="status"]') !== null,
     strip: element.querySelector('[data-verified-pill]') !== null,
   });
 
+  // @traces 423-FR-001
   it.each([
-    ['the owner', OWNER, { legal: true, requests: true, strip: true }],
+    [
+      'the owner',
+      OWNER,
+      { legal: true, ownJobs: false, requests: true, strip: true },
+    ],
     [
       'the receptionist',
       RECEPTIONIST,
-      { legal: false, requests: true, strip: true },
+      { legal: false, ownJobs: false, requests: true, strip: true },
     ],
     [
       'a mechanic who may answer quotes',
       ANSWERING_MECHANIC,
-      { legal: false, requests: true, strip: false },
+      { legal: false, ownJobs: true, requests: true, strip: false },
     ],
-    ['a mechanic', MECHANIC, { legal: false, requests: false, strip: false }],
+    [
+      'a mechanic',
+      MECHANIC,
+      { legal: false, ownJobs: true, requests: false, strip: false },
+    ],
   ])('gives %s the sections of the row', async (_, capabilities, shown) => {
     const element = await render(capabilities);
 
-    expect(sections(element)).toEqual({
-      ...shown,
-      status: !shown.requests && !shown.strip,
-    });
+    expect(sections(element)).toEqual(shown);
+  });
+
+  // @traces 423-FR-001
+  it('puts the requests panel above the own jobs of a mechanic who may answer quotes', async () => {
+    const element = await render(ANSWERING_MECHANIC);
+    const requests = panel(element) as Element;
+    const own = ownJobs(element) as Element;
+
+    expect(
+      requests.compareDocumentPosition(own) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  // @traces 423-FR-001
+  it('shows a mechanic no figures, demand or reviews on Panou', async () => {
+    const element = await render(ANSWERING_MECHANIC);
+
+    expect(text(element)).not.toMatch(/Recenzi|Cerere în zonă/);
+  });
+
+  // @traces 423-FR-001
+  it('reads the capabilities, not the role string: a row without the own jobs has no section', async () => {
+    const element = await render(
+      MECHANIC.filter((c) => c !== 'garage.own_jobs'),
+      { role: 'mechanic' },
+    );
+
+    expect(ownJobs(element)).toBeNull();
+    expect(jobs).not.toHaveBeenCalled();
   });
 
   it('reads the capabilities, not the role string: an owner row without the switches has no legal check', async () => {
@@ -300,7 +355,8 @@ describe('the garage Panou sections, each behind a capability of the table', () 
     expect(buttons).not.toContain('Modifică profilul');
   });
 
-  it('says the mechanic line in English too', () => {
+  // @traces 423-FR-011
+  it('says the own-jobs texts in English too, and no longer the placeholder line', () => {
     const en = JSON.parse(
       readFileSync(
         join(__dirname, '../../../../../../../libs/i18n/src/garage/en.json'),
@@ -308,7 +364,52 @@ describe('the garage Panou sections, each behind a capability of the table', () 
       ),
     );
 
-    expect(en.home.mechanic).toBe('Your jobs will appear here.');
+    expect(en.home.mechanic).toBeUndefined();
+    expect(en.home.ownJobs.daySheet).toBe('My day sheet');
+    expect(en.home.ownJobs.none).toBe('No jobs today');
+  });
+});
+
+// @traces 423-FR-003
+describe("the mechanic's day-sheet link on Panou", () => {
+  it('links a mechanic to Programări above her own jobs', async () => {
+    const element = await render(MECHANIC);
+    const link = daySheet(element);
+
+    expect(link).toBeDefined();
+    expect(link?.getAttribute('href')).toMatch(/\/schedule$/);
+    expect(
+      (link as Element).compareDocumentPosition(
+        element.querySelector('[data-job], [data-skeleton], [role="status"]') ??
+          element,
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('shows no link while the day sheets are switched off', async () => {
+    const element = await render(MECHANIC, {
+      features: { day_sheets: false },
+    });
+
+    expect(ownJobs(element)).not.toBeNull();
+    expect(daySheet(element)).toBeUndefined();
+  });
+
+  it('shows no link to a row without garage.schedule', async () => {
+    const element = await render(
+      MECHANIC.filter((c) => c !== 'garage.schedule'),
+      { role: 'mechanic' },
+    );
+
+    expect(daySheet(element)).toBeUndefined();
+  });
+
+  it('shows the owner and the receptionist no day-sheet link on Panou', async () => {
+    for (const capabilities of [OWNER, RECEPTIONIST]) {
+      const element = await render(capabilities);
+      expect(daySheet(element)).toBeUndefined();
+      TestBed.resetTestingModule();
+    }
   });
 });
 

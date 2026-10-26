@@ -1,7 +1,7 @@
 <div class="blank" aria-hidden="true"></div>
 @if (src(); as src) {
   @if (!broken()) {
-    <img [src]="src" alt="" (error)="broken.set(true)" />
+    <img [src]="src" alt="" (error)="broke()" />
   }
 }
 @if (overlay(); as drawn) {

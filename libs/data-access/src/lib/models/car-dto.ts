@@ -12,13 +12,18 @@ export interface CarDto {
   model: string;
 
   /**
-   * The odometer reading the next oil service is due at; read-only
+   * The odometer reading the next oil service is due at
    */
   nextServiceKm: number | null;
   odometerKm: number;
   plate: string | null;
   rcaUntil: string | null;
   rovinietaUntil: string | null;
+
+  /**
+   * The estimated day of the next oil service at the car's average mileage; null without nextServiceKm or once it is reached
+   */
+  serviceDueOn: string | null;
 
   /**
    * The version an edit sends back

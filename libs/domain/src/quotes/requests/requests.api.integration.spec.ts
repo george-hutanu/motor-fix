@@ -287,6 +287,7 @@ describe('GET /requests/:id', () => {
     expect(res.body.booking).toEqual({
       cancelledAt: null,
       cancelledBySide: null,
+      cancelNote: null,
       cancelReason: null,
       completedAt: null,
       confirmBy: booking.confirmBy.toISOString(),
@@ -295,6 +296,7 @@ describe('GET /requests/:id', () => {
       durationMinutes: 90,
       garage: garageRef,
       id: booking.id,
+      lateCancellation: false,
       noShowAt: null,
       quoteId: quote.id,
       startsAt: booking.startsAt.toISOString(),

@@ -1,18 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { GarageJobsService, type JobSummaryDto } from '@motor-fix/data-access';
-import { formatClock, formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { JobSteps } from '../job-steps/job-steps';
-import { JOB_KINDS, jobNames, jobStage } from '../jobs';
+import { JOB_KINDS, jobNames, jobStage, jobWhen, todayOrLive } from '../jobs';
 import { liveResource } from '../live';
-
-const bucharestDay = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'Europe/Bucharest',
-});
-
-const LIVE = new Set<JobSummaryDto['status']>(['in_work', 'paused']);
 
 // "Lucrări": the garage's confirmed jobs from today on, and those still in
 // work from earlier, by booking start. A row opens the job's steps.
@@ -37,24 +31,13 @@ export class JobsView {
     void this.i18n.enter('garage');
   }
 
-  private readonly today = () => bucharestDay.format(new Date());
-
-  // Today's time alone; another day's date before it.
   protected when(job: JobSummaryDto) {
-    const clock = formatClock(job.startsAt);
-    return bucharestDay.format(new Date(job.startsAt)) === this.today()
-      ? clock
-      : `${formatDay(job.startsAt, this.i18n.language())}, ${clock}`;
+    return jobWhen(job, this.i18n.language());
   }
 
   // Nothing booked for today and nothing still in work.
   protected noneToday(items: readonly JobSummaryDto[]) {
-    const today = this.today();
-    return !items.some(
-      (job) =>
-        LIVE.has(job.status) ||
-        bucharestDay.format(new Date(job.startsAt)) === today,
-    );
+    return !items.some((job) => todayOrLive(job));
   }
 
   protected names(job: JobSummaryDto) {

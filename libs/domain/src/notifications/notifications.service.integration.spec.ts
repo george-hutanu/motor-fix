@@ -17,6 +17,12 @@ import type { Actor } from '../auth/policy';
 import { serialDatabase } from '../auth/serial-db.testing';
 import { until } from '../waits.testing';
 
+const REMINDER = {
+  car: 'Dacia Logan',
+  driver: 'Andrei M.',
+  link: 'https://motorfix.example/app/garage/requests',
+};
+
 const redisUrl = redisUrlFor(11);
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
@@ -766,6 +772,8 @@ describe('quiet hours', () => {
     await service.notify({
       eventId: 'evt-n1',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     const written = await rows(ion);
@@ -869,10 +877,11 @@ describe('e-mails to a listing draft', () => {
     });
     expect(new Set(written.map((r) => r.eventId)).size).toBe(2);
     const queued = await jobs();
-    expect(queued.map((j) => j.data)).toEqual(
-      written
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-        .map((r) => ({ id: r.id, link })),
+    // Both sends can land in the same millisecond, so match them by id.
+    const byId = (a: { id: string }, b: { id: string }) =>
+      a.id.localeCompare(b.id);
+    expect(queued.map((j) => j.data).sort(byId)).toEqual(
+      written.map((r) => ({ id: r.id, link })).sort(byId),
     );
     // A bell row's position is a BigInt, which JSON cannot write as it is.
     expect(

@@ -12,7 +12,7 @@ import {
   GaragesService,
   type MeDto,
 } from '@motor-fix/data-access';
-import { bucharestDayStart, I18n } from '@motor-fix/i18n';
+import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
 import { GarageMembers } from './garage-members';
@@ -20,6 +20,16 @@ import { Live } from '../live';
 import { Session } from '../session';
 
 const GARAGE = '0f9c2a54-6a1e-4f43-9d2b-2f5a3c1d7e10';
+// Midday yesterday in Bucharest: 24 hours back from now is still today on
+// the evening the clocks go back.
+const YESTERDAY = (() => {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Bucharest',
+  }).format(new Date());
+  const at = new Date(`${today}T10:00:00Z`);
+  at.setUTCDate(at.getUTCDate() - 1);
+  return at.toISOString();
+})();
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const member = (over: Partial<GarageMemberDto> = {}): GarageMemberDto => ({
@@ -48,10 +58,7 @@ const SEEDED: GarageMembersDto = {
       email: 'elena@example.test',
       id: 'invite-2',
       kind: 'receptionist',
-      // An hour before today began in Bucharest: yesterday even on a 25-hour day.
-      sentAt: new Date(
-        bucharestDayStart(new Date()).getTime() - 3_600_000,
-      ).toISOString(),
+      sentAt: YESTERDAY,
     }),
     invite({
       email: 'dan@example.test',

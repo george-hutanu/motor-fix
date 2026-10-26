@@ -30,6 +30,7 @@ import {
   QUOTE_NOTE_MAX,
 } from './quote-limits';
 import {
+  BOOKING_CANCEL_NOTE_MAX,
   BOOKING_CANCEL_REASONS,
   BOOKING_STATUSES,
   type BookingCancelReasonCode,
@@ -38,6 +39,8 @@ import {
   type CancelledBySide,
   DECLINE_REASON_CODES,
   type DeclineReasonCode,
+  DRIVER_CANCEL_REASONS,
+  type DriverCancelReasonCode,
   GARAGE_CLOSE_REASONS,
   GARAGE_REQUEST_FILTERS,
   type GarageCloseReason,
@@ -274,6 +277,19 @@ export class BookingDto {
   @ApiProperty({ enum: BOOKING_CANCEL_REASONS, nullable: true })
   cancelReason!: BookingCancelReasonCode | null;
 
+  @ApiProperty({
+    description: 'What the driver wrote when cancelling, if anything',
+    nullable: true,
+    type: String,
+  })
+  cancelNote!: string | null;
+
+  @ApiProperty({
+    description:
+      'Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty',
+  })
+  lateCancellation!: boolean;
+
   @ApiProperty(NULLABLE_TIME)
   noShowAt!: string | null;
 
@@ -432,12 +448,6 @@ export class GarageBookingDto extends OmitType(BookingDto, [
 
   @ApiProperty()
   historyShared!: boolean;
-
-  @ApiProperty({ nullable: true, type: String })
-  cancelNote!: string | null;
-
-  @ApiProperty()
-  lateCancellation!: boolean;
 
   @ApiProperty({
     description:
@@ -610,6 +620,31 @@ export class SendQuoteDto {
   @IsOptional()
   @IsString()
   @Length(1, QUOTE_NOTE_MAX)
+  note?: string | null;
+}
+
+// Why the driver cancels a booking, and what they add, if anything; the
+// garage reads both.
+export class CancelBookingDto {
+  @ApiProperty({ enum: DRIVER_CANCEL_REASONS })
+  @IsIn(DRIVER_CANCEL_REASONS)
+  reason!: DriverCancelReasonCode;
+
+  @ApiPropertyOptional({
+    description: 'Counted after trimming; whitespace alone is no note',
+    maxLength: BOOKING_CANCEL_NOTE_MAX,
+    nullable: true,
+    type: String,
+  })
+  @Transform(trimmedOrNull)
+  @IsOptional()
+  @IsString()
+  @Length(1, BOOKING_CANCEL_NOTE_MAX)
+  // Line breaks and tabs are text; any other control character is refused,
+  // NUL first, which PostgreSQL cannot store.
+  @Matches(/^(?:\P{Cc}|[\t\n\r])*$/u, {
+    message: 'note must not hold control characters',
+  })
   note?: string | null;
 }
 

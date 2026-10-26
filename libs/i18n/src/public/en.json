@@ -127,6 +127,7 @@
     },
     "verified": "Active company and RAR technical authorisation, checked by MotorFix. Last check: {date}.",
     "where": {
+      "directions": "Get directions",
       "mobile": "Comes to you within {km}",
       "title": "Where"
     },

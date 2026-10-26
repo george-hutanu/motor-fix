@@ -20,6 +20,13 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { serialDatabase } from '../auth/serial-db.testing';
 
+// What main's REQUEST_REMINDER template words (ST-1257).
+const REMINDER = {
+  car: 'Dacia Logan',
+  driver: 'Andrei M.',
+  link: 'https://motorfix.example/app/garage/requests',
+};
+
 const redisUrl = redisUrlFor(12);
 const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
@@ -477,6 +484,8 @@ describe('the sweep of held rows whose job was lost', () => {
     await service.notify({
       eventId: 'r',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     await queue.obliterate({ force: true });
@@ -766,6 +775,8 @@ describe('releasing a held message at 08:00', () => {
     await service.notify({
       eventId: 'r',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     service.now = at(MORNING);
@@ -781,6 +792,8 @@ describe('releasing a held message at 08:00', () => {
     await service.notify({
       eventId: 'r',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     await prisma.account.update({
@@ -1086,6 +1099,8 @@ describe('two send jobs for one row', () => {
     await service.notify({
       eventId: 'r',
       kind: 'REQUEST_REMINDER',
+      // The values its template words (ST-1257).
+      params: REMINDER,
       recipients: [ion],
     });
     service.now = at(MORNING);
@@ -1277,5 +1292,39 @@ describe('an e-mail to a listing draft', () => {
     await draftJob(row.id);
 
     expect(mock.emails()).toEqual([]);
+  });
+});
+
+// @traces 223-FR-014
+describe('a garage message whose e-mail Brevo refuses for good', () => {
+  it.each([
+    ['QUOTE_LOST', {}],
+    ['REQUEST_CANCELLED', { driver: 'Andrei M.', reason: 'cancelled' }],
+    ['REQUEST_CANCELLED', { reason: 'account_closed' }],
+  ])('fails the %s e-mail and keeps the bell row', async (kind, extra) => {
+    const owner = await account('owner', ['garage']);
+    await service.notify({
+      eventId: `evt-${kind}`,
+      kind,
+      params: {
+        car: 'Dacia Logan',
+        link: 'https://motorfix.test/app/garage/requests',
+        ...extra,
+      },
+      recipients: [owner],
+    });
+    mock.answer({ status: 400 });
+    await sendJob((await emailRows(owner))[0].id, 0);
+    const stored = await prisma.notification.findMany({
+      select: { channel: true, status: true },
+      where: { accountId: owner, kind },
+    });
+    expect(stored).toHaveLength(2);
+    expect(stored).toEqual(
+      expect.arrayContaining([
+        { channel: 'email', status: 'failed' },
+        { channel: 'in_app', status: 'sent' },
+      ]),
+    );
   });
 });
