@@ -275,25 +275,3 @@ export function spanInsideHours(
       minuteOf(from) <= start.minute && end.minute <= minuteOf(to),
   );
 }
-
-// spanInsideHours for one garage, reading its closed day and the public
-// holiday of the span's own Bucharest day.
-export async function slotInsideHours(
-  tx: Prisma.TransactionClient,
-  garage: { id: string; hours: Prisma.JsonValue },
-  startsAt: Date,
-  durationMinutes: number,
-): Promise<boolean> {
-  const day = asDate(localDay(startsAt));
-  const [closed, holiday] = await Promise.all([
-    tx.garageClosedDay.findMany({ where: { day, garageId: garage.id } }),
-    tx.publicHoliday.findMany({ where: { day } }),
-  ]);
-  return spanInsideHours(
-    (garage.hours ?? {}) as Partial<Record<string, Interval[]>>,
-    new Set(closed.map((c) => dayOf(c.day))),
-    new Set(holiday.map((h) => dayOf(h.day))),
-    startsAt,
-    durationMinutes,
-  );
-}

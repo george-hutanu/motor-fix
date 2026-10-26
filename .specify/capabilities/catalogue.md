@@ -22,6 +22,7 @@ features:
   - 105-brand-list-admin
   - 309-open-now-directions
   - 1368-admin-brand-list
+  - 150-add-booking
   - 1241-3d-catalogue-seed
 ---
 
@@ -430,6 +431,10 @@ _From 1368-admin-brand-list._
 ### 1368-FR-010 — Tests MUST come before the code (Principle II): component specs for FR-001–FR-008 (rows, states and counts from a seeded list; the fold filter on accent and case; the empty-search line; add and the new row; `brand_exists` in the dialog and at a row; rename, retire and bring back with `seenUpdatedAt`; `stale_value` re-read and notice; the busy row; the read failure and retry), and one Playwright flow: the seeded admin adds a brand on screen; the garage form's brand step offers it unmarked; the garage results filtered by it show the red lamp of a brand with no stance; a visitor types it in Home's brand search and is offered it.
 
 _From 1368-admin-brand-list._
+
+### 150-FR-007 — JOB_TYPE MUST gain `needs_lift` (boolean, not null, default false), a catalogue default set by MotorFix: the migration sets it true for the shipped keys `oil-service`, `front-brakes`, `timing-chain` and `suspension-alignment` and leaves `diagnosis`, `ac-regas` and every garage-proposed job false; the job-type loader (`job-types.ts`) carries the flag so a reload keeps it. The confirm options read (`ConfirmOptionsDto`) MUST return `needsLift`, true when any of the quote's jobs has `needs_lift`. The flag advises the dialog only: the confirm accepts a lift or none whatever it says (FR-004).
+
+_From 150-add-booking._
 
 ### 1241-FR-001 — The product MUST keep the car systems in a data file beside the licensed model list: exactly the eleven codes `engine`, `brakes`, `suspension`, `aircon`, `exhaust`, `gearbox`, `electrics`, `tyres`, `bodywork`, `electric_motor`, `battery`; each with its fuel types (petrol and diesel: the nine; electric: `electric_motor`, `battery`, `brakes`, `suspension`, `aircon`, `electrics`, `tyres`, `bodywork`; hybrid: the nine plus `battery` and `electric_motor`), its names Motor / Engine, Frâne / Brakes, Suspensie / Suspension, Climă / Air-con, Evacuare / Exhaust, Cutie de viteze / Gearbox, Electrică / Electrics, Anvelope / Tyres, Caroserie / Bodywork, Motor electric / Electric motor, Baterie / Battery, and a display position (the order listed).
 

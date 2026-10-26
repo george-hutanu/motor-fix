@@ -119,6 +119,7 @@ model Garage {
   requestRecipients          RequestRecipient[]
   quotes                     Quote[]
   bookings                   Booking[]
+  bookingSegments            BookingSegment[]
   jobs                       Job[]
   reviews                    Review[]
   reviewReplies              ReviewReply[]
@@ -246,6 +247,7 @@ model Mechanic {
   garage              Garage           @relation(fields: [garageId], references: [id], onDelete: Cascade)
   account             Account?         @relation(fields: [accountId], references: [id], onDelete: Cascade)
   bookings            Booking[]
+  bookingSegments     BookingSegment[]
   invites             StaffInvite[]
   jobs                Job[]
   reviews             Review[]

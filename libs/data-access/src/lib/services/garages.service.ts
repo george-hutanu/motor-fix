@@ -47,6 +47,9 @@ import { GarageProfileDto } from '../models/garage-profile-dto';
 import { GarageReportCreatedDto } from '../models/garage-report-created-dto';
 import { garageReportsControllerReport } from '../fn/garages/garage-reports-controller-report';
 import { GarageReportsControllerReport$Params } from '../fn/garages/garage-reports-controller-report';
+import { garageSchedule } from '../fn/garages/garage-schedule';
+import { GarageSchedule$Params } from '../fn/garages/garage-schedule';
+import { GarageScheduleDto } from '../models/garage-schedule-dto';
 import { garageSettingsControllerUpdate } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsControllerUpdate$Params } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsDto } from '../models/garage-settings-dto';
@@ -97,6 +100,39 @@ import { VerificationStatusDto } from '../models/verification-status-dto';
 export class GaragesService extends BaseService {
   constructor(config: ApiConfiguration, http: HttpClient) {
     super(config, http);
+  }
+
+  /** Path part for operation `garageSchedule()` */
+  static readonly GarageSchedulePath = '/api/v1/garages/{garageId}/schedule';
+
+  /**
+   * The garage’s bookings over one to seven Bucharest days, with their segments.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageSchedule()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageSchedule$Response(params: GarageSchedule$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageScheduleDto>> {
+    const obs = garageSchedule(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The garage’s bookings over one to seven Bucharest days, with their segments.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageSchedule$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageSchedule(params: GarageSchedule$Params, context?: HttpContext): Promise<GarageScheduleDto> {
+    const resp = this.garageSchedule$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageScheduleDto>): GarageScheduleDto => r.body);
   }
 
   /** Path part for operation `profileViewsControllerRecord()` */

@@ -4,7 +4,7 @@ import {
   OmitType,
   PickType,
 } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDivisibleBy,
@@ -713,6 +713,145 @@ export class ConfirmOptionsDto {
       'Whether a confirm must name a mechanic: true while the garage works with a team, even before it has one',
   })
   mechanicRequired!: boolean;
+
+  @ApiProperty({
+    description:
+      "Whether any of the quote's jobs is done on a lift: the dialog offers a lift first, the confirm still accepts none",
+  })
+  needsLift!: boolean;
+}
+
+const SCHEDULE_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+// The garage's schedule over one to seven Bucharest days.
+export class ScheduleQueryDto {
+  @ApiPropertyOptional({
+    description: 'YYYY-MM-DD, Bucharest; today when left out',
+    format: 'date',
+  })
+  @IsOptional()
+  @Matches(SCHEDULE_DAY)
+  @IsISO8601({ strict: true })
+  from?: string;
+
+  @ApiPropertyOptional({
+    description: 'YYYY-MM-DD, Bucharest; from when left out, at most 6 days on',
+    format: 'date',
+  })
+  @IsOptional()
+  @Matches(SCHEDULE_DAY)
+  @IsISO8601({ strict: true })
+  to?: string;
+
+  @ApiPropertyOptional({ minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  lift?: number;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  mechanicId?: string;
+}
+
+// One stretch of work of a confirmed booking.
+export class BookingSegmentDto {
+  @ApiProperty({ format: 'date-time' })
+  startsAt!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  endsAt!: string;
+
+  @ApiProperty({ format: 'uuid', nullable: true, type: String })
+  mechanicId!: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Present only while the garage schedules with lifts',
+    nullable: true,
+    type: Number,
+  })
+  lift?: number | null;
+}
+
+export class ScheduleCarDto {
+  @ApiProperty()
+  brand!: string;
+
+  @ApiProperty()
+  model!: string;
+
+  @ApiProperty()
+  year!: number;
+}
+
+export class GarageScheduleEntryDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ type: ScheduleCarDto })
+  car!: ScheduleCarDto;
+
+  @ApiProperty({ description: "In the caller's language", type: [String] })
+  jobs!: string[];
+
+  @ApiProperty({ description: 'The driver\'s short name: "Dan V."' })
+  customer!: string;
+
+  @ApiProperty({ nullable: true, type: BookingMechanicDto })
+  mechanic!: BookingMechanicDto | null;
+
+  @ApiPropertyOptional({
+    description: 'Present only while the garage schedules lifts',
+    nullable: true,
+    type: Number,
+  })
+  lift?: number | null;
+
+  @ApiProperty({ format: 'date-time' })
+  startsAt!: string;
+
+  @ApiProperty()
+  durationMinutes!: number;
+
+  @ApiProperty({
+    enum: ['awaiting_confirmation', 'confirmed', 'completed', 'no_show'],
+  })
+  status!: 'awaiting_confirmation' | 'confirmed' | 'completed' | 'no_show';
+
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  confirmBy!: string | null;
+
+  @ApiProperty({ nullable: true, type: Number })
+  minutesLeft!: number | null;
+
+  @ApiProperty({
+    description: "The job's status, null before the confirmation",
+    nullable: true,
+    type: String,
+  })
+  jobStatus!: string | null;
+
+  @ApiProperty({
+    description: 'Empty while the booking awaits the garage',
+    type: [BookingSegmentDto],
+  })
+  segments!: BookingSegmentDto[];
+}
+
+export class GarageScheduleDto {
+  @ApiProperty({ type: [GarageScheduleEntryDto] })
+  entries!: GarageScheduleEntryDto[];
+
+  @ApiProperty()
+  from!: string;
+
+  @ApiProperty()
+  to!: string;
+
+  @ApiProperty()
+  lifts!: boolean;
 }
 
 // The driver's acceptance of a quote: whether the garage may read the car's
