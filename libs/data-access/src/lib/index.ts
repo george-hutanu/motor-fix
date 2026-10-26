@@ -118,6 +118,7 @@ export type { DocumentUploadAddressDto } from './models/document-upload-address-
 export type { DocumentUploadRequestDto } from './models/document-upload-request-dto';
 export type { DraftDocumentDto } from './models/draft-document-dto';
 export type { DriverNameDto } from './models/driver-name-dto';
+export type { DriverRowBookingDto } from './models/driver-row-booking-dto';
 export type { EmailChangeDto } from './models/email-change-dto';
 export type { FieldProblemDto } from './models/field-problem-dto';
 export type { GarageAccessDto } from './models/garage-access-dto';
@@ -284,7 +285,6 @@ export type { ReportQueueReplyDto } from './models/report-queue-reply-dto';
 export type { ReportQueueReportDto } from './models/report-queue-report-dto';
 export type { ReportQueueReviewDto } from './models/report-queue-review-dto';
 export type { ReportReviewDto } from './models/report-review-dto';
-export type { RequestBookingDto } from './models/request-booking-dto';
 export type { RequestDto } from './models/request-dto';
 export type { RequestJobDto } from './models/request-job-dto';
 export type { RequestListDto } from './models/request-list-dto';

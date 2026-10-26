@@ -1,0 +1,27 @@
+<p class="subject">{{ subject() }}</p>
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <fieldset class="reasons" [disabled]="sending()" [attr.aria-label]="'driver.requests.cancelBookingDialog.reasons' | t">
+    @for (reason of reasons(); track reason.code) {
+      <label class="reason">
+        <input type="radio" name="reason" formControlName="reason" [value]="reason.code" />
+        <span>{{ reason.label }}</span>
+      </label>
+    }
+  </fieldset>
+  <fieldset class="details" [disabled]="sending()">
+    <label for="cancel-booking-note">{{ 'driver.requests.cancelBookingDialog.details' | t }}</label>
+    <textarea hlmInput id="cancel-booking-note" formControlName="note" rows="3" [attr.maxlength]="max" aria-describedby="cancel-booking-count"></textarea>
+    <span id="cancel-booking-count" class="count" aria-live="polite">{{ count() }}/{{ max }}</span>
+  </fieldset>
+  @if (late()) {
+    <p class="late" role="status">{{ 'driver.requests.cancelBookingDialog.late' | t }}</p>
+  }
+  <mf-task-error [save]="save" />
+  @if (!online()) {
+    <p class="error" role="status">{{ 'shell.form.problem.offline' | t }}</p>
+  }
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'driver.requests.cancelBookingDialog.keep' | t }}</button>
+    <button hlmBtn variant="secondary" type="submit" class="danger" [mfTaskSubmit]="save" [disabled]="blocked()">{{ 'driver.requests.cancelBookingDialog.confirm' | t }}</button>
+  </div>
+</form>
