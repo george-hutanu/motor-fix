@@ -247,9 +247,6 @@ const RELEASES_PLACE: ReadonlySet<BookingStatus> = new Set<BookingStatus>([
   'no_show',
 ]);
 
-// A cancellation also files its reason, which the driver's short history
-// shows next to the status.
-
 export async function moveBooking(
   tx: Tx,
   ports: TransitionPorts,
@@ -265,6 +262,8 @@ export async function moveBooking(
   // transaction; a completed one keeps its segments as the record of the work.
   if (RELEASES_PLACE.has(move.to))
     await tx.bookingSegment.deleteMany({ where: { bookingId: move.id } });
+  // A cancellation also files its reason, which the driver's short history
+  // shows next to the status.
   if (move.to === 'cancelled' && cancellation) {
     await ports.audit.record(tx, {
       action: 'update',
