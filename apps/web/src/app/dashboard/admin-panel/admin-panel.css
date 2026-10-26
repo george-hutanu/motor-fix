@@ -8,9 +8,11 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+/* The six tiles start and end where the header's title and tools do. */
 @media (min-width: 1024px) {
   :host {
     grid-template-columns: repeat(6, minmax(0, 1fr));
+    padding-inline: var(--mf-space-4);
   }
   /* Growth and the brand demand side by side, growth's charts stacked. */
   mf-admin-growth {
@@ -93,15 +95,16 @@ button {
   border: 0;
   cursor: pointer;
 }
+/* In the flow under the number: it covers neither the number nor the button,
+   which stays pressable to close it. */
 .tip {
-  position: absolute;
-  inset: auto var(--mf-space-2) var(--mf-space-2);
   padding: var(--mf-space-2);
   font-size: var(--mf-size-small);
   color: var(--mf-text);
   background: var(--mf-panel-raised);
   border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-chip);
+  overflow-wrap: anywhere;
 }
 /* The type scale's 20 px on a small phone, its 24 px from 480 px up. */
 @media (min-width: 480px) {
