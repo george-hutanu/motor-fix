@@ -304,6 +304,16 @@ const reviewsAnnounced = () =>
     'motorfix_review_announced_total',
     'Posted reviews announced to garage owners, by outcome',
   );
+const reviewReportAlerts = () =>
+  counter(
+    'motorfix_review_report_alerts_total',
+    'Review reports told to the admins, by outcome',
+  );
+const reviewReportReminders = () =>
+  counter(
+    'motorfix_review_report_reminders_total',
+    'Reminders of review reports waiting 48 hours, by outcome',
+  );
 const reviewRepliesAnnounced = () =>
   counter(
     'motorfix_review_reply_announced_total',
@@ -542,6 +552,20 @@ export function countReviewAnnounced(
   outcome: (typeof REVIEW_ANNOUNCED_OUTCOMES)[number],
 ) {
   reviewsAnnounced().add(1, { outcome });
+}
+
+// A review report told to the active admins, one they all muted, or one
+// with nobody or nothing to tell.
+export function countReviewReportAlert(
+  outcome: (typeof REVIEW_ANNOUNCED_OUTCOMES)[number],
+) {
+  reviewReportAlerts().add(1, { outcome });
+}
+
+// A pending report's 48-hour reminder sent to the admins, or one that found
+// the report decided, closed or gone.
+export function countReviewReportReminder(outcome: 'sent' | 'skipped') {
+  reviewReportReminders().add(1, { outcome });
 }
 
 // A garage's reply told to the review's author, one they muted, or one
