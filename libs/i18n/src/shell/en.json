@@ -181,7 +181,6 @@
     },
     "coming": {
       "garage": {
-        "dashboard": "Here you will see what is happening in your garage today.",
         "history": "Here you will see who changed what in your garage.",
         "jobs": "Here you will see the garage’s jobs.",
         "prices": "Here you will see the price ranges per job.",

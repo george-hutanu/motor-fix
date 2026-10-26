@@ -15,18 +15,42 @@
   @if (owner()) {
     <mf-garage-legal-check />
   }
-  @if (feed.visible()) {
-    <mf-garage-requests-panel [limit]="4" />
+  @if (firstSteps()) {
+    <mf-first-steps-card [team]="team()" />
   }
-  @if (ownJobs()) {
+  <div class="sections">
+    @if (ownAfter() === -1) {
+      <ng-container *ngTemplateOutlet="own" />
+    }
+    @for (section of sections(); track section.key; let at = $index) {
+      @switch (section.key) {
+        @case ('req') {
+          @if (feed.visible()) {
+            <mf-garage-requests-panel data-section="req" [limit]="4" />
+          }
+        }
+        @case ('reviews') {
+          <mf-garage-reviews-panel data-section="reviews" [limit]="5" />
+        }
+        @default {
+          <section class="panel" [attr.data-section]="section.key">
+            <mf-section-title [heading]="section.title | t" [view]="section.view" />
+            <p class="empty">{{ section.empty ?? '' | t }}</p>
+          </section>
+        }
+      }
+      @if (ownAfter() === at) {
+        <ng-container *ngTemplateOutlet="own" />
+      }
+    }
+  </div>
+}
+
+<ng-template #own>
+  <div class="own">
     @if (daySheet()) {
       <a class="day-sheet" routerLink="schedule">{{ 'garage.home.ownJobs.daySheet' | t }}</a>
     }
     <mf-own-jobs-section />
-  } @else if (!feed.visible() && !reviews()) {
-    <p>{{ 'shell.frame.coming.garage.dashboard' | t }}</p>
-  }
-  @if (reviews()) {
-    <mf-garage-reviews-panel [limit]="5" />
-  }
-}
+  </div>
+</ng-template>
