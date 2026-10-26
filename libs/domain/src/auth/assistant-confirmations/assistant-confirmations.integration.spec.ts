@@ -233,6 +233,12 @@ describe('every other answer writes nothing', () => {
     expect(decision).toEqual({ mismatch: true, status: 'void' });
     expect(run).not.toHaveBeenCalled();
     expect((await row(c.id)).status).toBe('void');
+    // Asked again, it still says the arguments changed (FR-005, FR-006).
+    expect(await confirmations.decide(yes(c), run)).toEqual({
+      mismatch: true,
+      status: 'void',
+    });
+    expect(run).not.toHaveBeenCalled();
   });
 
   it('answers not_found for another grant’s or an unknown id and leaves the row waiting', async () => {

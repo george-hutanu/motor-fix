@@ -52,23 +52,8 @@ const LIFETIME = '5 minutes';
 export function judge(row: Stored | null, asked: Asked, now: Date): Judgement {
   if (!row || row.grantId !== asked.grantId)
     return { decision: { status: 'not_found' }, kind: 'answer' };
-  const outcome = (row.outcome ?? {}) as { code?: string; output?: unknown };
-  if (row.status === 'done')
-    return {
-      decision: { output: outcome.output, replayed: true, status: 'done' },
-      kind: 'answer',
-    };
-  if (row.status === 'failed')
-    return {
-      decision: {
-        code: outcome.code ?? 'internal_error',
-        replayed: true,
-        status: 'failed',
-      },
-      kind: 'answer',
-    };
   if (row.status !== 'waiting')
-    return { decision: { status: row.status }, kind: 'answer' };
+    return { decision: decided(row.status, row.outcome), kind: 'answer' };
   if (now.getTime() > row.expiresAt.getTime()) return close('expired');
   if (!asked.confirmed) return close('refused');
   if (row.argsHash !== asked.argsHash)
@@ -78,6 +63,30 @@ export function judge(row: Stored | null, asked: Asked, now: Date): Judgement {
       status: 'void',
     };
   return { kind: 'run' };
+}
+
+// What a decided confirmation answers again, whatever is asked.
+function decided(
+  status: Exclude<Status, 'waiting'>,
+  stored: unknown,
+): Decision {
+  const outcome = (stored ?? {}) as {
+    code?: string;
+    mismatch?: boolean;
+    output?: unknown;
+  };
+  if (status === 'done')
+    return { output: outcome.output, replayed: true, status: 'done' };
+  if (status === 'failed')
+    return {
+      code: outcome.code ?? 'internal_error',
+      replayed: true,
+      status: 'failed',
+    };
+  // A yes voided for changed arguments answers so again (FR-005, FR-006).
+  if (status === 'void' && outcome.mismatch)
+    return { mismatch: true, status: 'void' };
+  return { status };
 }
 
 const close = (status: Closed): Judgement => ({
@@ -95,7 +104,13 @@ function codeOf(error: unknown): string {
     : codeForStatus(error.getStatus());
 }
 
-const outcomeOf = (decision: Decision): ConfirmationOutcome => {
+// What a decision is counted as: any answer about a confirmation already
+// decided is a replay, whatever it was decided as.
+export const countedAs = (
+  kind: Judgement['kind'],
+  decision: Decision,
+): ConfirmationOutcome => {
+  if (kind === 'answer') return 'replayed';
   if ('replayed' in decision && decision.replayed) return 'replayed';
   if ('mismatch' in decision) return 'mismatch';
   if (decision.status === 'done') return 'confirmed';
@@ -173,6 +188,7 @@ export class AssistantConfirmations {
   ): Promise<Decision> {
     let failure: { error: unknown } | null = null;
     let tool = '';
+    let kind: Judgement['kind'] = 'run';
     const decision = await this.prisma.$transaction(
       async (tx) => {
         const [row] = await tx.$queryRaw<
@@ -186,9 +202,10 @@ export class AssistantConfirmations {
           FOR UPDATE`;
         tool = row?.tool ?? '';
         const judged = judge(row ?? null, input, row?.now ?? new Date());
+        kind = judged.kind;
         if (judged.kind === 'answer') return judged.decision;
         if (judged.kind === 'close') {
-          await this.store(tx, input.id, judged.status, null);
+          await this.closeUnrun(tx, input.id, judged);
           return judged.decision;
         }
         await tx.$executeRawUnsafe('SAVEPOINT confirmation_run');
@@ -212,7 +229,7 @@ export class AssistantConfirmations {
       throw (failure as { error: unknown }).error;
     }
     if (decision.status !== 'not_found')
-      recordConfirmation(outcomeOf(decision), who);
+      recordConfirmation(countedAs(kind, decision), who);
     return decision;
   }
 
@@ -220,6 +237,16 @@ export class AssistantConfirmations {
     return this.prisma.$transaction((tx) =>
       voidAssistantConfirmations(tx, { accountId }),
     );
+  }
+
+  // Closes a confirmation unrun, keeping a mismatch so a repeat says so too.
+  private closeUnrun(
+    tx: Tx,
+    id: string,
+    judged: Extract<Judgement, { kind: 'close' }>,
+  ) {
+    const mismatch = 'mismatch' in judged.decision;
+    return this.store(tx, id, judged.status, mismatch ? { mismatch } : null);
   }
 
   private async store(

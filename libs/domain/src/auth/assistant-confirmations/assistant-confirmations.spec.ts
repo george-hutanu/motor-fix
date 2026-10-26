@@ -4,7 +4,7 @@ import { Logger } from '@nestjs/common';
 import { SpanKind, trace } from '@opentelemetry/api';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
-import { judge } from './assistant-confirmations';
+import { countedAs, judge } from './assistant-confirmations';
 import { recordConfirmation } from './assistant-confirmations.metrics';
 
 const memory = inMemory();
@@ -136,6 +136,45 @@ describe('judging a confirmation', () => {
       });
     },
   );
+
+  it('answers a repeat about a yes voided for changed arguments with the mismatch again', () => {
+    expect(
+      judge(
+        stored({ outcome: { mismatch: true }, status: 'void' }),
+        asked,
+        NOW,
+      ),
+    ).toEqual({
+      decision: { mismatch: true, status: 'void' },
+      kind: 'answer',
+    });
+  });
+});
+
+// @traces 1253-FR-010
+describe('what a decision is counted as', () => {
+  it('counts each first decision by its outcome', () => {
+    expect(
+      countedAs('run', { output: 1, replayed: false, status: 'done' }),
+    ).toBe('confirmed');
+    expect(countedAs('close', { status: 'refused' })).toBe('refused');
+    expect(countedAs('close', { status: 'expired' })).toBe('expired');
+    expect(countedAs('close', { mismatch: true, status: 'void' })).toBe(
+      'mismatch',
+    );
+  });
+
+  it('counts every answer about a decided confirmation as replayed', () => {
+    for (const decision of [
+      { status: 'refused' },
+      { status: 'expired' },
+      { status: 'void' },
+      { mismatch: true, status: 'void' },
+      { output: 1, replayed: true, status: 'done' },
+      { code: 'internal_error', replayed: true, status: 'failed' },
+    ] as const)
+      expect(countedAs('answer', decision)).toBe('replayed');
+  });
 });
 
 // @traces 1253-FR-010
