@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
@@ -64,5 +67,13 @@ describe('the first-steps card', () => {
       'Add photos to your garage profile',
       'Invite the team in Mechanics',
     ]);
+  });
+
+  it('sets its heading at body size on a phone, as the section titles under it', () => {
+    const css = readFileSync(join(__dirname, 'first-steps-card.css'), 'utf8');
+    const phone =
+      /@media \(max-width: 767\.98px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+
+    expect(phone).toMatch(/h2 \{[^}]*font-size: var\(--mf-size-body\)/);
   });
 });

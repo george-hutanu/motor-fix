@@ -53,4 +53,7 @@ a:focus-visible {
   .panel {
     padding-inline: var(--mf-space-4);
   }
+  h2 {
+    font-size: var(--mf-size-body);
+  }
 }
