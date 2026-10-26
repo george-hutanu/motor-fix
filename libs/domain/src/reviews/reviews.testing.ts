@@ -1,4 +1,7 @@
-import type { ReviewStatus } from '../generated/prisma/enums';
+import type {
+  ReviewReplyStatus,
+  ReviewStatus,
+} from '../generated/prisma/enums';
 import type { quotesWorld } from '../quotes/quotes.testing';
 
 // The mechanic-read setting both review specs share: Elena, who worked at
@@ -142,4 +145,36 @@ export function garageReviews(world: ReturnType<typeof quotesWorld>) {
   }
 
   return { review };
+}
+
+// A garage's reply on one of its reviews, as the owner's POST or an admin's
+// decision leaves it.
+export function reviewReply(world: ReturnType<typeof quotesWorld>) {
+  return (
+    reviewId: string,
+    options: {
+      status?: ReviewReplyStatus;
+      text?: string;
+      postedAt?: Date;
+      editedAt?: Date | null;
+    } = {},
+  ) =>
+    world.prisma.review
+      .findUniqueOrThrow({ where: { id: reviewId } })
+      .then((review) =>
+        world.prisma.reviewReply.create({
+          data: {
+            editedAt: options.editedAt ?? null,
+            garageId: review.garageId,
+            postedAt: options.postedAt ?? new Date(),
+            reviewId,
+            status: options.status ?? 'published',
+            text: options.text ?? 'Mulțumim, Andrei!',
+            ...(options.status === 'removed' && {
+              removedAt: new Date(),
+              removedCause: 'report_upheld' as const,
+            }),
+          },
+        }),
+      );
 }

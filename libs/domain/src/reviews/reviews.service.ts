@@ -26,6 +26,7 @@ import {
   refusalOf,
   type Verdict,
 } from './eligibility/eligibility';
+import { publicReplyOf, replyRefusalOf, staffReplyOf } from './reply/reply';
 import { recordReviewPosted } from './reviews.metrics';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { refusal } from '../auth/http-refusal';
@@ -100,6 +101,7 @@ const PAGE_INCLUDE = {
     },
   },
   mechanic: { select: { name: true } },
+  reply: true,
 } satisfies Prisma.ReviewInclude;
 
 type PageReview = Prisma.ReviewGetPayload<{ include: typeof PAGE_INCLUDE }>;
@@ -119,6 +121,7 @@ const garageRowOf = (review: PageReview): GarageReviewDto => {
     ...amountsOf(fromJob, review.job, review.paidBani),
     postedAt: review.postedAt.toISOString(),
     rating: review.rating,
+    reply: publicReplyOf(review.reply),
     source: review.source,
     text: review.text,
   };
@@ -186,6 +189,7 @@ export class ReviewsService {
             include: {
               driver: { select: { name: true, status: true } },
               garage: true,
+              reply: true,
             },
             orderBy: [{ postedAt: 'desc' }, { id: 'desc' }],
             skip,
@@ -200,6 +204,7 @@ export class ReviewsService {
         id: review.id,
         postedAt: review.postedAt.toISOString(),
         rating: review.rating,
+        reply: publicReplyOf(review.reply),
         text: review.text,
       })),
       page,
@@ -263,12 +268,15 @@ export class ReviewsService {
       breakdown,
       items: reviews.map((review) => ({
         ...garageRowOf(review),
-        canReply: owner,
+        // One reply per review, to a published review only.
+        canReply:
+          owner && replyRefusalOf(review, review.reply, 'post') === null,
         canReport: owner,
         mechanic:
           review.source === 'job' && review.mechanic
             ? { shortName: shortName(review.mechanic.name) }
             : null,
+        reply: staffReplyOf(review.reply),
         status: review.status,
       })),
       page,

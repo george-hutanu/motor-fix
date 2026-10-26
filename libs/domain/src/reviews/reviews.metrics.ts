@@ -1,4 +1,8 @@
-import type { ReportRefusal, ReviewReportReason } from '@motor-fix/contracts';
+import type {
+  ReplyRefusal,
+  ReportRefusal,
+  ReviewReportReason,
+} from '@motor-fix/contracts';
 import { metrics } from '@opentelemetry/api';
 
 export const REVIEW_POSTED_OUTCOMES = [
@@ -35,6 +39,24 @@ export function recordReviewReported(outcome: ReviewReportedOutcome) {
     .getMeter('motorfix')
     .createCounter('motorfix_reviews_reported_total', {
       description: 'Reviews garages tried to report, by reason or refusal',
+    })
+    .add(1, { outcome });
+}
+
+// A reply posted or edited, or the code of a refusal; a 404 is not counted.
+// Not started at 0, as the reports: the API's start set is at its series cap.
+type ReviewRepliedOutcome =
+  | 'published'
+  | 'edited'
+  | 'forbidden'
+  | ReplyRefusal
+  | 'validation_failed';
+
+export function recordReviewReplied(outcome: ReviewRepliedOutcome) {
+  metrics
+    .getMeter('motorfix')
+    .createCounter('motorfix_reviews_replied_total', {
+      description: 'Replies garages tried to post or edit, by outcome',
     })
     .add(1, { outcome });
 }
