@@ -114,7 +114,7 @@ describe('the cancel request dialog under hostile use', () => {
   // The shared overlay contract (libs/overlays form.spec: "ignores an answer
   // that arrives after the task was closed"): Escape closes a task even mid
   // call, unasked when no field changed. The list is not left stale: the
-  // server's request.cancelled event re-reads it (FR-008).
+  // server's request.cancelled event re-reads it.
   it('closes on Escape while the call runs, as every task does, sending once', async () => {
     await open();
     let answer: (value: unknown) => void = () => undefined;
