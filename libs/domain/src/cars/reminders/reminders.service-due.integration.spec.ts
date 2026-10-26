@@ -12,6 +12,7 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import { planSave } from '../../notifications/preferences/preferences';
 
 const redisUrl = redisUrlFor(3);
 const { account, car, prisma, reset } = fixtures();
@@ -345,6 +346,23 @@ describe('the daily run of a service reminder', () => {
     });
 
     await runOn('2026-10-18');
+
+    expect(await bell()).toHaveLength(1);
+    expect(
+      await prisma.notification.count({
+        where: { channel: { not: 'in_app' }, kind: 'SERVICE_DUE' },
+      }),
+    ).toBe(0);
+  });
+
+  it('writes only the bell while the Scadențe group is muted', async () => {
+    const { writes } = planSave([], [{ enabled: false, key: 'due_dates' }], []);
+    expect(writes.map((w) => w.type)).toContain('SERVICE_DUE');
+    await prisma.notificationPreference.createMany({
+      data: writes.map((w) => ({ ...w, accountId: driver })),
+    });
+
+    expect(await runOn('2026-10-18')).toBe(1);
 
     expect(await bell()).toHaveLength(1);
     expect(
