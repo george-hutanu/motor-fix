@@ -12,7 +12,7 @@ import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { refusal } from '../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { localDay } from '../../bucharest';
+import { today } from '../../bucharest';
 import { EVENT_PORT, type EventPort, noEvents } from '../../events/event.port';
 import { featureOn } from '../../garages/features/feature-on';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
@@ -70,14 +70,16 @@ const VERBS: Record<
   },
 };
 
-// Today in Bucharest, as a reading's day is stored.
-const today = () => new Date(`${localDay(new Date())}T00:00:00Z`);
-
 const CLOSED: readonly JobStatus[] = ['done', 'cancelled'];
 const SYSTEM: TransitionActor = { accountId: null, role: 'system' };
 const TEAM = 'team_mechanics';
 
-const audience = (job: LockedJob) => ({
+type Audienced = Pick<
+  LockedJob,
+  'id' | 'garage_id' | 'car_id' | 'driver_id' | 'mechanic_id'
+>;
+
+const audience = (job: Audienced) => ({
   driverAccountId: job.driver_id,
   garageId: job.garage_id,
   mechanicId: job.mechanic_id,
@@ -251,10 +253,14 @@ export class JobStagesService {
 
   // A mechanic works one job at a time in a garage with a team: moving one
   // into work pauses their others, as the platform, in the same transaction.
+  // The mechanic's row is locked first, so two of their jobs moving into work
+  // at once take turns and the second sees the first in work.
   private async pauseOthers(tx: Tx, job: LockedJob): Promise<string[]> {
     if (!job.mechanic_id) return [];
     if (!(await featureOn(tx, job.garage_id, TEAM))) return [];
-    const busy = await tx.$queryRaw<LockedJob[]>`
+    await tx.$queryRaw`
+      SELECT id FROM mechanic WHERE id = ${job.mechanic_id}::uuid FOR UPDATE`;
+    const busy = await tx.$queryRaw<Audienced[]>`
       SELECT id, garage_id, car_id, driver_id, mechanic_id
       FROM job
       WHERE garage_id = ${job.garage_id}::uuid
@@ -331,7 +337,6 @@ export class JobStagesService {
     );
   }
 
-  // The refusal's log line carries the job's id and the code.
   private refuse(job: LockedJob, code: string, message: string) {
     this.logger.warn(`job stage refused: ${code} job=${job.id}`);
     return refusal(HttpStatus.CONFLICT, code, message);

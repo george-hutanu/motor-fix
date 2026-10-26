@@ -59,19 +59,28 @@ export async function moveJob(
     }),
     set: (row) => jobColumns(move.to, row),
   });
+  // One clock, this process's, writes every entry's time and measures from
+  // it, so a database clock running apart cannot shave or add seconds.
+  const at = new Date();
   if (moved.from === 'in_work') {
-    await tx.$executeRaw`
-      UPDATE job SET worked_seconds = worked_seconds + COALESCE((
-        SELECT GREATEST(0, floor(extract(epoch FROM clock_timestamp() - max(at))))::int
-        FROM job_stage_entry
-        WHERE job_id = ${move.id}::uuid AND to_status = 'in_work'
-      ), 0)
-      WHERE id = ${move.id}::uuid`;
+    const since = await tx.jobStageEntry.findFirst({
+      orderBy: { at: 'desc' },
+      select: { at: true },
+      where: { jobId: move.id, toStatus: 'in_work' },
+    });
+    const seconds = since
+      ? Math.max(0, Math.floor((at.getTime() - since.at.getTime()) / 1000))
+      : 0;
+    await tx.job.update({
+      data: { workedSeconds: { increment: seconds } },
+      where: { id: move.id },
+    });
   }
   await tx.jobStageEntry.create({
     data: {
       actorId: move.actor.accountId,
       actorRole: recordedRole(move.actor.role),
+      at,
       auto,
       fromStatus: moved.from,
       jobId: move.id,
