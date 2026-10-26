@@ -1,9 +1,12 @@
 import { isPlatformBrowser } from '@angular/common';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
+  ElementRef,
+  Injector,
   inject,
   linkedSignal,
   PLATFORM_ID,
@@ -22,8 +25,19 @@ import {
   TranslatePipe,
   timeLeft,
 } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { HlmButton, Panel } from '@motor-fix/ui-cockpit';
 
+import {
+  type CancelBookingData,
+  CancelBookingDialog,
+  type CancelBookingResult,
+} from './cancel-booking-dialog/cancel-booking-dialog';
+import {
+  type CancelRequestData,
+  CancelRequestDialog,
+  type CancelRequestResult,
+} from './cancel-request-dialog/cancel-request-dialog';
 import { ActiveRequest } from '../active-request/active-request';
 import { EmptyState } from '../empty-state/empty-state';
 import { focusCard } from '../focus-card';
@@ -44,6 +58,13 @@ interface Row {
   // The garage let the booking lapse and another quote is still open.
   lapsed?: true;
   quoted: boolean;
+  // The one cancel the row offers, if any: the request before a booking
+  // holds it, the booking while it is ahead and its job has not started.
+  cancel?: { kind: 'request' } | ({ kind: 'booking' } & CancelBookingData);
+  // The driver cancelled it: "Anulată de tine", late when it was.
+  cancelledByYou?: { late: boolean };
+  // The driver cancelled the booking and the request takes quotes again.
+  reopened?: true;
 }
 
 const TICK_MS = 60_000;
@@ -71,6 +92,11 @@ const TICK_MS = 60_000;
 export class RequestsView {
   private readonly api = inject(RequestsService);
   private readonly i18n = inject(I18n);
+  private readonly overlays = inject(Overlays);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
+  // A cancel dialog is up: the row actions open no second one.
+  private cancelling = false;
   protected readonly language = this.i18n.language;
   protected readonly list = liveResource(
     () => this.api.requestsControllerList(),
@@ -135,6 +161,55 @@ export class RequestsView {
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
   }
 
+  // Opens the row's cancel, re-reads the list after a cancel or a refusal,
+  // then gives the focus back to the row's action, or to the row when the
+  // action is gone.
+  protected async cancel(row: Row) {
+    const offer = row.cancel;
+    if (!offer || this.cancelling) return;
+    this.cancelling = true;
+    const result = await this.ask(row, offer).finally(() => {
+      this.cancelling = false;
+    });
+    if (result === 'done' || result === 'refused') await this.list.reload();
+    afterNextRender(
+      () => {
+        const card = Array.from(
+          this.host.nativeElement.querySelectorAll<HTMLElement>(
+            '[data-request]',
+          ),
+        ).find((el) => el.getAttribute('data-request') === row.id);
+        const action = card?.querySelector<HTMLElement>('.actions .cancel');
+        (action ?? card)?.focus();
+      },
+      { injector: this.injector },
+    );
+  }
+
+  private ask(row: Row, offer: NonNullable<Row['cancel']>) {
+    return offer.kind === 'booking'
+      ? this.overlays.open<CancelBookingResult, CancelBookingData>(
+          CancelBookingDialog,
+          {
+            data: {
+              bookingId: offer.bookingId,
+              garage: offer.garage,
+              startsAt: offer.startsAt,
+            },
+            shape: 'dialog',
+            title: 'driver.requests.cancelBookingDialog.title',
+          },
+        )
+      : this.overlays.open<CancelRequestResult, CancelRequestData>(
+          CancelRequestDialog,
+          {
+            data: { car: row.car, requestId: row.id, what: row.what },
+            shape: 'dialog',
+            title: 'driver.requests.cancelRequestDialog.title',
+          },
+        );
+  }
+
   private row(item: RequestSummaryDto, language: 'ro' | 'en', now: Date): Row {
     const { brand, model, year } = item.car;
     const booking = item.booking;
@@ -163,6 +238,55 @@ export class RequestsView {
         }),
       ...(item.status === 'quoted' &&
         booking?.status === 'lapsed' && { lapsed: true as const }),
+      ...cancelOf(item, now),
+      ...(byDriver(item) && {
+        cancelledByYou: {
+          late:
+            item.closedReason === 'booking_cancelled' &&
+            item.booking?.lateCancellation === true,
+        },
+      }),
+      ...(item.status === 'quoted' &&
+        booking?.status === 'cancelled' &&
+        booking.cancelledBySide === 'driver' && { reopened: true as const }),
     };
   }
+}
+
+// The cancel a request offers now: the request while it is sent or
+// quoted; the booking while it waits or is confirmed, starts after now and
+// its job has not started; nothing otherwise.
+function cancelOf(item: RequestSummaryDto, now: Date): Pick<Row, 'cancel'> {
+  if (item.status === 'sent' || item.status === 'quoted')
+    return { cancel: { kind: 'request' } };
+  const booking = item.booking;
+  if (
+    item.status !== 'booked' ||
+    !booking ||
+    (booking.status !== 'awaiting_confirmation' &&
+      booking.status !== 'confirmed') ||
+    booking.jobStarted ||
+    // An unreadable start (NaN) is not ahead of now either.
+    !(new Date(booking.startsAt).getTime() > now.getTime())
+  )
+    return {};
+  return {
+    cancel: {
+      bookingId: booking.id,
+      garage: booking.garage.name,
+      kind: 'booking',
+      startsAt: booking.startsAt,
+    },
+  };
+}
+
+// A request closed by the driver's own cancel, of the request or of its
+// booking.
+function byDriver(item: RequestSummaryDto): boolean {
+  if (item.status !== 'closed') return false;
+  if (item.closedReason === 'cancelled') return true;
+  return (
+    item.closedReason === 'booking_cancelled' &&
+    item.booking?.cancelledBySide === 'driver'
+  );
 }

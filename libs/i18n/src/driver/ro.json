@@ -394,8 +394,35 @@
   },
   "requests": {
     "booked": "Programată",
+    "bookingCancelled": "Ai anulat programarea. Poți alege altă ofertă.",
+    "cancelBooking": "Anulează programarea",
+    "cancelBookingDialog": {
+      "confirm": "Anulează programarea",
+      "details": "Detalii (opțional)",
+      "keep": "Păstrează programarea",
+      "late": "Anulezi cu mai puțin de 2 ore înainte. Se înregistrează ca anulare târzie, fără penalizare.",
+      "problem": {
+        "invalid_transition": "Programarea nu mai poate fi anulată."
+      },
+      "reasons": "Motivul anulării",
+      "title": "Anulezi programarea?",
+      "toast": "Programare anulată"
+    },
+    "cancelledByYou": "Anulată de tine",
+    "cancelRequest": "Anulează cererea",
+    "cancelRequestDialog": {
+      "body": "Service‑urile care așteaptă vor fi anunțate; ofertele primite se pierd.",
+      "confirm": "Anulează cererea",
+      "keep": "Păstrează cererea",
+      "problem": {
+        "invalid_transition": "Cererea nu mai poate fi anulată."
+      },
+      "title": "Anulezi cererea?",
+      "toast": "Cerere anulată"
+    },
     "compare": "Compară ofertele",
     "lapsed": "Service‑ul nu a confirmat. Alege altă ofertă.",
+    "lateCancellation": "Anulare târzie",
     "retry": "Încearcă din nou",
     "waitingGarage": "Așteaptă confirmarea service‑ului · {left}"
   },

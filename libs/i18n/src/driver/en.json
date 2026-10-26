@@ -389,8 +389,35 @@
   },
   "requests": {
     "booked": "Booked",
+    "bookingCancelled": "You cancelled the booking. You can choose another quote.",
+    "cancelBooking": "Cancel the booking",
+    "cancelBookingDialog": {
+      "confirm": "Cancel the booking",
+      "details": "Details (optional)",
+      "keep": "Keep the booking",
+      "late": "You are cancelling less than 2 hours before. It is recorded as a late cancellation, with no penalty.",
+      "problem": {
+        "invalid_transition": "This booking can no longer be cancelled."
+      },
+      "reasons": "Why you are cancelling",
+      "title": "Cancel the booking?",
+      "toast": "Booking cancelled"
+    },
+    "cancelledByYou": "Cancelled by you",
+    "cancelRequest": "Cancel the request",
+    "cancelRequestDialog": {
+      "body": "The garages still waiting will be told; the quotes received are lost.",
+      "confirm": "Cancel the request",
+      "keep": "Keep the request",
+      "problem": {
+        "invalid_transition": "This request can no longer be cancelled."
+      },
+      "title": "Cancel the request?",
+      "toast": "Request cancelled"
+    },
     "compare": "Compare the quotes",
     "lapsed": "The garage did not confirm. Choose another quote.",
+    "lateCancellation": "Late cancellation",
     "retry": "Try again",
     "waitingGarage": "Waiting for the garage · {left}"
   },

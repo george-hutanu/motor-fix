@@ -264,7 +264,16 @@ describe('the header, the edges', () => {
 // @traces 313-FR-007
 describe('a row’s state, the edges', () => {
   const awaiting = {
+    cancelledBySide: null,
     confirmBy: '2026-10-18T10:00:00.000Z',
+    garage: {
+      id: 'garage-1',
+      name: 'Service Auto Militari',
+      slug: 'service-auto-militari',
+    },
+    id: 'booking-1',
+    jobStarted: false,
+    lateCancellation: false,
     startsAt: '2026-10-20T06:00:00.000Z',
     status: 'awaiting_confirmation' as const,
   };
@@ -295,7 +304,16 @@ describe('a row’s state, the edges', () => {
     'leaves a waiting quote open when the newest booking is %s',
     (status) => {
       const booking = {
+        cancelledBySide: null,
         confirmBy: '2026-10-18T10:00:00.000Z',
+        garage: {
+          id: 'garage-1',
+          name: 'Service Auto Militari',
+          slug: 'service-auto-militari',
+        },
+        id: 'booking-1',
+        jobStarted: false,
+        lateCancellation: false,
         startsAt: '2026-10-20T06:00:00.000Z',
         status,
       };
@@ -339,7 +357,16 @@ describe('the request the overview shows, the edges', () => {
       (status) =>
         summary({
           booking: {
+            cancelledBySide: null,
             confirmBy: '2026-10-18T10:00:00.000Z',
+            garage: {
+              id: 'garage-1',
+              name: 'Service Auto Militari',
+              slug: 'service-auto-militari',
+            },
+            id: 'booking-1',
+            jobStarted: false,
+            lateCancellation: false,
             startsAt: '2026-10-20T06:00:00.000Z',
             status,
           },
@@ -482,7 +509,16 @@ describe('a row’s state, more edges', () => {
 
   it('holds an open waiting quote while a booking awaits confirmation', () => {
     const booking = {
+      cancelledBySide: null,
       confirmBy: '2026-10-18T10:00:00.000Z',
+      garage: {
+        id: 'garage-1',
+        name: 'Service Auto Militari',
+        slug: 'service-auto-militari',
+      },
+      id: 'booking-1',
+      jobStarted: false,
+      lateCancellation: false,
       startsAt: '2026-10-20T06:00:00.000Z',
       status: 'awaiting_confirmation' as const,
     };
@@ -497,7 +533,16 @@ describe('the request the overview shows, more edges', () => {
     const items = [
       summary({
         booking: {
+          cancelledBySide: null,
           confirmBy: '2026-10-18T10:00:00.000Z',
+          garage: {
+            id: 'garage-1',
+            name: 'Service Auto Militari',
+            slug: 'service-auto-militari',
+          },
+          id: 'booking-1',
+          jobStarted: false,
+          lateCancellation: false,
           startsAt: '2026-10-20T06:00:00.000Z',
           status: 'awaiting_confirmation',
         },
@@ -513,7 +558,16 @@ describe('the request the overview shows, more edges', () => {
     const items = [
       summary({
         booking: {
+          cancelledBySide: null,
           confirmBy: '2026-10-18T10:00:00.000Z',
+          garage: {
+            id: 'garage-1',
+            name: 'Service Auto Militari',
+            slug: 'service-auto-militari',
+          },
+          id: 'booking-1',
+          jobStarted: false,
+          lateCancellation: false,
           startsAt: '2026-10-20T06:00:00.000Z',
           status: 'awaiting_confirmation',
         },
@@ -537,7 +591,16 @@ describe('the request the overview shows, more edges', () => {
     const items = [
       summary({
         booking: {
+          cancelledBySide: null,
           confirmBy: '2026-10-18T10:00:00.000Z',
+          garage: {
+            id: 'garage-1',
+            name: 'Service Auto Militari',
+            slug: 'service-auto-militari',
+          },
+          id: 'booking-1',
+          jobStarted: false,
+          lateCancellation: false,
           startsAt: '2026-10-20T06:00:00.000Z',
           status: 'awaiting_confirmation',
         },

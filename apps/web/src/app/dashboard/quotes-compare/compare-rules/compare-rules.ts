@@ -2,7 +2,7 @@ import type {
   CompareBookingDto,
   CompareQuoteDto,
   CompareRequestDto,
-  RequestBookingDto,
+  DriverRowBookingDto,
   RequestSummaryDto,
 } from '@motor-fix/data-access';
 import type { Language } from '@motor-fix/i18n';
@@ -24,7 +24,7 @@ export type Sort = (typeof SORTS)[number];
 export const SORT_KEY = 'mf.quotes.sort';
 
 type Booking =
-  | (Pick<RequestBookingDto, 'status' | 'confirmBy'> &
+  | (Pick<DriverRowBookingDto, 'status' | 'confirmBy'> &
       Partial<Pick<CompareBookingDto, 'quoteId'>>)
   | null;
 
@@ -55,7 +55,7 @@ const STATE_OF: Record<
   lost: 'closed',
 };
 
-const HELD: Partial<Record<RequestBookingDto['status'], RowState>> = {
+const HELD: Partial<Record<DriverRowBookingDto['status'], RowState>> = {
   awaiting_confirmation: 'on_hold',
   confirmed: 'closed',
 };
