@@ -16,7 +16,11 @@ import {
   readGrowth,
   snapshotActiveDrivers,
 } from '../insights/platform-figures';
+import { countReportQueue } from '../reviews/report-queue/report-queue';
 
+jest.mock('../reviews/report-queue/report-queue', () => ({
+  countReportQueue: jest.fn(),
+}));
 jest.mock('./verification/suspension/suspended-garages', () => ({
   countGarages: jest.fn(),
   suspendedGarages: jest.fn(),
@@ -65,6 +69,11 @@ beforeEach(() => {
   monthStart.mockResolvedValue(undefined);
   periodStart.mockResolvedValue(undefined);
   jest.mocked(cities).mockResolvedValue(CITIES);
+  jest.mocked(countReportQueue).mockResolvedValue({
+    oldestCreatedAt: new Date('2026-10-24T09:00:00Z'),
+    overdue: 1,
+    pending: 3,
+  });
 });
 
 // @traces 163-FR-001 163-FR-002 163-FR-004
@@ -91,6 +100,8 @@ describe('the admin overview route', () => {
       garagesApprovedThisMonth: 9,
       garagesListed: 214,
       garagesWaiting: 2,
+      reportsOverdue: 1,
+      reportsPending: 3,
       requestsSent: 48,
     });
     expect(Object.keys(answer)).not.toContain('activeDriversMonthStart');
@@ -109,8 +120,22 @@ describe('the admin overview route', () => {
       garagesApprovedThisMonth: 9,
       garagesListed: 214,
       garagesWaiting: 2,
+      reportsOverdue: 1,
+      reportsPending: 3,
       requestsSent: 48,
     });
+  });
+
+  // @traces 177-FR-004
+  it('answers the pending review reports and those past due, counted at the moment of the call', async () => {
+    const { overview } = controller(0);
+
+    await expect(
+      overview.overview({ city: 'cluj-napoca' }),
+    ).resolves.toMatchObject({ reportsOverdue: 1, reportsPending: 3 });
+    const [db, at] = jest.mocked(countReportQueue).mock.calls[0];
+    expect(db).toBe(prisma);
+    expect(at).toEqual(figures.mock.calls[0][1]);
   });
 
   it('counts the figures on the database at the moment of the call', async () => {

@@ -65,6 +65,16 @@ export interface AdminOverviewDto {
   observabilityUrl?: string;
 
   /**
+   * Of those, the ones past their due time
+   */
+  reportsOverdue: number;
+
+  /**
+   * Review reports waiting for an admin, on the whole platform
+   */
+  reportsPending: number;
+
+  /**
    * Quote requests created in the chosen period (the current Europe/Bucharest month by default); a request to several garages once; in a city, those with a recipient garage there
    */
   requestsSent: number;

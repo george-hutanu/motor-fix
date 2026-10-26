@@ -17518,6 +17518,16 @@
             "description": "Verification files submitted or in review, on the whole platform",
             "minimum": 0
           },
+          "reportsPending": {
+            "type": "integer",
+            "description": "Review reports waiting for an admin, on the whole platform",
+            "minimum": 0
+          },
+          "reportsOverdue": {
+            "type": "integer",
+            "description": "Of those, the ones past their due time",
+            "minimum": 0
+          },
           "cityGaragesWaiting": {
             "type": "integer",
             "description": "Verification files submitted or in review of garages in the chosen city; only with a city",
@@ -17584,6 +17594,8 @@
         },
         "required": [
           "garagesWaiting",
+          "reportsPending",
+          "reportsOverdue",
           "garagesListed",
           "garagesApprovedThisMonth",
           "activeDrivers",
