@@ -251,6 +251,8 @@ export type { QuoteRequestsControllerCandidates$Params as QuoteRequestsControlle
 export { quoteRequestsControllerCandidates as quoteRequestsControllerCandidates } from './fn/quote-requests/quote-requests-controller-candidates';
 export type { CompareControllerGet$Params as CompareControllerGet$Params } from './fn/quote-requests/compare-controller-get';
 export { compareControllerGet as compareControllerGet } from './fn/quote-requests/compare-controller-get';
+export type { CancelRequestControllerCancel$Params as CancelRequestControllerCancel$Params } from './fn/quote-requests/cancel-request-controller-cancel';
+export { cancelRequestControllerCancel as cancelRequestControllerCancel } from './fn/quote-requests/cancel-request-controller-cancel';
 export type { QuotesControllerSend$Params as QuotesControllerSend$Params } from './fn/quotes/quotes-controller-send';
 export { quotesControllerSend as quotesControllerSend } from './fn/quotes/quotes-controller-send';
 export type { AcceptControllerAccept$Params as AcceptControllerAccept$Params } from './fn/quotes/accept-controller-accept';
@@ -261,6 +263,8 @@ export type { ConfirmControllerOptions$Params as ConfirmControllerOptions$Params
 export { confirmControllerOptions as confirmControllerOptions } from './fn/bookings/confirm-controller-options';
 export type { ConfirmControllerConfirm$Params as ConfirmControllerConfirm$Params } from './fn/bookings/confirm-controller-confirm';
 export { confirmControllerConfirm as confirmControllerConfirm } from './fn/bookings/confirm-controller-confirm';
+export type { CancelBookingControllerCancel$Params as CancelBookingControllerCancel$Params } from './fn/bookings/cancel-booking-controller-cancel';
+export { cancelBookingControllerCancel as cancelBookingControllerCancel } from './fn/bookings/cancel-booking-controller-cancel';
 export type { GarageReviewsControllerRead$Params as GarageReviewsControllerRead$Params } from './fn/reviews/garage-reviews-controller-read';
 export { garageReviewsControllerRead as garageReviewsControllerRead } from './fn/reviews/garage-reviews-controller-read';
 export type { ReviewReportsControllerReport$Params as ReviewReportsControllerReport$Params } from './fn/reviews/review-reports-controller-report';

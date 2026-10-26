@@ -11,6 +11,9 @@ async function openHome(page: Page) {
   await expect(languageSwitch(page, 'Limba')).toBeVisible();
   // Hydrated: the remembered language is applied after the first render.
   await settled(page);
+  // The browser then moves `/` to its language address, whose guard saves
+  // that language: a tap in another tab before the move lands is overwritten.
+  await expect(page).toHaveURL(/\/ro\/?$/);
 }
 
 test('Home opens in Romanian with RO chosen, and each button is at least 44 px tall', async ({

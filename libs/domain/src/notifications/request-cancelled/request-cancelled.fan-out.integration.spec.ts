@@ -184,6 +184,26 @@ describe('telling the garages a closed account’s request is cancelled', () => 
   });
 });
 
+// @traces 1258-driver-cancel-FR-007
+describe('telling the garages the driver cancelled the request', () => {
+  it('tells each owner and receptionist of every garage once, with the reason driver, and no mechanic', async () => {
+    const { dinamo, driverId, job, nord } = await cancelled('driver');
+    const fanOut = await start();
+
+    await fanOut.handle(job);
+    await fanOut.handle(job);
+
+    for (const person of [dinamo.owner, dinamo.desk, nord.owner, nord.desk]) {
+      const mine = await bells(person);
+      expect(mine).toHaveLength(1);
+      expect(mine[0].params).toMatchObject({ reason: 'driver' });
+    }
+    for (const person of [dinamo.fixer, nord.fixer, driverId]) {
+      expect(await bells(person)).toEqual([]);
+    }
+  });
+});
+
 // Each owner has a confirmed phone and chose WhatsApp for this garage.
 async function onWhatsApp(
   ...garages: { garage: { id: string }; owner: string }[]

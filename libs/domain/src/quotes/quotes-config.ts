@@ -1,3 +1,5 @@
+import { DRIVER_CANCEL_REASONS } from '@motor-fix/contracts';
+
 import type {
   BookingCancelReason,
   DeclineReason,
@@ -24,9 +26,11 @@ export const DECLINE_UNDO_MINUTES = 5;
 export const PAGE_SIZE = 20;
 
 // The reasons each side may give; the system's own reasons are not offered.
-// The migration's booking_cancel_reason_side_check lists them again in SQL.
+// The driver's are the contracts' list, which the cancel body validates
+// against. The migration's booking_cancel_reason_side_check lists them again
+// in SQL.
 export const CANCEL_REASONS = {
-  driver: ['plans_changed', 'found_another_garage', 'problem_solved', 'other'],
+  driver: DRIVER_CANCEL_REASONS,
   garage: [
     'no_mechanic_free',
     'parts_not_available',

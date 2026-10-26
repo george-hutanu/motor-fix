@@ -53,6 +53,7 @@ export type { BrandRangeDto } from './models/brand-range-dto';
 export type { BrandRangeItemDto } from './models/brand-range-item-dto';
 export type { BrandRangeSavedDto } from './models/brand-range-saved-dto';
 export type { BrandRefDto } from './models/brand-ref-dto';
+export type { CancelBookingDto } from './models/cancel-booking-dto';
 export type { CandidateGarageDto } from './models/candidate-garage-dto';
 export type { CandidateGarageListDto } from './models/candidate-garage-list-dto';
 export type { CarDto } from './models/car-dto';

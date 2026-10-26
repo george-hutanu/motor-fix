@@ -179,6 +179,35 @@ export const DECLINE_REASON_TEXTS: Record<
   },
 };
 
+// The reasons a driver gives when cancelling a booking, in the order the
+// dialog lists them, and the label each one reads as.
+export const DRIVER_CANCEL_REASONS = [
+  'plans_changed',
+  'found_another_garage',
+  'problem_solved',
+  'other',
+] as const;
+export type DriverCancelReasonCode = (typeof DRIVER_CANCEL_REASONS)[number];
+
+// What a driver may write when cancelling a booking, counted after trimming.
+export const BOOKING_CANCEL_NOTE_MAX = 500;
+
+export const CANCEL_REASON_TEXTS: Record<
+  DriverCancelReasonCode,
+  { label: Words }
+> = {
+  found_another_garage: {
+    label: { en: 'Found another garage', ro: 'Am găsit alt service' },
+  },
+  other: { label: { en: 'Other', ro: 'Altceva' } },
+  plans_changed: {
+    label: { en: 'Plans changed', ro: 'Mi s-au schimbat planurile' },
+  },
+  problem_solved: {
+    label: { en: 'Problem solved', ro: 'S-a rezolvat problema' },
+  },
+};
+
 export const CANCELLED_BY_SIDES = ['driver', 'garage', 'system'] as const;
 export type CancelledBySide = (typeof CANCELLED_BY_SIDES)[number];
 

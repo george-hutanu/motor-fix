@@ -42,7 +42,7 @@ export const said = (words: Words, actor: Pick<Actor, 'language'>) =>
 // A move refused, the state named for the client and worded for the driver,
 // in the shape `invalidTransition` answers.
 const refused = (
-  entity: 'quote' | 'quote_request',
+  entity: 'booking' | 'quote' | 'quote_request',
   currentStatus: string,
   to: string,
   message: string | undefined,
@@ -69,4 +69,29 @@ export const requestRefused = (
     currentStatus,
     'booked',
     said(REQUEST_CLOSED, actor),
+  );
+
+// Why the driver can no longer cancel: the request is booked or done, or the
+// booking has started, passed or ended.
+const CANCEL_TOO_LATE: Record<'booking' | 'quote_request', Words> = {
+  booking: {
+    en: 'The booking can no longer be cancelled',
+    ro: 'Programarea nu mai poate fi anulată',
+  },
+  quote_request: {
+    en: 'The request can no longer be cancelled',
+    ro: 'Cererea nu mai poate fi anulată',
+  },
+};
+
+export const cancelRefused = (
+  actor: Pick<Actor, 'language'>,
+  entity: 'booking' | 'quote_request',
+  currentStatus: string,
+) =>
+  refused(
+    entity,
+    currentStatus,
+    entity === 'booking' ? 'cancelled' : 'closed',
+    said(CANCEL_TOO_LATE[entity], actor),
   );
