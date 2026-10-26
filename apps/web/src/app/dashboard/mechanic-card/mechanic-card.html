@@ -122,31 +122,25 @@
       <span>{{ 'garage.mechanicCard.owned.line' | t }}</span>
     </p>
   }
-  @if (invitable()) {
+  @if (invitable() && current()?.invite; as invite) {
     <div #inviteBlock class="invite">
-      @if (current()?.invite; as invite) {
-        <p>{{ inviteLine(invite) }}</p>
-        <div class="invite-actions">
-          <button hlmBtn variant="secondary" type="button" [disabled]="!!inviting()" [attr.aria-busy]="inviting() === 'resend' || null" (click)="resend(invite.id)">
-            @if (inviting() === 'resend') {
-              <span class="spinner" aria-hidden="true"></span>
-              <span class="sr-only">{{ 'shell.form.sending' | t }}</span>
-            }
-            {{ 'garage.mechanicCard.invite.resend' | t }}
-          </button>
-          <button hlmBtn variant="ghost" type="button" [disabled]="!!inviting()" [attr.aria-busy]="inviting() === 'revoke' || null" (click)="revoke(invite.id)">
-            @if (inviting() === 'revoke') {
-              <span class="spinner" aria-hidden="true"></span>
-              <span class="sr-only">{{ 'shell.form.sending' | t }}</span>
-            }
-            {{ 'garage.mechanicCard.invite.cancel' | t }}
-          </button>
-        </div>
-      } @else {
-        <button hlmBtn variant="secondary" type="button" (click)="openInvite()">
-          {{ 'garage.mechanicCard.invite.button' | t }}
+      <p>{{ inviteLine(invite) }}</p>
+      <div class="invite-actions">
+        <button hlmBtn variant="secondary" type="button" [disabled]="!!inviting()" [attr.aria-busy]="inviting() === 'resend' || null" (click)="resend(invite.id)">
+          @if (inviting() === 'resend') {
+            <span class="spinner" aria-hidden="true"></span>
+            <span class="sr-only">{{ 'shell.form.sending' | t }}</span>
+          }
+          {{ 'garage.mechanicCard.invite.resend' | t }}
         </button>
-      }
+        <button hlmBtn variant="ghost" type="button" [disabled]="!!inviting()" [attr.aria-busy]="inviting() === 'revoke' || null" (click)="revoke(invite.id)">
+          @if (inviting() === 'revoke') {
+            <span class="spinner" aria-hidden="true"></span>
+            <span class="sr-only">{{ 'shell.form.sending' | t }}</span>
+          }
+          {{ 'garage.mechanicCard.invite.cancel' | t }}
+        </button>
+      </div>
     </div>
   }
   <mf-task-error [save]="save" />
@@ -154,6 +148,11 @@
     @if (card && !card.isOwner) {
       <button hlmBtn variant="ghost" type="button" class="remove" (click)="remove()">
         {{ 'garage.mechanicCard.remove.button' | t }}
+      </button>
+    }
+    @if (invitable() && !current()?.invite) {
+      <button #inviteButton hlmBtn variant="secondary" type="button" class="invite-button" (click)="openInvite()">
+        {{ 'garage.mechanicCard.invite.button' | t }}
       </button>
     }
     <button hlmBtn type="submit" class="submit" [mfTaskSubmit]="save">{{ 'garage.mechanicCard.save' | t }}</button>

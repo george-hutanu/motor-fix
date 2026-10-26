@@ -181,6 +181,8 @@ export class MechanicCard {
   protected readonly inviting = signal<'resend' | 'revoke' | null>(null);
   private readonly inviteBlock =
     viewChild<ElementRef<HTMLElement>>('inviteBlock');
+  private readonly inviteButton =
+    viewChild<ElementRef<HTMLButtonElement>>('inviteButton');
   protected readonly garageId = this.task.data.garageId;
   // The schedule is read only once its tab is opened: a card edit alone
   // never waits on it.
@@ -361,7 +363,7 @@ export class MechanicCard {
   // One invite action at a time; whatever it answers, the card reads again,
   // since a refusal means the invite changed elsewhere. The focus then goes
   // to the invite block's first button, enabled again: "Retrimite" while an
-  // invite is open, "Invită" once it is gone.
+  // invite is open, else "Invită" beside "Salvează" once it is gone.
   private async answer(
     action: 'resend' | 'revoke',
     act: () => Promise<unknown>,
@@ -383,9 +385,10 @@ export class MechanicCard {
       this.inviting.set(null);
       afterNextRender(
         () =>
-          this.inviteBlock()
-            ?.nativeElement.querySelector<HTMLButtonElement>('button')
-            ?.focus(),
+          (
+            this.inviteBlock()?.nativeElement.querySelector('button') ??
+            this.inviteButton()?.nativeElement
+          )?.focus(),
         { injector: this.injector },
       );
     }

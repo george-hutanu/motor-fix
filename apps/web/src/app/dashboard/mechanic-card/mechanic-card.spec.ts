@@ -616,6 +616,14 @@ describe('the card dialog, inviting the mechanic', () => {
     expect(button('Invită')).toBeDefined();
   });
 
+  it('puts Invită in the footer, just before Salvează', async () => {
+    await open(card());
+
+    const invite = button('Invită');
+    expect(invite?.closest('.actions')).not.toBeNull();
+    expect(invite?.nextElementSibling).toBe(button('Salvează'));
+  });
+
   it.each([
     ['a new card', undefined],
     ['a card with an account', card({ hasAccount: true })],

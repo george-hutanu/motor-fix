@@ -123,8 +123,12 @@ p {
 .actions button {
   white-space: normal;
 }
-.submit {
+.submit,
+.invite-button {
   margin-inline-start: auto;
+}
+.invite-button + .submit {
+  margin-inline-start: 0;
 }
 .remove {
   color: var(--mf-red-ink);
