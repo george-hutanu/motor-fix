@@ -1727,3 +1727,357 @@ describe('a refusal names its cause', () => {
     );
   });
 });
+
+// The first day from three days out on the UTC weekday `weekday` (0 Sunday)
+// whose own day and each of `clear` days after it no public holiday closes.
+async function nextOn(weekday: number, clear: number[] = []) {
+  let day = addDays(localDay(new Date()), 3);
+  for (;;) {
+    if (new Date(day).getUTCDay() === weekday) {
+      const days = [0, ...clear].map((n) => addDays(day, n));
+      const closed = await Promise.all(days.map(holiday));
+      if (closed.every((row) => !row)) return day;
+    }
+    day = addDays(day, 1);
+  }
+}
+
+// The last Sunday of `month` (1 to 12) from three days out on.
+function lastSunday(month: number) {
+  const soon = addDays(localDay(new Date()), 3);
+  for (let year = Number(soon.slice(0, 4)); ; year++) {
+    const end = new Date(Date.UTC(year, month, 0));
+    const day = addDays(end.toISOString().slice(0, 10), -end.getUTCDay());
+    if (day >= soon) return day;
+  }
+}
+
+const segmentsOf = async (bookingId: string) =>
+  (
+    await prisma.bookingSegment.findMany({
+      orderBy: { startsAt: 'asc' },
+      where: { bookingId },
+    })
+  ).map(({ endsAt, lift, mechanicId, startsAt }) => ({
+    endsAt,
+    lift,
+    mechanicId,
+    startsAt,
+  }));
+
+const span = (day: string, from: number, to: number) => ({
+  endsAt: atLocal(day, to),
+  startsAt: atLocal(day, from),
+});
+
+// @traces 150-FR-003
+describe('a job longer than its working stretch', () => {
+  const WEEKDAYS_8_16 = Object.fromEntries(
+    ['mon', 'tue', 'wed', 'thu', 'fri'].map((d) => [d, [['08:00', '16:00']]]),
+  );
+
+  // A team whose garage opens 08:00 to 17:00 every day, its mechanic Hand
+  // working 08:00 to 16:00 on weekdays, and a booking of `minutes` at `at`.
+  async function long(at: Date, minutes: number) {
+    const t = await team('Atelier Dinamo');
+    await lifts(t.garage.id, 2);
+    await prisma.garage.update({
+      data: { hours: everyDay([['08:00', '17:00']]) },
+      where: { id: t.garage.id },
+    });
+    await setHours(t.plainMechanic.id, WEEKDAYS_8_16);
+    const { booking } = await accepted(t, at);
+    await prisma.booking.update({
+      data: { durationMinutes: minutes },
+      where: { id: booking.id },
+    });
+    return { booking, t };
+  }
+
+  it('fills the day and goes on the next morning, on the same mechanic and lift', async () => {
+    const monday = await nextOn(1, [1]);
+    const { booking, t } = await long(atLocal(monday, 8), 720);
+
+    const res = await confirm(booking.id, owner(t), {
+      lift: 2,
+      mechanicId: t.plainMechanic.id,
+    });
+
+    expect(res.status).toBe(200);
+    const on = { lift: 2, mechanicId: t.plainMechanic.id };
+    expect(await segmentsOf(booking.id)).toEqual([
+      { ...on, ...span(monday, 8, 16) },
+      { ...on, ...span(addDays(monday, 1), 8, 12) },
+    ]);
+    expect(
+      (await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } }))
+        .durationMinutes,
+    ).toBe(720);
+  });
+
+  it('skips a day off of the mechanic', async () => {
+    const monday = await nextOn(1, [2]);
+    const { booking, t } = await long(atLocal(monday, 8), 720);
+    const tuesday = new Date(`${addDays(monday, 1)}T00:00:00Z`);
+    await prisma.mechanicDayOff.create({
+      data: {
+        createdBy: t.owner,
+        firstDay: tuesday,
+        lastDay: tuesday,
+        mechanicId: t.plainMechanic.id,
+      },
+    });
+
+    expect(
+      (await confirm(booking.id, owner(t), { mechanicId: t.plainMechanic.id }))
+        .status,
+    ).toBe(200);
+    expect(
+      (await segmentsOf(booking.id)).map(({ startsAt }) => startsAt),
+    ).toEqual([atLocal(monday, 8), atLocal(addDays(monday, 2), 8)]);
+  });
+
+  it('skips a weekend she does not work', async () => {
+    const friday = await nextOn(5, [3]);
+    const { booking, t } = await long(atLocal(friday, 8), 720);
+
+    expect(
+      (await confirm(booking.id, owner(t), { mechanicId: t.plainMechanic.id }))
+        .status,
+    ).toBe(200);
+    expect((await segmentsOf(booking.id))[1]).toMatchObject(
+      span(addDays(friday, 3), 8, 12),
+    );
+  });
+
+  it('refuses a job shorter than her stretch that runs past its end', async () => {
+    const { booking, t } = await long(atLocal(DAY, 15), 120);
+
+    expect(
+      await refusedIn(t, booking.id, { mechanicId: t.plainMechanic.id }, 'en'),
+    ).toEqual({
+      code: 'mechanic_unavailable',
+      message: 'Hand works until 16:00 that day',
+      reason: 'ends_early',
+    });
+    expect(
+      await prisma.bookingSegment.count({ where: { bookingId: booking.id } }),
+    ).toBe(0);
+  });
+
+  it('goes on after the lunch break of a two-interval day with the team off', async () => {
+    const t = await team('Atelier Dinamo');
+    await switched(t.garage.id, 'team_mechanics', false);
+    await prisma.garage.update({
+      data: {
+        hours: everyDay([
+          ['08:00', '12:00'],
+          ['13:00', '17:00'],
+        ]),
+      },
+      where: { id: t.garage.id },
+    });
+    const { booking } = await accepted(t);
+    await prisma.booking.update({
+      data: { durationMinutes: 300 },
+      where: { id: booking.id },
+    });
+
+    expect((await confirm(booking.id, owner(t), {})).status).toBe(200);
+    const none = { lift: null, mechanicId: null };
+    expect(await segmentsOf(booking.id)).toEqual([
+      { ...none, ...span(DAY, 10, 12) },
+      { ...none, ...span(DAY, 13, 16) },
+    ]);
+  });
+
+  it('refuses a busy lift on a later day, naming the weekday and the car', async () => {
+    const tuesday = await nextOn(2, [1]);
+    const wednesday = addDays(tuesday, 1);
+    const { booking, t } = await long(atLocal(tuesday, 8), 720);
+    await world.booked(
+      t.garage.id,
+      atLocal(wednesday, 8).toISOString(),
+      'confirmed',
+      {
+        lift: 1,
+      },
+    );
+    const before = await snapshot(booking.id);
+    const body = { lift: 1, mechanicId: t.plainMechanic.id };
+
+    expect(await refusedIn(t, booking.id, body, 'ro')).toEqual({
+      code: 'lift_busy',
+      message: 'Elevatorul 1 e ocupat miercuri 08:00–09:30 (Mini Cooper S)',
+    });
+    expect(await refusedIn(t, booking.id, body, 'en')).toEqual({
+      code: 'lift_busy',
+      message: 'Lift 1 is busy Wednesday 08:00–09:30 (Mini Cooper S)',
+    });
+    expect(await snapshot(booking.id)).toEqual(before);
+  });
+
+  it.each([
+    ['March', 3, 1, 240, 6],
+    ['October', 10, 0, 540, 8],
+  ] as const)(
+    'counts real minutes across the %s clock change',
+    async (_, month, from, minutes, to) => {
+      const sunday = lastSunday(month);
+      const t = await team('Atelier Dinamo');
+      await switched(t.garage.id, 'team_mechanics', false);
+      await prisma.garage.update({
+        data: { hours: { sun: [['00:00', '08:00']] } },
+        where: { id: t.garage.id },
+      });
+      const { booking } = await accepted(t, atLocal(sunday, from));
+      await prisma.booking.update({
+        data: { durationMinutes: minutes },
+        where: { id: booking.id },
+      });
+
+      expect((await confirm(booking.id, owner(t), {})).status).toBe(200);
+      const [segment, ...rest] = await segmentsOf(booking.id);
+      expect(rest).toEqual([]);
+      expect(segment).toMatchObject(span(sunday, from, to));
+      expect(segment.endsAt.getTime() - segment.startsAt.getTime()).toBe(
+        minutes * MINUTE,
+      );
+    },
+  );
+
+  it('refuses a job its minutes cannot fill within thirty days', async () => {
+    const { booking, t } = await long(TEN, 31 * 8 * 60);
+
+    expect(
+      await refusedIn(t, booking.id, { mechanicId: t.plainMechanic.id }, 'en'),
+    ).toMatchObject({ code: 'outside_hours', reason: 'outside_opening' });
+    expect(
+      await prisma.bookingSegment.count({ where: { bookingId: booking.id } }),
+    ).toBe(0);
+  });
+
+  it.each([
+    ['on', true],
+    ['off', false],
+  ] as const)(
+    'places a garage with no hours set as one span, the team %s',
+    async (_, teamOn) => {
+      const t = await team('Atelier Dinamo');
+      if (!teamOn) await switched(t.garage.id, 'team_mechanics', false);
+      await prisma.garage.update({
+        data: { hours: {} },
+        where: { id: t.garage.id },
+      });
+      await setHours(t.plainMechanic.id, null);
+      const { booking } = await accepted(t);
+      await prisma.booking.update({
+        data: { durationMinutes: 720 },
+        where: { id: booking.id },
+      });
+      const body = teamOn ? { mechanicId: t.plainMechanic.id } : {};
+
+      expect((await confirm(booking.id, owner(t), body)).status).toBe(200);
+      expect(await segmentsOf(booking.id)).toEqual([
+        expect.objectContaining({
+          endsAt: new Date(TEN.getTime() + 720 * MINUTE),
+          startsAt: TEN,
+        }),
+      ]);
+    },
+  );
+});
+
+// @traces 150-FR-007
+describe('a lift the jobs ask for', () => {
+  // Adds to the booking's quote one included job per flag, done on a lift or not.
+  async function jobs(bookingId: string, needsLift: boolean[]) {
+    const booking = await prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+    });
+    for (const [n, flag] of needsLift.entries()) {
+      const type = await prisma.jobType.create({
+        data: {
+          key: `job-${randomUUID()}`,
+          nameEn: 'Job',
+          nameRo: 'Lucrare',
+          needsLift: flag,
+          status: 'approved',
+        },
+      });
+      const asked = await prisma.requestJob.create({
+        data: {
+          jobTypeId: type.id,
+          position: n + 1,
+          requestId: booking.requestId,
+        },
+      });
+      await prisma.quoteJob.create({
+        data: {
+          included: true,
+          quoteId: booking.quoteId,
+          requestJobId: asked.id,
+        },
+      });
+    }
+  }
+  const options = async (t: Team, bookingId: string) =>
+    (await get(`/bookings/${bookingId}/confirm-options`, owner(t))).body;
+
+  it('says no lift for a diagnosis alone', async () => {
+    const t = await team('Atelier Dinamo');
+    const { booking } = await accepted(t);
+    await jobs(booking.id, [false]);
+
+    expect(await options(t, booking.id)).toMatchObject({ needsLift: false });
+  });
+
+  it('asks for a lift when any job needs one', async () => {
+    const t = await team('Atelier Dinamo');
+    const { booking } = await accepted(t);
+    await jobs(booking.id, [false, true]);
+
+    expect(await options(t, booking.id)).toMatchObject({ needsLift: true });
+  });
+
+  it('still confirms such a booking with no lift, its segments carrying none', async () => {
+    const t = await team('Atelier Dinamo');
+    await lifts(t.garage.id, 2);
+    const { booking } = await accepted(t);
+    await jobs(booking.id, [true]);
+
+    expect(
+      (await confirm(booking.id, owner(t), { mechanicId: t.plainMechanic.id }))
+        .status,
+    ).toBe(200);
+    expect(
+      (await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } }))
+        .lift,
+    ).toBeNull();
+    expect(await segmentsOf(booking.id)).toEqual([
+      expect.objectContaining({ lift: null }),
+    ]);
+  });
+
+  it('offers no lift and refuses one while the lift schedule is off', async () => {
+    const t = await team('Atelier Dinamo');
+    await lifts(t.garage.id, 2);
+    await switched(t.garage.id, 'lift_schedule', false);
+    const { booking } = await accepted(t);
+    await jobs(booking.id, [true]);
+
+    expect(await options(t, booking.id)).toMatchObject({
+      liftCount: 0,
+      needsLift: true,
+    });
+    const res = await confirm(booking.id, owner(t), {
+      lift: 1,
+      mechanicId: t.plainMechanic.id,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ code: 'validation_failed' });
+    expect(
+      await prisma.bookingSegment.count({ where: { bookingId: booking.id } }),
+    ).toBe(0);
+  });
+});

@@ -29,6 +29,7 @@ beforeEach(async () => {
 const place = (
   client: Prisma.TransactionClient,
   extra: {
+    durationMinutes?: number;
     lift?: number | null;
     mechanicId?: string | null;
     startsAt?: Date;
@@ -163,4 +164,55 @@ describe('placing a booking on PostgreSQL', () => {
       expect(await prisma.bookingSegment.count()).toBe(1);
     },
   );
+});
+
+// @traces 150-FR-003
+describe('placing a booking longer than its stretch', () => {
+  const NEXT = '2026-11-13';
+  const weekdays = Object.fromEntries(
+    ['mon', 'tue', 'wed', 'thu', 'fri'].map((day) => [
+      day,
+      [['08:00', '16:00']],
+    ]),
+  );
+  beforeEach(() =>
+    prisma.garage.update({
+      data: { hours: weekdays },
+      where: { id: garageId },
+    }),
+  );
+
+  it('returns every segment on the same mechanic and lift', async () => {
+    const segments = await prisma.$transaction((tx) =>
+      place(tx, { durationMinutes: 720, lift: 2, startsAt: at(8) }),
+    );
+
+    expect(segments).toEqual([
+      { endsAt: at(16), lift: 2, mechanicId, startsAt: at(8) },
+      {
+        endsAt: atLocal(NEXT, 12),
+        lift: 2,
+        mechanicId,
+        startsAt: atLocal(NEXT, 8),
+      },
+    ]);
+  });
+
+  it('refuses a later segment another booking holds, naming its interval', async () => {
+    await world.booked(garageId, atLocal(NEXT, 9).toISOString(), 'confirmed', {
+      lift: 2,
+    });
+
+    expect(
+      await refusal(
+        prisma.$transaction((tx) =>
+          place(tx, { durationMinutes: 720, lift: 2, startsAt: at(8) }),
+        ),
+      ),
+    ).toEqual({
+      code: 'lift_busy',
+      message: 'Elevatorul 2 e ocupat vineri 09:00–10:30 (Mini Cooper S)',
+    });
+    expect(await prisma.bookingSegment.count()).toBe(1);
+  });
 });
