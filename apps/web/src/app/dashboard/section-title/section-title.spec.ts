@@ -91,4 +91,10 @@ describe('a section title on Panou', () => {
 
     expect(phone).toMatch(/h2 \{[^}]*font-size: var\(--mf-size-body\)/);
   });
+
+  it('is as tall as a tap target whether it links or not, so the cards keep one top spacing', () => {
+    const css = readFileSync(join(__dirname, 'section-title.css'), 'utf8');
+
+    expect(css).toMatch(/(^|\n)h2 \{[^}]*min-height: var\(--mf-tap\)/);
+  });
 });
