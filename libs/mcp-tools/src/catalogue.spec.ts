@@ -1,5 +1,10 @@
 import { catalogue } from './catalogue';
-import { caller, context, fixtureTools } from './fixtures.testing';
+import {
+  caller,
+  context,
+  fixtureTools,
+  memoryConfirmations,
+} from './fixtures.testing';
 import { callTool, USER_TEXT_NOTICE, visibleTools } from './registry';
 
 const GARAGE_READS = [
@@ -10,6 +15,9 @@ const GARAGE_READS = [
 ];
 
 const GARAGE_ACTS = ['decline_quote_request'];
+
+// The tool that carries the person's yes to every other act.
+const CONFIRM = 'confirm_action';
 
 // What an assistant must never be able to do for a person.
 const FORBIDDEN = [
@@ -26,12 +34,13 @@ describe('catalogue', () => {
   // @traces 365-FR-007
   // @traces 374-FR-001
   // @traces 345-FR-017
-  it('ships get_my_account, the four garage reads and decline_quote_request, the one act', () => {
+  // @traces 1253-assistant-confirm-FR-004
+  it('ships get_my_account, the four garage reads, decline_quote_request and confirm_action', () => {
     expect(catalogue.map((t) => t.name).sort()).toEqual(
-      ['get_my_account', ...GARAGE_READS, ...GARAGE_ACTS].sort(),
+      ['get_my_account', ...GARAGE_READS, ...GARAGE_ACTS, CONFIRM].sort(),
     );
     for (const tool of catalogue) {
-      const acts = GARAGE_ACTS.includes(tool.name);
+      const acts = [...GARAGE_ACTS, CONFIRM].includes(tool.name);
       expect(tool.acts).toBe(acts);
       expect(tool.annotations).toMatchObject({
         destructiveHint: acts,
@@ -117,4 +126,67 @@ describe('the garage feature switches', () => {
       );
     }
   });
+});
+
+// Valid arguments for each acting tool: a tool added without them fails here.
+const VALID: Record<string, unknown> = {
+  decline_quote_request: {
+    reason: 'fully_booked',
+    requestId: '7a0c1b9e-4f4e-4b8e-9d55-0f1f3c2a9b10',
+  },
+};
+
+const written = async (): Promise<never> => {
+  throw new Error('a first call reached a write');
+};
+
+// @traces 1253-assistant-confirm-FR-001 1253-assistant-confirm-FR-008
+describe('every acting tool', () => {
+  const acting = catalogue.filter((t) => t.acts && t.name !== CONFIRM);
+
+  it.each(acting.map((t) => [t.name, t] as const))(
+    '%s has a preview',
+    (_name, tool) => {
+      expect(tool.preview).toBeDefined();
+    },
+  );
+
+  it.each(acting.map((t) => [t.name, t] as const))(
+    '%s, called once with valid arguments, writes nothing and answers confirmation_required',
+    async (name, tool) => {
+      expect(VALID[name]).toBeDefined();
+      const confirmations = memoryConfirmations();
+      const ctx = context({
+        confirmations,
+        garage: {
+          decline: {
+            preview: async () => ({
+              car: { brand: 'Mini', model: 'Cooper', year: 2019 },
+              driverFirstName: 'Andrei',
+              garageName: 'Atelier',
+              receivedAt: new Date('2026-10-26T10:52:00Z'),
+            }),
+            run: written,
+          },
+        },
+      });
+
+      const result = await callTool(
+        [tool],
+        caller({ roles: [...tool.roles] }),
+        ctx,
+        name,
+        VALID[name],
+      );
+
+      expect(result.isError).toBeFalsy();
+      expect(result.structuredContent).toMatchObject({
+        status: 'confirmation_required',
+        tool: name,
+      });
+      expect([...confirmations.rows.values()].map((r) => r.status)).toEqual([
+        'waiting',
+      ]);
+    },
+  );
 });

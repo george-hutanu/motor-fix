@@ -28,6 +28,7 @@ export { assistantBroker } from './auth/assistant/assistant.service';
 export {
   AssistantConfirmations,
   type Decision as ConfirmationDecision,
+  judge as judgeConfirmation,
   type Tx,
   voidAssistantConfirmations,
 } from './auth/assistant-confirmations/assistant-confirmations';
@@ -47,6 +48,7 @@ export { PhoneSignInModule } from './auth/phone-sign-in/phone-sign-in.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
 export { createPrisma, PRISMA } from './auth/prisma';
 export { signInLimitConfig } from './auth/qa-sign-in-limit';
+export { local as bucharestTime } from './bucharest';
 export { WarmModule } from './cache/warm/warm.module';
 export { warmCache } from './cache/warm-up/warm-up';
 export { CAR_ACCOUNT_DELETED_CONSUMER } from './cars/account-deleted/account-deleted';

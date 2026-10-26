@@ -1,10 +1,18 @@
 // @traces 345-FR-017
+import type { GarageRecipientDto } from '@motor-fix/contracts';
+import type { DeclinePreview } from '@motor-fix/domain';
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 
 import { declineQuoteRequest } from './decline-quote-request';
 import { catalogue } from '../../catalogue';
-import { caller, connect, context } from '../../fixtures.testing';
+import {
+  caller,
+  connect,
+  context,
+  memoryConfirmations,
+} from '../../fixtures.testing';
 import { callTool, type Scope, visibleTools } from '../../registry';
+import { confirmAction } from '../confirm-action/confirm-action';
 
 const REQUEST = '7a0c1b9e-4f4e-4b8e-9d55-0f1f3c2a9b10';
 
@@ -16,30 +24,47 @@ const DECLINED = {
   status: 'declined',
 };
 
-const declineOf = (answer: () => Promise<unknown> = async () => DECLINED) =>
-  jest.fn(answer);
+const PREVIEW: DeclinePreview = {
+  car: { brand: 'Mini', model: 'Cooper S', year: 2019 },
+  driverFirstName: 'Andrei',
+  garageName: 'Atelier Dinamo',
+  // 13:52 in Bucharest (UTC+2 once summer time ends on 25 October).
+  receivedAt: new Date('2026-10-26T11:52:00Z'),
+};
+
+const declineOf = (
+  answer: () => Promise<GarageRecipientDto> = async () =>
+    DECLINED as GarageRecipientDto,
+  preview: () => Promise<DeclinePreview> = async () => PREVIEW,
+) => ({ preview: jest.fn(preview), run: jest.fn(answer) });
+
+type Decline = ReturnType<typeof declineOf>;
 
 const call = (
   args: unknown,
   {
+    confirmations = memoryConfirmations(),
     decline = declineOf(),
     language = 'ro',
     maintenance = false,
     scopes = ['motorfix.read', 'motorfix.act'],
   }: {
-    decline?: jest.Mock;
+    confirmations?: ReturnType<typeof memoryConfirmations>;
+    decline?: Decline;
     language?: 'ro' | 'en';
     maintenance?: boolean;
     scopes?: Scope[];
   } = {},
 ) =>
   callTool(
-    [declineQuoteRequest],
+    [declineQuoteRequest, confirmAction],
     caller({ language, roles: ['garage'] }, scopes),
-    context({ garage: { decline: { decline } }, maintenance }),
+    context({ confirmations, garage: { decline }, maintenance }),
     'decline_quote_request',
     args,
   );
+
+const ARGS = { reason: 'fully_booked', requestId: REQUEST };
 
 describe('decline_quote_request', () => {
   it('is in the catalogue as an acting, destructive, non-idempotent tool for garage.requests', () => {
@@ -83,16 +108,85 @@ describe('decline_quote_request', () => {
     );
   });
 
-  it('declines as the assistant, for the grant, with the reason', async () => {
+  // @traces 1253-assistant-confirm-FR-001 1253-assistant-confirm-FR-008
+  it('first answers confirmation_required, stores one confirmation and declines nothing', async () => {
     const decline = declineOf();
+    const confirmations = memoryConfirmations();
 
-    const result = await call(
-      { reason: 'fully_booked', requestId: REQUEST },
-      { decline },
+    const result = await call(ARGS, { confirmations, decline });
+
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      confirmationId: expect.any(String),
+      expiresAt: expect.any(String),
+      status: 'confirmation_required',
+      tool: 'decline_quote_request',
+    });
+    expect(decline.run).not.toHaveBeenCalled();
+    expect(decline.preview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assistantGrantId: 'grant-1',
+        via: 'assistant',
+      }),
+      REQUEST,
+    );
+    expect([...confirmations.rows.values()]).toEqual([
+      expect.objectContaining({
+        accountId: 'account-1',
+        grantId: 'grant-1',
+        status: 'waiting',
+        tool: 'decline_quote_request',
+      }),
+    ]);
+  });
+
+  // @traces 1253-assistant-confirm-FR-001 1253-assistant-confirm-FR-008
+  it.each([
+    [
+      'ro',
+      'Service-ul Atelier Dinamo refuză cererea lui Andrei pentru Mini Cooper S (2019), primită pe 26.10.2026 la 13:52, cu motivul: Suntem ocupați complet.',
+    ],
+    [
+      'en',
+      "Atelier Dinamo declines Andrei's request for a Mini Cooper S (2019), received on 26.10.2026 at 13:52, with the reason: We are fully booked.",
+    ],
+  ] as const)('summarises the decline in %s', async (language, summary) => {
+    const result = await call(ARGS, { language });
+
+    expect((result.structuredContent as { summary: string }).summary).toBe(
+      summary,
+    );
+  });
+
+  // @traces 1253-assistant-confirm-FR-001
+  it('never names a phone or a plate in the summary', async () => {
+    const result = await call(ARGS);
+    const summary = (result.structuredContent as { summary: string }).summary;
+    expect(summary).not.toMatch(
+      /\+?\d{9,}|[A-Z]{1,2}[- ]?\d{2,3}[- ]?[A-Z]{3}/,
+    );
+  });
+
+  // @traces 1253-assistant-confirm-FR-004
+  it('declines at the yes, as the assistant, for the grant, with the reason, inside the confirmation', async () => {
+    const decline = declineOf();
+    const confirmations = memoryConfirmations();
+    const first = await call(ARGS, { confirmations, decline });
+    const { confirmationId } = first.structuredContent as {
+      confirmationId: string;
+    };
+
+    const result = await callTool(
+      [declineQuoteRequest, confirmAction],
+      caller({ roles: ['garage'] }),
+      context({ confirmations, garage: { decline } }),
+      'confirm_action',
+      { arguments: ARGS, confirmationId, confirmed: true },
     );
 
     expect(result.isError).toBeFalsy();
-    expect(decline).toHaveBeenCalledWith(
+    expect(decline.run).toHaveBeenCalledWith(
+      confirmations.tx,
       expect.objectContaining({
         assistantGrantId: 'grant-1',
         role: 'garage',
@@ -111,96 +205,129 @@ describe('decline_quote_request', () => {
       'a request id that is not a uuid',
       { reason: 'fully_booked', requestId: 'req-1' },
     ],
-  ])('refuses %s with validation and declines nothing', async (_, args) => {
+  ])('refuses %s with validation and stores nothing', async (_, args) => {
     const decline = declineOf();
+    const confirmations = memoryConfirmations();
 
-    const result = await call(args, { decline });
+    const result = await call(args, { confirmations, decline });
 
     expect(result.structuredContent).toMatchObject({ code: 'validation' });
-    expect(decline).not.toHaveBeenCalled();
+    expect(decline.preview).not.toHaveBeenCalled();
+    expect(confirmations.rows.size).toBe(0);
   });
 
-  it('refuses a read-only grant and declines nothing', async () => {
+  it('refuses a read-only grant and stores nothing', async () => {
     const decline = declineOf();
+    const confirmations = memoryConfirmations();
 
-    const result = await call(
-      { reason: 'fully_booked', requestId: REQUEST },
-      { decline, scopes: ['motorfix.read'] },
-    );
+    const result = await call(ARGS, {
+      confirmations,
+      decline,
+      scopes: ['motorfix.read'],
+    });
 
     expect(result.structuredContent).toMatchObject({
       code: 'assistant_act_off',
     });
-    expect(decline).not.toHaveBeenCalled();
+    expect(decline.preview).not.toHaveBeenCalled();
+    expect(confirmations.rows.size).toBe(0);
   });
 
-  it('refuses under maintenance and declines nothing', async () => {
+  it('refuses under maintenance and stores nothing', async () => {
     const decline = declineOf();
+    const confirmations = memoryConfirmations();
 
-    const result = await call(
-      { reason: 'fully_booked', requestId: REQUEST },
-      { decline, maintenance: true },
-    );
+    const result = await call(ARGS, {
+      confirmations,
+      decline,
+      maintenance: true,
+    });
 
     expect(result.structuredContent).toMatchObject({ code: 'maintenance' });
-    expect(decline).not.toHaveBeenCalled();
+    expect(decline.preview).not.toHaveBeenCalled();
+    expect(confirmations.rows.size).toBe(0);
   });
 
+  // @traces 1253-assistant-confirm-FR-002
   it.each([
     ['already_answered', 'Someone has already answered this request.'],
     ['request_not_open', 'The request is no longer open.'],
   ])(
-    'turns a 409 %s into a tool error with its own message',
+    'answers a 409 %s from the preview with its own message and stores no confirmation',
     async (code, message) => {
-      const decline = declineOf(async () => {
+      const confirmations = memoryConfirmations();
+      const decline = declineOf(undefined, async () => {
         throw new ConflictException({ code, message: 'x' });
       });
 
-      const result = await call(
-        { reason: 'fully_booked', requestId: REQUEST },
-        { decline, language: 'en' },
-      );
+      const result = await call(ARGS, {
+        confirmations,
+        decline,
+        language: 'en',
+      });
 
       expect(result.isError).toBe(true);
       expect(result.structuredContent).toEqual({ code, message });
+      expect(confirmations.rows.size).toBe(0);
     },
   );
 
-  it('turns a 403 into forbidden in Romanian', async () => {
-    const decline = declineOf(async () => {
+  // @traces 1253-assistant-confirm-FR-002
+  it('answers a 403 from the preview as forbidden in Romanian', async () => {
+    const confirmations = memoryConfirmations();
+    const decline = declineOf(undefined, async () => {
       throw new ForbiddenException({
         code: 'forbidden',
         message: 'Nu ai dreptul să răspunzi la cereri',
       });
     });
 
-    const result = await call(
-      { reason: 'fully_booked', requestId: REQUEST },
-      { decline },
-    );
+    const result = await call(ARGS, { confirmations, decline });
 
     expect(result.isError).toBe(true);
     expect(result.structuredContent).toMatchObject({ code: 'forbidden' });
     expect((result.structuredContent as { message: string }).message).toMatch(
       /\S/,
     );
+    expect(confirmations.rows.size).toBe(0);
   });
 });
 
-describe('decline_quote_request output schema', () => {
-  it('declares one its answer fits, as the client checks it', async () => {
+describe('decline_quote_request over the protocol', () => {
+  // @traces 1253-assistant-confirm-FR-008
+  it('lists no output schema, its first answer being the confirmation', async () => {
     const client = await connect(
-      [declineQuoteRequest],
+      [declineQuoteRequest, confirmAction],
       caller({ roles: ['garage'] }),
-      context({ garage: { decline: { decline: declineOf() as jest.Mock } } }),
+      context({ garage: { decline: declineOf() } }),
     );
     const { tools } = await client.listTools();
-    expect(tools[0].outputSchema).toBeDefined();
-    expect(tools[0].annotations).toMatchObject({ destructiveHint: true });
+    const listed = tools.find((t) => t.name === 'decline_quote_request');
+    expect(listed?.outputSchema).toBeUndefined();
+    expect(listed?.annotations).toMatchObject({ destructiveHint: true });
     const answer = await client.callTool({
       arguments: { reason: 'need_to_see_car', requestId: REQUEST },
       name: 'decline_quote_request',
     });
     expect(answer.isError).toBeFalsy();
+    expect(answer.structuredContent).toMatchObject({
+      status: 'confirmation_required',
+    });
+  });
+
+  it('keeps a refusal in structured content', async () => {
+    const client = await connect(
+      [declineQuoteRequest, confirmAction],
+      caller({ roles: ['garage'] }, ['motorfix.read', 'motorfix.act']),
+      context({ maintenance: true }),
+    );
+    const answer = await client.callTool({
+      arguments: ARGS,
+      name: 'decline_quote_request',
+    });
+    expect(answer).toMatchObject({
+      isError: true,
+      structuredContent: { code: 'maintenance' },
+    });
   });
 });

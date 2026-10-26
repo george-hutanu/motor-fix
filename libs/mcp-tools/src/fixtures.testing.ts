@@ -1,7 +1,18 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import type { LoadedAccount, Role } from '@motor-fix/domain';
+import {
+  ElicitRequestSchema,
+  type ElicitResult,
+} from '@modelcontextprotocol/sdk/types.js';
+import {
+  type ConfirmationDecision,
+  judgeConfirmation,
+  type LoadedAccount,
+  type Role,
+  type Tx,
+} from '@motor-fix/domain';
+import { HttpException } from '@nestjs/common';
 import { z } from 'zod';
 
 import {
@@ -17,6 +28,7 @@ import { userText } from './user-text';
 
 interface AccountShape {
   roles: Role[];
+  canAct?: boolean;
   garageId?: string;
   mechanic?: { canAnswerQuotes?: boolean };
   language?: 'ro' | 'en';
@@ -40,6 +52,7 @@ export function account(shape: AccountShape): LoadedAccount {
       }
     : null;
   return {
+    assistantCanAct: shape.canAct ?? true,
     id: 'account-1',
     language: shape.language ?? 'ro',
     mechanic,
@@ -67,8 +80,88 @@ const unused = async (): Promise<never> => {
   throw new Error('not stubbed in this spec');
 };
 
+interface MemoryRow {
+  accountId: string;
+  argsHash: string;
+  expiresAt: Date;
+  grantId: string;
+  outcome: unknown;
+  status: 'waiting' | 'done' | 'failed' | 'refused' | 'expired' | 'void';
+  tool: string;
+}
+
+const codeOf = (error: unknown) =>
+  (error instanceof HttpException &&
+    (error.getResponse() as { code?: string }).code) ||
+  'internal_error';
+
+// AssistantConfirmations in memory, judged as the real one judges: `tx` is
+// the transaction handed to every run, `rows` what is stored.
+export function memoryConfirmations(now: () => Date = () => new Date()) {
+  const rows = new Map<string, MemoryRow>();
+  const tx = { memory: true } as unknown as Tx;
+  return {
+    async decide(
+      input: {
+        argsHash: string;
+        confirmed: boolean;
+        grantId: string;
+        id: string;
+      },
+      run: (tx: Tx) => Promise<unknown>,
+    ): Promise<ConfirmationDecision> {
+      const row = rows.get(input.id);
+      const judged = judgeConfirmation(row ?? null, input, now());
+      if (judged.kind === 'answer') return judged.decision;
+      if (!row) throw new Error('unreachable: a judged row exists');
+      if (judged.kind === 'close') {
+        row.status = judged.status;
+        return judged.decision;
+      }
+      try {
+        const output = (await run(tx)) ?? null;
+        Object.assign(row, { outcome: { output }, status: 'done' });
+        return { output, replayed: false, status: 'done' };
+      } catch (error) {
+        Object.assign(row, {
+          outcome: { code: codeOf(error) },
+          status: 'failed',
+        });
+        throw error;
+      }
+    },
+    async open(input: {
+      accountId: string;
+      argsHash: string;
+      grantId: string;
+      tool: string;
+    }) {
+      const id = `00000000-0000-4000-8000-${String(rows.size + 1).padStart(12, '0')}`;
+      const expiresAt = new Date(now().getTime() + 5 * 60_000);
+      rows.set(id, { ...input, expiresAt, outcome: null, status: 'waiting' });
+      return { expiresAt, id };
+    },
+    rows,
+    async toolOf(id: string, grantId: string) {
+      const row = rows.get(id);
+      return row && row.grantId === grantId ? row.tool : null;
+    },
+    tx,
+    async voidForAccount(accountId: string) {
+      let voided = 0;
+      for (const row of rows.values())
+        if (row.accountId === accountId && row.status === 'waiting') {
+          row.status = 'void';
+          voided++;
+        }
+      return voided;
+    },
+  };
+}
+
 export function context(
   overrides: Partial<{
+    confirmations: ToolContext['confirmations'];
     features: Record<string, boolean>;
     maintenance: boolean;
     account: LoadedAccount;
@@ -80,10 +173,11 @@ export function context(
       activeAccount: async () =>
         overrides.account ?? account({ roles: ['driver'] }),
     },
+    confirmations: overrides.confirmations ?? memoryConfirmations(),
     featureOn: async (_garageId, key) => overrides.features?.[key] ?? true,
     garage: {
       daySheet: { get: unused },
-      decline: { decline: unused },
+      decline: { preview: unused, run: unused },
       figures: { get: unused },
       requests: { inbox: unused },
       schedule: { list: unused },
@@ -187,6 +281,11 @@ export async function connect(
   who: Caller,
   ctx: ToolContext,
   observe?: CallObserver,
+  // Given, the client declares elicitation and answers each question so.
+  elicit?: (params: {
+    message: string;
+    requestedSchema: unknown;
+  }) => unknown | Promise<unknown>,
 ): Promise<Client> {
   const server = new Server(
     { name: 'motor-fix-test', version: '0.0.0' },
@@ -194,7 +293,18 @@ export async function connect(
   );
   register(server, tools, who, ctx, observe);
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-  const client = new Client({ name: 'test', version: '0.0.0' });
+  const client = new Client(
+    { name: 'test', version: '0.0.0' },
+    { capabilities: elicit ? { elicitation: {} } : {} },
+  );
+  if (elicit)
+    client.setRequestHandler(
+      ElicitRequestSchema,
+      async ({ params }) =>
+        (await elicit(
+          params as { message: string; requestedSchema: unknown },
+        )) as ElicitResult,
+    );
   await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
   return client;
 }

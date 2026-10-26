@@ -68,6 +68,22 @@ const MESSAGES: Record<string, Record<Language, string>> = {
     en: 'Not found.',
     ro: 'Nu a fost găsit.',
   },
+  not_sent_arguments_changed: {
+    en: 'Nothing was sent: the details changed since the person agreed. Ask them again with the new summary.',
+    ro: 'Nu s-a trimis nimic: detaliile s-au schimbat de când persoana a fost de acord. Întreab-o din nou, cu noul rezumat.',
+  },
+  not_sent_expired: {
+    en: 'Nothing was sent: the confirmation expired after 5 minutes. Ask the person again for a new summary.',
+    ro: 'Nu s-a trimis nimic: confirmarea a expirat după 5 minute. Întreabă persoana din nou, cu un rezumat nou.',
+  },
+  not_sent_refused: {
+    en: 'Nothing was sent: the person did not agree. Ask them again if they change their mind.',
+    ro: 'Nu s-a trimis nimic: persoana nu a fost de acord. Întreab-o din nou dacă se răzgândește.',
+  },
+  not_sent_void: {
+    en: 'Nothing was sent: this confirmation was cancelled. Ask the person again for a new summary.',
+    ro: 'Nu s-a trimis nimic: această confirmare a fost anulată. Întreabă persoana din nou, cu un rezumat nou.',
+  },
   request_not_open: {
     en: 'The request is no longer open.',
     ro: 'Cererea nu mai este deschisă.',
@@ -100,11 +116,21 @@ export function refusal(code: string, language: Language): ToolError {
   return { code, message: text(code, language) };
 }
 
+// A refusal known only by its code, such as a failure stored at a
+// confirmation and answered again: worded in the language of this call.
+export class ToolRefusal extends Error {
+  constructor(readonly code: string) {
+    super(code);
+    this.name = 'ToolRefusal';
+  }
+}
+
 // The keys of an exception body a tool's refusal may carry: anything else a
 // use case puts there stays on the server.
 const DETAILS = new Set(['mechanics']);
 
 export function toolError(error: unknown, language: Language): ToolError {
+  if (error instanceof ToolRefusal) return refusal(error.code, language);
   if (error instanceof HttpException) {
     const body = error.getResponse();
     const own =

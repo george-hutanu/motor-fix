@@ -1,5 +1,14 @@
-import { caller, connect, context, fixtureTools } from './fixtures.testing';
-import { callTool, visibleTools } from './registry';
+import { z } from 'zod';
+
+import {
+  caller,
+  connect,
+  context,
+  fixtureTools,
+  memoryConfirmations,
+} from './fixtures.testing';
+import { callTool, defineTool, visibleTools } from './registry';
+import { confirmAction } from './tools/confirm-action/confirm-action';
 
 const names = async (...args: Parameters<typeof visibleTools>) =>
   (await visibleTools(...args)).map((t) => t.name).sort();
@@ -265,5 +274,185 @@ describe('register', () => {
 
     expect(answered.structuredContent).toEqual({ ok: true });
     expect(seen).toEqual(['list_my_cars', 'no_such_tool']);
+  });
+});
+
+// An acting tool with a preview, as every acting tool of the catalogue is.
+function previewed() {
+  const handler = jest.fn(async () => ({ moved: true, secret: 'x' }));
+  const preview = jest.fn(async () => ({ summary: 'Moves the booking.' }));
+  const tool = defineTool({
+    acts: true,
+    annotations: { destructiveHint: true, readOnlyHint: false },
+    description: 'Moves a booking.',
+    handler,
+    inputSchema: { at: z.string() },
+    name: 'move_booking',
+    outputSchema: { moved: z.boolean() },
+    preview,
+    roles: ['driver'],
+  });
+  return { handler, preview, tool };
+}
+
+describe('the confirmation step', () => {
+  // @traces 1253-assistant-confirm-FR-001
+  it('answers an acting tool’s first call with confirmation_required and stores one confirmation', async () => {
+    const { handler, preview, tool } = previewed();
+    const confirmations = memoryConfirmations();
+
+    const result = await callTool(
+      [tool, confirmAction],
+      caller({ roles: ['driver'] }),
+      context({ confirmations }),
+      'move_booking',
+      { at: '10:00', ignored: true },
+    );
+
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      status: 'confirmation_required',
+      summary: 'Moves the booking.',
+      tool: 'move_booking',
+    });
+    expect(preview).toHaveBeenCalledWith(
+      expect.objectContaining({ via: 'assistant' }),
+      { at: '10:00' },
+      expect.anything(),
+    );
+    expect(handler).not.toHaveBeenCalled();
+    expect(confirmations.rows.size).toBe(1);
+  });
+
+  // @traces 1253-assistant-confirm-FR-008
+  it('lists an acting tool with a preview without its output schema, and keeps a read’s', async () => {
+    const { tool } = previewed();
+    const listed = await visibleTools(
+      [tool, confirmAction, fixtureTools[0]],
+      caller({ roles: ['driver'] }),
+      context(),
+    );
+    const byName = Object.fromEntries(listed.map((t) => [t.name, t]));
+    expect(byName['move_booking']?.outputSchema).toBeUndefined();
+    expect(byName['confirm_action']?.outputSchema).toBeUndefined();
+    expect(byName['confirm_action']?.annotations).toEqual({
+      destructiveHint: true,
+      idempotentHint: true,
+      readOnlyHint: false,
+    });
+  });
+
+  // @traces 1253-assistant-confirm-FR-007
+  it('hides every acting tool and refuses it while the account’s switch is off, voiding its confirmations', async () => {
+    const { tool } = previewed();
+    const confirmations = memoryConfirmations();
+    const ctx = context({ confirmations });
+    const opened = await callTool(
+      [tool],
+      caller({ roles: ['driver'] }),
+      ctx,
+      'move_booking',
+      { at: '10:00' },
+    );
+    const { confirmationId } = opened.structuredContent as {
+      confirmationId: string;
+    };
+    const off = caller({ canAct: false, roles: ['driver'] });
+
+    const listed = await visibleTools([tool, ...fixtureTools], off, ctx);
+    const result = await callTool([tool], off, ctx, 'move_booking', {
+      at: '10:00',
+    });
+
+    expect(listed.map((t) => t.name)).not.toContain('move_booking');
+    expect(listed.map((t) => t.name)).not.toContain('book_service');
+    expect(result.structuredContent).toMatchObject({
+      code: 'assistant_act_off',
+    });
+    expect(confirmations.rows.get(confirmationId)?.status).toBe('void');
+  });
+});
+
+describe('the confirmation step over elicitation', () => {
+  const connected = (
+    elicit?: (params: { message: string; requestedSchema: unknown }) => unknown,
+    language: 'ro' | 'en' = 'en',
+  ) => {
+    const parts = previewed();
+    const confirmations = memoryConfirmations();
+    const client = connect(
+      [parts.tool, confirmAction],
+      caller({ language, roles: ['driver'] }),
+      context({ confirmations }),
+      undefined,
+      elicit,
+    );
+    return { ...parts, client, confirmations };
+  };
+
+  // @traces 1253-assistant-confirm-FR-003
+  it('asks the person with the summary and runs the action on yes', async () => {
+    const asked: { message: string; requestedSchema: unknown }[] = [];
+    const { client, confirmations, handler } = connected(async (params) => {
+      asked.push(params);
+      return { action: 'accept', content: { confirm: true } };
+    }, 'ro');
+
+    const answer = await (await client).callTool({
+      arguments: { at: '10:00' },
+      name: 'move_booking',
+    });
+
+    expect(asked).toEqual([
+      expect.objectContaining({
+        message: 'Moves the booking.',
+        requestedSchema: {
+          properties: { confirm: { title: 'Da', type: 'boolean' } },
+          required: ['confirm'],
+          type: 'object',
+        },
+      }),
+    ]);
+    expect(answer.isError).toBeFalsy();
+    expect(answer.structuredContent).toEqual({ moved: true });
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect([...confirmations.rows.values()][0]?.status).toBe('done');
+  });
+
+  // @traces 1253-assistant-confirm-FR-003 1253-assistant-confirm-FR-005
+  it.each([
+    ['a no', { action: 'accept', content: { confirm: false } }],
+    ['a declined question', { action: 'decline' }],
+    ['a cancelled question', { action: 'cancel' }],
+  ])('writes nothing on %s and says nothing was sent', async (_case, reply) => {
+    const { client, confirmations, handler } = connected(async () => reply);
+
+    const answer = await (await client).callTool({
+      arguments: { at: '10:00' },
+      name: 'move_booking',
+    });
+
+    expect(answer.isError).toBeFalsy();
+    expect(answer.structuredContent).toMatchObject({
+      reason: 'refused',
+      status: 'not_sent',
+    });
+    expect(handler).not.toHaveBeenCalled();
+    expect([...confirmations.rows.values()][0]?.status).toBe('refused');
+  });
+
+  // @traces 1253-assistant-confirm-FR-003
+  it('answers confirmation_required to a client that declared no elicitation', async () => {
+    const { client, handler } = connected();
+
+    const answer = await (await client).callTool({
+      arguments: { at: '10:00' },
+      name: 'move_booking',
+    });
+
+    expect(answer.structuredContent).toMatchObject({
+      status: 'confirmation_required',
+    });
+    expect(handler).not.toHaveBeenCalled();
   });
 });

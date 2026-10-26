@@ -208,6 +208,7 @@ describe('the MCP endpoint', () => {
 
     expect(tools.map((t) => t.name).sort()).toEqual(
       [
+        'confirm_action',
         'decline_quote_request',
         'get_my_account',
         ...GARAGE_READS.map(([name]) => name),
