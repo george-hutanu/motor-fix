@@ -1,7 +1,9 @@
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
+  cpSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -24,12 +26,25 @@ const check = (...args: string[]) =>
     maxBuffer: 64 * 1024 * 1024,
   });
 
+let generic: string;
 let dir: string;
 let outside: string;
+
+beforeAll(() => {
+  generic = mkdtempSync(join(tmpdir(), 'model-3d-adv-generic-'));
+  execFileSync(process.execPath, ['scripts/models-3d-generic.ts', generic], {
+    cwd: root,
+  });
+}, 60_000);
+
+afterAll(() => {
+  rmSync(generic, { force: true, recursive: true });
+});
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'model-3d-adv-'));
   outside = mkdtempSync(join(tmpdir(), 'model-3d-out-'));
+  cpSync(generic, dir, { recursive: true });
   for (const [file, bytes] of placeholders()) {
     writeFileSync(join(dir, file), bytes);
   }
@@ -163,11 +178,12 @@ describe('the 3D asset check command, attacked', () => {
 
   // @traces 1241-FR-007
   it('leaves the directory it checked untouched', () => {
-    const before = placeholders().size;
+    const before = readdirSync(dir).sort();
     check(dir);
     const again = check(dir);
 
     expect(again.status).toBe(0);
-    expect(MODEL_3D_FILES).toHaveLength(before);
+    expect(readdirSync(dir).sort()).toEqual(before);
+    expect(before).toHaveLength(MODEL_3D_FILES.length);
   });
 });

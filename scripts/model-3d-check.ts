@@ -5,8 +5,10 @@
 // and none of another; every catalogue row with its file, no file without a
 // row. Prints one `<file>: <fault>` line per fault and exits 1 when any.
 //
-// With no directory it checks the placeholder set the catalogue's keys name
-// today; given the directory of the real files, it checks those.
+// With no directory it checks the licensed models' placeholders and the six
+// generic files scripts/models-3d-generic.ts generates, so a generator or
+// encoder change that moves one byte fails here until the keys follow; given
+// the directory of the real files, it checks those.
 //
 //   node scripts/model-3d-check.ts [dir]
 
@@ -14,6 +16,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
+import { generateGeneric } from './models-3d-generic.ts';
 import {
   checkModels3d,
   placeholders,
@@ -32,7 +35,13 @@ function read(dir: string): Map<string, Uint8Array> {
   );
 }
 
-function main() {
+async function generated(): Promise<Map<string, Uint8Array>> {
+  const files = placeholders();
+  for (const { bytes, name } of await generateGeneric()) files.set(name, bytes);
+  return files;
+}
+
+async function main() {
   const { positionals } = parseArgs({ allowPositionals: true });
   const [dir] = positionals;
   if (
@@ -43,9 +52,11 @@ function main() {
     process.exitCode = 1;
     return;
   }
-  const faults = checkModels3d(dir === undefined ? placeholders() : read(dir));
+  const faults = checkModels3d(
+    dir === undefined ? await generated() : read(dir),
+  );
   for (const line of faults) console.log(line);
   if (faults.length > 0) process.exitCode = 1;
 }
 
-if (process.argv[1]?.endsWith('model-3d-check.ts')) main();
+if (process.argv[1]?.endsWith('model-3d-check.ts')) await main();
