@@ -1026,7 +1026,7 @@ _From 1258-driver-cancel._
 
 _From 1258-driver-cancel._
 
-### 177-FR-011 — On every `review.reported` event, the system MUST send ADMIN_REVIEW_REPORTED (the existing catalogue entry, admin group, muteable) once per event to every active admin account, in the admin's language: for a review "{garage} a raportat o recenzie de {score}: {reason}" / "{garage} reported a {score} review: {reason}", for a reply "{author} a raportat răspunsul lui {garage}: {reason}" / "{author} reported {garage}'s reply: {reason}", for an automatic flag "O recenzie de {score} a fost raportată automat: {reason}" / "A {score} review was flagged automatically: {reason}", by e-mail and push with a link to the admin queue; the event id is the report's, so a redelivered event sends nothing more; admins get no SMS or WhatsApp for it (the catalogue entry narrows to e-mail and push).
+### 177-FR-011 — On every `review.reported` event, the system MUST send ADMIN_REVIEW_REPORTED (the existing catalogue entry, admin group, muteable) once per event to every active admin account, in the admin's language: for a review "{garage} a raportat o recenzie de {score}: {reason}" / "{garage} reported a {score} review: {reason}", for a reply "{author} a raportat răspunsul lui {garage}: {reason}" / "{author} reported {garage}'s reply: {reason}", for an automatic flag "O recenzie de {score} a fost raportată automat: {reason}" / "A {score} review was flagged automatically: {reason}", by e-mail and push with a link to the admin queue; each notification is keyed by the event's outbox id, so a redelivered event sends nothing more; admins get no SMS or WhatsApp for it (the catalogue entry narrows to e-mail and push).
 
 _From 177-reported-reviews._
 
