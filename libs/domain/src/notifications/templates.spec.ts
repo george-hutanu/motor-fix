@@ -796,3 +796,23 @@ describe('the links an e-mail carries', () => {
     ).toContain(safe);
   });
 });
+
+// @traces 415-car-transfer-link-FR-006
+describe('the car transfer link', () => {
+  const params = {
+    car: 'Dacia Logan',
+    days: 7,
+    link: 'https://motorfix.example/ro/transfer/abc',
+  };
+
+  it('gives WhatsApp its approved name per language with the car, the link and the days', () => {
+    expect(render('CAR_TRANSFER_LINK', 'whatsapp', 'ro', params)).toEqual({
+      name: 'motorfix_car_transfer_link_ro',
+      params: ['Dacia Logan', params.link, '7'],
+    });
+    expect(render('CAR_TRANSFER_LINK', 'whatsapp', 'en', params)).toEqual({
+      name: 'motorfix_car_transfer_link_en',
+      params: ['Dacia Logan', params.link, '7'],
+    });
+  });
+});
