@@ -12,6 +12,7 @@ features:
   - 129-delete-account
   - 094-itp-reminders
   - 091-oil-service-due
+  - 415-car-transfer-link
 ---
 
 # Capability: Cars
@@ -266,6 +267,70 @@ _From 091-oil-service-due._
 ### 091-FR-017 — Tests MUST cover, with a `// @traces` line per spec file: the average with two readings a year apart, with one reading, with readings under 30 days apart, with a reading older than 12 months and with a lowered odometer; the estimated date and lamp at 3,800 km (green, 85 days from the brief's readings), 1,500 km (amber), 0 and −200 km (red, null date) and at the 60/61 and 7/8 day boundaries; the field refused at, below and more than 100,000 km above the odometer by the API, and an unchanged stored value not rechecked; a reading on add, on each change and none on an unchanged odometer; the back-fill; `serviceDueOn` in the car answers and null without a value; the audit entries and the event's changed fields; the worker's new id and reset on a new value, the moved date with kept flags on an odometer change, the cancel on null or passed; SERVICE_DUE at 30 and 7 days once each, the reset on a new value, the skipped past stage, no send for a removed car, a deleted account or a muted group, a send held from 22:00–08:00 to 08:00, the templates in both languages.
 
 _From 091-oil-service-due._
+
+### 415-FR-001 — The system MUST hold a REPAIR record per car (the minimal shape this story reads: the car, the job when the repair was done through MotorFix (unique, optional), the source (`motorfix` or `logged`), what was done, the garage name, the garage when on MotorFix (optional), the date done, a soft-deletion time and the creation time), with no writer in this story: ST-61 and ST-62 add the writers and the remaining columns. A repair's history in the sale dialog reads these rows only; a deleted logged repair never shows and cannot be ticked.
+
+_From 415-car-transfer-link._
+
+### 415-FR-002 — The system MUST hold a CAR_TRANSFER record (the car, the seller, the buyer's phone in E.164, the hash of the link's token, the status `sent` | `accepted` | `cancelled` | `expired`, the sending time, the expiry = sending + 7 days (`CAR_TRANSFER_LINK_VALID_DAYS` = 7), the buyer and the sale date left empty for ST-1265) and a CAR_TRANSFER_REPAIR record per ticked repair (the transfer, the repair; unique per pair). The raw token is never stored and never logged; only its hash is.
+
+_From 415-car-transfer-link._
+
+### 415-FR-003 — `GET /api/v1/cars/:id/sale` (capability `driver.cars`; 404 as 092-FR-001 for another account's car or a removed one) MUST answer what the sale dialog needs: whether the sale can start (`false` with `open_request` while the car has a quote request in `sent`, `quoted`, `booked` or `in_work`, the same states as ST-92's removal), the car's active repairs newest first (by date done, then by creation time, both descending; id, date, what, garage name, source), and the car's `sent` transfer when it has one (id, expiry, the buyer's phone as typed back in E.164, never the link).
+
+_From 415-car-transfer-link._
+
+### 415-FR-004 — `POST /api/v1/cars/:id/transfers` (capability `driver.cars`; 404 as FR-003) MUST take the buyer's phone (any writing `normalisePhone` accepts; otherwise 400 `invalid_phone`) and the ticked repair ids (each an active `logged` repair of this car, otherwise 400 `repair_not_tickable`; duplicates collapsed), refuse the seller's own phone with 400 `own_phone` (the normalised E.164 number equal to the seller account's phone; no refusal when the account has no phone), refuse 409 `open_request` in the states of FR-003, and in one transaction that first locks the owner's account row (as the removal does): cancel the car's `sent` transfer if any (FR-009), create the transfer `sent` with a fresh random token, its ticked-repair rows, the audit entry (FR-014) and the outbox event `car_transfer.sent`; then answer 201 with the transfer (id, expiry) and the link.
+
+_From 415-car-transfer-link._
+
+### 415-FR-005 — The link MUST be `<PUBLIC_WEB_URL>/<lang>/transfer/<token>` with the seller's interface language, the token at least 32 random bytes in URL-safe form, looked up by its hash; a token is shown to the seller in the 201 answer and in the WhatsApp message and never again (a later read of the car's sale answers the expiry, not the link).
+
+_From 415-car-transfer-link._
+
+### 415-FR-006 — After the transaction commits, the system MUST send CAR_TRANSFER_LINK by WhatsApp to the buyer's phone straight through the provider (as the sign-in code is sent, not through the notifications outbox and with no NOTIFICATION row: the seller is waiting to know), in the seller's interface language, carrying the link, the car's brand and model and the days it is valid, through an approved WhatsApp template registered like the sign-in code's; a template the configuration does not name, a blocked number or a provider refusal MUST NOT fail the request: the answer carries `whatsapp: 'sent' | 'failed'` and the transfer stays `sent`. The log of a failure names the transfer id and the failure kind, never the phone or the link.
+
+_From 415-car-transfer-link._
+
+### 415-FR-007 — `POST /api/v1/cars/:id/transfers/:transferId/cancel` (capability `driver.cars`; 404 for another account's car, a transfer of another car or an unknown transfer) MUST set a `sent` transfer `cancelled` in one transaction with its audit entry and the outbox event `car_transfer.cancelled`, answering 204; a transfer not `sent` answers 409 `not_sent`.
+
+_From 415-car-transfer-link._
+
+### 415-FR-008 — `GET /api/v1/car-transfers/:token` MUST be public (`@Public()`, listed in `public-routes.integration.spec.ts`) and answer by the token's hash: 404 `not_found` for no transfer; 410 `transfer_cancelled` for `cancelled`; 410 `transfer_expired` for `expired`, and also for a `sent` transfer whose expiry has passed (the time decides, not the sweep); for a `sent` transfer within its time, 200 with `{ status: 'sent' }` and nothing else (no car, no seller, no repairs: the buyer's view is ST-1265). An `accepted` transfer answers 410 `transfer_accepted` (ST-1265 replaces this). The answer never carries the seller's identity or the phone. The token is the only credential (at least 32 random bytes, FR-005, so it cannot be guessed); the route carries no rate limit (the app has no global one; guessing 256 bits is not feasible), and a wrong token answers the same 404 whatever it looks like.
+
+_From 415-car-transfer-link._
+
+### 415-FR-009 — A car MUST have at most one `sent` transfer at a time: sending a new one cancels the earlier `sent` transfer of that car in the same transaction (its own audit entry and `car_transfer.cancelled` event), and a cancellation by the seller (FR-007) does the same; the cancelled link answers 410 `transfer_cancelled`.
+
+_From 415-car-transfer-link._
+
+### 415-FR-010 — The worker MUST, through the existing daily mechanism (bucharestDaily), set every `sent` transfer whose expiry has passed to `expired`, each in its own transaction with its audit entry (actor `system`) and the outbox event `car_transfer.expired`; a transfer is within its time only while its expiry is later than now (at the expiry instant it is expired), and one past its time but not yet swept is treated as expired by every read (FR-008, FR-003's `sent` transfer is answered only while within its time).
+
+_From 415-car-transfer-link._
+
+### 415-FR-011 — The events `car_transfer.sent`, `car_transfer.cancelled` and `car_transfer.expired` (added to the contracts' event kinds) MUST carry `{ transferId, carId, sellerAccountId, status }` and nothing more (no phone, no token, no plate), and MUST reach `account:{sellerAccountId}` alone through the live audience resolver, so the seller's open Mașinile mele re-reads without a reload.
+
+_From 415-car-transfer-link._
+
+### 415-FR-012 — Removing a car (092-FR-003) MUST, in its transaction, cancel the car's `sent` transfer (as FR-009, actor the driver), so a sold-then-removed car's link answers 410 `transfer_cancelled`.
+
+_From 415-car-transfer-link._
+
+### 415-FR-014 — Every transfer step MUST write one audit entry in the step's transaction through the audit writer (390-FR-001): the send a `create` on subject type `car_transfer` (subject the transfer id, scope the car id) whose new value holds the car id, the ticked repair ids and the expiry; a cancellation (by the seller, by a new send, or by the car's removal) and an expiry an `update` on field `status` with old `sent` and new `cancelled` or `expired`, actor the driver or `system`. No entry holds the buyer's phone or the token.
+
+_From 415-car-transfer-link._
+
+### 415-FR-020 — Observability: the new endpoints join the API's endpoint inventory with their panels and alerts (`infra/observability/inventory.json`, `scripts/observability-inventory.ts`); the WhatsApp send is counted by outcome (`sent`, `failed` by kind) and the sweep logs the number of transfers it expired.
+
+_From 415-car-transfer-link._
+
+### 415-FR-021 — Tests MUST cover: the send creating the transfer, the ticked rows, the audit entry and the event in one transaction (a failing audit write rolls everything back); the phone normalised from the three writings, an invalid phone and the own phone refused; a tick on a MotorFix, deleted, foreign or unknown repair refused; `open_request` in each of the four states and allowed in `done` and `closed`; the second send cancelling the first; the cancel endpoint and its 409 and 404s; the link answering 200, 404, 410 for cancelled, expired-by-sweep, expired-by-time and accepted; the sweep expiring only past-due `sent` transfers; the removal cancelling the transfer; the WhatsApp failure leaving the transfer `sent` with `whatsapp: 'failed'`; the events' payload and audience; no phone or token in any log, event or audit value (Jest on real PostgreSQL where the repository is used); the menu item, the three dialog steps, the empty state, the refusal, the done states, the copy button, the transfer line and its cancel, and the public page's five states in both languages (Jest); end to end (Playwright): a driver sells a car, ticks one repair, sends, copies the link, opens it and sees the valid line; cancels and sees "Linkul nu mai e valabil".
+
+_From 415-car-transfer-link._
+
+### 415-FR-022 — The cars list answer (`GET /api/v1/cars`, 089) MUST carry, per car, `transfer: { id, expiresAt } | null`: the car's `sent` transfer while within its time, otherwise null; the card reads it (FR-015) with no per-car request.
+
+_From 415-car-transfer-link._
 
 ## Retired
 

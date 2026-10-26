@@ -267,14 +267,23 @@ export class CarTransfersService {
   async read(token: string): Promise<CarTransferLinkDto> {
     if (!TOKEN.test(token)) throw notFound();
     const transfer = await this.prisma.carTransfer.findUnique({
-      select: { expiresAt: true, status: true },
+      select: {
+        car: { select: { removedAt: true } },
+        expiresAt: true,
+        status: true,
+      },
       where: { tokenHash: hashToken(token) },
     });
     if (!transfer) throw notFound();
+    // A removed car's transfer is cancelled, whichever way the car went.
     const status =
-      transfer.status === 'sent' && !isLive(transfer.expiresAt, new Date())
-        ? 'expired'
-        : transfer.status;
+      transfer.status !== 'sent'
+        ? transfer.status
+        : transfer.car.removedAt
+          ? 'cancelled'
+          : isLive(transfer.expiresAt, new Date())
+            ? 'sent'
+            : 'expired';
     if (status !== 'sent') {
       throw refusal(HttpStatus.GONE, GONE[status], 'The link no longer works');
     }

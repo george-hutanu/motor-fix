@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import type { Role } from '@motor-fix/contracts/capabilities';
 import { ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -154,8 +152,6 @@ export function transfersWorld() {
     bearer,
     car: world.car,
     driver,
-    garage: world.garage,
-    idempotencyKey: randomUUID,
     logged,
     marks,
     prisma,
