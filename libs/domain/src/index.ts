@@ -152,6 +152,8 @@ export { ROUTE_LIMITS } from './rate-limit/rate-limit.config';
 export { countRateLimitRefusal } from './rate-limit/rate-limit.metrics';
 export { RateLimits } from './rate-limit/rate-limit.service';
 export { RetentionModule } from './retention/retention.module';
+export { MODERATION_TIMERS_CONSUMER } from './reviews/moderation-timers/moderation-timers';
+export { ModerationTimersModule } from './reviews/moderation-timers/moderation-timers.module';
 export { REVIEW_RATINGS_CONSUMER } from './reviews/ratings/ratings';
 export { ReviewRatingsModule } from './reviews/ratings/ratings.module';
 export { ReviewsModule } from './reviews/reviews.module';

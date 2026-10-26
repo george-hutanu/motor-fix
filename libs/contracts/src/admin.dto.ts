@@ -51,6 +51,20 @@ export class AdminOverviewDto {
   })
   garagesWaiting!: number;
 
+  @ApiProperty({
+    description: 'Review reports waiting for an admin, on the whole platform',
+    minimum: 0,
+    type: 'integer',
+  })
+  reportsPending!: number;
+
+  @ApiProperty({
+    description: 'Of those, the ones past their due time',
+    minimum: 0,
+    type: 'integer',
+  })
+  reportsOverdue!: number;
+
   @ApiPropertyOptional({
     description:
       'Verification files submitted or in review of garages in the chosen city; only with a city',

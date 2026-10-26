@@ -2,6 +2,7 @@ import {
   CANCEL_REASON_TEXTS,
   DECLINE_REASON_TEXTS,
   isDeclineReason,
+  REVIEW_REPORT_REASON_TEXTS,
 } from '@motor-fix/contracts';
 import {
   formatClock,
@@ -30,7 +31,9 @@ type Format =
   | 'date'
   | 'days'
   | 'reason'
-  | 'cancel_reason';
+  | 'cancel_reason'
+  | 'report_reason'
+  | 'score';
 
 interface EmailText {
   subject: string;
@@ -169,6 +172,24 @@ function reasonText(
   ];
 }
 
+// A review report's reason as the admins read it.
+function reportReason(value: unknown, language: Language): string {
+  if (!Object.hasOwn(REVIEW_REPORT_REASON_TEXTS, String(value))) {
+    throw new Error(`unknown report reason ${String(value)}`);
+  }
+  return REVIEW_REPORT_REASON_TEXTS[
+    value as keyof typeof REVIEW_REPORT_REASON_TEXTS
+  ][language];
+}
+
+// A review's score with one decimal, as the stars show it.
+function scoreText(value: unknown, language: Language): string {
+  const score = Number(value);
+  if (!Number.isFinite(score)) throw new Error(`not a score: ${value}`);
+  const text = score.toFixed(1);
+  return language === 'ro' ? text.replace('.', ',') : text;
+}
+
 function format(kind: Format, value: unknown, language: Language): string {
   switch (kind) {
     case 'count':
@@ -199,6 +220,10 @@ function format(kind: Format, value: unknown, language: Language): string {
     case 'reason':
     case 'cancel_reason':
       return reasonText(kind, value, language);
+    case 'report_reason':
+      return reportReason(value, language);
+    case 'score':
+      return scoreText(value, language);
     default:
       return String(value);
   }
@@ -369,6 +394,10 @@ function pushBody(
 // the kind's own text for any other.
 const BY_PARAM: Record<string, [param: string, values: ReadonlySet<unknown>]> =
   {
+    ADMIN_REVIEW_REPORTED: [
+      'variant',
+      new Set(['reply', 'automatic', 'reminder', 'reminder_reply']),
+    ],
     ADMIN_VERIFICATION_QUEUED: ['item', new Set(['documents'])],
     BOOKING_CANCELLED: ['variant', new Set(['driver', 'driver_late'])],
     GARAGE_REPORT_DECIDED: ['decision', REPORT_DECISION_SET],

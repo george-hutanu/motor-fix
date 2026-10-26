@@ -633,6 +633,8 @@ describe('the product dashboard', () => {
       'motorfix_retention_rows_total',
       'motorfix_review_announced_total',
       'motorfix_review_reply_announced_total',
+      'motorfix_review_report_alerts_total',
+      'motorfix_review_report_reminders_total',
       'motorfix_documents_uploaded_total',
       'motorfix_declarations_signed_total',
       'motorfix_documents_opened_total',

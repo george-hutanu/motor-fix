@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 253-live-connection
   - 254-live-audience
@@ -32,6 +32,7 @@ features:
   - 102-garage-members
   - 1193-fast-nav
   - 074-garage-reviews
+  - 177-reported-reviews
 ---
 
 # Capability: Live updates
@@ -485,6 +486,10 @@ _From 413-verification-file-presence._
 ### 074-FR-006 — The panel and the view MUST re-read, without a reload and without issuing any scroll-to-top, on any `review.posted`, `review.edited`, `review.deleted`, `review.replied`, `review.reply_edited`, `review.reported`, `review.decided`, `review.appeal_decided` or `rating.updated` message for the garage on `garage:{garageId}`, which the owner's and the receptionist's connections MUST receive, and on the live client's reconnect resync; the view re-reads its first page and drops the extra pages (024-FR-011). One read at a time, coalesced as 419-FR-009. The hub already lets these kinds through `garage:{garageId}` to the owner and the receptionist and to no mechanic (`live.hub.ts` `KIND_CAPABILITY`, 102-FR-010 unchanged); FR-017 proves it.
 
 _From 074-garage-reviews._
+
+### 177-FR-010 — The queue, the panel, the counter and the tile MUST re-read on `review.reported`, `review.decided`, `review.deleted` and `review.report_closed` arriving on the admin's live connection, so a new item is on screen within 5 seconds and a decided or deleted one leaves within 5 seconds, and MUST re-read when the connection resyncs after a loss; these review kinds, and no other review kind, MUST reach the `admin` channel (today the review audience reaches the garage, the mechanic and the author only), carrying the same event payload those audiences already receive and nothing more (the reporter, the reason and the facts stay in the admin-only read of FR-001); a re-read keeps the items already shown until the new ones arrive (no skeleton flash); the first read shows skeletons; a failed read shows "Nu am putut citi recenziile raportate." / "Could not read the reported reviews." with a Reîncearcă / Retry button.
+
+_From 177-reported-reviews._
 
 ## Retired
 
