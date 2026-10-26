@@ -8,10 +8,12 @@ import { JobStagesController } from './job-stages/job-stages.controller';
 import { JobStagesService } from './job-stages/job-stages.service';
 import { JobStepsController } from './job-steps/job-steps.controller';
 import { JobStepsService } from './job-steps/job-steps.service';
+import { ScheduleService } from './schedule/schedule.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 
-// The work on a confirmed booking, and the driver's view of it. The client, the events and the Redis
+// The work on a confirmed booking, and the driver's view of it; the schedule
+// a confirm places a booking on. The client, the events and the Redis
 // connection come from the global AuthModule.
 @Module({
   controllers: [
@@ -20,11 +22,13 @@ import { AuditService } from '../audit/audit.service';
     JobStagesController,
     JobStepsController,
   ],
+  exports: [ScheduleService],
   providers: [
     ActiveRequestService,
     GarageJobsService,
     JobStagesService,
     JobStepsService,
+    ScheduleService,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],
 })

@@ -21,6 +21,9 @@ export interface Problem {
   currentStatus?: string;
   to?: string;
   rule?: string;
+  // A refused confirm whose code alone does not say why: ends_early, day_off,
+  // saturday_off, not_working, public_holiday, closed_day or outside_opening.
+  reason?: string;
   // A verification file already decided: the deciding admin's first name
   // ("MotorFix" for the system) and when, in UTC.
   decidedBy?: string;

@@ -14,24 +14,23 @@ import {
 import { refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { localDay } from '../../bucharest';
 import { EVENT_PORT, type EventPort, noEvents } from '../../events/event.port';
-import { slotInsideHours } from '../../garages/garage-hours';
-import { mechanicOwnAtWork } from '../../garages/mechanic-hours';
 import type {
   Booking,
   Garage,
-  Mechanic,
   Prisma,
   PrismaClient,
 } from '../../generated/prisma/client';
 import { invalidTransition } from '../../transitions';
+import {
+  ScheduleService,
+  type Segment,
+} from '../../workshop/schedule/schedule.service';
 import { bookingMechanicInclude, garageBookingOf } from '../reads';
 import { moveBooking, moveQuote, moveRecipient } from '../transitions';
 
 type Tx = Prisma.TransactionClient;
 
-const MINUTE = 60_000;
 const DEADLOCK_RUNS = 3;
 
 const invalidField = (field: 'mechanicId' | 'lift', message: string) =>
@@ -48,34 +47,15 @@ const mechanicUnavailable = (en: boolean) =>
     en ? 'The mechanic is not available' : 'Mecanicul nu e disponibil',
   );
 
-const outsideHours = (en: boolean) =>
-  conflict(
-    'outside_hours',
-    en ? 'Outside opening hours' : 'În afara programului',
-  );
-
-const mechanicBusy = (name: string, en: boolean) =>
-  conflict(
-    'mechanic_busy',
-    en ? `${name} is busy at this time` : `${name} e ocupat la ora asta`,
-  );
-
-const liftBusy = (lift: number, en: boolean) =>
-  conflict(
-    'lift_busy',
-    en
-      ? `Lift ${lift} is busy at this time`
-      : `Elevatorul ${lift} e ocupat la ora asta`,
-  );
-
 // The overlap the database refused although the read before it found none:
 // a confirm of another booking committed in between.
-function exclusionOf(error: unknown) {
-  if (!(error instanceof Error)) return null;
+function slotTaken(error: unknown) {
+  if (!(error instanceof Error)) return false;
   const said = `${error.message} ${JSON.stringify((error as { meta?: unknown }).meta ?? {})}`;
-  if (said.includes('booking_mechanic_span_excl')) return 'mechanic' as const;
-  if (said.includes('booking_lift_span_excl')) return 'lift' as const;
-  return null;
+  return (
+    said.includes('booking_segment_mechanic_excl') ||
+    said.includes('booking_segment_lift_excl')
+  );
 }
 
 interface Switches {
@@ -92,6 +72,7 @@ export class ConfirmService {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
+    private readonly schedule: ScheduleService,
   ) {}
 
   async options(actor: Actor, bookingId: string): Promise<ConfirmOptionsDto> {
@@ -103,10 +84,19 @@ export class ConfirmService {
     const mechanics = switches.team
       ? await this.offered(this.prisma, garageId)
       : [];
+    // Whether any job the quote includes is done on a lift.
+    const onLift = await this.prisma.quoteJob.count({
+      where: {
+        included: true,
+        quote: { booking: { id: bookingId } },
+        requestJob: { jobType: { needsLift: true } },
+      },
+    });
     return {
       liftCount: switches.lifts ? garage.liftCount : 0,
       mechanicRequired: switches.team,
       mechanics: mechanics.map(({ id, name }) => ({ id, name })),
+      needsLift: onLift > 0,
     };
   }
 
@@ -119,13 +109,11 @@ export class ConfirmService {
     try {
       return await this.storeRetried(actor, bookingId, dto);
     } catch (error) {
-      const taken = exclusionOf(error);
-      if (taken === 'lift' && dto.lift) throw liftBusy(dto.lift, en);
-      if (taken === 'mechanic' && dto.mechanicId) {
-        const mechanic = await this.prisma.mechanic.findUnique({
-          where: { id: dto.mechanicId },
-        });
-        throw mechanicBusy(mechanic?.name ?? '', en);
+      if (slotTaken(error)) {
+        throw conflict(
+          'slot_taken',
+          en ? 'The slot was just taken' : 'Locul tocmai a fost ocupat',
+        );
       }
       throw error;
     }
@@ -231,20 +219,17 @@ export class ConfirmService {
         `lift must be from 1 to ${booking.garage.liftCount}`,
       );
     }
-    const inside = await slotInsideHours(
-      tx,
-      booking.garage,
-      booking.startsAt,
-      booking.durationMinutes,
-    );
-    if (!inside) throw outsideHours(en);
-    if (mechanic && !(await this.atWork(tx, mechanic, booking))) {
-      throw mechanicUnavailable(en);
-    }
-    await this.judgeOverlaps(tx, actor, booking, mechanic, dto.lift);
+    const segments = await this.schedule.assertPlaceable(tx, {
+      durationMinutes: booking.durationMinutes,
+      garageId,
+      language: en ? 'en' : 'ro',
+      lift: dto.lift ?? null,
+      mechanicId: mechanic?.id ?? null,
+      startsAt: booking.startsAt,
+    });
     const worker =
       mechanic ?? (await this.ownerMechanic(tx, actor, booking.garage));
-    await this.confirmBooking(tx, actor, booking, dto, now);
+    await this.confirmBooking(tx, actor, booking, dto, segments, now);
     await this.openJob(tx, actor, booking, worker.id);
     await this.closeRest(tx, actor, booking);
     const read = await tx.booking.findUniqueOrThrow({
@@ -272,40 +257,6 @@ export class ConfirmService {
     }
   }
 
-  // Whether the named mechanic works over the booking by her own hours and
-  // days off; the garage's hours were judged first.
-  private async atWork(
-    tx: Tx,
-    mechanic: Mechanic,
-    booking: Booking & { garage: { hours: Prisma.JsonValue } },
-  ) {
-    // Waits out a day off being added, which holds this row: the read below
-    // then sees it, and the add sees this booking.
-    await tx.$queryRaw`SELECT id FROM mechanic WHERE id = ${mechanic.id}::uuid FOR SHARE`;
-    const day = new Date(`${localDay(booking.startsAt)}T00:00:00Z`);
-    const daysOff = await tx.mechanicDayOff.findMany({
-      select: { firstDay: true, lastDay: true },
-      where: {
-        firstDay: { lte: day },
-        lastDay: { gte: day },
-        mechanicId: mechanic.id,
-      },
-    });
-    return mechanicOwnAtWork(
-      {
-        daysOff: daysOff.map((d) => ({
-          firstDay: d.firstDay.toISOString().slice(0, 10),
-          lastDay: d.lastDay.toISOString().slice(0, 10),
-        })),
-        workingHours: mechanic.workingHours,
-        worksSaturdays: mechanic.worksSaturdays,
-      },
-      booking.garage.hours,
-      booking.startsAt,
-      booking.durationMinutes,
-    );
-  }
-
   private async mechanicOf(
     tx: Tx,
     garageId: string,
@@ -318,47 +269,6 @@ export class ConfirmService {
     });
     if (!mechanic) throw mechanicUnavailable(en);
     return mechanic;
-  }
-
-  // The read that names who or what is taken; the constraints still catch a
-  // confirm that commits between this read and the write.
-  private async judgeOverlaps(
-    tx: Tx,
-    actor: Actor,
-    booking: Booking,
-    mechanic: { id: string; name: string } | null,
-    lift: number | undefined,
-  ) {
-    const en = actor.language === 'en';
-    const overlaps = async (where: Prisma.BookingWhereInput) => {
-      const rows = await tx.booking.findMany({
-        select: { durationMinutes: true, startsAt: true },
-        where: {
-          ...where,
-          id: { not: booking.id },
-          startsAt: {
-            lt: new Date(
-              booking.startsAt.getTime() + booking.durationMinutes * MINUTE,
-            ),
-          },
-          status: 'confirmed',
-        },
-      });
-      return rows.some(
-        (row) =>
-          row.startsAt.getTime() + row.durationMinutes * MINUTE >
-          booking.startsAt.getTime(),
-      );
-    };
-    if (mechanic && (await overlaps({ mechanicId: mechanic.id }))) {
-      throw mechanicBusy(mechanic.name, en);
-    }
-    if (
-      lift !== undefined &&
-      (await overlaps({ garageId: booking.garageId, lift }))
-    ) {
-      throw liftBusy(lift, en);
-    }
   }
 
   // A garage without a team gives every job to its owner, through the
@@ -414,6 +324,7 @@ export class ConfirmService {
     actor: Actor,
     booking: Booking & { request: { driverId: string } },
     dto: ConfirmBookingDto,
+    segments: readonly Segment[],
     now: Date,
   ) {
     const by = { accountId: actor.accountId, role: actor.role };
@@ -432,20 +343,24 @@ export class ConfirmService {
         where: { id: booking.id },
       });
     }
-    if (dto.mechanicId !== undefined) {
-      await this.audit.record(tx, {
-        ...entry,
-        field: 'mechanic_id',
-        newValue: dto.mechanicId,
-      });
-    }
-    if (dto.lift !== undefined) {
-      await this.audit.record(tx, {
-        ...entry,
-        field: 'lift',
-        newValue: dto.lift,
-      });
-    }
+    await tx.bookingSegment.createMany({
+      data: segments.map((segment) => ({
+        ...segment,
+        bookingId: booking.id,
+        garageId: booking.garageId,
+      })),
+    });
+    // Where the booking was put, as one entry: its segments follow from it.
+    await this.audit.record(tx, {
+      ...entry,
+      field: 'placement',
+      newValue: {
+        durationMinutes: booking.durationMinutes,
+        lift: dto.lift ?? null,
+        mechanicId: dto.mechanicId ?? null,
+        startsAt: booking.startsAt.toISOString(),
+      },
+    });
     const mechanicId = dto.mechanicId ?? null;
     await moveBooking(
       tx,

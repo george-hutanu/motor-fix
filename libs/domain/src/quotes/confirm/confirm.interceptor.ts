@@ -21,12 +21,23 @@ const OUTCOMES = new Set<string>(
   ),
 );
 
-function outcomeOf(error: unknown): BookingConfirmOutcome | null {
+// The outcome of a refused confirm, with the reason its problem details name.
+function outcomeOf(
+  error: unknown,
+): { outcome: BookingConfirmOutcome; reason?: string } | null {
   if (!(error instanceof HttpException)) return null;
-  const { code } = (error.getResponse() ?? {}) as { code?: string };
-  if (code && OUTCOMES.has(code)) return code as BookingConfirmOutcome;
+  const { code, reason } = (error.getResponse() ?? {}) as {
+    code?: string;
+    reason?: unknown;
+  };
+  if (code && OUTCOMES.has(code)) {
+    return {
+      outcome: code as BookingConfirmOutcome,
+      reason: typeof reason === 'string' ? reason : undefined,
+    };
+  }
   const status = error.getStatus();
-  return status >= 400 && status < 500 ? 'refused' : null;
+  return status >= 400 && status < 500 ? { outcome: 'refused' } : null;
 }
 
 // Counts and logs every confirm the guards let through, the ones the pipes
@@ -43,10 +54,13 @@ export class ConfirmOutcomes implements NestInterceptor {
     return next.handle().pipe(
       tap({
         error: (error: unknown) => {
-          const outcome = outcomeOf(error);
-          if (!outcome) return;
-          recordBookingConfirm(outcome);
-          this.logger.warn(`booking ${booking}: ${outcome}`);
+          const refused = outcomeOf(error);
+          if (!refused) return;
+          const { outcome, reason } = refused;
+          recordBookingConfirm(outcome, reason);
+          this.logger.warn(
+            `booking ${booking}: ${outcome}${reason ? ` ${reason}` : ''}`,
+          );
         },
         next: () => {
           recordBookingConfirm('confirmed');

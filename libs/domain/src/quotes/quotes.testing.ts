@@ -296,7 +296,7 @@ export function quotesWorld(prisma: PrismaClient = createPrisma(databaseUrl)) {
     await prisma.quoteJob.create({
       data: { included: true, quoteId: q.id, requestJobId: asked.id },
     });
-    return prisma.booking.update({
+    const placed = await prisma.booking.update({
       data: {
         lift: options.lift ?? null,
         mechanicId: options.mechanicId ?? null,
@@ -305,6 +305,23 @@ export function quotesWorld(prisma: PrismaClient = createPrisma(databaseUrl)) {
       },
       where: { id: b.id },
     });
+    // A confirmed booking holds its place as one segment, as the confirm
+    // and the migration's backfill leave it.
+    if (status === 'confirmed') {
+      await prisma.bookingSegment.create({
+        data: {
+          bookingId: placed.id,
+          endsAt: new Date(
+            placed.startsAt.getTime() + placed.durationMinutes * 60_000,
+          ),
+          garageId,
+          lift: placed.lift,
+          mechanicId: placed.mechanicId,
+          startsAt: placed.startsAt,
+        },
+      });
+    }
+    return placed;
   }
 
   const reset = () =>

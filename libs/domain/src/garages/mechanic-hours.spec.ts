@@ -7,6 +7,7 @@ import {
   mechanicAtWork,
   mechanicOwnAtWork,
   plannedMinutes,
+  workingStretches,
 } from './mechanic-hours';
 import { atLocal } from '../bucharest';
 
@@ -253,4 +254,108 @@ describe('a day off', () => {
       expect(isDayOff(daysOff, day)).toBe(false);
     },
   );
+});
+
+// @traces 150-FR-003
+describe('the working stretches of a booking', () => {
+  const FRI = '2026-11-13';
+  const span = (day: string, from: string, to: string) => [
+    at(day, Number(from.slice(0, 2)), Number(from.slice(3, 5))),
+    at(day, Number(to.slice(0, 2)), Number(to.slice(3, 5))),
+  ];
+  const plain = (
+    hours: WeeklyHours,
+    extra: { closedDays?: string[]; holidays?: string[] } = {},
+  ) => ({ ...calendar(extra), hours });
+
+  it("clips the mechanic's stretch to a garage day of one interval", () => {
+    const garage = plain(week([['08:00', '17:00']]));
+
+    expect(workingStretches(schedule(), garage, MON, 1)).toEqual([
+      span(MON, '08:00', '16:30'),
+    ]);
+  });
+
+  it('gives two stretches on a garage day of two intervals', () => {
+    expect(workingStretches(schedule(), calendar(), MON, 1)).toEqual([
+      span(MON, '08:00', '12:00'),
+      span(MON, '13:00', '16:30'),
+    ]);
+  });
+
+  it('gives nothing on a day off, a closed day or a public holiday', () => {
+    const off = schedule({ daysOff: [{ firstDay: MON, lastDay: MON }] });
+
+    expect(workingStretches(off, calendar(), MON, 1)).toEqual([]);
+    expect(
+      workingStretches(schedule(), calendar({ closedDays: [MON] }), MON, 1),
+    ).toEqual([]);
+    expect(
+      workingStretches(schedule(), calendar({ holidays: [MON] }), MON, 1),
+    ).toEqual([]);
+  });
+
+  it('gives a Saturday only with the switch on', () => {
+    const own = week([['08:00', '16:30']], { sat: [['10:00', '13:00']] });
+
+    expect(
+      workingStretches(schedule({ workingHours: own }), calendar(), SAT, 1),
+    ).toEqual([]);
+    expect(
+      workingStretches(
+        schedule({ workingHours: own, worksSaturdays: true }),
+        calendar(),
+        SAT,
+        1,
+      ),
+    ).toEqual([span(SAT, '10:00', '13:00')]);
+  });
+
+  it('gives nothing on a weekday the mechanic has no stretch', () => {
+    const own = week([['08:00', '16:30']], { thu: [] });
+
+    expect(
+      workingStretches(schedule({ workingHours: own }), calendar(), THU, 1),
+    ).toEqual([]);
+  });
+
+  it("takes the garage's intervals alone with the team off", () => {
+    expect(workingStretches(null, calendar(), MON, 1)).toEqual([
+      span(MON, '08:00', '12:00'),
+      span(MON, '13:00', '18:00'),
+    ]);
+  });
+
+  it("takes the mechanic's stretch alone while the garage has set no hours", () => {
+    expect(
+      workingStretches(schedule(), plain({} as WeeklyHours), MON, 1),
+    ).toEqual([span(MON, '08:00', '16:30')]);
+  });
+
+  it('runs over the days asked for, in time order, and stops there', () => {
+    const garage = plain(week([['08:00', '17:00']]));
+    const stretches = workingStretches(schedule(), garage, THU, 5);
+
+    expect(stretches).toEqual([
+      span(THU, '08:00', '16:30'),
+      span(FRI, '08:00', '16:30'),
+      span('2026-11-16', '08:00', '16:30'),
+    ]);
+    expect(workingStretches(schedule(), garage, THU, 0)).toEqual([]);
+  });
+
+  it('keeps the wall-clock hours on the March and October clock-change days', () => {
+    const night = schedule({
+      workingHours: week([], { sun: [['00:00', '08:00']] }),
+    });
+    const garage = plain(week([], { sun: [['00:00', '08:00']] }));
+    const hours = (day: string) => {
+      const [[start, end]] = workingStretches(night, garage, day, 1);
+      return (end.getTime() - start.getTime()) / 3_600_000;
+    };
+
+    expect(hours('2026-03-29')).toBe(7);
+    expect(hours('2026-10-25')).toBe(9);
+    expect(hours('2026-11-01')).toBe(8);
+  });
 });

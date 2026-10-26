@@ -15,6 +15,8 @@ import { DeclineQuoteController } from './decline-quote/decline-quote.controller
 import { DeclineQuoteService } from './decline-quote/decline-quote.service';
 import { GarageRequestsController } from './garage-requests/garage-requests.controller';
 import { GarageRequestsService } from './garage-requests/garage-requests.service';
+import { GarageScheduleController } from './garage-schedule/garage-schedule.controller';
+import { GarageScheduleService } from './garage-schedule/garage-schedule.service';
 import { QuoteRequestsController } from './quote-requests/quote-requests.controller';
 import { QuoteRequestsService } from './quote-requests/quote-requests.service';
 import { QuotesController } from './quotes/quotes.controller';
@@ -24,6 +26,7 @@ import { RequestsService } from './requests/requests.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { CacheModule } from '../cache/cache.module';
+import { WorkshopModule } from '../workshop/workshop.module';
 
 // Requests, quotes and bookings. The client, the outbox and the Redis
 // connection come from the global AuthModule.
@@ -39,9 +42,10 @@ import { CacheModule } from '../cache/cache.module';
     DeclineQuoteController,
     CancelRequestController,
     CancelBookingController,
+    GarageScheduleController,
   ],
   exports: [DeclineService, GarageRequestsService, RequestsService],
-  imports: [CacheModule],
+  imports: [CacheModule, WorkshopModule],
   providers: [
     RequestsService,
     GarageRequestsService,
@@ -54,6 +58,7 @@ import { CacheModule } from '../cache/cache.module';
     DeclineQuoteService,
     CancelRequestService,
     CancelBookingService,
+    GarageScheduleService,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],
 })

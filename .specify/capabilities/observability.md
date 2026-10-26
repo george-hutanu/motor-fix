@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -50,6 +50,7 @@ features:
   - 947-faro-consent-journeys
   - 056-mechanic-dialog
   - 1156-retention-job
+  - 150-add-booking
   - 1366-garage-map-directions
   - 1257-quote-reminders
 ---
@@ -856,9 +857,9 @@ _From 1181-rate-limits._
 
 _From 1190-live-reconnects._
 
-### 389-FR-018 — Observability (AGENTS.md): the new endpoint, the three timer kinds and the two consumers MUST be listed in `infra/observability/inventory.json`; the confirm (a product action) MUST emit one counter with the outcome (`confirmed`, `mechanic_busy`, `lift_busy`, `outside_hours`, `mechanic_unavailable`, `invalid_transition`, `refused` for 400/403/404) and one log line per outcome naming the booking id; the lapse kind one counter of lapses with whether the request stayed open or closed; the existing queue metrics cover the timers and consumers; the PR's Observability section lists them.
+### 150-FR-012 — (389-FR-018 modified) Observability (AGENTS.md): the schedule endpoint MUST be listed in `infra/observability/inventory.json` with its reason (the API's request-duration histogram labels the route; `api-error-rate` and `api-latency` cover it); the confirm's outcome counter MUST gain the outcome `slot_taken` and a `reason` label for `mechanic_unavailable` and `outside_hours` (the FR-006 reasons; never an id), and one log line per refusal naming the booking id and the reason; no new alert rule (the 50 in `infra/observability/alerts/` stay at 50); the PR's Observability section lists them.
 
-_From 389-confirm-booking-lift-mechanic._
+_From 150-add-booking._
 
 ### 1192-FR-012 — The image route MUST be counted by the API's existing request metrics, traces and dashboard (labelled by its route template, never the digest), and `infra/observability/inventory.json` MUST list it with the API's endpoint count; the variant writes are covered by the photo queue's existing job metrics and failure log.
 
@@ -945,3 +946,4 @@ _From 1257-quote-reminders._
 - `877-FR-016` — superseded by `947-FR-011` (2026-10-24)
 - `877-FR-017` — superseded by `947-FR-010` (2026-10-24)
 - `280-FR-023` — superseded by `056-FR-024` (2026-10-24)
+- `389-FR-018` — superseded by `150-FR-012` (2026-10-26)

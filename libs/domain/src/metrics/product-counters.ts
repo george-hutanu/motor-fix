@@ -716,7 +716,15 @@ const STARTS: Record<
     ],
     [quoteAccepts, each('outcome', QUOTE_ACCEPT_OUTCOMES)],
     [quoteDeclines, each('outcome', QUOTE_DECLINE_OUTCOMES)],
-    [bookingConfirms, each('outcome', BOOKING_CONFIRM_OUTCOMES)],
+    // A lost race (slot_taken) is rare: it starts on its first count, for
+    // the 150-series budget, as each outcome and reason pair does.
+    [
+      bookingConfirms,
+      each(
+        'outcome',
+        BOOKING_CONFIRM_OUTCOMES.filter((one) => one !== 'slot_taken'),
+      ),
+    ],
     [reviewsPosted, each('outcome', REVIEW_POSTED_OUTCOMES)],
     [searchCache, each('outcome', SEARCH_CACHE_OUTCOMES)],
     [searchLog, each('outcome', SEARCH_LOG_OUTCOMES)],

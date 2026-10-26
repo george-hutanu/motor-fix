@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 210,
+    "count": 211,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -2233,7 +2233,7 @@
       "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts the confirmations garages try by outcome (confirmed, mechanic_busy, lift_busy, outside_hours, mechanic_unavailable, invalid_transition, refused) with no identifiers, with one Confirm log line per try naming the booking id and the outcome; a refusal is a garage's choice, not an outage; the api-error-rate rule covers the service that reports it",
+      "reason": "counts the confirmations garages try by outcome (confirmed, mechanic_busy, lift_busy, outside_hours, mechanic_unavailable, invalid_transition, slot_taken when the segments' exclusion constraint loses a race, refused) and, for an outside_hours or mechanic_unavailable refusal, by reason (public_holiday, closed_day, outside_opening, day_off, saturday_off, not_working, ends_early) with no identifiers, with one Confirm log line per try naming the booking id and the outcome; a refusal is a garage's choice, not an outage; the api-error-rate rule covers the service that reports it",
       "story": "ST-389"
     },
     {
@@ -2385,6 +2385,19 @@
       ],
       "reason": "a read of the mechanics and lifts a confirmation may pick; it writes nothing, so its failures and latency are the route metric alone",
       "story": "ST-389"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-schedule",
+      "source": "libs/domain/src/quotes/garage-schedule/garage-schedule.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/schedule",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the schedule board's read of 1 to 7 days, the same service the get_schedule MCP tool reads (counted by mcp_tool_calls_total); it writes nothing, so its failures and latency are the route metric alone",
+      "story": "ST-150"
     },
     {
       "kind": "endpoint",
