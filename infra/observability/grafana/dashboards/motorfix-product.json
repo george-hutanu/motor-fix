@@ -5732,7 +5732,7 @@
             "type": "prometheus",
             "uid": "${prom}"
           },
-          "expr": "sum by (outcome) (increase(motorfix_review_reply_announced_total{deployment_environment=\"$env\"}[24h]))",
+          "expr": "sum by (outcome) (increase(motorfix_review_reply_announced_total{deployment_environment=\"$env\"}[1d]))",
           "legendFormat": "{{outcome}}"
         }
       ],
