@@ -27,7 +27,7 @@ import {
 } from '@nestjs/swagger';
 
 import { StaffInviteService } from './staff-invite.service';
-import { CurrentActor, Public } from '../../auth/actor.guard';
+import { CurrentActor, OptionalActor, Public } from '../../auth/actor.guard';
 import { JsonOnly } from '../../auth/auth.controller';
 import type { Actor } from '../../auth/policy';
 
@@ -44,9 +44,12 @@ export class GarageInvitesController {
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ type: StaffInviteSentDto })
   @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
-  @ApiNotFoundResponse({ description: 'not_found; feature_off' })
+  @ApiNotFoundResponse({
+    description: 'not_found: the garage, or the card; feature_off',
+  })
   @ApiConflictResponse({
-    description: 'invite_open (with inviteId); already_in_team',
+    description:
+      'owner_row; card_linked; invite_open (with inviteId); self_invite; already_in_team',
   })
   send(
     @CurrentActor() actor: Actor,
@@ -91,14 +94,19 @@ export class GarageInvitesController {
 export class InvitesController {
   constructor(private readonly invites: StaffInviteService) {}
 
+  // A session, when the call carries one, names the garage accepting leaves.
   @Public()
+  @OptionalActor()
   @Post('check')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: InviteViewDto })
   @ApiNotFoundResponse({ description: 'feature_off' })
   @ApiGoneResponse({ description: 'invite_expired; invite_invalid' })
-  check(@Body() body: InviteTokenDto): Promise<InviteViewDto> {
-    return this.invites.check(body.token);
+  check(
+    @Body() body: InviteTokenDto,
+    @CurrentActor() actor?: Actor,
+  ): Promise<InviteViewDto> {
+    return this.invites.check(body.token, actor);
   }
 
   @ApiBearerAuth()
@@ -108,6 +116,10 @@ export class InvitesController {
     description: 'Joined; switch the session to the invited role next',
   })
   @ApiNotFoundResponse({ description: 'feature_off' })
+  @ApiConflictResponse({
+    description:
+      'move_required (with garage): the invite is for a card and the account works at another garage',
+  })
   @ApiGoneResponse({ description: 'invite_expired; invite_invalid' })
   async accept(
     @CurrentActor() actor: Actor,

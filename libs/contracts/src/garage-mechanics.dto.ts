@@ -12,6 +12,7 @@ import {
   TAG_MAX,
   YEARS_MAX,
 } from './listing-sections';
+import { StaffInviteOnCardDto } from './staff-invite.dto';
 
 export class GarageMechanicDto {
   @ApiProperty({ format: 'uuid' })
@@ -59,6 +60,10 @@ export class GarageMechanicDto {
 
   @ApiProperty()
   reviewCount!: number;
+
+  // The card's newest sent invite, expired or not.
+  @ApiProperty({ nullable: true, type: StaffInviteOnCardDto })
+  invite!: StaffInviteOnCardDto | null;
 }
 
 // A brand the garage works on, offered in the card's brand list.

@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { normalisePhone } from '@motor-fix/contracts/phone';
 import {
   GaragesService,
   type StaffInviteSentDto,
@@ -29,6 +30,20 @@ import { Session } from '../session';
 
 type Kind = 'mechanic' | 'receptionist';
 
+export type InviteStaffData = {
+  card?: { id: string; name: string };
+  garageId: string;
+};
+
+// A card's invite goes to an e-mail when the value has an "@", else to a
+// phone number in any form a person types it.
+function recipient(value: string) {
+  const typed = value.trim();
+  if (typed.includes('@')) return ADDRESS.test(typed) ? { email: typed } : null;
+  const phone = normalisePhone(typed);
+  return phone ? { phone } : null;
+}
+
 // The open invite a refused send names: the problem's one extension.
 function openInvite(error: unknown): string | null {
   const body = error instanceof HttpErrorResponse ? error.error : null;
@@ -37,7 +52,9 @@ function openInvite(error: unknown): string | null {
 }
 
 // "Invită în echipă": the owner invites a mechanic or a receptionist by
-// e-mail. A mechanic's three permissions start unticked. When the e-mail
+// e-mail. Opened from a card, it invites that card's mechanic by e-mail or
+// phone, with no name or role to ask. A mechanic's three permissions start
+// unticked. When the e-mail
 // could not go out, the link is offered to copy; an address with an invite
 // still open can have it sent again. Mecanic is offered only while the
 // garage has its team on, as the session last read it. Closes with "sent"
@@ -62,9 +79,10 @@ export class InviteStaff {
   private readonly i18n = inject(I18n);
   private readonly session = inject(Session);
   protected readonly task = injectOverlayTask<
-    { garageId: string },
+    InviteStaffData,
     'sent' | 'cancelled'
   >();
+  protected readonly card = this.task.data.card;
 
   protected readonly outcome = signal<StaffInviteSentDto | null>(null);
   protected readonly inviteId = signal<string | null>(null);
@@ -93,6 +111,12 @@ export class InviteStaff {
       nonNullable: true,
       validators: [characters(2, 80, true)],
     }),
+    to: new FormControl('', {
+      nonNullable: true,
+      // Not one of the shared keys, so its message is the dialog's own
+      // `field.invalid`.
+      validators: [(c) => (recipient(c.value) ? null : { invalid: true })],
+    }),
   });
 
   protected readonly save = taskSave({
@@ -118,6 +142,10 @@ export class InviteStaff {
 
   constructor() {
     void this.i18n.enter('garage');
+    const { email, kind, name, to } = this.form.controls;
+    for (const control of this.card ? [email, kind, name] : [to]) {
+      control.disable();
+    }
     effect(() => {
       if (!this.mechanics()) this.form.controls.kind.setValue('receptionist');
     });
@@ -130,7 +158,15 @@ export class InviteStaff {
   }
 
   private body() {
-    const { email, kind, name, ...ticks } = this.form.getRawValue();
+    const { email, kind, name, to, ...ticks } = this.form.getRawValue();
+    if (this.card) {
+      return {
+        ...ticks,
+        kind: 'mechanic' as const,
+        mechanicId: this.card.id,
+        ...recipient(to),
+      };
+    }
     const person = { email: email.trim(), kind, name: name.trim() };
     return kind === 'mechanic' ? { ...person, ...ticks } : person;
   }

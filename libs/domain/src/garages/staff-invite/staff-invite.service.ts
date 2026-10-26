@@ -21,7 +21,11 @@ import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
-import type { PrismaClient, StaffInvite } from '../../generated/prisma/client';
+import {
+  Prisma,
+  type PrismaClient,
+  type StaffInvite,
+} from '../../generated/prisma/client';
 import { Brevo } from '../../notifications/brevo/brevo';
 import {
   blockedReason,
@@ -29,8 +33,14 @@ import {
   emailEnvelope,
 } from '../../notifications/email-config';
 import { NotificationsService } from '../../notifications/notifications.service';
+import {
+  PHONE_CONFIG,
+  type PhoneConfig,
+  phoneBlockedReason,
+} from '../../notifications/phone-config';
 import { render } from '../../notifications/templates';
 import { featureOn } from '../features/feature-on';
+import { cardAudience } from '../mechanics/garage-mechanics.service';
 
 export const INVITE_EMAIL = Symbol('INVITE_EMAIL');
 
@@ -41,12 +51,21 @@ const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
 const invalid = (status = HttpStatus.GONE) =>
   refusal(status, 'invite_invalid', 'This invitation is no longer valid');
+const conflict = (code: string, message: string) =>
+  refusal(HttpStatus.CONFLICT, code, message);
+const inviteOpen = (inviteId: string, message: string) =>
+  new HttpException(
+    { code: 'invite_open', inviteId, message },
+    HttpStatus.CONFLICT,
+  );
 const featureOff = () =>
   refusal(
     HttpStatus.NOT_FOUND,
     'feature_off',
     'This garage does not take mechanics',
   );
+
+type Address = { email: string } | { phone: string };
 
 const permissionsOf = (invite: StaffInvite) => ({
   canAnswerQuotes: invite.canAnswerQuotes,
@@ -66,6 +85,7 @@ export class StaffInviteService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
     @Inject(INVITE_EMAIL) private readonly config: EmailConfig,
+    @Inject(PHONE_CONFIG) private readonly phone: PhoneConfig,
     private readonly brevo: Brevo,
     private readonly accounts: AccountsService,
     private readonly notifications: NotificationsService,
@@ -78,40 +98,51 @@ export class StaffInviteService {
   ): Promise<StaffInviteSentDto> {
     this.assertOwner(actor, garageId);
     if (dto.kind === 'mechanic') await this.assertMechanics(garageId);
-    const email = dto.email.toLowerCase();
-    await this.assertNotInTeam(garageId, email, dto.kind);
+    const card = dto.mechanicId
+      ? await this.invitableCard(this.prisma, garageId, dto.mechanicId)
+      : null;
+    const address = dto.phone
+      ? { phone: dto.phone }
+      : { email: (dto.email ?? '').toLowerCase() };
+    await this.assertNotSelf(actor, address);
+    await this.assertNotInTeam(garageId, address, dto.kind);
     const open = await this.prisma.staffInvite.findFirst({
       where: {
-        email,
+        ...address,
         expiresAt: { gt: this.now() },
         garageId,
         status: 'sent',
       },
     });
     if (open) {
-      throw new HttpException(
-        {
-          code: 'invite_open',
-          inviteId: open.id,
-          message: 'This address already has an open invitation',
-        },
-        HttpStatus.CONFLICT,
-      );
+      throw inviteOpen(open.id, 'This address already has an open invitation');
     }
     const mechanic = dto.kind === 'mechanic';
     this.webUrl();
     const { hash, token } = newToken();
     const invite = await this.prisma.$transaction(async (tx) => {
+      // The card's row lock makes a second send for it wait, then find this
+      // one's invite open. Its earlier invites have all expired by now: one
+      // card, one live link.
+      if (card) {
+        await tx.$queryRaw`SELECT id FROM mechanic WHERE id = ${card.id}::uuid FOR UPDATE`;
+        await this.invitableCard(tx, garageId, card.id);
+        await tx.staffInvite.updateMany({
+          data: { status: 'revoked' },
+          where: { mechanicId: card.id, status: 'sent' },
+        });
+      }
       const row = await tx.staffInvite.create({
         data: {
+          ...address,
           canAnswerQuotes: mechanic && dto.canAnswerQuotes,
           canMoveBookings: mechanic && dto.canMoveBookings,
           canRecordFinalPrice: mechanic && dto.canRecordFinalPrice,
-          email,
           expiresAt: new Date(this.now().getTime() + TTL_MS),
           garageId,
           kind: dto.kind,
-          name: dto.name,
+          mechanicId: card?.id ?? null,
+          name: card?.name ?? dto.name ?? '',
           tokenHash: hash,
         },
       });
@@ -137,7 +168,7 @@ export class StaffInviteService {
       });
       return row;
     });
-    return this.mail(actor, invite, token);
+    return this.deliver(actor, invite, token);
   }
 
   async resend(
@@ -174,7 +205,7 @@ export class StaffInviteService {
       });
       return tx.staffInvite.findUniqueOrThrow({ where: { id } });
     });
-    return this.mail(actor, invite, token);
+    return this.deliver(actor, invite, token);
   }
 
   async revoke(actor: Actor, garageId: string, id: string): Promise<void> {
@@ -206,27 +237,53 @@ export class StaffInviteService {
     });
   }
 
-  // Without a session: what the link offers, or why it offers nothing.
-  async check(token: string): Promise<InviteViewDto> {
+  // What the link offers, or why it offers nothing; with a session, also the
+  // garage the account works at, which accepting a mechanic invite leaves.
+  // The garage's own owner is answered as accept answers him: the link is
+  // not his to use.
+  async check(token: string, actor?: Actor): Promise<InviteViewDto> {
     const invite = await this.usable(token);
+    if (actor) {
+      const owner = await this.prisma.garageMember.findFirst({
+        where: {
+          accountId: actor.accountId,
+          garageId: invite.garageId,
+          role: 'owner',
+        },
+      });
+      if (owner) throw invalid();
+    }
     const garage = await this.prisma.garage.findUniqueOrThrow({
       where: { id: invite.garageId },
     });
+    const current =
+      actor && invite.kind === 'mechanic'
+        ? await this.prisma.mechanic.findUnique({
+            select: { garage: { select: { name: true } }, garageId: true },
+            where: { accountId: actor.accountId },
+          })
+        : null;
     return {
       email: invite.email,
       garage: garage.name,
       kind: invite.kind,
+      leaving:
+        current && current.garageId !== invite.garageId
+          ? current.garage.name
+          : null,
       name: invite.name,
+      phone: invite.phone,
     };
   }
 
   // The signed-in account joins the garage in the invite's role; the web
-  // switches its session to that role once this answers.
+  // switches its session to that role once this answers. An invite for a
+  // card links the account to that card.
   async accept(actor: Actor, token: string): Promise<void> {
     const invite = await this.usable(token);
     const { garageId } = invite;
     const account = await this.prisma.account.findUniqueOrThrow({
-      include: { mechanic: true, memberships: true },
+      include: { memberships: true },
       where: { id: actor.accountId },
     });
     const owner = account.memberships.some(
@@ -235,14 +292,11 @@ export class StaffInviteService {
     const elsewhere = account.memberships.some(
       (m) => m.role === 'receptionist' && m.garageId !== garageId,
     );
-    // An owner's own row is his garage's: a mechanic link from
-    // another garage would move it away.
-    const ownRow = invite.kind === 'mechanic' && account.mechanic?.isOwner;
-    if (owner || ownRow || (invite.kind === 'receptionist' && elsewhere)) {
+    if (owner || (invite.kind === 'receptionist' && elsewhere)) {
       throw invalid();
     }
     const by = { id: actor.accountId, role: actor.role };
-    await this.prisma.$transaction(async (tx) => {
+    const accepting = this.prisma.$transaction(async (tx) => {
       // The row lock makes a second accept wait, then find it taken.
       const { count } = await tx.staffInvite.updateMany({
         data: { status: 'accepted' },
@@ -250,39 +304,17 @@ export class StaffInviteService {
       });
       if (count === 0) throw invalid();
       await this.accounts.grantRole(tx, by, actor.accountId, invite.kind);
+      let joinedAs = account.name;
       if (invite.kind === 'receptionist') {
-        await tx.garageMember.createMany({
-          data: [
-            { accountId: actor.accountId, garageId, role: 'receptionist' },
-          ],
-          skipDuplicates: true,
-        });
-      } else if (account.mechanic?.garageId !== garageId) {
-        // A mechanic already here keeps the permissions the owner gave him.
-        const before = account.mechanic;
-        const row = await tx.mechanic.upsert({
-          create: {
-            accountId: actor.accountId,
-            garageId,
-            name: invite.name,
-            ...permissionsOf(invite),
-          },
-          update: { garageId, ...permissionsOf(invite) },
-          where: { accountId: actor.accountId },
-        });
-        if (before) {
-          await this.events.record(tx, {
-            audience: {
-              garageIds: [garageId, before.garageId],
-              type: 'garage',
-            },
-            kind: 'mechanic.updated',
-            payload: { from: before.garageId, garageId, mechanicId: row.id },
-            subjectId: row.id,
-          });
-        }
+        await this.joinFrontDesk(tx, invite, actor.accountId);
+      } else {
+        joinedAs = await this.joinWorkshop(
+          tx,
+          invite,
+          actor.accountId,
+          account.name,
+        );
       }
-
       await this.audit.record(tx, {
         action: 'update',
         actorId: actor.accountId,
@@ -290,7 +322,12 @@ export class StaffInviteService {
         field: 'status',
         garageId,
         kind: 'invite_accepted',
-        newValue: 'accepted',
+        newValue: {
+          kind: invite.kind,
+          ...(invite.mechanicId ? { mechanicId: invite.mechanicId } : {}),
+          name: invite.name,
+          permissions: permissionsOf(invite),
+        },
         oldValue: 'sent',
         subjectId: invite.id,
         subjectType: 'staff_invite',
@@ -306,8 +343,116 @@ export class StaffInviteService {
         },
         subjectId: invite.id,
       });
+      return joinedAs;
     });
-    await this.joined(invite, account.name);
+    // An account with no mechanic row taking two links at once: the second
+    // finds the account linked by the first only at its write.
+    const name = await accepting.catch((error: unknown) => {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw invalid();
+      }
+      throw error;
+    });
+    await this.joined(invite, name);
+  }
+
+  private async joinFrontDesk(
+    tx: Prisma.TransactionClient,
+    invite: StaffInvite,
+    accountId: string,
+  ): Promise<void> {
+    await tx.garageMember.createMany({
+      data: [{ accountId, garageId: invite.garageId, role: 'receptionist' }],
+      skipDuplicates: true,
+    });
+  }
+
+  // The account's mechanic row is read under its lock, after the invite is
+  // taken: a concurrent accept that moved it has committed by then, so the
+  // move's `from` is the garage the row is really at.
+  private async joinWorkshop(
+    tx: Prisma.TransactionClient,
+    invite: StaffInvite,
+    accountId: string,
+    name: string,
+  ): Promise<string> {
+    const { garageId } = invite;
+    const [before] = await tx.$queryRaw<
+      { garageId: string; isOwner: boolean }[]
+    >`SELECT garage_id AS "garageId", is_owner AS "isOwner" FROM mechanic
+      WHERE account_id = ${accountId}::uuid FOR UPDATE`;
+    // An owner's own row is his garage's: a mechanic link from another
+    // garage would move it away.
+    if (before?.isOwner) throw invalid();
+    if (invite.mechanicId) return this.link(tx, invite, accountId, before);
+    // A mechanic already here keeps the permissions the owner gave him.
+    if (before?.garageId === garageId) return name;
+    const row = await tx.mechanic.upsert({
+      create: {
+        accountId,
+        garageId,
+        name: invite.name,
+        ...permissionsOf(invite),
+      },
+      update: { garageId, ...permissionsOf(invite) },
+      where: { accountId },
+    });
+    if (before) {
+      await this.events.record(tx, {
+        audience: { garageIds: [garageId, before.garageId], type: 'garage' },
+        kind: 'mechanic.updated',
+        payload: { from: before.garageId, garageId, mechanicId: row.id },
+        subjectId: row.id,
+      });
+    }
+    return name;
+  }
+
+  // The card becomes the account's, on the profile with the invite's
+  // permissions; its other fields stay as the owner wrote them. An account
+  // working at another garage would have to move, which is not offered yet.
+  private async link(
+    tx: Prisma.TransactionClient,
+    invite: StaffInvite,
+    accountId: string,
+    before: { garageId: string } | undefined,
+  ): Promise<string> {
+    const { garageId } = invite;
+    const mechanicId = invite.mechanicId as string;
+    if (before?.garageId === garageId) throw invalid();
+    if (before) {
+      const { name } = await tx.garage.findUniqueOrThrow({
+        select: { name: true },
+        where: { id: before.garageId },
+      });
+      throw new HttpException(
+        {
+          code: 'move_required',
+          garage: name,
+          message: 'The account works at another garage',
+        },
+        HttpStatus.CONFLICT,
+      );
+    }
+    const { count } = await tx.mechanic.updateMany({
+      data: { accountId, onProfile: true, ...permissionsOf(invite) },
+      where: { accountId: null, garageId, id: mechanicId, removedAt: null },
+    });
+    if (count === 0) throw invalid();
+    await this.events.record(tx, {
+      audience: cardAudience(garageId, { id: mechanicId, onProfile: true }),
+      kind: 'mechanic.updated',
+      payload: { fields: ['account'], garageId, mechanicId },
+      subjectId: mechanicId,
+    });
+    const card = await tx.mechanic.findUniqueOrThrow({
+      select: { name: true },
+      where: { id: mechanicId },
+    });
+    return card.name;
   }
 
   // A sent invite whose link is this token, before its expiry, for a kind
@@ -355,15 +500,54 @@ export class StaffInviteService {
     if (!(await featureOn(this.prisma, garageId, FEATURE))) throw featureOff();
   }
 
-  // The owner, or someone who already holds this kind at the garage.
+  // A card of this garage, still on the team, that no account holds and no
+  // live invite names. Read first to refuse early, then again in the send's
+  // transaction under the card's lock.
+  private async invitableCard(
+    db: PrismaClient | Prisma.TransactionClient,
+    garageId: string,
+    mechanicId: string,
+  ) {
+    const card = await db.mechanic.findFirst({
+      where: { garageId, id: mechanicId, removedAt: null },
+    });
+    if (!card) throw notFound();
+    if (card.isOwner) {
+      throw conflict('owner_row', "The owner's own row takes no invite");
+    }
+    if (card.accountId) {
+      throw conflict('card_linked', 'This card already has an account');
+    }
+    const open = await db.staffInvite.findFirst({
+      where: { expiresAt: { gt: this.now() }, mechanicId, status: 'sent' },
+    });
+    if (open) {
+      throw inviteOpen(open.id, 'This card already has an open invitation');
+    }
+    return card;
+  }
+
+  private async assertNotSelf(actor: Actor, address: Address) {
+    const own = await this.prisma.account.findUniqueOrThrow({
+      select: { email: true, phone: true },
+      where: { id: actor.accountId },
+    });
+    const self =
+      'phone' in address
+        ? own.phone === address.phone
+        : own.email?.toLowerCase() === address.email;
+    if (self) throw conflict('self_invite', 'You cannot invite yourself');
+  }
+
+  // Someone who already holds this kind at the garage, or owns it.
   private async assertNotInTeam(
     garageId: string,
-    email: string,
+    address: Address,
     kind: StaffInvite['kind'],
   ) {
-    const account = await this.prisma.account.findUnique({
+    const account = await this.prisma.account.findFirst({
       include: { mechanic: true, memberships: true },
-      where: { email },
+      where: address,
     });
     if (!account) return;
     const here = (role: 'owner' | 'receptionist') =>
@@ -376,11 +560,7 @@ export class StaffInviteService {
         ? here('receptionist')
         : account.mechanic?.garageId === garageId);
     if (inTeam) {
-      throw refusal(
-        HttpStatus.CONFLICT,
-        'already_in_team',
-        'This person is already in the team',
-      );
+      throw conflict('already_in_team', 'This person is already in the team');
     }
   }
 
@@ -391,9 +571,9 @@ export class StaffInviteService {
     return this.config.webUrl;
   }
 
-  // In the owner's language. A refused e-mail leaves the invite in place and
-  // hands the link to the owner instead.
-  private async mail(
+  // In the owner's language, by e-mail or by WhatsApp. A message that did not
+  // go leaves the invite in place and hands the link to the owner instead.
+  private async deliver(
     actor: Actor,
     invite: StaffInvite,
     token: string,
@@ -405,30 +585,70 @@ export class StaffInviteService {
     const language = owner.language === 'en' ? 'en' : 'ro';
     const webUrl = this.webUrl();
     const link = `${webUrl}/${language}/invite/${token}`;
-    const reason = blockedReason(this.config, invite.email);
+    const values = { app: webUrl, garage: garage.name, link };
     try {
-      if (reason) throw new Error(reason);
-      const mail = render(`STAFF_INVITE.${invite.kind}`, 'email', language, {
-        app: webUrl,
-        garage: garage.name,
-        link,
-      });
-      await this.brevo.send({
-        ...emailEnvelope(this.config, {
-          email: invite.email,
-          name: invite.name,
-        }),
-        html: mail.html,
-        subject: mail.subject,
-        text: mail.text,
-      });
+      if (invite.phone) {
+        await this.whatsapp(invite, invite.phone, language, values);
+      } else {
+        await this.mail(invite, invite.email ?? '', language, values);
+      }
       return { emailSent: true, id: invite.id };
     } catch (error) {
       this.logger.warn(
-        `invite ${invite.id} e-mail not sent: ${(error as Error).message}`,
+        `invite ${invite.id} not sent: ${(error as Error).message}`,
       );
       return { emailSent: false, id: invite.id, link };
     }
+  }
+
+  private async mail(
+    invite: StaffInvite,
+    email: string,
+    language: 'ro' | 'en',
+    values: Record<string, string>,
+  ) {
+    const reason = blockedReason(this.config, email);
+    if (reason) throw new Error(reason);
+    const mail = render(
+      `STAFF_INVITE.${invite.kind}`,
+      'email',
+      language,
+      values,
+    );
+    await this.brevo.send({
+      ...emailEnvelope(this.config, { email, name: invite.name }),
+      html: mail.html,
+      subject: mail.subject,
+      text: mail.text,
+    });
+  }
+
+  // Straight through Brevo, as the e-mail is: the owner waits for the answer.
+  // The number never reaches the log.
+  private async whatsapp(
+    invite: StaffInvite,
+    to: string,
+    language: 'ro' | 'en',
+    values: Record<string, string>,
+  ) {
+    const reason = phoneBlockedReason(this.phone, to);
+    if (reason) throw new Error(reason);
+    const message = render(
+      `STAFF_INVITE.${invite.kind}`,
+      'whatsapp',
+      language,
+      values,
+    );
+    const templateId = Object.hasOwn(this.phone.whatsappTemplates, message.name)
+      ? this.phone.whatsappTemplates[message.name]
+      : undefined;
+    if (templateId === undefined) throw new Error('template_missing');
+    await this.brevo.sendWhatsApp({
+      params: message.params,
+      sender: this.phone.whatsappSender,
+      templateId,
+      to,
+    });
   }
 
   // The garage's owners hear who joined; a failure here undoes nothing.

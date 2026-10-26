@@ -36,6 +36,7 @@ const mechanic = (
   futureBookings: 0,
   hasAccount: true,
   id: 'mechanic-1',
+  invite: null,
   isOwner: false,
   name: 'Andrei Popescu',
   onProfile: true,
@@ -517,7 +518,12 @@ describe('Mecanici, opening the card dialog', () => {
       expect(open).toHaveBeenCalledWith(
         MechanicCard,
         expect.objectContaining({
-          data: { brands: BRANDS, card: items[index], garageId: GARAGE },
+          data: {
+            brands: BRANDS,
+            card: items[index],
+            garageId: GARAGE,
+            refresh: expect.any(Function),
+          },
           shape: 'dialog',
         }),
       );
@@ -599,4 +605,82 @@ describe('Mecanici, kept current as cards come and go', () => {
       expect(list).toHaveBeenCalledTimes(2);
     },
   );
+});
+
+const invited = (expiresAt: string) =>
+  mechanic({
+    hasAccount: false,
+    id: 'mechanic-4',
+    invite: {
+      email: 'elena@example.ro',
+      expiresAt,
+      id: 'invite-1',
+      phone: null,
+      sentAt: '2026-10-25T11:00:00.000Z',
+    },
+    name: 'Elena Stan',
+    onProfile: false,
+  });
+const OPEN = invited('2099-01-01T00:00:00.000Z');
+const EXPIRED = invited('2000-01-01T00:00:00.000Z');
+
+// @traces 1255-FR-012
+describe("Mecanici, a card's invite", () => {
+  it('says whether the invite is sent or has expired, the lamp off', async () => {
+    const { element, settle } = await render(async () =>
+      listOf([OPEN, { ...EXPIRED, id: 'mechanic-5' }]),
+    );
+    await settle();
+
+    expect(rows(element).map((row) => text(lamp(row)))).toEqual([
+      'nu apare pe profil · invitație trimisă',
+      'nu apare pe profil · invitație expirată',
+    ]);
+    expect(rows(element).map((row) => lamp(row)?.dataset['state'])).toEqual([
+      'off',
+      'off',
+    ]);
+  });
+
+  it('says it in English', async () => {
+    const { element, settle } = await render(
+      async () => listOf([OPEN, { ...EXPIRED, id: 'mechanic-5' }]),
+      'en',
+    );
+    await settle();
+
+    expect(rows(element).map((row) => text(lamp(row)))).toEqual([
+      'not on the profile · invite sent',
+      'not on the profile · invite expired',
+    ]);
+  });
+
+  it.each(['invite.sent', 'invite.revoked'])(
+    'reads again on %s',
+    async (kind) => {
+      const { settle } = await render();
+      await settle();
+
+      events.next(message(kind, 'invite-1'));
+      await wait(350);
+      await settle();
+
+      expect(list).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("lets the open card read the list again and answers the card's new state", async () => {
+    const { element, settle } = await render(async () => listOf([OPEN]));
+    await settle();
+    rows(element)[0].querySelector('button')?.click();
+    await settle();
+    const [, options] = open.mock.calls[0];
+    const revoked = { ...OPEN, invite: null };
+    list.mockResolvedValueOnce(listOf([revoked]));
+
+    const fresh = await options.data.refresh();
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(fresh).toEqual(revoked);
+  });
 });

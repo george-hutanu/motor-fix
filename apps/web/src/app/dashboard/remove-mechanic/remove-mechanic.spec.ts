@@ -30,6 +30,7 @@ const elena = (futureBookings: number): GarageMechanicDto => ({
   futureBookings,
   hasAccount: true,
   id: 'mechanic-1',
+  invite: null,
   isOwner: false,
   name: 'Elena Stan',
   onProfile: true,
