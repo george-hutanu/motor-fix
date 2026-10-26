@@ -67,12 +67,13 @@ async function series() {
 // documents' uploaded, accepted and refused steps; the verification
 // presence's store_unavailable only, for the 150 budget),
 // one per check kind and result, one per re-check result, one per booking
-// confirmation outcome, one per quote decline outcome and one per review
+// confirmation outcome but slot_taken, one per quote decline outcome and one per review
 // outcome, and one sort change per sort.
 const API_SERIES =
   96 +
   SORTS.length +
-  BOOKING_CONFIRM_OUTCOMES.length +
+  BOOKING_CONFIRM_OUTCOMES.length -
+  1 +
   QUOTE_DECLINE_OUTCOMES.length +
   REVIEW_POSTED_OUTCOMES.length +
   VERIFICATION_CHECK_KINDS.length * VERIFICATION_CHECK_RESULTS.length +

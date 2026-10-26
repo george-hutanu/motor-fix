@@ -17,6 +17,7 @@ const KEY_CHANGES = new Set([
   'job.eta_at',
   'booking.starts_at',
   'booking.mechanic_id',
+  'booking.placement',
   'booking.cancel_reason',
 ]);
 

@@ -255,6 +255,31 @@ describe('GET /garage/jobs/:id', () => {
       expect((await get(`/garage/jobs/${id}`, auth)).status).toBe(404);
     }
   });
+
+  // @traces 1381-FR-002
+  it("answers 403 to a mechanic reading a colleague's job", async () => {
+    const s = await setting();
+
+    const res = await get(
+      `/garage/jobs/${s.handJob.id}`,
+      bearer(s.dinamo.answering, 'mechanic'),
+    );
+
+    expect(res.status).toBe(403);
+  });
+
+  // @traces 1381-FR-002
+  it('answers 404 to a mechanic whose card was removed, for her own job and her list', async () => {
+    const s = await setting();
+    await prisma.mechanic.update({
+      data: { removedAt: new Date() },
+      where: { id: s.dinamo.plainMechanic.id },
+    });
+    const auth = bearer(s.dinamo.plain, 'mechanic');
+
+    expect((await get(`/garage/jobs/${s.handJob.id}`, auth)).status).toBe(404);
+    expect((await get('/garage/jobs', auth)).status).toBe(404);
+  });
 });
 
 // Jobs booked yesterday, today and tomorrow, and one still in work from

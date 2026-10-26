@@ -9,6 +9,7 @@ import {
 } from '@motor-fix/contracts';
 
 import { minuteOf, spanInsideHours, wall } from './garage-hours';
+import { addDays, atLocal } from '../bucharest';
 
 type Hours = Partial<Record<string, Interval[]>>;
 
@@ -24,7 +25,7 @@ export interface MechanicSchedule {
   daysOff: readonly DayOff[];
 }
 
-interface GarageCalendar {
+export interface GarageCalendar {
   hours: Hours;
   closedDays: ReadonlySet<string>;
   holidays: ReadonlySet<string>;
@@ -59,7 +60,7 @@ export const isDayOff = (daysOff: readonly DayOff[], day: string): boolean =>
   daysOff.some((d) => d.firstDay <= day && day <= d.lastDay);
 
 // The stretch that counts on a weekday: Saturday only with the switch on.
-function stretchOn(
+export function stretchOn(
   schedule: MechanicSchedule,
   garageHours: unknown,
   weekday: Weekday,
@@ -68,7 +69,7 @@ function stretchOn(
   return effectiveHours(schedule.workingHours, garageHours)[weekday][0] ?? null;
 }
 
-const unset = (hours: unknown) =>
+export const unset = (hours: unknown) =>
   !hours || Object.keys(hours as object).length === 0;
 
 // Whether [start, start + duration) lies inside the mechanic's own stretch of
@@ -125,7 +126,64 @@ export function plannedMinutes(
   ) {
     return 0;
   }
-  const weekday = WEEKDAYS[(new Date(day).getUTCDay() + 6) % 7];
-  const stretch = stretchOn(schedule, garage.hours, weekday);
+  const stretch = stretchOn(schedule, garage.hours, weekdayOf(day));
   return stretch ? minuteOf(stretch[1]) - minuteOf(stretch[0]) : 0;
+}
+
+const weekdayOf = (day: string): Weekday =>
+  WEEKDAYS[(new Date(day).getUTCDay() + 6) % 7];
+
+// The instant the Bucharest clock reads `time` ("HH:MM") on `day`.
+const wallAt = (day: string, time: string): Date =>
+  new Date(
+    atLocal(day, Number(time.slice(0, 2))).getTime() +
+      Number(time.slice(3, 5)) * 60_000,
+  );
+
+// The garage's opening intervals of a weekday clipped to one stretch.
+function clipped(intervals: readonly Interval[], [from, to]: Interval) {
+  return intervals.flatMap(([start, end]): Interval[] => {
+    const a = minuteOf(start) > minuteOf(from) ? start : from;
+    const b = minuteOf(end) < minuteOf(to) ? end : to;
+    return minuteOf(a) < minuteOf(b) ? [[a, b]] : [];
+  });
+}
+
+// The intervals one Bucharest day gives to work in, in wall-clock times:
+// with a mechanic, her stretch clipped to the garage's opening intervals (her
+// stretch alone while the garage has set no hours); with none, the garage's
+// intervals. Nothing on a closed day, a holiday or, for her, a day off, a
+// Saturday without the switch or a weekday she has no stretch on.
+function dayIntervals(
+  schedule: MechanicSchedule | null,
+  garage: GarageCalendar,
+  day: string,
+): Interval[] {
+  if (garage.closedDays.has(day) || garage.holidays.has(day)) return [];
+  const weekday = weekdayOf(day);
+  const opening = listOf(garage.hours, weekday);
+  if (!schedule) return opening;
+  if (isDayOff(schedule.daysOff, day)) return [];
+  const own = stretchOn(schedule, garage.hours, weekday);
+  if (!own) return [];
+  return unset(garage.hours) ? [own] : clipped(opening, own);
+}
+
+// The working stretches of `days` Bucharest days from `from`, in time order,
+// as half-open [start, end) instants. Bounds are wall-clock times, so a day
+// across a clock change keeps its hours and gains or loses one real hour.
+export function workingStretches(
+  schedule: MechanicSchedule | null,
+  garage: GarageCalendar,
+  from: string,
+  days: number,
+): [Date, Date][] {
+  const stretches: [Date, Date][] = [];
+  for (let n = 0; n < days; n++) {
+    const day = addDays(from, n);
+    for (const [start, end] of dayIntervals(schedule, garage, day)) {
+      stretches.push([wallAt(day, start), wallAt(day, end)]);
+    }
+  }
+  return stretches;
 }

@@ -1,4 +1,5 @@
 // @traces 097-FR-005 097-FR-006
+// @traces 1381-FR-001
 import { randomUUID } from 'node:crypto';
 
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
@@ -203,6 +204,37 @@ describe('who am I, at the garages I work at', () => {
         permissions: ALL,
         role: 'owner',
       }),
+    ]);
+  });
+
+  it('lists no garage for a removed mechanic card, even one still holding its account', async () => {
+    const { mechanic } = await garage();
+    await prisma.mechanic.update({
+      data: { removedAt: new Date() },
+      where: { accountId: mechanic },
+    });
+
+    const res = await me(mechanic, 'mechanic');
+
+    expect(res.status).toBe(200);
+    expect(res.body.garageAccess).toEqual([]);
+  });
+
+  it('keeps a member’s row when their mechanic card at the same garage is removed', async () => {
+    const { atelier, owner } = await garage();
+    await prisma.mechanic.create({
+      data: {
+        accountId: owner,
+        garageId: atelier.id,
+        name: 'Mihai',
+        removedAt: new Date(),
+      },
+    });
+
+    const res = await me(owner, 'garage');
+
+    expect(res.body.garageAccess).toEqual([
+      expect.objectContaining({ garageId: atelier.id, role: 'owner' }),
     ]);
   });
 

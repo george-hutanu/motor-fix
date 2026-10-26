@@ -1,12 +1,19 @@
 import { randomUUID } from 'node:crypto';
 
 import { GarageScheduleService } from './garage-schedule.service';
+import type { Actor } from '../../auth/policy';
 import { garageActor } from '../quotes.testing';
 import { quotesApp } from '../quotes-api.testing';
 
 const { team, world } = quotesApp();
 const { prisma } = world;
 const service = new GarageScheduleService(prisma);
+// The read of the actor's own garage.
+const list = (
+  actor: Actor,
+  query: Parameters<typeof service.list>[2],
+  now: Date,
+) => service.list(actor, actor.garageId as string, query, now);
 
 const NOW = new Date('2026-10-09T07:00:00Z');
 
@@ -31,7 +38,7 @@ describe('a mechanic’s schedule under hostile input', () => {
       mechanicId: t.plainMechanic.id,
     });
 
-    const answer = await service.list(mechanicActor(t), {}, NOW);
+    const answer = await list(mechanicActor(t), {}, NOW);
 
     expect(answer.entries).toEqual([]);
   });
@@ -54,7 +61,7 @@ describe('a mechanic’s schedule under hostile input', () => {
       if (own) hers.push(b.id);
     }
 
-    const answer = await service.list(mechanicActor(t), {}, NOW);
+    const answer = await list(mechanicActor(t), {}, NOW);
 
     expect(answer.entries.map((e) => e.id).sort()).toEqual([...hers].sort());
   }, 120_000);
@@ -71,7 +78,7 @@ describe('a mechanic’s schedule under hostile input', () => {
       make() === 'X' ? `${t.answeringMechanic.id.toUpperCase()} ` : make();
 
     expect(
-      await refusal(service.list(mechanicActor(t), { mechanicId: asked }, NOW)),
+      await refusal(list(mechanicActor(t), { mechanicId: asked }, NOW)),
     ).toEqual([403, 'forbidden']);
   });
 
@@ -81,7 +88,7 @@ describe('a mechanic’s schedule under hostile input', () => {
 
     for (const id of [other.answeringMechanic.id, t.plainMechanic.id])
       expect(
-        await refusal(service.list(mechanicActor(t), { mechanicId: id }, NOW)),
+        await refusal(list(mechanicActor(t), { mechanicId: id }, NOW)),
       ).toEqual([403, 'forbidden']);
   });
 
@@ -92,7 +99,7 @@ describe('a mechanic’s schedule under hostile input', () => {
       mechanicId: other.answeringMechanic.id,
     });
 
-    const answer = await service.list(mechanicActor(t), {}, NOW);
+    const answer = await list(mechanicActor(t), {}, NOW);
 
     expect(answer.entries).toEqual([]);
   });
@@ -107,7 +114,7 @@ describe('a mechanic’s schedule under hostile input', () => {
       mechanicId: t.answeringMechanic.id,
     });
 
-    const result = await refusal(service.list(mechanicActor(t), {}, NOW));
+    const result = await refusal(list(mechanicActor(t), {}, NOW));
 
     // The status only: the HTTP layer names the code.
     expect(result).toEqual([404, undefined]);
@@ -117,13 +124,14 @@ describe('a mechanic’s schedule under hostile input', () => {
     const t = await team('Atelier Dinamo');
     const actor = { ...mechanicActor(t), garageId: undefined };
 
-    expect(await refusal(service.list(actor as never, {}, NOW))).toEqual([
+    expect(await refusal(list(actor as never, {}, NOW))).toEqual([
       404,
       undefined,
     ]);
   });
 
-  it('answers the same twice and does not change by the move right', async () => {
+  // @traces 150-FR-009
+  it('answers the same twice, and the whole garage once she may move bookings', async () => {
     const t = await team('Atelier Dinamo');
     const b = await world.booked(
       t.garage.id,
@@ -133,16 +141,55 @@ describe('a mechanic’s schedule under hostile input', () => {
         mechanicId: t.answeringMechanic.id,
       },
     );
+    const other = await world.booked(
+      t.garage.id,
+      '2026-10-09T09:00:00Z',
+      'confirmed',
+      { mechanicId: t.plainMechanic.id },
+    );
 
-    const [off, on, again] = [
-      await service.list(mechanicActor(t, false), {}, NOW),
-      await service.list(mechanicActor(t, true), {}, NOW),
-      await service.list(mechanicActor(t, false), {}, NOW),
+    const [off, again, on] = [
+      await list(mechanicActor(t, false), {}, NOW),
+      await list(mechanicActor(t, false), {}, NOW),
+      await list(mechanicActor(t, true), {}, NOW),
     ];
 
     expect(off.entries.map((e) => e.id)).toEqual([b.id]);
-    expect(on).toEqual(off);
     expect(again).toEqual(off);
+    expect(on.entries.map((e) => e.id)).toEqual([b.id, other.id]);
+  });
+
+  // @traces 150-FR-009
+  it('lets a mechanic who may move bookings filter by another card, inside her garage only', async () => {
+    const t = await team('Atelier Dinamo');
+    const rival = await team('Service Militari');
+    const hand = await world.booked(
+      t.garage.id,
+      '2026-10-09T09:00:00Z',
+      'confirmed',
+      { mechanicId: t.plainMechanic.id },
+    );
+    await world.booked(rival.garage.id, '2026-10-09T09:00:00Z', 'confirmed', {
+      mechanicId: rival.plainMechanic.id,
+    });
+    const mover = mechanicActor(t, true);
+
+    expect(
+      (await list(mover, { mechanicId: t.plainMechanic.id }, NOW)).entries.map(
+        (e) => e.id,
+      ),
+    ).toEqual([hand.id]);
+    expect(
+      (await list(mover, { mechanicId: rival.plainMechanic.id }, NOW)).entries,
+    ).toEqual([]);
+    expect(
+      await refusal(service.list(mover, rival.garage.id, {}, NOW)),
+    ).toEqual([404, undefined]);
+    expect(
+      await refusal(
+        list(mechanicActor(t), { mechanicId: t.plainMechanic.id }, NOW),
+      ),
+    ).toEqual([403, 'forbidden']);
   });
 
   it('keeps the lifts and phone out of her answer while still refusing a range over seven days', async () => {
@@ -151,17 +198,13 @@ describe('a mechanic’s schedule under hostile input', () => {
       mechanicId: t.answeringMechanic.id,
     });
 
-    const answer = await service.list(mechanicActor(t), {}, NOW);
+    const answer = await list(mechanicActor(t), {}, NOW);
 
     expect(JSON.stringify(answer)).not.toMatch(/phone|B123ABC/);
     expect(
       await refusal(
-        service.list(
-          mechanicActor(t),
-          { from: '2026-10-12', to: '2026-10-19' },
-          NOW,
-        ),
+        list(mechanicActor(t), { from: '2026-10-12', to: '2026-10-19' }, NOW),
       ),
-    ).toEqual([400, 'validation']);
+    ).toEqual([400, 'validation_failed']);
   });
 });

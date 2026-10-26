@@ -1,5 +1,6 @@
 // @traces 102-FR-001
 // @traces 102-FR-002
+// @traces 1381-FR-005
 import { CAPABILITIES, capabilitiesOf, ROLES } from './capabilities';
 
 const none = {
