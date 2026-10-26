@@ -63,11 +63,14 @@ test.describe('the sections of Panou @seeded @database', () => {
   });
 
   test.afterAll(async () => {
-    await db.query('DELETE FROM account WHERE email = $1', [owner.email]);
-    if (driverId)
-      await db.query('DELETE FROM account WHERE id = $1', [driverId]);
-    await db.query('DELETE FROM garage WHERE id = $1', [garageId]);
-    await db.end();
+    try {
+      await db.query('DELETE FROM account WHERE email = $1', [owner.email]);
+      if (driverId)
+        await db.query('DELETE FROM account WHERE id = $1', [driverId]);
+      await db.query('DELETE FROM garage WHERE id = $1', [garageId]);
+    } finally {
+      await db.end();
+    }
   });
 
   async function openPanou(page: Page) {

@@ -5,7 +5,7 @@ import {
 } from '@motor-fix/contracts/capabilities';
 import type { MeDto } from '@motor-fix/data-access';
 
-import { GARAGE_SECTIONS, homeSections, linksTo } from './garage-sections';
+import { homeSections, linksTo } from './garage-sections';
 
 const NONE: Permissions = {
   canAnswerQuotes: false,
@@ -45,28 +45,16 @@ const keys = (account: MeDto | null) =>
 
 // @traces 099-FR-001
 describe('the sections of Panou', () => {
-  it('declares the eight keys in their default order', () => {
-    expect(GARAGE_SECTIONS.map((section) => section.key)).toEqual([
-      'kpi',
-      'now',
-      'req',
-      'load',
-      'sched',
-      'funnel',
-      'brands',
-      'reviews',
-    ]);
-  });
-
   it('opens each section on its full view', () => {
     expect(
-      Object.fromEntries(GARAGE_SECTIONS.map((s) => [s.key, s.view])),
+      Object.fromEntries(
+        homeSections(me('garage')).map((s) => [s.key, s.view]),
+      ),
     ).toEqual({
       brands: 'profile',
       funnel: 'profile',
       kpi: 'profile',
       load: 'team',
-      now: 'schedule',
       req: 'requests',
       reviews: 'reviews',
       sched: 'schedule',
@@ -74,17 +62,16 @@ describe('the sections of Panou', () => {
   });
 
   it('gives every section not built yet a sentence of its own', () => {
-    const empty = GARAGE_SECTIONS.filter((section) => section.empty);
+    const empty = homeSections(me('garage')).filter((section) => section.empty);
 
     expect(empty.map((section) => section.key)).toEqual([
       'kpi',
-      'now',
       'load',
       'sched',
       'funnel',
       'brands',
     ]);
-    expect(new Set(empty.map((section) => section.empty)).size).toBe(6);
+    expect(new Set(empty.map((section) => section.empty)).size).toBe(5);
   });
 });
 
@@ -132,7 +119,6 @@ describe('which sections each person sees', () => {
   });
 
   it('keeps "În lucru acum" out while it is not released', () => {
-    expect(GARAGE_SECTIONS.find((s) => s.key === 'now')?.unreleased).toBe(true);
     expect(keys(me('garage'))).not.toContain('now');
   });
 

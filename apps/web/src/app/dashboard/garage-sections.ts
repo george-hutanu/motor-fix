@@ -31,7 +31,7 @@ const planned = (
   key: SectionKey,
   view: string,
   capability: Capability,
-  extra: Partial<GarageSection> = {},
+  extra: Pick<GarageSection, 'feature' | 'unreleased'> = {},
 ): GarageSection => ({
   capability,
   empty: `garage.home.empty.${key}`,
@@ -42,7 +42,7 @@ const planned = (
 });
 
 // Panou's sections in their default order.
-export const GARAGE_SECTIONS: readonly GarageSection[] = [
+const GARAGE_SECTIONS: readonly GarageSection[] = [
   planned('kpi', 'profile', 'garage.profile'),
   planned('now', 'schedule', 'garage.profile', { unreleased: true }),
   {
