@@ -1,3 +1,4 @@
+// @traces 1381-FR-007
 import { HttpException, NotFoundException } from '@nestjs/common';
 
 import {
@@ -55,6 +56,26 @@ describe('landing', () => {
     ['admin', '/app/admin'],
   ] as const)('a %s lands on %s', (role, path) => {
     expect(landingFor(role)).toBe(path);
+  });
+
+  it.each([
+    ['mechanic', '/app/garage'],
+    ['driver', '/app/driver'],
+  ] as const)(
+    'a mechanic who is also a driver, last in as a %s, lands on %s',
+    (lastRole, path) => {
+      const role = roleInUse(null, lastRole, ['driver', 'mechanic']);
+
+      expect(role).toBe(lastRole);
+      expect(role && landingFor(role)).toBe(path);
+    },
+  );
+
+  it('lands an account with no role recorded on its first held role', () => {
+    const role = roleInUse(null, 'admin', ['driver', 'mechanic']);
+
+    expect(role).toBe('mechanic');
+    expect(role && landingFor(role)).toBe('/app/garage');
   });
 });
 

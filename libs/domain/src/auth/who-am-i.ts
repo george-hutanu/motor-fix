@@ -62,7 +62,8 @@ export class WhoAmI {
     };
   }
 
-  // Read from the memberships and the mechanic card, never from the address.
+  // Read from the memberships and the live mechanic card, never from the
+  // address; a removed card opens no garage, as the actor loader reads it.
   private async garageAccess(accountId: string): Promise<GarageAccessDto[]> {
     const garage = {
       select: {
@@ -89,9 +90,9 @@ export class WhoAmI {
         orderBy: { joinedAt: 'asc' },
         where: { accountId },
       }),
-      this.prisma.mechanic.findUnique({
+      this.prisma.mechanic.findFirst({
         include: { garage },
-        where: { accountId },
+        where: { accountId, removedAt: null },
       }),
     ]);
     const entry = (
