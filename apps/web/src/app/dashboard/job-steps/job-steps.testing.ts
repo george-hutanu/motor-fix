@@ -39,6 +39,7 @@ export const job = (over: Partial<JobDto> = {}): JobDto => ({
     engine: '1.5 dCi',
     fuel: 'diesel',
     model: 'Logan',
+    odometerKm: 84000,
     plate: 'B 101 QAT',
     year: 2018,
   },
@@ -60,7 +61,9 @@ export const job = (over: Partial<JobDto> = {}): JobDto => ({
   ],
   mechanicId: 'mechanic-1',
   mechanicName: 'Mihai Dumitru',
+  odometerKm: null,
   pausedAt: null,
+  receivedAt: null,
   stages: [],
   startedAt: '2026-10-09T06:30:00.000Z',
   startsAt: '2026-10-09T06:30:00.000Z',
@@ -72,6 +75,7 @@ export const job = (over: Partial<JobDto> = {}): JobDto => ({
   ],
   stepsDone: 1,
   stepsTotal: 3,
+  workedSeconds: 0,
   ...over,
 });
 

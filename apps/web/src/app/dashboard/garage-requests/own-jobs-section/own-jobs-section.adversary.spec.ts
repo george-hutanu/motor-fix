@@ -15,6 +15,7 @@ const base: JobSummaryDto = {
     engine: '1.5 dCi',
     fuel: 'diesel',
     model: 'Logan',
+    odometerKm: 84000,
     plate: 'B 101 QAT',
     year: 2018,
   },
@@ -35,12 +36,15 @@ const base: JobSummaryDto = {
   ],
   mechanicId: 'm',
   mechanicName: 'Elena Stan',
+  odometerKm: null,
   pausedAt: null,
+  receivedAt: null,
   startedAt: null,
   startsAt: '2026-10-09T09:00:00.000Z',
   status: 'to_do',
   stepsDone: 0,
   stepsTotal: 0,
+  workedSeconds: 0,
 };
 const job = (id: string, over: Partial<JobSummaryDto> = {}): JobSummaryDto => ({
   ...base,

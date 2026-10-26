@@ -150,6 +150,11 @@ describe('ci workflow', () => {
     );
   });
 
+  // The suite runs 30 to 45 minutes; 45 cancelled finished runs at the edge.
+  it('gives the integration suite an hour before cancelling it', () => {
+    expect(Number(setting(job('integration'), 'timeout-minutes'))).toBe(60);
+  });
+
   it('builds the docker images on a PR that changes an image input, and by hand', () => {
     expect(setting(job('docker'), 'if')).toBe(
       "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.docker == 'true')",

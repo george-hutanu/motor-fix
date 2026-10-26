@@ -27,15 +27,16 @@ beforeAll(async () => {
   garageId = (await world.garage('Atelier Dinamo')).id;
 });
 
-async function jobIn(status: JobStatus) {
+async function jobIn(status: JobStatus, mechanicId?: string) {
   const { booking } = await world.chain(driver, garageId);
-  return world.job(booking.id, status);
+  return world.job(booking.id, status, { mechanicId });
 }
 
-const move = (id: string, to: JobStatus, text?: string) =>
+const move = (id: string, to: JobStatus, text?: string, auto?: boolean) =>
   prisma.$transaction((tx) =>
     moveJob(tx, ports, {
       actor: { accountId: owner, role: 'garage' },
+      auto,
       event: {
         audience: {
           driverAccountId: driver,
@@ -55,13 +56,14 @@ const statuses = Object.values(JobStatus);
 
 // @traces 220-FR-007
 // @traces 220-FR-008
+// @traces 276-FR-001 276-FR-003
 describe('moveJob', () => {
   it('holds exactly the moves of the job diagram', () => {
     expect(JOB_MOVES).toEqual({
       cancelled: [],
       done: [],
       in_work: ['paused', 'done'],
-      paused: ['in_work'],
+      paused: ['in_work', 'done'],
       to_do: ['in_work', 'cancelled'],
     });
   });
@@ -205,6 +207,100 @@ describe('moveJob', () => {
         where: { id: job.id },
       }),
     ).toMatchObject({ stages: [], startedAt: null, status: 'to_do' });
+  });
+});
+
+const stages = (jobId: string) =>
+  prisma.jobStageEntry.findMany({
+    orderBy: [{ at: 'asc' }, { id: 'asc' }],
+    where: { jobId },
+  });
+
+// The latest entry into work, moved back so the job has been in work a while.
+// Moves the whole history back, so the entries keep their order.
+async function inWorkFor(jobId: string, ms: number) {
+  await prisma.$executeRaw`
+    UPDATE job_stage_entry SET at = at - ${ms} * interval '1 millisecond'
+    WHERE job_id = ${jobId}::uuid`;
+}
+
+const worked = async (jobId: string) =>
+  (await prisma.job.findUniqueOrThrow({ where: { id: jobId } })).workedSeconds;
+
+// @traces 276-FR-004 276-FR-015
+describe('the stage entry of a move', () => {
+  it('carries the job’s mechanic and is not automatic by default', async () => {
+    const account = await world.account('Mihai Dobre', ['mechanic']);
+    const mechanic = await prisma.mechanic.create({
+      data: { accountId: account, garageId, name: 'Mihai' },
+    });
+    const job = await jobIn('to_do', mechanic.id);
+
+    await move(job.id, 'in_work');
+
+    expect(await stages(job.id)).toEqual([
+      expect.objectContaining({ auto: false, mechanicId: mechanic.id }),
+    ]);
+  });
+
+  it('has no mechanic when the job has none, and is marked when automatic', async () => {
+    const job = await jobIn('in_work');
+
+    await move(job.id, 'paused', undefined, true);
+
+    expect(await stages(job.id)).toEqual([
+      expect.objectContaining({ auto: true, mechanicId: null }),
+    ]);
+  });
+});
+
+// @traces 276-FR-006 276-FR-015
+describe('the time a job spends in work', () => {
+  it('starts at nothing', async () => {
+    const job = await jobIn('to_do');
+
+    expect(job.workedSeconds).toBe(0);
+  });
+
+  it('adds the whole seconds since the latest start on a pause by hand or an automatic one', async () => {
+    const job = await jobIn('to_do');
+    await move(job.id, 'in_work');
+    await inWorkFor(job.id, 90_400);
+
+    await move(job.id, 'paused');
+    expect(await worked(job.id)).toBe(90);
+
+    await move(job.id, 'in_work');
+    await inWorkFor(job.id, 30_900);
+    await move(job.id, 'paused', undefined, true);
+    expect(await worked(job.id)).toBe(120);
+  });
+
+  it('adds the time since the resume on a finish from work', async () => {
+    const job = await jobIn('to_do');
+    await move(job.id, 'in_work');
+    await inWorkFor(job.id, 10_000);
+    await move(job.id, 'paused');
+    await move(job.id, 'in_work');
+    await inWorkFor(job.id, 45_000);
+
+    await move(job.id, 'done');
+
+    expect(await worked(job.id)).toBe(55);
+  });
+
+  it('adds nothing on a finish from a pause', async () => {
+    const job = await jobIn('to_do');
+    await move(job.id, 'in_work');
+    await inWorkFor(job.id, 20_000);
+    await move(job.id, 'paused');
+
+    await move(job.id, 'done');
+
+    expect(await worked(job.id)).toBe(20);
+    expect(
+      await prisma.job.findUniqueOrThrow({ where: { id: job.id } }),
+    ).toMatchObject({ finishedAt: expect.any(Date), status: 'done' });
   });
 });
 
