@@ -252,7 +252,7 @@ describe('the MCP endpoint', () => {
     const codeOf = (answer: typeof sheet) =>
       JSON.parse((answer.content as { text: string }[])[0].text).code;
     expect(codeOf(sheet)).toBe('not_found');
-    expect(codeOf(lift)).toBe('validation');
+    expect(codeOf(lift)).toBe('validation_failed');
     expect(schedule.isError).toBeFalsy();
     expect(schedule.structuredContent).toMatchObject({ lifts: false });
     expect(schedule.structuredContent).not.toHaveProperty('byLift');
