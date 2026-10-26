@@ -5745,6 +5745,70 @@
     },
     {
       "id": 198,
+      "type": "stat",
+      "title": "Review reports told to the admins, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 267
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_review_report_alerts_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 199,
+      "type": "stat",
+      "title": "Review reports told to the admins, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 267
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_review_report_alerts_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 200,
       "type": "timeseries",
       "title": "Review reports told to the admins per hour",
       "datasource": {
@@ -5753,8 +5817,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 12,
-        "x": 0,
+        "w": 8,
+        "x": 16,
         "y": 267
       },
       "targets": [
@@ -5774,7 +5838,71 @@
       }
     },
     {
-      "id": 199,
+      "id": 201,
+      "type": "stat",
+      "title": "Review report 48-hour reminders, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 271
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_review_report_reminders_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 202,
+      "type": "stat",
+      "title": "Review report 48-hour reminders, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 271
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_review_report_reminders_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 203,
       "type": "timeseries",
       "title": "Review report 48-hour reminders per hour",
       "datasource": {
@@ -5783,9 +5911,9 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 12,
-        "x": 12,
-        "y": 267
+        "w": 8,
+        "x": 16,
+        "y": 271
       },
       "targets": [
         {
