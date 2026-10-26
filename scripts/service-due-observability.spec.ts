@@ -23,4 +23,14 @@ describe('the oil service in the observability inventory', () => {
     expect(reminders?.reason).toContain("cars module's");
     expect(reminders?.reason).toContain('SERVICE_DUE');
   });
+
+  it('lists the cars endpoints with the odometer reading and serviceDueOn they now carry', () => {
+    const cars = inventory.entries.find(
+      (e) =>
+        e.kind === 'endpoint' &&
+        e.source === 'libs/domain/src/cars/my-cars/cars/cars.controller.ts',
+    );
+    expect(cars?.reason).toContain('odometer_reading');
+    expect(cars?.reason).toContain('serviceDueOn');
+  });
 });
