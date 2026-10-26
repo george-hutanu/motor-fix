@@ -6,7 +6,7 @@ import {
   countLiveSession,
   countViewToken,
   recordProviderCall,
-} from './live-sessions.metrics';
+} from './sessions.metrics';
 
 const memory = inMemory();
 const started = startTelemetry(

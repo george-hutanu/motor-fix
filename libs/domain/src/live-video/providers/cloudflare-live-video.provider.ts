@@ -8,7 +8,7 @@ import { Logger } from '@nestjs/common';
 import { type Span, SpanStatusCode, trace } from '@opentelemetry/api';
 
 import type { LiveInput, LiveVideoProvider } from './live-video.provider';
-import { recordProviderCall } from '../sessions/live-sessions.metrics';
+import { recordProviderCall } from '../sessions/sessions.metrics';
 
 const API = 'https://api.cloudflare.com/client/v4';
 

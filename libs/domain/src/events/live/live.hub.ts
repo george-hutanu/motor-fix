@@ -53,7 +53,7 @@ export const KIND_CAPABILITY: [RegExp, Capability][] = [
   [/^(request|message)\./, 'garage.requests'],
   [/^booking\.move/, 'garage.move_bookings'],
 ];
-const FEATURES: [RegExp, string][] = [[/^media\./, 'live_media']];
+const FEATURES: [RegExp, string][] = [[/^(media|live)\./, 'live_media']];
 const REREAD_ACCESS = new Set([
   'member.removed',
   'mechanic.updated',
