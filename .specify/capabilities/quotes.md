@@ -26,6 +26,7 @@ features:
   - 1257-quote-reminders
   - 1258-driver-cancel
   - 099-overview-sections
+  - 1385-cancel-from-requests
 ---
 
 # Capability: Quotes
@@ -438,9 +439,9 @@ _From 222-booking-from-quote._
 
 _From 222-booking-from-quote._
 
-### 222-FR-009 — The driver's Cererile mele view and the driver home MUST re-read within 5 seconds when the driver's live channel delivers `quote.accepted` (added to the kinds each already listens to); the garage feed already re-reads on it (347-FR-010) and MUST move the row from "waiting" rendering to the accepted rendering without a reload.
+### 1385-FR-008 — The Cererile mele view and the driver home MUST re-read within 5 seconds on `request.cancelled` and `booking.cancelled` (added to the kinds the driver's request views listen to, 222-FR-009 and 389-FR-016), so a cancel from another tab or an AI assistant moves the row without a reload.
 
-_From 222-booking-from-quote._
+_From 1385-cancel-from-requests._
 
 ### 222-FR-011 — Nothing the garage reads (its list, its detail, its drawer, its notifications) MUST carry the car's history or the repairs the driver logged elsewhere, whether or not `history_shared` is true: the garage's booking carries the flag only (the existing `historyShared` on its booking DTO) and no history field is added; the read-only view is #288 and access opens at confirmation (#82).
 
@@ -810,6 +811,42 @@ _From 1258-driver-cancel._
 
 _From 1258-driver-cancel._
 
+### 1385-FR-001 — The driver's list summary of a request's newest booking (the booking a Cererile mele row reads, returned by `GET /api/v1/quote-requests`; the active-request read has its own booking DTO, carries no cancel on the driver home and is untouched, research R1) MUST also carry the booking's `id`, its `garage` (the garage's id, name and slug, as the detail read's garage reference), `cancelledBySide`, `lateCancellation` and `jobStarted`, true when the booking's job exists and its status is not `to_do`, else false. The DTO lives in the contracts library; the OpenAPI document and the generated client are regenerated. No endpoint, rule or write changes.
+
+_From 1385-cancel-from-requests._
+
+### 1385-FR-002 — Each Cererile mele row MUST show exactly one cancel action or none: "Anulează cererea" / "Cancel the request" when the request is `sent` or `quoted` (a `quoted` request with a `lapsed` or `cancelled` booking included); "Anulează programarea" / "Cancel the booking" when the request is `booked` and its booking is `awaiting_confirmation` or `confirmed`, its `startsAt` is ahead of now and `jobStarted` is false; nothing otherwise (`in_work`, `done`, `closed`, a booking in any other status, a passed `startsAt`, a started job). The action is a secondary button in the row's one actions group, after "Compară ofertele" when that exists (the group renders whenever either does), re-judged on the view's minute tick so a passed `startsAt` removes it without a reload.
+
+_From 1385-cancel-from-requests._
+
+### 1385-FR-003 — A row MUST show, under its status and the existing lines: "Anulată de tine" / "Cancelled by you" when the request is `closed` with `closedReason` `cancelled`, or `closed` with `closedReason` `booking_cancelled` and its booking's `cancelledBySide` `driver`; with " · Anulare târzie" / " · Late cancellation" appended when that booking's `lateCancellation` is true; and "Ai anulat programarea. Poți alege altă ofertă." / "You cancelled the booking. You can choose another quote." when the request is `quoted` and its newest booking is `cancelled` with `cancelledBySide` `driver`. A booking cancelled by another side shows none of these: a `quoted` row whose booking the garage or the system cancelled shows its status and "Compară ofertele" only.
+
+_From 1385-cancel-from-requests._
+
+### 1385-FR-004 — "Anulează cererea" MUST open a `dialog`-shaped overlay titled "Anulezi cererea?" / "Cancel the request?", naming the car and the jobs (or the description's first line) under the title, with the body "Service-urile care așteaptă vor fi anunțate; ofertele primite se pierd." / "The garages still waiting will be told; the quotes received are lost." and two buttons: "Anulează cererea" / "Cancel the request" (destructive) and "Păstrează cererea" / "Keep the request". The confirm calls `POST /api/v1/quote-requests/:id/cancel`; on 200 the dialog closes with the toast "Cerere anulată" / "Request cancelled" and the list re-reads.
+
+_From 1385-cancel-from-requests._
+
+### 1385-FR-005 — "Anulează programarea" MUST open a `dialog`-shaped overlay titled "Anulezi programarea?" / "Cancel the booking?", naming the garage and the slot ("<garage> · <day>, <time>", the slot in the view's existing format) under the title, with: a radio list of the four driver reasons in the contracts' order and labels ("Mi s-au schimbat planurile", "Am găsit alt service", "S-a rezolvat problema", "Altceva" / "Plans changed", "Found another garage", "Problem solved", "Other"), none preselected, the confirm disabled until one is chosen; a textarea "Detalii (opțional)" / "Details (optional)" with a live counter "<n>/500" that takes no more than 500 characters; when now is later than `startsAt` − 2 hours, the status region "Anulezi cu mai puțin de 2 ore înainte. Se înregistrează ca anulare târzie, fără penalizare." / "You are cancelling less than 2 hours before. It is recorded as a late cancellation, with no penalty.", judged in the browser and re-judged every minute; and the buttons "Anulează programarea" / "Cancel the booking" (destructive) and "Păstrează programarea" / "Keep the booking". The confirm calls `POST /api/v1/bookings/:id/cancel` with the reason and the trimmed details (an empty result is no note); on 200 the dialog closes with the toast "Programare anulată" / "Booking cancelled" and the list re-reads.
+
+_From 1385-cancel-from-requests._
+
+### 1385-FR-006 — Both dialogs MUST behave as the garage's decline-request dialog does, through the shared overlay and form-saving helper: while the call runs both buttons and every field are disabled and the dialog stays open; a 409 `invalid_transition` closes it with the toast "Cererea nu mai poate fi anulată." / "This request can no longer be cancelled." or "Programarea nu mai poate fi anulată." / "This booking can no longer be cancelled." and the list re-reads; a 404 closes it the same way with the shared not-found text; any other failure keeps it open with the shared error line, the chosen reason and the details kept; offline, the confirm is disabled with the shared offline line; Escape and the keep button close it sending nothing. Each is keyboard-operable (Tab through the reasons, the field and the buttons; Space picks a reason; Enter on the confirm submits), the focus moves into the dialog on open and returns to the row's action on close when that action is still rendered, else to the row itself (`li[data-request]`). Each dialog is its own web component folder.
+
+_From 1385-cancel-from-requests._
+
+### 1385-FR-007 — Every new text MUST exist in Romanian and English (hyphenated Romanian words with U+2011) in the driver's messages; the rows and both dialogs MUST pass the QA sweep at 320 px, 390 px, tablet and desktop, in light and dark, Romanian and English, with no sideways scroll and no axe violation; the destructive button uses the repo's existing `.danger` secondary rule (no destructive helm variant exists, research R3) and the warning a status region, both meeting the theme's contrast.
+
+_From 1385-cancel-from-requests._
+
+### 1385-FR-009 — One Playwright end to end MUST drive the P1 path against the seeded data: the seeded driver's request quoted by Service Auto Militari, accepted and confirmed through the API as the confirm-booking flow does; the driver opens Cererile mele, taps "Anulează programarea", picks "Am găsit alt service", confirms, and the row reads "Anulată de tine"; then, signed in as Militari's owner, the bell's unread count rose and its list shows "<driver> a anulat programarea · <car> · <slot>". It waits on visible elements and text, never `networkidle`.
+
+_From 1385-cancel-from-requests._
+
+### 1385-FR-010 — Tests MUST exist before the code (Principle II): in Jest on real PostgreSQL, the list summary's five new fields, `jobStarted` false with no job and with a `to_do` job, true with an `in_work` job, and the `cancelled` booking's `cancelledBySide` and `lateCancellation` as saved; in Jest for the web, the row's action for every status of FR-002 (none for a passed `startsAt`, a started job, `in_work`, `done`, `closed`; removed by the tick), the three lines of FR-003 and their absence for a garage-side cancel, each dialog's title and subject, the reason list with none chosen and the disabled confirm, the counter at 0, 120 and 500, the warning at 3 hours (absent) and 1 hour 30 (present, a status region), the body sent (reason, trimmed note, whitespace as no note), the toast and close on 200, the 409 toast and re-read, a 500 keeping the dialog with the reason and note, offline disabling the confirm, and the focus returning to the row's action; the sweep for FR-007; the end to end of FR-009. Every test file carries its `// @traces 1385-FR-<n>` line.
+
+_From 1385-cancel-from-requests._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -836,6 +873,7 @@ _From 1258-driver-cancel._
 - `221-FR-016` — superseded by `292-FR-006` (2026-10-23)
 - `428-FR-003` — superseded by `223-FR-004` (2026-10-25)
 - `389-FR-004` — superseded by `058-FR-012` (2026-10-25)
+- `222-FR-009` — superseded by `1385-FR-008` (2026-10-26)
 - `389-FR-007` — superseded by `150-FR-001` (2026-10-26)
 - `389-FR-002` — superseded by `150-FR-004` (2026-10-26)
 - `389-FR-003` — superseded by `150-FR-006` (2026-10-26)

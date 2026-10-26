@@ -192,6 +192,10 @@ export type DriverCancelReasonCode = (typeof DRIVER_CANCEL_REASONS)[number];
 // What a driver may write when cancelling a booking, counted after trimming.
 export const BOOKING_CANCEL_NOTE_MAX = 500;
 
+// A driver's cancel later than this many hours before the start is recorded
+// as late, never with a penalty.
+export const FREE_CANCEL_CUTOFF_HOURS = 2;
+
 export const CANCEL_REASON_TEXTS: Record<
   DriverCancelReasonCode,
   { label: Words }

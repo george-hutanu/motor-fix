@@ -13677,7 +13677,27 @@
           "position"
         ]
       },
-      "RequestBookingDto": {
+      "GarageRefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "DriverRowBookingDto": {
         "type": "object",
         "properties": {
           "status": {
@@ -13698,12 +13718,41 @@
           "startsAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "cancelledBySide": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "garage",
+              "system"
+            ],
+            "nullable": true
+          },
+          "lateCancellation": {
+            "type": "boolean",
+            "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
+          },
+          "jobStarted": {
+            "type": "boolean",
+            "description": "The booking’s job exists and has left to do"
           }
         },
         "required": [
           "status",
           "confirmBy",
-          "startsAt"
+          "startsAt",
+          "id",
+          "garage",
+          "cancelledBySide",
+          "lateCancellation",
+          "jobStarted"
         ]
       },
       "RequestSummaryDto": {
@@ -13772,7 +13821,7 @@
             "type": "object",
             "allOf": [
               {
-                "$ref": "#/components/schemas/RequestBookingDto"
+                "$ref": "#/components/schemas/DriverRowBookingDto"
               }
             ]
           }
@@ -13813,140 +13862,6 @@
           "items",
           "nextCursor",
           "total"
-        ]
-      },
-      "GarageRefDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug"
-        ]
-      },
-      "BookingDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "quoteId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "garage": {
-            "$ref": "#/components/schemas/GarageRefDto"
-          },
-          "startsAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "durationMinutes": {
-            "type": "number"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "awaiting_confirmation",
-              "confirmed",
-              "lapsed",
-              "cancelled",
-              "no_show",
-              "completed"
-            ]
-          },
-          "confirmBy": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "confirmedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "cancelledAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "cancelledBySide": {
-            "type": "string",
-            "enum": [
-              "driver",
-              "garage",
-              "system"
-            ],
-            "nullable": true
-          },
-          "cancelReason": {
-            "type": "string",
-            "enum": [
-              "plans_changed",
-              "found_another_garage",
-              "problem_solved",
-              "no_mechanic_free",
-              "parts_not_available",
-              "closed_that_day",
-              "driver_asked",
-              "other",
-              "garage_suspended",
-              "driver_account_closed"
-            ],
-            "nullable": true
-          },
-          "cancelNote": {
-            "type": "string",
-            "description": "What the driver wrote when cancelling, if anything",
-            "nullable": true
-          },
-          "lateCancellation": {
-            "type": "boolean",
-            "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
-          },
-          "noShowAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "completedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "id",
-          "quoteId",
-          "garage",
-          "startsAt",
-          "durationMinutes",
-          "status",
-          "confirmBy",
-          "confirmedAt",
-          "cancelledAt",
-          "cancelledBySide",
-          "cancelReason",
-          "cancelNote",
-          "lateCancellation",
-          "noShowAt",
-          "completedAt",
-          "createdAt"
         ]
       },
       "RecipientDto": {
@@ -14107,6 +14022,120 @@
           "jobs"
         ]
       },
+      "BookingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quoteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_confirmation",
+              "confirmed",
+              "lapsed",
+              "cancelled",
+              "no_show",
+              "completed"
+            ]
+          },
+          "confirmBy": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "confirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelledBySide": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "garage",
+              "system"
+            ],
+            "nullable": true
+          },
+          "cancelReason": {
+            "type": "string",
+            "enum": [
+              "plans_changed",
+              "found_another_garage",
+              "problem_solved",
+              "no_mechanic_free",
+              "parts_not_available",
+              "closed_that_day",
+              "driver_asked",
+              "other",
+              "garage_suspended",
+              "driver_account_closed"
+            ],
+            "nullable": true
+          },
+          "cancelNote": {
+            "type": "string",
+            "description": "What the driver wrote when cancelling, if anything",
+            "nullable": true
+          },
+          "lateCancellation": {
+            "type": "boolean",
+            "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
+          },
+          "noShowAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "quoteId",
+          "garage",
+          "startsAt",
+          "durationMinutes",
+          "status",
+          "confirmBy",
+          "confirmedAt",
+          "cancelledAt",
+          "cancelledBySide",
+          "cancelReason",
+          "cancelNote",
+          "lateCancellation",
+          "noShowAt",
+          "completedAt",
+          "createdAt"
+        ]
+      },
       "RequestDto": {
         "type": "object",
         "properties": {
@@ -14167,16 +14196,6 @@
             "description": "As the driver wrote it; the list shows its first line when there is no job",
             "nullable": true
           },
-          "booking": {
-            "description": "The request’s newest booking",
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/BookingDto"
-              }
-            ]
-          },
           "recipients": {
             "type": "array",
             "items": {
@@ -14188,6 +14207,15 @@
             "items": {
               "$ref": "#/components/schemas/QuoteDto"
             }
+          },
+          "booking": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingDto"
+              }
+            ]
           }
         },
         "required": [
@@ -14201,9 +14229,9 @@
           "closedAt",
           "quotesCount",
           "description",
-          "booking",
           "recipients",
-          "quotes"
+          "quotes",
+          "booking"
         ]
       },
       "GarageCarDto": {

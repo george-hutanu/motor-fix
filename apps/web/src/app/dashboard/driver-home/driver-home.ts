@@ -75,11 +75,18 @@ export class DriverHome {
   private readonly session = inject(Session);
   protected readonly language = this.i18n.language;
   protected readonly cars = signal<Read<CarDto>>(undefined);
-  // The requests, re-read when a quote is accepted, confirmed or lapses, and
-  // after a resync; the last read wins.
+  // The requests, re-read when a quote is accepted, a booking is confirmed,
+  // lapses or is cancelled, a request is cancelled, and after a resync; the
+  // last read wins.
   private readonly requestsRead = liveResource(
     () => this.requestsApi.requestsControllerList(),
-    ['quote.accepted', 'booking.confirmed', 'booking.lapsed'],
+    [
+      'quote.accepted',
+      'booking.confirmed',
+      'booking.lapsed',
+      'booking.cancelled',
+      'request.cancelled',
+    ],
   );
   protected readonly requests = computed(
     (): Read<RequestSummaryDto> =>
