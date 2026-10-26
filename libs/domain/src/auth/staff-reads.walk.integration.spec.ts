@@ -131,7 +131,12 @@ describe("what a mechanic's garage reads carry", () => {
         request: await http(`/garage/requests/${g.request.id}`),
         requests: await http('/garage/requests'),
         schedule: await answerOf(
-          schedule.list(actor, { from: DAY, to: DAY }, NOW),
+          schedule.list(
+            actor,
+            actor.garageId as string,
+            { from: DAY, to: DAY },
+            NOW,
+          ),
         ),
         theirJob: await http(`/garage/jobs/${g.theirJob.id}`),
       };

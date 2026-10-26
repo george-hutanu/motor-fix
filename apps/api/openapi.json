@@ -4113,6 +4113,92 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/schedule": {
+      "get": {
+        "operationId": "garageSchedule",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "YYYY-MM-DD, Bucharest; today when left out",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "YYYY-MM-DD, Bucharest; from when left out, at most 6 days on",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "lift",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageScheduleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad day, or a range over seven days"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic asking for another card"
+          },
+          "404": {
+            "description": "not_found: not this garage’s staff"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage’s bookings over one to seven Bucharest days, with their segments",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/reviews": {
       "get": {
         "operationId": "GarageReviewsController_read",
@@ -15098,6 +15184,167 @@
           "id",
           "status",
           "declinedAt"
+        ]
+      },
+      "ScheduleCarDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "brand",
+          "model",
+          "year"
+        ]
+      },
+      "BookingSegmentDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mechanicId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "lift": {
+            "type": "number",
+            "description": "Present only while the garage schedules with lifts",
+            "nullable": true
+          }
+        },
+        "required": [
+          "startsAt",
+          "endsAt",
+          "mechanicId"
+        ]
+      },
+      "GarageScheduleEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "car": {
+            "$ref": "#/components/schemas/ScheduleCarDto"
+          },
+          "jobs": {
+            "description": "In the caller's language",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "customer": {
+            "type": "string",
+            "description": "The driver's short name: \"Dan V.\""
+          },
+          "mechanic": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingMechanicDto"
+              }
+            ]
+          },
+          "lift": {
+            "type": "number",
+            "description": "Present only while the garage schedules lifts",
+            "nullable": true
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_confirmation",
+              "confirmed",
+              "completed",
+              "no_show"
+            ]
+          },
+          "confirmBy": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "minutesLeft": {
+            "type": "number",
+            "nullable": true
+          },
+          "jobStatus": {
+            "type": "string",
+            "description": "The job's status, null before the confirmation",
+            "nullable": true
+          },
+          "segments": {
+            "description": "Empty while the booking awaits the garage",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingSegmentDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "car",
+          "jobs",
+          "customer",
+          "mechanic",
+          "startsAt",
+          "durationMinutes",
+          "status",
+          "confirmBy",
+          "minutesLeft",
+          "jobStatus",
+          "segments"
+        ]
+      },
+      "GarageScheduleDto": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GarageScheduleEntryDto"
+            }
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "lifts": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entries",
+          "from",
+          "to",
+          "lifts"
         ]
       },
       "RatingBreakdownDto": {

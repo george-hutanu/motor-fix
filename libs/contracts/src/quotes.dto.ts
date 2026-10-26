@@ -4,9 +4,8 @@ import {
   OmitType,
   PickType,
 } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
-  Allow,
   IsBoolean,
   IsDivisibleBy,
   IsIn,
@@ -662,22 +661,38 @@ export class ConfirmOptionsDto {
   needsLift!: boolean;
 }
 
+const SCHEDULE_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
 // The garage's schedule over one to seven Bucharest days.
 export class ScheduleQueryDto {
   @ApiPropertyOptional({
     description: 'YYYY-MM-DD, Bucharest; today when left out',
+    format: 'date',
   })
-  @Allow()
-  from!: string;
+  @IsOptional()
+  @Matches(SCHEDULE_DAY)
+  @IsISO8601({ strict: true })
+  from?: string;
 
   @ApiPropertyOptional({
     description: 'YYYY-MM-DD, Bucharest; from when left out, at most 6 days on',
+    format: 'date',
   })
-  @Allow()
+  @IsOptional()
+  @Matches(SCHEDULE_DAY)
+  @IsISO8601({ strict: true })
   to?: string;
 
+  @ApiPropertyOptional({ minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  lift?: number;
+
   @ApiPropertyOptional({ format: 'uuid' })
-  @Allow()
+  @IsOptional()
+  @IsUUID()
   mechanicId?: string;
 }
 
@@ -692,8 +707,12 @@ export class BookingSegmentDto {
   @ApiProperty({ format: 'uuid', nullable: true, type: String })
   mechanicId!: string | null;
 
-  @ApiProperty({ nullable: true, type: Number })
-  lift!: number | null;
+  @ApiPropertyOptional({
+    description: 'Present only while the garage schedules with lifts',
+    nullable: true,
+    type: Number,
+  })
+  lift?: number | null;
 }
 
 export class ScheduleCarDto {

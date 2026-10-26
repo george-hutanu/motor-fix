@@ -11,6 +11,8 @@ import { DeclineQuoteController } from './decline-quote/decline-quote.controller
 import { DeclineQuoteService } from './decline-quote/decline-quote.service';
 import { GarageRequestsController } from './garage-requests/garage-requests.controller';
 import { GarageRequestsService } from './garage-requests/garage-requests.service';
+import { GarageScheduleController } from './garage-schedule/garage-schedule.controller';
+import { GarageScheduleService } from './garage-schedule/garage-schedule.service';
 import { QuoteRequestsController } from './quote-requests/quote-requests.controller';
 import { QuoteRequestsService } from './quote-requests/quote-requests.service';
 import { QuotesController } from './quotes/quotes.controller';
@@ -34,6 +36,7 @@ import { WorkshopModule } from '../workshop/workshop.module';
     CompareController,
     ConfirmController,
     DeclineQuoteController,
+    GarageScheduleController,
   ],
   exports: [DeclineService, GarageRequestsService, RequestsService],
   imports: [CacheModule, WorkshopModule],
@@ -47,6 +50,7 @@ import { WorkshopModule } from '../workshop/workshop.module';
     CompareService,
     ConfirmService,
     DeclineQuoteService,
+    GarageScheduleService,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],
 })

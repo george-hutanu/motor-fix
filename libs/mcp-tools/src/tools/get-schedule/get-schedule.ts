@@ -4,6 +4,9 @@ import { text } from '../../errors';
 import { defineTool } from '../../registry';
 import { bookedOutput, day } from '../day';
 
+// A schedule entry names its booking's state `status`, as the API does.
+const { state: status, ...booked } = bookedOutput;
+
 // Ids under each key, the groups in order of first appearance.
 function grouped<E extends { id: string }, K, G>(
   entries: E[],
@@ -24,10 +27,14 @@ export const getSchedule = defineTool({
   acts: false,
   annotations: { destructiveHint: false, readOnlyHint: true },
   description:
-    "Shows the garage's bookings from one day to another (at most 7 days; today when no day is given), in start order: the car, the jobs, the mechanic, the lift and the state, with the minutes left to confirm a booking still awaiting the garage. Grouped by mechanic and by lift. Filter by lift or by mechanicId.",
+    "Shows the garage's bookings from one day to another (at most 7 days; today when no day is given), in start order: the car, the jobs, the customer, the mechanic, the lift, the status and the job's status, with the minutes left to confirm a booking still awaiting the garage. A long job is on each day it has a working segment, with all its segments. Grouped by mechanic and by lift. Filter by lift or by mechanicId.",
   async handler(actor, input, ctx) {
     const language = actor.language ?? 'ro';
-    const schedule = await ctx.garage.schedule.list(actor, input);
+    const schedule = await ctx.garage.schedule.list(
+      actor,
+      actor.garageId as string,
+      input,
+    );
     const { entries } = schedule;
     return {
       ...schedule,
@@ -76,11 +83,22 @@ export const getSchedule = defineTool({
     ),
     entries: z.array(
       z.object({
-        ...bookedOutput,
+        ...booked,
         confirmBy: z.string().nullable(),
+        customer: z.string(),
+        jobStatus: z.string().nullable(),
         lift: z.number().nullable().optional(),
         mechanic: z.object({ id: z.string(), name: z.string() }).nullable(),
         minutesLeft: z.number().nullable(),
+        segments: z.array(
+          z.object({
+            endsAt: z.string(),
+            lift: z.number().nullable().optional(),
+            mechanicId: z.string().nullable(),
+            startsAt: z.string(),
+          }),
+        ),
+        status,
       }),
     ),
     from: z.string(),

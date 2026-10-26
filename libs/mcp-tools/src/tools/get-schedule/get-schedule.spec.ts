@@ -3,6 +3,7 @@
 // @traces 374-FR-003
 // @traces 374-FR-005
 // @traces 374-FR-011
+// @traces 150-FR-009
 import { BadRequestException } from '@nestjs/common';
 
 import { getSchedule } from './get-schedule';
@@ -17,14 +18,24 @@ type Entry = Schedule['entries'][number];
 const entry = (id: string, more: Partial<Entry> = {}): Entry => ({
   car: { brand: 'Dacia', model: 'Logan', year: 2019 },
   confirmBy: null,
+  customer: 'Dan V.',
   durationMinutes: 90,
   id,
+  jobStatus: 'to_do',
   jobs: ['Schimb ulei'],
   lift: 1,
   mechanic: null,
   minutesLeft: null,
+  segments: [
+    {
+      endsAt: '2026-10-09T07:30:00.000Z',
+      lift: 1,
+      mechanicId: null,
+      startsAt: '2026-10-09T06:00:00.000Z',
+    },
+  ],
   startsAt: '2026-10-09T06:00:00.000Z',
-  state: 'confirmed',
+  status: 'confirmed',
   ...more,
 });
 
@@ -87,6 +98,7 @@ describe('get_schedule', () => {
     );
     expect(list).toHaveBeenCalledWith(
       expect.objectContaining({ role: 'garage' }),
+      'garage-1',
       {
         from: '2026-10-12',
         lift: 2,
@@ -109,15 +121,17 @@ describe('get_schedule', () => {
     expect(list).not.toHaveBeenCalled();
   });
 
-  it('answers the read’s refusal of a range or a lift as validation', async () => {
+  it('answers the read’s refusal of a range or a lift as the API does', async () => {
     const list = jest.fn(async () => {
       throw new BadRequestException({
-        code: 'validation',
+        code: 'validation_failed',
         message: 'At most 7 days',
       });
     });
     const result = await call({ from: '2026-10-01', to: '2026-10-20' }, list);
-    expect(result.structuredContent).toMatchObject({ code: 'validation' });
+    expect(result.structuredContent).toMatchObject({
+      code: 'validation_failed',
+    });
   });
 
   it('names the group with no mechanic in the account’s language', async () => {
@@ -172,7 +186,13 @@ describe('get_schedule', () => {
 
   it('groups by mechanic only when the garage schedules without lifts', async () => {
     const { lift: _lift, ...unlifted } = entry('b-1', { mechanic: vlad });
-    const list = scheduleOf({ entries: [unlifted as Entry], lifts: false });
+    const segments = unlifted.segments.map(
+      ({ lift: _l, ...segment }) => segment,
+    );
+    const list = scheduleOf({
+      entries: [{ ...unlifted, segments } as Entry],
+      lifts: false,
+    });
     const result = await call({}, list);
     expect(result.structuredContent).not.toHaveProperty('byLift');
     expect(JSON.stringify(result.structuredContent)).not.toMatch(/"lift"/);
@@ -210,8 +230,10 @@ describe('get_schedule output schema', () => {
                 entry('b1', { mechanic: vlad }),
                 entry('b2', {
                   confirmBy: '2026-10-09T05:00:00.000Z',
+                  jobStatus: null,
                   minutesLeft: 30,
-                  state: 'awaiting_confirmation',
+                  segments: [],
+                  status: 'awaiting_confirmation',
                 }),
               ],
             }),
@@ -226,5 +248,41 @@ describe('get_schedule output schema', () => {
       name: 'get_schedule',
     });
     expect(answer.isError).toBeFalsy();
+  });
+});
+
+describe('get_schedule entries', () => {
+  it('carries the customer, the status, the job status and the segments the read gives', async () => {
+    const long = entry('b1', {
+      durationMinutes: 720,
+      mechanic: vlad,
+      segments: [
+        {
+          endsAt: '2026-10-09T13:00:00.000Z',
+          lift: 1,
+          mechanicId: vlad.id,
+          startsAt: '2026-10-09T05:00:00.000Z',
+        },
+        {
+          endsAt: '2026-10-12T09:00:00.000Z',
+          lift: 1,
+          mechanicId: vlad.id,
+          startsAt: '2026-10-12T05:00:00.000Z',
+        },
+      ],
+    });
+    const result = await call({}, scheduleOf({ entries: [long] }));
+
+    expect(result.structuredContent).toMatchObject({
+      byMechanic: [{ bookingIds: ['b1'], id: vlad.id, name: 'Vlad Stan' }],
+      entries: [
+        {
+          customer: 'Dan V.',
+          jobStatus: 'to_do',
+          segments: long.segments,
+          status: 'confirmed',
+        },
+      ],
+    });
   });
 });
