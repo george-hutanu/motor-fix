@@ -1,0 +1,29 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+h2 {
+  margin: 0;
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  font-weight: 400;
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mf-tap);
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+a:hover {
+  color: var(--mf-amber-ink);
+}
+a:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}

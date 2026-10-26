@@ -184,7 +184,6 @@
     },
     "coming": {
       "garage": {
-        "dashboard": "Aici vei vedea ce se întâmplă azi în service.",
         "history": "Aici vei vedea cine a schimbat ce în service.",
         "jobs": "Aici vei vedea lucrările service‑ului.",
         "prices": "Aici vei vedea intervalele de preț pe lucrări.",

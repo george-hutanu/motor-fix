@@ -1,7 +1,7 @@
 <section class="panel" [attr.aria-busy]="view.isLoading() || null">
   <header>
     @if (home()) {
-      <h2>{{ 'garage.reviews.title' | t }}</h2>
+      <mf-section-title [heading]="'garage.reviews.title' | t" view="reviews" />
     } @else {
       <h2>{{ 'garage.reviews.viewTitle' | t }}</h2>
     }

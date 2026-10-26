@@ -1,0 +1,56 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  padding: var(--mf-space-5) var(--mf-space-6);
+  background: var(--mf-panel);
+  border: 1px solid var(--mf-amber);
+  border-radius: var(--mf-radius-panel);
+  min-width: 0;
+}
+h2 {
+  margin: 0;
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  font-weight: 400;
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+p {
+  margin: 0;
+  font-size: var(--mf-size-body);
+  overflow-wrap: anywhere;
+}
+ul {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mf-tap);
+  color: var(--mf-amber-ink);
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+a:hover {
+  text-decoration: underline;
+}
+a:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}
+@media (max-width: 767.98px) {
+  .panel {
+    padding-inline: var(--mf-space-4);
+  }
+}

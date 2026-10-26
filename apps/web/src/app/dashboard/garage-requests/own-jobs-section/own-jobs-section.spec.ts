@@ -479,6 +479,11 @@ describe('the own jobs on a phone', () => {
       join(__dirname, '../garage-requests-panel/garage-requests-panel.css'),
       'utf8',
     );
+    // The panel's title is a section title.
+    const title = readFileSync(
+      join(__dirname, '../../section-title/section-title.css'),
+      'utf8',
+    );
     const block = (css: string, selector: string) =>
       css.match(new RegExp(`\\n${selector} \\{([^}]*)\\}`))?.[1] ?? '';
     const card = (css: string) =>
@@ -498,7 +503,7 @@ describe('the own jobs on a phone', () => {
         new RegExp(`${property}: [^;]+;`),
       )?.[0];
       expect(own).toBeDefined();
-      expect(block(panel, 'h2')).toContain(own);
+      expect(block(title, 'h2')).toContain(own);
     }
 
     const { element, settle } = await render();
