@@ -1,18 +1,9 @@
 import type { PrismaClient } from '../../generated/prisma/client';
 
-export interface ReportCounts {
-  pending: number;
-  overdue: number;
-  oldestCreatedAt: Date | null;
-}
-
 // The pending review reports: how many, how many past their due time (from
 // the very moment they are due), and when the oldest was made. The overview
 // and the queue read the same numbers.
-export async function countReportQueue(
-  prisma: PrismaClient,
-  now: Date,
-): Promise<ReportCounts> {
+export async function countReportQueue(prisma: PrismaClient, now: Date) {
   const [pending, overdue, oldest] = await Promise.all([
     prisma.reviewReport.count({ where: { status: 'pending' } }),
     prisma.reviewReport.count({

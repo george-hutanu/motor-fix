@@ -396,7 +396,7 @@ const BY_PARAM: Record<string, [param: string, values: ReadonlySet<unknown>]> =
   {
     ADMIN_REVIEW_REPORTED: [
       'variant',
-      new Set(['reply', 'automatic', 'reminder']),
+      new Set(['reply', 'automatic', 'reminder', 'reminder_reply']),
     ],
     ADMIN_VERIFICATION_QUEUED: ['item', new Set(['documents'])],
     BOOKING_CANCELLED: ['variant', new Set(['driver', 'driver_late'])],

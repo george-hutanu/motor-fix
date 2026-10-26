@@ -2,6 +2,8 @@ import { DELETED_AUTHOR, type EventKind } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions, Queue } from 'bullmq';
 
+import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
+import { outbox } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   countReviewReportAlert,
@@ -23,6 +25,13 @@ const REMINDER = 'report-reminder';
 // The notification's event id; the job id is `report-reminder-{id}`, as
 // BullMQ refuses ':'.
 const reminderEvent = (reportId: string) => `${REMINDER}:${reportId}`;
+
+// An id the database can look up; anything else in a payload is ignored.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuidOf = (value: unknown) =>
+  typeof value === 'string' && UUID.test(value) ? value : null;
+// An outbox row's id: a bigint, at most 19 digits.
+const OUTBOX_ID = /^\d{1,18}$/;
 
 // A failed job is tried 5 more times, 1, 2, 4, 8 and 16 minutes later; the
 // sweep sends a reminder whose timer was lost for good.
@@ -84,6 +93,7 @@ export class ModerationTimers {
     private readonly notifications: NotificationsService,
     @Inject(MODERATION_TIMERS_JOBS) queue: Queue,
     @Inject(MODERATION_TIMERS_URL) private readonly webUrl: string,
+    @Inject(AUDIT_PORT) private readonly audit: AuditPort,
   ) {
     this.timers = new ObjectTimers(queue, [
       {
@@ -102,15 +112,16 @@ export class ModerationTimers {
   }
 
   private async reported(eventId: string, payload: ModerationEvent['payload']) {
-    const report = payload.reportId
+    const reportId = uuidOf(payload.reportId);
+    const report = reportId
       ? await this.prisma.reviewReport.findUnique({
           select: REPORT_SELECT,
-          where: { id: payload.reportId },
+          where: { id: reportId },
         })
       : null;
     if (report?.status !== 'pending') {
       countReviewReportAlert('skipped');
-      this.logger.log(`report ${payload.reportId} not pending, nobody told`);
+      this.logger.log(`report ${reportId} not pending, nobody told`);
       return;
     }
     await this.tell(report, eventId);
@@ -157,7 +168,10 @@ export class ModerationTimers {
     await this.notifications.notify({
       eventId,
       kind: KIND,
-      params: this.params(report, 'reminder'),
+      params: this.params(
+        report,
+        report.target === 'reply' ? 'reminder_reply' : 'reminder',
+      ),
       recipients: admins,
       subjectId: report.id,
     });
@@ -165,34 +179,65 @@ export class ModerationTimers {
     this.logger.log(`report ${report.id} reminder sent`);
   }
 
+  // A decision names the report it decided; one that names none clears
+  // nothing.
   private async decided(payload: ModerationEvent['payload']) {
-    for (const id of await this.reportIds(payload)) {
-      await this.timers.clear(REMINDER, id);
-    }
+    const reportId = uuidOf(payload.reportId);
+    if (reportId) await this.timers.clear(REMINDER, reportId);
   }
 
   // The author deleted the review: its pending reports close at the
-  // event's time, with no decision. A second delivery finds none pending.
+  // event's time, with no decision, each with its audit entry and an event
+  // for the admins' queue in the same transaction. A second delivery finds
+  // none pending.
   private async deleted(eventId: string, payload: ModerationEvent['payload']) {
-    const reviewId = payload.reviewId;
-    if (typeof reviewId !== 'string') return;
-    const pending = await this.prisma.reviewReport.findMany({
-      select: { id: true },
-      where: { reviewId, status: 'pending' },
-    });
-    if (pending.length) {
-      const closed = await this.prisma.reviewReport.updateMany({
-        data: { decidedAt: await this.eventTime(eventId), status: 'closed' },
-        where: { id: { in: pending.map((r) => r.id) }, status: 'pending' },
+    const reviewId = uuidOf(payload.reviewId);
+    if (!reviewId) return;
+    const decidedAt = await this.eventTime(eventId);
+    const closed = await this.prisma.$transaction(async (tx) => {
+      const pending = await tx.reviewReport.findMany({
+        select: { id: true, review: { select: { garageId: true } } },
+        where: { reviewId, status: 'pending' },
       });
-      this.logger.log(`review ${reviewId}: ${closed.count} report(s) closed`);
+      const done: string[] = [];
+      for (const report of pending) {
+        const moved = await tx.reviewReport.updateMany({
+          data: { decidedAt, status: 'closed' },
+          where: { id: report.id, status: 'pending' },
+        });
+        if (moved.count === 0) continue;
+        await this.audit.record(tx, {
+          action: 'update',
+          actorId: null,
+          actorRole: 'system',
+          field: 'status',
+          garageId: report.review.garageId,
+          newValue: 'closed',
+          oldValue: 'pending',
+          subjectId: report.id,
+          subjectType: 'review_report',
+        });
+        await outbox.record(tx, {
+          audience: { adminOnly: true, type: 'platform' },
+          kind: 'review.report_closed',
+          payload: { reportId: report.id, reviewId },
+          subjectId: report.id,
+        });
+        done.push(report.id);
+      }
+      return done;
+    });
+    if (closed.length) {
+      this.logger.log(`review ${reviewId}: ${closed.length} report(s) closed`);
     }
-    for (const { id } of pending) await this.timers.clear(REMINDER, id);
+    for (const id of closed) await this.timers.clear(REMINDER, id);
   }
 
   // Pending reports past their due time whose reminder no admin holds: what
-  // a lost timer missed.
+  // a lost timer missed. None while nobody could be reminded, so the sweep
+  // does not skip the same report again every round.
   private async overdue(now: Date): Promise<string[]> {
+    if (!this.webUrl || (await this.admins()).length === 0) return [];
     const due = await this.prisma.reviewReport.findMany({
       select: { id: true },
       where: { dueAt: { lte: now }, status: 'pending' },
@@ -211,18 +256,8 @@ export class ModerationTimers {
     return due.map((r) => r.id).filter((id) => !sent.has(reminderEvent(id)));
   }
 
-  private async reportIds(payload: ModerationEvent['payload']) {
-    if (typeof payload.reportId === 'string') return [payload.reportId];
-    if (typeof payload.reviewId !== 'string') return [];
-    const reports = await this.prisma.reviewReport.findMany({
-      select: { id: true },
-      where: { reviewId: payload.reviewId },
-    });
-    return reports.map((r) => r.id);
-  }
-
   private async eventTime(eventId: string): Promise<Date> {
-    const event = /^\d+$/.test(eventId)
+    const event = OUTBOX_ID.test(eventId)
       ? await this.prisma.outboxEvent.findUnique({
           select: { createdAt: true },
           where: { id: BigInt(eventId) },

@@ -23,7 +23,6 @@ import { AuditService } from '../audit/audit.service';
     ReviewReportsController,
     ReviewsController,
   ],
-  exports: [ReportQueueService],
   providers: [
     ReviewEligibility,
     ReviewsService,

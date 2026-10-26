@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -27,6 +27,7 @@ features:
   - 067-restore-suspended-garage
   - 003-admin-account-actions
   - 1368-admin-brand-list
+  - 177-reported-reviews
 ---
 
 # Capability: Admin dashboard
@@ -812,6 +813,10 @@ _From 003-admin-account-actions._
 ### 003-FR-019 — The drawer and its dialogs MUST work at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll at 320 px, texts at 12 px or larger, every text in the shared i18n files (Romanian hyphenated words with U+2011), text the person or the admin typed (names, the reason, the note, the reference) never rendered as markup, and MUST pass the axe checks of the QA sweep; focus moves into the drawer or dialog when it opens and returns to the control that opened it when it closes, as the shared overlays do for every other drawer.
 
 _From 003-admin-account-actions._
+
+### 177-FR-004 — The count of pending items MUST be answered by the overview read (`GET /api/v1/admin/overview`) as `reportsPending`, together with `reportsOverdue`, so the one call that feeds the admin shell feeds the menu counter and the tile (161-FR-008).
+
+_From 177-reported-reviews._
 
 ## Retired
 

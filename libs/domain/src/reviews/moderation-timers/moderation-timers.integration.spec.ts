@@ -79,7 +79,7 @@ beforeEach(async () => {
 
 // Compiled, never started: no worker takes the jobs and no sweep is
 // scheduled, so each case runs the timers itself at `now`.
-async function start(now = NOW) {
+async function start(now = NOW, webUrl = WEB) {
   app = await Test.createTestingModule({
     imports: [
       ModerationTimersModule.registerWorker({
@@ -90,7 +90,7 @@ async function start(now = NOW) {
           redisUrl,
         }),
         redisUrl,
-        webUrl: WEB,
+        webUrl,
       }),
     ],
   }).compile();
@@ -276,6 +276,69 @@ describe('telling the admins a review was reported', () => {
   });
 });
 
+// @traces 177-FR-011 177-FR-017
+describe('when nobody can be told', () => {
+  const noAdmins = () =>
+    prisma.account.updateMany({
+      data: { status: 'suspended' },
+      where: { roles: { some: { role: 'admin' } } },
+    });
+
+  it('tells nobody and counts a skipped alert when no admin is active', async () => {
+    const { reported } = await setting();
+    await noAdmins();
+    const timers = await start();
+    const skipped = await alerts('skipped');
+
+    await timers.onEvent(reported);
+
+    expect(await sent()).toEqual([]);
+    expect((await alerts('skipped')) - skipped).toBe(1);
+  });
+
+  it('tells nobody and counts a skipped alert without the web address', async () => {
+    const { reported } = await setting();
+    const timers = await start(NOW, '');
+    const skipped = await alerts('skipped');
+
+    await timers.onEvent(reported);
+
+    expect(await sent()).toEqual([]);
+    expect((await alerts('skipped')) - skipped).toBe(1);
+  });
+
+  it('sends no reminder without the web address, and the sweep does not retry it', async () => {
+    const { report } = await setting({
+      createdAt: new Date(NOW.getTime() - 49 * HOUR),
+    });
+    const timers = await start(NOW, '');
+    const skipped = await reminders('skipped');
+
+    await fire(timers, report.id);
+    await timers.timers.sweep(NOW);
+    await timers.timers.sweep(NOW);
+
+    expect(await sent()).toEqual([]);
+    expect((await reminders('skipped')) - skipped).toBe(1);
+  });
+
+  it('sends no reminder with no active admin, and the sweep does not retry it', async () => {
+    const { report } = await setting({
+      createdAt: new Date(NOW.getTime() - 49 * HOUR),
+    });
+    await noAdmins();
+    const timers = await start();
+    const skipped = await reminders('skipped');
+
+    await fire(timers, report.id);
+    await timers.timers.sweep(NOW);
+    await timers.timers.sweep(NOW);
+
+    expect(await sent()).toEqual([]);
+    expect((await reminders('skipped')) - skipped).toBe(1);
+  });
+});
+
 // @traces 177-FR-012 177-FR-018
 describe('the 48-hour reminder', () => {
   it('sets one delayed job at the report’s due time', async () => {
@@ -339,6 +402,40 @@ describe('the 48-hour reminder', () => {
       expect((await reminders('skipped')) - skipped).toBe(1);
     },
   );
+
+  it('names a reported reply as a reply', async () => {
+    const { ana, report } = await setting({
+      source: 'author',
+      target: 'reply',
+    });
+    const timers = await start(new Date(NOW.getTime() + 47 * HOUR));
+
+    await fire(timers, report.id);
+
+    expect((await bells(ana))[0].params).toMatchObject({
+      author: 'Andrei M.',
+      variant: 'reminder_reply',
+    });
+  });
+
+  it('keeps the job when a decision names no report', async () => {
+    const { reported, report, review: one } = await setting();
+    const timers = await start();
+    await timers.onEvent(reported);
+
+    await timers.onEvent({
+      data: {
+        id: '502',
+        kind: 'review.decided',
+        payload: { reviewId: one.id },
+        subjectId: one.id,
+      },
+    });
+
+    expect(Object.keys(await delays())).toEqual([
+      `report-reminder-${report.id}`,
+    ]);
+  });
 
   it('removes the job when the report is decided', async () => {
     const { reported, report, review: one } = await setting();
@@ -409,6 +506,35 @@ describe('closing the report when its author deletes the review', () => {
       }),
     ).toMatchObject({ decidedAt: at, decision: null, status: 'closed' });
     expect(await delays()).toEqual({});
+  });
+
+  it('saves the close with its audit entry and an admin-only event', async () => {
+    const { report, review: one } = await setting();
+    const timers = await start();
+    const event = await deleted(one.id, NOW);
+
+    await timers.onEvent(event);
+    await timers.onEvent(event);
+
+    const entries = await prisma.activityLog.findMany({
+      where: { subjectId: report.id, subjectType: 'review_report' },
+    });
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      action: 'update',
+      actorId: null,
+      actorRole: 'system',
+      field: 'status',
+    });
+    const closed = await prisma.outboxEvent.findMany({
+      where: { kind: 'review.report_closed' },
+    });
+    expect(closed).toHaveLength(1);
+    expect(closed[0]).toMatchObject({
+      audience: ['admin'],
+      payload: { reportId: report.id, reviewId: one.id },
+      subjectId: report.id,
+    });
   });
 
   it('changes nothing on a second delivery', async () => {

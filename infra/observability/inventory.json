@@ -2625,6 +2625,19 @@
       "story": "ST-1258"
     },
     {
+      "kind": "endpoint",
+      "name": "admin-review-reports",
+      "source": "libs/domain/src/reviews/report-queue/report-queue.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/review-reports",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admins' queue of pending review reports with the facts, read from PostgreSQL in a fixed number of queries per page and written nowhere; reading it is not logged or audited; a 400 on a bad page or a 404 for a non-admin is the rule working; the API error-rate and latency rules cover the route; no outside call",
+      "story": "ST-177"
+    },
+    {
       "kind": "queue",
       "name": "moderation-timers",
       "source": "libs/domain/src/reviews/moderation-timers/moderation-timers.module.ts",

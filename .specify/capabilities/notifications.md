@@ -57,6 +57,7 @@ features:
   - 091-oil-service-due
   - 223-request-act-notifications
   - 1258-driver-cancel
+  - 177-reported-reviews
 ---
 
 # Capability: Notifications
@@ -1024,6 +1025,18 @@ _From 1258-driver-cancel._
 ### 1258-FR-007 — REQUEST_CANCELLED for a driver's cancel MUST reach every owner and receptionist of each recipient garage once through the existing `request.cancelled` fan-out (428-FR-009), with `reason` `driver`; the fan-out needs no change beyond the test for this reason. Its texts stay #147's: until that story writes them the generic bell and e-mail text fills in, as 428-FR-011 allows.
 
 _From 1258-driver-cancel._
+
+### 177-FR-011 — On every `review.reported` event, the system MUST send ADMIN_REVIEW_REPORTED (the existing catalogue entry, admin group, muteable) once per event to every active admin account, in the admin's language: for a review "{garage} a raportat o recenzie de {score}: {reason}" / "{garage} reported a {score} review: {reason}", for a reply "{author} a raportat răspunsul lui {garage}: {reason}" / "{author} reported {garage}'s reply: {reason}", for an automatic flag "O recenzie de {score} a fost raportată automat: {reason}" / "A {score} review was flagged automatically: {reason}", by e-mail and push with a link to the admin queue; the event id is the report's, so a redelivered event sends nothing more; admins get no SMS or WhatsApp for it (the catalogue entry narrows to e-mail and push).
+
+_From 177-reported-reviews._
+
+### 177-FR-012 — On the `review.reported` event (its consumer, not the report's write) the system MUST schedule one reminder for its due time (48 hours after creation, 076-FR-008's `dueAt`) as a delayed job `report-reminder:{reportId}` in a new `moderation-timers` queue (a due time already past when the consumer runs fires the job at once; a job lost from Redis is replaced by the existing timer sweep from the report's `dueAt` and `status`, and is never sent twice because the event id is the report's); when it fires and the report is still `pending`, every active admin MUST get ADMIN_REVIEW_REPORTED once more, as a reminder ("O recenzie raportată așteaptă de 48 de ore." / "A reported review has waited 48 hours.", with the item's title and the link), with the event id `report-reminder:{reportId}`; a report no longer `pending` when the job fires sends nothing, and a decision (ST-178/ST-179) or a closing MUST remove the job.
+
+_From 177-reported-reviews._
+
+### 177-FR-015 — Every new text (the titles, the lamps, the facts, the counts line, the oldest-wait line, the empty state, the error state, the overdue mark, the tile line, the action slots, the notification's e-mail and push in both forms) MUST exist in Romanian and English in the shared interface files and the notification templates and follow the reader's language; a Romanian hyphenated word uses U+2011; the garage's name, the author's name, the review text, the reply text and the report text MUST never be rendered as markup.
+
+_From 177-reported-reviews._
 
 ## Retired
 

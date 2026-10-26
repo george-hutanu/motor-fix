@@ -168,6 +168,8 @@ describe('the admin overview', () => {
       'garagesApprovedThisMonth',
       'garagesListed',
       'garagesWaiting',
+      'reportsOverdue',
+      'reportsPending',
       'requestsSent',
     ];
     const optional = ['activeDriversMonthStart', 'answerRate', 'cities'];

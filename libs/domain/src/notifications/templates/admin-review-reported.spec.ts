@@ -33,6 +33,7 @@ describe('the review report alert', () => {
       KIND,
       `${KIND}.automatic`,
       `${KIND}.reminder`,
+      `${KIND}.reminder_reply`,
       `${KIND}.reply`,
     ]);
     expect(checkTemplates(forms)).toEqual([]);
@@ -102,4 +103,37 @@ describe('the 48-hour reminder', () => {
       expect(push('reminder', language).link).toBe(link);
     },
   );
+});
+
+// @traces 177-FR-012 177-FR-015
+describe('the 48-hour reminder of a reported reply', () => {
+  it.each([
+    [
+      'ro',
+      'Un răspuns raportat așteaptă de 48 de ore.',
+      'Atelier Dinamo · răspuns la recenzia lui Andrei M.',
+    ],
+    [
+      'en',
+      'A reported reply has waited 48 hours.',
+      "Atelier Dinamo · reply to Andrei M.'s review",
+    ],
+  ])('names the reply in %s', (language, line, title) => {
+    const sent = mail('reminder_reply', language);
+
+    expect(sent.text).toContain(line);
+    expect(sent.text).toContain(title);
+    expect(push('reminder_reply', language).link).toBe(link);
+  });
+});
+
+// @traces 177-FR-015
+describe('the Romanian hyphenated words', () => {
+  it('use the non-breaking hyphen', () => {
+    for (const variant of [undefined, 'reply', 'automatic', 'reminder']) {
+      const sent = mail(variant, 'ro');
+      expect(sent.text).toContain('e\u2011mail');
+      expect(sent.text).not.toContain('e-mail');
+    }
+  });
 });

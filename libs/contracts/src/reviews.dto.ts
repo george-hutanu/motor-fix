@@ -548,12 +548,12 @@ export class GarageStaffReviewsPageDto {
   items!: GarageStaffReviewDto[];
 }
 
-// The admins' queue of pending review reports (ST-177): oldest first, 20 a
+// The admins' queue of pending review reports: oldest first, 20 a
 // page. Nothing in it names an account's e-mail, phone, plate or id.
 export const REVIEW_REPORT_QUEUE_PAGE = 20;
 
 const REVIEW_REPORT_SOURCES = ['garage', 'author', 'automatic'] as const;
-export type ReviewReportSource = (typeof REVIEW_REPORT_SOURCES)[number];
+type ReviewReportSource = (typeof REVIEW_REPORT_SOURCES)[number];
 
 export class ReportQueueQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1, type: 'integer' })

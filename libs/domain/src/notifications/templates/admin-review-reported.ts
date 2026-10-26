@@ -21,7 +21,7 @@ const EXAMPLE = {
 
 const REASON = {
   en: 'You get this e-mail because you are a MotorFix admin and reported reviews wait for a decision.',
-  ro: 'Primești acest e-mail pentru că ești administrator MotorFix și recenziile raportate așteaptă o decizie.',
+  ro: 'Primești acest e‑mail pentru că ești administrator MotorFix și recenziile raportate așteaptă o decizie.',
 };
 
 const BUTTON = {
@@ -68,6 +68,11 @@ const REVIEW_TITLE = {
   ro: '{garage} · recenzie de {score}',
 };
 
+const REPLY_TITLE = {
+  en: "{garage} · reply to {author}'s review",
+  ro: '{garage} · răspuns la recenzia lui {author}',
+};
+
 export const ADMIN_REVIEW_REPORTED_TEMPLATES: Record<string, Template> = {
   ADMIN_REVIEW_REPORTED: form(
     {
@@ -90,6 +95,14 @@ export const ADMIN_REVIEW_REPORTED_TEMPLATES: Record<string, Template> = {
     },
     REVIEW_TITLE,
     REVIEW_TITLE,
+  ),
+  'ADMIN_REVIEW_REPORTED.reminder_reply': form(
+    {
+      en: 'A reported reply has waited 48 hours.',
+      ro: 'Un răspuns raportat așteaptă de 48 de ore.',
+    },
+    REPLY_TITLE,
+    REPLY_TITLE,
   ),
   'ADMIN_REVIEW_REPORTED.reply': form(
     {

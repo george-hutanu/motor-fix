@@ -20,6 +20,8 @@ import {
   type ModerationEvent,
   ModerationTimers,
 } from './moderation-timers';
+import { AUDIT_PORT } from '../../audit/audit.port';
+import { AuditService } from '../../audit/audit.service';
 import { logFinalFailure } from '../../job-failures';
 import { inJob } from '../../logging';
 
@@ -52,6 +54,7 @@ export class ModerationTimersModule
       imports: [options.notifications],
       module: ModerationTimersModule,
       providers: [
+        { provide: AUDIT_PORT, useClass: AuditService },
         { provide: MODERATION_TIMERS_URL, useValue: options.webUrl ?? '' },
         {
           provide: MODERATION_TIMERS_JOBS,

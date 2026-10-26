@@ -1,5 +1,6 @@
 import { DELETED_AUTHOR } from '@motor-fix/contracts';
 
+import { countReportQueue } from './report-queue';
 import { ReportQueueService } from './report-queue.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type {
@@ -382,7 +383,7 @@ describe('the counts the overview reads', () => {
     });
     await report(reviews[3].id, { createdAt: ago(60), status: 'closed' });
 
-    await expect(service.counts(NOW)).resolves.toEqual({
+    await expect(countReportQueue(prisma, NOW)).resolves.toEqual({
       oldestCreatedAt: ago(49),
       overdue: 1,
       pending: 2,

@@ -7,7 +7,7 @@ import {
 } from '@motor-fix/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 
-import { countReportQueue, type ReportCounts } from './report-queue';
+import { countReportQueue } from './report-queue';
 import { PRISMA } from '../../auth/prisma';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { shortName } from '../../quotes/reads';
@@ -96,16 +96,12 @@ const accountFact = (review: Review): ReportQueueFactsDto['account'] =>
 export class ReportQueueService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
-  counts(now = new Date()): Promise<ReportCounts> {
-    return countReportQueue(this.prisma, now);
-  }
-
   async read(
     { language, page }: { language: QueueLanguage; page: number },
     now = new Date(),
   ): Promise<ReportQueueDto> {
     const [counts, reports] = await Promise.all([
-      this.counts(now),
+      countReportQueue(this.prisma, now),
       this.prisma.reviewReport.findMany({
         include: ITEM_INCLUDE,
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
