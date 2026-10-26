@@ -146,18 +146,24 @@ describe('the 3D files the catalogue points at', () => {
   });
 
   // @traces 1241-FR-006
-  it('are, until the real files arrive, placeholders made the same way every time under the keys the catalogue holds', () => {
+  // @traces 1242-FR-007
+  it('are, for the licensed models until their real files arrive, placeholders made the same way every time under the keys the catalogue holds', () => {
     const first = placeholders();
     const again = placeholders();
 
     expect([...first.keys()].sort()).toEqual(
-      MODEL_3D_FILES.map((row) => row.file).sort(),
+      CAR_MODELS.map((row) => row.file).sort(),
     );
     for (const [file, bytes] of first) {
       expect(again.get(file)).toEqual(bytes);
       expect(file).toContain(`.${hash16(bytes)}.glb`);
     }
-    expect(checkModels3d(first)).toEqual([]);
+    // The generic rows have their generated files (scripts/models-3d-generic.ts).
+    expect(checkModels3d(first)).toEqual(
+      Object.entries(GENERIC_FILES).map(
+        ([style, file]) => `generic-${style}: missing file ${file}`,
+      ),
+    );
   });
 });
 
