@@ -68,8 +68,9 @@ test.describe('cancelling a booking from Cererile mele @seeded', () => {
     const { items } = (await list.json()) as {
       items: { subjectId: string | null; text: string }[];
     };
-    // "<driver> a anulat programarea · <car> · <slot>": the driver's own name
-    // and car, as the driver's reads give them.
+    // "<driver> a anulat programarea · <car> · <slot>": the driver's short
+    // name ("Andrei M.", as every garage-side line names a driver) and car, as
+    // the driver's reads give them.
     const driver = bearer(await accessToken(request, DRIVER));
     const me = (await (
       await request.get('/api/v1/me', { headers: driver })
@@ -82,7 +83,11 @@ test.describe('cancelling a booking from Cererile mele @seeded', () => {
     const car = mine.items.find((item) => item.id === requestId)?.car;
     const told = items.find((item) => item.subjectId === bookingId);
     expect(told?.text).toMatch(/^.+ a anulat programarea · .+ · .+$/);
-    expect(told?.text.startsWith(`${me.name} a anulat programarea · `)).toBe(
+    const [first, ...rest] = me.name.trim().split(/\s+/);
+    const short = rest.length
+      ? `${first} ${Array.from(rest.at(-1) ?? '')[0]}.`
+      : first;
+    expect(told?.text.startsWith(`${short} a anulat programarea · `)).toBe(
       true,
     );
     expect(told?.text).toContain(`${car?.brand} ${car?.model}`);

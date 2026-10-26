@@ -355,6 +355,16 @@ export type { GarageJobsControllerList$Params as GarageJobsControllerList$Params
 export { garageJobsControllerList as garageJobsControllerList } from './fn/garage-jobs/garage-jobs-controller-list';
 export type { GarageJobsControllerGet$Params as GarageJobsControllerGet$Params } from './fn/garage-jobs/garage-jobs-controller-get';
 export { garageJobsControllerGet as garageJobsControllerGet } from './fn/garage-jobs/garage-jobs-controller-get';
+export type { JobStagesControllerStart$Params as JobStagesControllerStart$Params } from './fn/garage-jobs/job-stages-controller-start';
+export { jobStagesControllerStart as jobStagesControllerStart } from './fn/garage-jobs/job-stages-controller-start';
+export type { JobStagesControllerPause$Params as JobStagesControllerPause$Params } from './fn/garage-jobs/job-stages-controller-pause';
+export { jobStagesControllerPause as jobStagesControllerPause } from './fn/garage-jobs/job-stages-controller-pause';
+export type { JobStagesControllerResume$Params as JobStagesControllerResume$Params } from './fn/garage-jobs/job-stages-controller-resume';
+export { jobStagesControllerResume as jobStagesControllerResume } from './fn/garage-jobs/job-stages-controller-resume';
+export type { JobStagesControllerFinish$Params as JobStagesControllerFinish$Params } from './fn/garage-jobs/job-stages-controller-finish';
+export { jobStagesControllerFinish as jobStagesControllerFinish } from './fn/garage-jobs/job-stages-controller-finish';
+export type { JobStagesControllerReceive$Params as JobStagesControllerReceive$Params } from './fn/garage-jobs/job-stages-controller-receive';
+export { jobStagesControllerReceive as jobStagesControllerReceive } from './fn/garage-jobs/job-stages-controller-receive';
 export type { JobStepsControllerAdd$Params as JobStepsControllerAdd$Params } from './fn/garage-jobs/job-steps-controller-add';
 export { jobStepsControllerAdd as jobStepsControllerAdd } from './fn/garage-jobs/job-steps-controller-add';
 export type { JobStepsControllerReorder$Params as JobStepsControllerReorder$Params } from './fn/garage-jobs/job-steps-controller-reorder';

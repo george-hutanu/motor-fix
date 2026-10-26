@@ -107,6 +107,12 @@ const STEP_ACTIONS = [
   'unticked',
 ] as const;
 export type JobStepAction = (typeof STEP_ACTIONS)[number];
+export type JobStageAction =
+  | 'start'
+  | 'pause'
+  | 'resume'
+  | 'finish'
+  | 'receive';
 const GARAGE_REPORT_OUTCOMES = [
   'created',
   'already_reported',
@@ -294,6 +300,11 @@ const notifications = () =>
   );
 const jobSteps = () =>
   counter('motorfix_job_steps_total', "Changes to a job's steps, by action");
+const jobStageMoves = () =>
+  counter(
+    'motorfix_job_stage_moves_total',
+    "Calls to move a job's stage or record its reception, by action and outcome",
+  );
 const requestsReceived = () =>
   counter(
     'motorfix_request_received_total',
@@ -538,6 +549,13 @@ export function countNotification(channel: NotificationChannel) {
 
 export function countJobStep(action: JobStepAction) {
   jobSteps().add(1, { action });
+}
+
+export function countJobStageMove(
+  action: JobStageAction,
+  outcome: 'ok' | 'refused',
+) {
+  jobStageMoves().add(1, { action, outcome });
 }
 
 export function countRequestReceived(

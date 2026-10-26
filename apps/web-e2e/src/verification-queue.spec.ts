@@ -48,14 +48,23 @@ async function countsAgree(page: Page) {
     .toBe(true);
 }
 // From 900 px the rows share their columns: each part starts at one x.
+// Other workers send files meanwhile, so a row may be entering while the
+// parts are measured: the measure is repeated until the rows settle.
 async function expectColumnsShared(page: Page) {
   for (const part of ['mf-lamp', '.applied', 'a.open']) {
-    const lefts = await queue(page)
-      .locator(`li.row ${part}`)
-      .evaluateAll((els) =>
-        els.map((el) => Math.round(el.getBoundingClientRect().left)),
-      );
-    expect(new Set(lefts).size).toBe(1);
+    await expect
+      .poll(
+        async () =>
+          new Set(
+            await queue(page)
+              .locator(`li.row ${part}`)
+              .evaluateAll((els) =>
+                els.map((el) => Math.round(el.getBoundingClientRect().left)),
+              ),
+          ).size,
+        { message: `every row's ${part} starts at one x`, timeout: 10_000 },
+      )
+      .toBe(1);
   }
 }
 const sideways = (page: Page) =>

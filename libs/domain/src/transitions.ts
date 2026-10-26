@@ -28,6 +28,7 @@ export interface LockedRow {
   car_id?: string;
   garage_id?: string;
   started_at?: Date | null;
+  mechanic_id?: string | null;
 }
 
 // One status machine: its moves, written once, and the row it lives in.

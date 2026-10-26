@@ -8,6 +8,7 @@ features:
   - 274-request-stages
   - 150-add-booking
   - 423-mechanic-garage-dashboard
+  - 276-job-start-done
 ---
 
 # Capability: Workshop
@@ -16,9 +17,9 @@ The work in the garage for a confirmed booking: the job, its stages and the time
 
 ## Requirements
 
-### 389-FR-002 — The confirm MUST lock the booking row (`SELECT … FOR UPDATE`), then, in that one transaction, check in this order: the booking is `awaiting_confirmation` (else 409 `invalid_transition` with the entity `booking` and its state), `confirm_by` is after now (else 409 `invalid_transition` with the state `lapsed`, the row left to the lapse timer), the switches and the fields agree (FR-004, FR-005), the mechanic is one of the garage's (FR-004), the lift is within 1 … the garage's lift count (FR-006), the slot lies inside the opening hours (FR-008), and the mechanic and the lift are free (FR-007); then set `status` `confirmed`, `confirmed_at`, `confirmed_by` (the actor), `mechanic_id`, `lift`; create one JOB `to_do` for the booking (garage, the request's car, the driver, the mechanic of FR-005) with its first JOB_STAGE_ENTRY (no from-status, to `to_do`, the actor); move every other `waiting` quote of the request to `lost` and every `waiting` recipient to `closed` through the transition service; record the audit entries: the booking's `stage` (`awaiting_confirmation` → `confirmed`), `mechanic_id` and `lift` (old null), the job's creation; write the outbox events `booking.confirmed` `{ bookingId, requestId, quoteId, startsAt, durationMinutes, mechanicId, lift }` to the audiences `account:{driverId}`, `garage:{garageId}` and, when the platform routes one, `mechanic:{mechanicId}`, and one `quote.closed` `{ quoteIds, requestId }` to the driver's account and each losing garage; and clear the booking's three timers (FR-010) after the commit. The request stays `booked`. Nothing is written when any check fails.
+### 276-FR-004 — Every JOB_STAGE_ENTRY MUST store `mechanic_id`, the job's mechanic at that moment (null when none), and `auto` (true for an automatic pause, else false): the entries this story writes and the first `to_do` entry the confirm writes (389-FR-002).
 
-_From 389-confirm-booking-lift-mechanic._
+_From 276-job-start-done._
 
 ### 424-FR-001 — A JOB_STEP MUST also store `done_by` (the account that ticked it, optional; cleared with `done_at` on an untick), and the job's read MUST return each step's `doneAt` and `doneBy` and the job's steps done and total counts.
 
@@ -192,6 +193,47 @@ _From 150-add-booking._
 
 _From 423-mechanic-garage-dashboard._
 
+### 276-FR-001 — The API MUST offer, under the existing `garage/jobs` routes and the `garage.own_jobs` capability, `POST /api/v1/garage/jobs/:id/start`, `.../pause`, `.../resume` and `.../finish` with no body, each answering the job as `GET garage/jobs/:id` does. The moves MUST be `to_do` → `in_work` (start), `in_work` → `paused` (pause), `paused` → `in_work` (resume), `in_work` or `paused` → `done` (finish); any other pair MUST answer 409 `invalid_transition` with the current stage, except finish on a `to_do` job, which answers 409 `job_not_started` with "Lucrarea nu a început", and start on a job with no `received_at`, which answers 409 `not_received` with "Fă recepția mai întâi". A `cancelled` job answers 409 `invalid_transition` to every stage call.
+
+_From 276-job-start-done._
+
+### 276-FR-002 — A stage call MUST be allowed to the owner of the job's garage and to the job's mechanic (the mechanic row of `JOB.mechanic_id` belonging to the caller's account), and MUST answer 403 `forbidden` to a receptionist of the garage and to another mechanic of the garage, and 404 to anyone outside the garage, judged against the locked job row before anything is written.
+
+_From 276-job-start-done._
+
+### 276-FR-003 — Every stage move MUST run in one transaction that locks the job row, writes the status and its times (`started_at` on the first start and kept on a resume, `paused_at` on a pause, `finished_at` on finish), the stage entry, the audit entry (`job.status`, a key change) and the event, as the existing job mover does; the start MUST also move the request `booked` → `in_work` and the finish `in_work` → `done` through the request mover in the same transaction, with the request's own audit entry and no event of its own (the request mover's event goes to a no-op port, as the accept's request move does): the job's event is the one the tracker and Lucrări re-read on. When any part fails nothing is written.
+
+_From 276-job-start-done._
+
+### 276-FR-005 — A start or a resume MUST, when the garage's `team_mechanics` switch is on (on when the garage has no row) and the job has a mechanic, pause in the same transaction every other `in_work` job of the same garage with the same `mechanic_id`, whoever pressed: each with a stage entry `auto` = true, an audit entry recorded as a platform move (actor role `system`, no account) and `job.paused` `{ from, to, auto: true }`; the triggering `job.started` or `job.resumed` MUST carry `pausedJobIds`, the ids it paused (empty when none). With the switch off nothing is paused, whatever the mechanic ids.
+
+_From 276-job-start-done._
+
+### 276-FR-006 — The job MUST store `worked_seconds` (whole seconds, 0 at creation): every move out of `in_work` (a pause by hand, an automatic pause, a finish) adds now − the time of the job's latest stage entry to `in_work`, floored to whole seconds; a finish from `paused` adds nothing. The job read MUST return it as `workedSeconds`.
+
+_From 276-job-start-done._
+
+### 276-FR-007 — The events MUST be `job.started` `{ from, to, pausedJobIds }`, `job.paused` `{ from, to, auto }`, `job.resumed` `{ from, to, pausedJobIds }` and `job.done` `{ from, to }`, each with the `job` audience (the driver's account, the garage, the job's mechanic), written in the stage's transaction. No notification is sent by this story: the driver's JOB_READY message is #164's, read from `job.done`.
+
+_From 276-job-start-done._
+
+### 276-FR-009 — The job read (`GET garage/jobs/:id` and the list's items) MUST return `receivedAt`, `odometerKm` and the car's current odometer (`car.odometerKm`), so the drawer can show the reception state and warn on a lower reading without a second read.
+
+_From 276-job-start-done._
+
+### 276-FR-015 — The data model MUST gain `JOB.received_at` (timestamp, null), `JOB.odometer_km` (whole number, null), `JOB.worked_seconds` (whole number, default 0), `JOB_STAGE_ENTRY.mechanic_id` (reference to MECHANIC, null, set null on removal) and `JOB_STAGE_ENTRY.auto` (boolean, default false), with a migration; DTOs come from the contracts library, validated at the edge, and the generated client is regenerated.
+
+_From 276-job-start-done._
+
+### 276-FR-016 — The five new routes MUST be listed in `infra/observability/inventory.json` with their metrics and alert (or why none), and in the PR's Observability section; the stage calls count under one metric with the action and outcome as labels.
+
+_From 276-job-start-done._
+
+### 276-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis, with a `// @traces` line per spec file: start, pause, resume and finish by the owner and by the job's mechanic; finish from `paused`; 409 `job_not_started` on a finish from `to_do`; 409 on every other refused pair and on a `cancelled` job; 403 for a receptionist's and another mechanic's stage call, 404 for another garage's; the request moving to `in_work` and `done` with the job; `started_at` kept on a resume; `worked_seconds` after a pause and a finish; the automatic pause of the same mechanic's job only, triggered by the owner too, carrying `pausedJobIds`, and none with `team_mechanics` off or with no mechanic; `mechanic_id` and `auto` on every stage entry, the confirm's first one included; reception by the owner, a receptionist and the job's mechanic with the reading row, the car's odometer, the audit entries and `job.received`; a correction; the reading's bounds; reception refused on a `done` job; 403 and 404 for reception; the stage entries, audit rows and events in one transaction and nothing written on a failure. Web unit tests cover the buttons per role and stage, the reception-first start with save and a failed start after a saved reception, the warning, the sending state and the retry after a failure. End to end (Playwright): the owner records a reception and starts a job, then marks it done; in a second browser the driver's tracker shows În lucru, then Gata, without a reload.
+
+_From 276-job-start-done._
+
 ## Retired
 
 - `220-FR-007` — superseded by `389-FR-002` (2026-10-21)
+- `389-FR-002` — superseded by `276-FR-004` (2026-10-26)

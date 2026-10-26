@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 209,
+    "count": 214,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1495,6 +1495,19 @@
       "story": "ST-424"
     },
     {
+      "kind": "endpoint",
+      "name": "garage-job-stages",
+      "source": "libs/domain/src/workshop/job-stages/job-stages.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garage/jobs/:id/start, /pause, /resume, /finish and /receive",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each move locks the job and writes its stage, the request's move, the audit entries and the events in one PostgreSQL transaction; a start pauses the mechanic's other job in work in the same one; each refusal logs one 'job stage refused' line with the job id and its code; the counter motorfix_job_stage_moves_total counts every call by action and outcome; no outside call",
+      "story": "ST-276"
+    },
+    {
       "kind": "product-counter",
       "name": "motorfix_job_steps_total",
       "source": "libs/domain/src/metrics/product-counters.ts",
@@ -1502,6 +1515,15 @@
       "alerts": "none",
       "reason": "counts step changes by action (added, renamed, reordered, removed, ticked, unticked); a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
       "story": "ST-424"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_job_stage_moves_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts a job's stage moves and receptions by action (start, pause, resume, finish, receive) and outcome (ok, refused); a refusal is the rule working, and the api-error-rate rule covers the service that reports it",
+      "story": "ST-276"
     },
     {
       "kind": "product-counter",

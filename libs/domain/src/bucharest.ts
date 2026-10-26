@@ -42,6 +42,9 @@ export function localDay(at: Date): string {
   return iso(Date.UTC(year, month - 1, day));
 }
 
+// Today in Bucharest as a date column holds it: midnight UTC of that day.
+export const today = () => new Date(`${localDay(new Date())}T00:00:00Z`);
+
 export const addDays = (day: string, n: number) =>
   iso(Date.parse(day) + n * DAY);
 
