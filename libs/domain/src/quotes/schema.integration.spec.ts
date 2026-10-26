@@ -334,15 +334,34 @@ describe('the garage lift count', () => {
   });
 });
 
-// @traces 389-FR-007
-describe('the overlap rules of confirmed bookings', () => {
+// @traces 150-FR-001
+describe('the segments of confirmed bookings', () => {
   // 09:00 in Bucharest; every booking the world makes lasts 90 minutes.
   const NINE = Date.parse('2026-11-12T07:00:00Z');
-  const at = (minutes: number) =>
-    new Date(NINE + minutes * 60_000).toISOString();
+  const at = (minutes: number) => new Date(NINE + minutes * 60_000);
+  const MIGRATIONS = join(__dirname, '../../prisma/migrations');
+
+  // The migration's backfill, between its two markers, statement by
+  // statement.
+  const backfill = () => {
+    const folder = readdirSync(MIGRATIONS).find((name) =>
+      name.endsWith('_booking_segments'),
+    );
+    return readFileSync(
+      join(MIGRATIONS, String(folder), 'migration.sql'),
+      'utf8',
+    )
+      .split('-- backfill')[1]
+      .split('-- end backfill')[0]
+      .split(/;\s*$/m)
+      .map((sql) => sql.replace(/--.*$/gm, '').trim())
+      .filter((sql) => sql !== '');
+  };
 
   let garageId: string;
   let mechanicId: string;
+  // A booking awaiting the garage, which holds no segment of its own.
+  let bookingId: string;
 
   beforeEach(async () => {
     garageId = (await world.garage('Garaj Nordic')).id;
@@ -351,54 +370,121 @@ describe('the overlap rules of confirmed bookings', () => {
         data: { garageId, name: 'Mihai Dumitru' },
       })
     ).id;
+    bookingId = (
+      await world.booked(garageId, at(0).toISOString(), 'awaiting_confirmation')
+    ).id;
   });
 
-  it('refuses a mechanic two confirmed bookings that overlap', async () => {
-    await world.booked(garageId, at(0), 'confirmed', { mechanicId });
+  const segment = (
+    from: number,
+    to: number,
+    place: { garage?: string; lift?: number; mechanic?: string | null } = {},
+  ) =>
+    prisma.bookingSegment.create({
+      data: {
+        bookingId,
+        endsAt: at(to),
+        garageId: place.garage ?? garageId,
+        lift: place.lift ?? null,
+        mechanicId: place.mechanic === undefined ? mechanicId : place.mechanic,
+        startsAt: at(from),
+      },
+    });
 
-    await expect(
-      world.booked(garageId, at(30), 'confirmed', { mechanicId }),
-    ).rejects.toThrow(/booking_mechanic_span_excl/);
+  it('backfills one segment for each confirmed booking and none for the others', async () => {
+    const confirmed = await world.booked(
+      garageId,
+      at(120).toISOString(),
+      'confirmed',
+      { lift: 2, mechanicId },
+    );
+    const others = await Promise.all(
+      (['cancelled', 'lapsed', 'completed', 'no_show'] as const).map((status) =>
+        world.booked(garageId, at(0).toISOString(), status),
+      ),
+    );
+    await prisma.bookingSegment.deleteMany({});
+
+    for (const sql of backfill()) await prisma.$executeRawUnsafe(sql);
+    for (const sql of backfill()) await prisma.$executeRawUnsafe(sql);
+
+    expect(
+      await prisma.bookingSegment.findMany({
+        where: { bookingId: confirmed.id },
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        endsAt: at(210),
+        garageId,
+        lift: 2,
+        mechanicId,
+        startsAt: at(120),
+      }),
+    ]);
+    expect(
+      await prisma.bookingSegment.count({
+        where: { bookingId: { in: [bookingId, ...others.map((b) => b.id)] } },
+      }),
+    ).toBe(0);
   });
 
-  it('refuses one lift of a garage two confirmed bookings that overlap', async () => {
-    await world.booked(garageId, at(0), 'confirmed', { lift: 1 });
+  it('leaves the overlap rules of the booking table to the segments', async () => {
+    const left = await prisma.$queryRaw<{ conname: string }[]>`
+      SELECT conname FROM pg_constraint
+      WHERE conname IN ('booking_mechanic_span_excl', 'booking_lift_span_excl')`;
 
-    await expect(
-      world.booked(garageId, at(89), 'confirmed', { lift: 1 }),
-    ).rejects.toThrow(/booking_lift_span_excl/);
+    expect(left).toEqual([]);
   });
 
-  it('lets a booking start where the other ends', async () => {
-    await world.booked(garageId, at(0), 'confirmed', { lift: 1, mechanicId });
+  it('refuses a mechanic two segments that overlap', async () => {
+    await segment(0, 90);
 
-    await expect(
-      world.booked(garageId, at(90), 'confirmed', { lift: 1, mechanicId }),
-    ).resolves.toMatchObject({ status: 'confirmed' });
+    await expect(segment(30, 120)).rejects.toThrow(
+      /booking_segment_mechanic_excl/,
+    );
   });
 
-  it('lets another lift, another garage’s lift and no lift overlap', async () => {
-    const other = await world.garage('Service Militari');
-    await world.booked(garageId, at(0), 'confirmed', { lift: 1 });
+  it('refuses one lift of a garage two segments that overlap', async () => {
+    await segment(0, 90, { lift: 1, mechanic: null });
+
+    await expect(segment(89, 120, { lift: 1, mechanic: null })).rejects.toThrow(
+      /booking_segment_lift_excl/,
+    );
+  });
+
+  it('lets a segment start where the other ends', async () => {
+    await segment(0, 90, { lift: 1 });
+
+    await expect(segment(90, 180, { lift: 1 })).resolves.toMatchObject({
+      lift: 1,
+    });
+  });
+
+  it('lets another lift, another garage’s lift and no mechanic overlap', async () => {
+    const other = (await world.garage('Service Militari')).id;
+    await segment(0, 90, { lift: 1 });
 
     await expect(
       Promise.all([
-        world.booked(garageId, at(0), 'confirmed', { lift: 2 }),
-        world.booked(other.id, at(0), 'confirmed', { lift: 1 }),
-        world.booked(garageId, at(0), 'confirmed'),
-        world.booked(garageId, at(0), 'confirmed'),
+        segment(0, 90, { lift: 2, mechanic: null }),
+        segment(0, 90, { garage: other, lift: 1, mechanic: null }),
+        segment(0, 90, { mechanic: null }),
+        segment(0, 90, { mechanic: null }),
       ]),
     ).resolves.toHaveLength(4);
   });
 
-  it.each(['awaiting_confirmation', 'cancelled', 'lapsed'] as const)(
-    'leaves a %s booking out of the rule',
-    async (status) => {
-      await world.booked(garageId, at(0), 'confirmed', { lift: 1, mechanicId });
+  it('refuses a segment that does not end after it starts', async () => {
+    await expect(segment(90, 90)).rejects.toThrow(
+      /booking_segment_order_check/,
+    );
+  });
 
-      await expect(
-        world.booked(garageId, at(0), status, { lift: 1, mechanicId }),
-      ).resolves.toMatchObject({ status });
-    },
-  );
+  it('goes with its booking', async () => {
+    await segment(0, 90);
+
+    await prisma.booking.delete({ where: { id: bookingId } });
+
+    expect(await prisma.bookingSegment.count({ where: { bookingId } })).toBe(0);
+  });
 });

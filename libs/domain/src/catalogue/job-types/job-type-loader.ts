@@ -13,7 +13,7 @@ const SYSTEM = { actorId: null, actorRole: 'system' } as const;
 
 // Makes the stored jobs of the file match it: one transaction, so a refused
 // file changes nothing, and two API replicas booting together take turns.
-// Names and the kind of work follow the file; a job's status is the admins' once it exists.
+// Names, the kind of work and the lift flag follow the file; a job's status is the admins' once it exists.
 @Injectable()
 export class JobTypeLoader {
   private readonly logger = new Logger('JobTypeLoader');
@@ -72,7 +72,7 @@ export class JobTypeLoader {
     record: JobTypeRecord,
   ) {
     const fields = Object.fromEntries(
-      (['nameRo', 'nameEn', 'rarActivity'] as const)
+      (['nameRo', 'nameEn', 'needsLift', 'rarActivity'] as const)
         .filter((field) => job[field] !== record[field])
         .map((field) => [field, record[field]]),
     );

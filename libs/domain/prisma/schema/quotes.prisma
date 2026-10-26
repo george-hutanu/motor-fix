@@ -263,6 +263,7 @@ model Booking {
   noShowRecordedByActor Account?             @relation("BookingNoShowRecordedBy", fields: [noShowRecordedBy], references: [id], onDelete: SetNull)
   mechanic              Mechanic?            @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
   job                   Job?
+  segments              BookingSegment[]
 
   @@unique([driverId, idempotencyKey])
   @@index([garageId, createdAt(sort: Desc)])

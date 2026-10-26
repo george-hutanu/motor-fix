@@ -110,6 +110,7 @@ async function snapshot(bookingId: string) {
         where: { requestId: b.requestId },
       })
     ).map((q) => q.status),
+    segments: await prisma.bookingSegment.count(),
   };
 }
 
@@ -212,10 +213,14 @@ describe('POST /bookings/:id/confirm', () => {
           oldValue: 'awaiting_confirmation',
         }),
         expect.objectContaining({
-          field: 'mechanic_id',
-          newValue: t.plainMechanic.id,
+          field: 'placement',
+          newValue: {
+            durationMinutes: 90,
+            lift: 1,
+            mechanicId: t.plainMechanic.id,
+            startsAt: TEN.toISOString(),
+          },
         }),
-        expect.objectContaining({ field: 'lift', newValue: 1 }),
       ]),
     );
     expect(
@@ -456,6 +461,7 @@ describe('GET /bookings/:id/confirm-options', () => {
         { id: t.answeringMechanic.id, name: 'Fixer' },
         { id: t.plainMechanic.id, name: 'Hand' },
       ],
+      needsLift: false,
     });
   });
 
@@ -475,6 +481,7 @@ describe('GET /bookings/:id/confirm-options', () => {
       liftCount: 0,
       mechanicRequired: false,
       mechanics: [],
+      needsLift: false,
     });
   });
 
@@ -489,6 +496,7 @@ describe('GET /bookings/:id/confirm-options', () => {
       liftCount: 0,
       mechanicRequired: true,
       mechanics: [],
+      needsLift: false,
     });
     expect((await confirm(booking.id, owner(t), {})).status).toBe(400);
   });
@@ -789,9 +797,11 @@ describe('a mechanic or a lift already taken', () => {
       ]);
 
       expect(answers.map((r) => r.status).sort()).toEqual([200, 409]);
-      expect(answers.find((r) => r.status === 409)?.body).toMatchObject({
-        code,
-      });
+      // The loser read before the winner committed (slot_taken) or after
+      // its deadlock rerun (the named code).
+      expect([code, 'slot_taken']).toContain(
+        answers.find((r) => r.status === 409)?.body.code,
+      );
       expect(
         await prisma.booking.count({ where: { status: 'confirmed' } }),
       ).toBe(1);
@@ -949,7 +959,7 @@ describe('the refusals in English', () => {
       }),
     );
 
-    expect(said).toMatchObject({
+    expect(said).toEqual({
       code: 'mechanic_unavailable',
       message: 'The mechanic is not available',
     });
@@ -972,9 +982,10 @@ describe('the refusals in English', () => {
       }),
     );
 
-    expect(said).toMatchObject({
+    expect(said).toEqual({
       code: 'outside_hours',
-      message: 'Outside opening hours',
+      message: 'Outside opening hours (08:00–09:00)',
+      reason: 'outside_opening',
     });
   });
 });
@@ -1010,6 +1021,31 @@ describe('counting confirms the pipes refuse', () => {
 
     expect(res.status).toBe(400);
     expect(await refused()).toBe(before + 1);
+  });
+
+  // @traces 150-FR-012
+  it('counts a refusal with its reason', async () => {
+    const t = await team('Atelier Dinamo');
+    await prisma.garage.update({
+      data: { hours: everyDay([['08:00', '17:00']]) },
+      where: { id: t.garage.id },
+    });
+    await setHours(t.plainMechanic.id, everyDay([['08:00', '11:00']]));
+    const { booking } = await accepted(t);
+    const counted = () =>
+      counterTotal(reader, 'motorfix_booking_confirms_total', {
+        outcome: 'mechanic_unavailable',
+        reason: 'ends_early',
+      });
+    const before = await counted();
+
+    const res = await confirm(booking.id, owner(t), {
+      mechanicId: t.plainMechanic.id,
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({ reason: 'ends_early' });
+    expect(await counted()).toBe(before + 1);
   });
 });
 
@@ -1160,6 +1196,534 @@ describe("the mechanic's own hours", () => {
 
     expect((res.body.mechanics as { id: string }[]).map((m) => m.id)).toContain(
       t.plainMechanic.id,
+    );
+  });
+});
+
+const actorOf = (t: Team, language: 'ro' | 'en'): Actor => ({
+  accountId: t.owner,
+  garageId: t.garage.id,
+  language,
+  permissions: {
+    canAnswerQuotes: true,
+    canMoveBookings: true,
+    canRecordFinalPrice: true,
+  },
+  role: 'garage',
+  roles: ['garage'],
+});
+
+// The problem details a confirm by the owner in `language` is refused with.
+const refusedIn = (
+  t: Team,
+  bookingId: string,
+  body: object,
+  language: 'ro' | 'en',
+) =>
+  provider(ConfirmService)
+    .confirm(actorOf(t, language), bookingId, body)
+    .then(
+      () => null,
+      (error: { getResponse: () => unknown }) => error.getResponse(),
+    );
+
+const everyDay = (spans: [string, string][]) =>
+  Object.fromEntries(
+    ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((d) => [d, spans]),
+  );
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const setHours = (
+  mechanicId: string,
+  hours: object | null,
+  saturdays = false,
+) =>
+  prisma.$executeRaw`UPDATE mechanic SET working_hours = ${
+    hours === null ? null : JSON.stringify(hours)
+  }::jsonb, works_saturdays = ${saturdays} WHERE id = ${mechanicId}::uuid`;
+
+// @traces 150-FR-004
+// @traces 150-FR-005
+describe('the placement a confirm writes', () => {
+  it('writes the booking as one segment on its mechanic and lift, with one placement entry', async () => {
+    const t = await team('Atelier Dinamo');
+    await lifts(t.garage.id, 2);
+    const { booking } = await accepted(t);
+
+    const res = await confirm(booking.id, owner(t), {
+      lift: 2,
+      mechanicId: t.plainMechanic.id,
+    });
+
+    expect(res.status).toBe(200);
+    expect(
+      await prisma.bookingSegment.findMany({
+        where: { bookingId: booking.id },
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        endsAt: new Date(TEN.getTime() + 90 * MINUTE),
+        garageId: t.garage.id,
+        lift: 2,
+        mechanicId: t.plainMechanic.id,
+        startsAt: TEN,
+      }),
+    ]);
+    const fields = (
+      await prisma.activityLog.findMany({
+        where: { at: { gte: since }, subjectId: booking.id },
+      })
+    ).map((entry) => entry.field);
+    expect(fields.filter((field) => field === 'placement')).toHaveLength(1);
+    expect(fields).not.toContain('mechanic_id');
+    expect(fields).not.toContain('lift');
+    expect(
+      await prisma.activityLog.findFirstOrThrow({
+        where: { field: 'placement', subjectId: booking.id },
+      }),
+    ).toMatchObject({
+      action: 'update',
+      actorId: t.owner,
+      newValue: {
+        durationMinutes: 90,
+        lift: 2,
+        mechanicId: t.plainMechanic.id,
+        startsAt: TEN.toISOString(),
+      },
+      oldValue: null,
+      subjectType: 'booking',
+    });
+  });
+
+  it('writes a confirm with no lift as a segment with none, though the garage has lifts', async () => {
+    const t = await team('Atelier Dinamo');
+    await lifts(t.garage.id, 2);
+    const { booking } = await accepted(t);
+
+    const res = await confirm(booking.id, owner(t), {
+      mechanicId: t.plainMechanic.id,
+    });
+
+    expect(res.status).toBe(200);
+    expect(
+      await prisma.bookingSegment.findMany({
+        where: { bookingId: booking.id },
+      }),
+    ).toEqual([expect.objectContaining({ lift: null })]);
+  });
+
+  it('writes a segment with no mechanic while the team is off', async () => {
+    const t = await team('Atelier Dinamo');
+    await switched(t.garage.id, 'team_mechanics', false);
+    const { booking } = await accepted(t);
+
+    expect((await confirm(booking.id, owner(t), {})).status).toBe(200);
+    expect(
+      await prisma.bookingSegment.findMany({
+        where: { bookingId: booking.id },
+      }),
+    ).toEqual([expect.objectContaining({ lift: null, mechanicId: null })]);
+  });
+
+  it.each([
+    ['ro', 'Locul tocmai a fost ocupat'],
+    ['en', 'The slot was just taken'],
+  ] as const)(
+    'answers slot_taken to a confirm another one beat past its read (%s)',
+    async (language, message) => {
+      const t = await team('Atelier Dinamo');
+      const { booking } = await accepted(t);
+      const rival = await accepted(t, new Date(TEN.getTime() + 60 * MINUTE));
+      const taking = heldOpen(prisma, (tx) =>
+        tx.bookingSegment.create({
+          data: {
+            bookingId: rival.booking.id,
+            endsAt: new Date(TEN.getTime() + 150 * MINUTE),
+            garageId: t.garage.id,
+            mechanicId: t.plainMechanic.id,
+            startsAt: new Date(TEN.getTime() + 60 * MINUTE),
+          },
+        }),
+      );
+      await taking.ready;
+      const before = await snapshot(booking.id);
+
+      const said = refusedIn(
+        t,
+        booking.id,
+        { mechanicId: t.plainMechanic.id },
+        language,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      taking.release();
+      await taking.done;
+
+      expect(await said).toEqual({ code: 'slot_taken', message });
+      expect({ ...(await snapshot(booking.id)), segments: 0 }).toEqual({
+        ...before,
+        segments: 0,
+      });
+      expect(
+        await prisma.bookingSegment.count({ where: { bookingId: booking.id } }),
+      ).toBe(0);
+    },
+  );
+});
+
+// @traces 150-FR-006
+describe('a refusal names its cause', () => {
+  const RO_MONTHS = [
+    'ianuarie',
+    'februarie',
+    'martie',
+    'aprilie',
+    'mai',
+    'iunie',
+    'iulie',
+    'august',
+    'septembrie',
+    'octombrie',
+    'noiembrie',
+    'decembrie',
+  ];
+  const EN_MONTHS = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  const RO_WEEKDAYS = [
+    'duminică',
+    'luni',
+    'marți',
+    'miercuri',
+    'joi',
+    'vineri',
+    'sâmbătă',
+  ];
+  const EN_WEEKDAYS = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
+  const named = (day: string, months: string[]) =>
+    `${Number(day.slice(8, 10))} ${months[Number(day.slice(5, 7)) - 1]}`;
+
+  afterEach(() =>
+    prisma.publicHoliday.deleteMany({ where: { nameEn: 'Test day' } }),
+  );
+
+  // A team whose garage opens 08:00 to 17:00 every day.
+  async function open() {
+    const t = await team('Atelier Dinamo');
+    await prisma.garage.update({
+      data: { hours: everyDay([['08:00', '17:00']]) },
+      where: { id: t.garage.id },
+    });
+    return t;
+  }
+
+  async function both(
+    t: Team,
+    bookingId: string,
+    body: object,
+    expected: { code: string; reason?: string; ro: string; en: string },
+  ) {
+    const { code, reason, ro, en } = expected;
+    const problem = (message: string) => ({
+      code,
+      message,
+      ...(reason && { reason }),
+    });
+    expect(await refusedIn(t, bookingId, body, 'ro')).toEqual(problem(ro));
+    expect(await refusedIn(t, bookingId, body, 'en')).toEqual(problem(en));
+  }
+
+  it('names a public holiday by its day', async () => {
+    const t = await open();
+    await prisma.publicHoliday.upsert({
+      create: {
+        day: new Date(`${DAY}T00:00:00Z`),
+        nameEn: 'Test day',
+        nameRo: 'Zi de test',
+      },
+      update: {},
+      where: { day: new Date(`${DAY}T00:00:00Z`) },
+    });
+    const { booking } = await accepted(t);
+
+    await both(
+      t,
+      booking.id,
+      { mechanicId: t.plainMechanic.id },
+      {
+        code: 'outside_hours',
+        en: `${named(DAY, EN_MONTHS)} is a legal holiday`,
+        reason: 'public_holiday',
+        ro: `${named(DAY, RO_MONTHS)} e sărbătoare legală`,
+      },
+    );
+  });
+
+  it.each([
+    ['one of its closed days', true, [['08:00', '17:00']]],
+    ['a weekday it has no hours on', false, []],
+  ] as [string, boolean, [string, string][]][])(
+    'names the garage closed on %s',
+    async (_, closedDay, spans) => {
+      const t = await open();
+      await prisma.garage.update({
+        data: {
+          hours: {
+            ...everyDay([['08:00', '17:00']]),
+            [WEEKDAY_KEYS[new Date(DAY).getUTCDay()]]: spans,
+          },
+        },
+        where: { id: t.garage.id },
+      });
+      if (closedDay) {
+        await prisma.garageClosedDay.create({
+          data: { day: new Date(`${DAY}T00:00:00Z`), garageId: t.garage.id },
+        });
+      }
+      const { booking } = await accepted(t);
+
+      await both(
+        t,
+        booking.id,
+        { mechanicId: t.plainMechanic.id },
+        {
+          code: 'outside_hours',
+          en: 'The garage is closed that day',
+          reason: 'closed_day',
+          ro: 'Service-ul e închis în ziua aceea',
+        },
+      );
+    },
+  );
+
+  it("names the garage's opening hours for a start outside them", async () => {
+    const t = await open();
+    await prisma.garage.update({
+      data: {
+        hours: everyDay([
+          ['08:00', '09:30'],
+          ['13:00', '17:00'],
+        ]),
+      },
+      where: { id: t.garage.id },
+    });
+    const { booking } = await accepted(t);
+
+    await both(
+      t,
+      booking.id,
+      { mechanicId: t.plainMechanic.id },
+      {
+        code: 'outside_hours',
+        en: 'Outside opening hours (08:00–09:30, 13:00–17:00)',
+        reason: 'outside_opening',
+        ro: 'În afara programului (08:00–09:30, 13:00–17:00)',
+      },
+    );
+  });
+
+  it('names a day off of the mechanic', async () => {
+    const t = await open();
+    await prisma.$executeRaw`
+      INSERT INTO mechanic_day_off (mechanic_id, first_day, last_day, created_by)
+      VALUES (${t.plainMechanic.id}::uuid, ${DAY}::date, ${DAY}::date, gen_random_uuid())`;
+    const { booking } = await accepted(t);
+
+    await both(
+      t,
+      booking.id,
+      { mechanicId: t.plainMechanic.id },
+      {
+        code: 'mechanic_unavailable',
+        en: 'Hand is off that day',
+        reason: 'day_off',
+        ro: 'Hand e liberă în ziua aceea',
+      },
+    );
+  });
+
+  it('names a Saturday the mechanic does not work', async () => {
+    const t = await open();
+    await setHours(t.plainMechanic.id, everyDay([['08:00', '16:00']]));
+    const { booking } = await accepted(t, atLocal(SATURDAY, 10));
+
+    await both(
+      t,
+      booking.id,
+      { mechanicId: t.plainMechanic.id },
+      {
+        code: 'mechanic_unavailable',
+        en: 'Hand does not work on Saturdays',
+        reason: 'saturday_off',
+        ro: 'Hand nu lucrează sâmbăta',
+      },
+    );
+  });
+
+  it('names a weekday the mechanic has no hours on', async () => {
+    const t = await open();
+    await setHours(t.plainMechanic.id, {
+      ...everyDay([['08:00', '16:00']]),
+      [WEEKDAY_KEYS[new Date(DAY).getUTCDay()]]: [],
+    });
+    const { booking } = await accepted(t);
+
+    await both(
+      t,
+      booking.id,
+      { mechanicId: t.plainMechanic.id },
+      {
+        code: 'mechanic_unavailable',
+        en: 'Hand does not work that day',
+        reason: 'not_working',
+        ro: 'Hand nu lucrează în ziua aceea',
+      },
+    );
+  });
+
+  it("names the end of the mechanic's day when it comes before the job's", async () => {
+    const t = await open();
+    await setHours(t.plainMechanic.id, everyDay([['08:00', '11:00']]));
+    const { booking } = await accepted(t);
+
+    await both(
+      t,
+      booking.id,
+      { mechanicId: t.plainMechanic.id },
+      {
+        code: 'mechanic_unavailable',
+        en: 'Hand works until 11:00 that day',
+        reason: 'ends_early',
+        ro: 'Hand lucrează până la 11:00 în ziua aceea',
+      },
+    );
+  });
+
+  it("names the mechanic's other booking by its time", async () => {
+    const t = await open();
+    await world.booked(
+      t.garage.id,
+      new Date(TEN.getTime() + 30 * MINUTE).toISOString(),
+      'confirmed',
+      { mechanicId: t.plainMechanic.id },
+    );
+    const { booking } = await accepted(t);
+
+    await both(
+      t,
+      booking.id,
+      { mechanicId: t.plainMechanic.id },
+      {
+        code: 'mechanic_busy',
+        en: 'Hand has a booking 10:30–12:00',
+        ro: 'Hand are o programare 10:30–12:00',
+      },
+    );
+  });
+
+  it('names the busy lift by its time and car', async () => {
+    const t = await open();
+    await lifts(t.garage.id, 2);
+    await world.booked(
+      t.garage.id,
+      new Date(TEN.getTime() + 30 * MINUTE).toISOString(),
+      'confirmed',
+      { lift: 1 },
+    );
+    const { booking } = await accepted(t);
+
+    await both(
+      t,
+      booking.id,
+      { lift: 1, mechanicId: t.plainMechanic.id },
+      {
+        code: 'lift_busy',
+        en: 'Lift 1 is busy 10:30–12:00 (Mini Cooper S)',
+        ro: 'Elevatorul 1 e ocupat 10:30–12:00 (Mini Cooper S)',
+      },
+    );
+  });
+
+  it('names a busy segment on a later day by its weekday', async () => {
+    const t = await open();
+    let next = addDays(DAY, 1);
+    while (
+      [0, 6].includes(new Date(next).getUTCDay()) ||
+      (await prisma.publicHoliday.findUnique({
+        where: { day: new Date(`${next}T00:00:00Z`) },
+      }))
+    )
+      next = addDays(next, 1);
+    await prisma.garage.update({
+      data: {
+        hours: {
+          ...everyDay([['08:00', '16:00']]),
+          sat: [],
+          sun: [],
+        },
+      },
+      where: { id: t.garage.id },
+    });
+    await world.booked(
+      t.garage.id,
+      atLocal(next, 9).toISOString(),
+      'confirmed',
+      {
+        mechanicId: t.plainMechanic.id,
+      },
+    );
+    const { booking } = await accepted(t, atLocal(DAY, 15));
+    await prisma.booking.update({
+      data: { durationMinutes: 540 },
+      where: { id: booking.id },
+    });
+    const weekday = new Date(next).getUTCDay();
+
+    await both(
+      t,
+      booking.id,
+      { mechanicId: t.plainMechanic.id },
+      {
+        code: 'mechanic_busy',
+        en: `Hand has a booking ${EN_WEEKDAYS[weekday]} 09:00–10:30`,
+        ro: `Hand are o programare ${RO_WEEKDAYS[weekday]} 09:00–10:30`,
+      },
+    );
+  });
+
+  it('keeps the shipped words, with no reason, for a mechanic not of the garage', async () => {
+    const t = await open();
+    const away = await prisma.mechanic.create({
+      data: { garageId: (await world.garage('Elsewhere')).id, name: 'Away' },
+    });
+    const { booking } = await accepted(t);
+
+    await both(
+      t,
+      booking.id,
+      { mechanicId: away.id },
+      {
+        code: 'mechanic_unavailable',
+        en: 'The mechanic is not available',
+        ro: 'Mecanicul nu e disponibil',
+      },
     );
   });
 });

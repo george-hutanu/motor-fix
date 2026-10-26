@@ -4051,7 +4051,7 @@
             "description": "not_found: not this garage’s booking"
           },
           "409": {
-            "description": "invalid_transition: the booking is not awaiting confirmation, or has lapsed; mechanic_unavailable; outside_hours; mechanic_busy; lift_busy"
+            "description": "invalid_transition: the booking is not awaiting confirmation, or has lapsed; mechanic_unavailable; outside_hours; mechanic_busy; lift_busy; slot_taken: another confirm took the time first. An outside_hours or mechanic_unavailable refusal names its cause in reason: public_holiday, closed_day or outside_opening for the garage; day_off, saturday_off, not_working or ends_early for the mechanic"
           }
         },
         "security": [
@@ -15047,12 +15047,17 @@
           "mechanicRequired": {
             "type": "boolean",
             "description": "Whether a confirm must name a mechanic: true while the garage works with a team, even before it has one"
+          },
+          "needsLift": {
+            "type": "boolean",
+            "description": "Whether any of the quote's jobs is done on a lift: the dialog offers a lift first, the confirm still accepts none"
           }
         },
         "required": [
           "liftCount",
           "mechanics",
-          "mechanicRequired"
+          "mechanicRequired",
+          "needsLift"
         ]
       },
       "ConfirmBookingDto": {

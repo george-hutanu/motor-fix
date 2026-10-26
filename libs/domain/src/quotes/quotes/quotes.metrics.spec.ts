@@ -154,6 +154,23 @@ describe('counting booking confirmations and lapses', () => {
     );
   });
 
+  // @traces 150-FR-012
+  it('counts a confirm that lost the race as slot_taken and a refusal by its reason', async () => {
+    expect(BOOKING_CONFIRM_OUTCOMES).toContain('slot_taken');
+
+    recordBookingConfirm('mechanic_unavailable', 'ends_early');
+    recordBookingConfirm('mechanic_unavailable', 'ends_early');
+    recordBookingConfirm('outside_hours', 'public_holiday');
+
+    expect(await points('motorfix_booking_confirms_total')).toEqual(
+      expect.arrayContaining([
+        { outcome: 'mechanic_unavailable', reason: 'ends_early', value: 2 },
+        { outcome: 'outside_hours', reason: 'public_holiday', value: 1 },
+        { outcome: 'slot_taken', value: 1 },
+      ]),
+    );
+  });
+
   it('adds one per lapse by where the request went and whether the sweep ran it', async () => {
     recordBookingLapse('quoted', false);
     recordBookingLapse('quoted', false);

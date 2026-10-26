@@ -3,10 +3,12 @@
 // the names and on the kind of work. A job missing from this list stays as it
 // is. `rarActivity` is the code in `rar_activity` a garage's RAR authorisation
 // must hold for the job to show on its profile; null is work any garage may do.
+// `needsLift` marks work done on a lift: the confirm dialog asks for one first.
 export interface JobTypeRecord {
   key: string;
   nameRo: string;
   nameEn: string;
+  needsLift: boolean;
   rarActivity: string | null;
 }
 
@@ -15,36 +17,42 @@ export const JOB_TYPES: readonly JobTypeRecord[] = [
     key: 'diagnosis',
     nameEn: 'Diagnosis and fault-code read',
     nameRo: 'Diagnoză și citire coduri de eroare',
+    needsLift: false,
     rarActivity: null,
   },
   {
     key: 'oil-service',
     nameEn: 'Oil and filter service',
     nameRo: 'Schimb de ulei și filtre',
+    needsLift: true,
     rarActivity: 'mechanics',
   },
   {
     key: 'front-brakes',
     nameEn: 'Front brake pads and discs',
     nameRo: 'Plăcuțe și discuri de frână față',
+    needsLift: true,
     rarActivity: 'brakes',
   },
   {
     key: 'timing-chain',
     nameEn: 'Timing chain kit',
     nameRo: 'Kit lanț de distribuție',
+    needsLift: true,
     rarActivity: 'mechanics',
   },
   {
     key: 'ac-regas',
     nameEn: 'Air-con regas',
     nameRo: 'Încărcare freon climă',
+    needsLift: false,
     rarActivity: 'air_con',
   },
   {
     key: 'suspension-alignment',
     nameEn: 'Suspension check and alignment',
     nameRo: 'Verificare suspensie și geometrie',
+    needsLift: true,
     rarActivity: 'suspension',
   },
 ];

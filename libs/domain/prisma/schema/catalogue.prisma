@@ -42,6 +42,8 @@ model JobType {
   status             JobTypeStatus    @default(pending)
   carSystem          String?          @map("car_system")
   rarActivity        String?          @map("rar_activity")
+  // Done on a lift: the confirm dialog offers one first.
+  needsLift          Boolean          @default(false) @map("needs_lift")
   createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
   prices             GaragePrice[]

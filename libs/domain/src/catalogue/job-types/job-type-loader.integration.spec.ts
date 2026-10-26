@@ -34,6 +34,7 @@ const stored = () =>
       key: true,
       nameEn: true,
       nameRo: true,
+      needsLift: true,
       rarActivity: true,
       status: true,
     },
@@ -55,36 +56,42 @@ describe('the job catalogue file', () => {
         key: 'diagnosis',
         nameEn: 'Diagnosis and fault-code read',
         nameRo: 'Diagnoză și citire coduri de eroare',
+        needsLift: false,
         rarActivity: null,
       },
       {
         key: 'oil-service',
         nameEn: 'Oil and filter service',
         nameRo: 'Schimb de ulei și filtre',
+        needsLift: true,
         rarActivity: 'mechanics',
       },
       {
         key: 'front-brakes',
         nameEn: 'Front brake pads and discs',
         nameRo: 'Plăcuțe și discuri de frână față',
+        needsLift: true,
         rarActivity: 'brakes',
       },
       {
         key: 'timing-chain',
         nameEn: 'Timing chain kit',
         nameRo: 'Kit lanț de distribuție',
+        needsLift: true,
         rarActivity: 'mechanics',
       },
       {
         key: 'ac-regas',
         nameEn: 'Air-con regas',
         nameRo: 'Încărcare freon climă',
+        needsLift: false,
         rarActivity: 'air_con',
       },
       {
         key: 'suspension-alignment',
         nameEn: 'Suspension check and alignment',
         nameRo: 'Verificare suspensie și geometrie',
+        needsLift: true,
         rarActivity: 'suspension',
       },
     ]);
@@ -199,6 +206,7 @@ describe('JobTypeLoader', () => {
         key: 'front-brakes',
         nameEn: 'Front brake pads and discs',
         nameRo: 'Plăcuțe și discuri de frână față',
+        needsLift: false,
         rarActivity: after,
       },
     ]);
@@ -245,11 +253,18 @@ describe('JobTypeLoader', () => {
     [
       'a duplicate key',
       [
-        { key: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne', rarActivity: null },
+        {
+          key: 'brakes',
+          nameEn: 'Brakes',
+          nameRo: 'Frâne',
+          needsLift: false,
+          rarActivity: null,
+        },
         {
           key: 'brakes',
           nameEn: 'Rear brakes',
           nameRo: 'Frâne spate',
+          needsLift: false,
           rarActivity: null,
         },
       ],
@@ -257,22 +272,45 @@ describe('JobTypeLoader', () => {
     [
       'a duplicate name',
       [
-        { key: 'brakes', nameEn: 'Brakes', nameRo: 'Frâne', rarActivity: null },
+        {
+          key: 'brakes',
+          nameEn: 'Brakes',
+          nameRo: 'Frâne',
+          needsLift: false,
+          rarActivity: null,
+        },
         {
           key: 'rear-brakes',
           nameEn: 'Brakes',
           nameRo: 'Frâne spate',
+          needsLift: false,
           rarActivity: null,
         },
       ],
     ],
     [
       'a blank key',
-      [{ key: ' ', nameEn: 'Brakes', nameRo: 'Frâne', rarActivity: null }],
+      [
+        {
+          key: ' ',
+          nameEn: 'Brakes',
+          nameRo: 'Frâne',
+          needsLift: false,
+          rarActivity: null,
+        },
+      ],
     ],
     [
       'a blank name',
-      [{ key: 'brakes', nameEn: 'Brakes', nameRo: '', rarActivity: null }],
+      [
+        {
+          key: 'brakes',
+          nameEn: 'Brakes',
+          nameRo: '',
+          needsLift: false,
+          rarActivity: null,
+        },
+      ],
     ],
   ])('refuses a file with %s and stores nothing', async (_, records) => {
     await loader.load(JOB_TYPES);
@@ -333,5 +371,65 @@ describe('JobTypeLoader', () => {
       rarActivity: null,
       status: 'pending',
     });
+  });
+});
+
+// @traces 150-FR-007
+describe('whether a job is done on a lift', () => {
+  it('marks the oil service, the front brakes, the timing chain and the suspension, and no other job of the file', () => {
+    expect(
+      JOB_TYPES.filter((job) => job.needsLift).map((job) => job.key),
+    ).toEqual([
+      'oil-service',
+      'front-brakes',
+      'timing-chain',
+      'suspension-alignment',
+    ]);
+  });
+
+  it('stores the flag with each job and keeps it on a reload', async () => {
+    await loader.load(JOB_TYPES);
+    await loader.load(JOB_TYPES);
+
+    expect(
+      (await stored()).map(({ key, needsLift }) => ({ key, needsLift })),
+    ).toEqual([
+      { key: 'ac-regas', needsLift: false },
+      { key: 'diagnosis', needsLift: false },
+      { key: 'front-brakes', needsLift: true },
+      { key: 'oil-service', needsLift: true },
+      { key: 'suspension-alignment', needsLift: true },
+      { key: 'timing-chain', needsLift: true },
+    ]);
+  });
+
+  it("takes the file's flag over a stored one and records the change", async () => {
+    const job = await prisma.jobType.create({
+      data: { ...JOB_TYPES[0], needsLift: true, status: 'approved' },
+    });
+
+    const result = await loader.load([JOB_TYPES[0]]);
+
+    expect(result.changed).toBe(1);
+    expect(
+      await prisma.jobType.findUniqueOrThrow({ where: { id: job.id } }),
+    ).toMatchObject({ needsLift: false });
+    expect(await history()).toEqual([
+      expect.objectContaining({
+        action: 'update',
+        field: 'needsLift',
+        newValue: false,
+        oldValue: true,
+        subjectId: job.id,
+      }),
+    ]);
+  });
+
+  it('stores a job a garage proposes as needing no lift', async () => {
+    const job = await prisma.jobType.create({
+      data: { key: 'tyre-change', nameEn: 'Tyre change', nameRo: 'Anvelope' },
+    });
+
+    expect(job.needsLift).toBe(false);
   });
 });

@@ -18,4 +18,9 @@ export interface ConfirmOptionsDto {
    * Empty while the garage works without a team
    */
   mechanics: Array<BookingMechanicDto>;
+
+  /**
+   * Whether any of the quote's jobs is done on a lift: the dialog offers a lift first, the confirm still accepts none
+   */
+  needsLift: boolean;
 }
