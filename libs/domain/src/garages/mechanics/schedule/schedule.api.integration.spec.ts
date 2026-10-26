@@ -962,7 +962,7 @@ describe('the history and the live channel of a schedule', () => {
     const events = await outbox();
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
-      audience: [`garage:${dinamo.id}`],
+      audience: [`garage:${dinamo.id}`, `mechanic:${elena.id}`],
       payload: {
         fields: ['working_hours', 'works_saturdays'],
         garageId: dinamo.id,

@@ -37,3 +37,17 @@ p {
 .verified svg {
   flex: none;
 }
+.day-sheet {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--mf-tap);
+  color: var(--mf-text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.day-sheet:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: var(--mf-focus-offset);
+}

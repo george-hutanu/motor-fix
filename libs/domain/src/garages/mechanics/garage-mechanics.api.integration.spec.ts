@@ -907,7 +907,7 @@ describe('adding a card', () => {
     const events = await outbox('mechanic.added');
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
-      audience: [`garage:${dinamo.id}`],
+      audience: [`garage:${dinamo.id}`, `mechanic:${res.body.id}`],
       payload: { garageId: dinamo.id, mechanicId: res.body.id },
       subjectId: res.body.id,
     });
@@ -1119,7 +1119,7 @@ describe('editing a card', () => {
     const events = await outbox('mechanic.updated');
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
-      audience: [`garage:${dinamo.id}`],
+      audience: [`garage:${dinamo.id}`, `mechanic:${elena.id}`],
       payload: {
         fields: ['roleTitle'],
         garageId: dinamo.id,
@@ -1139,6 +1139,7 @@ describe('editing a card', () => {
     expect([...event.audience].sort()).toEqual(
       [
         `garage:${dinamo.id}`,
+        `mechanic:${vladCard.id}`,
         `public:garage:${dinamo.id}`,
         `public:mechanic:${vladCard.id}`,
       ].sort(),
@@ -1293,6 +1294,7 @@ describe('removing a card', () => {
     expect([...events[0].audience].sort()).toEqual(
       [
         `garage:${dinamo.id}`,
+        `mechanic:${vladCard.id}`,
         `public:garage:${dinamo.id}`,
         `public:mechanic:${vladCard.id}`,
       ].sort(),
@@ -1306,7 +1308,10 @@ describe('removing a card', () => {
     await remove(dinamo.id, elena.id, bearer(mihai, 'garage'));
 
     const [event] = await outbox('mechanic.removed');
-    expect(event.audience).toEqual([`garage:${dinamo.id}`]);
+    expect(event.audience).toEqual([
+      `garage:${dinamo.id}`,
+      `mechanic:${elena.id}`,
+    ]);
   });
 
   it("keeps the card's reviews, jobs and bookings naming it", async () => {
