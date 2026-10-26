@@ -8,6 +8,7 @@ const parts = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit',
   hour: '2-digit',
   hourCycle: 'h23',
+  minute: '2-digit',
   month: '2-digit',
   timeZone: 'Europe/Bucharest',
   timeZoneName: 'longOffset',
@@ -27,6 +28,7 @@ export function local(at: Date) {
   return {
     day: Number(read['day']),
     hour: Number(read['hour']),
+    minute: Number(read['minute']),
     month: Number(read['month']),
     offsetMinutes,
     year: Number(read['year']),

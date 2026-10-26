@@ -25,6 +25,12 @@ export {
 export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
 export { assistantBroker } from './auth/assistant/assistant.service';
+export {
+  AssistantConfirmations,
+  type Decision as ConfirmationDecision,
+  type Tx,
+  voidAssistantConfirmations,
+} from './auth/assistant-confirmations/assistant-confirmations';
 export { AuthModule } from './auth/auth.module';
 export { DATA_EXPORT_CONSUMER } from './auth/data-export/data-export.builder';
 export { DataExportModule } from './auth/data-export/data-export.module';
@@ -140,7 +146,10 @@ export { ACCOUNT_CLOSED_CONSUMER } from './quotes/account-closed/account-closed'
 export { AccountClosedModule } from './quotes/account-closed/account-closed.module';
 export { BOOKING_TIMERS_CONSUMER } from './quotes/booking-timers/booking-timers';
 export { BookingTimersModule } from './quotes/booking-timers/booking-timers.module';
-export { DeclineService } from './quotes/decline/decline.service';
+export {
+  type DeclinePreview,
+  DeclineService,
+} from './quotes/decline/decline.service';
 export { DECLINE_WINDOW_CONSUMER } from './quotes/decline-window/decline-window';
 export { DeclineWindowModule } from './quotes/decline-window/decline-window.module';
 export { GarageRequestsService } from './quotes/garage-requests/garage-requests.service';

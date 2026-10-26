@@ -4,6 +4,7 @@ import {
   addYears,
   atLocal,
   isoWeek,
+  local,
   localDay,
   monthStart,
   weekStart,
@@ -129,5 +130,15 @@ describe('addYears', () => {
     ['2026-12-31', 1, '2027-12-31'],
   ])('moves %s by %i years to %s, clamped to the month', (day, n, moved) => {
     expect(addYears(day, n)).toBe(moved);
+  });
+});
+
+// @traces 1253-assistant-confirm-FR-001
+describe('local', () => {
+  it.each([
+    ['2026-10-26T11:52:00.000Z', 13, 52],
+    ['2026-10-24T11:05:00.000Z', 14, 5],
+  ])('reads %s as %i:%i on the clock in Bucharest', (at, hour, minute) => {
+    expect(local(new Date(at))).toMatchObject({ hour, minute });
   });
 });

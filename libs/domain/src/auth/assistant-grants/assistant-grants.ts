@@ -3,6 +3,7 @@ import type { Role } from '@motor-fix/contracts/capabilities';
 import type { AuditPort } from '../../audit/audit.port';
 import type { EventPort } from '../../events/event.port';
 import type { Prisma } from '../../generated/prisma/client';
+import { voidAssistantConfirmations } from '../assistant-confirmations/assistant-confirmations';
 
 type GrantRevokeReason =
   | 'role_removed'
@@ -15,7 +16,8 @@ type GrantRevoker = { id: string; role: Role; label?: string } | 'system';
 
 // Ends every live assistant grant of an account inside the caller's
 // transaction: one audit entry and one `assistant_grant.revoked` event per
-// grant, and nothing for a grant already revoked. Answers how many it ended.
+// grant, its waiting confirmations voided, and nothing for a grant already
+// revoked. Answers how many it ended.
 export async function revokeAssistantGrants(
   tx: Prisma.TransactionClient,
   audit: AuditPort,
@@ -37,6 +39,7 @@ export async function revokeAssistantGrants(
   });
   if (ended.length === 0) return 0;
   const ids = ended.map((g) => g.id);
+  await voidAssistantConfirmations(tx, { grantIds: ids });
   const actor =
     by === 'system'
       ? { actorId: null, actorRole: 'system' as const }

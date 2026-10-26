@@ -71,6 +71,9 @@ model Account {
   consentRecords          ConsentRecord[]
   assistantGrants         AssistantGrant[]
   assistantSignInCodes    AssistantSignInCode[]
+  assistantConfirmations  AssistantConfirmation[]
+  // The person's own "the assistant may act"; off refuses acting tools.
+  assistantCanAct         Boolean                  @default(true) @map("assistant_can_act")
   quoteRequests           QuoteRequest[]
   declinedRecipients      RequestRecipient[]       @relation("RecipientDeclinedBy")
   bookings                Booking[]                @relation("BookingDriver")
