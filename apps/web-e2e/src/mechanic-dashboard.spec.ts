@@ -30,6 +30,13 @@ async function signedIn(page: Page, email: string) {
   if (size) await page.setViewportSize(size);
 }
 
+// On a phone the menu is the tab bar, whose entry is the short "Cereri" with
+// its count; "Cereri de ofertă" is the wide menu's, which a phone never shows.
+const requestsTab = (page: Page) =>
+  page
+    .getByRole('navigation', { name: 'Panou service' })
+    .getByRole('link', { name: /^Cereri/ });
+
 // Saves the mechanic's quote permission as the owner's save does.
 async function answerQuotes(db: Client, mechanicId: string, on: boolean) {
   await db.query('BEGIN');
@@ -101,9 +108,7 @@ test.describe("a mechanic's Panou on a phone @seeded @database", () => {
     await expect(page.locator('[data-verified-pill]')).toHaveCount(0);
     await expect(page.locator('mf-garage-legal-check')).toHaveCount(0);
     await expect(page.locator('mf-garage-requests-panel')).toHaveCount(0);
-    await expect(
-      page.getByRole('link', { name: /^Cereri de ofertă/ }),
-    ).toHaveCount(0);
+    await expect(requestsTab(page)).toHaveCount(0);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -134,16 +139,12 @@ test.describe("a mechanic's Panou on a phone @seeded @database", () => {
     await expect(job).toHaveCount(0);
 
     await answerQuotes(db, mechanicId, true);
-    await expect(
-      page.getByRole('link', { name: /^Cereri de ofertă/ }).first(),
-    ).toBeAttached({ timeout: 5_000 });
+    await expect(requestsTab(page)).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('mf-garage-requests-panel')).toBeVisible({
       timeout: 5_000,
     });
 
     await answerQuotes(db, mechanicId, false);
-    await expect(
-      page.getByRole('link', { name: /^Cereri de ofertă/ }),
-    ).toHaveCount(0, { timeout: 5_000 });
+    await expect(requestsTab(page)).toHaveCount(0, { timeout: 5_000 });
   });
 });
