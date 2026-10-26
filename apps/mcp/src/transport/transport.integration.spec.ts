@@ -497,7 +497,7 @@ const recipientNow = (id: string) =>
 const confirmationNow = (id: unknown) =>
   prisma.assistantConfirmation.findUniqueOrThrow({ where: { id: String(id) } });
 
-// @traces 1253-assistant-confirm-FR-001 1253-assistant-confirm-FR-004 1253-assistant-confirm-FR-006 1253-assistant-confirm-FR-011
+// @traces 1253-FR-001 1253-FR-004 1253-FR-006 1253-FR-011
 describe('an acting tool through the MCP endpoint', () => {
   it('answers confirmation_required first and writes nothing', async () => {
     const { id } = await newOwner();
@@ -609,7 +609,7 @@ describe('an acting tool through the MCP endpoint', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-005 1253-assistant-confirm-FR-007
+// @traces 1253-FR-005 1253-FR-007
 describe('a confirmation the person can no longer give', () => {
   it('refuses the yes after the grant is revoked, the row void and nothing sent', async () => {
     const owner = await newOwner();

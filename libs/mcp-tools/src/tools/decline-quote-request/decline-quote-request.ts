@@ -13,7 +13,7 @@ const two = (n: number) => String(n).padStart(2, '0');
 
 // What the person agrees to: garage, driver's first name, car, the request's
 // Bucharest time and the reason, never a phone or a plate.
-export function declineSummary(
+function declineSummary(
   preview: DeclinePreview,
   reason: DeclineReasonCode,
   language: Language,

@@ -296,7 +296,7 @@ function previewed() {
 }
 
 describe('the confirmation step', () => {
-  // @traces 1253-assistant-confirm-FR-001
+  // @traces 1253-FR-001
   it('answers an acting tool’s first call with confirmation_required and stores one confirmation', async () => {
     const { handler, preview, tool } = previewed();
     const confirmations = memoryConfirmations();
@@ -324,7 +324,7 @@ describe('the confirmation step', () => {
     expect(confirmations.rows.size).toBe(1);
   });
 
-  // @traces 1253-assistant-confirm-FR-008
+  // @traces 1253-FR-008
   it('lists an acting tool with a preview without its output schema, and keeps a read’s', async () => {
     const { tool } = previewed();
     const listed = await visibleTools(
@@ -342,7 +342,7 @@ describe('the confirmation step', () => {
     });
   });
 
-  // @traces 1253-assistant-confirm-FR-007
+  // @traces 1253-FR-007
   it('hides every acting tool and refuses it while the account’s switch is off, voiding its confirmations', async () => {
     const { tool } = previewed();
     const confirmations = memoryConfirmations();
@@ -390,7 +390,7 @@ describe('the confirmation step over elicitation', () => {
     return { ...parts, client, confirmations };
   };
 
-  // @traces 1253-assistant-confirm-FR-003
+  // @traces 1253-FR-003
   it('asks the person with the summary and runs the action on yes', async () => {
     const asked: { message: string; requestedSchema: unknown }[] = [];
     const { client, confirmations, handler } = connected(async (params) => {
@@ -419,7 +419,7 @@ describe('the confirmation step over elicitation', () => {
     expect([...confirmations.rows.values()][0]?.status).toBe('done');
   });
 
-  // @traces 1253-assistant-confirm-FR-003 1253-assistant-confirm-FR-005
+  // @traces 1253-FR-003 1253-FR-005
   it.each([
     ['a no', { action: 'accept', content: { confirm: false } }],
     ['a declined question', { action: 'decline' }],
@@ -441,7 +441,7 @@ describe('the confirmation step over elicitation', () => {
     expect([...confirmations.rows.values()][0]?.status).toBe('refused');
   });
 
-  // @traces 1253-assistant-confirm-FR-003
+  // @traces 1253-FR-003
   it('answers confirmation_required to a client that declared no elicitation', async () => {
     const { client, handler } = connected();
 

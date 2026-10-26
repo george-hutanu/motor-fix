@@ -36,7 +36,7 @@ async function untouched(recipientId: string) {
   ).toBe(0);
 }
 
-// @traces 1253-assistant-confirm-FR-001 1253-assistant-confirm-FR-002
+// @traces 1253-FR-001 1253-FR-002
 describe('previewing a decline', () => {
   it('names the car, the driver’s first name, the garage and when the request came, writing nothing', async () => {
     const { dinamo, recipient, request } = await open();
@@ -101,7 +101,7 @@ describe('previewing a decline', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-008
+// @traces 1253-FR-008
 describe('a preview refuses as the decline would', () => {
   it('answers request_not_open for a closed request', async () => {
     const andrei = await world.account('Andrei');
@@ -155,7 +155,7 @@ describe('a preview refuses as the decline would', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-004
+// @traces 1253-FR-004
 describe('running a decline inside the caller’s transaction', () => {
   it('declines with the caller’s writes and leaves nothing when that transaction rolls back', async () => {
     const { dinamo, recipient, request } = await open();

@@ -82,7 +82,7 @@ const yes = (c: { grantId: string; id: string }, argsHash = HASH) => ({
   id: c.id,
 });
 
-// @traces 1253-assistant-confirm-FR-009
+// @traces 1253-FR-009
 describe('opening an assistant confirmation', () => {
   it('stores it waiting, for the grant, account and tool, with the hash only and five minutes to answer', async () => {
     const c = await waiting();
@@ -116,7 +116,7 @@ describe('opening an assistant confirmation', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-004 1253-assistant-confirm-FR-006
+// @traces 1253-FR-004 1253-FR-006
 describe('a timely yes', () => {
   it('runs once and stores the output as done', async () => {
     const c = await waiting();
@@ -188,7 +188,7 @@ describe('a timely yes', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-005
+// @traces 1253-FR-005
 describe('every other answer writes nothing', () => {
   it('closes a no as refused', async () => {
     const c = await waiting();
@@ -272,7 +272,7 @@ describe('every other answer writes nothing', () => {
   );
 });
 
-// @traces 1253-assistant-confirm-FR-006
+// @traces 1253-FR-006
 describe('a repeated yes', () => {
   it('replays a done outcome whatever it is sent, running nothing', async () => {
     const c = await waiting();
@@ -351,7 +351,7 @@ describe('a repeated yes', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-007
+// @traces 1253-FR-007
 describe('voiding waiting confirmations', () => {
   it('voids every waiting one of the grants named, inside the caller’s transaction, and counts them', async () => {
     const a = await waiting('Andrei');
@@ -420,7 +420,7 @@ describe('voiding waiting confirmations', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-007
+// @traces 1253-FR-007
 describe('the account’s switch for acting', () => {
   it('is on for a new account', async () => {
     const id = await account('Andrei');

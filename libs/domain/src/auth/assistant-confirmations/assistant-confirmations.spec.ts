@@ -35,7 +35,7 @@ const stored = (
   ...shape,
 });
 
-// @traces 1253-assistant-confirm-FR-004 1253-assistant-confirm-FR-005 1253-assistant-confirm-FR-006
+// @traces 1253-FR-004 1253-FR-005 1253-FR-006
 describe('judging a confirmation', () => {
   it('runs a timely yes with the same arguments, up to the expiry itself', () => {
     expect(judge(stored(), asked, NOW)).toEqual({ kind: 'run' });
@@ -138,7 +138,7 @@ describe('judging a confirmation', () => {
   );
 });
 
-// @traces 1253-assistant-confirm-FR-010
+// @traces 1253-FR-010
 describe('counting the confirmations', () => {
   const who = {
     confirmationId: '0b5c1f0e-5a1b-4c6e-9f43-0d7a2b8e4c11',

@@ -108,7 +108,7 @@ describe('decline_quote_request', () => {
     );
   });
 
-  // @traces 1253-assistant-confirm-FR-001 1253-assistant-confirm-FR-008
+  // @traces 1253-FR-001 1253-FR-008
   it('first answers confirmation_required, stores one confirmation and declines nothing', async () => {
     const decline = declineOf();
     const confirmations = memoryConfirmations();
@@ -140,7 +140,7 @@ describe('decline_quote_request', () => {
     ]);
   });
 
-  // @traces 1253-assistant-confirm-FR-001 1253-assistant-confirm-FR-008
+  // @traces 1253-FR-001 1253-FR-008
   it.each([
     [
       'ro',
@@ -158,7 +158,7 @@ describe('decline_quote_request', () => {
     );
   });
 
-  // @traces 1253-assistant-confirm-FR-001
+  // @traces 1253-FR-001
   it('never names a phone or a plate in the summary', async () => {
     const result = await call(ARGS);
     const summary = (result.structuredContent as { summary: string }).summary;
@@ -167,7 +167,7 @@ describe('decline_quote_request', () => {
     );
   });
 
-  // @traces 1253-assistant-confirm-FR-004
+  // @traces 1253-FR-004
   it('declines at the yes, as the assistant, for the grant, with the reason, inside the confirmation', async () => {
     const decline = declineOf();
     const confirmations = memoryConfirmations();
@@ -248,7 +248,7 @@ describe('decline_quote_request', () => {
     expect(confirmations.rows.size).toBe(0);
   });
 
-  // @traces 1253-assistant-confirm-FR-002
+  // @traces 1253-FR-002
   it.each([
     ['already_answered', 'Someone has already answered this request.'],
     ['request_not_open', 'The request is no longer open.'],
@@ -272,7 +272,7 @@ describe('decline_quote_request', () => {
     },
   );
 
-  // @traces 1253-assistant-confirm-FR-002
+  // @traces 1253-FR-002
   it('answers a 403 from the preview as forbidden in Romanian', async () => {
     const confirmations = memoryConfirmations();
     const decline = declineOf(undefined, async () => {
@@ -294,7 +294,7 @@ describe('decline_quote_request', () => {
 });
 
 describe('decline_quote_request over the protocol', () => {
-  // @traces 1253-assistant-confirm-FR-008
+  // @traces 1253-FR-008
   it('lists no output schema, its first answer being the confirmation', async () => {
     const client = await connect(
       [declineQuoteRequest, confirmAction],

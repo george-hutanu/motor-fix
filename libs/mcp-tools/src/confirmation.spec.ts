@@ -6,7 +6,7 @@ import { argsHash, confirmationRequired, notSent } from './confirmation';
 
 const sha = (text: string) => createHash('sha256').update(text).digest('hex');
 
-// @traces 1253-assistant-confirm-FR-004
+// @traces 1253-FR-004
 describe('argsHash', () => {
   it('is the hex SHA-256 of the key-sorted JSON', () => {
     expect(argsHash({ reason: 'fully_booked', requestId: 'r' })).toBe(
@@ -35,7 +35,7 @@ describe('argsHash', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-001
+// @traces 1253-FR-001
 describe('confirmationRequired', () => {
   it('answers the id, the expiry as ISO, the summary and the tool', () => {
     expect(
@@ -54,7 +54,7 @@ describe('confirmationRequired', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-005
+// @traces 1253-FR-005
 describe('notSent', () => {
   it.each(['refused', 'expired', 'arguments_changed', 'void'] as const)(
     'says nothing was sent for %s, in both languages',

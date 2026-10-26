@@ -13,9 +13,9 @@ export type Tx = Prisma.TransactionClient;
 type Status = 'waiting' | 'done' | 'failed' | 'refused' | 'expired' | 'void';
 type Closed = 'refused' | 'expired' | 'void';
 
-export type ConfirmationScope = { grantIds: string[] } | { accountId: string };
+type ConfirmationScope = { grantIds: string[] } | { accountId: string };
 
-export interface OpenedConfirmation {
+interface OpenedConfirmation {
   expiresAt: Date;
   id: string;
 }

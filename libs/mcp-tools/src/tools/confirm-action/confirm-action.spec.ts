@@ -106,7 +106,7 @@ const statusOf = (id: string, rows: Map<string, { status: string }>) =>
   rows.get(id)?.status;
 
 describe('confirm_action', () => {
-  // @traces 1253-assistant-confirm-FR-004
+  // @traces 1253-FR-004
   it('is in the catalogue, acting, destructive and idempotent, with no output schema, permission or garage feature', () => {
     expect(catalogue).toContain(confirmAction);
     expect(confirmAction).toMatchObject({
@@ -123,7 +123,7 @@ describe('confirm_action', () => {
     expect(confirmAction.preview).toBeUndefined();
   });
 
-  // @traces 1253-assistant-confirm-FR-004 1253-assistant-confirm-FR-007
+  // @traces 1253-FR-004 1253-FR-007
   it.each([
     ['a driver who may act', ['driver'], true, true],
     ['a garage owner who may act', ['garage'], true, true],
@@ -143,7 +143,7 @@ describe('confirm_action', () => {
     );
   });
 
-  // @traces 1253-assistant-confirm-FR-004
+  // @traces 1253-FR-004
   it('runs the stored tool once at a timely yes and answers its declared output', async () => {
     const { ask, confirm, confirmations, handler } = setup();
     const confirmationId = await ask();
@@ -168,7 +168,7 @@ describe('confirm_action', () => {
     expect(statusOf(confirmationId, confirmations.rows)).toBe('done');
   });
 
-  // @traces 1253-assistant-confirm-FR-004
+  // @traces 1253-FR-004
   it('equals the arguments whatever their key order', async () => {
     const { ask, confirm } = setup();
     const confirmationId = await ask();
@@ -186,7 +186,7 @@ describe('confirm_action', () => {
     expect(result.structuredContent).toEqual({ cancelled: true });
   });
 
-  // @traces 1253-assistant-confirm-FR-004
+  // @traces 1253-FR-004
   it('parses the arguments with the stored tool’s schema and refuses them as validation', async () => {
     const { ask, confirm, handler } = setup();
     const confirmationId = await ask();
@@ -208,7 +208,7 @@ describe('confirm_action', () => {
     expect(result.structuredContent).toMatchObject({ code: 'validation' });
   });
 
-  // @traces 1253-assistant-confirm-FR-005
+  // @traces 1253-FR-005
   it.each([
     [
       'a no',
@@ -273,7 +273,7 @@ describe('confirm_action', () => {
     },
   );
 
-  // @traces 1253-assistant-confirm-FR-005
+  // @traces 1253-FR-005
   it('answers not_found to another grant’s confirmation and leaves it waiting', async () => {
     const { ask, confirm, confirmations, handler } = setup();
     const id = await ask();
@@ -289,7 +289,7 @@ describe('confirm_action', () => {
     expect(statusOf(id, confirmations.rows)).toBe('waiting');
   });
 
-  // @traces 1253-assistant-confirm-FR-005
+  // @traces 1253-FR-005
   it('answers not_found to an unknown id', async () => {
     const { confirm } = setup();
     const result = await confirm({
@@ -301,7 +301,7 @@ describe('confirm_action', () => {
     expect(result.structuredContent).toMatchObject({ code: 'not_found' });
   });
 
-  // @traces 1253-assistant-confirm-FR-005
+  // @traces 1253-FR-005
   it('answers the use case’s error when it fails at the yes, and stores it as failed', async () => {
     const s = setup({
       run: async () => {
@@ -324,7 +324,7 @@ describe('confirm_action', () => {
     expect(statusOf(id, s.confirmations.rows)).toBe('failed');
   });
 
-  // @traces 1253-assistant-confirm-FR-006
+  // @traces 1253-FR-006
   it('replays a done confirmation’s output without running again, whatever the arguments', async () => {
     const { ask, confirm, handler } = setup();
     const id = await ask();
@@ -341,7 +341,7 @@ describe('confirm_action', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  // @traces 1253-assistant-confirm-FR-006
+  // @traces 1253-FR-006
   it('replays a failed confirmation’s error in the language of the repeat', async () => {
     const s = setup({
       run: async () => {
@@ -364,7 +364,7 @@ describe('confirm_action', () => {
     expect(s.handler).toHaveBeenCalledTimes(1);
   });
 
-  // @traces 1253-assistant-confirm-FR-007
+  // @traces 1253-FR-007
   it('refuses with the switch off and voids the account’s waiting confirmations', async () => {
     const { ask, confirm, confirmations, handler } = setup();
     const id = await ask();
@@ -382,7 +382,7 @@ describe('confirm_action', () => {
     expect(statusOf(id, confirmations.rows)).toBe('void');
   });
 
-  // @traces 1253-assistant-confirm-FR-007
+  // @traces 1253-FR-007
   it('refuses under the read-only scope', async () => {
     const s = setup();
     const id = await s.ask();

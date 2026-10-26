@@ -33,11 +33,7 @@ export function confirmationRequired(
   };
 }
 
-export type NotSentReason =
-  | 'refused'
-  | 'expired'
-  | 'arguments_changed'
-  | 'void';
+type NotSentReason = 'refused' | 'expired' | 'arguments_changed' | 'void';
 
 export const notSent = (reason: NotSentReason, language: Language) => ({
   message: text(`not_sent_${reason}`, language),

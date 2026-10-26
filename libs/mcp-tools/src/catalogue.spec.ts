@@ -34,7 +34,7 @@ describe('catalogue', () => {
   // @traces 365-FR-007
   // @traces 374-FR-001
   // @traces 345-FR-017
-  // @traces 1253-assistant-confirm-FR-004
+  // @traces 1253-FR-004
   it('ships get_my_account, the four garage reads, decline_quote_request and confirm_action', () => {
     expect(catalogue.map((t) => t.name).sort()).toEqual(
       ['get_my_account', ...GARAGE_READS, ...GARAGE_ACTS, CONFIRM].sort(),
@@ -140,7 +140,7 @@ const written = async (): Promise<never> => {
   throw new Error('a first call reached a write');
 };
 
-// @traces 1253-assistant-confirm-FR-001 1253-assistant-confirm-FR-008
+// @traces 1253-FR-001 1253-FR-008
 describe('every acting tool', () => {
   const acting = catalogue.filter((t) => t.acts && t.name !== CONFIRM);
 

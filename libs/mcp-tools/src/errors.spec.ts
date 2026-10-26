@@ -95,7 +95,7 @@ describe('toolError', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-005
+// @traces 1253-FR-005
 describe('nothing-sent texts', () => {
   it.each([
     'not_sent_refused',
@@ -116,7 +116,7 @@ describe('nothing-sent texts', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-006
+// @traces 1253-FR-006
 describe('a stored refusal', () => {
   it('answers its code in the language of the call', () => {
     expect(toolError(new ToolRefusal('already_answered'), 'ro')).toEqual(

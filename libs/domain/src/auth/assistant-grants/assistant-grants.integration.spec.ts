@@ -151,7 +151,7 @@ describe('revokeAssistantGrants', () => {
   });
 });
 
-// @traces 1253-assistant-confirm-FR-007
+// @traces 1253-FR-007
 describe('revoking a grant with an action waiting to be confirmed', () => {
   const confirmation = (accountId: string, grantId: string) =>
     prisma.assistantConfirmation.create({
