@@ -877,10 +877,11 @@ describe('e-mails to a listing draft', () => {
     });
     expect(new Set(written.map((r) => r.eventId)).size).toBe(2);
     const queued = await jobs();
-    expect(queued.map((j) => j.data)).toEqual(
-      written
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-        .map((r) => ({ id: r.id, link })),
+    // Both sends can land in the same millisecond, so match them by id.
+    const byId = (a: { id: string }, b: { id: string }) =>
+      a.id.localeCompare(b.id);
+    expect(queued.map((j) => j.data).sort(byId)).toEqual(
+      written.map((r) => ({ id: r.id, link })).sort(byId),
     );
     // A bell row's position is a BigInt, which JSON cannot write as it is.
     expect(
