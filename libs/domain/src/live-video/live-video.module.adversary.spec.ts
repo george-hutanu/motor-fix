@@ -24,7 +24,7 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-// @traces 1250-live-video-provider-FR-001
+// @traces 1250-FR-001
 describe('which live video provider is chosen for odd signing keys', () => {
   it('has none when the key is an RSA public key', () => {
     const pub = rsa.publicKey

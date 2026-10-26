@@ -65,7 +65,7 @@ const json =
 const cloudflare = () =>
   new CloudflareLiveVideo(secrets, `http://127.0.0.1:${port}`);
 
-// @traces 1250-live-video-provider-FR-001 1250-live-video-provider-FR-005
+// @traces 1250-FR-001 1250-FR-005
 describe('the Cloudflare adapter against hostile answers', () => {
   it.each([
     ['an array body', '[]'],

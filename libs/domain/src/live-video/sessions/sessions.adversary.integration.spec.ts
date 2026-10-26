@@ -60,10 +60,11 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
-// @traces 1250-live-video-provider-FR-005
+// @traces 1250-FR-005
 describe('a start while the provider misbehaves', () => {
-  it('answers 503 within the five-second limit when the provider never answers', async () => {
+  it('answers 503 within the five-second limit when the provider is late, and closes the input it opens afterwards', async () => {
     const s = await setting();
+    const close = jest.spyOn(fake(), 'closeInput');
     jest
       .spyOn(fake(), 'createInput')
       .mockImplementation(
@@ -72,7 +73,7 @@ describe('a start while the provider misbehaves', () => {
             setTimeout(
               () =>
                 resolve({ inputId: 'late', publishUrl: 'https://x.test/p' }),
-              9000,
+              6000,
             ),
           ),
       );
@@ -88,6 +89,8 @@ describe('a start while the provider misbehaves', () => {
       events: 0,
       sessions: 0,
     });
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    expect(close).toHaveBeenCalledWith('late');
   }, 15_000);
 
   it('never repeats the provider’s error text, url or token in the answer', async () => {
@@ -200,7 +203,7 @@ describe('a start while the provider misbehaves', () => {
   });
 });
 
-// @traces 1250-live-video-provider-FR-004
+// @traces 1250-FR-004
 describe('a start that must not reach the provider', () => {
   it('does not call the provider for a refused caller, a closed job or a live job', async () => {
     const closed = await setting('done');
@@ -286,7 +289,7 @@ describe('a start that must not reach the provider', () => {
   });
 });
 
-// @traces 1250-live-video-provider-FR-004
+// @traces 1250-FR-004
 describe('the name in the already-live answer', () => {
   it.each([
     ['Costel', 'Costel transmite deja'],
@@ -303,7 +306,7 @@ describe('the name in the already-live answer', () => {
   });
 });
 
-// @traces 1250-live-video-provider-FR-004
+// @traces 1250-FR-004
 describe('five starts at once', () => {
   it('leave one session, one event, one audit entry and four 409s', async () => {
     const s = await setting();
@@ -330,7 +333,7 @@ async function live() {
   return { ...s, id, view: `/live-sessions/${id}/view-token` };
 }
 
-// @traces 1250-live-video-provider-FR-003
+// @traces 1250-FR-003
 describe('asking for a view credential', () => {
   it('gives the same answer shape twice and writes nothing either time', async () => {
     const s = await live();

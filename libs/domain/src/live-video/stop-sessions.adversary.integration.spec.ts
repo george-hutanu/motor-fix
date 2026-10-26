@@ -35,7 +35,7 @@ const events = (garageId: string) =>
     where: { audience: { has: `garage:${garageId}` }, kind: 'live.stopped' },
   });
 
-// @traces 1250-live-video-provider-FR-006
+// @traces 1250-FR-006
 describe('stopping live sessions at the edges', () => {
   it('stops nothing and returns 0 for an unknown job', async () => {
     const count = await prisma.$transaction((tx) =>
@@ -107,7 +107,7 @@ describe('stopping live sessions at the edges', () => {
   }, 60_000);
 });
 
-// @traces 1250-live-video-provider-FR-006
+// @traces 1250-FR-006
 describe('what leaves a live session running', () => {
   it('keeps the session when the job only pauses', async () => {
     const driver = await world.account('Andrei Marin', ['driver']);

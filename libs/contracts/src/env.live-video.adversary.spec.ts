@@ -9,7 +9,7 @@ const full = {
     '-----BEGIN PRIVATE KEY-----\nAAA\n-----END PRIVATE KEY-----',
 };
 
-// @traces 1250-live-video-provider-FR-001
+// @traces 1250-FR-001
 describe('reading the live video secrets', () => {
   it('returns nothing from an empty environment', () => {
     expect(liveVideoSecrets({})).toBeUndefined();
