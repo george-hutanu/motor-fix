@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 194-email-sending
   - 195-message-templates
@@ -54,6 +54,7 @@ features:
   - 094-itp-reminders
   - 074-garage-reviews
   - 1257-quote-reminders
+  - 091-oil-service-due
 ---
 
 # Capability: Notifications
@@ -766,10 +767,6 @@ _From 279-email-inbox._
 
 _From 069-report-decision._
 
-### 1351-FR-008 — The worker MUST, every day at 09:00 Europe/Bucharest through the existing daily mechanism (bucharestDaily), count the due garages and, when the count is above zero, queue one ADMIN_RECHECK_DUE per admin with the count; once per day whatever restarts happen. With a count of zero it MUST send nothing. The type's catalogue entry is timer, e-mail and push (narrowed from the proposed e-mail, push and WhatsApp), mutable.
-
-_From 1351-rar-monthly-recheck._
-
 ### 1351-FR-009 — The system MUST carry a Romanian and an English ADMIN_RECHECK_DUE template for e-mail and push reading "{n} service-uri de reverificat în registrul RAR" / "{n} garages to re-check in the RAR register" ("1 service" / "1 garage" for one), linking to the admin list, holding no other data, and passing the existing template checks (195-FR-009).
 
 _From 1351-rar-monthly-recheck._
@@ -949,6 +946,18 @@ _From 1257-quote-reminders._
 ### 1257-FR-009 — REQUEST_REMINDER, REQUEST_EXPIRED and QUOTE_EXPIRED MUST have registered templates in Romanian and English for e-mail, push and WhatsApp that name the car and the garage (the driver's REQUEST_EXPIRED names the request's car and carries FR-005's call to action and link; the garage's name the car and the driver's short name), hold no personal data beyond that, and pass the existing template tests; the bell entry of each MUST open the request on the reader's side (the driver's request page); the garage's bell entry carries no link, as the shipped bell gives none to any garage row (`bell.service.ts`, REQUEST_RECEIVED included).
 
 _From 1257-quote-reminders._
+
+### 091-FR-011 — The daily run (09:00 Europe/Bucharest) MUST send SERVICE_DUE for a `service` reminder exactly as it sends DUE_ITP (094-FR-001, 002, 004, 005, 010, 011, 012): 30 and 7 days before `due_on`, once each per reminder id, caught up after a missed run, none for a removed car or a deleted account, on the channel chosen for SERVICE_DUE with the SMS cap and WhatsApp fallback, muted by the Scadențe group (the bell row still written), non-urgent so an outside send in quiet hours waits until 08:00, retried on the queue's own schedule.
+
+_From 091-oil-service-due._
+
+### 091-FR-012 — SERVICE_DUE MUST have templates in Romanian and English for e-mail, push, SMS, WhatsApp and the bell, passing the templates' CI check (195-FR-009): the bell, the push and the e-mail read "Schimbul de ulei la <brand> <model> este estimat pe <long date>, peste <n> zile." / "The oil service on your <brand> <model> is estimated for <long date>, in <n> days." with the days rendered as 094-FR-013 renders them (Romanian "o zi" / "de zile", "astăzi" / "today" on the day itself); the e-mail and the push add "Programează schimbul de ulei din timp." / "Book the oil service in time." and link to Mașinile mele; the SMS keeps a text within 70 characters that names no car; the WhatsApp template renders its approved name and ordered parameters; no text shows the plate. The reminder MUST hand the message the car's brand and model, the due date and the days left (094-FR-014's parameters), so every channel renders.
+
+_From 091-oil-service-due._
+
+### 091-FR-016 — Every SERVICE_DUE text this story sends MUST exist in both Romanian and English; the kilometres and dates in them MUST use the recipient's formats.
+
+_From 091-oil-service-due._
 
 ## Retired
 

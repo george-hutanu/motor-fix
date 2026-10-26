@@ -293,10 +293,6 @@ _From 290-save-garage._
 
 _From 290-save-garage._
 
-### 386-FR-002 — The public read (`GET /api/v1/garages/{slug}?brand=`) MUST give a job the brand's range when the profile is read for a catalogue brand the garage **takes** (`works_on`) and a complete row for that brand exists; in every other case (no brand, another brand, an incomplete brand row, the brand refused or unstated) the default range. This narrows 355-FR-002: a brand row of a brand without a `works_on` row is kept and never used, and applies again when the brand is taken again. Visibility, duration and order stay the default row's, and the ticked-jobs rule of 355-FR-002 is unchanged: once the garage ticked any job for the brand, only the ticked jobs are listed for it.
-
-_From 386-brand-price-range._
-
 ### 386-FR-003 — Story #75's estimate MUST get the chosen range from the same public rows (FR-002); this story adds no second choice and no estimate of its own.
 
 _From 386-brand-price-range._
@@ -333,10 +329,6 @@ _From 356-live-estimate._
 
 _From 356-live-estimate._
 
-### 356-FR-009 — The switched-on jobs MUST be kept per garage in the browser's session storage (keyed by the garage's id, holding job ids), restored when the same profile opens again in the same browser tab's session and forgotten when the session ends (a new tab starts empty); a job restored that the list does not carry is dropped silently and pruned from storage (what is stored is what is on, so a job hidden for the brand in context does not come back on the default list); a refused or failing storage, or a stored value that is not a list of job ids, leaves the box working for the open page and is treated as nothing on; the server render and the first client render show nothing on, and the stored selection is applied after hydration, so the markup never disagrees with the server's.
-
-_From 356-live-estimate._
-
 ### 356-FR-010 — On a re-read of the profile (355-FR-012) a switched-on job no longer listed MUST be switched off and leave the box and the stored selection at once, the totals following; the box MUST then show, until the next switch change, "O lucrare pornită nu mai este oferită de service." / "A job you switched on is no longer offered by the garage." as visible text that the box's one polite live region (FR-005) carries once, so the box never holds a second live region; a job still listed keeps its state and takes its new range.
 
 _From 356-live-estimate._
@@ -361,9 +353,6 @@ _From 356-live-estimate._
 
 _From 271-garage-distance._
 
-### 271-FR-015 — The profile's place line MUST read "la {d} km" / "{d} km away" for a fixed garage when the browser holds a kept place (the server renders without it; the browser re-reads once with `near` and shows the distance in place), be left out without a place, and keep the mobile mechanic's area line "Mecanic mobil · zonă de {r} km" with no distance and no address (307-FR-013 completed).
-
-_From 271-garage-distance._
 ### 311-FR-001 — Below 768 px, the profile page MUST show a bar fixed above the public tab bar (and above the consent bar while it is shown) on every profile that has a request button to show (a visitor or a driver, 356-FR-011); while the profile loads, is unknown or removed, and for a signed-in garage-side account, no bar is rendered; from 768 px the bar's markup stays (FR-010) but is not shown and not announced (`display: none`). Below 768 px it is shown wherever the page stands, the in-page box on screen or not.
 
 _From 311-estimate-within-reach._
@@ -393,10 +382,6 @@ _From 311-estimate-within-reach._
 _From 311-estimate-within-reach._
 
 ### 311-FR-008 — The bar's smallest text MUST be at least 12 px, its buttons at least 44 × 44 px, its total in tabular figures; it MUST fit 320 px without sideways scroll, with the button's label wrapping rather than cut (286-FR-002, FR-003, FR-004, FR-006); it MUST pass axe and 4.5:1 contrast in light and dark, Romanian and English; the total wraps onto a second line rather than being cut or shrunk below 12 px, and the bar stays readable at 200% text size without sideways scroll; both of its buttons show the kit's visible focus ring and are reached in reading order (total, then "CERE OFERTĂ"); the total's changes are not announced as a live region (the button's name carries the current sum, read when it is focused), only the request button's own sent status is.
-
-_From 311-estimate-within-reach._
-
-### 311-FR-009 — From 1024 px, the profile's sections MUST lay out in two columns: a main column (photos, brands, mechanics, prices, reviews, in today's order) and a side column (the estimate box, then the `where` slot) that sticks under the site bar while the main column scrolls, and scrolls inside itself when taller than the window below the site bar; the side column exists only when the estimate box or the `where` slot has content, else the main column takes the full width; from 768 to 1023 px and below 768 px the page stays one column as today.
 
 _From 311-estimate-within-reach._
 

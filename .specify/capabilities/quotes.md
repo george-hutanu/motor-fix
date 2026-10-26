@@ -122,14 +122,6 @@ _From 221-quote-request._
 
 _From 049-garage-suspension._
 
-### 221-FR-008 — The send MUST be idempotent per driver: a QUOTE_REQUEST stores the key (a new column, unique with the driver), and a second call with the same key and driver MUST answer the same status and body as the first without writing anything; a different key creates a new request. The replay is by key alone: a second call with the same key and a different body still answers the first answer and writes nothing. A refused call (400, 404, 429) stores nothing, so its key stays free and a retry with it is judged afresh. The web app sends the key the form-saving helper issues per dialog, and a retry after a network failure reuses it.
-
-_From 221-quote-request._
-
-### 221-FR-009 — A driver MUST be able to send at most 20 requests per Bucharest calendar day; the 21st MUST be refused with 429 `too_many_requests` and nothing written. The count MUST read the driver's stored requests of that day in the same transaction as the insert, after locking the driver's account row and after the idempotency look-up (a replay answers its first answer, never 429) (PostgreSQL is the truth; no Redis counter), and the limit MUST be a named constant of the `quotes` config module (220-FR-010).
-
-_From 221-quote-request._
-
 ### 221-FR-010 — A successful send MUST write, in one transaction: one QUOTE_REQUEST (driver, car, car snapshot copied from the car: brand name, model, year, fuel, engine; description; status `sent`; `created_at`; `expires_at` = `created_at` + REQUEST_VALIDITY_DAYS Bucharest days, as 220-FR-001; the idempotency key), one REQUEST_JOB per job type in the order of `jobTypeIds` (position 1..n), one REQUEST_RECIPIENT per garage with status `waiting` and its `source`; the audit entry of FR-012 and the event of FR-011. When any write fails, nothing of the send remains.
 
 _From 221-quote-request._
@@ -162,10 +154,6 @@ _From 292-saved-garage-quote._
 
 _From 221-quote-request._
 
-### 221-FR-018 — The two new endpoints MUST be listed in `infra/observability/inventory.json`; the send (a product action) MUST emit one counter of requests sent with the outcome (`sent`, `cannot_receive`, `limit`, `invalid`) and the recipients count as a histogram or attribute, its dashboard panel added by the dashboards story (ST-879) while the repository holds no dashboard file (the inventory entry records `dashboard: none` with that reason), and one structured log line per send with the outcome and the request id, never the description, the plate or a phone (SC-006); the PR's Observability section names them and says why no alert is added (no agreed threshold yet) or adds one.
-
-_From 221-quote-request._
-
 ### 221-FR-019 — Tests MUST cover, in Jest on real PostgreSQL where rows are written: routing for a refused brand, no brand row, fuel not ticked, some jobs ticked, no job ticked, a suspended garage, a request with no job; idempotency (two calls with one key, one request; a different key, two); six garage ids, zero, and a repeated id refused; `source` stored per recipient as given; an unconfirmed e-mail may send; no job and no description, a 10-character floor, a 1,001-character description, another driver's car (404), a removed car (404), a garage-role actor (404); the 20-a-day limit at the boundary; the audit entry and the outbox event written in the same transaction and both absent after a forced rollback; the candidates read's distance, mobile-mechanic and routing filters; the public-routes list unchanged; the dialog's disabled states and the confirmation texts in both languages; the Cererile mele row and its live re-read. End to end (Playwright): sign in as a seeded driver with a Dacia, open an approved garage's profile, switch on a job, send, read the confirmation, open Cererile mele and see the request as Trimisă; then, as that garage's owner, read it through the garage requests endpoint (the garage inbox screen is another story's).
 
 _From 221-quote-request._
@@ -181,10 +169,6 @@ _From 345-decline-request._
 ### 343-FR-003 — Each garage-side request summary MUST mark, per job, whether the garage does that job on the request's car brand (`offered`: GARAGE_BRAND_JOB has the job type ticked for that brand), so the screen can show "nu faceți" / "not offered" on the others. A request with no jobs has nothing to mark.
 
 _From 343-live-quote-requests._
-
-### 345-FR-012 — `GET /api/v1/garage/requests?status=closed` MUST also answer the garage's recipients `declined` within the last 24 hours (close time `declined_at`), with the close reason `declined` added to the typed set of 343-FR-004, label "Refuzată" / "Declined", taking precedence over the request's own close reasons (rows stay ordered by close time); the `waiting` read never answers a `declined` recipient (unchanged); the `quoted` read is unchanged. A `declined` row carries its `declineReason` as the shipped `GarageRecipientDto` does.
-
-_From 345-decline-request._
 
 ### 347-FR-008 — The detail read MUST answer 403 `forbidden` to a mechanic of a recipient garage who lacks `can_answer_quotes` (today 404, 343-FR-005; the decline and the send already answer 403 to that mechanic, 344-FR-002), and 404 `not_found` to every other caller without a recipient row for their garage, another recipient garage's staff included, and to a caller with no garage; the list read is unchanged. The web MUST show "Nu ai dreptul să citești cererile" / "You are not allowed to read requests" on 403 and "Cererea nu mai este disponibilă" / "The request is no longer available" on 404 and 400, with no request data.
 
@@ -247,10 +231,6 @@ _From 344-send-quote._
 _From 344-send-quote._
 
 ### 344-FR-006 — The API MUST answer 201 with the quote as the garage reads it, the shipped `GarageQuoteDto`: id, request id, the range in bani (`fromBani`, `toBani`, integer bani, VAT included, as every garage-side read returns money; the screen shows lei), `durationMinutes`, `slot`, `note`, status, `sentAt`, `expiresAt` and the jobs with their `included` flags; errors MUST follow the platform's problem details (421-FR-008) with the codes of FR-001, FR-002 and FR-004 and their Romanian and English messages.
-
-_From 344-send-quote._
-
-### 344-FR-007 — `GET /api/v1/garage/requests/:id` MUST gain, per job, the garage's pre-fill (`price`: `fromBani`, `toBani` (nullable), `durationMinutes` (nullable), in bani like the price list's own reads, or null when the garage has no row for the job): the GARAGE_PRICE row for the job and the car's brand where one exists, else the job's default row (no brand), else null; a row not `visible` counts the same as a visible one. The shape is unchanged otherwise; the read's policy (343-FR-005) is unchanged.
 
 _From 344-send-quote._
 
