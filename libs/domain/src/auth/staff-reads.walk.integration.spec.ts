@@ -1,5 +1,6 @@
 // @traces 102-FR-009
 // @traces 102-FR-008
+// @traces 1381-FR-006
 import { GarageFiguresService } from '../insights/garage-figures/garage-figures.service';
 import { GarageScheduleService } from '../quotes/garage-schedule/garage-schedule.service';
 import { garageActor } from '../quotes/quotes.testing';
@@ -30,7 +31,7 @@ const isOwn = (record: Record<string, unknown>, own: Set<string>) =>
 
 // What one key of a record gives away.
 function leakOf(key: string, child: unknown, inside: boolean) {
-  if (key === 'phone') return 'phone';
+  if (/phone/i.test(key)) return 'phone';
   if (key === 'plate' && child !== null && !inside) return 'plate';
   return null;
 }
@@ -120,6 +121,12 @@ describe("what a mechanic's garage reads carry", () => {
       });
       const auth = bearer(g.t.answering, 'mechanic');
       const http = async (path: string) => (await get(path, auth)).body;
+      // Her own account's phone and its confirmation are hers to read.
+      const {
+        phone: _phone,
+        phoneConfirmed: _confirmed,
+        ...me
+      } = await http('/me');
 
       const answers_ = {
         daySheet: await answerOf(
@@ -127,7 +134,8 @@ describe("what a mechanic's garage reads carry", () => {
         ),
         figures: await answerOf(figures.get(actor, {}, NOW)),
         herJob: await http(`/garage/jobs/${g.herJob.id}`),
-        jobs: await http('/garage/jobs'),
+        jobs: await http(`/garage/jobs?from=${DAY}`),
+        me,
         request: await http(`/garage/requests/${g.request.id}`),
         requests: await http('/garage/requests'),
         schedule: await answerOf(
@@ -164,6 +172,14 @@ describe("what a mechanic's garage reads carry", () => {
           (e) => e.id,
         ),
       ).toEqual([g.hers.id]);
+      // Her own job carries its plate; the garage's inbox carries none.
+      expect(herJob.car.plate).toBe('B123ABC');
+      expect(
+        jobs.items.map((j: { car: { plate: string } }) => j.car.plate),
+      ).toEqual(['B123ABC']);
+      expect(JSON.stringify([answers_.requests, answers_.request])).not.toMatch(
+        /"plate"/,
+      );
     },
   );
 });

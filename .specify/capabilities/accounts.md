@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 079-account-model
   - 082-sign-in
@@ -56,6 +56,7 @@ features:
   - 1204-terms-reaccept
   - 102-garage-members
   - 423-mechanic-garage-dashboard
+  - 1381-mechanic-scope
 ---
 
 # Capability: Accounts
@@ -1444,6 +1445,38 @@ _From 423-mechanic-garage-dashboard._
 ### 423-FR-012 — This story MUST write nothing on the server beyond FR-004, add no endpoint, no event emitter and no audit entry (reading the dashboard is not recorded); the own-jobs section is built from the existing jobs read, and `job.mechanic_changed` keeps its emitter with the story that lets an owner reassign a job.
 
 _From 423-mechanic-garage-dashboard._
+
+### 1381-FR-001 — `GET /api/v1/me` MUST return no `garageAccess` entry for a mechanic card whose `removed_at` is set (the card lookup in `libs/domain/src/auth/who-am-i.ts`), so that after `mechanic.removed` or the next 404 the re-read of 102-FR-016 finds the garage gone and the dashboard shows "Nu mai ai acces la acest service" / "You no longer have access to this garage" with its home link and no view; a member's row at the same garage is unaffected, and her next call under the garage's path answers 404 (the actor loader already treats a removed card as none).
+
+_From 1381-mechanic-scope._
+
+### 1381-FR-002 — Tests MUST prove, in Jest on real PostgreSQL and Valkey, the own-jobs scope as the mechanic's contract: the jobs list, the single job read, the job steps, the schedule and the day-sheet reads answer a mechanic her own items, 403 for a colleague's item at the same garage, 404 for another garage's and 404 for a mechanic whose card is removed; and that a booking with no mechanic is not hers (102-FR-007, 102-FR-008 held and proven across these reads).
+
+_From 1381-mechanic-scope._
+
+### 1381-FR-003 — Tests MUST prove, through each existing route, the quote inbox, sending a quote and declining a request pass for a mechanic with `can_answer_quotes` and answer 403 without it.
+
+_From 1381-mechanic-scope._
+
+### 1381-FR-004 — Tests MUST prove that confirming a booking, confirming a driver's requested new time, reading the team, patching the garage settings, switching a feature, reading or writing the prices and reading the garage figures answer 403 for a mechanic whatever her permissions (102-FR-007).
+
+_From 1381-mechanic-scope._
+
+### 1381-FR-005 — Tests MUST prove a permission unticked is enforced on the very next call (the card's column written on the row, no new sign-in), and that `capabilitiesOf` yields `garage.move_bookings` only with `can_move_bookings` and `garage.final_price` only with `can_record_final_price`, until their routes ship (ST-199, ST-203, ST-206).
+
+_From 1381-mechanic-scope._
+
+### 1381-FR-006 — A test MUST deep-walk, as a mechanic, the answers of `/me`, the jobs list, the single job, the job steps and (with `can_answer_quotes`) the quote inbox and a request's detail for any key matching `/phone/i` and find none (`/me`'s own top-level `phone` and `phoneConfirmed` are her own account's and are left out of the walk, 097-FR-005), and MUST assert the plate is present on her own jobs and that the quote inbox and the request detail carry no `plate` key (102-FR-009, 079-FR-015 proven for the mechanic across these reads).
+
+_From 1381-mechanic-scope._
+
+### 1381-FR-007 — Tests MUST prove `landingFor` for each role and for the role used last (082-FR-017 over 079-FR-012), an account that is a mechanic and a driver included.
+
+_From 1381-mechanic-scope._
+
+### 1381-FR-008 — This story MUST change nothing on the server beyond FR-001: no endpoint, no event emitter, no audit entry, no screen and no contract change; the proofs extend the existing specs the Build brief names and add only `libs/domain/src/auth/mechanic-launch-actions.api.integration.spec.ts`; each test file carries a whole-line `// @traces` comment naming its `1381-FR-<n>` ids.
+
+_From 1381-mechanic-scope._
 
 ## Retired
 
