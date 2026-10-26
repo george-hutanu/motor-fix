@@ -63,7 +63,7 @@ async function seller(name = 'andrei', language: 'ro' | 'en' = 'ro') {
   return { ...who, car };
 }
 
-// @traces 415-car-transfer-link-FR-003
+// @traces 415-FR-003
 describe('GET /cars/:id/sale', () => {
   it('answers the repairs newest first, the sale open and no transfer', async () => {
     const { auth, car, id } = await seller();
@@ -208,8 +208,8 @@ describe('GET /cars/:id/sale', () => {
   });
 });
 
-// @traces 415-car-transfer-link-FR-004
-// @traces 415-car-transfer-link-FR-005
+// @traces 415-FR-004
+// @traces 415-FR-005
 describe('POST /cars/:id/transfers', () => {
   it('answers 201 with the transfer, its expiry in 7 days and the link in the seller’s language', async () => {
     const { auth, car } = await seller('andrei', 'en');
@@ -343,7 +343,7 @@ describe('POST /cars/:id/transfers', () => {
   });
 });
 
-// @traces 415-car-transfer-link-FR-006
+// @traces 415-FR-006
 describe('the WhatsApp message to the buyer', () => {
   it('goes to the buyer in the seller’s language with the car, the link and the days', async () => {
     const { auth, car } = await seller('andrei', 'ro');
@@ -373,7 +373,7 @@ describe('the WhatsApp message to the buyer', () => {
   });
 });
 
-// @traces 415-car-transfer-link-FR-007
+// @traces 415-FR-007
 describe('POST /cars/:id/transfers/:transferId/cancel', () => {
   it('answers 204 and the link then answers 410 transfer_cancelled', async () => {
     const { auth, car } = await seller();
@@ -437,7 +437,7 @@ describe('POST /cars/:id/transfers/:transferId/cancel', () => {
   });
 });
 
-// @traces 415-car-transfer-link-FR-008
+// @traces 415-FR-008
 describe('GET /car-transfers/:token', () => {
   async function sentLink() {
     const { auth, car } = await seller();
@@ -509,7 +509,7 @@ describe('GET /car-transfers/:token', () => {
   });
 });
 
-// @traces 415-car-transfer-link-FR-022
+// @traces 415-FR-022
 describe('the cars list', () => {
   it('carries the sent transfer per car while within its time, null otherwise', async () => {
     const { auth, car, id } = await seller();

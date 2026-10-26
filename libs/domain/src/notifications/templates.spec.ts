@@ -797,7 +797,7 @@ describe('the links an e-mail carries', () => {
   });
 });
 
-// @traces 415-car-transfer-link-FR-006
+// @traces 415-FR-006
 describe('the car transfer link', () => {
   const params = {
     car: 'Dacia Logan',

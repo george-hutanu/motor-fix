@@ -53,7 +53,7 @@ async function transfer(
 const statusOf = async (id: string) =>
   (await prisma.carTransfer.findUniqueOrThrow({ where: { id } })).status;
 
-// @traces 415-car-transfer-link-FR-010
+// @traces 415-FR-010
 describe('the daily transfer expiry', () => {
   it('expires the sent transfers past their time and at the expiry instant, and no other', async () => {
     const past = await transfer(new Date(NOW.getTime() - DAY_MS));

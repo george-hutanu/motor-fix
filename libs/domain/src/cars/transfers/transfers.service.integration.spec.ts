@@ -73,8 +73,9 @@ async function logged(run: () => Promise<unknown>) {
   return lines.join('\n');
 }
 
-// @traces 415-car-transfer-link-FR-002
-// @traces 415-car-transfer-link-FR-004
+// @traces 415-FR-002
+// @traces 415-FR-021
+// @traces 415-FR-004
 describe('a send', () => {
   it.each(['0722 123 456', '0722.123.456', '0040722123456'])(
     'stores the transfer sent with the phone %p in E.164',
@@ -262,7 +263,7 @@ describe('a send', () => {
   });
 });
 
-// @traces 415-car-transfer-link-FR-006
+// @traces 415-FR-006
 describe('a WhatsApp message that does not leave', () => {
   it.each([
     ['the provider refuses it', 'provider'],
@@ -293,7 +294,7 @@ describe('a WhatsApp message that does not leave', () => {
   });
 });
 
-// @traces 415-car-transfer-link-FR-020
+// @traces 415-FR-020
 describe('what a send counts and logs', () => {
   it('counts the send and the WhatsApp outcome', async () => {
     const reader = countedMetrics();
@@ -347,8 +348,8 @@ describe('what a send counts and logs', () => {
   });
 });
 
-// @traces 415-car-transfer-link-FR-011
-// @traces 415-car-transfer-link-FR-014
+// @traces 415-FR-011
+// @traces 415-FR-014
 describe('what each step writes beside the transfer', () => {
   it('writes one create entry and car_transfer.sent on a send', async () => {
     const { auth, car, id } = await seller();
@@ -454,7 +455,7 @@ describe('what each step writes beside the transfer', () => {
   });
 });
 
-// @traces 415-car-transfer-link-FR-012
+// @traces 415-FR-012
 describe('removing a car with a sent transfer', () => {
   it('cancels the transfer in the removal, with its entry and event, and the link answers 410', async () => {
     const { auth, car, id } = await seller();
@@ -507,9 +508,9 @@ describe('removing a car with a sent transfer', () => {
   });
 });
 
-// @traces 415-car-transfer-link-FR-001
-// @traces 415-car-transfer-link-FR-002
-// @traces 415-car-transfer-link-FR-009
+// @traces 415-FR-001
+// @traces 415-FR-002
+// @traces 415-FR-009
 describe('what the database holds to', () => {
   const row = (carId: string, sellerId: string, data = {}) =>
     prisma.carTransfer.create({

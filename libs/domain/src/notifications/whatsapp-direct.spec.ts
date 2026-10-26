@@ -22,7 +22,7 @@ function sender(send: Brevo['sendWhatsApp']) {
   };
 }
 
-// @traces 415-car-transfer-link-FR-006
+// @traces 415-FR-006
 describe('sendWhatsAppDirect', () => {
   it('sends the rendered template through the provider and answers null', async () => {
     const s = sender(async () => 'wa-1');

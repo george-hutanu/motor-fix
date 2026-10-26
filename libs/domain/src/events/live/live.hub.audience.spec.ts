@@ -101,7 +101,7 @@ const fanOut = (audience: string[], kind: string, id = 'e1') =>
   );
 
 describe('who a live event reaches', () => {
-  // @traces 415-car-transfer-link-FR-011
+  // @traces 415-FR-011
   it('gives a car transfer step to its seller alone', async () => {
     const andrei = open('andrei', 'driver', []);
     const maria = open('maria-driver', 'driver', []);
@@ -256,7 +256,7 @@ describe('who a live event reaches', () => {
     expect(formerMechanic.kinds()).toEqual([]);
   });
 
-  // @traces 415-car-transfer-link-FR-011
+  // @traces 415-FR-011
   it('never forwards a private kind through a public key', async () => {
     const page = open('visitor', 'driver', ['public:garage']);
 
