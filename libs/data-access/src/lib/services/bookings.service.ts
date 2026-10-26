@@ -9,6 +9,9 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { BookingDto } from '../models/booking-dto';
+import { cancelBookingControllerCancel } from '../fn/bookings/cancel-booking-controller-cancel';
+import { CancelBookingControllerCancel$Params } from '../fn/bookings/cancel-booking-controller-cancel';
 import { confirmControllerConfirm } from '../fn/bookings/confirm-controller-confirm';
 import { ConfirmControllerConfirm$Params } from '../fn/bookings/confirm-controller-confirm';
 import { confirmControllerOptions } from '../fn/bookings/confirm-controller-options';
@@ -86,6 +89,39 @@ export class BookingsService extends BaseService {
   confirmControllerConfirm(params: ConfirmControllerConfirm$Params, context?: HttpContext): Promise<GarageBookingDto> {
     const resp = this.confirmControllerConfirm$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageBookingDto>): GarageBookingDto => r.body);
+  }
+
+  /** Path part for operation `cancelBookingControllerCancel()` */
+  static readonly CancelBookingControllerCancelPath = '/api/v1/bookings/{id}/cancel';
+
+  /**
+   * Cancel a booking that has not started, with a reason; late inside the free-cancel cutoff, never a penalty.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `cancelBookingControllerCancel()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  cancelBookingControllerCancel$Response(params: CancelBookingControllerCancel$Params, context?: HttpContext): Promise<StrictHttpResponse<BookingDto>> {
+    const obs = cancelBookingControllerCancel(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Cancel a booking that has not started, with a reason; late inside the free-cancel cutoff, never a penalty.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `cancelBookingControllerCancel$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  cancelBookingControllerCancel(params: CancelBookingControllerCancel$Params, context?: HttpContext): Promise<BookingDto> {
+    const resp = this.cancelBookingControllerCancel$Response(params, context);
+    return resp.then((r: StrictHttpResponse<BookingDto>): BookingDto => r.body);
   }
 
 }

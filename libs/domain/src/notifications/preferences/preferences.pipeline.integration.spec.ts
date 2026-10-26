@@ -5,6 +5,7 @@ import { AuditService } from '../../audit/audit.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type { PrismaClient } from '../../generated/prisma/client';
 import * as counters from '../../metrics/product-counters';
+import { NOTIFICATION_TYPES } from '../catalogue';
 import { NotificationsService } from '../notifications.service';
 import {
   databaseUrl,
@@ -110,6 +111,28 @@ describe('a message whose kind the person switched off', () => {
     await prefer(driver, 'JOB_READY', 'whatsapp', true);
     await hand('JOB_READY', driver);
     expect(await channelsOf(driver, 'JOB_READY')).toEqual(['in_app', 'email']);
+  });
+});
+
+// @traces 223-FR-009
+describe('a driver who switched off the group Ofertă nouă', () => {
+  it('gets a new quote in the bell only, on no outside channel', async () => {
+    const driver = await account('andrei');
+    await prisma.pushSubscription.create({
+      data: {
+        accountId: driver,
+        auth: 'a',
+        endpoint: `https://push.example.test/${driver}`,
+        p256dh: 'p',
+      },
+    });
+    for (const type of Object.keys(NOTIFICATION_TYPES).filter(
+      (name) => NOTIFICATION_TYPES[name].group === 'offers',
+    )) {
+      await prefer(driver, type, 'email', false);
+    }
+    expect(await hand('QUOTE_RECEIVED', driver)).toBe(0);
+    expect(await channelsOf(driver, 'QUOTE_RECEIVED')).toEqual(['in_app']);
   });
 });
 
@@ -221,6 +244,7 @@ describe('a garage’s own staff choices', () => {
     return { garageId: garage.id, owner, receptionist };
   };
 
+  // @traces 223-FR-008
   it('leave only the bell for a request and its reminders the owner muted', async () => {
     const { garageId, owner } = await staffOf();
     await prefer(owner, 'REQUEST_RECEIVED', 'email', false, garageId);

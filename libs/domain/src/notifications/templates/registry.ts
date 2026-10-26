@@ -19,6 +19,10 @@ import {
   ADMIN_VERIFICATION_QUEUED,
   ADMIN_VERIFICATION_QUEUED_DOCUMENTS,
 } from './admin-verification-queued';
+import {
+  BOOKING_CANCELLED_DRIVER,
+  BOOKING_CANCELLED_DRIVER_LATE,
+} from './booking-cancelled';
 import { BOOKING_CONFIRM_REMINDER } from './booking-confirm-reminder';
 import { BOOKING_CONFIRMED } from './booking-confirmed';
 import { BOOKING_LAPSED_DRIVER, BOOKING_LAPSED_GARAGE } from './booking-lapsed';
@@ -45,7 +49,12 @@ import { PUSH_TEST } from './push-test';
 import { QUOTE_ACCEPTED } from './quote-accepted';
 import { QUOTE_DECLINED_BY_DRIVER } from './quote-declined-by-driver';
 import { QUOTE_EXPIRED_DRIVER, QUOTE_EXPIRED_GARAGE } from './quote-expired';
+import { QUOTE_LOST } from './quote-lost';
 import { QUOTE_RECEIVED, QUOTE_RECEIVED_GROUPED } from './quote-received';
+import {
+  REQUEST_CANCELLED,
+  REQUEST_CANCELLED_CLOSED,
+} from './request-cancelled';
 import { REQUEST_DECLINED } from './request-declined';
 import {
   REQUEST_EXPIRED_DRIVER,
@@ -89,6 +98,8 @@ export const TEMPLATES: Registry = {
   ADMIN_RULE_APPROVAL_NEEDED,
   ADMIN_VERIFICATION_QUEUED,
   'ADMIN_VERIFICATION_QUEUED.documents': ADMIN_VERIFICATION_QUEUED_DOCUMENTS,
+  'BOOKING_CANCELLED.driver': BOOKING_CANCELLED_DRIVER,
+  'BOOKING_CANCELLED.driver_late': BOOKING_CANCELLED_DRIVER_LATE,
   BOOKING_CONFIRM_REMINDER,
   BOOKING_CONFIRMED,
   'BOOKING_LAPSED.driver': BOOKING_LAPSED_DRIVER,
@@ -115,8 +126,11 @@ export const TEMPLATES: Registry = {
   QUOTE_DECLINED_BY_DRIVER,
   'QUOTE_EXPIRED.driver': QUOTE_EXPIRED_DRIVER,
   'QUOTE_EXPIRED.garage': QUOTE_EXPIRED_GARAGE,
+  QUOTE_LOST,
   QUOTE_RECEIVED,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
+  REQUEST_CANCELLED,
+  'REQUEST_CANCELLED.account_closed': REQUEST_CANCELLED_CLOSED,
   REQUEST_DECLINED,
   'REQUEST_EXPIRED.driver': REQUEST_EXPIRED_DRIVER,
   'REQUEST_EXPIRED.garage': REQUEST_EXPIRED_GARAGE,

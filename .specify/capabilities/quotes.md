@@ -20,8 +20,10 @@ features:
   - 009-copy-voice-analytics
   - 428-close-on-account-closed
   - 292-saved-garage-quote
+  - 223-request-act-notifications
   - 058-mechanic-hours
   - 1257-quote-reminders
+  - 1258-driver-cancel
 ---
 
 # Capability: Quotes
@@ -710,9 +712,9 @@ _From 428-close-on-account-closed._
 
 _From 428-close-on-account-closed._
 
-### 428-FR-003 — The same transaction MUST record one `request.cancelled` outbox event, subject the request, payload `{ requestId, reason: 'account_closed', garageIds }` where `garageIds` are the garages whose recipient was `waiting` or `quoted` at the close, audience the request's driver and those garages (`garage:{garageId}` live updates). When `garageIds` is empty (no recipient was `waiting` or `quoted`), the event is still recorded and FR-009 sends nothing.
+### 223-FR-004 — The account-closed close (428-FR-003) MUST set the `request.cancelled` payload `garageIds` (what the fan-out reads; the event's live-stream audience keeps every `waiting` or `quoted` recipient) to the garages whose recipient is still `waiting` plus the garages holding a `waiting` quote on the request, at the close; a garage that declined, or whose quote is `withdrawn`, `expired`, `lost`, `accepted` or `declined_by_driver`, is not in it; the booked garage is told by its booking's cancellation only. An empty `garageIds` is still recorded (the request's own close and the driver's live stream need the event) and sends nothing; this differs on purpose from `quote.closed`, which the confirm skips when empty.
 
-_From 428-close-on-account-closed._
+_From 223-request-act-notifications._
 
 ### 428-FR-004 — A booking is cancellable when its status is `awaiting_confirmation` or `confirmed`, its `starts_at` is after now, and it has no job or a job in `to_do`; the handler MUST cancel it in the request's transaction: booking to `cancelled` with `cancelled_by_side` = `system` and `cancel_reason` = `driver_account_closed`, its `to_do` job to `cancelled`, and one `booking.cancelled` outbox event, subject the booking, payload `{ bookingId, requestId, garageId, reason: 'driver_account_closed' }`, audience the booking's driver, garage and mechanic.
 
@@ -770,6 +772,30 @@ _From 1257-quote-reminders._
 
 _From 1257-quote-reminders._
 
+### 1258-FR-001 — `POST /api/v1/quote-requests/:id/cancel` MUST let the request's driver (a session in the `driver` role holding `driver.requests`; an AI assistant acting through the driver's tools uses the same endpoint) close a request that is `sent` or `quoted` with no body: in one transaction the request moves to `closed` with `closed_reason` `cancelled` and `closed_at`, every `waiting` quote moves to `lost`, every `waiting` recipient moves to `closed`, each move writing its audit entry and the one outbox event `request.cancelled` (subject the request, payload `{ requestId, garageIds, reason: 'driver' }`, audience the driver's account and the recipient garages) through the existing transition service (quotes 220-FR-008, 220-FR-011). It answers 200 with the request as the driver reads it. Another driver's request, a missing one, or a caller without the capability answers 404; a request in any other status answers 409 `invalid_transition` with the current status (220-FR-015).
+
+_From 1258-driver-cancel._
+
+### 1258-FR-002 — `POST /api/v1/bookings/:id/cancel` MUST let the booking's driver (same session rule as FR-001) cancel a booking that is `awaiting_confirmation` or `confirmed`, with a body of `reason` ∈ `plans_changed`, `found_another_garage`, `problem_solved`, `other` (the driver's list of CANCEL_REASONS, which already exists in the quotes config) and an optional `note` of at most 500 characters (counted after trimming; an empty result is no note), accepted with any of the four reasons; any other reason, a garage or system reason included, or a longer note answers 400 `validation_failed` naming the field. The DTO lives in the contracts library and the OpenAPI document and generated client are regenerated. Another driver's booking or a missing one answers 404.
+
+_From 1258-driver-cancel._
+
+### 1258-FR-003 — The booking cancel MUST be refused with 409 `invalid_transition` carrying the booking's current status, and write nothing, when `starts_at` is not ahead of now, when the booking's job exists and is not `to_do`, or when the booking is in any status other than `awaiting_confirmation` or `confirmed`.
+
+_From 1258-driver-cancel._
+
+### 1258-FR-004 — A booking cancel MUST, in one transaction: move the booking to `cancelled` through the existing booking transition with `cancelled_by_side` `driver`, `cancelled_by` the driver's account, `cancel_reason`, `cancel_note` and `late_cancellation` = now is later than `starts_at` − FREE_CANCEL_CUTOFF_HOURS (2, the existing constant); file the cancellation key change in the audit history as the transition already does (reason and note, old and new values); move the booking's job, when one exists, from `to_do` to `cancelled` through the workshop module's transition; move the accepted quote to `lost`; and move the request: from `booked` to `quoted` when another quote of the request is still `waiting`, else to `closed` with `closed_reason` `booking_cancelled`. The one outbox event is `booking.cancelled` with payload `{ bookingId, requestId, garageId, side: 'driver', reason, late }` (never the note), audience the driver's account, the garage and the booking's mechanic, so `account:{accountId}`, `garage:{garageId}` and `mechanic:{mechanicId}` refresh. There is no penalty, fee or strike of any kind: `late_cancellation` is a recorded fact only. It answers 200 with the booking as the driver reads it (the existing booking DTO, which already carries `cancelReason`; it MUST gain `cancelNote` and `lateCancellation` for the driver's own read).
+
+_From 1258-driver-cancel._
+
+### 1258-FR-011 — The two endpoints MUST be listed in `infra/observability/inventory.json` with the quotes module's panel and alerts; the module MUST emit one counter of cancellations with attributes `kind` (`request`, `booking`), `outcome` (`cancelled`, `refused` — a 409 from the state check only; a 400 or 404 never reaches the use case and is not counted) and, for a booking, `late` (true/false), and one structured log line per cancel naming the ids and the outcome, never the note; the PR's Observability section names them and says why no new alert is added (no agreed threshold) or adds one.
+
+_From 1258-driver-cancel._
+
+### 1258-FR-012 — Tests MUST cover, in Jest on real PostgreSQL where rows are written: the request cancel in `sent` and in `quoted` (quotes `lost`, recipients `closed`, the event and audit entries in the same transaction), 409 in `booked`, `in_work`, `done` and `closed`, 404 for another driver and for a garage-role session; the booking cancel at 3 hours (free) and at 1 hour 30 (late), after `starts_at` (409, for a `confirmed` and for an `awaiting_confirmation` booking), with the job `in_work` (409), from `awaiting_confirmation` with and without another open quote (request `quoted`, else `closed` as `booking_cancelled`), the job moved to `cancelled`, the accepted quote `lost`, 400 for a garage reason and for a 501-character note, 404 for another driver; the BOOKING_CANCELLED fan-out's recipients (owner, receptionists, the mechanic with an account; none for the driver; built once when the event is delivered twice) and both languages' texts with and without the note and the late line; REQUEST_CANCELLED once per owner and receptionist with reason `driver`; the confirm reminder and lapse timers doing nothing on a cancelled booking. The web rows, the dialogs and the Playwright end to end are ST-1385's (Split). Every test file carries its `// @traces 1258-driver-cancel-FR-<n>` line.
+
+_From 1258-driver-cancel._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -794,4 +820,5 @@ _From 1257-quote-reminders._
 - `222-FR-005` — superseded by `389-FR-009` (2026-10-21)
 - `222-FR-006` — superseded by `389-FR-016` (2026-10-21)
 - `221-FR-016` — superseded by `292-FR-006` (2026-10-23)
+- `428-FR-003` — superseded by `223-FR-004` (2026-10-25)
 - `389-FR-004` — superseded by `058-FR-012` (2026-10-25)
