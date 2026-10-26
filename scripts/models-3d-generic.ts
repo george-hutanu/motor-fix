@@ -999,7 +999,7 @@ interface GenericFile {
 }
 
 /** The six files, in style order, each named by the first 16 hex of its SHA-256. */
-async function generateGeneric(): Promise<GenericFile[]> {
+export async function generateGeneric(): Promise<GenericFile[]> {
   await MeshoptEncoder.ready;
   const io = new NodeIO()
     .registerExtensions([EXTMeshoptCompression])
