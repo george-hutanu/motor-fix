@@ -33,6 +33,7 @@ export {
   voidAssistantConfirmations,
 } from './auth/assistant-confirmations/assistant-confirmations';
 export { AuthModule } from './auth/auth.module';
+export { DashboardLayoutsModule } from './auth/dashboard-layouts/dashboard-layouts.module';
 export { DATA_EXPORT_CONSUMER } from './auth/data-export/data-export.builder';
 export { DataExportModule } from './auth/data-export/data-export.module';
 export { EmailConfirmationModule } from './auth/email-confirmation/email-confirmation.module';

@@ -652,6 +652,7 @@ describe('the product dashboard', () => {
       'motorfix_admin_account_actions_total',
       'motorfix_garage_suspensions_total',
       'motorfix_garage_restores_total',
+      'motorfix_dashboard_layout_writes_total',
       'motorfix_garage_restored_notices_total',
       'motorfix_garage_suspended_notices_total',
       'motorfix_garage_report_decided_notices_total',
