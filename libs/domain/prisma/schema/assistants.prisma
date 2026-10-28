@@ -3,18 +3,19 @@
 // One per account and assistant client (the token's azp), created at the
 // first call after consent. Never deleted: revocation sets revoked_at.
 model AssistantGrant {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  accountId    String    @map("account_id") @db.Uuid
-  account      Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  clientId     String    @map("client_id")
-  clientName   String    @map("client_name")
-  canRead      Boolean   @map("can_read")
-  canAct       Boolean   @map("can_act")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  lastUsedAt   DateTime  @default(now()) @map("last_used_at") @db.Timestamptz(3)
-  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
-  revokedBy    String?   @map("revoked_by")
-  revokeReason String?   @map("revoke_reason")
+  id            String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId     String                  @map("account_id") @db.Uuid
+  account       Account                 @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  clientId      String                  @map("client_id")
+  clientName    String                  @map("client_name")
+  canRead       Boolean                 @map("can_read")
+  canAct        Boolean                 @map("can_act")
+  createdAt     DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastUsedAt    DateTime                @default(now()) @map("last_used_at") @db.Timestamptz(3)
+  revokedAt     DateTime?               @map("revoked_at") @db.Timestamptz(3)
+  revokedBy     String?                 @map("revoked_by")
+  revokeReason  String?                 @map("revoke_reason")
+  confirmations AssistantConfirmation[]
 
   // Also serves look-ups by account: account_id leads the index.
   @@unique([accountId, clientId])
@@ -36,4 +37,37 @@ model AssistantSignInCode {
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@map("assistant_sign_in_code")
+}
+
+enum AssistantConfirmationStatus {
+  waiting
+  done
+  failed
+  refused
+  expired
+  void
+
+  @@map("assistant_confirmation_status")
+}
+
+// An acting tool's call waiting for the person's yes: only the hash of the
+// arguments is kept, never the summary or the arguments themselves. Its id
+// is the idempotency key of the run; expiry is judged at the next call.
+model AssistantConfirmation {
+  id        String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  grantId   String                      @map("grant_id") @db.Uuid
+  grant     AssistantGrant              @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  accountId String                      @map("account_id") @db.Uuid
+  account   Account                     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tool      String
+  argsHash  String                      @map("args_hash")
+  status    AssistantConfirmationStatus @default(waiting)
+  expiresAt DateTime                    @map("expires_at") @db.Timestamptz(3)
+  outcome   Json?
+  createdAt DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  decidedAt DateTime?                   @map("decided_at") @db.Timestamptz(3)
+
+  @@index([grantId, status])
+  @@index([accountId, status])
+  @@map("assistant_confirmation")
 }

@@ -328,6 +328,29 @@ describe('the charts and the web fonts', () => {
 
     expect(chartOf(el)).toBe(first);
   });
+
+  // A face is fetched only once the page first uses it, so the set can read
+  // `loaded` while the chart's own face is still on its way: the chart is
+  // drawn again when that face arrives too.
+  it('draw the chart again when a face arrives after the set read loaded', async () => {
+    const events = new EventTarget();
+    Object.defineProperty(document, 'fonts', {
+      configurable: true,
+      value: Object.assign(events, {
+        ready: Promise.resolve(),
+        status: 'loaded',
+      }),
+    });
+    const [fixture, el] = await render();
+    const first = chartOf(el);
+
+    events.dispatchEvent(new Event('loadingdone'));
+    await settle(fixture);
+
+    expect(first).toBeDefined();
+    expect(chartOf(el)).toBeDefined();
+    expect(chartOf(el)).not.toBe(first);
+  });
 });
 
 describe('the charts under reduced motion', () => {
