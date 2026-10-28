@@ -641,7 +641,8 @@
     "requestsSent": "Cereri de ofertă",
     "soon": "în curând",
     "thisMonth": "{sign}{n} luna asta",
-    "unavailable": "Cifrele nu au putut fi citite"
+    "unavailable": "Cifrele nu au putut fi citite",
+    "why": "De ce?"
   },
   "platformRules": {
     "alwaysOn": "Mereu active în producție",

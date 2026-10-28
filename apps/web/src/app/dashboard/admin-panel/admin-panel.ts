@@ -68,6 +68,8 @@ const MISSING = '—';
 export class AdminPanel {
   private readonly overview = inject(AdminOverview);
   private readonly i18n = inject(I18n);
+  // The label of the failed tile whose reason shows: one at a time, opened
+  // and closed by a press, never by focus alone.
   protected readonly tip = signal<string | null>(null);
 
   // The figures are on their way: the first read or a new choice's.
@@ -102,6 +104,19 @@ export class AdminPanel {
     });
   });
 
+  protected readonly why = computed(() => this.t('why'));
+
+  protected toggle(label: string) {
+    this.tip.update((open) => (open === label ? null : label));
+  }
+
+  // A failed tile's reason joins its name only while its tip shows.
+  protected nameOf(tile: Tile) {
+    return tile.state === 'failed' && this.tip() === tile.label
+      ? `${tile.name}, ${tile.line}`
+      : tile.name;
+  }
+
   private t(key: string, params?: Record<string, string>) {
     return this.i18n.t(`admin.panel.${key}`, params);
   }
@@ -124,7 +139,7 @@ export class AdminPanel {
 
   private missing(label: string, state: 'soon' | 'failed', line: string): Tile {
     const name =
-      state === 'soon' ? `${label}, ${line}` : `${label}, ${MISSING}, ${line}`;
+      state === 'soon' ? `${label}, ${line}` : `${label}, ${MISSING}`;
     return {
       label,
       line,

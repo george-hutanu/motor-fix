@@ -63,6 +63,7 @@ model Account {
   pushSubscriptions       PushSubscription[]
   smsCounters             SmsCounter[]
   tokens                  AccountToken[]
+  dashboardLayouts        DashboardLayout[]
   phoneChange             PhoneChange?
   reminders               Reminder[]
   cars                    Car[]
@@ -187,6 +188,21 @@ model PhoneChange {
   account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@map("phone_change")
+}
+
+// The order and visibility of a person's dashboard sections for one role:
+// theirs on every device and in every garage, so it holds no garage.
+model DashboardLayout {
+  accountId String   @map("account_id") @db.Uuid
+  role      Role
+  // [{ key, visible }] in the person's order; merged with the role's
+  // current section list on read.
+  panels    Json
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, role])
+  @@map("dashboard_layout")
 }
 
 // A single-use link sent to the account holder; only the token's SHA-256
