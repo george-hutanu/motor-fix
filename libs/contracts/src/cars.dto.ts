@@ -16,6 +16,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 
+import { CarTransferLineDto } from './car-transfers.dto';
 import { FUELS, MAX_KM, normalisePlate, STORED_PLATE } from './plate';
 
 type Fuel = (typeof FUELS)[number];
@@ -321,6 +322,13 @@ export class CarDto {
 
   @ApiProperty({ format: 'date', nullable: true, type: String })
   rovinietaUntil!: string | null;
+
+  @ApiProperty({
+    description: "The car's sent transfer while within its time",
+    nullable: true,
+    type: CarTransferLineDto,
+  })
+  transfer!: CarTransferLineDto | null;
 
   @ApiProperty({ format: 'date-time' })
   createdAt!: string;

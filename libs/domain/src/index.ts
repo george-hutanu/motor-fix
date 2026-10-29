@@ -81,6 +81,7 @@ export {
 } from './cars/reminders/reminders.module';
 export { reminderDayMs } from './cars/reminders/reminders-config';
 export { SavedGaragesModule } from './cars/saved-garages/saved-garages.module';
+export { CarTransfersModule } from './cars/transfers/transfers.module';
 export { BrandLoader } from './catalogue/brand-loader';
 export {
   type BodyStyle,

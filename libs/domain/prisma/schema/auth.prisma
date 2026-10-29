@@ -67,6 +67,8 @@ model Account {
   phoneChange             PhoneChange?
   reminders               Reminder[]
   cars                    Car[]
+  carsSold                CarTransfer[]            @relation("TransferSeller")
+  carsBought              CarTransfer[]            @relation("TransferBuyer")
   savedGarages            SavedGarage[]
   consents                AccountConsent[]
   consentRecords          ConsentRecord[]

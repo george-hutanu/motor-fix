@@ -27,6 +27,7 @@ const mini: CarDto = {
   rcaUntil: null,
   rovinietaUntil: null,
   serviceDueOn: null,
+  transfer: null,
   updatedAt: '2026-10-07T09:00:00.000Z',
   year: 2017,
 };
