@@ -7,6 +7,7 @@ export * from './audit-history.dto';
 export * from './auth.dto';
 export * from './brands.dto';
 export * from './car-systems';
+export * from './car-transfers.dto';
 export * from './cars.dto';
 export * from './catalogue-job-decisions.dto';
 export * from './catalogue-job-proposal.dto';

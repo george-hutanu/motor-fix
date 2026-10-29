@@ -101,6 +101,19 @@ const fanOut = (audience: string[], kind: string, id = 'e1') =>
   );
 
 describe('who a live event reaches', () => {
+  // @traces 415-FR-011
+  it('gives a car transfer step to its seller alone', async () => {
+    const andrei = open('andrei', 'driver', []);
+    const maria = open('maria-driver', 'driver', []);
+    const owner = staff('ion', 'garage');
+
+    await fanOut(['account:andrei'], 'car_transfer.sent');
+
+    expect(andrei.kinds()).toEqual(['car_transfer.sent']);
+    expect(maria.kinds()).toEqual([]);
+    expect(owner.kinds()).toEqual([]);
+  });
+
   it("gives a driver's job step to that driver and the garage owner, never to another driver", async () => {
     const andrei = open('andrei', 'driver', []);
     const maria = open('maria-driver', 'driver', []);
@@ -243,6 +256,7 @@ describe('who a live event reaches', () => {
     expect(formerMechanic.kinds()).toEqual([]);
   });
 
+  // @traces 415-FR-011
   it('never forwards a private kind through a public key', async () => {
     const page = open('visitor', 'driver', ['public:garage']);
 
@@ -256,6 +270,9 @@ describe('who a live event reaches', () => {
       'message.sent',
       'car.updated',
       'repair.logged',
+      'car_transfer.sent',
+      'car_transfer.cancelled',
+      'car_transfer.expired',
     ]) {
       await fanOut(['public:garage'], kind);
     }

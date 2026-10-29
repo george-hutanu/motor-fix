@@ -178,6 +178,13 @@ export class CacheService {
     return undefined;
   }
 
+  // Drops an entry the caller's own write has just made wrong, so their next
+  // read goes to the database instead of waiting for the relay's purge. A
+  // Redis that fails here leaves the entry to that purge.
+  async forget(key: string): Promise<void> {
+    await this.attempt(() => this.redis.del(key));
+  }
+
   // Names the served answer's tags on the request, for its Cache-Tag header;
   // a warm's reads are not the answer of the request they run in.
   private tagRequest(tags: string[] | undefined) {

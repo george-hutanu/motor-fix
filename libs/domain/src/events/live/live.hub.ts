@@ -38,7 +38,8 @@ const POSITION = /^\d{1,18}$/;
 const COUNTED = new Set(['notification.created', 'notification.read']);
 
 // Kinds about a request, job or car: never sent through a public key.
-const PRIVATE = /^(request|quote|booking|job|media|live|message|car|repair)\./;
+const PRIVATE =
+  /^(request|quote|booking|job|media|live|message|car|car_transfer|repair)\./;
 // The capability a garage's staff need to hear a kind through the garage
 // channel; who holds which is capabilitiesOf's to say. A kind no family claims
 // reaches an owner and a receptionist, and never a mechanic, whose own jobs and
