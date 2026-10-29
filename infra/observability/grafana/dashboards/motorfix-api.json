@@ -1480,8 +1480,17 @@
             "type": "prometheus",
             "uid": "${prom}"
           },
-          "expr": "sum by (outcome) (rate(motorfix_live_recordings_total{service_name=\"api\", deployment_environment=\"$env\"}[5m]))",
-          "legendFormat": "recording {{outcome}}"
+          "expr": "sum by (service_name, outcome) (rate(motorfix_live_recordings_total{deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "recording {{service_name}} {{outcome}}"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(rate(motorfix_live_idle_stops_total{service_name=\"worker\", deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "idle stop"
         }
       ],
       "fieldConfig": {

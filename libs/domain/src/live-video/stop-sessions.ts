@@ -7,7 +7,7 @@ import { Prisma } from '../generated/prisma/client';
 import { registerLiveRecording } from '../media/media.recording';
 
 type Scope = { jobId: string } | { garageId: string } | { sessionId: string };
-type Reason = 'job_closed' | 'feature_off' | 'sender';
+type Reason = 'job_closed' | 'feature_off' | 'sender' | 'idle';
 
 interface Row {
   id: string;

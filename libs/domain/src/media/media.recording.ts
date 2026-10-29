@@ -1,6 +1,5 @@
 import { type MediaAddedPayload, mediaConfig } from '@motor-fix/contracts';
 
-import { countMediaItem } from './media.metrics';
 import { purgeAfter } from './media.state';
 import type { AuditPort } from '../audit/audit.port';
 import type { EventPort } from '../events/event.port';
@@ -65,7 +64,8 @@ export async function announce(
 }
 
 // A kept live recording joins the job's media inside the caller's
-// transaction, visible at once: the provider holds and plays it.
+// transaction, visible at once: the provider holds and plays it. It is
+// counted once committed, never here, so a stop rolled back counts nothing.
 export async function registerLiveRecording(
   tx: Prisma.TransactionClient,
   deps: AnnounceDeps,
@@ -95,6 +95,5 @@ export async function registerLiveRecording(
     },
   });
   await announce(deps, tx, item);
-  countMediaItem('live', 'visible');
   return item;
 }

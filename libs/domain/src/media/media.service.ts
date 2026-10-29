@@ -348,6 +348,8 @@ export class MediaService implements OnModuleDestroy {
           sentAt,
         }),
       );
+      // Counted once committed: the registration itself counts nothing.
+      countMediaItem('live', 'visible');
       return itemDto(item);
     }
     const item = await this.prisma.mediaItem.create({

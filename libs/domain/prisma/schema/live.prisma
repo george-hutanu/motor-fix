@@ -5,6 +5,7 @@ enum LiveStopReason {
   job_closed
   feature_off
   sender
+  idle
 
   @@map("live_stop_reason")
 }

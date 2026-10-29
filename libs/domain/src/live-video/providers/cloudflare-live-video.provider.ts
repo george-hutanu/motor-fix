@@ -7,7 +7,11 @@ import {
 import { Logger } from '@nestjs/common';
 import { type Span, SpanStatusCode, trace } from '@opentelemetry/api';
 
-import type { LiveInput, LiveVideoProvider } from './live-video.provider';
+import type {
+  InputStatus,
+  LiveInput,
+  LiveVideoProvider,
+} from './live-video.provider';
 import { recordProviderCall } from '../sessions/sessions.metrics';
 
 const API = 'https://api.cloudflare.com/client/v4';
@@ -31,6 +35,14 @@ export function signingKey(value: string): KeyObject {
 }
 
 type Call = { body?: unknown; failed?: string };
+type Operation =
+  | 'create_input'
+  | 'close_input'
+  | 'delete_recording'
+  | 'input_status';
+
+// The states Cloudflare gives an input with a publisher on it.
+const CONNECTED = new Set(['connected', 'reconnected']);
 
 // Cloudflare Stream Live: a WHIP input per session, recorded, played back
 // only through a token this adapter signs itself. Its log lines and answers
@@ -103,6 +115,33 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     }
   }
 
+  // The input's current state: a connected or reconnected publisher, or none
+  // since the state was entered; an input with no state never had one, and
+  // an input already gone has none.
+  async inputStatus(inputId: string): Promise<InputStatus> {
+    const call = await this.call(
+      'input_status',
+      'GET',
+      `/live_inputs/${encodeURIComponent(inputId)}`,
+    );
+    if (call.failed === '404') return { connected: false, since: null };
+    if (call.failed) throw new Error(`input status failed: ${call.failed}`);
+    const body = call.body as {
+      success?: unknown;
+      result?: { status?: { current?: Record<string, unknown> } | null };
+    } | null;
+    if (body?.success === false || !body?.result) {
+      throw new Error('input status failed: malformed');
+    }
+    const current = body.result.status?.current;
+    if (!current) return { connected: false, since: null };
+    const entered = new Date(String(current['statusEnteredAt']));
+    return {
+      connected: CONNECTED.has(String(current['state'])),
+      since: Number.isNaN(entered.getTime()) ? null : entered,
+    };
+  }
+
   viewUrl(inputId: string, expiresAt: Date): string {
     const header = base64url({
       alg: 'RS256',
@@ -122,7 +161,7 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
   }
 
   private call(
-    operation: 'create_input' | 'close_input' | 'delete_recording',
+    operation: Operation,
     method: 'GET' | 'POST' | 'DELETE',
     path: string,
     body?: object,
