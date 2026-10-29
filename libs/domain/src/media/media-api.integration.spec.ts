@@ -143,7 +143,7 @@ async function shown(
   });
 }
 
-// @traces 333-media-storage-FR-003 333-media-storage-FR-015
+// @traces 333-FR-003 333-FR-015
 describe('asking to send a photo or a clip', () => {
   it.each([
     ['the job’s mechanic', 'costel'],
@@ -257,7 +257,7 @@ describe('asking to send a photo or a clip', () => {
   );
 });
 
-// @traces 333-media-storage-FR-004
+// @traces 333-FR-004 333-FR-017
 describe('who may send, and when', () => {
   it.each([
     ['a driver who is not the job’s', 'ioana', 404, 'not_found'],
@@ -380,7 +380,7 @@ describe('who may send, and when', () => {
   });
 });
 
-// @traces 333-media-storage-FR-005
+// @traces 333-FR-005
 describe('completing an upload', () => {
   async function asked(s: Setting, body: object = photo()) {
     const res = await ask(s, s.costel, body);
@@ -486,7 +486,7 @@ describe('completing an upload', () => {
   );
 });
 
-// @traces 333-media-storage-FR-009
+// @traces 333-FR-009
 describe('listing a job’s media', () => {
   it('lists oldest first, the driver seeing only what is visible or removed', async () => {
     const s = await setting();
@@ -545,7 +545,7 @@ describe('listing a job’s media', () => {
   });
 });
 
-// @traces 333-media-storage-FR-010
+// @traces 333-FR-010
 describe('the address of a file', () => {
   it.each(['andrei', 'owner', 'costel'] as const)(
     'gives %s a 5-minute address of the file or its thumbnail',
@@ -619,7 +619,7 @@ describe('the address of a file', () => {
   });
 });
 
-// @traces 333-media-storage-FR-004 333-media-storage-FR-008
+// @traces 333-FR-004 333-FR-008
 describe('a handover while an item converts', () => {
   it('still lets the item be shown', async () => {
     const s = await setting();

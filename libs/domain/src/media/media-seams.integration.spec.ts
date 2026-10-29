@@ -103,7 +103,7 @@ const audit = (subjectId: string) =>
     where: { subjectId, subjectType: 'media_item' },
   });
 
-// @traces 333-media-storage-FR-011
+// @traces 333-FR-011
 describe('a kept live recording', () => {
   it('held in storage, converts with no length limit and shows as the system’s', async () => {
     const { job } = await closedJob();
@@ -169,7 +169,7 @@ describe('a kept live recording', () => {
   });
 });
 
-// @traces 333-media-storage-FR-012
+// @traces 333-FR-012
 describe('removing an item', () => {
   async function visible(providerRef?: string) {
     const s = await closedJob();

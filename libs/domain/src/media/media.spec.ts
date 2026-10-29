@@ -14,7 +14,7 @@ const ALLOWED: ReadonlyArray<[MediaStatus, MediaStatus]> = [
   ['removed', 'purged'],
 ];
 
-// @traces 333-media-storage-FR-001
+// @traces 333-FR-001
 describe('a media item’s life', () => {
   it.each(ALLOWED)('moves from %s to %s', (from, to) => {
     expect(mayMove(from, to)).toBe(true);

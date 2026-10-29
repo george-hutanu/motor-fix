@@ -14,7 +14,7 @@ const deps = () => {
 
 afterEach(() => jest.restoreAllMocks());
 
-// @traces 333-media-storage-FR-013
+// @traces 333-FR-013
 describe('the nightly media run', () => {
   it('holds the purge alone', () => {
     expect(MEDIA_RETENTION_STEPS.map((step) => step.name)).toEqual(['purge']);
@@ -53,7 +53,7 @@ describe('the nightly media run', () => {
   });
 });
 
-// @traces 333-media-storage-FR-014
+// @traces 333-FR-014
 describe('the purge’s audit text', () => {
   it.each([
     [1, 90, '1 fișier șters după 90 de zile'],

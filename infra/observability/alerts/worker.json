@@ -242,7 +242,7 @@
             "service": "worker"
           },
           "annotations": {
-            "summary": "A job on the {{ $labels.queue }} queue {{ if eq $labels.reason \"overdue\" }}has not completed in 48 hours of worker uptime: the nightly {{ $labels.queue }} job, so data past its stated retention period is being kept{{ else }}failed for good in the last 15 minutes{{ end }} ({{ $labels.deployment_environment }}).",
+            "summary": "A job on the {{ $labels.queue }} queue {{ if eq $labels.reason \"overdue\" }}has not completed in {{ if eq $labels.queue \"media-retention\" }}26{{ else }}48{{ end }} hours of worker uptime: the nightly {{ $labels.queue }} job, so data past its stated retention period is being kept{{ else }}failed for good in the last 15 minutes{{ end }} ({{ $labels.deployment_environment }}).",
             "dashboard_uid": "motorfix-worker",
             "runbook": "Read the worker logs and traces for the failed job on this queue, fix the cause, and retry the job from the queue if its work is still needed. Overdue (queue retention or media-retention): Open the Queues dashboard for the retention queue's failed jobs and the system log's job_failed entry for the retention-nightly or media-retention-nightly job; fix the cause and restart the worker, which re-arms the nightly scheduler at boot. The next night's run catches up on everything due."
           },
@@ -256,7 +256,7 @@
               },
               "model": {
                 "refId": "A",
-                "expr": "label_replace(sum by (deployment_environment, queue) (increase(motorfix_jobs_total{outcome=\"failed\", queue!=\"verification-result\"}[15m])), \"reason\", \"failed\", \"\", \"\") or label_replace(label_replace(max by (deployment_environment) (count_over_time(target_info{service_name=\"worker\"}[1h] offset 47h)) unless sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"retention\", job_name=\"retention-nightly\", outcome=\"completed\"}[48h])) > 0, \"queue\", \"retention\", \"\", \"\"), \"reason\", \"overdue\", \"\", \"\") or label_replace(label_replace(max by (deployment_environment) (count_over_time(target_info{service_name=\"worker\"}[1h] offset 47h)) unless sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"media-retention\", job_name=\"media-retention-nightly\", outcome=\"completed\"}[48h])) > 0, \"queue\", \"media-retention\", \"\", \"\"), \"reason\", \"overdue\", \"\", \"\")",
+                "expr": "label_replace(sum by (deployment_environment, queue) (increase(motorfix_jobs_total{outcome=\"failed\", queue!=\"verification-result\"}[15m])), \"reason\", \"failed\", \"\", \"\") or label_replace(label_replace(max by (deployment_environment) (count_over_time(target_info{service_name=\"worker\"}[1h] offset 47h)) unless sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"retention\", job_name=\"retention-nightly\", outcome=\"completed\"}[48h])) > 0, \"queue\", \"retention\", \"\", \"\"), \"reason\", \"overdue\", \"\", \"\") or label_replace(label_replace(max by (deployment_environment) (count_over_time(target_info{service_name=\"worker\"}[1h] offset 25h)) unless sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"media-retention\", job_name=\"media-retention-nightly\", outcome=\"completed\"}[26h])) > 0, \"queue\", \"media-retention\", \"\", \"\"), \"reason\", \"overdue\", \"\", \"\")",
                 "instant": true,
                 "intervalMs": 60000,
                 "maxDataPoints": 43200

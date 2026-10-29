@@ -1,5 +1,5 @@
 // @traces 1191-FR-005
-// @traces 333-media-storage-FR-002
+// @traces 333-FR-002
 import {
   DOWNLOAD_URL_MINUTES,
   FILE_RULES,

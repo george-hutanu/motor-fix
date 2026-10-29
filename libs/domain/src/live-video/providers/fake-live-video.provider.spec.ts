@@ -33,7 +33,7 @@ describe('the stand-in live video provider', () => {
   });
 });
 
-// @traces 333-media-storage-FR-018
+// @traces 333-FR-018
 describe('deleting a kept recording', () => {
   it('records each recording the stand-in deleted', async () => {
     const fake = new FakeLiveVideo();

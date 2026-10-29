@@ -78,7 +78,7 @@ function probe(file: Buffer) {
 
 jest.setTimeout(120_000);
 
-// @traces 333-media-storage-FR-007
+// @traces 333-FR-007
 describe('converting a clip', () => {
   it('makes an H.264 MP4 with no sound, its shorter side at 720 px, and a JPEG thumbnail', async () => {
     const out = await convertClip(made(3, '1920x1080'), { maxSeconds: 60 });

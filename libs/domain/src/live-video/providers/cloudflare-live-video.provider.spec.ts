@@ -232,7 +232,7 @@ describe('the Cloudflare live video provider', () => {
   });
 });
 
-// @traces 333-media-storage-FR-018
+// @traces 333-FR-018
 describe('deleting a kept recording at Cloudflare', () => {
   it('deletes the recording by its uid', async () => {
     answer = json(200, { result: null, success: true });

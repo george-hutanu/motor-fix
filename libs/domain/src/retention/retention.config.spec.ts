@@ -56,7 +56,7 @@ describe('the retention config', () => {
   });
 });
 
-// @traces 333-media-storage-FR-013
+// @traces 333-FR-013
 describe('the media period', () => {
   const saved = process.env['MEDIA_RETENTION_DAYS'];
   afterEach(() => {

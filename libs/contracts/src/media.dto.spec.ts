@@ -1,4 +1,4 @@
-// @traces 333-media-storage-FR-015
+// @traces 333-FR-015
 import 'reflect-metadata';
 
 import { plainToInstance } from 'class-transformer';

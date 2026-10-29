@@ -1,4 +1,4 @@
-// @traces 333-media-storage-FR-013
+// @traces 333-FR-013
 import { mediaConfig } from './env';
 
 describe('mediaConfig', () => {

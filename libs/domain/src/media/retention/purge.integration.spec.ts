@@ -105,7 +105,7 @@ const purgeAudit = (...jobIds: string[]) =>
     where: { kind: 'media.purged', subjectId: { in: jobIds } },
   });
 
-// @traces 333-media-storage-FR-014 333-media-storage-FR-001
+// @traces 333-FR-014 333-FR-001 333-FR-017
 describe('the nightly media purge', () => {
   it('deletes every past item’s files, marks it purged and writes one audit entry per job', async () => {
     const first = await job();

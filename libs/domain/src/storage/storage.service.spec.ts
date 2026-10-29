@@ -1,6 +1,6 @@
 // @traces 1191-FR-005
 // @traces 1191-FR-006
-// @traces 333-media-storage-FR-002
+// @traces 333-FR-002
 import { crc32 } from 'node:zlib';
 
 import { HttpException } from '@nestjs/common';

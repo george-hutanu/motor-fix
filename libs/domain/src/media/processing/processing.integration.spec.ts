@@ -121,7 +121,7 @@ const auditOf = (subjectId: string) =>
 const reread = (id: string) =>
   prisma.mediaItem.findUniqueOrThrow({ where: { id } });
 
-// @traces 333-media-storage-FR-006 333-media-storage-FR-008
+// @traces 333-FR-006 333-FR-008
 describe('converting a photo', () => {
   it('shows it with its file and thumbnail, one event and one audit entry', async () => {
     const photo = await sharp({
@@ -230,7 +230,7 @@ describe('converting a photo', () => {
   });
 });
 
-// @traces 333-media-storage-FR-007 333-media-storage-FR-008 333-media-storage-FR-011
+// @traces 333-FR-007 333-FR-008 333-FR-011
 describe('converting a clip', () => {
   it('shows it with the seconds measured', async () => {
     const { item } = await waiting('clip', clipOf(3));
@@ -267,7 +267,7 @@ describe('converting a clip', () => {
   });
 });
 
-// @traces 333-media-storage-FR-007 333-media-storage-FR-008
+// @traces 333-FR-007 333-FR-008
 describe('a conversion that failed', () => {
   afterEach(() => jest.restoreAllMocks());
 

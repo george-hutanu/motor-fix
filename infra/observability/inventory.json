@@ -2765,7 +2765,7 @@
         "worker-queue-growing",
         "worker-jobs-failed"
       ],
-      "reason": "the nightly media purge: one scheduler, media-retention-nightly, at 03:00 Europe/Bucharest fails uploads abandoned for a day and deletes every item past its purge date (object store or provider), one audit entry per job; counted in motorfix_media_purged_total{kind}, a throwing step in motorfix_media_retention_step_failures_total{step}; worker-jobs-failed's overdue arm fires when no media-retention-nightly run completed in 48 hours of worker uptime",
+      "reason": "the nightly media purge: one scheduler, media-retention-nightly, at 03:00 Europe/Bucharest fails uploads abandoned for a day and deletes every item past its purge date (object store or provider), one audit entry per job; counted in motorfix_media_purged_total{kind}, a throwing step in motorfix_media_retention_step_failures_total{step}; worker-jobs-failed's overdue arm fires when no media-retention-nightly run completed in 26 hours of worker uptime",
       "story": "ST-333"
     },
     {

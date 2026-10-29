@@ -19,7 +19,7 @@ const plain = (format: 'png' | 'webp', width: number, height: number) =>
 
 jest.setTimeout(30_000);
 
-// @traces 333-media-storage-FR-006
+// @traces 333-FR-006
 describe('converting a job photo', () => {
   it('fits a large JPEG within 2048 px and a 480 px thumbnail, with no location left', async () => {
     const out = await convertPhoto(await located(4000, 3000));
