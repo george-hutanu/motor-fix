@@ -66,6 +66,11 @@ import {
   type GarageSuspendedEvent,
   GarageSuspendedFanOut,
 } from './garage-suspended/garage-suspended.fan-out';
+import {
+  JOB_STAGE_QUEUE,
+  type JobStageEvent,
+  JobStageFanOut,
+} from './job-stage/job-stage.fan-out';
 import { NewsController } from './news/news.controller';
 import {
   NEWS_QUEUE,
@@ -170,6 +175,7 @@ const QUOTE_DECLINED_WORKER = Symbol('QUOTE_DECLINED_WORKER');
 const QUOTE_LOST_WORKER = Symbol('QUOTE_LOST_WORKER');
 const BOOKING_CONFIRMED_WORKER = Symbol('BOOKING_CONFIRMED_WORKER');
 const BOOKING_LAPSED_WORKER = Symbol('BOOKING_LAPSED_WORKER');
+const JOB_STAGE_WORKER = Symbol('JOB_STAGE_WORKER');
 const REQUEST_CANCELLED_WORKER = Symbol('REQUEST_CANCELLED_WORKER');
 const BOOKING_CANCELLED_WORKER = Symbol('BOOKING_CANCELLED_WORKER');
 const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
@@ -238,6 +244,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(BOOKING_CONFIRMED_WORKER)
     private readonly bookingConfirmedWorker?: Worker | null,
+    @Optional()
+    @Inject(JOB_STAGE_WORKER)
+    private readonly jobStageWorker?: Worker | null,
     @Optional()
     @Inject(BOOKING_LAPSED_WORKER)
     private readonly bookingLapsedWorker?: Worker | null,
@@ -652,6 +661,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        JobStageFanOut,
+        {
+          inject: [JobStageFanOut],
+          provide: JOB_STAGE_WORKER,
+          useFactory: (fanOut: JobStageFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('JobStage').error(
+                'PUBLIC_WEB_URL missing; car started and ready messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<JobStageEvent>(
+              JOB_STAGE_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('JobStage'));
+            return worker;
+          },
+        },
         BookingLapsedFanOut,
         {
           inject: [BookingLapsedFanOut],
@@ -936,6 +972,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.quoteDeclinedWorker?.close();
     await this.quoteLostWorker?.close();
     await this.bookingConfirmedWorker?.close();
+    await this.jobStageWorker?.close();
     await this.bookingLapsedWorker?.close();
     await this.requestCancelledWorker?.close();
     await this.bookingCancelledWorker?.close();
