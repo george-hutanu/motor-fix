@@ -44,11 +44,13 @@ interface Grant {
   revokedAt: Date | null;
 }
 
-// The code a refusing use case is known by; null for anything else, which is
-// no refusal and fails the whole call.
+// The code a refusing use case is known by; null for anything else, a 5xx
+// included, which is no refusal and fails the whole call, leaving the
+// approval pending.
 function refusalCode(error: unknown): string | null {
   if (error instanceof ToolRefusal) return error.code;
-  if (!(error instanceof HttpException)) return null;
+  if (!(error instanceof HttpException) || error.getStatus() >= 500)
+    return null;
   const body = error.getResponse() as { code?: unknown };
   return typeof body === 'object' && typeof body.code === 'string'
     ? body.code
@@ -124,9 +126,6 @@ export async function approveApproval(
   );
   if (wrong) return { invalidOption: wrong[0] };
   if (await deps.ctx.maintenance.on()) return 'maintenance';
-  const account: LoadedAccount = await deps.ctx.accounts.activeAccount(
-    input.accountId,
-  );
   const decided = await deps.prisma.$transaction(
     async (tx) => {
       const locked = await deps.approvals.lockForDecision(
@@ -135,6 +134,9 @@ export async function approveApproval(
         input.id,
       );
       if (locked === 'not_found' || 'notPending' in locked) return locked;
+      const account: LoadedAccount = await deps.ctx.accounts.activeAccount(
+        input.accountId,
+      );
       const grant: Grant = await tx.assistantGrant.findUniqueOrThrow({
         select: { canAct: true, canRead: true, revokedAt: true },
         where: { id: locked.grantId },

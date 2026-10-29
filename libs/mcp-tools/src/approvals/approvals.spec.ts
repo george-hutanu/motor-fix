@@ -80,12 +80,12 @@ function setup(
   };
   const handler = jest.fn(over.handler ?? (async () => ({ ok: true })));
   const tool: ToolDefinition = { ...bookFixture, handler };
+  const activeAccount = jest.fn(async () =>
+    account({ canAct: over.canAct, roles: over.roles ?? ['driver'] }),
+  );
   const ctx = {
     ...context({ maintenance: over.maintenance ?? false }),
-    accounts: {
-      activeAccount: async () =>
-        account({ canAct: over.canAct, roles: over.roles ?? ['driver'] }),
-    },
+    accounts: { activeAccount },
   };
   const deps = {
     approvals,
@@ -97,10 +97,10 @@ function setup(
   } as unknown as ApproveDeps;
   const approve = (options?: Record<string, unknown>) =>
     approveApproval(deps, { accountId: 'account-1', by: BY, id: ID, options });
-  return { approvals, approve, handler, tx };
+  return { activeAccount, approvals, approve, handler, tx };
 }
 
-// @traces 1254-assistant-approvals-FR-005
+// @traces 1254-FR-005
 describe('approving an assistant action', () => {
   it('runs the stored tool once with the approval as key and the edited option', async () => {
     const { approvals, approve, handler, tx } = setup();
@@ -185,6 +185,34 @@ describe('approving an assistant action', () => {
     );
   });
 
+  it.each([
+    ['without a code', new HttpException('boom', 500)],
+    ['with a code', new HttpException({ code: 'service_unavailable' }, 503)],
+  ])(
+    'leaves it pending when the run breaks with a 5xx %s',
+    async (_, error) => {
+      const { approvals, approve } = setup({
+        handler: async () => {
+          throw error;
+        },
+      });
+
+      await expect(approve()).rejects.toBe(error);
+      expect(approvals.close).not.toHaveBeenCalled();
+    },
+  );
+
+  it('reads the account only once the approval is locked', async () => {
+    const { activeAccount, approvals, approve } = setup();
+
+    await approve();
+
+    expect(activeAccount).toHaveBeenCalledTimes(1);
+    expect(approvals.lockForDecision.mock.invocationCallOrder[0]).toBeLessThan(
+      activeAccount.mock.invocationCallOrder[0],
+    );
+  });
+
   it('fails a role check inside the locked run without running', async () => {
     const { approvals, approve, handler } = setup({ roles: ['garage'] });
 
@@ -248,7 +276,7 @@ describe('approving an assistant action', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-006
+// @traces 1254-FR-006
 describe('what approving refuses', () => {
   it.each([
     [{ other: true }, 'other'],
@@ -300,7 +328,7 @@ async function refusalOf(call: Promise<unknown>) {
   return { body: http.getResponse(), status: http.getStatus() };
 }
 
-// @traces 1254-assistant-approvals-FR-009
+// @traces 1254-FR-009
 describe('the approvals API', () => {
   it('answers 404 to read, approve and refuse an approval not the caller’s', async () => {
     const api = controller({
