@@ -23,6 +23,7 @@ import type {
 } from '../../generated/prisma/client';
 import { invalidTransition } from '../../transitions';
 import {
+  isSlotTaken,
   ScheduleService,
   type Segment,
 } from '../../workshop/schedule/schedule.service';
@@ -46,17 +47,6 @@ const mechanicUnavailable = (en: boolean) =>
     'mechanic_unavailable',
     en ? 'The mechanic is not available' : 'Mecanicul nu e disponibil',
   );
-
-// The overlap the database refused although the read before it found none:
-// a confirm of another booking committed in between.
-function slotTaken(error: unknown) {
-  if (!(error instanceof Error)) return false;
-  const said = `${error.message} ${JSON.stringify((error as { meta?: unknown }).meta ?? {})}`;
-  return (
-    said.includes('booking_segment_mechanic_excl') ||
-    said.includes('booking_segment_lift_excl')
-  );
-}
 
 interface Switches {
   team: boolean;
@@ -109,7 +99,7 @@ export class ConfirmService {
     try {
       return await this.storeRetried(actor, bookingId, dto);
     } catch (error) {
-      if (slotTaken(error)) {
+      if (isSlotTaken(error)) {
         throw conflict(
           'slot_taken',
           en ? 'The slot was just taken' : 'Locul tocmai a fost ocupat',
