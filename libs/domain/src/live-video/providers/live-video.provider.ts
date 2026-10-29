@@ -12,8 +12,9 @@ export interface LiveVideoProvider {
   closeInput(inputId: string): Promise<void>;
   // The signed low-latency HLS manifest of the input, valid until expiresAt.
   viewUrl(inputId: string, expiresAt: Date): string;
-  // Deletes a kept recording; one already gone counts as deleted. Throws when
-  // the provider could not delete it, so the caller keeps its own row.
+  // Deletes every recording of a live input, the reference a recording is
+  // kept under; one already gone counts as deleted. Throws when the provider
+  // could not delete it, so the caller keeps its own row.
   deleteRecording(providerRef: string): Promise<void>;
 }
 

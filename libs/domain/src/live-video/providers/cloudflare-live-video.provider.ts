@@ -80,16 +80,33 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     if (call.failed) throw new Error(`live input close failed: ${call.failed}`);
   }
 
-  // A 404 is a recording already gone; an answer with no JSON body is a
-  // delete the provider accepted.
-  async deleteRecording(providerRef: string): Promise<void> {
-    const call = await this.call(
+  // The reference is the live input: its recordings are listed and each is
+  // deleted. A 404 on either call is a recording already gone; an answer
+  // with no JSON body is a delete the provider accepted.
+  async deleteRecording(inputId: string): Promise<void> {
+    const list = await this.call(
       'delete_recording',
-      'DELETE',
-      `/${encodeURIComponent(providerRef)}`,
+      'GET',
+      `/live_inputs/${encodeURIComponent(inputId)}/videos`,
     );
-    if (call.failed && call.failed !== '404' && call.failed !== 'malformed') {
-      throw new Error(`recording delete failed: ${call.failed}`);
+    if (list.failed === '404') return;
+    if (list.failed) throw new Error(`recording delete failed: ${list.failed}`);
+    const videos = (list.body as { result?: unknown } | null)?.result;
+    if (!Array.isArray(videos)) {
+      throw new Error('recording delete failed: malformed');
+    }
+    for (const video of videos as { uid?: unknown }[]) {
+      if (typeof video?.uid !== 'string' || !video.uid) {
+        throw new Error('recording delete failed: malformed');
+      }
+      const call = await this.call(
+        'delete_recording',
+        'DELETE',
+        `/${encodeURIComponent(video.uid)}`,
+      );
+      if (call.failed && call.failed !== '404' && call.failed !== 'malformed') {
+        throw new Error(`recording delete failed: ${call.failed}`);
+      }
     }
   }
 
@@ -113,7 +130,7 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
 
   private call(
     operation: 'create_input' | 'close_input' | 'delete_recording',
-    method: 'POST' | 'DELETE',
+    method: 'GET' | 'POST' | 'DELETE',
     path: string,
     body?: object,
   ): Promise<Call> {

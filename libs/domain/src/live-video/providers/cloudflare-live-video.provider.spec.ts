@@ -233,53 +233,120 @@ describe('the Cloudflare live video provider', () => {
 });
 
 // @traces 333-FR-018
-describe('deleting a kept recording at Cloudflare', () => {
-  it('deletes the recording by its uid', async () => {
-    answer = json(200, { result: null, success: true });
+// @traces 1251-FR-001
+describe('deleting the recordings of a live input at Cloudflare', () => {
+  const list = '/accounts/acct-1/stream/live_inputs/input-uid-1/videos';
+  const videos = (...uids: string[]) =>
+    json(200, { result: uids.map((uid) => ({ uid })), success: true });
+  const route =
+    (listReply: Answer, deleteReply: Answer = json(200, { success: true })) =>
+    (req: IncomingMessage, res: ServerResponse) =>
+      req.method === 'GET' ? listReply(req, res) : deleteReply(req, res);
+  const calls = () => seen.map(({ method, url }) => `${method} ${url}`);
 
-    await cloudflare().deleteRecording('video-uid-1');
+  it('lists the input videos and deletes each by its uid', async () => {
+    answer = route(videos('video-1', 'video-2'));
 
-    expect(seen).toEqual([
-      expect.objectContaining({
-        auth: 'Bearer secret-api-token',
-        method: 'DELETE',
-        url: '/accounts/acct-1/stream/video-uid-1',
-      }),
+    await cloudflare().deleteRecording('input-uid-1');
+
+    expect(calls()).toEqual([
+      `GET ${list}`,
+      'DELETE /accounts/acct-1/stream/video-1',
+      'DELETE /accounts/acct-1/stream/video-2',
+    ]);
+    expect(seen.every(({ auth }) => auth === 'Bearer secret-api-token')).toBe(
+      true,
+    );
+  });
+
+  it('takes an empty list as deleted', async () => {
+    answer = route(videos());
+
+    await expect(cloudflare().deleteRecording('input-uid-1')).resolves.toBe(
+      undefined,
+    );
+    expect(calls()).toEqual([`GET ${list}`]);
+  });
+
+  it('takes an input already gone as deleted', async () => {
+    answer = route(json(404, { success: false }));
+
+    await expect(cloudflare().deleteRecording('input-uid-1')).resolves.toBe(
+      undefined,
+    );
+    expect(calls()).toEqual([`GET ${list}`]);
+  });
+
+  it('counts a video already gone as deleted', async () => {
+    answer = route(videos('video-1'), json(404, { success: false }));
+
+    await expect(cloudflare().deleteRecording('input-uid-1')).resolves.toBe(
+      undefined,
+    );
+    expect(calls()).toEqual([
+      `GET ${list}`,
+      'DELETE /accounts/acct-1/stream/video-1',
     ]);
   });
 
-  it('takes an empty answer as deleted', async () => {
-    answer = (_req, res) => {
+  it('takes an empty delete answer as deleted', async () => {
+    answer = route(videos('video-1'), (_req, res) => {
       res.writeHead(200);
       res.end();
-    };
+    });
 
-    await expect(cloudflare().deleteRecording('video-uid-1')).resolves.toBe(
+    await expect(cloudflare().deleteRecording('input-uid-1')).resolves.toBe(
       undefined,
     );
+    expect(calls()).toEqual([
+      `GET ${list}`,
+      'DELETE /accounts/acct-1/stream/video-1',
+    ]);
   });
 
-  it('counts a recording already gone as deleted', async () => {
-    answer = json(404, { success: false });
+  it('throws when the list fails', async () => {
+    answer = route(json(500, { success: false }));
 
-    await expect(cloudflare().deleteRecording('video-uid-1')).resolves.toBe(
-      undefined,
-    );
-  });
-
-  it('throws when the provider refuses or fails', async () => {
-    answer = json(500, { success: false });
-
-    await expect(cloudflare().deleteRecording('video-uid-1')).rejects.toThrow(
+    await expect(cloudflare().deleteRecording('input-uid-1')).rejects.toThrow(
       /500/,
     );
+  });
+
+  it('throws when a video delete fails', async () => {
+    answer = route(videos('video-1'), json(502, { success: false }));
+
+    await expect(cloudflare().deleteRecording('input-uid-1')).rejects.toThrow(
+      /502/,
+    );
+    expect(calls()).toEqual([
+      `GET ${list}`,
+      'DELETE /accounts/acct-1/stream/video-1',
+    ]);
+  });
+
+  it('does nothing more the second time once the videos are gone', async () => {
+    let left = ['video-1'];
+    answer = (req, res) => {
+      if (req.method === 'GET') return videos(...left)(req, res);
+      left = [];
+      json(200, { success: true })(req, res);
+    };
+
+    await cloudflare().deleteRecording('input-uid-1');
+    await cloudflare().deleteRecording('input-uid-1');
+
+    expect(calls()).toEqual([
+      `GET ${list}`,
+      'DELETE /accounts/acct-1/stream/video-1',
+      `GET ${list}`,
+    ]);
   });
 
   it('gives up after five seconds', async () => {
     answer = () => undefined;
     const started = Date.now();
 
-    await expect(cloudflare().deleteRecording('video-uid-1')).rejects.toThrow(
+    await expect(cloudflare().deleteRecording('input-uid-1')).rejects.toThrow(
       /timeout/,
     );
     expect(Date.now() - started).toBeLessThan(7000);

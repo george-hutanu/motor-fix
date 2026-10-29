@@ -1,4 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsOptional } from 'class-validator';
+
+import type { MediaKind } from './media.dto';
 
 // The window the sender has to begin publishing after a start.
 export const LIVE_PUBLISH_WINDOW_MS = 2 * 60_000;
@@ -64,4 +67,49 @@ export class LiveViewCredentialDto {
 
   @ApiProperty({ format: 'date-time' })
   expiresAt!: string;
+}
+
+export class LiveRecordingKeepDto {
+  @ApiProperty({ description: 'Keep the recording once the stream stops' })
+  @IsBoolean()
+  keep!: boolean;
+}
+
+export class LiveStopRequestDto {
+  @ApiPropertyOptional({
+    description: 'Keep the recording; absent keeps the session’s choice',
+  })
+  @IsOptional()
+  @IsBoolean()
+  keep?: boolean;
+}
+
+export class LiveSessionStoppedDto {
+  @ApiProperty({ format: 'uuid' })
+  liveSessionId!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  stoppedAt!: string;
+
+  @ApiProperty()
+  keep!: boolean;
+
+  @ApiProperty({ description: 'Whole seconds streamed, rounded down' })
+  seconds!: number;
+
+  @ApiProperty({ format: 'uuid', nullable: true, type: String })
+  recordingMediaId!: string | null;
+}
+
+export interface LiveStoppedPayload {
+  liveSessionId: string;
+  jobId: string;
+  reason: 'job_closed' | 'feature_off' | 'sender' | 'idle';
+  keep: boolean;
+}
+
+export interface MediaAddedPayload {
+  mediaId: string;
+  jobId: string;
+  kind: MediaKind;
 }
