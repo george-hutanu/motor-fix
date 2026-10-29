@@ -15,8 +15,8 @@ import { DOWNLOAD_URL_MINUTES, FILE_RULES, UPLOAD_URL_MINUTES } from './files';
 export const MEDIA_KINDS = ['photo', 'clip', 'live'] as const;
 export type MediaKind = (typeof MEDIA_KINDS)[number];
 // A kept recording is created by the live service, never uploaded.
-export const MEDIA_UPLOAD_KINDS = ['photo', 'clip'] as const;
-export type MediaUploadKind = (typeof MEDIA_UPLOAD_KINDS)[number];
+const MEDIA_UPLOAD_KINDS = ['photo', 'clip'] as const;
+type MediaUploadKind = (typeof MEDIA_UPLOAD_KINDS)[number];
 
 export const MEDIA_STATUSES = [
   'processing',
@@ -42,7 +42,7 @@ export const MEDIA_REFUSALS = [
 ] as const;
 export type MediaRefusal = (typeof MEDIA_REFUSALS)[number];
 
-export const MEDIA_FILE_VARIANTS = ['file', 'thumbnail'] as const;
+const MEDIA_FILE_VARIANTS = ['file', 'thumbnail'] as const;
 export type MediaFileVariant = (typeof MEDIA_FILE_VARIANTS)[number];
 
 export const MEDIA_LIMITS = {

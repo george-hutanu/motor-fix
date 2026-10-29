@@ -13,7 +13,7 @@ export interface MediaRetentionDeps {
   logger: { log(line: string): void; error(line: string): void };
 }
 
-export interface MediaRetentionStep {
+interface MediaRetentionStep {
   name: string;
   run(deps: MediaRetentionDeps, now: Date): Promise<unknown>;
 }

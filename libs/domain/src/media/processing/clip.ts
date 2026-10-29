@@ -89,26 +89,51 @@ async function lengthOf(source: string): Promise<number> {
 async function transcode(source: string, dir: string, duration: number) {
   const output = join(dir, 'clip.mp4');
   const poster = join(dir, 'thumb.jpg');
-  // biome-ignore format: one flag and its value per line
-  await run('ffmpeg', [
-    '-v', 'error', '-y',
-    '-i', source,
-    '-map', '0:v:0', '-an',
-    '-vf', SCALE,
-    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
-    '-pix_fmt', 'yuv420p',
-    '-movflags', '+faststart',
-    output,
-  ], LIMIT);
-  // biome-ignore format: one flag and its value per line
-  await run('ffmpeg', [
-    '-v', 'error', '-y',
-    '-ss', duration >= 1 ? '1' : '0',
-    '-i', output,
-    '-frames:v', '1',
-    '-vf', THUMB_SCALE,
-    poster,
-  ], LIMIT);
+  await run(
+    'ffmpeg',
+    [
+      '-v',
+      'error',
+      '-y',
+      '-i',
+      source,
+      '-map',
+      '0:v:0',
+      '-an',
+      '-vf',
+      SCALE,
+      '-c:v',
+      'libx264',
+      '-preset',
+      'veryfast',
+      '-crf',
+      '23',
+      '-pix_fmt',
+      'yuv420p',
+      '-movflags',
+      '+faststart',
+      output,
+    ],
+    LIMIT,
+  );
+  await run(
+    'ffmpeg',
+    [
+      '-v',
+      'error',
+      '-y',
+      '-ss',
+      duration >= 1 ? '1' : '0',
+      '-i',
+      output,
+      '-frames:v',
+      '1',
+      '-vf',
+      THUMB_SCALE,
+      poster,
+    ],
+    LIMIT,
+  );
   return { file: await readFile(output), thumbnail: await readFile(poster) };
 }
 

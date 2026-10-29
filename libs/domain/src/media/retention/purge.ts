@@ -89,10 +89,9 @@ export async function purgeMedia(
 ): Promise<number> {
   await failAbandoned(deps, now);
   const tally: Tally = new Map();
-  let after: string | undefined;
-  for (;;) {
-    const due = await dueAfter(deps, now, after);
-    if (due.length === 0) break;
+  // Pages by id; each page starts past the last, so it ends at an empty one.
+  let due = await dueAfter(deps, now, undefined);
+  while (due.length > 0) {
     for (const { id } of due) {
       const item = await purgeOne(deps, id, now).catch((error: unknown) => {
         deps.logger.error(
@@ -102,7 +101,7 @@ export async function purgeMedia(
       });
       if (item) tallied(tally, item);
     }
-    after = due.at(-1)?.id;
+    due = await dueAfter(deps, now, due.at(-1)?.id);
   }
   const days = mediaConfig().retentionDays;
   const entries: AuditEntry[] = [...tally].map(([jobId, job]) => ({

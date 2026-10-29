@@ -4,7 +4,7 @@ const IMAGES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 const GARAGE_PHOTOS = [...IMAGES, 'image/heic', 'image/heif'] as const;
 const DOCUMENTS = ['application/pdf', 'image/jpeg', 'image/png'] as const;
 // A job's clip as phones record it; the worker turns it into an H.264 MP4.
-export const VIDEOS = ['video/mp4', 'video/quicktime', 'video/webm'] as const;
+const VIDEOS = ['video/mp4', 'video/quicktime', 'video/webm'] as const;
 
 export interface FileRule {
   maxBytes: number;

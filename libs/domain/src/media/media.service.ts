@@ -67,7 +67,7 @@ interface JobRow {
 // nothing there.
 type Right = 'staff' | 'driver' | 'forbidden' | 'none';
 
-export function rightOn(actor: Actor, job: JobRow): Right {
+function rightOn(actor: Actor, job: JobRow): Right {
   if (actor.role === 'driver') {
     return job.driver_id === actor.accountId ? 'driver' : 'none';
   }
@@ -94,7 +94,7 @@ export async function jobRow(
   return job;
 }
 
-export const itemDto = (item: Item): MediaItemDto => ({
+const itemDto = (item: Item): MediaItemDto => ({
   caption: item.caption,
   hasThumbnail: item.thumbnailKey !== null,
   id: item.id,
@@ -113,7 +113,7 @@ export interface MediaDeps {
   events: EventPort;
 }
 
-export interface Converted {
+interface Converted {
   fileKey: string | null;
   thumbnailKey: string | null;
   seconds?: number;
