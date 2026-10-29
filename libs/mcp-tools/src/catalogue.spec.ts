@@ -1,11 +1,16 @@
+import { z } from 'zod';
+
 import { catalogue } from './catalogue';
 import {
+  bookFixture,
   caller,
   context,
   fixtureTools,
+  memoryApprovals,
   memoryConfirmations,
 } from './fixtures.testing';
 import { callTool, USER_TEXT_NOTICE, visibleTools } from './registry';
+import { confirmAction } from './tools/confirm-action/confirm-action';
 
 const GARAGE_READS = [
   'get_day_sheet',
@@ -130,6 +135,10 @@ describe('the garage feature switches', () => {
 
 // Valid arguments for each acting tool: a tool added without them fails here.
 const VALID: Record<string, unknown> = {
+  book_fixture: {
+    quoteId: '7a0c1b9e-4f4e-4b8e-9d55-0f1f3c2a9b10',
+    shareHistory: false,
+  },
   decline_quote_request: {
     reason: 'fully_booked',
     requestId: '7a0c1b9e-4f4e-4b8e-9d55-0f1f3c2a9b10',
@@ -187,6 +196,66 @@ describe('every acting tool', () => {
       expect([...confirmations.rows.values()].map((r) => r.status)).toEqual([
         'waiting',
       ]);
+    },
+  );
+});
+
+// The production catalogue declares none today; the fixture keeps the rule
+// proven until a booking tool joins it.
+const declaring = [...catalogue, bookFixture].filter((t) => t.approval);
+
+// @traces 1254-assistant-approvals-FR-001
+describe('every tool declaring in-app approval', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('includes the fixture', () => {
+    expect(declaring).toContain(bookFixture);
+  });
+
+  it.each(declaring.map((t) => [t.name, t] as const))(
+    '%s acts, has a preview, and names only boolean inputs as editable',
+    (_name, tool) => {
+      expect(tool.acts).toBe(true);
+      expect(tool.preview).toBeDefined();
+      for (const key of tool.approval?.editable ?? [])
+        expect(tool.inputSchema[key]).toBeInstanceOf(z.ZodBoolean);
+    },
+  );
+
+  it.each(declaring.map((t) => [t.name, t] as const))(
+    '%s never runs its use case at the yes: it saves one approval',
+    async (name, tool) => {
+      expect(VALID[name]).toBeDefined();
+      const handler = jest.spyOn(tool, 'handler');
+      const confirmations = memoryConfirmations();
+      const approvals = memoryApprovals();
+      const ctx = context({ approvals, confirmations });
+      const who = caller({ roles: [...tool.roles] });
+      const first = await callTool(
+        [tool, confirmAction],
+        who,
+        ctx,
+        name,
+        VALID[name],
+      );
+      const { confirmationId } = first.structuredContent as {
+        confirmationId: string;
+      };
+
+      const yes = await callTool([tool, confirmAction], who, ctx, CONFIRM, {
+        arguments: VALID[name],
+        confirmationId,
+        confirmed: true,
+      });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(approvals.rows.size).toBe(1);
+      expect(yes.structuredContent).toMatchObject({
+        status: 'approval_required',
+      });
+      expect(confirmations.rows.get(confirmationId)?.outcome).toEqual({
+        output: yes.structuredContent,
+      });
     },
   );
 });
