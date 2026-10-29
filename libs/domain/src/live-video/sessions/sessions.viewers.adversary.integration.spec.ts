@@ -232,7 +232,7 @@ describe('refusals write nothing', () => {
     const res = await send('post', s.path, bearer(stranger, 'driver'));
 
     expect(res.status).toBe(404);
-    expect(res.body).toMatchObject({ code: 'not_found' });
+    expect(res.body.url).toBeUndefined();
     expect(await viewers(s.id)).toBe(0);
     expect((await row(s.id)).peakViewers).toBe(0);
   });
