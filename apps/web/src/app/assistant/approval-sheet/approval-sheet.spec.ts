@@ -13,8 +13,8 @@ import { filter, Subject } from 'rxjs';
 import { ApprovalSheet, type ApprovalSheetData } from './approval-sheet';
 import { Live } from '../../dashboard/live';
 
-// @traces 1254-assistant-approvals-FR-004
-// @traces 1254-assistant-approvals-FR-010
+// @traces 1254-FR-004
+// @traces 1254-FR-010
 
 @Component({ template: '' })
 class Host {
@@ -196,6 +196,18 @@ describe('ApprovalSheet', () => {
       expect(text(state())).toBe(line);
       expect(button('Aprobă')).toBeUndefined();
       expect(button('Refuză')).toBeUndefined();
+    },
+  );
+
+  it.each([
+    ['ro', 'Nu s‑a putut face: datele acțiunii nu mai sunt valabile.'],
+    ['en', 'Could not be done: the action’s details are no longer valid.'],
+  ] as const)(
+    'gives a failure code its own reason when one is written, in %s',
+    async (language, line) => {
+      await open(decided('failed', { code: 'validation' }), language);
+
+      expect(text(state())).toBe(line);
     },
   );
 

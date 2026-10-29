@@ -12,7 +12,8 @@
     "page": "Aprobă acțiunea asistentului",
     "reason": {
       "other": "MotorFix a refuzat acțiunea.",
-      "tool_unavailable": "acțiunea nu mai este disponibilă."
+      "tool_unavailable": "acțiunea nu mai este disponibilă.",
+      "validation": "datele acțiunii nu mai sunt valabile."
     },
     "refuse": "Refuză",
     "state": {

@@ -27,9 +27,6 @@ export interface ApprovalSheetData {
   id: string;
 }
 
-// The failure codes with a reason of their own; any other reads as refused.
-const REASONS = new Set(['tool_unavailable']);
-
 // The assistant's action waiting for the person's approval, or how it ended.
 // Closes with the next pending approval's id, or null when none is left.
 @Component({
@@ -83,11 +80,14 @@ export class ApprovalSheet {
   protected state(approval: AssistantActionApprovalDto) {
     if (approval.status !== 'failed')
       return this.i18n.t(`assistant.approval.state.${approval.status}`);
-    const code = approval.outcome?.['code'] ?? '';
+    // A code with a reason written for it reads as that; any other as refused.
+    const key = `assistant.approval.reason.${approval.outcome?.['code'] ?? ''}`;
+    const reason = this.i18n.t(key);
     return this.i18n.t('assistant.approval.state.failed', {
-      reason: this.i18n.t(
-        `assistant.approval.reason.${REASONS.has(code) ? code : 'other'}`,
-      ),
+      reason:
+        reason === key
+          ? this.i18n.t('assistant.approval.reason.other')
+          : reason,
     });
   }
 

@@ -12,7 +12,8 @@
     "page": "Approve your assistant's action",
     "reason": {
       "other": "MotorFix refused the action.",
-      "tool_unavailable": "this action is no longer available."
+      "tool_unavailable": "this action is no longer available.",
+      "validation": "the action’s details are no longer valid."
     },
     "refuse": "Refuse",
     "state": {
