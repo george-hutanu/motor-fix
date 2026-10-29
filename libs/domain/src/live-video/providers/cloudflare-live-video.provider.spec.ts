@@ -352,3 +352,101 @@ describe('deleting the recordings of a live input at Cloudflare', () => {
     expect(Date.now() - started).toBeLessThan(7000);
   }, 10_000);
 });
+
+// @traces 1251-FR-011
+describe('reading the publisher state of a live input at Cloudflare', () => {
+  const status = (current: unknown) =>
+    json(200, {
+      result: { status: current, uid: 'input-uid-1' },
+      success: true,
+    });
+
+  it('reads the input and takes a connected state as a publisher, since its entry', async () => {
+    answer = status({
+      current: {
+        state: 'connected',
+        statusEnteredAt: '2026-10-29T10:00:00.000Z',
+      },
+    });
+
+    await expect(cloudflare().inputStatus('input-uid-1')).resolves.toEqual({
+      connected: true,
+      since: new Date('2026-10-29T10:00:00.000Z'),
+    });
+    expect(seen).toEqual([
+      expect.objectContaining({
+        auth: 'Bearer secret-api-token',
+        method: 'GET',
+        url: '/accounts/acct-1/stream/live_inputs/input-uid-1',
+      }),
+    ]);
+  });
+
+  it('takes a reconnected state as a publisher too', async () => {
+    answer = status({
+      current: {
+        state: 'reconnected',
+        statusEnteredAt: '2026-10-29T10:05:00.000Z',
+      },
+    });
+
+    await expect(
+      cloudflare().inputStatus('input-uid-1'),
+    ).resolves.toMatchObject({ connected: true });
+  });
+
+  it('takes a disconnect as no publisher since the state was entered', async () => {
+    answer = status({
+      current: {
+        state: 'client_disconnect',
+        statusEnteredAt: '2026-10-29T10:07:00.000Z',
+      },
+    });
+
+    await expect(cloudflare().inputStatus('input-uid-1')).resolves.toEqual({
+      connected: false,
+      since: new Date('2026-10-29T10:07:00.000Z'),
+    });
+  });
+
+  it('takes an input that never had a publisher as never connected', async () => {
+    answer = status(null);
+
+    await expect(cloudflare().inputStatus('input-uid-1')).resolves.toEqual({
+      connected: false,
+      since: null,
+    });
+  });
+
+  it('takes an input already gone as never connected', async () => {
+    answer = json(404, { success: false });
+
+    await expect(cloudflare().inputStatus('input-uid-1')).resolves.toEqual({
+      connected: false,
+      since: null,
+    });
+  });
+
+  it('drops an unreadable entry time', async () => {
+    answer = status({
+      current: { state: 'client_disconnect', statusEnteredAt: 'soon' },
+    });
+
+    await expect(cloudflare().inputStatus('input-uid-1')).resolves.toEqual({
+      connected: false,
+      since: null,
+    });
+  });
+
+  it.each([
+    ['a failing answer', json(500, { success: false })],
+    ['a refused answer', json(200, { success: false })],
+    ['a body with no input', json(200, { success: true })],
+  ])('throws on %s, so the session is not stopped on a guess', async (_, a) => {
+    answer = a;
+
+    await expect(cloudflare().inputStatus('input-uid-1')).rejects.toThrow(
+      'input status failed',
+    );
+  });
+});

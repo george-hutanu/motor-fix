@@ -3,9 +3,11 @@ import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 import type { DataPoint, Histogram } from '@opentelemetry/sdk-metrics';
 
 import {
+  countLiveIdleStop,
   countLiveRecording,
   countLiveSession,
   countViewToken,
+  recordIdleCheck,
   recordProviderCall,
 } from './sessions.metrics';
 
@@ -95,4 +97,27 @@ describe('the live stop counters', () => {
       expect(await total(name, { outcome })).toBe(before + 1);
     },
   );
+});
+
+// @traces 1251-FR-011
+describe('the idle stop measures', () => {
+  it('counts each idle stop', async () => {
+    const name = 'motorfix_live_idle_stops_total';
+    const before = await total(name);
+
+    countLiveIdleStop();
+
+    expect(await total(name)).toBe(before + 1);
+  });
+
+  it('times each idle check on a histogram', async () => {
+    recordIdleCheck(0.4);
+
+    const { resourceMetrics } = await memory.metricReader.collect();
+    const histogram = resourceMetrics.scopeMetrics
+      .flatMap((scope) => scope.metrics)
+      .find((m) => m.descriptor.name === 'motorfix_live_idle_check_seconds');
+    const points = (histogram?.dataPoints ?? []) as DataPoint<Histogram>[];
+    expect(points.reduce((n, p) => n + p.value.count, 0)).toBeGreaterThan(0);
+  });
 });

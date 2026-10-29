@@ -110,7 +110,7 @@ describe('registering a kept live recording inside the stop', () => {
     ]);
   });
 
-  it('counts the recording as a visible live item', async () => {
+  it('counts nothing inside the transaction, so a rolled-back stop is never counted', async () => {
     const { garageId, job } = await closedJob();
     const labels = { kind: 'live', outcome: 'visible' };
     const before = await counterTotal(
@@ -119,15 +119,18 @@ describe('registering a kept live recording inside the stop', () => {
       labels,
     );
 
-    await prisma.$transaction((tx) =>
-      registerLiveRecording(tx, deps, {
-        garageId,
-        jobId: job.id,
-        providerRef: randomUUID(),
-        seconds: 0,
-        sentAt: new Date(),
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await registerLiveRecording(tx, deps, {
+          garageId,
+          jobId: job.id,
+          providerRef: randomUUID(),
+          seconds: 0,
+          sentAt: new Date(),
+        });
+        throw new Error('stop failed');
       }),
-    );
+    ).rejects.toThrow('stop failed');
 
     expect(
       await counterTotal(
@@ -135,7 +138,7 @@ describe('registering a kept live recording inside the stop', () => {
         'motorfix_media_items_total',
         labels,
       ),
-    ).toBe(before + 1);
+    ).toBe(before);
   });
 
   it('writes nothing when the surrounding transaction rolls back', async () => {
