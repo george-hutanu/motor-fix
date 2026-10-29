@@ -18,15 +18,15 @@ function phone(selector: string): string {
 }
 
 // @traces 011-FR-004
-describe('the count and the customise button on phones (PR #617 QA lap 3)', () => {
-  it('keeps them on one full-width line instead of wrapping the button under the count', () => {
-    expect(phone('.layout')).toMatch(/flex-wrap:\s*nowrap;/);
+describe('the count and the customise button on phones (PR #617 QA laps 3 and 5)', () => {
+  it('stacks them on the full width instead of squeezing the count beside the button', () => {
+    expect(phone('.layout')).toMatch(/flex-direction:\s*column;/);
+    expect(phone('.layout')).toMatch(/align-items:\s*flex-start;/);
     expect(phone('.layout')).toMatch(/inline-size:\s*100%;/);
+    expect(phone('.layout')).toMatch(/margin-inline-start:\s*0;/);
   });
 
-  it('lets the count shrink and keeps the button whole', () => {
-    expect(phone('.layout .muted')).toMatch(/flex:\s*1 1 auto;/);
-    expect(phone('.layout .muted')).toMatch(/min-width:\s*0;/);
-    expect(phone('.layout button')).toMatch(/flex:\s*none;/);
+  it("lines the button's label up with the count's left edge", () => {
+    expect(phone('.layout button')).toMatch(/padding-inline:\s*0;/);
   });
 });
