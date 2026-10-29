@@ -891,6 +891,184 @@
         ]
       }
     },
+    "/api/v1/me/assistant/approvals": {
+      "get": {
+        "operationId": "AssistantApprovalsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantActionApprovalListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The pending approvals, oldest first",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/assistant/approvals/{id}": {
+      "get": {
+        "operationId": "AssistantApprovalsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantActionApprovalDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One of the caller's approvals, in any status",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/assistant/approvals/{id}/approve": {
+      "post": {
+        "operationId": "AssistantApprovalsController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveAssistantActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantActionApprovalDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "approval_not_pending, currentStatus"
+          },
+          "422": {
+            "description": "invalid_option, field"
+          },
+          "503": {
+            "description": "maintenance or service_unavailable; still pending"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Run the assistant's action once; failed when a check refuses",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/assistant/approvals/{id}/refuse": {
+      "post": {
+        "operationId": "AssistantApprovalsController_refuse",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantActionApprovalDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "approval_not_pending, currentStatus"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Refuse the assistant's action; nothing runs",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "operationId": "BellController_list",
@@ -2041,6 +2219,9 @@
               }
             }
           },
+          "403": {
+            "description": "own_transfer: the seller opened their own link"
+          },
           "404": {
             "description": "not_found: no such link"
           },
@@ -2048,7 +2229,58 @@
             "description": "transfer_expired, transfer_cancelled or transfer_accepted: the link no longer works"
           }
         },
-        "summary": "Whether a transfer link still works; nothing about the car",
+        "summary": "Whether a transfer link still works; to a signed-in account, the car, its repair count and the seller’s short name",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/car-transfers/{token}/accept": {
+      "post": {
+        "operationId": "CarTransferLinkController_accept",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarTransferAcceptedDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "own_transfer: the seller cannot take their own car"
+          },
+          "404": {
+            "description": "not_found: no such link"
+          },
+          "409": {
+            "description": "car_limit: the caller holds 20 cars; open_request: the car has a request under way"
+          },
+          "410": {
+            "description": "transfer_expired, transfer_cancelled or transfer_accepted: the link no longer works"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Take the car over, with the history passed on, as the buyer",
         "tags": [
           "cars"
         ]
@@ -2400,6 +2632,120 @@
         ],
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/cars/sold": {
+      "get": {
+        "operationId": "CarHistoryController_sold",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoldCarListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The cars the caller sold, newest sale first",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/cars/sold/{id}/repairs": {
+      "get": {
+        "operationId": "CarHistoryController_soldRepairs",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarRepairListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: the caller never sold it"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A sold car's repairs, up to the sale date, read-only",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/cars/{id}/repairs": {
+      "get": {
+        "operationId": "CarHistoryController_repairs",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarRepairListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not the caller’s car, or removed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's car's repairs, newest first",
+        "tags": [
+          "cars"
         ]
       }
     },
@@ -11895,6 +12241,134 @@
           "privacyVersion"
         ]
       },
+      "AssistantActionOptionDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "shareHistory"
+          },
+          "value": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ]
+      },
+      "AssistantActionApprovalDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tool": {
+            "type": "string",
+            "example": "book_fixture"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "book",
+              "move",
+              "cancel"
+            ]
+          },
+          "assistantName": {
+            "type": "string",
+            "description": "The assistant client's name; null reads as your assistant",
+            "nullable": true
+          },
+          "summary": {
+            "type": "string",
+            "description": "The sentence shown at the yes, verbatim"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssistantActionOptionDto"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "refused",
+              "expired",
+              "failed"
+            ]
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "decidedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "outcome": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "approved: { subjectType, subjectId }; failed or expired: { code }",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "tool",
+          "kind",
+          "assistantName",
+          "summary",
+          "options",
+          "status",
+          "expiresAt",
+          "createdAt",
+          "decidedAt",
+          "outcome"
+        ]
+      },
+      "AssistantActionApprovalListDto": {
+        "type": "object",
+        "properties": {
+          "pending": {
+            "type": "number",
+            "description": "How many approvals are pending"
+          },
+          "items": {
+            "description": "The pending approvals, oldest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssistantActionApprovalDto"
+            }
+          }
+        },
+        "required": [
+          "pending",
+          "items"
+        ]
+      },
+      "ApproveAssistantActionDto": {
+        "type": "object",
+        "properties": {
+          "options": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "New values of the options the approval declares editable"
+          }
+        }
+      },
       "NotificationDto": {
         "type": "object",
         "properties": {
@@ -12990,6 +13464,26 @@
           "whatsapp"
         ]
       },
+      "CarTransferOfferCarDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "description": "The brand's name"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "brand",
+          "model",
+          "year"
+        ]
+      },
       "CarTransferLinkDto": {
         "type": "object",
         "properties": {
@@ -12998,10 +13492,40 @@
             "enum": [
               "sent"
             ]
+          },
+          "car": {
+            "description": "Signed in only: the car on offer, never its plate",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CarTransferOfferCarDto"
+              }
+            ]
+          },
+          "repairCount": {
+            "type": "number",
+            "description": "Signed in only: how many repairs pass with the car"
+          },
+          "sellerName": {
+            "type": "string",
+            "description": "Signed in only: the seller's first name and the initial of the last, or null",
+            "nullable": true
           }
         },
         "required": [
           "status"
+        ]
+      },
+      "CarTransferAcceptedDto": {
+        "type": "object",
+        "properties": {
+          "carId": {
+            "type": "string",
+            "description": "The car, now the caller's",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "carId"
         ]
       },
       "AdminAccountCountDto": {
@@ -13418,6 +13942,104 @@
           "reference",
           "receivedOn",
           "identityChecked"
+        ]
+      },
+      "SoldCarDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brandName": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "number"
+          },
+          "saleDate": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "id",
+          "brandName",
+          "model",
+          "year",
+          "saleDate"
+        ]
+      },
+      "SoldCarListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest sale first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SoldCarDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CarRepairDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "doneOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "what": {
+            "type": "string",
+            "description": "What was done"
+          },
+          "garageName": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "motorfix",
+              "logged"
+            ]
+          },
+          "fromPreviousOwner": {
+            "type": "boolean",
+            "description": "Created before the reader held the car: it came with it"
+          }
+        },
+        "required": [
+          "id",
+          "doneOn",
+          "what",
+          "garageName",
+          "source",
+          "fromPreviousOwner"
+        ]
+      },
+      "CarRepairListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarRepairDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "CreateCarDto": {

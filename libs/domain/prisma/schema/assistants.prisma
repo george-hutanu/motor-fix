@@ -16,6 +16,7 @@ model AssistantGrant {
   revokedBy     String?                 @map("revoked_by")
   revokeReason  String?                 @map("revoke_reason")
   confirmations AssistantConfirmation[]
+  approvals     AssistantApproval[]
 
   // Also serves look-ups by account: account_id leads the index.
   @@unique([accountId, clientId])
@@ -70,4 +71,48 @@ model AssistantConfirmation {
   @@index([grantId, status])
   @@index([accountId, status])
   @@map("assistant_confirmation")
+}
+
+enum AssistantApprovalKind {
+  book
+  move
+  cancel
+
+  @@map("assistant_approval_kind")
+}
+
+enum AssistantApprovalStatus {
+  pending
+  approved
+  refused
+  expired
+  failed
+
+  @@map("assistant_approval_status")
+}
+
+// An acting tool's call the person approves in the app after the yes: the
+// arguments and the summary are kept to run and show it. Its id is the
+// idempotency key of the run; written when saved and once when decided.
+model AssistantApproval {
+  id        String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  grantId   String                  @map("grant_id") @db.Uuid
+  grant     AssistantGrant          @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  accountId String                  @map("account_id") @db.Uuid
+  account   Account                 @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tool      String
+  kind      AssistantApprovalKind
+  summary   String
+  arguments Json
+  editable  String[]
+  status    AssistantApprovalStatus @default(pending)
+  expiresAt DateTime                @map("expires_at") @db.Timestamptz(3)
+  outcome   Json?
+  createdAt DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  decidedAt DateTime?               @map("decided_at") @db.Timestamptz(3)
+
+  @@index([accountId, status])
+  @@index([grantId, status])
+  @@index([status, expiresAt])
+  @@map("assistant_approval")
 }

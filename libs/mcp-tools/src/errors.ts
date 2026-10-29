@@ -20,6 +20,10 @@ const MESSAGES: Record<string, Record<Language, string>> = {
     en: 'This has already been decided.',
     ro: 'Acest lucru a fost deja hotărât.',
   },
+  approval_required: {
+    en: 'Approve it in the MotorFix app.',
+    ro: 'Aprobă în aplicația MotorFix.',
+  },
   assistant_act_off: {
     en: 'The person allowed this assistant to read only; it cannot act for them.',
     ro: 'Persoana a permis acestui asistent doar să citească; nu poate acționa în numele ei.',

@@ -3,6 +3,11 @@
     "text": "Datele tale și contul: o copie a datelor sau ștergerea contului.",
     "title": "Contul tău"
   },
+  "approvals": {
+    "few": "{count} acțiuni așteaptă aprobarea ta",
+    "one": "1 acțiune așteaptă aprobarea ta",
+    "other": "{count} de acțiuni așteaptă aprobarea ta"
+  },
   "bell": {
     "empty": "Nicio notificare încă",
     "failed": "Notificările nu s‑au încărcat.",

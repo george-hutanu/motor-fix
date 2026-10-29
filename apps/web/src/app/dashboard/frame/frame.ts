@@ -41,6 +41,7 @@ import { HlmToaster, toast } from '@motor-fix/ui-cockpit';
 import { filter, map } from 'rxjs';
 
 import { segmentsOf } from '../../addresses';
+import { ApprovalStrip } from '../../assistant/approval-strip/approval-strip';
 import { ConsentBar } from '../../consent/consent-bar/consent-bar';
 import { Voice } from '../../voice/voice';
 import { AddCar } from '../add-car/add-car';
@@ -104,6 +105,7 @@ const ROLES: readonly { role: Role; label: string }[] = [
 @Component({
   imports: [
     AdminFilters,
+    ApprovalStrip,
     AsWritten,
     Bell,
     ClockPipe,
