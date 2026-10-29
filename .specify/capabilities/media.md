@@ -3,6 +3,7 @@ capability: media
 updated: 2026-10-29
 features:
   - 333-media-storage
+  - 1251-live-recording
 ---
 
 # Capability: Media
@@ -47,9 +48,9 @@ _From 333-media-storage._
 
 _From 333-media-storage._
 
-### 333-FR-011 — `registerRecording(jobId, file, seconds)` on the media pipeline (the `media` module's service, exported from the domain library) MUST create a `live` item with no sender, `sent_at` now and `purge_after` from the retention setting: when `file` is a storage key, the item starts `processing` and the worker converts it as a clip (FR-007, the 60-second limit not applied) to `visible` (FR-008); when `file` is a provider reference, the item is written `visible` at once with `provider_ref`, no thumbnail, `media.added` and its audit entry in the same transaction. It runs regardless of the `live_media` switch and the job's state (the recording was made while both allowed it). Tested with a fake file; ST-334 is its caller.
+### 1251-FR-003 — A kept recording MUST be registered in ST-333's MEDIA_ITEM (333-FR-001) through the media module's registration (333-FR-011), in an in-transaction form the stop routine calls with the caller's transaction: kind `live`, status `visible`, `sender_id` null, `provider_ref` the session's `provider_input_id`, `content_type` `video/mp4`, `size_bytes` 0, `seconds` the elapsed whole seconds, `sent_at` and `uploaded_at` the stop's time, `purge_after` from `MEDIA_RETENTION_DAYS` (`mediaConfig().retentionDays`, 90) after `sent_at`, with `media.added` and its system audit entry (333-FR-008) written in that same transaction and the item counted (`motorfix_media_items_total{kind="live",outcome="visible"}`). `registerRecording(jobId, file, seconds)` keeps its contract and uses the same form. No media schema or migration is added by this story.
 
-_From 333-media-storage._
+_From 1251-live-recording._
 
 ### 333-FR-012 — `removeItem(mediaId, actor)` on the media service MUST, for a `visible` item: delete the converted file, the thumbnail and the original from storage (or the recording at the provider) at once, then set `removed` with `removed_at` and write one audit entry (action `update`, field `status`, old `visible`, new `removed`, the actor given) in one transaction; an item not `visible` refuses with 409 `invalid_state`; a failing storage or provider delete leaves the item `visible` and unchanged, writes no audit entry and surfaces the error to the caller. No route calls it in this story (ST-340 adds the action).
 
@@ -76,3 +77,5 @@ _From 333-media-storage._
 _From 333-media-storage._
 
 ## Retired
+
+- `333-FR-011` — superseded by `1251-FR-003` (2026-10-29)
