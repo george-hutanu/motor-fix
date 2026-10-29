@@ -1,8 +1,9 @@
-import type {
-  CreateTimeBlockDto,
-  TimeBlockDto,
-  TimeBlocksDto,
-  UpdateTimeBlockDto,
+import {
+  type CreateTimeBlockDto,
+  TIME_BLOCK_NOTE_MAX,
+  type TimeBlockDto,
+  type TimeBlocksDto,
+  type UpdateTimeBlockDto,
 } from '@motor-fix/contracts';
 import {
   BadRequestException,
@@ -48,7 +49,7 @@ type Tx = Prisma.TransactionClient;
 type Db = Pick<PrismaClient, 'timeBlock'> | Pick<Tx, 'timeBlock'>;
 
 const MAX_LIST_DAYS = 31;
-const MAX_NOTE = 200;
+
 const MAX_DAYS = 14;
 const QUARTER = 15;
 const MINUTE = 60_000;
@@ -93,7 +94,7 @@ const cleaned = (note: string | null | undefined) => {
 };
 
 // A block as staff read it; its lift only while the garage schedules lifts.
-export function timeBlockOf(row: Stored, lifts: boolean): TimeBlockDto {
+function timeBlockOf(row: Stored, lifts: boolean): TimeBlockDto {
   return {
     endsAt: row.endsAt.toISOString(),
     id: row.id,
@@ -609,8 +610,11 @@ export class TimeBlocksService {
     }
     judgeRange(asked);
     const note = cleaned(asked.note);
-    if (note !== null && [...note].length > MAX_NOTE) {
-      throw invalid('note', `note must be at most ${MAX_NOTE} characters`);
+    if (note !== null && [...note].length > TIME_BLOCK_NOTE_MAX) {
+      throw invalid(
+        'note',
+        `note must be at most ${TIME_BLOCK_NOTE_MAX} characters`,
+      );
     }
     return {
       lifts: switches.lifts,

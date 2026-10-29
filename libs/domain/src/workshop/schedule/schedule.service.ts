@@ -31,7 +31,7 @@ export interface Segment {
 
 // Who holds a stored segment: a booking, with the car it is for, or a time
 // block, with its whole range.
-export type Holder =
+type Holder =
   | { kind: 'booking'; car: { brand: string; model: string } }
   | { kind: 'time_block'; startsAt: Date; endsAt: Date };
 
