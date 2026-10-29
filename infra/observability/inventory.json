@@ -2377,6 +2377,19 @@
     },
     {
       "kind": "queue",
+      "name": "job-stage",
+      "source": "libs/domain/src/notifications/job-stage/job-stage.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one log line per event naming the job id, the type and whether the driver was told or why the event was skipped; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-277"
+    },
+    {
+      "kind": "queue",
       "name": "booking-lapsed",
       "source": "libs/domain/src/notifications/booking-lapsed/booking-lapsed.fan-out.ts",
       "dashboard": "motorfix-queues",
