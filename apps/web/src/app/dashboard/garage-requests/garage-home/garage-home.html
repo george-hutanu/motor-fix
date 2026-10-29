@@ -20,14 +20,14 @@
       </button>
     </span>
   </div>
-  @if (allHidden()) {
-    <p class="muted" data-all-hidden>{{ 'garage.home.panel.empty' | t }}</p>
-  }
   @if (owner()) {
     <mf-garage-legal-check />
   }
   @if (firstSteps()) {
     <mf-first-steps-card [team]="team()" />
+  }
+  @if (allHidden()) {
+    <p class="muted" data-all-hidden>{{ 'garage.home.panel.empty' | t }}</p>
   }
   <div class="sections">
     @if (ownAfter() === -1) {

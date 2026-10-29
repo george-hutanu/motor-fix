@@ -308,6 +308,18 @@ describe('every section hidden', () => {
     );
   });
 
+  it('puts the line under the legal check', async () => {
+    const { element } = await render('garage', {
+      read: async () => answer(layoutOf(KEYS), 'garage'),
+    });
+    const legal = element.querySelector('mf-garage-legal-check') as Element;
+
+    expect(
+      legal.compareDocumentPosition(allHidden(element) as Element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('keeps a mechanic’s own jobs when both her sections are hidden', async () => {
     const { element } = await render('mechanic', {
       read: async () => answer(layoutOf(['load', 'sched']), 'mechanic'),
