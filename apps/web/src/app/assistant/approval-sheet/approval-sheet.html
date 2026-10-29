@@ -7,6 +7,7 @@
         @for (option of a.options; track option.key) {
           <label class="tick" [for]="'mf-approval-' + option.key">
             <input
+              class="mf-check"
               type="checkbox"
               [id]="'mf-approval-' + option.key"
               [checked]="ticked(option)"

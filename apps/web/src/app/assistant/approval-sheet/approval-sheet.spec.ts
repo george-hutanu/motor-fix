@@ -129,6 +129,8 @@ describe('ApprovalSheet', () => {
     );
     expect(text()).toContain('Asistentul tău (Claude) vrea să:');
     expect(tick()?.checked).toBe(true);
+    // The theme's checkbox, not the browser's own (design.md: helm checkbox).
+    expect(tick()?.classList).toContain('mf-check');
     const label = panel().querySelector(`label[for="${tick()?.id}"]`);
     expect(text(label)).toContain('Trimite service‑ului istoricul mașinii');
     expect(button('Aprobă')).toBeDefined();
