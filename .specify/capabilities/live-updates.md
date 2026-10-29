@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 253-live-connection
   - 254-live-audience
@@ -35,6 +35,7 @@ features:
   - 1263-admin-dashboard-customise
   - 1250-live-video-provider
   - 177-reported-reviews
+  - 427-time-blocks
 ---
 
 # Capability: Live updates
@@ -496,6 +497,10 @@ _From 1263-admin-dashboard-customise._
 ### 177-FR-010 — The queue, the panel, the counter and the tile MUST re-read on `review.reported`, `review.decided`, `review.deleted` and `review.report_closed` arriving on the admin's live connection, so a new item is on screen within 5 seconds and a decided or deleted one leaves within 5 seconds, and MUST re-read when the connection resyncs after a loss; these review kinds, and no other review kind, MUST reach the `admin` channel (today the review audience reaches the garage, the mechanic and the author only), carrying the same event payload those audiences already receive and nothing more (the reporter, the reason and the facts stay in the admin-only read of FR-001); a re-read keeps the items already shown until the new ones arrive (no skeleton flash); the first read shows skeletons; a failed read shows "Nu am putut citi recenziile raportate." / "Could not read the reported reviews." with a Reîncearcă / Retry button.
 
 _From 177-reported-reviews._
+
+### 427-FR-010 — Each write MUST record its event in the same transaction through the outbox (257-FR-001): `time_block.created`, `time_block.updated` (added to the kinds), `time_block.deleted`, subject `time_block` with `blockId`, `garageId`, `mechanicId`, `lift`, `startsAt`, `endsAt` in the payload and never the note; the audience resolver gains the `time_block` subject: `garage:{garageId}`, `mechanic:{mechanicId}` when set, `public:garage:{garageId}` (so open profiles re-read their free slots; the public stream carries the kind and the id only, as every event). The live hub MUST deliver the three kinds to the owner and a receptionist and, through her `mechanic:` channel, to the mechanic (as it does the unclaimed `booking.confirmed`: no `KIND_CAPABILITY` entry is added, plan.md R4), and the `public:garage:` allow-list gains the three kinds. Nobody is notified.
+
+_From 427-time-blocks._
 
 ## Retired
 
