@@ -1,3 +1,5 @@
+import { mediaConfig } from '@motor-fix/contracts';
+
 // How long the product keeps each kind of data, as the privacy notice states
 // it: the owner's decision T10 of 2026-10-16. Every sweep reads its period
 // here, at call time; nothing else in the product states these numbers.
@@ -19,9 +21,13 @@ export const RETENTION = {
       "a garage's legal documents and their page files, from the garage's closure",
     days: 1826,
   },
+  // MEDIA_RETENTION_DAYS, 90 by default: the media purge and the items
+  // sent read the same value.
   media: {
     covers: 'job photos, clips, recordings, request and reply photos',
-    days: 90,
+    get days() {
+      return mediaConfig().retentionDays;
+    },
   },
   notifications: {
     covers: 'notifications of every channel and status, from their creation',

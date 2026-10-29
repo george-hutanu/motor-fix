@@ -26,7 +26,9 @@ import {
   HealthModule,
   InsightsModule,
   ListingPhotosWorkerModule,
+  liveVideoConfig,
   MediaProcessingModule,
+  MediaRetentionModule,
   MODERATION_TIMERS_CONSUMER,
   ModerationTimersModule,
   NEWS_CONSUMER,
@@ -219,6 +221,12 @@ export function workerModule(
       // Nightly: removes and anonymises what is past the stated retention periods.
       RetentionModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
+        redisUrl: env.REDIS_URL,
+      }),
+      // Nightly: deletes the job media past its purge date.
+      MediaRetentionModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
+        liveVideo: liveVideoConfig(env.APP_ENV, process.env),
         redisUrl: env.REDIS_URL,
       }),
       StatusModule.registerWorker({

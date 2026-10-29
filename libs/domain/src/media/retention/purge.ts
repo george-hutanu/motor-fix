@@ -1,0 +1,125 @@
+import { type MediaKind, mediaConfig } from '@motor-fix/contracts';
+
+import type { MediaRetentionDeps } from './retention';
+import { MEDIA_RETENTION } from './retention.config';
+import type { AuditEntry } from '../../audit/audit.port';
+import type { MediaItem } from '../../generated/prisma/client';
+import { countMediaPurged } from '../media.metrics';
+import { deleteFiles } from '../media.service';
+
+const HOUR_MS = 3_600_000;
+const PURGEABLE = ['visible', 'failed', 'removed'] as const;
+
+// Romanian puts "de" between a number and its noun from twenty on.
+const de = (n: number) => (n % 100 === 0 || n % 100 >= 20 ? ' de' : '');
+
+export const purgedText = (count: number, days: number) =>
+  `${count === 1 ? '1 fișier șters' : `${count}${de(count)} fișiere șterse`} după ${days}${de(days)} ${days === 1 ? 'zi' : 'zile'}`;
+
+// An item whose upload never came within a day is failed, so the purge
+// takes it when it is due; one uploaded and still converting is left to
+// the worker.
+async function failAbandoned({ prisma }: MediaRetentionDeps, now: Date) {
+  const asked = new Date(
+    now.getTime() - MEDIA_RETENTION.stuckAfterHours * HOUR_MS,
+  );
+  const { count } = await prisma.mediaItem.updateMany({
+    data: { status: 'failed' },
+    where: { sentAt: { lt: asked }, status: 'processing', uploadedAt: null },
+  });
+  return count;
+}
+
+// One item in its own transaction: locked unless another run holds it,
+// its files deleted, then marked purged. A delete that fails rolls the
+// item back, and the next night tries again.
+async function purgeOne(
+  deps: MediaRetentionDeps,
+  id: string,
+  now: Date,
+): Promise<MediaItem | null> {
+  return deps.prisma.$transaction(
+    async (tx) => {
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM media_item
+        WHERE id = ${id}::uuid
+          AND status IN ('visible', 'failed', 'removed')
+          AND purge_after <= ${now}
+        FOR UPDATE SKIP LOCKED`;
+      if (locked.length === 0) return null;
+      const item = await tx.mediaItem.findUniqueOrThrow({ where: { id } });
+      await deleteFiles(deps.storage, deps.provider, item);
+      await tx.mediaItem.update({
+        data: { purgedAt: now, status: 'purged' },
+        where: { id },
+      });
+      return item;
+    },
+    { timeout: MEDIA_RETENTION.transactionMs },
+  );
+}
+
+async function dueAfter(deps: MediaRetentionDeps, now: Date, after?: string) {
+  return deps.prisma.mediaItem.findMany({
+    orderBy: { id: 'asc' },
+    select: { id: true },
+    take: MEDIA_RETENTION.batch,
+    where: {
+      purgeAfter: { lte: now },
+      status: { in: [...PURGEABLE] },
+      ...(after && { id: { gt: after } }),
+    },
+  });
+}
+
+type Tally = Map<string, { garageId: string; count: number }>;
+
+function tallied(tally: Tally, item: MediaItem) {
+  const job = tally.get(item.jobId) ?? { count: 0, garageId: item.garageId };
+  job.count += 1;
+  tally.set(item.jobId, job);
+  countMediaPurged(item.kind as MediaKind);
+}
+
+// FR-014: deletes every item past its purge date, whatever its state, and
+// writes one audit entry per job for the night.
+export async function purgeMedia(
+  deps: MediaRetentionDeps,
+  now: Date,
+): Promise<number> {
+  await failAbandoned(deps, now);
+  const tally: Tally = new Map();
+  let after: string | undefined;
+  for (;;) {
+    const due = await dueAfter(deps, now, after);
+    if (due.length === 0) break;
+    for (const { id } of due) {
+      const item = await purgeOne(deps, id, now).catch((error: unknown) => {
+        deps.logger.error(
+          `media ${id} not purged: ${error instanceof Error ? error.name : typeof error}`,
+        );
+        return null;
+      });
+      if (item) tallied(tally, item);
+    }
+    after = due.at(-1)?.id;
+  }
+  const days = mediaConfig().retentionDays;
+  const entries: AuditEntry[] = [...tally].map(([jobId, job]) => ({
+    action: 'delete',
+    actorId: null,
+    actorRole: 'system',
+    garageId: job.garageId,
+    jobId,
+    kind: 'media.purged',
+    subjectId: jobId,
+    subjectType: 'job',
+    text: purgedText(job.count, days),
+  }));
+  if (entries.length) {
+    await deps.prisma.$transaction((tx) => deps.audit.recordMany(tx, entries));
+  }
+  const total = [...tally.values()].reduce((sum, job) => sum + job.count, 0);
+  deps.logger.log(`media retention purged ${total}`);
+  return total;
+}

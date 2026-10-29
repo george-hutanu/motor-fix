@@ -564,8 +564,8 @@ export class MediaService implements OnModuleDestroy {
 // Deletes an item's files wherever they are held: the original with its
 // converted copy and thumbnail, or the provider's recording.
 export async function deleteFiles(
-  storage: StorageService,
-  provider: LiveVideoProvider,
+  storage: Pick<StorageService, 'deleteObject' | 'deleteWithCopies'>,
+  provider: Pick<LiveVideoProvider, 'deleteRecording'>,
   item: Pick<Item, 'originalKey' | 'fileKey' | 'thumbnailKey' | 'providerRef'>,
 ) {
   if (item.providerRef) await provider.deleteRecording(item.providerRef);

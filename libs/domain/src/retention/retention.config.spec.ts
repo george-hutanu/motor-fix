@@ -1,3 +1,5 @@
+import { mediaConfig } from '@motor-fix/contracts';
+
 import {
   ANONYMISED,
   RETENTION,
@@ -51,5 +53,21 @@ describe('the retention config', () => {
     expect(retentionCutoff(now, 30)).toEqual(
       new Date('2026-09-24T10:00:00.000Z'),
     );
+  });
+});
+
+// @traces 333-media-storage-FR-013
+describe('the media period', () => {
+  const saved = process.env['MEDIA_RETENTION_DAYS'];
+  afterEach(() => {
+    if (saved === undefined) delete process.env['MEDIA_RETENTION_DAYS'];
+    else process.env['MEDIA_RETENTION_DAYS'] = saved;
+  });
+
+  it('follows MEDIA_RETENTION_DAYS, the value the media items are sent with', () => {
+    process.env['MEDIA_RETENTION_DAYS'] = '30';
+
+    expect(RETENTION.media.days).toBe(mediaConfig().retentionDays);
+    expect(RETENTION.media.days).toBe(30);
   });
 });
