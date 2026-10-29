@@ -31,7 +31,7 @@ _From 333-media-storage._
 
 _From 333-media-storage._
 
-### 333-FR-007 — The worker MUST process a clip with ffmpeg: the real length measured first (over 61 seconds → `failed` without converting); the output an MP4 with H.264 video, the shorter side scaled to at most 720 px without upscaling, no audio stream whatever the input carried, `faststart` for progressive playback; and a JPEG thumbnail of at most 480 px on the long side from the frame at 1 second (or the first frame of a shorter clip). The conversion runs with 2 tries and a 10-minute limit per try; the worker image and CI MUST carry ffmpeg (the one new runtime dependency of this story, pinned in the worker's Dockerfile and installed in the CI jobs that run the worker's tests).
+### 333-FR-007 — The worker MUST process a clip with ffmpeg: the real length measured first (over 61 seconds → `failed` without converting); the output an MP4 with H.264 video, the shorter side scaled to at most 720 px without upscaling, no audio stream whatever the input carried, `faststart` for progressive playback; and a JPEG thumbnail of at most 480 px on the long side from the frame at 1 second (or the first frame of a shorter clip). The conversion runs with 2 tries and a 10-minute limit per try, one deadline shared by every ffprobe and ffmpeg run of the try, so a try ends before the job's lock (the limit plus one minute) runs out (amended after merge, motor-fix#616); the worker image and CI MUST carry ffmpeg (the one new runtime dependency of this story, pinned in the worker's Dockerfile and installed in the CI jobs that run the worker's tests).
 
 _From 333-media-storage._
 

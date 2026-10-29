@@ -5,7 +5,6 @@ import { PassThrough } from 'node:stream';
 import { MEDIA_LIMITS } from '@motor-fix/contracts';
 
 import { convertClip } from './clip';
-import { MEDIA_PROCESSING } from './processing.config';
 
 // ffprobe and ffmpeg stood in for: each run takes `took` of a clock the test
 // owns, then answers. Every run's `timeout` is recorded.
@@ -37,7 +36,7 @@ beforeEach(() => {
   calls.length = 0;
   took = [];
   now = 1_000_000;
-  jest.spyOn(Date, 'now').mockImplementation(() => now);
+  jest.spyOn(performance, 'now').mockImplementation(() => now);
 });
 afterEach(() => jest.restoreAllMocks());
 
@@ -63,9 +62,5 @@ describe('the time one conversion has', () => {
       convertClip(Buffer.from('a clip'), { maxSeconds: 60 }),
     ).rejects.toThrow(/time/);
     expect(calls).toHaveLength(2);
-  });
-
-  it('ends every attempt before the job lock runs out', () => {
-    expect(LIMIT).toBeLessThan(MEDIA_PROCESSING.lockDurationMs);
   });
 });

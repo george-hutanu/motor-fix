@@ -30,20 +30,14 @@ class ToolFailed extends Error {
   }
 }
 
-// The attempt's time ran out between two runs.
-class OutOfTime extends Error {
-  constructor(tool: string) {
-    super(`no time left to run ${tool}`);
-    this.name = 'OutOfTime';
-  }
-}
-
 // Runs a tool with an argument list: no shell, so nothing in a file name or
 // a value is ever read as a command. The tool gets only the time left
-// before the attempt's deadline, and is killed outright when that ends.
+// before the attempt's deadline, read on the monotonic clock so a step of
+// the wall clock cannot stretch it, and is killed outright when that ends.
 function run(tool: 'ffmpeg' | 'ffprobe', args: string[], deadline: number) {
-  const left = deadline - Date.now();
-  if (left <= 0) return Promise.reject(new OutOfTime(tool));
+  const left = Math.floor(deadline - performance.now());
+  if (left <= 0)
+    return Promise.reject(new Error(`no time left to run ${tool}`));
   return new Promise<string>((resolve, reject) => {
     const child = spawn(tool, args, {
       killSignal: 'SIGKILL',
@@ -166,7 +160,7 @@ export function convertClip(
   options: { maxSeconds?: number },
 ): Promise<{ file: Buffer; seconds: number; thumbnail: Buffer }> {
   return tracer().startActiveSpan('media.convert', async (span) => {
-    const deadline = Date.now() + LIMIT;
+    const deadline = performance.now() + LIMIT;
     const dir = await mkdtemp(join(tmpdir(), 'media-'));
     try {
       const source = join(dir, 'source');
