@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { MEDIA_LIMITS } from '@motor-fix/contracts';
 import sharp from 'sharp';
 
 import { ClipTooLong, convertClip } from './clip';
@@ -11,6 +12,7 @@ import { ClipTooLong, convertClip } from './clip';
 // host without ffmpeg fails these tests, never skips them.
 const work = mkdtempSync(join(tmpdir(), 'clip-spec-'));
 afterAll(() => rmSync(work, { force: true, recursive: true }));
+afterEach(() => jest.restoreAllMocks());
 
 function made(
   seconds: number,
@@ -148,6 +150,28 @@ describe('converting a clip', () => {
     await expect(
       convertClip(Buffer.from('not a video'), { maxSeconds: 60 }),
     ).rejects.toThrow();
+  });
+
+  it('kills an ffmpeg run that reaches the attempt deadline', async () => {
+    const clip = made(3, '1920x1080');
+    const start = performance.now();
+    let reads = 0;
+    // The deadline is taken at the start and the probe runs a millisecond
+    // later; from the transcode on, the clock stands 100 ms short of the
+    // deadline, less than the transcode of a 1080p clip takes.
+    jest
+      .spyOn(performance, 'now')
+      .mockImplementation(() =>
+        ++reads === 1
+          ? start
+          : reads === 2
+            ? start + 1
+            : start + MEDIA_LIMITS.conversionTimeoutMs - 100,
+      );
+
+    await expect(convertClip(clip, { maxSeconds: 60 })).rejects.toThrow(
+      /ffmpeg exited on a signal/,
+    );
   });
 
   it('converts a 45-second 720p clip with sound in under a minute', async () => {

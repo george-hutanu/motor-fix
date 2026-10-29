@@ -427,9 +427,15 @@ describe('completing an upload', () => {
     expect(res.status).toBe(200);
     const again = await prisma.mediaItem.findUniqueOrThrow({ where: { id } });
     expect(again.uploadedAt).toEqual(first.uploadedAt);
-    expect(
-      await queue.getJobCountByTypes('waiting', 'delayed', 'prioritized'),
-    ).toBeGreaterThanOrEqual(1);
+    const queued = await queue.getJobs([
+      'waiting',
+      'delayed',
+      'prioritized',
+      'active',
+      'completed',
+      'failed',
+    ]);
+    expect(queued.filter((job) => job.data.mediaId === id)).toHaveLength(1);
     const job = await queue.getJob(id);
     expect(job?.id).toBe(id);
   });
