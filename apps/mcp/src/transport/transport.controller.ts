@@ -3,16 +3,8 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   AccountLoader,
-  AssistantConfirmations,
-  AuditService,
   countRateLimitRefusal,
   type createPrisma,
-  DaySheetService,
-  DeclineService,
-  featureOn,
-  GarageFiguresService,
-  GarageRequestsService,
-  GarageScheduleService,
   MAINTENANCE,
   type MaintenanceReader,
   outbox,
@@ -25,6 +17,7 @@ import {
   register,
   type ToolContext,
   type ToolDefinition,
+  toolContext,
 } from '@motor-fix/mcp-tools';
 import {
   Controller,
@@ -80,19 +73,7 @@ export class TransportController {
   ) {
     this.metadataUrl = metadataUrlOf(settings.mcpUrl);
     this.toolNames = tools.map((t) => t.name);
-    this.ctx = {
-      accounts,
-      confirmations: new AssistantConfirmations(prisma),
-      featureOn: (garageId, key) => featureOn(prisma, garageId, key),
-      garage: {
-        daySheet: new DaySheetService(prisma),
-        decline: new DeclineService(prisma, new AuditService(), outbox),
-        figures: new GarageFiguresService(prisma),
-        requests: new GarageRequestsService(prisma),
-        schedule: new GarageScheduleService(prisma),
-      },
-      maintenance,
-    };
+    this.ctx = toolContext({ accounts, maintenance, outbox, prisma });
   }
 
   @Post()

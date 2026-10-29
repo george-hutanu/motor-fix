@@ -18,6 +18,7 @@ import {
   AssistantService,
   assistantThrottle,
 } from './assistant/assistant.service';
+import { AssistantApprovals } from './assistant-approvals/assistant-approvals';
 import { Attempts, AUTH_REDIS } from './attempts';
 import { AuthController } from './auth.controller';
 import { ConsentsController } from './consents/consents.controller';
@@ -61,6 +62,7 @@ export class AuthModule implements OnApplicationShutdown {
       exports: [
         AccountLoader,
         AccountsService,
+        AssistantApprovals,
         Attempts,
         AUTH_OPTIONS,
         AUTH_REDIS,
@@ -79,6 +81,7 @@ export class AuthModule implements OnApplicationShutdown {
         AccountLoader,
         AccountsService,
         ActorGuard,
+        AssistantApprovals,
         AssistantService,
         { provide: APP_GUARD, useExisting: ActorGuard },
         AuditHistoryService,

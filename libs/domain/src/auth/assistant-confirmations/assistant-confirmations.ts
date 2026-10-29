@@ -6,6 +6,7 @@ import {
   recordConfirmation,
 } from './assistant-confirmations.metrics';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import { expireAssistantApprovals } from '../assistant-approvals/assistant-approvals';
 import { PRISMA } from '../prisma';
 
 export type Tx = Prisma.TransactionClient;
@@ -117,8 +118,9 @@ export const countedAs = (
   return decision.status as ConfirmationOutcome;
 };
 
-// Turns every waiting confirmation of the grants or the account to void,
-// inside the caller's transaction; answers how many.
+// Turns every waiting confirmation of the grants or the account to void and
+// expires their pending approvals, inside the caller's transaction; answers
+// how many confirmations it voided.
 export async function voidAssistantConfirmations(
   tx: Tx,
   scope: ConfirmationScope,
@@ -139,6 +141,7 @@ export async function voidAssistantConfirmations(
       grantId: row.grantId,
       tool: row.tool,
     });
+  await expireAssistantApprovals(tx, scope);
   return voided.length;
 }
 

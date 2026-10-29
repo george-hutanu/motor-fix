@@ -50,6 +50,7 @@ const tools = [
 ];
 const ctx: ToolContext = {
   accounts: loader,
+  approvals: {} as ToolContext['approvals'],
   confirmations: {} as ToolContext['confirmations'],
   featureOn: async () => true,
   garage: {} as ToolContext['garage'],

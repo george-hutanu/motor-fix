@@ -1040,6 +1040,77 @@ async function team(db: Client) {
   );
 }
 
+// The driver's assistant and its actions to approve in the app: two waiting
+// and one expired. Their tool is in no catalogue, so Aprobă ends failed and
+// Refuză refused, and nothing is ever booked. Fixed ids, written once: a
+// decision taken since stays.
+const APPROVALS = [
+  {
+    arguments: { shareHistory: true },
+    created: '10 minutes',
+    editable: ['shareHistory'],
+    id: '5eed0a00-0000-4000-8000-000000000001',
+    kind: 'book',
+    status: 'pending',
+    summary:
+      'Programează schimbul de ulei la Service Auto Militari, joi la 10:00.',
+  },
+  {
+    arguments: {},
+    created: '5 minutes',
+    editable: null,
+    id: '5eed0a00-0000-4000-8000-000000000002',
+    kind: 'move',
+    status: 'pending',
+    summary: 'Mută programarea de la Atelier Test pe vineri, la 9:00.',
+  },
+  {
+    arguments: {},
+    created: '2 hours',
+    editable: null,
+    id: '5eed0a00-0000-4000-8000-000000000003',
+    kind: 'cancel',
+    status: 'expired',
+    summary: 'Anulează programarea de luni de la Atelier Test.',
+  },
+] as const;
+
+async function assistantApprovals(db: Client) {
+  await db.query(
+    `INSERT INTO assistant_grant (id, account_id, client_id, client_name, can_read, can_act)
+     SELECT gen_random_uuid(), a.id, 'seed-assistant', 'Claude', true, true
+     FROM account a WHERE a.email = 'sofer@example.test'
+     ON CONFLICT (account_id, client_id) DO NOTHING`,
+  );
+  for (const approval of APPROVALS) {
+    const expired = approval.status === 'expired';
+    await db.query(
+      `INSERT INTO assistant_approval (id, grant_id, account_id, tool, kind, summary,
+         arguments, editable, status, expires_at, outcome, created_at, decided_at)
+       SELECT $1::uuid, g.id, g.account_id, 'seed_book_service', $2::assistant_approval_kind, $3::text,
+         $4::jsonb, $5::text[], $6::assistant_approval_status,
+         CASE WHEN $7::boolean THEN now() - $8::interval + interval '30 minutes'
+              ELSE now() + interval '30 days' END,
+         CASE WHEN $7 THEN '{"code":"timeout"}'::jsonb END,
+         now() - $8::interval,
+         CASE WHEN $7 THEN now() - $8::interval + interval '30 minutes' END
+       FROM assistant_grant g JOIN account a ON a.id = g.account_id
+       WHERE a.email = 'sofer@example.test' AND g.client_id = 'seed-assistant'
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        approval.id,
+        approval.kind,
+        approval.summary,
+        JSON.stringify(approval.arguments),
+        approval.editable,
+        approval.status,
+        expired,
+        approval.created,
+      ],
+    );
+  }
+}
+
 // Atelier Dinamo's waiting file, as the admin's RAR and activities forms read
 // it: a workshop address under "aceeași adresă" and two priced jobs to mark
 // covered or not: oil-service needs `mechanics` and front-brakes `brakes`, so
@@ -1349,6 +1420,7 @@ async function seed(db: Client, secret: string): Promise<string> {
   await startOlderJob(db);
   await quoteable(db);
   await team(db);
+  await assistantApprovals(db);
   // The checks a test run may switch off; production refused the seed above.
   await db.query(
     `INSERT INTO platform_rule (id, key, value, default_value)

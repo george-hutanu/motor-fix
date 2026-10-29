@@ -162,7 +162,7 @@ describe('confirm_action', () => {
       ARGS,
       expect.anything(),
       expect.objectContaining({
-        run: { confirmationId, tx: confirmations.tx },
+        run: { key: confirmationId, tx: confirmations.tx },
       }),
     );
     expect(statusOf(confirmationId, confirmations.rows)).toBe('done');

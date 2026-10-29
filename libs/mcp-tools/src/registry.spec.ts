@@ -1,10 +1,12 @@
 import { z } from 'zod';
 
 import {
+  bookFixture,
   caller,
   connect,
   context,
   fixtureTools,
+  memoryApprovals,
   memoryConfirmations,
 } from './fixtures.testing';
 import { callTool, defineTool, visibleTools } from './registry';
@@ -454,5 +456,183 @@ describe('the confirmation step over elicitation', () => {
       status: 'confirmation_required',
     });
     expect(handler).not.toHaveBeenCalled();
+  });
+});
+
+const QUOTE = '7a0c1b9e-4f4e-4b8e-9d55-0f1f3c2a9b10';
+const BOOK_ARGS = { quoteId: QUOTE, shareHistory: true };
+
+// The fixture booking tool behind a spied handler, its yes and its stores.
+function approvalSetup(language: 'ro' | 'en' = 'ro') {
+  let now = new Date('2026-10-29T10:00:00Z');
+  const confirmations = memoryConfirmations(() => now);
+  const approvals = memoryApprovals(() => now);
+  const handler = jest.spyOn(bookFixture, 'handler');
+  const tools = [bookFixture, confirmAction];
+  const ctx = context({ approvals, confirmations });
+  const who = caller({ language, roles: ['driver'] });
+  const ask = async () => {
+    const first = await callTool(tools, who, ctx, 'book_fixture', BOOK_ARGS);
+    return (first.structuredContent as { confirmationId: string })
+      .confirmationId;
+  };
+  const confirm = (confirmationId: string, confirmed = true) =>
+    callTool(tools, who, ctx, 'confirm_action', {
+      arguments: BOOK_ARGS,
+      confirmationId,
+      confirmed,
+    });
+  return {
+    approvals,
+    ask,
+    confirm,
+    confirmations,
+    handler,
+    later: (ms: number) => {
+      now = new Date(now.getTime() + ms);
+    },
+  };
+}
+
+describe('in-app approval at the yes', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  // @traces 1254-FR-001
+  // @traces 1254-FR-002
+  it('saves a pending approval in the confirmation’s transaction, runs nothing and answers approval_required in Romanian', async () => {
+    const { approvals, ask, confirm, confirmations, handler } = approvalSetup();
+    const confirmationId = await ask();
+
+    const result = await confirm(confirmationId);
+
+    const [approval] = [...approvals.rows.values()];
+    expect(handler).not.toHaveBeenCalled();
+    expect(approvals.rows.size).toBe(1);
+    expect(approval).toMatchObject({
+      accountId: 'account-1',
+      args: BOOK_ARGS,
+      editable: ['shareHistory'],
+      grantId: 'grant-1',
+      kind: 'book',
+      summary: 'Rezervă serviciul de probă.',
+      tool: 'book_fixture',
+      tx: confirmations.tx,
+    });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toEqual({
+      approvalId: approval?.id,
+      expiresAt: '2026-10-29T10:30:00.000Z',
+      message: 'Aprobă în aplicația MotorFix.',
+      status: 'approval_required',
+    });
+    expect(confirmations.rows.get(confirmationId)?.status).toBe('done');
+  });
+
+  // @traces 1254-FR-002
+  it('answers in English for an English account', async () => {
+    const { ask, confirm } = approvalSetup('en');
+
+    const result = await confirm(await ask());
+
+    expect(result.structuredContent).toMatchObject({
+      message: 'Approve it in the MotorFix app.',
+      status: 'approval_required',
+    });
+  });
+
+  // @traces 1254-FR-002
+  it('replays the stored answer on a repeated yes and saves no second approval', async () => {
+    const { approvals, ask, confirm, handler } = approvalSetup();
+    const confirmationId = await ask();
+
+    const first = await confirm(confirmationId);
+    const again = await confirm(confirmationId);
+
+    expect(again.structuredContent).toEqual(first.structuredContent);
+    expect(approvals.rows.size).toBe(1);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  // @traces 1254-FR-001
+  it('saves nothing on a no or a late yes, answering not_sent as before', async () => {
+    const refused = approvalSetup('en');
+    const late = approvalSetup('en');
+    const lateId = await late.ask();
+    late.later(6 * 60_000);
+
+    const no = await refused.confirm(await refused.ask(), false);
+    const tooLate = await late.confirm(lateId);
+
+    expect(no.structuredContent).toMatchObject({
+      reason: 'refused',
+      status: 'not_sent',
+    });
+    expect(tooLate.structuredContent).toMatchObject({
+      reason: 'expired',
+      status: 'not_sent',
+    });
+    expect(refused.approvals.rows.size + late.approvals.rows.size).toBe(0);
+  });
+
+  // @traces 1254-FR-001
+  it('saves the approval on a yes given over elicitation too', async () => {
+    const approvals = memoryApprovals();
+    const handler = jest.spyOn(bookFixture, 'handler');
+    const client = await connect(
+      [bookFixture, confirmAction],
+      caller({ language: 'en', roles: ['driver'] }),
+      context({ approvals }),
+      undefined,
+      async () => ({ action: 'accept', content: { confirm: true } }),
+    );
+
+    const answer = await client.callTool({
+      arguments: BOOK_ARGS,
+      name: 'book_fixture',
+    });
+
+    expect(answer.structuredContent).toMatchObject({
+      status: 'approval_required',
+    });
+    expect(approvals.rows.size).toBe(1);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  // @traces 1254-FR-001
+  it('runs a tool that declares no approval at once, keyed by the confirmation', async () => {
+    const { handler, tool } = previewed();
+    const confirmations = memoryConfirmations();
+    const approvals = memoryApprovals();
+    const ctx = context({ approvals, confirmations });
+    const who = caller({ roles: ['driver'] });
+    const first = await callTool(
+      [tool, confirmAction],
+      who,
+      ctx,
+      'move_booking',
+      { at: '10:00' },
+    );
+    const { confirmationId } = first.structuredContent as {
+      confirmationId: string;
+    };
+
+    const result = await callTool(
+      [tool, confirmAction],
+      who,
+      ctx,
+      'confirm_action',
+      { arguments: { at: '10:00' }, confirmationId, confirmed: true },
+    );
+
+    expect(result.structuredContent).toEqual({ moved: true });
+    expect(handler).toHaveBeenCalledWith(
+      expect.anything(),
+      { at: '10:00' },
+      expect.anything(),
+      expect.objectContaining({
+        run: { key: confirmationId, tx: confirmations.tx },
+      }),
+    );
+    expect(approvals.rows.size).toBe(0);
   });
 });

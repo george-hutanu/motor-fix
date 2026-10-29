@@ -1,4 +1,30 @@
 {
+  "approval": {
+    "again": "MotorFix nu poate face acum acțiunea. Încearcă din nou peste câteva minute.",
+    "approve": "Aprobă",
+    "error": "Nu s‑a putut trimite. Încearcă din nou.",
+    "loading": "Se încarcă…",
+    "missing": "Nu am găsit această cerere a asistentului.",
+    "option": {
+      "shareHistory": "Trimite service‑ului istoricul mașinii"
+    },
+    "options": "Ce poți schimba",
+    "page": "Aprobă acțiunea asistentului",
+    "reason": {
+      "other": "MotorFix a refuzat acțiunea.",
+      "tool_unavailable": "acțiunea nu mai este disponibilă.",
+      "validation": "datele acțiunii nu mai sunt valabile."
+    },
+    "refuse": "Refuză",
+    "state": {
+      "approved": "Aprobată",
+      "expired": "Expirată",
+      "failed": "Nu s‑a putut face: {reason}",
+      "refused": "Refuzată"
+    },
+    "title": "Asistentul tău ({client}) vrea să:",
+    "titleUnnamed": "Asistentul tău vrea să:"
+  },
   "connecting": "Se conectează asistentul…",
   "error": {
     "text": "Cererea de conectare a expirat sau nu mai este valabilă. Întoarce‑te în asistent și pornește din nou conectarea.",

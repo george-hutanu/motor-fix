@@ -63,6 +63,14 @@ export type { MeControllerUpdate$Params as MeControllerUpdate$Params } from './f
 export { meControllerUpdate as meControllerUpdate } from './fn/me/me-controller-update';
 export type { AcceptanceControllerAccept$Params as AcceptanceControllerAccept$Params } from './fn/me/acceptance-controller-accept';
 export { acceptanceControllerAccept as acceptanceControllerAccept } from './fn/me/acceptance-controller-accept';
+export type { AssistantApprovalsControllerList$Params as AssistantApprovalsControllerList$Params } from './fn/me/assistant-approvals-controller-list';
+export { assistantApprovalsControllerList as assistantApprovalsControllerList } from './fn/me/assistant-approvals-controller-list';
+export type { AssistantApprovalsControllerGet$Params as AssistantApprovalsControllerGet$Params } from './fn/me/assistant-approvals-controller-get';
+export { assistantApprovalsControllerGet as assistantApprovalsControllerGet } from './fn/me/assistant-approvals-controller-get';
+export type { AssistantApprovalsControllerApprove$Params as AssistantApprovalsControllerApprove$Params } from './fn/me/assistant-approvals-controller-approve';
+export { assistantApprovalsControllerApprove as assistantApprovalsControllerApprove } from './fn/me/assistant-approvals-controller-approve';
+export type { AssistantApprovalsControllerRefuse$Params as AssistantApprovalsControllerRefuse$Params } from './fn/me/assistant-approvals-controller-refuse';
+export { assistantApprovalsControllerRefuse as assistantApprovalsControllerRefuse } from './fn/me/assistant-approvals-controller-refuse';
 export type { EmailChangeControllerRequest$Params as EmailChangeControllerRequest$Params } from './fn/me/email-change-controller-request';
 export { emailChangeControllerRequest as emailChangeControllerRequest } from './fn/me/email-change-controller-request';
 export type { MeEmailConfirmationControllerAskAgain$Params as MeEmailConfirmationControllerAskAgain$Params } from './fn/me/me-email-confirmation-controller-ask-again';
