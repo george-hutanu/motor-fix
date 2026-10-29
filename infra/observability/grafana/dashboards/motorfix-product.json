@@ -6037,6 +6037,139 @@
         "defaults": {},
         "overrides": []
       }
+    },
+    {
+      "id": 208,
+      "type": "row",
+      "title": "Media",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 280
+      },
+      "panels": []
+    },
+    {
+      "id": 209,
+      "type": "timeseries",
+      "title": "Job media per hour, by kind and outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 281
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind, outcome) (increase(motorfix_media_items_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{kind}} {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 210,
+      "type": "timeseries",
+      "title": "Conversion time p95, by kind",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 281
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, kind) (rate(motorfix_media_conversion_seconds_bucket{deployment_environment=\"$env\"}[1h])))",
+          "legendFormat": "{{kind}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 211,
+      "type": "timeseries",
+      "title": "Media purged per night, by kind",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 285
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind) (increase(motorfix_media_purged_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{kind}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 212,
+      "type": "timeseries",
+      "title": "Media retention step failures",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 285
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (step) (increase(motorfix_media_retention_step_failures_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{step}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
     }
   ]
 }
