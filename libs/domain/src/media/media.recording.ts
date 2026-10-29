@@ -8,7 +8,7 @@ import type { Prisma } from '../generated/prisma/client';
 
 type Item = Prisma.MediaItemGetPayload<object>;
 
-export interface AnnounceDeps {
+interface AnnounceDeps {
   audit: AuditPort;
   events: EventPort;
 }

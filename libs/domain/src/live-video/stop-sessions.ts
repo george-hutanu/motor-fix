@@ -21,7 +21,7 @@ interface Row {
   stopped_at: Date;
 }
 
-export interface StoppedSession {
+interface StoppedSession {
   id: string;
   providerInputId: string;
   stoppedAt: Date;
