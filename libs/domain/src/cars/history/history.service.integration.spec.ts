@@ -73,6 +73,7 @@ async function sold() {
       repairs: { create: [{ repairId: ticked.id }] },
       saleDate: day('2026-06-15'),
       sellerId: andrei.id,
+      sentAt: at('2026-06-14T10:00:00Z'),
       status: 'accepted',
       tokenHash: `hash-${car.id}`,
     },

@@ -274,7 +274,7 @@ describe('what the buyer inherits when a ticked repair vanishes', () => {
     });
 
     expect(bad.status).toBe(400);
-    expect(bad.body.code).toBe('unknown_repair');
+    expect(bad.body.code).toBe('repair_not_tickable');
     expect(good.status).toBe(201);
   });
 });

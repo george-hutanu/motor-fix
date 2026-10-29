@@ -685,7 +685,12 @@ describe('the car after it changed hands', () => {
     // Built one at a time: supertest closes the shared server after each call.
     for (const call of [
       () => as(http().get(`/cars/${car.id}/sale`)),
-      () => as(http().patch(`/cars/${car.id}`).send({ model: 'Altul' })),
+      () =>
+        as(
+          http()
+            .patch(`/cars/${car.id}`)
+            .send({ model: 'Altul', version: new Date().toISOString() }),
+        ),
       () => as(http().delete(`/cars/${car.id}`)),
       () => as(http().post(`/cars/${car.id}/transfers/${transferId}/cancel`)),
       () =>
