@@ -25,7 +25,7 @@ async function setting() {
   const desk = bearer(t.receptionist, 'receptionist');
   const path = `/garages/${t.garage.id}/time-blocks`;
   const mihai = t.plainMechanic;
-  return { ...t, desk, mihai, owner, path };
+  return { ...t, desk, mihai, owner, ownerId: t.owner, path };
 }
 type Setting = Awaited<ReturnType<typeof setting>>;
 
@@ -219,12 +219,12 @@ describe('blocking time', () => {
     const first = heldOpen(client(), async (tx) => {
       const { id } = await tx.timeBlock.create({
         data: {
-          createdBy: s.owner,
+          createdBy: s.ownerId,
           endsAt: new Date(at(12)),
           garageId: s.garage.id,
           lift: 2,
           startsAt: new Date(at(10)),
-          updatedBy: s.owner,
+          updatedBy: s.ownerId,
         },
       });
       await tx.bookingSegment.create({
@@ -239,7 +239,12 @@ describe('blocking time', () => {
     });
     await first.ready;
 
-    const second = create(s, { endsAt: at(11, 30), lift: 2, startsAt: at(11) });
+    // supertest sends on `then`: started now, it meets the held segment.
+    const second = create(s, {
+      endsAt: at(11, 30),
+      lift: 2,
+      startsAt: at(11),
+    }).then((res) => res);
     await lockWaited(prisma);
     first.release();
     await first.done;
@@ -449,7 +454,7 @@ describe('changing and removing a block', () => {
     const updates = (await entries(s.id)).filter((e) => e.action === 'update');
     expect(updates).toEqual([
       expect.objectContaining({
-        actorId: s.owner,
+        actorId: s.ownerId,
         actorRole: 'owner',
         field: 'endsAt',
         newValue: at(12),
@@ -462,7 +467,7 @@ describe('changing and removing a block', () => {
     const stored = await prisma.timeBlock.findUniqueOrThrow({
       where: { id: s.id },
     });
-    expect(stored.updatedBy).toBe(s.owner);
+    expect(stored.updatedBy).toBe(s.ownerId);
   });
 
   it('refuses a change onto a booking, leaving the block as it was', async () => {
@@ -569,18 +574,18 @@ describe('changing and removing a block', () => {
     const s = await setting();
     const past = await prisma.timeBlock.create({
       data: {
-        createdBy: s.owner,
+        createdBy: s.ownerId,
         endsAt: new Date(Date.now() - 86_400_000),
         garageId: s.garage.id,
         lift: 1,
         startsAt: new Date(Date.now() - 2 * 86_400_000),
-        updatedBy: s.owner,
+        updatedBy: s.ownerId,
       },
     });
     const path = `${s.path}/${past.id}`;
 
     const change = await send('patch', path, s.owner, { note: 'x' });
-    await english(s.owner);
+    await english(s.ownerId);
     const removal = await send('delete', path, s.owner);
 
     expect(change.status).toBe(409);

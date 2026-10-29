@@ -157,20 +157,26 @@ describe('a segment held by a booking or a block', () => {
     const [a, b] = await Promise.all([block(), block()]);
     const first = write(a.id, at(10));
     await first.ready;
-    const second = prisma.bookingSegment.create({
-      data: {
-        endsAt: at(12),
-        garageId,
-        lift: 2,
-        startsAt: at(11),
-        timeBlockId: b.id,
-      },
-    });
+    // A Prisma call runs on `then`: started now, it meets the held segment.
+    const second = prisma.bookingSegment
+      .create({
+        data: {
+          endsAt: at(12),
+          garageId,
+          lift: 2,
+          startsAt: at(11),
+          timeBlockId: b.id,
+        },
+      })
+      .then(
+        () => 'saved',
+        (error: Error) => error.message,
+      );
     await lockWaited(prisma);
     first.release();
     await first.done;
 
-    await expect(second).rejects.toThrow(/booking_segment_lift_excl/);
+    expect(await second).toMatch(/booking_segment_lift_excl/);
     expect(await prisma.bookingSegment.count()).toBe(1);
   });
 

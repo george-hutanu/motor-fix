@@ -531,8 +531,17 @@ export class ScheduleService {
         endsAt: { gt: first.startsAt },
         OR: holders,
         startsAt: { lt: last.endsAt },
+        // Not `NOT: { timeBlockId }`: SQL drops the rows whose timeBlockId
+        // is null from that, every booking's segment among them.
         ...(asked.exceptTimeBlockId && {
-          NOT: { timeBlockId: asked.exceptTimeBlockId },
+          AND: [
+            {
+              OR: [
+                { timeBlockId: null },
+                { timeBlockId: { not: asked.exceptTimeBlockId } },
+              ],
+            },
+          ],
         }),
       },
     });

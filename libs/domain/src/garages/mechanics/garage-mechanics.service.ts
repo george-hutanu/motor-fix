@@ -27,7 +27,7 @@ import type {
   PrismaClient,
 } from '../../generated/prisma/client';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { removeMechanicBlocks } from '../../workshop/time-blocks/time-blocks.service';
+import { removeMechanicBlocks } from '../../workshop/time-blocks/time-blocks';
 import { featureOn } from '../features/feature-on';
 import { assertGarageOwner } from '../garage-brands/garage-brands.service';
 import { isRecord, plainText } from '../plain-text';

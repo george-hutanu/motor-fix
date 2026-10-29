@@ -1,4 +1,4 @@
-import { segmentsOf } from './time-blocks.service';
+import { segmentsOf } from './time-blocks';
 import { atLocal } from '../../bucharest';
 
 const at = (day: string, hour: number, minute = 0) =>

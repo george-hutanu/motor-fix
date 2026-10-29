@@ -15,7 +15,7 @@ import {
 import { PRISMA } from '../../auth/prisma';
 import { addDays, atLocal, daysBetween, localDay } from '../../bucharest';
 import type { PrismaClient } from '../../generated/prisma/client';
-import { blocksOf } from '../../workshop/time-blocks/time-blocks.service';
+import { blocksOf } from '../../workshop/time-blocks/time-blocks';
 import { bookedInclude, bookedOf, shortName } from '../reads';
 
 interface ScheduleQuery {

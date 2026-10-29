@@ -5,6 +5,7 @@ import {
   type PlacementInput,
   placementOf,
   placeSegments,
+  ScheduleService,
   type TakenSegment,
 } from './schedule.service';
 import { atLocal } from '../../bucharest';
@@ -542,5 +543,40 @@ describe('a blocked interval among the overlaps', () => {
       errors: [{ code: 'busy', field: 'lift' }],
       message: 'Elevatorul 2 e ocupat 10:00–11:00 (Dacia Logan)',
     });
+  });
+});
+
+// @traces 427-FR-005
+// @traces 427-FR-007
+describe("the rows a block's change is judged against", () => {
+  it('keeps the bookings, whose segments hold no block, beside the other blocks', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const tx = { bookingSegment: { findMany } } as never;
+
+    await new ScheduleService().assertFree(tx, {
+      exceptTimeBlockId: 'block-1',
+      garageId: 'garage-1',
+      language: 'ro',
+      lift: 2,
+      mechanicId: 'mihai',
+      mechanicName: 'Mihai Pop',
+      segments: [
+        {
+          endsAt: at(TUE, 12),
+          lift: 2,
+          mechanicId: 'mihai',
+          startsAt: at(TUE, 11),
+        },
+      ],
+      startsAt: at(TUE, 11),
+    });
+
+    // `NOT: { timeBlockId }` alone drops every row whose timeBlockId is null:
+    // every booking's segment.
+    const { where } = findMany.mock.calls[0][0];
+    expect(where.NOT).toBeUndefined();
+    expect(where.AND).toEqual([
+      { OR: [{ timeBlockId: null }, { timeBlockId: { not: 'block-1' } }] },
+    ]);
   });
 });

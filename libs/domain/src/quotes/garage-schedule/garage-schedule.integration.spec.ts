@@ -604,7 +604,11 @@ describe('the blocked time on the schedule read', () => {
       data: { canMoveBookings: true },
       where: { id: t.plainMechanic.id },
     });
-    expect(blockIds(await read(t, auth))).toEqual([hers.id, his.id, lift.id]);
+    // Two blocks starting together come in id order.
+    expect(blockIds(await read(t, auth))).toEqual([
+      ...[hers.id, his.id].sort(),
+      lift.id,
+    ]);
   });
 
   it('filters blocks by lift and by mechanic, a lift-only block never matching a mechanic', async () => {

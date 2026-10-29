@@ -1,4 +1,4 @@
-import { removeMechanicBlocks, segmentsOf } from './time-blocks.service';
+import { removeMechanicBlocks, segmentsOf } from './time-blocks';
 import { atLocal } from '../../bucharest';
 
 const at = (day: string, hour: number, minute = 0) =>

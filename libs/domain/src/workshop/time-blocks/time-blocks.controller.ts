@@ -33,12 +33,15 @@ import {
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 
-import { TimeBlocksService } from './time-blocks.service';
+import { blockNotFound, TimeBlocksService } from './time-blocks.service';
 import { CurrentActor, Requires } from '../../auth/actor.guard';
 import type { Actor } from '../../auth/policy';
 
 const REFUSED_FIELDS =
   'nothing_to_block: neither a mechanic nor a lift, or both switches off; validation_failed naming mechanicId, lift, startsAt, endsAt or note';
+// A blockId that is not a uuid names no block: 404, as an unknown one.
+const BLOCK_ID = new ParseUUIDPipe({ exceptionFactory: blockNotFound });
+
 const CLASH =
   'mechanic_busy or lift_busy (reason time_block when a block holds it); slot_taken';
 
@@ -98,7 +101,7 @@ export class TimeBlocksController {
   update(
     @CurrentActor() actor: Actor,
     @Param('garageId', new ParseUUIDPipe()) garageId: string,
-    @Param('blockId', new ParseUUIDPipe()) blockId: string,
+    @Param('blockId', BLOCK_ID) blockId: string,
     @Body() dto: UpdateTimeBlockDto,
   ): Promise<TimeBlockDto> {
     return this.blocks.update(
@@ -122,7 +125,7 @@ export class TimeBlocksController {
   remove(
     @CurrentActor() actor: Actor,
     @Param('garageId', new ParseUUIDPipe()) garageId: string,
-    @Param('blockId', new ParseUUIDPipe()) blockId: string,
+    @Param('blockId', BLOCK_ID) blockId: string,
   ): Promise<void> {
     return this.blocks.remove(
       actor,

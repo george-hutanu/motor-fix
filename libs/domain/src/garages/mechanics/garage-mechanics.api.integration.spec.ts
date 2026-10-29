@@ -1694,6 +1694,26 @@ describe("a removed card's blocked time", () => {
     );
   });
 
+  it("removes a card with no block, keeping another card's block and writing no block entry", async () => {
+    const { dinamo, mihai, mihaiCard, vladCard } = await world({
+      ownerRow: true,
+    });
+    const kept = await blocked(dinamo.id, mihai, mihaiCard.id, at(24), at(26));
+
+    const res = await remove(dinamo.id, vladCard.id, bearer(mihai, 'garage'));
+
+    expect(res.status).toBe(204);
+    expect(
+      (await prisma.timeBlock.findMany({ where: { garageId: dinamo.id } })).map(
+        (block) => block.id,
+      ),
+    ).toEqual([kept.id]);
+    expect(
+      await prisma.activityLog.count({ where: { subjectType: 'time_block' } }),
+    ).toBe(0);
+    expect(await outbox('time_block.deleted')).toEqual([]);
+  });
+
   it('leaves every block in place when the removal is refused', async () => {
     const { dinamo, mihai, mihaiCard } = await world({ ownerRow: true });
     await blocked(dinamo.id, mihai, mihaiCard.id, at(24), at(26));

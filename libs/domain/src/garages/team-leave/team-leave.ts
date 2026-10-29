@@ -1,7 +1,7 @@
 import type { AuditPort } from '../../audit/audit.port';
 import type { EventPort } from '../../events/event.port';
 import type { Prisma } from '../../generated/prisma/client';
-import { removeMechanicBlocks } from '../../workshop/time-blocks/time-blocks.service';
+import { removeMechanicBlocks } from '../../workshop/time-blocks/time-blocks';
 
 // A deleted account leaves every team it works on. Its mechanic card stays,
 // detached, off the profile and marked removed (out of the team list), so its
