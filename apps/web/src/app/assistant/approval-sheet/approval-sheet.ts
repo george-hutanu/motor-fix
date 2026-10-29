@@ -137,9 +137,7 @@ export class ApprovalSheet {
     const list = await this.me
       .assistantApprovalsControllerList()
       .catch(() => null);
-    const next = list?.items.find(
-      (a) => a.status === 'pending' && a.id !== this.id,
-    );
+    const next = list?.items.find((a) => a.id !== this.id);
     this.task.close(next?.id ?? null);
   }
 

@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 253-live-connection
   - 254-live-audience
@@ -35,6 +35,7 @@ features:
   - 1263-admin-dashboard-customise
   - 1250-live-video-provider
   - 177-reported-reviews
+  - 1254-assistant-approvals
 ---
 
 # Capability: Live updates
@@ -496,6 +497,10 @@ _From 1263-admin-dashboard-customise._
 ### 177-FR-010 — The queue, the panel, the counter and the tile MUST re-read on `review.reported`, `review.decided`, `review.deleted` and `review.report_closed` arriving on the admin's live connection, so a new item is on screen within 5 seconds and a decided or deleted one leaves within 5 seconds, and MUST re-read when the connection resyncs after a loss; these review kinds, and no other review kind, MUST reach the `admin` channel (today the review audience reaches the garage, the mechanic and the author only), carrying the same event payload those audiences already receive and nothing more (the reporter, the reason and the facts stay in the admin-only read of FR-001); a re-read keeps the items already shown until the new ones arrive (no skeleton flash); the first read shows skeletons; a failed read shows "Nu am putut citi recenziile raportate." / "Could not read the reported reviews." with a Reîncearcă / Retry button.
 
 _From 177-reported-reviews._
+
+### 1254-FR-010 — The signed-in frame (once, in the frame every `/app` area shares, else once per area frame) MUST show, for an account with pending approvals,, above the view, the strip "n acțiuni așteaptă aprobarea ta" / "n actions await your approval" (Romanian plural rules: "1 acțiune", "2 acțiuni"; absent at 0) linking to the oldest pending approval's sheet; after a decision the sheet shows the next pending one or closes. The strip and an open sheet MUST re-read on `assistant_approval.requested` and `assistant_approval.decided` received on the account's live stream, so every open tab updates without a reload. The strip is one component with one mount line, so ST-368 moves it into the Asistent AI view. (AC 6; brief Live updates; build plan ST-376 ↔ ST-368)
+
+_From 1254-assistant-approvals._
 
 ## Retired
 

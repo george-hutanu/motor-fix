@@ -28,7 +28,5 @@ export class ApprovalStrip {
   protected readonly pending = computed(
     () => this.approvals.value()?.pending ?? 0,
   );
-  protected readonly oldest = computed(() =>
-    this.approvals.value()?.items.find((a) => a.status === 'pending'),
-  );
+  protected readonly oldest = computed(() => this.approvals.value()?.items[0]);
 }

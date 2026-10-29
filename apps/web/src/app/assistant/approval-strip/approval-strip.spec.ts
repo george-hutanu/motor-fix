@@ -16,10 +16,7 @@ import { Live } from '../../dashboard/live';
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const approval = (
-  id: string,
-  status: AssistantActionApprovalDto['status'] = 'pending',
-): AssistantActionApprovalDto => ({
+const approval = (id: string): AssistantActionApprovalDto => ({
   assistantName: 'Claude',
   createdAt: '2026-10-29T10:00:00.000Z',
   decidedAt: null,
@@ -28,13 +25,13 @@ const approval = (
   kind: 'book',
   options: [],
   outcome: null,
-  status,
+  status: 'pending',
   summary: 'Programează schimbul de ulei joi la 10:00.',
   tool: 'book_service',
 });
 
 const waiting = (...ids: string[]): AssistantActionApprovalListDto => ({
-  items: [...ids.map((id) => approval(id)), approval('old', 'refused')],
+  items: ids.map((id) => approval(id)),
   pending: ids.length,
 });
 
@@ -111,7 +108,7 @@ describe('ApprovalStrip', () => {
 
   it('shows nothing when no approval is pending', async () => {
     const { element } = await render({
-      items: [approval('old', 'approved')],
+      items: [],
       pending: 0,
     });
 
