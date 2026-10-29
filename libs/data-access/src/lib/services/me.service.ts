@@ -11,6 +11,16 @@ import { StrictHttpResponse } from '../strict-http-response';
 
 import { acceptanceControllerAccept } from '../fn/me/acceptance-controller-accept';
 import { AcceptanceControllerAccept$Params } from '../fn/me/acceptance-controller-accept';
+import { AssistantActionApprovalDto } from '../models/assistant-action-approval-dto';
+import { AssistantActionApprovalListDto } from '../models/assistant-action-approval-list-dto';
+import { assistantApprovalsControllerApprove } from '../fn/me/assistant-approvals-controller-approve';
+import { AssistantApprovalsControllerApprove$Params } from '../fn/me/assistant-approvals-controller-approve';
+import { assistantApprovalsControllerGet } from '../fn/me/assistant-approvals-controller-get';
+import { AssistantApprovalsControllerGet$Params } from '../fn/me/assistant-approvals-controller-get';
+import { assistantApprovalsControllerList } from '../fn/me/assistant-approvals-controller-list';
+import { AssistantApprovalsControllerList$Params } from '../fn/me/assistant-approvals-controller-list';
+import { assistantApprovalsControllerRefuse } from '../fn/me/assistant-approvals-controller-refuse';
+import { AssistantApprovalsControllerRefuse$Params } from '../fn/me/assistant-approvals-controller-refuse';
 import { dataExportControllerDownload } from '../fn/me/data-export-controller-download';
 import { DataExportControllerDownload$Params } from '../fn/me/data-export-controller-download';
 import { dataExportControllerLatest } from '../fn/me/data-export-controller-latest';
@@ -112,6 +122,138 @@ export class MeService extends BaseService {
   acceptanceControllerAccept(params: AcceptanceControllerAccept$Params, context?: HttpContext): Promise<void> {
     const resp = this.acceptanceControllerAccept$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `assistantApprovalsControllerList()` */
+  static readonly AssistantApprovalsControllerListPath = '/api/v1/me/assistant/approvals';
+
+  /**
+   * Pending approvals oldest first, then those decided in a day.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `assistantApprovalsControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  assistantApprovalsControllerList$Response(params?: AssistantApprovalsControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<AssistantActionApprovalListDto>> {
+    const obs = assistantApprovalsControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Pending approvals oldest first, then those decided in a day.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `assistantApprovalsControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  assistantApprovalsControllerList(params?: AssistantApprovalsControllerList$Params, context?: HttpContext): Promise<AssistantActionApprovalListDto> {
+    const resp = this.assistantApprovalsControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AssistantActionApprovalListDto>): AssistantActionApprovalListDto => r.body);
+  }
+
+  /** Path part for operation `assistantApprovalsControllerGet()` */
+  static readonly AssistantApprovalsControllerGetPath = '/api/v1/me/assistant/approvals/{id}';
+
+  /**
+   * One of the caller's approvals, in any status.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `assistantApprovalsControllerGet()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  assistantApprovalsControllerGet$Response(params: AssistantApprovalsControllerGet$Params, context?: HttpContext): Promise<StrictHttpResponse<AssistantActionApprovalDto>> {
+    const obs = assistantApprovalsControllerGet(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * One of the caller's approvals, in any status.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `assistantApprovalsControllerGet$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  assistantApprovalsControllerGet(params: AssistantApprovalsControllerGet$Params, context?: HttpContext): Promise<AssistantActionApprovalDto> {
+    const resp = this.assistantApprovalsControllerGet$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AssistantActionApprovalDto>): AssistantActionApprovalDto => r.body);
+  }
+
+  /** Path part for operation `assistantApprovalsControllerApprove()` */
+  static readonly AssistantApprovalsControllerApprovePath = '/api/v1/me/assistant/approvals/{id}/approve';
+
+  /**
+   * Run the assistant's action once; failed when a check refuses.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `assistantApprovalsControllerApprove()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  assistantApprovalsControllerApprove$Response(params: AssistantApprovalsControllerApprove$Params, context?: HttpContext): Promise<StrictHttpResponse<AssistantActionApprovalDto>> {
+    const obs = assistantApprovalsControllerApprove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Run the assistant's action once; failed when a check refuses.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `assistantApprovalsControllerApprove$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  assistantApprovalsControllerApprove(params: AssistantApprovalsControllerApprove$Params, context?: HttpContext): Promise<AssistantActionApprovalDto> {
+    const resp = this.assistantApprovalsControllerApprove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AssistantActionApprovalDto>): AssistantActionApprovalDto => r.body);
+  }
+
+  /** Path part for operation `assistantApprovalsControllerRefuse()` */
+  static readonly AssistantApprovalsControllerRefusePath = '/api/v1/me/assistant/approvals/{id}/refuse';
+
+  /**
+   * Refuse the assistant's action; nothing runs.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `assistantApprovalsControllerRefuse()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  assistantApprovalsControllerRefuse$Response(params: AssistantApprovalsControllerRefuse$Params, context?: HttpContext): Promise<StrictHttpResponse<AssistantActionApprovalDto>> {
+    const obs = assistantApprovalsControllerRefuse(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Refuse the assistant's action; nothing runs.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `assistantApprovalsControllerRefuse$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  assistantApprovalsControllerRefuse(params: AssistantApprovalsControllerRefuse$Params, context?: HttpContext): Promise<AssistantActionApprovalDto> {
+    const resp = this.assistantApprovalsControllerRefuse$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AssistantActionApprovalDto>): AssistantActionApprovalDto => r.body);
   }
 
   /** Path part for operation `emailChangeControllerRequest()` */

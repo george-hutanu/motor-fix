@@ -23,7 +23,12 @@ export {
   type LoadedAccount,
 } from './auth/account-loader';
 export { AccountsService } from './auth/accounts.service';
-export { CurrentActor, Public, Requires } from './auth/actor.guard';
+export {
+  CurrentActor,
+  OpenInMaintenance,
+  Public,
+  Requires,
+} from './auth/actor.guard';
 export { assistantBroker } from './auth/assistant/assistant.service';
 export {
   AssistantApprovals,
@@ -53,6 +58,7 @@ export {
   MAINTENANCE,
   type Maintenance,
   type MaintenanceReader,
+  maintenanceRefusal,
   storedMaintenance,
 } from './auth/maintenance';
 export { oauthSettings } from './auth/oauth/providers';

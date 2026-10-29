@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 221,
+    "count": 225,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -2813,6 +2813,19 @@
       ],
       "reason": "a request signs a 15-minute upload address and writes the processing item; complete checks the stored bytes and queues the conversion; a refusal is counted in motorfix_media_items_total{outcome=\"refused\"}, a store failure answers 503 storage_unavailable, which api-error-rate sees",
       "story": "ST-333"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-assistant-approvals",
+      "source": "libs/mcp-tools/src/approvals/approvals.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/assistant/approvals, /api/v1/me/assistant/approvals/:id, /api/v1/me/assistant/approvals/:id/approve and /api/v1/me/assistant/approvals/:id/refuse",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the person's list, one approval, and the approve and refuse of an assistant's action; approve runs the stored tool once under the row lock with every access check of a tool call made again, writing the action, the decision's audit entry and the assistant_approval.decided event in one transaction; a 404, 409 approval_not_pending or 422 invalid_option is the rule working; a 503 maintenance or service_unavailable leaves the approval pending and is what api-error-rate sees; no outside call",
+      "story": "ST-1254"
     },
     {
       "kind": "product-counter",

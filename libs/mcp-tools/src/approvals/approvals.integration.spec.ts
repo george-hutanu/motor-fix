@@ -1,10 +1,19 @@
 import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts';
-import { AccountLoader, createPrisma, outbox } from '@motor-fix/domain';
+import {
+  AccountLoader,
+  type Actor,
+  AssistantApprovals,
+  AuditService,
+  createPrisma,
+  outbox,
+} from '@motor-fix/domain';
 import { databaseTurn, TURN_WAIT_MS } from '@motor-fix/domain/testing';
 
+import { approveApproval } from './approvals';
 import { toolContext } from '../context';
+import { ToolRefusal } from '../errors';
 import { bookFixture } from '../fixtures.testing';
-import { type Caller, callTool } from '../registry';
+import { type Caller, callTool, type Step } from '../registry';
 import { confirmAction } from '../tools/confirm-action/confirm-action';
 
 const databaseUrl =
@@ -153,5 +162,199 @@ describe('a tool needing in-app approval through confirm_action', () => {
         where: { accountId: who.account.id },
       }),
     ).toBe(1);
+  });
+});
+
+const audit = new AuditService();
+const approvals = new AssistantApprovals(prisma, audit, outbox);
+const deps = { approvals, ctx, prisma, tools };
+
+// A pending approval of the driver's, opened through the yes.
+async function pending(who: Caller): Promise<string> {
+  const { confirm } = await yes(who);
+  const { approvalId } = (await confirm()).structuredContent as {
+    approvalId: string;
+  };
+  return approvalId;
+}
+
+const by = (who: Caller) => ({
+  id: who.account.id,
+  requestId: 'api-request-1',
+  role: 'driver' as const,
+});
+
+const approve = (who: Caller, id: string, options?: Record<string, unknown>) =>
+  approveApproval(deps, {
+    accountId: who.account.id,
+    by: by(who),
+    id,
+    options,
+  });
+
+// The use case's own write, as a booking tool's would be.
+const writes = async (actor: Actor, _input: unknown, step: Step) => {
+  const run = step.run as NonNullable<Step['run']>;
+  await audit.record(run.tx, {
+    action: 'create',
+    actorId: actor.accountId,
+    actorRole: actor.role,
+    assistantGrantId: actor.assistantGrantId,
+    requestId: actor.requestId,
+    subjectId: run.key,
+    subjectType: 'fixture_booking',
+  });
+};
+
+const actionRows = (who: Caller) =>
+  prisma.activityLog.findMany({
+    where: { actorId: who.account.id, subjectType: 'fixture_booking' },
+  });
+
+const status = async (id: string) =>
+  (await prisma.assistantApproval.findUniqueOrThrow({ where: { id } })).status;
+
+// @traces 1254-assistant-approvals-FR-005
+describe('approving in the app', () => {
+  it('runs the action once with the approval as key, via the assistant', async () => {
+    const who = await driver();
+    const id = await pending(who);
+    const handler = jest
+      .spyOn(bookFixture, 'handler')
+      .mockImplementation(async (actor, input, _ctx, step) => {
+        await writes(actor, input, step);
+        return { subjectId: id, subjectType: 'fixture_booking' };
+      });
+
+    const result = await approve(who, id, { shareHistory: false });
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler.mock.calls[0]?.[1]).toEqual({
+      ...ARGS,
+      shareHistory: false,
+    });
+    expect(handler.mock.calls[0]?.[3].run?.key).toBe(id);
+    expect(result).toMatchObject({
+      outcome: { subjectId: id, subjectType: 'fixture_booking' },
+      status: 'approved',
+    });
+    expect(await actionRows(who)).toEqual([
+      expect.objectContaining({
+        assistantGrantId: who.grantId,
+        requestId: 'api-request-1',
+      }),
+    ]);
+    expect(
+      await prisma.activityLog.findMany({
+        select: { actorId: true, actorRole: true, newValue: true },
+        where: { subjectId: id, subjectType: 'assistant_approval' },
+      }),
+    ).toEqual([
+      { actorId: who.account.id, actorRole: 'driver', newValue: 'approved' },
+    ]);
+    expect(
+      await prisma.outboxEvent.count({
+        where: { kind: 'assistant_approval.decided', subjectId: id },
+      }),
+    ).toBe(1);
+  });
+
+  it('runs once on a double tap; the second answers not pending', async () => {
+    const who = await driver();
+    const id = await pending(who);
+    const handler = jest.spyOn(bookFixture, 'handler');
+
+    const answers = await Promise.all([approve(who, id), approve(who, id)]);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(answers).toContainEqual({ notPending: 'approved' });
+  });
+
+  it('fails with the code and writes nothing of the action when the use case refuses', async () => {
+    const who = await driver();
+    const id = await pending(who);
+    jest
+      .spyOn(bookFixture, 'handler')
+      .mockImplementation(async (actor, input, _ctx, step) => {
+        await writes(actor, input, step);
+        throw new ToolRefusal('quote_expired');
+      });
+
+    const result = await approve(who, id);
+
+    expect(result).toMatchObject({
+      outcome: { code: 'quote_expired' },
+      status: 'failed',
+    });
+    expect(await actionRows(who)).toEqual([]);
+  });
+
+  it('refuses without running anything', async () => {
+    const who = await driver();
+    const id = await pending(who);
+    const handler = jest.spyOn(bookFixture, 'handler');
+
+    const result = await approvals.refuse(who.account.id, id, {
+      id: who.account.id,
+      role: 'driver',
+    });
+
+    expect(result).toMatchObject({ status: 'refused' });
+    expect(handler).not.toHaveBeenCalled();
+    expect(await actionRows(who)).toEqual([]);
+    expect(await approve(who, id)).toEqual({ notPending: 'refused' });
+  });
+});
+
+// @traces 1254-assistant-approvals-FR-006
+describe('access checked again at the approval', () => {
+  it('expires it when the grant was revoked', async () => {
+    const who = await driver();
+    const id = await pending(who);
+    await prisma.assistantGrant.update({
+      data: { revokedAt: new Date() },
+      where: { id: who.grantId },
+    });
+
+    expect(await approve(who, id)).toEqual({ notPending: 'expired' });
+    expect(await status(id)).toBe('expired');
+  });
+
+  it("expires it when the account's switch was turned off", async () => {
+    const who = await driver();
+    const id = await pending(who);
+    await prisma.account.update({
+      data: { assistantCanAct: false },
+      where: { id: who.account.id },
+    });
+
+    expect(await approve(who, id)).toEqual({ notPending: 'expired' });
+    expect(await status(id)).toBe('expired');
+  });
+
+  it('leaves it pending in maintenance', async () => {
+    const who = await driver();
+    const id = await pending(who);
+    const paused = {
+      ...deps,
+      ctx: { ...ctx, maintenance: { on: async () => true } },
+    };
+
+    expect(
+      await approveApproval(paused, {
+        accountId: who.account.id,
+        by: by(who),
+        id,
+      }),
+    ).toBe('maintenance');
+    expect(await status(id)).toBe('pending');
+  });
+
+  it('answers not found to another account', async () => {
+    const who = await driver();
+    const other = await driver();
+    const id = await pending(who);
+
+    expect(await approve(other, id)).toBe('not_found');
   });
 });

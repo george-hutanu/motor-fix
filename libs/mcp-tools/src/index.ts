@@ -1,3 +1,4 @@
+export { AssistantApprovalsModule } from './approvals/approvals.module';
 export { catalogue } from './catalogue';
 export { toolContext } from './context';
 export { databaseDown } from './errors';
