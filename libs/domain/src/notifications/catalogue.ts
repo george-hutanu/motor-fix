@@ -8,6 +8,9 @@ export interface NotificationType {
   channels: readonly OutsideChannel[];
   alwaysSent: boolean;
   transactional: boolean;
+  // Goes by e-mail instead when the account has no push device, whatever
+  // its role; never both.
+  emailWithoutPush: boolean;
   groupable: boolean;
   urgent: boolean;
   group: DriverGroup | null;
@@ -38,7 +41,7 @@ type Entry = [
   NotificationType['trigger'],
   readonly OutsideChannel[],
   DriverGroup | null,
-  ('always' | 'transactional' | 'single')?,
+  ('always' | 'transactional' | 'transactional-or-email' | 'single')?,
 ];
 
 const ENTRIES: Record<string, Entry> = {
@@ -53,7 +56,12 @@ const ENTRIES: Record<string, Entry> = {
   ADMIN_RULE_APPROVAL_NEEDED: ['event', ['email', 'push'], null],
   ADMIN_STATUS_ALERT: ['event', ['email', 'push'], null, 'always'],
   ADMIN_VERIFICATION_QUEUED: ['event', ['email', 'push'], null],
-  ASSISTANT_APPROVAL_NEEDED: ['event', ['push'], null, 'transactional'],
+  ASSISTANT_APPROVAL_NEEDED: [
+    'event',
+    ['push'],
+    null,
+    'transactional-or-email',
+  ],
   BOOKING_CANCELLED: ['event', EPW, 'bookings', 'always'],
   BOOKING_CONFIRM_REMINDER: ['timer', EPW, null, 'always'],
   BOOKING_CONFIRMED: ['event', EPW, 'bookings', 'always'],
@@ -138,10 +146,12 @@ export const NOTIFICATION_TYPES: Readonly<Record<string, NotificationType>> =
       {
         alwaysSent: kind === 'always',
         channels,
+        emailWithoutPush: kind === 'transactional-or-email',
         group,
         groupable: kind === undefined && channels.length > 0,
         templateKey: `notifications.${name.toLowerCase()}`,
-        transactional: kind === 'transactional',
+        transactional:
+          kind === 'transactional' || kind === 'transactional-or-email',
         trigger,
         urgent: !NOT_URGENT.has(name),
       },

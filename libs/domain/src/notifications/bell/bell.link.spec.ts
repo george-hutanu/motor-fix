@@ -48,6 +48,7 @@ const GARAGE_KINDS = [
   'DOCUMENT_REFUSED',
 ];
 const PROFILE_KINDS = ['GARAGE_REPORT_DECIDED'];
+const APPROVAL_KINDS = ['ASSISTANT_APPROVAL_NEEDED'];
 const PRICES_KINDS = ['CATALOGUE_JOB_DECIDED'];
 const GARAGE_REVIEW_KINDS = ['REVIEW_POSTED'];
 const REVIEW_KINDS = [
@@ -111,6 +112,7 @@ describe('the view a bell row opens', () => {
         ...PROFILE_KINDS,
         ...PRICES_KINDS,
         ...GARAGE_REVIEW_KINDS,
+        ...APPROVAL_KINDS,
       ].sort(),
     );
     for (const kind of Object.keys(VIEW_OF_KIND))
@@ -197,6 +199,24 @@ describe('a row about a garage a driver reported', () => {
   ])('opens nothing for %s', (_, params) => {
     expect(
       bellLink({ kind: 'GARAGE_REPORT_DECIDED', params, subjectId: CAR }),
+    ).toBeNull();
+  });
+});
+
+// @traces 1254-assistant-approvals-FR-003
+describe("a row about an assistant's action waiting for approval", () => {
+  it.each(APPROVAL_KINDS)('opens %s on that approval', (kind) => {
+    expect(
+      bellLink({ kind, params: { link: requestLink }, subjectId: CAR }),
+    ).toBe(`/app/assistant/approvals/${CAR}`);
+  });
+
+  it.each([
+    ['no subject', null],
+    ['a subject that is not an id', '../garage'],
+  ])('opens nothing for %s', (_, subjectId) => {
+    expect(
+      bellLink({ kind: 'ASSISTANT_APPROVAL_NEEDED', params: {}, subjectId }),
     ).toBeNull();
   });
 });

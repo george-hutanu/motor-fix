@@ -30,6 +30,8 @@ export {
   Requires,
 } from './auth/actor.guard';
 export { assistantBroker } from './auth/assistant/assistant.service';
+export { APPROVAL_TIMERS_CONSUMER } from './auth/assistant-approvals/approval-timers/approval-timers';
+export { ApprovalTimersModule } from './auth/assistant-approvals/approval-timers/approval-timers.module';
 export {
   AssistantApprovals,
   type Decider as ApprovalDecider,

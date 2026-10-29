@@ -317,6 +317,15 @@ export class AssistantApprovals {
     return (await this.get(accountId, id)) ?? 'not_found';
   }
 
+  // Whose a still pending approval is and when it expires; null once
+  // decided or gone.
+  waiting(id: string): Promise<{ accountId: string; expiresAt: Date } | null> {
+    return this.prisma.assistantApproval.findFirst({
+      select: { accountId: true, expiresAt: true },
+      where: { id, status: 'pending' },
+    });
+  }
+
   // The pending approvals past their expiry, for the sweep.
   async overdue(now: Date): Promise<string[]> {
     const rows = await this.prisma.assistantApproval.findMany({

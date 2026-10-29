@@ -521,6 +521,19 @@
     },
     {
       "kind": "queue",
+      "name": "assistant-approval-timers",
+      "source": "libs/domain/src/auth/assistant-approvals/approval-timers/approval-timers.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed",
+        "worker-queue-growing"
+      ],
+      "reason": "carries the relay's assistant_approval.requested events (the ASSISTANT_APPROVAL_NEEDED notification, counted by motorfix_notifications_sent_total) and each approval's 30-minute expiry timer and sweep, with one ApprovalTimers log line per fire naming the approval id; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-1254"
+    },
+    {
+      "kind": "queue",
       "name": "quote-timers",
       "source": "libs/domain/src/quotes/decline-window/decline-window.module.ts",
       "dashboard": "motorfix-queues",
