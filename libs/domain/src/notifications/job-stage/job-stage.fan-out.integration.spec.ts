@@ -271,6 +271,20 @@ describe('telling the driver work has started', () => {
     expect(messages.map((m) => m.channel)).toEqual(['in_app']);
   });
 
+  it('goes at once at 22:40, never held for the morning', async () => {
+    const { jobId } = await job('in_work');
+    const fanOut = await start(LATE);
+
+    await fanOut.handle(await event('job.started', jobId));
+
+    const rows = await outside('JOB_STARTED');
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.status).not.toBe('held');
+      expect(row.sendAfter).toBeNull();
+    }
+  });
+
   it('builds each message once when the same event is handled twice', async () => {
     const { jobId } = await job('in_work');
     const fanOut = await start();
