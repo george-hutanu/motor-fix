@@ -78,10 +78,13 @@ test.describe('the yearly documents, from the owner’s row to the admin’s dec
   };
   let db: Client;
 
+  // Checked in the RAR register today, so the garage is never also due its
+  // monthly recheck: that panel's row on the same page would match it too.
   const garage = async (into: typeof renewed, slug: string) => {
     const made = await db.query<{ id: string }>(
       `INSERT INTO garage (id, name, slug, status, approved_at, last_checked_on)
-       VALUES (gen_random_uuid(), $1, $2, 'approved', now() - interval '1 year', DATE '2026-10-01')
+       VALUES (gen_random_uuid(), $1, $2, 'approved', now() - interval '1 year',
+               (now() AT TIME ZONE 'Europe/Bucharest')::date)
        RETURNING id::text`,
       [into.name, `e2e-${slug}-${stamp}`],
     );

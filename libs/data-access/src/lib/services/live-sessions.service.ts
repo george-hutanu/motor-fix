@@ -9,11 +9,17 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { LiveRecordingKeepDto } from '../models/live-recording-keep-dto';
+import { liveSessionsControllerSetKeep } from '../fn/live-sessions/live-sessions-controller-set-keep';
+import { LiveSessionsControllerSetKeep$Params } from '../fn/live-sessions/live-sessions-controller-set-keep';
 import { liveSessionsControllerStart } from '../fn/live-sessions/live-sessions-controller-start';
 import { LiveSessionsControllerStart$Params } from '../fn/live-sessions/live-sessions-controller-start';
+import { liveSessionsControllerStop } from '../fn/live-sessions/live-sessions-controller-stop';
+import { LiveSessionsControllerStop$Params } from '../fn/live-sessions/live-sessions-controller-stop';
 import { liveSessionsControllerView } from '../fn/live-sessions/live-sessions-controller-view';
 import { LiveSessionsControllerView$Params } from '../fn/live-sessions/live-sessions-controller-view';
 import { LiveSessionStartedDto } from '../models/live-session-started-dto';
+import { LiveSessionStoppedDto } from '../models/live-session-stopped-dto';
 import { LiveViewCredentialDto } from '../models/live-view-credential-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -86,6 +92,72 @@ export class LiveSessionsService extends BaseService {
   liveSessionsControllerView(params: LiveSessionsControllerView$Params, context?: HttpContext): Promise<LiveViewCredentialDto> {
     const resp = this.liveSessionsControllerView$Response(params, context);
     return resp.then((r: StrictHttpResponse<LiveViewCredentialDto>): LiveViewCredentialDto => r.body);
+  }
+
+  /** Path part for operation `liveSessionsControllerSetKeep()` */
+  static readonly LiveSessionsControllerSetKeepPath = '/api/v1/live-sessions/{id}/recording';
+
+  /**
+   * Keep or discard the recording while live.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `liveSessionsControllerSetKeep()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  liveSessionsControllerSetKeep$Response(params: LiveSessionsControllerSetKeep$Params, context?: HttpContext): Promise<StrictHttpResponse<LiveRecordingKeepDto>> {
+    const obs = liveSessionsControllerSetKeep(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Keep or discard the recording while live.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `liveSessionsControllerSetKeep$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  liveSessionsControllerSetKeep(params: LiveSessionsControllerSetKeep$Params, context?: HttpContext): Promise<LiveRecordingKeepDto> {
+    const resp = this.liveSessionsControllerSetKeep$Response(params, context);
+    return resp.then((r: StrictHttpResponse<LiveRecordingKeepDto>): LiveRecordingKeepDto => r.body);
+  }
+
+  /** Path part for operation `liveSessionsControllerStop()` */
+  static readonly LiveSessionsControllerStopPath = '/api/v1/live-sessions/{id}/stop';
+
+  /**
+   * Stop the live stream, keeping or discarding it.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `liveSessionsControllerStop()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  liveSessionsControllerStop$Response(params: LiveSessionsControllerStop$Params, context?: HttpContext): Promise<StrictHttpResponse<LiveSessionStoppedDto>> {
+    const obs = liveSessionsControllerStop(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Stop the live stream, keeping or discarding it.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `liveSessionsControllerStop$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  liveSessionsControllerStop(params: LiveSessionsControllerStop$Params, context?: HttpContext): Promise<LiveSessionStoppedDto> {
+    const resp = this.liveSessionsControllerStop$Response(params, context);
+    return resp.then((r: StrictHttpResponse<LiveSessionStoppedDto>): LiveSessionStoppedDto => r.body);
   }
 
 }

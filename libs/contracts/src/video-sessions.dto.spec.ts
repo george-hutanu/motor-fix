@@ -1,5 +1,8 @@
 import 'reflect-metadata';
 
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
+
 import {
   LIVE_PROVIDER_TIMEOUT_MS,
   LIVE_PUBLISH_CONSTRAINTS,
@@ -7,7 +10,10 @@ import {
   LIVE_REFUSALS,
   LIVE_VIEW_TOKEN_TTL_MS,
   LivePublishCredentialDto,
+  LiveRecordingKeepDto,
   LiveSessionStartedDto,
+  LiveSessionStoppedDto,
+  LiveStopRequestDto,
   LiveViewCredentialDto,
 } from './video-sessions.dto';
 
@@ -16,6 +22,12 @@ const listed = (dto: object) =>
     (Reflect.getMetadata('swagger/apiModelPropertiesArray', dto) ??
       []) as string[]
   ).map((name) => name.replace(/^:/, ''));
+
+const failed = <T extends object>(type: new () => T, body: unknown) =>
+  validateSync(plainToInstance(type, body as object), {
+    forbidNonWhitelisted: true,
+    whitelist: true,
+  }).map((error) => error.property);
 
 // @traces 1250-FR-008
 describe('the live session contract', () => {
@@ -56,5 +68,41 @@ describe('the live session contract', () => {
       'expiresAt',
       'url',
     ]);
+  });
+});
+
+// @traces 1251-FR-008
+describe('the stop and keep contract', () => {
+  it('requires a boolean keep on the keep change', () => {
+    expect(failed(LiveRecordingKeepDto, { keep: true })).toEqual([]);
+    expect(failed(LiveRecordingKeepDto, { keep: false })).toEqual([]);
+    expect(failed(LiveRecordingKeepDto, {})).toEqual(['keep']);
+    expect(failed(LiveRecordingKeepDto, { keep: 'false' })).toEqual(['keep']);
+    expect(failed(LiveRecordingKeepDto, { keep: 0 })).toEqual(['keep']);
+  });
+
+  it('takes an empty stop or a boolean keep on the stop', () => {
+    expect(failed(LiveStopRequestDto, {})).toEqual([]);
+    expect(failed(LiveStopRequestDto, { keep: false })).toEqual([]);
+    expect(failed(LiveStopRequestDto, { keep: true })).toEqual([]);
+    expect(failed(LiveStopRequestDto, { keep: 'yes' })).toEqual(['keep']);
+  });
+
+  it('refuses any other field on either body', () => {
+    expect(failed(LiveRecordingKeepDto, { keep: true, reason: 'x' })).toEqual([
+      'reason',
+    ]);
+    expect(failed(LiveStopRequestDto, { seconds: 3 })).toEqual(['seconds']);
+  });
+
+  it('documents every field of the stop answer', () => {
+    expect(listed(LiveSessionStoppedDto.prototype).sort()).toEqual([
+      'keep',
+      'liveSessionId',
+      'recordingMediaId',
+      'seconds',
+      'stoppedAt',
+    ]);
+    expect(listed(LiveRecordingKeepDto.prototype)).toEqual(['keep']);
   });
 });

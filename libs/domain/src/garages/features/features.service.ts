@@ -21,10 +21,13 @@ import {
 const isFeatureKey = (key: string): key is FeatureKey =>
   (FEATURE_KEYS as readonly string[]).includes(key);
 
-// The row locked, so two changes to one garage run one after the other.
+// The row locked, so two changes to one garage run one after the other. No
+// key update: a row that only references the garage, as the media item a job
+// close registers for a kept recording, is not held off, or that close and
+// this switch would wait on each other.
 async function lockGarage(tx: Prisma.TransactionClient, garageId: string) {
   const [row] = await tx.$queryRaw<{ id: string }[]>`
-    SELECT id FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
+    SELECT id FROM garage WHERE id = ${garageId}::uuid FOR NO KEY UPDATE`;
   if (!row) throw notFound();
 }
 

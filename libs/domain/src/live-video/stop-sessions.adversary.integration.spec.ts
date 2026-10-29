@@ -37,23 +37,23 @@ const events = (garageId: string) =>
 
 // @traces 1250-FR-006
 describe('stopping live sessions at the edges', () => {
-  it('stops nothing and returns 0 for an unknown job', async () => {
-    const count = await prisma.$transaction((tx) =>
+  it('stops nothing and returns none for an unknown job', async () => {
+    const stopped = await prisma.$transaction((tx) =>
       stopLiveSessions(tx, audit, { jobId: randomUUID() }, 'job_closed'),
     );
 
-    expect(count).toBe(0);
+    expect(stopped).toEqual([]);
   });
 
-  it('stops nothing and returns 0 for an unknown garage', async () => {
-    const count = await prisma.$transaction((tx) =>
+  it('stops nothing and returns none for an unknown garage', async () => {
+    const stopped = await prisma.$transaction((tx) =>
       stopLiveSessions(tx, audit, { garageId: randomUUID() }, 'feature_off'),
     );
 
-    expect(count).toBe(0);
+    expect(stopped).toEqual([]);
   });
 
-  it('returns 0 the second time and keeps the first reason', async () => {
+  it('returns none the second time and keeps the first reason', async () => {
     const driver = await world.account('Andrei Marin', ['driver']);
     const dinamo = await world.garage('Atelier Dinamo');
     const job = await jobAt(dinamo.id, driver);
@@ -66,7 +66,7 @@ describe('stopping live sessions at the edges', () => {
       stopLiveSessions(tx, audit, { garageId: dinamo.id }, 'feature_off'),
     );
 
-    expect([first, second]).toEqual([1, 0]);
+    expect([first.length, second.length]).toEqual([1, 0]);
     const row = await prisma.liveSession.findUniqueOrThrow({
       where: { id: live.id },
     });
@@ -97,11 +97,11 @@ describe('stopping live sessions at the edges', () => {
     for (let i = 0; i < 50; i++)
       await session((await jobAt(dinamo.id, driver)).id, dinamo.id);
 
-    const count = await prisma.$transaction((tx) =>
+    const stopped = await prisma.$transaction((tx) =>
       stopLiveSessions(tx, audit, { garageId: dinamo.id }, 'feature_off'),
     );
 
-    expect(count).toBe(50);
+    expect(stopped).toHaveLength(50);
     expect(await open({ garageId: dinamo.id })).toBe(0);
     expect(await events(dinamo.id)).toBe(50);
   }, 60_000);
