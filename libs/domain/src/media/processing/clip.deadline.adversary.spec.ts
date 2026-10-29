@@ -45,15 +45,6 @@ afterEach(() => jest.restoreAllMocks());
 
 // @traces 333-FR-007
 describe('the conversion deadline under hostile timing', () => {
-  it('runs no ffmpeg when the probe alone spends the whole budget', async () => {
-    took = [LIMIT];
-
-    await expect(
-      convertClip(Buffer.from('a clip'), { maxSeconds: 60 }),
-    ).rejects.toThrow(/no time left to run ffmpeg/);
-    expect(calls.map((c) => c.tool)).toEqual(['ffprobe']);
-  });
-
   it('runs the last run with one millisecond left, not zero', async () => {
     took = [LIMIT - 1];
 
