@@ -4,6 +4,7 @@
 // tick. Browser-safe: the web app and the API read the same rule.
 
 import { type HoursSection, isHoursSection } from './garage-hours';
+import { isRecord } from './is-record';
 import {
   DECLARED_NAME_MAX,
   DOCUMENT_PAGES_MAX,
@@ -87,9 +88,6 @@ export interface MechanicsSection {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
 const onlyKeys = (value: Record<string, unknown>, keys: readonly string[]) =>
   Object.keys(value).every((key) => keys.includes(key));
 
@@ -105,7 +103,11 @@ const oneOf = (values: readonly string[]) => (value: unknown) =>
 const isId = (value: unknown) => typeof value === 'string' && UUID.test(value);
 
 // Counted in code points, as the mechanics write and the table count them.
-const trimmedWithin = (value: string | undefined, min: number, max: number) => {
+export const trimmedWithin = (
+  value: string | undefined,
+  min: number,
+  max: number,
+) => {
   const length = [...(value?.trim() ?? '')].length;
   return length >= min && length <= max;
 };

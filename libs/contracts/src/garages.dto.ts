@@ -187,7 +187,7 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
 
   @ApiPropertyOptional({
     description: 'The line the garage wrote about itself, as written',
-    maxLength: 160,
+    maxLength: 1000,
   })
   description?: string;
 
@@ -315,4 +315,10 @@ export class GarageProfileDto extends PublicGarageDto {
     type: String,
   })
   phone!: string | null;
+
+  @ApiProperty({
+    description: "The profile's change stamp; sent back with a save",
+    type: String,
+  })
+  version!: string;
 }

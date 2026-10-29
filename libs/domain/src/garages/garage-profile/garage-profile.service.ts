@@ -19,8 +19,8 @@ export class GarageProfileService {
   // Anyone outside the garage is told there is no such garage; its staff
   // without the profile capability are told no, before the garage's own
   // state is given away. The answer is the public one, read through its
-  // cache, with the stored phone added after the read so it never enters
-  // the cache.
+  // cache, with the stored phone and the change stamp added after the read
+  // so neither enters the cache.
   async read(actor: Actor, garageId: string): Promise<GarageProfileDto> {
     assertGarage(actor, garageId);
     if (
@@ -33,11 +33,15 @@ export class GarageProfileService {
       );
     }
     const row = await this.prisma.garage.findUnique({
-      select: { phone: true, slug: true },
+      select: { phone: true, profileVersion: true, slug: true },
       where: { id: garageId },
     });
     if (!row) throw notFound();
     const answer = await this.publicGarages.bySlug(row.slug);
-    return { ...answer, phone: row.phone };
+    return {
+      ...answer,
+      phone: row.phone,
+      version: String(row.profileVersion),
+    };
   }
 }

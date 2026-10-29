@@ -2,6 +2,8 @@
 // draft save and the write at submit read the section by these same rules.
 // Browser-safe: no Nest or validator import.
 
+import { isRecord } from './is-record';
+
 export const WEEKDAYS = [
   'mon',
   'tue',
@@ -80,9 +82,6 @@ export const DAY_OFF_DAYS_AHEAD = 365;
 
 const TIME = /^([01]\d|2[0-3]):(00|15|30|45)$/;
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const letters = (text: string) => [...text].length;
 

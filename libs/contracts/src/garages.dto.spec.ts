@@ -1,7 +1,11 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
-import { PublicGarageDto, PublicGarageQueryDto } from './garages.dto';
+import {
+  GarageProfileDto,
+  PublicGarageDto,
+  PublicGarageQueryDto,
+} from './garages.dto';
 
 // Any error here is the 400 validation_failed the API answers.
 const errors = (query: Record<string, unknown>) =>
@@ -13,7 +17,7 @@ const errors = (query: Record<string, unknown>) =>
 const constraints = (query: Record<string, unknown>) =>
   errors(query).flatMap((e) => Object.keys(e.constraints ?? {}));
 
-type Documented = { required?: boolean; type?: unknown };
+type Documented = { maxLength?: number; required?: boolean; type?: unknown };
 
 const documented = (dto: abstract new () => object, name: string) =>
   Reflect.getMetadata('swagger/apiModelProperties', dto.prototype, name) as
@@ -57,5 +61,24 @@ describe('PublicGarageDto', () => {
       required: false,
       type: Number,
     });
+  });
+});
+
+// @traces 1246-FR-008, 1246-FR-010
+describe('the profile answers', () => {
+  it('give the staff the change stamp as a string', () => {
+    const version = documented(GarageProfileDto, 'version');
+    expect(version).toMatchObject({ type: String });
+    expect(version?.required).not.toBe(false);
+  });
+
+  it('let the public description run to a thousand characters', () => {
+    expect(documented(PublicGarageDto, 'description')).toMatchObject({
+      maxLength: 1000,
+    });
+  });
+
+  it('keep the phone off the public answer', () => {
+    expect(documented(PublicGarageDto, 'phone')).toBeUndefined();
   });
 });
