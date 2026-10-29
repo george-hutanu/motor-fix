@@ -91,6 +91,7 @@ test.describe('each stage change within seconds @seeded', () => {
   // @traces 275-FR-001
   // @traces 275-FR-003
   // @traces 275-FR-006
+  // @traces 275-FR-008
   // @traces 275-FR-009
   test('a step the garage adds and ticks reaches the overview, Cererile mele and a second tab without a reload', async ({
     browser,
@@ -113,6 +114,15 @@ test.describe('each stage change within seconds @seeded', () => {
     for (const page of pages) {
       await shows(panel(page), await stepsHeading(request, driver));
     }
+    // From here the driver's pages only read: no write of any kind.
+    const writes: string[] = [];
+    for (const page of pages) {
+      page.on('request', (sent) => {
+        if (sent.url().includes('/api/') && sent.method() !== 'GET') {
+          writes.push(`${sent.method()} ${sent.url()}`);
+        }
+      });
+    }
 
     const added = await request.post(`/api/v1/garage/jobs/${job}/steps`, {
       data: { text: `Verificare ${randomUUID().slice(0, 6)}` },
@@ -133,6 +143,7 @@ test.describe('each stage change within seconds @seeded', () => {
       for (const page of pages) await shows(panel(page), afterTick);
       expect(overview.url()).toMatch(/\/app\/driver$/);
       expect(requests.url()).toMatch(/\/app\/driver\/requests$/);
+      expect(writes).toEqual([]);
     } finally {
       await request.delete(`/api/v1/garage/jobs/${job}/steps/${step}`, {
         headers: garage,
@@ -192,6 +203,74 @@ test.describe('each stage change within seconds @seeded', () => {
         });
       }
       await context.close();
+    }
+  });
+
+  // @traces 275-FR-004
+  test('the job’s change reaches its driver’s stream and never another driver’s', async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(60_000);
+    const garage = await headers(request, ACCOUNTS.garage);
+    const job = await seededJob(request, garage);
+    const tokenOf = async (email: string) =>
+      (await headers(request, email)).Authorization;
+    await ready(page, '/ro');
+
+    // Each stream's text over the next few seconds, read in the page; a
+    // stream counts itself open in `window.opened` once its headers arrive.
+    const listen = (authorization: string) =>
+      page.evaluate(async (auth) => {
+        const marks = window as unknown as { opened?: number };
+        const stop = new AbortController();
+        setTimeout(() => stop.abort(), 6_000);
+        const res = await fetch('/api/v1/live', {
+          headers: { Accept: 'text/event-stream', Authorization: auth },
+          signal: stop.signal,
+        }).catch(() => null);
+        marks.opened = (marks.opened ?? 0) + 1;
+        if (!res?.body) return '';
+        // The stream's text until the window closes it.
+        const decoder = new TextDecoder();
+        let text = '';
+        await res.body
+          .pipeTo(
+            new WritableStream<Uint8Array>({
+              write: (chunk) => {
+                text += decoder.decode(chunk, { stream: true });
+              },
+            }),
+          )
+          .catch(() => undefined);
+        return text;
+      }, authorization);
+    const kindsOf = (text: string) =>
+      text
+        .split('\n')
+        .filter((line) => line.startsWith('event: job.'))
+        .map((line) => line.slice('event: '.length));
+
+    const mine = listen(await tokenOf(DRIVER));
+    const theirs = listen(await tokenOf(ACCOUNTS.otherDriver));
+    // Both streams open before the garage writes.
+    await page.waitForFunction(
+      () => ((window as unknown as { opened?: number }).opened ?? 0) >= 2,
+    );
+    const added = await request.post(`/api/v1/garage/jobs/${job}/steps`, {
+      data: { text: `Verificare ${randomUUID().slice(0, 6)}` },
+      headers: { ...garage, 'Idempotency-Key': randomUUID() },
+    });
+    expect(added.status()).toBe(201);
+    const step = ((await added.json()) as { id: string }).id;
+    try {
+      const [driverText, otherText] = await Promise.all([mine, theirs]);
+      expect(kindsOf(driverText).length).toBeGreaterThan(0);
+      expect(kindsOf(otherText)).toEqual([]);
+    } finally {
+      await request.delete(`/api/v1/garage/jobs/${job}/steps/${step}`, {
+        headers: garage,
+      });
     }
   });
 });
