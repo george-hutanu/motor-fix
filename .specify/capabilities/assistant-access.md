@@ -1,6 +1,6 @@
 ---
 capability: assistant-access
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 365-mcp-oauth
   - 374-assistant-requests
@@ -9,6 +9,7 @@ features:
   - 003-admin-account-actions
   - 1204-terms-reaccept
   - 1253-assistant-confirm
+  - 1254-assistant-approvals
 ---
 
 # Capability: Assistant access
@@ -29,9 +30,9 @@ _From 365-mcp-oauth._
 
 _From 365-mcp-oauth._
 
-### 1253-FR-007 — The account MUST gain the switch `assistant_can_act` (default on, no screen or route in this story). Before any acting tool or `confirm_action` runs, the switch, the grant's scope (`motorfix.act`) and the grant's revocation MUST be checked: the switch off or the scope missing answers `assistant_act_off` (the tool unlisted, as the registry hides unconsented tools today), a revoked grant is refused as 365-FR-004 refuses it. There MUST be one domain function that voids every waiting confirmation of a set of grants or of an account, inside the caller's transaction; it is called by the grant revoke function (003-FR-015) in the revoke's own transaction for the revoked grants, and by the refusal of an acting call or `confirm_action` when the account's switch is found off, for the account, so ST-370 (the switch panel) and ST-372 (disconnect) need only call it. A void confirmation answers as FR-005 answers an expired one. (AC 7; build plan ST-370/372 → ST-376)
+### 1254-FR-007 — A pending approval MUST become expired 30 minutes after it was saved when no decision was taken: a delayed timer set by the worker on `assistant_approval.requested` (one conditional update: pending and past its expiry) and the existing 5-minute sweep of the worker's object timers (`libs/domain/src/scheduler/timers.ts`: fire checks the state first, so a late or repeated fire changes nothing); the expiry emits `assistant_approval.decided` and writes no audit entry of a person's. The one void function of ST-1253 (1253-FR-007) MUST also expire the pending approvals of the grants or account it is called for, so a revoke, a switch found off, and ST-370/ST-372 expire them at once with no second function. (AC 4, 7; brief Edge cases)
 
-_From 1253-assistant-confirm._
+_From 1254-assistant-approvals._
 
 ### 365-FR-005 — The server MUST build the same actor the API builds from a session (account, the union of all its roles, garage membership, mechanic permissions), loaded through the shared account-loading function `ActorGuard` uses (not a copy), plus `via` = `assistant`, `assistantGrantId` and `requestId`; for each tool call the actor's role in use is the first role of the tool's role set the account holds, so existing use cases run unchanged; a deleted account is refused with 401 and a suspended one with `account_suspended`. (D5; brief Actor, Account changes)
 
@@ -177,9 +178,9 @@ _From 1253-assistant-confirm._
 
 _From 1253-assistant-confirm._
 
-### 1253-FR-004 — The catalogue MUST gain the tool `confirm_action`, listed to every account that may act (scope `motorfix.act` and the account's switch on) and hidden otherwise, input `{ confirmationId: uuid, arguments: object, confirmed: boolean }`, no mechanic permission and no garage feature of its own. Given `confirmed: true`, a confirmation of the same grant, for the same tool, still waiting, before its expiry, and arguments whose canonical hash equals the stored one, it MUST run the tool's use case once as the actor of that grant, with the confirmation id as the idempotency key of the run, so the run writes the same rows, audit entries (each carrying `via_assistant`, the grant id and the request id, as the audit writer stores them today) and events as the screen's own action, then store the outcome and answer the tool's declared output as structured content (the declared output schema filters it, as the registry filters today). (AC 4; brief rule 4; 365-FR-005, 365-FR-011)
+### 1254-FR-002 — When a timely yes (`confirm_action` with `confirmed: true` and matching arguments, or the elicitation's yes; 1253-FR-004) reaches a tool declaring in-app approval, the server MUST NOT run the action: in the confirmation's transaction it saves one approval pending (FR-008), emits `assistant_approval.requested` on `account:{accountId}` (the worker's fan-out of that event writes ASSISTANT_APPROVAL_NEEDED, FR-003, and sets the expiry timer, FR-007), closes the confirmation as done with the answer `{ status: "approval_required", approvalId, expiresAt, message }`, the message "Aprobă în aplicația MotorFix." / "Approve it in the MotorFix app." in the account's language, and answers it. A repeated `confirm_action` replays that answer and saves nothing (1253-FR-006). Every other `confirm_action` outcome (refused, expired, changed, void, not found, checks failing) stays as ST-1253 defines it. (AC 1)
 
-_From 1253-assistant-confirm._
+_From 1254-assistant-approvals._
 
 ### 1253-FR-005 — `confirm_action` MUST write nothing and answer, in the account's language, that nothing was sent and the assistant must ask again, when `confirmed` is false (the confirmation closed as refused), when the expiry has passed (closed as expired), or when the arguments' hash differs from the stored one (closed as void, the answer saying the arguments changed). A confirmation id of another grant, or unknown, answers `not_found` and changes nothing. When the use case's checks fail at the run, nothing is written, the confirmation is closed as failed with the error's code, and the answer is that error; an error with no stable code of its own is stored and answered as `internal_error`, as the registry maps it today. (AC 5; brief States)
 
@@ -201,9 +202,51 @@ _From 1253-assistant-confirm._
 
 _From 1253-assistant-confirm._
 
+### 1254-FR-001 — An acting tool MUST be able to declare that its action needs in-app approval of kind `book`, `move` or `cancel`, and which of its boolean inputs the person may still change in the app (editable options, none by default). The catalogue of this story has no such production tool (the booking tools are later stories); the test fixtures hold one that declares kind `book` and one editable option, and a catalogue-wide test MUST fail when a tool declaring in-app approval runs its use case at the person's yes. (brief rule 1, catalogue column "In-app approval")
+
+_From 1254-assistant-approvals._
+
+### 1254-FR-003 — ASSISTANT_APPROVAL_NEEDED MUST go to the person by push and into the bell, and by e-mail instead of push when the account has no push device (never both; one catalogue flag read by the routing for any role, not a driver preference group); it MUST NOT be mutable by any preference, MUST go at any hour (not held for quiet hours), and its push, bell and e-mail texts (ro/en) MUST name that the assistant wants to do something and link to the approval's sheet (`/app/assistant/approvals/:id`). It carries no summary detail beyond that: the sheet shows the summary. (AC 1; brief Notifications)
+
+_From 1254-assistant-approvals._
+
+### 1254-FR-004 — The web app MUST show the approval sheet at `/app/assistant/approvals/:id` (a route outside the area frames, signed in; a signed-out person gets the sign-in dialog first), as a drawer on desktop and a bottom sheet on a phone, with: the title "Asistentul tău (Claude) vrea să:" naming the grant's assistant client, the stored summary, one tick per editable option showing its stored value, the buttons Aprobă and Refuză; after a decision, or for an approval already decided or expired, the state (approved, refused, expired, or failed with the reason in the account's language). Romanian and English; nothing scrolls sideways at 320 px; the dialog's focus, labels and contrast pass the QA sweep's axe checks. (AC 2)
+
+_From 1254-assistant-approvals._
+
+### 1254-FR-005 — `POST /api/v1/me/assistant/approvals/:id/approve` (body: the editable options' new values, optional) MUST, for a pending approval of the caller's account, lock the row and run the stored tool's action once as the actor of the grant that asked, with the approval id as the run's idempotency key, the stored arguments with the edited options applied, after re-running every access check of a tool call (roles, scope `motorfix.act`, the account's switch, revocation, mechanic capability, garage feature, maintenance) and letting the use case's own checks run in its write; on success the approval becomes approved with the result's subject id and the use case's rows, events and audit entries are written exactly as from the screen (marked via assistant with the grant id, 390-FR-007); when a check inside the locked run (role, capability, garage feature) or the use case refuses, nothing of the action is written and the approval becomes failed with the stable error code. Maintenance on or the database unavailable answers 503 and leaves the approval pending; the account's switch off or the grant revoked expires it through the void function and answers 409 `approval_not_pending`; an approval past its stored expiry under the lock is closed as expired and answers 409. `POST …/:id/refuse` MUST make it refused and run nothing. Refuse is not held by the maintenance switch (it writes the decision only) and ignores any option values in its body. Both answer the approval's new state. (AC 3, 4)
+
+_From 1254-assistant-approvals._
+
+### 1254-FR-006 — An approval that is not pending answers 409 `approval_not_pending` with its current status to approve and refuse, nothing running; an id of another account, or unknown, answers 404 to read, approve and refuse (as another person's resource does today, 365-FR-009). An option value for an input not declared editable, or not a boolean, answers 422. The decision (approved, failed, refused) MUST be an audit entry of its own — the person as actor in the role in use, subject `assistant_approval`, field `status`, old `pending`, new status — and MUST emit `assistant_approval.decided` on `account:{accountId}`, in the same transaction (Principle VI). (AC 5, 8)
+
+_From 1254-assistant-approvals._
+
+### 1254-FR-008 — An approval is a row in PostgreSQL: id (the idempotency key of the run), grant, account, tool name, action kind (`book`, `move`, `cancel`), the parsed arguments, the summary text as shown at the yes, the editable option names, status (`pending`, `approved`, `refused`, `expired`, `failed`), expiry (saved + 30 minutes), result subject id and error code once decided, saved and decided times. It is written at most twice (saved, decided) and never deleted by this story. (brief Data ASSISTANT_APPROVAL)
+
+_From 1254-assistant-approvals._
+
+### 1254-FR-009 — `GET /api/v1/me/assistant/approvals` MUST list the caller's pending approvals oldest first (id, assistant client name, action kind, summary, options with values, expiry) and `GET …/:id` one approval of the caller's in any status (with its status, result and error code); the strip reads the first, the sheet the second. (AC 6)
+
+_From 1254-assistant-approvals._
+
+### 1254-FR-010 — The signed-in frame (once, in the frame every `/app` area shares, else once per area frame) MUST show, for an account with pending approvals,, above the view, the strip "n acțiuni așteaptă aprobarea ta" / "n actions await your approval" (Romanian plural rules: "1 acțiune", "2 acțiuni"; absent at 0) linking to the oldest pending approval's sheet; after a decision the sheet shows the next pending one or closes. The strip and an open sheet MUST re-read on `assistant_approval.requested` and `assistant_approval.decided` received on the account's live stream, so every open tab updates without a reload. The strip is one component with one mount line, so ST-368 moves it into the Asistent AI view. (AC 6; brief Live updates; build plan ST-376 ↔ ST-368)
+
+_From 1254-assistant-approvals._
+
+### 1254-FR-011 — Observability (AGENTS.md): the approval is a new product action with two endpoints and a timer kind; it MUST emit one counter of approvals by action kind and outcome (`requested`, `approved`, `refused`, `expired`, `failed`), one structured log line per outcome with the approval id, tool, grant id and account id (never the summary, the arguments, a phone or a plate), the endpoints' spans as every API route has, and MUST list the counter, the endpoints and the timer with their panel and alert (a rising share of `failed` or `expired`: the sheet is not being reached or the previews drift from the runs) in `infra/observability/inventory.json`.
+
+_From 1254-assistant-approvals._
+
+### 1254-FR-012 — Tests MUST come first (Principle II) and cover: in Jest on real PostgreSQL and Redis — the yes on the fixture tool saving the approval and running nothing, the stored answer replayed, the non-approval tool unchanged; the notification's channel with and without a push device, its bell entry, never muted and not held by quiet hours; approve running once with the key and the edited option, writing the audit entry and the event; refuse; failed on a refusing use case; 409 on a decided one; 404 for another account; 422 for an undeclared option; the timer's fire and the sweep expiring, and idempotent on a decided one; the revoke and the switch off expiring in one transaction; the catalogue-wide rule of FR-001; the live events' audience. In Playwright — the sheet at 320 px and desktop, light and dark, ro and en, with approve, refuse, failed and expired states, and the strip's count, link and live update. No MCP transport (HTTP) spec: the production catalogue has no tool declaring in-app approval and the fixture tool is never served, so the two calls are proven through `confirm_action` on the fixture catalogue against real PostgreSQL (analyze remediation, autonomous default); the transport spec of ST-1253 keeps proving the unchanged path.
+
+_From 1254-assistant-approvals._
+
 ## Retired
 
 - `365-FR-017` — superseded by `1204-FR-005` (2026-10-25)
 - `365-FR-004` — superseded by `1253-FR-007` (2026-10-26)
 - `003-FR-015` — superseded by `1253-FR-007` (2026-10-26)
 - `365-FR-006` — superseded by `1253-FR-008` (2026-10-26)
+- `1253-FR-004` — superseded by `1254-FR-002` (2026-10-29)
+- `1253-FR-007` — superseded by `1254-FR-007` (2026-10-29)

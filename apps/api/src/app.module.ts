@@ -10,6 +10,7 @@ import {
   AdminAccountsModule,
   AuthModule,
   assistantBroker,
+  CarHistoryModule,
   CarsModule,
   CarTransfersModule,
   CatalogueModule,
@@ -53,6 +54,7 @@ import {
   WarmModule,
   WorkshopModule,
 } from '@motor-fix/domain';
+import { AssistantApprovalsModule } from '@motor-fix/mcp-tools';
 import { DynamicModule, Logger, Module } from '@nestjs/common';
 
 type ApiEnv = Env<'DATABASE_URL' | 'REDIS_URL' | 'AUTH_TOKEN_SECRET'> &
@@ -107,6 +109,7 @@ export class AppModule {
         }),
         StorageModule.register(env),
         auth,
+        AssistantApprovalsModule,
         notifications,
         EmailConfirmationModule.register(
           { webUrl: email.webUrl },
@@ -128,6 +131,7 @@ export class AppModule {
           { support: email.replyTo?.email, webUrl: email.webUrl },
           notifications,
         ),
+        CarHistoryModule,
         CarsModule,
         SavedGaragesModule,
         DashboardLayoutsModule,

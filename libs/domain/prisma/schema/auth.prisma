@@ -69,11 +69,13 @@ model Account {
   cars                    Car[]
   carsSold                CarTransfer[]            @relation("TransferSeller")
   carsBought              CarTransfer[]            @relation("TransferBuyer")
+  carOwnerships           CarOwnership[]
   savedGarages            SavedGarage[]
   consents                AccountConsent[]
   consentRecords          ConsentRecord[]
   assistantGrants         AssistantGrant[]
   assistantSignInCodes    AssistantSignInCode[]
+  assistantApprovals      AssistantApproval[]
   assistantConfirmations  AssistantConfirmation[]
   // The person's own "the assistant may act"; off refuses acting tools.
   assistantCanAct         Boolean                  @default(true) @map("assistant_can_act")
@@ -88,6 +90,7 @@ model Account {
   jobStepsDone            JobStep[]                @relation("JobStepDoneBy")
   reviews                 Review[]                 @relation("ReviewDriver")
   liveSessionsStarted     LiveSession[]            @relation("LiveSessionStarter")
+  liveViews               LiveViewer[]
   sentMedia               MediaItem[]              @relation("MediaSender")
   reviewReports           ReviewReport[]           @relation("ReviewReporter")
   reviewDecisions         ReviewReport[]           @relation("ReviewReportDecider")

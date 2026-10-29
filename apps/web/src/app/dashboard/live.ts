@@ -500,6 +500,13 @@ export const REQUEST_EVENTS: readonly EventKind[] = [
   'booking.cancelled',
 ];
 
+// The events that move the assistant's approvals: the strip and the sheet
+// read again on each.
+export const APPROVAL_EVENTS: readonly EventKind[] = [
+  'assistant_approval.requested',
+  'assistant_approval.decided',
+];
+
 // A view's data, read through the API and read again when an event of these
 // kinds arrives about the object it shows (without `id`, about any object); a
 // burst of 300 ms is one re-read.

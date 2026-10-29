@@ -65,7 +65,7 @@
         },
         {
           "uid": "booking-lapse-sweep-late",
-          "title": "Booking and request timers run late by the sweep",
+          "title": "Booking, request and approval timers run late by the sweep",
           "condition": "B",
           "for": "0s",
           "noDataState": "OK",
@@ -74,9 +74,9 @@
             "service": "worker"
           },
           "annotations": {
-            "summary": "The sweep, not their own timers, lapsed bookings or expired waiting garages, requests and quotes, more than 10 in an hour: timers on the booking-timers or request-timers queue are being lost ({{ $labels.deployment_environment }}).",
+            "summary": "The sweep, not their own timers, lapsed bookings or expired waiting garages, requests, quotes and assistant approvals, more than 10 in an hour: timers on the booking-timers, request-timers or assistant-approval-timers queue are being lost ({{ $labels.deployment_environment }}).",
             "dashboard_uid": "motorfix-queues",
-            "runbook": "Booking or request timers are being lost: check the booking-timers and request-timers queues on the queues dashboard, Redis memory and eviction, and the worker logs."
+            "runbook": "Booking or request timers are being lost: check the booking-timers, request-timers and assistant-approval-timers queues on the queues dashboard, Redis memory and eviction, and the worker logs."
           },
           "data": [
             {
@@ -88,7 +88,7 @@
               },
               "model": {
                 "refId": "A",
-                "expr": "sum by (deployment_environment) (increase(motorfix_booking_lapses_total{job=~\"(.+/)?worker\", sweep=\"true\"}[1h]) or increase(motorfix_request_timers_total{job=~\"(.+/)?worker\", sweep=\"true\", step=~\"recipient_expired|request_closed|quote_expired\"}[1h]))",
+                "expr": "sum by (deployment_environment) (increase(motorfix_booking_lapses_total{job=~\"(.+/)?worker\", sweep=\"true\"}[1h]) or increase(motorfix_request_timers_total{job=~\"(.+/)?worker\", sweep=\"true\", step=~\"recipient_expired|request_closed|quote_expired\"}[1h]) or increase(motorfix_assistant_approvals_total{job=~\"(.+/)?worker\", outcome=\"expired\", sweep=\"true\"}[1h]))",
                 "instant": true,
                 "intervalMs": 60000,
                 "maxDataPoints": 43200

@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 194-email-sending
   - 195-message-templates
@@ -58,6 +58,7 @@ features:
   - 223-request-act-notifications
   - 1258-driver-cancel
   - 177-reported-reviews
+  - 1254-assistant-approvals
 ---
 
 # Capability: Notifications
@@ -1037,6 +1038,10 @@ _From 177-reported-reviews._
 ### 177-FR-015 — Every new text (the titles, the lamps, the facts, the counts line, the oldest-wait line, the empty state, the error state, the overdue mark, the tile line, the action slots, the notification's e-mail and push in both forms) MUST exist in Romanian and English in the shared interface files and the notification templates and follow the reader's language; a Romanian hyphenated word uses U+2011; the garage's name, the author's name, the review text, the reply text and the report text MUST never be rendered as markup.
 
 _From 177-reported-reviews._
+
+### 1254-FR-003 — ASSISTANT_APPROVAL_NEEDED MUST go to the person by push and into the bell, and by e-mail instead of push when the account has no push device (never both; one catalogue flag read by the routing for any role, not a driver preference group); it MUST NOT be mutable by any preference, MUST go at any hour (not held for quiet hours), and its push, bell and e-mail texts (ro/en) MUST name that the assistant wants to do something and link to the approval's sheet (`/app/assistant/approvals/:id`). It carries no summary detail beyond that: the sheet shows the summary. (AC 1; brief Notifications)
+
+_From 1254-assistant-approvals._
 
 ## Retired
 

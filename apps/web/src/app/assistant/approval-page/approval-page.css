@@ -1,0 +1,16 @@
+:host {
+  display: block;
+  padding: var(--mf-space-4);
+}
+main {
+  max-width: 36rem;
+  margin: var(--mf-space-8) auto 0;
+}
+h1,
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+h1 + p {
+  margin-top: var(--mf-space-3);
+}

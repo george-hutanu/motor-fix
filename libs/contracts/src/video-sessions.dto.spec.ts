@@ -71,7 +71,7 @@ describe('the live session contract', () => {
   });
 });
 
-// @traces 1251-FR-008
+// @traces 1251-FR-008 1252-FR-004
 describe('the stop and keep contract', () => {
   it('requires a boolean keep on the keep change', () => {
     expect(failed(LiveRecordingKeepDto, { keep: true })).toEqual([]);
@@ -99,10 +99,25 @@ describe('the stop and keep contract', () => {
     expect(listed(LiveSessionStoppedDto.prototype).sort()).toEqual([
       'keep',
       'liveSessionId',
+      'peakViewers',
       'recordingMediaId',
       'seconds',
       'stoppedAt',
+      'viewedByDriverAt',
     ]);
     expect(listed(LiveRecordingKeepDto.prototype)).toEqual(['keep']);
+  });
+
+  it('publishes the stop answer’s whole-number figures as integers', () => {
+    const typeOf = (name: string) =>
+      (
+        Reflect.getMetadata(
+          'swagger/apiModelProperties',
+          LiveSessionStoppedDto.prototype,
+          name,
+        ) as { type?: unknown } | undefined
+      )?.type;
+    expect(typeOf('peakViewers')).toBe('integer');
+    expect(typeOf('seconds')).toBe('integer');
   });
 });

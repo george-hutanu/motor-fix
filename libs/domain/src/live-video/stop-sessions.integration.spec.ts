@@ -258,6 +258,36 @@ describe('stopping a live session with its recording kept or discarded', () => {
     expect(await kinds(job.id)).toEqual(['live.stopped', 'media.added']);
   });
 
+  // @traces 1252-FR-003 1252-FR-004
+  it('returns who watched and writes nothing about viewers', async () => {
+    const { live } = await liveJob({});
+    const firstView = new Date(Date.now() - 60 * SECOND);
+    await prisma.liveSession.update({
+      data: { peakViewers: 2, viewedByDriverAt: firstView },
+      where: { id: live.id },
+    });
+
+    const [row] = await prisma.$transaction((tx) =>
+      stopLiveSessions(tx, audit, { sessionId: live.id }, 'job_closed'),
+    );
+
+    expect(row).toMatchObject({ peakViewers: 2, viewedByDriverAt: firstView });
+    expect(
+      await prisma.liveSession.findUniqueOrThrow({ where: { id: live.id } }),
+    ).toMatchObject({ peakViewers: 2, viewedByDriverAt: firstView });
+    expect(await prisma.liveViewer.count()).toBe(0);
+  });
+
+  it('returns no viewers for a session nobody watched', async () => {
+    const { live } = await liveJob({});
+
+    const [row] = await prisma.$transaction((tx) =>
+      stopLiveSessions(tx, audit, { sessionId: live.id }, 'feature_off'),
+    );
+
+    expect(row).toMatchObject({ peakViewers: 0, viewedByDriverAt: null });
+  });
+
   it('writes no media for a discarded recording and says so in the event', async () => {
     const { job, live, owner } = await liveJob({ keepRecording: false });
 

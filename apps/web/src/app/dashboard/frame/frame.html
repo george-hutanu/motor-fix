@@ -80,6 +80,7 @@
   </header>
   <p class="live-offline mf-message" role="status">@if (offline()) { {{ 'shell.live.offline' | t }} }</p>
   <mf-email-banner />
+  <mf-approval-strip />
   <p class="live-status" role="status" [mfLiveChange]="lastTest()">
     @if (lastTest(); as at) { {{ 'shell.live.test' | t }} · {{ at | clock }} }
   </p>

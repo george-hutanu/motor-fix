@@ -299,3 +299,22 @@ describe('the audience of a time block', () => {
     ).toEqual(['garage:g1', 'public:garage:g1']);
   });
 });
+
+// @traces 1265-FR-008
+describe('audienceOf a car transfer', () => {
+  it('sends an accepted transfer to the seller and the buyer', () => {
+    expect(
+      audienceOf({
+        buyerAccountId: 'b1',
+        sellerAccountId: 's1',
+        type: 'car_transfer',
+      }),
+    ).toEqual(['account:s1', 'account:b1']);
+  });
+
+  it('still sends a sent or cancelled step to the seller alone', () => {
+    expect(audienceOf({ accountId: 's1', type: 'account' })).toEqual([
+      'account:s1',
+    ]);
+  });
+});

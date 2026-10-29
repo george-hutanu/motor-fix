@@ -23,8 +23,27 @@ export {
   type LoadedAccount,
 } from './auth/account-loader';
 export { AccountsService } from './auth/accounts.service';
-export { CurrentActor, Public, Requires } from './auth/actor.guard';
+export {
+  CurrentActor,
+  OpenInMaintenance,
+  Public,
+  Requires,
+} from './auth/actor.guard';
 export { assistantBroker } from './auth/assistant/assistant.service';
+export { APPROVAL_TIMERS_CONSUMER } from './auth/assistant-approvals/approval-timers/approval-timers';
+export { ApprovalTimersModule } from './auth/assistant-approvals/approval-timers/approval-timers.module';
+export {
+  AssistantApprovals,
+  type Decider as ApprovalDecider,
+  type LockedApproval,
+} from './auth/assistant-approvals/assistant-approvals';
+export {
+  type ApprovalKind,
+  type ApprovalOutcome,
+  ApproveAssistantActionDto,
+  AssistantActionApprovalDto,
+  AssistantActionApprovalListDto,
+} from './auth/assistant-approvals/assistant-approvals.dto';
 export {
   AssistantConfirmations,
   type Decision as ConfirmationDecision,
@@ -41,6 +60,7 @@ export {
   MAINTENANCE,
   type Maintenance,
   type MaintenanceReader,
+  maintenanceRefusal,
   storedMaintenance,
 } from './auth/maintenance';
 export { oauthSettings } from './auth/oauth/providers';
@@ -54,6 +74,7 @@ export { WarmModule } from './cache/warm/warm.module';
 export { warmCache } from './cache/warm-up/warm-up';
 export { CAR_ACCOUNT_DELETED_CONSUMER } from './cars/account-deleted/account-deleted';
 export { CarAccountDeletedModule } from './cars/account-deleted/account-deleted.module';
+export { CarHistoryModule } from './cars/history/history.module';
 export { CarsModule } from './cars/my-cars/cars/cars.module';
 export {
   CAR_REMINDERS_CONSUMER,
@@ -126,6 +147,7 @@ export { BOOKING_CANCELLED_CONSUMER } from './notifications/booking-cancelled/bo
 export { BOOKING_CONFIRMED_CONSUMER } from './notifications/booking-confirmed/booking-confirmed.fan-out';
 export { BOOKING_LAPSED_CONSUMER } from './notifications/booking-lapsed/booking-lapsed.fan-out';
 export { Brevo } from './notifications/brevo/brevo';
+export { CAR_TRANSFER_ACCEPTED_CONSUMER } from './notifications/car-transfer-accepted/car-transfer-accepted.fan-out';
 export { CATALOGUE_JOB_DECIDED_CONSUMER } from './notifications/catalogue-job-decided/catalogue-job-decided.fan-out';
 export { CATALOGUE_JOB_PENDING_CONSUMER } from './notifications/catalogue-job-pending/catalogue-job-pending.fan-out';
 export { DOCUMENT_REFUSED_CONSUMER } from './notifications/document-refused/document-refused.fan-out';

@@ -19,6 +19,8 @@ interface Row {
   keep_recording: boolean;
   started_at: Date;
   stopped_at: Date;
+  peak_viewers: number;
+  viewed_by_driver_at: Date | null;
 }
 
 interface StoppedSession {
@@ -28,6 +30,8 @@ interface StoppedSession {
   keep: boolean;
   seconds: number;
   recordingMediaId: string | null;
+  peakViewers: number;
+  viewedByDriverAt: Date | null;
 }
 
 const SECOND_MS = 1000;
@@ -62,7 +66,8 @@ export async function stopLiveSessions(
     FROM job j
     WHERE j.id = s.job_id AND s.stopped_at IS NULL AND ${inScope(scope)}
     RETURNING s.id, s.job_id, s.garage_id, j.driver_id, j.mechanic_id,
-      s.provider_input_id, s.keep_recording, s.started_at, s.stopped_at`;
+      s.provider_input_id, s.keep_recording, s.started_at, s.stopped_at,
+      s.peak_viewers, s.viewed_by_driver_at`;
   const stopped: StoppedSession[] = [];
   for (const row of rows) {
     await audit.record(tx, {
@@ -122,10 +127,12 @@ export async function stopLiveSessions(
     stopped.push({
       id: row.id,
       keep: row.keep_recording,
+      peakViewers: row.peak_viewers,
       providerInputId: row.provider_input_id,
       recordingMediaId,
       seconds,
       stoppedAt: row.stopped_at,
+      viewedByDriverAt: row.viewed_by_driver_at,
     });
   }
   return stopped;

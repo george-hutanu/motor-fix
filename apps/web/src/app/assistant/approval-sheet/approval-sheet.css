@@ -1,0 +1,53 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-4);
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.summary {
+  font-size: var(--mf-size-subheading);
+}
+.state {
+  font-weight: 600;
+}
+.error {
+  color: var(--mf-red-ink);
+  font-weight: 600;
+}
+fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+legend {
+  margin-bottom: var(--mf-space-2);
+  padding: 0;
+  font-weight: 600;
+}
+.tick {
+  display: flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: var(--mf-tap);
+  cursor: pointer;
+}
+.tick span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.actions button {
+  flex: 1 1 8rem;
+  white-space: normal;
+}

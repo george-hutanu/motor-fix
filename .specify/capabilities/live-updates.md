@@ -36,6 +36,7 @@ features:
   - 1250-live-video-provider
   - 177-reported-reviews
   - 427-time-blocks
+  - 1254-assistant-approvals
 ---
 
 # Capability: Live updates
@@ -501,6 +502,10 @@ _From 177-reported-reviews._
 ### 427-FR-010 — Each write MUST record its event in the same transaction through the outbox (257-FR-001): `time_block.created`, `time_block.updated` (added to the kinds), `time_block.deleted`, subject `time_block` with `blockId`, `garageId`, `mechanicId`, `lift`, `startsAt`, `endsAt` in the payload and never the note; the audience resolver gains the `time_block` subject: `garage:{garageId}`, `mechanic:{mechanicId}` when set, `public:garage:{garageId}` (so open profiles re-read their free slots; the public stream carries the kind and the id only, as every event). The live hub MUST deliver the three kinds to the owner and a receptionist and, through her `mechanic:` channel, to the mechanic (as it does the unclaimed `booking.confirmed`: no `KIND_CAPABILITY` entry is added, plan.md R4), and the `public:garage:` allow-list gains the three kinds. Nobody is notified.
 
 _From 427-time-blocks._
+
+### 1254-FR-010 — The signed-in frame (once, in the frame every `/app` area shares, else once per area frame) MUST show, for an account with pending approvals,, above the view, the strip "n acțiuni așteaptă aprobarea ta" / "n actions await your approval" (Romanian plural rules: "1 acțiune", "2 acțiuni"; absent at 0) linking to the oldest pending approval's sheet; after a decision the sheet shows the next pending one or closes. The strip and an open sheet MUST re-read on `assistant_approval.requested` and `assistant_approval.decided` received on the account's live stream, so every open tab updates without a reload. The strip is one component with one mount line, so ST-368 moves it into the Asistent AI view. (AC 6; brief Live updates; build plan ST-376 ↔ ST-368)
+
+_From 1254-assistant-approvals._
 
 ## Retired
 
