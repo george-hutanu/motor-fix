@@ -201,6 +201,14 @@ describe('Panou drawn from the person’s layout', () => {
     expect(button(element)).not.toBeNull();
   });
 
+  it('draws a mechanic’s own jobs only once the layout answers', async () => {
+    const { element } = await render('mechanic', {
+      read: () => new Promise(() => undefined),
+    });
+
+    expect(element.querySelector('mf-own-jobs-section')).toBeNull();
+  });
+
   it('leaves out the sections the layout hides, keeping the order', async () => {
     const { element } = await render('garage', {
       read: async () => answer(layoutOf(['sched', 'funnel']), 'garage'),

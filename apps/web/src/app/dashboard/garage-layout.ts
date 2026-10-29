@@ -16,7 +16,6 @@ import {
 } from '@motor-fix/data-access';
 import { merge } from 'rxjs';
 
-import type { SectionKey } from './garage-sections';
 import { Live } from './live';
 import { Session } from './session';
 
@@ -25,18 +24,6 @@ const GARAGE_ROLES: readonly GarageRole[] = [
   'garage',
   'receptionist',
   'mechanic',
-];
-// Every key Panou can hold, in its default order: the body of a save made
-// after the read failed.
-const DEFAULT_KEYS: readonly SectionKey[] = [
-  'kpi',
-  'now',
-  'req',
-  'load',
-  'sched',
-  'funnel',
-  'brands',
-  'reviews',
 ];
 
 // The garage person's own Panou layout: which sections she hides, read once
@@ -67,6 +54,8 @@ export class GarageLayout {
     return hidden;
   });
   readonly ready = computed(() => this.server() !== undefined);
+  // Bumped by every read and save, so an answer overtaken by a later one is dropped.
+  private turn = 0;
 
   constructor() {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
@@ -93,14 +82,17 @@ export class GarageLayout {
     const role = this.role();
     if (!role) return false;
     if (this.pending().has(key)) return true;
+    this.turn++;
     this.pending.update((pending) => new Map(pending).set(key, shown));
-    const base =
-      this.server() ?? DEFAULT_KEYS.map((k) => ({ key: k, visible: true }));
     const flips = this.pending();
-    const panels = base.map((panel) => ({
-      key: panel.key,
-      visible: flips.get(panel.key) ?? panel.visible,
-    }));
+    const server = this.server();
+    // After a failed read only the switches go: the server keeps the rest.
+    const panels = server
+      ? server.map((panel) => ({
+          key: panel.key,
+          visible: flips.get(panel.key) ?? panel.visible,
+        }))
+      : [...flips].map(([k, visible]) => ({ key: k, visible }));
     try {
       const answer = await this.api.dashboardLayoutsControllerSave({
         body: { panels },
@@ -109,7 +101,10 @@ export class GarageLayout {
       this.server.set(answer.panels);
       return true;
     } catch {
-      return false;
+      // A later save may have carried this switch: then it is kept.
+      return (
+        this.server()?.find((panel) => panel.key === key)?.visible === shown
+      );
     } finally {
       this.pending.update((pending) => {
         const next = new Map(pending);
@@ -127,10 +122,13 @@ export class GarageLayout {
       return;
     }
     const account = this.account();
+    const turn = ++this.turn;
     try {
       const answer = await this.api.dashboardLayoutsControllerRead({ role });
-      // An answer for an account signed out meanwhile is dropped.
-      if (this.account() === account) this.server.set(answer.panels);
+      // An answer for an account signed out meanwhile, or overtaken by a
+      // later read or save, is dropped; the first one is kept until then.
+      const current = this.turn === turn || this.server() === undefined;
+      if (this.account() === account && current) this.server.set(answer.panels);
     } catch {
       // The first read failing draws the default; a later one keeps the layout.
       if (this.server() === undefined) this.server.set(null);

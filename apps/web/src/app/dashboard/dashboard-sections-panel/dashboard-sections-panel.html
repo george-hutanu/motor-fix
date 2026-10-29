@@ -2,7 +2,7 @@
 <ol>
   @for (row of rows(); track row.key) {
     <li data-row [attr.data-off]="row.shown ? null : ''">
-      <span class="position" aria-hidden="true">{{ row.position }}</span>
+      <span class="position">{{ row.position }}</span>
       <span class="text">
         <span class="name" aria-hidden="true">{{ row.name }}</span>
         <span class="description" [id]="'sections-panel-' + row.key">{{ row.description }}</span>

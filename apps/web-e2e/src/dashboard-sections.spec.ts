@@ -104,8 +104,15 @@ test.describe('choosing the sections of Panou @seeded @database', () => {
       'reviews',
     ]);
 
-    await page.goto('/app/garage/schedule');
+    // The menu still opens the views of both hidden sections.
+    await page.setViewportSize({ height: 900, width: 1440 });
+    const menu = page.getByRole('navigation', { name: 'Meniu' });
+    await menu.getByRole('link', { exact: true, name: 'Programări' }).click();
     await expect(page).toHaveURL('/app/garage/schedule');
+    await menu
+      .getByRole('link', { exact: true, name: 'Profilul service‑ului' })
+      .click();
+    await expect(page).toHaveURL('/app/garage/profile');
   });
 
   test('a mechanic sees only her two rows', async ({ page }) => {

@@ -123,9 +123,10 @@ export class GarageHome {
       this.sections().length > 0 &&
       this.shown().length === 0,
   );
-  // Her own jobs come right after the requests, or first without them.
+  // Her own jobs come right after the requests, or first without them, once
+  // the layout answers.
   protected readonly ownAfter = computed(() =>
-    this.ownJobs()
+    this.ownJobs() && this.layout.ready()
       ? this.shown().findIndex((section) => section.key === 'req')
       : null,
   );

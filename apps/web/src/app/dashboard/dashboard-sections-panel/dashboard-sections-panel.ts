@@ -49,7 +49,7 @@ export class DashboardSectionsPanel {
 
   protected async flip(key: string, shown: boolean, control: HlmSwitch) {
     this.pending.update((keys) => new Set(keys).add(key));
-    const saved = await this.task.data.toggle(key, shown);
+    const saved = await this.task.data.toggle(key, shown).catch(() => false);
     this.pending.update((keys) => {
       const left = new Set(keys);
       left.delete(key);

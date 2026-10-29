@@ -162,7 +162,7 @@ describe('switching a section', () => {
     expect([...layout.hidden()].sort()).toEqual(['brands', 'sched']);
   });
 
-  it('saves the eight keys visible with the change after a failed read', async () => {
+  it('saves only the switched key after a failed read', async () => {
     const { api, layout, settle } = setup({
       read: () => Promise.reject(new Error('down')),
     });
@@ -171,9 +171,26 @@ describe('switching a section', () => {
     await layout.toggle('reviews', false);
 
     expect(api.dashboardLayoutsControllerSave).toHaveBeenCalledWith({
-      body: { panels: all(['reviews']) },
+      body: { panels: [{ key: 'reviews', visible: false }] },
       role: 'garage',
     });
+  });
+
+  it('drops a read that was out when the switch was made', async () => {
+    const reads = [async () => answer(all()), () => stale.promise];
+    const stale = deferred<DashboardLayoutDto>();
+    const { layout, live, settle } = setup({
+      read: () => (reads.shift() as () => Promise<DashboardLayoutDto>)(),
+    });
+    await settle();
+
+    live.emit('dashboard_layout.updated', 'account-1');
+    await settle();
+    await layout.toggle('sched', false);
+    stale.resolve(answer(all()));
+    await settle();
+
+    expect([...layout.hidden()]).toEqual(['sched']);
   });
 
   it('sends every pending switch with the next save', async () => {
@@ -207,6 +224,25 @@ describe('switching a section', () => {
     expect(await layout.toggle('funnel', true)).toBe(false);
     expect([...layout.hidden()]).toEqual(['funnel']);
     expect(layout.pending().size).toBe(0);
+  });
+
+  it('answers true for a failed save whose switch a later save kept', async () => {
+    const first = deferred<DashboardLayoutDto>();
+    const saves = [
+      () => first.promise,
+      async () => answer(all(['kpi', 'load'])),
+    ];
+    const { layout, settle } = setup({
+      save: () => (saves.shift() as () => Promise<DashboardLayoutDto>)(),
+    });
+    await settle();
+
+    const kpi = layout.toggle('kpi', false);
+    await layout.toggle('load', false);
+    first.reject(new Error('500'));
+
+    expect(await kpi).toBe(true);
+    expect([...layout.hidden()].sort()).toEqual(['kpi', 'load']);
   });
 
   it('sends nothing for a section whose save is pending', async () => {

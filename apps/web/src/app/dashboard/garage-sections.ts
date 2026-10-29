@@ -4,7 +4,7 @@ import type { MeDto } from '@motor-fix/data-access';
 import { garageOf } from './session';
 import { allowedViews } from './views';
 
-export type SectionKey =
+type SectionKey =
   | 'kpi'
   | 'now'
   | 'req'
