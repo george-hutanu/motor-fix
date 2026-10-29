@@ -1601,3 +1601,108 @@ describe('telling the removed account', () => {
     ).toMatchObject({ accountId: null, removedAt: expect.any(Date) });
   });
 });
+
+// @traces 427-FR-012
+describe("a removed card's blocked time", () => {
+  const QUARTER = 15 * 60_000;
+  const at = (hours: number) =>
+    new Date(Math.round((Date.now() + hours * HOUR) / QUARTER) * QUARTER);
+
+  async function blocked(
+    garageId: string,
+    createdBy: string,
+    mechanicId: string,
+    from: Date,
+    to: Date,
+  ) {
+    const block = await prisma.timeBlock.create({
+      data: {
+        createdBy,
+        endsAt: to,
+        garageId,
+        mechanicId,
+        startsAt: from,
+        updatedBy: createdBy,
+      },
+    });
+    await prisma.bookingSegment.create({
+      data: {
+        endsAt: to,
+        garageId,
+        mechanicId,
+        startsAt: from,
+        timeBlockId: block.id,
+      },
+    });
+    return block;
+  }
+
+  it('deletes its two future blocks with their segments, one system entry and one event each, and keeps the past one', async () => {
+    const { dinamo, mihai, vladCard } = await world({ ownerRow: true });
+    const first = await blocked(dinamo.id, mihai, vladCard.id, at(24), at(26));
+    const second = await blocked(dinamo.id, mihai, vladCard.id, at(48), at(50));
+    const past = await blocked(
+      dinamo.id,
+      mihai,
+      vladCard.id,
+      at(-170),
+      at(-168),
+    );
+
+    const res = await remove(dinamo.id, vladCard.id, bearer(mihai, 'garage'));
+
+    expect(res.status).toBe(204);
+    const left = await prisma.timeBlock.findMany({
+      where: { garageId: dinamo.id },
+    });
+    expect(left).toEqual([
+      expect.objectContaining({
+        endsAt: past.endsAt,
+        id: past.id,
+        mechanicId: vladCard.id,
+        startsAt: past.startsAt,
+      }),
+    ]);
+    expect(
+      await prisma.bookingSegment.findMany({
+        select: { timeBlockId: true },
+        where: { garageId: dinamo.id, timeBlockId: { not: null } },
+      }),
+    ).toEqual([{ timeBlockId: past.id }]);
+    const audit = await prisma.activityLog.findMany({
+      orderBy: { at: 'asc' },
+      where: { subjectType: 'time_block' },
+    });
+    expect(audit.map((entry) => entry.subjectId).sort()).toEqual(
+      [first.id, second.id].sort(),
+    );
+    for (const entry of audit) {
+      expect(entry).toMatchObject({
+        action: 'delete',
+        actorId: mihai,
+        actorRole: 'system',
+        garageId: dinamo.id,
+      });
+      expect(entry.oldValue).toMatchObject({
+        mechanicId: vladCard.id,
+        mechanicName: 'Tudor Vlad',
+      });
+    }
+    const events = await outbox('time_block.deleted');
+    expect(events.map((event) => event.subjectId).sort()).toEqual(
+      [first.id, second.id].sort(),
+    );
+  });
+
+  it('leaves every block in place when the removal is refused', async () => {
+    const { dinamo, mihai, mihaiCard } = await world({ ownerRow: true });
+    await blocked(dinamo.id, mihai, mihaiCard.id, at(24), at(26));
+
+    const res = await remove(dinamo.id, mihaiCard.id, bearer(mihai, 'garage'));
+
+    expect(res.status).toBe(409);
+    expect(
+      await prisma.timeBlock.count({ where: { garageId: dinamo.id } }),
+    ).toBe(1);
+  });
+});

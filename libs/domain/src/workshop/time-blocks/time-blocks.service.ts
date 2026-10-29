@@ -172,6 +172,86 @@ const valuesOf = (shape: Shape) => ({
   startsAt: shape.startsAt.toISOString(),
 });
 
+type BlockEvent =
+  | 'time_block.created'
+  | 'time_block.updated'
+  | 'time_block.deleted';
+
+// The event of a write: the garage, the block's mechanic and the public
+// stream of the garage hear it; never the note.
+function announced(
+  events: EventPort,
+  tx: Tx,
+  kind: BlockEvent,
+  garageId: string,
+  blockId: string,
+  shape: Shape,
+) {
+  return events.record(tx, {
+    audience: { garageId, mechanicId: shape.mechanicId, type: 'time_block' },
+    kind,
+    payload: { blockId, garageId, ...valuesOf(shape) },
+    subjectId: blockId,
+  });
+}
+
+// What a removal's audit entry keeps of the block.
+const removedValues = (
+  stored: TimeBlock & { mechanic: Pick<Mechanic, 'name'> | null },
+) => ({
+  ...valuesOf(stored),
+  mechanicName: stored.mechanic?.name ?? null,
+  note: stored.note,
+});
+
+// A card leaves the team: its blocks still to come go with it, each recorded
+// as the system's removal on behalf of whoever removed the card. Blocks that
+// already ended stay with their values.
+export async function removeMechanicBlocks(
+  tx: Tx,
+  ports: { audit: AuditPort; events: EventPort },
+  who: { actorId: string | null; garageId: string; mechanicId: string },
+  now = new Date(),
+): Promise<void> {
+  const rows = await tx.timeBlock.findMany({
+    include: storedInclude,
+    orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+    where: {
+      endsAt: { gt: now },
+      garageId: who.garageId,
+      mechanicId: who.mechanicId,
+    },
+  });
+  if (rows.length === 0) return;
+  await tx.timeBlock.deleteMany({
+    where: { id: { in: rows.map((row) => row.id) } },
+  });
+  await ports.audit.recordMany(
+    tx,
+    rows.map((row) => ({
+      action: 'delete' as const,
+      actorId: who.actorId,
+      actorRole: 'system' as const,
+      garageId: who.garageId,
+      internal: true,
+      newValue: null,
+      oldValue: removedValues(row),
+      subjectId: row.id,
+      subjectType: 'time_block',
+    })),
+  );
+  for (const row of rows) {
+    await announced(
+      ports.events,
+      tx,
+      'time_block.deleted',
+      who.garageId,
+      row.id,
+      row,
+    );
+  }
+}
+
 // What a block holds: a mechanic or a lift, each only while its switch is
 // on, and something while either is.
 function judgeSwitches(
@@ -407,11 +487,7 @@ export class TimeBlocksService {
           ...this.entry(actor, garageId, blockId),
           action: 'delete',
           newValue: null,
-          oldValue: {
-            ...valuesOf(stored),
-            mechanicName: stored.mechanic?.name ?? null,
-            note: stored.note,
-          },
+          oldValue: removedValues(stored),
         });
         await this.announce(
           tx,
@@ -598,17 +674,12 @@ export class TimeBlocksService {
 
   private announce(
     tx: Tx,
-    kind: 'time_block.created' | 'time_block.updated' | 'time_block.deleted',
+    kind: BlockEvent,
     garageId: string,
     blockId: string,
     shape: Shape,
   ) {
-    return this.events.record(tx, {
-      audience: { garageId, mechanicId: shape.mechanicId, type: 'time_block' },
-      kind,
-      payload: { blockId, garageId, ...valuesOf(shape) },
-      subjectId: blockId,
-    });
+    return announced(this.events, tx, kind, garageId, blockId, shape);
   }
 
   private async read(tx: Tx, id: string, lifts: boolean) {

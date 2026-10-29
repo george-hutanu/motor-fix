@@ -27,7 +27,7 @@ export const getSchedule = defineTool({
   acts: false,
   annotations: { destructiveHint: false, readOnlyHint: true },
   description:
-    "Shows the garage's bookings from one day to another (at most 7 days; today when no day is given), in start order: the car, the jobs, the customer, the mechanic, the lift, the status and the job's status, with the minutes left to confirm a booking still awaiting the garage. A long job is on each day it has a working segment, with all its segments. Grouped by mechanic and by lift. Filter by lift or by mechanicId.",
+    "Shows the garage's bookings from one day to another (at most 7 days; today when no day is given), in start order: the car, the jobs, the customer, the mechanic, the lift, the status and the job's status, with the minutes left to confirm a booking still awaiting the garage. A long job is on each day it has a working segment, with all its segments. Grouped by mechanic and by lift. Also the blocked time staff set aside for walk-ins and phone bookings (blocks), each with its mechanic, lift, note and day segments. Filter by lift or by mechanicId.",
   async handler(actor, input, ctx) {
     const language = actor.language ?? 'ro';
     const schedule = await ctx.garage.schedule.list(
@@ -66,6 +66,19 @@ export const getSchedule = defineTool({
   },
   name: 'get_schedule',
   outputSchema: {
+    blocks: z.array(
+      z.object({
+        endsAt: z.string(),
+        id: z.string(),
+        lift: z.number().nullable().optional(),
+        mechanic: z.object({ id: z.string(), name: z.string() }).nullable(),
+        note: z.string().nullable(),
+        segments: z.array(
+          z.object({ endsAt: z.string(), startsAt: z.string() }),
+        ),
+        startsAt: z.string(),
+      }),
+    ),
     byLift: z
       .array(
         z.object({
