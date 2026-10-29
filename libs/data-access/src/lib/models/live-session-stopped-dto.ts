@@ -4,6 +4,11 @@
 export interface LiveSessionStoppedDto {
   keep: boolean;
   liveSessionId: string;
+
+  /**
+   * The most accounts watching at once; 0 when nobody watched
+   */
+  peakViewers: number;
   recordingMediaId: string | null;
 
   /**
@@ -11,4 +16,9 @@ export interface LiveSessionStoppedDto {
    */
   seconds: number;
   stoppedAt: string;
+
+  /**
+   * When the job’s driver first watched; null when he never did
+   */
+  viewedByDriverAt: string | null;
 }

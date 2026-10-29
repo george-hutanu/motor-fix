@@ -19045,6 +19045,16 @@
             "type": "string",
             "format": "uuid",
             "nullable": true
+          },
+          "peakViewers": {
+            "type": "number",
+            "description": "The most accounts watching at once; 0 when nobody watched"
+          },
+          "viewedByDriverAt": {
+            "type": "string",
+            "description": "When the job’s driver first watched; null when he never did",
+            "format": "date-time",
+            "nullable": true
           }
         },
         "required": [
@@ -19052,7 +19062,9 @@
           "stoppedAt",
           "keep",
           "seconds",
-          "recordingMediaId"
+          "recordingMediaId",
+          "peakViewers",
+          "viewedByDriverAt"
         ]
       },
       "MediaUploadRequestDto": {

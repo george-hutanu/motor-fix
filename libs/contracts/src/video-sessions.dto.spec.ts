@@ -71,7 +71,7 @@ describe('the live session contract', () => {
   });
 });
 
-// @traces 1251-FR-008
+// @traces 1251-FR-008 1252-FR-004
 describe('the stop and keep contract', () => {
   it('requires a boolean keep on the keep change', () => {
     expect(failed(LiveRecordingKeepDto, { keep: true })).toEqual([]);
@@ -99,9 +99,11 @@ describe('the stop and keep contract', () => {
     expect(listed(LiveSessionStoppedDto.prototype).sort()).toEqual([
       'keep',
       'liveSessionId',
+      'peakViewers',
       'recordingMediaId',
       'seconds',
       'stoppedAt',
+      'viewedByDriverAt',
     ]);
     expect(listed(LiveRecordingKeepDto.prototype)).toEqual(['keep']);
   });
