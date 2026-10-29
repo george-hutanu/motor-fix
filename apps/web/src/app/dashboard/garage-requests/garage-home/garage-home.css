@@ -99,4 +99,16 @@ p {
   .panel {
     padding-inline: var(--mf-space-4);
   }
+  .layout {
+    flex-wrap: nowrap;
+    inline-size: 100%;
+    margin-inline-start: 0;
+  }
+  .layout .muted {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .layout button {
+    flex: none;
+  }
 }
