@@ -95,11 +95,28 @@ export class LiveSessionStoppedDto {
   @ApiProperty()
   keep!: boolean;
 
-  @ApiProperty({ description: 'Whole seconds streamed, rounded down' })
+  @ApiProperty({
+    description: 'Whole seconds streamed, rounded down',
+    type: 'integer',
+  })
   seconds!: number;
 
   @ApiProperty({ format: 'uuid', nullable: true, type: String })
   recordingMediaId!: string | null;
+
+  @ApiProperty({
+    description: 'The most accounts watching at once; 0 when nobody watched',
+    type: 'integer',
+  })
+  peakViewers!: number;
+
+  @ApiProperty({
+    description: 'When the job’s driver first watched; null when he never did',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  viewedByDriverAt!: string | null;
 }
 
 // Types, not interfaces: an outbox payload is a plain record.

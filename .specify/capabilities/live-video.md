@@ -5,6 +5,7 @@ features:
   - 1250-live-video-provider
   - 333-media-storage
   - 1251-live-recording
+  - 1252-live-viewers
 ---
 
 # Capability: Live video
@@ -21,9 +22,9 @@ _From 1251-live-recording._
 
 _From 1250-live-video-provider._
 
-### 1250-FR-003 — The API MUST offer `POST /api/v1/live-sessions/:id/view-token` (view), for the job's driver (the account of the job's booking request), the owner of the job's garage and the job's mechanic. For a session in `live` it answers 200 with `{ url, expiresAt }`: `url` the provider's low-latency HLS manifest for the session's input (`https://customer-<code>.cloudflarestream.com/<token>/manifest/video.m3u8?protocol=llhls` on Cloudflare), `<token>` a JSON web token the API signs itself with RS256 (`node:crypto`, the configured signing key, no new dependency) whose `sub` is the provider input id, `kid` the signing key id and `exp` 5 minutes ahead, carrying no account, name, plate or job id; `expiresAt` is that `exp`. A session not in `live` MUST answer 409 `live_ended`. No credential, row or event is written for a view; the view is not audited (it is counted, FR-009).
+### 1252-FR-002 — A view credential issued by `POST /api/v1/live-sessions/:id/view-token` (1250-FR-003) MUST, in one transaction that first takes `FOR UPDATE` on the session's row and checks the caller's rights and `stopped_at` on that row, using one `now` for every time below and for the credential's `expiresAt`: insert the caller's LIVE_VIEWER record with `first_viewed_at` and `last_viewed_at` now, or set `last_viewed_at` now on their existing one; set `viewed_by_driver_at` to now when the caller is the job's driver (role `driver`) and it is null; count the session's viewer records with `last_viewed_at + LIVE_VIEW_TOKEN_TTL_MS` (5 minutes) after now, the caller's included; set `peak_viewers` to the greater of its value and that count; and sign the link inside the same transaction. A refused view (404, 409 `live_ended`, 401, 503 `live_unavailable`) MUST write nothing: a signing failure rolls the writes back. The view stays unaudited and writes no event; its rights, its answer and its refusals are 1250-FR-003 and 1250-FR-004 unchanged. The lock is the session's row alone (no garage or job lock), so a view never waits on a stop or a start for more than that row.
 
-_From 1250-live-video-provider._
+_From 1252-live-viewers._
 
 ### 1250-FR-004 — Start and view MUST answer 404 to anyone without the right: another garage's staff, a receptionist of the garage, a mechanic of the garage who is not the job's mechanic, another driver, an admin, and everyone when the job's garage has `live_media` off (a switched-off feature is hidden everywhere; the check is `featureOn(garageId, 'live_media')`, 398-FR-007). With `live_media` off both operations answer 404 before any other check. A start on a job that already has a `live` session MUST answer 409 `live_already_on` with the message "<first name> <last name> transmite deja" / "<first name> <last name> is already live" built from the starter's account name (first name alone when there is no last name); a start on a `done` or `cancelled` job MUST answer 409 `job_closed`. A call without a session is 401 `sign_in_required`. Every refusal is checked before the provider is called and writes nothing; the only input a refused start creates is the race loser's, closed before the answer (FR-005).
 
@@ -37,9 +38,9 @@ _From 1250-live-video-provider._
 
 _From 1251-live-recording._
 
-### 1251-FR-002 — LIVE_SESSION MUST live in its own Prisma schema file, `libs/domain/prisma/schema/live.prisma`, with: `id` (uuid), `job_id`, `garage_id`, `started_by` (account), `started_at`, `stopped_at` (null while live), `stop_reason` (null, `job_closed`, `feature_off`, `sender`, `idle`), `provider` (`cloudflare` | `fake`), `provider_input_id`, `keep_recording` (boolean, not null, default true: the sender's choice, on until changed) and `recording_media_id` (null, or the MEDIA_ITEM the stop registered, set only when the session stopped with `keep_recording` true); a session is `live` when `stopped_at` is null. One live session per job MUST be enforced by the database: a partial unique index on `job_id` where `stopped_at IS NULL`, with its migration. PostgreSQL is the truth (Principle VI): no copy of a session's state or keep value lives in Valkey.
+### 1252-FR-001 — LIVE_SESSION (`libs/domain/prisma/schema/live.prisma`) MUST gain `viewed_by_driver_at` (timestamp, null until the job's driver first takes a view credential) and `peak_viewers` (integer, not null, default 0, the highest number of distinct accounts holding an unexpired view credential at one moment), and the schema MUST gain LIVE_VIEWER (`live_viewer`): `live_session_id`, `account_id`, `first_viewed_at`, `last_viewed_at`, primary key (`live_session_id`, `account_id`), deleted with its session or its account (cascade on both); with its migration. PostgreSQL is the truth (Principle VI): no copy of a viewer or a count lives anywhere else.
 
-_From 1251-live-recording._
+_From 1252-live-viewers._
 
 ### 1250-FR-008 — The two operations' request and answer DTOs and the refusal codes MUST come from the contracts library, validated at the edge; `apps/api/openapi.json` MUST carry both operations and `libs/data-access` MUST be regenerated (`npx nx run data-access:generate`), never edited by hand. Neither route is public: both run under the app-wide actor guard.
 
@@ -65,9 +66,9 @@ _From 1250-live-video-provider._
 
 _From 1251-live-recording._
 
-### 1251-FR-005 — The API MUST offer `POST /api/v1/live-sessions/:id/stop` with body `{ keep?: boolean }` (the stop), for the same people as FR-004. In one transaction under the session's row lock it MUST: when `keep` is given and differs from the row, apply it as FR-004 does (row and audit entry); then run the stop routine of FR-007 with `stop_reason` `sender` and the actor as the audit's actor. It answers 200 `{ liveSessionId, stoppedAt, keep, seconds, recordingMediaId }`, `seconds` the whole seconds from `started_at` to `stopped_at` (rounded down) and `recordingMediaId` null when discarded. When `keep_recording` is false, the API MUST call `deleteRecording(provider_input_id)` once, after the transaction committed and before answering; a failure or timeout of that call MUST not change the answer: it is logged as one warning line with the session id and input id (never the provider's message), counted (FR-009), and left to the worker (FR-013), which reads `keep: false` on `live.stopped`. No provider call is made for a kept recording.
+### 1252-FR-004 — The stop's answer (1251-FR-005) MUST gain `peakViewers` (integer) and `viewedByDriverAt` (ISO time or null), read from the row inside the stop's transaction; the DTO comes from the contracts library, `apps/api/openapi.json` carries the two fields and `libs/data-access` is regenerated (`npx nx run data-access:generate`), never edited by hand. The `live.stopped` payload is unchanged. A stop that is refused answers as 1251-FR-005 says today and carries neither field: the figures ride a successful stop only.
 
-_From 1251-live-recording._
+_From 1252-live-viewers._
 
 ### 1251-FR-006 — Stop and the keep change MUST answer 404 to anyone without the right: the job's driver, a receptionist of the garage, a mechanic of the garage who is not the job's mechanic, another garage's staff, another driver, an admin, and everyone when the job's garage has `live_media` off (checked first, `featureOn(garageId, 'live_media')`, 398-FR-007). A session not in `live` MUST answer 409 `live_ended` with "Transmisia live s-a încheiat" / "The live stream has ended" (ST-1250's words). A call without a session is 401 `sign_in_required`. Every refusal writes nothing and calls the provider for nothing; two stops racing on one session yield one 200 and one 409 under the row lock.
 
@@ -89,9 +90,24 @@ _From 1251-live-recording._
 
 ### 1251-FR-013 — The worker MUST delete at the provider the recording of every session that stopped with `keep: false`: a consumer of `live.stopped` (ST-1390's, extended, or its own when ST-1390 is not merged) calls `deleteRecording` for the session's `provider_input_id` with retries (three tries, a minute apart), counted in `motorfix_live_recordings_total{outcome}` (`discarded`, `discard_failed`) and logged with ids only; the same consumer counts a kept recording (`keep: true`) as a visible live media item once its stop committed (FR-003); it is idempotent, since the port's delete succeeds on nothing to delete, so a sender's discard the API already completed costs one empty call. Tested with a stubbed provider: the delete after a system stop, the retry on failure, the no-op after a completed discard.
 
+### 1252-FR-003 — Whether anyone watches MUST have no effect on a session: no viewer count or its absence ends, pauses or changes a stream, the idle stop (1251-FR-011) keeps reading the publisher's state alone, and a session with a connected publisher and no viewer past the idle window stays `live`. A stop of a session nobody watched writes `peak_viewers` 0 and `viewed_by_driver_at` null and otherwise behaves as 1251-FR-007 and 1251-FR-005 say; a system stop writes nothing about viewers.
+
+_From 1252-live-viewers._
+
+### 1252-FR-005 — Observability: this story adds no endpoint, service, queue, outside call or metric: a view is counted by `motorfix_live_view_tokens_total{outcome="issued"}` already (1250-FR-009), and the viewer write rides the same route. The `live-sessions` endpoint entry of `infra/observability/inventory.json` MUST say that a view writes the viewer record, the driver's first view and the peak in one transaction, and `node scripts/observability-inventory.ts` MUST pass; no alert rule is added (the total stays at 50), and no log line gains a name or a token.
+
+_From 1252-live-viewers._
+
+### 1252-FR-006 — Tests MUST exist before the code (Principle II), in Jest on real PostgreSQL and Valkey for the API: the driver's first credential setting `viewed_by_driver_at` and his record; his second credential leaving `viewed_by_driver_at` and the count unchanged; the owner's and the mechanic's credentials leaving `viewed_by_driver_at` null; three distinct viewers within five minutes reaching `peak_viewers` 3 one at a time; a viewer whose last credential is older than five minutes (fake clock) not counted and the peak not falling; three simultaneous first credentials yielding `peak_viewers` 3; every refusal of 1250-FR-004, 409 `live_ended` and 503 `live_unavailable` (a provider whose signing throws) writing no viewer record and no peak; a viewer held at `last_viewed_at` + 5 min + 1 ms not counted; an account deletion removing its viewer rows; a connected publisher with no viewer past ten minutes left `live` by the idle check (the stand-in provider's table, fake clock); the stop answer carrying the two fields, 0 and null for a session nobody watched; the load check of 1250-FR-010 extended to read `peak_viewers` 3 on each of its 20 sessions; the migration applied; the inventory check. Every test file carries its `// @traces 1252-FR-<n>` line.
+
+_From 1252-live-viewers._
+
 ## Retired
 
 - `1250-FR-001` — superseded by `333-FR-018` (2026-10-29)
 - `333-FR-018` — superseded by `1251-FR-001` (2026-10-29)
 - `1250-FR-007` — superseded by `1251-FR-002` (2026-10-29)
 - `1250-FR-006` — superseded by `1251-FR-007` (2026-10-29)
+- `1251-FR-002` — superseded by `1252-FR-001` (2026-10-29)
+- `1250-FR-003` — superseded by `1252-FR-002` (2026-10-29)
+- `1251-FR-005` — superseded by `1252-FR-004` (2026-10-29)
