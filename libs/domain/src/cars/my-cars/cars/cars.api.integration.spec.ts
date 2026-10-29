@@ -553,7 +553,7 @@ describe('what a save writes beside the car', () => {
   });
 });
 
-// @traces 1265-FR-001, 1265-FR-002
+// @traces 1265-FR-001 1265-FR-002
 describe('the ownership row a car is added with', () => {
   const rows = (carId: string) =>
     prisma.carOwnership.findMany({ where: { carId } });

@@ -3,7 +3,7 @@ import { serialDatabase } from '../../auth/serial-db.testing';
 import { databaseUrl } from '../../notifications/notifications.testing';
 import { transfersWorld } from '../transfers/transfers.testing';
 
-// @traces 1265-FR-010, 1265-FR-013
+// @traces 1265-FR-010 1265-FR-013
 
 const world = transfersWorld();
 const { prisma } = world;

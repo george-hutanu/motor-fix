@@ -13,7 +13,7 @@ import {
   transfersWorld,
 } from '../transfers/transfers.testing';
 
-// @traces 1265-FR-010, 1265-FR-011, 1265-FR-012
+// @traces 1265-FR-010 1265-FR-011 1265-FR-012
 
 const world = transfersWorld();
 const { prisma } = world;

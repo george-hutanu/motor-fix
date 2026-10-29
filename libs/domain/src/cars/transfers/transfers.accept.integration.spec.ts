@@ -18,7 +18,7 @@ import { outbox } from '../../events/event.port';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
 import { databaseUrl } from '../../notifications/notifications.testing';
 
-// @traces 1265-FR-003, 1265-FR-004, 1265-FR-005, 1265-FR-006, 1265-FR-007, 1265-FR-008, 1265-FR-013, 1265-FR-014, 1265-FR-015, 1265-FR-016
+// @traces 1265-FR-003 1265-FR-004 1265-FR-005 1265-FR-006 1265-FR-007 1265-FR-008 1265-FR-013 1265-FR-014 1265-FR-015 1265-FR-016
 
 const SELLER_PHONE = '+40733000111';
 const BUYER_PHONE = '+40722123456';
