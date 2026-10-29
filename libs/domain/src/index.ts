@@ -26,6 +26,18 @@ export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
 export { assistantBroker } from './auth/assistant/assistant.service';
 export {
+  AssistantApprovals,
+  type Decider as ApprovalDecider,
+  type LockedApproval,
+} from './auth/assistant-approvals/assistant-approvals';
+export {
+  type ApprovalKind,
+  type ApprovalOutcome,
+  ApproveAssistantActionDto,
+  AssistantActionApprovalDto,
+  AssistantActionApprovalListDto,
+} from './auth/assistant-approvals/assistant-approvals.dto';
+export {
   AssistantConfirmations,
   type Decision as ConfirmationDecision,
   judge as judgeConfirmation,
