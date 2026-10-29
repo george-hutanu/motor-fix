@@ -83,6 +83,7 @@ async function sold() {
   });
   await prisma.carOwnership.create({
     data: {
+      access: 'owner',
       accountId: maria.id,
       carId: car.id,
       fromDate: day('2026-06-15'),
