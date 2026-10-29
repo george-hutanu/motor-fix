@@ -31,18 +31,23 @@ async function sold() {
     createdAt: string,
     source: 'logged' | 'motorfix' = 'logged',
     deletedAt: Date | null = null,
-  ) =>
-    prisma.repair.create({
-      data: {
-        carId: car.id,
-        createdAt: at(createdAt),
-        deletedAt,
-        doneOn: day(doneOn),
-        garageName: 'Service Popescu',
-        source,
-        what,
-      },
+  ) => {
+    const data = {
+      createdAt: at(createdAt),
+      deletedAt,
+      doneOn: day(doneOn),
+      what,
+    };
+    // A MotorFix repair carries its job, so it comes from the job's chain.
+    if (source === 'motorfix') {
+      return world
+        .throughMotorFix(andrei.id, car.id)
+        .then(({ id }) => prisma.repair.update({ data, where: { id } }));
+    }
+    return prisma.repair.create({
+      data: { ...data, carId: car.id, garageName: 'Service Popescu', source },
     });
+  };
   const before = await repair('Before', '2025-12-01', '2026-01-09T10:00:00Z');
   const ticked = await repair('Ticked', '2026-03-01', '2026-03-01T10:00:00Z');
   const kept = await repair('Kept', '2026-04-01', '2026-04-01T10:00:00Z');

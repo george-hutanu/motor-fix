@@ -77,7 +77,7 @@ describe('POST /car-transfers/:token/accept on hostile tokens', () => {
     const res = await accept(maria.auth, token);
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toBe('not_found');
+    expect(res.body.code).toBe('not_found');
   });
 
   it('answers 404 to a read of the same hostile tokens, signed in or not', async () => {
@@ -139,7 +139,7 @@ describe('POST /car-transfers/:token/accept in a race', () => {
       200, 410, 410, 410, 410,
     ]);
     expect(
-      answers.filter((res) => res.status === 410).map((res) => res.body.error),
+      answers.filter((res) => res.status === 410).map((res) => res.body.code),
     ).toEqual(Array(4).fill('transfer_accepted'));
     const open = (await world.ownerships(car.id)).filter(
       (row) => row.access === 'owner' && row.closedAt === null,
@@ -155,7 +155,7 @@ describe('POST /car-transfers/:token/accept in a race', () => {
     const res = await accept(seller.auth, token);
 
     expect(res.status).toBe(410);
-    expect(res.body.error).toBe('transfer_accepted');
+    expect(res.body.code).toBe('transfer_accepted');
   });
 
   it('lets the same buyer who just took the car not take it again', async () => {
@@ -166,7 +166,7 @@ describe('POST /car-transfers/:token/accept in a race', () => {
     const again = await accept(maria.auth, token);
 
     expect(again.status).toBe(410);
-    expect(again.body.error).toBe('transfer_accepted');
+    expect(again.body.code).toBe('transfer_accepted');
   });
 });
 
@@ -274,7 +274,7 @@ describe('what the buyer inherits when a ticked repair vanishes', () => {
     });
 
     expect(bad.status).toBe(400);
-    expect(bad.body.error).toBe('unknown_repair');
+    expect(bad.body.code).toBe('unknown_repair');
     expect(good.status).toBe(201);
   });
 });
@@ -350,44 +350,43 @@ describe('the seller’s read-only copy on hostile ids', () => {
 });
 
 describe('the seller’s notice of the sale', () => {
-  it('queues a bell row for the seller naming the car and never the buyer', async () => {
+  // The bell, e-mail and push rows are the worker's (the fan-out spec);
+  // the accept owes the event they are built from.
+  const acceptedEvents = async (mark: bigint) =>
+    (await world.transferEvents(mark)).filter(
+      (event) => event.kind === 'car_transfer.accepted',
+    );
+
+  it('writes one car_transfer.accepted event for the seller, naming neither the buyer nor the phone', async () => {
     const { seller, token } = await offered();
     const maria = await buyer('Maria Ionescu');
+    const { mark } = await world.marks();
     await accept(maria.auth, token).expect(200);
 
-    const rows = await prisma.notification.findMany({
-      where: { accountId: seller.id, kind: 'CAR_TRANSFER_ACCEPTED' },
-    });
+    const events = await acceptedEvents(mark);
 
-    expect(rows.map((row) => row.channel)).toContain('in_app');
-    expect(JSON.stringify(rows)).not.toContain('Maria');
-    expect(JSON.stringify(rows)).not.toContain(BUYER_PHONE);
-    expect(
-      await prisma.notification.count({
-        where: { accountId: maria.id, kind: 'CAR_TRANSFER_ACCEPTED' },
-      }),
-    ).toBe(0);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.payload).toEqual(
+      expect.objectContaining({ sellerAccountId: seller.id }),
+    );
+    const text = JSON.stringify(events[0]?.payload);
+    expect(text).not.toContain('Maria');
+    expect(text).not.toContain(BUYER_PHONE);
   });
 
   it('still hands the car over when the model name is 40 characters long', async () => {
-    const { car, seller, token } = await offered();
+    const { car, token } = await offered();
     await prisma.car.update({
       data: { model: 'M'.repeat(40) },
       where: { id: car.id },
     });
     const maria = await buyer();
+    const { mark } = await world.marks();
 
     const res = await accept(maria.auth, token);
 
     expect(res.status).toBe(200);
-    const bell = await prisma.notification.findMany({
-      where: {
-        accountId: seller.id,
-        channel: 'in_app',
-        kind: 'CAR_TRANSFER_ACCEPTED',
-      },
-    });
-    expect(bell).toHaveLength(1);
+    expect(await acceptedEvents(mark)).toHaveLength(1);
   });
 
   it('notifies a seller with no name and no language set without failing the accept', async () => {

@@ -154,7 +154,9 @@ describe('telling the seller the buyer took the car over', () => {
       `The buyer has taken over your ${carName}. Its history stays with you, read-only, up to the sale date.`,
     );
     expect(await messages(buyer)).toEqual([]);
-    const text = JSON.stringify(all);
+    const text = JSON.stringify(all, (_, value) =>
+      typeof value === 'bigint' ? String(value) : value,
+    );
     expect(text).not.toContain(BUYER_PHONE);
     expect(text).not.toContain(BUYER_NAME);
     expect(await counted('built')).toBe(before + 1);

@@ -470,7 +470,19 @@ describe('POST /car-transfers/:token/accept', () => {
       await tx.$queryRaw`SELECT id FROM account WHERE id = ${seller.id}::uuid FOR UPDATE`;
       pending = accept(maria.auth, token).then((res) => res);
       await new Promise((resolve) => setTimeout(resolve, 500));
-      await world.request(seller.id, { carId: car.id, status: 'sent' });
+      await tx.quoteRequest.create({
+        data: {
+          carBrand: 'Mini',
+          carFuel: 'petrol',
+          carId: car.id,
+          carModel: 'Cooper S',
+          carYear: 2019,
+          driverId: seller.id,
+          expiresAt: new Date(Date.now() + 7 * 86_400_000),
+          idempotencyKey: `held-${seller.id}`,
+          status: 'sent',
+        },
+      });
     });
     const res = await pending;
 
@@ -670,18 +682,20 @@ describe('the car after it changed hands', () => {
     await accept(maria.auth, token).expect(200);
     const as = (call: request.Test) => call.set('Authorization', seller.auth);
 
+    // Built one at a time: supertest closes the shared server after each call.
     for (const call of [
-      as(http().get(`/cars/${car.id}/sale`)),
-      as(http().patch(`/cars/${car.id}`).send({ model: 'Altul' })),
-      as(http().delete(`/cars/${car.id}`)),
-      as(http().post(`/cars/${car.id}/transfers/${transferId}/cancel`)),
-      as(
-        http()
-          .post(`/cars/${car.id}/transfers`)
-          .send({ buyerPhone: BUYER_PHONE, repairIds: [] }),
-      ),
+      () => as(http().get(`/cars/${car.id}/sale`)),
+      () => as(http().patch(`/cars/${car.id}`).send({ model: 'Altul' })),
+      () => as(http().delete(`/cars/${car.id}`)),
+      () => as(http().post(`/cars/${car.id}/transfers/${transferId}/cancel`)),
+      () =>
+        as(
+          http()
+            .post(`/cars/${car.id}/transfers`)
+            .send({ buyerPhone: BUYER_PHONE, repairIds: [] }),
+        ),
     ]) {
-      expect((await call).status).toBe(404);
+      expect((await call()).status).toBe(404);
     }
     const theirs = await http().get('/cars').set('Authorization', seller.auth);
     expect(theirs.body.items).toEqual([]);
