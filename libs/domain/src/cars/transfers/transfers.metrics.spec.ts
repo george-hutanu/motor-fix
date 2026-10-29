@@ -2,6 +2,8 @@ import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 
 import {
+  ACCEPT_OUTCOMES,
+  recordAccept,
   recordExpiries,
   recordSend,
   recordWhatsApp,
@@ -61,4 +63,34 @@ describe('the car transfer counters', () => {
 
     expect(await total(name)).toBe(before + 3);
   });
+});
+
+// @traces 1265-FR-015
+describe('the car transfer accept counter', () => {
+  it('names every outcome: the accept and each refusal', () => {
+    expect([...ACCEPT_OUTCOMES].sort()).toEqual(
+      [
+        'accepted',
+        'car_limit',
+        'not_found',
+        'open_request',
+        'own_transfer',
+        'transfer_accepted',
+        'transfer_cancelled',
+        'transfer_expired',
+      ].sort(),
+    );
+  });
+
+  it.each([...ACCEPT_OUTCOMES])(
+    'counts an accept answered %s',
+    async (outcome) => {
+      const name = 'motorfix_car_transfer_accepts_total';
+      const before = await total(name, { outcome });
+
+      recordAccept(outcome);
+
+      expect(await total(name, { outcome })).toBe(before + 1);
+    },
+  );
 });

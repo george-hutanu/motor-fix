@@ -59,6 +59,7 @@ features:
   - 1258-driver-cancel
   - 177-reported-reviews
   - 1254-assistant-approvals
+  - 277-car-status-alerts
 ---
 
 # Capability: Notifications
@@ -1042,6 +1043,34 @@ _From 177-reported-reviews._
 ### 1254-FR-003 — ASSISTANT_APPROVAL_NEEDED MUST go to the person by push and into the bell, and by e-mail instead of push when the account has no push device (never both; one catalogue flag read by the routing for any role, not a driver preference group); it MUST NOT be mutable by any preference, MUST go at any hour (not held for quiet hours), and its push, bell and e-mail texts (ro/en) MUST name that the assistant wants to do something and link to the approval's sheet (`/app/assistant/approvals/:id`). It carries no summary detail beyond that: the sheet shows the summary. (AC 1; brief Notifications)
 
 _From 1254-assistant-approvals._
+
+### 277-FR-001 — The system MUST carry a JOB_STARTED template in Romanian and English for the bell, push, e-mail and WhatsApp, passing the existing template check: bell and push "{actor} a început lucrul la {car}." / "{actor} started work on {car}."; e-mail subject "Lucrul la {car} a început" / "Work on {car} has started", the body with the same line and a link to the driver's tracker (`/app/driver/requests/<requestId>`); the WhatsApp a template name declared for Brevo approval like the other fan-outs. `actor` is the mechanic's first name (the first word of the mechanic's name) when the garage's `team_mechanics` feature is on and the job has a mechanic, else the garage's name; `car` is the whole noun phrase, never the plate: EN "the <brand> <model>" (or "the <brand>", or "your car"), RO "<brand> <model>" (or "<brand>", or "mașina ta"); the template carries no article; no phone value.
+
+_From 277-car-status-alerts._
+
+### 277-FR-002 — The system MUST carry a JOB_READY template in Romanian and English for the bell, push, e-mail and WhatsApp, passing the template check: bell and push "Mașina ta e gata. Te așteptăm la {garage}." / "Your car is ready. {garage} is expecting you."; e-mail subject "Mașina ta e gata" / "Your car is ready", the body with the same line and the tracker link; a WhatsApp template name declared for approval; no plate or phone value.
+
+_From 277-car-status-alerts._
+
+### 277-FR-003 — `job.started` and `job.done` MUST each have one registered consumer in the notifications worker (one fan-out, in the worker's consumer list) which, per event, reads the job with its request, booking, mechanic, garage and car and builds one message to the request's driver (subject the job): JOB_STARTED for `job.started`, JOB_READY for `job.done`, on the catalogue's channels (e-mail, push, WhatsApp; never SMS), routed by the existing channel rules (`routing.ts`) with no new fallback code, in the driver's account language; keyed by the existing (type, recipient, channel, outbox event id) dedupe so a redelivered event builds nothing twice; a failed run is retried with exponential backoff like the other fan-outs. The consumer reads the workshop module's data and changes none of it.
+
+_From 277-car-status-alerts._
+
+### 277-FR-004 — JOB_READY MUST be built only while the job's status is still `done` when the consumer runs; JOB_STARTED MUST be skipped when the job is cancelled or missing. `job.paused` and `job.resumed` MUST build no message (no consumer; proven by test). A skipped event (a successful read finding the job absent, cancelled, or for JOB_READY not `done`) MUST be logged with the job id and the reason and MUST NOT be retried; any thrown error propagates to the queue's retry. Dedupe is per outbox event: a genuine second `job.started` sends again.
+
+_From 277-car-status-alerts._
+
+### 277-FR-005 — JOB_READY MUST be sent whatever the driver's bookings-group and per-type choices are (the catalogue's `always`), and never held by quiet hours; JOB_STARTED MUST honour the driver's mute (no outside message, the bell entry written) and is never held by quiet hours either (both outside the not-urgent set). The catalogue entries stay as they are; the settings panel shows JOB_READY as always on through the existing rule (142-FR-001).
+
+_From 277-car-status-alerts._
+
+### 277-FR-006 — BOOKING_CONFIRMED MUST be proven by a test of the existing consumer (389-FR-013): one message to the driver per `booking.confirmed`, sent with the bookings group off and built once on redelivery. No change to its code or template.
+
+_From 277-car-status-alerts._
+
+### 277-FR-009 — Tests, written first: Jest unit tests of both templates in both languages (actor by mechanic, by garage with `team_mechanics` off, by garage with no mechanic; car by brand and model, no plate); integration tests of the fan-out on PostgreSQL and Valkey for each acceptance scenario of User Stories 1 and 2 (one message per event, muted JOB_STARTED sends nothing outside, JOB_READY ignores the mute and quiet hours, no SMS, WhatsApp when chosen, redelivery builds once, reopened job sends no JOB_READY, cancelled or missing job sends no JOB_STARTED, pause and resume send nothing) and FR-006's test of BOOKING_CONFIRMED; the Playwright flow of the brief is optional and not owed by this story (Assumptions). Test files carry `// @traces 277-car-status-alerts-FR-<n>` lines.
+
+_From 277-car-status-alerts._
 
 ## Retired
 

@@ -159,37 +159,69 @@ export class LiveSessionsService {
     };
   }
 
+  // One transaction: the caller's viewer row, the driver's first view and
+  // the peak move with the credential, or not at all. The session row alone
+  // is locked, so concurrent viewers count one after another.
   async view(
     actor: Actor,
     liveSessionId: string,
   ): Promise<LiveViewCredentialDto> {
-    const [session] = await this.prisma.$queryRaw<
-      (LockedJob & { provider_input_id: string; stopped: boolean })[]
-    >`
-      SELECT j.id, j.garage_id, j.driver_id, j.mechanic_id,
-             m.account_id AS mechanic_account, j.status,
-             s.provider_input_id, s.stopped_at IS NOT NULL AS stopped
-      FROM live_session s
-      JOIN job j ON j.id = s.job_id
-      LEFT JOIN mechanic m ON m.id = j.mechanic_id
-      WHERE s.id = ${liveSessionId}::uuid`;
-    if (
-      !session ||
-      !(await featureOn(this.prisma, session.garage_id, FEATURE)) ||
-      !(mayStart(actor, session) || isDriver(actor, session))
-    ) {
-      countViewToken('refused');
-      this.logger.warn(`live view refused: not_found session ${liveSessionId}`);
-      throw new NotFoundException();
-    }
-    if (session.stopped) {
-      countViewToken('ended');
-      throw refused(HttpStatus.CONFLICT, 'live_ended', LIVE_ENDED, actor);
-    }
-    const expiresAt = new Date(Date.now() + LIVE_VIEW_TOKEN_TTL_MS);
-    let url: string;
+    const credential = await this.prisma.$transaction(async (tx) => {
+      const [session] = await tx.$queryRaw<
+        (LockedJob & { provider_input_id: string; stopped: boolean })[]
+      >`
+        SELECT j.id, j.garage_id, j.driver_id, j.mechanic_id,
+               m.account_id AS mechanic_account, j.status,
+               s.provider_input_id, s.stopped_at IS NOT NULL AS stopped
+        FROM live_session s
+        JOIN job j ON j.id = s.job_id
+        LEFT JOIN mechanic m ON m.id = j.mechanic_id
+        WHERE s.id = ${liveSessionId}::uuid
+        FOR UPDATE OF s`;
+      if (
+        !session ||
+        !(await featureOn(tx, session.garage_id, FEATURE)) ||
+        !(mayStart(actor, session) || isDriver(actor, session))
+      ) {
+        countViewToken('refused');
+        this.logger.warn(
+          `live view refused: not_found session ${liveSessionId}`,
+        );
+        throw new NotFoundException();
+      }
+      if (session.stopped) {
+        countViewToken('ended');
+        throw refused(HttpStatus.CONFLICT, 'live_ended', LIVE_ENDED, actor);
+      }
+      const now = new Date();
+      await this.watched(tx, actor, liveSessionId, now);
+      const expiresAt = new Date(now.getTime() + LIVE_VIEW_TOKEN_TTL_MS);
+      return {
+        expiresAt,
+        url: this.sign(
+          actor,
+          liveSessionId,
+          session.provider_input_id,
+          expiresAt,
+        ),
+      };
+    });
+    countViewToken('issued');
+    return {
+      expiresAt: credential.expiresAt.toISOString(),
+      url: credential.url,
+    };
+  }
+
+  // A provider that cannot sign answers 503 and rolls the view back.
+  private sign(
+    actor: Actor,
+    liveSessionId: string,
+    providerInputId: string,
+    expiresAt: Date,
+  ) {
     try {
-      url = this.provider.viewUrl(session.provider_input_id, expiresAt);
+      return this.provider.viewUrl(providerInputId, expiresAt);
     } catch (error) {
       countViewToken('unavailable');
       this.logger.warn(
@@ -202,8 +234,32 @@ export class LiveSessionsService {
         actor,
       );
     }
-    countViewToken('issued');
-    return { expiresAt: expiresAt.toISOString(), url };
+  }
+
+  // Records the caller as a viewer at `now`, the driver's first view, and
+  // the peak: accounts whose last credential has not yet expired.
+  private async watched(
+    tx: Tx,
+    actor: Actor,
+    liveSessionId: string,
+    now: Date,
+  ): Promise<void> {
+    await tx.$executeRaw`
+      INSERT INTO live_viewer
+        (live_session_id, account_id, first_viewed_at, last_viewed_at)
+      VALUES (${liveSessionId}::uuid, ${actor.accountId}::uuid, ${now}, ${now})
+      ON CONFLICT (live_session_id, account_id)
+      DO UPDATE SET last_viewed_at = EXCLUDED.last_viewed_at`;
+    const since = new Date(now.getTime() - LIVE_VIEW_TOKEN_TTL_MS);
+    await tx.$executeRaw`
+      UPDATE live_session s SET
+        viewed_by_driver_at = CASE WHEN ${actor.role === 'driver'}
+          THEN COALESCE(s.viewed_by_driver_at, ${now})
+          ELSE s.viewed_by_driver_at END,
+        peak_viewers = GREATEST(s.peak_viewers, (
+          SELECT count(*)::int FROM live_viewer v
+          WHERE v.live_session_id = s.id AND v.last_viewed_at > ${since}))
+      WHERE s.id = ${liveSessionId}::uuid`;
   }
 
   async setKeep(
@@ -250,9 +306,11 @@ export class LiveSessionsService {
     return {
       keep: stopped.keep,
       liveSessionId,
+      peakViewers: stopped.peakViewers,
       recordingMediaId: stopped.recordingMediaId,
       seconds: stopped.seconds,
       stoppedAt: stopped.stoppedAt.toISOString(),
+      viewedByDriverAt: stopped.viewedByDriverAt?.toISOString() ?? null,
     };
   }
 

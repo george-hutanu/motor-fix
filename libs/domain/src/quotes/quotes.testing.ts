@@ -12,6 +12,7 @@ import { AuditService } from '../audit/audit.service';
 import { AccountsService } from '../auth/accounts.service';
 import type { Actor } from '../auth/policy';
 import { createPrisma } from '../auth/prisma';
+import { localDay } from '../bucharest';
 import { noEvents } from '../events/event.port';
 import type { PrismaClient } from '../generated/prisma/client';
 import type {
@@ -80,15 +81,26 @@ export function quotesWorld(prisma: PrismaClient = createPrisma(databaseUrl)) {
         slug: `mini-${randomUUID()}`,
       },
     });
+    // Opened with its owner row, as adding a car does.
+    const at = new Date();
     return prisma.car.create({
       data: {
         brandId: brand.id,
+        createdAt: at,
         engine: '2.0 turbo',
         fuel: 'petrol',
         idempotencyKey: randomUUID(),
         model: 'Cooper S',
         odometerKm: 84_000,
         ownerId,
+        ownerships: {
+          create: {
+            access: 'owner',
+            accountId: ownerId,
+            fromDate: new Date(`${localDay(at)}T00:00:00Z`),
+            openedAt: at,
+          },
+        },
         plate,
         year: 2019,
       },

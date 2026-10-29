@@ -28,6 +28,7 @@ import {
 import { BOOKING_CONFIRM_REMINDER } from './booking-confirm-reminder';
 import { BOOKING_CONFIRMED } from './booking-confirmed';
 import { BOOKING_LAPSED_DRIVER, BOOKING_LAPSED_GARAGE } from './booking-lapsed';
+import { CAR_TRANSFER_ACCEPTED } from './car-transfer-accepted';
 import { CAR_TRANSFER_LINK } from './car-transfer-link';
 import {
   CATALOGUE_JOB_APPROVED,
@@ -45,6 +46,8 @@ import {
 import { GARAGE_RESTORED } from './garage-restored';
 import { GARAGE_SUSPENDED } from './garage-suspended';
 import { GENERIC, GENERIC_GROUPED } from './generic';
+import { JOB_READY } from './job-ready';
+import { JOB_STARTED } from './job-started';
 import { LISTING_CONTINUE_LINK, LISTING_REMINDER } from './listing';
 import { NEWS } from './news';
 import { PHONE_CHANGE_CODE } from './phone-change-code';
@@ -110,6 +113,7 @@ export const TEMPLATES: Registry = {
   BOOKING_CONFIRMED,
   'BOOKING_LAPSED.driver': BOOKING_LAPSED_DRIVER,
   'BOOKING_LAPSED.garage': BOOKING_LAPSED_GARAGE,
+  CAR_TRANSFER_ACCEPTED,
   CAR_TRANSFER_LINK,
   'CATALOGUE_JOB_DECIDED.approved': CATALOGUE_JOB_APPROVED,
   'CATALOGUE_JOB_DECIDED.rejected': CATALOGUE_JOB_REJECTED,
@@ -124,6 +128,8 @@ export const TEMPLATES: Registry = {
   GARAGE_SUSPENDED,
   GENERIC,
   'GENERIC.grouped': GENERIC_GROUPED,
+  JOB_READY,
+  JOB_STARTED,
   LISTING_CONTINUE_LINK,
   LISTING_REMINDER,
   NEWS,

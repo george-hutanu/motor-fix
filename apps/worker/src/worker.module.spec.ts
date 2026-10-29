@@ -1,5 +1,6 @@
 import {
   BOOKING_TIMERS_CONSUMER,
+  JOB_STAGE_CONSUMER,
   MODERATION_TIMERS_CONSUMER,
   OutboxRelayModule,
   QUOTE_ACCEPTED_CONSUMER,
@@ -44,6 +45,8 @@ describe('the outbox consumers of the worker', () => {
       ],
     ],
     ['quote.closed', [QUOTE_LOST_CONSUMER, REQUEST_TIMERS_CONSUMER]],
+    ['job.started', [JOB_STAGE_CONSUMER]],
+    ['job.done', [JOB_STAGE_CONSUMER]],
   ])('hands %s to one notifications fan-out', (kind, expected) => {
     const taking = consumers().filter((c) => c.kinds.includes(kind));
     expect(taking.map((c) => c.queue).sort()).toEqual(

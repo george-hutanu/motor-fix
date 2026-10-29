@@ -35,6 +35,11 @@ import {
 import { Brevo } from './brevo/brevo';
 import { BrevoWebhookController } from './brevo/brevo-webhook.controller';
 import {
+  CAR_TRANSFER_ACCEPTED_QUEUE,
+  type CarTransferAcceptedEvent,
+  CarTransferAcceptedFanOut,
+} from './car-transfer-accepted/car-transfer-accepted.fan-out';
+import {
   CATALOGUE_JOB_DECIDED_QUEUE,
   type CatalogueJobDecidedEvent,
   CatalogueJobDecidedFanOut,
@@ -66,6 +71,11 @@ import {
   type GarageSuspendedEvent,
   GarageSuspendedFanOut,
 } from './garage-suspended/garage-suspended.fan-out';
+import {
+  JOB_STAGE_QUEUE,
+  type JobStageEvent,
+  JobStageFanOut,
+} from './job-stage/job-stage.fan-out';
 import { NewsController } from './news/news.controller';
 import {
   NEWS_QUEUE,
@@ -164,12 +174,14 @@ const NEWS_WORKER = Symbol('NEWS_WORKER');
 const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
 const REVIEW_POSTED_WORKER = Symbol('REVIEW_POSTED_WORKER');
 const REVIEW_REPLIED_WORKER = Symbol('REVIEW_REPLIED_WORKER');
+const CAR_TRANSFER_ACCEPTED_WORKER = Symbol('CAR_TRANSFER_ACCEPTED_WORKER');
 const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
 const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const QUOTE_DECLINED_WORKER = Symbol('QUOTE_DECLINED_WORKER');
 const QUOTE_LOST_WORKER = Symbol('QUOTE_LOST_WORKER');
 const BOOKING_CONFIRMED_WORKER = Symbol('BOOKING_CONFIRMED_WORKER');
 const BOOKING_LAPSED_WORKER = Symbol('BOOKING_LAPSED_WORKER');
+const JOB_STAGE_WORKER = Symbol('JOB_STAGE_WORKER');
 const REQUEST_CANCELLED_WORKER = Symbol('REQUEST_CANCELLED_WORKER');
 const BOOKING_CANCELLED_WORKER = Symbol('BOOKING_CANCELLED_WORKER');
 const VERIFICATION_RESULT_WORKER = Symbol('VERIFICATION_RESULT_WORKER');
@@ -224,6 +236,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Inject(REVIEW_REPLIED_WORKER)
     private readonly reviewRepliedWorker?: Worker | null,
     @Optional()
+    @Inject(CAR_TRANSFER_ACCEPTED_WORKER)
+    private readonly carTransferAcceptedWorker?: Worker | null,
+    @Optional()
     @Inject(QUOTE_RECEIVED_WORKER)
     private readonly quoteReceivedWorker?: Worker | null,
     @Optional()
@@ -238,6 +253,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(BOOKING_CONFIRMED_WORKER)
     private readonly bookingConfirmedWorker?: Worker | null,
+    @Optional()
+    @Inject(JOB_STAGE_WORKER)
+    private readonly jobStageWorker?: Worker | null,
     @Optional()
     @Inject(BOOKING_LAPSED_WORKER)
     private readonly bookingLapsedWorker?: Worker | null,
@@ -517,6 +535,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        CarTransferAcceptedFanOut,
+        {
+          inject: [CarTransferAcceptedFanOut],
+          provide: CAR_TRANSFER_ACCEPTED_WORKER,
+          useFactory: (fanOut: CarTransferAcceptedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('CarTransferAccepted').error(
+                'PUBLIC_WEB_URL missing; car takeover messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<CarTransferAcceptedEvent>(
+              CAR_TRANSFER_ACCEPTED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('CarTransferAccepted'));
+            return worker;
+          },
+        },
         QuoteReceivedFanOut,
         {
           inject: [QuoteReceivedFanOut],
@@ -649,6 +694,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             );
             observeWorker(worker);
             logFinalFailure(worker, new Logger('BookingConfirmed'));
+            return worker;
+          },
+        },
+        JobStageFanOut,
+        {
+          inject: [JobStageFanOut],
+          provide: JOB_STAGE_WORKER,
+          useFactory: (fanOut: JobStageFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('JobStage').error(
+                'PUBLIC_WEB_URL missing; car started and ready messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<JobStageEvent>(
+              JOB_STAGE_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('JobStage'));
             return worker;
           },
         },
@@ -931,11 +1003,13 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.requestReceivedWorker?.close();
     await this.reviewPostedWorker?.close();
     await this.reviewRepliedWorker?.close();
+    await this.carTransferAcceptedWorker?.close();
     await this.quoteReceivedWorker?.close();
     await this.quoteAcceptedWorker?.close();
     await this.quoteDeclinedWorker?.close();
     await this.quoteLostWorker?.close();
     await this.bookingConfirmedWorker?.close();
+    await this.jobStageWorker?.close();
     await this.bookingLapsedWorker?.close();
     await this.requestCancelledWorker?.close();
     await this.bookingCancelledWorker?.close();

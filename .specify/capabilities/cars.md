@@ -1,6 +1,6 @@
 ---
 capability: cars
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 089-add-a-car
   - 090-itp-status-lamp
@@ -14,6 +14,7 @@ features:
   - 091-oil-service-due
   - 415-car-transfer-link
   - 276-job-start-done
+  - 1265-car-transfer-accept
 ---
 
 # Capability: Cars
@@ -38,9 +39,9 @@ _From 089-add-a-car._
 
 _From 089-add-a-car._
 
-### 089-FR-007 — In the same transaction the system MUST write one audit entry "car added" (action `create`, subject `car`, the new values without the plate, which stays the owner's alone (FR-011), actor the account in its role in use) through the audit writer (390-FR-001), and hand `car.added` (car id, owner id, the saved fields) to the event port; the reminders this event feeds are a later story's.
+### 1265-FR-002 — Adding a car (089) MUST open its `owner` ownership row in the same transaction as the car, the audit entry and `car.added` (089-FR-007 unchanged in what it writes; this row joins it).
 
-_From 089-add-a-car._
+_From 1265-car-transfer-accept._
 
 ### 089-FR-009 — The dialog MUST be a `dialog` task of the overlays service (158-FR-010) using the shared form-saving helper (159-FR-001..004), titled "Adaugă o mașină" / "Add a car", with the lead line of scenario 1, the fields Marcă (a search field over the brand catalogue, `GET /api/v1/brands`, case- and accent-insensitive, popular first; one brand chosen from the offered list), Model, An, Kilometri, Combustibil (Benzină, Motorină, Hibrid, Electric / Petrol, Diesel, Hybrid, Electric), a section "Opțional" / "Optional" with Număr de înmatriculare, Motor, ITP valabil până la, RCA valabilă până la, Rovinietă valabilă până la (date fields), and one main button "Adaugă mașina" / "Add the car". The year field's message, the plate warnings (pattern; same plate already held, from the loaded car list) and the brand-load failure with "Reîncearcă" / "Try again" are shown as the scenarios say. On success the task closes with the car and the view shows it at once without re-reading the list; the first field gets the focus on a computer (157-FR-007). The brand list is operable by keyboard (arrow keys move, Enter picks, Escape closes it) and each field has a visible label and its message tied to it for screen readers (157-FR-007, the overlays' dialog rules).
 
@@ -122,9 +123,9 @@ _From 092-edit-remove-car._
 
 _From 092-edit-remove-car._
 
-### 092-FR-012 — A removed car's repairs and figures MUST stay stored and be hidden with the car: Istoric reparații and the spend figures (when they exist) read only cars not removed. Selling a car and passing its history on is out of scope (#287).
+### 1265-FR-012 — `GET /api/v1/cars/sold` (capability `driver.cars`) MUST answer the caller's `former_owner_read_only` rows, newest sale first (ties by closing instant, newest first), each with the car's `id`, `brandName`, `model`, `year` and `saleDate` (`to_date`), the car's removal notwithstanding; `GET /api/v1/cars/sold/:id/repairs` MUST answer, for a car the caller has such a row for (else 404), the repairs that row may read (FR-010; done on or before the sale date), in FR-011's shape and order. A car the caller owns again (a second transfer back) is listed by both its open row (in `GET /api/v1/cars`) and its closed row (here). These reads are read-only: no write of this story or of 092 accepts a car through a closed row. (Modifies 092-FR-012: selling a car and passing its history on is this story's, and the former owner's read is the one exception to "repairs read only cars not removed".)
 
-_From 092-edit-remove-car._
+_From 1265-car-transfer-accept._
 
 ### 092-FR-013 — The two endpoints MUST be listed in `infra/observability/inventory.json` with the existing cars module's metrics, logs and traces; no new service, queue, outside call or dashboard panel is needed, and the PR's Observability section says so.
 
@@ -277,13 +278,9 @@ _From 415-car-transfer-link._
 
 _From 415-car-transfer-link._
 
-### 415-FR-003 — `GET /api/v1/cars/:id/sale` (capability `driver.cars`; 404 as 092-FR-001 for another account's car or a removed one) MUST answer what the sale dialog needs: whether the sale can start (`false` with `open_request` while the car has a quote request in `sent`, `quoted`, `booked` or `in_work`, the same states as ST-92's removal), the car's active repairs newest first (by date done, then by creation time, both descending; id, date, what, garage name, source), and the car's `sent` transfer when it has one (id, expiry, the buyer's phone as typed back in E.164, never the link).
+### 1265-FR-013 — ST-415's sale read (`GET /api/v1/cars/:id/sale`, 415-FR-003) MUST list only the repairs the seller's open ownership row may read (FR-010), and the send (415-FR-004) MUST accept a tick only on an active `logged` repair among them (else 400 `repair_not_tickable` as today), so a car sold twice passes on what the second seller received and never what the first seller kept.
 
-_From 415-car-transfer-link._
-
-### 415-FR-004 — `POST /api/v1/cars/:id/transfers` (capability `driver.cars`; 404 as FR-003) MUST take the buyer's phone (any writing `normalisePhone` accepts; otherwise 400 `invalid_phone`) and the ticked repair ids (each an active `logged` repair of this car, otherwise 400 `repair_not_tickable`; duplicates collapsed), refuse the seller's own phone with 400 `own_phone` (the normalised E.164 number equal to the seller account's phone; no refusal when the account has no phone), refuse 409 `open_request` in the states of FR-003, and in one transaction that first locks the owner's account row (as the removal does): cancel the car's `sent` transfer if any (FR-009), create the transfer `sent` with a fresh random token, its ticked-repair rows, the audit entry (FR-014) and the outbox event `car_transfer.sent`; then answer 201 with the transfer (id, expiry) and the link.
-
-_From 415-car-transfer-link._
+_From 1265-car-transfer-accept._
 
 ### 415-FR-005 — The link MUST be `<PUBLIC_WEB_URL>/<lang>/transfer/<token>` with the seller's interface language, the token at least 32 random bytes in URL-safe form, looked up by its hash; a token is shown to the seller in the 201 answer and in the WhatsApp message and never again (a later read of the car's sale answers the expiry, not the link).
 
@@ -297,9 +294,9 @@ _From 415-car-transfer-link._
 
 _From 415-car-transfer-link._
 
-### 415-FR-008 — `GET /api/v1/car-transfers/:token` MUST be public (`@Public()`, listed in `public-routes.integration.spec.ts`) and answer by the token's hash: 404 `not_found` for no transfer; 410 `transfer_cancelled` for `cancelled`; 410 `transfer_expired` for `expired`, and also for a `sent` transfer whose expiry has passed (the time decides, not the sweep); for a `sent` transfer within its time, 200 with `{ status: 'sent' }` and nothing else (no car, no seller, no repairs: the buyer's view is ST-1265). An `accepted` transfer answers 410 `transfer_accepted` (ST-1265 replaces this). The answer never carries the seller's identity or the phone. The token is the only credential (at least 32 random bytes, FR-005, so it cannot be guessed); the route carries no rate limit (the app has no global one; guessing 256 bits is not feasible), and a wrong token answers the same 404 whatever it looks like.
+### 1265-FR-003 — `GET /api/v1/car-transfers/:token` MUST stay public (415-FR-008's 404 and 410 answers and its signed-out 200 `{ status: 'sent' }` unchanged) and gain an optional actor: with a session that resolves to an account other than the seller, the 200 answer MUST add the car (`brand`, `model`, `year`), `repairCount` (the car's active MotorFix repairs plus the transfer's ticked repairs still active) and `sellerName` (the seller's short name: the first word of the account's name and the initial of its last word with a dot when the name has two or more words, the one word as it is, `null` for an empty name); with a session that resolves to the seller it MUST answer 403 `own_transfer` (after the gone states: a cancelled own link still answers 410). It MUST never carry the buyer's phone, the plate, the seller's phone, the seller's account id or the token. An `accepted` transfer keeps answering 410 `transfer_accepted`.
 
-_From 415-car-transfer-link._
+_From 1265-car-transfer-accept._
 
 ### 415-FR-009 — A car MUST have at most one `sent` transfer at a time: sending a new one cancels the earlier `sent` transfer of that car in the same transaction (its own audit entry and `car_transfer.cancelled` event), and a cancellation by the seller (FR-007) does the same; the cancelled link answers 410 `transfer_cancelled`.
 
@@ -333,6 +330,54 @@ _From 415-car-transfer-link._
 
 _From 415-car-transfer-link._
 
+### 1265-FR-001 — The system MUST hold a CAR_OWNERSHIP record per period an account held a car: the car, the account, the access (`owner` | `former_owner_read_only`), `from_date` and `to_date` (Europe/Bucharest calendar days; `to_date` empty while open), the transfer that opened it (empty for the car's original owner), and the exact instants it opened and closed (the visibility rule of FR-010 reads them). Every car MUST have exactly one open `owner` row at any time; the migration MUST open one per existing car, removed cars included, with `from_date` the Bucharest day of the car's creation and the opening instant its creation time.
+
+_From 1265-car-transfer-accept._
+
+### 1265-FR-004 — `POST /api/v1/car-transfers/:token/accept` MUST take any signed-in account (no capability: a garage-only account may accept, FR-006) and, in one transaction that locks the seller's and the buyer's account rows `FOR UPDATE` in ascending id order (the buyer's is the 20-car count's lock, 089-FR-004; the seller's is the lock a quote request's creation takes, so a request sent in the same instant as the acceptance and the acceptance cannot both succeed), then the car row, then the transfer row, re-reading its status under the lock (the order the send and the cancel already take, so none of them can deadlock with the acceptance): answer 404 `not_found` for no transfer, 410 `transfer_cancelled` | `transfer_expired` | `transfer_accepted` by 415-FR-008's rule (the time decides an expiry; a removed car's transfer is cancelled), 403 `own_transfer` when the buyer is the seller, 409 `car_limit` when the buyer holds 20 cars not removed, 409 `open_request` when the car has a quote request in `sent`, `quoted`, `booked` or `in_work` (the refusals are tested in exactly this order, the first that holds is the one answered: 404, 410, 403, `car_limit`, `open_request`); then: set the car's owner to the buyer and clear its add-car idempotency key (the seller's spent dedupe key; kept it could collide with the buyer's `(owner, key)` unique pair); close the seller's open ownership row (`to_date` = the sale date, access `former_owner_read_only`, closing instant now); open the buyer's (`owner`, `from_date` = the sale date, this transfer as origin); set the transfer `accepted` with the buyer and the sale date (the Bucharest day of now); clear the car's plate, RCA date and rovinietă date; move the reminders (FR-005); grant the role when due (FR-006); write the audit entries (FR-007), the event (FR-008) and the notification (FR-009); and answer 200 `{ carId }`. The acceptance emits no `car.updated`: FR-005 does the reminder work in the transaction, and `car_transfer.accepted` is the change's one event. A second accept of the same token, in a race or after, answers 410 `transfer_accepted` and changes nothing.
+
+_From 1265-car-transfer-accept._
+
+### 1265-FR-005 — In the acceptance's transaction the car's reminder rows MUST move to the buyer's account, keeping their kinds, due dates, stages and ids (a stage already sent is not sent again), except the `rca` and `rovinieta` rows, which are deleted with their dates; the ITP, service and tyre reminders then reach the buyer from the next daily run. The buyer sets new RCA and rovinietă dates through the edit dialog as for any car, which creates their reminders as today.
+
+_From 1265-car-transfer-accept._
+
+### 1265-FR-006 — A buyer whose account lacks the `driver` role MUST be granted it in the acceptance's transaction with the role's audit entry (as adding a car grants it, 089-FR-012); an account that holds it, whatever role it acts in, gets no grant and no entry.
+
+_From 1265-car-transfer-accept._
+
+### 1265-FR-007 — The acceptance MUST write, in its transaction, through the audit writer (390-FR-001): one `update` on subject `car_transfer` (field `status`, old `sent`, new `accepted`, scope the car, actor the buyer in the role in use); on subject `car`, actor the buyer in the role in use (the role grant's own entry records `driver`, FR-006), one `update` per field changed by the acceptance as 092-FR-004 writes an edit's (owner with the seller's and the buyer's account ids; RCA and rovinietă dates with old value and `null`; the plate's entry with both values `null`). No entry holds the phone or the token.
+
+_From 1265-car-transfer-accept._
+
+### 1265-FR-008 — The event `car_transfer.accepted` (already a contracts event kind) MUST carry `{ transferId, carId, sellerAccountId, buyerAccountId, status: 'accepted' }` and nothing more, and reach both `account:{sellerAccountId}` and `account:{buyerAccountId}` through the live audience resolver, so the seller's Mașinile mele and the buyer's open screens re-read without a reload.
+
+_From 1265-car-transfer-accept._
+
+### 1265-FR-009 — The acceptance MUST bring CAR_TRANSFER_ACCEPTED to the seller as every `event` kind goes: the outbox event `car_transfer.accepted` written in the acceptance's transaction (FR-008) is fanned out by the worker to the notification (the catalogue entry as listed: event; e-mail, push or WhatsApp; muted by the seller's "Recenzii și istoric" switch, the bell row still written), in the seller's interface language, naming the car's brand and model and saying its history stays with them read-only up to the sale date; never the buyer's phone or name.
+
+_From 1265-car-transfer-accept._
+
+### 1265-FR-010 — One visibility rule MUST decide which repairs of a car an ownership row may read, used by every read of this story and by ST-415's sale read: every MotorFix repair of the car whatever its date; a logged repair when it was created during that ownership (at or after its opening instant and, for a closed row, before its closing instant) or is a ticked repair of the transfer that opened the ownership; never a soft-deleted repair; for a `former_owner_read_only` row both cuts apply to every source: only repairs done on or before its `to_date` and created before its closing instant (nothing recorded after the sale reaches the former owner). A repair is `fromPreviousOwner` for a row when it was created before the row's opening instant.
+
+_From 1265-car-transfer-accept._
+
+### 1265-FR-011 — `GET /api/v1/cars/:id/repairs` (capability `driver.cars`; 404 for another account's car or a removed one, as 091-FR-003) MUST answer the car's repairs the owner's open row may read (FR-010), newest first (date done, then creation time, both descending), each with `id`, `doneOn`, `what`, `garageName`, `source` and `fromPreviousOwner`, and no invoice or review field; ST-61 extends this answer for the history screen and keeps: a repair from a previous owner is not reviewable and never carries an invoice.
+
+_From 1265-car-transfer-accept._
+
+### 1265-FR-014 — After the acceptance, the seller MUST get 404 from every car route taking the car's id (`GET /api/v1/cars/:id`, the edit, the removal, the sale, the transfer cancel), and the car MUST be absent from the seller's `GET /api/v1/cars` and present in the buyer's with `plate`, `rcaUntil` and `rovinietaUntil` `null` (the existing owner check does this: the owner changed); both accounts' warm car lists (`driver-home`, 1169-FR-003) MUST be dropped in the acceptance's request.
+
+_From 1265-car-transfer-accept._
+
+### 1265-FR-015 — Observability: the four new routes (the accept, the owner's repairs, the sold list, the sold car's repairs) join the API's endpoint inventory with their panels and alerts (`infra/observability/inventory.json`, `scripts/observability-inventory.ts`); the acceptance is counted by outcome (`accepted`, and each refusal code), beside ST-415's send counter.
+
+_From 1265-car-transfer-accept._
+
+### 1265-FR-016 — Tests MUST cover, in Jest on real PostgreSQL and Valkey (`*.integration.spec.ts` where the repository is used), each file naming its ids in one whole-line `// @traces` comment: the migration's backfill (one open row per car, removed included) and the add-car row; the read signed out, as another account, as the seller, for each gone state and with a deleted ticked repair in the count; the short name from an empty, one-word, two-word and three-word name; the acceptance's every write in one transaction, rolled back together when the audit or the event write fails; the owner's, the buyer's and the car's rows before and after; the cleared fields and the kept ITP date, kilometres and next service; the reminders moved with their stages and the two dropped; the role granted once to a garage-only account and never to a driver; 404, each 410, `own_transfer`, `car_limit` at 20 and allowed at 19 with a removed car, `open_request` in each of the four states and allowed in `done` and `closed`; two concurrent accepts: one 200, one 410; the event's payload and both channels; the notification's type, recipient, language and muting; no phone, token or plate in any log, event, audit value or answer; the owner's repairs with the flag, the unticked repair absent, a later repair unflagged, the deleted one absent; the sold list and the sold car's repairs cut at the sale date and at the closing instant, 404 to the buyer and for a car never sold; the sale read and the tick narrowed to the seller's visible repairs (a second sale); the seller's 404s and the buyer's list after the acceptance; the warm lists dropped; the public-routes list unchanged (the token route stays public; the accept route needs a session).
+
+_From 1265-car-transfer-accept._
+
 ## Retired
 
 - `089-FR-008` — superseded by `090-FR-006` (2026-10-08)
@@ -346,3 +391,8 @@ _From 415-car-transfer-link._
 - `089-FR-001` — superseded by `091-FR-003` (2026-10-26)
 - `092-FR-006` — superseded by `091-FR-010` (2026-10-26)
 - `091-FR-002` — superseded by `276-FR-008` (2026-10-26)
+- `089-FR-007` — superseded by `1265-FR-002` (2026-10-29)
+- `415-FR-008` — superseded by `1265-FR-003` (2026-10-29)
+- `092-FR-012` — superseded by `1265-FR-012` (2026-10-29)
+- `415-FR-003` — superseded by `1265-FR-013` (2026-10-29)
+- `415-FR-004` — superseded by `1265-FR-013` (2026-10-29)

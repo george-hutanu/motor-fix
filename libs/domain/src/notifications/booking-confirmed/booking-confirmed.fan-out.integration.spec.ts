@@ -172,3 +172,29 @@ describe('telling the driver the garage confirmed the booking', () => {
     expect(await built()).toEqual([]);
   });
 });
+
+// @traces 277-FR-006
+describe('the booking confirmed message among the stage messages', () => {
+  it('is sent outside although the driver turned every channel off', async () => {
+    const { driverId, job } = await confirmed();
+    for (const channel of ['email', 'push', 'whatsapp'] as const) {
+      await prisma.notificationPreference.create({
+        data: {
+          accountId: driverId,
+          channel,
+          enabled: false,
+          type: 'BOOKING_CONFIRMED',
+        },
+      });
+    }
+    const { fanOut } = await start();
+
+    await fanOut.handle(job);
+
+    const messages = await built();
+    expect(
+      messages.filter((m) => m.channel !== 'in_app').length,
+    ).toBeGreaterThan(0);
+    expect(messages.map((m) => m.channel)).not.toContain('sms');
+  });
+});

@@ -10,7 +10,14 @@ import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
 import { CarDto } from '../models/car-dto';
+import { carHistoryControllerRepairs } from '../fn/cars/car-history-controller-repairs';
+import { CarHistoryControllerRepairs$Params } from '../fn/cars/car-history-controller-repairs';
+import { carHistoryControllerSold } from '../fn/cars/car-history-controller-sold';
+import { CarHistoryControllerSold$Params } from '../fn/cars/car-history-controller-sold';
+import { carHistoryControllerSoldRepairs } from '../fn/cars/car-history-controller-sold-repairs';
+import { CarHistoryControllerSoldRepairs$Params } from '../fn/cars/car-history-controller-sold-repairs';
 import { CarListDto } from '../models/car-list-dto';
+import { CarRepairListDto } from '../models/car-repair-list-dto';
 import { carSaleControllerCancel } from '../fn/cars/car-sale-controller-cancel';
 import { CarSaleControllerCancel$Params } from '../fn/cars/car-sale-controller-cancel';
 import { carSaleControllerSale } from '../fn/cars/car-sale-controller-sale';
@@ -26,10 +33,14 @@ import { carsControllerRemove } from '../fn/cars/cars-controller-remove';
 import { CarsControllerRemove$Params } from '../fn/cars/cars-controller-remove';
 import { carsControllerUpdate } from '../fn/cars/cars-controller-update';
 import { CarsControllerUpdate$Params } from '../fn/cars/cars-controller-update';
+import { CarTransferAcceptedDto } from '../models/car-transfer-accepted-dto';
+import { carTransferLinkControllerAccept } from '../fn/cars/car-transfer-link-controller-accept';
+import { CarTransferLinkControllerAccept$Params } from '../fn/cars/car-transfer-link-controller-accept';
 import { carTransferLinkControllerRead } from '../fn/cars/car-transfer-link-controller-read';
 import { CarTransferLinkControllerRead$Params } from '../fn/cars/car-transfer-link-controller-read';
 import { CarTransferLinkDto } from '../models/car-transfer-link-dto';
 import { CarTransferSentDto } from '../models/car-transfer-sent-dto';
+import { SoldCarListDto } from '../models/sold-car-list-dto';
 
 @Injectable({ providedIn: 'root' })
 export class CarsService extends BaseService {
@@ -140,7 +151,7 @@ export class CarsService extends BaseService {
   static readonly CarTransferLinkControllerReadPath = '/api/v1/car-transfers/{token}';
 
   /**
-   * Whether a transfer link still works; nothing about the car.
+   * Whether a transfer link still works; to a signed-in account, the car, its repair count and the seller’s short name.
    *
    *
    *
@@ -155,7 +166,7 @@ export class CarsService extends BaseService {
   }
 
   /**
-   * Whether a transfer link still works; nothing about the car.
+   * Whether a transfer link still works; to a signed-in account, the car, its repair count and the seller’s short name.
    *
    *
    *
@@ -167,6 +178,138 @@ export class CarsService extends BaseService {
   carTransferLinkControllerRead(params: CarTransferLinkControllerRead$Params, context?: HttpContext): Promise<CarTransferLinkDto> {
     const resp = this.carTransferLinkControllerRead$Response(params, context);
     return resp.then((r: StrictHttpResponse<CarTransferLinkDto>): CarTransferLinkDto => r.body);
+  }
+
+  /** Path part for operation `carTransferLinkControllerAccept()` */
+  static readonly CarTransferLinkControllerAcceptPath = '/api/v1/car-transfers/{token}/accept';
+
+  /**
+   * Take the car over, with the history passed on, as the buyer.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `carTransferLinkControllerAccept()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carTransferLinkControllerAccept$Response(params: CarTransferLinkControllerAccept$Params, context?: HttpContext): Promise<StrictHttpResponse<CarTransferAcceptedDto>> {
+    const obs = carTransferLinkControllerAccept(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Take the car over, with the history passed on, as the buyer.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `carTransferLinkControllerAccept$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carTransferLinkControllerAccept(params: CarTransferLinkControllerAccept$Params, context?: HttpContext): Promise<CarTransferAcceptedDto> {
+    const resp = this.carTransferLinkControllerAccept$Response(params, context);
+    return resp.then((r: StrictHttpResponse<CarTransferAcceptedDto>): CarTransferAcceptedDto => r.body);
+  }
+
+  /** Path part for operation `carHistoryControllerSold()` */
+  static readonly CarHistoryControllerSoldPath = '/api/v1/cars/sold';
+
+  /**
+   * The cars the caller sold, newest sale first.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `carHistoryControllerSold()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carHistoryControllerSold$Response(params?: CarHistoryControllerSold$Params, context?: HttpContext): Promise<StrictHttpResponse<SoldCarListDto>> {
+    const obs = carHistoryControllerSold(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The cars the caller sold, newest sale first.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `carHistoryControllerSold$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carHistoryControllerSold(params?: CarHistoryControllerSold$Params, context?: HttpContext): Promise<SoldCarListDto> {
+    const resp = this.carHistoryControllerSold$Response(params, context);
+    return resp.then((r: StrictHttpResponse<SoldCarListDto>): SoldCarListDto => r.body);
+  }
+
+  /** Path part for operation `carHistoryControllerSoldRepairs()` */
+  static readonly CarHistoryControllerSoldRepairsPath = '/api/v1/cars/sold/{id}/repairs';
+
+  /**
+   * A sold car's repairs, up to the sale date, read-only.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `carHistoryControllerSoldRepairs()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carHistoryControllerSoldRepairs$Response(params: CarHistoryControllerSoldRepairs$Params, context?: HttpContext): Promise<StrictHttpResponse<CarRepairListDto>> {
+    const obs = carHistoryControllerSoldRepairs(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * A sold car's repairs, up to the sale date, read-only.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `carHistoryControllerSoldRepairs$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carHistoryControllerSoldRepairs(params: CarHistoryControllerSoldRepairs$Params, context?: HttpContext): Promise<CarRepairListDto> {
+    const resp = this.carHistoryControllerSoldRepairs$Response(params, context);
+    return resp.then((r: StrictHttpResponse<CarRepairListDto>): CarRepairListDto => r.body);
+  }
+
+  /** Path part for operation `carHistoryControllerRepairs()` */
+  static readonly CarHistoryControllerRepairsPath = '/api/v1/cars/{id}/repairs';
+
+  /**
+   * The caller's car's repairs, newest first.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `carHistoryControllerRepairs()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carHistoryControllerRepairs$Response(params: CarHistoryControllerRepairs$Params, context?: HttpContext): Promise<StrictHttpResponse<CarRepairListDto>> {
+    const obs = carHistoryControllerRepairs(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The caller's car's repairs, newest first.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `carHistoryControllerRepairs$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carHistoryControllerRepairs(params: CarHistoryControllerRepairs$Params, context?: HttpContext): Promise<CarRepairListDto> {
+    const resp = this.carHistoryControllerRepairs$Response(params, context);
+    return resp.then((r: StrictHttpResponse<CarRepairListDto>): CarRepairListDto => r.body);
   }
 
   /** Path part for operation `carsControllerList()` */
