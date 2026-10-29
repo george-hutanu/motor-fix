@@ -132,6 +132,7 @@ export {
   type DnsResolver,
   dnsReport,
 } from './notifications/email-dns/email-dns';
+export { FINAL_PRICE_CORRECTED_CONSUMER } from './notifications/final-price-corrected/final-price-corrected.fan-out';
 export { GARAGE_REPORT_DECIDED_CONSUMER } from './notifications/garage-report-decided/garage-report-decided.fan-out';
 export { GARAGE_RESTORED_CONSUMER } from './notifications/garage-restored/garage-restored.fan-out';
 export { GARAGE_SUSPENDED_CONSUMER } from './notifications/garage-suspended/garage-suspended.fan-out';

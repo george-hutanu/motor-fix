@@ -37,6 +37,7 @@ import { DOCUMENT_DUE } from './document-due';
 import { DOCUMENT_OVERDUE } from './document-overdue';
 import { DOCUMENT_REFUSED } from './document-refused';
 import { DUE_ITP } from './due-itp';
+import { FINAL_PRICE_CORRECTED } from './final-price-corrected';
 import {
   GARAGE_REPORT_CONFIRMED,
   GARAGE_REPORT_UNFOUNDED,
@@ -116,6 +117,7 @@ export const TEMPLATES: Registry = {
   DOCUMENT_OVERDUE,
   DOCUMENT_REFUSED,
   DUE_ITP,
+  FINAL_PRICE_CORRECTED,
   'GARAGE_REPORT_DECIDED.confirmed': GARAGE_REPORT_CONFIRMED,
   'GARAGE_REPORT_DECIDED.unfounded': GARAGE_REPORT_UNFOUNDED,
   GARAGE_RESTORED,

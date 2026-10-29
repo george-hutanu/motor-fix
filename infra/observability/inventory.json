@@ -2288,6 +2288,19 @@
     },
     {
       "kind": "queue",
+      "name": "final-price-corrected",
+      "source": "libs/domain/src/notifications/final-price-corrected/final-price-corrected.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one log line per job naming the job id and how many messages were queued; BullMQ's queue metrics cover depth and failures; the corrections themselves are counted by motorfix_job_stage_moves_total{action=\"correct\"}",
+      "story": "ST-406"
+    },
+    {
+      "kind": "queue",
       "name": "booking-lapsed",
       "source": "libs/domain/src/notifications/booking-lapsed/booking-lapsed.fan-out.ts",
       "dashboard": "motorfix-queues",
