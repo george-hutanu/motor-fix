@@ -19038,7 +19038,7 @@
             "type": "boolean"
           },
           "seconds": {
-            "type": "number",
+            "type": "integer",
             "description": "Whole seconds streamed, rounded down"
           },
           "recordingMediaId": {
@@ -19047,7 +19047,7 @@
             "nullable": true
           },
           "peakViewers": {
-            "type": "number",
+            "type": "integer",
             "description": "The most accounts watching at once; 0 when nobody watched"
           },
           "viewedByDriverAt": {

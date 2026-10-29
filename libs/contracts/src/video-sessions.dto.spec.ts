@@ -107,4 +107,17 @@ describe('the stop and keep contract', () => {
     ]);
     expect(listed(LiveRecordingKeepDto.prototype)).toEqual(['keep']);
   });
+
+  it('publishes the stop answer’s whole-number figures as integers', () => {
+    const typeOf = (name: string) =>
+      (
+        Reflect.getMetadata(
+          'swagger/apiModelProperties',
+          LiveSessionStoppedDto.prototype,
+          name,
+        ) as { type?: unknown } | undefined
+      )?.type;
+    expect(typeOf('peakViewers')).toBe('integer');
+    expect(typeOf('seconds')).toBe('integer');
+  });
 });

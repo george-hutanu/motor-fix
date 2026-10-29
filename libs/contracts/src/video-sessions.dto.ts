@@ -95,7 +95,10 @@ export class LiveSessionStoppedDto {
   @ApiProperty()
   keep!: boolean;
 
-  @ApiProperty({ description: 'Whole seconds streamed, rounded down' })
+  @ApiProperty({
+    description: 'Whole seconds streamed, rounded down',
+    type: 'integer',
+  })
   seconds!: number;
 
   @ApiProperty({ format: 'uuid', nullable: true, type: String })
@@ -103,6 +106,7 @@ export class LiveSessionStoppedDto {
 
   @ApiProperty({
     description: 'The most accounts watching at once; 0 when nobody watched',
+    type: 'integer',
   })
   peakViewers!: number;
 
