@@ -335,7 +335,7 @@ async function live() {
 
 // @traces 1250-FR-003
 describe('asking for a view credential', () => {
-  it('gives the same answer shape twice and writes nothing either time', async () => {
+  it('gives the same answer shape twice and writes no audit or event either time', async () => {
     const s = await live();
     const before = await written(s.job.id);
 

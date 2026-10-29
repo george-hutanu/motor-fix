@@ -114,6 +114,26 @@ describe('who a live event reaches', () => {
     expect(owner.kinds()).toEqual([]);
   });
 
+  // @traces 1265-FR-008
+  it('gives an accepted car transfer to its seller and its buyer alone, the buyer acting as a garage too', async () => {
+    const andrei = open('andrei', 'driver', []);
+    const ion = staff('ion', 'garage');
+    const maria = open('maria-driver', 'driver', []);
+
+    await fanOut(
+      audienceOf({
+        buyerAccountId: 'ion',
+        sellerAccountId: 'andrei',
+        type: 'car_transfer',
+      }),
+      'car_transfer.accepted',
+    );
+
+    expect(andrei.kinds()).toEqual(['car_transfer.accepted']);
+    expect(ion.kinds()).toEqual(['car_transfer.accepted']);
+    expect(maria.kinds()).toEqual([]);
+  });
+
   it("gives a driver's job step to that driver and the garage owner, never to another driver", async () => {
     const andrei = open('andrei', 'driver', []);
     const maria = open('maria-driver', 'driver', []);
@@ -273,6 +293,7 @@ describe('who a live event reaches', () => {
       'car_transfer.sent',
       'car_transfer.cancelled',
       'car_transfer.expired',
+      'car_transfer.accepted',
     ]) {
       await fanOut(['public:garage'], kind);
     }

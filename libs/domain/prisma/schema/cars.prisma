@@ -26,7 +26,8 @@ model Car {
   rcaUntil       DateTime?         @map("rca_until") @db.Date
   rovinietaUntil DateTime?         @map("rovinieta_until") @db.Date
   nextServiceKm  Int?              @map("next_service_km")
-  idempotencyKey String            @map("idempotency_key")
+  // Cleared when the car changes hands: the buyer never inherits it.
+  idempotencyKey String?           @map("idempotency_key")
   removedAt      DateTime?         @map("removed_at") @db.Timestamptz(3)
   createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
   // The version an edit sends back: a save on an older one is refused.
@@ -39,6 +40,7 @@ model Car {
   jobs           Job[]
   repairs        Repair[]
   transfers      CarTransfer[]
+  ownerships     CarOwnership[]
 
   @@unique([ownerId, idempotencyKey])
   @@index([ownerId, createdAt])
@@ -179,6 +181,8 @@ model CarTransfer {
   seller     Account             @relation("TransferSeller", fields: [sellerId], references: [id], onDelete: Cascade)
   buyer      Account?            @relation("TransferBuyer", fields: [buyerId], references: [id], onDelete: SetNull)
   repairs    CarTransferRepair[]
+  // The buyer's ownership this transfer opened, once accepted.
+  openedOwnership CarOwnership[]
 
   @@index([status, expiresAt])
   @@index([sellerId])
@@ -194,4 +198,35 @@ model CarTransferRepair {
 
   @@id([transferId, repairId])
   @@map("car_transfer_repair")
+}
+
+enum CarOwnershipAccess {
+  owner
+  former_owner_read_only
+
+  @@map("car_ownership_access")
+}
+
+// Who held a car, from which day to which. The open row (no to_date) names
+// car.owner_id; a partial unique index keeps one open row per car, and the
+// CHECKs in the migration tie access, to_date and closed_at together.
+// opened_at and closed_at are the instants that cut the logged repairs.
+model CarOwnership {
+  id         String             @id @default(uuid()) @db.Uuid
+  carId      String             @map("car_id") @db.Uuid
+  accountId  String             @map("account_id") @db.Uuid
+  access     CarOwnershipAccess
+  fromDate   DateTime           @map("from_date") @db.Date
+  toDate     DateTime?          @map("to_date") @db.Date
+  // The transfer that opened this row; none for a car added by hand.
+  transferId String?            @map("transfer_id") @db.Uuid
+  openedAt   DateTime           @map("opened_at") @db.Timestamptz(3)
+  closedAt   DateTime?          @map("closed_at") @db.Timestamptz(3)
+  car        Car                @relation(fields: [carId], references: [id], onDelete: Cascade)
+  account    Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transfer   CarTransfer?       @relation(fields: [transferId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, toDate(sort: Desc), closedAt(sort: Desc)])
+  @@index([carId, accountId])
+  @@map("car_ownership")
 }

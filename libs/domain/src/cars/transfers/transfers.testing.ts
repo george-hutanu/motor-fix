@@ -18,12 +18,13 @@ import {
   testPhoneConfig,
 } from '../../notifications/notifications.testing';
 import { quotesWorld } from '../../quotes/quotes.testing';
+import { CarHistoryModule } from '../history/history.module';
 import { CarsModule } from '../my-cars/cars/cars.module';
 
 export const WEB_URL = 'https://motorfix.example';
 const tokenSecret = 'test-secret';
 
-// The app with the cars and their transfers, WhatsApp through `brevo` with
+// The app with the cars, their transfers and their history, WhatsApp through `brevo` with
 // both languages' transfer templates named and every +407 number allowed.
 export async function transfersApp(brevo: BrevoMock) {
   const moduleRef = await Test.createTestingModule({
@@ -33,6 +34,7 @@ export async function transfersApp(brevo: BrevoMock) {
         redisUrl: redisUrlFor(15),
         tokenSecret,
       }),
+      CarHistoryModule,
       CarsModule,
       CarTransfersModule.register({
         brevo: { apiKey: 'test-key', apiUrl: brevo.url },
@@ -141,6 +143,13 @@ export function transfersWorld() {
       where: { id: { gt: mark }, kind: { startsWith: 'car_transfer.' } },
     });
 
+  // The car's ownership rows, oldest first.
+  const ownerships = (carId: string) =>
+    prisma.carOwnership.findMany({
+      orderBy: [{ openedAt: 'asc' }],
+      where: { carId },
+    });
+
   const transferAudit = (since: Date) =>
     prisma.activityLog.findMany({
       orderBy: { at: 'asc' },
@@ -154,6 +163,7 @@ export function transfersWorld() {
     driver,
     logged,
     marks,
+    ownerships,
     prisma,
     request: world.request,
     reset,
@@ -177,3 +187,15 @@ export const sendTransfer = (
 
 // The token at the end of a transfer link.
 export const tokenOf = (link: string) => link.split('/').at(-1) ?? '';
+
+// Takes a transfer over through the API, as the account `auth` names.
+export const acceptTransfer = (
+  app: NestExpressApplication,
+  auth: string | null,
+  token: string,
+) => {
+  const call = request(app.getHttpServer()).post(
+    `/car-transfers/${token}/accept`,
+  );
+  return auth ? call.set('Authorization', auth) : call;
+};

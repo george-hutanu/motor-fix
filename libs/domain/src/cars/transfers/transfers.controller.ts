@@ -1,5 +1,6 @@
 import {
   CarSaleDto,
+  CarTransferAcceptedDto,
   CarTransferLinkDto,
   CarTransferSentDto,
   CreateCarTransferDto,
@@ -20,6 +21,7 @@ import {
   ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiGoneResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -30,7 +32,12 @@ import {
 } from '@nestjs/swagger';
 
 import { CarTransfersService } from './transfers.service';
-import { CurrentActor, Public, Requires } from '../../auth/actor.guard';
+import {
+  CurrentActor,
+  OptionalActor,
+  Public,
+  Requires,
+} from '../../auth/actor.guard';
 import { JsonOnly } from '../../auth/auth.controller';
 import type { Actor } from '../../auth/policy';
 import { CacheService, cacheKey } from '../../cache/cache.service';
@@ -119,23 +126,67 @@ export class CarSaleController {
   }
 }
 
+// The read is open to visitors; the accept needs a session.
 @ApiTags('cars')
-@Public()
 @Controller('car-transfers')
 export class CarTransferLinkController {
-  constructor(private readonly transfers: CarTransfersService) {}
+  constructor(
+    private readonly transfers: CarTransfersService,
+    private readonly cache: CacheService,
+  ) {}
 
   @Get(':token')
+  @Public()
+  @OptionalActor()
   @ApiOperation({
-    summary: 'Whether a transfer link still works; nothing about the car',
+    summary:
+      'Whether a transfer link still works; to a signed-in account, the car, its repair count and the seller’s short name',
   })
   @ApiOkResponse({ type: CarTransferLinkDto })
+  @ApiNotFoundResponse({ description: 'not_found: no such link' })
+  @ApiForbiddenResponse({
+    description: 'own_transfer: the seller opened their own link',
+  })
+  @ApiGoneResponse({
+    description:
+      'transfer_expired, transfer_cancelled or transfer_accepted: the link no longer works',
+  })
+  read(
+    @Param('token') token: string,
+    @CurrentActor() actor?: Actor,
+  ): Promise<CarTransferLinkDto> {
+    return this.transfers.read(token, actor);
+  }
+
+  @Post(':token/accept')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Take the car over, with the history passed on, as the buyer',
+  })
+  @ApiOkResponse({ type: CarTransferAcceptedDto })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiNotFoundResponse({ description: 'not_found: no such link' })
   @ApiGoneResponse({
     description:
       'transfer_expired, transfer_cancelled or transfer_accepted: the link no longer works',
   })
-  read(@Param('token') token: string): Promise<CarTransferLinkDto> {
-    return this.transfers.read(token);
+  @ApiForbiddenResponse({
+    description: 'own_transfer: the seller cannot take their own car',
+  })
+  @ApiConflictResponse({
+    description:
+      'car_limit: the caller holds 20 cars; open_request: the car has a request under way',
+  })
+  async accept(
+    @CurrentActor() actor: Actor,
+    @Param('token') token: string,
+  ): Promise<CarTransferAcceptedDto> {
+    const { carId, sellerId } = await this.transfers.accept(actor, token);
+    // Both warm car lists show the car where it was.
+    for (const id of [actor.accountId, sellerId]) {
+      await this.cache.forget(cacheKey('driver-home', id, 'cars'));
+    }
+    return { carId };
   }
 }

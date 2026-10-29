@@ -2219,6 +2219,9 @@
               }
             }
           },
+          "403": {
+            "description": "own_transfer: the seller opened their own link"
+          },
           "404": {
             "description": "not_found: no such link"
           },
@@ -2226,7 +2229,58 @@
             "description": "transfer_expired, transfer_cancelled or transfer_accepted: the link no longer works"
           }
         },
-        "summary": "Whether a transfer link still works; nothing about the car",
+        "summary": "Whether a transfer link still works; to a signed-in account, the car, its repair count and the seller’s short name",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/car-transfers/{token}/accept": {
+      "post": {
+        "operationId": "CarTransferLinkController_accept",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarTransferAcceptedDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "own_transfer: the seller cannot take their own car"
+          },
+          "404": {
+            "description": "not_found: no such link"
+          },
+          "409": {
+            "description": "car_limit: the caller holds 20 cars; open_request: the car has a request under way"
+          },
+          "410": {
+            "description": "transfer_expired, transfer_cancelled or transfer_accepted: the link no longer works"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Take the car over, with the history passed on, as the buyer",
         "tags": [
           "cars"
         ]
@@ -2578,6 +2632,120 @@
         ],
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/cars/sold": {
+      "get": {
+        "operationId": "CarHistoryController_sold",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoldCarListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The cars the caller sold, newest sale first",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/cars/sold/{id}/repairs": {
+      "get": {
+        "operationId": "CarHistoryController_soldRepairs",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarRepairListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: the caller never sold it"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A sold car's repairs, up to the sale date, read-only",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/cars/{id}/repairs": {
+      "get": {
+        "operationId": "CarHistoryController_repairs",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarRepairListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not the caller’s car, or removed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's car's repairs, newest first",
+        "tags": [
+          "cars"
         ]
       }
     },
@@ -13296,6 +13464,26 @@
           "whatsapp"
         ]
       },
+      "CarTransferOfferCarDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "description": "The brand's name"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "brand",
+          "model",
+          "year"
+        ]
+      },
       "CarTransferLinkDto": {
         "type": "object",
         "properties": {
@@ -13304,10 +13492,40 @@
             "enum": [
               "sent"
             ]
+          },
+          "car": {
+            "description": "Signed in only: the car on offer, never its plate",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CarTransferOfferCarDto"
+              }
+            ]
+          },
+          "repairCount": {
+            "type": "number",
+            "description": "Signed in only: how many repairs pass with the car"
+          },
+          "sellerName": {
+            "type": "string",
+            "description": "Signed in only: the seller's first name and the initial of the last, or null",
+            "nullable": true
           }
         },
         "required": [
           "status"
+        ]
+      },
+      "CarTransferAcceptedDto": {
+        "type": "object",
+        "properties": {
+          "carId": {
+            "type": "string",
+            "description": "The car, now the caller's",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "carId"
         ]
       },
       "AdminAccountCountDto": {
@@ -13724,6 +13942,104 @@
           "reference",
           "receivedOn",
           "identityChecked"
+        ]
+      },
+      "SoldCarDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brandName": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "number"
+          },
+          "saleDate": {
+            "type": "string",
+            "format": "date"
+          }
+        },
+        "required": [
+          "id",
+          "brandName",
+          "model",
+          "year",
+          "saleDate"
+        ]
+      },
+      "SoldCarListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest sale first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SoldCarDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CarRepairDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "doneOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "what": {
+            "type": "string",
+            "description": "What was done"
+          },
+          "garageName": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "motorfix",
+              "logged"
+            ]
+          },
+          "fromPreviousOwner": {
+            "type": "boolean",
+            "description": "Created before the reader held the car: it came with it"
+          }
+        },
+        "required": [
+          "id",
+          "doneOn",
+          "what",
+          "garageName",
+          "source",
+          "fromPreviousOwner"
+        ]
+      },
+      "CarRepairListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarRepairDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "CreateCarDto": {
@@ -19344,12 +19660,22 @@
             "type": "boolean"
           },
           "seconds": {
-            "type": "number",
+            "type": "integer",
             "description": "Whole seconds streamed, rounded down"
           },
           "recordingMediaId": {
             "type": "string",
             "format": "uuid",
+            "nullable": true
+          },
+          "peakViewers": {
+            "type": "integer",
+            "description": "The most accounts watching at once; 0 when nobody watched"
+          },
+          "viewedByDriverAt": {
+            "type": "string",
+            "description": "When the job’s driver first watched; null when he never did",
+            "format": "date-time",
             "nullable": true
           }
         },
@@ -19358,7 +19684,9 @@
           "stoppedAt",
           "keep",
           "seconds",
-          "recordingMediaId"
+          "recordingMediaId",
+          "peakViewers",
+          "viewedByDriverAt"
         ]
       },
       "MediaUploadRequestDto": {

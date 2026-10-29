@@ -141,9 +141,11 @@ describe('stopping a live stream and keeping its recording', () => {
       expect(res.body).toEqual({
         keep: true,
         liveSessionId: s.id,
+        peakViewers: 0,
         recordingMediaId: item?.id,
         seconds: expect.any(Number),
         stoppedAt: row.stoppedAt?.toISOString(),
+        viewedByDriverAt: null,
       });
       expect(res.body.seconds).toBeGreaterThanOrEqual(0);
       expect(await kinds(s)).toEqual(['live.stopped', 'media.added']);
@@ -193,6 +195,51 @@ describe('stopping a live stream and keeping its recording', () => {
         oldValue: true,
       }),
     ]);
+  });
+});
+
+// @traces 1252-FR-003 1252-FR-004
+describe('the stop’s answer on who watched', () => {
+  it('says when the driver first joined and the most viewers at once', async () => {
+    const s = await live();
+    const view = `/live-sessions/${s.id}/view-token`;
+    await send('post', view, bearer(s.andrei, 'driver'));
+    await send('post', view, s.owner);
+    const watched = await session(s);
+
+    const res = await send('post', s.stop, s.costel, {});
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      peakViewers: 2,
+      viewedByDriverAt: watched.viewedByDriverAt?.toISOString(),
+    });
+  });
+
+  it('says nobody watched a stream nobody opened, and stops it as usual', async () => {
+    const s = await live();
+
+    const res = await send('post', s.stop, s.costel, {});
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ peakViewers: 0, viewedByDriverAt: null });
+    expect(await kinds(s)).toEqual(['live.stopped', 'media.added']);
+    expect(await session(s)).toMatchObject({
+      peakViewers: 0,
+      stopReason: 'sender',
+      viewedByDriverAt: null,
+    });
+  });
+
+  it('carries neither figure on a refused stop', async () => {
+    const s = await live();
+    await send('post', s.stop, s.costel, {});
+
+    const res = await send('post', s.stop, s.costel, {});
+
+    expect(res.status).toBe(409);
+    expect(res.body.peakViewers).toBeUndefined();
+    expect(res.body.viewedByDriverAt).toBeUndefined();
   });
 });
 

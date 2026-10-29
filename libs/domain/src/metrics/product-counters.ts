@@ -331,6 +331,11 @@ const reviewReportReminders = () =>
     'motorfix_review_report_reminders_total',
     'Reminders of review reports waiting 48 hours, by outcome',
   );
+const carTransferAcceptedNotices = () =>
+  counter(
+    'motorfix_car_transfer_accepted_notices_total',
+    'Car takeovers told to the seller, by outcome',
+  );
 const reviewRepliesAnnounced = () =>
   counter(
     'motorfix_review_reply_announced_total',
@@ -605,6 +610,14 @@ export function countReviewReplyAnnounced(
   outcome: (typeof REVIEW_ANNOUNCED_OUTCOMES)[number],
 ) {
   reviewRepliesAnnounced().add(1, { outcome });
+}
+
+// A car takeover told to its seller, one they muted, or one with nobody or
+// no car left to tell about.
+export function countCarTransferAcceptedNotice(
+  outcome: (typeof REVIEW_ANNOUNCED_OUTCOMES)[number],
+) {
+  carTransferAcceptedNotices().add(1, { outcome });
 }
 
 // A verification decision told to the garage's owners, or one with nobody

@@ -33,12 +33,31 @@ model LiveSession {
   keepRecording    Boolean         @default(true) @map("keep_recording")
   // The job's media item a kept recording became, set by the stop.
   recordingMediaId String?         @unique @map("recording_media_id") @db.Uuid
+  // When the job's driver first took a view credential.
+  viewedByDriverAt DateTime?       @map("viewed_by_driver_at") @db.Timestamptz(3)
+  // The most accounts holding an unexpired view credential at once.
+  peakViewers      Int             @default(0) @map("peak_viewers")
   job              Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
   garage           Garage          @relation(fields: [garageId], references: [id], onDelete: Cascade)
   starter          Account?        @relation("LiveSessionStarter", fields: [startedBy], references: [id], onDelete: SetNull)
   recording        MediaItem?      @relation("LiveRecording", fields: [recordingMediaId], references: [id], onDelete: SetNull)
+  viewers          LiveViewer[]
 
   @@index([garageId])
   @@index([jobId])
   @@map("live_session")
+}
+
+// An account that took a view credential for a session: first and last.
+model LiveViewer {
+  liveSessionId String      @map("live_session_id") @db.Uuid
+  accountId     String      @map("account_id") @db.Uuid
+  firstViewedAt DateTime    @map("first_viewed_at") @db.Timestamptz(3)
+  lastViewedAt  DateTime    @map("last_viewed_at") @db.Timestamptz(3)
+  session       LiveSession @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  account       Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@id([liveSessionId, accountId])
+  @@index([accountId])
+  @@map("live_viewer")
 }

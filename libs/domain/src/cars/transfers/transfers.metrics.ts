@@ -29,3 +29,24 @@ export function recordExpiries(count: number) {
     })
     .add(count);
 }
+
+// What an accept answered: the takeover, or the refusal by its code.
+export const ACCEPT_OUTCOMES = [
+  'accepted',
+  'not_found',
+  'transfer_cancelled',
+  'transfer_expired',
+  'transfer_accepted',
+  'own_transfer',
+  'car_limit',
+  'open_request',
+] as const;
+export type AcceptOutcome = (typeof ACCEPT_OUTCOMES)[number];
+
+export function recordAccept(outcome: AcceptOutcome) {
+  meter()
+    .createCounter('motorfix_car_transfer_accepts_total', {
+      description: 'Car transfer accepts, by the takeover or the refusal',
+    })
+    .add(1, { outcome });
+}
