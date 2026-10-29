@@ -372,6 +372,7 @@ export type { UnreadCountDto } from './models/unread-count-dto';
 export type { UpdateBrandDto } from './models/update-brand-dto';
 export type { UpdateCarDto } from './models/update-car-dto';
 export type { UpdateGarageDto } from './models/update-garage-dto';
+export type { UpdateGarageProfileDto } from './models/update-garage-profile-dto';
 export type { UpdateMechanicDto } from './models/update-mechanic-dto';
 export type { UpdateMechanicHoursDto } from './models/update-mechanic-hours-dto';
 export type { UpdateMeDto } from './models/update-me-dto';

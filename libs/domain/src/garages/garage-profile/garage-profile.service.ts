@@ -32,12 +32,20 @@ export class GarageProfileService {
         "Your role does not read the garage's profile",
       );
     }
+    return this.answer(garageId);
+  }
+
+  // The answer alone, for a caller that has checked the actor; `fresh` reads
+  // past the public cache, so a save answers what it just wrote.
+  async answer(garageId: string, fresh = false): Promise<GarageProfileDto> {
     const row = await this.prisma.garage.findUnique({
       select: { phone: true, profileVersion: true, slug: true },
       where: { id: garageId },
     });
     if (!row) throw notFound();
-    const answer = await this.publicGarages.bySlug(row.slug);
+    const answer = fresh
+      ? await this.publicGarages.fresh(row.slug)
+      : await this.publicGarages.bySlug(row.slug);
     return {
       ...answer,
       phone: row.phone,

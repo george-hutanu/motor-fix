@@ -413,8 +413,9 @@ describe("the mechanic's reviews read and the review-ratings queue", () => {
 });
 
 // @traces 133-FR-014
-describe("the staff read of a garage's own profile", () => {
-  it('lists the route with its metric and only the shared API alerts', () => {
+// @traces 1246-FR-025
+describe("the staff read and the owner's save of a garage's own profile", () => {
+  it('lists both operations with their metric and only the shared API alerts', () => {
     const read = JSON.parse(
       readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
     ).paths['/api/v1/garages/{garageId}/profile'];
@@ -424,7 +425,7 @@ describe("the staff read of a garage's own profile", () => {
       ),
     ).flatMap((each) => (Array.isArray(each) ? each : []));
 
-    expect(Object.keys(read)).toEqual(['get']);
+    expect(Object.keys(read).sort()).toEqual(['get', 'patch']);
     expect(
       entries.find((each) => each.name === 'garage-profile'),
     ).toMatchObject({

@@ -17,7 +17,12 @@ import {
   isWeeklyHours,
   type WeeklyHours,
 } from './garage-hours';
-import { NAME_MAX, NAME_MIN, trimmedWithin } from './listing-sections';
+import {
+  isRomanianPhone,
+  NAME_MAX,
+  NAME_MIN,
+  trimmedWithin,
+} from './listing-sections';
 import { normalisePhone } from './phone';
 
 export const PROFILE_DESCRIPTION_MAX = 1000;
@@ -65,13 +70,13 @@ export class UpdateGarageProfileDto {
   description?: string;
 
   @ApiPropertyOptional({
-    description: 'As typed; stored as the E.164 number it reads as',
+    description: 'As typed; a Romanian number, stored as +40 and nine digits',
   })
   @IsOptional()
-  @holds(
-    'phoneNumber',
-    (value) => typeof value === 'string' && normalisePhone(value) !== null,
-  )
+  @holds('phoneNumber', (value) => {
+    const phone = typeof value === 'string' ? normalisePhone(value) : null;
+    return phone !== null && isRomanianPhone(phone);
+  })
   phone?: string;
 
   @ApiPropertyOptional({

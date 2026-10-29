@@ -43,6 +43,8 @@ import { GarageMembersControllerList$Params } from '../fn/garages/garage-members
 import { GarageMembersDto } from '../models/garage-members-dto';
 import { garageProfileControllerRead } from '../fn/garages/garage-profile-controller-read';
 import { GarageProfileControllerRead$Params } from '../fn/garages/garage-profile-controller-read';
+import { garageProfileControllerUpdate } from '../fn/garages/garage-profile-controller-update';
+import { GarageProfileControllerUpdate$Params } from '../fn/garages/garage-profile-controller-update';
 import { GarageProfileDto } from '../models/garage-profile-dto';
 import { GarageReportCreatedDto } from '../models/garage-report-created-dto';
 import { garageReportsControllerReport } from '../fn/garages/garage-reports-controller-report';
@@ -331,6 +333,39 @@ export class GaragesService extends BaseService {
    */
   garageProfileControllerRead(params: GarageProfileControllerRead$Params, context?: HttpContext): Promise<GarageProfileDto> {
     const resp = this.garageProfileControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageProfileDto>): GarageProfileDto => r.body);
+  }
+
+  /** Path part for operation `garageProfileControllerUpdate()` */
+  static readonly GarageProfileControllerUpdatePath = '/api/v1/garages/{garageId}/profile';
+
+  /**
+   * Change the garage's name, description, phone, hours with closed days or service radius in place.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageProfileControllerUpdate()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageProfileControllerUpdate$Response(params: GarageProfileControllerUpdate$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageProfileDto>> {
+    const obs = garageProfileControllerUpdate(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Change the garage's name, description, phone, hours with closed days or service radius in place.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageProfileControllerUpdate$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  garageProfileControllerUpdate(params: GarageProfileControllerUpdate$Params, context?: HttpContext): Promise<GarageProfileDto> {
+    const resp = this.garageProfileControllerUpdate$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageProfileDto>): GarageProfileDto => r.body);
   }
 

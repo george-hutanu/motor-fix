@@ -53,6 +53,7 @@ const answer = (over: Partial<GarageProfileDto> = {}): GarageProfileDto => ({
   reviewCount: 0,
   slug: 'service-auto-militari',
   verifiedAt: null,
+  version: '0',
   worksOn: [
     {
       fuels: ['petrol', 'diesel', 'hybrid'],

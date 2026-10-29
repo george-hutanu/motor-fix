@@ -91,9 +91,12 @@ describe('UpdateGarageProfileDto', () => {
     },
   );
 
-  it.each(['abc', '12', '', 722123456])('refuses the phone %p', (phone) => {
-    expect(save({ phone })).toEqual(['phone']);
-  });
+  it.each(['abc', '12', '', 722123456, '+4930123456', '0722 123 45'])(
+    'refuses the phone %p',
+    (phone) => {
+      expect(save({ phone })).toEqual(['phone']);
+    },
+  );
 
   it.each([
     [{ ...WEEK, mon: [['17:00', '08:00']] }],
