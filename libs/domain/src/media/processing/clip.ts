@@ -31,12 +31,18 @@ class ToolFailed extends Error {
 }
 
 // Runs a tool with an argument list: no shell, so nothing in a file name or
-// a value is ever read as a command.
-function run(tool: 'ffmpeg' | 'ffprobe', args: string[], timeoutMs: number) {
+// a value is ever read as a command. The tool gets only the time left
+// before the attempt's deadline, read on the monotonic clock so a step of
+// the wall clock cannot stretch it, and is killed outright when that ends.
+function run(tool: 'ffmpeg' | 'ffprobe', args: string[], deadline: number) {
+  const left = Math.floor(deadline - performance.now());
+  if (left <= 0)
+    return Promise.reject(new Error(`no time left to run ${tool}`));
   return new Promise<string>((resolve, reject) => {
     const child = spawn(tool, args, {
+      killSignal: 'SIGKILL',
       stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: timeoutMs,
+      timeout: left,
     });
     let stdout = '';
     let stderr = '';
@@ -65,7 +71,7 @@ const THUMB_SCALE = `scale=w='min(${THUMB},iw)':h='min(${THUMB},ih)':force_origi
 const LIMIT = MEDIA_LIMITS.conversionTimeoutMs;
 
 // The real length, in seconds, as the container states it.
-async function lengthOf(source: string): Promise<number> {
+async function lengthOf(source: string, deadline: number): Promise<number> {
   const said = await run(
     'ffprobe',
     [
@@ -77,7 +83,7 @@ async function lengthOf(source: string): Promise<number> {
       'csv=p=0',
       source,
     ],
-    LIMIT,
+    deadline,
   );
   const duration = Number(said.trim());
   if (!Number.isFinite(duration) || duration <= 0) {
@@ -86,7 +92,12 @@ async function lengthOf(source: string): Promise<number> {
   return duration;
 }
 
-async function transcode(source: string, dir: string, duration: number) {
+async function transcode(
+  source: string,
+  dir: string,
+  duration: number,
+  deadline: number,
+) {
   const output = join(dir, 'clip.mp4');
   const poster = join(dir, 'thumb.jpg');
   await run(
@@ -114,7 +125,7 @@ async function transcode(source: string, dir: string, duration: number) {
       '+faststart',
       output,
     ],
-    LIMIT,
+    deadline,
   );
   await run(
     'ffmpeg',
@@ -132,7 +143,7 @@ async function transcode(source: string, dir: string, duration: number) {
       THUMB_SCALE,
       poster,
     ],
-    LIMIT,
+    deadline,
   );
   return { file: await readFile(output), thumbnail: await readFile(poster) };
 }
@@ -141,17 +152,20 @@ async function transcode(source: string, dir: string, duration: number) {
 // its index first so it starts before it has all loaded, and a JPEG
 // thumbnail from its first second. The real length is read before
 // converting; a clip past `maxSeconds` (plus the rounding margin) is
-// refused. Each ffmpeg run stops after the conversion limit.
+// refused. The conversion limit is one budget for the whole attempt, every
+// ffprobe and ffmpeg run sharing it, so an attempt ends before the job's
+// lock does.
 export function convertClip(
   input: Buffer,
   options: { maxSeconds?: number },
 ): Promise<{ file: Buffer; seconds: number; thumbnail: Buffer }> {
   return tracer().startActiveSpan('media.convert', async (span) => {
+    const deadline = performance.now() + LIMIT;
     const dir = await mkdtemp(join(tmpdir(), 'media-'));
     try {
       const source = join(dir, 'source');
       await writeFile(source, input);
-      const duration = await lengthOf(source);
+      const duration = await lengthOf(source, deadline);
       const seconds = Math.max(1, Math.round(duration));
       span.setAttributes({ 'media.kind': 'clip', 'media.seconds': seconds });
       const most = options.maxSeconds;
@@ -161,7 +175,7 @@ export function convertClip(
       ) {
         throw new ClipTooLong(seconds);
       }
-      const converted = await transcode(source, dir, duration);
+      const converted = await transcode(source, dir, duration, deadline);
       span.setAttribute('media.exit_code', 0);
       return { ...converted, seconds };
     } catch (error) {
