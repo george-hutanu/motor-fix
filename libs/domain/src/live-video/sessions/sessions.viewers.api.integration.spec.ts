@@ -1,9 +1,14 @@
 import { LIVE_VIEW_TOKEN_TTL_MS } from '@motor-fix/contracts';
 
+import * as metrics from './sessions.metrics';
 import { quotesApp } from '../../quotes/quotes-api.testing';
 import { LiveVideoModule } from '../live-video.module';
+import {
+  LIVE_VIDEO_PROVIDER,
+  type LiveVideoProvider,
+} from '../providers/live-video.provider';
 
-const { bearer, send, team, world } = quotesApp([
+const { bearer, provider, send, team, world } = quotesApp([
   LiveVideoModule.register({ provider: 'fake' }),
 ]);
 const { prisma } = world;
@@ -150,5 +155,36 @@ describe('the most people watching a live session at once', () => {
     await prisma.liveSession.delete({ where: { id: s.id } });
 
     expect(await prisma.liveViewer.count()).toBe(0);
+  });
+});
+
+// @traces 1252-FR-005
+describe('counting the views that record a viewer', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('counts each recorded view once as issued, on the existing counter', async () => {
+    const s = await live();
+    const counted = jest.spyOn(metrics, 'countViewToken');
+
+    await send('post', s.path, s.driver);
+    await send('post', s.path, s.owner);
+
+    expect(counted.mock.calls).toEqual([['issued'], ['issued']]);
+  });
+
+  it('counts a view the provider could not sign as unavailable, with no viewer kept', async () => {
+    const s = await live();
+    const counted = jest.spyOn(metrics, 'countViewToken');
+    jest
+      .spyOn(provider<LiveVideoProvider>(LIVE_VIDEO_PROVIDER), 'viewUrl')
+      .mockImplementation(() => {
+        throw new Error('live video is not configured');
+      });
+
+    expect((await send('post', s.path, s.driver)).status).toBe(503);
+
+    expect(counted.mock.calls).toEqual([['unavailable']]);
+    expect(await prisma.liveViewer.count()).toBe(0);
+    expect(await peak(s.id)).toBe(0);
   });
 });
