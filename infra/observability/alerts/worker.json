@@ -242,9 +242,9 @@
             "service": "worker"
           },
           "annotations": {
-            "summary": "A job on the {{ $labels.queue }} queue {{ if eq $labels.reason \"overdue\" }}has not completed in 48 hours of worker uptime: the nightly retention job, so data past its stated retention period is being kept{{ else }}failed for good in the last 15 minutes{{ end }} ({{ $labels.deployment_environment }}).",
+            "summary": "A job on the {{ $labels.queue }} queue {{ if eq $labels.reason \"overdue\" }}has not completed in 48 hours of worker uptime: the nightly {{ $labels.queue }} job, so data past its stated retention period is being kept{{ else }}failed for good in the last 15 minutes{{ end }} ({{ $labels.deployment_environment }}).",
             "dashboard_uid": "motorfix-worker",
-            "runbook": "Read the worker logs and traces for the failed job on this queue, fix the cause, and retry the job from the queue if its work is still needed. Overdue (queue retention): Open the Queues dashboard for the retention queue's failed jobs and the system log's job_failed entry for the retention-nightly job; fix the cause and restart the worker, which re-arms the nightly scheduler at boot. The next night's run catches up on everything due."
+            "runbook": "Read the worker logs and traces for the failed job on this queue, fix the cause, and retry the job from the queue if its work is still needed. Overdue (queue retention or media-retention): Open the Queues dashboard for the retention queue's failed jobs and the system log's job_failed entry for the retention-nightly or media-retention-nightly job; fix the cause and restart the worker, which re-arms the nightly scheduler at boot. The next night's run catches up on everything due."
           },
           "data": [
             {
@@ -256,7 +256,7 @@
               },
               "model": {
                 "refId": "A",
-                "expr": "label_replace(sum by (deployment_environment, queue) (increase(motorfix_jobs_total{outcome=\"failed\", queue!=\"verification-result\"}[15m])), \"reason\", \"failed\", \"\", \"\") or label_replace(label_replace(max by (deployment_environment) (count_over_time(target_info{service_name=\"worker\"}[1h] offset 47h)) unless sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"retention\", job_name=\"retention-nightly\", outcome=\"completed\"}[48h])) > 0, \"queue\", \"retention\", \"\", \"\"), \"reason\", \"overdue\", \"\", \"\")",
+                "expr": "label_replace(sum by (deployment_environment, queue) (increase(motorfix_jobs_total{outcome=\"failed\", queue!=\"verification-result\"}[15m])), \"reason\", \"failed\", \"\", \"\") or label_replace(label_replace(max by (deployment_environment) (count_over_time(target_info{service_name=\"worker\"}[1h] offset 47h)) unless sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"retention\", job_name=\"retention-nightly\", outcome=\"completed\"}[48h])) > 0, \"queue\", \"retention\", \"\", \"\"), \"reason\", \"overdue\", \"\", \"\") or label_replace(label_replace(max by (deployment_environment) (count_over_time(target_info{service_name=\"worker\"}[1h] offset 47h)) unless sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"media-retention\", job_name=\"media-retention-nightly\", outcome=\"completed\"}[48h])) > 0, \"queue\", \"media-retention\", \"\", \"\"), \"reason\", \"overdue\", \"\", \"\")",
                 "instant": true,
                 "intervalMs": 60000,
                 "maxDataPoints": 43200
@@ -425,118 +425,6 @@
               "model": {
                 "refId": "A",
                 "expr": "sum by (deployment_environment) (increase(motorfix_data_exports_total{service_name=\"worker\", outcome=\"failed\"}[15m]))",
-                "instant": true,
-                "intervalMs": 60000,
-                "maxDataPoints": 43200
-              }
-            },
-            {
-              "refId": "B",
-              "datasourceUid": "__expr__",
-              "relativeTimeRange": {
-                "from": 0,
-                "to": 0
-              },
-              "model": {
-                "refId": "B",
-                "type": "threshold",
-                "expression": "A",
-                "conditions": [
-                  {
-                    "evaluator": {
-                      "type": "gt",
-                      "params": [
-                        0
-                      ]
-                    }
-                  }
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "uid": "media-conversion-failures",
-          "title": "Job media conversions failing",
-          "condition": "B",
-          "for": "0m",
-          "noDataState": "OK",
-          "execErrState": "Error",
-          "labels": {
-            "service": "worker"
-          },
-          "annotations": {
-            "summary": "More than 20 % of the job photos and clips converted in the last 30 minutes failed ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-product",
-            "runbook": "Mechanics' photos or clips are not reaching the drivers. Read the worker logs for 'MediaProcessing' and 'failed to convert' and the media.convert spans' exit codes: ffmpeg missing from the worker image, the object store down or a run of files the worker cannot read. Failed items keep their originals until the purge; the mechanic sends again once fixed. The motorfix-product dashboard's Media row shows the outcomes."
-          },
-          "data": [
-            {
-              "refId": "A",
-              "datasourceUid": "grafanacloud-prom",
-              "relativeTimeRange": {
-                "from": 1800,
-                "to": 0
-              },
-              "model": {
-                "refId": "A",
-                "expr": "sum by (deployment_environment) (increase(motorfix_media_items_total{service_name=\"worker\", outcome=\"failed\"}[30m])) / sum by (deployment_environment) (increase(motorfix_media_items_total{service_name=\"worker\", outcome=~\"visible|failed\"}[30m]))",
-                "instant": true,
-                "intervalMs": 60000,
-                "maxDataPoints": 43200
-              }
-            },
-            {
-              "refId": "B",
-              "datasourceUid": "__expr__",
-              "relativeTimeRange": {
-                "from": 0,
-                "to": 0
-              },
-              "model": {
-                "refId": "B",
-                "type": "threshold",
-                "expression": "A",
-                "conditions": [
-                  {
-                    "evaluator": {
-                      "type": "gt",
-                      "params": [
-                        0.2
-                      ]
-                    }
-                  }
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "uid": "media-retention-overdue",
-          "title": "Media purge overdue",
-          "condition": "B",
-          "for": "0m",
-          "noDataState": "OK",
-          "execErrState": "Error",
-          "labels": {
-            "service": "worker"
-          },
-          "annotations": {
-            "summary": "No nightly media purge completed in the last 26 hours ({{ $labels.deployment_environment }}).",
-            "dashboard_uid": "motorfix-product",
-            "runbook": "Job media past its 90 days is not being deleted. Open the Queues dashboard for the media-retention queue and the worker logs for 'MediaRetention'; fix the cause and restart the worker, which re-arms the media-retention-nightly scheduler at boot. The next night's run catches up on every item due."
-          },
-          "data": [
-            {
-              "refId": "A",
-              "datasourceUid": "grafanacloud-prom",
-              "relativeTimeRange": {
-                "from": 93600,
-                "to": 0
-              },
-              "model": {
-                "refId": "A",
-                "expr": "max by (deployment_environment) (count_over_time(target_info{service_name=\"worker\"}[1h] offset 25h)) unless sum by (deployment_environment) (increase(motorfix_jobs_total{queue=\"media-retention\", job_name=\"media-retention-nightly\", outcome=\"completed\"}[26h])) > 0",
                 "instant": true,
                 "intervalMs": 60000,
                 "maxDataPoints": 43200

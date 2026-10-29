@@ -190,6 +190,12 @@ const NOT_CHANGES = new Set([
   // A message to support is correspondence, often from a visitor with no
   // account, not a change to anyone's data; the row is its own record.
   'SupportMessagesService.create',
+  // A job's photo or clip enters the history once, when it is shown: asking
+  // for its upload and marking it uploaded change nothing anyone sees, and a
+  // kept recording's entry is written where it turns visible (markVisible).
+  'MediaService.requestUpload',
+  'MediaService.complete',
+  'MediaService.registerRecording',
 ]);
 
 const uncovered = (source: string) =>

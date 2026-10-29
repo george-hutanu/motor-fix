@@ -34,6 +34,7 @@ describe('who writes the system status log', () => {
       'libs/domain/src/cars/reminders/reminders.module.ts',
       'libs/domain/src/garages/photos/listing-photos/listing-photos.worker.ts',
       'libs/domain/src/job-failures.ts',
+      'libs/domain/src/media/processing/processing.module.ts',
       'libs/domain/src/notifications/brevo/brevo.ts',
       'libs/domain/src/places/lookup/places/places.controller.ts',
       'libs/domain/src/status/run.ts',

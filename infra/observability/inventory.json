@@ -2750,8 +2750,7 @@
       "alerts": [
         "worker-queue-backlog",
         "worker-queue-growing",
-        "worker-jobs-failed",
-        "media-conversion-failures"
+        "worker-jobs-failed"
       ],
       "reason": "the API queues one convert job per uploaded job photo, clip or kept recording (job id = media id, 2 tries, exponential backoff); the worker converts it with sharp or a local ffmpeg process (no shell, 10-minute timeout, media.convert span with the exit code), timed in motorfix_media_conversion_seconds{kind} and counted in motorfix_media_items_total{kind,outcome}; a last failure logs one MediaProcessing line and a job_failed entry and marks the item failed",
       "story": "ST-333"
@@ -2764,10 +2763,9 @@
       "alerts": [
         "worker-queue-backlog",
         "worker-queue-growing",
-        "worker-jobs-failed",
-        "media-retention-overdue"
+        "worker-jobs-failed"
       ],
-      "reason": "the nightly media purge: one scheduler, media-retention-nightly, at 03:00 Europe/Bucharest fails uploads abandoned for a day and deletes every item past its purge date (object store or provider), one audit entry per job; counted in motorfix_media_purged_total{kind}, a throwing step in motorfix_media_retention_step_failures_total{step}; media-retention-overdue fires when no run completed in 26 hours",
+      "reason": "the nightly media purge: one scheduler, media-retention-nightly, at 03:00 Europe/Bucharest fails uploads abandoned for a day and deletes every item past its purge date (object store or provider), one audit entry per job; counted in motorfix_media_purged_total{kind}, a throwing step in motorfix_media_retention_step_failures_total{step}; worker-jobs-failed's overdue arm fires when no media-retention-nightly run completed in 48 hours of worker uptime",
       "story": "ST-333"
     },
     {
@@ -2789,9 +2787,9 @@
       "source": "libs/domain/src/media/media.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": [
-        "media-conversion-failures"
+        "worker-jobs-failed"
       ],
-      "reason": "counts job photos, clips and recordings by kind and outcome (visible, failed, refused); panel Job media per hour; a failure rate above 20 % in 30 minutes is media-conversion-failures'",
+      "reason": "counts job photos, clips and recordings by kind and outcome (visible, failed, refused); panel Job media per hour; a conversion failed for good fires worker-jobs-failed on the media queue",
       "story": "ST-333"
     },
     {
@@ -2800,9 +2798,9 @@
       "source": "libs/domain/src/media/media.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": [
-        "media-conversion-failures"
+        "worker-jobs-failed"
       ],
-      "reason": "times each conversion by kind; panel Conversion time p95; a conversion that times out is a failure media-conversion-failures sees",
+      "reason": "times each conversion by kind; panel Conversion time p95; a conversion that times out fails the job, which worker-jobs-failed sees",
       "story": "ST-333"
     },
     {
@@ -2811,9 +2809,9 @@
       "source": "libs/domain/src/media/media.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": [
-        "media-retention-overdue"
+        "worker-jobs-failed"
       ],
-      "reason": "counts the items the nightly purge deleted by kind; panel Media purged per night; a night with no completed run is media-retention-overdue's",
+      "reason": "counts the items the nightly purge deleted by kind; panel Media purged per night; a night with no completed run is worker-jobs-failed's overdue arm",
       "story": "ST-333"
     },
     {
@@ -2822,7 +2820,7 @@
       "source": "libs/domain/src/media/media.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": [
-        "media-retention-overdue"
+        "worker-jobs-failed"
       ],
       "reason": "counts nightly media retention steps that threw, by step; panel Media retention step failures; an item that failed to purge is retried the next night",
       "story": "ST-333"
