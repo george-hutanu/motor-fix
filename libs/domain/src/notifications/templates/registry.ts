@@ -47,6 +47,8 @@ import {
 import { GARAGE_RESTORED } from './garage-restored';
 import { GARAGE_SUSPENDED } from './garage-suspended';
 import { GENERIC, GENERIC_GROUPED } from './generic';
+import { JOB_READY } from './job-ready';
+import { JOB_STARTED } from './job-started';
 import { LISTING_CONTINUE_LINK, LISTING_REMINDER } from './listing';
 import { NEWS } from './news';
 import { PHONE_CHANGE_CODE } from './phone-change-code';
@@ -128,6 +130,8 @@ export const TEMPLATES: Registry = {
   GARAGE_SUSPENDED,
   GENERIC,
   'GENERIC.grouped': GENERIC_GROUPED,
+  JOB_READY,
+  JOB_STARTED,
   LISTING_CONTINUE_LINK,
   LISTING_REMINDER,
   NEWS,
