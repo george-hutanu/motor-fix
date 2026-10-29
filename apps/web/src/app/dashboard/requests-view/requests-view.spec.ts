@@ -140,11 +140,13 @@ describe('Cererile mele once a quote is accepted', () => {
       booking: {
         cancelledBySide: null,
         confirmBy: new Date(Date.now() + confirmIn).toISOString(),
+        finalPriceBani: null,
         garage: {
           id: 'garage-1',
           name: 'Service Auto Militari',
           slug: 'service-auto-militari',
         },
+        handedOverAt: null,
         id: 'booking-1',
         jobStarted: false,
         lateCancellation: false,
@@ -262,11 +264,13 @@ describe('Cererile mele’s clock after an acceptance', () => {
             booking: {
               cancelledBySide: null,
               confirmBy,
+              finalPriceBani: null,
               garage: {
                 id: 'garage-1',
                 name: 'Service Auto Militari',
                 slug: 'service-auto-militari',
               },
+              handedOverAt: null,
               id: 'booking-1',
               jobStarted: false,
               lateCancellation: false,
@@ -311,11 +315,13 @@ describe('Cererile mele once the garage confirms or lets the booking lapse', () 
       booking: {
         cancelledBySide: null,
         confirmBy: new Date(Date.now() + HOUR).toISOString(),
+        finalPriceBani: null,
         garage: {
           id: 'garage-1',
           name: 'Service Auto Militari',
           slug: 'service-auto-militari',
         },
+        handedOverAt: null,
         id: 'booking-1',
         jobStarted: false,
         lateCancellation: false,
@@ -387,11 +393,13 @@ describe('Cererile mele once the garage confirms or lets the booking lapse', () 
             booking: {
               cancelledBySide: null,
               confirmBy: new Date(Date.now() + HOUR).toISOString(),
+              finalPriceBani: null,
               garage: {
                 id: 'garage-1',
                 name: 'Service Auto Militari',
                 slug: 'service-auto-militari',
               },
+              handedOverAt: null,
               id: 'booking-1',
               jobStarted: false,
               lateCancellation: false,
@@ -908,7 +916,9 @@ type Booking = NonNullable<RequestSummaryDto['booking']>;
 const booking = (over: Partial<Booking> = {}): Booking => ({
   cancelledBySide: null,
   confirmBy: new Date(Date.now() + HOURS).toISOString(),
+  finalPriceBani: null,
   garage: GARAGE,
+  handedOverAt: null,
   id: 'booking-1',
   jobStarted: false,
   lateCancellation: false,
