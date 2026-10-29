@@ -44,7 +44,7 @@ export interface LockedApproval {
   tool: string;
 }
 
-export type Locking = LockedApproval | 'not_found' | { notPending: Decided };
+type Locking = LockedApproval | 'not_found' | { notPending: Decided };
 
 interface Shown {
   arguments: unknown;

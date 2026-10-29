@@ -3,7 +3,7 @@ import { metrics, trace } from '@opentelemetry/api';
 
 import type { ApprovalKind, ApprovalStatus } from './assistant-approvals.dto';
 
-export type ApprovalCount = Exclude<ApprovalStatus, 'pending'> | 'requested';
+type ApprovalCount = Exclude<ApprovalStatus, 'pending'> | 'requested';
 
 const logger = new Logger('AssistantApprovals');
 
