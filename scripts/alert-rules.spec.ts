@@ -810,6 +810,19 @@ describe('alert rules', () => {
     expect(rule?.annotations['summary']).toContain('{{ $labels.queue }}');
   });
 
+  // @traces 333-FR-014 333-FR-016
+  it('tells the owner the nightly media purge is overdue as an arm of worker-jobs-failed', () => {
+    const rules = rulesOf(own('worker') as AlertFile);
+    const rule = rules.find((r) => r.uid === 'worker-jobs-failed');
+    const expr = query(rule as Rule)?.model.expr ?? '';
+    expect(rules.map((r) => r.uid)).not.toContain('media-retention-overdue');
+    expect(expr).toContain(
+      'increase(motorfix_jobs_total{queue="media-retention", job_name="media-retention-nightly", outcome="completed"}[26h])) > 0',
+    );
+    expect(expr).toContain('"queue", "media-retention"');
+    expect(rule?.annotations['runbook']).toContain('media-retention-nightly');
+  });
+
   // @traces 1156-FR-011
   it('tells the owner the retention job is overdue as an arm of worker-jobs-failed, not a rule of its own', () => {
     const rules = rulesOf(own('worker') as AlertFile);

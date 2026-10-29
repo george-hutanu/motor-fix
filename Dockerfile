@@ -56,6 +56,13 @@ ENV NODE_ENV=production RELEASE_SHA=${RELEASE_SHA} TZ=UTC
 # user can write; the heap follows the container's memory limit.
 ENV NODE_COMPILE_CACHE=/tmp/node-compile-cache
 ENV NODE_OPTIONS=--max-old-space-size-percentage=75
+# The worker converts clips with ffmpeg and ffprobe, spawned from Node; only
+# its image carries them, and a major other than 6 or 7 fails the build.
+RUN if [ "${APP}" = worker ]; then \
+      apt-get update \
+      && apt-get install -y --no-install-recommends ffmpeg \
+      && rm -rf /var/lib/apt/lists/* \
+      && ffmpeg -version | head -1 | grep -Eq '^ffmpeg version [67]'; fi
 COPY --from=build --chown=node:node /repo/dist/apps/${APP} /app
 WORKDIR /app
 USER node

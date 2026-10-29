@@ -48,7 +48,7 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
   }
 
   async createInput(session: { id: string }): Promise<LiveInput> {
-    const call = await this.call('create_input', 'POST', '', {
+    const call = await this.call('create_input', 'POST', '/live_inputs', {
       meta: { name: `motorfix live session ${session.id}` },
       preferLowLatency: true,
       recording: { mode: 'automatic', requireSignedURLs: true },
@@ -75,9 +75,22 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     const call = await this.call(
       'close_input',
       'DELETE',
-      `/${encodeURIComponent(inputId)}`,
+      `/live_inputs/${encodeURIComponent(inputId)}`,
     );
     if (call.failed) throw new Error(`live input close failed: ${call.failed}`);
+  }
+
+  // A 404 is a recording already gone; an answer with no JSON body is a
+  // delete the provider accepted.
+  async deleteRecording(providerRef: string): Promise<void> {
+    const call = await this.call(
+      'delete_recording',
+      'DELETE',
+      `/${encodeURIComponent(providerRef)}`,
+    );
+    if (call.failed && call.failed !== '404' && call.failed !== 'malformed') {
+      throw new Error(`recording delete failed: ${call.failed}`);
+    }
   }
 
   viewUrl(inputId: string, expiresAt: Date): string {
@@ -99,12 +112,12 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
   }
 
   private call(
-    operation: 'create_input' | 'close_input',
+    operation: 'create_input' | 'close_input' | 'delete_recording',
     method: 'POST' | 'DELETE',
     path: string,
     body?: object,
   ): Promise<Call> {
-    const url = `${this.api}/accounts/${this.secrets.CLOUDFLARE_STREAM_ACCOUNT_ID}/stream/live_inputs${path}`;
+    const url = `${this.api}/accounts/${this.secrets.CLOUDFLARE_STREAM_ACCOUNT_ID}/stream${path}`;
     return tracer().startActiveSpan(`live-video.${operation}`, async (span) => {
       span.setAttributes({
         'http.host': new URL(url).host,

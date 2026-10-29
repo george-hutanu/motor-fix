@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 221,
+    "count": 225,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -641,7 +641,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "opens and closes a live input per live session, 5 s timeout, in a live-video.create_input or live-video.close_input span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees",
+      "reason": "opens and closes a live input per live session and deletes a kept recording on removal or purge (DELETE /stream/{uid}, a 404 counting as deleted), 5 s timeout, in a live-video.create_input or live-video.close_input span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees",
       "story": "ST-1250"
     },
     {
@@ -2774,6 +2774,89 @@
       "alerts": "none",
       "reason": "counts each 48-hour reminder of a pending review report by outcome (sent, skipped), with the reminder's log line naming the report id; a count has no failure to alert on; the worker-jobs-failed rule covers the queue that reports it",
       "story": "ST-177"
+    },
+    {
+      "kind": "queue",
+      "name": "media",
+      "source": "libs/domain/src/media/media.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "the API queues one convert job per uploaded job photo, clip or kept recording (job id = media id, 2 tries, exponential backoff); the worker converts it with sharp or a local ffmpeg process (no shell, 10-minute timeout, media.convert span with the exit code), timed in motorfix_media_conversion_seconds{kind} and counted in motorfix_media_items_total{kind,outcome}; a last failure logs one MediaProcessing line and a job_failed entry and marks the item failed",
+      "story": "ST-333"
+    },
+    {
+      "kind": "queue",
+      "name": "media-retention",
+      "source": "libs/domain/src/media/retention/retention.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "the nightly media purge: one scheduler, media-retention-nightly, at 03:00 Europe/Bucharest fails uploads abandoned for a day and deletes every item past its purge date (object store or provider), one audit entry per job; counted in motorfix_media_purged_total{kind}, a throwing step in motorfix_media_retention_step_failures_total{step}; worker-jobs-failed's overdue arm fires when no media-retention-nightly run completed in 26 hours of worker uptime",
+      "story": "ST-333"
+    },
+    {
+      "kind": "endpoint",
+      "name": "media",
+      "source": "libs/domain/src/media/media.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/jobs/:id/media/uploads, /api/v1/media/:id/complete, /api/v1/jobs/:id/media and /api/v1/media/:id/file",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a request signs a 15-minute upload address and writes the processing item; complete checks the stored bytes and queues the conversion; a refusal is counted in motorfix_media_items_total{outcome=\"refused\"}, a store failure answers 503 storage_unavailable, which api-error-rate sees",
+      "story": "ST-333"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_media_items_total",
+      "source": "libs/domain/src/media/media.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "worker-jobs-failed"
+      ],
+      "reason": "counts job photos, clips and recordings by kind and outcome (visible, failed, refused); panel Job media per hour; a conversion failed for good fires worker-jobs-failed on the media queue",
+      "story": "ST-333"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_media_conversion_seconds",
+      "source": "libs/domain/src/media/media.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "worker-jobs-failed"
+      ],
+      "reason": "times each conversion by kind; panel Conversion time p95; a conversion that times out fails the job, which worker-jobs-failed sees",
+      "story": "ST-333"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_media_purged_total",
+      "source": "libs/domain/src/media/media.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "worker-jobs-failed"
+      ],
+      "reason": "counts the items the nightly purge deleted by kind; panel Media purged per night; a night with no completed run is worker-jobs-failed's overdue arm",
+      "story": "ST-333"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_media_retention_step_failures_total",
+      "source": "libs/domain/src/media/media.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": [
+        "worker-jobs-failed"
+      ],
+      "reason": "counts nightly media retention steps that threw, by step; panel Media retention step failures; an item that failed to purge is retried the next night",
+      "story": "ST-333"
     },
     {
       "kind": "endpoint",

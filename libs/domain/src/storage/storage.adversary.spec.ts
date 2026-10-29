@@ -89,16 +89,20 @@ describe('StorageService under hostile input', () => {
   }
 
   describe('the rules table', () => {
-    it('names exactly the five purposes with a 10 MB limit each', () => {
+    it('names exactly the seven purposes, 10 MB each but a clip at 100 MB', () => {
       expect(Object.keys(FILE_RULES).sort()).toEqual([
         'garage_photo',
         'legal_document',
         'mechanic_photo',
+        'media_clip',
+        'media_photo',
         'message_photo',
         'repair_invoice',
       ]);
-      for (const rule of Object.values(FILE_RULES)) {
-        expect(rule.maxBytes).toBe(TEN_MB);
+      for (const [purpose, rule] of Object.entries(FILE_RULES)) {
+        expect(rule.maxBytes).toBe(
+          purpose === 'media_clip' ? 10 * TEN_MB : TEN_MB,
+        );
       }
     });
 

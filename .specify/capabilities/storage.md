@@ -1,12 +1,13 @@
 ---
 capability: storage
-updated: 2026-10-23
+updated: 2026-10-29
 features:
   - 422-private-file-storage
   - 110-workshop-photos
   - 1191-resilient-uploads
   - 1192-photo-variants
   - 068-yearly-documents
+  - 333-media-storage
 ---
 
 # Capability: Storage
@@ -15,9 +16,9 @@ Private object storage for every file MotorFix keeps: the rules per file purpose
 
 ## Requirements
 
-### 1191-FR-005 — The one table of file purposes and their rules, shared by the API, the worker and the web app (`libs/contracts/src/files.ts`), MUST read: `garage_photo` takes JPEG, PNG, WebP, HEIC and HEIF; `message_photo` and `mechanic_photo` take JPEG, PNG or WebP; `legal_document` and `repair_invoice` take PDF, JPEG or PNG; every purpose up to 10 MB (supersedes 422-FR-001 by adding `image/heic` and `image/heif` to `garage_photo`). The confirm's signature check MUST recognise a HEIC/HEIF file by its `ftyp` box brand (`heic`, `heix`, `hevc`, `hevx`, `mif1`, `msf1`, `heif`); a declared HEIC whose bytes are not one, or a HEIC declared as another type, is refused as `file_type_mismatch` and deleted (422-FR-005). The worker MUST decode a HEIC/HEIF original (a HEIC decoder dependency in the worker, the one new dependency of this story) and write a JPEG thumbnail and a JPEG display copy with the same sizes and metadata stripping as today (110-FR-010). `legal_document` and the other purposes do not change. Integration tests MUST cover a real HEIC accepted and processed, and both mismatch cases. This supersedes the closed ST-936 decision "HEIC photos are not accepted" (context.md, Contradictions), which rested on sharp's binary not decoding HEIC; the worker's decoder removes that reason.
+### 333-FR-002 — The storage module's one table of file purposes (`FILE_RULES`, 1191-FR-005) MUST gain `media_photo` (JPEG, PNG, WebP, HEIC/HEIF, up to 10 MB) and `media_clip` (`video/mp4`, `video/quicktime`, `video/webm`, up to 100 MB), every other purpose unchanged, and the confirm's signature check MUST recognise an MP4 and a MOV by the `ftyp` box (brands `isom`, `iso2`, `mp41`, `mp42`, `avc1`, `qt  `) and a WebM by the EBML header with DocType `webm`; a declared video whose bytes are not one of its purpose's types is `file_type_mismatch` and deleted (422-FR-005).
 
-_From 1191-resilient-uploads._
+_From 333-media-storage._
 
 ### 422-FR-002 — Before issuing an upload address, storage MUST refuse a declared type the purpose does not allow (422, `file_type_not_allowed`) and a declared size above the purpose's limit (422, `file_too_large`), and MUST refuse with 400 (`validation_failed`) a size that is not a positive whole number of bytes, an unknown purpose and an owner id that is not 1 to 64 letters, digits, `_` or `-`.
 
@@ -63,3 +64,4 @@ _From 1192-photo-variants._
 - `422-FR-012` — superseded by `1191-FR-006` (2026-10-18)
 - `110-FR-003` — superseded by `1192-FR-004` (2026-10-22)
 - `1191-FR-006` — superseded by `068-FR-006` (2026-10-23)
+- `1191-FR-005` — superseded by `333-FR-002` (2026-10-29)

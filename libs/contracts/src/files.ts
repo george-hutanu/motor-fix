@@ -3,6 +3,8 @@ const IMAGES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 // Phones save HEIC; the worker turns a garage photo into JPEG.
 const GARAGE_PHOTOS = [...IMAGES, 'image/heic', 'image/heif'] as const;
 const DOCUMENTS = ['application/pdf', 'image/jpeg', 'image/png'] as const;
+// A job's clip as phones record it; the worker turns it into an H.264 MP4.
+const VIDEOS = ['video/mp4', 'video/quicktime', 'video/webm'] as const;
 
 export interface FileRule {
   maxBytes: number;
@@ -15,6 +17,8 @@ export const FILE_RULES = {
   garage_photo: { maxBytes: 10 * MB, types: GARAGE_PHOTOS },
   legal_document: { maxBytes: 10 * MB, types: DOCUMENTS },
   mechanic_photo: { maxBytes: 10 * MB, types: IMAGES },
+  media_clip: { maxBytes: 100 * MB, types: VIDEOS },
+  media_photo: { maxBytes: 10 * MB, types: GARAGE_PHOTOS },
   message_photo: { maxBytes: 10 * MB, types: IMAGES },
   repair_invoice: { maxBytes: 10 * MB, types: DOCUMENTS },
 } as const satisfies Record<string, FileRule>;

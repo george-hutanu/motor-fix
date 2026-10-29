@@ -280,6 +280,22 @@ export function photoConfig(
   };
 }
 
+// How long a job's photos and clips are kept, read when an item is sent and
+// by the nightly purge; a value that is not a whole number of days stops the
+// app rather than keeping media for a default nobody chose.
+export function mediaConfig(
+  source: Record<string, string | undefined> = process.env,
+) {
+  const days = source['MEDIA_RETENTION_DAYS'];
+  if (days && wholeNumber(days, 0) === 0) {
+    throw new Error('MEDIA_RETENTION_DAYS must be a whole number of days');
+  }
+  return {
+    retentionDays: wholeNumber(days, 90),
+    workerConcurrency: wholeNumber(source['MEDIA_WORKER_CONCURRENCY'], 1),
+  };
+}
+
 // Where the browser loads photo variants from: the API on the same origin
 // until a CDN host is set.
 export function imageBaseUrl(

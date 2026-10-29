@@ -42,6 +42,7 @@ model Job {
   reviews        Review[]
   liveSessions   LiveSession[]
   repair         Repair?
+  media          MediaItem[]
 
   @@index([garageId, createdAt(sort: Desc)])
   @@index([mechanicId])

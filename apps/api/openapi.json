@@ -6003,6 +6003,218 @@
         ]
       }
     },
+    "/api/v1/jobs/{id}/media/uploads": {
+      "post": {
+        "operationId": "requestMediaUpload",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaUploadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaUploadAddressDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "403": {
+            "description": "forbidden: not the garage owner or the job’s mechanic"
+          },
+          "404": {
+            "description": "not_found: no such job, another garage’s or driver’s, or live media off"
+          },
+          "409": {
+            "description": "job_handed_over or job_not_in_work"
+          },
+          "422": {
+            "description": "file_type_not_allowed, file_too_large or clip_too_long"
+          },
+          "503": {
+            "description": "storage_unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send a photo or a clip of the car to the job",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/api/v1/media/{id}/complete": {
+      "post": {
+        "operationId": "completeMediaUpload",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not the sender’s"
+          },
+          "409": {
+            "description": "file_missing or invalid_state"
+          },
+          "422": {
+            "description": "file_type_mismatch or file_too_large"
+          },
+          "503": {
+            "description": "storage_unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Say a sent file has finished uploading",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/api/v1/jobs/{id}/media": {
+      "get": {
+        "operationId": "listJobMedia",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaListDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The job’s photos, clips and kept recordings, oldest first",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/api/v1/media/{id}/file": {
+      "get": {
+        "operationId": "mediaFileAddress",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variant",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "file",
+              "type": "string",
+              "enum": [
+                "file",
+                "thumbnail"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaFileAddressDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "503": {
+            "description": "storage_unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A 5-minute address of a visible item’s file or thumbnail",
+        "tags": [
+          "media"
+        ]
+      }
+    },
     "/api/v1/maps/static": {
       "get": {
         "operationId": "StaticMapController_render",
@@ -18669,6 +18881,191 @@
           "url": {
             "type": "string",
             "description": "The signed low-latency HLS manifest URL"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
+        ]
+      },
+      "MediaUploadRequestDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "photo",
+              "clip"
+            ]
+          },
+          "contentType": {
+            "type": "string",
+            "example": "image/jpeg"
+          },
+          "sizeBytes": {
+            "type": "number",
+            "description": "Bytes",
+            "minimum": 1
+          },
+          "checksum": {
+            "type": "string",
+            "description": "Base64 of the CRC32 of the file, big-endian",
+            "example": "yPQ5Jg=="
+          },
+          "seconds": {
+            "type": "number",
+            "description": "The clip length in whole seconds; a photo has none",
+            "minimum": 1
+          },
+          "caption": {
+            "type": "string",
+            "maxLength": 140
+          }
+        },
+        "required": [
+          "kind",
+          "contentType",
+          "sizeBytes",
+          "checksum"
+        ]
+      },
+      "MediaItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "photo",
+              "clip",
+              "live"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "visible",
+              "failed",
+              "removed",
+              "purged"
+            ]
+          },
+          "caption": {
+            "type": "string",
+            "nullable": true
+          },
+          "seconds": {
+            "type": "number",
+            "nullable": true
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "removedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "senderId": {
+            "type": "string",
+            "description": "The account that sent it; none for a kept recording",
+            "format": "uuid",
+            "nullable": true
+          },
+          "hasThumbnail": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "jobId",
+          "kind",
+          "status",
+          "caption",
+          "seconds",
+          "sentAt",
+          "removedAt",
+          "senderId",
+          "hasThumbnail"
+        ]
+      },
+      "MediaUploadTargetDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Where the app PUTs the file"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Headers to send with the PUT, exactly as given"
+          },
+          "key": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "headers",
+          "key",
+          "expiresAt"
+        ]
+      },
+      "MediaUploadAddressDto": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/MediaItemDto"
+          },
+          "upload": {
+            "$ref": "#/components/schemas/MediaUploadTargetDto"
+          }
+        },
+        "required": [
+          "item",
+          "upload"
+        ]
+      },
+      "MediaListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "MediaFileAddressDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Signed for 5 minutes"
           },
           "expiresAt": {
             "type": "string",

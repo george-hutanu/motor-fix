@@ -26,6 +26,7 @@ export { ReviewsService } from './services/reviews.service';
 export { GarageJobsService } from './services/garage-jobs.service';
 export { PlacesService } from './services/places.service';
 export { LiveSessionsService } from './services/live-sessions.service';
+export { MediaService } from './services/media.service';
 export { MapsService } from './services/maps.service';
 export { SupportService } from './services/support.service';
 export { InvitesService } from './services/invites.service';
