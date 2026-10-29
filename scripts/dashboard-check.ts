@@ -57,7 +57,6 @@ export const PRODUCT_COUNTERS = [
   'motorfix_account_deletions_total',
   'motorfix_data_exports_total',
   'motorfix_admin_account_actions_total',
-  'motorfix_car_transfer_accepted_notices_total',
   'motorfix_garage_suspensions_total',
   'motorfix_garage_restores_total',
   'motorfix_dashboard_layout_writes_total',
@@ -78,6 +77,7 @@ export const PRODUCT_COUNTERS = [
   'motorfix_listing_submissions_total',
   'motorfix_listing_completions_total',
   'motorfix_sort_changes_total',
+  'motorfix_car_transfer_accepted_notices_total',
 ];
 const SIGNAL_SOURCES = new Set(['prometheus', 'loki', 'tempo', 'grafana']);
 const GRAFANA = '-- Grafana --';
