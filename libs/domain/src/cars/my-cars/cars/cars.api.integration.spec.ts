@@ -162,6 +162,7 @@ describe('POST /cars', () => {
       rcaUntil: null,
       rovinietaUntil: null,
       serviceDueOn: null,
+      transfer: null,
       updatedAt: res.body.createdAt,
       year: 2019,
     });
