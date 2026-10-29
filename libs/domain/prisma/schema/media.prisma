@@ -1,0 +1,54 @@
+// media models: the photos, clips and kept recordings of a job. Only the
+// media module writes them.
+
+enum MediaKind {
+  photo
+  clip
+  live
+
+  @@map("media_kind")
+}
+
+enum MediaStatus {
+  processing
+  visible
+  failed
+  removed
+  purged
+
+  @@map("media_status")
+}
+
+// One photo, clip or kept recording. Exactly one of originalKey and
+// providerRef is set when it is created.
+model MediaItem {
+  id           String      @id @default(uuid()) @db.Uuid
+  jobId        String      @map("job_id") @db.Uuid
+  // The job's garage, copied at creation for scoped reads and the audit.
+  garageId     String      @map("garage_id") @db.Uuid
+  senderId     String?     @map("sender_id") @db.Uuid
+  kind         MediaKind
+  status       MediaStatus @default(processing)
+  caption      String?     @db.VarChar(140)
+  contentType  String      @map("content_type")
+  sizeBytes    BigInt      @map("size_bytes")
+  originalKey  String?     @map("original_key")
+  fileKey      String?     @map("file_key")
+  thumbnailKey String?     @map("thumbnail_key")
+  providerRef  String?     @map("provider_ref")
+  seconds      Int?
+  sentAt       DateTime    @map("sent_at") @db.Timestamptz(3)
+  uploadedAt   DateTime?   @map("uploaded_at") @db.Timestamptz(3)
+  purgeAfter   DateTime    @map("purge_after") @db.Timestamptz(3)
+  removedAt    DateTime?   @map("removed_at") @db.Timestamptz(3)
+  purgedAt     DateTime?   @map("purged_at") @db.Timestamptz(3)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job          Job         @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  garage       Garage      @relation(fields: [garageId], references: [id], onDelete: Restrict)
+  sender       Account?    @relation("MediaSender", fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([jobId, sentAt])
+  @@index([status, purgeAfter])
+  @@map("media_item")
+}

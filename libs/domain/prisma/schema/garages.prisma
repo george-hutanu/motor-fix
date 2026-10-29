@@ -123,6 +123,7 @@ model Garage {
   jobs                       Job[]
   reviews                    Review[]
   liveSessions               LiveSession[]
+  media                      MediaItem[]
   reviewReplies              ReviewReply[]
   responseStats              GarageResponseStats?
   dailyFigures               GarageDailyFigures[]

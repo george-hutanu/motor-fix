@@ -41,6 +41,7 @@ model Job {
   stages         JobStageEntry[]
   reviews        Review[]
   liveSessions   LiveSession[]
+  media          MediaItem[]
 
   @@index([garageId, createdAt(sort: Desc)])
   @@index([mechanicId])
