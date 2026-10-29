@@ -103,6 +103,7 @@ afterEach(() => {
 
 // @traces 011-FR-004
 // @traces 011-FR-010
+// @traces 011-FR-011
 describe('the sections panel rows', () => {
   it('says what it does, then lists each row with its position, name and description', async () => {
     await open();

@@ -239,6 +239,7 @@ describe('Panou drawn from the person’s layout', () => {
 
 // @traces 011-FR-003
 // @traces 011-FR-013
+// @traces 011-FR-011
 describe('the strip row count', () => {
   it('counts the owner’s sections', async () => {
     const { element } = await render('garage');

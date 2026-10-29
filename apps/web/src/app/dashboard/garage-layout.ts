@@ -16,6 +16,7 @@ import {
 } from '@motor-fix/data-access';
 import { merge } from 'rxjs';
 
+import type { SectionKey } from './garage-sections';
 import { Live } from './live';
 import { Session } from './session';
 
@@ -27,7 +28,7 @@ const GARAGE_ROLES: readonly GarageRole[] = [
 ];
 // Every key Panou can hold, in its default order: the body of a save made
 // after the read failed.
-const DEFAULT_KEYS = [
+const DEFAULT_KEYS: readonly SectionKey[] = [
   'kpi',
   'now',
   'req',
