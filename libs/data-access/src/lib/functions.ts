@@ -387,6 +387,14 @@ export type { LiveSessionsControllerStart$Params as LiveSessionsControllerStart$
 export { liveSessionsControllerStart as liveSessionsControllerStart } from './fn/live-sessions/live-sessions-controller-start';
 export type { LiveSessionsControllerView$Params as LiveSessionsControllerView$Params } from './fn/live-sessions/live-sessions-controller-view';
 export { liveSessionsControllerView as liveSessionsControllerView } from './fn/live-sessions/live-sessions-controller-view';
+export type { RequestMediaUpload$Params as RequestMediaUpload$Params } from './fn/media/request-media-upload';
+export { requestMediaUpload as requestMediaUpload } from './fn/media/request-media-upload';
+export type { CompleteMediaUpload$Params as CompleteMediaUpload$Params } from './fn/media/complete-media-upload';
+export { completeMediaUpload as completeMediaUpload } from './fn/media/complete-media-upload';
+export type { ListJobMedia$Params as ListJobMedia$Params } from './fn/media/list-job-media';
+export { listJobMedia as listJobMedia } from './fn/media/list-job-media';
+export type { MediaFileAddress$Params as MediaFileAddress$Params } from './fn/media/media-file-address';
+export { mediaFileAddress as mediaFileAddress } from './fn/media/media-file-address';
 export type { StaticMapControllerRender$Params as StaticMapControllerRender$Params } from './fn/maps/static-map-controller-render';
 export { staticMapControllerRender as staticMapControllerRender } from './fn/maps/static-map-controller-render';
 export type { SupportContactControllerContact$Params as SupportContactControllerContact$Params } from './fn/support/support-contact-controller-contact';

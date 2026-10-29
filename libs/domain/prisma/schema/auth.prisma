@@ -86,6 +86,7 @@ model Account {
   jobStepsDone            JobStep[]                @relation("JobStepDoneBy")
   reviews                 Review[]                 @relation("ReviewDriver")
   liveSessionsStarted     LiveSession[]            @relation("LiveSessionStarter")
+  sentMedia               MediaItem[]              @relation("MediaSender")
   reviewReports           ReviewReport[]           @relation("ReviewReporter")
   reviewDecisions         ReviewReport[]           @relation("ReviewReportDecider")
   reviewReplies           ReviewReply[]            @relation("ReviewReplyAuthor")

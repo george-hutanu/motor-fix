@@ -1,5 +1,6 @@
 // @traces 1191-FR-005
 // @traces 1191-FR-006
+// @traces 333-FR-002
 import { crc32 } from 'node:zlib';
 
 import { HttpException } from '@nestjs/common';
@@ -21,6 +22,15 @@ const PDF = Buffer.from('%PDF-1.7\n%âãÏÓ\n');
 const HEIC = Buffer.from(HEIC_BASE64, 'base64');
 const ftyp = (brand: string) =>
   Buffer.concat([Buffer.from([0, 0, 0, 0x18]), Buffer.from(`ftyp${brand}`)]);
+const video = (brand: string) => Buffer.concat([ftyp(brand), Buffer.alloc(16)]);
+const ebml = (docType: string) =>
+  Buffer.concat([
+    Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x9f, 0x42, 0x86, 0x81, 0x01]),
+    Buffer.from([0x42, 0xf7, 0x81, 0x01, 0x42, 0xf2, 0x81, 0x04]),
+    Buffer.from([0x42, 0xf3, 0x81, 0x08, 0x42, 0x82, 0x80 + docType.length]),
+    Buffer.from(docType),
+    Buffer.alloc(16),
+  ]);
 const EXE = Buffer.from('MZ\x90\x00\x03\x00\x00\x00\x04\x00\x00\x00');
 const TEN_MB = 10 * 1024 * 1024;
 const MINUTE = 60_000;
@@ -394,6 +404,55 @@ describe('StorageService', () => {
 
       expect(
         await refusal(storage.confirmUpload(key, 'garage_photo', 'acc_1')),
+      ).toEqual({ code: 'file_type_mismatch', status: 422 });
+      expect(store.objects.size).toBe(0);
+    });
+
+    it.each([
+      ['isom', 'video/mp4'],
+      ['iso2', 'video/mp4'],
+      ['mp41', 'video/mp4'],
+      ['mp42', 'video/mp4'],
+      ['avc1', 'video/mp4'],
+      ['qt  ', 'video/quicktime'],
+    ])(
+      'recognises a clip whose ftyp brand is %p as %s',
+      async (brand, type) => {
+        const key = await uploaded(video(brand), type, 'media_clip');
+
+        await expect(
+          storage.confirmUpload(key, 'media_clip', 'acc_1'),
+        ).resolves.toBe(key.replace(/^incoming\//, ''));
+      },
+    );
+
+    it('recognises a WebM by its EBML header and DocType', async () => {
+      const key = await uploaded(ebml('webm'), 'video/webm', 'media_clip');
+
+      await expect(
+        storage.confirmUpload(key, 'media_clip', 'acc_1'),
+      ).resolves.toBe(key.replace(/^incoming\//, ''));
+    });
+
+    it.each([
+      ['a Matroska sent as a WebM', ebml('matroska'), 'video/webm'],
+      ['a HEIC sent as an MP4', video('heic'), 'video/mp4'],
+      ['a WebM sent as an MP4', ebml('webm'), 'video/mp4'],
+      ['a JPEG sent as a QuickTime', JPEG, 'video/quicktime'],
+    ])('deletes %s', async (_, file, type) => {
+      const key = await uploaded(file, type, 'media_clip');
+
+      expect(
+        await refusal(storage.confirmUpload(key, 'media_clip', 'acc_1')),
+      ).toEqual({ code: 'file_type_mismatch', status: 422 });
+      expect(store.objects.size).toBe(0);
+    });
+
+    it('deletes a QuickTime clip declared as a JPEG photo', async () => {
+      const key = await uploaded(video('qt  '), 'image/jpeg', 'media_photo');
+
+      expect(
+        await refusal(storage.confirmUpload(key, 'media_photo', 'acc_1')),
       ).toEqual({ code: 'file_type_mismatch', status: 422 });
       expect(store.objects.size).toBe(0);
     });

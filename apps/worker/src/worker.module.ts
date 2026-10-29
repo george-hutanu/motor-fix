@@ -26,6 +26,9 @@ import {
   HealthModule,
   InsightsModule,
   ListingPhotosWorkerModule,
+  liveVideoConfig,
+  MediaProcessingModule,
+  MediaRetentionModule,
   MODERATION_TIMERS_CONSUMER,
   ModerationTimersModule,
   NEWS_CONSUMER,
@@ -198,6 +201,11 @@ export function workerModule(
         support,
       }),
       ListingPhotosWorkerModule.register({ redisUrl: env.REDIS_URL }),
+      // Converts the job photos, clips and kept recordings.
+      MediaProcessingModule.register({
+        databaseUrl: env.DATABASE_URL,
+        redisUrl: env.REDIS_URL,
+      }),
       InsightsModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
         // Places the garages with no city before the night's figures.
@@ -213,6 +221,12 @@ export function workerModule(
       // Nightly: removes and anonymises what is past the stated retention periods.
       RetentionModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
+        redisUrl: env.REDIS_URL,
+      }),
+      // Nightly: deletes the job media past its purge date.
+      MediaRetentionModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
+        liveVideo: liveVideoConfig(env.APP_ENV, process.env),
         redisUrl: env.REDIS_URL,
       }),
       StatusModule.registerWorker({

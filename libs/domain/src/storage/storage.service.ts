@@ -73,6 +73,14 @@ const ascii = (head: Uint8Array, from: number, to: number) =>
 const heif = (head: Uint8Array) =>
   ascii(head, 4, 8) === 'ftyp' && HEIF_BRANDS.has(ascii(head, 8, 12));
 
+const VIDEO_BRANDS = new Set(['isom', 'iso2', 'mp41', 'mp42', 'avc1', 'qt  ']);
+const isoVideo = (head: Uint8Array) =>
+  ascii(head, 4, 8) === 'ftyp' && VIDEO_BRANDS.has(ascii(head, 8, 12));
+// Matroska's EBML header names its DocType within the first bytes.
+const EBML = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
+const webm = (head: Uint8Array) =>
+  EBML.equals(head.subarray(0, 4)) && ascii(head, 4, 64).includes('webm');
+
 // What a file of each type starts with; a renamed executable fails here.
 const SIGNATURES: Record<string, (head: Uint8Array) => boolean> = {
   'application/pdf': (head) => ascii(head, 0, 5) === '%PDF-',
@@ -83,6 +91,9 @@ const SIGNATURES: Record<string, (head: Uint8Array) => boolean> = {
   'image/png': (head) => PNG.equals(head.subarray(0, 8)),
   'image/webp': (head) =>
     ascii(head, 0, 4) === 'RIFF' && ascii(head, 8, 12) === 'WEBP',
+  'video/mp4': isoVideo,
+  'video/quicktime': isoVideo,
+  'video/webm': webm,
 };
 
 const missing = () =>
@@ -429,7 +440,7 @@ export class StorageService implements OnApplicationShutdown {
         new GetObjectCommand({
           Bucket: this.bucket,
           Key: key,
-          Range: 'bytes=0-11',
+          Range: 'bytes=0-63',
         }),
       )
       .catch((error: unknown) => {

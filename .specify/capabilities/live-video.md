@@ -1,8 +1,9 @@
 ---
 capability: live-video
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 1250-live-video-provider
+  - 333-media-storage
 ---
 
 # Capability: Live video
@@ -11,9 +12,9 @@ Live video from the workshop to the job's driver: the provider behind its port, 
 
 ## Requirements
 
-### 1250-FR-001 — The domain MUST reach the live video service only through one port, `LiveVideoProvider`, with three operations: `createInput(session)` returning the provider's input id and the publish (ingest) URL, `closeInput(inputId)`, and `viewUrl(inputId, token)` returning the playback URL. Exactly one adapter is chosen once at boot, as `placesConfig` chooses the address look-up (`libs/domain/src/places/places.module.ts`): `cloudflare` when its secrets are all set (`CLOUDFLARE_STREAM_ACCOUNT_ID`, `CLOUDFLARE_STREAM_API_TOKEN`, `CLOUDFLARE_STREAM_CUSTOMER_CODE`, `CLOUDFLARE_STREAM_SIGNING_KEY_ID`, `CLOUDFLARE_STREAM_SIGNING_KEY_PEM`; names a proposal, read by one function in the contracts library), `fake` when `APP_ENV` is `test`, else `none`, whose `createInput` reports the service as not configured so a start answers 503 (FR-005). The Cloudflare adapter creates one live input per session with recording on and signed URLs required, over WHIP (A47); every provider call MUST time out after 5 seconds.
+### 333-FR-018 — The live video port `LiveVideoProvider` (1250-FR-001) MUST gain a fourth operation, `deleteRecording(providerRef)`, which removes a kept recording at the provider: the `cloudflare` adapter deletes the video (a 404 from the provider counts as deleted), `fake` records the call for the tests, `none` is a no-op; it times out after 5 seconds like the other three. The purge (FR-014) and the removal (FR-012) are its callers.
 
-_From 1250-live-video-provider._
+_From 333-media-storage._
 
 ### 1250-FR-002 — The API MUST offer `POST /api/v1/jobs/:id/live` (start), for the job's mechanic (the mechanic row of the job belonging to the caller's account) and the owner of the job's garage. It MUST, in one transaction after the provider's input is created: insert the LIVE_SESSION in `live` (FR-007) with `started_by` the actor, `started_at` now and `provider_input_id`; record one audit entry (action `create`, subject type `live_session`, subject id the session, garage id and job id, the actor and their role); and write one event `live.started` `{ liveSessionId, jobId }` to the job's audience (the driver's account, the garage, the job's mechanic; the `job` audience the stage events use). It answers 201 with `{ liveSessionId, startedAt, publish: { url, expiresAt, constraints: { audio: false, video: { maxHeight: 720, maxBitrateKbps: 1500 } } } }`; `expiresAt` is 2 minutes after the start, the window in which the sender must begin publishing. No microphone is asked for and no audio is published by a client honouring the constraints; the provider cannot refuse an audio track at ingest (a known limit, Assumptions).
 
@@ -60,3 +61,5 @@ _From 1250-live-video-provider._
 _From 1250-live-video-provider._
 
 ## Retired
+
+- `1250-FR-001` — superseded by `333-FR-018` (2026-10-29)
