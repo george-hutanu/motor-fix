@@ -10,6 +10,7 @@ import { markVisible } from './media.service';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
 import type { JobStatus } from '../generated/prisma/enums';
+import { LiveVideoModule } from '../live-video/live-video.module';
 import { quotesApp } from '../quotes/quotes-api.testing';
 import { S3TestStore } from '../storage/s3-test-store';
 import { StorageModule } from '../storage/storage.module';
@@ -27,7 +28,10 @@ afterAll(() => store.stop());
 const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
 const { bearer, get, provider, send, team, world } = quotesApp([
   StorageModule.register(env),
-  MediaModule.register({ liveVideo: { provider: 'fake' }, redisUrl }),
+  MediaModule.register({
+    live: LiveVideoModule.register({ provider: 'fake' }),
+    redisUrl,
+  }),
 ]);
 const { prisma } = world;
 

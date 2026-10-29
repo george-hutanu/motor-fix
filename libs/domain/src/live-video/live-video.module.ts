@@ -66,6 +66,8 @@ export class LiveVideoModule {
   static register(config: LiveVideoConfig): DynamicModule {
     return {
       controllers: [LiveSessionsController],
+      // Media deletes a kept recording through the same provider.
+      exports: [LIVE_VIDEO_PROVIDER],
       module: LiveVideoModule,
       providers: [
         { provide: LIVE_VIDEO_PROVIDER, useValue: providerFor(config) },

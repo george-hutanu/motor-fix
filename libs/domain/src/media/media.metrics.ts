@@ -15,12 +15,12 @@ export function countMediaItem(kind: MediaKind, outcome: ItemOutcome) {
     .add(1, { kind, outcome });
 }
 
-export function countMediaPurged(kind: MediaKind, count = 1) {
+export function countMediaPurged(kind: MediaKind) {
   meter()
     .createCounter('motorfix_media_purged_total', {
       description: 'Job media deleted by the nightly purge',
     })
-    .add(count, { kind });
+    .add(1, { kind });
 }
 
 export function countRetentionStepFailure(step: string) {

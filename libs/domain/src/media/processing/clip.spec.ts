@@ -150,7 +150,7 @@ describe('converting a clip', () => {
     ).rejects.toThrow();
   });
 
-  it('converts a 45-second 720p clip with sound in under a minute (SC-001)', async () => {
+  it('converts a 45-second 720p clip with sound in under a minute', async () => {
     const clip = made(45, '1280x720');
     const started = performance.now();
 

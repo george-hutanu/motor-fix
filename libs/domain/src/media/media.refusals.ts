@@ -7,7 +7,7 @@ import { said } from '../quotes/refusals';
 
 type Words = Parameters<typeof said>[0];
 
-// What each refusal says, in the caller's language (FR-015).
+// What each refusal says, in the caller's language .
 const WORDS: Record<MediaRefusal, Words> = {
   clip_too_long: {
     en: 'A clip runs at most 60 seconds',

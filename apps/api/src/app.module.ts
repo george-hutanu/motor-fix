@@ -91,6 +91,7 @@ export class AppModule {
       observabilityUrl(grafanaUrl(process.env), env.APP_ENV),
     );
     const liveVideo = liveVideoConfig(env.APP_ENV, process.env);
+    const live = LiveVideoModule.register(liveVideo);
     const photos = ListingPhotosModule.register(
       { redisUrl: env.REDIS_URL },
       garages,
@@ -129,8 +130,8 @@ export class AppModule {
         WarmModule,
         WorkshopModule,
         PlacesModule.register(placesConfig(env.APP_ENV, process.env)),
-        LiveVideoModule.register(liveVideo),
-        MediaModule.register({ liveVideo, redisUrl: env.REDIS_URL }),
+        live,
+        MediaModule.register({ live, redisUrl: env.REDIS_URL }),
         MapsModule.register({ tileJsonUrl: mapTilesTileJsonUrl(process.env) }),
         ProfileViewsModule,
         SupportModule.register(supportConfig(process.env)),

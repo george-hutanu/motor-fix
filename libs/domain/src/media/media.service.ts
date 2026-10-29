@@ -134,7 +134,7 @@ async function senderRole(
 
 // Shows a converted item: it moves only from processing, so a second worker
 // run or a late retry changes nothing; its event and audit entry are
-// written with the move, once (FR-008).
+// written with the move, once.
 export async function markVisible(
   deps: MediaDeps,
   mediaId: string,
@@ -236,7 +236,7 @@ export class MediaService implements OnModuleDestroy {
     await this.jobs.close();
   }
 
-  // FR-003, FR-004: the right, then the switch, then the job's state, then
+  // The right, then the switch, then the job's state, then
   // the file; the item exists only once its upload address does.
   async requestUpload(
     actor: Actor,
@@ -274,7 +274,7 @@ export class MediaService implements OnModuleDestroy {
     });
   }
 
-  // FR-005: only the sender completes; a second call changes nothing.
+  // Only the sender completes; a second call changes nothing.
   async complete(actor: Actor, mediaId: string): Promise<MediaItemDto> {
     const item = await this.prisma.mediaItem.findUnique({
       where: { id: mediaId },
@@ -282,10 +282,7 @@ export class MediaService implements OnModuleDestroy {
     if (!item || item.senderId !== actor.accountId || item.kind === 'live') {
       throw new NotFoundException();
     }
-    if (item.uploadedAt) {
-      if (item.status === 'processing') await this.enqueue(item.id);
-      return itemDto(item);
-    }
+    if (item.uploadedAt) return itemDto(item);
     if (item.status !== 'processing' || !item.originalKey) {
       throw mediaRefused(HttpStatus.CONFLICT, 'invalid_state', actor);
     }
@@ -313,7 +310,7 @@ export class MediaService implements OnModuleDestroy {
     return itemDto(done);
   }
 
-  // FR-009: by role alone, whatever the switch says.
+  // By role alone, whatever the switch says.
   async list(actor: Actor, jobId: string): Promise<MediaListDto> {
     const job = await jobRow(this.prisma, jobId);
     const right = job ? rightOn(actor, job) : 'none';
@@ -334,7 +331,7 @@ export class MediaService implements OnModuleDestroy {
     return { items: items.map(itemDto) };
   }
 
-  // FR-010: a 5-minute address, signed without asking the store.
+  // A 5-minute address, signed without asking the store.
   async fileAddress(
     actor: Actor,
     mediaId: string,
@@ -359,7 +356,7 @@ export class MediaService implements OnModuleDestroy {
     return { expiresAt: expiresAt.toISOString(), url };
   }
 
-  // FR-011: a kept live recording joins the job's media whatever the switch
+  // A kept live recording joins the job's media whatever the switch
   // or the job's state; one the provider holds is visible at once.
   async registerRecording(
     jobId: string,
@@ -404,7 +401,7 @@ export class MediaService implements OnModuleDestroy {
     return itemDto(item);
   }
 
-  // FR-012: the files go first; a delete that fails leaves the item as it
+  // The files go first; a delete that fails leaves the item as it
   // was and says so.
   async removeItem(mediaId: string, actor: Actor): Promise<void> {
     const item = await this.prisma.mediaItem.findUnique({

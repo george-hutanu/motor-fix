@@ -13,6 +13,7 @@ import { MediaProcessingModule } from './processing.module';
 import { type ProcessingDeps, processMedia } from './processing.worker';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
+import { LiveVideoModule } from '../../live-video/live-video.module';
 import { redisUrlFor } from '../../notifications/notifications.testing';
 import { quotesApp } from '../../quotes/quotes-api.testing';
 import { S3TestStore } from '../../storage/s3-test-store';
@@ -33,7 +34,10 @@ afterAll(() => store.stop());
 const redisUrl = redisUrlFor(8);
 const { provider, team, world } = quotesApp([
   StorageModule.register(env),
-  MediaModule.register({ liveVideo: { provider: 'fake' }, redisUrl }),
+  MediaModule.register({
+    live: LiveVideoModule.register({ provider: 'fake' }),
+    redisUrl,
+  }),
 ]);
 const { prisma } = world;
 
@@ -245,13 +249,12 @@ describe('converting a clip', () => {
     );
   });
 
-  it('refuses for good a clip that runs over 61 seconds', async () => {
+  it('refuses for good a clip that runs over 61 seconds, without a retry', async () => {
     const { item, job } = await waiting('clip', clipOf(63));
 
-    await expect(processMedia(deps(), item.id)).rejects.toBeInstanceOf(
-      UnrecoverableError,
-    );
+    await processMedia(deps(), item.id);
 
+    expect((await reread(item.id)).status).toBe('failed');
     expect(await eventsOf(job.id)).toEqual([]);
   });
 
@@ -338,14 +341,14 @@ describe('a conversion that failed', () => {
     }
   });
 
-  it('fails a clip too long on its first try', async () => {
+  it('fails an item at once on an error that cannot be retried', async () => {
     const { item } = await waiting('clip', Buffer.from('x'));
     const media = await worker();
     try {
       media.emit(
         'failed',
         job(item.id, 1) as never,
-        new UnrecoverableError('too long'),
+        new UnrecoverableError('broken'),
         'active',
       );
 

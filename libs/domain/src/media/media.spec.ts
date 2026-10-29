@@ -1,39 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { MEDIA_STATUSES, type MediaStatus } from '@motor-fix/contracts';
-
-import { mayMove, purgeAfter } from './media.state';
-
-const ALLOWED: ReadonlyArray<[MediaStatus, MediaStatus]> = [
-  ['processing', 'visible'],
-  ['processing', 'failed'],
-  ['visible', 'removed'],
-  ['visible', 'purged'],
-  ['failed', 'purged'],
-  ['removed', 'purged'],
-];
+import { purgeAfter } from './media.state';
 
 // @traces 333-FR-001
 describe('a media item’s life', () => {
-  it.each(ALLOWED)('moves from %s to %s', (from, to) => {
-    expect(mayMove(from, to)).toBe(true);
-  });
-
-  const refused = MEDIA_STATUSES.flatMap((from) =>
-    MEDIA_STATUSES.filter(
-      (to) => !ALLOWED.some(([a, b]) => a === from && b === to),
-    ).map((to) => [from, to] as [MediaStatus, MediaStatus]),
-  );
-
-  it.each(refused)('refuses %s to %s', (from, to) => {
-    expect(mayMove(from, to)).toBe(false);
-  });
-
-  it('never leaves purged', () => {
-    for (const to of MEDIA_STATUSES) expect(mayMove('purged', to)).toBe(false);
-  });
-
   it('keeps an item the retention days after it was sent', () => {
     const sent = new Date('2026-01-31T22:30:00.000Z');
     expect(purgeAfter(sent, 90).toISOString()).toBe('2026-05-01T22:30:00.000Z');

@@ -16,16 +16,23 @@ const de = (n: number) => (n % 100 === 0 || n % 100 >= 20 ? ' de' : '');
 export const purgedText = (count: number, days: number) =>
   `${count === 1 ? '1 fișier șters' : `${count}${de(count)} fișiere șterse`} după ${days}${de(days)} ${days === 1 ? 'zi' : 'zile'}`;
 
-// An item whose upload never came within a day is failed, so the purge
-// takes it when it is due; one uploaded and still converting is left to
-// the worker.
+// An item whose upload never came within a day is failed, and so is one
+// uploaded a day ago and still not converted (its queue job lost, or its
+// worker killed past both tries): a conversion takes minutes. The purge
+// then takes it when it is due, so no original is kept for ever.
 async function failAbandoned({ prisma }: MediaRetentionDeps, now: Date) {
-  const asked = new Date(
+  const dayAgo = new Date(
     now.getTime() - MEDIA_RETENTION.stuckAfterHours * HOUR_MS,
   );
   const { count } = await prisma.mediaItem.updateMany({
     data: { status: 'failed' },
-    where: { sentAt: { lt: asked }, status: 'processing', uploadedAt: null },
+    where: {
+      OR: [
+        { sentAt: { lt: dayAgo }, uploadedAt: null },
+        { uploadedAt: { lt: dayAgo } },
+      ],
+      status: 'processing',
+    },
   });
   return count;
 }
@@ -81,7 +88,7 @@ function tallied(tally: Tally, item: MediaItem) {
   countMediaPurged(item.kind as MediaKind);
 }
 
-// FR-014: deletes every item past its purge date, whatever its state, and
+// Deletes every shown, failed or removed item past its purge date, and
 // writes one audit entry per job for the night.
 export async function purgeMedia(
   deps: MediaRetentionDeps,

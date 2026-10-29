@@ -235,6 +235,7 @@ describe('the nightly media purge', () => {
     });
     const converting = await item(j, future, 'processing', {
       sentAt: new Date(NOW.getTime() - 48 * 3_600_000),
+      uploadedAt: new Date(NOW.getTime() - 3_600_000),
     });
 
     await purgeMedia(deps(), NOW);
@@ -242,6 +243,18 @@ describe('the nightly media purge', () => {
     expect(await statusOf(abandoned.id)).toBe('failed');
     expect(await statusOf(fresh.id)).toBe('processing');
     expect(await statusOf(converting.id)).toBe('processing');
+  });
+
+  it('fails an item uploaded a day ago that is still converting', async () => {
+    const j = await job();
+    const stuck = await item(j, future, 'processing', {
+      sentAt: new Date(NOW.getTime() - 26 * 3_600_000),
+      uploadedAt: new Date(NOW.getTime() - 25 * 3_600_000),
+    });
+
+    await purgeMedia(deps(), NOW);
+
+    expect(await statusOf(stuck.id)).toBe('failed');
   });
 
   it('keeps an item’s own date when the period changes', async () => {

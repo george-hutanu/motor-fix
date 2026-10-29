@@ -6,7 +6,6 @@ export const MEDIA_PROCESSING = {
   attempts: MEDIA_LIMITS.conversionAttempts,
   backoffMs: 5_000,
   lockDurationMs: MEDIA_LIMITS.conversionTimeoutMs + 60_000,
-  timeoutMs: MEDIA_LIMITS.conversionTimeoutMs,
 } as const;
 
 export const MEDIA_QUEUE = 'media';

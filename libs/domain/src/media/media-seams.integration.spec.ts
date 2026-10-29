@@ -14,6 +14,7 @@ import { processMedia } from './processing/processing.worker';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import type { Actor } from '../auth/policy';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
+import { LiveVideoModule } from '../live-video/live-video.module';
 import type { FakeLiveVideo } from '../live-video/providers/fake-live-video.provider';
 import { LIVE_VIDEO_PROVIDER } from '../live-video/providers/live-video.provider';
 import { redisUrlFor } from '../notifications/notifications.testing';
@@ -33,7 +34,10 @@ afterAll(() => store.stop());
 const redisUrl = redisUrlFor(0);
 const { get, bearer, provider, team, world } = quotesApp([
   StorageModule.register(env),
-  MediaModule.register({ liveVideo: { provider: 'fake' }, redisUrl }),
+  MediaModule.register({
+    live: LiveVideoModule.register({ provider: 'fake' }),
+    redisUrl,
+  }),
 ]);
 const { prisma } = world;
 

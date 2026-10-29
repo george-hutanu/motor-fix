@@ -1,11 +1,10 @@
 import { MEDIA_LIMITS } from '@motor-fix/contracts';
-import { UnrecoverableError } from 'bullmq';
 
 import { ClipTooLong, convertClip } from './clip';
 import { convertPhoto } from './photo';
 import type { StorageService } from '../../storage/storage.service';
 import { recordConversion } from '../media.metrics';
-import { type MediaDeps, markVisible } from '../media.service';
+import { type MediaDeps, markFailed, markVisible } from '../media.service';
 
 export interface ProcessingDeps extends MediaDeps {
   storage: StorageService;
@@ -36,14 +35,18 @@ export async function processMedia(
     return;
   }
   // A kept recording has no length limit; a clip is held to its declared
-  // 60 seconds, a second try cannot shorten it.
+  // 60 seconds. A clip too long is the sender's, not the platform's: the
+  // item fails at once and the job ends well, so no alert fires on it.
   const converted = await convertClip(original, {
     maxSeconds: item.kind === 'clip' ? MEDIA_LIMITS.clipSeconds : undefined,
   }).catch((error: unknown) => {
-    throw error instanceof ClipTooLong
-      ? new UnrecoverableError(error.message)
-      : error;
+    if (error instanceof ClipTooLong) return null;
+    throw error;
   });
+  if (!converted) {
+    await markFailed(deps.prisma, mediaId);
+    return;
+  }
   await storage.putObject(fileKey, converted.file, 'video/mp4');
   await storage.putObject(thumbnailKey, converted.thumbnail, 'image/jpeg');
   recordConversion(item.kind, (performance.now() - started) / 1000);
