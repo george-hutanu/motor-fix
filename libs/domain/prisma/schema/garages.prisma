@@ -51,6 +51,7 @@ model Garage {
   verificationFiles          VerificationFile[]
   rechecks                   Recheck[]
   reports                    GarageReport[]
+  repairs                    Repair[]
   savedBy                    SavedGarage[]
   members                    GarageMember[]
   mechanics                  Mechanic[]

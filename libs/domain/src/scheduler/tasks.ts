@@ -1,6 +1,9 @@
 import type { Provider } from '@nestjs/common';
 
 import { DAILY_TASKS } from './daily';
+import { AuditService } from '../audit/audit.service';
+import { CarTransferExpirySweep } from '../cars/transfers/expiry-sweep/expiry-sweep';
+import { outbox } from '../events/event.port';
 import { DocumentCycleStep } from '../garages/documents/document-cycle/document-cycle.step';
 import { ListingDraftSweep } from '../garages/listing-draft-sweep';
 import { RecheckDueTask } from '../garages/verification/recheck/recheck-due';
@@ -24,5 +27,6 @@ export const dailyTasks = (webUrl: string | undefined): Provider => ({
     new ListingDraftSweep(prisma, notifications, storage, webUrl),
     new DocumentCycleStep(prisma, notifications, webUrl),
     new RecheckDueTask(prisma, notifications, webUrl),
+    new CarTransferExpirySweep(prisma, new AuditService(), outbox),
   ],
 });

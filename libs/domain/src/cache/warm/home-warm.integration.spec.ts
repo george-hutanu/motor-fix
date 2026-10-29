@@ -527,6 +527,66 @@ describe('a write before the home read it', () => {
     expect(outcomes).toEqual({ 'driver-home miss': 1 });
   });
 
+  it('answers a car added after sign-in at the next read, before the relay runs', async () => {
+    const andrei = await driver();
+    const auth = bearer(andrei.id, 'driver');
+    await signIn(andrei.email);
+    await stored(...driverKeys(andrei.id));
+
+    const added = await request(app.getHttpServer())
+      .post('/cars')
+      .set('Authorization', auth)
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        brandId: andrei.car.brandId,
+        fuel: 'diesel',
+        model: 'Countryman',
+        odometerKm: 1000,
+        year: 2020,
+      });
+    expect(added.status).toBe(201);
+
+    const cars = await get('/cars', auth);
+    expect(cars.body.items.map((car: { id: string }) => car.id)).toContain(
+      added.body.id,
+    );
+  });
+
+  it('answers a car edited after sign-in at the next read, before the relay runs', async () => {
+    const andrei = await driver();
+    const auth = bearer(andrei.id, 'driver');
+    await signIn(andrei.email);
+    await stored(...driverKeys(andrei.id));
+
+    const edit = await request(app.getHttpServer())
+      .patch(`/cars/${andrei.car.id}`)
+      .set('Authorization', auth)
+      .send({ model: 'Clubman', version: andrei.car.updatedAt.toISOString() });
+    expect(edit.status).toBe(200);
+
+    const cars = await get('/cars', auth);
+    expect(
+      cars.body.items.find((car: { id: string }) => car.id === andrei.car.id)
+        .model,
+    ).toBe('Clubman');
+  });
+
+  it('answers a car removed after sign-in at the next read, before the relay runs', async () => {
+    const andrei = await person(['driver']);
+    const spare = await world.car(andrei.id, 'B99XYZ');
+    const auth = bearer(andrei.id, 'driver');
+    await signIn(andrei.email);
+    await stored(...driverKeys(andrei.id));
+
+    const removed = await request(app.getHttpServer())
+      .delete(`/cars/${spare.id}`)
+      .set('Authorization', auth);
+    expect(removed.status).toBe(204);
+
+    const cars = await get('/cars', auth);
+    expect(cars.body.items).toEqual([]);
+  });
+
   it('evicts the driver’s requests and the garage’s lists when a quote is sent', async () => {
     const andrei = await driver();
     const boss = await owner();
@@ -609,6 +669,7 @@ describe('the warmed car list', () => {
         'rcaUntil',
         'rovinietaUntil',
         'serviceDueOn',
+        'transfer',
         'updatedAt',
         'year',
       ].sort(),
