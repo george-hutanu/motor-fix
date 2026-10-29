@@ -1444,7 +1444,7 @@
       "id": 40,
       "type": "timeseries",
       "title": "Live sessions and view tokens",
-      "description": "Live stream starts by outcome (started, refused, provider_failed, unavailable) and viewing links by outcome (issued, refused, ended), per second over 5 minutes. A provider_failed or unavailable rise is the video provider down or not configured: the workshop is told to send photos and clips.",
+      "description": "Live stream starts by outcome (started, refused, provider_failed, unavailable, stopped), viewing links by outcome (issued, refused, ended) and recordings discarded at the stop by outcome (discarded, discard_failed), per second over 5 minutes. A discard_failed rise leaves recordings at the provider to be deleted later. A provider_failed or unavailable rise is the video provider down or not configured: the workshop is told to send photos and clips.",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -1473,6 +1473,24 @@
           },
           "expr": "sum by (outcome) (rate(motorfix_live_view_tokens_total{service_name=\"api\", deployment_environment=\"$env\"}[5m]))",
           "legendFormat": "view {{outcome}}"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (service_name, outcome) (rate(motorfix_live_recordings_total{deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "recording {{service_name}} {{outcome}}"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(rate(motorfix_live_idle_stops_total{service_name=\"worker\", deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "idle stop"
         }
       ],
       "fieldConfig": {

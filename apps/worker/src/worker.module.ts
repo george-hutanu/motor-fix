@@ -26,7 +26,10 @@ import {
   GARAGE_SUSPENDED_CONSUMER,
   HealthModule,
   InsightsModule,
+  LIVE_RECORDINGS_CONSUMER,
   ListingPhotosWorkerModule,
+  LiveIdleModule,
+  LiveRecordingsModule,
   liveVideoConfig,
   MediaProcessingModule,
   MediaRetentionModule,
@@ -76,7 +79,8 @@ class WorkerModule {}
 // Railway can health-check it. It relays the outbox's events to the live
 // streams, consumes the notifications queue, sending e-mail, SMS and
 // WhatsApp, sends the contact form's e-mails, runs the monthly news, the daily reminders, the decline windows, the booking timers,
-// the listing draft sweep, the listing photos' copies and the nightly
+// the listing draft sweep, the listing photos' copies, the live sessions'
+// idle stop and their recordings' deletes, and the nightly
 // platform figures (placing the garages with no city first), checks the
 // services behind the admin dashboard's tiles and reads the data stores for
 // their figures.
@@ -85,6 +89,7 @@ export function workerModule(
 ): DynamicModule {
   const email = emailConfig(env.APP_ENV, process.env);
   const support = supportConfig(process.env);
+  const liveVideo = liveVideoConfig(env.APP_ENV, process.env);
   const notifications = NotificationsModule.registerWorker({
     databaseUrl: env.DATABASE_URL,
     email,
@@ -120,6 +125,7 @@ export function workerModule(
           GARAGE_REPORT_DECIDED_CONSUMER,
           GARAGE_RESTORED_CONSUMER,
           GARAGE_SUSPENDED_CONSUMER,
+          LIVE_RECORDINGS_CONSUMER,
           MODERATION_TIMERS_CONSUMER,
           NEWS_CONSUMER,
           QUOTE_RECEIVED_CONSUMER,
@@ -228,7 +234,21 @@ export function workerModule(
       // Nightly: deletes the job media past its purge date.
       MediaRetentionModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
-        liveVideo: liveVideoConfig(env.APP_ENV, process.env),
+        liveVideo,
+        redisUrl: env.REDIS_URL,
+      }),
+      // Every minute: stops the live sessions with no publisher for ten
+      // minutes.
+      LiveIdleModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
+        liveVideo,
+        redisUrl: env.REDIS_URL,
+      }),
+      // After each live stop: counts a kept recording, deletes a discarded
+      // one at the provider.
+      LiveRecordingsModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
+        liveVideo,
         redisUrl: env.REDIS_URL,
       }),
       StatusModule.registerWorker({

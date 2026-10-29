@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 229,
+    "count": 231,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -641,7 +641,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "opens and closes a live input per live session and deletes a kept recording on removal or purge (DELETE /stream/{uid}, a 404 counting as deleted), 5 s timeout, in a live-video.create_input or live-video.close_input span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees",
+      "reason": "opens and closes a live input per live session and deletes the recordings of a live input on removal, purge or a discard at the stop (GET /stream/live_inputs/{id}/videos, then DELETE /stream/{uid} per video, a 404 counting as deleted), 5 s timeout, in a live-video.create_input, live-video.close_input or live-video.delete_recording span; the worker reads each live input's publisher state once a minute (GET /stream/live_inputs/{id}, a 404 counting as no publisher) in a live-video.input_status span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees",
       "story": "ST-1250"
     },
     {
@@ -1017,14 +1017,25 @@
       "kind": "endpoint",
       "name": "live-sessions",
       "source": "libs/domain/src/live-video/sessions/sessions.controller.ts",
-      "metric": "http.server.request.duration by http.route /api/v1/jobs/:id/live and /api/v1/live-sessions/:id/view-token",
+      "metric": "http.server.request.duration by http.route /api/v1/jobs/:id/live, /api/v1/live-sessions/:id/view-token, /api/v1/live-sessions/:id/recording and /api/v1/live-sessions/:id/stop",
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "a start writes the live_session row, its audit entry and the live.started event in one transaction after the provider opened the input, counted in motorfix_live_sessions_total{outcome}; a view writes nothing and is counted in motorfix_live_view_tokens_total{outcome}; a refusal logs one LiveSessions warning line with its code and the job or session id, never a name; a 409 live_already_on, job_closed or live_ended is the rule working",
+      "reason": "a start writes the live_session row, its audit entry and the live.started event in one transaction after the provider opened the input, counted in motorfix_live_sessions_total{outcome}; a view writes nothing and is counted in motorfix_live_view_tokens_total{outcome}; a keep change writes the row and one audit entry; a stop writes stopped_at, its audit entry and the live.stopped event, and for a kept recording the live media item with its media.added event, in one transaction, counted as motorfix_live_sessions_total{outcome=\"stopped\"}; a discarded recording is deleted at the provider after the commit with a 5 s cut, counted in motorfix_live_recordings_total{outcome} (discarded, discard_failed) and deleted again by the worker from live.stopped (the live-recordings queue), a failure logging one LiveSessions warning with the session and input ids and the error class; a refusal logs one LiveSessions warning line with its code and the job or session id, never a name; a 409 live_already_on, job_closed or live_ended is the rule working",
       "story": "ST-1250"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_live_idle_stops_total",
+      "source": "libs/domain/src/live-video/sessions/sessions.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "worker-jobs-failed"
+      ],
+      "reason": "counts every live session the worker stopped after ten minutes with no publisher, on the live panel beside the starts and recordings; motorfix_live_idle_check_seconds times each minute's check; a check that fails is a failed live-idle job, which worker-jobs-failed sees",
+      "story": "ST-1251"
     },
     {
       "kind": "endpoint",
@@ -2800,6 +2811,32 @@
       ],
       "reason": "the nightly media purge: one scheduler, media-retention-nightly, at 03:00 Europe/Bucharest fails uploads abandoned for a day and deletes every item past its purge date (object store or provider), one audit entry per job; counted in motorfix_media_purged_total{kind}, a throwing step in motorfix_media_retention_step_failures_total{step}; worker-jobs-failed's overdue arm fires when no media-retention-nightly run completed in 26 hours of worker uptime",
       "story": "ST-333"
+    },
+    {
+      "kind": "queue",
+      "name": "live-idle",
+      "source": "libs/domain/src/live-video/idle/idle.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one scheduler, live-idle-check, every minute reads each live session's publisher state from the provider and stops, as the system with stop_reason idle, a session with no publisher for ten minutes straight, through the one stop routine (keep or discard as the sender last chose); counted in motorfix_live_idle_stops_total, the check timed in motorfix_live_idle_check_seconds, one LiveIdle line per stop and one warning per session the provider could not tell, ids only; a check that throws is a failed job, which worker-jobs-failed sees",
+      "story": "ST-1251"
+    },
+    {
+      "kind": "queue",
+      "name": "live-recordings",
+      "source": "libs/domain/src/live-video/recordings/recordings.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "consumes live.stopped (job id = event id, 3 tries a minute apart): a kept recording is counted once committed in motorfix_media_items_total{kind=\"live\",outcome=\"visible\"}; a discarded one is deleted at the provider by the session's input, counted in motorfix_live_recordings_total{outcome} (discarded, or discard_failed on the last try), one LiveRecordings warning per failed try with the session and input ids; the last failure is a failed job, which worker-jobs-failed sees",
+      "story": "ST-1251"
     },
     {
       "kind": "endpoint",

@@ -105,10 +105,13 @@ export { DemandModule } from './insights/demand/demand.module';
 export { GarageFiguresService } from './insights/garage-figures/garage-figures.service';
 export { InsightsModule } from './insights/insights.module';
 export { ProfileViewsModule } from './insights/profile-views/profile-views.module';
+export { LiveIdleModule } from './live-video/idle/idle.module';
 export {
   LiveVideoModule,
   liveVideoConfig,
 } from './live-video/live-video.module';
+export { LIVE_RECORDINGS_CONSUMER } from './live-video/recordings/recordings';
+export { LiveRecordingsModule } from './live-video/recordings/recordings.module';
 export * from './logging';
 export { MapsModule } from './maps/maps.module';
 export { MediaModule } from './media/media.module';

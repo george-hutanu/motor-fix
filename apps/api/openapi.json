@@ -6171,6 +6171,116 @@
         ]
       }
     },
+    "/api/v1/live-sessions/{id}/recording": {
+      "patch": {
+        "operationId": "LiveSessionsController_setKeep",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveRecordingKeepDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveRecordingKeepDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The session id is not a uuid, or keep is not a boolean"
+          },
+          "404": {
+            "description": "not_found: no such session, live media off, or not the owner or the job’s mechanic"
+          },
+          "409": {
+            "description": "live_ended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Keep or discard the recording while live",
+        "tags": [
+          "live-sessions"
+        ]
+      }
+    },
+    "/api/v1/live-sessions/{id}/stop": {
+      "post": {
+        "operationId": "LiveSessionsController_stop",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveStopRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveSessionStoppedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The session id is not a uuid, or keep is not a boolean"
+          },
+          "404": {
+            "description": "not_found: no such session, live media off, or not the owner or the job’s mechanic"
+          },
+          "409": {
+            "description": "live_ended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stop the live stream, keeping or discarding it",
+        "tags": [
+          "live-sessions"
+        ]
+      }
+    },
     "/api/v1/jobs/{id}/media/uploads": {
       "post": {
         "operationId": "requestMediaUpload",
@@ -19206,6 +19316,59 @@
         "required": [
           "url",
           "expiresAt"
+        ]
+      },
+      "LiveRecordingKeepDto": {
+        "type": "object",
+        "properties": {
+          "keep": {
+            "type": "boolean",
+            "description": "Keep the recording once the stream stops"
+          }
+        },
+        "required": [
+          "keep"
+        ]
+      },
+      "LiveStopRequestDto": {
+        "type": "object",
+        "properties": {
+          "keep": {
+            "type": "boolean",
+            "description": "Keep the recording; absent keeps the session’s choice"
+          }
+        }
+      },
+      "LiveSessionStoppedDto": {
+        "type": "object",
+        "properties": {
+          "liveSessionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stoppedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "keep": {
+            "type": "boolean"
+          },
+          "seconds": {
+            "type": "number",
+            "description": "Whole seconds streamed, rounded down"
+          },
+          "recordingMediaId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "liveSessionId",
+          "stoppedAt",
+          "keep",
+          "seconds",
+          "recordingMediaId"
         ]
       },
       "MediaUploadRequestDto": {
