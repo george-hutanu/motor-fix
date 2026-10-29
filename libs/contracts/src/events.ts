@@ -21,6 +21,7 @@ export const EVENT_KINDS = [
   'assistant_grant.revoked',
   'assistant_settings.updated',
   'booking.cancelled',
+  'booking.completed',
   'booking.confirmed',
   'booking.lapsed',
   'booking.lift_changed',
