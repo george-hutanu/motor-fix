@@ -200,7 +200,7 @@ const NOT_CHANGES = new Set([
   'MediaService.complete',
   'MediaService.registerRecording',
   // Watching a live stream notes who watched, the driver's first view and
-  // the peak, like a read noting when it was first seen (ST-1252).
+  // the peak, like a read noting when it was first seen.
   'LiveSessionsService.watched',
 ]);
 
