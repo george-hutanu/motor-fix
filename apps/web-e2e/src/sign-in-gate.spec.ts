@@ -58,6 +58,10 @@ async function sessionEndsWhileWorking(page: Page) {
   await page.route('**/api/v1/quote-requests/active', (route) =>
     route.fulfill({ json: { openCount: 0, request: null } }),
   );
+  // The frame's approval strip reads the pending approvals on load: none.
+  await page.route(/\/api\/v1\/me\/assistant\/approvals(\?.*)?$/, (route) =>
+    route.fulfill({ json: { items: [], pending: 0 } }),
+  );
   // Panou reads the saved garages on load: none saved.
   await page.route(/\/api\/v1\/me\/saved-garages(\?.*)?$/, (route) =>
     route.fulfill({
