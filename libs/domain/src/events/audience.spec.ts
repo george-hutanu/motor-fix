@@ -280,3 +280,22 @@ describe('audienceOf a mechanic card', () => {
     }
   });
 });
+
+// @traces 427-FR-010
+describe('the audience of a time block', () => {
+  it("sends a block to the garage's staff, its mechanic and the garage's public page", () => {
+    expect(
+      audienceOf({
+        garageId: garage,
+        mechanicId: mechanic,
+        type: 'time_block',
+      }),
+    ).toEqual(['garage:g1', 'mechanic:m1', 'public:garage:g1']);
+  });
+
+  it('sends a lift-only block to no mechanic', () => {
+    expect(
+      audienceOf({ garageId: garage, mechanicId: null, type: 'time_block' }),
+    ).toEqual(['garage:g1', 'public:garage:g1']);
+  });
+});

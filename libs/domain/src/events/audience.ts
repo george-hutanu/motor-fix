@@ -46,7 +46,10 @@ export type LiveSubject =
   | { type: 'platform'; adminOnly?: boolean }
   // An admin's decision on a proposed job: the admins and the proposing
   // garage's staff (null when the garage is gone).
-  | { type: 'catalogue_job'; garageId: string | null };
+  | { type: 'catalogue_job'; garageId: string | null }
+  // Time a garage blocked: its staff, the blocked mechanic, and its public
+  // page, whose free slots move (never the block's note).
+  | { type: 'time_block'; garageId: string; mechanicId: string | null };
 
 const account = (id: string) => `account:${id}`;
 const garage = (id: string) => `garage:${id}`;
@@ -134,6 +137,12 @@ export function audienceOf(subject: LiveSubject): string[] {
       return ['admin', ...new Set(subject.reporterIds.map(account))];
     case 'platform':
       return subject.adminOnly ? ['admin'] : ['admin', 'system'];
+    case 'time_block':
+      return [
+        garage(subject.garageId),
+        ...when(subject.mechanicId, `mechanic:${subject.mechanicId}`),
+        `public:garage:${subject.garageId}`,
+      ];
     case 'catalogue_job':
       return subject.garageId ? ['admin', garage(subject.garageId)] : ['admin'];
   }
