@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -53,6 +53,7 @@ features:
   - 150-add-booking
   - 1366-garage-map-directions
   - 1257-quote-reminders
+  - 277-car-status-alerts
 ---
 
 # Capability: Observability
@@ -920,6 +921,10 @@ _From 1366-garage-map-directions._
 ### 1257-FR-012 — Observability MUST ship with the change: the new queue or timer kinds listed in `infra/observability/inventory.json` with one log line per fired timer naming the object and what it did, a counter of reminders sent, recipients expired, requests closed and quotes expired by timer or sweep, BullMQ's queue metrics for depth and failures, and a sweep-late alert on the sweep doing the work of lost timers. The alert counts the expiry steps the sweep ran (`recipient_expired`, `request_closed`, `quote_expired`) and leaves reminders out, because after a booking lapse the sweep is their expected sender; it is the shipped `booking-lapse-sweep-late`, widened to this counter, as Grafana's free tier caps the alert rules at 50.
 
 _From 1257-quote-reminders._
+
+### 277-FR-008 — Observability MUST ship with the change: the new queue listed in `infra/observability/inventory.json` (kind `queue`, on the `motorfix-queues` dashboard with the three worker-queue alerts, like `booking-confirmed`), one log line per job naming the job id, the type and whether the driver was told or why the event was skipped; BullMQ's queue metrics cover depth and failures; the PR's Observability section lists them.
+
+_From 277-car-status-alerts._
 
 ## Retired
 

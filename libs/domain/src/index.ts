@@ -164,6 +164,7 @@ export {
   inboxMailboxes,
   runInboxTest,
 } from './notifications/inbox-test/inbox-test';
+export { JOB_STAGE_CONSUMER } from './notifications/job-stage/job-stage.fan-out';
 export { NEWS_CONSUMER } from './notifications/news/news.fan-out';
 export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';
