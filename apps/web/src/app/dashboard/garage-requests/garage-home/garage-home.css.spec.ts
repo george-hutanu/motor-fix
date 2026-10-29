@@ -17,7 +17,7 @@ function phone(selector: string): string {
   return rule?.[1] ?? '';
 }
 
-// @traces 011-FR-004
+// @traces 011-FR-011
 describe('the count and the customise button on phones (PR #617 QA laps 3 and 5)', () => {
   it('stacks them on the full width instead of squeezing the count beside the button', () => {
     expect(phone('.layout')).toMatch(/flex-direction:\s*column;/);
