@@ -1175,6 +1175,39 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "Assistant confirmations by tool and outcome",
+      "description": "Each step of an assistant action the person must confirm, by tool and outcome (opened, confirmed, refused, expired, mismatch, void, replayed, failed) over 5 minutes. Many mismatch or failed is an assistant changing its arguments or a use case refusing at the yes (libs/domain/src/auth/assistant-confirmations/assistant-confirmations.metrics.ts).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 76
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (tool, outcome) (increase(motorfix_assistant_confirmations_total{service_name=\"mcp\", deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "{{tool}} {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     }
   ]
 }

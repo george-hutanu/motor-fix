@@ -57,6 +57,7 @@ features:
   - 102-garage-members
   - 423-mechanic-garage-dashboard
   - 1381-mechanic-scope
+  - 099-overview-sections
 ---
 
 # Capability: Accounts
@@ -1477,6 +1478,58 @@ _From 1381-mechanic-scope._
 ### 1381-FR-008 — This story MUST change nothing on the server beyond FR-001: no endpoint, no event emitter, no audit entry, no screen and no contract change; the proofs extend the existing specs the Build brief names and add only `libs/domain/src/auth/mechanic-launch-actions.api.integration.spec.ts`; each test file carries a whole-line `// @traces` comment naming its `1381-FR-<n>` ids.
 
 _From 1381-mechanic-scope._
+
+### 099-FR-001 — Panou (`/app/garage`) MUST be built from one declared list of sections, each with a key, a title, the dashboard view it opens, the capability it needs, the garage feature switch it needs (if any) and a release mark, in this default order: `kpi` "Cifrele zilei" / "Today's numbers" (the slot for the four numbers of #119), `now` "În lucru acum" / "In work now", `req` "Cereri de ofertă" / "Quote requests", `load` "Încărcarea mecanicilor azi" / "Mechanics' load today", `sched` "Programul de azi, pe elevatoare" / "Today's schedule, by lift", `funnel` "De la profil la cerere, pe săptămâni" / "From profile to request, by week", `brands` "Mărci cerute luna asta" / "Brands requested this month", `reviews` "Recenzii noi" / "New reviews". The list is the one later stories (#119, #133, #20, #131, #132, #190) fill and the one MF-32 stores layouts against; no other order or key is introduced for Panou.
+
+_From 099-overview-sections._
+
+### 099-FR-002 — Each section MUST declare its access in the same terms as the menu's views (`capability` typed with the table's `Capability`, `feature` a switch key, `unreleased`) and MUST be shown or left out by the order 102-FR-003 fixes: a feature switched off removes it for everyone, then the role's row, then the mechanic's permissions, then the release mark. The declared access is: `kpi` `garage.profile`; `now` `garage.profile`, unreleased in this release; `req` `garage.requests`; `load` `garage.own_jobs` with feature `team_mechanics`; `sched` `garage.schedule` with feature `lift_schedule`; `funnel` and `brands` `garage.profile`; `reviews` `garage.reviews`. So the owner sees every released section, the receptionist every released section, and a mechanic `load`, `sched` and, with `can_answer_quotes`, `req`.
+
+_From 099-overview-sections._
+
+### 099-FR-003 — Each section's title MUST be a heading; when the person's allowed views (`allowedViews` over the same account) include the section's target view, the heading MUST be a link to it — `now` and `sched` → `schedule`, `req` → `requests`, `load` → `team`, `kpi`, `funnel` and `brands` → `profile`, `reviews` → `reviews` — that opens the view on click and on Enter or Space, with a visible focus ring, a tap target at least 44 px high on phones and the section's name as its accessible name. When the target view is not in the person's allowed views, the heading MUST be plain text and nothing is navigable.
+
+_From 099-overview-sections._
+
+### 099-FR-004 — A section whose story has not shipped MUST show, under its title, one empty-state sentence saying what will appear there and nothing else — `kpi` "Aici apar cifrele zilei: cereri, programări, lucrări și încasări." / "Today's numbers appear here: requests, bookings, jobs and takings."; `now` "Aici apar lucrările în curs, cu poze, video și live din atelier." / "Jobs in progress appear here, with photos, video and live from the workshop."; `load` "Aici apare încărcarea fiecărui mecanic pe ziua de azi." / "Each mechanic's load for today appears here."; `sched` "Aici apare programul de azi, elevator cu elevator." / "Today's schedule appears here, lift by lift."; `funnel` "Aici apare drumul de la vizitele pe profil la cereri, pe săptămâni." / "The path from profile views to requests appears here, by week."; `brands` "Aici apar mărcile cele mai cerute luna asta." / "The most requested brands this month appear here." — and MUST NOT show sample numbers, rows, charts, names or dates. The sections already built keep their own empty states (343-FR-006, 074-FR-001).
+
+_From 099-overview-sections._
+
+### 099-FR-005 — The verified strip of 1354-FR-005 MUST stay the first element of Panou for an approved garage, above the numbers slot and every section; the suspension banner of 049-FR-012 MUST stay above everything while suspended; a `draft` garage MUST keep seeing only its verification progress (no strip, no sections, no card); the legal-check panel of the owner (210-FR-011) MUST keep its place directly under the strip. This story changes none of their content.
+
+_From 099-overview-sections._
+
+### 099-FR-006 — A mechanic (a person holding `garage.own_jobs` but neither `garage.profile` nor `garage.feature_switches`) MUST keep her own-jobs section and her "Foaia mea de zi" link of 423-FR-001 and 423-FR-003, placed right after `req` (or first, when `req` is absent) and before `load`; the placeholder line "shell.frame.coming.garage.dashboard" MUST no longer be shown to anyone, the section frame taking its place.
+
+_From 099-overview-sections._
+
+### 099-FR-007 — Each section that reads data MUST load on its own, show its own skeleton while its first read is in flight, and on a failed read (the final failure, after the interceptor's own sign-in resend) MUST show an error line with "Reîncearcă" / "Try again" inside that section only, announced to assistive technology (`role="alert"`); one failing section MUST NOT blank, delay or hide another. The sections this story adds read nothing and show at once.
+
+_From 099-overview-sections._
+
+### 099-FR-008 — For the owner (the role holding `garage.feature_switches`) of an `approved` garage whose request lists Panou already reads (waiting, quoted, closed) and whose review list are all empty, Panou MUST show, below the strip and the legal-check panel and above the numbers slot, a card titled "Primii pași" / "First steps" with the line "Service-ul tău e verificat. Până la prima cerere, pregătește-l:" / "Your garage is verified. Until the first request, get it ready:" and these rows, each a link: "Verifică lucrările din Prețuri" / "Check the jobs on Prices" → Prețuri; "Adaugă poze în Profilul service-ului" / "Add photos to your garage profile" → Profilul service-ului; "Invită echipa în Mecanici" / "Invite the team in Mechanics" → Mecanici, only while the `team` view is among the person's allowed views. The card MUST disappear once the garage has a request of any status or a review, and MUST be absent for a receptionist, a mechanic, a `suspended` or `draft` garage, and while either read is loading or has failed.
+
+_From 099-overview-sections._
+
+### 099-FR-009 — Panou MUST follow the account re-read the frame already performs on `garage.features_changed`, `mechanic.updated`, `verification.decided`, `garage.suspended` and `garage.restored` from `garage:{garageId}`, so that a section whose feature was switched off leaves within 5 seconds without a page reload, a section switched back on returns the same way, and the strip, banner and card follow the garage's status; this story adds no event, sender, audience, channel or endpoint for it.
+
+_From 099-overview-sections._
+
+### 099-FR-010 — Panou MUST lay out phones first: at 320 px and 390 px the strip, the card, the numbers slot and every section stack in the default order, each full width, with no horizontal scroll, light and dark; `funnel` and `brands` share one row only when the content column holds two 420 px columns side by side (the mock's rule: two-up on the 1440 px board, stacked on phones, tablets and a 1024 px desktop beside the menu), the other sections keeping full width; the section headings MUST form the page's heading outline (one heading per section and one for the first-steps card, the view title above them) so a screen reader lists the sections.
+
+_From 099-overview-sections._
+
+### 099-FR-011 — Every text of FR-001, FR-004 and FR-008 MUST come from the garage area's translation files in Romanian and English (016-FR-002), with comma-below diacritics; axe MUST report no violation on Panou for the owner, the receptionist and the mechanic.
+
+_From 099-overview-sections._
+
+### 099-FR-012 — This story MUST write nothing on the server, emit no event, record no audit entry and add no endpoint and no read: every section and the card are decided from the access context and the reads Panou already performs.
+
+_From 099-overview-sections._
+
+### 099-FR-013 — Tests MUST exist before the code (Principle II), each test file carrying one whole-line `// @traces` comment naming this feature's ids. In Jest: the section table for the owner, the receptionist, a mechanic with and without `can_answer_quotes`, each feature off, and the release mark on and off (FR-002); the default order and the keys (FR-001); the title link present and absent by the target view (FR-003); the empty states hold no data (FR-004); the own-jobs placement and the placeholder gone (FR-006); the first-steps rule in every branch (FR-008); the section list re-filtering when the account signal changes (FR-009). In Playwright, end to end: the owner of a new garage sees the strip, the first-steps card and every released section empty, in the default order, each title opening its view; with `lift_schedule` switched off the lift section is gone; a mechanic without permissions sees only her sections.
+
+_From 099-overview-sections._
 
 ## Retired
 

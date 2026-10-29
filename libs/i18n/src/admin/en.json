@@ -628,7 +628,8 @@
     "requestsSent": "Quote requests",
     "soon": "coming soon",
     "thisMonth": "{sign}{n} this month",
-    "unavailable": "The figures could not be read"
+    "unavailable": "The figures could not be read",
+    "why": "Why?"
   },
   "platformRules": {
     "alwaysOn": "Always on in production",

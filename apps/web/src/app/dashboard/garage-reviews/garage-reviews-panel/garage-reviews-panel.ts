@@ -21,6 +21,7 @@ import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { liveView } from '../../../live/view';
 import { Live } from '../../live';
+import { SectionTitle } from '../../section-title/section-title';
 import { garageOf, Session } from '../../session';
 import { GarageReviewRow } from '../garage-review-row/garage-review-row';
 
@@ -42,7 +43,13 @@ const SCORES = [
 // again, dropping the pages loaded since.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GarageReviewRow, HlmButton, RouterLink, TranslatePipe],
+  imports: [
+    GarageReviewRow,
+    HlmButton,
+    RouterLink,
+    SectionTitle,
+    TranslatePipe,
+  ],
   selector: 'mf-garage-reviews-panel',
   styleUrl: './garage-reviews-panel.css',
   templateUrl: './garage-reviews-panel.html',
@@ -73,6 +80,8 @@ export class GarageReviewsPanel {
   });
 
   protected readonly home = computed(() => this.limit() !== undefined);
+  // How many reviews the garage has, once the first page is read.
+  readonly count = computed(() => this.view.value()?.total);
   protected readonly reviews = computed(() => {
     const page = this.view.value();
     if (!page) return [];

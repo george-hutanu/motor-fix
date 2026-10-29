@@ -6040,6 +6040,70 @@
     },
     {
       "id": 208,
+      "type": "stat",
+      "title": "Dashboard layout writes, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 280
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (role, outcome) (increase(motorfix_dashboard_layout_writes_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{role}} {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 209,
+      "type": "timeseries",
+      "title": "Dashboard layout writes per hour, by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 280
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (role, outcome) (increase(motorfix_dashboard_layout_writes_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{role}} {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 210,
       "type": "row",
       "title": "Media",
       "collapsed": false,
@@ -6047,12 +6111,12 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 280
+        "y": 284
       },
       "panels": []
     },
     {
-      "id": 209,
+      "id": 211,
       "type": "timeseries",
       "title": "Job media per hour, by kind and outcome",
       "datasource": {
@@ -6063,7 +6127,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 281
+        "y": 285
       },
       "targets": [
         {
@@ -6082,7 +6146,7 @@
       }
     },
     {
-      "id": 210,
+      "id": 212,
       "type": "timeseries",
       "title": "Conversion time p95, by kind",
       "datasource": {
@@ -6093,7 +6157,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 281
+        "y": 285
       },
       "targets": [
         {
@@ -6112,7 +6176,7 @@
       }
     },
     {
-      "id": 211,
+      "id": 213,
       "type": "timeseries",
       "title": "Media purged per night, by kind",
       "datasource": {
@@ -6123,7 +6187,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 285
+        "y": 289
       },
       "targets": [
         {
@@ -6142,7 +6206,7 @@
       }
     },
     {
-      "id": 212,
+      "id": 214,
       "type": "timeseries",
       "title": "Media retention step failures",
       "datasource": {
@@ -6153,7 +6217,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 285
+        "y": 289
       },
       "targets": [
         {

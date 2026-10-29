@@ -150,3 +150,67 @@ describe('revokeAssistantGrants', () => {
     await expect(revoke(person, 'system', 'role_removed')).resolves.toBe(1);
   });
 });
+
+// @traces 1253-FR-007
+describe('revoking a grant with an action waiting to be confirmed', () => {
+  const confirmation = (accountId: string, grantId: string) =>
+    prisma.assistantConfirmation.create({
+      data: {
+        accountId,
+        argsHash: 'a'.repeat(64),
+        expiresAt: new Date(Date.now() + 5 * 60_000),
+        grantId,
+        tool: 'decline_quote_request',
+      },
+    });
+
+  it('voids the revoked grants’ waiting confirmations in the same transaction', async () => {
+    const person = await account('Andrei');
+    const other = await account('Ioana');
+    const live = await grant(person, 'claude');
+    const kept = await grant(other, 'claude');
+    const waiting = await confirmation(person, live.id);
+    const untouched = await confirmation(other, kept.id);
+
+    await revoke(person, 'system', 'account_suspended');
+
+    expect(
+      await prisma.assistantConfirmation.count({
+        where: { grantId: live.id, status: 'waiting' },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.assistantConfirmation.findUniqueOrThrow({
+        where: { id: waiting.id },
+      }),
+    ).toMatchObject({ status: 'void' });
+    expect(
+      await prisma.assistantConfirmation.findUniqueOrThrow({
+        where: { id: untouched.id },
+      }),
+    ).toMatchObject({ status: 'waiting' });
+  });
+
+  it('keeps them waiting when the revoking transaction fails', async () => {
+    const person = await account('Andrei');
+    const live = await grant(person, 'claude');
+    const waiting = await confirmation(person, live.id);
+
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await revokeAssistantGrants(tx, audit, outbox, {
+          accountId: person,
+          by: 'system',
+          reason: 'account_deleted',
+        });
+        throw new Error('the deletion failed');
+      }),
+    ).rejects.toThrow('the deletion failed');
+
+    expect(
+      await prisma.assistantConfirmation.findUniqueOrThrow({
+        where: { id: waiting.id },
+      }),
+    ).toMatchObject({ status: 'waiting' });
+  });
+});

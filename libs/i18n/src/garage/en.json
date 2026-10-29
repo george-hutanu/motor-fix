@@ -32,6 +32,21 @@
     "title": "Features"
   },
   "home": {
+    "empty": {
+      "brands": "The most requested brands this month appear here.",
+      "funnel": "The path from profile views to requests appears here, by week.",
+      "kpi": "Today's numbers appear here: requests, bookings, jobs and takings.",
+      "load": "Each mechanic's load for today appears here.",
+      "now": "Jobs in progress appear here, with photos, video and live from the workshop.",
+      "sched": "Today's schedule appears here, lift by lift."
+    },
+    "firstSteps": {
+      "line": "Your garage is verified. Until the first request, get it ready:",
+      "prices": "Check the jobs on Prices",
+      "profile": "Add photos to your garage profile",
+      "team": "Invite the team in Mechanics",
+      "title": "First steps"
+    },
     "ownJobs": {
       "daySheet": "My day sheet",
       "load": {
@@ -47,6 +62,14 @@
       "next": "Next booking: {when} · {car}",
       "none": "No jobs today",
       "title": "My jobs"
+    },
+    "section": {
+      "brands": "Brands requested this month",
+      "funnel": "From profile to request, by week",
+      "kpi": "Today's numbers",
+      "load": "Mechanics' load today",
+      "now": "In work now",
+      "sched": "Today's schedule, by lift"
     }
   },
   "invite": {

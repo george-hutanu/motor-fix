@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { refusal, text, toolError } from './errors';
+import { refusal, ToolRefusal, text, toolError } from './errors';
 import { caller, context, fixtureTools } from './fixtures.testing';
 import { callTool } from './registry';
 
@@ -92,6 +92,39 @@ describe('toolError', () => {
       expect([ro.code, en.code]).toEqual([code, code]);
       expect(ro.message).not.toBe(en.message);
     }
+  });
+});
+
+// @traces 1253-FR-005
+describe('nothing-sent texts', () => {
+  it.each([
+    'not_sent_refused',
+    'not_sent_expired',
+    'not_sent_arguments_changed',
+    'not_sent_void',
+  ])('words %s in both languages', (key) => {
+    const ro = text(key, 'ro');
+    const en = text(key, 'en');
+    expect(en).toMatch(/nothing was sent/i);
+    expect(ro).toMatch(/nu s-a trimis nimic/i);
+    expect(en).toMatch(/ask/i);
+    expect(ro).not.toBe(text('unknown_key', 'ro'));
+  });
+
+  it('says the arguments changed when they did', () => {
+    expect(text('not_sent_arguments_changed', 'en')).toMatch(/changed/i);
+  });
+});
+
+// @traces 1253-FR-006
+describe('a stored refusal', () => {
+  it('answers its code in the language of the call', () => {
+    expect(toolError(new ToolRefusal('already_answered'), 'ro')).toEqual(
+      refusal('already_answered', 'ro'),
+    );
+    expect(toolError(new ToolRefusal('already_answered'), 'en')).toEqual(
+      refusal('already_answered', 'en'),
+    );
   });
 });
 

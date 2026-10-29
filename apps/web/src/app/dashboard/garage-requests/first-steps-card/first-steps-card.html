@@ -1,0 +1,11 @@
+<section class="panel">
+  <h2>{{ 'garage.home.firstSteps.title' | t }}</h2>
+  <p>{{ 'garage.home.firstSteps.line' | t }}</p>
+  <ul>
+    <li><a routerLink="/app/garage/prices">{{ 'garage.home.firstSteps.prices' | t }}</a></li>
+    <li><a routerLink="/app/garage/profile">{{ 'garage.home.firstSteps.profile' | t }}</a></li>
+    @if (team()) {
+      <li><a routerLink="/app/garage/team">{{ 'garage.home.firstSteps.team' | t }}</a></li>
+    }
+  </ul>
+</section>

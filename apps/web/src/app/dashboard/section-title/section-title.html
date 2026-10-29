@@ -1,0 +1,7 @@
+<h2>
+  @if (href(); as link) {
+    <a [routerLink]="link">{{ heading() }}</a>
+  } @else {
+    {{ heading() }}
+  }
+</h2>

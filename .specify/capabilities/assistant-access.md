@@ -1,6 +1,6 @@
 ---
 capability: assistant-access
-updated: 2026-10-25
+updated: 2026-10-26
 features:
   - 365-mcp-oauth
   - 374-assistant-requests
@@ -8,6 +8,7 @@ features:
   - 1019-staging-mcp-connect
   - 003-admin-account-actions
   - 1204-terms-reaccept
+  - 1253-assistant-confirm
 ---
 
 # Capability: Assistant access
@@ -28,17 +29,17 @@ _From 365-mcp-oauth._
 
 _From 365-mcp-oauth._
 
-### 365-FR-004 — On every call the server MUST load the grant for (account, assistant client), the client being the token's `azp` (`client_name` = the host of a URL client id, otherwise the `azp` itself), create it at the first successful call after consent when it is missing (one audit entry `assistant_grant` create and one event `assistant_grant.created` with audience `account:{id}`, in the same transaction), refuse a grant whose `revoked_at` is set with 401 and code `assistant_grant_revoked`, update `last_used_at` only when the stored value is older than 60 seconds (a rolling minute), and record `can_read` / `can_act` from the token's scopes at creation and whenever they change. (D4; brief 6, Grant check)
+### 1253-FR-007 — The account MUST gain the switch `assistant_can_act` (default on, no screen or route in this story). Before any acting tool or `confirm_action` runs, the switch, the grant's scope (`motorfix.act`) and the grant's revocation MUST be checked: the switch off or the scope missing answers `assistant_act_off` (the tool unlisted, as the registry hides unconsented tools today), a revoked grant is refused as 365-FR-004 refuses it. There MUST be one domain function that voids every waiting confirmation of a set of grants or of an account, inside the caller's transaction; it is called by the grant revoke function (003-FR-015) in the revoke's own transaction for the revoked grants, and by the refusal of an acting call or `confirm_action` when the account's switch is found off, for the account, so ST-370 (the switch panel) and ST-372 (disconnect) need only call it. A void confirmation answers as FR-005 answers an expired one. (AC 7; build plan ST-370/372 → ST-376)
 
-_From 365-mcp-oauth._
+_From 1253-assistant-confirm._
 
 ### 365-FR-005 — The server MUST build the same actor the API builds from a session (account, the union of all its roles, garage membership, mechanic permissions), loaded through the shared account-loading function `ActorGuard` uses (not a copy), plus `via` = `assistant`, `assistantGrantId` and `requestId`; for each tool call the actor's role in use is the first role of the tool's role set the account holds, so existing use cases run unchanged; a deleted account is refused with 401 and a suspended one with `account_suspended`. (D5; brief Actor, Account changes)
 
 _From 365-mcp-oauth._
 
-### 365-FR-006 — Tool definitions MUST live in the `libs/mcp-tools` registry — name, English description, input and output JSON schema, `readOnlyHint` / `destructiveHint`, the role set, an optional mechanic permission, an optional garage feature, whether it acts, and the use case it calls (no tool touches a table directly). Listing MUST return only the tools whose role set intersects the account's roles (receptionist and mechanic rules through the existing capability mapping), whose scope is consented (no acting tool without `motorfix.act`) and whose garage feature is on; the same check runs again on every call. A call refused by scope answers code `assistant_act_off`; one refused by role or feature, or unknown, answers `not_found`. (D6; brief 4, 5, 10, Effective rights)
+### 1253-FR-008 — Every acting tool already in the catalogue — today `decline_quote_request` — MUST go through this pipeline: its use case gains a read-only preview that runs the same checks as its write without a lock or a write (one use case per rule, Constitution V: the checks are shared, not copied), its summary names the garage, the driver's first name, the car, the request's time and the reason, its first answer is `confirmation_required` and its declared output is answered by `confirm_action`. A catalogue-wide test MUST fail when any tool with `acts: true`, called once with valid arguments, calls its use case's write or answers anything but `confirmation_required` (or an error of FR-002). (AC 8; modifies 345-FR-017; the decision of 2026-10-16 on the switch-off is superseded, see Clarifications)
 
-_From 365-mcp-oauth._
+_From 1253-assistant-confirm._
 
 ### 365-FR-007 — The catalogue in this story MUST hold exactly one tool, the read-only `get_my_account` (first name, roles, language), as the smoke read tool of the end-to-end check; the person's and platform switches (ST-370, ST-382) join the effective-rights check in their own stories. (D7)
 
@@ -164,10 +165,45 @@ _From 1019-staging-mcp-connect._
 
 _From 1019-staging-mcp-connect._
 
-### 003-FR-015 — There MUST be one revoke function for an account's assistant grants that, inside the caller's transaction, sets `revoked_at`, `revoked_by` (the acting account's id whenever a person acts, `system` only when a handler acts with no person) and `revoke_reason` on every grant of the account whose `revoked_at` is null (all of them on a role loss too: a grant has no role scope), writes one audit entry per grant (action `update`, subject `assistant_grant`, field `revoked_at`) and records one `assistant_grant.revoked` outbox event per grant (`{ grantId, accountId, reason }`, audience `account:{accountId}`), and does nothing for a grant already revoked. It MUST be called with reason `account_suspended` by FR-007, `account_deleted` by FR-012 and by ST-129's self-service deletion (whose grants are then revoked and kept rather than deleted, Modifies 129-FR-001), and `role_removed` wherever the account loses a role today (the team-leave paths that detach a mechanic or remove a receptionist, and any later role removal), in that write's transaction. Adding a role calls nothing. A still-valid access token of a revoked grant MUST be refused at its next tool call (365-FR-004's `assistant_grant_revoked`; a suspended or deleted account also by 365-FR-005). The identity server's consents and sessions for those grants and any pending approvals are revoked through this same function once ST-372 (#195) adds those steps; until then the MotorFix grant is the gate every call checks (see Assumptions).
+### 1253-FR-001 — The first call of every acting tool (a tool with `acts: true` in the catalogue) MUST write nothing: it runs the tool's use case's checks without saving (the target exists and is the caller's, the person has the right, the state allows the action), and when they pass it answers `confirmation_required` with a confirmation id, the expiry (5 minutes after the call) and a plain summary in the account's language (`ro` / `en`) naming every person (first name or display name), garage, car (brand, model, year), time (Europe/Bucharest, through the domain's Bucharest helper) and amount (lei) the action concerns, and never a phone number or a plate. The first call stores a confirmation (FR-009) and nothing else: no row of the action, no audit entry, no event, no notification. (AC 1, 3; brief rule 1)
 
-_From 003-admin-account-actions._
+_From 1253-assistant-confirm._
+
+### 1253-FR-002 — When those checks fail, the first call MUST answer the use case's own error as the registry maps errors today (stable code and a plain message in the account's language; another person's resource `not_found`) with no summary, and store no confirmation. (AC 2)
+
+_From 1253-assistant-confirm._
+
+### 1253-FR-003 — When the client declared the elicitation capability on the connection the call arrived on, the server MUST instead ask the person through elicitation, in the account's language ("Da" / "Nu", "Yes" / "No"), with the same summary, and on yes continue as a timely confirmation of the same confirmation (FR-004); on no, cancel or a declined elicitation nothing is written (FR-005). When the client declared no such capability (every client on today's stateless transport) the `confirmation_required` answer of FR-001 is the path. The decision is per call, from the connection's declared capabilities, never from the client's name. (AC 3)
+
+_From 1253-assistant-confirm._
+
+### 1253-FR-004 — The catalogue MUST gain the tool `confirm_action`, listed to every account that may act (scope `motorfix.act` and the account's switch on) and hidden otherwise, input `{ confirmationId: uuid, arguments: object, confirmed: boolean }`, no mechanic permission and no garage feature of its own. Given `confirmed: true`, a confirmation of the same grant, for the same tool, still waiting, before its expiry, and arguments whose canonical hash equals the stored one, it MUST run the tool's use case once as the actor of that grant, with the confirmation id as the idempotency key of the run, so the run writes the same rows, audit entries (each carrying `via_assistant`, the grant id and the request id, as the audit writer stores them today) and events as the screen's own action, then store the outcome and answer the tool's declared output as structured content (the declared output schema filters it, as the registry filters today). (AC 4; brief rule 4; 365-FR-005, 365-FR-011)
+
+_From 1253-assistant-confirm._
+
+### 1253-FR-005 — `confirm_action` MUST write nothing and answer, in the account's language, that nothing was sent and the assistant must ask again, when `confirmed` is false (the confirmation closed as refused), when the expiry has passed (closed as expired), or when the arguments' hash differs from the stored one (closed as void, the answer saying the arguments changed). A confirmation id of another grant, or unknown, answers `not_found` and changes nothing. When the use case's checks fail at the run, nothing is written, the confirmation is closed as failed with the error's code, and the answer is that error; an error with no stable code of its own is stored and answered as `internal_error`, as the registry maps it today. (AC 5; brief States)
+
+_From 1253-assistant-confirm._
+
+### 1253-FR-006 — A second `confirm_action` for a confirmation already decided (done or failed) MUST run nothing and answer the stored outcome — the structured output or the error — whatever its `arguments` and `confirmed`; two confirmations of one id at the same moment MUST run the use case once, the second waiting for the first's outcome and answering it (the confirmation row is locked for the run). A repeat of a refused, expired or void confirmation answers as FR-005 answered. (AC 6; brief rule 4)
+
+_From 1253-assistant-confirm._
+
+### 1253-FR-009 — A confirmation is a row in PostgreSQL (Principle VI; never only in Valkey): id, grant, account, tool name, the canonical hash of the arguments, status (waiting, done, failed, refused, expired, void), expiry (opened + 5 minutes), the stored outcome (the structured output or the error code) once decided, opened and decided times. It MUST NOT store the summary text or the raw arguments. An expired row needs no sweep: expiry is judged by the stored time at the next call.
+
+_From 1253-assistant-confirm._
+
+### 1253-FR-010 — Observability (AGENTS.md): the confirmation step (a product action) MUST emit one counter of confirmations by tool and outcome (`opened`, `confirmed`, `refused`, `expired`, `mismatch`, `void`, `replayed`, `failed`), one structured log line per outcome with the confirmation id, tool and grant id, never the summary, a phone, a plate or an argument, the existing tool-call trace span carrying the outcome, and MUST list the counter with its panel and alert (a rising share of `failed` or `mismatch` outcomes) in `infra/observability/inventory.json`.
+
+_From 1253-assistant-confirm._
+
+### 1253-FR-011 — Tests MUST cover, before the code (Principle II): in Jest on real PostgreSQL — the first call of `decline_quote_request` writes nothing and answers the summary in Romanian and English with the garage, the driver's first name, the car, the Bucharest time and the reason and without the phone or the plate; the use case's error with no summary and no stored confirmation on a closed request, another garage's request and a mechanic without the permission; the timely yes writing the same rows, events and audit entries (`via_assistant`, grant id, request id) as the screen's decline; no, expiry, changed arguments (including key order equality), another grant's id, the use case failing at the run; the repeated and the concurrent yes running the use case once; the switch off, the scope missing and the revoked grant refusing and voiding (the revoke in one transaction); the elicitation path over an in-memory connection, yes and no; the catalogue-wide first-call test of FR-008; the account's `assistant_can_act` default on. Over HTTP (the MCP app's transport integration spec, real PostgreSQL): the two calls of a decline through the real endpoint, the first writing nothing and the second the decline. No Playwright test: there is no screen, and the transport spec drives the real endpoint (autonomous default).
+
+_From 1253-assistant-confirm._
 
 ## Retired
 
 - `365-FR-017` — superseded by `1204-FR-005` (2026-10-25)
+- `365-FR-004` — superseded by `1253-FR-007` (2026-10-26)
+- `003-FR-015` — superseded by `1253-FR-007` (2026-10-26)
+- `365-FR-006` — superseded by `1253-FR-008` (2026-10-26)

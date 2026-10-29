@@ -243,10 +243,12 @@ describe('the garage Panou for each role', () => {
 
     expect(panel(element)).toBeNull();
     expect(element.querySelector('[role="alert"]')).toBeNull();
-    expect(text(element)).toBe('Profil verificat Recenzii noi');
+    expect(element.querySelector('[data-section="req"]')).toBeNull();
+    expect(text(element)).not.toContain('Cereri de ofertă');
   });
 
-  it('keeps the coming-soon line for a role with neither requests nor reviews', async () => {
+  // @traces 099-FR-005
+  it('shows the empty sections, not the coming-soon line, for a role with neither requests nor reviews', async () => {
     const element = await render(
       OWNER.filter((c) => c !== 'garage.reviews'),
       {
@@ -254,9 +256,12 @@ describe('the garage Panou for each role', () => {
       },
     );
 
-    expect(text(element)).toBe(
-      'Profil verificat Aici vei vedea ce se întâmplă azi în service.',
-    );
+    expect(text(element)).not.toContain('Aici vei vedea ce se întâmplă azi');
+    expect(
+      [...element.querySelectorAll('[data-section]')].map((el) =>
+        el.getAttribute('data-section'),
+      ),
+    ).toEqual(['kpi', 'load', 'sched', 'funnel', 'brands']);
   });
 });
 

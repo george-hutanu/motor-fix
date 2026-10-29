@@ -33,7 +33,11 @@ let list: jest.Mock;
 
 async function render(
   waiting: Answer[],
-  { language = 'ro', limit }: { language?: 'ro' | 'en'; limit?: number } = {},
+  {
+    garage,
+    language = 'ro',
+    limit,
+  }: { garage?: boolean; language?: 'ro' | 'en'; limit?: number } = {},
 ) {
   live = fakeLive();
   let call = 0;
@@ -45,6 +49,9 @@ async function render(
   });
   const me = signal({
     capabilities: ['garage.requests'],
+    garageAccess: garage
+      ? [{ features: {}, garageId: 'garage-1', status: 'approved' }]
+      : [],
     garageId: 'garage-1',
   } as unknown as MeDto);
   TestBed.configureTestingModule({
@@ -358,6 +365,30 @@ describe('the requests panel with a limit', () => {
 
     expect(rows(element)).toHaveLength(4);
     expect(element.querySelector('a[href="/app/garage/requests"]')).toBeNull();
+  });
+
+  // @traces 099-FR-003
+  // @traces 099-FR-014
+  it('makes its Panou title the link to Cereri, where the menu holds it', async () => {
+    const { element } = await render([listOf(five)], {
+      garage: true,
+      limit: 4,
+    });
+    const heading = element.querySelectorAll('h2');
+
+    expect(heading).toHaveLength(1);
+    expect(element.querySelector('h2 > a')?.getAttribute('href')).toBe(
+      '/app/garage/requests',
+    );
+    expect(text(element.querySelector('h2 > a'))).toBe('Cereri de ofertă');
+  });
+
+  // @traces 099-FR-003
+  it('keeps its Panou title plain without a garage to open', async () => {
+    const { element } = await render([listOf(five)], { limit: 4 });
+
+    expect(element.querySelector('h2 > a')).toBeNull();
+    expect(text(element.querySelector('h2'))).toBe('Cereri de ofertă');
   });
 
   it('says "See all" in English', async () => {
