@@ -1,4 +1,5 @@
 import { FakeLiveVideo } from './fake-live-video.provider';
+import { NONE } from './live-video.provider';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -29,5 +30,21 @@ describe('the stand-in live video provider', () => {
     await expect(new FakeLiveVideo().closeInput('input-1')).resolves.toBe(
       undefined,
     );
+  });
+});
+
+// @traces 333-media-storage-FR-018
+describe('deleting a kept recording', () => {
+  it('records each recording the stand-in deleted', async () => {
+    const fake = new FakeLiveVideo();
+
+    await fake.deleteRecording('video-1');
+    await fake.deleteRecording('video-2');
+
+    expect(fake.deleted).toEqual(['video-1', 'video-2']);
+  });
+
+  it('does nothing when no provider is configured', async () => {
+    await expect(NONE.deleteRecording('video-1')).resolves.toBe(undefined);
   });
 });

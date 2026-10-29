@@ -231,3 +231,57 @@ describe('the Cloudflare live video provider', () => {
     ).toBe(true);
   });
 });
+
+// @traces 333-media-storage-FR-018
+describe('deleting a kept recording at Cloudflare', () => {
+  it('deletes the recording by its uid', async () => {
+    answer = json(200, { result: null, success: true });
+
+    await cloudflare().deleteRecording('video-uid-1');
+
+    expect(seen).toEqual([
+      expect.objectContaining({
+        auth: 'Bearer secret-api-token',
+        method: 'DELETE',
+        url: '/accounts/acct-1/stream/video-uid-1',
+      }),
+    ]);
+  });
+
+  it('takes an empty answer as deleted', async () => {
+    answer = (_req, res) => {
+      res.writeHead(200);
+      res.end();
+    };
+
+    await expect(cloudflare().deleteRecording('video-uid-1')).resolves.toBe(
+      undefined,
+    );
+  });
+
+  it('counts a recording already gone as deleted', async () => {
+    answer = json(404, { success: false });
+
+    await expect(cloudflare().deleteRecording('video-uid-1')).resolves.toBe(
+      undefined,
+    );
+  });
+
+  it('throws when the provider refuses or fails', async () => {
+    answer = json(500, { success: false });
+
+    await expect(cloudflare().deleteRecording('video-uid-1')).rejects.toThrow(
+      /500/,
+    );
+  });
+
+  it('gives up after five seconds', async () => {
+    answer = () => undefined;
+    const started = Date.now();
+
+    await expect(cloudflare().deleteRecording('video-uid-1')).rejects.toThrow(
+      /timeout/,
+    );
+    expect(Date.now() - started).toBeLessThan(7000);
+  }, 10_000);
+});
