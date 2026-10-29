@@ -1,6 +1,3 @@
-// Each app compiles this file through its imports, not the lib's include.
-/// <reference path="./heic/heic.d.ts" />
-// sharp's prebuilt libvips has no HEVC decoder, so it cannot read a HEIC.
 import { createHash } from 'node:crypto';
 
 import {
@@ -10,10 +7,10 @@ import {
   photoConfig,
   variantFile,
 } from '@motor-fix/contracts';
-import decode from 'heic-decode';
 import sharp, { type Sharp } from 'sharp';
 import { rgbaToThumbHash } from 'thumbhash';
 
+import { opened } from './decode';
 import type { StorageService } from '../../storage/storage.service';
 
 // One libvips thread per photo: the worker's concurrency sets how many
@@ -33,33 +30,6 @@ const KEPT_FORMATS: Record<string, 'png' | 'webp'> = {
   png: 'png',
   webp: 'webp',
 };
-
-// The original as sharp input, with its size as seen upright. sharp's libvips
-// reads a HEIC's header but cannot decode HEVC; the decoder hands over upright
-// RGBA pixels instead, which sharp takes as raw input.
-async function opened(original: Buffer, maxInputPixels: number) {
-  const meta = await sharp(original).metadata();
-  if ((meta.width ?? 0) * (meta.height ?? 0) > maxInputPixels) {
-    throw new Error('Input image exceeds pixel limit');
-  }
-  if (meta.compression === 'hevc') {
-    const { data, height, width } = await decode({ buffer: original });
-    const pixels = Buffer.from(data.buffer, data.byteOffset, data.byteLength);
-    return {
-      format: 'jpeg',
-      height,
-      source: () => sharp(pixels, { raw: { channels: 4, height, width } }),
-      width,
-    };
-  }
-  const sideways = (meta.orientation ?? 1) >= 5;
-  return {
-    format: meta.format,
-    height: sideways ? meta.width : meta.height,
-    source: () => sharp(original),
-    width: sideways ? meta.height : meta.width,
-  };
-}
 
 // The display copy and the thumbnail beside the original, and the responsive
 // variants at an address fixed by the original's content, all stripped of

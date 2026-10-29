@@ -26,6 +26,7 @@ import {
   HealthModule,
   InsightsModule,
   ListingPhotosWorkerModule,
+  MediaProcessingModule,
   MODERATION_TIMERS_CONSUMER,
   ModerationTimersModule,
   NEWS_CONSUMER,
@@ -198,6 +199,11 @@ export function workerModule(
         support,
       }),
       ListingPhotosWorkerModule.register({ redisUrl: env.REDIS_URL }),
+      // Converts the job photos, clips and kept recordings.
+      MediaProcessingModule.register({
+        databaseUrl: env.DATABASE_URL,
+        redisUrl: env.REDIS_URL,
+      }),
       InsightsModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
         // Places the garages with no city before the night's figures.

@@ -100,6 +100,7 @@ export {
 } from './live-video/live-video.module';
 export * from './logging';
 export { MapsModule } from './maps/maps.module';
+export * from './media';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
 export {
   countConsentRefusal,

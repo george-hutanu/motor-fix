@@ -20,7 +20,7 @@ import { LiveSessionsService } from './sessions/sessions.service';
 import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 
-type LiveVideoConfig =
+export type LiveVideoConfig =
   | { provider: 'cloudflare'; secrets: LiveVideoSecrets }
   | { provider: 'fake' }
   | { provider: 'none' };
@@ -45,7 +45,7 @@ export function liveVideoConfig(
   return appEnv === 'test' ? { provider: 'fake' } : { provider: 'none' };
 }
 
-function providerFor(config: LiveVideoConfig): LiveVideoProvider {
+export function providerFor(config: LiveVideoConfig): LiveVideoProvider {
   const logger = new Logger('LiveVideo');
   if (config.provider === 'none') {
     logger.warn('live video off: the CLOUDFLARE_STREAM_* values are not set');
