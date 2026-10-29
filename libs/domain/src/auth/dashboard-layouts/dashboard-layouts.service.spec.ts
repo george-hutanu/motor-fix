@@ -20,8 +20,8 @@ describe('the admin section list', () => {
     ]);
   });
 
-  it('serves no other role yet', () => {
-    for (const role of ['driver', 'garage', 'owner', 'mechanic']) {
+  it('serves no driver or owner list', () => {
+    for (const role of ['driver', 'owner']) {
       expect(panelKeysOf(role)).toBeUndefined();
     }
   });
