@@ -8,7 +8,7 @@ const { prisma } = world;
 
 const GARAGES = 20;
 
-// @traces 1250-FR-010
+// @traces 1250-FR-010 1252-FR-006
 describe('live sessions under load', () => {
   it('starts twenty streams at once and hands out sixty view credentials with no server error', async () => {
     const jobs = [];
@@ -44,5 +44,10 @@ describe('live sessions under load', () => {
     expect(await prisma.liveSession.count({ where: { stoppedAt: null } })).toBe(
       GARAGES,
     );
+    expect(
+      (
+        await prisma.liveSession.findMany({ select: { peakViewers: true } })
+      ).map((row) => row.peakViewers),
+    ).toEqual(Array(GARAGES).fill(3));
   }, 60_000);
 });

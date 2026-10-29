@@ -203,3 +203,24 @@ describe('stopping a live session nobody publishes to', () => {
     expect((await row(ended.session.id)).stopReason).toBe('sender');
   });
 });
+
+// @traces 1252-FR-003
+describe('a live session nobody watches', () => {
+  it('goes on past the idle window while its publisher is connected', async () => {
+    const now = new Date();
+    const { session } = await live(new Date(now.getTime() - 30 * MINUTE));
+    provider.statuses.set(session.providerInputId, {
+      connected: true,
+      since: new Date(now.getTime() - 30 * MINUTE),
+    });
+
+    expect(await stopIdleSessions(deps(), now)).toBe(0);
+
+    expect(await row(session.id)).toMatchObject({
+      peakViewers: 0,
+      stoppedAt: null,
+      viewedByDriverAt: null,
+    });
+    expect(await prisma.liveViewer.count()).toBe(0);
+  });
+});
