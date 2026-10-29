@@ -16,9 +16,12 @@ import { ApprovalSheet } from '../approval-sheet/approval-sheet';
 
 let get: jest.Mock;
 let open: jest.Mock;
+let order: string[];
 
 async function visit(id: string, answers: unknown[]) {
+  order = [];
   get = jest.fn(async ({ id }: { id: string }) => {
+    order.push('get');
     if (id === 'gone')
       throw new HttpErrorResponse({
         error: { code: 'not_found' },
@@ -43,7 +46,13 @@ async function visit(id: string, answers: unknown[]) {
       { provide: Live, useValue: { close: jest.fn(), open: jest.fn() } },
       {
         provide: Session,
-        useValue: { load: async () => ({ landing: '/app/driver' }) },
+        useValue: {
+          load: async () => {
+            await new Promise((r) => setTimeout(r));
+            order.push('session');
+            return { landing: '/app/driver' };
+          },
+        },
       },
     ],
   });
@@ -69,6 +78,14 @@ describe('ApprovalPage', () => {
       title: 'assistant.approval.title',
       titleParams: { client: 'Claude' },
     });
+  });
+
+  // The access token lives in memory: a read before the session is loaded
+  // goes without one and is answered 401 before the renewal.
+  it('reads the approval only once the session is loaded', async () => {
+    await visit('ap-1', []);
+
+    expect(order).toEqual(['session', 'get']);
   });
 
   it('titles an unnamed assistant as your assistant', async () => {

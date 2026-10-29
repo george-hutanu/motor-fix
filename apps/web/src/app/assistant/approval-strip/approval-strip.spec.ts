@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
@@ -114,6 +117,28 @@ describe('ApprovalStrip', () => {
 
     expect(link(element)).toBeNull();
     expect(element.textContent?.trim()).toBe('');
+  });
+
+  // axe's region rule: the strip sits between the header and the main
+  // landmark, so its line is a live region, read out when the count changes.
+  it('keeps its line in a status region, also while nothing is pending', async () => {
+    const some = await render(waiting('a1'));
+    expect(some.element.querySelector('[role="status"] a')).not.toBeNull();
+    TestBed.resetTestingModule();
+
+    const none = await render({ items: [], pending: 0 });
+    expect(none.element.querySelector('[role="status"]')).not.toBeNull();
+  });
+
+  // The link keeps the 44 px tap height every link gets; its text sits in
+  // the middle of it rather than at the top of an empty band.
+  it('centres its line in the tap height', () => {
+    const css = readFileSync(join(__dirname, 'approval-strip.css'), 'utf8');
+    const rule = css.slice(css.indexOf('a {'));
+
+    expect(rule).toMatch(/display: flex;/);
+    expect(rule).toMatch(/align-items: center;/);
+    expect(rule).toMatch(/box-sizing: border-box;/);
   });
 
   it("links to the oldest pending approval's sheet", async () => {

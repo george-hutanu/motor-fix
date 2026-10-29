@@ -50,6 +50,9 @@ export class ApprovalPage {
 
   private async show(id: string) {
     this.missing.set(false);
+    // The access token lives in memory: loading the session first renews it,
+    // so the read below does not go without one and come back 401.
+    const account = await this.session.load();
     const approval = await this.me
       .assistantApprovalsControllerGet({ id })
       .catch(() => null);
@@ -57,7 +60,6 @@ export class ApprovalPage {
       this.missing.set(true);
       return;
     }
-    const account = await this.session.load();
     this.live.open();
     const name = approval.assistantName;
     const next = await this.overlays.open<string | null, ApprovalSheetData>(
