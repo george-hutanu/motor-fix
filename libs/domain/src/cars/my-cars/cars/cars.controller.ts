@@ -80,7 +80,7 @@ export class CarsController {
         [{ code: 'required', field: 'idempotency-key' }],
       );
     }
-    return this.cars.create(actor, key, body);
+    return this.forgetList(actor, this.cars.create(actor, key, body));
   }
 
   @Get()
@@ -122,7 +122,7 @@ export class CarsController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: UpdateCarDto,
   ): Promise<CarDto> {
-    return this.cars.update(actor, id, body);
+    return this.forgetList(actor, this.cars.update(actor, id, body));
   }
 
   @Delete(':id')
@@ -144,6 +144,13 @@ export class CarsController {
     @CurrentActor() actor: Actor,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<void> {
-    return this.cars.remove(actor, id);
+    return this.forgetList(actor, this.cars.remove(actor, id));
+  }
+
+  // The sign-in's warm list, taken by the first read, predates this write.
+  private async forgetList<T>(actor: Actor, write: Promise<T>): Promise<T> {
+    const done = await write;
+    await this.cache.forget(cacheKey('driver-home', actor.accountId, 'cars'));
+    return done;
   }
 }

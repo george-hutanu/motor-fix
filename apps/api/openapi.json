@@ -1865,6 +1865,195 @@
         ]
       }
     },
+    "/api/v1/cars/{id}/sale": {
+      "get": {
+        "operationId": "CarSaleController_sale",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarSaleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: no such car of the caller, or not a driver"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "What selling the caller's car starts from: its repairs and the transfer already sent",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/cars/{id}/transfers": {
+      "post": {
+        "operationId": "CarSaleController_send",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCarTransferDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarTransferSentDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad field or id; invalid_phone; own_phone: the seller’s own number; repair_not_tickable: a tick on a repair that is not the car’s own active logged one"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: no such car of the caller, or not a driver"
+          },
+          "409": {
+            "description": "open_request: a request for the car is under way"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send the buyer a link to take the car and the ticked repairs; replaces a transfer already sent",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/cars/{id}/transfers/{transferId}/cancel": {
+      "post": {
+        "operationId": "CarSaleController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "transferId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The transfer is cancelled"
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: no such car of the caller, no such transfer of the car, or not a driver"
+          },
+          "409": {
+            "description": "not_sent: the transfer is not sent"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel the transfer sent; its link stops working",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/car-transfers/{token}": {
+      "get": {
+        "operationId": "CarTransferLinkController_read",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarTransferLinkDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: no such link"
+          },
+          "410": {
+            "description": "transfer_expired, transfer_cancelled or transfer_accepted: the link no longer works"
+          }
+        },
+        "summary": "Whether a transfer link still works; nothing about the car",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
     "/api/v1/admin/accounts": {
       "get": {
         "operationId": "AdminAccountsController_list",
@@ -12637,6 +12826,184 @@
           }
         }
       },
+      "CarSaleRepairDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "doneOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "what": {
+            "type": "string",
+            "description": "What was done"
+          },
+          "garageName": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "description": "motorfix: done through MotorFix, always passed on; logged: added by the owner, passed on when ticked",
+            "enum": [
+              "motorfix",
+              "logged"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "doneOn",
+          "what",
+          "garageName",
+          "source"
+        ]
+      },
+      "CarSaleTransferDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "buyerPhone": {
+            "type": "string",
+            "description": "E.164",
+            "example": "+40722123456"
+          }
+        },
+        "required": [
+          "id",
+          "expiresAt",
+          "buyerPhone"
+        ]
+      },
+      "CarSaleDto": {
+        "type": "object",
+        "properties": {
+          "canStart": {
+            "type": "boolean",
+            "description": "False while the car has a request under way"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "open_request"
+            ],
+            "nullable": true
+          },
+          "repairs": {
+            "description": "Active repairs, newest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarSaleRepairDto"
+            }
+          },
+          "transfer": {
+            "description": "The sent transfer while within its time; never the link",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CarSaleTransferDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "canStart",
+          "reason",
+          "repairs",
+          "transfer"
+        ]
+      },
+      "CreateCarTransferDto": {
+        "type": "object",
+        "properties": {
+          "buyerPhone": {
+            "type": "string",
+            "description": "The buyer's phone, as typed",
+            "example": "0722 123 456",
+            "maxLength": 32,
+            "minLength": 1
+          },
+          "repairIds": {
+            "description": "The ticked repairs: the car's own active logged repairs",
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "buyerPhone",
+          "repairIds"
+        ]
+      },
+      "CarTransferLineDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "expiresAt"
+        ]
+      },
+      "CarTransferSentDto": {
+        "type": "object",
+        "properties": {
+          "transfer": {
+            "$ref": "#/components/schemas/CarTransferLineDto"
+          },
+          "link": {
+            "type": "string",
+            "description": "The link for the buyer; answered here only, never again"
+          },
+          "whatsapp": {
+            "type": "string",
+            "description": "Whether the WhatsApp message to the buyer left",
+            "enum": [
+              "sent",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "transfer",
+          "link",
+          "whatsapp"
+        ]
+      },
+      "CarTransferLinkDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "sent"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
       "AdminAccountCountDto": {
         "type": "object",
         "properties": {
@@ -13195,6 +13562,16 @@
             "format": "date",
             "nullable": true
           },
+          "transfer": {
+            "description": "The car's sent transfer while within its time",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CarTransferLineDto"
+              }
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -13220,6 +13597,7 @@
           "itpUntil",
           "rcaUntil",
           "rovinietaUntil",
+          "transfer",
           "createdAt",
           "updatedAt"
         ]

@@ -11,6 +11,7 @@ import {
   AuthModule,
   assistantBroker,
   CarsModule,
+  CarTransfersModule,
   CatalogueModule,
   DashboardLayoutsModule,
   DataExportModule,
@@ -116,6 +117,11 @@ export class AppModule {
         PhoneSignInModule.register({
           brevo: { apiKey: email.apiKey ?? '', apiUrl: email.apiUrl },
           phone,
+        }),
+        CarTransfersModule.register({
+          brevo: { apiKey: email.apiKey ?? '', apiUrl: email.apiUrl },
+          phone,
+          webUrl: email.webUrl,
         }),
         AdminAccountsModule,
         AdminAccountModule.register(
