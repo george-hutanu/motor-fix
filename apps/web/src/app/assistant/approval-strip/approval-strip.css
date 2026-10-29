@@ -1,0 +1,14 @@
+:host {
+  display: block;
+}
+a {
+  display: block;
+  margin: 0 var(--mf-space-4) var(--mf-space-3);
+  padding: var(--mf-space-3) var(--mf-space-4);
+  border: 1px solid var(--mf-amber-ink);
+  border-radius: var(--mf-radius-control);
+  background: var(--mf-amber-tint);
+  color: inherit;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

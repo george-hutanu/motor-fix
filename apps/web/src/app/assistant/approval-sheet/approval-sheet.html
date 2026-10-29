@@ -1,0 +1,44 @@
+@if (approval.value(); as a) {
+  <p class="summary">{{ a.summary }}</p>
+  @if (a.status === 'pending') {
+    @if (a.options.length) {
+      <fieldset>
+        <legend>{{ 'assistant.approval.options' | t }}</legend>
+        @for (option of a.options; track option.key) {
+          <label class="tick" [for]="'mf-approval-' + option.key">
+            <input
+              type="checkbox"
+              [id]="'mf-approval-' + option.key"
+              [checked]="ticked(option)"
+              [disabled]="busy()"
+              (change)="tick(option, $event)"
+            />
+            <span>{{ label(option) }}</span>
+          </label>
+        }
+      </fieldset>
+    }
+    @if (error(); as e) {
+      <p class="error" role="alert">{{ e }}</p>
+    }
+    <div class="actions">
+      <button hlmBtn type="button" [disabled]="busy()" [attr.aria-busy]="busy()" (click)="decide('approve')">
+        {{ 'assistant.approval.approve' | t }}
+      </button>
+      <button hlmBtn variant="secondary" type="button" [disabled]="busy()" (click)="decide('refuse')">
+        {{ 'assistant.approval.refuse' | t }}
+      </button>
+    </div>
+  } @else {
+    <p class="state" role="status">{{ state(a) }}</p>
+    <div class="actions">
+      <button #done hlmBtn variant="secondary" type="button" (click)="next()">{{ 'shell.form.done' | t }}</button>
+    </div>
+  }
+} @else if (approval.gone()) {
+  <p role="status">{{ 'assistant.approval.missing' | t }}</p>
+} @else if (approval.failed()) {
+  <p class="error" role="alert">{{ 'assistant.approval.error' | t }}</p>
+} @else {
+  <p role="status" aria-busy="true">{{ 'assistant.approval.loading' | t }}</p>
+}

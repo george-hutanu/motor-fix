@@ -71,6 +71,15 @@ export const routes: Routes = [
     title: () => inject(I18n).t('assistant.connecting'),
   },
   {
+    canMatch: [assistantTexts],
+    loadComponent: () =>
+      import('./assistant/approval-page/approval-page').then(
+        (m) => m.ApprovalPage,
+      ),
+    path: 'app/assistant/approvals/:id',
+    title: () => inject(I18n).t('assistant.approval.page'),
+  },
+  {
     canMatch: [cockpitTexts],
     loadComponent: () =>
       import('@motor-fix/ui-cockpit/sample').then((m) => m.CockpitSamplePage),

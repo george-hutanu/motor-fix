@@ -1,4 +1,29 @@
 {
+  "approval": {
+    "again": "MotorFix cannot do this right now. Try again in a few minutes.",
+    "approve": "Approve",
+    "error": "Could not send. Try again.",
+    "loading": "Loading…",
+    "missing": "We could not find this request from your assistant.",
+    "option": {
+      "shareHistory": "Send the garage your car's history"
+    },
+    "options": "What you can change",
+    "page": "Approve your assistant's action",
+    "reason": {
+      "other": "MotorFix refused the action.",
+      "tool_unavailable": "this action is no longer available."
+    },
+    "refuse": "Refuse",
+    "state": {
+      "approved": "Approved",
+      "expired": "Expired",
+      "failed": "Could not be done: {reason}",
+      "refused": "Refused"
+    },
+    "title": "Your assistant ({client}) wants to:",
+    "titleUnnamed": "Your assistant wants to:"
+  },
   "connecting": "Connecting your assistant…",
   "error": {
     "text": "The connection request has expired or is no longer valid. Go back to your assistant and start connecting again.",

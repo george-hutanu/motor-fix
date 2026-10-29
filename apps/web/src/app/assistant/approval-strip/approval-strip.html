@@ -1,0 +1,3 @@
+@if (pending() > 0 && oldest(); as oldest) {
+  <a [routerLink]="['/app/assistant/approvals', oldest.id]">{{ 'shell.approvals' | t: { count: pending() } }}</a>
+}
