@@ -578,3 +578,40 @@ describe('the garage members read route', () => {
     }
   });
 });
+
+// @traces 427-FR-015
+// @traces 427-FR-016
+describe('the time-block routes', () => {
+  repoIt(
+    'are four OpenAPI operations the inventory lists under the api alerts, and the schedule read carries blocks',
+    () => {
+      const api = JSON.parse(
+        readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+      );
+      const inventory = JSON.parse(
+        readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+      );
+      const base = '/api/v1/garages/{garageId}/time-blocks';
+
+      expect(Object.keys(api.paths[base]).sort()).toEqual(['get', 'post']);
+      expect(Object.keys(api.paths[`${base}/{blockId}`]).sort()).toEqual([
+        'delete',
+        'patch',
+      ]);
+      expect(
+        Object.keys(api.components.schemas.GarageScheduleDto.properties),
+      ).toContain('blocks');
+      const listed = inventory.entries.filter(
+        (entry: { kind: string; name: string }) =>
+          entry.kind === 'endpoint' &&
+          entry.name.startsWith('garage-time-block'),
+      );
+      expect(listed).toHaveLength(4);
+      for (const entry of listed) {
+        expect(entry.alerts).toEqual(['api-error-rate', 'api-latency']);
+        expect(entry.story).toBe('ST-427');
+      }
+      expect(checkInventory(root)).toEqual([]);
+    },
+  );
+});
