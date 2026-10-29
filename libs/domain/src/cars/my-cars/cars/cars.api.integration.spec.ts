@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import type { Role } from '@motor-fix/contracts/capabilities';
 import { ValidationPipe } from '@nestjs/common';
@@ -548,6 +550,113 @@ describe('what a save writes beside the car', () => {
         where: { accountId: id, role: 'driver' },
       }),
     ).toBe(0);
+  });
+});
+
+// @traces 1265-FR-001 1265-FR-002
+describe('the ownership row a car is added with', () => {
+  const rows = (carId: string) =>
+    prisma.carOwnership.findMany({ where: { carId } });
+
+  it('opens one owner row on the Bucharest day, at the car’s creation, with no transfer', async () => {
+    const { auth, id } = await driver();
+    const { id: brandId } = await brand('BMW');
+
+    const res = await add(auth, bmw320d(brandId));
+
+    const car = await prisma.car.findUniqueOrThrow({
+      where: { id: res.body.id },
+    });
+    expect(await rows(car.id)).toEqual([
+      expect.objectContaining({
+        access: 'owner',
+        accountId: id,
+        closedAt: null,
+        fromDate: new Date(`${localDay(car.createdAt)}T00:00:00Z`),
+        openedAt: car.createdAt,
+        toDate: null,
+        transferId: null,
+      }),
+    ]);
+  });
+
+  it('opens no second row for a repeated key', async () => {
+    const { auth } = await driver();
+    const { id: brandId } = await brand('BMW');
+    const key = randomUUID();
+
+    const res = await add(auth, bmw320d(brandId), key);
+    await add(auth, bmw320d(brandId), key);
+
+    expect(await rows(res.body.id)).toHaveLength(1);
+  });
+
+  it('leaves no row when the history cannot be written', async () => {
+    const { auth, id } = await driver();
+    const { id: brandId } = await brand('BMW');
+    jest
+      .spyOn(AuditService.prototype, 'record')
+      .mockRejectedValue(new Error('history unavailable'));
+
+    const res = await add(auth, bmw320d(brandId));
+
+    expect(res.status).toBe(500);
+    expect(await prisma.carOwnership.count({ where: { accountId: id } })).toBe(
+      0,
+    );
+  });
+
+  it('backfills one open row per existing car, a removed one included, naming its owner', async () => {
+    const { id } = await driver();
+    const { id: brandId } = await brand('BMW');
+    await holding(id, brandId, 2);
+    await prisma.car.updateMany({
+      data: { removedAt: new Date() },
+      where: { idempotencyKey: 'held-0', ownerId: id },
+    });
+    const sql = readFileSync(
+      join(
+        __dirname,
+        '../../../../prisma/migrations/20261029190000_car_ownership/migration.sql',
+      ),
+      'utf8',
+    );
+    const backfill = sql.slice(sql.indexOf('INSERT INTO "car_ownership"'));
+    await prisma.carOwnership.deleteMany({ where: { accountId: id } });
+
+    await prisma.$executeRawUnsafe(
+      backfill.slice(0, backfill.indexOf(';') + 1),
+    );
+
+    const held = await prisma.car.findMany({
+      include: { ownerships: true },
+      where: { ownerId: id },
+    });
+    expect(held).toHaveLength(2);
+    for (const car of held) {
+      expect(car.ownerships).toEqual([
+        expect.objectContaining({
+          access: 'owner',
+          accountId: car.ownerId,
+          fromDate: new Date(`${localDay(car.createdAt)}T00:00:00Z`),
+          openedAt: car.createdAt,
+          toDate: null,
+        }),
+      ]);
+    }
+  });
+
+  it('holds one open row naming the owner for every car', async () => {
+    const { auth } = await driver();
+    const { id: brandId } = await brand('BMW');
+    await add(auth, bmw320d(brandId));
+
+    const broken = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT c.id FROM car c
+      LEFT JOIN car_ownership o ON o.car_id = c.id AND o.to_date IS NULL
+      GROUP BY c.id, c.owner_id
+      HAVING count(o.id) <> 1 OR bool_or(o.account_id <> c.owner_id)`;
+    expect(broken).toEqual([]);
   });
 });
 

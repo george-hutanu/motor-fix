@@ -104,7 +104,45 @@ export class CarTransferSentDto {
   whatsapp!: 'sent' | 'failed';
 }
 
+export class CarTransferOfferCarDto {
+  @ApiProperty({ description: "The brand's name" })
+  brand!: string;
+
+  @ApiProperty()
+  model!: string;
+
+  @ApiProperty()
+  year!: number;
+}
+
 export class CarTransferLinkDto {
   @ApiProperty({ enum: ['sent'] })
   status!: 'sent';
+
+  @ApiProperty({
+    description: 'Signed in only: the car on offer, never its plate',
+    required: false,
+    type: CarTransferOfferCarDto,
+  })
+  car?: CarTransferOfferCarDto;
+
+  @ApiProperty({
+    description: 'Signed in only: how many repairs pass with the car',
+    required: false,
+  })
+  repairCount?: number;
+
+  @ApiProperty({
+    description:
+      "Signed in only: the seller's first name and the initial of the last, or null",
+    nullable: true,
+    required: false,
+    type: String,
+  })
+  sellerName?: string | null;
+}
+
+export class CarTransferAcceptedDto {
+  @ApiProperty({ description: "The car, now the caller's", format: 'uuid' })
+  carId!: string;
 }

@@ -20,6 +20,8 @@ export type LiveSubject =
   // results, and the mechanic's page when a mechanic's moved.
   | { type: 'rating'; garageId: string; mechanicId: string | null }
   | { type: 'car'; ownerAccountId: string }
+  // A car taken over: the seller and the buyer.
+  | { type: 'car_transfer'; sellerAccountId: string; buyerAccountId: string }
   | { type: 'repair'; ownerAccountId: string; sharedGarageId: string | null }
   | {
       type: 'verification';
@@ -90,6 +92,11 @@ export function audienceOf(subject: LiveSubject): string[] {
       ];
     case 'car':
       return [account(subject.ownerAccountId)];
+    case 'car_transfer':
+      return [
+        account(subject.sellerAccountId),
+        account(subject.buyerAccountId),
+      ];
     case 'repair':
       return [
         account(subject.ownerAccountId),

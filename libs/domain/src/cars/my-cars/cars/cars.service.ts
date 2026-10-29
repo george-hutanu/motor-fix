@@ -18,7 +18,7 @@ import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { serviceDueOn } from '../../odometer/odometer';
 import { cancelSentTransfer, isLive } from '../../transfers/transfers';
 
-const LIMIT = 20;
+export const LIMIT = 20;
 // A request in one of these is still under way, so its car stays.
 export const OPEN_REQUEST = ['sent', 'quoted', 'booked', 'in_work'] as const;
 const DATES = ['itpUntil', 'rcaUntil', 'rovinietaUntil'] as const;
@@ -224,7 +224,7 @@ function carData(
   return data;
 }
 
-const editEntry = (actor: Actor, carId: string) => ({
+export const editEntry = (actor: Actor, carId: string) => ({
   actorId: actor.accountId,
   actorRole: actor.role,
   carId,
@@ -306,6 +306,16 @@ export class CarsService {
       const car = await tx.car.create({
         data: newCar(dto, ownerId, key),
         include: withBrand,
+      });
+      // The owner's open row: the history this account may read starts here.
+      await tx.carOwnership.create({
+        data: {
+          access: 'owner',
+          accountId: ownerId,
+          carId: car.id,
+          fromDate: date(localDay(car.createdAt)) as Date,
+          openedAt: car.createdAt,
+        },
       });
       if (joins) {
         await this.accounts.grantRole(

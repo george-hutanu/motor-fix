@@ -28,6 +28,7 @@ import {
 import { BOOKING_CONFIRM_REMINDER } from './booking-confirm-reminder';
 import { BOOKING_CONFIRMED } from './booking-confirmed';
 import { BOOKING_LAPSED_DRIVER, BOOKING_LAPSED_GARAGE } from './booking-lapsed';
+import { CAR_TRANSFER_ACCEPTED } from './car-transfer-accepted';
 import { CAR_TRANSFER_LINK } from './car-transfer-link';
 import {
   CATALOGUE_JOB_APPROVED,
@@ -112,6 +113,7 @@ export const TEMPLATES: Registry = {
   BOOKING_CONFIRMED,
   'BOOKING_LAPSED.driver': BOOKING_LAPSED_DRIVER,
   'BOOKING_LAPSED.garage': BOOKING_LAPSED_GARAGE,
+  CAR_TRANSFER_ACCEPTED,
   CAR_TRANSFER_LINK,
   'CATALOGUE_JOB_DECIDED.approved': CATALOGUE_JOB_APPROVED,
   'CATALOGUE_JOB_DECIDED.rejected': CATALOGUE_JOB_REJECTED,

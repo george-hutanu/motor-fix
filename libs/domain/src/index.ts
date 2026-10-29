@@ -74,6 +74,7 @@ export { WarmModule } from './cache/warm/warm.module';
 export { warmCache } from './cache/warm-up/warm-up';
 export { CAR_ACCOUNT_DELETED_CONSUMER } from './cars/account-deleted/account-deleted';
 export { CarAccountDeletedModule } from './cars/account-deleted/account-deleted.module';
+export { CarHistoryModule } from './cars/history/history.module';
 export { CarsModule } from './cars/my-cars/cars/cars.module';
 export {
   CAR_REMINDERS_CONSUMER,
@@ -146,6 +147,7 @@ export { BOOKING_CANCELLED_CONSUMER } from './notifications/booking-cancelled/bo
 export { BOOKING_CONFIRMED_CONSUMER } from './notifications/booking-confirmed/booking-confirmed.fan-out';
 export { BOOKING_LAPSED_CONSUMER } from './notifications/booking-lapsed/booking-lapsed.fan-out';
 export { Brevo } from './notifications/brevo/brevo';
+export { CAR_TRANSFER_ACCEPTED_CONSUMER } from './notifications/car-transfer-accepted/car-transfer-accepted.fan-out';
 export { CATALOGUE_JOB_DECIDED_CONSUMER } from './notifications/catalogue-job-decided/catalogue-job-decided.fan-out';
 export { CATALOGUE_JOB_PENDING_CONSUMER } from './notifications/catalogue-job-pending/catalogue-job-pending.fan-out';
 export { DOCUMENT_REFUSED_CONSUMER } from './notifications/document-refused/document-refused.fan-out';
