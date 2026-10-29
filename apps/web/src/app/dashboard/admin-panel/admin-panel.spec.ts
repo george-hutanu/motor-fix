@@ -416,9 +416,7 @@ describe('AdminPanel', () => {
       const failed = tile(element, label);
       expect(text(failed, 'number')).toBe('—');
       expect(failed.textContent).toContain('Cifrele nu au putut fi citite');
-      expect(failed.getAttribute('aria-label')).toBe(
-        `${label}, —, Cifrele nu au putut fi citite`,
-      );
+      expect(failed.getAttribute('aria-label')).toBe(`${label}, —`);
       expect(failed.getAttribute('aria-busy')).not.toBe('true');
     }
     expect(text(tile(element, 'Recenzii raportate'), 'line')).toBe('în curând');
@@ -446,43 +444,160 @@ describe('AdminPanel', () => {
     );
   });
 
-  it('opens the reason of a failed tile by focus or tap, not by hover only', async () => {
-    answer = async () => {
-      throw new HttpErrorResponse({ status: 503 });
-    };
-    const element = await open();
+  // @traces 1263-admin-dashboard-customise-FR-010
+  // @traces 1263-admin-dashboard-customise-FR-015
+  describe('the reason of a failed tile', () => {
+    async function failed(language: 'ro' | 'en' = 'ro') {
+      answer = async () => {
+        throw new HttpErrorResponse({ status: 503 });
+      };
+      const element = await open(language);
+      const group = tile(
+        element,
+        language === 'ro' ? LISTED : 'Garages listed',
+      );
+      const button = group.querySelector('button') as HTMLButtonElement;
+      const tip = group.querySelector('[role="tooltip"]') as HTMLElement;
+      return { button, element, group, tip };
+    }
 
-    const tip = tile(element, LISTED).querySelector<HTMLButtonElement>(
-      'button',
-    ) as HTMLButtonElement;
-    expect(tip).not.toBeNull();
-    expect(tip.getAttribute('aria-expanded')).toBe('false');
+    const key = (target: HTMLElement, name: string) =>
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', { bubbles: true, key: name }),
+      );
 
-    tip.click();
-    await settle();
+    it('opens on a press and closes on the next, so the button stays pressable', async () => {
+      const { button, tip } = await failed();
+      expect(tip.hidden).toBe(true);
 
-    expect(tip.getAttribute('aria-expanded')).toBe('true');
+      button.click();
+      await settle();
+      expect([button.getAttribute('aria-expanded'), tip.hidden]).toEqual([
+        'true',
+        false,
+      ]);
+
+      button.click();
+      await settle();
+      expect([button.getAttribute('aria-expanded'), tip.hidden]).toEqual([
+        'false',
+        true,
+      ]);
+    });
+
+    it('opens nothing on focus alone', async () => {
+      const { button, tip } = await failed();
+
+      button.focus();
+      button.dispatchEvent(new FocusEvent('focus'));
+      await settle();
+
+      expect([button.getAttribute('aria-expanded'), tip.hidden]).toEqual([
+        'false',
+        true,
+      ]);
+    });
+
+    it('closes on Escape', async () => {
+      const { button, tip } = await failed();
+      button.click();
+      await settle();
+
+      key(button, 'Escape');
+      await settle();
+
+      expect(tip.hidden).toBe(true);
+    });
+
+    it('closes when focus leaves the tile', async () => {
+      const { button, tip } = await failed();
+      button.click();
+      await settle();
+
+      button.dispatchEvent(new FocusEvent('blur'));
+      await settle();
+
+      expect(tip.hidden).toBe(true);
+    });
+
+    it('opens one tile at a time', async () => {
+      const { button, element, tip } = await failed();
+      const other = tile(element, 'Programări');
+      button.click();
+      await settle();
+
+      (other.querySelector('button') as HTMLButtonElement).click();
+      await settle();
+
+      expect(tip.hidden).toBe(true);
+      expect(
+        (other.querySelector('[role="tooltip"]') as HTMLElement).hidden,
+      ).toBe(false);
+    });
   });
 
-  it('ties each failed tile’s reason to its button for assistive tech', async () => {
-    answer = async () => {
-      throw new HttpErrorResponse({ status: 503 });
-    };
-    const element = await open();
+  // @traces 1263-admin-dashboard-customise-FR-011
+  // @traces 1263-admin-dashboard-customise-FR-014
+  // @traces 1263-admin-dashboard-customise-FR-015
+  describe('the names of a failed tile', () => {
+    const REASON = 'Cifrele nu au putut fi citite';
 
-    const buttons = Array.from(
-      element.querySelectorAll<HTMLButtonElement>('[role="group"] button'),
-    );
-    expect(buttons).toHaveLength(COMPUTED.length);
-    const ids = buttons.map((b) => b.getAttribute('aria-describedby'));
-    expect(new Set(ids).size).toBe(COMPUTED.length);
-    for (const [i, id] of ids.entries()) {
+    async function failed(language: 'ro' | 'en' = 'ro') {
+      answer = async () => {
+        throw new HttpErrorResponse({ status: 503 });
+      };
+      const element = await open(language);
+      const group = tile(
+        element,
+        language === 'ro' ? LISTED : 'Garages listed',
+      );
+      const button = group.querySelector('button') as HTMLButtonElement;
+      return { button, element, group };
+    }
+
+    it('names the button De ce? and keeps the reason in the tip alone while closed', async () => {
+      const { button, element, group } = await failed();
+
+      expect(button.getAttribute('aria-label')).toBe('De ce?');
+      expect(button.getAttribute('aria-describedby')).toBeNull();
+      expect(group.getAttribute('aria-label')).toBe(`${LISTED}, —`);
+      const carriers = Array.from(element.querySelectorAll('[aria-label]'))
+        .map((node) => node.getAttribute('aria-label') ?? '')
+        .filter((label) => label.includes(REASON));
+      expect(carriers).toEqual([]);
+    });
+
+    it('joins the reason to the tile name and the button while the tip shows', async () => {
+      const { button, element, group } = await failed();
+
+      button.click();
+      await settle();
+
+      expect(group.getAttribute('aria-label')).toBe(`${LISTED}, —, ${REASON}`);
+      const id = button.getAttribute('aria-describedby');
       const described = element.querySelector(`#${id}`);
       expect(described?.getAttribute('role')).toBe('tooltip');
-      expect(described?.closest('[role="group"]')).toBe(
-        buttons[i]?.closest('[role="group"]'),
-      );
-    }
+      expect(described?.textContent?.trim()).toBe(REASON);
+      expect(described?.closest('[role="group"]')).toBe(group);
+    });
+
+    it('gives every failed tile its own tip', async () => {
+      answer = async () => {
+        throw new HttpErrorResponse({ status: 503 });
+      };
+      const element = await open();
+      const tips = Array.from(
+        element.querySelectorAll('[role="group"] [role="tooltip"]'),
+      ).map((tip) => tip.id);
+
+      expect(new Set(tips).size).toBe(COMPUTED.length);
+    });
+
+    it('names the button Why? in English', async () => {
+      const { button } = await failed('en');
+
+      expect(button.getAttribute('aria-label')).toBe('Why?');
+    });
   });
 
   it('switches labels, lines and grouping to English without a reload', async () => {

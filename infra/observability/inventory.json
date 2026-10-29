@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 218,
+    "count": 221,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -795,14 +795,25 @@
     },
     {
       "kind": "product-counter",
-      "name": "mcp_tool_calls_total{tool=~\"list_quote_requests|get_schedule|get_day_sheet|get_stats|decline_quote_request\"}",
+      "name": "mcp_tool_calls_total{tool=~\"list_quote_requests|get_schedule|get_day_sheet|get_stats|decline_quote_request|confirm_action\"}",
       "source": "libs/mcp-tools/src/catalogue.ts",
       "dashboard": "motorfix-mcp",
       "alerts": [
         "mcp-tool-errors"
       ],
-      "reason": "the four garage read tools count under mcp_tool_calls_total{tool,outcome} and mcp_tool_call_duration_seconds{tool}, one McpToolCall log line and an mcp.tool <name> span per call, like every tool; the existing mcp-tool-errors alert sums every tool; reads write no audit row; decline_quote_request (ST-345) acts, so its decline writes the audit row marked via the assistant and counts in motorfix_request_declines_total",
+      "reason": "the four garage read tools count under mcp_tool_calls_total{tool,outcome} and mcp_tool_call_duration_seconds{tool}, one McpToolCall log line and an mcp.tool <name> span per call, like every tool; the existing mcp-tool-errors alert sums every tool; reads write no audit row; decline_quote_request (ST-345) acts, so its decline writes the audit row marked via the assistant and counts in motorfix_request_declines_total; since ST-1253 decline_quote_request first answers confirmation_required and confirm_action carries the action out, both counted here, with each confirmation step in motorfix_assistant_confirmations_total",
       "story": "ST-374"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_assistant_confirmations_total",
+      "source": "libs/domain/src/auth/assistant-confirmations/assistant-confirmations.metrics.ts",
+      "dashboard": "motorfix-mcp",
+      "alerts": [
+        "mcp-tool-errors"
+      ],
+      "reason": "on the MCP dashboard panel \"Assistant confirmations by tool and outcome\" (id 34), counts each step of an assistant action the person must confirm by tool and outcome (opened, confirmed, refused, expired, mismatch, void, replayed, failed), with no identifiers in the labels; one AssistantConfirmations log line per step naming the confirmation, grant and tool, never the summary or the arguments, and the motorfix.confirmation.outcome attribute on the call span; mcp-tool-errors fires when failed and mismatch pass 20% of at least 5 steps in 10 minutes",
+      "story": "ST-1253"
     },
     {
       "kind": "product-counter",
@@ -934,6 +945,15 @@
       "alerts": "none",
       "reason": "counts each garage suspension by cause (recheck_failed, documents_overdue, admin, report_confirmed); the audit holds who and why; a count has no failure to alert on, the admin-garage-suspension endpoint entry owns the error and latency alerts",
       "story": "ST-49"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_dashboard_layout_writes_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each dashboard layout save, reset and refused key by role and outcome (saved, reset, refused); not started at 0, so the API stays under its 150 series; a refused shape is a 400 on the endpoint entry's request metric; a count has no failure to alert on, the me-dashboard-layouts endpoint entry owns the error and latency alerts",
+      "story": "ST-1263"
     },
     {
       "kind": "product-counter",
@@ -1659,6 +1679,19 @@
       ],
       "reason": "a read only: it changes nothing, so no product counter or audit row; its refusals and latency show on the request-duration metric by route and status code, each refusal writes one LegalCheck warn line with its code and the actor's role, its spans come from the HTTP and Prisma auto-instrumentation, and the API-wide error and latency rules cover it",
       "story": "ST-210"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-dashboard-layouts",
+      "source": "libs/domain/src/auth/dashboard-layouts/dashboard-layouts.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/dashboard-layouts/:role",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "GET, PUT and DELETE show on the request-duration metric by route and status code; each save and reset writes a dashboard_layout.updated event and is counted by the motorfix_dashboard_layout_writes_total entry, a refused key logged once as a warn with the role and the problem; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-1263"
     },
     {
       "kind": "endpoint",

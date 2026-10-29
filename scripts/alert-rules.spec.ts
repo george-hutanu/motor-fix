@@ -1108,6 +1108,19 @@ describe('the inventory lists the rules', () => {
     );
     expect(waiting.map((e) => `${e.kind} ${e.name}`)).toEqual([]);
   });
+
+  // @traces 1253-FR-010
+  it('a reason that says which rule fires names one of its own alerts', () => {
+    const wrong = inventory.entries.flatMap((e) =>
+      [...(e.reason ?? '').matchAll(/\b([a-z0-9]+(?:-[a-z0-9]+)+) fires\b/g)]
+        .map((m) => m[1])
+        .filter(
+          (uid) => !(Array.isArray(e.alerts) ? e.alerts : []).includes(uid),
+        )
+        .map((uid) => `${e.kind} ${e.name}: ${uid}`),
+    );
+    expect(wrong).toEqual([]);
+  });
 });
 
 type ContactPoint = {

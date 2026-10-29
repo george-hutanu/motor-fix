@@ -240,30 +240,28 @@ test.describe('the tab bar under the sign-in sheet', () => {
     const behind = await page.evaluate(() => window.scrollY);
     const last = dialog.getByRole('button').last();
     // The sheet stops at 92% of the screen; its own body scrolls the rest in.
-    // It is scrolled again until the button is in: the sheet may still be
-    // sliding up or filling in when the first scroll lands.
-    const bottom = async () => {
-      await last.evaluate((button) => {
+    // The scroll and every measure run together and are retried as one: the
+    // sheet may still be sliding up or filling in after a scroll lands, so a
+    // measure taken apart from its scroll can see the button pushed out again.
+    await expect(async () => {
+      const at = await last.evaluate((button) => {
         let box = button.parentElement;
         while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) {
           box = box.parentElement;
         }
         if (box) box.scrollTop = box.scrollHeight;
+        const { x, y, width, height } = button.getBoundingClientRect();
+        const hit = document.elementFromPoint(x + width / 2, y + height / 2);
+        return {
+          bottom: y + height,
+          onTop: hit !== null && button.contains(hit),
+          top: y,
+        };
       });
-      const box = await last.boundingBox();
-      return box ? box.y + box.height : Number.POSITIVE_INFINITY;
-    };
-    await expect.poll(bottom).toBeLessThanOrEqual(640);
-    const at = await last.boundingBox();
-    expect(at).not.toBeNull();
-    expect(at?.y ?? -1).toBeGreaterThanOrEqual(0);
-    expect((at?.y ?? 0) + (at?.height ?? 0)).toBeLessThanOrEqual(640);
-    const onTop = await last.evaluate((button) => {
-      const { x, y, width, height } = button.getBoundingClientRect();
-      const hit = document.elementFromPoint(x + width / 2, y + height / 2);
-      return hit !== null && button.contains(hit);
-    });
-    expect(onTop).toBe(true);
+      expect(at.top).toBeGreaterThanOrEqual(0);
+      expect(at.bottom).toBeLessThanOrEqual(640);
+      expect(at.onTop).toBe(true);
+    }).toPass();
     expect(await page.evaluate(() => window.scrollY)).toBe(behind);
   });
 

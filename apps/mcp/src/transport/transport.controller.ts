@@ -3,6 +3,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   AccountLoader,
+  AssistantConfirmations,
   AuditService,
   countRateLimitRefusal,
   type createPrisma,
@@ -81,6 +82,7 @@ export class TransportController {
     this.toolNames = tools.map((t) => t.name);
     this.ctx = {
       accounts,
+      confirmations: new AssistantConfirmations(prisma),
       featureOn: (garageId, key) => featureOn(prisma, garageId, key),
       garage: {
         daySheet: new DaySheetService(prisma),

@@ -25,8 +25,9 @@ features:
   - 223-request-act-notifications
   - 1257-quote-reminders
   - 1258-driver-cancel
-  - 099-overview-sections
+  - 1253-assistant-confirm
   - 1385-cancel-from-requests
+  - 099-overview-sections
 ---
 
 # Capability: Quotes
@@ -315,9 +316,9 @@ _From 345-decline-request._
 
 _From 345-decline-request._
 
-### 345-FR-017 — The MCP garage tools MUST gain `decline_quote_request` (`acts: true`, scope `motorfix.act`, capability `garage.requests`, annotations `readOnlyHint: false`, `destructiveHint: true`, `idempotentHint: false`), input `{ requestId: uuid, reason: one of the four }`, running the same use case as the owner's garage actor and answering the recipient's status, `declinedAt` and `declineReason`; its description MUST tell the assistant to confirm the request and the reason with the person before calling; a refused state or actor answers the API's error as the registry maps errors today; the audit entry carries `via_assistant` (221-FR-001's rule for the assistant). The maintenance switch refuses it as every acting tool.
+### 1253-FR-008 — Every acting tool already in the catalogue — today `decline_quote_request` — MUST go through this pipeline: its use case gains a read-only preview that runs the same checks as its write without a lock or a write (one use case per rule, Constitution V: the checks are shared, not copied), its summary names the garage, the driver's first name, the car, the request's time and the reason, its first answer is `confirmation_required` and its declared output is answered by `confirm_action`. A catalogue-wide test MUST fail when any tool with `acts: true`, called once with valid arguments, calls its use case's write or answers anything but `confirmation_required` (or an error of FR-002). (AC 8; modifies 345-FR-017; the decision of 2026-10-16 on the switch-off is superseded, see Clarifications)
 
-_From 345-decline-request._
+_From 1253-assistant-confirm._
 
 ### 345-FR-018 — Observability (AGENTS.md): the new endpoint, the `quote-timers` queue and the `decline-window` timer MUST be listed in `infra/observability/inventory.json`; the decline (a product action) MUST emit one counter of declines with the outcome (`declined`, `already_answered`, `request_not_open`, `invalid`) and the reason as an attribute; the window job one counter of windows closed with the outcome (`sent`, `muted` when no channel built a message, `skipped_undone`, `skipped_closed`, `already_told`) and whether the sweep ran it; one structured log line per decline and per window with the recipient id and the outcome, never the description, the plate or a phone. The PR's Observability section names them, the dashboard panel being the dashboards story's while the repository holds no dashboard file, and names the alert for a sweep that keeps finding overdue windows or says why none is added.
 
@@ -879,4 +880,5 @@ _From 1385-cancel-from-requests._
 - `389-FR-003` — superseded by `150-FR-006` (2026-10-26)
 - `389-FR-008` — superseded by `150-FR-003` (2026-10-26)
 - `058-FR-012` — superseded by `150-FR-004` (2026-10-26)
+- `345-FR-017` — superseded by `1253-FR-008` (2026-10-26)
 - `343-FR-006` — superseded by `099-FR-014` (2026-10-26)

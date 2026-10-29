@@ -5,7 +5,12 @@ import type { AddressInfo } from 'node:net';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { PRIVACY_VERSION, TERMS_VERSION } from '@motor-fix/contracts';
-import { AuditService, createPrisma, ROUTE_LIMITS } from '@motor-fix/domain';
+import {
+  AuditService,
+  createPrisma,
+  ROUTE_LIMITS,
+  voidAssistantConfirmations,
+} from '@motor-fix/domain';
 import { databaseTurn, TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import { catalogue, defineTool } from '@motor-fix/mcp-tools';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
@@ -186,6 +191,7 @@ describe('the MCP endpoint', () => {
 
     expect(tools.map((t) => t.name)).toEqual([
       'get_my_account',
+      'confirm_action',
       'touch_account',
     ]);
     expect(result.structuredContent).toEqual({
@@ -208,6 +214,7 @@ describe('the MCP endpoint', () => {
 
     expect(tools.map((t) => t.name).sort()).toEqual(
       [
+        'confirm_action',
         'decline_quote_request',
         'get_my_account',
         ...GARAGE_READS.map(([name]) => name),
@@ -393,6 +400,297 @@ describe('the MCP endpoint', () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: 'ok' });
+  });
+});
+
+// A driver's open request sent to the owner's garage, not answered yet.
+async function openRequestFor(ownerId: string) {
+  const { garageId } = await prisma.garageMember.findFirstOrThrow({
+    where: { accountId: ownerId },
+  });
+  const driver = await prisma.account.create({
+    data: {
+      consents: accepted(),
+      language: 'ro',
+      lastRole: 'driver',
+      name: 'Andrei Ion Marin',
+      roles: { create: [{ role: 'driver' }] },
+    },
+  });
+  const key = `mini-${Date.now()}-${Math.random()}`;
+  const brand = await prisma.brand.create({
+    data: { key, name: key, slug: key },
+  });
+  const car = await prisma.car.create({
+    data: {
+      brandId: brand.id,
+      engine: '2.0 turbo',
+      fuel: 'petrol',
+      idempotencyKey: key,
+      model: 'Cooper S',
+      odometerKm: 84_000,
+      ownerId: driver.id,
+      plate: 'B123ABC',
+      year: 2019,
+    },
+  });
+  const request = await prisma.quoteRequest.create({
+    data: {
+      carBrand: 'Mini',
+      carEngine: '2.0 turbo',
+      carFuel: 'petrol',
+      carId: car.id,
+      carModel: 'Cooper S',
+      carYear: 2019,
+      description: 'Scârțâie la frânare',
+      driverId: driver.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 3_600_000),
+      idempotencyKey: key,
+      status: 'sent',
+    },
+  });
+  const recipient = await prisma.requestRecipient.create({
+    data: { garageId, requestId: request.id, source: 'search' },
+  });
+  return { driver, garageId, recipient, request };
+}
+
+const DECLINE = 'decline_quote_request';
+const answerOf = (result: unknown) =>
+  (result as { structuredContent: Record<string, unknown> }).structuredContent;
+const textOf = (result: unknown) =>
+  JSON.parse((result as { content: { text: string }[] }).content[0].text);
+
+async function proposed(ownerId: string) {
+  const seeded = await openRequestFor(ownerId);
+  const args = { reason: 'fully_booked', requestId: seeded.request.id };
+  const client = await connect(await tokenFor(ownerId));
+  const first = answerOf(
+    await client.callTool({ arguments: args, name: DECLINE }),
+  );
+  await client.close();
+  return { args, first, ...seeded };
+}
+
+const confirm = (
+  client: Client,
+  confirmationId: unknown,
+  args: Record<string, unknown>,
+  confirmed = true,
+) =>
+  client.callTool({
+    arguments: { arguments: args, confirmationId, confirmed },
+    name: 'confirm_action',
+  });
+
+const declinedEvents = async (requestId: string) =>
+  (
+    await prisma.outboxEvent.findMany({ where: { kind: 'request.declined' } })
+  ).filter(
+    (e) => (e.payload as { requestId?: string }).requestId === requestId,
+  );
+
+const recipientNow = (id: string) =>
+  prisma.requestRecipient.findUniqueOrThrow({ where: { id } });
+
+const confirmationNow = (id: unknown) =>
+  prisma.assistantConfirmation.findUniqueOrThrow({ where: { id: String(id) } });
+
+// @traces 1253-FR-001 1253-FR-004 1253-FR-006 1253-FR-011
+describe('an acting tool through the MCP endpoint', () => {
+  it('answers confirmation_required first and writes nothing', async () => {
+    const { id } = await newOwner();
+
+    const { first, recipient, request } = await proposed(id);
+
+    expect(first).toMatchObject({
+      status: 'confirmation_required',
+      tool: DECLINE,
+    });
+    expect(first['summary']).toContain('Atelier Dinamo');
+    expect(first['summary']).toContain('Andrei');
+    expect(first['summary']).toContain('Mini Cooper S (2019)');
+    expect(first['summary']).not.toMatch(/B123ABC|Marin/);
+    expect(await recipientNow(recipient.id)).toMatchObject({
+      declinedAt: null,
+      status: 'waiting',
+    });
+    expect(await declinedEvents(request.id)).toEqual([]);
+    expect(await confirmationNow(first['confirmationId'])).toMatchObject({
+      status: 'waiting',
+      tool: DECLINE,
+    });
+  });
+
+  it('declines once on the yes, as the screen does, stamped as the assistant', async () => {
+    const owner = await newOwner();
+    const { args, first, garageId, driver, recipient, request } =
+      await proposed(owner.id);
+    const client = await connect(await tokenFor(owner.id), {
+      'x-request-id': 'confirm-request-9',
+    });
+
+    const yes = await confirm(client, first['confirmationId'], args);
+
+    expect(yes.isError).toBeFalsy();
+    expect(answerOf(yes)).toMatchObject({
+      declineReason: 'fully_booked',
+      status: 'declined',
+    });
+    expect(await recipientNow(recipient.id)).toMatchObject({
+      declineReason: 'fully_booked',
+      status: 'declined',
+    });
+    const events = await declinedEvents(request.id);
+    expect(events.map((e) => e.payload)).toEqual([
+      {
+        driverId: driver.id,
+        from: 'waiting',
+        garageId,
+        reason: 'fully_booked',
+        recipientId: recipient.id,
+        requestId: request.id,
+        to: 'declined',
+      },
+    ]);
+    const grant = await prisma.assistantGrant.findFirstOrThrow({
+      where: { accountId: owner.id },
+    });
+    expect(
+      await prisma.activityLog.findMany({
+        where: { subjectId: recipient.id },
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        assistantGrantId: grant.id,
+        requestId: 'confirm-request-9',
+        viaAssistant: true,
+      }),
+    ]);
+    expect(await confirmationNow(first['confirmationId'])).toMatchObject({
+      status: 'done',
+    });
+    await client.close();
+  });
+
+  it('answers a repeated yes and two at once with the first outcome, running it once', async () => {
+    const owner = await newOwner();
+    const { args, first, recipient, request } = await proposed(owner.id);
+    const client = await connect(await tokenFor(owner.id));
+
+    const [a, b] = await Promise.all([
+      confirm(client, first['confirmationId'], args),
+      confirm(client, first['confirmationId'], args),
+    ]);
+    const again = await confirm(client, first['confirmationId'], args);
+
+    expect(answerOf(a)).toEqual(answerOf(b));
+    expect(answerOf(again)).toEqual(answerOf(a));
+    expect(await declinedEvents(request.id)).toHaveLength(1);
+    expect(
+      await prisma.activityLog.count({ where: { subjectId: recipient.id } }),
+    ).toBe(1);
+    await client.close();
+  });
+
+  it('lists confirm_action and no output schema on the acting tool', async () => {
+    const { id } = await newOwner();
+    const client = await connect(await tokenFor(id));
+
+    const { tools } = await client.listTools();
+
+    const byName = new Map(tools.map((t) => [t.name, t]));
+    expect(byName.get('confirm_action')).toBeDefined();
+    expect(byName.get('confirm_action')).not.toHaveProperty('outputSchema');
+    expect(byName.get(DECLINE)).not.toHaveProperty('outputSchema');
+    expect(byName.get('get_stats')).toHaveProperty('outputSchema');
+    await client.close();
+  });
+});
+
+// @traces 1253-FR-005 1253-FR-007
+describe('a confirmation the person can no longer give', () => {
+  it('refuses the yes after the grant is revoked, the row void and nothing sent', async () => {
+    const owner = await newOwner();
+    const { args, first, recipient } = await proposed(owner.id);
+    const token = await tokenFor(owner.id);
+    // As revokeAssistantGrants does it: the grants and their waiting rows
+    // in one transaction.
+    await prisma.$transaction(async (tx) => {
+      const grants = await tx.assistantGrant.updateManyAndReturn({
+        data: { revokedAt: new Date(), revokedBy: 'person' },
+        select: { id: true },
+        where: { accountId: owner.id },
+      });
+      await voidAssistantConfirmations(tx, {
+        grantIds: grants.map((g) => g.id),
+      });
+    });
+
+    const res = await fetch(`${base}/mcp`, {
+      body: JSON.stringify({
+        id: 2,
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: {
+          arguments: {
+            arguments: args,
+            confirmationId: first['confirmationId'],
+            confirmed: true,
+          },
+          name: 'confirm_action',
+        },
+      }),
+      headers: {
+        accept: 'application/json, text/event-stream',
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(401);
+    expect(await res.json()).toMatchObject({ code: 'assistant_grant_revoked' });
+    expect(await confirmationNow(first['confirmationId'])).toMatchObject({
+      status: 'void',
+    });
+    expect(await recipientNow(recipient.id)).toMatchObject({
+      status: 'waiting',
+    });
+  });
+
+  it('answers assistant_act_off with the switch off and voids the waiting row; a later yes sends nothing', async () => {
+    const owner = await newOwner();
+    const { args, first, recipient } = await proposed(owner.id);
+    await prisma.account.update({
+      data: { assistantCanAct: false },
+      where: { id: owner.id },
+    });
+    const client = await connect(await tokenFor(owner.id));
+
+    const declined = await client.callTool({ arguments: args, name: DECLINE });
+    const off = await confirm(client, first['confirmationId'], args);
+
+    expect(textOf(declined)).toMatchObject({ code: 'assistant_act_off' });
+    expect(answerOf(off)).toMatchObject({ code: 'assistant_act_off' });
+    expect(await confirmationNow(first['confirmationId'])).toMatchObject({
+      status: 'void',
+    });
+
+    await prisma.account.update({
+      data: { assistantCanAct: true },
+      where: { id: owner.id },
+    });
+    const late = await confirm(client, first['confirmationId'], args);
+
+    expect(answerOf(late)).toMatchObject({
+      reason: 'void',
+      status: 'not_sent',
+    });
+    expect(await recipientNow(recipient.id)).toMatchObject({
+      status: 'waiting',
+    });
+    await client.close();
   });
 });
 

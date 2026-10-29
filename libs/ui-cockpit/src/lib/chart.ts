@@ -176,17 +176,21 @@ abstract class CockpitChart {
       // Chart.js measures its tick labels once and keeps the widths for the
       // chart's life: a chart drawn before the web fonts arrived is drawn
       // again, new, so its ticks and plot are laid out in them.
+      // A face is fetched only when the page first uses it, so the set can
+      // read `loaded` while the chart's face is still on its way: every face
+      // that arrives later redraws it too.
       const fonts = this.document.fonts as FontFaceSet | undefined;
-      if (fonts && fonts.status !== 'loaded') {
-        fonts.ready.then(() => {
-          if (!this.chart) return;
-          this.destroyChart();
-          redraw();
-        });
-      }
+      const remeasure = () => {
+        if (!this.chart) return;
+        this.destroyChart();
+        redraw();
+      };
+      if (fonts && fonts.status !== 'loaded') fonts.ready.then(remeasure);
+      fonts?.addEventListener?.('loadingdone', remeasure);
       destroyRef.onDestroy(() => {
         schemeQuery.removeEventListener('change', redraw);
         this.document.removeEventListener('pointerdown', tapOutside);
+        fonts?.removeEventListener?.('loadingdone', remeasure);
       });
     });
   }

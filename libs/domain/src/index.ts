@@ -25,7 +25,15 @@ export {
 export { AccountsService } from './auth/accounts.service';
 export { CurrentActor, Public, Requires } from './auth/actor.guard';
 export { assistantBroker } from './auth/assistant/assistant.service';
+export {
+  AssistantConfirmations,
+  type Decision as ConfirmationDecision,
+  judge as judgeConfirmation,
+  type Tx,
+  voidAssistantConfirmations,
+} from './auth/assistant-confirmations/assistant-confirmations';
 export { AuthModule } from './auth/auth.module';
+export { DashboardLayoutsModule } from './auth/dashboard-layouts/dashboard-layouts.module';
 export { DATA_EXPORT_CONSUMER } from './auth/data-export/data-export.builder';
 export { DataExportModule } from './auth/data-export/data-export.module';
 export { EmailConfirmationModule } from './auth/email-confirmation/email-confirmation.module';
@@ -41,6 +49,7 @@ export { PhoneSignInModule } from './auth/phone-sign-in/phone-sign-in.module';
 export { type Actor, assertGarage, assertOwner } from './auth/policy';
 export { createPrisma, PRISMA } from './auth/prisma';
 export { signInLimitConfig } from './auth/qa-sign-in-limit';
+export { local as bucharestTime } from './bucharest';
 export { WarmModule } from './cache/warm/warm.module';
 export { warmCache } from './cache/warm-up/warm-up';
 export { CAR_ACCOUNT_DELETED_CONSUMER } from './cars/account-deleted/account-deleted';
@@ -145,7 +154,10 @@ export { ACCOUNT_CLOSED_CONSUMER } from './quotes/account-closed/account-closed'
 export { AccountClosedModule } from './quotes/account-closed/account-closed.module';
 export { BOOKING_TIMERS_CONSUMER } from './quotes/booking-timers/booking-timers';
 export { BookingTimersModule } from './quotes/booking-timers/booking-timers.module';
-export { DeclineService } from './quotes/decline/decline.service';
+export {
+  type DeclinePreview,
+  DeclineService,
+} from './quotes/decline/decline.service';
 export { DECLINE_WINDOW_CONSUMER } from './quotes/decline-window/decline-window';
 export { DeclineWindowModule } from './quotes/decline-window/decline-window.module';
 export { GarageRequestsService } from './quotes/garage-requests/garage-requests.service';

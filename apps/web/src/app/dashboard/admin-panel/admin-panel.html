@@ -1,7 +1,7 @@
 @for (tile of tiles(); track tile.label; let i = $index) {
   <div
     role="group"
-    [attr.aria-label]="tile.name"
+    [attr.aria-label]="nameOf(tile)"
     [attr.aria-busy]="tile.state === 'loading' ? 'true' : null"
   >
     <span class="label">{{ tile.label }}</span>
@@ -15,11 +15,10 @@
           {{ tile.number }}
           <button
             type="button"
-            [attr.aria-label]="tile.line"
+            [attr.aria-label]="why()"
             [attr.aria-expanded]="tip() === tile.label"
-            [attr.aria-describedby]="'mf-admin-tip-' + i"
-            (click)="tip.set(tile.label)"
-            (focus)="tip.set(tile.label)"
+            [attr.aria-describedby]="tip() === tile.label ? 'mf-admin-tip-' + i : null"
+            (click)="toggle(tile.label)"
             (blur)="tip.set(null)"
             (keydown.escape)="tip.set(null)"
           >

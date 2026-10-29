@@ -65,7 +65,7 @@
         },
         {
           "uid": "mcp-tool-errors",
-          "title": "MCP tool error rate",
+          "title": "MCP tool or confirmation error rate",
           "condition": "B",
           "for": "0s",
           "noDataState": "OK",
@@ -74,9 +74,9 @@
             "service": "mcp"
           },
           "annotations": {
-            "summary": "More than 20% of MCP tool calls failed over 10 minutes, with at least 10 calls ({{ $labels.deployment_environment }}).",
+            "summary": "More than 20% of MCP tool calls failed (at least 10 calls), or more than 20% of assistant confirmation steps failed or met changed arguments (at least 5), over 10 minutes ({{ $labels.deployment_environment }}).",
             "dashboard_uid": "motorfix-mcp",
-            "runbook": "Open the MCP dashboard: find the failing tool, read its error logs and traces, and roll back the last deploy if it brought the errors."
+            "runbook": "Open the MCP dashboard. Tool errors: find the failing tool, read its error logs and traces, and roll back the last deploy if it brought the errors. Confirmations (panel \"Assistant confirmations by tool and outcome\"): failed means the use case refused at the yes (read its error logs by confirmationId), mismatch means assistants change the arguments between the two calls (read the tool description they follow)."
           },
           "data": [
             {
@@ -88,7 +88,7 @@
               },
               "model": {
                 "refId": "A",
-                "expr": "(sum by (deployment_environment) (increase(mcp_tool_calls_total{job=~\"(.+/)?mcp\", outcome=\"error\"}[10m])) / sum by (deployment_environment) (increase(mcp_tool_calls_total{job=~\"(.+/)?mcp\"}[10m]))) and on (deployment_environment) (sum by (deployment_environment) (increase(mcp_tool_calls_total{job=~\"(.+/)?mcp\"}[10m])) >= 10)",
+                "expr": "max by (deployment_environment) (label_replace((sum by (deployment_environment) (increase(mcp_tool_calls_total{job=~\"(.+/)?mcp\", outcome=\"error\"}[10m])) / sum by (deployment_environment) (increase(mcp_tool_calls_total{job=~\"(.+/)?mcp\"}[10m]))) and on (deployment_environment) (sum by (deployment_environment) (increase(mcp_tool_calls_total{job=~\"(.+/)?mcp\"}[10m])) >= 10), \"signal\", \"tools\", \"\", \"\") or label_replace((sum by (deployment_environment) (increase(motorfix_assistant_confirmations_total{job=~\"(.+/)?mcp\", outcome=~\"failed|mismatch\"}[10m])) / sum by (deployment_environment) (increase(motorfix_assistant_confirmations_total{job=~\"(.+/)?mcp\"}[10m]))) and on (deployment_environment) (sum by (deployment_environment) (increase(motorfix_assistant_confirmations_total{job=~\"(.+/)?mcp\"}[10m])) >= 5), \"signal\", \"confirmations\", \"\", \"\"))",
                 "instant": true,
                 "intervalMs": 60000,
                 "maxDataPoints": 43200
