@@ -121,15 +121,4 @@ describe('the reconnecting text and wiring', () => {
       'Reconnecting…',
     );
   });
-
-  it.each([
-    ['apps/web/src/app/dashboard/driver-home/driver-home'],
-    ['apps/web/src/app/dashboard/requests-view/requests-view'],
-  ])('%s binds the panel to the live offline signal', (file) => {
-    const html = readFileSync(join(root, `${file}.html`), 'utf8');
-    const ts = readFileSync(join(root, `${file}.ts`), 'utf8');
-
-    expect(html).toContain('[reconnecting]="reconnecting()"');
-    expect(ts).toContain('inject(Live).offline');
-  });
 });

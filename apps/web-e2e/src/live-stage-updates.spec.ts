@@ -32,15 +32,24 @@ const bucharestDay = new Intl.DateTimeFormat('en-CA', {
 async function ownJob(request: APIRequestContext) {
   const garage = bearer(await accessToken(request, MILITARI));
   const { bookingId, startsAt } = await confirmed(request);
-  const list = await request.get(
-    `/api/v1/garage/jobs?from=${bucharestDay.format(new Date(startsAt))}`,
-    { headers: garage },
-  );
-  expect(list.ok()).toBe(true);
-  const { items } = (await list.json()) as {
-    items: { bookingId: string; car: { odometerKm: number }; id: string }[];
-  };
-  const job = items.find((item) => item.bookingId === bookingId);
+  // Followed page by page: jobs in work sort first and could fill the first.
+  const from = bucharestDay.format(new Date(startsAt));
+  type Job = { bookingId: string; car: { odometerKm: number }; id: string };
+  let job: Job | undefined;
+  let cursor: string | null = null;
+  do {
+    const page = await request.get(
+      `/api/v1/garage/jobs?from=${from}${cursor ? `&cursor=${cursor}` : ''}`,
+      { headers: garage },
+    );
+    expect(page.ok()).toBe(true);
+    const body = (await page.json()) as {
+      items: Job[];
+      nextCursor: string | null;
+    };
+    job = body.items.find((item) => item.bookingId === bookingId);
+    cursor = body.nextCursor;
+  } while (!job && cursor);
   expect(job).toBeDefined();
   const id = job?.id ?? '';
   const call = async (verb: string, data?: object) => {
@@ -128,8 +137,9 @@ test.describe('each stage change within seconds @seeded', () => {
     test.setTimeout(120_000);
     const job = await ownJob(request);
     const home = await browser.newContext();
-    const list = await browser.newContext();
+    let list: BrowserContext | undefined;
     try {
+      list = await browser.newContext();
       const overview = await signedIn(home, '/app/driver');
       const requests = await signedIn(list, '/app/driver/requests');
       // A second tab of the overview's browser shares its stream.
@@ -170,7 +180,7 @@ test.describe('each stage change within seconds @seeded', () => {
         ).toBeVisible();
       });
 
-      // Done ranks after every request in work (274-FR-002): the panel
+      // Done ranks after every request in work: the panel
       // moves on to what the read now puts first.
       await job.call('finish');
       await onEach(pages, (shown) =>
@@ -192,7 +202,7 @@ test.describe('each stage change within seconds @seeded', () => {
     } finally {
       await job.close();
       await home.close();
-      await list.close();
+      await list?.close();
     }
   });
 
