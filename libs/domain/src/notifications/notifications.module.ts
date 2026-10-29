@@ -35,6 +35,11 @@ import {
 import { Brevo } from './brevo/brevo';
 import { BrevoWebhookController } from './brevo/brevo-webhook.controller';
 import {
+  CAR_TRANSFER_ACCEPTED_QUEUE,
+  type CarTransferAcceptedEvent,
+  CarTransferAcceptedFanOut,
+} from './car-transfer-accepted/car-transfer-accepted.fan-out';
+import {
   CATALOGUE_JOB_DECIDED_QUEUE,
   type CatalogueJobDecidedEvent,
   CatalogueJobDecidedFanOut,
@@ -164,6 +169,7 @@ const NEWS_WORKER = Symbol('NEWS_WORKER');
 const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
 const REVIEW_POSTED_WORKER = Symbol('REVIEW_POSTED_WORKER');
 const REVIEW_REPLIED_WORKER = Symbol('REVIEW_REPLIED_WORKER');
+const CAR_TRANSFER_ACCEPTED_WORKER = Symbol('CAR_TRANSFER_ACCEPTED_WORKER');
 const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
 const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const QUOTE_DECLINED_WORKER = Symbol('QUOTE_DECLINED_WORKER');
@@ -223,6 +229,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(REVIEW_REPLIED_WORKER)
     private readonly reviewRepliedWorker?: Worker | null,
+    @Optional()
+    @Inject(CAR_TRANSFER_ACCEPTED_WORKER)
+    private readonly carTransferAcceptedWorker?: Worker | null,
     @Optional()
     @Inject(QUOTE_RECEIVED_WORKER)
     private readonly quoteReceivedWorker?: Worker | null,
@@ -514,6 +523,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             );
             observeWorker(worker);
             logFinalFailure(worker, new Logger('ReviewReplied'));
+            return worker;
+          },
+        },
+        CarTransferAcceptedFanOut,
+        {
+          inject: [CarTransferAcceptedFanOut],
+          provide: CAR_TRANSFER_ACCEPTED_WORKER,
+          useFactory: (fanOut: CarTransferAcceptedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('CarTransferAccepted').error(
+                'PUBLIC_WEB_URL missing; car takeover messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<CarTransferAcceptedEvent>(
+              CAR_TRANSFER_ACCEPTED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('CarTransferAccepted'));
             return worker;
           },
         },
@@ -931,6 +967,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.requestReceivedWorker?.close();
     await this.reviewPostedWorker?.close();
     await this.reviewRepliedWorker?.close();
+    await this.carTransferAcceptedWorker?.close();
     await this.quoteReceivedWorker?.close();
     await this.quoteAcceptedWorker?.close();
     await this.quoteDeclinedWorker?.close();

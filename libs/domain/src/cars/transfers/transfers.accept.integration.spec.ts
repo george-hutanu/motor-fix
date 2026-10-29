@@ -177,7 +177,7 @@ describe('GET /car-transfers/:token with a session', () => {
 
     const own = await open(token, seller.auth);
     expect(own.status).toBe(403);
-    expect(own.body.error).toBe('own_transfer');
+    expect(own.body.code).toBe('own_transfer');
 
     await http()
       .post(`/cars/${car.id}/transfers/${transferId}/cancel`)
@@ -185,7 +185,7 @@ describe('GET /car-transfers/:token with a session', () => {
       .expect(204);
     const gone = await open(token, seller.auth);
     expect(gone.status).toBe(410);
-    expect(gone.body.error).toBe('transfer_cancelled');
+    expect(gone.body.code).toBe('transfer_cancelled');
   });
 
   it('answers 410 transfer_accepted once taken over, signed in or not', async () => {
@@ -196,7 +196,7 @@ describe('GET /car-transfers/:token with a session', () => {
     for (const auth of [undefined, maria.auth]) {
       const res = await open(token, auth);
       expect(res.status).toBe(410);
-      expect(res.body.error).toBe('transfer_accepted');
+      expect(res.body.code).toBe('transfer_accepted');
     }
   });
 
@@ -216,7 +216,7 @@ describe('POST /car-transfers/:token/accept', () => {
     const res = await accept(null, token);
 
     expect(res.status).toBe(401);
-    expect(res.body.error).toBe('sign_in_required');
+    expect(res.body.code).toBe('sign_in_required');
   });
 
   it.each(['x'.repeat(43), 'short'])(
@@ -227,7 +227,7 @@ describe('POST /car-transfers/:token/accept', () => {
       const res = await accept(maria.auth, token);
 
       expect(res.status).toBe(404);
-      expect(res.body.error).toBe('not_found');
+      expect(res.body.code).toBe('not_found');
     },
   );
 
@@ -438,7 +438,7 @@ describe('POST /car-transfers/:token/accept', () => {
     for (const auth of [maria.auth, ana.auth]) {
       const res = await accept(auth, token);
       expect(res.status).toBe(410);
-      expect(res.body.error).toBe('transfer_accepted');
+      expect(res.body.code).toBe('transfer_accepted');
     }
     expect(await snapshot(car.id, transferId)).toEqual(before);
   });
@@ -454,7 +454,7 @@ describe('POST /car-transfers/:token/accept', () => {
     ]);
 
     expect(answers.map((r) => r.status).sort()).toEqual([200, 410]);
-    expect(answers.find((r) => r.status === 410)?.body.error).toBe(
+    expect(answers.find((r) => r.status === 410)?.body.code).toBe(
       'transfer_accepted',
     );
     const open = (await world.ownerships(car.id)).filter((o) => !o.toDate);
@@ -475,7 +475,7 @@ describe('POST /car-transfers/:token/accept', () => {
     const res = await pending;
 
     expect(res?.status).toBe(409);
-    expect(res?.body.error).toBe('open_request');
+    expect(res?.body.code).toBe('open_request');
     expect(
       (
         await prisma.carTransfer.findUniqueOrThrow({
@@ -493,7 +493,7 @@ describe('an accept that cannot go through', () => {
     error: string,
   ) => {
     expect(res.status).toBe(status);
-    expect(res.body.error).toBe(error);
+    expect(res.body.code).toBe(error);
   };
 
   it.each([
@@ -745,7 +745,7 @@ describe('the car after it changed hands', () => {
       repairIds: [kept.id],
     });
     expect(refused.status).toBe(400);
-    expect(refused.body.error).toBe('repair_not_tickable');
+    expect(refused.body.code).toBe('repair_not_tickable');
     const passed = await sendTransfer(app, maria.auth, car.id, {
       buyerPhone: SELLER_PHONE,
       repairIds: [ticked.id, hers.id],

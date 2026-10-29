@@ -95,8 +95,8 @@ export function quotesWorld(prisma: PrismaClient = createPrisma(databaseUrl)) {
         ownerId,
         ownerships: {
           create: {
-            accountId: ownerId,
             access: 'owner',
+            accountId: ownerId,
             fromDate: new Date(`${localDay(at)}T00:00:00Z`),
             openedAt: at,
           },

@@ -43,23 +43,25 @@ describe('the message that a sold car was taken over', () => {
       'Mașina VW Golf a fost preluată de cumpărător. Istoricul ei rămâne la tine, doar pentru citire, până la data vânzării.',
       'VW Golf a fost preluată',
       'Mașină preluată',
+      'Mașina VW Golf a fost preluată. Istoricul ei rămâne la tine, doar pentru citire.',
     ],
     [
       'en',
       'The buyer has taken over your VW Golf. Its history stays with you, read-only, up to the sale date.',
       'Your VW Golf has been taken over',
       'Car taken over',
+      'The buyer has taken over your VW Golf. Its history stays with you, read-only, up to the sale date.',
     ],
   ] as const)(
     'says in %s the car was taken over and its history stays read-only',
-    (language, line, subject, title) => {
+    (language, line, subject, title, pushBody) => {
       expect(bellText(KIND, language, params)).toBe(line);
       const mail = render(KIND, 'email', language, params);
       expect(mail.subject).toBe(subject);
       expect(mail.text).toContain(line);
       expect(mail.html).toContain(`href="${link}"`);
       expect(render(KIND, 'push', language, params)).toMatchObject({
-        body: line,
+        body: pushBody,
         link,
         title,
       });
@@ -76,7 +78,10 @@ describe('the message that a sold car was taken over', () => {
   it.each([
     ['ro', 'Vezi mașinile vândute'],
     ['en', 'See sold cars'],
-  ] as const)('opens the sold cars from the e-mail button in %s', (language, label) => {
-    expect(render(KIND, 'email', language, params).text).toContain(label);
-  });
+  ] as const)(
+    'opens the sold cars from the e-mail button in %s',
+    (language, label) => {
+      expect(render(KIND, 'email', language, params).text).toContain(label);
+    },
+  );
 });

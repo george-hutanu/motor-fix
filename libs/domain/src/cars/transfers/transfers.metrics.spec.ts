@@ -82,12 +82,15 @@ describe('the car transfer accept counter', () => {
     );
   });
 
-  it.each([...ACCEPT_OUTCOMES])('counts an accept answered %s', async (outcome) => {
-    const name = 'motorfix_car_transfer_accepts_total';
-    const before = await total(name, { outcome });
+  it.each([...ACCEPT_OUTCOMES])(
+    'counts an accept answered %s',
+    async (outcome) => {
+      const name = 'motorfix_car_transfer_accepts_total';
+      const before = await total(name, { outcome });
 
-    recordAccept(outcome);
+      recordAccept(outcome);
 
-    expect(await total(name, { outcome })).toBe(before + 1);
-  });
+      expect(await total(name, { outcome })).toBe(before + 1);
+    },
+  );
 });
