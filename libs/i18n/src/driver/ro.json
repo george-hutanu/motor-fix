@@ -19,6 +19,7 @@
     "new": "Cerere nouă",
     "paused": "În pauză",
     "ready": "Mașina e gata. Poți veni după ea.",
+    "reconnecting": "Reconectare…",
     "retry": "Reîncearcă",
     "stage": {
       "booked": "Programată",

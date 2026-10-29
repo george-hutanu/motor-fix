@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -57,6 +58,7 @@ async function open(url: string, answer: () => Promise<unknown>) {
         provide: Live,
         useValue: {
           events,
+          offline: signal(false),
           on: () => events,
           resync: new Subject<void>(),
         },

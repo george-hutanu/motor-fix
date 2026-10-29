@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
@@ -27,6 +28,7 @@ async function mount(
         provide: Live,
         useValue: {
           events,
+          offline: signal(false),
           on: (kinds: readonly EventKind[]) =>
             events.pipe(
               filter((m) => (kinds as readonly string[]).includes(m.kind)),
