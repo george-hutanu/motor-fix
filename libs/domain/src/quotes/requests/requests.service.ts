@@ -40,7 +40,12 @@ import {
 const SUMMARY = {
   _count: { select: { quotes: true } },
   bookings: {
-    include: { garage: true, job: { select: { status: true } } },
+    include: {
+      garage: true,
+      job: {
+        select: { finalPriceBani: true, handedOverAt: true, status: true },
+      },
+    },
     orderBy: NEWEST_FIRST,
     take: 1,
   },
@@ -51,10 +56,16 @@ type SummaryRow = QuoteRequest & {
   _count: { quotes: number };
   bookings: (Booking & {
     garage: Garage;
-    job: Pick<Job, 'status'> | null;
+    job: Pick<Job, 'finalPriceBani' | 'handedOverAt' | 'status'> | null;
   })[];
   jobs: (RequestJob & { jobType: JobType })[];
 };
+
+// The price the garage recorded at the handover, and when; null until then.
+const finalPriceOf = (job: SummaryRow['bookings'][number]['job']) => ({
+  finalPriceBani: job?.finalPriceBani ?? null,
+  handedOverAt: iso(job?.handedOverAt ?? null),
+});
 
 const summaryOf = ({
   bookings: [booking],
@@ -64,6 +75,7 @@ const summaryOf = ({
     ? {
         ...rowBookingOf(booking),
         cancelledBySide: booking.cancelledBySide,
+        ...finalPriceOf(booking.job),
         garage: garageRef(booking.garage),
         id: booking.id,
         jobStarted: booking.job !== null && booking.job.status !== 'to_do',
@@ -129,7 +141,9 @@ export class RequestsService {
     const now = new Date();
     return {
       ...summaryOf(row),
-      booking: booking ? bookingOf(booking) : null,
+      booking: booking
+        ? { ...bookingOf(booking), ...finalPriceOf(booking.job) }
+        : null,
       quotes: row.quotes.map((quote) => ({
         ...quoteOf(quote),
         garage: garageRef(quote.garage),
