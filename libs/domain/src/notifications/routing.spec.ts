@@ -1,7 +1,8 @@
 // @traces 392-FR-004 392-FR-005
 import type { OutsideChannel } from '@motor-fix/contracts';
 
-import { mutedChannels } from './preferences/preferences';
+import { notificationType } from './catalogue';
+import { canMute, mutedChannels } from './preferences/preferences';
 import { outsideChannels, substitutions } from './routing';
 
 const everyone = { email: true, phone: true, push: false, whatsapp: true };
@@ -226,11 +227,7 @@ describe('push for staff', () => {
 
   it('is nothing for a push-only type without a device', () => {
     expect(
-      outsideChannels(
-        'ASSISTANT_APPROVAL_NEEDED',
-        mutedChannels('ASSISTANT_APPROVAL_NEEDED', []),
-        everyone,
-      ),
+      outsideChannels('PUSH_TEST', mutedChannels('PUSH_TEST', []), everyone),
     ).toEqual([]);
   });
 });
@@ -292,5 +289,50 @@ describe('the channel a driver message changes to when it is built', () => {
         'garage-1',
       ),
     ).toEqual([]);
+  });
+});
+
+// @traces 1254-FR-003
+describe('an assistant action waiting for approval', () => {
+  const name = 'ASSISTANT_APPROVAL_NEEDED';
+  const none = mutedChannels(name, []);
+
+  it('goes by push to an account with a device, never also by e-mail', () => {
+    expect(outsideChannels(name, none, withDevice)).toEqual(['push']);
+    expect(outsideChannels(name, none, withDevice, 'garage-1')).toEqual([
+      'push',
+    ]);
+  });
+
+  it('goes by e-mail instead to an account with no device, whatever its role', () => {
+    expect(outsideChannels(name, none, everyone)).toEqual(['email']);
+    expect(outsideChannels(name, none, everyone, 'garage-1')).toEqual([
+      'email',
+    ]);
+  });
+
+  it('names the push without a device going by e-mail', () => {
+    expect(substitutions(name, none, everyone, 'garage-1')).toEqual([
+      { from: 'push', reason: 'no_device', to: 'email' },
+    ]);
+    expect(substitutions(name, none, withDevice)).toEqual([]);
+  });
+
+  it('goes by nothing outside with neither a device nor an e-mail address', () => {
+    expect(outsideChannels(name, none, { ...everyone, email: false })).toEqual(
+      [],
+    );
+  });
+
+  it('cannot be muted and goes at any hour', () => {
+    expect(canMute(name)).toBe(false);
+    expect(notificationType(name)).toMatchObject({
+      channels: ['push'],
+      emailWithoutPush: true,
+      group: null,
+      transactional: true,
+      urgent: true,
+    });
+    expect(notificationType('PUSH_TEST').emailWithoutPush).toBe(false);
   });
 });

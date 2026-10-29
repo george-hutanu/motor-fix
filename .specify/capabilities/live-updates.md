@@ -36,6 +36,7 @@ features:
   - 1250-live-video-provider
   - 177-reported-reviews
   - 011-dashboard-sections
+  - 1254-assistant-approvals
 ---
 
 # Capability: Live updates
@@ -501,6 +502,10 @@ _From 177-reported-reviews._
 ### 011-FR-009 — Panou MUST re-read the person's layout on `dashboard_layout.updated` from `account:{accountId}` (1263-FR-007) and follow the answer within 5 seconds without a reload, except while one of its own saves is in flight, when the event is ignored and the save's answer is the truth: a section hidden in another tab or on another device leaves, the count follows, and an open panel shows the new switch states. This story adds no event, sender, audience, channel or endpoint; it joins the account stream the frame already holds.
 
 _From 011-dashboard-sections._
+
+### 1254-FR-010 — The signed-in frame (once, in the frame every `/app` area shares, else once per area frame) MUST show, for an account with pending approvals,, above the view, the strip "n acțiuni așteaptă aprobarea ta" / "n actions await your approval" (Romanian plural rules: "1 acțiune", "2 acțiuni"; absent at 0) linking to the oldest pending approval's sheet; after a decision the sheet shows the next pending one or closes. The strip and an open sheet MUST re-read on `assistant_approval.requested` and `assistant_approval.decided` received on the account's live stream, so every open tab updates without a reload. The strip is one component with one mount line, so ST-368 moves it into the Asistent AI view. (AC 6; brief Live updates; build plan ST-376 ↔ ST-368)
+
+_From 1254-assistant-approvals._
 
 ## Retired
 

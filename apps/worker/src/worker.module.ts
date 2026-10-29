@@ -2,6 +2,8 @@ import { bunnyConfig, type Env, STORAGE_ENV } from '@motor-fix/contracts';
 import {
   ACCOUNT_CLOSED_CONSUMER,
   AccountClosedModule,
+  APPROVAL_TIMERS_CONSUMER,
+  ApprovalTimersModule,
   BOOKING_CANCELLED_CONSUMER,
   BOOKING_CONFIRMED_CONSUMER,
   BOOKING_LAPSED_CONSUMER,
@@ -77,7 +79,7 @@ class WorkerModule {}
 // The worker serves no routes of its own: its HTTP listener exists so that
 // Railway can health-check it. It relays the outbox's events to the live
 // streams, consumes the notifications queue, sending e-mail, SMS and
-// WhatsApp, sends the contact form's e-mails, runs the monthly news, the daily reminders, the decline windows, the booking timers,
+// WhatsApp, sends the contact form's e-mails, runs the monthly news, the daily reminders, the decline windows, the booking timers, the assistant approvals' expiry,
 // the listing draft sweep, the listing photos' copies, the live sessions'
 // idle stop and their recordings' deletes, and the nightly
 // platform figures (placing the garages with no city first), checks the
@@ -110,6 +112,7 @@ export function workerModule(
         cdn: bunnyConfig(process.env),
         consumers: [
           ACCOUNT_CLOSED_CONSUMER,
+          APPROVAL_TIMERS_CONSUMER,
           BOOKING_CANCELLED_CONSUMER,
           BOOKING_CONFIRMED_CONSUMER,
           BOOKING_LAPSED_CONSUMER,
@@ -195,6 +198,13 @@ export function workerModule(
       }),
       // Tells the driver of a decline once its undo window has passed.
       DeclineWindowModule.registerWorker({
+        notifications,
+        redisUrl: env.REDIS_URL,
+        webUrl: email.webUrl,
+      }),
+      // Tells the account its assistant waits for an approval, and expires
+      // the approval nobody decided in 30 minutes.
+      ApprovalTimersModule.registerWorker({
         notifications,
         redisUrl: env.REDIS_URL,
         webUrl: email.webUrl,
