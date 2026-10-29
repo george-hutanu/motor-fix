@@ -40,7 +40,8 @@ describe('CreateTimeBlockDto', () => {
 
   it.each([
     ['mechanicId', { mechanicId: 'mihai' }],
-    ['lift', { lift: 0 }],
+    ['startsAt', { startsAt: '2026-11-12' }],
+    ['endsAt', { endsAt: '2026-11-12T08:00:00' }],
     ['lift', { lift: 1.5 }],
     ['startsAt', { startsAt: 'tomorrow' }],
     ['endsAt', { endsAt: 12 }],

@@ -56,9 +56,7 @@ import {
   type RequestSource,
   type RequestStatus,
 } from './request-status';
-import type { TimeBlockDto } from './time-blocks.dto';
-// The value import is lazy: time-blocks.dto imports this file.
-import * as timeBlocks from './time-blocks.dto';
+import { TimeBlockDto } from './time-blocks.dto';
 
 // Far above any garage's lifts; keeps the number inside the column's range.
 const LIFT_MAX = 99;
@@ -848,7 +846,8 @@ export class GarageScheduleDto {
   entries!: GarageScheduleEntryDto[];
 
   // The blocked time staff read, filtered as the entries are.
-  @ApiProperty({ type: () => [timeBlocks.TimeBlockDto] })
+  // A thunk: time-blocks.dto imports this file.
+  @ApiProperty({ type: () => [TimeBlockDto] })
   blocks!: TimeBlockDto[];
 
   @ApiProperty()

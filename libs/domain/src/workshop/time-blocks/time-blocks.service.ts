@@ -21,12 +21,7 @@ import {
   type AuditPort,
 } from '../../audit/audit.port';
 import { refusal } from '../../auth/http-refusal';
-import {
-  type Actor,
-  assertGarage,
-  forbidden,
-  requireCapability,
-} from '../../auth/policy';
+import { type Actor, assertGarage, forbidden } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import {
   addDays,
@@ -43,7 +38,11 @@ import type {
   PrismaClient,
   TimeBlock,
 } from '../../generated/prisma/client';
-import { isSlotTaken, ScheduleService } from '../schedule/schedule.service';
+import {
+  deadlockRetried,
+  isSlotTaken,
+  ScheduleService,
+} from '../schedule/schedule.service';
 
 type Tx = Prisma.TransactionClient;
 type Db = Pick<PrismaClient, 'timeBlock'> | Pick<Tx, 'timeBlock'>;
@@ -53,7 +52,6 @@ const MAX_LIST_DAYS = 31;
 const MAX_DAYS = 14;
 const QUARTER = 15;
 const MINUTE = 60_000;
-const DEADLOCK_RUNS = 3;
 
 // The block as stored or asked, before it is written.
 interface Shape {
@@ -286,7 +284,8 @@ function judgeSwitches(
 }
 
 // On the quarter-hour grid, 15 minutes to 14 days long, and not over yet.
-function judgeRange({ startsAt, endsAt }: Shape, now = new Date()) {
+function judgeRange({ startsAt, endsAt }: Shape) {
+  const now = new Date();
   if (!onGrid(startsAt)) {
     throw invalid('startsAt', 'startsAt must be on a quarter hour');
   }
@@ -344,10 +343,9 @@ export class TimeBlocksService {
     actor: Actor,
     garageId: string,
     query: { from?: string; to?: string },
-    now = new Date(),
   ): Promise<TimeBlocksDto> {
     this.assertDesk(actor, garageId);
-    const from = query.from ?? localDay(now);
+    const from = query.from ?? localDay(new Date());
     const to = query.to ?? from;
     const span = daysBetween(from, to);
     if (!(span >= 0 && span < MAX_LIST_DAYS)) {
@@ -412,7 +410,8 @@ export class TimeBlocksService {
           newValue: { ...valuesOf(shape), mechanicName, note: shape.note },
           oldValue: null,
         });
-        await this.announce(
+        await announced(
+          this.events,
           tx,
           'time_block.created',
           garageId,
@@ -472,7 +471,14 @@ export class TimeBlocksService {
           { ...valuesOf(stored), note: stored.note },
           { ...valuesOf(shape), note: shape.note },
         );
-        await this.announce(tx, 'time_block.updated', garageId, blockId, shape);
+        await announced(
+          this.events,
+          tx,
+          'time_block.updated',
+          garageId,
+          blockId,
+          shape,
+        );
         return this.read(tx, blockId, lifts);
       });
     });
@@ -490,7 +496,8 @@ export class TimeBlocksService {
           newValue: null,
           oldValue: removedValues(stored),
         });
-        await this.announce(
+        await announced(
+          this.events,
           tx,
           'time_block.deleted',
           garageId,
@@ -512,7 +519,6 @@ export class TimeBlocksService {
           : 'Doar proprietarul sau recepția blochează timp',
       );
     }
-    requireCapability(actor, 'garage.schedule');
   }
 
   // One log line per refusal: the code, the garage and the block, never the
@@ -544,7 +550,7 @@ export class TimeBlocksService {
     write: (tx: Tx) => Promise<T>,
   ): Promise<T> {
     try {
-      return await this.retried(write);
+      return await deadlockRetried(() => this.prisma.$transaction(write));
     } catch (error) {
       if (!isSlotTaken(error)) throw error;
       throw refusal(
@@ -554,17 +560,6 @@ export class TimeBlocksService {
           ? 'The slot was just taken'
           : 'Locul tocmai a fost ocupat',
       );
-    }
-  }
-
-  private async retried<T>(write: (tx: Tx) => Promise<T>): Promise<T> {
-    for (let run = 1; ; run++) {
-      try {
-        return await this.prisma.$transaction(write);
-      } catch (error) {
-        const deadlocked = (error as { code?: unknown }).code === 'P2034';
-        if (!deadlocked || run === DEADLOCK_RUNS) throw error;
-      }
     }
   }
 
@@ -591,7 +586,7 @@ export class TimeBlocksService {
     return stored;
   }
 
-  // The refusals of FR-004, in their order, before any write; the card is
+  // The refusals in their order, before any write; the card is
   // read FOR SHARE so its removal waits for this block, or this block for it.
   private async judged(tx: Tx, actor: Actor, garageId: string, asked: Shape) {
     const switches = await this.switches(tx, garageId);
@@ -604,7 +599,7 @@ export class TimeBlocksService {
         select: { liftCount: true },
         where: { id: garageId },
       });
-      if (asked.lift > liftCount) {
+      if (asked.lift < 1 || asked.lift > liftCount) {
         throw invalid('lift', `lift must be from 1 to ${liftCount}`);
       }
     }
@@ -674,16 +669,6 @@ export class TimeBlocksService {
       subjectId: blockId,
       subjectType: 'time_block',
     };
-  }
-
-  private announce(
-    tx: Tx,
-    kind: BlockEvent,
-    garageId: string,
-    blockId: string,
-    shape: Shape,
-  ) {
-    return announced(this.events, tx, kind, garageId, blockId, shape);
   }
 
   private async read(tx: Tx, id: string, lifts: boolean) {

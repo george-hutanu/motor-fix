@@ -17270,8 +17270,13 @@
             "format": "uuid"
           },
           "mechanic": {
+            "nullable": true,
             "type": "object",
-            "nullable": true
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingMechanicDto"
+              }
+            ]
           },
           "lift": {
             "type": "number",
@@ -19256,6 +19261,11 @@
             "minimum": 1,
             "nullable": true
           },
+          "note": {
+            "type": "string",
+            "description": "Trimmed, at most 200 characters; empty is none",
+            "nullable": true
+          },
           "startsAt": {
             "type": "string",
             "description": "On a quarter hour of the Bucharest clock",
@@ -19265,11 +19275,6 @@
             "type": "string",
             "description": "15 minutes to 14 days after the start, and after now",
             "format": "date-time"
-          },
-          "note": {
-            "type": "string",
-            "description": "Trimmed, at most 200 characters; empty is none",
-            "nullable": true
           }
         }
       },

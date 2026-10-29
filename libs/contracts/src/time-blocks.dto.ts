@@ -1,4 +1,9 @@
-import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import {
+  ApiProperty,
+  ApiPropertyOptional,
+  OmitType,
+  PartialType,
+} from '@nestjs/swagger';
 import {
   IsInt,
   IsISO8601,
@@ -6,13 +11,16 @@ import {
   IsString,
   IsUUID,
   Matches,
-  Min,
+  ValidateIf,
 } from 'class-validator';
 
 import { BookingMechanicDto } from './quotes.dto';
 
 export const TIME_BLOCK_NOTE_MAX = 200;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+// An instant: a date, a time and its zone, so no server clock reads it.
+const INSTANT =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
 
 // One Bucharest day of a block's range.
 export class TimeBlockSegmentDto {
@@ -29,7 +37,9 @@ export class TimeBlockDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
 
-  @ApiProperty({ nullable: true, type: BookingMechanicDto })
+  // A thunk: quotes.dto imports this file, so the class is not yet defined
+  // when this one is decorated.
+  @ApiProperty({ nullable: true, type: () => BookingMechanicDto })
   mechanic!: BookingMechanicDto | null;
 
   @ApiPropertyOptional({
@@ -109,15 +119,16 @@ export class CreateTimeBlockDto {
     nullable: true,
     type: Number,
   })
+  // 1 and up is the service's 422 naming the field, beside the lift count.
   @IsOptional()
   @IsInt()
-  @Min(1)
   lift?: number | null;
 
   @ApiProperty({
     description: 'On a quarter hour of the Bucharest clock',
     format: 'date-time',
   })
+  @Matches(INSTANT)
   @IsISO8601({ strict: true })
   startsAt!: string;
 
@@ -125,6 +136,7 @@ export class CreateTimeBlockDto {
     description: '15 minutes to 14 days after the start, and after now',
     format: 'date-time',
   })
+  @Matches(INSTANT)
   @IsISO8601({ strict: true })
   endsAt!: string;
 
@@ -138,5 +150,26 @@ export class CreateTimeBlockDto {
   note?: string | null;
 }
 
-// Any of the create's fields, over the stored block.
-export class UpdateTimeBlockDto extends PartialType(CreateTimeBlockDto) {}
+// Any of the create's fields, over the stored block. The range may be left
+// out but never cleared: a null start or end is refused.
+export class UpdateTimeBlockDto extends PartialType(
+  OmitType(CreateTimeBlockDto, ['startsAt', 'endsAt']),
+) {
+  @ApiPropertyOptional({
+    description: 'On a quarter hour of the Bucharest clock',
+    format: 'date-time',
+  })
+  @ValidateIf((_dto, value) => value !== undefined)
+  @Matches(INSTANT)
+  @IsISO8601({ strict: true })
+  startsAt?: string;
+
+  @ApiPropertyOptional({
+    description: '15 minutes to 14 days after the start, and after now',
+    format: 'date-time',
+  })
+  @ValidateIf((_dto, value) => value !== undefined)
+  @Matches(INSTANT)
+  @IsISO8601({ strict: true })
+  endsAt?: string;
+}

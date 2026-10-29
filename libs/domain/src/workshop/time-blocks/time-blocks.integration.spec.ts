@@ -265,8 +265,7 @@ describe('the refusals of a block, in their order', () => {
       'validation_failed',
       'mechanicId',
     ],
-    // The DTO's own refusal: the API's problem filter names it validation_failed.
-    ['lift 0', { lift: 0 }, 400, undefined, undefined],
+    ['lift 0', { lift: 0 }, 422, 'validation_failed', 'lift'],
     ['lift 4 of 3', { lift: 4 }, 422, 'validation_failed', 'lift'],
     [
       'a start off the quarter hour',

@@ -601,6 +601,10 @@ describe('the time-block routes', () => {
       expect(
         Object.keys(api.components.schemas.GarageScheduleDto.properties),
       ).toContain('blocks');
+      // The mechanic is the shared card, not an untyped object.
+      expect(
+        api.components.schemas.TimeBlockDto.properties.mechanic.allOf,
+      ).toEqual([{ $ref: '#/components/schemas/BookingMechanicDto' }]);
       const listed = inventory.entries.filter(
         (entry: { kind: string; name: string }) =>
           entry.kind === 'endpoint' &&

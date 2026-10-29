@@ -399,6 +399,22 @@ export function isSlotTaken(error: unknown) {
   );
 }
 
+const DEADLOCK_RUNS = 3;
+
+// Two writes racing for one lift or mechanic can deadlock on the exclusion
+// constraints. Postgres aborts one; it runs again and then reads the other's
+// write, so the loser hears 409, not 500.
+export async function deadlockRetried<T>(run: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await run();
+    } catch (error) {
+      const deadlocked = (error as { code?: unknown }).code === 'P2034';
+      if (!deadlocked || attempt === DEADLOCK_RUNS) throw error;
+    }
+  }
+}
+
 const asDate = (day: string) => new Date(`${day}T00:00:00Z`);
 
 // Places a booking for a confirm: reads the calendar, the mechanic's days and
