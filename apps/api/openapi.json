@@ -21317,6 +21317,23 @@
           "displayUrl"
         ]
       },
+      "StoredClosedDayDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "description": "A Bucharest calendar day, \"YYYY-MM-DD\"",
+            "format": "date"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "day"
+        ]
+      },
       "GarageProfileDto": {
         "type": "object",
         "properties": {
@@ -21505,6 +21522,13 @@
           "version": {
             "type": "string",
             "description": "The profile's change stamp; sent back with a save"
+          },
+          "storedClosedDays": {
+            "description": "Every closed day the garage stored, from today on, with its note; never public",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoredClosedDayDto"
+            }
           }
         },
         "required": [
@@ -21527,7 +21551,8 @@
           "prices",
           "photos",
           "phone",
-          "version"
+          "version",
+          "storedClosedDays"
         ]
       },
       "UpdateGarageProfileDto": {

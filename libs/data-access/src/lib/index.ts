@@ -363,6 +363,7 @@ export type { StaffNotificationsDto } from './models/staff-notifications-dto';
 export type { StaffNotificationTypeDto } from './models/staff-notification-type-dto';
 export type { StaffSectionDto } from './models/staff-section-dto';
 export type { StaffWhatsAppDto } from './models/staff-whats-app-dto';
+export type { StoredClosedDayDto } from './models/stored-closed-day-dto';
 export type { SupportContactDto } from './models/support-contact-dto';
 export type { SupportMessageCreatedDto } from './models/support-message-created-dto';
 export type { SuspendAccountDto } from './models/suspend-account-dto';

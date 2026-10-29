@@ -147,12 +147,18 @@ describe("the staff read of a garage's own public profile", () => {
 
     expect(staff.status).toBe(200);
     expect(open.status).toBe(200);
-    const { phone, version, ...rest } = staff.body;
+    const { phone, storedClosedDays, version, ...rest } = staff.body;
     expect(phone).toBe(PHONE);
+    expect(storedClosedDays).toEqual([]);
     expect(version).toBe('0');
     expect(rest).toEqual(open.body);
     expect(Object.keys(staff.body).sort()).toEqual(
-      [...Object.keys(open.body), 'phone', 'version'].sort(),
+      [
+        ...Object.keys(open.body),
+        'phone',
+        'storedClosedDays',
+        'version',
+      ].sort(),
     );
   });
 

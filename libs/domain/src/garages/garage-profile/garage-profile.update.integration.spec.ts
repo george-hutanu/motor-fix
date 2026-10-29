@@ -670,6 +670,9 @@ describe('PATCH /garages/:garageId/profile: hours and closed days', () => {
       'waiting_area',
     ]);
     expect(await closedDays(w.nord.id)).toEqual([{ day, note: 'Inventar' }]);
+    // Past the public answer's two weeks, the owner's answer still has it,
+    // note included, so the dialog sends the list back whole.
+    expect(res.body.storedClosedDays).toEqual([{ day, note: 'Inventar' }]);
   });
 
   it('adds one hours entry when the week changed, and none for the facilities', async () => {

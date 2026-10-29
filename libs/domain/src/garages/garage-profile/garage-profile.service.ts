@@ -1,5 +1,6 @@
 import type { GarageProfileDto } from '@motor-fix/contracts';
 import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
+import { todayInBucharest } from '@motor-fix/contracts/garage-hours';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { refusal } from '../../auth/http-refusal';
@@ -36,10 +37,21 @@ export class GarageProfileService {
   }
 
   // The answer alone, for a caller that has checked the actor; `fresh` reads
-  // past the public cache, so a save answers what it just wrote.
+  // past the public cache, so a save answers what it just wrote. The public
+  // answer's closed days reach two weeks and carry no note, so the stored
+  // ones come with the phone: the hours dialog sends the list back whole.
   async answer(garageId: string, fresh = false): Promise<GarageProfileDto> {
     const row = await this.prisma.garage.findUnique({
-      select: { phone: true, profileVersion: true, slug: true },
+      select: {
+        closedDays: {
+          orderBy: { day: 'asc' },
+          select: { day: true, note: true },
+          where: { day: { gte: new Date(`${todayInBucharest()}T00:00:00Z`) } },
+        },
+        phone: true,
+        profileVersion: true,
+        slug: true,
+      },
       where: { id: garageId },
     });
     if (!row) throw notFound();
@@ -49,6 +61,10 @@ export class GarageProfileService {
     return {
       ...answer,
       phone: row.phone,
+      storedClosedDays: row.closedDays.map(({ day, note }) => ({
+        day: day.toISOString().slice(0, 10),
+        ...(note && { note }),
+      })),
       version: String(row.profileVersion),
     };
   }

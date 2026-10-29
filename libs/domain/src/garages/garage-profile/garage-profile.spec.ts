@@ -18,10 +18,15 @@ const actor = (role: Actor['role'], garageId: string | null = GARAGE) =>
     roles: [role],
   }) as Actor;
 
-type Row = { phone: string | null; profileVersion: number; slug: string };
+type Row = {
+  phone: string | null;
+  profileVersion: number;
+  slug: string;
+  closedDays?: { day: Date; note: string | null }[];
+};
 
 function service(row: Row | null) {
-  const findUnique = jest.fn(async () => row);
+  const findUnique = jest.fn(async () => row && { closedDays: [], ...row });
   const bySlug = jest.fn(async (slug: string) => ({ name: 'Nord', slug }));
   const profile = new GarageProfileService(
     { garage: { findUnique } } as never,
@@ -45,6 +50,7 @@ describe("the staff read of a garage's own public profile, in order", () => {
       name: 'Nord',
       phone: '+40722123456',
       slug: 'nord',
+      storedClosedDays: [],
       version: '0',
     });
     expect(bySlug).toHaveBeenCalledWith('nord');
@@ -119,5 +125,43 @@ describe("the staff read of a garage's own public profile, in order", () => {
         select: expect.objectContaining({ profileVersion: true }),
       }),
     );
+  });
+
+  // @traces 1246-FR-012
+  it('carries every closed day the garage stored from today on, each with its note, for the hours dialog', async () => {
+    jest.useFakeTimers({ now: new Date('2026-10-30T22:30:00Z') });
+    try {
+      const { findUnique, profile } = service({
+        closedDays: [
+          { day: new Date('2026-12-27T00:00:00Z'), note: 'Inventar' },
+          { day: new Date('2027-03-02T00:00:00Z'), note: null },
+        ],
+        phone: null,
+        profileVersion: 0,
+        slug: 'nord',
+      });
+
+      await expect(
+        profile.read(actor('garage'), GARAGE),
+      ).resolves.toMatchObject({
+        storedClosedDays: [
+          { day: '2026-12-27', note: 'Inventar' },
+          { day: '2027-03-02' },
+        ],
+      });
+      expect(findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            closedDays: {
+              orderBy: { day: 'asc' },
+              select: { day: true, note: true },
+              where: { day: { gte: new Date('2026-10-31T00:00:00Z') } },
+            },
+          }),
+        }),
+      );
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

@@ -7,6 +7,7 @@ import {
   PublicBrandDto,
 } from './garage-brands.dto';
 import {
+  CLOSED_NOTE_MAX,
   FACILITIES,
   FACILITIES_NOTE_MAX,
   type Facility,
@@ -154,6 +155,19 @@ export class ClosedDayAheadDto {
     enum: ['holiday', 'closed'],
   })
   reason!: 'holiday' | 'closed';
+}
+
+// A closed day the garage stored, with its note: the owner's own record, which
+// the hours dialog edits whole.
+export class StoredClosedDayDto {
+  @ApiProperty({
+    description: 'A Bucharest calendar day, "YYYY-MM-DD"',
+    format: 'date',
+  })
+  day!: string;
+
+  @ApiPropertyOptional({ maxLength: CLOSED_NOTE_MAX })
+  note?: string;
 }
 
 export class PublicGarageDto extends GarageBrandAnswerDto {
@@ -321,4 +335,11 @@ export class GarageProfileDto extends PublicGarageDto {
     type: String,
   })
   version!: string;
+
+  @ApiProperty({
+    description:
+      'Every closed day the garage stored, from today on, with its note; never public',
+    type: [StoredClosedDayDto],
+  })
+  storedClosedDays!: StoredClosedDayDto[];
 }

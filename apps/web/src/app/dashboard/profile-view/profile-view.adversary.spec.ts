@@ -52,6 +52,7 @@ const answer = (over: Partial<GarageProfileDto> = {}): GarageProfileDto => ({
   responseRate: { state: 'new' },
   reviewCount: 0,
   slug: 'service-auto-militari',
+  storedClosedDays: [],
   verifiedAt: null,
   version: '0',
   worksOn: [
