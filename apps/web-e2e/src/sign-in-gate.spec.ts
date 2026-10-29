@@ -47,6 +47,10 @@ async function sessionEndsWhileWorking(page: Page) {
   await page.route('**/api/v1/me/consents', (route) =>
     route.fulfill({ json: { accepted: [], analytics: null } }),
   );
+  // Every signed-in view reads the assistant's pending approvals: none.
+  await page.route('**/api/v1/me/assistant/approvals', (route) =>
+    route.fulfill({ json: { items: [], pending: 0 } }),
+  );
   await page.route('**/api/v1/notifications/unread-count', (route) =>
     route.fulfill({ json: { count: 0 } }),
   );

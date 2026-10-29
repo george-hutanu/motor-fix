@@ -63,6 +63,11 @@ async function start(now = NIGHT) {
           databaseUrl,
           email: testConfig('http://127.0.0.1:9'),
           phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
+          push: {
+            privateKey: 'private',
+            publicKey: 'public',
+            subject: 'mailto:ops@example.test',
+          },
           redisUrl,
         }),
         redisUrl,
@@ -215,8 +220,9 @@ describe('the expiry of an approval nobody decided', () => {
 
   it('expires it from the sweep within one sweep of a lost timer', async () => {
     const a = await asked();
-    const timers = await start();
     const sweptAt = new Date(a.expiresAt.getTime() + 5 * MINUTE);
+    // The sweep expires at the worker's own clock, as in production.
+    const timers = await start(sweptAt);
 
     expect(await timers.timers.sweep(sweptAt)).toBe(1);
     expect(await timers.timers.sweep(sweptAt)).toBe(0);
