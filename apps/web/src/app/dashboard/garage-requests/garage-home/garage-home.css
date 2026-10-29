@@ -21,6 +21,18 @@ p {
   font-size: var(--mf-size-body);
   overflow-wrap: anywhere;
 }
+.layout {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  margin-inline-start: auto;
+  min-width: 0;
+}
+:host > .muted {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-body);
+}
 .verified {
   display: inline-flex;
   align-items: center;

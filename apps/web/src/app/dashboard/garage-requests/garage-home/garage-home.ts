@@ -9,7 +9,15 @@ import {
 import { RouterLink } from '@angular/router';
 import type { Capability } from '@motor-fix/contracts/capabilities';
 import { formatDayMonth, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
+import { HlmButton } from '@motor-fix/ui-cockpit';
 
+import {
+  DashboardSectionsPanel,
+  type PanelRow,
+  type SectionsPanelData,
+} from '../../dashboard-sections-panel/dashboard-sections-panel';
+import { GarageLayout } from '../../garage-layout';
 import { GarageLegalCheck } from '../../garage-legal-check/garage-legal-check';
 import { GarageReviewsPanel } from '../../garage-reviews/garage-reviews-panel/garage-reviews-panel';
 import { homeSections, linksTo } from '../../garage-sections';
@@ -34,6 +42,10 @@ import { SuspendedBanner } from '../suspended-banner/suspended-banner';
 // keeps day sheets on. A draft garage sees only where its verification stands.
 // The owner of a verified garage with no request and no review yet gets the
 // first steps above the sections.
+// Every garage person keeps her own layout: the sections she hid stay out,
+// the strip counts what is shown, and "Personalizează panoul" opens the panel
+// that switches them; with all of them hidden one line says how to get one
+// back.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -42,6 +54,7 @@ import { SuspendedBanner } from '../suspended-banner/suspended-banner';
     GarageLegalCheck,
     GarageRequestsPanel,
     GarageReviewsPanel,
+    HlmButton,
     OwnJobsSection,
     RouterLink,
     SectionTitle,
@@ -56,6 +69,8 @@ import { SuspendedBanner } from '../suspended-banner/suspended-banner';
 export class GarageHome {
   private readonly session = inject(Session);
   private readonly i18n = inject(I18n);
+  private readonly overlays = inject(Overlays);
+  protected readonly layout = inject(GarageLayout);
   protected readonly feed = inject(GarageRequestsFeed);
   private readonly garage = computed(() => garageOf(this.session.shown()));
   private readonly holds = (capability: Capability) =>
@@ -85,15 +100,46 @@ export class GarageHome {
       this.garage()?.features?.['day_sheets'] !== false,
   );
   private readonly reviewsPanel = viewChild(GarageReviewsPanel);
-  protected readonly sections = computed(() =>
+  private readonly sections = computed(() =>
     homeSections(this.session.shown()),
+  );
+  // The sections drawn: none until the layout answers, then the ones not hidden.
+  protected readonly shown = computed(() => {
+    if (!this.layout.ready()) return [];
+    const hidden = this.layout.hidden();
+    return this.sections().filter((section) => !hidden.has(section.key));
+  });
+  protected readonly count = computed(() =>
+    this.layout.ready()
+      ? this.i18n.t('garage.home.panel.count', {
+          x: this.shown().length,
+          y: this.sections().length,
+        })
+      : null,
+  );
+  protected readonly allHidden = computed(
+    () =>
+      this.layout.ready() &&
+      this.sections().length > 0 &&
+      this.shown().length === 0,
   );
   // Her own jobs come right after the requests, or first without them.
   protected readonly ownAfter = computed(() =>
     this.ownJobs()
-      ? this.sections().findIndex((section) => section.key === 'req')
+      ? this.shown().findIndex((section) => section.key === 'req')
       : null,
   );
+  // The panel's rows: every section she may see, in her order.
+  private readonly rows = computed<PanelRow[]>(() => {
+    const hidden = this.layout.hidden();
+    return this.sections().map((section, at) => ({
+      description: this.i18n.t(`garage.home.panel.description.${section.key}`),
+      key: section.key,
+      name: this.i18n.t(`garage.home.panel.name.${section.key}`),
+      position: at + 1,
+      shown: !hidden.has(section.key),
+    }));
+  });
   protected readonly team = computed(() =>
     linksTo(this.session.shown(), 'team'),
   );
@@ -124,5 +170,19 @@ export class GarageHome {
 
   constructor() {
     void this.i18n.enter('garage');
+  }
+
+  protected open() {
+    const data: SectionsPanelData = {
+      messages: 'garage.home.panel',
+      rows: () => this.rows(),
+      toggle: (key, shown) => this.layout.toggle(key, shown),
+    };
+    void this.overlays.open(DashboardSectionsPanel, {
+      confirmDiscard: false,
+      data,
+      shape: 'drawer',
+      title: 'garage.home.panel.title',
+    });
   }
 }
