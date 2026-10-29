@@ -56,7 +56,8 @@ export class FinalPriceCorrectedFanOut {
     const { id: eventId, payload, subjectId: jobId } = job.data;
     const found = await this.prisma.job.findUnique({
       select: {
-        booking: { select: { driverId: true, requestId: true } },
+        booking: { select: { requestId: true } },
+        driverId: true,
         garage: { select: { name: true } },
       },
       where: { id: jobId },
@@ -73,7 +74,7 @@ export class FinalPriceCorrectedFanOut {
         link: `${this.config.webUrl}/app/driver/requests/${found.booking.requestId}`,
         price: payload.newBani,
       },
-      recipients: [found.booking.driverId],
+      recipients: [found.driverId],
       subjectId: jobId,
     });
     this.logger.log(

@@ -142,6 +142,24 @@ describe('telling the driver the garage corrected the final price', () => {
     });
   });
 
+  it('sends to the job’s driver, not the booking’s', async () => {
+    const { job, queued } = await corrected();
+    const jobDriver = await account('Ioana Pop', ['driver']);
+    await prisma.job.update({
+      data: { driverId: jobDriver },
+      where: { id: job.id },
+    });
+    const { fanOut } = await start();
+
+    await fanOut.handle(queued);
+
+    const messages = await built();
+    expect(messages.length).toBeGreaterThan(0);
+    expect(new Set(messages.map((m) => m.accountId))).toEqual(
+      new Set([jobDriver]),
+    );
+  });
+
   it('builds each message once when the same event is handled twice', async () => {
     const { queued } = await corrected();
     const { fanOut } = await start();
