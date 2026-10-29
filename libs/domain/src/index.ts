@@ -109,6 +109,10 @@ export {
 } from './live-video/live-video.module';
 export * from './logging';
 export { MapsModule } from './maps/maps.module';
+export { MediaModule } from './media/media.module';
+export { MediaService } from './media/media.service';
+export { MediaProcessingModule } from './media/processing/processing.module';
+export { MediaRetentionModule } from './media/retention/retention.module';
 export { DataStoreMetricsModule } from './metrics/data-store-metrics.module';
 export {
   countConsentRefusal,
