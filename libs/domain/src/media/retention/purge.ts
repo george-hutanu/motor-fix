@@ -3,7 +3,7 @@ import { type MediaKind, mediaConfig } from '@motor-fix/contracts';
 import type { MediaRetentionDeps } from './retention';
 import { MEDIA_RETENTION } from './retention.config';
 import type { AuditEntry } from '../../audit/audit.port';
-import type { MediaItem } from '../../generated/prisma/client';
+import { type MediaItem, Prisma } from '../../generated/prisma/client';
 import { countMediaPurged } from '../media.metrics';
 import { deleteFiles } from '../media.service';
 
@@ -50,7 +50,7 @@ async function purgeOne(
       const locked = await tx.$queryRaw<{ id: string }[]>`
         SELECT id FROM media_item
         WHERE id = ${id}::uuid
-          AND status IN ('visible', 'failed', 'removed')
+          AND status::text IN (${Prisma.join([...PURGEABLE])})
           AND purge_after <= ${now}
         FOR UPDATE SKIP LOCKED`;
       if (locked.length === 0) return null;

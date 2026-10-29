@@ -6,7 +6,7 @@ import { Queue } from 'bullmq';
 import sharp from 'sharp';
 
 import { MediaModule } from './media.module';
-import { markVisible } from './media.service';
+import { MEDIA_JOBS, markVisible } from './media.service';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { EVENT_PORT, type EventPort } from '../events/event.port';
 import type { JobStatus } from '../generated/prisma/enums';
@@ -367,6 +367,7 @@ describe('who may send, and when', () => {
     await prisma.garageFeature.create({
       data: { enabled: false, garageId: s.dinamo.garage.id, key: 'live_media' },
     });
+    expect((await ask(s, s.desk, clip({ seconds: 61 }))).status).toBe(403);
     expect((await ask(s, s.owner, clip({ seconds: 61 }))).status).toBe(404);
   });
 
@@ -431,6 +432,24 @@ describe('completing an upload', () => {
     ).toBeGreaterThanOrEqual(1);
     const job = await queue.getJob(id);
     expect(job?.id).toBe(id);
+  });
+
+  it('queues an item again when the first call could not queue it', async () => {
+    const s = await setting();
+    const { id, key } = await asked(s);
+    store.put(key, await jpeg(), 'image/jpeg');
+    const spy = jest
+      .spyOn(provider<Queue>(MEDIA_JOBS), 'add')
+      .mockRejectedValueOnce(new Error('connect ECONNREFUSED'));
+
+    expect((await complete(id, s.costel)).status).toBe(500);
+    expect(await queue.getJob(id)).toBeUndefined();
+    spy.mockRestore();
+
+    const res = await complete(id, s.costel);
+
+    expect(res.status).toBe(200);
+    expect((await queue.getJob(id))?.data).toEqual({ mediaId: id });
   });
 
   it('answers file_missing while nothing was uploaded, and keeps the item processing', async () => {

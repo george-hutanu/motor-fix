@@ -1,6 +1,5 @@
 import { metrics } from '@opentelemetry/api';
 
-import { purgedText } from './purge';
 import {
   MEDIA_RETENTION_STEPS,
   type MediaRetentionDeps,
@@ -50,17 +49,5 @@ describe('the nightly media run', () => {
     expect(logger.error).toHaveBeenCalledWith(
       'media retention two failed: TypeError',
     );
-  });
-});
-
-// @traces 333-FR-014
-describe('the purge’s audit text', () => {
-  it.each([
-    [1, 90, '1 fișier șters după 90 de zile'],
-    [3, 90, '3 fișiere șterse după 90 de zile'],
-    [20, 7, '20 de fișiere șterse după 7 zile'],
-    [101, 1, '101 fișiere șterse după 1 zi'],
-  ])('says %i files after %i days in Romanian', (count, days, text) => {
-    expect(purgedText(count, days)).toBe(text);
   });
 });

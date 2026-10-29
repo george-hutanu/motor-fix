@@ -274,7 +274,9 @@ export class MediaService implements OnModuleDestroy {
     });
   }
 
-  // Only the sender completes; a second call changes nothing.
+  // Only the sender completes; a second call changes nothing but queues an
+  // item still converting again, in case the first call's queueing failed
+  // (the job id keeps it to one job).
   async complete(actor: Actor, mediaId: string): Promise<MediaItemDto> {
     const item = await this.prisma.mediaItem.findUnique({
       where: { id: mediaId },
@@ -282,7 +284,10 @@ export class MediaService implements OnModuleDestroy {
     if (!item || item.senderId !== actor.accountId || item.kind === 'live') {
       throw new NotFoundException();
     }
-    if (item.uploadedAt) return itemDto(item);
+    if (item.uploadedAt) {
+      if (item.status === 'processing') await this.enqueue(item.id);
+      return itemDto(item);
+    }
     if (item.status !== 'processing' || !item.originalKey) {
       throw mediaRefused(HttpStatus.CONFLICT, 'invalid_state', actor);
     }
@@ -484,15 +489,12 @@ export class MediaService implements OnModuleDestroy {
   private async staffJob(actor: Actor, jobId: string): Promise<JobRow> {
     const job = await jobRow(this.prisma, jobId);
     const right = job ? rightOn(actor, job) : 'none';
-    if (
-      !job ||
-      right === 'none' ||
-      !(await featureOn(this.prisma, job.garage_id, FEATURE))
-    ) {
-      throw new NotFoundException();
-    }
+    if (!job || right === 'none') throw new NotFoundException();
     if (right !== 'staff') {
       throw mediaRefused(HttpStatus.FORBIDDEN, 'forbidden', actor);
+    }
+    if (!(await featureOn(this.prisma, job.garage_id, FEATURE))) {
+      throw new NotFoundException();
     }
     return job;
   }
