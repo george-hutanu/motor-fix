@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type { OutsideChannel } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
@@ -316,7 +318,7 @@ describe('telling the driver work has started', () => {
   it('tells nobody about a job that is gone', async () => {
     const fanOut = await start();
 
-    await fanOut.handle(await event('job.started', 'no-such-job'));
+    await fanOut.handle(await event('job.started', randomUUID()));
 
     expect(await built('JOB_STARTED')).toEqual([]);
   });
