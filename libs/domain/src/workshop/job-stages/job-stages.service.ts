@@ -1,4 +1,8 @@
-import type { EventKind, JobDto } from '@motor-fix/contracts';
+import {
+  type EventKind,
+  FINAL_PRICE_CORRECTION_HOURS,
+  type JobDto,
+} from '@motor-fix/contracts';
 import {
   HttpException,
   HttpStatus,
@@ -8,7 +12,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
+import {
+  AUDIT_PORT,
+  type AuditEntry,
+  type AuditPort,
+} from '../../audit/audit.port';
 import { refusal } from '../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -16,18 +24,18 @@ import { today } from '../../bucharest';
 import { EVENT_PORT, type EventPort, noEvents } from '../../events/event.port';
 import { featureOn } from '../../garages/features/feature-on';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
-import type { JobStatus } from '../../generated/prisma/enums';
+import type { BookingStatus, JobStatus } from '../../generated/prisma/enums';
 import {
   countJobStageMove,
   type JobStageAction,
 } from '../../metrics/product-counters';
-import { moveRequest } from '../../quotes/transitions';
+import { moveBooking, moveRequest } from '../../quotes/transitions';
 import { invalidTransition, type TransitionActor } from '../../transitions';
 import { GarageJobsService } from '../garage-jobs/garage-jobs.service';
 import { moveJob } from '../transitions';
 
 type Tx = Prisma.TransactionClient;
-type Verb = Exclude<JobStageAction, 'receive'>;
+type Verb = Exclude<JobStageAction, 'receive' | 'handover' | 'correct'>;
 
 // The job as locked for one move, with its mechanic's account and its request.
 interface LockedJob {
@@ -41,6 +49,11 @@ interface LockedJob {
   status: JobStatus;
   received_at: Date | null;
   odometer_km: number | null;
+  booking_id: string;
+  booking_status: BookingStatus;
+  booking_mechanic: string | null;
+  final_price_bani: number | null;
+  handed_over_at: Date | null;
 }
 
 // Each verb's stages it starts from, where it goes, what it is called and
@@ -71,6 +84,7 @@ const VERBS: Record<
 };
 
 const CLOSED: readonly JobStatus[] = ['done', 'cancelled'];
+const HOUR = 3_600_000;
 const SYSTEM: TransitionActor = { accountId: null, role: 'system' };
 const TEAM = 'team_mechanics';
 
@@ -216,6 +230,128 @@ export class JobStagesService {
     });
   }
 
+  // The handover: the owner or the desk records the price the driver paid
+  // for a done job, which completes its booking. A mechanic never does,
+  // whatever their final-price flag says.
+  handover(actor: Actor, jobId: string, price: number): Promise<JobDto> {
+    return this.write(actor, jobId, 'handover', async (tx, job) => {
+      this.judgePrice(actor);
+      if (job.status !== 'done') {
+        throw this.refuse(
+          job,
+          'job_not_done',
+          'Marchează întâi lucrarea ca gata',
+        );
+      }
+      if (job.handed_over_at) {
+        this.logger.warn(
+          `job stage refused: already_handed_over job=${job.id}`,
+        );
+        throw new HttpException(
+          {
+            code: 'already_handed_over',
+            finalPriceBani: job.final_price_bani,
+            message: 'Mașina a fost deja predată',
+          },
+          HttpStatus.CONFLICT,
+        );
+      }
+      if (job.booking_status !== 'completed') {
+        await moveBooking(
+          tx,
+          { audit: this.audit, events: this.events },
+          {
+            actor,
+            event: {
+              audience: {
+                driverAccountId: job.driver_id,
+                garageId: job.garage_id,
+                mechanicId: job.booking_mechanic,
+                type: 'booking',
+              },
+              kind: 'booking.completed',
+            },
+            id: job.booking_id,
+            to: 'completed',
+          },
+        );
+      }
+      const now = new Date();
+      await tx.job.update({
+        data: {
+          finalPriceBani: price,
+          finalPriceRecordedById: actor.accountId,
+          handedOverAt: now,
+        },
+        where: { id: job.id },
+      });
+      await this.audit.recordMany(tx, [
+        priceEntry(actor, job, 'final_price_bani', null, price),
+        priceEntry(actor, job, 'handed_over_at', null, now.toISOString()),
+      ]);
+      await this.events.record(tx, {
+        audience: audience(job),
+        kind: 'job.handed_over',
+        payload: { by: actor.accountId, finalPriceBani: price },
+        subjectId: job.id,
+      });
+    });
+  }
+
+  // A correction of the recorded price, within 48 hours of the handover, as
+  // often as needed; the same price again changes nothing.
+  correct(actor: Actor, jobId: string, price: number): Promise<JobDto> {
+    return this.write(actor, jobId, 'correct', async (tx, job) => {
+      this.judgePrice(actor);
+      if (!job.handed_over_at) {
+        throw this.refuse(
+          job,
+          'not_handed_over',
+          'Mașina nu a fost încă predată',
+        );
+      }
+      const closes =
+        job.handed_over_at.getTime() + FINAL_PRICE_CORRECTION_HOURS * HOUR;
+      if (Date.now() >= closes) {
+        throw this.refuse(
+          job,
+          'correction_window_closed',
+          'Prețul final nu mai poate fi corectat',
+        );
+      }
+      if (price === job.final_price_bani) return;
+      await tx.job.update({
+        data: { finalPriceBani: price, finalPriceCorrectedAt: new Date() },
+        where: { id: job.id },
+      });
+      await this.audit.record(
+        tx,
+        priceEntry(actor, job, 'final_price_bani', job.final_price_bani, price),
+      );
+      await this.events.record(tx, {
+        audience: audience(job),
+        kind: 'job.final_price_corrected',
+        payload: {
+          by: actor.accountId,
+          newBani: price,
+          oldBani: job.final_price_bani,
+        },
+        subjectId: job.id,
+      });
+    });
+  }
+
+  // The owner and the desk record the final price; a mechanic never does.
+  private judgePrice(actor: Actor) {
+    if (actor.role === 'mechanic') {
+      throw refusal(
+        HttpStatus.FORBIDDEN,
+        'forbidden',
+        'The owner and the desk record the final price',
+      );
+    }
+  }
+
   // The car's odometer is its newest reading, by day then creation: today's
   // reception is it unless the driver dated one later.
   private async followCar(
@@ -311,7 +447,9 @@ export class JobStagesService {
     const [job] = await tx.$queryRaw<LockedJob[]>`
       SELECT j.id, j.garage_id, j.car_id, j.driver_id, j.mechanic_id,
              m.account_id AS mechanic_account, b.request_id, j.status,
-             j.received_at, j.odometer_km
+             j.received_at, j.odometer_km, j.booking_id,
+             b.status AS booking_status, b.mechanic_id AS booking_mechanic,
+             j.final_price_bani, j.handed_over_at
       FROM job j
       JOIN booking b ON b.id = j.booking_id
       LEFT JOIN mechanic m ON m.id = j.mechanic_id
@@ -341,4 +479,27 @@ export class JobStagesService {
     this.logger.warn(`job stage refused: ${code} job=${job.id}`);
     return refusal(HttpStatus.CONFLICT, code, message);
   }
+}
+
+// One audited change to a job's final price or handover time.
+function priceEntry(
+  actor: Actor,
+  job: LockedJob,
+  field: string,
+  oldValue: number | string | null,
+  newValue: number | string,
+): AuditEntry {
+  return {
+    action: 'update',
+    actorId: actor.accountId,
+    actorRole: actor.role,
+    carId: job.car_id,
+    field,
+    garageId: job.garage_id,
+    jobId: job.id,
+    newValue,
+    oldValue,
+    subjectId: job.id,
+    subjectType: 'job',
+  };
 }
