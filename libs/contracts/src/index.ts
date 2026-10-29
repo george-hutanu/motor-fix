@@ -52,6 +52,7 @@ export * from './listing-verification';
 export * from './live.dto';
 export * from './marked-brands';
 export * from './me.dto';
+export * from './media.dto';
 export * from './near.dto';
 export * from './notification-preferences.dto';
 export * from './notifications.dto';
