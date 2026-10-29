@@ -49,6 +49,13 @@ export async function stopLiveSessions(
   reason: Reason,
   actor?: { accountId: string; role: Role },
 ): Promise<StoppedSession[]> {
+  // Jobs before sessions, the order a job's own close takes them: a kept
+  // recording's media item holds its job, so a stop that took the session
+  // first could wait on a close that waits on the session.
+  await tx.$queryRaw`
+    SELECT j.id FROM job j JOIN live_session s ON s.job_id = j.id
+    WHERE s.stopped_at IS NULL AND ${inScope(scope)}
+    ORDER BY j.id FOR KEY SHARE OF j`;
   const rows = await tx.$queryRaw<Row[]>`
     UPDATE live_session s
     SET stopped_at = now(), stop_reason = ${reason}::live_stop_reason

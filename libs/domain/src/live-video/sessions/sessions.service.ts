@@ -257,12 +257,20 @@ export class LiveSessionsService {
   }
 
   // Locks the session so a stop and a keep change on it run one after the
-  // other; the second stop then finds it ended.
+  // other; the second stop then finds it ended. The garage and the job are
+  // taken first, in the order every live write takes them, so a stop never
+  // deadlocks with a job close or the live media switch.
   private async lockLive(
     tx: Tx,
     actor: Actor,
     liveSessionId: string,
   ): Promise<LockedSession> {
+    const [owner] = await tx.$queryRaw<{ job_id: string; garage_id: string }[]>`
+      SELECT job_id, garage_id FROM live_session
+      WHERE id = ${liveSessionId}::uuid`;
+    if (!owner) throw new NotFoundException();
+    await tx.$queryRaw`SELECT id FROM garage WHERE id = ${owner.garage_id}::uuid FOR SHARE`;
+    await tx.$queryRaw`SELECT id FROM job WHERE id = ${owner.job_id}::uuid FOR KEY SHARE`;
     const [session] = await tx.$queryRaw<LockedSession[]>`
       SELECT j.id, j.garage_id, j.driver_id, j.mechanic_id,
              m.account_id AS mechanic_account, j.status,
@@ -335,16 +343,21 @@ export class LiveSessionsService {
   // Locks the job so starts on it run one after the other, and says why the
   // caller may not start one now.
   private async judge(tx: Tx, actor: Actor, jobId: string): Promise<LockedJob> {
+    const [owner] = await tx.$queryRaw<{ garage_id: string }[]>`
+      SELECT garage_id FROM job WHERE id = ${jobId}::uuid`;
+    if (!owner || owner.garage_id !== actor.garageId)
+      throw new NotFoundException();
+    // Holds off the live media switch, which locks the garage before it stops
+    // the garage's sessions, until this start is committed and can be seen;
+    // taken before the job, the order the switch takes them in.
+    await tx.$queryRaw`SELECT id FROM garage WHERE id = ${owner.garage_id}::uuid FOR SHARE`;
     const [job] = await tx.$queryRaw<LockedJob[]>`
       SELECT j.id, j.garage_id, j.driver_id, j.mechanic_id,
              m.account_id AS mechanic_account, j.status
       FROM job j LEFT JOIN mechanic m ON m.id = j.mechanic_id
       WHERE j.id = ${jobId}::uuid
       FOR UPDATE OF j`;
-    if (!job || job.garage_id !== actor.garageId) throw new NotFoundException();
-    // Holds off the live media switch, which locks the garage before it stops
-    // the garage's sessions, until this start is committed and can be seen.
-    await tx.$queryRaw`SELECT id FROM garage WHERE id = ${job.garage_id}::uuid FOR KEY SHARE`;
+    if (!job) throw new NotFoundException();
     if (!(await featureOn(tx, job.garage_id, FEATURE)) || !mayStart(actor, job))
       throw new NotFoundException();
     if (job.status === 'done' || job.status === 'cancelled')

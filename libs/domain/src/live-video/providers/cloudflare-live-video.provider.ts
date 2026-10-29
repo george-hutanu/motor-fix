@@ -91,18 +91,11 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     );
     if (list.failed === '404') return;
     if (list.failed) throw new Error(`recording delete failed: ${list.failed}`);
-    const videos = (list.body as { result?: unknown } | null)?.result;
-    if (!Array.isArray(videos)) {
-      throw new Error('recording delete failed: malformed');
-    }
-    for (const video of videos as { uid?: unknown }[]) {
-      if (typeof video?.uid !== 'string' || !video.uid) {
-        throw new Error('recording delete failed: malformed');
-      }
+    for (const uid of videoUids(list.body)) {
       const call = await this.call(
         'delete_recording',
         'DELETE',
-        `/${encodeURIComponent(video.uid)}`,
+        `/${encodeURIComponent(uid)}`,
       );
       if (call.failed && call.failed !== '404' && call.failed !== 'malformed') {
         throw new Error(`recording delete failed: ${call.failed}`);
@@ -194,4 +187,22 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     this.logger.warn(`live provider failed: create_input ${reason}`);
     return { unavailable: reason };
   }
+}
+
+// Every video uid of a live input's list, or a throw when the list is not one.
+function videoUids(body: unknown): string[] {
+  const listed = body as { success?: unknown; result?: unknown } | null;
+  if (listed?.success === false) {
+    throw new Error('recording delete failed: rejected');
+  }
+  const videos = listed?.result;
+  if (!Array.isArray(videos)) {
+    throw new Error('recording delete failed: malformed');
+  }
+  return videos.map((video: { uid?: unknown } | null) => {
+    if (typeof video?.uid !== 'string' || !video.uid) {
+      throw new Error('recording delete failed: malformed');
+    }
+    return video.uid;
+  });
 }

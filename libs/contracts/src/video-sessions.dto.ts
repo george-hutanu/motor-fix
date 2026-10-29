@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsBoolean, ValidateIf } from 'class-validator';
 
 import type { MediaKind } from './media.dto';
 
@@ -79,7 +79,8 @@ export class LiveStopRequestDto {
   @ApiPropertyOptional({
     description: 'Keep the recording; absent keeps the session’s choice',
   })
-  @IsOptional()
+  // Absent is allowed, null is not: it would reach the row as no choice.
+  @ValidateIf((_, value) => value !== undefined)
   @IsBoolean()
   keep?: boolean;
 }

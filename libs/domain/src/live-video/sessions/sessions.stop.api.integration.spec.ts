@@ -167,3 +167,48 @@ describe('the system ends a live stream with the recording choice', () => {
     },
   );
 });
+
+// @traces 1251-FR-005 1251-FR-007
+describe('a sender stop racing the system ending the stream', () => {
+  const ends = {
+    done: (s: Live) => move(s, 'done'),
+    switched_off: (s: Live) =>
+      new GarageFeaturesService(prisma, audit, outbox).set(
+        garageActor(s.dinamo.owner, s.dinamo.garage.id),
+        s.dinamo.garage.id,
+        'live_media',
+        false,
+      ),
+  };
+
+  it.each(['done', 'switched_off'] as const)(
+    'ends it once with one recording, neither side failing, when %s',
+    async (end) => {
+      for (let round = 0; round < 5; round++) {
+        const s = await live();
+        const [stopped] = await Promise.all([
+          send('post', `/live-sessions/${s.id}/stop`, s.costel, { keep: true }),
+          ends[end](s),
+        ]);
+
+        expect([200, 404, 409]).toContain(stopped.status);
+        const stops = await prisma.outboxEvent.count({
+          where: { kind: 'live.stopped', subjectId: s.job.id },
+        });
+        expect(stops).toBe(1);
+        const items = await prisma.mediaItem.count({
+          where: { jobId: s.job.id, kind: 'live' },
+        });
+        expect(items).toBe(1);
+        if (end === 'switched_off')
+          await new GarageFeaturesService(prisma, audit, outbox).set(
+            garageActor(s.dinamo.owner, s.dinamo.garage.id),
+            s.dinamo.garage.id,
+            'live_media',
+            true,
+          );
+      }
+    },
+    30_000,
+  );
+});
