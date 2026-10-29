@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 229,
+    "count": 233,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -521,6 +521,20 @@
     },
     {
       "kind": "queue",
+      "name": "assistant-approval-timers",
+      "source": "libs/domain/src/auth/assistant-approvals/approval-timers/approval-timers.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-jobs-failed",
+        "worker-queue-growing",
+        "booking-lapse-sweep-late"
+      ],
+      "reason": "carries the relay's assistant_approval.requested events (the ASSISTANT_APPROVAL_NEEDED notification, counted by motorfix_notifications_sent_total) and each approval's 30-minute expiry timer and sweep, with one ApprovalTimers log line per fire naming the approval id; BullMQ's queue metrics cover depth and failures; each expiry counts in motorfix_assistant_approvals_total, and booking-lapse-sweep-late fires on the ones the sweep expired (lost timers)",
+      "story": "ST-1254"
+    },
+    {
+      "kind": "queue",
       "name": "quote-timers",
       "source": "libs/domain/src/quotes/decline-window/decline-window.module.ts",
       "dashboard": "motorfix-queues",
@@ -814,6 +828,18 @@
       ],
       "reason": "on the MCP dashboard panel \"Assistant confirmations by tool and outcome\" (id 34), counts each step of an assistant action the person must confirm by tool and outcome (opened, confirmed, refused, expired, mismatch, void, replayed, failed), with no identifiers in the labels; one AssistantConfirmations log line per step naming the confirmation, grant and tool, never the summary or the arguments, and the motorfix.confirmation.outcome attribute on the call span; mcp-tool-errors fires when failed and mismatch pass 20% of at least 5 steps in 10 minutes",
       "story": "ST-1253"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_assistant_approvals_total",
+      "source": "libs/domain/src/auth/assistant-approvals/assistant-approvals.metrics.ts",
+      "dashboard": "motorfix-mcp",
+      "alerts": [
+        "mcp-tool-errors",
+        "booking-lapse-sweep-late"
+      ],
+      "reason": "on the MCP dashboard panel \"Assistant approvals by kind and outcome\" (id 35), counts each step of an assistant action the person approves in the app by kind and outcome (requested at the yes on the MCP server, approved, refused and failed on the API, expired by a decision past its time, the timer, the sweep with sweep=true, or a revoke or the switch turned off), with no identifiers in the labels; one AssistantApprovals log line per step naming the approval, tool, grant and account, never the summary or the arguments, and the motorfix.approval.outcome attribute on the call span; mcp-tool-errors fires when failed passes 20% of at least 5 runs in 10 minutes (previews drifting from the runs), booking-lapse-sweep-late counts the approvals the sweep expired (lost timers)",
+      "story": "ST-1254"
     },
     {
       "kind": "product-counter",
@@ -2863,6 +2889,19 @@
       ],
       "reason": "a request signs a 15-minute upload address and writes the processing item; complete checks the stored bytes and queues the conversion; a refusal is counted in motorfix_media_items_total{outcome=\"refused\"}, a store failure answers 503 storage_unavailable, which api-error-rate sees",
       "story": "ST-333"
+    },
+    {
+      "kind": "endpoint",
+      "name": "me-assistant-approvals",
+      "source": "libs/mcp-tools/src/approvals/approvals.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/assistant/approvals, /api/v1/me/assistant/approvals/:id, /api/v1/me/assistant/approvals/:id/approve and /api/v1/me/assistant/approvals/:id/refuse",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the person's list, one approval, and the approve and refuse of an assistant's action; approve runs the stored tool once under the row lock with every access check of a tool call made again, writing the action, the decision's audit entry and the assistant_approval.decided event in one transaction; a 404, 409 approval_not_pending or 422 invalid_option is the rule working; a 503 maintenance or service_unavailable leaves the approval pending and is what api-error-rate sees; no outside call",
+      "story": "ST-1254"
     },
     {
       "kind": "product-counter",

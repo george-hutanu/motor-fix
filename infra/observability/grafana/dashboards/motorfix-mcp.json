@@ -1208,6 +1208,39 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "Assistant approvals by kind and outcome",
+      "description": "Each step of an assistant action the person approves in the app, by kind and outcome (requested, approved, refused, expired, failed) over 5 minutes, counted by the MCP server, the API and the worker. A rising share of failed is previews that drift from the runs; of expired, the sheet not being reached (libs/domain/src/auth/assistant-approvals/assistant-approvals.metrics.ts).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 84
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (kind, outcome) (increase(motorfix_assistant_approvals_total{deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "{{kind}} {{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     }
   ]
 }

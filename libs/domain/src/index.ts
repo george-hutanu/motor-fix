@@ -23,8 +23,27 @@ export {
   type LoadedAccount,
 } from './auth/account-loader';
 export { AccountsService } from './auth/accounts.service';
-export { CurrentActor, Public, Requires } from './auth/actor.guard';
+export {
+  CurrentActor,
+  OpenInMaintenance,
+  Public,
+  Requires,
+} from './auth/actor.guard';
 export { assistantBroker } from './auth/assistant/assistant.service';
+export { APPROVAL_TIMERS_CONSUMER } from './auth/assistant-approvals/approval-timers/approval-timers';
+export { ApprovalTimersModule } from './auth/assistant-approvals/approval-timers/approval-timers.module';
+export {
+  AssistantApprovals,
+  type Decider as ApprovalDecider,
+  type LockedApproval,
+} from './auth/assistant-approvals/assistant-approvals';
+export {
+  type ApprovalKind,
+  type ApprovalOutcome,
+  ApproveAssistantActionDto,
+  AssistantActionApprovalDto,
+  AssistantActionApprovalListDto,
+} from './auth/assistant-approvals/assistant-approvals.dto';
 export {
   AssistantConfirmations,
   type Decision as ConfirmationDecision,
@@ -41,6 +60,7 @@ export {
   MAINTENANCE,
   type Maintenance,
   type MaintenanceReader,
+  maintenanceRefusal,
   storedMaintenance,
 } from './auth/maintenance';
 export { oauthSettings } from './auth/oauth/providers';

@@ -34,7 +34,8 @@ function sentBy(
 }
 
 // Choosing push is what muted a driver's e-mail, so with no device the
-// e-mail goes anyway; a staff choice leaves that to its own e-mail entry.
+// e-mail goes anyway; a staff choice leaves that to its own e-mail entry. A
+// type that goes by e-mail without a device does so for anyone.
 function pushBy(
   type: NotificationType,
   muted: ReadonlySet<OutsideChannel>,
@@ -43,7 +44,9 @@ function pushBy(
 ): SentChannel | null {
   if (muted.has('push')) return null;
   if (reach.push) return 'push';
-  return driver && type.channels.includes('email') ? 'email' : null;
+  const email =
+    type.emailWithoutPush || (driver && type.channels.includes('email'));
+  return email ? 'email' : null;
 }
 
 // The outside rows a message writes. An SMS or WhatsApp the person cannot
@@ -79,15 +82,17 @@ export interface Substitution {
 
 // The driver's channel a message cannot use and what it goes by instead: a
 // push with no device, an SMS or WhatsApp with no confirmed phone, each by
-// e-mail. Only when e-mail is written; a staff message has none.
+// e-mail. Only when e-mail is written; a staff message has none, unless its
+// type goes by e-mail without a device.
 export function substitutions(
   name: string,
   muted: ReadonlySet<OutsideChannel>,
   reach: Reach,
   garageId: string | null = null,
 ): Substitution[] {
-  if (!isDriverChoice(name, garageId) || !reach.email) return [];
   const type = notificationType(name);
+  const driver = isDriverChoice(name, garageId);
+  if (!(driver || type.emailWithoutPush) || !reach.email) return [];
   return type.channels
     .filter((channel) => channel !== 'email' && !muted.has(channel))
     .filter((channel) => sentBy(channel, type, muted, reach, true) === 'email')
