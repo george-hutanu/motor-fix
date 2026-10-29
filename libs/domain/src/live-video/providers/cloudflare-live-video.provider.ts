@@ -7,7 +7,11 @@ import {
 import { Logger } from '@nestjs/common';
 import { type Span, SpanStatusCode, trace } from '@opentelemetry/api';
 
-import type { LiveInput, LiveVideoProvider } from './live-video.provider';
+import type {
+  InputStatus,
+  LiveInput,
+  LiveVideoProvider,
+} from './live-video.provider';
 import { recordProviderCall } from '../sessions/sessions.metrics';
 
 const API = 'https://api.cloudflare.com/client/v4';
@@ -31,6 +35,14 @@ export function signingKey(value: string): KeyObject {
 }
 
 type Call = { body?: unknown; failed?: string };
+type Operation =
+  | 'create_input'
+  | 'close_input'
+  | 'delete_recording'
+  | 'input_status';
+
+// The states Cloudflare gives an input with a publisher on it.
+const CONNECTED = new Set(['connected', 'reconnected']);
 
 // Cloudflare Stream Live: a WHIP input per session, recorded, played back
 // only through a token this adapter signs itself. Its log lines and answers
@@ -80,17 +92,54 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     if (call.failed) throw new Error(`live input close failed: ${call.failed}`);
   }
 
-  // A 404 is a recording already gone; an answer with no JSON body is a
-  // delete the provider accepted.
-  async deleteRecording(providerRef: string): Promise<void> {
-    const call = await this.call(
+  // The reference is the live input: its recordings are listed and each is
+  // deleted. A 404 on either call is a recording already gone; an answer
+  // with no JSON body is a delete the provider accepted.
+  async deleteRecording(inputId: string): Promise<void> {
+    const list = await this.call(
       'delete_recording',
-      'DELETE',
-      `/${encodeURIComponent(providerRef)}`,
+      'GET',
+      `/live_inputs/${encodeURIComponent(inputId)}/videos`,
     );
-    if (call.failed && call.failed !== '404' && call.failed !== 'malformed') {
-      throw new Error(`recording delete failed: ${call.failed}`);
+    if (list.failed === '404') return;
+    if (list.failed) throw new Error(`recording delete failed: ${list.failed}`);
+    for (const uid of videoUids(list.body)) {
+      const call = await this.call(
+        'delete_recording',
+        'DELETE',
+        `/${encodeURIComponent(uid)}`,
+      );
+      if (call.failed && call.failed !== '404' && call.failed !== 'malformed') {
+        throw new Error(`recording delete failed: ${call.failed}`);
+      }
     }
+  }
+
+  // The input's current state: a connected or reconnected publisher, or none
+  // since the state was entered; an input with no state never had one, and
+  // an input already gone has none.
+  async inputStatus(inputId: string): Promise<InputStatus> {
+    const call = await this.call(
+      'input_status',
+      'GET',
+      `/live_inputs/${encodeURIComponent(inputId)}`,
+    );
+    if (call.failed === '404') return { connected: false, since: null };
+    if (call.failed) throw new Error(`input status failed: ${call.failed}`);
+    const body = call.body as {
+      success?: unknown;
+      result?: { status?: { current?: Record<string, unknown> } | null };
+    } | null;
+    if (body?.success === false || !body?.result) {
+      throw new Error('input status failed: malformed');
+    }
+    const current = body.result.status?.current;
+    if (!current) return { connected: false, since: null };
+    const entered = new Date(String(current['statusEnteredAt']));
+    return {
+      connected: CONNECTED.has(String(current['state'])),
+      since: Number.isNaN(entered.getTime()) ? null : entered,
+    };
   }
 
   viewUrl(inputId: string, expiresAt: Date): string {
@@ -112,8 +161,8 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
   }
 
   private call(
-    operation: 'create_input' | 'close_input' | 'delete_recording',
-    method: 'POST' | 'DELETE',
+    operation: Operation,
+    method: 'GET' | 'POST' | 'DELETE',
     path: string,
     body?: object,
   ): Promise<Call> {
@@ -177,4 +226,22 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     this.logger.warn(`live provider failed: create_input ${reason}`);
     return { unavailable: reason };
   }
+}
+
+// Every video uid of a live input's list, or a throw when the list is not one.
+function videoUids(body: unknown): string[] {
+  const listed = body as { success?: unknown; result?: unknown } | null;
+  if (listed?.success === false) {
+    throw new Error('recording delete failed: rejected');
+  }
+  const videos = listed?.result;
+  if (!Array.isArray(videos)) {
+    throw new Error('recording delete failed: malformed');
+  }
+  return videos.map((video: { uid?: unknown } | null) => {
+    if (typeof video?.uid !== 'string' || !video.uid) {
+      throw new Error('recording delete failed: malformed');
+    }
+    return video.uid;
+  });
 }

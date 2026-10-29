@@ -48,3 +48,31 @@ describe('deleting a kept recording', () => {
     await expect(NONE.deleteRecording('video-1')).resolves.toBe(undefined);
   });
 });
+
+// @traces 1251-FR-011
+describe('the stand-in publisher state', () => {
+  it('takes an input nobody set as never connected', async () => {
+    await expect(new FakeLiveVideo().inputStatus('input-1')).resolves.toEqual({
+      connected: false,
+      since: null,
+    });
+  });
+
+  it('answers from the table a test sets', async () => {
+    const fake = new FakeLiveVideo();
+    const since = new Date('2026-10-29T10:00:00.000Z');
+    fake.statuses.set('input-1', { connected: true, since });
+
+    await expect(fake.inputStatus('input-1')).resolves.toEqual({
+      connected: true,
+      since,
+    });
+  });
+
+  it('says connected when no provider is configured, so nothing is stopped idle', async () => {
+    await expect(NONE.inputStatus('input-1')).resolves.toEqual({
+      connected: true,
+      since: null,
+    });
+  });
+});
