@@ -1,6 +1,6 @@
 ---
 capability: workshop
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 220-requests-quotes-bookings
   - 424-job-steps
@@ -9,6 +9,7 @@ features:
   - 150-add-booking
   - 423-mechanic-garage-dashboard
   - 276-job-start-done
+  - 275-live-stage-updates
 ---
 
 # Capability: Workshop
@@ -169,9 +170,9 @@ _From 274-request-stages._
 
 _From 274-request-stages._
 
-### 274-FR-020 — The panel MUST read again on the request events the overview already follows (`quote.accepted`, `booking.confirmed`, `booking.lapsed`) plus `quote.sent`, and, in Cererile mele, on the events its list follows; it adds no live channel of its own (live updates are ST-275).
+### 275-FR-001 — The panel Cererea activă on the overview and in Cererile mele MUST re-read the active request on every live message of these kinds, besides the request kinds it follows today (274-FR-020): `quote.sent`, `quote.changed`, `quote.withdrawn`, `quote.expired`, `quote.accepted`, `booking.confirmed`, `booking.lapsed`, `booking.cancelled`, `booking.no_show_recorded`, `job.started`, `job.paused`, `job.resumed`, `job.step_done`, `job.step_undone`, `job.steps_changed`, `job.eta_changed`, `job.done`, `job.handed_over`, `job.final_price_corrected`, and `job.mechanic_changed`, `job.reopened`, `job.received`, `request.expired`, `request.decline_undone`, `request.direct_answered`, `quote.closed`, `quote.declined_by_driver` and `booking.moved` (Assumptions, Clarifications). The kinds are one exported list beside the request kinds, a superset of them; the list is closed and pinned by a unit test. The messages carry only kind, id and time; the panel re-reads through the API, so access rules apply once, on the server. Modifies 274-FR-020: the panel follows every kind that moves what it shows.
 
-_From 274-request-stages._
+_From 275-live-stage-updates._
 
 ### 274-FR-021 — Every text MUST exist in Romanian and English, and the panel MUST fit 320 px wide with no sideways scroll, in light and dark.
 
@@ -233,7 +234,40 @@ _From 276-job-start-done._
 
 _From 276-job-start-done._
 
+### 275-FR-002 — The re-read MUST follow the in-place rules the helper already keeps: messages within 300 ms cause one re-read, one read runs at a time, the result is merged by structural sharing, a failed re-read keeps the last value and shows no error, and no update reloads the page, changes the route, closes an overlay, moves focus or loses text typed elsewhere on the page (256-FR-001 to 256-FR-005).
+
+_From 275-live-stage-updates._
+
+### 275-FR-003 — After the re-read the panel MUST show what 274-FR-010 to 274-FR-015 define for the new state, with nothing to press: the stage line, Început, În pauză, Gata estimat, the booking's date and time in place of the countdown, Ofertă with its range, the final price, and Pașii lucrării with its count and each step's state.
+
+_From 275-live-stage-updates._
+
+### 275-FR-005 — The panel MUST show a small line "Reconectare…" / "Reconnecting…", a polite status for assistive technology, while the connection's `offline` signal is true, that is once the live connection has not been `open` for more than 10 seconds while it is wanted (the same signal as the frame's offline bar, 255-FR-006, so the two never disagree, also while polling), and MUST hide it as soon as the connection is `open` again; the reopen's re-read (255-FR-004) then brings the request up to date. The line is not designed (Assumptions): plain text under the stage line, no icon, no button. It belongs to the panel's loaded view (the stage line it sits under); while the panel shows its loading, empty or error state the frame's offline bar alone speaks.
+
+_From 275-live-stage-updates._
+
+### 275-FR-006 — Both tabs of a driver's dashboard MUST show the change (1190-FR-007: the shared stream fans the event to every tab of the account and role; the panel in each tab re-reads).
+
+_From 275-live-stage-updates._
+
+### 275-FR-007 — The waiting-for-the-garage countdown MUST keep ticking in the browser every minute (as today) and MUST be re-read on any booking message of FR-001.
+
+_From 275-live-stage-updates._
+
+### 275-FR-008 — The story MUST write nothing: no row, no audit entry, no event; the only read is the active request API (274-FR-001). It adds no server channel, route or event kind.
+
+_From 275-live-stage-updates._
+
+### 275-FR-009 — Tests MUST cover: in Jest (already held by `libs/domain/src/events/audience.spec.ts` and `live.hub.audience.spec.ts`, cited, not duplicated), the audience of a job, booking and quote subject (the driver's account, the garage and the job's mechanic are in it; another driver's account, another garage and a mechanic of another garage are not; a job with no mechanic yields exactly the driver's account and the garage), and that a driver's stream is given no channel but its own account's and `system`; in web unit tests, the full list of kinds that re-read the panel (FR-001), the 300 ms coalescing, the countdown's re-read on a booking kind, and the reconnecting line's show and hide on the connection's `offline` signal; in Playwright, two browser contexts where the garage starts the job, ticks a step and marks it done and the driver's tracker follows each change without a navigation, on the overview and in Cererile mele, then once more after the driver's network is cut and restored; and a second driver tab following a tick. Each spec file carries a `// @traces` line naming this feature's ids.
+
+_From 275-live-stage-updates._
+
+### 275-FR-010 — Every new text MUST exist in Romanian and English, and the panel with the reconnecting line MUST fit 320 px wide with no sideways scroll, in light and dark.
+
+_From 275-live-stage-updates._
+
 ## Retired
 
 - `220-FR-007` — superseded by `389-FR-002` (2026-10-21)
 - `389-FR-002` — superseded by `276-FR-004` (2026-10-26)
+- `274-FR-020` — superseded by `275-FR-001` (2026-10-29)

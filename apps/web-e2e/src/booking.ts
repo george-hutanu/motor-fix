@@ -116,5 +116,6 @@ export async function confirmed(request: APIRequestContext) {
     headers,
   });
   expect(confirm.ok()).toBe(true);
-  return { bookingId, requestId };
+  const { startsAt } = (await confirm.json()) as { startsAt: string };
+  return { bookingId, requestId, startsAt };
 }
