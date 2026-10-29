@@ -6234,6 +6234,324 @@
         "defaults": {},
         "overrides": []
       }
+    },
+    {
+      "id": 215,
+      "type": "stat",
+      "title": "Car transfer links sent, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 293
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_car_transfer_sends_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 216,
+      "type": "stat",
+      "title": "Car transfer links sent, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 293
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_car_transfer_sends_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 217,
+      "type": "stat",
+      "title": "Car transfer WhatsApp messages, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 293
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_car_transfer_whatsapp_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 218,
+      "type": "stat",
+      "title": "Car transfer WhatsApp messages, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 293
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_car_transfer_whatsapp_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 219,
+      "type": "stat",
+      "title": "Car transfers expired, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 297
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_car_transfer_expiries_total{deployment_environment=\"$env\"}[1h]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 220,
+      "type": "stat",
+      "title": "Car transfers expired, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 297
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_car_transfer_expiries_total{deployment_environment=\"$env\"}[1d]))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 221,
+      "type": "stat",
+      "title": "Car takeovers by the buyer, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 297
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_car_transfer_accepts_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 222,
+      "type": "stat",
+      "title": "Car takeovers by the buyer, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 297
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_car_transfer_accepts_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 223,
+      "type": "stat",
+      "title": "Car takeovers told to the seller, last hour",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 301
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_car_transfer_accepted_notices_total{deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 224,
+      "type": "stat",
+      "title": "Car takeovers told to the seller, last 24 hours",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 301
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (increase(motorfix_car_transfer_accepted_notices_total{deployment_environment=\"$env\"}[1d]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0"
+        },
+        "overrides": []
+      }
     }
   ]
 }

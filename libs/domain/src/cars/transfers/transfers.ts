@@ -28,6 +28,8 @@ interface TransferRow {
   id: string;
   carId: string;
   sellerId: string;
+  // Set on the accepted step only.
+  buyerId?: string;
 }
 
 export const transferLink = (
@@ -41,17 +43,26 @@ export const transferLink = (
 export const isLive = (expiresAt: Date, now: Date) =>
   expiresAt.getTime() > now.getTime();
 
-// The event of a step, to the seller alone: never the phone or the token.
+// The event of a step, to the seller alone, and to the buyer too once taken
+// over: never the phone or the token.
 export const transferEvent = (
   events: EventPort,
   tx: Prisma.TransactionClient,
   transfer: TransferRow,
   status: TransferStatus,
-) =>
-  events.record(tx, {
-    audience: { accountId: transfer.sellerId, type: 'account' },
+) => {
+  const { buyerId } = transfer;
+  return events.record(tx, {
+    audience: buyerId
+      ? {
+          buyerAccountId: buyerId,
+          sellerAccountId: transfer.sellerId,
+          type: 'car_transfer',
+        }
+      : { accountId: transfer.sellerId, type: 'account' },
     kind: `car_transfer.${status}`,
     payload: {
+      ...(buyerId && { buyerAccountId: buyerId }),
       carId: transfer.carId,
       sellerAccountId: transfer.sellerId,
       status,
@@ -59,6 +70,7 @@ export const transferEvent = (
     },
     subjectId: transfer.id,
   });
+};
 
 // The audit entry and event of a sent transfer that moves on, in the
 // caller's transaction. The caller has already moved the row.

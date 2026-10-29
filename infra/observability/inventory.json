@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 231,
+    "count": 235,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -2999,6 +2999,89 @@
       "alerts": "none",
       "reason": "counts the sent transfers the daily sweep expired, with one CarTransferExpirySweep log line per run and an error line per transfer that failed, by id; the link already answers transfer_expired past its time, so a late sweep loses nothing",
       "story": "ST-415"
+    },
+    {
+      "kind": "endpoint",
+      "name": "car-transfer-accept",
+      "source": "libs/domain/src/cars/transfers/transfers.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/car-transfers/:token/accept",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the buyer's takeover: each outcome counted by motorfix_car_transfer_accepts_total, one CarTransfers log line per takeover with the transfer and car ids, the audit rows and a car_transfer.accepted event; refusals read from the status codes; the route label carries :token, never the token",
+      "story": "ST-1265"
+    },
+    {
+      "kind": "endpoint",
+      "name": "car-repairs",
+      "source": "libs/domain/src/cars/history/history.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/cars/:id/repairs",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner's history read through the open ownership row; a read changes nothing, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-1265"
+    },
+    {
+      "kind": "endpoint",
+      "name": "cars-sold",
+      "source": "libs/domain/src/cars/history/history.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/cars/sold",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the former owner's sold cars list; a read changes nothing, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-1265"
+    },
+    {
+      "kind": "endpoint",
+      "name": "car-sold-repairs",
+      "source": "libs/domain/src/cars/history/history.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/cars/sold/:id/repairs",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the former owner's read-only history up to the sale; a read changes nothing, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-1265"
+    },
+    {
+      "kind": "queue",
+      "name": "car-transfer-accepted",
+      "source": "libs/domain/src/notifications/car-transfer-accepted/car-transfer-accepted.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_car_transfer_accepted_notices_total (built, muted, skipped) on motorfix-product, with one CarTransferAccepted log line per event naming the transfer id; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-1265"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_car_transfer_accepts_total",
+      "source": "libs/domain/src/cars/transfers/transfers.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each takeover attempt by outcome (accepted and each refusal) with no car, account or token label; a count has no failure to alert on; the api-error-rate rule covers the service",
+      "story": "ST-1265"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_car_transfer_accepted_notices_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each takeover told to the seller by outcome (built, muted, skipped), with the fan-out's log line naming the transfer id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
+      "story": "ST-1265"
     }
   ]
 }
