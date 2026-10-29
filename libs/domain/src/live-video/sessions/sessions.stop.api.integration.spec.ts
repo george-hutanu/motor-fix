@@ -6,8 +6,10 @@ import { garageActor } from '../../quotes/quotes.testing';
 import { quotesApp } from '../../quotes/quotes-api.testing';
 import { moveJob } from '../../workshop/transitions';
 import { LiveVideoModule } from '../live-video.module';
+import type { FakeLiveVideo } from '../providers/fake-live-video.provider';
+import { LIVE_VIDEO_PROVIDER } from '../providers/live-video.provider';
 
-const { bearer, send, team, world } = quotesApp([
+const { bearer, provider, send, team, world } = quotesApp([
   LiveVideoModule.register({ provider: 'fake' }),
 ]);
 const { prisma } = world;
@@ -110,4 +112,103 @@ describe('the system ends a live stream', () => {
     expect(again.status).toBe(201);
     expect(again.body.liveSessionId).not.toBe(s.id);
   });
+});
+
+const fake = () => provider<FakeLiveVideo>(LIVE_VIDEO_PROVIDER);
+
+// @traces 1251-FR-007 1251-FR-010
+describe('the system ends a live stream with the recording choice', () => {
+  const ends = {
+    cancelled: (s: Live) => move(s, 'cancelled', noEvents),
+    done: (s: Live) => move(s, 'done'),
+    switched_off: async (s: Live) => {
+      const features = new GarageFeaturesService(prisma, audit, outbox);
+      const owner = garageActor(s.dinamo.owner, s.dinamo.garage.id);
+      await features.set(owner, s.dinamo.garage.id, 'live_media', false);
+    },
+  };
+
+  it.each([
+    ['done', true],
+    ['done', false],
+    ['cancelled', true],
+    ['cancelled', false],
+    ['switched_off', true],
+    ['switched_off', false],
+  ] as const)(
+    'when %s keeps the recording only if the session says so (%s)',
+    async (end, keepRecording) => {
+      const s = await live(end === 'cancelled' ? 'to_do' : 'in_work');
+      await prisma.liveSession.update({
+        data: { keepRecording },
+        where: { id: s.id },
+      });
+      fake().deleted.length = 0;
+
+      await ends[end](s);
+
+      const items = await prisma.mediaItem.findMany({
+        where: { jobId: s.job.id },
+      });
+      expect(items).toEqual(
+        keepRecording
+          ? [expect.objectContaining({ kind: 'live', senderId: null })]
+          : [],
+      );
+      const row = await prisma.liveSession.findUniqueOrThrow({
+        where: { id: s.id },
+      });
+      expect(row.recordingMediaId).toBe(items[0]?.id ?? null);
+      const [stop] = await prisma.outboxEvent.findMany({
+        where: { kind: 'live.stopped', subjectId: s.job.id },
+      });
+      expect(stop?.payload).toMatchObject({ keep: keepRecording });
+      expect(fake().deleted).toEqual([]);
+    },
+  );
+});
+
+// @traces 1251-FR-005 1251-FR-007
+describe('a sender stop racing the system ending the stream', () => {
+  const ends = {
+    done: (s: Live) => move(s, 'done'),
+    switched_off: (s: Live) =>
+      new GarageFeaturesService(prisma, audit, outbox).set(
+        garageActor(s.dinamo.owner, s.dinamo.garage.id),
+        s.dinamo.garage.id,
+        'live_media',
+        false,
+      ),
+  };
+
+  it.each(['done', 'switched_off'] as const)(
+    'ends it once with one recording, neither side failing, when %s',
+    async (end) => {
+      for (let round = 0; round < 5; round++) {
+        const s = await live();
+        const [stopped] = await Promise.all([
+          send('post', `/live-sessions/${s.id}/stop`, s.costel, { keep: true }),
+          ends[end](s),
+        ]);
+
+        expect([200, 404, 409]).toContain(stopped.status);
+        const stops = await prisma.outboxEvent.count({
+          where: { kind: 'live.stopped', subjectId: s.job.id },
+        });
+        expect(stops).toBe(1);
+        const items = await prisma.mediaItem.count({
+          where: { jobId: s.job.id, kind: 'live' },
+        });
+        expect(items).toBe(1);
+        if (end === 'switched_off')
+          await new GarageFeaturesService(prisma, audit, outbox).set(
+            garageActor(s.dinamo.owner, s.dinamo.garage.id),
+            s.dinamo.garage.id,
+            'live_media',
+            true,
+          );
+      }
+    },
+    30_000,
+  );
 });

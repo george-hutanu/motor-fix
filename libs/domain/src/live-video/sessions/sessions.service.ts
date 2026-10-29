@@ -5,8 +5,11 @@ import {
   LIVE_PUBLISH_CONSTRAINTS,
   LIVE_PUBLISH_WINDOW_MS,
   LIVE_VIEW_TOKEN_TTL_MS,
+  type LiveRecordingKeepDto,
   type LiveRefusal,
   type LiveSessionStartedDto,
+  type LiveSessionStoppedDto,
+  type LiveStopRequestDto,
   type LiveViewCredentialDto,
 } from '@motor-fix/contracts';
 import {
@@ -18,7 +21,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { countLiveSession, countViewToken } from './sessions.metrics';
+import {
+  countLiveRecording,
+  countLiveSession,
+  countViewToken,
+} from './sessions.metrics';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
@@ -33,8 +40,16 @@ import {
   type LiveInput,
   type LiveVideoProvider,
 } from '../providers/live-video.provider';
+import { stopLiveSessions } from '../stop-sessions';
 
 type Tx = Prisma.TransactionClient;
+
+interface LockedSession extends LockedJob {
+  session_id: string;
+  provider_input_id: string;
+  keep_recording: boolean;
+  stopped: boolean;
+}
 type Words = Parameters<typeof said>[0];
 
 interface LockedJob {
@@ -191,19 +206,158 @@ export class LiveSessionsService {
     return { expiresAt: expiresAt.toISOString(), url };
   }
 
+  async setKeep(
+    actor: Actor,
+    liveSessionId: string,
+    body: LiveRecordingKeepDto,
+  ): Promise<LiveRecordingKeepDto> {
+    await this.refusingOn('keep', liveSessionId, () =>
+      this.prisma.$transaction(async (tx) => {
+        const session = await this.lockLive(tx, actor, liveSessionId);
+        await this.applyKeep(tx, actor, session, body.keep);
+      }),
+    );
+    return { keep: body.keep };
+  }
+
+  // The stop is written in one transaction; a discarded recording is deleted
+  // at the provider after the commit, and a delete that fails or hangs is
+  // left to be retried later without changing the answer.
+  async stop(
+    actor: Actor,
+    liveSessionId: string,
+    body: LiveStopRequestDto,
+  ): Promise<LiveSessionStoppedDto> {
+    const stopped = await this.refusingOn('stop', liveSessionId, () =>
+      this.prisma.$transaction(async (tx) => {
+        const session = await this.lockLive(tx, actor, liveSessionId);
+        if (body.keep !== undefined)
+          await this.applyKeep(tx, actor, session, body.keep);
+        const [row] = await stopLiveSessions(
+          tx,
+          this.audit,
+          { sessionId: liveSessionId },
+          'sender',
+          actor,
+        );
+        if (!row) throw new Error(`live session ${liveSessionId} not stopped`);
+        return row;
+      }),
+    );
+    countLiveSession('stopped');
+    if (!stopped.keep)
+      await this.discard(liveSessionId, stopped.providerInputId);
+    return {
+      keep: stopped.keep,
+      liveSessionId,
+      recordingMediaId: stopped.recordingMediaId,
+      seconds: stopped.seconds,
+      stoppedAt: stopped.stoppedAt.toISOString(),
+    };
+  }
+
+  // Locks the session so a stop and a keep change on it run one after the
+  // other; the second stop then finds it ended. The garage and the job are
+  // taken first, in the order every live write takes them, so a stop never
+  // deadlocks with a job close or the live media switch.
+  private async lockLive(
+    tx: Tx,
+    actor: Actor,
+    liveSessionId: string,
+  ): Promise<LockedSession> {
+    const [owner] = await tx.$queryRaw<{ job_id: string; garage_id: string }[]>`
+      SELECT job_id, garage_id FROM live_session
+      WHERE id = ${liveSessionId}::uuid`;
+    if (!owner) throw new NotFoundException();
+    await tx.$queryRaw`SELECT id FROM garage WHERE id = ${owner.garage_id}::uuid FOR SHARE`;
+    await tx.$queryRaw`SELECT id FROM job WHERE id = ${owner.job_id}::uuid FOR KEY SHARE`;
+    const [session] = await tx.$queryRaw<LockedSession[]>`
+      SELECT j.id, j.garage_id, j.driver_id, j.mechanic_id,
+             m.account_id AS mechanic_account, j.status,
+             s.id AS session_id, s.provider_input_id, s.keep_recording,
+             s.stopped_at IS NOT NULL AS stopped
+      FROM live_session s
+      JOIN job j ON j.id = s.job_id
+      LEFT JOIN mechanic m ON m.id = j.mechanic_id
+      WHERE s.id = ${liveSessionId}::uuid
+      FOR UPDATE OF s`;
+    if (
+      !session ||
+      !(await featureOn(tx, session.garage_id, FEATURE)) ||
+      !mayStart(actor, session)
+    )
+      throw new NotFoundException();
+    if (session.stopped)
+      throw refused(HttpStatus.CONFLICT, 'live_ended', LIVE_ENDED, actor);
+    return session;
+  }
+
+  private async applyKeep(
+    tx: Tx,
+    actor: Actor,
+    session: LockedSession,
+    keep: boolean,
+  ) {
+    if (session.keep_recording === keep) return;
+    await tx.liveSession.update({
+      data: { keepRecording: keep },
+      where: { id: session.session_id },
+    });
+    await this.audit.record(tx, {
+      action: 'update',
+      actorId: actor.accountId,
+      actorRole: actor.role,
+      field: 'keep_recording',
+      garageId: session.garage_id,
+      jobId: session.id,
+      newValue: keep,
+      oldValue: session.keep_recording,
+      subjectId: session.session_id,
+      subjectType: 'live_session',
+    });
+  }
+
+  private async discard(liveSessionId: string, inputId: string) {
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        this.provider.deleteRecording(inputId),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error('timeout')),
+            LIVE_PROVIDER_TIMEOUT_MS,
+          );
+        }),
+      ]);
+      countLiveRecording('discarded');
+    } catch (error) {
+      countLiveRecording('discard_failed');
+      this.logger.warn(
+        `live recording not discarded: session ${liveSessionId} input ${inputId} ${error instanceof Error ? error.name : 'error'}`,
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   // Locks the job so starts on it run one after the other, and says why the
   // caller may not start one now.
   private async judge(tx: Tx, actor: Actor, jobId: string): Promise<LockedJob> {
+    const [owner] = await tx.$queryRaw<{ garage_id: string }[]>`
+      SELECT garage_id FROM job WHERE id = ${jobId}::uuid`;
+    if (!owner || owner.garage_id !== actor.garageId)
+      throw new NotFoundException();
+    // Holds off the live media switch, which locks the garage before it stops
+    // the garage's sessions, until this start is committed and can be seen;
+    // taken before the job, the order the switch takes them in.
+    await tx.$queryRaw`SELECT id FROM garage WHERE id = ${owner.garage_id}::uuid FOR SHARE`;
     const [job] = await tx.$queryRaw<LockedJob[]>`
       SELECT j.id, j.garage_id, j.driver_id, j.mechanic_id,
              m.account_id AS mechanic_account, j.status
       FROM job j LEFT JOIN mechanic m ON m.id = j.mechanic_id
       WHERE j.id = ${jobId}::uuid
       FOR UPDATE OF j`;
-    if (!job || job.garage_id !== actor.garageId) throw new NotFoundException();
-    // Holds off the live media switch, which locks the garage before it stops
-    // the garage's sessions, until this start is committed and can be seen.
-    await tx.$queryRaw`SELECT id FROM garage WHERE id = ${job.garage_id}::uuid FOR KEY SHARE`;
+    if (!job) throw new NotFoundException();
     if (!(await featureOn(tx, job.garage_id, FEATURE)) || !mayStart(actor, job))
       throw new NotFoundException();
     if (job.status === 'done' || job.status === 'cancelled')
@@ -277,13 +431,23 @@ export class LiveSessionsService {
       return await run();
     } catch (error) {
       countLiveSession('refused');
-      const code =
-        error instanceof NotFoundException
-          ? 'not_found'
-          : error instanceof HttpException
-            ? ((error.getResponse() as { code?: string }).code ?? 'error')
-            : 'error';
-      this.logger.warn(`live start refused: ${code} job ${jobId}`);
+      this.logger.warn(`live start refused: ${codeOf(error)} job ${jobId}`);
+      throw error;
+    }
+  }
+
+  // Logs a refused stop or keep change by its code and the session's id.
+  private async refusingOn<T>(
+    what: 'stop' | 'keep',
+    liveSessionId: string,
+    run: () => Promise<T>,
+  ) {
+    try {
+      return await run();
+    } catch (error) {
+      this.logger.warn(
+        `live ${what} refused: ${codeOf(error)} session ${liveSessionId}`,
+      );
       throw error;
     }
   }
@@ -296,6 +460,13 @@ export class LiveSessionsService {
     });
   }
 }
+
+const codeOf = (error: unknown) =>
+  error instanceof NotFoundException
+    ? 'not_found'
+    : error instanceof HttpException
+      ? ((error.getResponse() as { code?: string }).code ?? 'error')
+      : 'error';
 
 const isUniqueClash = (error: unknown) =>
   error instanceof Prisma.PrismaClientKnownRequestError &&
