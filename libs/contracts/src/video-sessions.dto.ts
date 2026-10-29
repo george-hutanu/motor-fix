@@ -101,15 +101,16 @@ export class LiveSessionStoppedDto {
   recordingMediaId!: string | null;
 }
 
-export interface LiveStoppedPayload {
+// Types, not interfaces: an outbox payload is a plain record.
+export type LiveStoppedPayload = {
   liveSessionId: string;
   jobId: string;
   reason: 'job_closed' | 'feature_off' | 'sender' | 'idle';
   keep: boolean;
-}
+};
 
-export interface MediaAddedPayload {
+export type MediaAddedPayload = {
   mediaId: string;
   jobId: string;
   kind: MediaKind;
-}
+};

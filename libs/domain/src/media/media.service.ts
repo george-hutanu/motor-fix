@@ -24,6 +24,7 @@ import {
 import type { Queue } from 'bullmq';
 
 import { countMediaItem } from './media.metrics';
+import { announce, registerLiveRecording } from './media.recording';
 import { mediaRefused } from './media.refusals';
 import { purgeAfter } from './media.state';
 import { MEDIA_PROCESSING } from './processing/processing.config';
@@ -119,19 +120,6 @@ interface Converted {
   seconds?: number;
 }
 
-// The role a sender acted in: the job's garage's mechanic, else its owner.
-async function senderRole(
-  tx: Prisma.TransactionClient,
-  item: Pick<Item, 'garageId' | 'senderId'>,
-) {
-  if (!item.senderId) return 'system' as const;
-  const mechanic = await tx.mechanic.findFirst({
-    select: { id: true },
-    where: { accountId: item.senderId, garageId: item.garageId },
-  });
-  return mechanic ? ('mechanic' as const) : ('garage' as const);
-}
-
 // Shows a converted item: it moves only from processing, so a second worker
 // run or a late retry changes nothing; its event and audit entry are
 // written with the move, once.
@@ -159,39 +147,6 @@ export async function markVisible(
   });
   if (shown) countMediaItem(shown.kind, 'visible');
   return shown !== null;
-}
-
-async function announce(
-  deps: MediaDeps,
-  tx: Prisma.TransactionClient,
-  item: Item,
-) {
-  const job = await tx.job.findUniqueOrThrow({
-    select: { driverId: true, mechanicId: true },
-    where: { id: item.jobId },
-  });
-  await deps.events.record(tx, {
-    audience: {
-      driverAccountId: job.driverId,
-      garageId: item.garageId,
-      mechanicId: job.mechanicId,
-      type: 'job',
-    },
-    kind: 'media.added',
-    payload: { jobId: item.jobId, kind: item.kind, mediaId: item.id },
-    subjectId: item.jobId,
-  });
-  await deps.audit.record(tx, {
-    action: 'create',
-    actorId: item.senderId,
-    actorRole: await senderRole(tx, item),
-    garageId: item.garageId,
-    jobId: item.jobId,
-    kind: 'media.added',
-    newValue: item.kind,
-    subjectId: item.id,
-    subjectType: 'media_item',
-  });
 }
 
 // A conversion that failed for good; the original stays for the purge.
@@ -384,19 +339,15 @@ export class MediaService implements OnModuleDestroy {
       sizeBytes: 0n,
     };
     if ('providerRef' in file) {
-      const item = await this.prisma.$transaction(async (tx) => {
-        const created = await tx.mediaItem.create({
-          data: {
-            ...data,
-            providerRef: file.providerRef,
-            status: 'visible',
-            uploadedAt: sentAt,
-          },
-        });
-        await announce(this.deps(), tx, created);
-        return created;
-      });
-      countMediaItem('live', 'visible');
+      const item = await this.prisma.$transaction((tx) =>
+        registerLiveRecording(tx, this.deps(), {
+          garageId: job.garage_id,
+          jobId,
+          providerRef: file.providerRef,
+          seconds,
+          sentAt,
+        }),
+      );
       return itemDto(item);
     }
     const item = await this.prisma.mediaItem.create({
