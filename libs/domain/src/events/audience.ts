@@ -94,8 +94,10 @@ export function audienceOf(subject: LiveSubject): string[] {
       return [account(subject.ownerAccountId)];
     case 'car_transfer':
       return [
-        account(subject.sellerAccountId),
-        account(subject.buyerAccountId),
+        ...new Set([
+          account(subject.sellerAccountId),
+          account(subject.buyerAccountId),
+        ]),
       ];
     case 'repair':
       return [

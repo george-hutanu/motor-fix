@@ -15,7 +15,7 @@ export const REPAIR_ORDER = [
   { createdAt: 'desc' },
 ] satisfies Prisma.RepairOrderByWithRelationInput[];
 
-// The one visibility rule (1265-FR-010): every MotorFix repair, a logged one
+// The one visibility rule: every MotorFix repair, a logged one
 // created during the ownership or ticked on the transfer that opened it,
 // never a deleted one; a closed row reads nothing done after its sale date
 // or recorded after its closing instant, whatever the source.

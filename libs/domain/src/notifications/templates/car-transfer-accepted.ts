@@ -36,12 +36,15 @@ export const CAR_TRANSFER_ACCEPTED: Template = {
     en: {
       body: 'The buyer has taken over your {car}. Its history stays with you, read-only, up to the sale date.',
       link: 'link',
+      shorten: 'car',
       title: 'Car taken over',
     },
     ro: {
-      // The bell's line runs past the 120-character push limit in Romanian.
+      // The bell's line runs past the 120-character push limit in Romanian;
+      // a long car name is still cut with "…".
       body: 'Mașina {car} a fost preluată. Istoricul ei rămâne la tine, doar pentru citire.',
       link: 'link',
+      shorten: 'car',
       title: 'Mașină preluată',
     },
   },

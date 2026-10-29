@@ -122,7 +122,7 @@ interface SoldCar {
   rovinietaUntil: Date | null;
 }
 
-// Takes the accept's locks and answers its refusals, in FR-004's order:
+// Takes the accept's locks and answers its refusals, in the order the spec names:
 // 410, 403, car_limit, open_request (the 404 is the caller's).
 async function lockedForTakeover(
   tx: Prisma.TransactionClient,
@@ -248,7 +248,7 @@ export class CarTransfersService {
     if (!car || !row) {
       throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such car');
     }
-    // Only what the seller may read goes with the car (1265-FR-013).
+    // Only what the seller may read goes with the car.
     const repairs = await this.prisma.repair.findMany({
       orderBy: REPAIR_ORDER,
       select: {

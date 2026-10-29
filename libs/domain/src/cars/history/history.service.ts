@@ -20,7 +20,7 @@ const day = (at: Date) => at.toISOString().slice(0, 10);
 const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such car');
 
-// The repair history an ownership row may read (1265-FR-010..012).
+// The repair history an ownership row may read.
 @Injectable()
 export class CarHistoryService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
@@ -54,20 +54,14 @@ export class CarHistoryService {
       orderBy: [{ toDate: 'desc' }, { closedAt: 'desc' }],
       where: { access: 'former_owner_read_only', accountId: actor.accountId },
     });
-    // A car sold twice by the same person is listed once, by its newest sale.
-    const seen = new Set<string>();
-    const items: SoldCarDto[] = [];
-    for (const row of rows) {
-      if (seen.has(row.carId)) continue;
-      seen.add(row.carId);
-      items.push({
-        brandName: row.car.brand.name,
-        id: row.carId,
-        model: row.car.model,
-        saleDate: day(row.toDate as Date),
-        year: row.car.year,
-      });
-    }
+    // A car sold twice by the same person is listed once per sale.
+    const items: SoldCarDto[] = rows.map((row) => ({
+      brandName: row.car.brand.name,
+      id: row.carId,
+      model: row.car.model,
+      saleDate: day(row.toDate as Date),
+      year: row.car.year,
+    }));
     return { items };
   }
 
