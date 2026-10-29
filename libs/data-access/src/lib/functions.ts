@@ -387,6 +387,10 @@ export type { LiveSessionsControllerStart$Params as LiveSessionsControllerStart$
 export { liveSessionsControllerStart as liveSessionsControllerStart } from './fn/live-sessions/live-sessions-controller-start';
 export type { LiveSessionsControllerView$Params as LiveSessionsControllerView$Params } from './fn/live-sessions/live-sessions-controller-view';
 export { liveSessionsControllerView as liveSessionsControllerView } from './fn/live-sessions/live-sessions-controller-view';
+export type { LiveSessionsControllerSetKeep$Params as LiveSessionsControllerSetKeep$Params } from './fn/live-sessions/live-sessions-controller-set-keep';
+export { liveSessionsControllerSetKeep as liveSessionsControllerSetKeep } from './fn/live-sessions/live-sessions-controller-set-keep';
+export type { LiveSessionsControllerStop$Params as LiveSessionsControllerStop$Params } from './fn/live-sessions/live-sessions-controller-stop';
+export { liveSessionsControllerStop as liveSessionsControllerStop } from './fn/live-sessions/live-sessions-controller-stop';
 export type { RequestMediaUpload$Params as RequestMediaUpload$Params } from './fn/media/request-media-upload';
 export { requestMediaUpload as requestMediaUpload } from './fn/media/request-media-upload';
 export type { CompleteMediaUpload$Params as CompleteMediaUpload$Params } from './fn/media/complete-media-upload';

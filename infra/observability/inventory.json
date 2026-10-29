@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 221,
+    "count": 223,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -641,7 +641,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "opens and closes a live input per live session and deletes a kept recording on removal or purge (DELETE /stream/{uid}, a 404 counting as deleted), 5 s timeout, in a live-video.create_input or live-video.close_input span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees",
+      "reason": "opens and closes a live input per live session and deletes the recordings of a live input on removal, purge or a discard at the stop (GET /stream/live_inputs/{id}/videos, then DELETE /stream/{uid} per video, a 404 counting as deleted), 5 s timeout, in a live-video.create_input, live-video.close_input or live-video.delete_recording span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees",
       "story": "ST-1250"
     },
     {
@@ -1017,13 +1017,13 @@
       "kind": "endpoint",
       "name": "live-sessions",
       "source": "libs/domain/src/live-video/sessions/sessions.controller.ts",
-      "metric": "http.server.request.duration by http.route /api/v1/jobs/:id/live and /api/v1/live-sessions/:id/view-token",
+      "metric": "http.server.request.duration by http.route /api/v1/jobs/:id/live, /api/v1/live-sessions/:id/view-token, /api/v1/live-sessions/:id/recording and /api/v1/live-sessions/:id/stop",
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "a start writes the live_session row, its audit entry and the live.started event in one transaction after the provider opened the input, counted in motorfix_live_sessions_total{outcome}; a view writes nothing and is counted in motorfix_live_view_tokens_total{outcome}; a refusal logs one LiveSessions warning line with its code and the job or session id, never a name; a 409 live_already_on, job_closed or live_ended is the rule working",
+      "reason": "a start writes the live_session row, its audit entry and the live.started event in one transaction after the provider opened the input, counted in motorfix_live_sessions_total{outcome}; a view writes nothing and is counted in motorfix_live_view_tokens_total{outcome}; a keep change writes the row and one audit entry; a stop writes stopped_at, its audit entry and the live.stopped event, and for a kept recording the live media item with its media.added event, in one transaction, counted as motorfix_live_sessions_total{outcome=\"stopped\"}; a discarded recording is deleted at the provider after the commit with a 5 s cut, counted in motorfix_live_recordings_total{outcome} (discarded, discard_failed), a failure logging one LiveSessions warning with the session and input ids and the error class; a refusal logs one LiveSessions warning line with its code and the job or session id, never a name; a 409 live_already_on, job_closed or live_ended is the rule working",
       "story": "ST-1250"
     },
     {
