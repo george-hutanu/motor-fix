@@ -8,6 +8,7 @@ import type {
   AssistantActionApprovalDto,
   AssistantActionApprovalListDto,
 } from './assistant-approvals.dto';
+import { recordApproval } from './assistant-approvals.metrics';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import {
   type DomainEvent,
@@ -59,6 +60,15 @@ interface Shown {
   summary: string;
   tool: string;
 }
+
+// What a count and its log line name an approval by.
+const SIGNED = {
+  accountId: true,
+  grantId: true,
+  id: true,
+  kind: true,
+  tool: true,
+} as const;
 
 const LIFETIME_MS = 30 * 60_000;
 const DECIDED_SHOWN_MS = 24 * 3_600_000;
@@ -135,7 +145,7 @@ export async function expireAssistantApprovals(
       outcome: { code: expiryCodeOf(scope) },
       status: 'expired',
     },
-    select: { accountId: true, id: true, kind: true },
+    select: SIGNED,
     where: {
       status: 'pending',
       ...('grantIds' in scope
@@ -143,8 +153,10 @@ export async function expireAssistantApprovals(
         : { accountId: scope.accountId }),
     },
   });
-  for (const row of expired)
+  for (const row of expired) {
     await events.record(tx, decidedEvent(row, 'expired'));
+    recordApproval('expired', row);
+  }
   return expired.length;
 }
 
@@ -197,6 +209,7 @@ export class AssistantApprovals {
       },
       subjectId: opened.id,
     });
+    recordApproval('requested', { ...input, id: opened.id });
     return opened;
   }
 
@@ -270,7 +283,10 @@ export class AssistantApprovals {
   // answers whether this write decided it.
   async close(
     tx: Tx,
-    approval: Pick<LockedApproval, 'accountId' | 'id' | 'kind'>,
+    approval: Pick<
+      LockedApproval,
+      'accountId' | 'grantId' | 'id' | 'kind' | 'tool'
+    >,
     status: Decided,
     outcome: ApprovalOutcome,
     by?: Decider,
@@ -285,6 +301,7 @@ export class AssistantApprovals {
     });
     if (count === 0) return false;
     await this.events.record(tx, decidedEvent(approval, status));
+    recordApproval(status, approval);
     if (by)
       await this.audit.record(tx, {
         action: 'update',
@@ -337,7 +354,8 @@ export class AssistantApprovals {
 
   // One conditional write: only a pending approval past its expiry becomes
   // expired, so a late or repeated timer changes nothing.
-  expireOverdue(id: string, now = new Date()): Promise<boolean> {
+  // `sweep` marks the sweep's expiry of an approval whose timer was lost.
+  expireOverdue(id: string, now = new Date(), sweep = false): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
       const [row] = await tx.assistantApproval.updateManyAndReturn({
         data: {
@@ -345,11 +363,12 @@ export class AssistantApprovals {
           outcome: { code: 'timeout' },
           status: 'expired',
         },
-        select: { accountId: true, id: true, kind: true },
+        select: SIGNED,
         where: { expiresAt: { lte: now }, id, status: 'pending' },
       });
       if (!row) return false;
       await this.events.record(tx, decidedEvent(row, 'expired'));
+      recordApproval('expired', row, sweep);
       return true;
     });
   }

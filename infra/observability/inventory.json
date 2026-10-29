@@ -527,9 +527,10 @@
       "alerts": [
         "worker-queue-backlog",
         "worker-jobs-failed",
-        "worker-queue-growing"
+        "worker-queue-growing",
+        "booking-lapse-sweep-late"
       ],
-      "reason": "carries the relay's assistant_approval.requested events (the ASSISTANT_APPROVAL_NEEDED notification, counted by motorfix_notifications_sent_total) and each approval's 30-minute expiry timer and sweep, with one ApprovalTimers log line per fire naming the approval id; BullMQ's queue metrics cover depth and failures",
+      "reason": "carries the relay's assistant_approval.requested events (the ASSISTANT_APPROVAL_NEEDED notification, counted by motorfix_notifications_sent_total) and each approval's 30-minute expiry timer and sweep, with one ApprovalTimers log line per fire naming the approval id; BullMQ's queue metrics cover depth and failures; each expiry counts in motorfix_assistant_approvals_total, and booking-lapse-sweep-late fires on the ones the sweep expired (lost timers)",
       "story": "ST-1254"
     },
     {
@@ -827,6 +828,18 @@
       ],
       "reason": "on the MCP dashboard panel \"Assistant confirmations by tool and outcome\" (id 34), counts each step of an assistant action the person must confirm by tool and outcome (opened, confirmed, refused, expired, mismatch, void, replayed, failed), with no identifiers in the labels; one AssistantConfirmations log line per step naming the confirmation, grant and tool, never the summary or the arguments, and the motorfix.confirmation.outcome attribute on the call span; mcp-tool-errors fires when failed and mismatch pass 20% of at least 5 steps in 10 minutes",
       "story": "ST-1253"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_assistant_approvals_total",
+      "source": "libs/domain/src/auth/assistant-approvals/assistant-approvals.metrics.ts",
+      "dashboard": "motorfix-mcp",
+      "alerts": [
+        "mcp-tool-errors",
+        "booking-lapse-sweep-late"
+      ],
+      "reason": "on the MCP dashboard panel \"Assistant approvals by kind and outcome\" (id 35), counts each step of an assistant action the person approves in the app by kind and outcome (requested at the yes on the MCP server, approved, refused and failed on the API, expired by a decision past its time, the timer, the sweep with sweep=true, or a revoke or the switch turned off), with no identifiers in the labels; one AssistantApprovals log line per step naming the approval, tool, grant and account, never the summary or the arguments, and the motorfix.approval.outcome attribute on the call span; mcp-tool-errors fires when failed passes 20% of at least 5 runs in 10 minutes (previews drifting from the runs), booking-lapse-sweep-late counts the approvals the sweep expired (lost timers)",
+      "story": "ST-1254"
     },
     {
       "kind": "product-counter",

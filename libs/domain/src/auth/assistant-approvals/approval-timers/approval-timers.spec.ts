@@ -80,7 +80,7 @@ describe('the expiry timer', () => {
 
     await w.timers.fire(ID, false);
 
-    expect(w.approvals.expireOverdue).toHaveBeenCalledWith(ID, NOW);
+    expect(w.approvals.expireOverdue).toHaveBeenCalledWith(ID, NOW, false);
   });
 
   it('changes nothing when late or repeated, the write having found nothing pending', async () => {
@@ -90,6 +90,7 @@ describe('the expiry timer', () => {
     await expect(w.timers.fire(ID, false)).resolves.toBeUndefined();
 
     expect(w.approvals.expireOverdue).toHaveBeenCalledTimes(2);
+    expect(w.approvals.expireOverdue).toHaveBeenCalledWith(ID, NOW, true);
     expect(w.notifications.notify).not.toHaveBeenCalled();
   });
 

@@ -70,7 +70,7 @@ export class ApprovalTimers implements TimerKind {
   }
 
   async fire(id: string, sweep: boolean): Promise<void> {
-    const expired = await this.approvals.expireOverdue(id, this.now());
+    const expired = await this.approvals.expireOverdue(id, this.now(), sweep);
     this.logger.log(
       `approval ${id}${sweep ? ' (sweep)' : ''}: ${expired ? 'expired' : 'unchanged'}`,
     );
