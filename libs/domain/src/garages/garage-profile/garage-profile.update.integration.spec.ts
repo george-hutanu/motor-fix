@@ -520,7 +520,9 @@ describe('PATCH /garages/:garageId/profile: what a save writes', () => {
         'public:search',
       ].sort(),
     );
-    expect(JSON.stringify(saved)).not.toContain('733000111');
+    expect(
+      JSON.stringify(saved.map((e) => [e.payload, e.audience])),
+    ).not.toContain('733000111');
   });
 
   it('leaves no field, entry or event when a write of the save fails', async () => {

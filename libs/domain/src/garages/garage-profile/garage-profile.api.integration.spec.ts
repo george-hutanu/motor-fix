@@ -135,7 +135,8 @@ async function world(
 }
 
 describe("the staff read of a garage's own public profile", () => {
-  it('answers the owner with the public answer plus the stored phone', async () => {
+  // @traces 1246-FR-008
+  it('answers the owner with the public answer plus the stored phone and the change stamp', async () => {
     const w = await world();
     await prisma.garageFacility.create({
       data: { facility: 'waiting_area', garageId: w.nord.id },
@@ -146,11 +147,12 @@ describe("the staff read of a garage's own public profile", () => {
 
     expect(staff.status).toBe(200);
     expect(open.status).toBe(200);
-    const { phone, ...rest } = staff.body;
+    const { phone, version, ...rest } = staff.body;
     expect(phone).toBe(PHONE);
+    expect(version).toBe('0');
     expect(rest).toEqual(open.body);
     expect(Object.keys(staff.body).sort()).toEqual(
-      [...Object.keys(open.body), 'phone'].sort(),
+      [...Object.keys(open.body), 'phone', 'version'].sort(),
     );
   });
 
