@@ -3,9 +3,11 @@
 // subject is a quote or a recipient; a review's opens the reviews; a
 // suspension or a yearly documents notice opens the garage dashboard; a decision on a driver's report
 // opens the reported garage's public profile its e-mail links to; a decision
-// on a job the garage proposed opens its Prețuri. Any other
+// on a job the garage proposed opens its Prețuri; an assistant's action
+// waiting for approval opens that approval. Any other
 // kind opens nothing: the bell only marks it read.
 type View =
+  | 'assistant-approval'
   | 'cars'
   | 'garage'
   | 'garage-reviews'
@@ -15,6 +17,7 @@ type View =
   | 'reviews';
 
 export const VIEW_OF_KIND: Readonly<Record<string, View>> = {
+  ASSISTANT_APPROVAL_NEEDED: 'assistant-approval',
   BOOKING_CANCELLED: 'requests',
   BOOKING_CONFIRMED: 'requests',
   BOOKING_LAPSED: 'requests',
@@ -103,12 +106,22 @@ function profileOf(params: unknown): string | null {
   return path && PROFILE_PATH.test(path) ? path : null;
 }
 
+// The views a row opens at what it alone names, else nothing.
+const OPENS: Partial<Record<View, (row: Row) => string | null>> = {
+  'assistant-approval': ({ subjectId }) =>
+    subjectId && UUID.test(subjectId)
+      ? `/app/assistant/approvals/${subjectId}`
+      : null,
+  profile: ({ params }) => profileOf(params),
+};
+
 export function bellLink(row: Row): string | null {
   if (!Object.hasOwn(VIEW_OF_KIND, row.kind)) return null;
   const view = VIEW_OF_KIND[row.kind];
   const fixed = FIXED_PATH[view];
   if (fixed) return fixed;
-  if (view === 'profile') return profileOf(row.params);
+  const opens = OPENS[view];
+  if (opens) return opens(row);
   if (view === 'cars') {
     return row.subjectId ? `${ROOT}/cars/${row.subjectId}` : `${ROOT}/cars`;
   }

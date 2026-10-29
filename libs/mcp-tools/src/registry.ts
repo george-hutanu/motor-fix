@@ -7,6 +7,8 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import {
   type Actor,
+  type ApprovalKind,
+  type AssistantApprovals,
   type AssistantConfirmations,
   actorOf,
   type Capability,
@@ -29,6 +31,7 @@ import {
   refusal,
   type ToolError,
   ToolRefusal,
+  text,
   toolError,
 } from './errors';
 
@@ -48,6 +51,7 @@ export interface Caller {
 
 export interface ToolContext {
   accounts: { activeAccount(id: string): Promise<LoadedAccount> };
+  approvals: Pick<AssistantApprovals, 'open'>;
   confirmations: Pick<
     AssistantConfirmations,
     'decide' | 'open' | 'toolOf' | 'voidForAccount'
@@ -65,11 +69,12 @@ export interface ToolContext {
 }
 
 // What a handler is called within: the caller and the catalogue in use, and
-// for an acting tool with a preview, the confirmation whose transaction the
-// action runs in.
+// for an acting tool with a preview, the transaction the action runs in and
+// its idempotency key: the confirmation's id at a yes, the approval's in the
+// app.
 export interface Step {
   caller: Caller;
-  run?: { confirmationId: string; tx: Tx };
+  run?: { key: string; tx: Tx };
   tools: ToolDefinition[];
 }
 
@@ -94,6 +99,10 @@ export interface ToolDefinition<In extends ZodRawShape = ZodRawShape> {
   capability?: Capability;
   garageFeature?: string;
   acts: boolean;
+  // Set on an act the person approves in the app after the yes: the yes then
+  // saves the approval and the handler runs only once it is approved.
+  // `editable` names boolean inputs the person may still change there.
+  approval?: { kind: ApprovalKind; editable?: string[] };
   // An acting tool's first step: its use case's checks without saving, and
   // what the action would do, in actor.language. With one, the handler runs
   // only at the person's yes, inside the confirmation's transaction.
@@ -209,6 +218,37 @@ const failure = (error: ToolError): CallToolResult => ({
 const declared = (tool: ToolDefinition, answer: unknown) =>
   tool.outputSchema ? z.object(tool.outputSchema).parse(answer) : answer;
 
+// The yes on an act approved in the app: saves the approval in the yes's
+// transaction instead of running the action, and tells the assistant so.
+async function awaitApproval(
+  tool: ToolDefinition,
+  approval: NonNullable<ToolDefinition['approval']>,
+  actor: Actor,
+  input: Record<string, unknown>,
+  ctx: ToolContext,
+  step: Step,
+  tx: Tx,
+) {
+  const { summary } = await (
+    tool.preview as NonNullable<ToolDefinition['preview']>
+  )(actor, input, ctx);
+  const opened = await ctx.approvals.open(tx, {
+    accountId: step.caller.account.id,
+    args: input,
+    editable: approval.editable ?? [],
+    grantId: step.caller.grantId,
+    kind: approval.kind,
+    summary,
+    tool: tool.name,
+  });
+  return {
+    approvalId: opened.id,
+    expiresAt: opened.expiresAt.toISOString(),
+    message: text('approval_required', step.caller.account.language),
+    status: 'approval_required' as const,
+  };
+}
+
 // Decides the confirmation with the person's answer, running the tool inside
 // it on a timely yes, and answers what came of it.
 export async function settle(
@@ -228,13 +268,15 @@ export async function settle(
       id: confirmationId,
     },
     async (tx) =>
-      declared(
-        tool,
-        await tool.handler(actor, input, ctx, {
-          ...step,
-          run: { confirmationId, tx },
-        }),
-      ),
+      tool.approval
+        ? awaitApproval(tool, tool.approval, actor, input, ctx, step, tx)
+        : declared(
+            tool,
+            await tool.handler(actor, input, ctx, {
+              ...step,
+              run: { key: confirmationId, tx },
+            }),
+          ),
   );
   const language = step.caller.account.language;
   switch (decision.status) {

@@ -3,6 +3,10 @@
     "text": "Your data and your account: a copy of your data, or deleting the account.",
     "title": "Your account"
   },
+  "approvals": {
+    "one": "1 action awaits your approval",
+    "other": "{count} actions await your approval"
+  },
   "bell": {
     "empty": "No notifications yet",
     "failed": "Notifications did not load.",

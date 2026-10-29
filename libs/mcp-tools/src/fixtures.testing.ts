@@ -6,6 +6,7 @@ import {
   type ElicitResult,
 } from '@modelcontextprotocol/sdk/types.js';
 import {
+  type ApprovalKind,
   type ConfirmationDecision,
   judgeConfirmation,
   type LoadedAccount,
@@ -159,8 +160,49 @@ export function memoryConfirmations(now: () => Date = () => new Date()) {
   };
 }
 
+// AssistantApprovals.open in memory: `rows` what was saved, each with the
+// transaction it was saved in.
+export function memoryApprovals(now: () => Date = () => new Date()) {
+  const rows = new Map<
+    string,
+    {
+      accountId: string;
+      args: Record<string, unknown>;
+      editable: readonly string[];
+      expiresAt: Date;
+      grantId: string;
+      id: string;
+      kind: ApprovalKind;
+      summary: string;
+      tool: string;
+      tx: Tx;
+    }
+  >();
+  return {
+    async open(
+      tx: Tx,
+      input: {
+        accountId: string;
+        args: Record<string, unknown>;
+        editable: readonly string[];
+        grantId: string;
+        kind: ApprovalKind;
+        summary: string;
+        tool: string;
+      },
+    ) {
+      const id = `00000000-0000-4000-9000-${String(rows.size + 1).padStart(12, '0')}`;
+      const expiresAt = new Date(now().getTime() + 30 * 60_000);
+      rows.set(id, { ...input, expiresAt, id, tx });
+      return { expiresAt, id };
+    },
+    rows,
+  };
+}
+
 export function context(
   overrides: Partial<{
+    approvals: ToolContext['approvals'];
     confirmations: ToolContext['confirmations'];
     features: Record<string, boolean>;
     maintenance: boolean;
@@ -173,6 +215,7 @@ export function context(
       activeAccount: async () =>
         overrides.account ?? account({ roles: ['driver'] }),
     },
+    approvals: overrides.approvals ?? memoryApprovals(),
     confirmations: overrides.confirmations ?? memoryConfirmations(),
     featureOn: async (_garageId, key) => overrides.features?.[key] ?? true,
     garage: {
@@ -275,6 +318,25 @@ export const fixtureTools: ToolDefinition[] = [
     roles: ['garage'],
   }),
 ];
+
+// A booking act the person approves in the app; its handler stands for the
+// use case and never runs at the yes.
+export const bookFixture = defineTool({
+  acts: true,
+  annotations: { destructiveHint: true, readOnlyHint: false },
+  approval: { editable: ['shareHistory'], kind: 'book' },
+  description: 'Books the fixture service.',
+  handler: ok,
+  inputSchema: { quoteId: z.uuid(), shareHistory: z.boolean() },
+  name: 'book_fixture',
+  preview: async (actor) => ({
+    summary:
+      actor.language === 'en'
+        ? 'Books the fixture service.'
+        : 'Rezervă serviciul de probă.',
+  }),
+  roles: ['driver'],
+});
 
 export async function connect(
   tools: ToolDefinition[],
