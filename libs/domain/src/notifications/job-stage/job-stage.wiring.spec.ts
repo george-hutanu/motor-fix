@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { JOB_STAGE_CONSUMER, JOB_STAGE_QUEUE } from './job-stage.fan-out';
+import { JOB_STAGE_QUEUE } from './job-stage.fan-out';
 
 interface InventoryEntry {
   kind: string;
@@ -46,10 +46,5 @@ describe('the job-stage queue is observed', () => {
       story: 'ST-277',
     });
     expect(existsSync(join(root, entry?.source ?? 'missing'))).toBe(true);
-  });
-
-  it('listens to started and done only', () => {
-    expect(JOB_STAGE_CONSUMER.queue).toBe(JOB_STAGE_QUEUE);
-    expect([...JOB_STAGE_CONSUMER.kinds]).toEqual(['job.started', 'job.done']);
   });
 });

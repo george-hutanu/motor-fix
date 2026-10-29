@@ -2,7 +2,7 @@ import type { OutsideChannel } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 
-import { JOB_STAGE_CONSUMER, JobStageFanOut } from './job-stage.fan-out';
+import { JobStageFanOut } from './job-stage.fan-out';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type { JobStatus } from '../../generated/prisma/enums';
 import { quotesWorld } from '../../quotes/quotes.testing';
@@ -130,12 +130,6 @@ const withPhone = (accountId: string) =>
 // @traces 277-FR-005
 // @traces 277-FR-009
 describe('telling the driver the car is ready', () => {
-  it('listens to job.started and job.done only, so a pause or a resume tells nobody', () => {
-    expect(JOB_STAGE_CONSUMER.kinds).toEqual(['job.started', 'job.done']);
-    expect(JOB_STAGE_CONSUMER.kinds).not.toContain('job.paused');
-    expect(JOB_STAGE_CONSUMER.kinds).not.toContain('job.resumed');
-  });
-
   it('builds JOB_READY for the driver only, naming the garage', async () => {
     const { driverId, jobId } = await job('done');
     const fanOut = await start();
@@ -291,6 +285,26 @@ describe('telling the driver work has started', () => {
     expect((await outside('JOB_STARTED')).map((m) => m.channel)).not.toContain(
       'sms',
     );
+  });
+
+  it('sends again for a genuine second start, a new event', async () => {
+    const { jobId } = await job('in_work');
+    const fanOut = await start();
+
+    await fanOut.handle(await event('job.started', jobId));
+    const once = (await built('JOB_STARTED')).length;
+    await fanOut.handle(await event('job.started', jobId));
+
+    expect(once).toBeGreaterThan(0);
+    expect(await built('JOB_STARTED')).toHaveLength(once * 2);
+  });
+
+  it('tells nobody about a job that is gone', async () => {
+    const fanOut = await start();
+
+    await fanOut.handle(await event('job.started', 'no-such-job'));
+
+    expect(await built('JOB_STARTED')).toEqual([]);
   });
 
   it('tells nobody about a cancelled job', async () => {

@@ -33,7 +33,7 @@ export const JOB_STAGE_CONSUMER = {
 // job's.
 export interface JobStageEvent {
   id: string;
-  kind: string;
+  kind: EventKind;
   subjectId: string;
 }
 
@@ -89,14 +89,18 @@ export class JobStageFanOut {
       where: { id: jobId },
     });
     const ready = kind === 'job.done';
-    // Reopened, cancelled or gone before the message went out.
-    if (!row || (ready ? row.status !== 'done' : row.status === 'cancelled')) {
+    // Another kind, or reopened, cancelled or gone before the message went out.
+    if (
+      !JOB_STAGE_CONSUMER.kinds.includes(kind) ||
+      !row ||
+      (ready ? row.status !== 'done' : row.status === 'cancelled')
+    ) {
       this.logger.log(
         `job ${jobId} ${kind} not announced: ${row?.status ?? 'missing'}`,
       );
       return;
     }
-    const link = `${this.config.webUrl}/app/driver/requests/${row.booking.requestId}`;
+    const link = `${this.config.webUrl}/app/driver/requests/${encodeURIComponent(row.booking.requestId)}`;
     const type = ready ? 'JOB_READY' : 'JOB_STARTED';
     const queued = await this.notifications.notify({
       eventId,
