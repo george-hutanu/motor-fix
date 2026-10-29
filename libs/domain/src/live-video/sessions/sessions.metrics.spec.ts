@@ -3,6 +3,7 @@ import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 import type { DataPoint, Histogram } from '@opentelemetry/sdk-metrics';
 
 import {
+  countLiveRecording,
   countLiveSession,
   countViewToken,
   recordProviderCall,
@@ -70,4 +71,28 @@ describe('the live video counters', () => {
       0.1, 0.25, 0.5, 1, 2, 3, 5,
     ]);
   });
+});
+
+// @traces 1251-FR-009
+describe('the live stop counters', () => {
+  it('counts a sender stop on the live sessions series', async () => {
+    const name = 'motorfix_live_sessions_total';
+    const before = await total(name, { outcome: 'stopped' });
+
+    countLiveSession('stopped');
+
+    expect(await total(name, { outcome: 'stopped' })).toBe(before + 1);
+  });
+
+  it.each(['discarded', 'discard_failed'] as const)(
+    'counts a recording %s',
+    async (outcome) => {
+      const name = 'motorfix_live_recordings_total';
+      const before = await total(name, { outcome });
+
+      countLiveRecording(outcome);
+
+      expect(await total(name, { outcome })).toBe(before + 1);
+    },
+  );
 });

@@ -1,6 +1,12 @@
 import { metrics } from '@opentelemetry/api';
 
-type StartOutcome = 'started' | 'refused' | 'provider_failed' | 'unavailable';
+type StartOutcome =
+  | 'started'
+  | 'refused'
+  | 'provider_failed'
+  | 'unavailable'
+  | 'stopped';
+type RecordingOutcome = 'discarded' | 'discard_failed';
 type ViewOutcome = 'issued' | 'refused' | 'ended' | 'unavailable';
 type Operation = 'create_input' | 'close_input' | 'delete_recording';
 
@@ -12,6 +18,14 @@ export function countLiveSession(outcome: StartOutcome) {
   meter()
     .createCounter('motorfix_live_sessions_total', {
       description: 'Live stream starts, by outcome',
+    })
+    .add(1, { outcome });
+}
+
+export function countLiveRecording(outcome: RecordingOutcome) {
+  meter()
+    .createCounter('motorfix_live_recordings_total', {
+      description: 'Live recordings discarded at the stop, by outcome',
     })
     .add(1, { outcome });
 }

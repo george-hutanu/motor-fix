@@ -1,13 +1,18 @@
 import {
+  LiveRecordingKeepDto,
   LiveSessionStartedDto,
+  LiveSessionStoppedDto,
+  LiveStopRequestDto,
   LiveViewCredentialDto,
 } from '@motor-fix/contracts';
 import {
+  Body,
   Controller,
   HttpCode,
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
 } from '@nestjs/common';
 import {
@@ -69,5 +74,44 @@ export class LiveSessionsController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<LiveViewCredentialDto> {
     return this.sessions.view(actor, id);
+  }
+
+  @Patch('live-sessions/:id/recording')
+  @ApiOperation({ summary: 'Keep or discard the recording while live' })
+  @ApiOkResponse({ type: LiveRecordingKeepDto })
+  @ApiBadRequestResponse({
+    description: 'The session id is not a uuid, or keep is not a boolean',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'not_found: no such session, live media off, or not the owner or the job’s mechanic',
+  })
+  @ApiConflictResponse({ description: 'live_ended' })
+  setKeep(
+    @CurrentActor() actor: Actor,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: LiveRecordingKeepDto,
+  ): Promise<LiveRecordingKeepDto> {
+    return this.sessions.setKeep(actor, id, body);
+  }
+
+  @Post('live-sessions/:id/stop')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Stop the live stream, keeping or discarding it' })
+  @ApiOkResponse({ type: LiveSessionStoppedDto })
+  @ApiBadRequestResponse({
+    description: 'The session id is not a uuid, or keep is not a boolean',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'not_found: no such session, live media off, or not the owner or the job’s mechanic',
+  })
+  @ApiConflictResponse({ description: 'live_ended' })
+  stop(
+    @CurrentActor() actor: Actor,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: LiveStopRequestDto,
+  ): Promise<LiveSessionStoppedDto> {
+    return this.sessions.stop(actor, id, body);
   }
 }
