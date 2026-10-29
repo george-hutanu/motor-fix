@@ -218,6 +218,21 @@ describe('GET /cars/sold and /cars/sold/:id/repairs', () => {
     expect((await get(null, `/cars/sold/${car.id}/repairs`)).status).toBe(401);
   });
 
+  it('lists a car the caller sold twice once per sale, newest first', async () => {
+    const { andrei, maria } = await people();
+    const car = await world.car(andrei.id);
+    await hand(andrei, maria, car.id);
+    await hand(maria, andrei, car.id);
+    await hand(andrei, maria, car.id);
+
+    const res = await get(andrei.auth, '/cars/sold');
+
+    expect(res.body.items.map((c: { id: string }) => c.id)).toEqual([
+      car.id,
+      car.id,
+    ]);
+  });
+
   it('lists a car back with its first owner by both rows', async () => {
     const { andrei, maria } = await people();
     const car = await world.car(andrei.id);
