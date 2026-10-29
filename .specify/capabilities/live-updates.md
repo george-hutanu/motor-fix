@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 253-live-connection
   - 254-live-audience
@@ -35,6 +35,7 @@ features:
   - 1263-admin-dashboard-customise
   - 1250-live-video-provider
   - 177-reported-reviews
+  - 011-dashboard-sections
 ---
 
 # Capability: Live updates
@@ -496,6 +497,10 @@ _From 1263-admin-dashboard-customise._
 ### 177-FR-010 — The queue, the panel, the counter and the tile MUST re-read on `review.reported`, `review.decided`, `review.deleted` and `review.report_closed` arriving on the admin's live connection, so a new item is on screen within 5 seconds and a decided or deleted one leaves within 5 seconds, and MUST re-read when the connection resyncs after a loss; these review kinds, and no other review kind, MUST reach the `admin` channel (today the review audience reaches the garage, the mechanic and the author only), carrying the same event payload those audiences already receive and nothing more (the reporter, the reason and the facts stay in the admin-only read of FR-001); a re-read keeps the items already shown until the new ones arrive (no skeleton flash); the first read shows skeletons; a failed read shows "Nu am putut citi recenziile raportate." / "Could not read the reported reviews." with a Reîncearcă / Retry button.
 
 _From 177-reported-reviews._
+
+### 011-FR-009 — Panou MUST re-read the person's layout on `dashboard_layout.updated` from `account:{accountId}` (1263-FR-007) and follow the answer within 5 seconds without a reload, except while one of its own saves is in flight, when the event is ignored and the save's answer is the truth: a section hidden in another tab or on another device leaves, the count follows, and an open panel shows the new switch states. This story adds no event, sender, audience, channel or endpoint; it joins the account stream the frame already holds.
+
+_From 011-dashboard-sections._
 
 ## Retired
 

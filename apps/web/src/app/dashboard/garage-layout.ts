@@ -56,6 +56,10 @@ export class GarageLayout {
   readonly ready = computed(() => this.server() !== undefined);
   // Bumped by every read and save, so an answer overtaken by a later one is dropped.
   private turn = 0;
+  // The turn of the last save answer applied: an older one arriving late is dropped.
+  private applied = 0;
+  // The last save sent, which a failed earlier save waits for.
+  private saving: Promise<unknown> = Promise.resolve();
 
   constructor() {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
@@ -82,11 +86,12 @@ export class GarageLayout {
     const role = this.role();
     if (!role) return false;
     if (this.pending().has(key)) return true;
-    this.turn++;
+    const account = this.account();
+    const turn = ++this.turn;
     this.pending.update((pending) => new Map(pending).set(key, shown));
     const flips = this.pending();
     const server = this.server();
-    // After a failed read only the switches go: the server keeps the rest.
+    // After a failed read only the switches go: the server fills the rest visible.
     const panels = server
       ? server.map((panel) => ({
           key: panel.key,
@@ -94,14 +99,25 @@ export class GarageLayout {
         }))
       : [...flips].map(([k, visible]) => ({ key: k, visible }));
     try {
-      const answer = await this.api.dashboardLayoutsControllerSave({
+      const save = this.api.dashboardLayoutsControllerSave({
         body: { panels },
         role,
       });
-      this.server.set(answer.panels);
+      this.saving = save;
+      const answer = await save;
+      if (
+        turn > this.applied &&
+        this.account() === account &&
+        this.role() === role
+      ) {
+        this.applied = turn;
+        this.server.set(answer.panels);
+      }
       return true;
     } catch {
       // A later save may have carried this switch: then it is kept.
+      const later = this.saving;
+      if (this.turn > turn) await later.catch(() => undefined);
       return (
         this.server()?.find((panel) => panel.key === key)?.visible === shown
       );
@@ -128,7 +144,10 @@ export class GarageLayout {
       // An answer for an account signed out meanwhile, or overtaken by a
       // later read or save, is dropped; the first one is kept until then.
       const current = this.turn === turn || this.server() === undefined;
-      if (this.account() === account && current) this.server.set(answer.panels);
+      if (this.account() === account && current) {
+        this.applied = turn;
+        this.server.set(answer.panels);
+      }
     } catch {
       // The first read failing draws the default; a later one keeps the layout.
       if (this.server() === undefined) this.server.set(null);

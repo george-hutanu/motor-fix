@@ -78,7 +78,7 @@ function setup({
       await wait(0);
     }
   };
-  return { api, layout, live, settle };
+  return { api, layout, live, me, settle };
 }
 
 // @traces 011-FR-002
@@ -212,6 +212,84 @@ describe('switching a section', () => {
       role: 'garage',
     });
     first.resolve(answer(all(['kpi'])));
+    await settle();
+    expect([...layout.hidden()].sort()).toEqual(['kpi', 'load']);
+  });
+
+  it('keeps the earlier answer when the later save fails', async () => {
+    const second = deferred<DashboardLayoutDto>();
+    const saves = [async () => answer(all(['kpi'])), () => second.promise];
+    const { layout, settle } = setup({
+      save: () => (saves.shift() as () => Promise<DashboardLayoutDto>)(),
+    });
+    await settle();
+
+    const kpi = layout.toggle('kpi', false);
+    const load = layout.toggle('load', false);
+    expect(await kpi).toBe(true);
+    second.reject(new Error('500'));
+    expect(await load).toBe(false);
+    await settle();
+    expect([...layout.hidden()]).toEqual(['kpi']);
+  });
+
+  it('answers true for a failed save rejected before the later save that kept it', async () => {
+    const first = deferred<DashboardLayoutDto>();
+    const second = deferred<DashboardLayoutDto>();
+    const saves = [() => first.promise, () => second.promise];
+    const { layout, settle } = setup({
+      save: () => (saves.shift() as () => Promise<DashboardLayoutDto>)(),
+    });
+    await settle();
+
+    const kpi = layout.toggle('kpi', false);
+    void layout.toggle('load', false);
+    first.reject(new Error('500'));
+    await settle();
+    second.resolve(answer(all(['kpi', 'load'])));
+
+    expect(await kpi).toBe(true);
+    expect([...layout.hidden()].sort()).toEqual(['kpi', 'load']);
+  });
+
+  it('drops a save answer sent under a role the person left meanwhile', async () => {
+    const saved = deferred<DashboardLayoutDto>();
+    const reread = deferred<DashboardLayoutDto>();
+    const reads = [async () => answer(all()), () => reread.promise];
+    const { layout, me, settle } = setup({
+      read: () => (reads.shift() as () => Promise<DashboardLayoutDto>)(),
+      save: () => saved.promise,
+    });
+    await settle();
+
+    void layout.toggle('kpi', false);
+    me.set({
+      role: 'receptionist',
+      roles: ['receptionist'],
+    } as unknown as MeDto);
+    await settle();
+    saved.resolve(answer(all(['kpi'])));
+    await settle();
+
+    expect(layout.ready()).toBe(false);
+  });
+
+  it('drops a save answer for an account signed out meanwhile', async () => {
+    const saved = deferred<DashboardLayoutDto>();
+    const { layout, me, settle } = setup({ save: () => saved.promise });
+    await settle();
+
+    void layout.toggle('kpi', false);
+    me.set({
+      id: 'other',
+      role: 'garage',
+      roles: ['garage'],
+    } as unknown as MeDto);
+    await settle();
+    saved.resolve(answer(all(['kpi'])));
+    await settle();
+
+    expect(layout.hidden().size).toBe(0);
   });
 
   it('drops the switch and answers false when the save fails', async () => {

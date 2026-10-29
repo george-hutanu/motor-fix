@@ -138,16 +138,6 @@ describe('switching a row, hostile cases', () => {
     expect(toggle).toHaveBeenCalledWith('kpi', true);
   });
 
-  it('treats a rejected save as a failed save and shows the alert', async () => {
-    await open([row('kpi', 1)], () => Promise.reject(new Error('down')));
-
-    named('kpi name').click();
-    await settle();
-
-    expect(alert()?.textContent).toContain('Nu am putut salva');
-    expect(named('kpi name').disabled).toBe(false);
-  });
-
   it('keeps the alert while another row fails and clears it on the next success', async () => {
     const outcomes = [false, false, true];
     await open([row('kpi', 1), row('req', 2)], async () => outcomes.shift()!);

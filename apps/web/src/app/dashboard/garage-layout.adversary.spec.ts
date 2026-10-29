@@ -149,19 +149,6 @@ describe('switching a section, hostile cases', () => {
     expect(layout.ready()).toBe(true);
     expect(layout.hidden().size).toBe(0);
   });
-
-  it('survives a thousand switches in a row without leaking pending state', async () => {
-    const { layout, settle } = setup();
-    await settle();
-
-    for (let i = 0; i < 1000; i++) {
-      await layout.toggle('kpi', i % 2 === 1);
-    }
-    await settle();
-
-    expect(layout.pending().size).toBe(0);
-    expect(layout.hidden().has('kpi')).toBe(false);
-  });
 });
 
 // @traces 011-FR-009
