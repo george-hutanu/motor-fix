@@ -11,8 +11,8 @@ import { Live } from '../../dashboard/live';
 import { Session } from '../../dashboard/session';
 import { ApprovalSheet } from '../approval-sheet/approval-sheet';
 
-// @traces 1254-assistant-approvals-FR-004
-// @traces 1254-assistant-approvals-FR-010
+// @traces 1254-FR-004
+// @traces 1254-FR-010
 
 let get: jest.Mock;
 let open: jest.Mock;

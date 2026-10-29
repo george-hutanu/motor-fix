@@ -292,7 +292,7 @@ describe('the channel a driver message changes to when it is built', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-003
+// @traces 1254-FR-003
 describe('an assistant action waiting for approval', () => {
   const name = 'ASSISTANT_APPROVAL_NEEDED';
   const none = mutedChannels(name, []);

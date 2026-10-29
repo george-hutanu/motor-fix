@@ -12,7 +12,7 @@ import { filter, Subject } from 'rxjs';
 import { ApprovalStrip } from './approval-strip';
 import { Live } from '../../dashboard/live';
 
-// @traces 1254-assistant-approvals-FR-010
+// @traces 1254-FR-010
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

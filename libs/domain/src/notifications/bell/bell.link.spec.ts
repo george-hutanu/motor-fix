@@ -203,7 +203,7 @@ describe('a row about a garage a driver reported', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-003
+// @traces 1254-FR-003
 describe("a row about an assistant's action waiting for approval", () => {
   it.each(APPROVAL_KINDS)('opens %s on that approval', (kind) => {
     expect(

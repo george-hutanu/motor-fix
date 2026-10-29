@@ -497,8 +497,8 @@ function approvalSetup(language: 'ro' | 'en' = 'ro') {
 describe('in-app approval at the yes', () => {
   afterEach(() => jest.restoreAllMocks());
 
-  // @traces 1254-assistant-approvals-FR-001
-  // @traces 1254-assistant-approvals-FR-002
+  // @traces 1254-FR-001
+  // @traces 1254-FR-002
   it('saves a pending approval in the confirmation’s transaction, runs nothing and answers approval_required in Romanian', async () => {
     const { approvals, ask, confirm, confirmations, handler } = approvalSetup();
     const confirmationId = await ask();
@@ -528,7 +528,7 @@ describe('in-app approval at the yes', () => {
     expect(confirmations.rows.get(confirmationId)?.status).toBe('done');
   });
 
-  // @traces 1254-assistant-approvals-FR-002
+  // @traces 1254-FR-002
   it('answers in English for an English account', async () => {
     const { ask, confirm } = approvalSetup('en');
 
@@ -540,7 +540,7 @@ describe('in-app approval at the yes', () => {
     });
   });
 
-  // @traces 1254-assistant-approvals-FR-002
+  // @traces 1254-FR-002
   it('replays the stored answer on a repeated yes and saves no second approval', async () => {
     const { approvals, ask, confirm, handler } = approvalSetup();
     const confirmationId = await ask();
@@ -553,7 +553,7 @@ describe('in-app approval at the yes', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  // @traces 1254-assistant-approvals-FR-001
+  // @traces 1254-FR-001
   it('saves nothing on a no or a late yes, answering not_sent as before', async () => {
     const refused = approvalSetup('en');
     const late = approvalSetup('en');
@@ -574,7 +574,7 @@ describe('in-app approval at the yes', () => {
     expect(refused.approvals.rows.size + late.approvals.rows.size).toBe(0);
   });
 
-  // @traces 1254-assistant-approvals-FR-001
+  // @traces 1254-FR-001
   it('saves the approval on a yes given over elicitation too', async () => {
     const approvals = memoryApprovals();
     const handler = jest.spyOn(bookFixture, 'handler');
@@ -598,7 +598,7 @@ describe('in-app approval at the yes', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  // @traces 1254-assistant-approvals-FR-001
+  // @traces 1254-FR-001
   it('runs a tool that declares no approval at once, keyed by the confirmation', async () => {
     const { handler, tool } = previewed();
     const confirmations = memoryConfirmations();

@@ -71,7 +71,7 @@ async function delta(
   return (await countOf(attributes)) - before;
 }
 
-// @traces 1254-assistant-approvals-FR-011
+// @traces 1254-FR-011
 describe('counting the approvals', () => {
   beforeEach(() => {
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
@@ -135,7 +135,7 @@ describe('counting the approvals', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-011
+// @traces 1254-FR-011
 describe('every outcome of the store is counted', () => {
   const events = { record: jest.fn(async () => undefined) };
   const audit = { record: jest.fn(async () => undefined) };

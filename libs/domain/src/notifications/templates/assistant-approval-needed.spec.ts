@@ -1,4 +1,4 @@
-// @traces 1254-assistant-approvals-FR-003
+// @traces 1254-FR-003
 import { TEMPLATES } from './registry';
 import { checkTemplates } from '../template-check';
 import { render, templateName } from '../templates';

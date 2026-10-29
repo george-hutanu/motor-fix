@@ -204,7 +204,7 @@ describe('every acting tool', () => {
 // proven until a booking tool joins it.
 const declaring = [...catalogue, bookFixture].filter((t) => t.approval);
 
-// @traces 1254-assistant-approvals-FR-001
+// @traces 1254-FR-001
 describe('every tool declaring in-app approval', () => {
   afterEach(() => jest.restoreAllMocks());
 

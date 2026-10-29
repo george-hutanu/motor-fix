@@ -101,7 +101,7 @@ async function yes(who: Caller) {
   return { confirm, confirmationId };
 }
 
-// @traces 1254-assistant-approvals-FR-002
+// @traces 1254-FR-002 1254-FR-012
 describe('a tool needing in-app approval through confirm_action', () => {
   it('saves one pending approval with its event and runs nothing of the action', async () => {
     const handler = jest.spyOn(bookFixture, 'handler');
@@ -214,7 +214,7 @@ const actionRows = (who: Caller) =>
 const status = async (id: string) =>
   (await prisma.assistantApproval.findUniqueOrThrow({ where: { id } })).status;
 
-// @traces 1254-assistant-approvals-FR-005
+// @traces 1254-FR-005
 describe('approving in the app', () => {
   it('runs the action once with the approval as key, via the assistant', async () => {
     const who = await driver();
@@ -306,7 +306,7 @@ describe('approving in the app', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-006
+// @traces 1254-FR-006
 describe('access checked again at the approval', () => {
   it('expires it when the grant was revoked', async () => {
     const who = await driver();

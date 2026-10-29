@@ -1,5 +1,5 @@
-// @traces 1254-assistant-approvals-FR-004
-// @traces 1254-assistant-approvals-FR-010
+// @traces 1254-FR-004
+// @traces 1254-FR-010
 import { randomUUID } from 'node:crypto';
 
 import { type APIRequestContext, expect, type Page } from '@playwright/test';

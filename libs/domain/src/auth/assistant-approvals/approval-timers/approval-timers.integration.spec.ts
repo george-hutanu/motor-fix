@@ -138,7 +138,7 @@ const decided = (id: string) =>
     where: { kind: 'assistant_approval.decided', subjectId: id },
   });
 
-// @traces 1254-assistant-approvals-FR-003
+// @traces 1254-FR-003
 describe('an approval asked for, at the worker', () => {
   it('goes by push and into the bell for an account with a device, at night too', async () => {
     const a = await asked({ device: true });
@@ -190,7 +190,7 @@ describe('an approval asked for, at the worker', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-007
+// @traces 1254-FR-007
 describe('the expiry of an approval nobody decided', () => {
   it('expires it when its timer fires at the expiry, once', async () => {
     const a = await asked();

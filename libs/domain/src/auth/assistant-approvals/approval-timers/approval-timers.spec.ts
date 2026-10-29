@@ -37,7 +37,7 @@ const requested = {
   },
 };
 
-// @traces 1254-assistant-approvals-FR-003
+// @traces 1254-FR-003
 describe('an approval asked for', () => {
   it('tells its account once per approval and sets its expiry timer', async () => {
     const w = world({ accountId: ACCOUNT, expiresAt: EXPIRES });
@@ -72,7 +72,7 @@ describe('an approval asked for', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-007
+// @traces 1254-FR-007
 describe('the expiry timer', () => {
   it('expires through the one conditional write, judged at its own time', async () => {
     const w = world(null);
