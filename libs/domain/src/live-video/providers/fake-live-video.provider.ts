@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import type { LiveInput, LiveVideoProvider } from './live-video.provider';
+import type {
+  InputStatus,
+  LiveInput,
+  LiveVideoProvider,
+} from './live-video.provider';
 
 const HOST = 'https://live.motorfix.test';
 
@@ -9,6 +13,9 @@ export class FakeLiveVideo implements LiveVideoProvider {
   readonly name = 'fake';
   // The recordings deleted, in order, for the tests to read.
   readonly deleted: string[] = [];
+  // The publisher state of each input, set by the tests; an input not set
+  // never had a publisher.
+  readonly statuses = new Map<string, InputStatus>();
 
   async createInput(_session: { id: string }): Promise<LiveInput> {
     const inputId = randomUUID();
@@ -19,6 +26,10 @@ export class FakeLiveVideo implements LiveVideoProvider {
 
   async deleteRecording(providerRef: string): Promise<void> {
     this.deleted.push(providerRef);
+  }
+
+  async inputStatus(inputId: string): Promise<InputStatus> {
+    return this.statuses.get(inputId) ?? { connected: false, since: null };
   }
 
   viewUrl(inputId: string, expiresAt: Date): string {

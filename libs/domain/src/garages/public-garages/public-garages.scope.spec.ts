@@ -71,6 +71,8 @@ const EXCEPTIONS: Record<string, string> = {
   'garages/verification/verification.service.ts#autoApprove': OWN_NEW_GARAGE,
   'live-video/sessions/sessions.service.ts#judge':
     "locks the row of the job's own garage, after checking the actor works there, so the live media switch waits for the start; it reads nothing of it",
+  'live-video/sessions/sessions.service.ts#lockLive':
+    "locks the row of the live session's own garage, before the job and the session, so a stop and the live media switch run one after the other; it reads nothing of it, and access is checked on the session's row next",
   'quotes/quote-requests/quote-requests.service.ts#assertRouted':
     'reads the garages a driver picked only to refuse the request, naming why a hidden one cannot take it; it sends to none of them',
   'search/garage-search/garage-search.service.ts#after':
