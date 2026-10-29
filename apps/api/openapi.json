@@ -915,7 +915,7 @@
             "bearer": []
           }
         ],
-        "summary": "Pending approvals oldest first, then those decided in a day",
+        "summary": "The pending approvals, oldest first",
         "tags": [
           "me"
         ]
@@ -11878,7 +11878,7 @@
             "description": "How many approvals are pending"
           },
           "items": {
-            "description": "Pending oldest first, then the ones decided in the last day",
+            "description": "The pending approvals, oldest first",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AssistantActionApprovalDto"

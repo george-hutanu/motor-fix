@@ -70,7 +70,7 @@ const overdueNow = (id: string) =>
     UPDATE assistant_approval SET expires_at = now() - interval '1 second'
     WHERE id = ${id}::uuid`;
 
-// @traces 1254-assistant-approvals-FR-008
+// @traces 1254-FR-008
 describe('opening an approval', () => {
   it('saves one pending row with the tool, kind, summary, arguments and options, thirty minutes to decide', async () => {
     const a = await pending();
@@ -138,8 +138,8 @@ describe('opening an approval', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-006
-// @traces 1254-assistant-approvals-FR-009
+// @traces 1254-FR-006
+// @traces 1254-FR-009
 describe('reading approvals', () => {
   it('reads one approval of the caller’s in any status, and 404s another account’s or an unknown id', async () => {
     const a = await pending();
@@ -158,38 +158,26 @@ describe('reading approvals', () => {
     await expect(approvals.get(a.accountId, 'not-a-uuid')).resolves.toBeNull();
   });
 
-  it('lists the caller’s pending approvals oldest first, then the ones decided in the last day, and counts the pending', async () => {
+  it('lists only the caller’s pending approvals, oldest first, and counts them', async () => {
     const first = await pending();
     const second = await pending('', first.grantId, first.accountId);
     const refused = await pending('', first.grantId, first.accountId);
-    const old = await pending('', first.grantId, first.accountId);
     await approvals.refuse(first.accountId, refused.id, {
       id: first.accountId,
       role: 'driver',
-    });
-    await prisma.assistantApproval.update({
-      data: {
-        decidedAt: new Date(Date.now() - 25 * 3_600_000),
-        status: 'refused',
-      },
-      where: { id: old.id },
     });
     const elsewhere = await pending('Ioana');
 
     const list = await approvals.list(first.accountId);
 
     expect(list.pending).toBe(2);
-    expect(list.items.map((i) => i.id)).toEqual([
-      first.id,
-      second.id,
-      refused.id,
-    ]);
+    expect(list.items.map((i) => i.id)).toEqual([first.id, second.id]);
     expect(list.items.map((i) => i.id)).not.toContain(elsewhere.id);
   });
 });
 
-// @traces 1254-assistant-approvals-FR-005
-// @traces 1254-assistant-approvals-FR-006
+// @traces 1254-FR-005
+// @traces 1254-FR-006
 describe('refusing an approval', () => {
   it('makes it refused once, with the person’s audit entry and assistant_approval.decided, in one transaction', async () => {
     const a = await pending();
@@ -268,8 +256,8 @@ describe('refusing an approval', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-005
-// @traces 1254-assistant-approvals-FR-008
+// @traces 1254-FR-005
+// @traces 1254-FR-008
 describe('locking an approval for a decision', () => {
   it('hands back the stored row under the lock, and a second decision waits for the first', async () => {
     const a = await pending();
@@ -353,7 +341,7 @@ describe('locking an approval for a decision', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-007
+// @traces 1254-FR-007
 describe('expiring an approval nobody decided', () => {
   it('names the pending approvals past their expiry, and only those', async () => {
     const due = await pending();
@@ -411,7 +399,7 @@ describe('expiring an approval nobody decided', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-007
+// @traces 1254-FR-007
 describe('the void function expires pending approvals too', () => {
   it('expires the pending ones of the grants named as revoked, in the caller’s transaction', async () => {
     const a = await pending();

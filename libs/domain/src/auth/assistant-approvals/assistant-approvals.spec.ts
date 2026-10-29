@@ -1,6 +1,6 @@
 import {
   approvalView,
-  expiryCodeOf,
+  expireAssistantApprovals,
   judgeApproval,
 } from './assistant-approvals';
 
@@ -13,9 +13,9 @@ const row = (
   ...shape,
 });
 
-// @traces 1254-assistant-approvals-FR-005
-// @traces 1254-assistant-approvals-FR-006
-// @traces 1254-assistant-approvals-FR-007
+// @traces 1254-FR-005
+// @traces 1254-FR-006
+// @traces 1254-FR-007
 describe('judging an approval at a decision', () => {
   it('lets a pending approval before its expiry be decided', () => {
     expect(judgeApproval(row(), NOW)).toBe('pending');
@@ -43,16 +43,34 @@ describe('judging an approval at a decision', () => {
   });
 });
 
-// @traces 1254-assistant-approvals-FR-007
+// @traces 1254-FR-007
 describe('why the void function expires an approval', () => {
-  it('says revoked for named grants and switch_off for a whole account', () => {
-    expect(expiryCodeOf({ grantIds: ['g-1'] })).toBe('revoked');
-    expect(expiryCodeOf({ accountId: 'a-1' })).toBe('switch_off');
+  const outcomeFor = async (
+    scope: Parameters<typeof expireAssistantApprovals>[1],
+  ) => {
+    const updateManyAndReturn = jest.fn(async () => []);
+    await expireAssistantApprovals(
+      { assistantApproval: { updateManyAndReturn } } as never,
+      scope,
+      { record: jest.fn() } as never,
+    );
+    return (updateManyAndReturn.mock.calls[0] as unknown[])[0];
+  };
+
+  it('says revoked for named grants and switch_off for a whole account', async () => {
+    await expect(outcomeFor({ grantIds: ['g-1'] })).resolves.toMatchObject({
+      data: { outcome: { code: 'revoked' }, status: 'expired' },
+      where: { grantId: { in: ['g-1'] }, status: 'pending' },
+    });
+    await expect(outcomeFor({ accountId: 'a-1' })).resolves.toMatchObject({
+      data: { outcome: { code: 'switch_off' }, status: 'expired' },
+      where: { accountId: 'a-1', status: 'pending' },
+    });
   });
 });
 
-// @traces 1254-assistant-approvals-FR-008
-// @traces 1254-assistant-approvals-FR-009
+// @traces 1254-FR-008
+// @traces 1254-FR-009
 describe('what the person reads of an approval', () => {
   const stored = {
     arguments: { quoteId: 'q-1', shareHistory: true, slot: 'thu' },

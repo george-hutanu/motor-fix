@@ -128,7 +128,7 @@ export class MeService extends BaseService {
   static readonly AssistantApprovalsControllerListPath = '/api/v1/me/assistant/approvals';
 
   /**
-   * Pending approvals oldest first, then those decided in a day.
+   * The pending approvals, oldest first.
    *
    *
    *
@@ -143,7 +143,7 @@ export class MeService extends BaseService {
   }
 
   /**
-   * Pending approvals oldest first, then those decided in a day.
+   * The pending approvals, oldest first.
    *
    *
    *

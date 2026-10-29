@@ -5,7 +5,7 @@ import { AssistantActionApprovalDto } from '../models/assistant-action-approval-
 export interface AssistantActionApprovalListDto {
 
   /**
-   * Pending oldest first, then the ones decided in the last day
+   * The pending approvals, oldest first
    */
   items: Array<AssistantActionApprovalDto>;
 

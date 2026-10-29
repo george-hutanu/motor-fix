@@ -71,7 +71,6 @@ const SIGNED = {
 } as const;
 
 const LIFETIME_MS = 30 * 60_000;
-const DECIDED_SHOWN_MS = 24 * 3_600_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const SHOWN = {
@@ -99,7 +98,7 @@ export function judgeApproval(
   return now.getTime() >= row.expiresAt.getTime() ? 'expired' : 'pending';
 }
 
-export const expiryCodeOf = (scope: ApprovalScope): ExpiryCode =>
+const expiryCodeOf = (scope: ApprovalScope): ExpiryCode =>
   'grantIds' in scope ? 'revoked' : 'switch_off';
 
 // What the person reads of an approval: never an input it did not declare
@@ -213,27 +212,14 @@ export class AssistantApprovals {
     return opened;
   }
 
+  // The account's pending approvals, oldest first.
   async list(accountId: string): Promise<AssistantActionApprovalListDto> {
-    const [pending, decided] = await Promise.all([
-      this.prisma.assistantApproval.findMany({
-        orderBy: { createdAt: 'asc' },
-        select: SHOWN,
-        where: { accountId, status: 'pending' },
-      }),
-      this.prisma.assistantApproval.findMany({
-        orderBy: { decidedAt: 'desc' },
-        select: SHOWN,
-        where: {
-          accountId,
-          decidedAt: { gte: new Date(Date.now() - DECIDED_SHOWN_MS) },
-          status: { not: 'pending' },
-        },
-      }),
-    ]);
-    return {
-      items: [...pending, ...decided].map(approvalView),
-      pending: pending.length,
-    };
+    const pending = await this.prisma.assistantApproval.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: SHOWN,
+      where: { accountId, status: 'pending' },
+    });
+    return { items: pending.map(approvalView), pending: pending.length };
   }
 
   // One approval of the account's, in any status; null for anyone else's.

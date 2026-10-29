@@ -78,7 +78,7 @@ export class AssistantActionApprovalListDto {
   pending!: number;
 
   @ApiProperty({
-    description: 'Pending oldest first, then the ones decided in the last day',
+    description: 'The pending approvals, oldest first',
     type: [AssistantActionApprovalDto],
   })
   items!: AssistantActionApprovalDto[];

@@ -119,7 +119,7 @@ export class AssistantApprovalsController {
   @Get()
   @Header('Cache-Control', 'no-store')
   @ApiOperation({
-    summary: 'Pending approvals oldest first, then those decided in a day',
+    summary: 'The pending approvals, oldest first',
   })
   @ApiOkResponse({ type: AssistantActionApprovalListDto })
   list(@CurrentActor() actor: Actor): Promise<AssistantActionApprovalListDto> {
