@@ -154,6 +154,22 @@ describe('telling the driver the garage corrected the final price', () => {
     expect(await built()).toHaveLength(once);
   });
 
+  it('builds nothing, and does not throw, for a job that is gone', async () => {
+    const { queued } = await corrected();
+    const { fanOut, notify } = await start();
+    const gone = {
+      data: {
+        ...queued.data,
+        subjectId: '00000000-0000-4000-8000-000000000000',
+      },
+    };
+
+    await expect(fanOut.handle(gone)).resolves.toBeUndefined();
+
+    expect(notify).not.toHaveBeenCalled();
+    expect(await built()).toHaveLength(0);
+  });
+
   it('keeps the bell for a driver who turned the e-mail off', async () => {
     const { driverId, job, queued } = await corrected();
     await prisma.notificationPreference.create({

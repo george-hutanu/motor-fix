@@ -235,7 +235,7 @@ export class JobStagesService {
   // whatever their final-price flag says.
   handover(actor: Actor, jobId: string, price: number): Promise<JobDto> {
     return this.write(actor, jobId, 'handover', async (tx, job) => {
-      this.judgePrice(actor);
+      this.judgePrice(actor, job);
       if (job.status !== 'done') {
         throw this.refuse(
           job,
@@ -302,7 +302,7 @@ export class JobStagesService {
   // often as needed; the same price again changes nothing.
   correct(actor: Actor, jobId: string, price: number): Promise<JobDto> {
     return this.write(actor, jobId, 'correct', async (tx, job) => {
-      this.judgePrice(actor);
+      this.judgePrice(actor, job);
       if (!job.handed_over_at) {
         throw this.refuse(
           job,
@@ -342,8 +342,9 @@ export class JobStagesService {
   }
 
   // The owner and the desk record the final price; a mechanic never does.
-  private judgePrice(actor: Actor) {
+  private judgePrice(actor: Actor, job: LockedJob) {
     if (actor.role === 'mechanic') {
+      this.logger.warn(`job stage refused: forbidden job=${job.id}`);
       throw refusal(
         HttpStatus.FORBIDDEN,
         'forbidden',
