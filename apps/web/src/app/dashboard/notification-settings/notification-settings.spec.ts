@@ -346,6 +346,87 @@ describe('NotificationSettings', () => {
     expect(toast).toHaveBeenCalledWith('Setarea nu a putut fi salvată');
   });
 
+  // @traces 1315-optimistic-toggles-FR-001 1315-optimistic-toggles-FR-002 1315-optimistic-toggles-FR-008
+  it('shows the saved row again, not a guess, when two saves of one switch both fail', async () => {
+    jest.mocked(toast).mockClear();
+    const { element, settle } = await render();
+    await settle();
+    let failFirst: (reason: unknown) => void = () => undefined;
+    let failSecond: (reason: unknown) => void = () => undefined;
+    save
+      .mockReturnValueOnce(
+        new Promise((_, reject) => {
+          failFirst = reject;
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise((_, reject) => {
+          failSecond = reject;
+        }),
+      );
+    const push = () => named(element, 'Cerere de ofertă nouă, Push');
+
+    push()?.click();
+    await settle();
+    push()?.click();
+    await settle();
+    failFirst(new HttpErrorResponse({ status: 500 }));
+    await settle();
+    failSecond(new HttpErrorResponse({ status: 500 }));
+    await settle();
+
+    expect(push()?.getAttribute('aria-checked')).toBe('true');
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(toast).toHaveBeenCalledTimes(2);
+    expect(read.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  // @traces 1315-optimistic-toggles-FR-001 1315-optimistic-toggles-FR-008
+  it('reads the saved row back after a failed save instead of flipping the switch', async () => {
+    const { element, settle } = await render();
+    await settle();
+    const elsewhere = owner();
+    elsewhere.sections[0].types[0].channels[0].enabled = false;
+    read.mockResolvedValueOnce(answer([elsewhere]));
+    save.mockRejectedValueOnce(new HttpErrorResponse({ status: 500 }));
+
+    named(element, 'Cerere de ofertă nouă, E‑mail')?.click();
+    await settle();
+
+    expect(
+      named(element, 'Cerere de ofertă nouă, E‑mail')?.getAttribute(
+        'aria-checked',
+      ),
+    ).toBe('false');
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1315-optimistic-toggles-FR-002
+  it('keeps a save that succeeds after another switch failed and the lists were read again', async () => {
+    const { element, settle } = await render();
+    await settle();
+    let done: (value: NotificationPreferencesDto) => void = () => undefined;
+    save
+      .mockReturnValueOnce(
+        new Promise<NotificationPreferencesDto>((r) => {
+          done = r;
+        }),
+      )
+      .mockRejectedValueOnce(new HttpErrorResponse({ status: 500 }));
+    const email = () => named(element, 'Cerere de ofertă nouă, E‑mail');
+
+    email()?.click();
+    await settle();
+    named(element, 'Cerere de ofertă nouă, Push')?.click();
+    await settle();
+    expect(read).toHaveBeenCalledTimes(2);
+    done(answer([owner()]));
+    await settle();
+
+    expect(email()?.getAttribute('aria-checked')).toBe('false');
+  });
+
   // @traces 198-FR-014
   it('offers to try again when the lists cannot be read, and reads again', async () => {
     const { element, settle } = await render(Promise.reject(new Error('down')));
