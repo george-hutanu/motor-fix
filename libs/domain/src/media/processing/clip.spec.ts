@@ -157,8 +157,9 @@ describe('converting a clip', () => {
     const start = performance.now();
     let reads = 0;
     // The deadline is taken at the start and the probe runs a millisecond
-    // later; from the transcode on, the clock stands 100 ms short of the
-    // deadline, less than the transcode of a 1080p clip takes.
+    // later; from the transcode on, the clock stands 1 ms short of the
+    // deadline. With 100 ms left a loaded machine could fire the kill timer
+    // after ffmpeg had finished; no transcode of a 1080p clip ends in 1 ms.
     jest
       .spyOn(performance, 'now')
       .mockImplementation(() =>
@@ -166,7 +167,7 @@ describe('converting a clip', () => {
           ? start
           : reads === 2
             ? start + 1
-            : start + MEDIA_LIMITS.conversionTimeoutMs - 100,
+            : start + MEDIA_LIMITS.conversionTimeoutMs - 1,
       );
 
     await expect(convertClip(clip, { maxSeconds: 60 })).rejects.toThrow(
