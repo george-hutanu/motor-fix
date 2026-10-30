@@ -170,6 +170,7 @@ interface LastLabel {
 
 const LAST_LABEL: Plugin<ChartType, LastLabel> = {
   afterDatasetsDraw: (chart, _args, label) => {
+    if (!label.text) return;
     const bar = chart.getDatasetMeta(label.dataset)?.data[label.index];
     if (!bar) return;
     const { ctx } = chart;
@@ -184,9 +185,11 @@ const LAST_LABEL: Plugin<ChartType, LastLabel> = {
   id: 'mf-last-label',
 };
 
-// An update replaces the options, never the plugins: what the label writes
-// travels in its options so new points or a new language reach it.
+// An update replaces the options, never the plugins: the plugin is registered
+// whenever the chart may label, and what it writes travels in its options so
+// new points or a new language reach it.
 function newestLabel(
+  on: boolean,
   points: readonly ChartPoint[],
   dataset: number,
   theme: ChartTheme,
@@ -195,8 +198,10 @@ function newestLabel(
   config?: { plugins: Plugin<ChartType, LastLabel>[] };
   options?: Record<string, LastLabel>;
 } {
+  if (!on) return {};
+  const config = { plugins: [LAST_LABEL] };
   const index = points.findLastIndex((p) => p.value !== null);
-  if (index < 0) return {};
+  if (index < 0) return { config };
   const label: LastLabel = {
     color: theme.text,
     dataset,
@@ -205,7 +210,7 @@ function newestLabel(
     text: format(points[index].value),
   };
   return {
-    config: { plugins: [LAST_LABEL] },
+    config,
     options: { [LAST_LABEL.id]: label },
   };
 }
@@ -261,7 +266,8 @@ export function chartConfig(
     font: { family: theme.font, size: theme.labelSize },
   };
   const newest = newestLabel(
-    lastLabel && !horizontal ? points : [],
+    lastLabel && !horizontal,
+    points,
     datasets.length - 1,
     theme,
     format,
