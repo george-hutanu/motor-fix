@@ -735,26 +735,28 @@ describe('PATCH /garages/:garageId/profile: hours and closed days', () => {
   it('drops a closed day on a legal holiday and counts no change for it', async () => {
     const w = await world();
     const day = dayAhead(40);
-    await prisma.publicHoliday.upsert({
-      create: {
-        day: new Date(`${day}T00:00:00Z`),
-        nameEn: 'Holiday',
-        nameRo: 'Sărbătoare',
-      },
-      update: {},
-      where: { day: new Date(`${day}T00:00:00Z`) },
-    });
-    const before = await stored(w.nord.id);
+    const at = new Date(`${day}T00:00:00Z`);
+    const known = await prisma.publicHoliday.findUnique({ where: { day: at } });
+    if (!known) {
+      await prisma.publicHoliday.create({
+        data: { day: at, nameEn: 'Holiday', nameRo: 'Sărbătoare' },
+      });
+    }
+    try {
+      const before = await stored(w.nord.id);
 
-    const res = await patch(w, {
-      closedDays: [{ day }],
-      hours: WEEK,
-      version: '0',
-    });
+      const res = await patch(w, {
+        closedDays: [{ day }],
+        hours: WEEK,
+        version: '0',
+      });
 
-    expect(res.status).toBe(200);
-    expect(await closedDays(w.nord.id)).toEqual([]);
-    await nothingWritten(w, before);
+      expect(res.status).toBe(200);
+      expect(await closedDays(w.nord.id)).toEqual([]);
+      await nothingWritten(w, before);
+    } finally {
+      if (!known) await prisma.publicHoliday.delete({ where: { day: at } });
+    }
   });
 
   it('refuses hours that break a rule with 400 naming them', async () => {
