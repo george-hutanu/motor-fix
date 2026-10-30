@@ -82,7 +82,9 @@ export class GaragePinsService {
     { bbox, filters, point, radiusKm }: PinnedOptions,
   ): Promise<GaragePinsDto> {
     // With neither a place nor a box the count reads no area, and the pins
-    // are the nearest garages to the middle of Romania.
+    // are the nearest garages to the middle of Romania. The count then holds
+    // the garages with no position too, which have no pin, so the matching
+    // pins number the total less those (1260-FR-007).
     const placed = Boolean(point || bbox);
     const area = areaSql({ bbox, point, radiusKm });
     const [found, rows] = await Promise.all([

@@ -93,6 +93,8 @@ interface Seed {
   kind?: 'company' | 'mobile';
   metres?: number;
   bani?: number;
+  // false: a garage with no position, found only by a search with no place.
+  placed?: boolean;
 }
 
 async function garage({
@@ -102,6 +104,7 @@ async function garage({
   kind = 'company',
   metres = 1000,
   name = `Garage ${randomUUID()}`,
+  placed = true,
   stance,
 }: Seed = {}) {
   const { id } = await prisma.garage.create({
@@ -109,8 +112,8 @@ async function garage({
       businessKind: kind,
       hours: hours as object,
       labourFromBani: bani,
-      latitude: PLACE.lat + metres / METRES_PER_DEGREE,
-      longitude: PLACE.lng,
+      latitude: placed ? PLACE.lat + metres / METRES_PER_DEGREE : null,
+      longitude: placed ? PLACE.lng : null,
       name,
       slug: randomUUID(),
       status: 'approved',
@@ -651,6 +654,59 @@ describe('the pins of a filtered search', () => {
 
     expect(answer.pins.map((pin) => pin.matches)).toEqual([false]);
     expect(answer.total).toBe(0);
+  });
+
+  it('counts a matching garage with no position in the total, with no pin, when no place is given', async () => {
+    const pinned = await garage({ metres: 500 });
+    const unplaced = await garage({ placed: false });
+    const shut = await garage({ hours: MON_TO_FRI, metres: 1000 });
+    const filters = filtersOf({ open_saturday: '1' }, TUESDAY);
+
+    const answer = await pins.forBrand(
+      dacia,
+      undefined,
+      undefined,
+      undefined,
+      filters,
+    );
+    const list = await search.forBrand(
+      dacia,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      undefined,
+      filters,
+    );
+
+    // Nearest to Romania's centre first: the order is not this case's point.
+    expect(
+      Object.fromEntries(answer.pins.map(({ id, matches }) => [id, matches])),
+    ).toEqual({ [pinned]: true, [shut]: false });
+    expect(list.items.map((item) => item.id).sort()).toEqual(
+      [pinned, unplaced].sort(),
+    );
+    expect(answer.total).toBe(list.total);
+    const matching = answer.pins.filter((pin) => pin.matches).length;
+    expect(answer.total - matching).toBe(1);
+  });
+
+  it('counts exactly the matching pins when a place is given', async () => {
+    await garage({ metres: 500 });
+    await garage({ placed: false });
+    await garage({ hours: MON_TO_FRI, metres: 1000 });
+
+    const answer = await pins.forBrand(
+      dacia,
+      PLACE,
+      undefined,
+      undefined,
+      filtersOf({ open_saturday: '1' }, TUESDAY),
+    );
+
+    expect(answer.total).toBe(answer.pins.filter((pin) => pin.matches).length);
+    expect(answer.total).toBe(1);
   });
 });
 

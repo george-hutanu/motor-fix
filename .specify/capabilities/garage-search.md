@@ -192,7 +192,7 @@ _From 1182-cache-service._
 
 _From 1169-prefetch-intent._
 
-### 1260-FR-007 — The pins answer MUST carry every garage the search finds, as today, each pin with a `matches` boolean: true when the garage meets every set filter, always true with no filter; its `total` MUST equal the list's `total` for the same parameters computed at the same instant (a live difference inside the 60 s cache life is FR-008's stale window), so the matches only (269-FR-002 otherwise unchanged: the pin's fields, the 500 cap by nearness, the mobile mechanic's rounded centre).
+### 1260-FR-007 — The pins answer MUST carry every garage the search finds, as today, each pin with a `matches` boolean: true when the garage meets every set filter, always true with no filter; its `total` MUST equal the list's `total` for the same parameters computed at the same instant (a live difference inside the 60 s cache life is FR-008's stale window), so the matches only (269-FR-002 otherwise unchanged: the pin's fields, the 500 cap by nearness, the mobile mechanic's rounded centre). A garage with no position has no pin: with no place and no box, the list and the `total` still count a matching one (as 269-FR-002 counted it with no filter), so there the matching pins number `total` less those garages; with a place or a box no such garage is found, and under the cap the matching pins number exactly `total`.
 
 _From 1260-open-now-filters._
 
