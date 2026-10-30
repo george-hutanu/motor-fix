@@ -1021,9 +1021,7 @@
         },
         "fields": {
           "amount": "Amount, in lei",
-          "date": "Date",
-          "odometer": "Odometer, in km",
-          "what": "What was done"
+          "odometer": "Odometer, in km"
         },
         "garage": "Garage",
         "odometer": "Odometer",

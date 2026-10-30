@@ -19,9 +19,6 @@ h3 {
 .said {
   font-weight: 600;
 }
-.said:empty {
-  display: none;
-}
 ul {
   display: grid;
   gap: var(--mf-space-2);
@@ -30,13 +27,23 @@ ul {
   list-style: none;
 }
 li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--mf-space-1) var(--mf-space-3);
+  display: grid;
+  gap: var(--mf-space-2);
   padding-block: var(--mf-space-2);
   border-bottom: 1px solid var(--mf-line);
+}
+li button {
+  width: 100%;
+}
+@media (min-width: 30rem) {
+  li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--mf-space-3);
+  }
+  li button {
+    width: auto;
+  }
 }
 .line {
   min-width: 0;
@@ -47,7 +54,13 @@ li {
 .loading {
   color: var(--mf-text-secondary);
 }
-.link,
+.skeleton {
+  display: block;
+  height: 1em;
+  width: 60%;
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-line);
+}
 .retry {
   min-height: var(--mf-tap);
   padding: 0;

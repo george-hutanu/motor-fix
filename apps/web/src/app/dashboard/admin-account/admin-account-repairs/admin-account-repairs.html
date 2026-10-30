@@ -1,12 +1,12 @@
 <section aria-labelledby="mf-account-repairs" data-part="repairs">
   <h3 id="mf-account-repairs">{{ 'admin.users.account.repairs.heading' | t }}</h3>
-  <p class="said" aria-live="polite">{{ said() }}</p>
+  <p class="said mf-message" aria-live="polite">{{ said() }}</p>
   @if (rows().length > 0) {
     <ul>
       @for (r of rows(); track r.id) {
         <li>
           <span class="line">{{ r.line }}</span>
-          <button type="button" class="link" [attr.aria-label]="r.label" (click)="open(r.id)">
+          <button hlmBtn variant="secondary" type="button" [attr.aria-label]="r.label" (click)="open(r.id)">
             {{ 'admin.users.account.repairs.open' | t }}
           </button>
         </li>

@@ -1044,9 +1044,7 @@
         },
         "fields": {
           "amount": "Suma, în lei",
-          "date": "Data",
-          "odometer": "Kilometraj, în km",
-          "what": "Ce s‑a făcut"
+          "odometer": "Kilometraj, în km"
         },
         "garage": "Service",
         "odometer": "Kilometraj",

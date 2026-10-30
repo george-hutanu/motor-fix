@@ -16,6 +16,7 @@ import {
 } from '@motor-fix/data-access';
 import { formatDay, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import type {
   AdminRepairData,
@@ -28,7 +29,7 @@ type Load = 'loading' | 'ready' | 'failed';
 // car only, each opened in a dialog loaded the first time one is opened.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   selector: 'mf-admin-account-repairs',
   styleUrl: './admin-account-repairs.css',
   templateUrl: './admin-account-repairs.html',
@@ -45,7 +46,8 @@ export class AdminAccountRepairs {
   protected readonly truncated = signal(false);
   protected readonly said = signal('');
   protected readonly openFailed = signal(false);
-  private readonly opening = signal<string | null>(null);
+  // One repair opens at a time: a second press waits for the first.
+  private opening = false;
 
   protected readonly rows = computed(() => {
     const language = this.i18n.language();
@@ -79,18 +81,21 @@ export class AdminAccountRepairs {
     this.state.set('loading');
     try {
       const list = await this.api.adminRepairsControllerList({ id });
+      // The drawer may have moved to another account meanwhile.
+      if (id !== this.accountId()) return;
       this.items.set(list.items);
       this.truncated.set(list.truncated);
       this.state.set('ready');
     } catch {
+      if (id !== this.accountId()) return;
       this.state.set('failed');
     }
   }
 
   // Read first (the read is what the history records), then the dialog.
   protected async open(id: string) {
-    if (this.opening() !== null) return;
-    this.opening.set(id);
+    if (this.opening) return;
+    this.opening = true;
     this.said.set('');
     this.openFailed.set(false);
     try {
@@ -119,7 +124,7 @@ export class AdminAccountRepairs {
       );
       if (result === 'gone') this.gone(id);
     } finally {
-      this.opening.set(null);
+      this.opening = false;
     }
   }
 

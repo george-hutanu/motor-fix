@@ -60,8 +60,25 @@ const limit =
   (control: AbstractControl) =>
     holds(control.value) ? null : { server: name };
 
-const bani = (lei: number) => Math.round(lei * 100);
-const lei = (value: number | null) => (value === null ? null : value / 100);
+// The amount and the odometer are typed as text, so a Romanian decimal comma
+// is read and a mistyped value is refused rather than read as an empty field.
+// Empty is null; a value that is not a number is undefined.
+const LEI = /^\d+([.,]\d{1,2})?$/;
+const WHOLE = /^\d+$/;
+const readBani = (text: string): number | null | undefined => {
+  const typed = text.trim();
+  if (typed === '') return null;
+  if (!LEI.test(typed)) return undefined;
+  const [whole, cents = ''] = typed.split(/[.,]/);
+  return Number(whole) * 100 + Number(cents.padEnd(2, '0'));
+};
+const readKm = (text: string): number | null | undefined => {
+  const typed = text.trim();
+  if (typed === '') return null;
+  return WHOLE.test(typed) ? Number(typed) : undefined;
+};
+const leiText = (bani: number | null) =>
+  bani === null ? '' : String(bani / 100);
 
 // A driver's logged repair as the admin reads it, and the form that corrects
 // it as MotorFix: only the changed fields are sent, with the version read.
@@ -131,16 +148,12 @@ export class AdminRepairDialog {
   // Each control is named after the field the API takes, so a 400 for a
   // field shows at its control; the amount is typed in lei, sent in bani.
   protected readonly form = new FormGroup({
-    costBani: new FormControl<number | null>(null, {
-      validators: limit(
-        'costBani',
-        (v) =>
-          v === null ||
-          (typeof v === 'number' &&
-            v >= 0 &&
-            Number.isInteger(Math.round(v * 1000) / 10) &&
-            bani(v) <= BANI_MAX),
-      ),
+    costBani: new FormControl('', {
+      nonNullable: true,
+      validators: limit('costBani', (v) => {
+        const bani = readBani(String(v ?? ''));
+        return bani === null || (bani !== undefined && bani <= BANI_MAX);
+      }),
     }),
     doneOn: new FormControl('', {
       nonNullable: true,
@@ -149,16 +162,13 @@ export class AdminRepairDialog {
         (v) => typeof v === 'string' && DAY.test(v) && v <= this.today,
       ),
     }),
-    odometerKm: new FormControl<number | null>(null, {
-      validators: limit(
-        'odometerKm',
-        (v) =>
-          (v === null && this.repair().odometerKm === null) ||
-          (typeof v === 'number' &&
-            Number.isInteger(v) &&
-            v >= 0 &&
-            v <= KM_MAX),
-      ),
+    odometerKm: new FormControl('', {
+      nonNullable: true,
+      validators: limit('odometerKm', (v) => {
+        const km = readKm(String(v ?? ''));
+        if (km === null) return this.repair().odometerKm === null;
+        return km !== undefined && km <= KM_MAX;
+      }),
     }),
     what: new FormControl('', {
       nonNullable: true,
@@ -172,7 +182,6 @@ export class AdminRepairDialog {
   protected readonly save = taskSave({
     done: (repair: AdminRepairDto) => {
       this.repair.set(repair);
-      this.task.data.saved(repair);
       this.said.set(this.i18n.t('admin.users.dialogs.repair.saved'));
       this.show('view');
     },
@@ -183,6 +192,12 @@ export class AdminRepairDialog {
         .adminRepairsControllerCorrect({
           body: this.changes(),
           id: this.repair().id,
+        })
+        // The section hears of a correction even when the dialog was closed
+        // while it was on its way, which the overlays allow.
+        .then((repair) => {
+          this.task.data.saved(repair);
+          return repair;
         })
         .catch((failure: unknown) => this.refused(failure)),
   });
@@ -200,9 +215,9 @@ export class AdminRepairDialog {
   protected correct() {
     const r = this.repair();
     this.form.reset({
-      costBani: lei(r.costBani),
+      costBani: leiText(r.costBani),
       doneOn: r.doneOn,
-      odometerKm: r.odometerKm,
+      odometerKm: r.odometerKm === null ? '' : String(r.odometerKm),
       what: r.what,
     });
     this.said.set('');
@@ -219,16 +234,19 @@ export class AdminRepairDialog {
     this.task.focusStart();
   }
 
-  // The fields the admin changed, as the API takes them, and the version read.
+  // The fields whose value differs from the one loaded, as the API takes
+  // them, and the version read: a field typed back to its value is not sent.
   private changes(): CorrectClientRepairDto {
-    const { costBani, doneOn, odometerKm, what } = this.form.controls;
-    const body: CorrectClientRepairDto = { version: this.repair().version };
-    if (what.dirty) body.what = what.value.trim();
-    if (doneOn.dirty) body.doneOn = doneOn.value;
-    if (odometerKm.dirty && odometerKm.value !== null)
-      body.odometerKm = odometerKm.value;
-    if (costBani.dirty)
-      body.costBani = costBani.value === null ? null : bani(costBani.value);
+    const r = this.repair();
+    const value = this.form.getRawValue();
+    const body: CorrectClientRepairDto = { version: r.version };
+    const what = value.what.trim();
+    if (what !== r.what) body.what = what;
+    if (value.doneOn !== r.doneOn) body.doneOn = value.doneOn;
+    const km = readKm(value.odometerKm);
+    if (km != null && km !== r.odometerKm) body.odometerKm = km;
+    const bani = readBani(value.costBani);
+    if (bani !== undefined && bani !== r.costBani) body.costBani = bani;
     return body;
   }
 

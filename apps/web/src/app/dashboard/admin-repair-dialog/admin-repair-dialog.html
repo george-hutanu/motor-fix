@@ -1,4 +1,4 @@
-<p class="said" aria-live="polite" data-part="said">{{ said() }}</p>
+<p class="said mf-message" aria-live="polite" data-part="said">{{ said() }}</p>
 @if (mode() === 'view') {
   <div class="view">
     <dl>
@@ -27,7 +27,7 @@
       <dd>{{ repair().garageName }}</dd>
     </dl>
     <div class="field">
-      <label for="mf-repair-what">{{ 'admin.users.dialogs.repair.fields.what' | t }}</label>
+      <label for="mf-repair-what">{{ 'admin.users.dialogs.repair.what' | t }}</label>
       <input
         hlmInput
         id="mf-repair-what"
@@ -39,7 +39,7 @@
       <mf-field-error id="mf-repair-what-error" [save]="save" [control]="form.controls.what" />
     </div>
     <div class="field">
-      <label for="mf-repair-date">{{ 'admin.users.dialogs.repair.fields.date' | t }}</label>
+      <label for="mf-repair-date">{{ 'admin.users.dialogs.repair.date' | t }}</label>
       <input
         hlmInput
         id="mf-repair-date"
@@ -55,11 +55,8 @@
       <input
         hlmInput
         id="mf-repair-km"
-        type="number"
+        type="text"
         inputmode="numeric"
-        min="0"
-        max="2000000"
-        step="1"
         autocomplete="off"
         formControlName="odometerKm"
         aria-describedby="mf-repair-km-error"
@@ -71,11 +68,8 @@
       <input
         hlmInput
         id="mf-repair-amount"
-        type="number"
+        type="text"
         inputmode="decimal"
-        min="0"
-        max="920000"
-        step="0.01"
         autocomplete="off"
         formControlName="costBani"
         aria-describedby="mf-repair-amount-error"

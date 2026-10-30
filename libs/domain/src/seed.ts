@@ -751,7 +751,7 @@ async function requester(
 }
 
 // A repair the requester logged on his car, for the admin to open and
-// correct (ST-1405), and the car's open ownership row the admin's list reads
+// correct, and the car's open ownership row the admin's list reads
 // through: the seed writes the car straight to its table, so no route opened
 // one. Once each: a database where an admin corrected it keeps the correction.
 const LOGGED_REPAIR = '00000000-0000-4000-8000-000000001405';
