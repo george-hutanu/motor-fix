@@ -29,6 +29,9 @@ export interface DashboardView {
   // The header's own title and the line under it; absent, the label is the title.
   title?: string;
   subtitle?: string;
+  // The line under the title stays at body size from a tablet up, where
+  // other views read it at the small size (346-FR-005).
+  lead?: true;
   // Absent: every role of the area sees it.
   capability?: Capability;
   // The garage feature switch it needs; absent or on in the switches, shown.
@@ -255,6 +258,7 @@ export const DASHBOARDS: Record<
       {
         ...garageView('requests', 'garage.requests'),
         counter: 'requestsWaiting',
+        lead: true,
         load: () =>
           import(
             './garage-requests/garage-requests-view/garage-requests-view'

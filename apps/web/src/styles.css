@@ -116,19 +116,13 @@ input[type="checkbox"].mf-check:checked::after {
 }
 
 /* Text read by a screen reader and not shown, such as a count beside its
-   chip; one rule for every component that needs it. */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-/* An empty message region (an error, a warning, a status line) takes no room
-   and stays in the accessibility tree, so a screen reader hears what fills it
-   later; display: none would drop it. The shape of .sr-only, while empty. */
+   chip; one rule for every component that needs it. The CDK live announcer's
+   element (.cdk-visually-hidden) shares it, in place of the CDK's a11y sheet.
+   An empty message region (an error, a warning, a status line) takes the same
+   shape: no room, still in the accessibility tree, so a screen reader hears
+   what fills it later; display: none would drop it. */
+.sr-only,
+.cdk-visually-hidden,
 .mf-message:empty {
   position: absolute;
   width: 1px;

@@ -260,7 +260,7 @@ export function bucharestDayStart(now: Date): Date {
 }
 
 const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
-const DAY_MS = 86_400_000;
+export const DAY_MS = 86_400_000;
 
 // A calendar day as UTC midnight, or undefined: Date rolls 30 February into
 // March, and an expiry that does not exist must not become one that does.
@@ -439,7 +439,10 @@ export function timeLeft(
 }
 
 const TODAY: Record<Language, string> = { en: 'today', ro: 'azi' };
-const TOMORROW: Record<Language, string> = { en: 'tomorrow', ro: 'mâine' };
+export const TOMORROW: Record<Language, string> = {
+  en: 'tomorrow',
+  ro: 'mâine',
+};
 
 // A proposed start: today or tomorrow with the Bucharest time, else the
 // weekday and the day: "mâine, 09:00", "joi, 15 oct., 14:00".
@@ -493,7 +496,7 @@ export function appliedAt(
 
 // "<word>, 14:00" for a Bucharest day `named` has a word for (by days from
 // today), else "joi, 15 oct., 14:00".
-function dayAndTime(
+export function dayAndTime(
   date: Date,
   language: Language,
   now: Date,

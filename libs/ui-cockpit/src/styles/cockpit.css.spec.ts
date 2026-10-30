@@ -570,3 +570,12 @@ describe('cockpit.css phone rules', () => {
     expect(topLevel).not.toContain('data-column');
   });
 });
+
+// @traces 346-FR-003
+describe('cockpit.css screen-reader announcements', () => {
+  // The web app's .sr-only rule hides the CDK live announcer's element; the
+  // CDK's whole a11y sheet would put the initial bundle over its budget.
+  it('leaves the CDK a11y sheet out', () => {
+    expect(css).not.toMatch(/@angular\/cdk\/a11y-prebuilt\.css/);
+  });
+});
