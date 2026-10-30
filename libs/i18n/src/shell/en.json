@@ -105,13 +105,9 @@
   "form": {
     "done": "Done",
     "field": {
-      "decimals": "Two decimals at most.",
       "email": "Enter a valid e-mail address.",
-      "format": "Write the amount in lei, for example 4.200 or 4.200,50.",
       "invalid": "This value is not valid.",
-      "max": "1,000,000 lei at most.",
       "maxlength": "Use at most {requiredLength} characters.",
-      "min": "The amount must be more than 0.",
       "minlength": "Use at least {requiredLength} characters.",
       "pattern": "This is not in the expected format.",
       "required": "This field is required."

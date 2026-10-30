@@ -107,13 +107,9 @@
   "form": {
     "done": "Gata",
     "field": {
-      "decimals": "Cel mult două zecimale.",
       "email": "Scrie o adresă de e‑mail validă.",
-      "format": "Scrie suma în lei, de exemplu 4.200 sau 4.200,50.",
       "invalid": "Valoarea nu este validă.",
-      "max": "Cel mult 1.000.000 lei.",
       "maxlength": "Scrie cel mult {requiredLength} caractere.",
-      "min": "Suma trebuie să fie mai mare de 0.",
       "minlength": "Scrie cel puțin {requiredLength} caractere.",
       "pattern": "Formatul nu este cel așteptat.",
       "required": "Câmpul este obligatoriu."

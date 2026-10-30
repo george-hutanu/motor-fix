@@ -342,7 +342,7 @@ _From 1393-final-price-predare._
 
 _From 1393-final-price-predare._
 
-### 1393-FR-003 — The amount MUST be read by `parseLeiText` (Romanian format: thousands with a dot, decimals with a comma, up to 2 decimals, an optional "lei"), so "1.250,50" sends 125050 bani and "890" sends 89000; when the parser answers `format`, `decimals`, `min` (0 or negative) or `max` (above 1.000.000 lei), Salvează MUST send nothing, mark the field invalid (`aria-invalid`, the message tied by `aria-describedby`) and show the message for that answer, reusing the review form's four paid-amount messages, moved from `driver.review.field.*` to the shared `shell.form.field.*` (bundles load per area, so a garage session cannot read the driver's) and the review form re-pointed; the message clears as the text changes. An empty field reads as `format`.
+### 1393-FR-003 — The amount MUST be read by `parseLeiText` (Romanian format: thousands with a dot, decimals with a comma, up to 2 decimals, an optional "lei"), so "1.250,50" sends 125050 bani and "890" sends 89000; when the parser answers `format`, `decimals`, `min` (0 or negative) or `max` (above 1.000.000 lei), Salvează MUST send nothing, mark the field invalid (`aria-invalid`, the message tied by `aria-describedby`) and show the message for that answer, worded as the review form's four paid-amount messages, held in the garage bundle as `garage.jobs.finalPrice.field.*` (bundles load per area, so a garage session cannot read the driver's; the shell's Romanian is in the initial bundle, which has no room for them) beside the driver's own `driver.review.field.*`; the message clears as the text changes. An empty field reads as `format`.
 
 _From 1393-final-price-predare._
 
@@ -366,7 +366,7 @@ _From 1393-final-price-predare._
 
 _From 1393-final-price-predare._
 
-### 1393-FR-013 — Every new text MUST exist in Romanian and English in the i18n library (hyphenated Romanian words with U+2011): "Predare" / "Handover", "Corectează prețul final" / "Correct the final price", "Preț final (lei)" / "Final price (lei)", "Salvează" / "Save", "Renunță" / "Cancel", "Corectează" / "Correct", "Preț final" / "Final price" as the drawer's line, "Încheiată pe" / "Closed on", the three new refusals of FR-007; the existing `job_not_done` and `correction_window_closed` texts are reused and the review form's amount messages are moved to `shell.form.field.*` (FR-003), not duplicated. The empty-keys and as-written i18n checks pass.
+### 1393-FR-013 — Every new text MUST exist in Romanian and English in the i18n library (hyphenated Romanian words with U+2011): "Predare" / "Handover", "Corectează prețul final" / "Correct the final price", "Preț final (lei)" / "Final price (lei)", "Salvează" / "Save", "Renunță" / "Cancel", "Corectează" / "Correct", "Preț final" / "Final price" as the drawer's line, "Încheiată pe" / "Closed on", the three new refusals of FR-007; the existing `job_not_done` and `correction_window_closed` texts are reused and the review form's amount messages are worded the same in the garage bundle (FR-003), a test keeping the two copies equal. The empty-keys and as-written i18n checks pass.
 
 _From 1393-final-price-predare._
 

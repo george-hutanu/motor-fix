@@ -65,7 +65,7 @@ describe('the final price texts', () => {
     ],
     [
       'garage',
-      'jobs.finalPrice.field',
+      'jobs.finalPrice.label',
       'Preț final (lei)',
       'Final price (lei)',
     ],
@@ -85,26 +85,26 @@ describe('the final price texts', () => {
       'Final price {price}',
     ],
     [
-      'shell',
-      'form.field.format',
+      'garage',
+      'jobs.finalPrice.field.format',
       'Scrie suma în lei, de exemplu 4.200 sau 4.200,50.',
       'Write the amount in lei, for example 4.200 or 4.200,50.',
     ],
     [
-      'shell',
-      'form.field.decimals',
+      'garage',
+      'jobs.finalPrice.field.decimals',
       'Cel mult două zecimale.',
       'Two decimals at most.',
     ],
     [
-      'shell',
-      'form.field.min',
+      'garage',
+      'jobs.finalPrice.field.min',
       'Suma trebuie să fie mai mare de 0.',
       'The amount must be more than 0.',
     ],
     [
-      'shell',
-      'form.field.max',
+      'garage',
+      'jobs.finalPrice.field.max',
       'Cel mult 1.000.000 lei.',
       '1,000,000 lei at most.',
     ],
@@ -113,14 +113,14 @@ describe('the final price texts', () => {
     expect(at(bundle(area, 'en'), path)).toBe(en);
   });
 
-  // Moved to the shared form texts, which every area loads: not kept twice.
+  // The garage's copy reads as the review form's: the same parser, the same words.
   it.each(['format', 'decimals', 'min', 'max'])(
-    'keeps the amount message %s only in the shared form texts',
+    'words the amount message %s as the driver review does',
     (code) => {
       for (const language of ['ro', 'en'] as const)
         expect(
-          at(bundle('driver', language), `review.field.${code}`),
-        ).toBeUndefined();
+          at(bundle('garage', language), `jobs.finalPrice.field.${code}`),
+        ).toBe(at(bundle('driver', language), `review.field.${code}`));
     },
   );
 });

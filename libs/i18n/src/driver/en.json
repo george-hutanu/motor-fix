@@ -437,7 +437,11 @@
     },
     "failed": "We couldn't post the review. Try again.",
     "field": {
+      "decimals": "Two decimals at most.",
+      "format": "Write the amount in lei, for example 4.200 or 4.200,50.",
       "length": "2,000 characters at most.",
+      "max": "1,000,000 lei at most.",
+      "min": "The amount must be more than 0.",
       "range": "The amount must be between 0.01 and 1,000,000 lei."
     },
     "loadFailed": "We couldn't load the job.",

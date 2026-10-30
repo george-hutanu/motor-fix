@@ -147,8 +147,14 @@
       "cancel": "Renunță",
       "correct": "Corectează",
       "correctTitle": "Corectează prețul final",
-      "field": "Preț final (lei)",
+      "field": {
+        "decimals": "Cel mult două zecimale.",
+        "format": "Scrie suma în lei, de exemplu 4.200 sau 4.200,50.",
+        "max": "Cel mult 1.000.000 lei.",
+        "min": "Suma trebuie să fie mai mare de 0."
+      },
       "handover": "Predare",
+      "label": "Preț final (lei)",
       "line": "Preț final {price}",
       "problem": {
         "already_handed_over": "Prețul final a fost deja înregistrat",
