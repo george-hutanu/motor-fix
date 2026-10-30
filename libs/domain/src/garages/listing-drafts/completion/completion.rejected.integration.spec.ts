@@ -119,7 +119,7 @@ beforeEach(async () => {
 });
 afterAll(() => prisma.$disconnect());
 
-// @traces 1273-reapply-after-rejection-FR-003
+// @traces 1273-FR-003
 describe('opening the copy of a rejected garage', () => {
   it('answers the owner a copy of the garage bound to the rejected file, at the step its reason names', async () => {
     const copy = await service.open(garage.owner);
@@ -224,7 +224,7 @@ describe('opening the copy of a rejected garage', () => {
   });
 });
 
-// @traces 1273-reapply-after-rejection-FR-004 1273-reapply-after-rejection-FR-006
+// @traces 1273-FR-004 1273-FR-006 1273-FR-009
 describe('sending the corrected copy', () => {
   it('creates one new submitted file after the rejected one, the garage and its owner left as they are', async () => {
     const before = await rejectedFile();
@@ -403,7 +403,7 @@ describe('sending the corrected copy', () => {
   });
 });
 
-// @traces 1273-reapply-after-rejection-FR-005 1273-reapply-after-rejection-FR-004
+// @traces 1273-FR-005 1273-FR-004
 describe('a corrected copy that is refused', () => {
   async function nothingWritten(
     copy: CompletionCopyDto,
@@ -516,7 +516,7 @@ const files = new VerificationFileService(
   new DocumentCycleService(prisma),
 );
 
-// @traces 1273-reapply-after-rejection-FR-007 1273-reapply-after-rejection-FR-006
+// @traces 1273-FR-007 1273-FR-006
 describe('the admin reading the file a correction made', () => {
   const corrected = async () => {
     await send(await service.open(garage.owner));

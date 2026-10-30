@@ -304,7 +304,7 @@ describe('a copy of a live garage', () => {
   });
 });
 
-// @traces 1273-reapply-after-rejection-FR-003
+// @traces 1273-FR-003
 describe('a copy of a rejected garage', () => {
   async function rejectedCopy() {
     const garage = await prisma.garage.create({

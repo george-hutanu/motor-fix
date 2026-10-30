@@ -332,7 +332,7 @@ describe('the product counters', () => {
     ),
     // @traces 304-FR-012
     [() => countMoreRequest(), 'motorfix_verification_more_requests_total', {}],
-    // @traces 304-FR-012 1273-reapply-after-rejection-FR-008
+    // @traces 304-FR-012 1273-FR-008
     ...RESUBMISSION_AFTER.map(
       (after) =>
         [
@@ -489,7 +489,7 @@ describe('the product counters', () => {
     expect(await total(name, labels)).toBe(before + 1);
   });
 
-  // @traces 1273-reapply-after-rejection-FR-008
+  // @traces 1273-FR-008
   it('starts the resubmissions after a request for more at zero, and none after a rejection', () => {
     const added: Record<string, unknown>[] = [];
     const meter = {

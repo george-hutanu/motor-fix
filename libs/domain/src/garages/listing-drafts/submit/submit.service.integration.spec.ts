@@ -782,7 +782,7 @@ describe('an account that already owns a garage', () => {
     ).toMatchObject({ status: 'open', submitKey: null });
   });
 
-  // @traces 1273-reapply-after-rejection-FR-005
+  // @traces 1273-FR-005
   it('refuses the owner of a rejected garage too: the way back is a new file, not a new garage', async () => {
     const actor = await driver();
     const held = await prisma.garage.create({

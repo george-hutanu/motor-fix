@@ -534,7 +534,7 @@ export function countMoreRequest() {
 // The decision a sending again follows: a request for more, sent back on
 // the same file, or a rejection, answered with a new file.
 export const RESUBMISSION_AFTER = ['more_requested', 'rejected'] as const;
-export type ResubmissionAfter = (typeof RESUBMISSION_AFTER)[number];
+type ResubmissionAfter = (typeof RESUBMISSION_AFTER)[number];
 
 export function countResubmission(after: ResubmissionAfter) {
   resubmissions().add(1, { after });

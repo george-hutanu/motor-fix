@@ -127,7 +127,7 @@ describe("the API's product counters at start", () => {
       ),
     ).toEqual(['documents', 'rar', 'address', 'photos', 'other']);
     // @traces 304-FR-012
-    // @traces 1273-reapply-after-rejection-FR-008
+    // @traces 1273-FR-008
     expect(
       [
         ...named(all, 'motorfix_verification_more_requests_total'),
