@@ -14,12 +14,14 @@ import {
   fixtures,
   redisUrlFor,
   testConfig,
+  testPhone,
   testPhoneConfig,
 } from '../notifications.testing';
-import { render } from '../templates';
+import { bellText } from '../templates';
 
 // @traces 409-FR-013
 // @traces 409-FR-017
+// @traces 1267-FR-012
 
 const redisUrl = redisUrlFor(7);
 const { account, prisma, reset } = fixtures();
@@ -134,20 +136,105 @@ describe('telling the driver a garage corrected a repair', () => {
     const all = await messages(owner);
     for (const message of all) expect(message.subjectId).toBe(repair.id);
     expect(all.find((m) => m.channel === 'email')?.params).toEqual({
+      by: 'owner',
       car: carName,
       garage: 'Garaj Nordic',
       link: 'https://motorfix.test/app/driver?view=cars',
     });
     const bell = all.find((m) => m.channel === 'in_app');
     expect(
-      render(
-        'REPAIR_UPDATED',
-        'bell',
-        'en',
-        bell?.params as Record<string, unknown>,
-      ),
+      bellText('REPAIR_UPDATED', 'en', bell?.params as Record<string, unknown>),
     ).toBe(`Garaj Nordic corrected a repair in ${carName}'s history.`);
     expect(await counted('built')).toBe(before + 1);
+  });
+
+  it('names MotorFix, not the garage, for an admin’s correction', async () => {
+    const { carName, job, owner } = await corrected('ro');
+    const fanOut = await start();
+    const before = await counted('built');
+
+    await fanOut.handle(job('83', { by: 'admin' }));
+
+    expect(await channels(owner)).toEqual(['email', 'in_app']);
+    const all = await messages(owner);
+    expect(all.find((m) => m.channel === 'email')?.params).toMatchObject({
+      by: 'admin',
+      garage: 'MotorFix',
+    });
+    const bell = all.find((m) => m.channel === 'in_app');
+    expect(
+      bellText('REPAIR_UPDATED', 'ro', bell?.params as Record<string, unknown>),
+    ).toBe(`MotorFix a corectat o reparație din istoricul ${carName}.`);
+    expect(await counted('built')).toBe(before + 1);
+  });
+
+  it('keeps only the bell of an admin’s correction for an owner who muted reviews and history', async () => {
+    const { job, owner } = await corrected();
+    await prisma.notificationPreference.createMany({
+      data: (['email', 'push', 'whatsapp'] as const).map((channel) => ({
+        accountId: owner,
+        channel,
+        enabled: false,
+        type: 'REPAIR_UPDATED',
+      })),
+    });
+    const fanOut = await start();
+
+    await fanOut.handle(job('84', { by: 'admin' }));
+    await fanOut.handle(job('84', { by: 'admin' }));
+
+    expect(await channels(owner)).toEqual(['in_app']);
+  });
+
+  it('writes an admin’s correction to the new owner after a sale, never the seller', async () => {
+    const { job, owner } = await corrected();
+    const buyer = await account('Maria Ionescu', ['driver']);
+    const fanOut = await start();
+
+    await fanOut.handle(job('85', { by: 'admin', ownerId: buyer }));
+
+    expect(await channels(buyer)).toEqual(['email', 'in_app']);
+    expect(
+      (await messages(buyer)).find((m) => m.channel === 'email')?.params,
+    ).toMatchObject({ by: 'admin', garage: 'MotorFix' });
+    expect(await messages(owner)).toEqual([]);
+  });
+
+  it('writes nothing for an admin’s correction on a car with no owner, and counts skipped', async () => {
+    const { job, owner } = await corrected();
+    const fanOut = await start();
+    const before = await counted('skipped');
+
+    await fanOut.handle(job('86', { by: 'admin', ownerId: null }));
+
+    expect(await messages(owner)).toEqual([]);
+    expect(await counted('skipped')).toBe(before + 1);
+  });
+
+  it('sends an admin’s correction by WhatsApp when the owner chose it, never by SMS', async () => {
+    const { job, owner } = await corrected();
+    await prisma.account.update({
+      data: { phone: testPhone(7), phoneVerifiedAt: new Date('2026-09-01') },
+      where: { id: owner },
+    });
+    await prisma.notificationPreference.create({
+      data: {
+        accountId: owner,
+        channel: 'whatsapp',
+        enabled: true,
+        type: 'REPAIR_UPDATED',
+      },
+    });
+    const fanOut = await start();
+
+    await fanOut.handle(job('87', { by: 'admin' }));
+
+    const sent = await channels(owner);
+    expect(sent).toContain('whatsapp');
+    expect(sent).not.toContain('sms');
+    expect(
+      (await messages(owner)).find((m) => m.channel === 'whatsapp')?.params,
+    ).toMatchObject({ by: 'admin', garage: 'MotorFix' });
   });
 
   it('writes nothing more for the same event run twice', async () => {

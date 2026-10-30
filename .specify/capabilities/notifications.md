@@ -61,6 +61,7 @@ features:
   - 1254-assistant-approvals
   - 277-car-status-alerts
   - 409-garage-corrects-repair
+  - 1267-admin-corrects-repair
   - 1315-optimistic-toggles
 ---
 
@@ -1078,9 +1079,9 @@ _From 277-car-status-alerts._
 
 _From 409-garage-corrects-repair._
 
-### 409-FR-014 — The REPAIR_UPDATED message (bell body, e-mail, push, WhatsApp) MUST name the garage ("Garaj Nordic a corectat o reparație din istoricul VW Golf 2015" / "Garaj Nordic corrected a repair in VW Golf 2015's history") in the recipient's language, the texts in the notifications module's own files as the other kinds keep theirs; the existing bell title stays.
+### 1267-FR-012 — REPAIR_UPDATED for a `repair.updated` with `by` `admin` MUST be built by the existing fan-out (409-FR-013, unchanged in recipient, once-per-event and mute rules) with texts that name MotorFix in place of the garage in every channel (bell body, e-mail, push, WhatsApp): "MotorFix a corectat o reparație din istoricul {car}." / "MotorFix corrected a repair in {car}'s history.", the e-mail subject "MotorFix a corectat o reparație a mașinii {car}" / "MotorFix corrected a repair of your {car}", and every e-mail body line and the reason line that name the garage or a shared repair speak of MotorFix and a repair in the driver's history; the texts live in the notifications module's own files as the other kinds keep theirs, the WhatsApp message through the registered `motorfix_repair_updated_{ro,en}` templates with "MotorFix" in their `{garage}` slot (no new template); the existing bell title and link stay.
 
-_From 409-garage-corrects-repair._
+_From 1267-admin-corrects-repair._
 
 ### 1315-FR-002 — The `shell.notifications.saveFailed` toast MUST show once per failed save. The re-read of FR-001 replaces the lists wholesale; a save that succeeds after it MUST re-apply its own choice to its switch, so the screen ends on the server's rows.
 
@@ -1126,4 +1127,5 @@ _From 1315-optimistic-toggles._
 - `032-FR-006` — superseded by `094-FR-013` (2026-10-25)
 - `032-FR-007` — superseded by `094-FR-014` (2026-10-25)
 - `428-FR-010` — superseded by `1258-FR-005` (2026-10-25)
+- `409-FR-014` — superseded by `1267-FR-012` (2026-10-30)
 - `198-FR-014` — superseded by `1315-FR-001` (2026-10-30)

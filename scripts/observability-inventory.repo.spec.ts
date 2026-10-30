@@ -627,3 +627,44 @@ describe('the time-block routes', () => {
     },
   );
 });
+
+// @traces 1267-FR-013
+describe('the admin’s logged repair routes', () => {
+  repoIt(
+    'are OpenAPI operations the inventory lists, the correction with its counter',
+    () => {
+      const api = JSON.parse(
+        readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+      );
+      const inventory = JSON.parse(
+        readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+      );
+      expect(
+        Object.keys(api.paths['/api/v1/admin/accounts/{id}/repairs']),
+      ).toEqual(['get']);
+      expect(
+        Object.keys(api.paths['/api/v1/admin/repairs/{id}']).sort(),
+      ).toEqual(['delete', 'get', 'patch']);
+      const listed = inventory.entries.filter(
+        (entry: { story?: string; kind: string }) =>
+          entry.kind === 'endpoint' && entry.story === 'ST-1267',
+      );
+      expect(
+        listed.map((entry: { name: string }) => entry.name).sort(),
+      ).toEqual([
+        'admin-account-repairs',
+        'admin-repair-correct',
+        'admin-repair-delete',
+        'admin-repair-open',
+      ]);
+      for (const entry of listed) {
+        expect(entry.alerts).toEqual(['api-error-rate', 'api-latency']);
+      }
+      expect(
+        listed.find(
+          (entry: { name: string }) => entry.name === 'admin-repair-correct',
+        ).reason,
+      ).toContain('motorfix_repair_corrections_total');
+    },
+  );
+});
