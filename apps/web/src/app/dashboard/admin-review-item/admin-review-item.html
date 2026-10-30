@@ -1,0 +1,35 @@
+@let v = view();
+<article tabindex="-1" [attr.aria-label]="v.title">
+  <div class="head">
+    <span class="title">{{ v.title }}</span>&ngsp;
+    <mf-lamp state="red" [label]="v.lamp" />&ngsp;
+    @if (overdue()) {
+      <span class="overdue">{{ 'admin.reviews.overdue' | t }}</span>&ngsp;
+    }
+  </div>
+  @if (v.reply !== undefined) {
+    <p class="reply">{{ v.reply }}</p>&ngsp;
+    <p class="posted">{{ v.posted }}@if (v.edited) { · {{ v.edited }}}</p>&ngsp;
+    @if (v.answered; as answered) {
+      <blockquote class="answered">
+        <span class="score">{{ answered.score }}</span>&ngsp;
+        @if (v.text) {
+          <span class="quoted">{{ v.text }}</span>&ngsp;
+        }
+        <span class="author">{{ answered.author }}</span>
+      </blockquote>&ngsp;
+    }
+  } @else if (v.text) {
+    <p class="text">{{ v.text }}</p>&ngsp;
+  }
+  <ul class="facts">
+    @for (fact of v.facts; track $index) {
+      <li>{{ fact }}</li>&ngsp;
+    }
+  </ul>&ngsp;
+  <div class="actions">
+    <button type="button" class="keep" aria-disabled="true" [attr.aria-describedby]="tipId">{{ v.keep }}</button>&ngsp;
+    <button type="button" class="remove" aria-disabled="true" [attr.aria-describedby]="tipId">{{ v.remove }}</button>&ngsp;
+    <span class="tip" role="tooltip" [id]="tipId">{{ 'admin.reviews.actions.soon' | t }}</span>
+  </div>
+</article>
