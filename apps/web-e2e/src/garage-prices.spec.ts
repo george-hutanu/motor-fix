@@ -138,6 +138,11 @@ test.describe('the garage price list @seeded', () => {
       });
       expect(lines).toBe(1);
       expect(
+        await toggle.evaluate((button) =>
+          Number.parseFloat(getComputedStyle(button).fontSize),
+        ),
+      ).toBeGreaterThanOrEqual(16);
+      expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(320);
     }

@@ -41,14 +41,16 @@ h2 {
   min-height: var(--mf-tap);
   white-space: nowrap;
 }
-/* Michroma at 16 px runs "MODIFICĂ PREȚURILE" past a 320 px phone: a smaller
-   size and tighter padding keep it on one line inside the 288 px column. */
+/* Michroma at 16 px runs "MODIFICĂ PREȚURILE" past a 320 px phone: the narrower
+   body face keeps phone body size (16 px) and one line inside the 288 px column. */
 @media not all and (min-width: 400px) {
   .toggle {
     max-width: 100%;
     padding-inline: var(--mf-space-3);
-    font-size: var(--mf-size-small);
-    letter-spacing: 0.08em;
+    font-family: var(--mf-font-body);
+    font-size: var(--mf-size-body);
+    font-weight: 600;
+    letter-spacing: 0.04em;
   }
 }
 /* Under the range on a phone, wrapping as the cells do. */
