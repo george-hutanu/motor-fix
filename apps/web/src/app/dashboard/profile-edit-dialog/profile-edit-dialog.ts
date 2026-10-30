@@ -71,6 +71,11 @@ const rule =
   (control) =>
     holds(String(control.value ?? '')) ? null : { [code]: true };
 
+// A rule whose words the listing form already says, under the listing's key.
+const SHARED_TEXTS: Record<string, string> = {
+  radius: 'public.listing.check.radiusNeeded',
+};
+
 // The shared normaliser's number, when it is a Romanian one.
 const romanian = (value: string) => {
   const phone = normalisePhone(value);
@@ -226,6 +231,8 @@ export class ProfileEditDialog {
 
   constructor() {
     void this.i18n.enter('garage');
+    // The hours step and the radius speak in the listing form's texts.
+    void this.i18n.enter('public');
     for (const [name, control] of Object.entries(this.form.controls)) {
       if (!GROUPS[this.group].includes(name)) control.disable();
     }
@@ -242,7 +249,10 @@ export class ProfileEditDialog {
     if (!errors) return null;
     if ('server' in errors) return this.save.fieldError(control);
     if (!control.touched) return null;
-    return this.i18n.t(`garage.profile.edit.field.${Object.keys(errors)[0]}`);
+    const code = Object.keys(errors)[0];
+    return this.i18n.t(
+      SHARED_TEXTS[code] ?? `garage.profile.edit.field.${code}`,
+    );
   }
 
   private sectionOf(): HoursSection {

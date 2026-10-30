@@ -594,6 +594,80 @@ describe('step 5, the closed days', () => {
       { day: '2026-12-01' },
     ]);
   });
+
+  // The calendar answers late: a day taken while it loads is judged once it
+  // arrives, and kept only when the calendar is down.
+  // @traces 1246-FR-017
+  describe('while the calendar is still loading', () => {
+    let answer: (failed: boolean) => void;
+    // Until the step shows the calendar's answer: its next holidays, or that
+    // the list is not available.
+    const shows = (step: HTMLElement) => {
+      const holidays = step.querySelector('.holidays');
+      return (
+        !!holidays?.querySelector('li') ||
+        text(holidays).includes('nu e disponibilă acum')
+      );
+    };
+    const answered = async (fixture: Fixture, step: HTMLElement) => {
+      for (let i = 0; i < 20 && !shows(step); i++) await settle(fixture);
+      if (!shows(step)) throw new Error('the calendar never answered');
+    };
+    beforeEach(() => {
+      const pending = new Promise<boolean>((resolve) => {
+        answer = resolve;
+      });
+      list.mockImplementation(async ({ year }: { year: number }) => {
+        if (await pending) throw new Error('offline');
+        return CALENDAR[year] ?? [];
+      });
+    });
+
+    it('refuses a legal holiday taken meanwhile once the calendar loads', async () => {
+      const { fixture, step } = await open();
+      await add(fixture, step, '2026-12-01');
+      await add(fixture, step, '2026-12-27', 'Inventar');
+
+      answer(false);
+      await answered(fixture, step);
+
+      expect(fixture.componentInstance.value().closedDays).toEqual([
+        { day: '2026-12-27', note: 'Inventar' },
+      ]);
+      expect(text(step.querySelector('.closed-error'))).toBe(
+        'E deja zi liberă legală',
+      );
+      expect(closedDays(step)).toHaveLength(1);
+    });
+
+    it('refuses it the same way in the profile dialog', async () => {
+      const { fixture, step } = await open();
+      fixture.componentRef.setInput('hoursOnly', true);
+      await settle(fixture);
+      await add(fixture, step, '2026-12-01');
+
+      answer(false);
+      await answered(fixture, step);
+
+      expect(fixture.componentInstance.value().closedDays).toBeUndefined();
+      expect(text(step.querySelector('.closed-error'))).toBe(
+        'E deja zi liberă legală',
+      );
+    });
+
+    it('keeps the day when the calendar turns out to be down', async () => {
+      const { fixture, step } = await open();
+      await add(fixture, step, '2026-12-01');
+
+      answer(true);
+      await answered(fixture, step);
+
+      expect(fixture.componentInstance.value().closedDays).toEqual([
+        { day: '2026-12-01' },
+      ]);
+      expect(text(step.querySelector('.closed-error'))).toBe('');
+    });
+  });
 });
 
 describe('step 5, the row messages under hostile use', () => {
@@ -1358,6 +1432,25 @@ describe('type scale', () => {
     expect(stylesheet).toMatch(
       /\n[^{}\n]*input:not\(\[type="checkbox"\], \[type="radio"\]\) \{[^}]*font-size: var\(--mf-size-field\);/,
     );
+  });
+  // @traces 1246-FR-018
+  it('draws the courtesy car terms as round radios with a dot, not as ticks', () => {
+    expect(stylesheet).toMatch(
+      /\.tick input\[type="radio"\]::before \{[^}]*border-radius: 50%;/,
+    );
+    expect(stylesheet).toMatch(
+      /\.tick input\[type="radio"\]:checked::after \{[^}]*border-radius: 50%;[^}]*background: var\(--mf-text\);/,
+    );
+    expect(stylesheet).toMatch(
+      /\.tick input\[type="radio"\]:checked::after \{[^}]*transform: none;/,
+    );
+  });
+
+  // @traces 1246-FR-018
+  it('reads "Preț pe zi" and "lei" at the body size on a phone, the small size from a tablet', () => {
+    const [phone, tablet] = stylesheet.split('@media (min-width: 768px)');
+    expect(phone).toMatch(/\n\.price \{[^}]*font-size: var\(--mf-size-body\);/);
+    expect(tablet).toMatch(/\.price \{[^}]*font-size: var\(--mf-size-small\);/);
   });
 });
 

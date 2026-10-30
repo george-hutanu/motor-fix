@@ -488,7 +488,6 @@
         "nameWithin": "Numele trebuie să aibă între 2 și 80 de caractere.",
         "phoneNeeded": "Adaugă un număr de telefon",
         "phoneNumber": "Momentan acceptăm doar numere din România",
-        "radius": "Alege raza de deplasare",
         "weeklyHours": "Programul nu este valid. Verifică orele."
       },
       "nameHint": "Între 2 și 80 de caractere",

@@ -484,7 +484,6 @@
         "nameWithin": "The name must be 2 to 80 characters.",
         "phoneNeeded": "Add a phone number",
         "phoneNumber": "We only take Romanian numbers for now",
-        "radius": "Choose your travel radius",
         "weeklyHours": "The hours are not valid. Check the times."
       },
       "nameHint": "2 to 80 characters",

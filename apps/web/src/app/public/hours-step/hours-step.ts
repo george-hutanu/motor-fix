@@ -215,9 +215,22 @@ export class HoursStep {
       this.calendarApi.publicHolidaysControllerList({ year }),
       this.calendarApi.publicHolidaysControllerList({ year: year + 1 }),
     ]).then(
-      ([now, next]) =>
-        this.calendar.set({ days: [...now, ...next], state: 'ready' }),
+      ([now, next]) => this.calendarReady([...now, ...next]),
       () => this.calendar.set({ state: 'down' }),
+    );
+  }
+
+  // A legal holiday taken while the calendar loaded is refused now that it
+  // is known, as it would have been had the calendar come first.
+  private calendarReady(days: PublicHolidayDto[]) {
+    this.calendar.set({ days, state: 'ready' });
+    const legal = new Set(days.map((h) => h.day));
+    const list = this.value().closedDays ?? [];
+    const kept = list.filter((entry) => !legal.has(entry.day));
+    if (kept.length === list.length) return;
+    this.closedError.set('holiday');
+    this.value.update(({ closedDays: _, ...rest }) =>
+      kept.length ? { ...rest, closedDays: kept } : rest,
     );
   }
 

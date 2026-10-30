@@ -755,6 +755,8 @@ describe('the profile dialog: service radius', () => {
     });
   });
 
+  // One text for the radius everywhere: the listing's own.
+  // @traces 1246-FR-023
   it('says it in English', async () => {
     await open('area', MOBILE(), 'en');
     await fill('profile-edit-radius', '4');
@@ -762,7 +764,7 @@ describe('the profile dialog: service radius', () => {
 
     expect(text(panel().querySelector('h2'))).toBe('Service area');
     expect(text(panel().querySelector('#profile-edit-radius-error'))).toBe(
-      'Choose your travel radius',
+      'Choose how far you travel',
     );
   });
 });
