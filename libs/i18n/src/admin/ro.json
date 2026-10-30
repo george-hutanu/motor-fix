@@ -968,6 +968,16 @@
         "owner": "proprietar la {name}",
         "receptionist": "recepție la {name}"
       },
+      "repairs": {
+        "empty": "Nicio reparație adăugată de acest cont",
+        "failed": "Reparațiile nu s‑au încărcat.",
+        "gone": "Reparația nu mai există",
+        "heading": "Reparații adăugate",
+        "more": "și altele",
+        "open": "Deschide",
+        "openFailed": "Reparația nu s‑a deschis. Încearcă din nou.",
+        "openLabel": "Deschide reparația din {day}, {car}"
+      },
       "roles": "Roluri",
       "state": "Stare"
     },
@@ -1013,6 +1023,39 @@
         "identity": "Identitatea a fost verificată",
         "reference": "Referința cererii",
         "title": "Șterge la cererea titularului"
+      },
+      "repair": {
+        "amount": "Suma",
+        "cancel": "Renunță",
+        "car": "Mașina",
+        "changed": "Reparația a fost modificată între timp. Am reîncărcat valorile.",
+        "close": "Închide",
+        "correct": "Corectează",
+        "correctedBy": {
+          "admin": "Corectată de MotorFix",
+          "garage": "Corectată de {garage}"
+        },
+        "date": "Data",
+        "field": {
+          "costBani": "O sumă între 0 și 920.000 lei, cu cel mult două zecimale",
+          "doneOn": "Alege o zi până azi",
+          "odometerKm": "Un număr întreg între 0 și 2.000.000",
+          "what": "Scrie ce s‑a făcut, cel mult 200 de caractere"
+        },
+        "fields": {
+          "amount": "Suma, în lei",
+          "date": "Data",
+          "odometer": "Kilometraj, în km",
+          "what": "Ce s‑a făcut"
+        },
+        "garage": "Service",
+        "odometer": "Kilometraj",
+        "recorded": "Deschiderea este înregistrată în istoric",
+        "rereadFailed": "Reparația a fost modificată între timp și nu s‑a reîncărcat. Închide și deschide‑o din nou.",
+        "save": "Salvează",
+        "saved": "Corectura e salvată.",
+        "title": "Reparație adăugată de șofer",
+        "what": "Ce s‑a făcut"
       },
       "reset": {
         "confirm": "Resetează",
