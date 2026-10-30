@@ -51,6 +51,14 @@ h3,
   row-gap: var(--mf-space-1);
   min-width: 0;
 }
+/* The owner's edit control closes its group of lines, on a row of its own. */
+.edit {
+  grid-column: 1 / -1;
+}
+.edit button {
+  min-height: 44px;
+  white-space: normal;
+}
 .label {
   display: flex;
   flex-wrap: wrap;

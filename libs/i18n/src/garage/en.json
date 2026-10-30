@@ -471,6 +471,23 @@
   "profile": {
     "address": "Address",
     "area": "Service area: {km}",
+    "edit": {
+      "cancel": "Cancel",
+      "control": "Edit profile",
+      "controlFor": "Edit profile: {group}",
+      "field": {
+        "closedDays": "A closed day is not valid. Check the days.",
+        "weeklyHours": "The hours are not valid. Check the times."
+      },
+      "problem": {
+        "profile_changed": "The profile was changed meanwhile. Reload."
+      },
+      "reload": "Reload",
+      "save": "Save",
+      "title": {
+        "hours": "Hours and closed days"
+      }
+    },
     "error": "We could not load the profile.",
     "hours": "Hours",
     "name": "Name",

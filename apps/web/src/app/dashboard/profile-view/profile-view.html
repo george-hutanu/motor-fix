@@ -26,6 +26,11 @@
             </span>
           </li>
         }
+        @if (legalCheck()) {
+          <li class="edit">
+            <button hlmBtn variant="secondary" type="button" data-edit="hours" [attr.aria-label]="editLabel('hours')" (click)="edit('hours')">{{ 'garage.profile.edit.control' | t }}</button>
+          </li>
+        }
         @if (garage.phone) {
           <li class="field" data-line="phone">
             <span class="label">{{ 'garage.profile.phone' | t }}&ngsp;<span class="tag" data-phone-tag>{{ 'garage.profile.phonePrivate' | t }}</span></span>&ngsp;<span class="value" data-value>{{ garage.phone }}</span>

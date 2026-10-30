@@ -100,6 +100,9 @@ export class HoursStep {
   // The page's judgement of this step, and whether sending was asked for.
   readonly problems = input<ListingCheck>(NO_PROBLEMS);
   readonly showAll = input(false);
+  // The profile dialog edits the week and the closed days alone: the
+  // facilities, their note and the payments stay out of it.
+  readonly hoursOnly = input(false);
   // Whether any field shows an error, for the step list's dot.
   readonly shown = output<boolean>();
   // Whether the facilities note is past its limit: the draft cannot see it,

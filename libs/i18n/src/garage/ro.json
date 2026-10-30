@@ -475,6 +475,23 @@
   "profile": {
     "address": "Adresă",
     "area": "Zonă de lucru: {km}",
+    "edit": {
+      "cancel": "Renunță",
+      "control": "Modifică profilul",
+      "controlFor": "Modifică profilul: {group}",
+      "field": {
+        "closedDays": "O zi închisă nu este validă. Verifică zilele.",
+        "weeklyHours": "Programul nu este valid. Verifică orele."
+      },
+      "problem": {
+        "profile_changed": "Profilul a fost modificat între timp. Reîncarcă."
+      },
+      "reload": "Reîncarcă",
+      "save": "Salvează",
+      "title": {
+        "hours": "Program și zile închise"
+      }
+    },
     "error": "Nu am putut încărca profilul.",
     "hours": "Program",
     "name": "Nume",

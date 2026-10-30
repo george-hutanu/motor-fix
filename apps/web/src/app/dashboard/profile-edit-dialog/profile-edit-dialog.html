@@ -1,0 +1,25 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  @if (group === 'hours') {
+    <mf-hours-step [hoursOnly]="true" [value]="section()" (valueChange)="keep($event)" />
+    <p id="profile-edit-hours-error" class="error mf-message" role="status" aria-live="polite">{{ save.fieldError(form.controls.hours) }}</p>
+    <p id="profile-edit-closedDays-error" class="error mf-message" role="status" aria-live="polite">{{ save.fieldError(form.controls.closedDays) }}</p>
+  }
+  @if (stale()) {
+    <div class="stale" data-stale role="alert">
+      <p class="error mf-message">{{ 'garage.profile.edit.problem.profile_changed' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" [attr.aria-busy]="reloading() || null" (click)="reload()">
+        {{ 'garage.profile.edit.reload' | t }}
+      </button>
+    </div>
+  } @else if (save.problem()) {
+    <div class="error mf-message" data-problem role="alert"><mf-task-error [save]="save" /></div>
+  }
+  <div class="actions">
+    <button hlmBtn type="submit" [mfTaskSubmit]="save">
+      {{ 'garage.profile.edit.save' | t }}
+    </button>
+    <button hlmBtn variant="ghost" type="button" (click)="task.close('cancelled')">
+      {{ 'garage.profile.edit.cancel' | t }}
+    </button>
+  </div>
+</form>
