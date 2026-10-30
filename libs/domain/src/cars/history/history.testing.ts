@@ -2,7 +2,7 @@ import { addDays, localDay } from '../../bucharest';
 import type { PrismaClient, ReviewStatus } from '../../generated/prisma/client';
 import { quotesWorld } from '../../quotes/quotes.testing';
 
-export interface MotorFixRepairOptions {
+interface MotorFixRepairOptions {
   daysAgo?: number;
   garageName?: string;
   // The jobs of the accepted quote, in Romanian and English, by asked order.

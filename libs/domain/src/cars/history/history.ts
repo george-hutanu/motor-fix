@@ -152,7 +152,7 @@ export const REPAIR_ROW_SELECT = {
   what: true,
 } satisfies Prisma.RepairSelect;
 
-export type RepairRow = Prisma.RepairGetPayload<{
+type RepairRow = Prisma.RepairGetPayload<{
   select: typeof REPAIR_ROW_SELECT;
 }>;
 
