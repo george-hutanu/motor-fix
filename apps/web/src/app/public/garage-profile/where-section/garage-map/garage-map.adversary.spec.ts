@@ -25,7 +25,7 @@ const piece = () =>
   fixture.debugElement.query(By.directive(StaticMap))
     ?.componentInstance as StaticMap;
 
-async function render(opener?: jest.Mock) {
+async function render(opener?: jest.Mock, km?: number) {
   open =
     opener ??
     jest.fn(
@@ -45,6 +45,7 @@ async function render(opener?: jest.Mock) {
   await TestBed.inject(I18n).enter('public');
   fixture = TestBed.createComponent(GarageMap);
   fixture.componentRef.setInput('point', POINT);
+  if (km !== undefined) fixture.componentRef.setInput('km', km);
   fixture.componentInstance.gone.subscribe(gone);
   fixture.detectChanges();
   await fixture.whenStable();
@@ -67,6 +68,18 @@ afterEach(() => jest.restoreAllMocks());
 
 // @traces 1366-FR-006
 describe('GarageMap, failing in odd orders', () => {
+  // @traces 1383-FR-006
+  // @traces 1383-FR-008
+  it('says it is gone once when the image of an area fails twice', async () => {
+    await render(undefined, 20);
+    piece().failed.emit();
+    piece().failed.emit();
+    fixture.detectChanges();
+
+    expect(element().querySelector('.overlay .area')).not.toBeNull();
+    expect(gone).toHaveBeenCalledTimes(1);
+  });
+
   it('says it is gone once when the image fails twice', async () => {
     await render();
     piece().failed.emit();

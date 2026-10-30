@@ -20,7 +20,8 @@ import { hoursLines } from './hours-lines';
 import { Consent } from '../../../consent/consent';
 
 // Where the garage is and when it is open. A mobile mechanic is shown by the
-// area it comes to, never by an address; with neither a place nor hours the
+// area it comes to, never by an address, and on a map of that area when the
+// answer carries its rounded centre; with neither a place nor hours the
 // section shows nothing. A workshop with a point also gets a small map of it
 // and directions in the maps app of the driver's device.
 @Component({
@@ -66,6 +67,16 @@ export class WhereSection {
     if (this.mobile() || typeof lat !== 'number' || typeof lng !== 'number')
       return undefined;
     return { lat, lng };
+  });
+  // A mobile mechanic's area: its rounded centre and the radius it travels.
+  protected readonly circle = computed(() => {
+    const { areaLat: lat, areaLng: lng, serviceRadiusKm } = this.garage();
+    if (!this.mobile() || typeof lat !== 'number' || typeof lng !== 'number')
+      return undefined;
+    return {
+      at: { lat, lng },
+      km: serviceRadiusKm ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+    };
   });
   // The map went (its image or the interactive map failed); a new garage
   // tries again.

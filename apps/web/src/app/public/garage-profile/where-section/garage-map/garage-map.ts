@@ -14,10 +14,12 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import type { LatLng } from '@motor-fix/contracts/map-view';
+import { type LatLng, STATIC_MAP_ZOOM } from '@motor-fix/contracts/map-view';
+import type { GaragePinsDto } from '@motor-fix/data-access';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import {
+  circleBounds,
   closeMapLibre,
   keepOutOfTabOrder,
   type MapStart,
@@ -31,6 +33,7 @@ import {
   type MapView,
   paddingOf,
 } from '../../../static-map/fit-view';
+import { overlayOf } from '../../../static-map/overlay';
 import { StaticMap } from '../../../static-map/static-map';
 
 // The static map's fade into the interactive one.
@@ -73,8 +76,10 @@ export const GARAGE_MAP = new InjectionToken<OpenGarageMap>('GARAGE_MAP', {
 });
 
 // One garage on a strip of map: the static image first, the interactive map
-// in the same box once the driver asks. It says it is gone when neither can
-// show, and its host drops it; the address is the accessible place.
+// in the same box once the driver asks. With `km` the point is a mobile
+// mechanic's centre and the map shows its area, a plain circle, instead of a
+// marker. It says it is gone when neither can show, and its host drops it;
+// the address or the area line is the accessible place.
 @Component({
   imports: [StaticMap],
   selector: 'mf-garage-map',
@@ -83,6 +88,7 @@ export const GARAGE_MAP = new InjectionToken<OpenGarageMap>('GARAGE_MAP', {
 })
 export class GarageMap {
   readonly point = input.required<LatLng>();
+  readonly km = input<number>();
   readonly gone = output<void>();
 
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
@@ -91,10 +97,34 @@ export class GarageMap {
   protected readonly stage = signal<'static' | 'opening' | 'leaving' | 'open'>(
     'static',
   );
-  // The view the static image shows, which the interactive map opens at.
+  // The area as the static map's overlay draws a mobile mechanic's circle.
+  protected readonly area = computed<GaragePinsDto | undefined>(() => {
+    const serviceRadiusKm = this.km();
+    if (serviceRadiusKm === undefined) return undefined;
+    const { lat, lng } = this.point();
+    const pin = { id: 'area', lat, lng, matches: true, rateLei: null };
+    return {
+      pins: [{ ...pin, serviceRadiusKm, stance: 'unstated' }],
+      total: 1,
+    };
+  });
+  // The view the static image shows, which the interactive map opens at. The
+  // snapped centre can move a fitted circle up to a sixteenth of the image
+  // off its middle, so a zoom lower is taken until all of it is in the box.
   protected readonly still = computed<MapView | undefined>(() => {
     const box = this.box();
-    return box && fitView(boundsOf([this.point()]), box, paddingOf());
+    if (!box) return undefined;
+    const area = this.area();
+    const km = this.km();
+    if (!area || km === undefined)
+      return fitView(boundsOf([this.point()]), box, paddingOf());
+    const bounds = boundsOf(
+      circleBounds(this.point(), km).map(([lng, lat]) => ({ lat, lng })),
+    );
+    let view = fitView(bounds, box, paddingOf());
+    while (view.zoom > STATIC_MAP_ZOOM.min && !inside(area, view, box))
+      view = fitView(bounds, box, paddingOf(), view.zoom - 1);
+    return view;
   });
   private readonly reduced = inject(REDUCED_MOTION);
   private readonly open = inject(GARAGE_MAP);
@@ -168,4 +198,11 @@ export class GarageMap {
     this.left = true;
     this.gone.emit();
   }
+}
+
+function inside(area: GaragePinsDto, view: MapView, box: Box) {
+  return overlayOf(area, undefined, view, box).circles.every(
+    ({ r, x, y }) =>
+      x - r >= 0 && y - r >= 0 && x + r <= box.w && y + r <= box.h,
+  );
 }

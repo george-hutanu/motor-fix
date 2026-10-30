@@ -1,4 +1,9 @@
 @if (!empty()) {
+  @if (circle(); as circle) {
+    @if (!mapGone()) {
+      <mf-garage-map [point]="circle.at" [km]="circle.km" (gone)="mapGone.set(true)" />
+    }
+  }
   @if (point(); as point) {
     @if (!mapGone()) {
       <mf-garage-map [point]="point" (gone)="mapGone.set(true)" />

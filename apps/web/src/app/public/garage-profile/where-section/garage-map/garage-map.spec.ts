@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { PLATFORM_ID, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { STATIC_MAP_ZOOM } from '@motor-fix/contracts/map-view';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
@@ -18,6 +19,7 @@ jest.mock('maplibre-gl', () =>
 
 const POINT = { lat: 44.4352671, lng: 26.0123456 };
 const BOX = { h: 200, w: 390 };
+let box = BOX;
 
 let opened: (value: { destroy(): void }) => void;
 let refused: (error: unknown) => void;
@@ -43,7 +45,12 @@ const piece = () =>
   fixture.debugElement.query(By.directive(StaticMap))
     ?.componentInstance as StaticMap;
 
-async function render({ platform = 'browser', reduced = false } = {}) {
+async function render({
+  km = undefined as number | undefined,
+  platform = 'browser',
+  point = POINT as { lat: number; lng: number },
+  reduced = false,
+} = {}) {
   TestBed.configureTestingModule({
     providers: [
       { provide: GARAGE_MAP, useValue: open },
@@ -53,7 +60,8 @@ async function render({ platform = 'browser', reduced = false } = {}) {
   });
   await TestBed.inject(I18n).enter('public');
   fixture = TestBed.createComponent(GarageMap);
-  fixture.componentRef.setInput('point', POINT);
+  fixture.componentRef.setInput('point', point);
+  if (km !== undefined) fixture.componentRef.setInput('km', km);
   fixture.componentInstance.gone.subscribe(gone);
   fixture.detectChanges();
   await fixture.whenStable();
@@ -75,12 +83,13 @@ beforeEach(() => {
   open.mockClear();
   destroy.mockClear();
   gone.mockClear();
+  box = BOX;
   jest
     .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
-    .mockReturnValue(BOX.w);
+    .mockImplementation(() => box.w);
   jest
     .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
-    .mockReturnValue(BOX.h);
+    .mockImplementation(() => box.h);
 });
 
 afterEach(() => jest.restoreAllMocks());
@@ -120,6 +129,100 @@ describe('GarageMap, the static map of one garage', () => {
 
     expect(still()?.querySelector('img')).toBeNull();
     expect(open).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 1383-FR-004
+// @traces 1383-FR-005
+// @traces 1383-FR-007
+describe('GarageMap, the area of a mobile mechanic', () => {
+  const CENTRE = { lat: 46.9, lng: 23.68 };
+
+  const circle = () => {
+    const area = element().querySelector<HTMLElement>('.overlay .area');
+    return {
+      r: Number.parseFloat(area?.style.getPropertyValue('--r') ?? ''),
+      x: Number.parseFloat(area?.style.left ?? ''),
+      y: Number.parseFloat(area?.style.top ?? ''),
+    };
+  };
+
+  it.each([
+    [CENTRE, 20, 320],
+    [CENTRE, 20, 1024],
+    [CENTRE, 5, 390],
+    [CENTRE, 100, 1280],
+    // Here the snapped centre would push the edge of the fitted zoom's
+    // circle off the strip at the widest image.
+    [{ lat: 44.94, lng: 26.01 }, 20, 1280],
+  ])(
+    'keeps the whole circle round %j of %i km inside a %i px strip',
+    async (at, km, w) => {
+      box = { h: 200, w };
+      await render({ km, point: at });
+      const { r, x, y } = circle();
+      const { zoom } = piece().view() as { zoom: number };
+
+      expect(r).toBeGreaterThan(0);
+      expect(x - r).toBeGreaterThanOrEqual(0);
+      expect(x + r).toBeLessThanOrEqual(w);
+      expect(y - r).toBeGreaterThanOrEqual(0);
+      expect(y + r).toBeLessThanOrEqual(200);
+      expect(zoom).toBeLessThanOrEqual(15);
+      expect(zoom).toBeGreaterThanOrEqual(STATIC_MAP_ZOOM.min);
+    },
+  );
+
+  it('fits the view to the circle, not to its centre', async () => {
+    await render({ km: 20, point: CENTRE });
+
+    expect(piece().view()?.zoom).toBeLessThan(
+      fitView(boundsOf([CENTRE]), BOX, paddingOf()).zoom,
+    );
+  });
+
+  it('draws one plain circle, with no pin, no marker and no label', async () => {
+    await render({ km: 20, point: CENTRE });
+
+    expect(element().querySelectorAll('.overlay .area')).toHaveLength(1);
+    expect(element().querySelector('.overlay .area')?.textContent?.trim()).toBe(
+      '',
+    );
+    expect(
+      element().querySelector('.overlay .area.takes, .overlay .area.lit'),
+    ).toBeNull();
+    expect(element().querySelector('.overlay .here')).toBeNull();
+    expect(element().querySelector('.overlay .pin')).toBeNull();
+    expect(still()?.classList.contains('plain')).toBe(true);
+    expect(piece().place()).toBeUndefined();
+  });
+
+  it('marks a workshop as before, on an unplain map', async () => {
+    await render();
+
+    expect(still()?.classList.contains('plain')).toBe(false);
+    expect(element().querySelector('.overlay .area')).toBeNull();
+  });
+
+  it('gives a new view for a new radius or centre, the same one for the same', async () => {
+    await render({ km: 20, point: CENTRE });
+    const first = piece().view();
+    fixture.componentRef.setInput('km', 20);
+    fixture.componentRef.setInput('point', { ...CENTRE });
+    fixture.detectChanges();
+
+    expect(piece().view()).toEqual(first);
+
+    fixture.componentRef.setInput('km', 60);
+    fixture.detectChanges();
+    const wider = piece().view();
+
+    expect(wider?.zoom).toBeLessThan(first?.zoom ?? 0);
+
+    fixture.componentRef.setInput('point', { lat: 45.75, lng: 24.5 });
+    fixture.detectChanges();
+
+    expect(piece().view()?.center).not.toEqual(wider?.center);
   });
 });
 
