@@ -837,6 +837,10 @@ describe('through the queue', () => {
       await service.notify({
         eventId: 'evt-q',
         kind: 'JOB_READY',
+        params: {
+          garage: 'Atelier Dinamo',
+          link: 'https://motorfix.test/app/driver/requests',
+        },
         recipients: [andrei],
       });
       let row = (await emailRows(andrei))[0];
