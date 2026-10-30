@@ -177,6 +177,40 @@ test.describe('customising the admin Panou @seeded @database', () => {
     await page.emulateMedia({ colorScheme: null });
   };
 
+  // @traces 1391-FR-012
+  test('every control of the strip and the panel is 44 px tall, and the panel does not slide under reduced motion', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ height: 800, width: 320 });
+    await signedIn(page);
+    const customise = page.getByRole('button', {
+      name: 'Personalizează panoul',
+    });
+    expect((await customise.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(
+      44,
+    );
+    await open(page);
+    const heights = await panel(page)
+      .locator('mf-dashboard-sections-panel')
+      .locator('button, [role="switch"]')
+      .evaluateAll((all) =>
+        all.map((el) => Math.round(el.getBoundingClientRect().height)),
+      );
+    expect(heights.length).toBeGreaterThanOrEqual(8);
+    for (const height of heights) expect(height).toBeGreaterThanOrEqual(44);
+    // No slide: neither the panel nor the backdrop runs an animation.
+    const moving = await page.evaluate(
+      () =>
+        document.getAnimations().filter((each) => each.playState === 'running')
+          .length,
+    );
+    expect(moving).toBe(0);
+    await panel(page).getByRole('button', { name: 'Gata' }).click();
+    await expect(panel(page)).toHaveCount(0);
+    await page.emulateMedia({ reducedMotion: null });
+  });
+
   // @traces 1391-FR-012 1391-FR-018
   for (const width of [320, 390]) {
     test(`the open panel fits ${width} px in both schemes and languages, with no axe finding`, async ({
