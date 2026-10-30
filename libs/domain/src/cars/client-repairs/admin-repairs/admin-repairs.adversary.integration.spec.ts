@@ -255,7 +255,8 @@ describe('PATCH /admin/repairs/:id under hostile bodies', () => {
       'Content-Type': 'application/x-www-form-urlencoded',
     }).send(`version=${version(row)}&what=Ulei`);
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(415);
+    expect(res.body.code).toBe('unsupported_media_type');
     expect(await reread(row.id)).toEqual(row);
   });
 });

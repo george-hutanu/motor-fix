@@ -337,7 +337,7 @@ describe('PATCH /admin/repairs/:id', () => {
     expect((await reread(row.id)).updatedAt).toEqual(row.updatedAt);
   });
 
-  it('answers 400 without a version and for a body that is not JSON', async () => {
+  it('answers 400 without a version and 415 for a body that is not JSON', async () => {
     const s = await scene();
     const row = await s.repair();
 
@@ -350,7 +350,7 @@ describe('PATCH /admin/repairs/:id', () => {
           'Content-Type': 'text/plain',
         }).send('what=Ulei')
       ).status,
-    ).toBe(400);
+    ).toBe(415);
   });
 
   it('answers 404 for a deleted, unknown, MotorFix or malformed repair', async () => {

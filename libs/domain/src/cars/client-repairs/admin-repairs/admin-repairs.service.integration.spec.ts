@@ -25,7 +25,7 @@ const corrections = (outcome: string) =>
 
 const entries = (subjectId: string) =>
   prisma.activityLog.findMany({
-    orderBy: [{ createdAt: 'asc' }, { field: 'asc' }],
+    orderBy: [{ at: 'asc' }, { field: 'asc' }],
     where: { subjectId },
   });
 const events = (subjectId: string) =>
