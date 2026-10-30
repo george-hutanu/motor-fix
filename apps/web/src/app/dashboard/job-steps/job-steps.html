@@ -10,6 +10,23 @@
         <span>{{ job.mechanicName ?? ('garage.jobs.noMechanic' | t) }}</span>
         <span class="stage" [attr.data-stage]="job.status">{{ stage(job) | t }}</span>
       </p>
+      @if (job.handedOverAt && job.finalPriceBani !== null) {
+        <p class="price" data-final-price>
+          {{ 'garage.jobs.finalPrice.line' | t: { price: price(job.finalPriceBani) } }}
+        </p>
+      }
+      @switch (priceAction()) {
+        @case ('handover') {
+          <button hlmBtn type="button" variant="secondary" class="price-action" (click)="recordPrice('handover')">
+            {{ 'garage.jobs.finalPrice.handover' | t }}
+          </button>
+        }
+        @case ('correct') {
+          <button hlmBtn type="button" variant="secondary" class="price-action" (click)="recordPrice('correct')">
+            {{ 'garage.jobs.finalPrice.correct' | t }}
+          </button>
+        }
+      }
     </header>
 
     <div class="heading">
