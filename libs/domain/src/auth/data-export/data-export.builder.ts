@@ -566,6 +566,7 @@ export class DataExportBuilder {
           carId: true,
           createdAt: true,
           finalPriceBani: true,
+          finalPriceCorrectedAt: true,
           finishedAt: true,
           garage,
           handedOverAt: true,

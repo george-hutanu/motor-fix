@@ -121,6 +121,35 @@ describe('ProblemFilter', () => {
     }
   });
 
+  // @traces 406-FR-002
+  it('forwards the final price a second handover was recorded at', () => {
+    const res = send(
+      new HttpException(
+        {
+          code: 'already_handed_over',
+          finalPriceBani: 125_000,
+          message: 'Mașina a fost deja predată',
+        },
+        409,
+      ),
+    );
+
+    expect(res.body).toMatchObject({
+      code: 'already_handed_over',
+      finalPriceBani: 125_000,
+    });
+  });
+
+  it('drops a finalPriceBani that is not a whole positive amount', () => {
+    for (const finalPriceBani of [0, -1, 1.5, '125000', null]) {
+      const res = send(
+        new HttpException({ code: 'already_handed_over', finalPriceBani }, 409),
+      );
+
+      expect(res.body).not.toHaveProperty('finalPriceBani');
+    }
+  });
+
   it('still maps a status without a code', () => {
     expect(send(new NotFoundException()).body).toMatchObject({
       code: 'not_found',

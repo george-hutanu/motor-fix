@@ -30,6 +30,7 @@ features:
   - 099-overview-sections
   - 346-quote-outcomes
   - 427-time-blocks
+  - 406-final-price-handover
 ---
 
 # Capability: Quotes
@@ -857,6 +858,10 @@ _From 346-quote-outcomes._
 ### 346-FR-008 — Tests MUST exist before the code (Principle II). In Jest, domain (pure): the outcome mapping for every combination of FR-001, including R3 (waiting held past expiry on a booked request), Q01 (another garage accepted, not confirmed), the lapsed booking, the own cancelled booking with the request `quoted` and with it closed `booking_cancelled`, the request cancelled with a waiting and with an accepted quote, the account closed with and without an own booking, the suspended garage's waiting, accepted and booked quotes, `completed` and `no_show`, and an exhaustiveness check over the quote and booking statuses. In Jest on real PostgreSQL, API: the `quoted` read answering every quote of the garage in every state, newest first, with `outcome` and `total`, 20 then the rest by cursor; the phone present for the owner and a receptionist on `accepted` and `booked` rows only, absent for a mechanic and on every ending; the plate from confirmation only; 403 for a mechanic without the permission and 404 for another garage's owner; `openapi.json` carrying `outcome`. In Jest, web: each outcome's tag text and lamp class in both languages, the sent-age and expiry wording at 7 days, under a day, under an hour and past, the confirm button and phone per role and outcome, the feed re-reading on each kind of FR-004, the subtitle, the empty and loading states, and the route's stylesheets holding no spacing off the grid and no literal font size. End to end (Playwright), one test: the seeded owner sends a quote; the seeded driver accepts it through the API from the browser session; the owner's row changes to "Acceptată · confirmă până la …" within 5 seconds without a reload; the owner confirms it from the row and sees "programată". Every test file carries its `// @traces 346-FR-<n>` line.
 
 _From 346-quote-outcomes._
+
+### 406-FR-008 — The driver's request list rows (`GET requests`, `booking`) and the request details (`GET requests/:id`, `booking`) MUST carry `finalPriceBani` (null until the handover) and `handedOverAt` (null until then) from the booking's job, so the list can show the amount paid and the details the final price without a second read; the active request read keeps returning `finalPriceBani` as today.
+
+_From 406-final-price-handover._
 
 ### 427-FR-014 — No public route (the `@Public()` list of `public-routes.integration.spec.ts`) and no driver-facing read MUST return a block, its note or a "blocked" wording; the four routes are not public; a driver's quote-compare and the garage's public profile stay as they are (the free slots that leave blocks out are #21's). The public live stream is not a read: it carries the kind and the block id only (FR-010, 257-FR-002).
 

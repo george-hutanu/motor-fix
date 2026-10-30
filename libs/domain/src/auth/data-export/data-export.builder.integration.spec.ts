@@ -210,6 +210,45 @@ describe('building the file', () => {
     expect(json(files, 'reviews.json')).toEqual([]);
   });
 
+  // @traces 406-FR-009 406-FR-011
+  it('says when a job’s final price was corrected, never who recorded it', async () => {
+    const builder = await start();
+    const { a, b } = await twoDrivers();
+    const correctedAt = new Date('2026-10-20T08:30:00.000Z');
+    await prisma.job.updateMany({
+      data: {
+        finalPriceBani: 115_000,
+        finalPriceCorrectedAt: correctedAt,
+        finalPriceRecordedById: b.id,
+        handedOverAt: new Date('2026-10-19T08:30:00.000Z'),
+      },
+      where: { driverId: a.id },
+    });
+
+    const forA = json(
+      (await built(builder, a.id)).files,
+      'bookings-and-jobs.json',
+    );
+    const forB = json(
+      (await built(builder, b.id)).files,
+      'bookings-and-jobs.json',
+    );
+
+    expect(forA.jobs).toEqual([
+      expect.objectContaining({
+        finalPriceBani: 115_000,
+        finalPriceCorrectedAt: correctedAt.toISOString(),
+      }),
+    ]);
+    expect(forB.jobs).toEqual([
+      expect.objectContaining({ finalPriceCorrectedAt: null }),
+    ]);
+    const text = JSON.stringify(forA);
+    expect(text).not.toContain('finalPriceRecordedBy');
+    expect(text).not.toContain('final_price_recorded_by');
+    expect(text).not.toContain(b.id);
+  });
+
   it('holds none of the other driver’s ids, names, e-mails, phones or plates, in any file', async () => {
     const builder = await start();
     const { a, b } = await twoDrivers();

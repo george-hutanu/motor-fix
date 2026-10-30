@@ -338,6 +338,35 @@ export class DriverRowBookingDto extends RequestBookingDto {
     description: 'The booking’s job exists and has left to do',
   })
   jobStarted!: boolean;
+
+  @ApiProperty({
+    description: 'The final price recorded at the handover, in bani',
+    nullable: true,
+    type: Number,
+  })
+  finalPriceBani!: number | null;
+
+  @ApiProperty({
+    ...NULLABLE_TIME,
+    description: 'When the car was handed over',
+  })
+  handedOverAt!: string | null;
+}
+
+// The driver's request page also shows the price paid at the handover.
+export class DriverBookingDto extends BookingDto {
+  @ApiProperty({
+    description: 'The final price recorded at the handover, in bani',
+    nullable: true,
+    type: Number,
+  })
+  finalPriceBani!: number | null;
+
+  @ApiProperty({
+    ...NULLABLE_TIME,
+    description: 'When the car was handed over',
+  })
+  handedOverAt!: string | null;
 }
 
 export class RequestSummaryDto {
@@ -391,8 +420,8 @@ export class RequestDto extends OmitType(RequestSummaryDto, ['booking']) {
   @ApiProperty({ type: [QuoteDto] })
   quotes!: QuoteDto[];
 
-  @ApiProperty({ nullable: true, type: BookingDto })
-  declare booking: BookingDto | null;
+  @ApiProperty({ nullable: true, type: DriverBookingDto })
+  declare booking: DriverBookingDto | null;
 }
 
 export class RequestListDto {

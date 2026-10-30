@@ -112,7 +112,9 @@ export type JobStageAction =
   | 'pause'
   | 'resume'
   | 'finish'
-  | 'receive';
+  | 'receive'
+  | 'handover'
+  | 'correct';
 const GARAGE_REPORT_OUTCOMES = [
   'created',
   'already_reported',

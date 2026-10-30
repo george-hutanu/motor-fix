@@ -9,6 +9,7 @@ features:
   - 150-add-booking
   - 423-mechanic-garage-dashboard
   - 276-job-start-done
+  - 406-final-price-handover
   - 427-time-blocks
 ---
 
@@ -233,6 +234,46 @@ _From 276-job-start-done._
 ### 276-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis, with a `// @traces` line per spec file: start, pause, resume and finish by the owner and by the job's mechanic; finish from `paused`; 409 `job_not_started` on a finish from `to_do`; 409 on every other refused pair and on a `cancelled` job; 403 for a receptionist's and another mechanic's stage call, 404 for another garage's; the request moving to `in_work` and `done` with the job; `started_at` kept on a resume; `worked_seconds` after a pause and a finish; the automatic pause of the same mechanic's job only, triggered by the owner too, carrying `pausedJobIds`, and none with `team_mechanics` off or with no mechanic; `mechanic_id` and `auto` on every stage entry, the confirm's first one included; reception by the owner, a receptionist and the job's mechanic with the reading row, the car's odometer, the audit entries and `job.received`; a correction; the reading's bounds; reception refused on a `done` job; 403 and 404 for reception; the stage entries, audit rows and events in one transaction and nothing written on a failure. Web unit tests cover the buttons per role and stage, the reception-first start with save and a failed start after a saved reception, the warning, the sending state and the retry after a failure. End to end (Playwright): the owner records a reception and starts a job, then marks it done; in a second browser the driver's tracker shows În lucru, then Gata, without a reload.
 
 _From 276-job-start-done._
+
+### 406-FR-001 — The API MUST offer, under the existing `garage/jobs` routes and the `garage.own_jobs` capability, `POST /api/v1/garage/jobs/:id/handover` with `{ finalPriceBani }`, answering 200 with the job as `GET garage/jobs/:id` does. It MUST be allowed to the owner of the job's garage (role `garage`) and to a receptionist of that garage, answer 403 `forbidden` to every mechanic of the garage (the job's own included; `MECHANIC.can_record_final_price` is not read until EP-9's ST-399) and 404 to anyone outside the garage, judged against the locked job row before anything is written. The checks run in this order on both routes: the caller (404 outside the garage, then 403 for a mechanic), then the job's stage, then the handover state and the window, then the booking (FR-004), then the same-price no-op (FR-005).
+
+_From 406-final-price-handover._
+
+### 406-FR-002 — A handover MUST be accepted only while the job is `done` and not yet handed over: any other stage (`to_do`, `in_work`, `paused`, `cancelled`) answers 409 `job_not_done` with "Marchează întâi lucrarea ca gata" / "Mark the job as done first"; a job with `handed_over_at` set answers 409 `already_handed_over` with the recorded `finalPriceBani` in the body. Nothing is written on a refusal.
+
+_From 406-final-price-handover._
+
+### 406-FR-003 — `finalPriceBani` MUST be a whole number of bani from 1 to 100,000,000 (1.000.000 lei, the limit `PAID_BANI_MAX` the reviews already share), validated at the edge by the DTO in the contracts library; anything else, a missing field or an unknown key answers 400 `validation_failed` with the field named. VAT is included, as in the quote.
+
+_From 406-final-price-handover._
+
+### 406-FR-004 — A handover MUST run in one transaction that locks the job row, writes `final_price_bani`, `final_price_recorded_by` (the caller's account) and `handed_over_at` = now, moves the booking `confirmed` → `completed` through the existing booking mover (its `completed_at`, audit entry and event `booking.completed`, a new kind of the events list, as 220-FR-008 writes them; a booking already `completed` is left as it is; a booking in any other state answers the mover's own 409 `invalid_transition` and nothing is written), writes the audit entries `job.final_price_bani` (null → the price, a key change) and `job.handed_over_at` with the actor and their role, filed under the job and the garage, and records the event `job.handed_over` `{ finalPriceBani, by }` with the `job` audience (the driver's account, the garage, the job's mechanic). The request's status stays `done`; it leaves the driver's open requests by `handed_over_at` (274-FR-001). No notification is sent for the first recording.
+
+_From 406-final-price-handover._
+
+### 406-FR-005 — The API MUST offer `PATCH /api/v1/garage/jobs/:id/final-price` with `{ finalPriceBani }` (FR-003's rule), allowed and refused as FR-001, answering the job. It MUST be accepted only on a handed-over job (else 409 `not_handed_over`) and before `handed_over_at` + `FINAL_PRICE_CORRECTION_HOURS` (48, a constant of the contracts library) has passed (at or after it, 409 `correction_window_closed` with "Prețul final nu mai poate fi corectat" / "The final price can no longer be corrected"). A correction equal to the recorded price MUST change nothing and answer success, judged after every refusal (a same-price call after the window or before the handover is refused as above). Corrections are unlimited within the window; each one overwrites `final_price_corrected_at` and writes its own audit entry, event and message.
+
+_From 406-final-price-handover._
+
+### 406-FR-006 — A correction MUST run in one transaction that locks the job row, writes `final_price_bani` and `final_price_corrected_at` = now, writes the audit entry `job.final_price_bani` (old → new, a key change, the actor and their role), and records `job.final_price_corrected` `{ oldBani, newBani, by }` with the `job` audience.
+
+_From 406-final-price-handover._
+
+### 406-FR-007 — After a correction has committed, the driver (the job's `driver_id`) MUST be sent FINAL_PRICE_CORRECTED through the notifications service, keyed by the event so a retry sends it once, with the garage's name and the new price formatted by the shared `formatLei` (`libs/i18n/src/formats.ts`: whole lei without decimals, otherwise 2 decimals, so 125050 bani reads "1.250,50 lei" / "1,250.50 lei"): "Garaj Nordic a corectat prețul final: 1.150 lei." / "Garaj Nordic corrected the final price: 1,150 lei", in e-mail, push and WhatsApp by the driver's choice, group `bookings`, mutable, never held by quiet hours; its bell link opens the driver's requests (already in the catalogue). A failed send is logged and does not undo the correction.
+
+_From 406-final-price-handover._
+
+### 406-FR-009 — The data model MUST gain `JOB.final_price_recorded_by` (reference to ACCOUNT, null, set null on removal) and `JOB.final_price_corrected_at` (timestamp, null), with a migration and no backfill; the two request DTOs, the OpenAPI document and the generated client are updated, and the data export of a driver's jobs carries `finalPriceCorrectedAt` when it carries the job; `final_price_recorded_by` stays out of every read and export (the audit history names who).
+
+_From 406-final-price-handover._
+
+### 406-FR-010 — The two routes MUST be listed in `infra/observability/inventory.json` with their metrics and alert (or why none), and in the PR's Observability section; the calls count under the existing job stage counter with the action (`handover`, `correct`) and the outcome as labels, and each refusal logs one warning line with the code and the job.
+
+_From 406-final-price-handover._
+
+### 406-FR-011 — Tests MUST cover, in Jest on real PostgreSQL and Redis, with a `// @traces` line per spec file: a handover by the owner and by a receptionist; 403 for the job's mechanic (with `can_record_final_price` true and false) and for another mechanic, 404 for another garage; 409 from every stage but `done` and on a second handover; 400 for 0, a negative value, a fraction and above the limit; the job, the booking, the audit entries and the event written in one transaction and nothing written on a refusal; a correction within 48 hours with its audit entry, its event and the driver's queued message; a correction refused at 48 hours and before the handover; the same-price no-op and its refusal after the window; a `done` job whose booking is neither `confirmed` nor `completed` refused with 409 `invalid_transition`; the message's amount for 115000 and 125050 bani; the list and details fields of FR-008; the DTO's limits in a contracts unit test; two simultaneous handovers both judged.
+
+_From 406-final-price-handover._
 
 ### 427-FR-001 — A new table TIME_BLOCK (`time_block`) MUST hold `id`, `garage_id` (cascade), `mechanic_id` (nullable; set null when the card row is deleted, the soft-removed card keeps its past blocks), `lift` (nullable integer), `starts_at` and `ends_at` (timestamptz, half-open, `ends_at` > `starts_at` checked), `note` (nullable text, at most 200 characters checked), `created_by` and `updated_by` (account ids), `created_at`, `updated_at`, with a check that at least one of `mechanic_id` and `lift` is set and an index on (`garage_id`, `starts_at`); one Prisma migration in the `workshop` schema adds it.
 

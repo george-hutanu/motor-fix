@@ -27,6 +27,7 @@ export function sendProblem(
   extensions: Pick<
     Problem,
     | 'attemptsLeft'
+    | 'finalPriceBani'
     | 'retryAfterSeconds'
     | 'entity'
     | 'currentStatus'
@@ -102,8 +103,9 @@ export class ProblemFilter implements ExceptionFilter {
       detail(typeof body === 'string' ? body : own.message),
       fieldProblems(own.errors),
       // The members beyond the problem shape a refusal carries: the open
-      // invite a refused send names, the tries a wrong code has left, and
-      // the wait before a limit lifts, what a refused move was about, and
+      // invite a refused send names, the tries a wrong code has left, the
+      // price a second handover was recorded at, and the wait before a
+      // limit lifts, what a refused move was about, and
       // the garage a refused quote request names, the one field a refused
       // re-check marks, and the notes a refused listing check keeps beside
       // its errors, and the current brand a stale save is refused with.
@@ -113,6 +115,7 @@ export class ProblemFilter implements ExceptionFilter {
         ...brand(own.brand),
         ...warnings(own.warnings),
         ...attemptsLeft(own.attemptsLeft),
+        ...finalPrice(own.finalPriceBani),
         ...retryAfter(own.retryAfterSeconds),
         ...stringMembers(own),
       },
@@ -149,6 +152,13 @@ const tooLarge = (exception: unknown) =>
 function attemptsLeft(value: unknown): Pick<Problem, 'attemptsLeft'> {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0
     ? { attemptsLeft: value }
+    : {};
+}
+
+// The final price a second handover was recorded at, when the refusal says so.
+function finalPrice(value: unknown): Pick<Problem, 'finalPriceBani'> {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0
+    ? { finalPriceBani: value }
     : {};
 }
 
