@@ -38,8 +38,7 @@ export const filtersOf = (query: {
 
 // One text per combination, for a cache key and a cursor; none without a
 // filter, so an unfiltered search keeps its key and its cursors.
-export function filtersKey(filters?: SearchFilters): string | undefined {
-  if (!filters) return undefined;
+export function filtersKey(filters: SearchFilters = {}): string | undefined {
   const { card, maxPrice, minRating } = filters;
   if (!card && maxPrice === undefined && minRating === undefined) {
     return undefined;

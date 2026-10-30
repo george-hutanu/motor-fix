@@ -496,8 +496,8 @@ export class GarageSearchService {
   }
 
   // The cards a page already shows, read again: the public ones among the
-  // ids meeting the filters, in the search's order and with its counts. Not a search of its own,
-  // so it is never counted.
+  // ids meeting the filters, in the search's order and with its counts.
+  // Not a search of its own, so it is never counted.
   async byIds(
     key: BrandKey,
     ids: string[],
