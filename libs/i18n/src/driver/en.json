@@ -416,7 +416,9 @@
       "title": "Cancel the request?",
       "toast": "Request cancelled"
     },
+    "closedOn": "Closed on {day}",
     "compare": "Compare the quotes",
+    "finalPrice": "Final price {price}",
     "lapsed": "The garage did not confirm. Choose another quote.",
     "lateCancellation": "Late cancellation",
     "retry": "Try again",

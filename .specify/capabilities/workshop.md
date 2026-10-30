@@ -12,6 +12,7 @@ features:
   - 275-live-stage-updates
   - 427-time-blocks
   - 406-final-price-handover
+  - 1393-final-price-predare
   - 1395-block-time-dashboard
   - 1403-block-time-dialog
 ---
@@ -82,9 +83,9 @@ _From 424-job-steps._
 
 _From 424-job-steps._
 
-### 424-FR-015 — The list and the open panel MUST re-read on `job.step_done`, `job.step_undone`, `job.steps_changed`, the job's stage events and `job.mechanic_changed` through the garage's live stream, a burst as one re-read, so a second person's change shows within seconds without a reload.
+### 1393-FR-011 — (424-FR-015 modified) The list and the open panel MUST re-read on `job.step_done`, `job.step_undone`, `job.steps_changed`, the job's stage events, `job.mechanic_changed`, `job.handed_over` and `job.final_price_corrected` through the garage's live stream, a burst as one re-read, so a second person's change (a handover or a correction included) shows within seconds without a reload; the two kinds join the one exported job kinds list the drawer and Lucrări read (`JOB_KINDS`).
 
-_From 424-job-steps._
+_From 1393-final-price-predare._
 
 ### 424-FR-016 — Every label MUST exist in Romanian and English; the list and the panel MUST show without sideways scrolling at 320 px and 390 px, on a tablet and a desktop, light and dark. Every control is at least 44 px tall, every refusal message is announced to assistive technology, and every control is reachable and operable by keyboard.
 
@@ -334,6 +335,54 @@ _From 427-time-blocks._
 
 _From 427-time-blocks._
 
+### 1393-FR-001 — The job's drawer (424-FR-013) MUST show a button "Predare" / "Handover" when the job is `done`, `handedOverAt` is null and the session's role (`session.current()?.role`, as the drawer reads it today) is `garage` (the owner) or `receptionist`; on any other stage, once handed over, or for a `mechanic`, the button MUST NOT exist in the drawer's markup. The button sits under the stage line and above the steps, a Cockpit secondary button at least 44 px tall.
+
+_From 1393-final-price-predare._
+
+### 1393-FR-002 — Predare MUST open the shared overlay task in its `dialog` shape (centred from 768 px, the sheet below it, 158-FR-010) titled "Predare" / "Handover", with one text field labelled "Preț final (lei)" / "Final price (lei)" (`inputmode="decimal"`, the label tied to the field), a primary "Salvează" / "Save" and a secondary "Renunță" / "Cancel" that closes with `cancelled`. The dialog opens on top of the drawer and hands its result back to it; Escape, X, outside and Back close it as every task (491-FR-002).
+
+_From 1393-final-price-predare._
+
+### 1393-FR-003 — The amount MUST be read by `parseLeiText` (Romanian format: thousands with a dot, decimals with a comma, up to 2 decimals, an optional "lei"), so "1.250,50" sends 125050 bani and "890" sends 89000; when the parser answers `format`, `decimals`, `min` (0 or negative) or `max` (above 1.000.000 lei), Salvează MUST send nothing, mark the field invalid (`aria-invalid`, the message tied by `aria-describedby`) and show the message for that answer, worded as the review form's four paid-amount messages, held in the garage bundle as `garage.jobs.finalPrice.field.*` (bundles load per area, so a garage session cannot read the driver's; the shell's Romanian is in the initial bundle, which has no room for them) beside the driver's own `driver.review.field.*`; the message clears as the text changes. An empty field reads as `format`.
+
+_From 1393-final-price-predare._
+
+### 1393-FR-005 — Salvează from Predare MUST call the handover (406-FR-001) with the parsed bani, through the shared form-saving helper: while the call runs the field and both buttons are disabled and the dialog stays open; on success the dialog closes with the job it answered, the drawer shows the job as the answer gives it (FR-006's price line, the button for the window) without waiting for the live re-read, and Lucrări's row keeps its stage "Gata". No toast is shown on success, for a handover or a correction: the drawer's line is the feedback; the first recording sends the driver no message (406, Assumptions). Dismissing the dialog while the call runs follows the shared form-saving helper as it is; the call completes and FR-011's re-read lands it.
+
+_From 1393-final-price-predare._
+
+### 1393-FR-006 — Once `handedOverAt` is set, the drawer MUST show the line "Preț final <price>" / "Final price <price>" (`formatLei`, so 125050 reads "1.250,50 lei" / "1,250.50 lei") to every role, in place of Predare, and, while now is before `handedOverAt` + `FINAL_PRICE_CORRECTION_HOURS` hours (the contracts constant, 48, never a literal in the web) and the role is `garage` or `receptionist`, a secondary button "Corectează" / "Correct" beside it; at or after that instant, and for a mechanic, the line alone. Corectează MUST open FR-002's dialog titled "Corectează prețul final" / "Correct the final price", the field pre-filled with the recorded price in Romanian text (`formatLei(bani, 'ro')` without " lei"; the field takes the Romanian format in both languages, as the review form does), and its Salvează MUST call the correction (406-FR-005) with the parsed bani, FR-003 to FR-005 applying as written (a same-price save is sent and closes on the API's success). The window is judged from the job read and the browser clock when the drawer's job or the session changes; a re-read of the drawer (FR-011) re-judges it.
+
+_From 1393-final-price-predare._
+
+### 1393-FR-007 — A refused or failed save MUST keep the dialog open, keep the typed text and the buttons, and show the shared `.problem.mf-message[role=alert]` under the field in the person's language: 409 `job_not_done` and `correction_window_closed` with the garage's existing texts (moved from `garage.jobs.problem` to the dialog's own `garage.jobs.finalPrice.problem`, which the shared form helper reads first); 409 `already_handed_over` "Prețul final a fost deja înregistrat" / "The final price is already recorded"; 409 `not_handed_over` "Lucrarea nu a fost încă predată" / "The job has not been handed over yet"; 403 `forbidden` "Doar proprietarul și recepția înregistrează prețul final" / "Only the owner and the front desk record the final price" (the steps' `forbidden` text names the mechanic, wrong here); 400 `validation_failed` and every other failure with the shared form problem texts (`shell.form.problem.*`). After a 409 of the four, the drawer behind MUST re-read the job so its button and line match what the API holds (US1-6, US1-7, US2-6).
+
+_From 1393-final-price-predare._
+
+### 1393-FR-008 — A mechanic (role `mechanic`) MUST see no Predare, no Corectează and no price field, whatever the job's state; the mechanic sees FR-006's price line once a price is recorded, as the job read gives it. No role check is made in the browser beyond hiding the controls: the API refuses a mechanic's call (406-FR-001) and FR-007 shows it.
+
+_From 1393-final-price-predare._
+
+### 1393-FR-009 — The driver's active request panel MUST keep its existing line (274-FR-012: "Ofertă <range>" and, on stage Gata with a recorded price, "Preț final <price>") unchanged, and MUST drop the handed-over request within 5 seconds of the handover through its existing re-read on `job.handed_over` (275-FR-001): the handover ends the request's open state (274-FR-001), so the next open request shows, or the invitations when none is open (030-FR-002), with "Încă n cereri deschise" (274-FR-016) recounted. The story's "panel shows the final price once handed over" is therefore met by the row of FR-010, not by the panel (Assumptions).
+
+_From 1393-final-price-predare._
+
+### 1393-FR-013 — Every new text MUST exist in Romanian and English in the i18n library (hyphenated Romanian words with U+2011): "Predare" / "Handover", "Corectează prețul final" / "Correct the final price", "Preț final (lei)" / "Final price (lei)", "Salvează" / "Save", "Renunță" / "Cancel", "Corectează" / "Correct", "Preț final" / "Final price" as the drawer's line, "Încheiată pe" / "Closed on", the three new refusals of FR-007; the existing `job_not_done` and `correction_window_closed` texts are reused and the review form's amount messages are worded the same in the garage bundle (FR-003), a test keeping the two copies equal. The empty-keys and as-written i18n checks pass.
+
+_From 1393-final-price-predare._
+
+### 1393-FR-014 — The drawer with its button and line, the dialog in every state (empty, invalid, saving, refused) and the Cererile mele row MUST show without sideways scrolling at 320 px and 390 px, on a tablet and a desktop, light and dark, Romanian and English, in the QA sweep; every control is at least 44 px tall and reachable and operable by keyboard (Tab order: field, Renunță, Salvează, the app's button order for every task dialog; Enter in the field saves); the problem message is announced (`role="alert"`), the field's label and messages are tied to it, and the axe checks pass.
+
+_From 1393-final-price-predare._
+
+### 1393-FR-015 — One Playwright end to end (`apps/web-e2e`) MUST drive the P1 path: a `done` job of the seeded garage (the `pastJob` helper or an equivalent written through the API and the database, ), the seeded receptionist opens Lucrări, the job's drawer, Predare, types "1.250,50", saves and sees "Preț final 1.250,50 lei" with Corectează; the job's driver signs in and sees in Cererile mele the row "Încheiată pe <today>" with "1.250,50 lei" as the amount paid, waiting on visible text, never `networkidle`. The flow is proven with `precheck.mjs --check` before dispatch and skips without `DATABASE_URL` as the helper does.
+
+_From 1393-final-price-predare._
+
+### 1393-FR-017 — Tests MUST exist before the code (Principle II), with a `// @traces` line per spec file: colocated Jest specs for the drawer's rules (button by role, stage and `handedOverAt`; Corectează by the window at 47 h 59 min and at 48 h; the line for every role), the dialog (parsing "1.250,50" to 125050 and each parser answer to its message, nothing sent on an invalid text, the handover and the correction routes, the pre-fill, the problem text per code and the kept value, the re-read after a 409; "Peste ofertă" above `toBani` and not at it is title 2's), the row builder ("Încheiată pe 3 oct." and the amount from `handedOverAt` and `finalPriceBani`, today's row when null, English), the two kinds in `JOB_KINDS` and the driver list's kinds, the i18n texts in both files; plus FR-015's flow. FR-016's integration test is title 2's.
+
+_From 1393-final-price-predare._
+
 ### 1395-FR-001 — The API MUST offer `GET /api/v1/garages/:garageId/time-blocks/options` (operationId `timeBlockOptions`, in `TimeBlocksController` under the `workshop` module, `libs/domain/src/workshop/time-blocks/`, declared before the `:blockId` routes so the path segment `options` is never read as a block id), answering 200 with `TimeBlockOptionsDto { liftCount: number, mechanics: BookingMechanicDto[] }`, the DTO in the contracts library (`libs/contracts/src/time-blocks.dto.ts`) and `BookingMechanicDto` reused from `quotes.dto.ts` (id and name only).
 
 _From 1395-block-time-dashboard._
@@ -402,3 +451,4 @@ _From 1403-block-time-dialog._
 - `150-FR-002` — superseded by `427-FR-006` (2026-10-29)
 - `150-FR-008` — superseded by `427-FR-005` (2026-10-29)
 - `427-FR-013` — struck by 427-time-blocks at clarify (2026-10-29): no code lowers `lift_count`; the first story that writes it owns the guard
+- `424-FR-015` — superseded by `1393-FR-011` (2026-10-30)

@@ -1,5 +1,6 @@
 import type { EventKind } from '@motor-fix/contracts';
-import type { JobSummaryDto } from '@motor-fix/data-access';
+import { FINAL_PRICE_CORRECTION_HOURS } from '@motor-fix/contracts/request-status';
+import type { JobDto, JobSummaryDto } from '@motor-fix/data-access';
 import { formatClock, formatDay, type Language } from '@motor-fix/i18n';
 
 // Every change that moves a job: its steps, its stage, its mechanic.
@@ -13,7 +14,26 @@ export const JOB_KINDS: readonly EventKind[] = [
   'job.done',
   'job.reopened',
   'job.mechanic_changed',
+  'job.handed_over',
+  'job.final_price_corrected',
 ];
+
+// The owner and the front desk record the final price; a mechanic never does.
+const DESK = new Set(['garage', 'receptionist']);
+const WINDOW_MS = FINAL_PRICE_CORRECTION_HOURS * 3_600_000;
+
+// What the drawer offers on the final price: the handover of a done job, then
+// the correction until the window after the handover closes, else nothing.
+export function finalPriceAction(
+  job: Pick<JobDto, 'status' | 'handedOverAt'>,
+  role: string | undefined,
+  now: Date,
+): 'handover' | 'correct' | null {
+  if (!DESK.has(role ?? '') || job.status !== 'done') return null;
+  if (!job.handedOverAt) return 'handover';
+  const closes = new Date(job.handedOverAt).getTime() + WINDOW_MS;
+  return now.getTime() < closes ? 'correct' : null;
+}
 
 // The booked works, in the language shown.
 export function jobNames(job: Pick<JobSummaryDto, 'jobs'>, language: string) {
