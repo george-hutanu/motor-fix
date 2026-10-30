@@ -27,6 +27,7 @@ input {
   margin: 0;
   color: var(--mf-text-secondary);
   font-size: var(--mf-size-small);
+  overflow-wrap: anywhere;
 }
 .above {
   color: var(--mf-amber-ink);

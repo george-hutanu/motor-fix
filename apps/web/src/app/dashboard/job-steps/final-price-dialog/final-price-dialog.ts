@@ -15,12 +15,7 @@ import {
 } from '@angular/forms';
 import { parseLeiText } from '@motor-fix/contracts/lei-text';
 import { GarageJobsService, type JobDto } from '@motor-fix/data-access';
-import {
-  formatLei,
-  formatLeiRange,
-  I18n,
-  TranslatePipe,
-} from '@motor-fix/i18n';
+import { formatLei, LeiPipe, TranslatePipe } from '@motor-fix/i18n';
 import {
   FieldError,
   injectOverlayTask,
@@ -60,6 +55,7 @@ const lei = (control: AbstractControl<string>) => {
     FieldError,
     HlmButton,
     HlmInput,
+    LeiPipe,
     ReactiveFormsModule,
     TaskError,
     TaskSubmit,
@@ -71,12 +67,11 @@ const lei = (control: AbstractControl<string>) => {
 })
 export class FinalPriceDialog {
   private readonly api = inject(GarageJobsService);
-  private readonly i18n = inject(I18n);
   protected readonly task = injectOverlayTask<
     FinalPriceData,
     OverlayResult<JobDto>
   >();
-  private readonly data = this.task.data;
+  protected readonly data = this.task.data;
 
   protected readonly online = signal(globalThis.navigator?.onLine !== false);
   // The field takes the Romanian format in both languages, as typed.
@@ -89,15 +84,8 @@ export class FinalPriceDialog {
     ),
   });
 
-  // What the driver accepted, and whether the typed amount is above it: an
-  // advisory hint, the amount still saves.
-  protected readonly range = computed(() =>
-    formatLeiRange(
-      this.data.quoteFromBani,
-      this.data.quoteToBani,
-      this.i18n.language(),
-    ),
-  );
+  // Whether the typed amount is above the accepted quote: an advisory hint,
+  // the amount still saves.
   private readonly typed = toSignal(this.form.controls.price.valueChanges, {
     initialValue: this.form.controls.price.value,
   });

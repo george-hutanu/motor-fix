@@ -125,7 +125,6 @@ describe('the final price texts', () => {
   );
 });
 
-// The accepted quote under the Predare field and the warning above it.
 // @traces 1410-FR-003
 describe('the quote hint texts', () => {
   it.each([
