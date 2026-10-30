@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-25
+updated: 2026-10-30
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -29,6 +29,7 @@ features:
   - 024-garage-reviews
   - 1367-review-price-marks
   - 1366-garage-map-directions
+  - 1246-garage-profile-edit
 ---
 
 # Capability: Garage profile
@@ -599,9 +600,9 @@ _From 309-open-now-directions._
 ### 309-FR-014 — The feature adds no service, queue, outside call, endpoint or product action and writes nothing but the seed migration: the observability inventory is unchanged, and this is recorded in the PR.
 
 _From 309-open-now-directions._
-### 133-FR-001 — The API MUST expose `GET /api/v1/garages/{garageId}/profile` for the garage's own staff, answering 200 with the public profile read model of `GET /api/v1/garages/{slug}` — the same `PublicGarageDto` fields, field for field, built by the same read (one read model, no second query shape) — plus one field `phone` (the garage's stored `phone` column as saved, already normalised at save by 109-FR-001; `null` when the row has none). The read model part is served through the public read's own cache (1182-FR-007); `phone` is read apart from it and never written into that cache entry. It takes no `brand` or `near` parameter: the owner's view is brand-neutral and shows no distance.
+### 1246-FR-008 — The owner's profile read (133-FR-001) MUST carry a change stamp `version` (an opaque string backed by a new `profile_version` column, default 0, that changes on every successful save of this write). A save whose `version` is not the current one MUST answer 409 `profile_changed` with no write. The stamp check and the write MUST be one conditional update inside the save's transaction (the row is written only where `profile_version` still equals the sent value), so two saves carrying the same stamp at the same moment cannot both succeed: exactly one answers 200 and the other 409.
 
-_From 133-garage-public-profile._
+_From 1246-garage-profile-edit._
 
 ### 133-FR-002 — The read MUST answer: 200 for the garage's owner (role `garage`); 403 `forbidden` for the garage's staff who do not hold `garage.profile` (the mechanic, and the receptionist until ST-1369); 404 `not_found` for every other actor (another garage's staff, a driver, an admin) and for a `garageId` that is no garage; 410 `gone` for the staff of a suspended garage, as the public read does; a garage not yet approved answers 404 like the public read. The checks run in this order: no session 401; not staff of this garage (or no such garage) 404; staff without `garage.profile` (the mechanic) 403; then the garage's status (not approved 404, suspended 410). The trust check runs on the server; the menu entry and the view only mirror it.
 
@@ -619,9 +620,9 @@ _From 133-garage-public-profile._
 
 _From 133-garage-public-profile._
 
-### 133-FR-006 — The view MUST show a panel "Profilul public" / "Public profile" with the lines, in this order and each with its label: "Nume" / "Name"; for a workshop "Adresă" / "Address" with the address as the garage wrote it, for a mobile mechanic (`businessKind` `mobile`) "Zonă de lucru: {r} km" / "Service area: {r} km" where `r` is `serviceRadiusKm` or 20 when the answer has none, and never any address; "Program" / "Hours" as the public profile's hours lines (Monday first, runs of identical days, 24-hour two-digit times, "Închis" / "Closed", 308-FR-012), no line when the answer carries no usable hours; "Telefon" / "Phone" with the stored phone and the tag "nu apare public" / "not shown publicly", no line when the answer has no phone.
+### 1246-FR-011 — Profilul service-ului (133-FR-005, 133-FR-006) MUST show, for the owner only (136-FR-006's rule), one "Modifică profilul" / "Edit profile" control per group next to its lines: texts (name, description, the read-only address), hours (weekly hours and closed days), contact (phone) and, for a mobile mechanic only, service area (radius). A receptionist sees no control; a mechanic has no view (133-FR-002).
 
-_From 133-garage-public-profile._
+_From 1246-garage-profile-edit._
 
 ### 133-FR-007 — The view MUST show "Lucrează pe" / "Works on" and "Nu lucrează pe" / "Does not work on" with chips built in the garage area the way the public profile builds them (308-FR-004, 308-FR-005 minus the brand in context) — the shared lamp, the same fuel labels and order; the public profile's own section component is not reused, as it carries the brand in context and the driver's copy: one chip per brand of `worksOn` with a green lamp, one per brand of `doesNotTake` with a red lamp, in the answer's order; each `worksOn` chip carries its fuel line ("benzină · motorină · hibrid · electric" / "petrol · diesel · hybrid · electric", the ticked ones in that fixed order) exactly as the public profile shows it; the lamp is `aria-hidden`, the stance carried by the heading. An unstated brand is in neither list. An empty list shows its heading and "nimic ales încă" / "nothing chosen yet". Under both lists one line reads "Mărcile nemarcate contează ca refuz: apari ultimul la ele și nu primești cereri." / "Unmarked brands count as a refusal: you show last for them and get no requests." The garage's brand note, when the answer carries one, follows as on the public profile (308-FR-007).
 
@@ -639,9 +640,9 @@ _From 133-garage-public-profile._
 
 _From 136-legal-check-panel._
 
-### 133-FR-011 — The open view MUST re-read in place when `garage.updated`, `garage.suspended`, `garage.restored`, `facility.removed` or `facility.re_add_decided` for its garage arrives on the dashboard's existing live stream, with no reload and no polling; the latest read's answer wins over an older one still in flight; the swap is silent for assistive technology (as 308-FR-014).
+### 1246-FR-014 — On a successful save the dialog MUST close, the view MUST show the answer's values at once (no second read), and the open view MUST keep re-reading on `garage.updated` (133-FR-011). The texts dialog's address MUST be read only, with the text that a change of address goes to an admin and the control that starts the flow of #127 (ST-135); until ST-135 ships the control is that story's entry point and this story adds no address write.
 
-_From 133-garage-public-profile._
+_From 1246-garage-profile-edit._
 
 ### 133-FR-012 — Every text this story introduces for FR-005 to FR-010 MUST come from the garage area's translation files in Romanian and English with comma-below diacritics (016-FR-002); the labels the view shares with the public profile (fuel words, weekday names, "Închis", the facility labels, "gratuit" / "{price} / zi", "Plată: {methods}" and the payment words) are read from the public area's files, the one copy the public profile shows; money in whole lei and hours in 24-hour time through the shared formats (019-FR-001, 019-FR-006); the view MUST render at 320 px and 390 px (fields stacked, chips wrapping), tablet and desktop, light and dark, Romanian and English, with no sideways scroll at 320 px, buttons at least 44 × 44 px and the smallest text at least 12 px.
 
@@ -783,6 +784,66 @@ _From 1366-garage-map-directions._
 
 _From 1366-garage-map-directions._
 
+### 1246-FR-001 — A new owner write `PATCH /api/v1/garages/{garageId}/profile` (beside `GET …/profile`; the settings write `PATCH /api/v1/garages/{garageId}` for payment methods and the courtesy car is left unchanged) MUST accept, each optional and each a group of its own, `name` (2–80 characters after trimming), `description` (at most 1,000 characters after trimming; empty stored as none), `phone` (a number the shared normaliser accepts, stored normalised), `hours` with `closedDays` (the listing's hours section shape, 112-FR-003 and 112-FR-004) and `serviceRadiusKm` (a whole number from 5 to 100, accepted only for a garage whose `businessKind` is `mobile`); every other field is refused as unknown (400), except the verification fields of FR-003 (422). The body MUST carry the profile's change stamp `version` (FR-008).
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-002 — A value outside its limits (a name of 1 or 81 characters, a description of 1,001, a radius of 4 or 101, a fraction, a non-number, a phone the normaliser refuses, a radius for a workshop) MUST answer 400 `validation_failed` naming the field, and nothing MUST be written.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-003 — `address`, company fields (`name` of the company, `cui`, `mobileLegalForm`), `seatAddress`, `rarActivities` and `proposedJobs` (kinds of work) sent to this endpoint MUST answer 422 `needs_verification` with no write: a change of those goes through the warned flow of ST-135 (#127).
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-004 — The endpoint MUST answer 200 for the garage's owner (role `garage` on this garage), 403 `forbidden` for its receptionist or mechanic, 404 `not_found` for the owner of another garage and for a garage not yet approved, 410 `gone` for a suspended garage, and 401 `sign_in_required` with no session; trust is checked on the server (Principle V).
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-005 — A successful save MUST write, in one transaction: the changed fields; one `update` audit entry per changed field (field, old, new, actor, garage id) through the audit writer (390-FR-001, 390-FR-003); one `garage.updated` outbox event for the garage (Principle VI); and the new change stamp. A field sent with its current value is not a change; a save that changes nothing writes no entry, no event and keeps the stamp. If any of the writes fails, none of them stays (no field without its audit entry or its event). The phone is stored and audited in its normalised form only; it MUST NOT appear in the outbox event payload, the logs, the metric labels or the trace attributes (109-FR-014 keeps it out of every public read).
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-006 — The hours and closed days MUST be written through the listing's one hours write (112-FR-009, 112-FR-010), so a legal holiday, a day in the past or one past the two-year window is dropped and never stored; the use case passes the garage's current facilities and facilities note with the new hours so they are left as they are, and the write itself is not changed (FR-026). A change of the weekly hours adds one `update` audit entry for `hours`; closed days keep the write's own per-day entries.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-007 — The answer MUST be the owner's profile as `GET /api/v1/garages/{garageId}/profile` answers it (133-FR-001), with the new stamp, so the dialog and the view show exactly what was saved.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-009 — After `garage.updated` the public profile cache for the garage MUST be dropped (1183-FR-005) so the public read, the open-now line, the search cards and the search's mobile area (229-FR-011, 269-FR-014) use the new name, description, hours, closed days and radius on their next read, with no review and no admin step.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-012 — Each control MUST open a Cockpit dialog on the Spartan dialog (the shared task shape, centred from 768 px (the shared overlay's TABLET breakpoint, libs/overlays/src/panel.ts), a sheet below) holding the group's fields with their current values, the limits shown under the fields, "Salvează" / "Save" and "Renunță" / "Cancel"; the hours dialog MUST reuse the listing form's hours and closed-days controls (the hours step's block, 112-FR-002 to 112-FR-005), not a copy of them. Keyboard and focus follow the Spartan dialog: focus moves into the dialog on open and stays inside it, Escape closes it, focus returns to the control that opened it, the first field in error takes focus on a refused save, and each error is tied to its field with `aria-describedby`.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-013 — The dialog MUST check each field as the owner leaves it with the shared rules (name 2–80, description at most 1,000, phone through the shared normaliser, radius 5–100 whole, its error the listing form's own "Alege raza de deplasare" / "Choose how far you travel", one text under one key) and show the error under the field in the page's language; a dialog with an error MUST NOT send the save. The server's 400 MUST be shown under its field; a 409 MUST be shown as "Profilul a fost modificat între timp. Reîncarcă." / "The profile was changed meanwhile. Reload." with a reload control that re-reads the profile into the dialog and nothing else. While a save is in flight the Save control MUST be disabled and show a busy state (no second send from a double click); a network failure or a 5xx MUST keep the dialog open with the typed values and show a retry text in the page's language, with Save enabled again; "Renunță" / "Cancel", Escape and a click on the backdrop MUST close the dialog without sending anything and without a confirmation, and reopening it shows the saved values.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-015 — An open public profile MUST show the saved hours, closed days, name and description within 5 s of the save with no reload, through its existing `garage.updated` re-read (307-FR-017, 309-FR-011); the open-now line MUST be re-worked on the new hours (309-FR-011).
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-024 — Every new text (the control labels, the dialog titles, the field labels and limits, the errors, the 409 text, the address note) MUST live in the garage area's translation files in Romanian and English, and the dialogs MUST render at 320 and 390 px (a sheet, no sideways scroll, 44 px targets, 16 px text fields, 286-FR-005), tablet and desktop, light and dark, in both languages.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-025 — The endpoint's new fields and the `garage.updated` it emits MUST be recorded in `infra/observability/inventory.json` (the existing endpoint's entry grows; the event is already listed) and the OpenAPI document and the generated client MUST be regenerated; no new service, queue or outside call is added.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-026 — Every change to the hours and closed-day data, to the hours write (112-FR-009) and to anything that reads them MUST be additive: no field, function, message or meaning renamed, removed or changed, because ST-427 (workshop time blocks) reads them in another lane; PR #616 (`333-media-timeout-budget`) is not touched.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-027 — Tests MUST exist before the code (Principle II) and name this feature's ids in `// @traces` lines: Jest on real PostgreSQL and Redis for FR-001 to FR-010 (each limit's boundary, 422 for every verification field, 403/404/410, the per-field audit entries and the one event in one transaction, 409 on a stale stamp, the cache drop); component tests for the view's controls per role and business kind, each dialog's field checks, the 400 and 409 handling, the no-second-read close, and the reused hours block; the PR QA flows of FR-020 and a flow that saves Saturday's hours and sees the public profile update.
+
+_From 1246-garage-profile-edit._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -805,3 +866,6 @@ _From 1366-garage-map-directions._
 - `308-FR-003` — superseded by `309-FR-007` (2026-10-24)
 - `307-FR-015` — superseded by `385-FR-008` (2026-10-24)
 - `308-FR-011` — superseded by `1366-FR-001` (2026-10-25)
+- `133-FR-001` — superseded by `1246-FR-008` (2026-10-30)
+- `133-FR-006` — superseded by `1246-FR-011` (2026-10-30)
+- `133-FR-011` — superseded by `1246-FR-014` (2026-10-30)

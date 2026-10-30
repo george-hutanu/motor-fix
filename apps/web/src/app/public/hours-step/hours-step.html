@@ -122,6 +122,7 @@
   </ul>
 }
 
+@if (!hoursOnly()) {
 <h3>{{ 'public.listing.hours.facilities' | t }}</h3>
 <ul class="facilities">
   @for (facility of facilities; track facility) {
@@ -211,3 +212,4 @@
 </ul>
 <p class="mf-message" id="payments-error" [class]="paymentMessage?.warning ? 'warning' : 'error'" role="status" aria-live="polite">{{ paymentMessage ? (paymentMessage.key | t) : '' }}</p>
 </div>
+}

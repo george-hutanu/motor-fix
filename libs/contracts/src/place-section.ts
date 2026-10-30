@@ -2,6 +2,8 @@
 // radius it works in. The draft guard, the listing form, the address look-up
 // and the write at submit all read these rules. Browser-safe.
 
+import { isRecord } from './is-record';
+
 export const ADDRESS_MAX = 200;
 export const PLACE_SEARCH_MIN = 3;
 export const PLACE_SUGGESTIONS_MAX = 5;
@@ -41,9 +43,6 @@ export const radiusAllowed = (value: unknown): value is number =>
   Number.isInteger(value) &&
   (value as number) >= RADIUS_KM.min &&
   (value as number) <= RADIUS_KM.max;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 // Shape only, so a half-given place is kept; a position is both or neither.
 export function isPlaceSection(value: unknown): value is PlaceSection {
