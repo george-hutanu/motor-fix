@@ -233,6 +233,7 @@ describe("the staff read of a garage's own public profile", () => {
   });
 
   // @traces 102-FR-006
+  // @traces 1369-FR-003
   it("answers the garage's receptionist as it answers the owner", async () => {
     const w = await world();
 

@@ -1143,6 +1143,7 @@ describe('Profilul service-ului: type and alignment on a phone', () => {
 });
 
 // @traces 102-FR-006
+// @traces 1369-FR-004
 describe('Profilul service-ului for the receptionist', () => {
   afterEach(() => {
     me = OWNER;
