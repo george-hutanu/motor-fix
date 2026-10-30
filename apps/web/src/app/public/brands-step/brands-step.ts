@@ -170,13 +170,9 @@ export class BrandsStep implements OnInit {
         if (!cursor || cursor === asked) break;
       }
     } catch {
-      this.searchDown();
+      if (!this.gone) this.notice.set('public.listing.brands.searchDown');
     }
-    if (read && !this.gone) this.tellOrder();
-  }
-
-  private searchDown() {
-    if (!this.gone) this.notice.set('public.listing.brands.searchDown');
+    if (read) this.tellOrder();
   }
 
   // A page of chips: the popular twelve, or a page of the whole catalogue
@@ -191,6 +187,7 @@ export class BrandsStep implements OnInit {
   }
 
   private tellOrder() {
+    if (this.gone) return;
     this.order.emit([...this.popular(), ...this.added()].map((b) => b.id));
   }
 

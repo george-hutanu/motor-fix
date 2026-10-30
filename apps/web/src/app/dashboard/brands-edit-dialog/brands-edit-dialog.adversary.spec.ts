@@ -142,10 +142,6 @@ const chip = (name: string) => {
   if (!found) throw new Error(`no chip ${name}`);
   return found;
 };
-const _chipNames = () =>
-  [...panel().querySelectorAll<HTMLButtonElement>('.chips > li > button')].map(
-    (c) => text(c).split(' ')[0],
-  );
 const row = (name: string) => chip(name).closest('li') as HTMLElement;
 const fuel = (name: string, label: string) => {
   const found = [
