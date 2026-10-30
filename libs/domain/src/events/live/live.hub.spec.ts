@@ -836,3 +836,89 @@ describe('the mechanic card events', () => {
     },
   );
 });
+
+// @traces 427-FR-010
+describe('the time block events', () => {
+  const KINDS = [
+    'time_block.created',
+    'time_block.updated',
+    'time_block.deleted',
+  ];
+  let team: LiveHub;
+
+  beforeEach(() => {
+    team = new LiveHub(async () => ({
+      mechanics: new Map([
+        [
+          'mihai',
+          {
+            canAnswerQuotes: false,
+            canMoveBookings: false,
+            canRecordFinalPrice: false,
+          },
+        ],
+      ]),
+      off: new Set(),
+      owners: new Set(['ion']),
+      receptionists: new Set(['maria']),
+    }));
+  });
+
+  afterEach(() => team.shutdown());
+
+  const staff = (
+    accountId: string,
+    role: 'garage' | 'receptionist' | 'mechanic',
+    channels: string[] = [],
+  ) => {
+    const sink = new Sink();
+    team.open(sink, {
+      accountId,
+      channels: [`account:${accountId}`, 'garage:g1', ...channels],
+      expiresAt: NOW + 15 * MINUTE,
+      garageId: 'g1',
+      role,
+    });
+    return sink;
+  };
+  const kinds = (sink: Sink) =>
+    sink
+      .messages()
+      .map((m) => m.event)
+      .filter((kind) => kind !== 'hello');
+  const send = (audience: string[], kind: string) =>
+    team.deliver(
+      JSON.stringify({
+        audience,
+        event: { at: new Date(NOW).toISOString(), id: kind, kind },
+      }),
+    );
+
+  it.each(KINDS)(
+    'gives %s to the owner, a receptionist and the mechanic on her channel',
+    async (kind) => {
+      const owner = staff('ion', 'garage');
+      const desk = staff('maria', 'receptionist');
+      const mihai = staff('mihai', 'mechanic', ['mechanic:m1']);
+
+      await send(['garage:g1', 'mechanic:m1', 'public:garage:g1'], kind);
+
+      expect(kinds(owner)).toEqual([kind]);
+      expect(kinds(desk)).toEqual([kind]);
+      expect(kinds(mihai)).toEqual([kind]);
+    },
+  );
+
+  it.each(KINDS)("lets the garage's public page hear %s", async (kind) => {
+    const page = new Sink();
+    team.open(page, {
+      address: '10.0.0.9',
+      channels: ['public:garage:g1'],
+      public: true,
+    });
+
+    await send(['garage:g1', 'public:garage:g1'], kind);
+
+    expect(kinds(page)).toEqual([kind]);
+  });
+});

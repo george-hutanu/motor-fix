@@ -203,6 +203,13 @@ describe('routes without a session', () => {
       if (operation && PUBLIC.includes(route)) visit(operation.responses);
 
     expect(properties.filter((name) => /seat/i.test(name))).toEqual([]);
+    // @traces 427-FR-014
+    expect([...reached].filter((name) => /TimeBlock/.test(name))).toEqual([]);
+    expect(properties).not.toContain('blocks');
+    expect(PUBLIC.filter((route) => route.includes('time-blocks'))).toEqual([]);
+    expect(routes.map((r) => r.path)).toContain(
+      `/api/v1/garages/${SOME_ID}/time-blocks`,
+    );
     expect(reached).toContain('PublicGarageDto');
     expect(reached).toContain('PlacesResultDto');
     expect(properties).toEqual(

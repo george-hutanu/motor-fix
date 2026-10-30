@@ -6317,6 +6317,249 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/time-blocks": {
+      "get": {
+        "operationId": "garageTimeBlocks",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "YYYY-MM-DD, Bucharest; today when left out",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "YYYY-MM-DD, Bucharest; from when left out, at most 30 days on",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeBlocksDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: the range"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage's blocked time over 1 to 31 Bucharest days",
+        "tags": [
+          "garages"
+        ]
+      },
+      "post": {
+        "operationId": "createTimeBlock",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTimeBlockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeBlockDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "409": {
+            "description": "mechanic_busy or lift_busy (reason time_block when a block holds it); slot_taken"
+          },
+          "422": {
+            "description": "nothing_to_block: neither a mechanic nor a lift, or both switches off; validation_failed naming mechanicId, lift, startsAt, endsAt or note"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Block time on a mechanic, a lift or both",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/time-blocks/{blockId}": {
+      "patch": {
+        "operationId": "updateTimeBlock",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "blockId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTimeBlockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeBlockDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found; feature_off"
+          },
+          "409": {
+            "description": "block_past; mechanic_busy or lift_busy (reason time_block when a block holds it); slot_taken"
+          },
+          "422": {
+            "description": "nothing_to_block: neither a mechanic nor a lift, or both switches off; validation_failed naming mechanicId, lift, startsAt, endsAt or note"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change a blocked interval that has not ended",
+        "tags": [
+          "garages"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteTimeBlock",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "blockId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Freed"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "block_past"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Free a blocked interval that has not ended",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/places": {
       "get": {
         "operationId": "PlacesController_search",
@@ -17880,6 +18123,73 @@
           "segments"
         ]
       },
+      "TimeBlockSegmentDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "TimeBlockDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mechanic": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingMechanicDto"
+              }
+            ]
+          },
+          "lift": {
+            "type": "number",
+            "description": "Present only while the garage schedules lifts",
+            "nullable": true
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "segments": {
+            "description": "One per Bucharest day the range touches",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeBlockSegmentDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "mechanic",
+          "startsAt",
+          "endsAt",
+          "note",
+          "segments"
+        ]
+      },
       "GarageScheduleDto": {
         "type": "object",
         "properties": {
@@ -17887,6 +18197,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/GarageScheduleEntryDto"
+            }
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeBlockDto"
             }
           },
           "from": {
@@ -17901,6 +18217,7 @@
         },
         "required": [
           "entries",
+          "blocks",
           "from",
           "to",
           "lifts"
@@ -19756,6 +20073,102 @@
         "required": [
           "done"
         ]
+      },
+      "TimeBlocksDto": {
+        "type": "object",
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeBlockDto"
+            }
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "lifts": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "blocks",
+          "from",
+          "to",
+          "lifts"
+        ]
+      },
+      "CreateTimeBlockDto": {
+        "type": "object",
+        "properties": {
+          "mechanicId": {
+            "type": "string",
+            "description": "A current card of the garage; refused while the team is off",
+            "format": "uuid",
+            "nullable": true
+          },
+          "lift": {
+            "type": "number",
+            "description": "1 to the garage's lift count; refused while it schedules without lifts",
+            "minimum": 1,
+            "nullable": true
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "On a quarter hour of the Bucharest clock",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "15 minutes to 14 days after the start, and after now",
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string",
+            "description": "Trimmed, at most 200 characters; empty is none",
+            "nullable": true
+          }
+        },
+        "required": [
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "UpdateTimeBlockDto": {
+        "type": "object",
+        "properties": {
+          "mechanicId": {
+            "type": "string",
+            "description": "A current card of the garage; refused while the team is off",
+            "format": "uuid",
+            "nullable": true
+          },
+          "lift": {
+            "type": "number",
+            "description": "1 to the garage's lift count; refused while it schedules without lifts",
+            "minimum": 1,
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "description": "Trimmed, at most 200 characters; empty is none",
+            "nullable": true
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "On a quarter hour of the Bucharest clock",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "15 minutes to 14 days after the start, and after now",
+            "format": "date-time"
+          }
+        }
       },
       "PlaceSuggestionDto": {
         "type": "object",
