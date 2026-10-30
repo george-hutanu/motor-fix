@@ -45,7 +45,7 @@ describe('the date lamp thresholds at the day boundaries', () => {
 // @traces 029-FR-003
 describe('the oil estimate at its extremes', () => {
   it('reads one kilometre left as red with zero days', () => {
-    expect(oilStatus(148201, 148200)).toEqual({
+    expect(oilStatus(148201, 148200, null, NOW)).toEqual({
       days: 0,
       kmLeft: 1,
       state: 'red',
@@ -53,25 +53,31 @@ describe('the oil estimate at its extremes', () => {
   });
 
   it('reads one kilometre past as red with a negative distance', () => {
-    expect(oilStatus(148199, 148200)).toMatchObject({
+    expect(oilStatus(148199, 148200, null, NOW)).toMatchObject({
       kmLeft: -1,
       state: 'red',
     });
   });
 
   it('keeps a huge distance green', () => {
-    expect(oilStatus(2_000_000, 0)).toMatchObject({
+    expect(oilStatus(2_000_000, 0, null, NOW)).toMatchObject({
       kmLeft: 2_000_000,
       state: 'green',
     });
   });
 
   it('reads a zero odometer with a zero next service as due now', () => {
-    expect(oilStatus(0, 0)).toEqual({ days: 0, kmLeft: 0, state: 'red' });
+    expect(oilStatus(0, 0, null, NOW)).toEqual({
+      days: 0,
+      kmLeft: 0,
+      state: 'red',
+    });
   });
 
   it('never returns a negative zero for days', () => {
-    expect(Object.is(oilStatus(148199, 148200).days, -0)).toBe(false);
+    expect(Object.is(oilStatus(148199, 148200, null, NOW).days, -0)).toBe(
+      false,
+    );
   });
 });
 
