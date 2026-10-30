@@ -684,8 +684,43 @@ describe('step 5 for a mobile mechanic', () => {
       expect(opened.emitted).toEqual([]);
       expect(map.show).toHaveBeenCalledTimes(sent);
       expect(area.getAttribute('aria-invalid')).toBe('true');
-      expect(described(opened.step, area)).toContain('Între 1 și 100 km');
+      expect(described(opened.step, area)).toBe('Alege raza de deplasare');
       expect(shown()?.km).toBe(35);
+    },
+  );
+
+  // @traces 1246-FR-023
+  it.each([
+    ['ro', '0', 'Alege raza de deplasare'],
+    ['ro', '101', 'Alege raza de deplasare'],
+    ['en', '150', 'Choose how far you travel'],
+  ] as const)(
+    'says in %s to choose the radius for %s km, in error style, not the range hint',
+    async (language, typed, said) => {
+      const opened = await open(
+        { address: STEFAN.label, radiusKm: 35 },
+        'mobile',
+        language,
+      );
+      const area = radius(opened.step) as HTMLInputElement;
+
+      area.value = typed;
+      area.dispatchEvent(new Event('input'));
+      await settle(opened.fixture);
+
+      const message = opened.step.querySelector('#place-radius-hint');
+      expect(text(message)).toBe(said);
+      expect(message?.classList).toContain('error');
+      expect(message?.classList).not.toContain('hint');
+      expect(text(opened.step)).not.toContain('Între 1 și 100 km');
+      expect(text(opened.step)).not.toContain('Between 1 and 100 km');
+
+      area.value = '40';
+      area.dispatchEvent(new Event('input'));
+      await settle(opened.fixture);
+
+      expect(opened.emitted.at(-1)?.radiusKm).toBe(40);
+      expect(text(message)).not.toBe(said);
     },
   );
 

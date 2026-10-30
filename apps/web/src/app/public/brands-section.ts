@@ -1,3 +1,4 @@
+import { isRecord } from '@motor-fix/contracts/is-record';
 import { refOf } from '@motor-fix/contracts/listing-check';
 import type { PriceEntry } from '@motor-fix/contracts/listing-sections';
 import {
@@ -138,9 +139,6 @@ export const letters = (text: string) => [...text].length;
 export function clean(text: string, max: number): string | undefined {
   return cut(text.trim(), max) || undefined;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const stepTwo = (data: unknown) => {
   if (!isRecord(data)) return undefined;

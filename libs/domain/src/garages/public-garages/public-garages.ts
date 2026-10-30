@@ -243,6 +243,14 @@ export class PublicGaragesService {
     return distanceKm === undefined ? answer : { ...answer, distanceKm };
   }
 
+  // The profile read past the cache, for an owner's save whose purge the
+  // relay has not made yet; the cached entry is left to that purge.
+  async fresh(slug: string): Promise<PublicGarageDto> {
+    const { value } = await this.fill(slug, null);
+    if (!value) throw notFound();
+    return value;
+  }
+
   // Kilometres from the place to a listed garage, on the search's rule;
   // none for a garage without a position.
   private async distanceKm(id: string, point: SearchPoint) {

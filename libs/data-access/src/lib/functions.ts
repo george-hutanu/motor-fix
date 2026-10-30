@@ -325,6 +325,8 @@ export type { GarageInvitesControllerRevoke$Params as GarageInvitesControllerRev
 export { garageInvitesControllerRevoke as garageInvitesControllerRevoke } from './fn/garages/garage-invites-controller-revoke';
 export type { GarageProfileControllerRead$Params as GarageProfileControllerRead$Params } from './fn/garages/garage-profile-controller-read';
 export { garageProfileControllerRead as garageProfileControllerRead } from './fn/garages/garage-profile-controller-read';
+export type { GarageProfileControllerUpdate$Params as GarageProfileControllerUpdate$Params } from './fn/garages/garage-profile-controller-update';
+export { garageProfileControllerUpdate as garageProfileControllerUpdate } from './fn/garages/garage-profile-controller-update';
 export type { GarageReportsControllerReport$Params as GarageReportsControllerReport$Params } from './fn/garages/garage-reports-controller-report';
 export { garageReportsControllerReport as garageReportsControllerReport } from './fn/garages/garage-reports-controller-report';
 export type { GarageFeaturesControllerSet$Params as GarageFeaturesControllerSet$Params } from './fn/garages/garage-features-controller-set';
