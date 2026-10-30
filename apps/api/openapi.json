@@ -7103,6 +7103,54 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/figures/weekly": {
+      "get": {
+        "operationId": "garageWeeklyFigures",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklyFiguresDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a garage id that is not a UUID"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic does not read the garage’s figures"
+          },
+          "404": {
+            "description": "not_found: not this garage’s staff"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Profile views, requests and conversion of the eight complete weeks before this one",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/support/contact": {
       "get": {
         "operationId": "SupportContactController_contact",
@@ -20356,6 +20404,62 @@
             ]
           }
         }
+      },
+      "WeeklyFigureDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "2026-W40"
+          },
+          "from": {
+            "type": "string",
+            "description": "The Monday",
+            "example": "2026-09-28"
+          },
+          "to": {
+            "type": "string",
+            "description": "The Sunday",
+            "example": "2026-10-04"
+          },
+          "views": {
+            "type": "number",
+            "description": "Distinct profile visitors",
+            "nullable": true
+          },
+          "requests": {
+            "type": "number",
+            "description": "Requests that reached the garage",
+            "nullable": true
+          },
+          "conversion": {
+            "type": "number",
+            "description": "Requests per hundred views, one decimal, at most 100; null without views",
+            "nullable": true
+          }
+        },
+        "required": [
+          "key",
+          "from",
+          "to",
+          "views",
+          "requests",
+          "conversion"
+        ]
+      },
+      "WeeklyFiguresDto": {
+        "type": "object",
+        "properties": {
+          "weeks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeeklyFigureDto"
+            }
+          }
+        },
+        "required": [
+          "weeks"
+        ]
       },
       "SupportContactDto": {
         "type": "object",
