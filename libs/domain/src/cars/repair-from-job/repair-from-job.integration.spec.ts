@@ -368,6 +368,9 @@ describe('the repair a handed-over job leaves in the car’s history', () => {
 
     const [repair] = await repairsOf(job.id);
     expect(repair.doneOn).toEqual(new Date('2026-10-05T00:00:00Z'));
+    expect(logged).toContain(
+      `job ${job.id}: no finished_at, done_on from the handover day`,
+    );
   });
 
   it('leaves the reading empty when the reception recorded none', async () => {

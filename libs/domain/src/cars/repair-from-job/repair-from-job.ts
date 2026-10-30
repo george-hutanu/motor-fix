@@ -1,6 +1,7 @@
 import type { EventKind } from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions } from 'bullmq';
+import { isUUID } from 'class-validator';
 
 import {
   type RepairFromJobOutcome,
@@ -101,8 +102,14 @@ export class RepairFromJob {
   ) {}
 
   async onEvent(job: Pick<Job<RepairFromJobEvent>, 'data'>) {
-    const { kind, subjectId } = job.data;
+    const { id, kind, subjectId } = job.data;
     if (!KINDS.includes(kind as EventKind) || !subjectId) return;
+    // A subject that is no job id names no job, now or on a retry.
+    if (!isUUID(subjectId)) {
+      recordRepairFromJob('job_missing');
+      this.logger.warn(`event ${id}: subject is no job id, job_missing`);
+      return;
+    }
     await this.syncFromJob(subjectId);
   }
 
@@ -143,6 +150,11 @@ export class RepairFromJob {
         subjectType: 'repair',
       };
       if (!existing) {
+        if (!job.finishedAt) {
+          this.logger.log(
+            `job ${job.id}: no finished_at, done_on from the handover day`,
+          );
+        }
         const values = {
           carId: job.carId,
           costBani: job.finalPriceBani,
