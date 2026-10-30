@@ -40,6 +40,14 @@ import { carTransferLinkControllerRead } from '../fn/cars/car-transfer-link-cont
 import { CarTransferLinkControllerRead$Params } from '../fn/cars/car-transfer-link-controller-read';
 import { CarTransferLinkDto } from '../models/car-transfer-link-dto';
 import { CarTransferSentDto } from '../models/car-transfer-sent-dto';
+import { ClientRepairDto } from '../models/client-repair-dto';
+import { ClientRepairListDto } from '../models/client-repair-list-dto';
+import { clientRepairsControllerCorrect } from '../fn/cars/client-repairs-controller-correct';
+import { ClientRepairsControllerCorrect$Params } from '../fn/cars/client-repairs-controller-correct';
+import { clientRepairsControllerList } from '../fn/cars/client-repairs-controller-list';
+import { ClientRepairsControllerList$Params } from '../fn/cars/client-repairs-controller-list';
+import { clientRepairsControllerRemove } from '../fn/cars/client-repairs-controller-remove';
+import { ClientRepairsControllerRemove$Params } from '../fn/cars/client-repairs-controller-remove';
 import { SoldCarListDto } from '../models/sold-car-list-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -310,6 +318,105 @@ export class CarsService extends BaseService {
   carHistoryControllerRepairs(params: CarHistoryControllerRepairs$Params, context?: HttpContext): Promise<CarRepairListDto> {
     const resp = this.carHistoryControllerRepairs$Response(params, context);
     return resp.then((r: StrictHttpResponse<CarRepairListDto>): CarRepairListDto => r.body);
+  }
+
+  /** Path part for operation `clientRepairsControllerList()` */
+  static readonly ClientRepairsControllerListPath = '/api/v1/garage/client-repairs';
+
+  /**
+   * The logged repairs drivers shared with the caller's garage.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `clientRepairsControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  clientRepairsControllerList$Response(params?: ClientRepairsControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<ClientRepairListDto>> {
+    const obs = clientRepairsControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The logged repairs drivers shared with the caller's garage.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `clientRepairsControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  clientRepairsControllerList(params?: ClientRepairsControllerList$Params, context?: HttpContext): Promise<ClientRepairListDto> {
+    const resp = this.clientRepairsControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ClientRepairListDto>): ClientRepairListDto => r.body);
+  }
+
+  /** Path part for operation `clientRepairsControllerRemove()` */
+  static readonly ClientRepairsControllerRemovePath = '/api/v1/garage/client-repairs/{id}';
+
+  /**
+   * Always refused: a garage never deletes a repair.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `clientRepairsControllerRemove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  clientRepairsControllerRemove$Response(params: ClientRepairsControllerRemove$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = clientRepairsControllerRemove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Always refused: a garage never deletes a repair.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `clientRepairsControllerRemove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  clientRepairsControllerRemove(params: ClientRepairsControllerRemove$Params, context?: HttpContext): Promise<void> {
+    const resp = this.clientRepairsControllerRemove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `clientRepairsControllerCorrect()` */
+  static readonly ClientRepairsControllerCorrectPath = '/api/v1/garage/client-repairs/{id}';
+
+  /**
+   * Correct what was done, the day, the reading or the amount of a shared repair; null clears the amount.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `clientRepairsControllerCorrect()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  clientRepairsControllerCorrect$Response(params: ClientRepairsControllerCorrect$Params, context?: HttpContext): Promise<StrictHttpResponse<ClientRepairDto>> {
+    const obs = clientRepairsControllerCorrect(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Correct what was done, the day, the reading or the amount of a shared repair; null clears the amount.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `clientRepairsControllerCorrect$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  clientRepairsControllerCorrect(params: ClientRepairsControllerCorrect$Params, context?: HttpContext): Promise<ClientRepairDto> {
+    const resp = this.clientRepairsControllerCorrect$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ClientRepairDto>): ClientRepairDto => r.body);
   }
 
   /** Path part for operation `carsControllerList()` */

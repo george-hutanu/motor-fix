@@ -22,7 +22,12 @@ export type LiveSubject =
   | { type: 'car'; ownerAccountId: string }
   // A car taken over: the seller and the buyer.
   | { type: 'car_transfer'; sellerAccountId: string; buyerAccountId: string }
-  | { type: 'repair'; ownerAccountId: string; sharedGarageId: string | null }
+  // A car with no owner (its account deleted) reaches the garage alone.
+  | {
+      type: 'repair';
+      ownerAccountId: string | null;
+      sharedGarageId: string | null;
+    }
   | {
       type: 'verification';
       garageId: string;
@@ -102,8 +107,8 @@ export function audienceOf(subject: LiveSubject): string[] {
       ];
     case 'repair':
       return [
-        account(subject.ownerAccountId),
-        ...(subject.sharedGarageId ? [garage(subject.sharedGarageId)] : []),
+        ...when(subject.ownerAccountId, `account:${subject.ownerAccountId}`),
+        ...when(subject.sharedGarageId, `garage:${subject.sharedGarageId}`),
       ];
     case 'garage':
       return subject.garageIds.map(garage);

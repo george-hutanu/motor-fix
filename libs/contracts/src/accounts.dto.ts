@@ -7,7 +7,6 @@ import {
   Length,
   Matches,
   MaxLength,
-  ValidateBy,
 } from 'class-validator';
 
 import {
@@ -21,7 +20,7 @@ import {
   type AccountRole,
   SEARCH_MAX,
 } from './account-search';
-import { calendarDay } from './cars.dto';
+import { calendarDay, notAfterToday } from './cars.dto';
 import { NOTE_TEXT } from './note-text';
 
 const COUNT_KIND = ['requests', 'reviews', 'age'] as const;
@@ -186,26 +185,6 @@ const EMAIL_OUTCOME = ['sent', 'none', 'failed'] as const;
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
-
-// Today as Bucharest reads it, YYYY-MM-DD.
-const bucharestToday = (now = new Date()) =>
-  new Intl.DateTimeFormat('en-CA', {
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: 'Europe/Bucharest',
-    year: 'numeric',
-  }).format(now);
-
-const notAfterToday = () =>
-  ValidateBy({
-    name: 'notAfterToday',
-    validator: {
-      defaultMessage: (args) =>
-        `${args?.property} must not be after today in Bucharest`,
-      validate: (value) =>
-        typeof value === 'string' && value <= bucharestToday(),
-    },
-  });
 
 export class AdminAccountGarageDto {
   @ApiProperty({ format: 'uuid' })

@@ -1,6 +1,8 @@
 // @traces 102-FR-001
 // @traces 102-FR-002
 // @traces 1381-FR-005
+// @traces 409-FR-002
+// @traces 409-FR-017
 import { CAPABILITIES, capabilitiesOf, ROLES } from './capabilities';
 
 const none = {
@@ -37,6 +39,7 @@ const granted = {
     'garage.profile',
     'garage.feature_switches',
     'garage.audit_history',
+    'garage.client_repairs',
   ],
   mechanic: ['garage.own_jobs', 'garage.schedule', 'garage.audit_history'],
   receptionist: [
@@ -103,6 +106,15 @@ describe('capabilities by role', () => {
       expect(capabilitiesOf('mechanic', others)).not.toContain(capability);
     },
   );
+
+  it('lists garage.client_repairs among the capabilities, for the owner alone', () => {
+    expect(CAPABILITIES).toContain('garage.client_repairs');
+    expect(
+      ROLES.filter((role) =>
+        capabilitiesOf(role, none).includes('garage.client_repairs' as never),
+      ),
+    ).toEqual(['garage']);
+  });
 
   it('lists garage.move_bookings among the capabilities', () => {
     expect(CAPABILITIES).toContain('garage.move_bookings');
