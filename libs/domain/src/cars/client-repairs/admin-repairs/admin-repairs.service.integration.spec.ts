@@ -113,7 +113,9 @@ describe('correcting a repair as the admin', () => {
 
     const logged = await entries(row.id);
     expect(
-      logged.map((e) => [e.field, e.oldValue, e.newValue, e.action]),
+      logged
+        .map((e) => [e.field, e.oldValue, e.newValue, e.action])
+        .sort(([a], [b]) => String(a).localeCompare(String(b))),
     ).toEqual([
       ['costBani', 45_000, null, 'update'],
       ['odometerKm', 151_000, 150_000, 'update'],
