@@ -124,6 +124,17 @@ img {
   border: 2.5px solid var(--mf-amber);
 }
 
+/* A garage outside the filters: on the map, faint, whole again when lit. */
+.pin.dim,
+.area.dim {
+  opacity: 0.4;
+}
+
+.pin.dim.lit,
+.area.dim.lit {
+  opacity: 1;
+}
+
 /* "You are here", as on the interactive map. */
 .here {
   background: var(--mf-amber);

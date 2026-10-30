@@ -851,6 +851,18 @@
     "endCapped": "Ai văzut primele {max} · apropie harta pentru mai puține",
     "enterAddress": "Introdu o adresă",
     "failed": "Nu am putut încărca rezultatele",
+    "filters": {
+      "button": "Filtre",
+      "buttonCount": "Filtre · {n}",
+      "clear": "Scoate filtrele",
+      "filtering": "Se filtrează…",
+      "none": "Niciun service nu are tot ce ai ales",
+      "openNow": "Deschis acum",
+      "openSaturday": "Deschis sâmbăta",
+      "remove": "Scoate filtrul {name}",
+      "summary": "{n} cu filtrele alese",
+      "title": "Filtre"
+    },
     "found": {
       "few": "{count} service‑uri găsite",
       "one": "{count} service găsit",
