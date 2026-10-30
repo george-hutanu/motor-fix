@@ -701,8 +701,6 @@ describe('a filtered search writes nothing', () => {
       hours: LUNCH,
       stance: 'works_on',
     });
-    // The stored hours and closed days, the audit trail, the outbox (which
-    // carries live updates) and the notifications.
     const written = async () => ({
       activity: await prisma.activityLog.count(),
       closedDays: await prisma.garageClosedDay.findMany({
