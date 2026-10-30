@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
@@ -185,6 +188,18 @@ describe('Cererile mele once the garage hands the car over', () => {
 
     expect(text(card(element))).toContain('Încheiată pe 3 oct.');
     expect(amountEl(element)).toBeNull();
+  });
+
+  // PR #636 lap 2: the largest amount on a closed row at 320 px.
+  it('writes the largest amount whole, on a head that wraps rather than scrolls', async () => {
+    const { element } = await render([
+      [row({ finalPriceBani: 100_000_000, handedOverAt: HANDED_OVER })],
+    ]);
+
+    expect(text(amount(element))).toBe('1.000.000 lei');
+    const css = readFileSync(join(__dirname, 'requests-view.css'), 'utf8');
+    expect(css).toMatch(/\.head \{[^}]*flex-wrap: wrap;/);
+    expect(css).toMatch(/\.amount \{[^}]*white-space: nowrap;/);
   });
 });
 
