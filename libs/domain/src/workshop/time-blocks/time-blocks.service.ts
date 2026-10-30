@@ -41,6 +41,7 @@ import {
   localDay,
 } from '../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
+import { switchesOf } from '../../garages/features/garage-options';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   deadlockRetried,
@@ -182,7 +183,7 @@ export class TimeBlocksService {
         message: `from and to span 1 to ${MAX_LIST_DAYS} days`,
       });
     }
-    const { lifts } = await this.switches(this.prisma, garageId);
+    const { lifts } = await switchesOf(this.prisma, garageId);
     const blocks = await blocksOf(
       this.prisma,
       {
@@ -417,7 +418,7 @@ export class TimeBlocksService {
   // The refusals in their order, before any write; the card is
   // read FOR SHARE so its removal waits for this block, or this block for it.
   private async judged(tx: Tx, actor: Actor, garageId: string, asked: Shape) {
-    const switches = await this.switches(tx, garageId);
+    const switches = await switchesOf(tx, garageId);
     judgeSwitches(asked, switches, actor.language === 'en');
     const mechanicName = asked.mechanicId
       ? await this.cardName(tx, garageId, asked.mechanicId)
@@ -461,15 +462,6 @@ export class TimeBlocksService {
       throw invalid('mechanicId', 'mechanicId is not a card of this garage');
     }
     return card.name;
-  }
-
-  private async switches(db: Pick<Tx, 'garageFeature'>, garageId: string) {
-    const rows = await db.garageFeature.findMany({
-      where: { garageId, key: { in: ['team_mechanics', 'lift_schedule'] } },
-    });
-    const on = (key: string) =>
-      rows.find((row) => row.key === key)?.enabled ?? true;
-    return { lifts: on('lift_schedule'), team: on('team_mechanics') };
   }
 
   private assertFree(
