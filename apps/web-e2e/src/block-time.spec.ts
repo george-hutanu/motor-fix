@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import { ACCOUNTS, headers, ready, signIn } from './accounts.js';
+import { headers, ready, signIn } from './accounts.js';
 import { bucharestDay } from './bucharest-day.js';
 import { test } from './fixtures.js';
 import { keepSeededLanguage } from './seeded-language.js';
@@ -26,21 +26,26 @@ interface Block {
 }
 
 // @seeded: the seeded receptionist blocks a mechanic and a lift of her garage.
+// Service Auto Militari is the seeded garage with lifts (at least two) and
+// mechanic cards; the plain receptionist's Atelier Test has no lift.
+const RECEPTIONIST = 'receptie-militari@example.test';
+
 test.describe('blocking time from the dashboard @seeded', () => {
   // @traces 1403-FR-011
-  test('the receptionist blocks the first mechanic and the last lift a day ahead, and the block reads back', async ({
+  test('the receptionist blocks the first mechanic and the last lift a month ahead, and the block reads back', async ({
     page,
     request,
   }) => {
-    const auth = await headers(request, ACCOUNTS.receptionist);
+    const auth = await headers(request, RECEPTIONIST);
     const me = await request.get('/api/v1/me', { headers: auth });
     expect(me.ok()).toBe(true);
     const { garageId } = (await me.json()) as { garageId: string };
-    const day = bucharestDay(1);
+    // A month out: the quote and booking specs take tomorrow at the same garage.
+    const day = bucharestDay(30);
     const note = 'Client la telefon: Ford Focus, plăcuțe';
 
     await page.setViewportSize({ height: 900, width: 1440 });
-    await signedIn(page, ACCOUNTS.receptionist, '/app/garage');
+    await signedIn(page, RECEPTIONIST, '/app/garage');
     await page
       .getByRole('button', { exact: true, name: 'Blochează timp' })
       .click();
