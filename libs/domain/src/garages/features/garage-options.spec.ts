@@ -42,7 +42,6 @@ describe('the lifts and cards a garage offers', () => {
 
     await expect(garageOptions(on as unknown as Db, GARAGE)).resolves.toEqual({
       liftCount: 3,
-      lifts: true,
       mechanics: cards,
       team: true,
     });
@@ -61,7 +60,6 @@ describe('the lifts and cards a garage offers', () => {
 
     await expect(garageOptions(off as unknown as Db, GARAGE)).resolves.toEqual({
       liftCount: 0,
-      lifts: false,
       mechanics: [],
       team: false,
     });

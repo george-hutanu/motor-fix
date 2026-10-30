@@ -1,6 +1,6 @@
 ---
 capability: workshop
-updated: 2026-10-29
+updated: 2026-10-30
 features:
   - 220-requests-quotes-bookings
   - 424-job-steps
@@ -11,6 +11,7 @@ features:
   - 276-job-start-done
   - 406-final-price-handover
   - 427-time-blocks
+  - 1395-block-time-dashboard
 ---
 
 # Capability: Workshop
@@ -298,6 +299,30 @@ _From 427-time-blocks._
 ### 427-FR-017 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids. In Jest on real PostgreSQL and Redis: US1-1 to US1-8 (the row, the segments per day and on the clock-change days, the block and the booking refusals with their messages and `reason`, the race with exactly one block and a 409 `slot_taken`, the awaiting booking), US2-1 to US2-6 (the change, the clash on a change, the note-only change, the removal, `block_past`, the lost update), US3-1 to US3-6 (every role on every route, the schedule read per role with `blocks` and the note, the public routes list, the driver's history), US4-1 and US4-3 to US4-5 (the removal with its entries and events, each switch state, `nothing_to_block`), every FR-004 refusal at its bound, and the confirm onto blocked time through `assertPlaceable` (FR-006). In unit Jest: the day cut (`segmentsOf`), `judgeOverlaps` with block rows, the message wording in both languages. The OpenAPI document matches the running API (the existing openapi test) and the structure check passes.
 
 _From 427-time-blocks._
+
+### 1395-FR-001 — The API MUST offer `GET /api/v1/garages/:garageId/time-blocks/options` (operationId `timeBlockOptions`, in `TimeBlocksController` under the `workshop` module, `libs/domain/src/workshop/time-blocks/`, declared before the `:blockId` routes so the path segment `options` is never read as a block id), answering 200 with `TimeBlockOptionsDto { liftCount: number, mechanics: BookingMechanicDto[] }`, the DTO in the contracts library (`libs/contracts/src/time-blocks.dto.ts`) and `BookingMechanicDto` reused from `quotes.dto.ts` (id and name only).
+
+_From 1395-block-time-dashboard._
+
+### 1395-FR-002 — The read MUST hold the access of the four routes (427-FR-003), checked on the server before anything else: the owner and a receptionist of that garage 200; a mechanic of the garage 403 `forbidden` whatever her permissions; any other actor and an unknown garage 404 `not_found`; a visitor 401 `sign_in_required`; the route is not `@Public()`.
+
+_From 1395-block-time-dashboard._
+
+### 1395-FR-003 — `liftCount` MUST be the garage's `lift_count` while `lift_schedule` is on and 0 while it is off; `mechanics` MUST be the garage's current mechanic cards (`removed_at` null, the owner's own card included) as `{ id, name }`, ordered by name then id in the database's default collation (the confirm query's `orderBy`), while `team_mechanics` is on, and `[]` while it is off — the same switch reads and card query as the confirm options (`ConfirmService.options`, `switches`, `offered`), shared as one exported function both services call (Principle V: one rule in one place), so the two answers cannot disagree on the same garage.
+
+_From 1395-block-time-dashboard._
+
+### 1395-FR-004 — With both switches off the read MUST answer 200 `{ liftCount: 0, mechanics: [] }`: no 4xx, no `nothing_to_block`, no refusal log line for that 200 (OD-33: the web shows no action then; the refusal belongs to the write, 427-FR-004).
+
+_From 1395-block-time-dashboard._
+
+### 1395-FR-005 — The read MUST write nothing: no audit entry, no event, no row; two reads with no change in between answer the same body.
+
+_From 1395-block-time-dashboard._
+
+### 1395-FR-008 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids: in Jest on real PostgreSQL, US1-1 to US1-7 (the body per switch state, the order, the removed card, the owner's own card, the empty team) and US2-1 to US2-6 (every role, the unknown garage, the visitor and the public routes list, the idempotent read, the non-uuid id); the DTO's OpenAPI shape in the contracts unit specs where the sibling DTOs have one. No web file changes in this story (the `apps/web` diff is empty; the regenerated `libs/data-access` is not counted).
+
+_From 1395-block-time-dashboard._
 
 ## Retired
 

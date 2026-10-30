@@ -37,8 +37,8 @@ export async function garageOptions(db: Db, garageId: string) {
       })
     : [];
   return {
-    ...switches,
     liftCount: switches.lifts ? garage.liftCount : 0,
     mechanics,
+    team: switches.team,
   };
 }
