@@ -154,7 +154,6 @@ const replyButton = (row: HTMLElement) =>
   row.querySelector<HTMLButtonElement>('button[data-reply-button]');
 
 // @traces 1387-FR-001 1387-FR-005
-// @traces 1387-FR-001 1387-FR-005
 describe('the reply button on a review row', () => {
   it('offers the owner "Răspunde" on a review that can be answered, and says so when pressed', async () => {
     const row = await render(staffReview({ canReply: true }));

@@ -447,7 +447,6 @@ describe('live', () => {
 });
 
 // @traces 1387-FR-001 1387-FR-003
-// @traces 1387-FR-001 1387-FR-003
 describe('replying from the panel', () => {
   const replyButton = (row: HTMLElement | undefined) =>
     row?.querySelector<HTMLButtonElement>('button[data-reply-button]');

@@ -133,7 +133,6 @@ afterEach(() => {
 });
 
 // @traces 1387-FR-002 1387-FR-005
-// @traces 1387-FR-002 1387-FR-003 1387-FR-005
 describe('the reply dialog: what it shows', () => {
   it('titles the reply and names the review: author, day and mechanic', async () => {
     await open();

@@ -155,15 +155,26 @@ export class GarageReviewsPanel {
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
   }
 
-  protected reply(review: GarageStaffReviewDto): void {
-    void openReply(this.overlays, review, (answer) => {
-      const reads = this.view.reads();
-      const held = this.replied();
-      const byId = new Map(held.reads === reads ? held.byId : []);
-      byId.set(review.id, answer);
-      this.replied.set({ byId, reads });
-    });
+  // One dialog at a time: a second press while it loads or shows opens none.
+  // A dialog whose chunk failed to load leaves the row as it was, to press again.
+  protected async reply(review: GarageStaffReviewDto): Promise<void> {
+    if (this.replying) return;
+    this.replying = true;
+    try {
+      await openReply(this.overlays, review, (answer) => {
+        const reads = this.view.reads();
+        const held = this.replied();
+        const byId = new Map(held.reads === reads ? held.byId : []);
+        byId.set(review.id, answer);
+        this.replied.set({ byId, reads });
+      });
+    } catch {
+      return;
+    } finally {
+      this.replying = false;
+    }
   }
+  private replying = false;
 
   protected more(): void {
     if (this.loadingMore()) return;

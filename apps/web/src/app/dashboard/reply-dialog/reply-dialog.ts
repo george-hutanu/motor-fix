@@ -103,9 +103,9 @@ export class ReplyDialog {
       n: formatNum(this.length(), language),
     });
   });
-  // Empty, over the cap or on its way: pressing does nothing.
+  // Empty or over the cap: pressing does nothing (TaskSubmit covers the send).
   protected readonly blocked = computed(
-    () => this.length() === 0 || this.over() || this.save.state() === 'sending',
+    () => this.length() === 0 || this.over(),
   );
 
   protected publish(): void {

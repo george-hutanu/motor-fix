@@ -33,12 +33,12 @@ textarea {
   color: var(--mf-red-ink);
 }
 .actions {
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
   margin-top: var(--mf-space-2);
 }
 .actions button {
-  min-height: var(--mf-tap);
+  width: 100%;
+  min-height: 54px;
   white-space: normal;
 }
 .actions button[aria-disabled="true"] {
