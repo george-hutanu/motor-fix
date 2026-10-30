@@ -782,6 +782,32 @@ describe('an account that already owns a garage', () => {
     ).toMatchObject({ status: 'open', submitKey: null });
   });
 
+  // @traces 1273-reapply-after-rejection-FR-005
+  it('refuses the owner of a rejected garage too: the way back is a new file, not a new garage', async () => {
+    const actor = await driver();
+    const held = await prisma.garage.create({
+      data: { name: 'Atelier Vechi', slug: 'atelier-vechi' },
+    });
+    await prisma.garageMember.create({
+      data: { accountId: actor.accountId, garageId: held.id, role: 'owner' },
+    });
+    await prisma.verificationFile.create({
+      data: { garageId: held.id, reasonCode: 'address', status: 'rejected' },
+    });
+    const { id, token } = await draft();
+
+    const refused = await refusalOf(service.submit(actor, id, token, 'key-1'));
+
+    expect(refused.status).toBe(409);
+    expect(refused.body).toMatchObject({ code: 'garage_already_exists' });
+    expect(await prisma.garage.count()).toBe(1);
+    expect(await prisma.garageMember.count()).toBe(1);
+    expect(await prisma.verificationFile.count()).toBe(1);
+    expect(
+      await prisma.listingDraft.findUniqueOrThrow({ where: { id } }),
+    ).toMatchObject({ status: 'open', submitKey: null });
+  });
+
   it('refuses the second of two drafts sent at once with 409 garage_already_exists', async () => {
     const actor = await driver();
     const one = await draft();

@@ -44,6 +44,7 @@ import {
   countVerificationCheck,
   countVerificationResult,
   initProductCounters,
+  RESUBMISSION_AFTER,
 } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
 
@@ -170,7 +171,9 @@ function countEverySeries() {
     countRejection(reason);
   });
   countMoreRequest();
-  countResubmission();
+  RESUBMISSION_AFTER.forEach((after) => {
+    countResubmission(after);
+  });
   countCompletionOpened();
   countQuote();
   // Only a template with an e-mail text is ever counted as an e-mail sent.
@@ -329,12 +332,15 @@ describe('the product counters', () => {
     ),
     // @traces 304-FR-012
     [() => countMoreRequest(), 'motorfix_verification_more_requests_total', {}],
-    // @traces 304-FR-012
-    [
-      () => countResubmission(),
-      'motorfix_verification_resubmissions_total',
-      {},
-    ],
+    // @traces 304-FR-012 1273-reapply-after-rejection-FR-008
+    ...RESUBMISSION_AFTER.map(
+      (after) =>
+        [
+          () => countResubmission(after),
+          'motorfix_verification_resubmissions_total',
+          { after },
+        ] as const,
+    ),
     [() => countQuote(), 'motorfix_quotes_total', {}],
     [
       () => countEmail('SIGN_IN_CODE'),
@@ -481,6 +487,27 @@ describe('the product counters', () => {
     count();
 
     expect(await total(name, labels)).toBe(before + 1);
+  });
+
+  // @traces 1273-reapply-after-rejection-FR-008
+  it('starts the resubmissions after a request for more at zero, and none after a rejection', () => {
+    const added: Record<string, unknown>[] = [];
+    const meter = {
+      createCounter: (name: string) => ({
+        add: (value: number, labels: Record<string, unknown> = {}) => {
+          if (name === 'motorfix_verification_resubmissions_total')
+            added.push({ ...labels, value });
+        },
+      }),
+    } as unknown as Meter;
+    const spy = jest.spyOn(metrics, 'getMeter').mockReturnValue(meter);
+    try {
+      initProductCounters('api');
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(added).toEqual([{ after: 'more_requested', value: 0 }]);
   });
 
   // @traces 056-FR-024

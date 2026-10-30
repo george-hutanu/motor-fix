@@ -298,12 +298,26 @@ export function completionWorld(prisma: PrismaClient) {
     };
   }
 
+  // Puts a file in `rejected` with the admin's reason and note, as the
+  // decision leaves it.
+  const reject = (fileId: string, reason: string, note: string) =>
+    prisma.verificationFile.update({
+      data: {
+        decidedAt: new Date(),
+        reasonCode: reason,
+        reasonNote: note,
+        status: 'rejected',
+      },
+      where: { id: fileId },
+    });
+
   return {
     completion,
     drafts,
     full,
     listed,
     plain,
+    reject,
     released,
     reset,
     submit,
