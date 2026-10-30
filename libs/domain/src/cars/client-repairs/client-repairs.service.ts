@@ -83,9 +83,9 @@ export class ClientRepairsService {
     dto: CorrectClientRepairDto,
   ): Promise<ClientRepairRow> {
     const by = writerOf(actor);
+    if (scope) requireCapability(actor, scope.capability);
     try {
       if (!scope) throw notFound();
-      requireCapability(actor, scope.capability);
       const answer = await this.prisma.$transaction(async (tx) => {
         const row = await this.locked(tx, id, scope.where);
         if (row.updatedAt.getTime() !== new Date(dto.version).getTime()) {
