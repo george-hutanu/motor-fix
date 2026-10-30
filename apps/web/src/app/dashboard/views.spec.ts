@@ -383,6 +383,7 @@ describe('the dashboard view lists', () => {
   });
 
   // @traces 172-FR-001 172-FR-009
+  // @traces 1315-FR-012
   it('gives the owner alone the prices view, its body downloaded with the view', async () => {
     const prices = DASHBOARDS.garage.views.find(
       (view) => view.path === 'prices',
