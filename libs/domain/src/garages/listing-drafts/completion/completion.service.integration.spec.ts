@@ -530,7 +530,7 @@ describe('a sending again that is refused', () => {
     ).toMatchObject({ status: 'open' });
   }
 
-  it.each(['approved', 'rejected', 'in_review'])(
+  it.each(['approved', 'in_review', 'submitted'])(
     'answers 409 with the status once the file is %s, and writes nothing',
     async (status) => {
       await asked(['photos']);

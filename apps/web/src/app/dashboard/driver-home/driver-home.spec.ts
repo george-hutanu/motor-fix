@@ -22,6 +22,7 @@ import { filter, Subject } from 'rxjs';
 import { DriverHome } from './driver-home';
 import { SavedGarages } from '../../public/saved-garages/saved-garages';
 import { AddCar } from '../add-car/add-car';
+import { CarsView } from '../cars-view/cars-view';
 import { DRIVER_PANELS, panelsToDraw } from '../driver-panels/driver-panels';
 import { Live } from '../live';
 import {
@@ -175,7 +176,7 @@ async function render({
   const current = signal(
     capabilities === null
       ? null
-      : ({ capabilities, role: 'driver' } as unknown as MeDto),
+      : ({ capabilities, id: 'account-1', role: 'driver' } as unknown as MeDto),
   );
   TestBed.configureTestingModule({
     providers: [
@@ -233,7 +234,7 @@ async function render({
     }
   };
   await settle();
-  return { element, settle };
+  return { element, fixture, settle };
 }
 
 const text = (element: Element | null | undefined) =>
@@ -1383,5 +1384,99 @@ describe('Panou while the live stream is down', () => {
     offline.set(false);
     await settle();
     expect(line()).toBeNull();
+  });
+});
+
+// @traces 1316-FR-001 1316-FR-002
+describe('Panou opened again', () => {
+  const opened = async () => {
+    const fixture = TestBed.createComponent(DriverHome);
+    fixture.detectChanges();
+    return fixture;
+  };
+
+  it('shows the cars, the requests and the active request at once, read once in all', async () => {
+    const first = await render({
+      cars: [car()],
+      requests: [request({ quotesCount: 2 })],
+    });
+    first.fixture.destroy();
+
+    const again = await opened();
+    const element = again.nativeElement as HTMLElement;
+
+    expect(element.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(text(panel(element, 'cars'))).toContain('Dacia Logan');
+    expect(panel(element, 'activeRequest')).not.toBeNull();
+    await again.whenStable();
+    expect(carsList).toHaveBeenCalledTimes(1);
+    expect(requestsList).toHaveBeenCalledTimes(1);
+    expect(activeRead).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the requests again past 30 seconds and the cars past 5 minutes', async () => {
+    const start = Date.now();
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(start);
+    try {
+      const first = await render({ cars: [car()], requests: [request()] });
+      first.fixture.destroy();
+
+      clock.mockReturnValue(start + 30_000);
+      const second = await opened();
+      await second.whenStable();
+      expect(carsList).toHaveBeenCalledTimes(1);
+      expect(requestsList).toHaveBeenCalledTimes(2);
+      expect(activeRead).toHaveBeenCalledTimes(2);
+      second.destroy();
+
+      clock.mockReturnValue(start + 300_000);
+      const third = await opened();
+      await third.whenStable();
+      expect(carsList).toHaveBeenCalledTimes(2);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+});
+
+// @traces 1316-FR-005
+describe('a car changed on one view', () => {
+  it('shows in Mașinile mele opened next when saved from Panou, with no read', async () => {
+    const { element, fixture, settle } = await render();
+    open.mockResolvedValueOnce(car({ id: 'car-9', model: 'Duster' }));
+    control(invitation(element, 'car'), 'Adaugă o mașină')?.click();
+    await settle();
+    fixture.destroy();
+
+    const cars = TestBed.createComponent(CarsView);
+    cars.detectChanges();
+    await cars.whenStable();
+
+    expect(
+      (cars.nativeElement as HTMLElement).querySelector('[data-car="car-9"]'),
+    ).not.toBeNull();
+    expect(carsList).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows on Panou opened next when added on Mașinile mele, with no read', async () => {
+    const { fixture } = await render({ cars: [car()] });
+    fixture.destroy();
+    const cars = TestBed.createComponent(CarsView);
+    cars.detectChanges();
+    await cars.whenStable();
+    open.mockResolvedValueOnce(car({ id: 'car-9', model: 'Duster' }));
+    control(cars.nativeElement as HTMLElement, 'Adaugă o mașină')?.click();
+    for (let i = 0; i < 6; i++) {
+      cars.detectChanges();
+      await cars.whenStable();
+    }
+    cars.destroy();
+
+    const again = TestBed.createComponent(DriverHome);
+    again.detectChanges();
+
+    expect(text(panel(again.nativeElement, 'cars'))).toContain('Dacia Duster');
+    await again.whenStable();
+    expect(carsList).toHaveBeenCalledTimes(1);
   });
 });

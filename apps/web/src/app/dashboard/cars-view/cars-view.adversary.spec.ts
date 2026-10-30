@@ -5,6 +5,7 @@ import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
 import { CarsView } from './cars-view';
+import { heldForDriver } from '../resources/resources.testing';
 
 const car = (over: Partial<CarDto> = {}): CarDto => ({
   brandId: 'bmw',
@@ -37,6 +38,7 @@ async function mount(answer: () => Promise<unknown>) {
     providers: [
       { provide: CarsService, useValue: { carsControllerList: list } },
       { provide: Overlays, useValue: { open } },
+      ...heldForDriver(),
       provideRouter([]),
     ],
   });

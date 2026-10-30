@@ -39,6 +39,7 @@ export const requestRow = (
       position: 0,
     },
   ],
+  outcome: null,
   quote: null,
   recipient: {
     answeredAt: null,
@@ -58,6 +59,7 @@ export const quotedRow = (
 ): GarageRequestSummaryDto =>
   requestRow({
     id: 'req-q1',
+    outcome: 'waiting',
     quote: {
       acceptedAt: null,
       changedAt: null,
