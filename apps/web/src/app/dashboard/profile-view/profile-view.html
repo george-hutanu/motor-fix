@@ -128,6 +128,19 @@
       </ul>
     }
   </section>
+  @defer (on idle) {
+    <mf-weekly-figures-panel data-section="funnel" />
+  } @placeholder {
+    <section class="panel" data-section="funnel">
+      <h2>{{ 'garage.home.section.funnel' | t }}</h2>
+      <div class="chart-skeleton" data-chart-skeleton aria-hidden="true"></div>
+    </section>
+  } @error {
+    <section class="panel" data-section="funnel">
+      <h2>{{ 'garage.home.section.funnel' | t }}</h2>
+      <p role="alert">{{ 'garage.weekly.error' | t }}</p>
+    </section>
+  }
 }
 @if (legalCheck() && (profile() || suspended() || view.error())) {
   <mf-garage-legal-check />
