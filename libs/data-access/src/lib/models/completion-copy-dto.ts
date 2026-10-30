@@ -20,7 +20,7 @@ export interface CompletionCopyDto {
   language: 'ro' | 'en';
 
   /**
-   * What the request for more asks for
+   * What the request for more asks for, or the item a rejection names
    */
   requestedItems: Array<string>;
   status: 'open' | 'submitted';

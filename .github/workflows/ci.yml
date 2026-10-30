@@ -228,9 +228,10 @@ jobs:
     needs: changes
     if: github.event_name == 'workflow_dispatch' || inputs.integration
     runs-on: ubuntu-latest
-    # The suite takes 30 to 45 minutes now (domain's run alone up to 43), so
-    # 45 cancelled it at the edge of a finished run; 60 leaves the headroom.
-    timeout-minutes: 60
+    # The suite takes 50 to 60 minutes now (two runs of one head: 56, then
+    # cancelled at 60 with domain still running), so 60 cancels it at the edge
+    # of a finished run; 90 leaves the headroom.
+    timeout-minutes: 90
     services: &services
       # The repository's own image (infra/postgres), as compose and staging:
       # it preloads pg_stat_statements, which the data-store specs read.
@@ -310,7 +311,9 @@ jobs:
     needs: changes
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The suite takes 23 to 30 minutes now (three runs of one PR: 23, 29, then
+    # cancelled at 30), so 30 cancels it at the edge; 45 leaves the headroom.
+    timeout-minutes: 45
     services: *services
     env:
       APP_ENV: test

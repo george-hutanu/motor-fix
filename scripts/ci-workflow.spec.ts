@@ -150,9 +150,14 @@ describe('ci workflow', () => {
     );
   });
 
-  // The suite runs 30 to 45 minutes; 45 cancelled finished runs at the edge.
-  it('gives the integration suite an hour before cancelling it', () => {
-    expect(Number(setting(job('integration'), 'timeout-minutes'))).toBe(60);
+  // The suite runs 50 to 60 minutes; 60 cancelled finished runs at the edge.
+  it('gives the integration suite an hour and a half before cancelling it', () => {
+    expect(Number(setting(job('integration'), 'timeout-minutes'))).toBe(90);
+  });
+
+  // The end-to-end suite runs 23 to 30 minutes; 30 cancelled a run at the edge.
+  it('gives the end-to-end suite three quarters of an hour before cancelling it', () => {
+    expect(Number(setting(job('e2e'), 'timeout-minutes'))).toBe(45);
   });
 
   it('builds the docker images on a PR that changes an image input, and by hand', () => {
