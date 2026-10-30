@@ -8,6 +8,7 @@ import {
   inject,
   input,
   model,
+  type OnInit,
   output,
   PLATFORM_ID,
   signal,
@@ -68,15 +69,21 @@ type JobName = Pick<JobTypeDto, 'nameEn' | 'nameRo'>;
   styleUrl: './brands-step.css',
   templateUrl: './brands-step.html',
 })
-export class BrandsStep {
+export class BrandsStep implements OnInit {
   private readonly i18n = inject(I18n);
-  private readonly catalogue = inject(BrandsService);
+  private readonly server = isPlatformServer(inject(PLATFORM_ID));
+  private readonly brands = inject(BrandsService);
   private readonly limits: Record<Text, number> = {
     brandNote: NOTE_MAX,
     refusalPhrase: PHRASE_MAX,
   };
   private timer: ReturnType<typeof setTimeout> | undefined;
   private searches = 0;
+  private gone = false;
+
+  // The chips: the twelve most popular brands, or (the owner's dialog) every
+  // active brand of the catalogue, in its order.
+  readonly catalogue = input<'popular' | 'all'>('popular');
 
   readonly value = model<BrandsSection>({ brands: [] });
   // The ids of the popular and searched brands, in the order the chips show them.
@@ -133,20 +140,44 @@ export class BrandsStep {
 
   constructor() {
     effect(() => this.shown.emit(this.brandsError() !== null));
-    let gone = false;
     inject(DestroyRef).onDestroy(() => {
-      gone = true;
+      this.gone = true;
       clearTimeout(this.timer);
     });
+  }
+
+  ngOnInit() {
     // The chips come with the client: a server render would drop the answer.
-    if (isPlatformServer(inject(PLATFORM_ID))) return;
-    this.catalogue.brandsControllerSearch({}).then(
-      (page) => {
-        this.popular.set(page.items.slice(0, POPULAR));
-        if (!gone) this.tellOrder();
-      },
-      () => this.notice.set('public.listing.brands.searchDown'),
+    if (this.server) return;
+    void this.loadChips();
+  }
+
+  private async loadChips() {
+    let cursor: string | undefined;
+    let read = false;
+    try {
+      do {
+        const page = await this.brands.brandsControllerSearch(
+          cursor ? { cursor } : {},
+        );
+        cursor = this.show(page);
+        read = true;
+      } while (cursor);
+    } catch {
+      if (!this.gone) this.notice.set('public.listing.brands.searchDown');
+    }
+    if (read && !this.gone) this.tellOrder();
+  }
+
+  // A page of chips: the popular twelve, or a page of the whole catalogue
+  // added to those shown; the cursor of the next page to read, if any.
+  private show(page: { items: Brand[]; nextCursor?: string | null }) {
+    if (this.gone) return undefined;
+    const all = this.catalogue() === 'all';
+    this.popular.update((shown) =>
+      all ? [...shown, ...page.items] : page.items.slice(0, POPULAR),
     );
+    return all ? (page.nextCursor ?? undefined) : undefined;
   }
 
   private tellOrder() {
@@ -167,11 +198,22 @@ export class BrandsStep {
     return held?.stance === 'works_on' ? fuelsOf(held) : null;
   }
 
+  // The one fuel left ticked on a taken brand cannot be unticked.
+  protected isLast(ticked: Fuel[], fuel: Fuel) {
+    return ticked.length === 1 && ticked[0] === fuel;
+  }
+
+  protected lastId(id: string) {
+    return `fuel-last-${id}`;
+  }
+
   protected fuelKey(fuel: Fuel) {
     return `public.listing.brands.fuel.${fuel}`;
   }
 
   protected tickFuel(id: string, fuel: Fuel) {
+    const ticked = this.fuelsTicked(id);
+    if (ticked && this.isLast(ticked, fuel)) return;
     this.value.update((v) => ({
       ...v,
       brands: toggleFuel(v.brands, id, fuel),
@@ -271,7 +313,7 @@ export class BrandsStep {
   private async search(q: string) {
     const turn = ++this.searches;
     try {
-      const page = await this.catalogue.brandsControllerSearch({ q });
+      const page = await this.brands.brandsControllerSearch({ q });
       if (turn !== this.searches) return;
       this.results.set(page.items);
       this.notice.set(

@@ -262,6 +262,7 @@
         "diesel": "Diesel",
         "electric": "Electric",
         "hybrid": "Hybrid",
+        "last": "At least one fuel type stays ticked",
         "petrol": "Petrol",
         "ticked": "you work on it"
       },
