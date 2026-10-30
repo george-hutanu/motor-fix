@@ -1,5 +1,6 @@
 import {
   afterRenderEffect,
+  DestroyRef,
   ElementRef,
   inject,
   type Signal,
@@ -11,7 +12,9 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 // A view opened at one of its cards (`/app/driver/cars/<id>`, from the bell):
 // once the list has loaded, the card the address names scrolls into view and
 // takes the focus. Once per address, so a live re-read never moves the page;
-// a card no longer listed leaves the view at the top. Call it from the view's
+// a card no longer listed leaves the view at the top. The move waits a
+// macrotask, after the router's own move to the top of a new screen: a list
+// already held draws in the navigation's own pass. Call it from the view's
 // constructor; `attribute` is the one each card carries with its id.
 export function focusCard(
   attribute: 'data-car' | 'data-request',
@@ -21,6 +24,8 @@ export function focusCard(
   const url = toSignal(inject(ActivatedRoute).url, { initialValue: [] });
   const reduced = inject(REDUCED_MOTION);
   let done: string | undefined;
+  let pending: ReturnType<typeof setTimeout> | undefined;
+  inject(DestroyRef).onDestroy(() => clearTimeout(pending));
   afterRenderEffect(() => {
     const segments = url();
     if (!loaded()) return;
@@ -33,10 +38,12 @@ export function focusCard(
       host.querySelectorAll<HTMLElement>(`[${attribute}]`),
     ).find((el) => el.getAttribute(attribute) === id);
     if (!card) return;
-    card.scrollIntoView({
-      behavior: reduced() ? 'auto' : 'smooth',
-      block: 'center',
+    const behavior = reduced() ? 'auto' : 'smooth';
+    clearTimeout(pending);
+    pending = setTimeout(() => {
+      if (!card.isConnected) return;
+      card.scrollIntoView({ behavior, block: 'center' });
+      card.focus({ preventScroll: true });
     });
-    card.focus({ preventScroll: true });
   });
 }

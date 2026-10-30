@@ -733,6 +733,16 @@ describe('a garage-side account adding a car', () => {
 });
 
 describe('GET /cars', () => {
+  // @traces 1316-FR-008
+  it('answers a signed-in read private, no-cache, for no shared cache to keep', async () => {
+    const { auth } = await driver();
+
+    const res = await list(auth);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('private, no-cache');
+  });
+
   it("answers the driver's own cars, newest first, without the removed ones", async () => {
     const { auth, id } = await driver();
     const other = await driver('maria');

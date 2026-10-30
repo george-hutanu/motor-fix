@@ -2,6 +2,7 @@
 <p class="who">
   <span class="name">{{ request.driver.shortName }} </span>
   <span class="car">{{ request.car.brand }} {{ request.car.model }} · {{ request.car.year }} </span>
+  <time class="sent" [attr.datetime]="request.quote?.sentAt">{{ 'garage.quotes.sentList.sent' | t: { age: sent() } }}</time>
 </p>
 <p class="jobs">
   @if (jobs().length) {
@@ -15,19 +16,20 @@
   <time class="slot" [attr.datetime]="request.quote?.slot">{{ slot() }}</time>
 </p>
 <div class="state">
-  <p class="status">
-    <span class="lamp" aria-hidden="true"></span>
-    @if (booked()) {
-      <span>{{ 'garage.quotes.sentList.booked' | t }} <time [attr.datetime]="request.booking?.startsAt">{{ bookedSlot() }}</time></span>
-    } @else if (declined()) {
-      <span>{{ 'garage.quotes.sentList.declined' | t }}</span>
-    } @else if (accepted()) {
-      <span>{{ 'garage.quotes.sentList.accepted' | t }} · <time [attr.datetime]="request.booking?.confirmBy">{{ left() }}</time></span>
-    } @else {
-      <span>{{ 'garage.quotes.sentList.waiting' | t }}</span>
-    }
-  </p>
-  @if (booked() && request.booking; as booking) {
+  @if (tag(); as tag) {
+    <p class="status">
+      <span class="lamp" aria-hidden="true"></span>
+      @if (tag.when) {
+        <span>{{ tag.label }} <time [attr.datetime]="tag.at">{{ tag.when }}</time></span>
+      } @else {
+        <span>{{ tag.label }}</span>
+      }
+    </p>
+  }
+  @if (outcome() === 'waiting') {
+    <time class="expires" [attr.datetime]="request.quote?.expiresAt">{{ expires() }}</time>
+  }
+  @if (outcome() === 'booked' && request.booking; as booking) {
     <p class="booking">
       @if (booking.mechanic; as mechanic) {
         <span class="mechanic">{{ mechanic.name }}</span>
@@ -43,7 +45,7 @@
       }
     </p>
   }
-  @if ((accepted() || booked()) && request.driver.phone; as phone) {
+  @if (callable() && request.driver.phone; as phone) {
     <a class="phone" href="tel:{{ phone }}" [attr.aria-label]="'garage.quotes.sentList.phone' | t: { phone }">{{ phone }}</a>
   }
   @if (canConfirm()) {

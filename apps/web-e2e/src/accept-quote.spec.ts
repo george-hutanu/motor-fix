@@ -133,8 +133,7 @@ test.describe('accepting a quote @seeded', () => {
       const sent = owner
         .locator('mf-quotes-sent-panel')
         .locator(`[data-live-id="${requestId}"]`);
-      await expect(sent).toContainText('Acceptată · așteaptă confirmarea ta');
-      await expect(sent).toContainText(/încă 23 h/);
+      await expect(sent).toContainText('Acceptată · confirmă până la');
       await expect(sent.locator(`a[href="tel:${DRIVER_PHONE}"]`)).toHaveText(
         DRIVER_PHONE,
       );

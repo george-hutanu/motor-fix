@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-29
+updated: 2026-10-30
 features:
   - 253-live-connection
   - 254-live-audience
@@ -39,6 +39,8 @@ features:
   - 275-live-stage-updates
   - 427-time-blocks
   - 011-dashboard-sections
+  - 1316-swr-resource-store
+  - 1389-reported-reviews-admin
 ---
 
 # Capability: Live updates
@@ -187,9 +189,9 @@ _From 257-live-events._
 
 _From 257-live-events._
 
-### 256-FR-002 — The web app MUST offer a helper that loads a view's data through the API and re-reads it when an event about the shown object arrives. Events that arrive within 300 ms of each other cause one re-read, events about other objects cause none, and only one read runs at a time.
+### 1316-FR-002 — Each resource type MUST declare its own stale time; when a view opens and the held value's age (measured from the time its last full read answered) is equal to or greater than its type's stale time, the app MUST read the resource again in the background, the held value staying on screen until the answer replaces it in place (256-FR-001's structural sharing); when the held value is younger, the view's open MUST start no read. The stale time gates only that read: re-reads caused by live events, a reconnect, the polling state or a failed read's retry keep their own rules (FR-003, FR-004).
 
-_From 256-live-in-place._
+_From 1316-swr-resource-store._
 
 ### 257-FR-011 — Account sign-up (`account.created`) and sign-out everywhere (`account.signed_out_everywhere`) MUST record their events through the outbox, with the account as their subject.
 
@@ -497,9 +499,9 @@ _From 074-garage-reviews._
 
 _From 1263-admin-dashboard-customise._
 
-### 177-FR-010 — The queue, the panel, the counter and the tile MUST re-read on `review.reported`, `review.decided`, `review.deleted` and `review.report_closed` arriving on the admin's live connection, so a new item is on screen within 5 seconds and a decided or deleted one leaves within 5 seconds, and MUST re-read when the connection resyncs after a loss; these review kinds, and no other review kind, MUST reach the `admin` channel (today the review audience reaches the garage, the mechanic and the author only), carrying the same event payload those audiences already receive and nothing more (the reporter, the reason and the facts stay in the admin-only read of FR-001); a re-read keeps the items already shown until the new ones arrive (no skeleton flash); the first read shows skeletons; a failed read shows "Nu am putut citi recenziile raportate." / "Could not read the reported reviews." with a Reîncearcă / Retry button.
+### 1389-FR-006 — (from 177-FR-010, its web part; modifies 177-FR-010) The view, the panel, the counter and the tile MUST re-read on `review.reported`, `review.decided`, `review.deleted` and `review.report_closed` arriving on the admin's live connection, so a new item is on screen within 5 seconds and a decided, deleted or closed one leaves within 5 seconds, and MUST re-read when the connection resyncs after a loss; these review kinds, and no other review kind, reach the `admin` channel, carrying the same event payload the review audiences receive and nothing more (built by ST-177, unchanged here: the reporter, the reason and the facts stay in the admin-only read); the queue and the overview re-read through the dashboard's shared live re-read, so a re-read keeps the items and numbers already shown until the new ones arrive (no skeleton flash), events within 300 ms cause one read, and a failed re-read keeps what is shown; the first read of the queue shows skeletons in the view and the panel; a failed first read shows "Nu am putut citi recenziile raportate." / "Could not read the reported reviews." with a "Reîncearcă" / "Retry" button that reads again. The view and the panel add no polling and no cache.
 
-_From 177-reported-reviews._
+_From 1389-reported-reviews-admin._
 
 ### 427-FR-010 — Each write MUST record its event in the same transaction through the outbox (257-FR-001): `time_block.created`, `time_block.updated` (added to the kinds), `time_block.deleted`, subject `time_block` with `blockId`, `garageId`, `mechanicId`, `lift`, `startsAt`, `endsAt` in the payload and never the note; the audience resolver gains the `time_block` subject: `garage:{garageId}`, `mechanic:{mechanicId}` when set, `public:garage:{garageId}` (so open profiles re-read their free slots; the public stream carries the kind and the id only, as every event). The live hub MUST deliver the three kinds to the owner and a receptionist and, through her `mechanic:` channel, to the mechanic (as it does the unclaimed `booking.confirmed`: no `KIND_CAPABILITY` entry is added, plan.md R4), and the `public:garage:` allow-list gains the three kinds. Nobody is notified.
 
@@ -516,6 +518,26 @@ _From 1254-assistant-approvals._
 ### 275-FR-004 — The driver's tracker MUST hear about a job through the audience its events already carry, `account:{driverAccountId}`, with the garage's staff through `garage:{garageId}` and the job's mechanic through `mechanic:{mechanicId}` (254-FR-001, 276-FR-007); no client joins a job channel and no other account's stream receives the job's, its booking's or its quotes' events. This is the brief's `job:{jobId}` realised on the server (Assumptions), and a test proves it (FR-009).
 
 _From 275-live-stage-updates._
+
+### 1316-FR-003 — A background read that fails MUST leave the held value on screen and show no error; the view MUST re-read on the next event or after 60 seconds, as 256-FR-003 says.
+
+_From 1316-swr-resource-store._
+
+### 1316-FR-004 — A re-read caused by a live event, a reconnect or the polling state (256-FR-002, 255-FR-003, 255-FR-004) MUST update the held value, so that every view showing that resource changes in place and the next visit shows the re-read's answer.
+
+_From 1316-swr-resource-store._
+
+### 1316-FR-008 — The store MUST read personal resources only through the signed-in API calls the views make today; the API's answer to each of these reads (`GET /api/v1/cars`, `GET /api/v1/requests`, `GET /api/v1/quote-requests/active`, `GET /api/v1/garage/requests`) MUST carry `Cache-Control: private, no-cache` (the existing rule of the cache interceptor for every read made with a session), so that no edge or CDN cache can hold or serve a copy.
+
+_From 1316-swr-resource-store._
+
+### 1316-FR-009 — The store MUST keep its copy in the page's memory only: nothing is written to local storage, session storage, IndexedDB or a cookie, and a page reload starts from an empty store (ST-1330 owns the copy kept across reloads).
+
+_From 1316-swr-resource-store._
+
+### 1316-FR-010 — Tests MUST cover, in Jest: a return within the stale time shows the held value and starts no read; a return past the stale time shows the held value and starts one read whose answer replaces it; two resource types with different stale times behave by their own; a failed background read keeps the held value; a live-event re-read replaces the held value for every view showing it, whatever the stale time; the store writes nothing to local storage, session storage, IndexedDB or cookies; an answer arriving after the account changed is dropped; a car added, edited and removed on one view is what another view shows next; sign-out, a revoked session, a sign-in of account B after account A and a role switch each leave the store empty, with the A-then-B test proving none of A's data is held or shown after B signs in; and the four routes' signed-in answers carry `private, no-cache`.
+
+_From 1316-swr-resource-store._
 
 ## Retired
 
@@ -542,3 +564,5 @@ _From 275-live-stage-updates._
 - `398-FR-008` — superseded by `102-FR-010` (2026-10-25)
 - `419-FR-008` — superseded by `1193-FR-001` (2026-10-25)
 - `254-FR-005` — superseded by `1250-FR-013` (2026-10-26)
+- `256-FR-002` — superseded by `1316-FR-002` (2026-10-30)
+- `177-FR-010` — superseded by `1389-FR-006` (2026-10-30)

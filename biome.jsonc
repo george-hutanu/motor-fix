@@ -158,6 +158,7 @@
         "apps/web/src/app/dashboard/admin-log/admin-log.html",
         "apps/web/src/app/dashboard/admin-panel/admin-panel.html",
         "apps/web/src/app/dashboard/admin-queue/admin-queue.html",
+        "apps/web/src/app/dashboard/admin-reviews/admin-reviews.html",
         "apps/web/src/app/dashboard/admin-suspended/admin-suspended.html",
         "apps/web/src/app/dashboard/delete-account/delete-account.html",
         "apps/web/src/app/dashboard/driver-home/driver-home.html",

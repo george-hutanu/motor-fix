@@ -25,7 +25,7 @@ import { Frame } from './frame';
 import { spoken } from '../../spoken.testing';
 import { Live } from '../live';
 import { Session } from '../session';
-import { dashboardRoutes } from '../views';
+import { DASHBOARDS, dashboardRoutes } from '../views';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -35,7 +35,10 @@ jest.mock('@motor-fix/ui-cockpit', () => ({
 let signOut: jest.Mock;
 let reload: jest.Mock;
 let overview: jest.Mock;
-let waiting = async (): Promise<{ garagesWaiting: number }> => ({
+let waiting = async (): Promise<{
+  garagesWaiting: number;
+  reportsPending?: number;
+}> => ({
   garagesWaiting: 0,
 });
 let requests = async (): Promise<GarageRequestListDto> => ({
@@ -350,6 +353,7 @@ describe('Frame', () => {
       'Panou',
       'Service‑uri',
       'Utilizatori',
+      'Recenzii raportate',
       'Mărci și lucrări',
       'Lucrări propuse',
       'Jurnal de sistem',
@@ -568,6 +572,7 @@ describe('Frame', () => {
       'Dashboard',
       'Garages',
       'Users',
+      'Reported reviews',
       'Brands and jobs',
       'Proposed jobs',
       'System log',
@@ -577,6 +582,7 @@ describe('Frame', () => {
       'Dashboard',
       'Garages',
       'Users',
+      'Reported',
       'Brands',
       'Proposed',
       'Log',
@@ -897,6 +903,12 @@ const garagesEntry = (element: HTMLElement) =>
   menuLinks(element).find(
     (a) => a.getAttribute('href') === '/app/admin/garages',
   );
+const reviewsEntry = (element: HTMLElement) =>
+  menuLinks(element).find(
+    (a) => a.getAttribute('href') === '/app/admin/reviews',
+  );
+const reviewsTab = (element: HTMLElement) =>
+  bar(element).find((a) => a.getAttribute('href') === '/app/admin/reviews');
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function admin(count: number | Error) {
@@ -981,14 +993,17 @@ describe('the admin header', () => {
     expect(line(element)).toBe('MotorFix · Toată țara ·');
     expect(element.querySelectorAll('.chip')).toHaveLength(0);
     expect(element.querySelectorAll('aside nav .chip-skeleton')).toHaveLength(
-      1,
+      2,
     );
     expect(
       garagesEntry(element)?.querySelector('.chip-skeleton'),
     ).not.toBeNull();
     expect(
+      reviewsEntry(element)?.querySelector('.chip-skeleton'),
+    ).not.toBeNull();
+    expect(
       element.querySelectorAll('mf-dashboard-tab-bar .chip-skeleton'),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
   });
 
   it('hides the count everywhere when the read fails, never showing 0', async () => {
@@ -1035,6 +1050,70 @@ describe('the admin header', () => {
     expect(element.querySelector('.admin-line')).toBeNull();
     expect(element.querySelector('.admin-label')).toBeNull();
     expect(overview).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 1389-FR-001 1389-FR-006
+describe('the reported reviews counter', () => {
+  afterEach(() => {
+    waiting = async () => ({ garagesWaiting: 0 });
+  });
+
+  async function reported(pending: number) {
+    waiting = async () => ({ garagesWaiting: 0, reportsPending: pending });
+    const rendered = await render('admin', '/app/admin', ADMIN);
+    await settle(rendered.harness);
+    return rendered;
+  }
+
+  it('puts the pending reports on the Recenzii raportate entry and tab, with the count in its name', async () => {
+    const { element } = await reported(3);
+
+    expect(
+      reviewsEntry(element)?.querySelector('.chip')?.textContent?.trim(),
+    ).toBe('3');
+    expect(spoken(reviewsEntry(element))).toBe(
+      'Recenzii raportate 3 în așteptare',
+    );
+    expect(
+      reviewsTab(element)?.querySelector('.chip')?.textContent?.trim(),
+    ).toBe('3');
+    expect(reviewsEntry(element)?.textContent).not.toMatch(/curând/);
+  });
+
+  it('shows no number when nothing is reported', async () => {
+    const { element } = await reported(0);
+
+    expect(reviewsEntry(element)?.querySelector('.chip')).toBeNull();
+    expect(reviewsTab(element)?.querySelector('.chip')).toBeNull();
+  });
+
+  it('shows no number when the read fails', async () => {
+    waiting = async () => {
+      throw new Error('offline');
+    };
+    const { element, harness } = await render('admin', '/app/admin', ADMIN);
+    await settle(harness);
+
+    expect(reviewsEntry(element)?.querySelector('.chip')).toBeNull();
+    expect(reviewsEntry(element)?.querySelector('.chip-skeleton')).toBeNull();
+  });
+
+  it('moves the number when a review is reported, without a reload', async () => {
+    const { element, harness } = await reported(1);
+
+    waiting = async () => ({ garagesWaiting: 0, reportsPending: 2 });
+    live.events.next({
+      at: '2026-10-30T09:00:00.000Z',
+      id: 'review-9',
+      kind: 'review.reported',
+    });
+    await pause(400);
+    await settle(harness);
+
+    expect(
+      reviewsEntry(element)?.querySelector('.chip')?.textContent?.trim(),
+    ).toBe('2');
   });
 });
 
@@ -1119,6 +1198,25 @@ describe('the driver header', () => {
 
     expect(title(element)).toBe('Mecanici');
     expect(subtitle(element)).toBe('Echipa ta și ce poate face fiecare');
+  });
+
+  // @traces 346-FR-005
+  it('asks the garage to answer within an hour under the requests title, in both languages', async () => {
+    const { element, harness } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage/requests',
+    );
+
+    expect(subtitle(element)).toBe(
+      'Răspunde în mai puțin de o oră ca să apari primul la șofer.',
+    );
+    await TestBed.inject(I18n).use('en');
+    await settle(harness);
+    expect(subtitle(element)).toBe(
+      'Answer within an hour to appear first to the driver.',
+    );
   });
 });
 
@@ -1395,6 +1493,30 @@ describe('Frame side links', () => {
   it('marks the wordmark link with the logo class', () => {
     const html = readFileSync(join(__dirname, 'frame.html'), 'utf8');
     expect(html).toMatch(/<a class="logo" routerLink="\/"/);
+  });
+});
+
+// @traces 346-FR-005
+describe('Frame title line', () => {
+  it('keeps the requests view line at body size from a tablet up', () => {
+    const css = readFileSync(join(__dirname, 'frame.css'), 'utf8').replace(
+      /\s+/g,
+      ' ',
+    );
+    const html = readFileSync(join(__dirname, 'frame.html'), 'utf8');
+
+    expect(html).toContain('[class.lead]="open().lead"');
+    expect(css).toMatch(
+      /@media \(min-width: 768px\) \{.*\.line\.lead \{ font-size: var\(--mf-size-body\); \}/,
+    );
+  });
+
+  it('marks only the requests view line to stay at body size', () => {
+    const lead = Object.values(DASHBOARDS)
+      .flatMap(({ views }) => views)
+      .filter((view) => view.lead)
+      .map((view) => view.path);
+    expect(lead).toEqual(['requests']);
   });
 });
 

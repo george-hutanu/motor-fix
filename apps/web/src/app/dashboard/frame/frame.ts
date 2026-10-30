@@ -194,6 +194,7 @@ export class Frame implements OnInit {
   // A count from a failed re-read may be old: none is shown until it reads again.
   protected readonly counts = computed<Counts>(() => ({
     garagesWaiting: this.adminOverview?.waiting(),
+    reportsPending: this.adminOverview?.pending(),
     requestsWaiting: this.requests?.stale()
       ? undefined
       : this.requests?.total(),

@@ -1,5 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { signal } from '@angular/core';
+import {
+  createEnvironmentInjector,
+  EnvironmentInjector,
+  signal,
+} from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { EventKind } from '@motor-fix/contracts';
 import {
@@ -524,4 +528,82 @@ describe('GarageRequestsFeed: the quotes sent', () => {
     expect(feed.quoted()).toBeUndefined();
     expect(feed.quotedLoading()).toBe(false);
   });
+});
+
+// @traces 1316-FR-001 1316-FR-002
+describe('GarageRequestsFeed: opened again', () => {
+  // The feed lives as long as the dashboard's frame: a return builds a new one.
+  const reopened = () =>
+    createEnvironmentInjector(
+      [GarageRequestsFeed],
+      TestBed.inject(EnvironmentInjector),
+    ).get(GarageRequestsFeed);
+  const lists = () =>
+    start({
+      closed: [listOf([requestRow({ id: 'req-c' })])],
+      quoted: [listOf([quotedRow()])],
+    });
+
+  it('shows the waiting, quoted and closed rows at once and reads none again within 30 s', async () => {
+    await lists();
+
+    const again = reopened();
+
+    expect(again.loading()).toBe(false);
+    expect(again.rows()?.map((row) => row.id)).toEqual(['req-1']);
+    expect(again.quoted()?.map((row) => row.id)).toEqual(['req-q1']);
+    expect(again.closed()?.map((row) => row.id)).toEqual(['req-c']);
+    await settle();
+    expect(reads('waiting')).toHaveLength(1);
+    expect(reads('quoted')).toHaveLength(1);
+    expect(reads('closed')).toHaveLength(1);
+  });
+
+  it('reads each list again once past 30 s, showing the held rows meanwhile', async () => {
+    const begun = Date.now();
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(begun);
+    try {
+      await lists();
+      clock.mockReturnValue(begun + 30_000);
+
+      const again = reopened();
+
+      expect(again.rows()?.map((row) => row.id)).toEqual(['req-1']);
+      await settle();
+      expect(reads('waiting')).toHaveLength(2);
+      expect(reads('quoted')).toHaveLength(2);
+      expect(reads('closed')).toHaveLength(2);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+});
+
+// @traces 346-FR-004
+describe('GarageRequestsFeed: what became of a quote sent', () => {
+  it.each<EventKind>([
+    'quote.closed',
+    'quote.expired',
+    'quote.changed',
+    'quote.withdrawn',
+    'booking.cancelled',
+    'booking.no_show_recorded',
+    'garage.suspended',
+    'quote.accepted',
+    'booking.lapsed',
+  ])(
+    'reads the quoted rows again on %s, so the outcome changes in place',
+    async (kind) => {
+      const before = quotedRow({ id: 'req-q1', outcome: 'waiting' });
+      const after = quotedRow({ id: 'req-q1', outcome: 'chose_other' });
+      const feed = await start({ quoted: [listOf([before]), listOf([after])] });
+
+      live.emit(kind, 'req-q1');
+      await wait(400);
+      await settle();
+
+      expect(reads('quoted')).toHaveLength(2);
+      expect(feed.quoted()?.map((row) => row.outcome)).toEqual(['chose_other']);
+    },
+  );
 });

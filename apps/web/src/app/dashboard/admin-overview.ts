@@ -7,7 +7,7 @@ import {
   AdminService,
 } from '@motor-fix/data-access';
 
-import { liveResource } from './live';
+import { liveResource, REVIEW_QUEUE_KINDS } from './live';
 
 interface Choice {
   readonly city: string;
@@ -55,6 +55,7 @@ export class AdminOverview {
       'verification.check_recorded',
       'verification.decided',
       'verification.reopened',
+      ...REVIEW_QUEUE_KINDS,
     ],
   );
 
@@ -78,6 +79,14 @@ export class AdminOverview {
   // The menu's counter is the platform's, whatever the choice.
   readonly waiting = computed(() =>
     this.failed() ? undefined : this.overview.value()?.answer.garagesWaiting,
+  );
+  // The reported reviews waiting, and those past 48 hours: the platform's,
+  // whatever the choice.
+  readonly pending = computed(() =>
+    this.failed() ? undefined : this.overview.value()?.answer.reportsPending,
+  );
+  readonly overdue = computed(() =>
+    this.failed() ? undefined : this.overview.value()?.answer.reportsOverdue,
   );
   // The header's: the chosen city's, or the platform's for the whole country.
   readonly headerWaiting = computed(() =>

@@ -14,7 +14,7 @@ export type Area = 'driver' | 'garage' | 'admin';
 
 // The numbers a dashboard's menu entries carry, while known.
 export type Counts = Partial<
-  Record<'garagesWaiting' | 'requestsWaiting', number>
+  Record<'garagesWaiting' | 'reportsPending' | 'requestsWaiting', number>
 >;
 
 // `label` (the menu's) and `tab` (the bar's, shorter) are shell translation keys.
@@ -29,6 +29,9 @@ export interface DashboardView {
   // The header's own title and the line under it; absent, the label is the title.
   title?: string;
   subtitle?: string;
+  // The line under the title stays at body size from a tablet up, where
+  // other views read it at the small size (346-FR-005).
+  lead?: true;
   // Absent: every role of the area sees it.
   capability?: Capability;
   // The garage feature switch it needs; absent or on in the switches, shown.
@@ -120,10 +123,12 @@ export const DASHBOARDS: Record<
       },
       {
         capability: 'admin.reviews',
+        counter: 'reportsPending',
         label: 'shell.frame.nav.admin.reviews',
+        load: () =>
+          import('./admin-reviews/admin-reviews').then((m) => m.AdminReviews),
         path: 'reviews',
         tab: 'shell.frame.tab.reported',
-        unreleased: true,
       },
       {
         capability: 'admin.catalogue',
@@ -253,6 +258,7 @@ export const DASHBOARDS: Record<
       {
         ...garageView('requests', 'garage.requests'),
         counter: 'requestsWaiting',
+        lead: true,
         load: () =>
           import(
             './garage-requests/garage-requests-view/garage-requests-view'
