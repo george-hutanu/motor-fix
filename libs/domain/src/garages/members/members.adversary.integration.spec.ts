@@ -86,12 +86,12 @@ async function garage(name: string) {
   return { garage: g, owner };
 }
 
-async function staff(garageId: string) {
-  const desk = await account('desk', ['receptionist']);
+async function staff(garageId: string, of = '') {
+  const desk = await account(`${of}desk`, ['receptionist']);
   await prisma.garageMember.create({
     data: { accountId: desk, garageId, role: 'receptionist' },
   });
-  const fixer = await account('fixer', ['mechanic']);
+  const fixer = await account(`${of}fixer`, ['mechanic']);
   await prisma.mechanic.create({
     data: {
       accountId: fixer,
@@ -395,5 +395,153 @@ describe('staff 403 versus cross-garage 404 on garage routes', () => {
         );
         expect([route, role, res.status]).toEqual([route, role, 404]);
       }
+  });
+});
+
+// @traces 400-FR-001
+describe('the receptionist removal under hostile callers', () => {
+  const remove = (garageId: string, accountId: string, auth?: string) => {
+    const call = request(app.getHttpServer()).delete(
+      `/garages/${garageId}/members/${accountId}`,
+    );
+    return auth ? call.set('Authorization', auth) : call;
+  };
+  const still = (garageId: string, accountId: string) =>
+    prisma.garageMember.count({ where: { accountId, garageId } });
+
+  it('answers 401 sign_in_required without a session, even with a malformed id', async () => {
+    const a = await garage('Dinamo');
+    const s = await staff(a.garage.id);
+
+    const plain = await remove(a.garage.id, s.desk);
+    const malformed = await remove('not-a-uuid', 'nope');
+
+    expect([plain.status, plain.body.code]).toEqual([401, 'sign_in_required']);
+    expect([malformed.status, malformed.body.code]).toEqual([
+      401,
+      'sign_in_required',
+    ]);
+    expect(await still(a.garage.id, s.desk)).toBe(1);
+  });
+
+  it('answers 400 for either id not a uuid, before the owner check', async () => {
+    const a = await garage('Dinamo');
+    const s = await staff(a.garage.id);
+    const stranger = await account('stranger', ['driver']);
+
+    const answers = [
+      await remove('not-a-uuid', s.desk, bearer(a.owner, 'garage')),
+      await remove(a.garage.id, "x'--", bearer(a.owner, 'garage')),
+      await remove(a.garage.id, 'not-a-uuid', bearer(stranger, 'driver')),
+    ];
+
+    // The API's problem filter words a pipe's 400 validation_failed.
+    expect(answers.map((r) => r.status)).toEqual([400, 400, 400]);
+    expect(await still(a.garage.id, s.desk)).toBe(1);
+  });
+
+  it("answers 403 forbidden to the garage's own receptionist and mechanic, and removes nobody", async () => {
+    const a = await garage('Dinamo');
+    const s = await staff(a.garage.id);
+    const other = await account('other desk', ['receptionist']);
+    await prisma.garageMember.create({
+      data: { accountId: other, garageId: a.garage.id, role: 'receptionist' },
+    });
+
+    const desk = await remove(
+      a.garage.id,
+      other,
+      bearer(s.desk, 'receptionist'),
+    );
+    const self = await remove(
+      a.garage.id,
+      s.desk,
+      bearer(s.desk, 'receptionist'),
+    );
+    const mechanic = await remove(
+      a.garage.id,
+      s.desk,
+      bearer(s.fixer, 'mechanic'),
+    );
+
+    expect([desk, self, mechanic].map((r) => [r.status, r.body.code])).toEqual([
+      [403, 'forbidden'],
+      [403, 'forbidden'],
+      [403, 'forbidden'],
+    ]);
+    expect(await still(a.garage.id, other)).toBe(1);
+    expect(await still(a.garage.id, s.desk)).toBe(1);
+  });
+
+  it("answers 404 not_found to another garage's owner and staff, a driver and an admin, never 403", async () => {
+    const a = await garage('Dinamo');
+    const b = await garage('Nord');
+    const s = await staff(a.garage.id);
+    const t = await staff(b.garage.id, 'nord-');
+    const driver = await account('driver', ['driver']);
+    const admin = await account('admin', ['admin']);
+
+    const answers = {
+      admin: await remove(a.garage.id, s.desk, bearer(admin, 'admin')),
+      driver: await remove(a.garage.id, s.desk, bearer(driver, 'driver')),
+      otherDesk: await remove(
+        a.garage.id,
+        s.desk,
+        bearer(t.desk, 'receptionist'),
+      ),
+      otherMechanic: await remove(
+        a.garage.id,
+        s.desk,
+        bearer(t.fixer, 'mechanic'),
+      ),
+      otherOwner: await remove(a.garage.id, s.desk, bearer(b.owner, 'garage')),
+      unknownGarage: await remove(
+        randomUUID(),
+        s.desk,
+        bearer(a.owner, 'garage'),
+      ),
+    };
+
+    for (const [name, res] of Object.entries(answers)) {
+      expect([name, res.status, res.body.code]).toEqual([
+        name,
+        404,
+        'not_found',
+      ]);
+    }
+    expect(await still(a.garage.id, s.desk)).toBe(1);
+  });
+
+  it('answers the owner 404 for a receptionist of another garage and leaves her there', async () => {
+    const a = await garage('Dinamo');
+    const b = await garage('Nord');
+    const t = await staff(b.garage.id);
+
+    const res = await remove(a.garage.id, t.desk, bearer(a.owner, 'garage'));
+
+    expect([res.status, res.body.code]).toEqual([404, 'not_found']);
+    expect(await still(b.garage.id, t.desk)).toBe(1);
+  });
+
+  it('answers every refusal with the code and message the problem filter maps', async () => {
+    const a = await garage('Dinamo');
+    const s = await staff(a.garage.id);
+
+    const refusals = [
+      await remove(a.garage.id, s.desk),
+      await remove(a.garage.id, s.desk, bearer(s.fixer, 'mechanic')),
+      await remove(a.garage.id, a.owner, bearer(a.owner, 'garage')),
+      await remove(a.garage.id, s.fixer, bearer(a.owner, 'garage')),
+    ];
+
+    // The API's problem filter turns each into application/problem+json.
+    for (const res of refusals) {
+      expect(res.body).toEqual(
+        expect.objectContaining({
+          code: expect.any(String),
+          message: expect.any(String),
+        }),
+      );
+    }
   });
 });

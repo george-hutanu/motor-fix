@@ -9167,6 +9167,58 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/members/{accountId}": {
+      "delete": {
+        "operationId": "GarageMembersController_remove",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "accountId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "removed"
+          },
+          "400": {
+            "description": "an id is not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "owner_row: the owner's own row"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a receptionist from the garage, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/images/g/{owner}/{digest}/{file}": {
       "get": {
         "operationId": "getImageVariant",

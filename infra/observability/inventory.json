@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 251,
+    "count": 252,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1127,6 +1127,19 @@
       ],
       "reason": "each removal is audited (delete) and recorded as mechanic.removed in the same transaction; the STAFF_REMOVED e-mail and push go through the notifications pipeline, whose sends and failures its own entries count, and a failed send is logged as an error with the card id while the removal stays; a 409 owner_row is the rule working",
       "story": "ST-56"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-members-remove",
+      "source": "libs/domain/src/garages/members/members.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/members/:accountId",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each removal is audited (delete on member) and recorded as member.removed in the same transaction; the STAFF_REMOVED e-mail and push go through the notifications pipeline, whose sends and failures its own entries count, and a failed send is logged as an error with the account and garage ids while the removal stays; a 409 owner_row is the rule working",
+      "story": "ST-400"
     },
     {
       "kind": "endpoint",
