@@ -31,6 +31,7 @@ describe('the repository inventory', () => {
     },
   );
 
+  // @traces 346-FR-007
   repoIt('counts every OpenAPI operation and misses nothing', () => {
     expect(checkInventory(root)).toEqual([]);
   });

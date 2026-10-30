@@ -7,6 +7,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { CarsView } from './cars-view';
 import { AddCar } from '../add-car/add-car';
 import { RemoveCar } from '../remove-car/remove-car';
+import { heldForDriver } from '../resources/resources.testing';
 
 const car = (over: Partial<CarDto> = {}): CarDto => ({
   brandId: 'bmw',
@@ -39,6 +40,7 @@ async function render(cars: CarDto[]) {
     providers: [
       { provide: CarsService, useValue: { carsControllerList: list } },
       { provide: Overlays, useValue: { open } },
+      ...heldForDriver(),
       provideRouter([]),
     ],
   });

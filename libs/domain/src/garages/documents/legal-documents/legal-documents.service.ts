@@ -114,6 +114,57 @@ export class LegalDocumentsService {
     return created;
   }
 
+  // In the transaction of a sending after a rejection: each kind the copy
+  // holds pages of becomes the new file's document; each other kind the
+  // rejected file holds is carried onto the new file as a row of its own,
+  // with no event (no upload happened). The rejected file's rows stay as
+  // the decision left them.
+  async carry(
+    tx: Prisma.TransactionClient,
+    actor: VerificationActor,
+    from: { id: string },
+    to: { id: string; garageId: string },
+    documents: DraftDocuments | undefined,
+  ): Promise<LegalDocument[]> {
+    const created: LegalDocument[] = [];
+    for (const kind of DOCUMENT_KINDS) {
+      const document = documents?.[kind];
+      if (document?.pages.length) {
+        created.push(await this.add(tx, actor, to, kind, document, null));
+        continue;
+      }
+      const held = await tx.legalDocument.findFirst({
+        where: {
+          kind,
+          replacedAt: null,
+          status: 'valid',
+          verificationFileId: from.id,
+        },
+      });
+      if (!held) continue;
+      const row = await tx.legalDocument.create({
+        data: {
+          issuedOn: held.issuedOn,
+          kind,
+          pages: held.pages,
+          verificationFileId: to.id,
+        },
+      });
+      await this.audit.record(tx, {
+        action: 'create',
+        actorId: actor.accountId,
+        actorRole: actor.role,
+        garageId: to.garageId,
+        kind,
+        newValue: { carriedFrom: held.id, kind, pages: held.pages.length },
+        subjectId: row.id,
+        subjectType: 'legal_document',
+      });
+      created.push(row);
+    }
+    return created;
+  }
+
   // In the yearly upload's transaction: each document waits for an admin
   // beside the kind's valid one, which stays current until it is accepted.
   async renew(

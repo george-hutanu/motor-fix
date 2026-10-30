@@ -290,6 +290,7 @@ export class VerificationService {
     });
     await withChecks(tx, file.id);
     await this.announce(tx, file, 'verification.submitted');
+    if (newest) this.followed(file.id, newest.id, garageId);
     return this.autoApprove(tx, file);
   }
 
@@ -493,6 +494,16 @@ export class VerificationService {
     });
     this.told(fileId, actor, decision.outcome, reason, requestedItems);
     return file;
+  }
+
+  // A new file after a rejected one: its count, span attribute and log
+  // line, the ids alone.
+  private followed(fileId: string, rejectedId: string, garageId: string) {
+    countResubmission('rejected');
+    trace.getActiveSpan()?.setAttribute('verification.after', 'rejected');
+    this.logger.log(
+      `file ${fileId} follows rejected file ${rejectedId} garage ${garageId}`,
+    );
   }
 
   // A decision's count, span attributes and log line. The reason and the
@@ -707,7 +718,8 @@ export class VerificationService {
     await this.announce(tx, file, 'verification.submitted', {
       resubmission: true,
     });
-    countResubmission();
+    countResubmission('more_requested');
+    trace.getActiveSpan()?.setAttribute('verification.after', 'more_requested');
     this.logger.log(`file ${fileId} resent`);
     return this.autoApprove(tx, file);
   }

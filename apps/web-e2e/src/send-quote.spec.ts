@@ -140,7 +140,7 @@ test.describe('sending a quote @seeded', () => {
       .locator(`[data-live-id="${id}"]`);
     await expect(sent).toBeVisible({ timeout: 5_000 });
     await expect(waiting).toHaveCount(0, { timeout: 5_000 });
-    await expect(sent).toContainText('650–800 lei');
+    await expect(sent).toContainText('650 – 800 lei');
     await expect(sent).toContainText('mâine, 09:00');
     await expect(sent).toContainText('Așteaptă răspunsul clientului');
 

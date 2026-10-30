@@ -10,7 +10,8 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 
-import { Live, liveResource } from '../live';
+import { Live } from '../live';
+import { Resources } from '../resources/resources';
 import { Session } from '../session';
 
 // Every event that moves a row into, within or out of the garage's lists.
@@ -25,6 +26,13 @@ const CHANGES: readonly EventKind[] = [
   'quote.declined_by_driver',
   'booking.confirmed',
   'booking.lapsed',
+  'quote.closed',
+  'quote.expired',
+  'quote.changed',
+  'quote.withdrawn',
+  'booking.cancelled',
+  'booking.no_show_recorded',
+  'garage.suspended',
 ];
 
 // A toast's job: the first one, else the description's first line, shortened.
@@ -43,12 +51,19 @@ export class GarageRequestsFeed {
     () =>
       this.session.shown()?.capabilities?.includes('garage.requests') ?? false,
   );
-  private readonly waiting = liveResource(() => this.read('waiting'), CHANGES);
-  private readonly closedRows = liveResource(
+  private readonly resources = inject(Resources);
+  private readonly waiting = this.resources.live(
+    'garageWaiting',
+    () => this.read('waiting'),
+    CHANGES,
+  );
+  private readonly closedRows = this.resources.live(
+    'garageClosed',
     () => this.read('closed'),
     CHANGES,
   );
-  private readonly quotedRows = liveResource(
+  private readonly quotedRows = this.resources.live(
+    'garageQuoted',
     () => this.read('quoted'),
     CHANGES,
   );

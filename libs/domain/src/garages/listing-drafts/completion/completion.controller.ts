@@ -33,7 +33,7 @@ export class CompletionController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      "Open the copy of the owner's garage that answers a request for more, or the one already open",
+      "Open the copy of the owner's garage that answers a request for more or a rejection, or the one already open",
   })
   @ApiOkResponse({ type: CompletionCopyDto })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
@@ -43,7 +43,7 @@ export class CompletionController {
   @ApiNotFoundResponse({ description: 'not_found: no garage, or no file' })
   @ApiConflictResponse({
     description:
-      'verification_transition_refused, with currentStatus: the file asks for nothing more',
+      "verification_transition_refused, with currentStatus: the garage's newest file is neither more_requested nor rejected",
   })
   open(@CurrentActor() actor: Actor): Promise<CompletionCopyDto> {
     return this.completion.open(actor);

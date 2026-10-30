@@ -46,6 +46,7 @@ const detail = (over: Partial<GarageRequestDto> = {}): GarageRequestDto => ({
   expiresAt: new Date(Date.now() + 6 * 86_400_000 + 3_600_000).toISOString(),
   id: 'req-1',
   jobs: [job()],
+  outcome: null,
   quote: null,
   recipient: {
     answeredAt: null,
