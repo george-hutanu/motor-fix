@@ -156,11 +156,10 @@ export class Resources {
     const owner = this.owner();
     const generation = this.stamp();
     const next = await load();
-    if (
-      owner !== null &&
-      owner === this.owner() &&
-      generation === this.stamp()
-    ) {
+    // An owner change since the start, seen by the effect or here, moved the
+    // count; every sign-in waits on the network, so the effect sees a sign-out
+    // between it and the next sign-in of the same account.
+    if (owner !== null && generation === this.stamp()) {
       const slot = this.slots[type] as WritableSignal<
         Slot<Held[K]> | undefined
       >;
