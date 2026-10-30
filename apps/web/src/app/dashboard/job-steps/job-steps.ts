@@ -14,11 +14,15 @@ import {
   type JobDto,
   type JobStepDto,
 } from '@motor-fix/data-access';
-import { I18n, TranslatePipe } from '@motor-fix/i18n';
-import { injectOverlayTask, toProblem } from '@motor-fix/overlays';
+import { formatLei, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { injectOverlayTask, Overlays, toProblem } from '@motor-fix/overlays';
 import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
-import { JOB_KINDS, jobNames, jobStage } from '../jobs';
+import {
+  type FinalPriceData,
+  FinalPriceDialog,
+} from './final-price-dialog/final-price-dialog';
+import { finalPriceAction, JOB_KINDS, jobNames, jobStage } from '../jobs';
 import { liveResource } from '../live';
 import { Session } from '../session';
 import { Waiting } from '../waiting';
@@ -76,6 +80,7 @@ export class JobSteps {
   private readonly waiting = inject(Waiting);
   private readonly session = inject(Session);
   private readonly i18n = inject(I18n);
+  private readonly overlays = inject(Overlays);
   private readonly task = injectOverlayTask<{ id: string }, void>();
   private readonly id = this.task.data.id;
 
@@ -84,7 +89,8 @@ export class JobSteps {
     JOB_KINDS,
     () => this.id,
   );
-  protected readonly job = computed(() => this.view.value());
+  // The last read, or the job the final price dialog answered with.
+  protected readonly job = linkedSignal(() => this.view.value());
   // The steps as shown: the last read, with this person's writes on top.
   protected readonly steps = linkedSignal<JobStepDto[]>(
     () => this.view.value()?.steps ?? [],
@@ -104,6 +110,14 @@ export class JobSteps {
     const job = this.job();
     const role = this.session.current()?.role ?? '';
     return !!job && WRITERS.has(role) && !CLOSED.has(job.status);
+  });
+  // Predare, Corectează or nothing, judged again when the job or the session
+  // changes; a re-read on the next event drops a window that has closed.
+  protected readonly priceAction = computed(() => {
+    const job = this.job();
+    return job
+      ? finalPriceAction(job, this.session.current()?.role, new Date())
+      : null;
   });
   protected readonly doneCount = computed(
     () => this.steps().filter((s) => this.isDone(s)).length,
@@ -164,6 +178,33 @@ export class JobSteps {
 
   protected stage(job: JobDto) {
     return jobStage(job);
+  }
+
+  protected price(bani: number) {
+    return formatLei(bani, this.i18n.language());
+  }
+
+  // Opens the final price dialog over the drawer; the job it answers with is
+  // shown at once, without a re-read.
+  protected async recordPrice(action: 'handover' | 'correct') {
+    const job = this.job();
+    if (!job) return;
+    const answer = await this.overlays.open<JobDto, FinalPriceData>(
+      FinalPriceDialog,
+      {
+        data: {
+          jobId: job.id,
+          recorded: action === 'correct' ? job.finalPriceBani : null,
+          reread: () => this.view.reload(),
+        },
+        shape: 'dialog',
+        title:
+          action === 'handover'
+            ? 'garage.jobs.finalPrice.handover'
+            : 'garage.jobs.finalPrice.correctTitle',
+      },
+    );
+    if (answer && typeof answer === 'object') this.job.set(answer);
   }
 
   protected tick(step: JobStepDto) {

@@ -9,10 +9,22 @@
     <ul class="rows">
       @for (row of list; track row.id) {
         <li [attr.data-request]="row.id" tabindex="-1">
-          <p class="car">{{ row.car }}</p>
+          <div class="head">
+            <p class="car">{{ row.car }}</p>
+            @if (row.price; as price) {
+              <p class="amount" data-amount>
+                <span aria-hidden="true">{{ price }}</span>
+                <span class="sr-only">{{ 'driver.requests.finalPrice' | t: { price } }}</span>
+              </p>
+            }
+          </div>
           <p class="what">{{ row.what }}</p>
           <p class="meta">
-            <span class="status">{{ row.status }}</span>
+            @if (row.closedOn; as day) {
+              <span class="status">{{ 'driver.requests.closedOn' | t: { day } }}</span>
+            } @else {
+              <span class="status">{{ row.status }}</span>
+            }
             <span aria-hidden="true">·</span>
             <time>{{ row.when }}</time>
           </p>
