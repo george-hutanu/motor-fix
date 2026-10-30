@@ -276,7 +276,7 @@ describe('the layout event', () => {
 
 // @traces 1263-admin-dashboard-customise-FR-006
 describe('who may reach a layout', () => {
-  it.each(['driver', 'garage', 'mechanic', 'nobody'])(
+  it.each(['driver', 'mechanic', 'nobody'])(
     'answers 404 for the %s role',
     async (role) => {
       const { auth } = await admin(['admin', 'driver', 'garage']);
@@ -324,5 +324,119 @@ describe('who may reach a layout', () => {
     for (const res of [await read(auth), await read(auth, 'driver')]) {
       expect([res.status, res.body.code]).toEqual([403, 'account_suspended']);
     }
+  });
+});
+
+const GARAGE_KEYS = [
+  'kpi',
+  'now',
+  'req',
+  'load',
+  'sched',
+  'funnel',
+  'brands',
+  'reviews',
+];
+const GARAGE_DEFAULT = GARAGE_KEYS.map((key) => ({ key, visible: true }));
+const NO_SCHED = GARAGE_KEYS.map((key) => ({ key, visible: key !== 'sched' }));
+
+async function staff(role: 'garage' | 'receptionist' | 'mechanic') {
+  const id = await account(`${role}${randomUUID().slice(0, 8)}`, [role]);
+  return { auth: bearer(id, role), id };
+}
+
+// @traces 011-FR-001
+// @traces 011-FR-013
+describe('the garage roles layouts', () => {
+  it.each(['garage', 'receptionist', 'mechanic'] as const)(
+    'reads, saves and reads back the %s layout with the eight keys',
+    async (role) => {
+      const { auth } = await staff(role);
+
+      const first = await read(auth, role);
+      expect(first.status).toBe(200);
+      expect(first.body).toEqual({
+        panels: GARAGE_DEFAULT,
+        role,
+        updatedAt: null,
+      });
+
+      const saved = await save(auth, { panels: NO_SCHED }, role);
+      expect(saved.status).toBe(200);
+      expect(saved.body.panels).toEqual(NO_SCHED);
+
+      const back = await read(auth, role);
+      expect(back.body.panels).toEqual(NO_SCHED);
+      expect(back.body.role).toBe(role);
+    },
+  );
+
+  it('keeps a mechanic hiding sched as saved', async () => {
+    const { auth, id } = await staff('mechanic');
+    await save(
+      auth,
+      { panels: [{ key: 'sched', visible: false }] },
+      'mechanic',
+    );
+
+    const rows = await stored(id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].role).toBe('mechanic');
+    expect((await read(auth, 'mechanic')).body.panels).toEqual([
+      { key: 'sched', visible: false },
+      ...GARAGE_KEYS.filter((key) => key !== 'sched').map((key) => ({
+        key,
+        visible: true,
+      })),
+    ]);
+  });
+
+  it('never answers another account its garage layout', async () => {
+    const mine = await staff('receptionist');
+    const theirs = await staff('garage');
+    await save(mine.auth, { panels: NO_SCHED }, 'receptionist');
+
+    expect((await read(theirs.auth, 'garage')).body).toEqual({
+      panels: GARAGE_DEFAULT,
+      role: 'garage',
+      updatedAt: null,
+    });
+    expect(await stored(theirs.id)).toEqual([]);
+  });
+
+  it.each([
+    ['an admin key', 'numbers'],
+    ['a key outside the eight', 'own'],
+  ])('refuses %s with 400', async (_, key) => {
+    const { auth, id } = await staff('garage');
+    const res = await save(
+      auth,
+      { panels: [{ key, visible: false }] },
+      'garage',
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('validation_failed');
+    expect(await stored(id)).toEqual([]);
+  });
+
+  it('still answers 404 to a driver', async () => {
+    const id = await account(`sofer${randomUUID().slice(0, 8)}`, ['driver']);
+    const auth = bearer(id, 'driver');
+
+    for (const res of [
+      await read(auth, 'driver'),
+      await save(auth, { panels: [] }, 'driver'),
+      await read(auth, 'garage'),
+    ]) {
+      expect([res.status, res.body.code]).toEqual([404, 'not_found']);
+    }
+  });
+
+  it('writes the layout event for a garage role save', async () => {
+    const { auth } = await staff('garage');
+    await save(auth, { panels: NO_SCHED }, 'garage');
+
+    expect(await events()).toHaveLength(1);
   });
 });

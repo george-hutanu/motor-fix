@@ -50,6 +50,8 @@ const OPEN = [
   'POST /api/v1/auth/sign-in',
   'POST /api/v1/auth/sign-out',
   'POST /api/v1/auth/sign-up',
+  // Refusing an assistant's action only writes the decision.
+  'POST /api/v1/me/assistant/approvals/00000000-0000-4000-8000-000000000000/refuse',
 ];
 
 const SOME_ID = '00000000-0000-4000-8000-000000000000';

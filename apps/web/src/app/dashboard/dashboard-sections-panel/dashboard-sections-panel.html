@@ -1,0 +1,26 @@
+<p class="line">{{ text.line | t }}</p>
+<ol>
+  @for (row of rows(); track row.key) {
+    <li data-row [attr.data-off]="row.shown ? null : ''">
+      <span class="position">{{ row.position }}</span>
+      <span class="text">
+        <span class="name" aria-hidden="true">{{ row.name }}</span>
+        <span class="description" [id]="'sections-panel-' + row.key">{{ row.description }}</span>
+      </span>
+      <hlm-switch
+        #control
+        [checked]="row.shown"
+        [disabled]="pending().has(row.key)"
+        [aria-label]="row.name"
+        [aria-describedby]="'sections-panel-' + row.key"
+        (checkedChange)="flip(row.key, $event, control)"
+      />
+    </li>
+  }
+</ol>
+@if (failed()) {
+  <p role="alert" class="error">{{ text.saveFailed | t }}</p>
+}
+<div class="actions">
+  <button hlmBtn type="button" (click)="task.close('done')">{{ text.done | t }}</button>
+</div>
