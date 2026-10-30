@@ -266,11 +266,13 @@ describe('a row’s state, the edges', () => {
   const awaiting = {
     cancelledBySide: null,
     confirmBy: '2026-10-18T10:00:00.000Z',
+    finalPriceBani: null,
     garage: {
       id: 'garage-1',
       name: 'Service Auto Militari',
       slug: 'service-auto-militari',
     },
+    handedOverAt: null,
     id: 'booking-1',
     jobStarted: false,
     lateCancellation: false,
@@ -306,11 +308,13 @@ describe('a row’s state, the edges', () => {
       const booking = {
         cancelledBySide: null,
         confirmBy: '2026-10-18T10:00:00.000Z',
+        finalPriceBani: null,
         garage: {
           id: 'garage-1',
           name: 'Service Auto Militari',
           slug: 'service-auto-militari',
         },
+        handedOverAt: null,
         id: 'booking-1',
         jobStarted: false,
         lateCancellation: false,
@@ -359,11 +363,13 @@ describe('the request the overview shows, the edges', () => {
           booking: {
             cancelledBySide: null,
             confirmBy: '2026-10-18T10:00:00.000Z',
+            finalPriceBani: null,
             garage: {
               id: 'garage-1',
               name: 'Service Auto Militari',
               slug: 'service-auto-militari',
             },
+            handedOverAt: null,
             id: 'booking-1',
             jobStarted: false,
             lateCancellation: false,
@@ -511,11 +517,13 @@ describe('a row’s state, more edges', () => {
     const booking = {
       cancelledBySide: null,
       confirmBy: '2026-10-18T10:00:00.000Z',
+      finalPriceBani: null,
       garage: {
         id: 'garage-1',
         name: 'Service Auto Militari',
         slug: 'service-auto-militari',
       },
+      handedOverAt: null,
       id: 'booking-1',
       jobStarted: false,
       lateCancellation: false,
@@ -535,11 +543,13 @@ describe('the request the overview shows, more edges', () => {
         booking: {
           cancelledBySide: null,
           confirmBy: '2026-10-18T10:00:00.000Z',
+          finalPriceBani: null,
           garage: {
             id: 'garage-1',
             name: 'Service Auto Militari',
             slug: 'service-auto-militari',
           },
+          handedOverAt: null,
           id: 'booking-1',
           jobStarted: false,
           lateCancellation: false,
@@ -560,11 +570,13 @@ describe('the request the overview shows, more edges', () => {
         booking: {
           cancelledBySide: null,
           confirmBy: '2026-10-18T10:00:00.000Z',
+          finalPriceBani: null,
           garage: {
             id: 'garage-1',
             name: 'Service Auto Militari',
             slug: 'service-auto-militari',
           },
+          handedOverAt: null,
           id: 'booking-1',
           jobStarted: false,
           lateCancellation: false,
@@ -593,11 +605,13 @@ describe('the request the overview shows, more edges', () => {
         booking: {
           cancelledBySide: null,
           confirmBy: '2026-10-18T10:00:00.000Z',
+          finalPriceBani: null,
           garage: {
             id: 'garage-1',
             name: 'Service Auto Militari',
             slug: 'service-auto-militari',
           },
+          handedOverAt: null,
           id: 'booking-1',
           jobStarted: false,
           lateCancellation: false,
