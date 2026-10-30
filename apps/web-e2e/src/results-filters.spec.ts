@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 import { ready } from './accounts.js';
+import { violations } from './axe.js';
 import { deleteBrand } from './delete-brand.js';
 import { test } from './fixtures.js';
 
@@ -12,7 +13,7 @@ import { test } from './fixtures.js';
 // API's verdict on its own clock, so the seed holds at any instant but a legal
 // holiday, when the calendar closes every garage: then the file asserts that
 // verdict, the filtered empty state, instead of the open garage.
-// @traces 1398-FR-001 1398-FR-002 1398-FR-003 1398-FR-004 1398-FR-006 1398-FR-007 1398-FR-009 1398-FR-010 1398-FR-011 1398-FR-015
+// @traces 1398-FR-001 1398-FR-002 1398-FR-003 1398-FR-004 1398-FR-006 1398-FR-007 1398-FR-009 1398-FR-010 1398-FR-011 1398-FR-014 1398-FR-015
 test.describe('filtering the Results page @seeded @database', () => {
   test.describe.configure({ mode: 'serial' });
 
@@ -170,6 +171,40 @@ test.describe('filtering the Results page @seeded @database', () => {
     await expect(cards(page)).toHaveCount(1);
     await expect(cards(page).first()).toHaveText(`Departe ${stamp}`);
   });
+
+  // The controls the QA sweep cannot reach without a place: the button, the
+  // chips, the filtered summary and the open panel pass axe at 320 px.
+  for (const colorScheme of ['light', 'dark'] as const) {
+    test(`the filter controls pass axe at 320 px, ${colorScheme}`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+      await page.setViewportSize({ height: 800, width: 320 });
+      await ready(page, opened(first, '&open_now=1&open_saturday=1'));
+      await expect(chip(page, 'Deschis sâmbăta')).toBeAttached();
+      await expect(page.locator('.summary .tally')).toContainText(
+        'cu filtrele alese',
+      );
+      const named = (found: Awaited<ReturnType<typeof violations>>) =>
+        found.map((v) => `${v.id} (${v.nodes.length})`);
+
+      expect(
+        named(
+          await violations(page, {}, { include: [['.intro'], ['.brands']] }),
+        ),
+      ).toEqual([]);
+
+      await opener(page).click();
+      await expect(
+        page.getByRole('switch', { name: 'Deschis sâmbăta' }),
+      ).toBeVisible();
+      expect(
+        named(
+          await violations(page, {}, { include: [['.cdk-overlay-container']] }),
+        ),
+      ).toEqual([]);
+    });
+  }
 
   // The chip row holds at 320 px without a sideways scroll.
   test('holds both chips at 320 px with no sideways scroll', async ({
