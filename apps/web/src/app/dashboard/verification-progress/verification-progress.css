@@ -13,6 +13,16 @@ p {
   gap: var(--mf-space-2);
   min-width: 0;
 }
+/* The Cockpit primary label is 318 px for "Corectează listarea" at 16 px,
+   wider than its button on a 320 or 390 px phone: smaller, less tracked and
+   less inset there, it fits on one line (254 px of the 262 px at 320). */
+@media (width < 480px) {
+  .correct {
+    padding-inline: var(--mf-space-3);
+    font-size: var(--mf-size-small);
+    letter-spacing: min(var(--mf-label-tracking), 0.5vw);
+  }
+}
 .failed {
   display: grid;
   justify-items: start;

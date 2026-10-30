@@ -17,7 +17,7 @@
     }
     @if (file.status === 'rejected') {
       <div class="actions">
-        <button hlmBtn type="button" (click)="complete()">{{ 'garage.verification.correct' | t }}</button>
+        <button hlmBtn class="correct" type="button" (click)="complete()">{{ 'garage.verification.correct' | t }}</button>
         <button hlmBtn variant="secondary" type="button" (click)="contact()">{{ 'garage.verification.contact' | t }}</button>
       </div>
     }

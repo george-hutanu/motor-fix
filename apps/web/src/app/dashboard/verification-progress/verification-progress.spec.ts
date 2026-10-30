@@ -741,4 +741,29 @@ describe('the verification page, on a rejection', () => {
 
     expect(sheet).toMatch(/\.actions \{[^}]*flex-wrap: wrap/);
   });
+
+  // The Cockpit primary label (Michroma, uppercase, tracked) is 318 px for
+  // "Corectează listarea" at 16 px: wider than its button on a 320 or 390 px
+  // phone. At 13 px with its tracking narrowed and a 12 px inset it is 254 px,
+  // inside the 262 px a 320 px phone leaves it, so it stays on one line.
+  // @traces 1401-FR-001 1401-FR-003
+  it('keeps the correct label on one line on a phone', async () => {
+    api.verificationStatusControllerRead.mockResolvedValue(rejected('rar'));
+    const { host } = await render();
+    expect(button(host, CORRECT.ro)?.classList.contains('correct')).toBe(true);
+
+    const sheet = readFileSync(
+      join(__dirname, 'verification-progress.css'),
+      'utf8',
+    );
+    const phone =
+      /@media \(width < 480px\) \{\s*\.correct \{([^}]*)\}\s*\}/.exec(
+        sheet,
+      )?.[1] ?? '';
+    expect(phone).toMatch(/font-size: var\(--mf-size-small\)/);
+    expect(phone).toMatch(/padding-inline: var\(--mf-space-3\)/);
+    expect(phone).toMatch(
+      /letter-spacing: min\(var\(--mf-label-tracking\), 0\.5vw\)/,
+    );
+  });
 });
