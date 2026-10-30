@@ -813,6 +813,24 @@ describe('seed of the listed garages', () => {
     expect(ticked('dacia')).toEqual(['oil-service']);
   });
 
+  // @traces 1247-FR-003
+  it("ticks a brand only for a job on its garage's price list, so an owner's brands save back as they are", async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const unpriced = await prisma.$queryRaw<{ slug: string; key: string }[]>`
+      SELECT DISTINCT g.slug, j.key
+      FROM garage_brand_job t
+      JOIN garage g ON g.id = t.garage_id
+      JOIN job_type j ON j.id = t.job_type_id
+      WHERE NOT EXISTS (
+        SELECT 1 FROM garage_price p
+        WHERE p.garage_id = t.garage_id AND p.job_type_id = t.job_type_id
+      )
+      ORDER BY g.slug, j.key`;
+    expect(unpriced).toEqual([]);
+  });
+
   // @traces 389-FR-020
   it('gives Service Auto Militari two lifts, so a booking there can be confirmed on one', async () => {
     expect(seed('test').status).toBe(0);

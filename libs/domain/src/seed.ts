@@ -988,6 +988,21 @@ async function quoteable(db: Client) {
      ON CONFLICT DO NOTHING`,
   );
   await priceList(db);
+  // A brand is ticked only for a job on the garage's price list (1247-FR-003),
+  // so a garage ticked for a job its list lacks gets that job priced, at the
+  // range Service Auto Militari asks, saved by its owner (a garage with no
+  // owner account by the seed's own, as the price list above).
+  await db.query(
+    `INSERT INTO garage_price (id, garage_id, job_type_id, from_bani, to_bani, duration_minutes, position, updated_at, updated_by)
+     SELECT gen_random_uuid(), t.garage_id, t.job_type_id, 25000, 40000, 60, 0, now(), COALESCE(m.account_id, a.id)
+     FROM (SELECT DISTINCT garage_id, job_type_id FROM garage_brand_job) t
+     JOIN account a ON a.email = 'militari@example.test'
+     LEFT JOIN garage_member m ON m.garage_id = t.garage_id AND m.role = 'owner'
+     WHERE NOT EXISTS (
+       SELECT 1 FROM garage_price p
+       WHERE p.garage_id = t.garage_id AND p.job_type_id = t.job_type_id
+     )`,
+  );
   await dinamoForms(db);
 }
 
