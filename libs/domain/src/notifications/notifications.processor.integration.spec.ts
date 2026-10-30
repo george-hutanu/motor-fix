@@ -837,6 +837,8 @@ describe('through the queue', () => {
       await service.notify({
         eventId: 'evt-q',
         kind: 'JOB_READY',
+        // The values the job-stage fan-out sends (ST-277).
+        params: { garage: QUOTE.garage, link: QUOTE.link },
         recipients: [andrei],
       });
       let row = (await emailRows(andrei))[0];
