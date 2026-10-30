@@ -130,6 +130,11 @@ describe('GET /search/garages/pins', () => {
     ['a repeated box', { bbox: [BBOX, BBOX], brand: 'dacia' }],
     ['ids, which only the list reads', { brand: 'dacia', ids: randomUUID() }],
     ['log, which only the list reads', { brand: 'dacia', log: '1' }],
+    ['a price ceiling of 175', { brand: 'dacia', max_price: '175' }],
+    ['a price ceiling of 200.0', { brand: 'dacia', max_price: '200.0' }],
+    ['a minimum rating of 4', { brand: 'dacia', min_rating: '4' }],
+    ['a card value of true', { brand: 'dacia', card: 'true' }],
+    ['a repeated card', { brand: 'dacia', card: ['1', '1'] }],
   ])('answers 400 to %s', async (_, query) => {
     expect((await pins(query)).status).toBe(400);
   });
@@ -195,5 +200,18 @@ describe('counting the pins reads', () => {
     await pins({ bbox: '1,2,3,4', brand: 'dacia' }).expect(400);
 
     expect(await total()).toBe(before);
+  });
+});
+
+// @traces 1261-FR-007
+describe('GET /search/garages/pins with filters', () => {
+  it('marks whether each pin meets the filters and counts the matches', async () => {
+    const res = await pins({ brand: 'dacia', max_price: '150', near: NEAR });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      pins: [{ ...PIN(), matches: false }],
+      total: 0,
+    });
   });
 });

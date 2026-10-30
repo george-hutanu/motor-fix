@@ -28,6 +28,7 @@ features:
   - 385-share-garage-link
   - 1193-fast-nav
   - 1260-open-now-filters
+  - 1261-result-filters
 ---
 
 # Capability: Garage search
@@ -59,6 +60,14 @@ _From 1260-open-now-filters._
 ### 1260-FR-009 — The cursor MUST be bound to the filters it was made under: a cursor presented with another combination of `open_now` and `open_saturday` (one added, one removed) MUST be refused as `invalid_cursor`, as for another sort, brand, group or box (328-FR-006 otherwise unchanged; the cursor stays opaque and unsigned). A cursor made with no filter stays valid with none, so a page read before this story continues unchanged.
 
 _From 1260-open-now-filters._
+
+### 1261-FR-006 — `total`, `counts.worksOn` and `counts.doesNotTake` MUST count the matching garages only, over every garage found, not over the page (043-FR-005 otherwise unchanged); with no match all three are zero and the list is empty, with no error.
+
+_From 1261-result-filters._
+
+### 1261-FR-009 — The cursor MUST be bound to the filters it was made under: a cursor presented with another combination of `max_price`, `min_rating` and `card` (one added, one removed or one changed) MUST be refused as `invalid_cursor`, as for another sort, brand, group or box (328-FR-006 otherwise unchanged; the cursor stays opaque and unsigned). A cursor made with no filter stays valid with none, so a page read before this story continues unchanged.
+
+_From 1261-result-filters._
 
 ### 328-FR-003 — `rating` MUST keep today's order inside each group (267-FR-001): rating high to low with unrated garages after every rated one, then more reviews first, then name A to Z, then id; the rating is the stored one-decimal value (`Decimal(2,1)`), so the order key and the card's number are the same.
 
@@ -140,6 +149,10 @@ _From 267-brand-results._
 
 _From 1260-open-now-filters._
 
+### 1261-FR-008 — The three filters MUST be part of the cache key of a page and of the pins (269-FR-019's key, 267-FR-009's rules otherwise unchanged): a filtered answer is never served for another combination of filters, and every entry is dropped on the same public garage events and expires in the same 60 seconds.
+
+_From 1261-result-filters._
+
 ### 267-FR-010 — Every cached answer MUST be dropped when a public garage change passes through the API (an approval, suspension, restoration, `garage.updated`, a brand-stance change or a review kind), so a count or card read after it is fresh; 60 seconds is the longest an entry lives either way.
 
 _From 267-brand-results._
@@ -195,6 +208,10 @@ _From 1169-prefetch-intent._
 ### 1260-FR-007 — The pins answer MUST carry every garage the search finds, as today, each pin with a `matches` boolean: true when the garage meets every set filter, always true with no filter; its `total` MUST equal the list's `total` for the same parameters computed at the same instant (a live difference inside the 60 s cache life is FR-008's stale window), so the matches only (269-FR-002 otherwise unchanged: the pin's fields, the 500 cap by nearness, the mobile mechanic's rounded centre). A garage with no position has no pin: with no place and no box, the list and the `total` still count a matching one (as 269-FR-002 counted it with no filter), so there the matching pins number `total` less those garages; with a place or a box no such garage is found, and under the cap the matching pins number exactly `total`.
 
 _From 1260-open-now-filters._
+
+### 1261-FR-007 — The pins answer MUST carry every garage the search finds, as today, each pin with a new `matches` boolean: true when the garage meets every filter (always true with no filter); its `total` MUST equal the list's `total` for the same parameters, so the matches only (269-FR-002 otherwise unchanged: the pin's fields, the 500 cap by nearness, the mobile mechanic's rounded centre).
+
+_From 1261-result-filters._
 
 ### 269-FR-003 — The answer MUST hold at most 500 pins (`SEARCH_PINS_MAX`, a named constant in the contracts library); above that the 500 nearest the place, or the box's centre without a place, are answered and `total` still counts every garage found.
 
@@ -746,6 +763,42 @@ _From 1260-open-now-filters._
 
 _From 1260-open-now-filters._
 
+### 1261-FR-001 — Both `GET /api/v1/search/garages` (the list, with or without `ids`) and `GET /api/v1/search/garages/pins` MUST accept three optional filters: `max_price` with exactly one of the values `150`, `200`, `250`, `300` (whole lei an hour, the text as written, so `200.0` is not `200`), `min_rating` with exactly one of `3.5`, `4.0`, `4.5` (the text as written, so `4` is not `4.0`), and `card` with the value `1` only; any other value, an empty value (`max_price=`), a null, or a repeated key answers 400 `validation_failed`, and a filter left out does not filter. Validation runs before the cursor is read: a request with both a bad filter and a stale cursor answers `validation_failed`.
+
+_From 1261-result-filters._
+
+### 1261-FR-002 — With `max_price`, a garage MUST match only when its starting hourly labour rate is set and at or below the ceiling as the card shows it: the stored bani rounded to the leu half up (`Math.round(bani / 100)`, as the card and pin show it) at or below the ceiling, so the SQL compares `labour_from_bani < ceiling × 100 + 50`; a garage without a rate does not match.
+
+_From 1261-result-filters._
+
+### 1261-FR-003 — With `min_rating`, a garage MUST match only when its stored rating is set and at or above the minimum; a garage without reviews (no rating) does not match.
+
+_From 1261-result-filters._
+
+### 1261-FR-004 — With `card=1`, a garage MUST match only when it marked card payment.
+
+_From 1261-result-filters._
+
+### 1261-FR-005 — The filters MUST combine by AND, inside the one query the search runs, within each brand group; the groups and the chosen sort are kept (the garages that take the brand first, then those that refuse it or have not marked it, each in its sort's order), and a mobile mechanic is filtered like any garage. The list's items are the matches only.
+
+_From 1261-result-filters._
+
+### 1261-FR-010 — A filter change MUST write no search-log row: the row is written only for `log=1`, as today, and the filters are not part of the row; the web (title 2) sends `log=1` on a new search only, never on a filter change. A filtered first page with `log=1` counts as one search, as today; a first page carrying any filter without `log=1` increments neither the search counter nor the sort-change counter.
+
+_From 1261-result-filters._
+
+### 1261-FR-011 — The three parameters and `matches` MUST be documented in the OpenAPI document with DTOs from the contracts library, validated at the edge, and the web client regenerated from it; the routes stay public and the public routes list is unchanged.
+
+_From 1261-result-filters._
+
+### 1261-FR-012 — Jest on real PostgreSQL and Redis MUST cover: each filter alone, with and without a rate, with and without reviews, the exact boundaries of FR-002 and FR-003; AND across two and three filters; the groups and each sort kept; `total`, the counts and `matches` on the pins; the next page under filters and `invalid_cursor` for a cursor of other filters; `ids` mode; 400 for every other value of FR-001; no search-log row without `log=1` and one with it; the cache key telling the filter combinations apart. The DTO's validation is covered in the contracts library's unit tests.
+
+_From 1261-result-filters._
+
+### 1261-FR-013 — Observability: no new endpoint, service, queue or outside call; the existing search and pins counters and the latency histogram cover the filtered calls; the PR's Observability section states this.
+
+_From 1261-result-filters._
+
 ## Retired
 
 - `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
@@ -785,3 +838,7 @@ _From 1260-open-now-filters._
 - `269-FR-002` — superseded by `1260-FR-007` (2026-10-30)
 - `269-FR-019` — superseded by `1260-FR-008` (2026-10-30)
 - `328-FR-006` — superseded by `1260-FR-009` (2026-10-30)
+- `043-FR-005` — superseded by `1261-FR-006` (2026-10-30)
+- `269-FR-002` — superseded by `1261-FR-007` (2026-10-30)
+- `269-FR-019` — superseded by `1261-FR-008` (2026-10-30)
+- `328-FR-006` — superseded by `1261-FR-009` (2026-10-30)

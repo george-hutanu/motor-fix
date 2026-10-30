@@ -23,9 +23,13 @@ import {
   parseBbox,
   SEARCH_BBOX_MAX_KM,
   SEARCH_IDS_MAX,
+  SEARCH_MIN_RATINGS,
   SEARCH_PINS_MAX,
+  SEARCH_PRICE_CEILINGS,
   SEARCH_RADII,
   SEARCH_SORTS,
+  type SearchMinRating,
+  type SearchPriceCeiling,
   type SearchRadius,
   type SearchSort,
 } from './search-place';
@@ -152,6 +156,38 @@ export class GaragePinsQueryDto extends NearQueryDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsIn(['1'])
   open_saturday?: '1';
+
+  @ApiPropertyOptional({
+    description:
+      'The most a garage may charge an hour, in whole lei, as its card shows the rate; a garage with no rate is left out',
+    enum: SEARCH_PRICE_CEILINGS,
+    type: 'integer',
+  })
+  // Only the digits as written: Number() would also read "200.0" or "2e2"
+  // as 200, and IsOptional would let a null through.
+  @ValidateIf((_, value) => value !== undefined)
+  @Transform(({ value }) =>
+    SEARCH_PRICE_CEILINGS.map(String).includes(value) ? Number(value) : value,
+  )
+  @IsIn(SEARCH_PRICE_CEILINGS)
+  max_price?: SearchPriceCeiling;
+
+  @ApiPropertyOptional({
+    description:
+      'The least rating a garage must have; a garage with no reviews is left out',
+    enum: SEARCH_MIN_RATINGS,
+  })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(SEARCH_MIN_RATINGS)
+  min_rating?: SearchMinRating;
+
+  @ApiPropertyOptional({
+    description: 'Only the garages that take a card',
+    enum: ['1'],
+  })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['1'])
+  card?: '1';
 }
 
 export class GarageSearchQueryDto extends GaragePinsQueryDto {

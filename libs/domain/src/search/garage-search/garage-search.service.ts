@@ -48,11 +48,11 @@ interface Cursor {
   b: string;
   c: number;
   d?: number;
+  f?: string;
   g: (typeof GROUPS)[number];
   i: string;
   p?: number | null;
   r: string | null;
-  f?: string;
   s: SearchSort;
   x?: string;
 }
@@ -222,10 +222,13 @@ const takes = (brandId: string | string[]) => Prisma.sql`EXISTS (
 // intervals (start included, end not), today neither a legal holiday nor one
 // of the garage's closed days. Open on Saturday reads the weekly hours only.
 // The CASE guards keep a stored value that is not a list from failing the
-// statement; such a day matches nothing.
+// statement; such a day matches nothing. The price ceiling reads the rate as
+// a card shows it, rounded to the leu; the rating is at least the minimum;
+// card is card payment. A garage with no rate or no rating fails the filter
+// on it.
 export function filterSql(filters?: SearchFilters): Prisma.Sql {
   const conditions: Prisma.Sql[] = [];
-  const { openNow, saturday } = filters ?? {};
+  const { card, maxPrice, minRating, openNow, saturday } = filters ?? {};
   if (openNow) {
     const { day, time, weekday } = openNow;
     conditions.push(Prisma.sql`EXISTS (
@@ -247,6 +250,16 @@ export function filterSql(filters?: SearchFilters): Prisma.Sql {
         THEN jsonb_array_length(garage.hours -> 'sat') > 0
       ELSE FALSE END`);
   }
+  if (maxPrice !== undefined) {
+    conditions.push(Prisma.sql`(garage.labour_from_bani IS NOT NULL
+      AND garage.labour_from_bani < ${maxPrice * 100 + 50})`);
+  }
+  if (minRating !== undefined) {
+    conditions.push(
+      Prisma.sql`(garage.rating IS NOT NULL AND garage.rating >= ${minRating}::numeric)`,
+    );
+  }
+  if (card) conditions.push(Prisma.sql`garage.payment_card`);
   return conditions.length === 0
     ? Prisma.sql`TRUE`
     : Prisma.sql`(${Prisma.join(conditions, ' AND ')})`;
@@ -515,8 +528,8 @@ export class GarageSearchService {
   }
 
   // The cards a page already shows, read again: the public ones among the
-  // ids, in the search's order and with its counts. Not a search of its own,
-  // so it is never counted.
+  // ids meeting the filters, in the search's order and with its counts.
+  // Not a search of its own, so it is never counted.
   async byIds(
     key: BrandKey,
     ids: string[],
