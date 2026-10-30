@@ -6,7 +6,7 @@ import { PRISMA } from '../../auth/prisma';
 import { publishLive } from '../../events/live/live.hub';
 import type { PrismaClient } from '../../generated/prisma/client';
 import { countJobLock } from '../job-lock/job-lock.metrics';
-import { type HeldLock, lockKey } from '../job-lock/job-lock.service';
+import { lockKey, parseHeld } from '../job-lock/job-lock.service';
 
 const KEYS = 'job:lock:*';
 
@@ -80,9 +80,8 @@ export class JobLockSweep {
       );
       cursor = next;
       for (const key of keys) {
-        const stored = await this.redis.get(key);
-        if (!stored) continue;
-        const held: HeldLock = JSON.parse(stored);
+        const held = parseHeld(await this.redis.get(key));
+        if (!held) continue;
         await this.prisma.job.updateMany({
           data: {
             lockHolderId: held.holderId,

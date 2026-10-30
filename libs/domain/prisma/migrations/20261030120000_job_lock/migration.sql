@@ -1,9 +1,11 @@
+CREATE TYPE "job_lock_holder_role" AS ENUM ('owner', 'receptionist', 'mechanic');
+
 -- The job's version for a change based on a stale read, and the mirror of
 -- its Redis edit lock with the last forced unlock.
 ALTER TABLE "job"
     ADD COLUMN "updated_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ADD COLUMN "lock_holder_id" UUID,
-    ADD COLUMN "lock_holder_role" TEXT,
+    ADD COLUMN "lock_holder_role" "job_lock_holder_role",
     ADD COLUMN "lock_since" TIMESTAMPTZ(3),
     ADD COLUMN "lock_last_change_at" TIMESTAMPTZ(3),
     ADD COLUMN "lock_forced_by_id" UUID,

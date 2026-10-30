@@ -1,8 +1,11 @@
 import { Redis } from 'ioredis';
 
+import { AUTH_REDIS } from '../../auth/attempts';
+import { PRISMA } from '../../auth/prisma';
+import type { PrismaClient } from '../../generated/prisma/client';
 import { quotesApp } from '../../quotes/quotes-api.testing';
 
-const { bearer, get, send, team, world } = quotesApp();
+const { bearer, get, provider, send, team, world } = quotesApp();
 const { prisma } = world;
 
 const redisUrl = process.env['REDIS_URL'] ?? 'redis://localhost:6379';
@@ -447,6 +450,25 @@ describe('a job-changing request', () => {
     expect((await reread(s.job.id)).status).toBe('to_do');
   });
 
+  it('ends the lock and its copy on a step tick that changes nothing', async () => {
+    const s = await setting();
+    await send('post', `/garage/jobs/${s.job.id}/start`, s.hand);
+    const step = await add(s.job.id, s.hand, 'Placute verificate');
+    const tick = `/garage/jobs/${s.job.id}/steps/${step.body.id}/done`;
+    await send('put', tick, s.hand, { done: true });
+    await take(s.lock, s.hand);
+    const { updatedAt } = await reread(s.job.id);
+
+    const res = await send('put', tick, s.hand, { done: true });
+
+    expect(res.status).toBe(200);
+    expect(await keys.exists(`job:lock:${s.job.id}`)).toBe(0);
+    expect(await reread(s.job.id)).toMatchObject({
+      lockHolderId: null,
+      updatedAt,
+    });
+  });
+
   it('takes and releases the lock around a one-tap change', async () => {
     const s = await setting();
     const { updatedAt } = await reread(s.job.id);
@@ -495,5 +517,65 @@ describe('a job-changing request', () => {
     expect(res.status).toBe(409);
     expect(await keys.exists(`job:lock:${s.job.id}`)).toBe(1);
     expect((await reread(s.job.id)).lockHolderId).toBe(s.dinamo.plain);
+  });
+});
+
+// @traces 395-FR-001 395-FR-003 395-FR-004
+describe('with the lock store unreachable', () => {
+  const down = () => Promise.reject(new Error('connect ECONNREFUSED'));
+  let store: Redis;
+
+  beforeEach(() => {
+    store = provider<Redis>(AUTH_REDIS);
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('answers a take 503 try_again and mirrors nothing', async () => {
+    const s = await setting();
+    jest.spyOn(store, 'set').mockImplementation(down);
+
+    const res = await take(s.lock, s.hand);
+
+    expect([res.status, res.body.code]).toEqual([503, 'try_again']);
+    expect((await reread(s.job.id)).lockHolderId).toBeNull();
+  });
+
+  it('gives the key back and answers 503 when the job’s copy is not written', async () => {
+    const s = await setting();
+    jest
+      .spyOn(provider<PrismaClient>(PRISMA).job, 'update')
+      .mockRejectedValueOnce(new Error('connection terminated'));
+
+    const res = await take(s.lock, s.hand);
+
+    expect([res.status, res.body.code]).toEqual([503, 'try_again']);
+    expect(await keys.exists(`job:lock:${s.job.id}`)).toBe(0);
+  });
+
+  it('answers a release 503 try_again and keeps the lock', async () => {
+    const s = await setting();
+    await take(s.lock, s.hand);
+    jest.spyOn(store, 'eval').mockImplementation(down);
+
+    const res = await send('delete', s.lock, s.hand);
+
+    expect([res.status, res.body.code]).toEqual([503, 'try_again']);
+    expect((await reread(s.job.id)).lockHolderId).toBe(s.dinamo.plain);
+  });
+
+  it('answers a change 503 try_again and leaves the job as it was', async () => {
+    const s = await setting();
+    const before = await reread(s.job.id);
+    jest.spyOn(store, 'set').mockImplementation(down);
+
+    const res = await send('post', `/garage/jobs/${s.job.id}/start`, s.hand);
+
+    expect([res.status, res.body.code]).toEqual([503, 'try_again']);
+    const after = await reread(s.job.id);
+    expect([after.status, after.updatedAt]).toEqual([
+      before.status,
+      before.updatedAt,
+    ]);
   });
 });

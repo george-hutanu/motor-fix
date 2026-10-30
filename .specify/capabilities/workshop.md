@@ -14,6 +14,7 @@ features:
   - 406-final-price-handover
   - 1393-final-price-predare
   - 1395-block-time-dashboard
+  - 395-job-lock
 ---
 
 # Capability: Workshop
@@ -51,10 +52,6 @@ _From 424-job-steps._
 _From 424-job-steps._
 
 ### 424-FR-007 — A tick MUST set `done_at` = now and `done_by` = the caller; an untick MUST clear both. Ticking a ticked step or unticking an unticked one MUST change nothing and answer success, so a resent action is harmless.
-
-_From 424-job-steps._
-
-### 424-FR-008 — Every step write MUST run in one transaction that locks the job's row (as the stage moves do), judges the state and the rules against the locked row, writes the change, its audit entries and its event, so no change is saved without them and two simultaneous changes are applied one after the other.
 
 _From 424-job-steps._
 
@@ -206,9 +203,9 @@ _From 276-job-start-done._
 
 _From 276-job-start-done._
 
-### 276-FR-003 — Every stage move MUST run in one transaction that locks the job row, writes the status and its times (`started_at` on the first start and kept on a resume, `paused_at` on a pause, `finished_at` on finish), the stage entry, the audit entry (`job.status`, a key change) and the event, as the existing job mover does; the start MUST also move the request `booked` → `in_work` and the finish `in_work` → `done` through the request mover in the same transaction, with the request's own audit entry and no event of its own (the request mover's event goes to a no-op port, as the accept's request move does): the job's event is the one the tracker and Lucrări re-read on. When any part fails nothing is written.
+### 395-FR-004 — Every job-changing use case MUST take the lock before its transaction and release it after the commit, inside the one request: start, pause, resume, finish, receive, handover, final-price correction, and the step add, rename, reorder, tick, untick and remove. The caller's own open lock is used and released by the change (the lock lifts after each single change, decided 2026-10-03); a lock held by another person answers 423 `job_locked` as FR-001 does, after the access check (403/404) and before any state rule (409); a refused or failed change MUST release a lock the request itself took and MUST keep a lock the caller held before the request. Reads, photos, clips and messages need no lock. An AI assistant's tool reaches the same use case as the person it acts for and so meets the same rule.
 
-_From 276-job-start-done._
+_From 395-job-lock._
 
 ### 276-FR-005 — A start or a resume MUST, when the garage's `team_mechanics` switch is on (on when the garage has no row) and the job has a mechanic, pause in the same transaction every other `in_work` job of the same garage with the same `mechanic_id`, whoever pressed: each with a stage entry `auto` = true, an audit entry recorded as a platform move (actor role `system`, no account) and `job.paused` `{ from, to, auto: true }`; the triggering `job.started` or `job.resumed` MUST carry `pausedJobIds`, the ids it paused (empty when none). With the switch off nothing is paused, whatever the mechanic ids.
 
@@ -279,10 +276,6 @@ _From 406-final-price-handover._
 _From 406-final-price-handover._
 
 ### 406-FR-003 — `finalPriceBani` MUST be a whole number of bani from 1 to 100,000,000 (1.000.000 lei, the limit `PAID_BANI_MAX` the reviews already share), validated at the edge by the DTO in the contracts library; anything else, a missing field or an unknown key answers 400 `validation_failed` with the field named. VAT is included, as in the quote.
-
-_From 406-final-price-handover._
-
-### 406-FR-004 — A handover MUST run in one transaction that locks the job row, writes `final_price_bani`, `final_price_recorded_by` (the caller's account) and `handed_over_at` = now, moves the booking `confirmed` → `completed` through the existing booking mover (its `completed_at`, audit entry and event `booking.completed`, a new kind of the events list, as 220-FR-008 writes them; a booking already `completed` is left as it is; a booking in any other state answers the mover's own 409 `invalid_transition` and nothing is written), writes the audit entries `job.final_price_bani` (null → the price, a key change) and `job.handed_over_at` with the actor and their role, filed under the job and the garage, and records the event `job.handed_over` `{ finalPriceBani, by }` with the `job` audience (the driver's account, the garage, the job's mechanic). The request's status stays `done`; it leaves the driver's open requests by `handed_over_at` (274-FR-001). No notification is sent for the first recording.
 
 _From 406-final-price-handover._
 
@@ -406,6 +399,50 @@ _From 1395-block-time-dashboard._
 
 _From 1395-block-time-dashboard._
 
+### 395-FR-001 — The API MUST offer `POST /api/v1/garage/jobs/:id/lock` with an optional body `{ purpose: "edit" | "reception" | "handover" }` (default `edit`). On a free job it MUST take the lock for the caller and answer 200 with the lock (`holder: { accountId, firstName, role }`, `since`, `lastChangeAt` (the time of the take or of the latest refresh), `expiresAt`) and the job's current `updatedAt`; when the caller already holds it, it MUST refresh (200, `since` kept, `lastChangeAt` now, `expiresAt` moved 5 minutes from now); when another person holds it, 423 `job_locked` with the holder's first name and role and `since`, "Blocat de {name}, {role}, de la {time}" / "Locked by {name}, {role}, since {time}".
+
+_From 395-job-lock._
+
+### 395-FR-002 — The lock route and the forced unlock MUST check access on the server before anything else, in this order: an actor outside the garage (another garage's staff, a driver, an admin, an unknown job) 404 `not_found`; a mechanic of the garage who is not the job's mechanic 403 `forbidden`; a receptionist 403 `forbidden` unless `purpose` is `reception` or `handover`; the owner (`garage` role) and the job's mechanic are allowed for every purpose. The holder's `role` is stored and returned as `owner`, `receptionist` or `mechanic` (390-FR-005).
+
+_From 395-job-lock._
+
+### 395-FR-003 — The API MUST offer `DELETE /api/v1/garage/jobs/:id/lock`: by the holder it MUST release the lock (204); on a free job or one the caller does not hold, without `?force=true`, 204 with nothing changed for every role (so a stale tab never unlocks another person); by the owner with `?force=true` on another person's lock it MUST be a forced unlock: the lock lifts at once, the former holder, their role and `since` are recorded on the job (FR-009) and in the audit history (FR-012), and the change is published (FR-010). A receptionist or a mechanic asking to force-unlock (`?force=true`) MUST be answered 403 `forbidden`.
+
+_From 395-job-lock._
+
+### 395-FR-005 — JOB MUST gain `updated_at` (timestamp, set to now explicitly by every job-changing write of FR-004 and by no other write — the lock mirror and forced-unlock columns of FR-008 and FR-009 never move it — backfilled from `created_at`), returned as `updatedAt` by the job read and the list's items. Every job-changing request MUST accept an optional `basedOnUpdatedAt`; when given and different from the job's current `updated_at` (compared to the millisecond), the use case MUST answer 409 `job_changed` with the current `updatedAt` and the current job, after the lock check and before any write. The web's edit dialogs (ST-1409) always send it; one-tap actions and existing API callers may omit it.
+
+_From 395-job-lock._
+
+### 395-FR-006 — The lock MUST be decided by one atomic set-if-absent of the key `job:lock:{jobId}` in Redis holding the holder's account id, first name, role, `since` and `last_change_at`, with a time to live of 5 minutes from the take and from each refresh; two simultaneous takes MUST leave exactly one holder. When Redis cannot be reached, the lock routes and every job-changing use case MUST answer 503 `try_again` "Încearcă din nou în câteva secunde" / "Try again in a few seconds" and apply nothing.
+
+_From 395-job-lock._
+
+### 395-FR-007 — A lock not refreshed for 5 minutes MUST lift by itself: the key expires, and the worker queue `job-locks` (one repeatable job every minute) MUST clear every JOB mirror whose key is gone and publish `job.lock_changed` for each, so every open screen shows the job free within one minute of the expiry. Idle means no change and no refresh; the web refreshes at most once every 60 seconds while the holder types or changes a field, never on a mere open dialog.
+
+_From 395-job-lock._
+
+### 395-FR-008 — The lock's state MUST also be mirrored on JOB in PostgreSQL: `lock_holder_id` (reference to ACCOUNT, null, set null on removal), `lock_since` and `lock_last_change_at` (timestamps, null), written on take and refresh and cleared on release, forced unlock, the change that releases, and the sweep; the mirror is a copy for reads and recovery, never the arbiter: a disagreement is settled by the key (Constitution VI, Valkey holds no only copy).
+
+_From 395-job-lock._
+
+### 395-FR-009 — The job read (`GET garage/jobs/:id`) and the list's items MUST return `lock: null | { holder: { accountId, firstName, role }, since, lastChangeAt }` from the mirror, and `lastForcedUnlock: null | { by: { firstName, role }, at, holderId }` from two further mirror columns `lock_forced_by_id` (reference to ACCOUNT, null) and `lock_forced_at` (timestamp, null), set by a forced unlock and cleared only when the former holder (`holderId`) takes the lock again, so another person's take right after the force does not hide it from the former holder. The driver's active request read (274-FR-001) MUST return neither field.
+
+_From 395-job-lock._
+
+### 395-FR-010 — Every take, release, forced unlock and expiry MUST publish (a refresh changes nothing a screen shows and publishes nothing) `job.lock_changed` (`id` = the job id) straight to Redis through `publishLive`, not the outbox, with the audience `garage:{garageId}` and, when the job has a mechanic, `mechanic:{mechanicId}`; never `account:{driverId}` or any driver channel. The web's re-read on this kind is ST-1409's (see Split).
+
+_From 395-job-lock._
+
+### 395-FR-016 — The two lock routes, the `job-locks` queue and the `job.lock_changed` kind MUST be listed in `infra/observability/inventory.json` with their metrics (a counter of lock outcomes by action: `take`, `refresh`, `release`, `force`, `locked`, `stale`, `expired`, `unavailable`), the queue's panel and the existing worker queue alerts, a warning log line on each 503 `try_again`, and in the PR's Observability section.
+
+_From 395-job-lock._
+
+### 395-FR-018 — Tests MUST exist before the code (Principle II), with a `// @traces` line per spec file: Jest on real PostgreSQL and Redis for take, refresh and release; the release after one change by a one-tap action and by a held lock; expiry after 5 idle minutes with a fake clock and the sweep clearing the mirror and publishing; the owner's forced unlock with its audit entry and its mirror; 403 for a receptionist's and a mechanic's force and for a receptionist's `edit` purpose; 200 for a receptionist's `reception` and `handover`; 403 for a mechanic not on the job and 404 for another garage, a driver and an admin; 423 with the holder's details on every job-changing route; 409 `job_changed` on a stale `basedOnUpdatedAt` and success without the field; the set-if-absent race (two concurrent takes, one winner); the audience of `job.lock_changed` holding the garage and mechanic channels and never a driver's; 503 `try_again` with Redis down and no change applied. The web's component tests and the end-to-end flow are ST-1409's (see Split).
+
+_From 395-job-lock._
+
 ## Retired
 
 - `220-FR-007` — superseded by `389-FR-002` (2026-10-21)
@@ -415,3 +452,6 @@ _From 1395-block-time-dashboard._
 - `150-FR-008` — superseded by `427-FR-005` (2026-10-29)
 - `427-FR-013` — struck by 427-time-blocks at clarify (2026-10-29): no code lowers `lift_count`; the first story that writes it owns the guard
 - `424-FR-015` — superseded by `1393-FR-011` (2026-10-30)
+- `276-FR-003` — superseded by `395-FR-004` (2026-10-30)
+- `424-FR-008` — superseded by `395-FR-004` (2026-10-30)
+- `406-FR-004` — superseded by `395-FR-004` (2026-10-30)

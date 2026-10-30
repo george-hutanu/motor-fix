@@ -40,8 +40,8 @@ model Job {
   updatedAt              DateTime        @default(now()) @map("updated_at") @db.Timestamptz(3)
   // A copy of the Redis lock for reads and recovery; Redis decides who holds it.
   lockHolderId           String?         @map("lock_holder_id") @db.Uuid
-  // owner, receptionist or mechanic: the role the holder took the job as.
-  lockHolderRole         String?         @map("lock_holder_role")
+  // The role the holder took the job as.
+  lockHolderRole         JobLockHolderRole? @map("lock_holder_role")
   lockSince              DateTime?       @map("lock_since") @db.Timestamptz(3)
   lockLastChangeAt       DateTime?       @map("lock_last_change_at") @db.Timestamptz(3)
   // The last forced unlock, kept until the former holder takes the job again.
@@ -162,4 +162,12 @@ model TimeBlock {
   @@index([garageId, startsAt])
   @@index([mechanicId])
   @@map("time_block")
+}
+
+enum JobLockHolderRole {
+  owner
+  receptionist
+  mechanic
+
+  @@map("job_lock_holder_role")
 }

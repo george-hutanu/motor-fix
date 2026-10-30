@@ -41,6 +41,7 @@ features:
   - 011-dashboard-sections
   - 1316-swr-resource-store
   - 1389-reported-reviews-admin
+  - 395-job-lock
 ---
 
 # Capability: Live updates

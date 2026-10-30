@@ -31,13 +31,30 @@ const LOCK_MS = LOCK_SECONDS * 1000;
 export const lockKey = (jobId: string) => `job:lock:${jobId}`;
 
 // What Redis holds for a held job.
-export interface HeldLock {
+interface HeldLock {
   holderId: string;
   firstName: string;
   role: LockHolderRole;
   since: string;
   lastChangeAt: string;
 }
+
+// A value this service did not write, or one cut short, counts as no lock.
+export const parseHeld = (stored: string | null): HeldLock | null => {
+  if (!stored) return null;
+  try {
+    const held = JSON.parse(stored);
+    return typeof held?.holderId === 'string' &&
+      typeof held.firstName === 'string' &&
+      Object.hasOwn(ROLE_RO, held.role) &&
+      typeof held.since === 'string' &&
+      typeof held.lastChangeAt === 'string'
+      ? held
+      : null;
+  } catch {
+    return null;
+  }
+};
 
 // The job's fields a lock reads: who it belongs to and whom a change reaches.
 interface LockedJobRef {
@@ -65,7 +82,11 @@ const ROLE_RO: Record<LockHolderRole, string> = {
 const REFRESH = `
 local v = redis.call('GET', KEYS[1])
 if not v then return false end
-local held = cjson.decode(v)
+local ok, held = pcall(cjson.decode, v)
+if not ok or type(held) ~= 'table' or type(held.holderId) ~= 'string' then
+  redis.call('DEL', KEYS[1])
+  return false
+end
 if held.holderId ~= ARGV[1] then return v end
 held.lastChangeAt = ARGV[2]
 local n = cjson.encode(held)
@@ -76,7 +97,8 @@ return n`;
 const RELEASE = `
 local v = redis.call('GET', KEYS[1])
 if not v then return 0 end
-if cjson.decode(v).holderId ~= ARGV[1] then return 0 end
+local ok, held = pcall(cjson.decode, v)
+if ok and type(held) == 'table' and held.holderId ~= ARGV[1] then return 0 end
 redis.call('DEL', KEYS[1])
 return 1`;
 
@@ -140,7 +162,7 @@ export class JobLockService {
       countJobLock('locked');
       throw locked(held);
     }
-    const row = await this.prisma.job.update({
+    const row = await this.mirror(actor, jobId, fresh, {
       data: {
         lockHolderId: held.holderId,
         lockHolderRole: held.role,
@@ -245,10 +267,11 @@ export class JobLockService {
     return { took: fresh };
   }
 
-  // The change's own write: a new version, and the copy of the lock it ends.
-  settle(tx: Tx, jobId: string) {
+  // The change's own write: the copy of the lock it ends and, when the job
+  // moved, a new version. A change that wrote nothing still ends the lock.
+  settle(tx: Tx, jobId: string, moved = true) {
     return tx.job.update({
-      data: { ...cleared, updatedAt: new Date() },
+      data: { ...cleared, ...(moved && { updatedAt: new Date() }) },
       where: { id: jobId },
     });
   }
@@ -347,11 +370,11 @@ export class JobLockService {
     refresh = true,
   ): Promise<{ held: HeldLock; fresh: boolean }> {
     const now = new Date().toISOString();
+    const { name } = await db.account.findUniqueOrThrow({
+      select: { name: true },
+      where: { id: actor.accountId },
+    });
     for (let attempt = 0; attempt < 2; attempt++) {
-      const { name } = await db.account.findUniqueOrThrow({
-        select: { name: true },
-        where: { id: actor.accountId },
-      });
       const mine: HeldLock = {
         firstName: firstName(name),
         holderId: actor.accountId,
@@ -381,14 +404,35 @@ export class JobLockService {
             ) as Promise<string | null>)
           : this.redis.get(lockKey(jobId)),
       );
-      if (stored) return { fresh: false, held: JSON.parse(stored) };
+      const held = parseHeld(stored);
+      if (held) return { fresh: false, held };
+      if (stored) await this.unavailable(() => this.redis.del(lockKey(jobId)));
     }
     throw this.tryAgain();
   }
 
+  // A key whose copy could not be written is given back, so the job is not
+  // held by a lock its readers cannot see.
+  private async mirror(
+    actor: Actor,
+    jobId: string,
+    fresh: boolean,
+    write: Prisma.JobUpdateArgs & { select: { updatedAt: true } },
+  ) {
+    try {
+      return await this.prisma.job.update(write);
+    } catch (error) {
+      this.logger.warn(
+        `job lock copy not written: job=${jobId} ${(error as Error).message}`,
+      );
+      if (fresh) await this.drop(jobId, actor.accountId).catch(() => false);
+      throw this.tryAgain();
+    }
+  }
+
   private async read(jobId: string): Promise<HeldLock | null> {
     const stored = await this.unavailable(() => this.redis.get(lockKey(jobId)));
-    return stored ? JSON.parse(stored) : null;
+    return parseHeld(stored);
   }
 
   private async drop(jobId: string, holderId: string) {
@@ -408,7 +452,6 @@ export class JobLockService {
     try {
       return await call();
     } catch (error) {
-      if (error instanceof HttpException) throw error;
       this.logger.warn(
         `job lock store unreachable: ${(error as Error).message}`,
       );

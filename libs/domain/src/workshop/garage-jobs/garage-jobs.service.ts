@@ -3,7 +3,6 @@ import type {
   JobListDto,
   JobListQueryDto,
   JobSummaryDto,
-  LockHolderRole,
 } from '@motor-fix/contracts';
 import {
   HttpStatus,
@@ -126,12 +125,18 @@ function summaryOf(row: SummaryRow): JobSummaryDto {
 
 // The job's copy of who holds it; Redis decides, the sweep keeps this in step.
 function lockOf(row: SummaryRow): JobSummaryDto['lock'] {
-  if (!row.lockHolderId || !row.lockSince || !row.lockLastChangeAt) return null;
+  if (
+    !row.lockHolderId ||
+    !row.lockHolderRole ||
+    !row.lockSince ||
+    !row.lockLastChangeAt
+  )
+    return null;
   return {
     holder: {
       accountId: row.lockHolderId,
       firstName: firstName(row.lockHolder?.name ?? ''),
-      role: row.lockHolderRole as LockHolderRole,
+      role: row.lockHolderRole,
     },
     lastChangeAt: row.lockLastChangeAt.toISOString(),
     since: row.lockSince.toISOString(),

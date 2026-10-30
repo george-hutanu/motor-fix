@@ -290,7 +290,7 @@ export class JobStepsService {
         met.job = job;
         met.hold = await this.locks.hold(tx, actor, job, basedOn);
         const result = await change(tx, job);
-        if (result.action) await this.locks.settle(tx, job.id);
+        await this.locks.settle(tx, job.id, Boolean(result.action));
         return result;
       });
     } catch (error) {
