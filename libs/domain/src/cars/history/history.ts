@@ -1,7 +1,6 @@
-import type { CarRepairDto, RepairReviewDto } from '@motor-fix/contracts';
+import type { CarRepairDto } from '@motor-fix/contracts';
 
-import { daysBetween } from '../../bucharest';
-import type { Prisma, ReviewStatus } from '../../generated/prisma/client';
+import type { Prisma } from '../../generated/prisma/client';
 
 // What an ownership row needs to decide which repairs it may read.
 export type OwnershipRow = {
@@ -83,25 +82,6 @@ export const jobNames = (jobs: QuotedJob[], language: 'ro' | 'en') =>
     )
     .join(', ');
 
-// How long after the repair the driver may still write a review.
-const REVIEW_DAYS = 60;
-
-// A removed review is neither shown nor written again; one its author
-// deleted leaves the window open as if none had been written.
-export function reviewState(
-  review: { rating: number; status: ReviewStatus } | null,
-  doneOn: Date,
-  today: string,
-): RepairReviewDto {
-  if (review?.status === 'published' || review?.status === 'reported') {
-    return { rating: review.rating, state: 'rated' };
-  }
-  if (review?.status === 'removed') return { state: 'none' };
-  return daysBetween(day(doneOn), today) <= REVIEW_DAYS
-    ? { state: 'write' }
-    : { state: 'none' };
-}
-
 export const REPAIR_ROW_SELECT = {
   car: {
     select: {
@@ -139,11 +119,6 @@ export const REPAIR_ROW_SELECT = {
         },
       },
       mechanic: { select: { name: true } },
-      reviews: {
-        orderBy: { postedAt: 'desc' },
-        select: { rating: true, status: true },
-        take: 1,
-      },
     },
   },
   odometerKm: true,
@@ -172,7 +147,6 @@ export function toRow(
   { car, createdAt, doneOn, job, updatedByRole, ...repair }: RepairRow,
   row: Pick<OwnershipRow, 'openedAt'>,
   language: 'ro' | 'en',
-  today: string,
 ): CarRepairDto {
   const motorfix = repair.source === 'motorfix';
   return {
@@ -187,9 +161,8 @@ export function toRow(
     doneOn: day(doneOn),
     fromPreviousOwner: fromPreviousOwner({ createdAt }, row),
     mechanicName: job?.mechanic?.name ?? null,
-    review: motorfix
-      ? reviewState(job?.reviews[0] ?? null, doneOn, today)
-      : null,
+    // Empty for every row until the review drawer (ST-26, #91) fills it.
+    review: null,
     what:
       (motorfix && job && jobNames(job.booking.quote.jobs, language)) ||
       repair.what,

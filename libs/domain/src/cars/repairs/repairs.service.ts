@@ -5,7 +5,6 @@ import { recordEditRefusal } from './repairs.metrics';
 import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { localDay } from '../../bucharest';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   REPAIR_ORDER,
@@ -41,13 +40,12 @@ export class RepairsService {
     });
     const page = repairs.slice(0, size);
     const rowOf = new Map(rows.map((row) => [row.carId, row]));
-    const today = localDay(new Date());
     const language = actor.language ?? 'ro';
     return {
       // Every repair matched one of these rows, so none is dropped.
       items: page.flatMap((repair) => {
         const row = rowOf.get(repair.car.id);
-        return row ? [toRow(repair, row, language, today)] : [];
+        return row ? [toRow(repair, row, language)] : [];
       }),
       nextCursor: repairs.length > size ? (page.at(-1)?.id ?? null) : null,
     };

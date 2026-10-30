@@ -255,7 +255,7 @@ describe('GET /repairs', () => {
         (r: { fromPreviousOwner: boolean }) => r.fromPreviousOwner,
       ),
     ).toBe(true);
-    expect(hers.body.items[0].review).toEqual({ state: 'none' });
+    expect(hers.body.items[0].review).toBeNull();
     expect((await list(andrei.auth)).body.items).toEqual([]);
   });
 
@@ -333,7 +333,7 @@ describe('GET /repairs', () => {
     const res = await list(andrei.auth);
     const body = JSON.stringify(res.body);
 
-    expect(res.body.items[0].review).toEqual({ state: 'none' });
+    expect(res.body.items[0].review).toBeNull();
     for (const text of [body, lines.join('\n')]) {
       expect(text).not.toContain('B123ABC');
       expect(text).not.toContain(andrei.phone);

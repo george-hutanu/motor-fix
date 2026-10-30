@@ -322,7 +322,7 @@ describe('the reading, the amount and the correction on both reads', () => {
 });
 
 describe('a MotorFix repair on the history reads', () => {
-  it('names the job’s mechanic and the review state, with the car and the garage', async () => {
+  it('names the job’s mechanic, an empty review column, the car and the garage', async () => {
     const { andrei } = await people();
     const car = await world.car(andrei.id);
     const { garage, repair } = await motorFixRepair(prisma, andrei.id, car.id);
@@ -339,7 +339,7 @@ describe('a MotorFix repair on the history reads', () => {
         id: repair.id,
         mechanicName: 'Mihai Dumitru',
         odometerKm: 148_250,
-        review: { state: 'write' },
+        review: null,
         source: 'motorfix',
         what: 'Plăcuțe și discuri față',
       }),
@@ -415,16 +415,16 @@ describe('a MotorFix repair on the history reads', () => {
   });
 
   it.each([
-    [10, undefined, { state: 'write' }],
-    [60, undefined, { state: 'write' }],
-    [61, undefined, { state: 'none' }],
-    [10, { rating: 5, status: 'published' }, { rating: 5, state: 'rated' }],
-    [10, { rating: 2, status: 'reported' }, { rating: 2, state: 'rated' }],
-    [10, { rating: 1, status: 'removed' }, { state: 'none' }],
-    [30, { rating: 3, status: 'deleted_by_author' }, { state: 'write' }],
-    [61, { rating: 3, status: 'deleted_by_author' }, { state: 'none' }],
+    [10, undefined, null],
+    [60, undefined, null],
+    [61, undefined, null],
+    [10, { rating: 5, status: 'published' }, null],
+    [10, { rating: 2, status: 'reported' }, null],
+    [10, { rating: 1, status: 'removed' }, null],
+    [30, { rating: 3, status: 'deleted_by_author' }, null],
+    [61, { rating: 3, status: 'deleted_by_author' }, null],
   ] as const)(
-    'answers a repair done %i days ago with review %j as %j',
+    'answers a repair done %i days ago with review %j with the review column %j until ST-26',
     async (daysAgo, review, state) => {
       const { andrei } = await people();
       const car = await world.car(andrei.id);
@@ -453,14 +453,14 @@ describe('a MotorFix repair on the history reads', () => {
       expect.objectContaining({
         id: repair.id,
         mechanicName: 'Mihai Dumitru',
-        review: { rating: 5, state: 'rated' },
+        review: null,
       }),
     ]);
     expect(hers.body.items).toContainEqual(
       expect.objectContaining({
         fromPreviousOwner: true,
         id: repair.id,
-        review: { rating: 5, state: 'rated' },
+        review: null,
       }),
     );
   });

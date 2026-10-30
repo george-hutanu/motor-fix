@@ -15,7 +15,6 @@ import {
 import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { localDay } from '../../bucharest';
 import type { PrismaClient } from '../../generated/prisma/client';
 
 const day = (at: Date) => at.toISOString().slice(0, 10);
@@ -90,10 +89,9 @@ export class CarHistoryService {
       select: REPAIR_ROW_SELECT,
       where: repairWhere(row),
     });
-    const today = localDay(new Date());
     const language = actor.language ?? 'ro';
     return {
-      items: repairs.map((repair) => toRow(repair, row, language, today)),
+      items: repairs.map((repair) => toRow(repair, row, language)),
     };
   }
 }
