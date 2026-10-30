@@ -551,8 +551,10 @@ describe('the verification page, on a request for more', () => {
       answer('submitted', { submittedAt: resent }),
     );
 
+    const started = Date.now();
     await emit(fixture, 'verification.submitted');
 
+    expect(Date.now() - started).toBeLessThan(5000);
     expect(api.verificationStatusControllerRead).toHaveBeenCalledTimes(2);
     expect(current(host)).toBe('Trimis · 9 mart. 2027');
     expect(button(host, 'Completează')).toBeNull();
