@@ -279,7 +279,7 @@ test.describe('a toggle shows before the server answers @seeded', () => {
     await expect(state).toHaveText(before ?? '');
   });
 
-  // @traces 1411-FR-004
+  // @traces 1411-FR-004 1411-FR-008
   test('a fuel tick on a brand already taken shows at once', async ({
     page,
   }) => {
