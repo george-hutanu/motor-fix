@@ -533,17 +533,20 @@ describe('the sweep run again and on odd states', () => {
     const s = await setting();
     await keys.set(`job:lock:${s.job.id}`, 'not json', 'PX', 60_000);
 
-    await expect(provider(JobLockSweep).sweep()).resolves.toEqual(
-      expect.any(Number),
-    );
+    await expect(provider(JobLockSweep).sweep()).resolves.toBe(0);
+    expect((await reread(s.job.id)).lockHolderId).toBeNull();
   });
 
-  it('lets a job be taken after a key written by garbage runs out', async () => {
-    const s = await setting();
-    await keys.set(`job:lock:${s.job.id}`, '{}', 'PX', 60_000);
+  it.each(['{}', 'not json'])(
+    'lets a job be taken over a key holding %s',
+    async (stored) => {
+      const s = await setting();
+      await keys.set(`job:lock:${s.job.id}`, stored, 'PX', 60_000);
 
-    const res = await send('post', s.lock, s.hand);
+      const res = await send('post', s.lock, s.hand);
 
-    expect(res.status).toBeLessThan(500);
-  });
+      expect(res.status).toBe(200);
+      expect((await reread(s.job.id)).lockHolderId).toBe(s.dinamo.plain);
+    },
+  );
 });

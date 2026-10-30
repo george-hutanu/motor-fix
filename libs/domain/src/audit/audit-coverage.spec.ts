@@ -204,7 +204,7 @@ const NOT_CHANGES = new Set([
   'LiveSessionsService.watched',
   // A job's edit lock is who is editing now, not a change to the job: only
   // the owner's forced unlock enters the history (JobLockService.force).
-  'JobLockService.take',
+  'JobLockService.mirror',
   'JobLockService.settle',
   'JobLockSweep.clearExpired',
   'JobLockSweep.remirror',
