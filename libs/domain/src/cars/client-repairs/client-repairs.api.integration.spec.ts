@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { DELETED_AUTHOR } from '@motor-fix/contracts';
 
 import { ClientRepairsModule } from './client-repairs.module';
@@ -118,6 +121,36 @@ describe('the repair columns', () => {
     });
     expect(row.updatedAt.getTime()).toBeGreaterThanOrEqual(
       row.createdAt.getTime(),
+    );
+  });
+
+  it('gives a repair older than the columns its creation as its version', async () => {
+    const { car } = await scene();
+    const row = await prisma.repair.create({
+      data: {
+        carId: car.id,
+        createdAt: new Date('2026-01-05T10:00:00.000Z'),
+        doneOn: new Date('2026-01-04T00:00:00Z'),
+        garageName: 'Service Popescu',
+        source: 'logged',
+        updatedAt: new Date('2026-10-30T09:00:00.000Z'),
+        what: 'Ulei',
+      },
+    });
+    const migration = readFileSync(
+      join(
+        __dirname,
+        '../../../prisma/migrations/20261030090000_repair_corrections/migration.sql',
+      ),
+      'utf8',
+    );
+    const backfill = migration.match(/^UPDATE "repair"[^;]*;/m)?.[0];
+    expect(backfill).toBeDefined();
+
+    await prisma.$executeRawUnsafe(backfill as string);
+
+    expect((await reread(row.id)).updatedAt).toEqual(
+      new Date('2026-01-05T10:00:00.000Z'),
     );
   });
 
@@ -550,6 +583,31 @@ describe('PATCH /garage/client-repairs/:id', () => {
     ).toBe(404);
   });
 
+  it('answers 404 to a garage that reads the car’s history only through a booking', async () => {
+    const s = await scene();
+    const row = await s.repair();
+    const other = await team('Service Popescu');
+    const { booking } = await world.chain(s.driverId, other.garage.id);
+    await prisma.quoteRequest.update({
+      data: { carId: s.car.id },
+      where: { id: booking.requestId },
+    });
+    await prisma.booking.update({
+      data: { historyShared: true },
+      where: { id: booking.id },
+    });
+    const otherOwner = bearer(other.owner, 'garage');
+
+    const res = await send('patch', one(row.id), otherOwner, {
+      odometerKm: 150_000,
+      version: version(row),
+    });
+
+    expect(res.status).toBe(404);
+    expect((await get(LIST, otherOwner).expect(200)).body.items).toEqual([]);
+    expect((await reread(row.id)).odometerKm).toBe(151_000);
+  });
+
   it('answers 404 once sharing stopped after the garage read the list', async () => {
     const s = await scene();
     const row = await s.repair();
@@ -599,12 +657,41 @@ describe('PATCH /garage/client-repairs/:id', () => {
     expect((await reread(row.id)).odometerKm).toBe(151_000);
   });
 
-  it('checks the version before the values: a stale future date answers 409', async () => {
+  it('refuses in order: 403 before 400, 400 before 404, 404 before 409', async () => {
+    const s = await scene();
+    const row = await s.repair();
+    const old = new Date(row.updatedAt.getTime() - 1000).toISOString();
+    const future = addDays(localDay(new Date()), 1);
+
+    const staff = await send('patch', one(row.id), s.auth.receptionist, {
+      what: '',
+    });
+    const invalid = await send('patch', one(missing), s.auth.owner, {
+      doneOn: future,
+      version: old,
+    });
+    const absent = await send('patch', one(missing), s.auth.owner, {
+      version: old,
+    });
+    const stale = await send('patch', one(row.id), s.auth.owner, {
+      doneOn: future,
+      version: old,
+    });
+
+    expect(staff.status).toBe(403);
+    expect(invalid.status).toBe(400);
+    expect(absent.status).toBe(404);
+    expect(stale.status).toBe(400);
+    expect(stale.body.code).toBe('validation_failed');
+    expect((await reread(row.id)).doneOn).toEqual(row.doneOn);
+  });
+
+  it('checks the version before comparing values: a stale body that changes nothing answers 409', async () => {
     const s = await scene();
     const row = await s.repair();
 
     const res = await send('patch', one(row.id), s.auth.owner, {
-      doneOn: addDays(localDay(new Date()), 1),
+      odometerKm: 151_000,
       version: new Date(row.updatedAt.getTime() - 1000).toISOString(),
     });
 
