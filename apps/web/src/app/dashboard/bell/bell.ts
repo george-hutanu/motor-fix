@@ -43,11 +43,12 @@ export class BellStore {
   // Count requests in the order they were sent, and the one the badge shows.
   private asked = 0;
   private shown = 0;
-  // How many counts the server has given the badge: a failed read puts back
-  // what it took off only while none came since the press.
+  // How many counts the server or a "mark all" has given the badge: a failed
+  // read puts back what it took off only while none came since the press.
   private served = 0;
-  // Rows whose read from this tab is on its way, and a "mark all" on its way.
-  private readonly reading = new Set<string>();
+  // Rows whose read from this tab is on its way, with the instant they show
+  // and what they took off the count, and a "mark all" on its way.
+  private readonly reading = new Map<string, { at: string; taken: number }>();
   private readingAll = false;
   // First-page requests in the order they were sent, and the one shown.
   private pageAsked = 0;
@@ -129,52 +130,76 @@ export class BellStore {
   async read(id: string) {
     const row = this.items().find((n) => n.id === id);
     if (row?.readAt || this.reading.has(id)) return;
-    this.reading.add(id);
-    const at = new Date().toISOString();
-    this.markRead((n) => n.id === id, at);
     // Only a listed unread row is known to be in the count.
-    const taken = row && this.count() > 0 ? 1 : 0;
+    const mine = {
+      at: new Date().toISOString(),
+      taken: row && this.count() > 0 ? 1 : 0,
+    };
+    this.reading.set(id, mine);
+    this.markRead((n) => n.id === id && n.readAt === null, mine.at);
     const served = this.served;
-    this.show(this.count() - taken);
+    this.show(this.count() - mine.taken);
     try {
       const read = await this.api.bellControllerRead({ id });
       this.items.update((items) => items.map((n) => (n.id === id ? read : n)));
       await this.refreshCount();
     } catch {
-      this.unmark((n) => n.id === id, at);
-      if (this.served === served) this.count.update((count) => count + taken);
+      this.putBack(id, mine, served);
       toast(this.i18n.t('shell.bell.readFailed'));
     } finally {
-      this.reading.delete(id);
+      if (this.reading.get(id) === mine) this.reading.delete(id);
     }
+  }
+
+  // A "mark all" pressed since owns the row and what it took.
+  private putBack(
+    id: string,
+    mine: { at: string; taken: number },
+    served: number,
+  ) {
+    if (this.reading.get(id) !== mine) return;
+    this.unmark((n) => n.id === id, mine.at);
+    if (this.served === served)
+      this.count.update((count) => count + mine.taken);
   }
 
   // A second press while one is on its way does nothing.
   async readAll() {
     if (this.readingAll) return;
     this.readingAll = true;
-    const at = new Date().toISOString();
-    const unread = new Set(
-      this.items()
-        .filter((n) => !n.readAt)
-        .map((n) => n.id),
-    );
-    for (const id of unread) this.reading.add(id);
-    const taken = this.count();
-    const served = this.served;
-    this.markRead((n) => unread.has(n.id), at);
+    const all = { at: new Date().toISOString(), taken: 0 };
+    const { taken, unread } = this.takeOver(all);
+    const served = ++this.served;
+    this.markRead((n) => unread.has(n.id), all.at);
     // A count already in flight was asked before this and answers too late.
     this.show(0);
     try {
       await this.api.bellControllerReadAll();
     } catch {
-      this.unmark((n) => unread.has(n.id), at);
+      this.unmark((n) => unread.has(n.id), all.at);
       if (this.served === served) this.count.update((count) => count + taken);
       toast(this.i18n.t('shell.bell.readFailed'));
     } finally {
-      for (const id of unread) this.reading.delete(id);
+      for (const id of unread)
+        if (this.reading.get(id) === all) this.reading.delete(id);
       this.readingAll = false;
     }
+  }
+
+  // The unread rows and the reads still on their way become part of a
+  // "mark all": a read's own failure then puts nothing back, and the mark
+  // all's puts back what both took.
+  private takeOver(all: { at: string; taken: number }) {
+    let taken = this.count();
+    const unread = new Set<string>();
+    for (const n of this.items()) {
+      const own = this.reading.get(n.id);
+      if (n.readAt !== null && own?.at !== n.readAt) continue;
+      taken += own?.taken ?? 0;
+      unread.add(n.id);
+      this.reading.set(n.id, all);
+    }
+    return { taken, unread };
   }
 
   // Shows a count of this tab's own making, newer than any still being asked.
@@ -249,11 +274,11 @@ export class BellStore {
   // the account's id, so it shows as an unread count of zero.
   private async readElsewhere(message: LiveMessage) {
     const { id, at } = message;
-    this.markRead((n) => n.id === id, at);
+    this.markRead((n) => n.id === id && n.readAt === null, at);
     // Rows that join while the count is reloading are newer than it.
     const shown = new Set(this.items().map((n) => n.id));
     if ((this.carried(message) ?? (await this.refreshCount())) === 0)
-      this.markRead((n) => shown.has(n.id), at);
+      this.markRead((n) => shown.has(n.id) && n.readAt === null, at);
     if (this.state() !== 'ready') return;
     const asked = ++this.pageAsked;
     try {
@@ -267,7 +292,7 @@ export class BellStore {
   private markRead(match: (n: NotificationDto) => boolean, at: string) {
     this.items.update((items) =>
       items.map((n) => {
-        if (n.readAt !== null || !match(n)) return n;
+        if (!match(n)) return n;
         this.readSince.set(n.id, this.pageAsked);
         return { ...n, readAt: at };
       }),

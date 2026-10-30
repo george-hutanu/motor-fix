@@ -1018,6 +1018,39 @@ describe('BellStore: a read shows before the server answers', () => {
     expect(store.count()).toBe(2);
   });
 
+  // @traces 1315-FR-003 1315-FR-004
+  it('keeps a row read when its own read fails after a mark all that went through', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const own = deferred<NotificationDto>();
+    api.bellControllerRead.mockReturnValueOnce(own.promise);
+
+    const reading = store.read('a');
+    await store.readAll();
+    own.reject(new Error('offline'));
+    await reading;
+
+    expect(store.items().every((n) => n.readAt !== null)).toBe(true);
+    expect(store.count()).toBe(0);
+  });
+
+  // @traces 1315-FR-003 1315-FR-004
+  it('puts back the row a read had taken when the mark all after it fails', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const own = deferred<NotificationDto>();
+    api.bellControllerRead.mockReturnValueOnce(own.promise);
+    api.bellControllerReadAll.mockRejectedValueOnce(new Error('offline'));
+
+    const reading = store.read('a');
+    await store.readAll();
+    own.reject(new Error('offline'));
+    await reading;
+
+    expect(store.items().every((n) => n.readAt === null)).toBe(true);
+    expect(store.count()).toBe(2);
+  });
+
   // @traces 1315-FR-004 1315-FR-005
   it('keeps the rows a mark all read when a page asked before it answers after it', async () => {
     const { fixture, store } = await render(2, [row('a'), row('b')]);
