@@ -117,7 +117,7 @@ function importsBrevo(text: string): boolean {
   ].some(([, names]) =>
     names
       .split(',')
-      .map((name) => name.trim())
+      .map((name) => name.trim().split(/\s+as\s+/)[0])
       .includes('Brevo'),
   );
 }
@@ -172,6 +172,9 @@ describe('AppModule holds no provider sending client', () => {
     expect(importsBrevo("import { a, Brevo } from '@motor-fix/domain';")).toBe(
       true,
     );
+    expect(
+      importsBrevo("import { Brevo as Client } from '@motor-fix/domain';"),
+    ).toBe(true);
     expect(
       importsBrevo("import { BrevoError } from '@motor-fix/domain';"),
     ).toBe(false);

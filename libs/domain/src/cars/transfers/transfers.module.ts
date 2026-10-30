@@ -1,6 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 
-import { TRANSFER_SENDING, type TransferSending } from './transfers';
+import { TRANSFER_WEB_URL } from './transfers';
 import {
   CarSaleController,
   CarTransferLinkController,
@@ -17,7 +17,7 @@ import { CacheModule } from '../../cache/cache.module';
 @Module({})
 export class CarTransfersModule {
   static register(
-    options: TransferSending,
+    webUrl: string | undefined,
     sending: DynamicModule,
   ): DynamicModule {
     return {
@@ -27,7 +27,7 @@ export class CarTransfersModule {
       providers: [
         CarTransfersService,
         { provide: AUDIT_PORT, useClass: AuditService },
-        { provide: TRANSFER_SENDING, useValue: options },
+        { provide: TRANSFER_WEB_URL, useValue: webUrl },
       ],
     };
   }

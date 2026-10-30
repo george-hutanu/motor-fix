@@ -124,16 +124,13 @@ describe('direct-send, once and gone', () => {
     expect(brevo.whatsapp()).toHaveLength(0);
   });
 
-  it('leaves no finished job behind with its recipient and code', async () => {
-    await code(send);
+  it('leaves no answered job behind with its recipient and code', async () => {
+    expect(await code(send)).toBeNull();
 
-    const kept = await queue.getJobs(['completed', 'failed']);
-    expect(
-      kept.filter((job) => Date.now() - (job.finishedOn ?? 0) > 60_000),
-    ).toHaveLength(0);
-    const added = kept.find((job) => job.data.values['code'] === '123456');
-    expect(added?.opts.removeOnComplete).toEqual({ age: 60 });
-    expect(added?.opts.removeOnFail).toEqual({ age: 60 });
+    const kept = await queue.getJobs(['completed', 'failed', 'wait', 'active']);
+    expect(kept.filter((job) => job.data.values['code'] === '123456')).toEqual(
+      [],
+    );
   });
 });
 

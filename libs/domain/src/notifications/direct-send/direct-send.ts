@@ -15,7 +15,9 @@ import { render } from '../templates';
 export const DIRECT_SEND_QUEUE = 'direct-send';
 
 // How long the API waits for the worker's answer; a job picked up later than
-// this is not sent, since its caller has already been told it failed.
+// this is not sent, since its caller has already been told it failed. The
+// job's age is read on the worker's clock against the API's: both hosts'
+// clocks are assumed to agree well within the cap.
 export const DIRECT_SEND_WAIT_MS = 8000;
 
 // The job's name is its channel: 'whatsapp' or 'email'. The values and the
@@ -53,16 +55,16 @@ async function whatsapp(
     ? phone.whatsappTemplates[message.name]
     : undefined;
   if (templateId === undefined) return 'template_missing';
-  await brevo
-    .sendWhatsApp({
+  try {
+    await brevo.sendWhatsApp({
       params: message.params,
       sender: phone.whatsappSender,
       templateId,
       to,
-    })
-    .catch((error) => {
-      throw providerFailure(error);
     });
+  } catch (error) {
+    throw providerFailure(error);
+  }
   return null;
 }
 
@@ -73,16 +75,16 @@ async function email(
   const blocked = blockedReason(config, to);
   if (blocked) return blocked;
   const mail = render(template, 'email', language, values);
-  await brevo
-    .send({
+  try {
+    await brevo.send({
       ...emailEnvelope(config, { email: to, name }),
       html: mail.html,
       subject: mail.subject,
       text: mail.text,
-    })
-    .catch((error) => {
-      throw providerFailure(error);
     });
+  } catch (error) {
+    throw providerFailure(error);
+  }
   return null;
 }
 
@@ -92,8 +94,9 @@ export async function sendDirect(
   sender: DirectSender,
   job: Job<DirectSendJob>,
 ): Promise<string | null> {
-  if (Date.now() - job.timestamp > DIRECT_SEND_WAIT_MS) return 'stale';
-  return job.name === 'email'
-    ? email(sender, job.data)
-    : whatsapp(sender, job.data);
+  // Written so a job with no readable age is stale too.
+  if (!(Date.now() - job.timestamp <= DIRECT_SEND_WAIT_MS)) return 'stale';
+  if (job.name === 'email') return email(sender, job.data);
+  if (job.name === 'whatsapp') return whatsapp(sender, job.data);
+  throw new Error('unknown_channel');
 }

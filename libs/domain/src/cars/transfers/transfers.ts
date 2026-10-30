@@ -4,12 +4,9 @@ import type { AuditPort } from '../../audit/audit.port';
 import type { EventPort } from '../../events/event.port';
 import type { Prisma } from '../../generated/prisma/client';
 
-// The web address the link to the buyer points at; the worker sends it.
-export interface TransferSending {
-  // Unset where PUBLIC_WEB_URL is: no link can be made, so no send.
-  webUrl: string | undefined;
-}
-export const TRANSFER_SENDING = Symbol('TRANSFER_SENDING');
+// The web address the link to the buyer points at; unset where PUBLIC_WEB_URL
+// is: no link can be made, so no send.
+export const TRANSFER_WEB_URL = Symbol('TRANSFER_WEB_URL');
 
 type TransferStatus = 'sent' | 'cancelled' | 'expired' | 'accepted';
 

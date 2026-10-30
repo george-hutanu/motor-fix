@@ -20,8 +20,7 @@ import {
   cancelTransfer,
   isLive,
   recordStep,
-  TRANSFER_SENDING,
-  type TransferSending,
+  TRANSFER_WEB_URL,
   transferEvent,
   transferLink,
 } from './transfers';
@@ -227,7 +226,7 @@ export class CarTransfersService {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
-    @Inject(TRANSFER_SENDING) private readonly sending: TransferSending,
+    @Inject(TRANSFER_WEB_URL) private readonly webUrl: string | undefined,
     private readonly directSend: DirectSend,
     private readonly accounts: AccountsService,
   ) {}
@@ -288,7 +287,7 @@ export class CarTransfersService {
     dto: CreateCarTransferDto,
   ): Promise<CarTransferSentDto> {
     requireCapability(actor, 'driver.cars');
-    const { webUrl } = this.sending;
+    const { webUrl } = this;
     if (!webUrl) throw new Error('PUBLIC_WEB_URL is not set');
     const buyerPhone = normalisePhone(dto.buyerPhone);
     if (!buyerPhone) {

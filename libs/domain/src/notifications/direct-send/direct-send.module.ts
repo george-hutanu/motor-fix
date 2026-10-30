@@ -38,7 +38,9 @@ interface Runner {
 }
 
 // A command waits for the broker rather than failing after a few retries;
-// the API's wait cap bounds it instead.
+// the API's wait cap bounds it instead. The offline queue stays on, so a
+// broker blip does not fail a sign-in; a job queued through an outage reaches
+// the worker past the cap and ends `stale`, unsent.
 const connection = (url: string) => ({ maxRetriesPerRequest: null, url });
 
 // The API adds the jobs and waits on their answer (`register`); the worker

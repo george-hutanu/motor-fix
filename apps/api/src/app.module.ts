@@ -119,7 +119,7 @@ export class AppModule {
         // Both send through the worker (direct-send), with the one DirectSend
         // the notifications module holds.
         PhoneSignInModule.register(notifications),
-        CarTransfersModule.register({ webUrl: email.webUrl }, notifications),
+        CarTransfersModule.register(email.webUrl, notifications),
         AdminAccountsModule,
         AdminAccountModule.register(
           { support: email.replyTo?.email, webUrl: email.webUrl },

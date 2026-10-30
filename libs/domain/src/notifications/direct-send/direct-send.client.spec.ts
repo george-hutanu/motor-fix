@@ -24,10 +24,11 @@ function client(
   wait?: (events: unknown, ttl: number) => Promise<unknown>,
 ) {
   const waitUntilFinished = jest.fn(wait ?? (async () => null));
+  const remove = jest.fn(async () => undefined);
   const queue = {
     add: jest.fn(async () => {
       await add();
-      return { waitUntilFinished };
+      return { remove, waitUntilFinished };
     }),
     close: jest.fn(async () => undefined),
   };
@@ -36,7 +37,7 @@ function client(
     waitUntilReady: jest.fn(async () => undefined),
   };
   const send = new DirectSend(queue as never, events as never);
-  return { events, queue, send, waitUntilFinished };
+  return { events, queue, remove, send, waitUntilFinished };
 }
 
 const code = (s: DirectSend) =>
@@ -106,6 +107,22 @@ describe('DirectSend', () => {
     );
 
     expect(await code(c.send)).toBe('template_missing');
+  });
+
+  it('removes the job once its answer is read, sent or not', async () => {
+    const sent = client(async () => undefined);
+    const failed = client(
+      async () => undefined,
+      async () => {
+        throw new Error('provider_timeout');
+      },
+    );
+
+    await code(sent.send);
+    await code(failed.send);
+
+    expect(sent.remove).toHaveBeenCalledTimes(1);
+    expect(failed.remove).toHaveBeenCalledTimes(1);
   });
 
   it('answers the failed job’s reason, provider_error when it is no kind', async () => {

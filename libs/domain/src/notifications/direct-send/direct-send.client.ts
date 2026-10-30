@@ -6,8 +6,9 @@ import { DIRECT_SEND_WAIT_MS, type DirectSendJob } from './direct-send';
 export const DIRECT_SEND_JOBS = Symbol('DIRECT_SEND_JOBS');
 export const DIRECT_SEND_EVENTS = Symbol('DIRECT_SEND_EVENTS');
 
-// One attempt, and gone from Valkey a minute after it ends: the job carries a
-// code, a number or a link.
+// One attempt, and gone from Valkey once answered: the job carries a code, a
+// number or a link. The age options cover a job whose answer nobody read,
+// removed when a later job ends.
 const JOB_OPTIONS = {
   attempts: 1,
   removeOnComplete: { age: 60 },
@@ -17,7 +18,7 @@ const JOB_OPTIONS = {
 // A failed job's reason is one of the worker's kinds; anything else is not
 // passed on, as it may carry what the logs must not.
 function failureKind(error: unknown): string {
-  const message = (error as Error).message ?? '';
+  const message = error instanceof Error ? error.message : '';
   if (message.startsWith('Job wait')) return 'timeout';
   return /^[a-z0-9_]+$/.test(message) ? message : 'provider_error';
 }
@@ -80,7 +81,9 @@ export class DirectSend implements OnApplicationShutdown {
     name: 'whatsapp' | 'email',
     data: DirectSendJob,
   ): Promise<string | null> {
-    const job = await this.queue.add(name, data, JOB_OPTIONS).catch(() => null);
+    const job = await Promise.resolve()
+      .then(() => this.queue.add(name, data, JOB_OPTIONS))
+      .catch(() => null);
     if (!job) return 'queue_unavailable';
     // The listener reads finish events from when it is ready; BullMQ checks
     // the job's own state too, so one that finished first is not missed.
@@ -89,8 +92,10 @@ export class DirectSend implements OnApplicationShutdown {
       () => false,
     );
     if (!ready) return 'queue_unavailable';
-    return job
+    const answer = await job
       .waitUntilFinished(this.events, DIRECT_SEND_WAIT_MS)
       .then((result: string | null) => result ?? null, failureKind);
+    await job.remove().catch(() => undefined);
+    return answer;
   }
 }

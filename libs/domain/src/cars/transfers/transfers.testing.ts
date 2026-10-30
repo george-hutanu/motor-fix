@@ -47,10 +47,7 @@ export async function transfersApp(brevo: BrevoMock) {
       }),
       CarHistoryModule,
       CarsModule,
-      CarTransfersModule.register(
-        { webUrl: WEB_URL },
-        DirectSendModule.register(redisUrl),
-      ),
+      CarTransfersModule.register(WEB_URL, DirectSendModule.register(redisUrl)),
       DirectSendModule.registerWorker({
         email: testConfig(brevo.url),
         phone: sending.config,
