@@ -159,7 +159,8 @@ export class CompletionCopyDto extends ListingDraftDto {
   token!: string;
 
   @ApiProperty({
-    description: 'What the request for more asks for',
+    description:
+      'What the request for more asks for, or the item a rejection names',
     type: [String],
   })
   requestedItems!: string[];
