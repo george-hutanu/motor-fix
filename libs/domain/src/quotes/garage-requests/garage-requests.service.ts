@@ -31,6 +31,7 @@ import type {
   RequestRecipient,
 } from '../../generated/prisma/client';
 import { ANSWERING } from '../answers';
+import { outcomeOf } from '../quote-outcome/quote-outcome';
 import { PAGE_SIZE } from '../quotes-config';
 import {
   assertCursor,
@@ -64,7 +65,10 @@ const summaryInclude = (garageId: string) => ({
   car: { select: { plate: true } },
   driver: true,
   jobs: { include: { jobType: true }, orderBy: { position: 'asc' as const } },
-  quotes: { include: { jobs: true }, where: { garageId } },
+  quotes: {
+    include: { garage: { select: { status: true } }, jobs: true },
+    where: { garageId },
+  },
   recipients: { where: { garageId } },
 });
 
@@ -73,7 +77,10 @@ type SummaryRow = QuoteRequest & {
   car: { plate: string | null };
   driver: Account;
   jobs: (RequestJob & { jobType: JobType })[];
-  quotes: (Quote & { jobs: QuoteJob[] })[];
+  quotes: (Quote & {
+    garage: { status: GarageStatus };
+    jobs: QuoteJob[];
+  })[];
   recipients: RequestRecipient[];
 };
 
@@ -164,6 +171,7 @@ function summaryOf(
       ...job,
       offered: offered.has(offeredKey(row.carBrand, job.jobTypeId)),
     })),
+    outcome: null,
     quote: quote ? quoteOf(quote) : null,
     recipient: {
       answeredAt: iso(recipient.answeredAt),
@@ -340,10 +348,7 @@ export class GarageRequestsService {
     };
   }
 
-  // The rows this garage quoted whose quote still waits, was declined by the
-  // driver and has not reached its own expiry, or was accepted and its
-  // booking waits for the garage or is confirmed with its slot still ahead,
-  // newest quote first.
+  // Every quote this garage sent, whatever became of it, newest first.
   private async quoted(
     actor: Actor,
     garageId: string,
@@ -351,18 +356,6 @@ export class GarageRequestsService {
   ): Promise<GarageRequestListDto> {
     const where: Prisma.QuoteWhereInput = {
       garageId,
-      OR: [
-        { status: 'waiting' },
-        { expiresAt: { gt: new Date() }, status: 'declined_by_driver' },
-        {
-          booking: { status: 'awaiting_confirmation' },
-          status: 'accepted',
-        },
-        {
-          booking: { id: { in: await this.slotsAhead(garageId) } },
-          status: 'accepted',
-        },
-      ],
       recipient: { status: 'quoted' },
     };
     const from = await assertCursor(cursor, (requestId) =>
@@ -393,21 +386,19 @@ export class GarageRequestsService {
     return page(rows, total, (row) => {
       const summary = summaryOf(row, offered);
       const contact = listContactOf(row, actor);
+      const [quote] = row.quotes;
       return {
         ...summary,
         car: { ...summary.car, ...contact.plate },
         driver: { ...summary.driver, ...contact.phone },
+        outcome: outcomeOf({
+          booking: row.bookings[0] ?? null,
+          garage: quote.garage,
+          quote,
+          request: row,
+        }),
       };
     });
-  }
-
-  // The garage's confirmed bookings whose slot has not ended yet.
-  private async slotsAhead(garageId: string): Promise<string[]> {
-    const rows = await this.prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM booking
-      WHERE garage_id = ${garageId}::uuid AND status = 'confirmed'
-        AND starts_at + duration_minutes * interval '1 minute' > now()`;
-    return rows.map((row) => row.id);
   }
 
   // The garage's price-list row for each asked job: the row for the car's

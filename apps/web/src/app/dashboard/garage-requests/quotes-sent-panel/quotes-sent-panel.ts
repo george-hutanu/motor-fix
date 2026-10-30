@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import type { GarageRequestSummaryDto } from '@motor-fix/data-access';
-import { TranslatePipe } from '@motor-fix/i18n';
+import { I18n, TranslatePipe } from '@motor-fix/i18n';
 
 import {
   LiveAnchor,
@@ -21,7 +21,11 @@ import {
 } from '../../live-in-place/live-in-place';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 import { moreRows } from '../more-rows/more-rows';
-import { QuoteSentRow } from '../quote-sent-row/quote-sent-row';
+import {
+  outcomeTag,
+  QuoteSentRow,
+  spokenTag,
+} from '../quote-sent-row/quote-sent-row';
 
 const SLOT_TICK_MS = 60_000;
 
@@ -42,6 +46,7 @@ interface Arrivals {
 })
 export class QuotesSentPanel {
   protected readonly feed = inject(GarageRequestsFeed);
+  private readonly i18n = inject(I18n);
   private readonly window = inject(DOCUMENT).defaultView;
   // Sampled again on every read of the rows, so a line read right after an
   // acceptance measures from then; the tick moves it between reads.
@@ -91,5 +96,10 @@ export class QuotesSentPanel {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     const tick = setInterval(() => this.now.set(new Date()), SLOT_TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
+  }
+
+  // A row that changed in place is announced by its new tag.
+  protected say(row: GarageRequestSummaryDto) {
+    return spokenTag(outcomeTag(row, this.i18n, this.now())) ?? undefined;
   }
 }

@@ -25,7 +25,7 @@ import { Frame } from './frame';
 import { spoken } from '../../spoken.testing';
 import { Live } from '../live';
 import { Session } from '../session';
-import { dashboardRoutes } from '../views';
+import { DASHBOARDS, dashboardRoutes } from '../views';
 
 jest.mock('@motor-fix/ui-cockpit', () => ({
   ...jest.requireActual('@motor-fix/ui-cockpit'),
@@ -1199,6 +1199,25 @@ describe('the driver header', () => {
     expect(title(element)).toBe('Mecanici');
     expect(subtitle(element)).toBe('Echipa ta și ce poate face fiecare');
   });
+
+  // @traces 346-FR-005
+  it('asks the garage to answer within an hour under the requests title, in both languages', async () => {
+    const { element, harness } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage/requests',
+    );
+
+    expect(subtitle(element)).toBe(
+      'Răspunde în mai puțin de o oră ca să apari primul la șofer.',
+    );
+    await TestBed.inject(I18n).use('en');
+    await settle(harness);
+    expect(subtitle(element)).toBe(
+      'Answer within an hour to appear first to the driver.',
+    );
+  });
 });
 
 // @traces 028-FR-004
@@ -1474,6 +1493,30 @@ describe('Frame side links', () => {
   it('marks the wordmark link with the logo class', () => {
     const html = readFileSync(join(__dirname, 'frame.html'), 'utf8');
     expect(html).toMatch(/<a class="logo" routerLink="\/"/);
+  });
+});
+
+// @traces 346-FR-005
+describe('Frame title line', () => {
+  it('keeps the requests view line at body size from a tablet up', () => {
+    const css = readFileSync(join(__dirname, 'frame.css'), 'utf8').replace(
+      /\s+/g,
+      ' ',
+    );
+    const html = readFileSync(join(__dirname, 'frame.html'), 'utf8');
+
+    expect(html).toContain('[class.lead]="open().lead"');
+    expect(css).toMatch(
+      /@media \(min-width: 768px\) \{.*\.line\.lead \{ font-size: var\(--mf-size-body\); \}/,
+    );
+  });
+
+  it('marks only the requests view line to stay at body size', () => {
+    const lead = Object.values(DASHBOARDS)
+      .flatMap(({ views }) => views)
+      .filter((view) => view.lead)
+      .map((view) => view.path);
+    expect(lead).toEqual(['requests']);
   });
 });
 
