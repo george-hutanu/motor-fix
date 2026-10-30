@@ -149,22 +149,26 @@ test.describe('a toggle shows before the server answers @seeded', () => {
   }) => {
     await signedIn(page, 'militari@example.test');
     await page.goto('/app/garage/prices');
-    const row = page.locator('[data-row]').filter({
-      has: page.locator('[data-name]', {
-        hasText: 'Diagnoză și citire coduri de eroare',
-      }),
-    });
+    const job = 'Diagnoză și citire coduri de eroare';
+    const row = page
+      .locator('[data-row]')
+      .filter({ has: page.locator('[data-name]', { hasText: job }) });
     await expect(row).toBeVisible();
     await page
       .getByRole('button', { exact: true, name: 'Modifică prețurile' })
       .click();
+    await expect(
+      page.getByRole('button', { exact: true, name: 'Gata' }),
+    ).toHaveAttribute('aria-pressed', 'true');
     const state = row.locator('[data-state]');
     const before = await state.textContent();
     await failLater(page, '**/api/v1/garages/*/prices/*', 'PATCH');
     await slow3g(page);
     await watch(state);
 
-    await row.getByRole('button', { exact: true, name: 'Ascunde' }).click();
+    await row
+      .getByRole('button', { exact: true, name: `Ascunde ${job}` })
+      .click();
 
     await shownWithin(page);
     await expect(row.getByRole('alert')).toHaveText(
