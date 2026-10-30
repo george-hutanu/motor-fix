@@ -346,7 +346,8 @@ describe('NotificationSettings', () => {
     expect(toast).toHaveBeenCalledWith('Setarea nu a putut fi salvată');
   });
 
-  // @traces 1315-optimistic-toggles-FR-001 1315-optimistic-toggles-FR-002 1315-optimistic-toggles-FR-008
+  // @traces 1315-FR-001 1315-FR-002 1315-FR-008
+  // @traces 1315-FR-013 1315-FR-015
   it('shows the saved row again, not a guess, when two saves of one switch both fail', async () => {
     jest.mocked(toast).mockClear();
     const { element, settle } = await render();
@@ -381,7 +382,7 @@ describe('NotificationSettings', () => {
     expect(read.mock.calls.length).toBeGreaterThan(1);
   });
 
-  // @traces 1315-optimistic-toggles-FR-001 1315-optimistic-toggles-FR-008
+  // @traces 1315-FR-001 1315-FR-008
   it('reads the saved row back after a failed save instead of flipping the switch', async () => {
     const { element, settle } = await render();
     await settle();
@@ -402,7 +403,40 @@ describe('NotificationSettings', () => {
     expect(save).toHaveBeenCalledTimes(1);
   });
 
-  // @traces 1315-optimistic-toggles-FR-002
+  // @traces 1315-FR-002
+  it('keeps the last press when the older save of one switch answers last', async () => {
+    const { element, settle } = await render();
+    await settle();
+    let first: (value: NotificationPreferencesDto) => void = () => undefined;
+    let second: (value: NotificationPreferencesDto) => void = () => undefined;
+    save
+      .mockReturnValueOnce(
+        new Promise<NotificationPreferencesDto>((r) => {
+          first = r;
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise<NotificationPreferencesDto>((r) => {
+          second = r;
+        }),
+      );
+    const push = () => named(element, 'Cerere de ofertă nouă, Push');
+    const before = push()?.getAttribute('aria-checked');
+
+    push()?.click();
+    await settle();
+    push()?.click();
+    await settle();
+    second(answer([owner()]));
+    await settle();
+    first(answer([owner()]));
+    await settle();
+
+    expect(push()?.getAttribute('aria-checked')).toBe(before);
+    expect(save).toHaveBeenCalledTimes(2);
+  });
+
+  // @traces 1315-FR-002
   it('keeps a save that succeeds after another switch failed and the lists were read again', async () => {
     const { element, settle } = await render();
     await settle();

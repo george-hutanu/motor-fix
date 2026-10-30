@@ -298,7 +298,8 @@ describe('the cancel booking dialog: cancelling', () => {
     expect(toast).toHaveBeenCalledWith('Booking cancelled');
   });
 
-  // @traces 1315-optimistic-toggles-FR-009
+  // @traces 1315-FR-009
+  // @traces 1315-FR-015
   it('disables both buttons and every field while cancelling, the dialog open', async () => {
     await open();
     await pick('Altceva');
