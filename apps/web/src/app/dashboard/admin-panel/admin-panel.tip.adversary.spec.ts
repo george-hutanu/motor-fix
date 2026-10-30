@@ -22,6 +22,8 @@ const OK = {
   garagesApprovedThisMonth: 9,
   garagesListed: 214,
   garagesWaiting: 2,
+  reportsOverdue: 0,
+  reportsPending: 0,
   requestsSent: 1250,
 };
 const REASON = 'Cifrele nu au putut fi citite';

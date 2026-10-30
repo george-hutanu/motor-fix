@@ -500,6 +500,15 @@ export const REQUEST_EVENTS: readonly EventKind[] = [
   'booking.cancelled',
 ];
 
+// What moves the reported reviews: a report made, decided or closed, or the
+// review deleted. The admin's list, counter and tile follow them.
+export const REVIEW_QUEUE_KINDS: readonly EventKind[] = [
+  'review.reported',
+  'review.decided',
+  'review.deleted',
+  'review.report_closed',
+];
+
 // The events that move the active request panel: the list's, plus every
 // change to a request, its quotes, its booking and its job the driver is sent.
 export const ACTIVE_REQUEST_EVENTS: readonly EventKind[] = [
