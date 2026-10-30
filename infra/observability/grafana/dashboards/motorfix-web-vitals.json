@@ -417,7 +417,7 @@
     {
       "id": 12,
       "type": "timeseries",
-      "title": "Pre-fetch: profile path",
+      "title": "Pre-fetch: browser paths",
       "datasource": {
         "type": "loki",
         "uid": "${loki}"
@@ -435,8 +435,8 @@
             "type": "loki",
             "uid": "${loki}"
           },
-          "expr": "sum by (context_outcome) (count_over_time({app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"prefetch\" | context_path=\"profile\" [$__auto]))",
-          "legendFormat": "{{context_outcome}}"
+          "expr": "sum by (context_path, context_outcome) (count_over_time({app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"prefetch\" | context_path=~\"profile|filter\" [$__auto]))",
+          "legendFormat": "{{context_path}} {{context_outcome}}"
         },
         {
           "refId": "B",
@@ -444,8 +444,8 @@
             "type": "loki",
             "uid": "${loki}"
           },
-          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"prefetch\" | context_path=\"profile\" | context_outcome=\"fetched\" | unwrap duration [$__auto]) by (context_path)",
-          "legendFormat": "fetch p75"
+          "expr": "quantile_over_time(0.75, {app_name=\"$web_app\", kind=\"measurement\"} | logfmt | app_environment=\"$env\" | type=\"prefetch\" | context_path=~\"profile|filter\" | context_outcome=\"fetched\" | unwrap duration [$__auto]) by (context_path)",
+          "legendFormat": "{{context_path}} fetch p75"
         }
       ],
       "fieldConfig": {

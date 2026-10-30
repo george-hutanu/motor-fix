@@ -123,11 +123,15 @@ test.describe('loading more garages on the Results page @seeded @database', () =
     await ready(page, opened());
     await expect(cards(page)).toHaveCount(20);
     const more = page.getByRole('button', { name: 'Încarcă mai multe' });
-    await more.focus();
+    // Focused without scrolling: a scroll would bring the last cards into
+    // view and load the next page on its own, and Enter would then load the
+    // last one, which takes the button away.
+    await more.evaluate((button: HTMLElement) =>
+      button.focus({ preventScroll: true }),
+    );
+    await expect(cards(page)).toHaveCount(20);
     await page.keyboard.press('Enter');
-    await expect
-      .poll(() => cards(page).count(), { timeout: 10_000 })
-      .toBeGreaterThanOrEqual(40);
+    await expect(cards(page)).toHaveCount(40, { timeout: 10_000 });
     await expect(more).toBeFocused();
   });
 
