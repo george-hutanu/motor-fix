@@ -198,7 +198,7 @@ async function profileSaysOpen(
   return openStatus(hours, shut, instant).kind === 'open';
 }
 
-// @traces 1260-FR-002 1260-FR-003
+// @traces 1260-FR-002 1260-FR-003 1260-FR-013
 describe('open now agrees with the status of a profile', () => {
   it.each(OPEN_STATUS_CASES)(
     'matches exactly when the profile says open, %s',
@@ -654,7 +654,7 @@ describe('the pins of a filtered search', () => {
   });
 });
 
-// @traces 1260-FR-010
+// @traces 1260-FR-010 1260-FR-014
 describe('counting a filtered search', () => {
   it('counts neither a search nor a sort change for a filtered first page without log', async () => {
     await garage();
@@ -690,5 +690,39 @@ describe('counting a filtered search', () => {
     );
 
     expect(await searches('results')).toBe(before + 1);
+  });
+});
+
+// @traces 1260-FR-012
+describe('a filtered search writes nothing', () => {
+  it('leaves the hours, closed days, audit trail, outbox and notifications as they were', async () => {
+    const id = await garage({
+      closed: ['2027-11-03'],
+      hours: LUNCH,
+      stance: 'works_on',
+    });
+    // The stored hours and closed days, the audit trail, the outbox (which
+    // carries live updates) and the notifications.
+    const written = async () => ({
+      activity: await prisma.activityLog.count(),
+      closedDays: await prisma.garageClosedDay.findMany({
+        where: { garageId: id },
+      }),
+      hours: (await prisma.garage.findUnique({ where: { id } }))?.hours,
+      notifications: await prisma.notification.count(),
+      outbox: await prisma.outboxEvent.count(),
+    });
+    const before = await written();
+
+    await page({ open_now: '1', open_saturday: '1' }, TUESDAY);
+    await pins.forBrand(
+      dacia,
+      undefined,
+      undefined,
+      undefined,
+      filtersOf({ open_now: '1', open_saturday: '1' }, TUESDAY),
+    );
+
+    expect(await written()).toEqual(before);
   });
 });
