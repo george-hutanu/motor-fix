@@ -19,6 +19,7 @@
             [now]="now()"
             [attr.data-live-id]="row.id"
             [mfLiveChange]="row"
+            [mfLiveChangeSay]="say(row)"
             [mfLiveChangeNew]="fresh().has(row.id)"
           ></li>
         }

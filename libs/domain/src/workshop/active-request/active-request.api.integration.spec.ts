@@ -39,6 +39,16 @@ async function working(
 
 // @traces 274-FR-001
 describe('GET /quote-requests/active for a driver with nothing open', () => {
+  // @traces 1316-FR-008
+  it('is answered private, no-cache, for no shared cache to keep', async () => {
+    const andrei = await world.account('Andrei Marin');
+
+    const res = await get(PATH, bearer(andrei, 'driver'));
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('private, no-cache');
+  });
+
   it('answers no request and a count of 0', async () => {
     const andrei = await world.account('Andrei Marin');
 

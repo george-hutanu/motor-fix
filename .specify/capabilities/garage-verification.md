@@ -1,6 +1,6 @@
 ---
 capability: garage-verification
-updated: 2026-10-24
+updated: 2026-10-30
 features:
   - 207-garage-approval-flow
   - 300-verification-checks
@@ -31,6 +31,7 @@ features:
   - 413-verification-file-presence
   - 136-legal-check-panel
   - 1156-retention-job
+  - 1273-reapply-after-rejection
 ---
 
 # Capability: Garage verification
@@ -586,9 +587,9 @@ _From 304-request-garage-details._
 
 _From 304-request-garage-details._
 
-### 304-FR-012 — The two product actions MUST be observable: a product counter `motorfix_verification_more_requests_total` incremented once per stored request beside the refusals counter (306-FR-011, whose `note_required` and `note_too_short` now count a request's refusals too), and `motorfix_verification_resubmissions_total` incremented once per committed resend; one log line per request (file id, admin id, the ticked codes; never the note) and per resend (file id) under the existing `Verification` logger; the decision request's span carrying `verification.decision` = `more_requested` and `verification.requested_items` (the codes joined by a comma); a panel "Requests for more and files returned, per hour" on the product dashboard beside the rejections panel; an alert "Request-for-more burst" firing when more than 5 requests are counted in 60 minutes, to the owner's contact point; the new endpoint of FR-008 under the API's request metrics by route with the API-wide error and latency rules; every one of them, and the reason the resubmissions counter needs no alert, listed in `infra/observability/inventory.json` (`scripts/observability-inventory.ts` passes).
+### 1273-FR-008 — The correction send MUST be observable: counted once per send that reaches the submit transition (where the counter is incremented today) in the existing `motorfix_verification_resubmissions_total`, which gains the label `after` (`more_requested` for the resend of ST-208, `rejected` for this send), one log line per send under the existing `Verification` logger (new file id, previous file id, garage id; never the note), the send's span carrying `verification.after` = `rejected`; the existing panel of 304-FR-012 sums over the `after` label (the counter has no alert and gets none: a count has no failure to alert on), and `infra/observability/inventory.json` records the label. No new endpoint, queue or outside call is added. Modifies 304-FR-012.
 
-_From 304-request-garage-details._
+_From 1273-reapply-after-rejection._
 
 ### 304-FR-014 — Tests MUST exist before the code (Principle II), with `// @traces` lines naming this feature's FR ids. Jest on real PostgreSQL and Redis: `note_required` for a blank note and a note of spaces, `note_too_short` at 9 code points, 10 and 1,000 accepted, 1,001 refused 400 at the edge, nothing stored on a refusal; each of the five items stored once, duplicates collapsed, no items accepted; the garage `draft` with its profile, prices, brands, photos and documents unchanged after the request; the audit entry and the outbox row with the note; the owner's VERIFICATION_RESULT with the note and unmutable; 409 from the guard after an approval, a rejection and a request, two concurrent decisions ending one committed; 404 for an owner, a receptionist, a mechanic and a driver, 401 with no token, for the decision and for the changes read; the waiting count one lower after the request and one higher after the resend; `resubmitted` true and `requestedAt` after a resend, false for a never-asked file, a reopened file and a decided file; the changes read listing only entries after the request, only the five areas, no internal entry, the 200 cap and `total`, empty for a never-asked file, the latest request after two cycles; the new audit entries of FR-010; the two counters, the span attributes and the log lines. Jest for the browser: the dialog's refusal, count, focus and close values; the drawer's spinner, the 409, the 422 re-open, the footer; the queue's kept "Cerute completări" row and the "Actualizat" tag on a live re-read; the panel's grouping, lines, empty, loading and failed states. Playwright, run on demand and at release: ask for photos as the admin; as the owner add photos and resend (no resend route exists until ST-208 ships it: the Jest tests drive the verification service's existing resend transition directly against PostgreSQL, and the Playwright setup performs it through the database, an `UPDATE` of the file and an outbox row, as `verification-queue.spec.ts` seeds files); as the admin see "Actualizat" and the change list.
 
@@ -741,21 +742,21 @@ _From 101-verification-progress._
 
 _From 208-resubmit-after-more._
 
-### 208-FR-004 — The system MUST let the garage's `owner` open a **completion copy** of a `more_requested` garage: the garage's saved rows (step 1 details and place, step 2 brands and stances, step 3 prices, step 4 mechanic cards, step 5 hours and payments, step 6 CUI, RAR number and declaration), its current legal documents and its photos, read into the draft shape the listing form keeps; one open copy per file, opened again as long as the file is `more_requested`, with the owner's edits kept; 403 for a receptionist or mechanic, 404 for anyone outside the garage, 409 `verification_transition_refused` when the file is not `more_requested`. The copy is never swept while its file is `more_requested`; once the file leaves it, the sweep removes the open copy. It is not a visitor's draft: it needs the session, not a continue link.
+### 1273-FR-003 — The system MUST let the garage's `owner` open the completion copy of ST-208 for a garage whose newest file is `rejected` as for one `more_requested`: the garage's saved rows, current legal documents and photos read into the draft shape; one open copy per file, opened again with the owner's edits kept as long as that file is the garage's newest and `rejected`; 403 for a receptionist or mechanic, 404 for anyone outside the garage, 409 `verification_transition_refused` with `currentStatus` when the newest file is neither `more_requested` nor `rejected`. The copy is never swept while its file is the garage's newest and `rejected`; the sweep removes it once its file is neither `more_requested` nor (`rejected` and the garage's newest), so a newer file or a reopen of the rejected file both let it go. Modifies 208-FR-004.
 
-_From 208-resubmit-after-more._
+_From 1273-reapply-after-rejection._
 
 ### 208-FR-006 — Replacing a legal document in step 6 MUST keep the replacement's pages in the copy until the resend and, in the resend's transaction, make the new upload the current LEGAL_DOCUMENT of its kind and keep the old row marked replaced (`replaced_at`, proposed); a kind not replaced keeps its row untouched; a replacement removed before the send leaves the file as it was. Admin reads of the file MUST show the current document per kind and list a replaced one as "înlocuit" / "replaced" with its date; a replaced document's pages stay downloadable to admins. One `document.uploaded` event per replaced document, emitted at the resend in that transaction, as the brief says. The per-file-and-kind uniqueness becomes a partial unique index over rows with no `replaced_at`.
 
 _From 208-resubmit-after-more._
 
-### 208-FR-007 — The send of a completion copy MUST, in one transaction that rolls back whole if any write fails: re-check the copy with the first send's rules (116-FR-007: 422 with the field list, nothing written; the two step 6 uploads not required; the `cui_in_use` warning stored on the file, never a refusal, 116-FR-012); write the copy back over the garage's own rows (details, place, brands, prices, mechanics, hours, payments, photos, documents), changing only what differs; write one audit entry per changed field with old and new values, one per photo or brand added or removed, one per replaced document, none for an unchanged value, and one for the resend; move the file `more_requested` → `submitted` through the existing `resend` transition (new `submittedAt`; `decidedAt`, `reasonNote` and `requestedItems` kept, so `resubmitted` and `requestedAt` derive as 304-FR-007 states); hand the outbox `verification.submitted` with `resubmission: true` in the same transaction (Principle VI). The garage stays `draft` and out of public reads while the stored automatic-approval switch is off; with it on, the existing `resend` ends in the automatic approval exactly as today (unchanged). The resubmissions counter counts once (304-FR-012). The same `Idempotency-Key` rule as the first send applies (116-FR-008).
+### 1273-FR-004 — The send of a copy whose file is `rejected` MUST, in one transaction that rolls back whole if any write fails: re-check the copy with the first send's rules (116-FR-007: 422 with the field list, nothing written; the `cui_in_use` warning stored on the new file, never a refusal); write the copy back over the garage's own rows, changing only what differs, with the audit entries of 208-FR-007; create one **new** verification file `submitted` through the existing submit transition, carrying what the file itself holds of the listing: a new legal-document row bound to the new file for each document the rejected file holds and the copy did not replace (a replacement per 208-FR-006 is bound to the new file only), and the copy's declaration (`declaredAt`, `declaredByName`) and RAR number written onto the new file (207-FR-004: `previous_file_id` = the rejected file, which keeps its status, reason, note and decision untouched; `rejected` → a new file, never `rejected` → `submitted` on the same file); hand the outbox the `verification.submitted` of a first send in the same transaction. No garage, no membership row and no draft of the owner is created or changed: the first-send route and its X20b refusal (116-FR-009) are not on this path. The garage stays `draft` and off the map while the stored automatic-approval switch is off; with it on, the new file is approved at once as a first send is. The same `Idempotency-Key` rule as the first send applies (116-FR-008). The same copy, once sent, is closed as 208-FR-007 closes it. Modifies 208-FR-007.
 
-_From 208-resubmit-after-more._
+_From 1273-reapply-after-rejection._
 
-### 208-FR-008 — A send when the file is not `more_requested` (decided, reopened, or already resent) MUST answer 409 `verification_transition_refused` with `currentStatus`, nothing written; the form then shows the status view with the status read again. A receptionist or mechanic sending MUST be refused 403; anyone outside the garage 404.
+### 1273-FR-005 — A send when the copy's file is neither `more_requested` nor `rejected`, or is no longer the garage's newest, MUST answer 409 `verification_transition_refused` with `currentStatus` = the status of the garage's newest file (e.g. `submitted` when a second tab sent first), nothing written; the form then shows the status view with the status read again. A receptionist or mechanic sending MUST be refused 403; anyone outside the garage 404. The first-send route's 409 `garage_already_exists` for an account holding an `owner` membership stays exactly as it is (116-FR-009 unchanged): the only path back is the same garage with a new file. Modifies 208-FR-008.
 
-_From 208-resubmit-after-more._
+_From 1273-reapply-after-rejection._
 
 ### 208-FR-009 — After a successful resend the form MUST show the confirmation and status view of 116-FR-001 ("Am primit cererea. O verificăm în 1–2 zile lucrătoare.", "Trimis" lit with the new date), focus on its heading; `/app/garage` MUST show "Trimis" with the new date and no request within 5 seconds (the `verification.submitted` event reaches the garage's channel). The admins' queue MUST show the garage waiting from the new sending time with "Actualizat" (304-FR-007), and the ADMIN_VERIFICATION_QUEUED fan-out MUST fire as for a first send (116-FR-011); nothing new is added to notifications.
 
@@ -884,6 +885,18 @@ _From 136-legal-check-panel._
 
 _From 1156-retention-job._
 
+### 1273-FR-006 — After a successful send the form MUST show the confirmation and status view of 116-FR-001 ("Am primit cererea. O verificăm în 1–2 zile lucrătoare.", "Trimis" lit with the new date), focus on its heading; the admins' queue lists the new file as a new sending (no "Actualizat" tag: `resubmitted` of 304-FR-007 stays false for a file never decided), and the admins' notification of a new sending (116-FR-011) goes as for a first send. Nothing in those rules changes.
+
+_From 1273-reapply-after-rejection._
+
+### 1273-FR-007 — An admin opening a file whose `previous_file_id` names a `rejected` file MUST see "Respins anterior: {reason}, {when}" with the earlier note (305-FR-008 unchanged), and for a garage rejected twice the newest file's `previous_file_id` MUST name the second rejected file and the line MUST show the second rejection (207-FR-004 and 305-FR-008 unchanged): this story proves both through the correction path, with tests, not a change.
+
+_From 1273-reapply-after-rejection._
+
+### 1273-FR-009 — Tests MUST exist before the code (Principle II), with `// @traces` lines naming this feature's FR ids. Jest on real PostgreSQL and Redis: the copy opened for a `rejected` file and again with edits kept; 409 with `currentStatus` for `submitted`, `in_review` and `approved`; 403 for the receptionist and the mechanic, 404 outside the garage, on the open and on the send; the send creating one `submitted` file with `previous_file_id` = the rejected file, the rejected file byte-for-byte unchanged, the garage count and the `owner` membership count unchanged, the garage `draft`, the corrected field written with its audit entry, the outbox row in the same transaction; the chain after two rejections and the admin read's earlier rejection being the second; the first-send route still 409 `garage_already_exists` for the owner; 422 on a failed re-check with nothing written; 409 when a newer file exists at the send; the counter's `after` label; the idempotent repeat. The web unit tests and the QA sweep's end-to-end flow are ST-1401's (Split, title 2).
+
+_From 1273-reapply-after-rejection._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -944,3 +957,7 @@ _From 1156-retention-job._
 - `069-FR-008` — superseded by `067-FR-010` (2026-10-23)
 - `302-FR-008` — superseded by `413-FR-008` (2026-10-24)
 - `068-FR-005` — superseded by `136-FR-003` (2026-10-24)
+- `208-FR-004` — superseded by `1273-FR-003` (2026-10-30)
+- `208-FR-007` — superseded by `1273-FR-004` (2026-10-30)
+- `208-FR-008` — superseded by `1273-FR-005` (2026-10-30)
+- `304-FR-012` — superseded by `1273-FR-008` (2026-10-30)
