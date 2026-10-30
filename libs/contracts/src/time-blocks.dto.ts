@@ -173,3 +173,18 @@ export class UpdateTimeBlockDto extends PartialType(
   @IsISO8601({ strict: true })
   endsAt?: string;
 }
+
+// What a block may take: the garage's lifts and the cards of its team, the
+// same as the confirm dialog offers.
+export class TimeBlockOptionsDto {
+  @ApiProperty({ description: '0 while the garage schedules without lifts' })
+  liftCount!: number;
+
+  // A thunk, as on TimeBlockDto.
+  @ApiProperty({
+    description:
+      'Empty while the garage works without a team; ordered by name, then id',
+    type: () => [BookingMechanicDto],
+  })
+  mechanics!: BookingMechanicDto[];
+}

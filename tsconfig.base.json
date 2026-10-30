@@ -43,10 +43,14 @@
       "@motor-fix/contracts/garage-hours": [
         "./libs/contracts/src/garage-hours.ts"
       ],
+      "@motor-fix/contracts/garage-profile-limits": [
+        "./libs/contracts/src/garage-profile-limits.ts"
+      ],
       "@motor-fix/contracts/garage-report-text": [
         "./libs/contracts/src/garage-report-text.ts"
       ],
       "@motor-fix/contracts/images": ["./libs/contracts/src/images.ts"],
+      "@motor-fix/contracts/is-record": ["./libs/contracts/src/is-record.ts"],
       "@motor-fix/contracts/legal-documents": [
         "./libs/contracts/src/legal-documents/legal-documents.ts"
       ],

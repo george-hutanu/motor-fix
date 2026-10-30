@@ -1,3 +1,5 @@
+import { isRecord } from '@motor-fix/contracts/is-record';
+
 export interface Step6Values {
   cui: string;
   rarNumber: string;
@@ -5,8 +7,6 @@ export interface Step6Values {
 
 type Five = [boolean, boolean, boolean, boolean, boolean];
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 const text = (value: unknown) => (typeof value === 'string' ? value : '');
 
 // The two values from whatever the draft holds; anything but text reads empty.

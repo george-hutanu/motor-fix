@@ -18,11 +18,9 @@ import {
   type Weekday,
   type WeeklyHours,
 } from '@motor-fix/contracts/garage-hours';
+import { isRecord } from '@motor-fix/contracts/is-record';
 
 import { letters } from './brands-section';
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const stepFive = (data: unknown) => {
   if (!isRecord(data)) return undefined;

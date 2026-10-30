@@ -6574,6 +6574,54 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/time-blocks/options": {
+      "get": {
+        "operationId": "timeBlockOptions",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeBlockOptionsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "the garage id is not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The lifts and the mechanics a block may take",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/time-blocks/{blockId}": {
       "patch": {
         "operationId": "updateTimeBlock",
@@ -8113,6 +8161,71 @@
           }
         ],
         "summary": "The garage's public profile as drivers see it, with its stored phone",
+        "tags": [
+          "garages"
+        ]
+      },
+      "patch": {
+        "operationId": "GarageProfileController_update",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGarageProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageProfileDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a limit broken (errors[].field names it), an unknown field, an empty save, a radius for a workshop (radius_not_applicable)"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          },
+          "409": {
+            "description": "profile_changed: the version is not the current one"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          },
+          "422": {
+            "description": "needs_verification: address, company or kinds of work, which change through a new verification (errors[].field names each)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change the garage's name, description, phone, hours with closed days or service radius in place",
         "tags": [
           "garages"
         ]
@@ -20285,6 +20398,26 @@
           "lifts"
         ]
       },
+      "TimeBlockOptionsDto": {
+        "type": "object",
+        "properties": {
+          "liftCount": {
+            "type": "number",
+            "description": "0 while the garage schedules without lifts"
+          },
+          "mechanics": {
+            "description": "Empty while the garage works without a team; ordered by name, then id",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingMechanicDto"
+            }
+          }
+        },
+        "required": [
+          "liftCount",
+          "mechanics"
+        ]
+      },
       "CreateTimeBlockDto": {
         "type": "object",
         "properties": {
@@ -22174,6 +22307,23 @@
           "displayUrl"
         ]
       },
+      "StoredClosedDayDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "description": "A Bucharest calendar day, \"YYYY-MM-DD\"",
+            "format": "date"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "day"
+        ]
+      },
       "GarageProfileDto": {
         "type": "object",
         "properties": {
@@ -22240,7 +22390,7 @@
           "description": {
             "type": "string",
             "description": "The line the garage wrote about itself, as written",
-            "maxLength": 160
+            "maxLength": 1000
           },
           "verifiedAt": {
             "type": "string",
@@ -22358,6 +22508,17 @@
             "type": "string",
             "description": "The garage's stored phone as saved; never public",
             "nullable": true
+          },
+          "version": {
+            "type": "string",
+            "description": "The profile's change stamp; sent back with a save"
+          },
+          "storedClosedDays": {
+            "description": "Every closed day the garage stored, from today on, with its note; never public",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoredClosedDayDto"
+            }
           }
         },
         "required": [
@@ -22379,7 +22540,79 @@
           "jobTypes",
           "prices",
           "photos",
-          "phone"
+          "phone",
+          "version",
+          "storedClosedDays"
+        ]
+      },
+      "UpdateGarageProfileDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The profile's change stamp as last read",
+            "maxLength": 20,
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Trimmed before it is counted and stored",
+            "maxLength": 80,
+            "minLength": 2
+          },
+          "description": {
+            "type": "string",
+            "description": "Trimmed; empty clears it",
+            "maxLength": 1000
+          },
+          "phone": {
+            "type": "string",
+            "description": "As typed; a Romanian number, stored as +40 and nine digits"
+          },
+          "hours": {
+            "type": "object",
+            "additionalProperties": {
+              "items": {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "description": "Each weekday (mon…sun) to its intervals as \"HH:MM\" pairs, an empty list on a closed day; sent with closedDays"
+          },
+          "closedDays": {
+            "type": "array",
+            "description": "Every closed day the garage keeps, once each; a note up to 80 characters",
+            "items": {
+              "properties": {
+                "day": {
+                  "format": "date",
+                  "type": "string"
+                },
+                "note": {
+                  "maxLength": 80,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "day"
+              ],
+              "type": "object"
+            }
+          },
+          "serviceRadiusKm": {
+            "type": "integer",
+            "description": "A mobile mechanic only",
+            "maximum": 100,
+            "minimum": 5
+          }
+        },
+        "required": [
+          "version"
         ]
       },
       "CreateGarageReportDto": {
@@ -23854,7 +24087,7 @@
           "description": {
             "type": "string",
             "description": "The line the garage wrote about itself, as written",
-            "maxLength": 160
+            "maxLength": 1000
           },
           "verifiedAt": {
             "type": "string",
