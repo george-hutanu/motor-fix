@@ -5,6 +5,7 @@ import {
   isWeeklyHours,
   todayInBucharest,
   WEEKDAYS,
+  type Weekday,
   type WeeklyHours,
 } from './garage-hours';
 
@@ -44,6 +45,17 @@ const plusDays = (day: string, days: number) =>
 const weekdayOf = (day: string) =>
   WEEKDAYS[(new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7];
 
+// The Bucharest calendar day, wall-clock time and weekday of an instant: the
+// one reading the profile's status and the search's open-now filter share.
+export function bucharestClock(at: Date): {
+  day: string;
+  time: string;
+  weekday: Weekday;
+} {
+  const day = todayInBucharest(at);
+  return { day, time: BUCHAREST_TIME.format(at), weekday: weekdayOf(day) };
+}
+
 const closedOn = (closedDays: readonly ClosedDayAhead[]) => {
   const shut = new Map<string, ClosedDayAhead['reason']>();
   for (const { day, reason } of closedDays)
@@ -71,9 +83,8 @@ export function openStatus(
 ): OpenStatus {
   if (!isWeeklyHours(hours)) return { kind: 'none' };
   const shut = closedOn(closedDays);
-  const today = todayInBucharest(now);
-  const time = BUCHAREST_TIME.format(now);
-  const intervals = shut.has(today) ? [] : hours[weekdayOf(today)];
+  const { day: today, time, weekday } = bucharestClock(now);
+  const intervals = shut.has(today) ? [] : hours[weekday];
 
   const current = intervals.find(([start, end]) => start <= time && time < end);
   if (current) return { kind: 'open', until: current[1] };
