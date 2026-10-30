@@ -14,6 +14,7 @@ features:
   - 406-final-price-handover
   - 1393-final-price-predare
   - 1395-block-time-dashboard
+  - 1404-predare-quote-range
 ---
 
 # Capability: Workshop
@@ -405,6 +406,30 @@ _From 1395-block-time-dashboard._
 ### 1395-FR-008 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids: in Jest on real PostgreSQL, US1-1 to US1-7 (the body per switch state, the order, the removed card, the owner's own card, the empty team) and US2-1 to US2-6 (every role, the unknown garage, the visitor and the public routes list, the idempotent read, the non-uuid id); the DTO's OpenAPI shape in the contracts unit specs where the sibling DTOs have one. No web file changes in this story (the `apps/web` diff is empty; the regenerated `libs/data-access` is not counted).
 
 _From 1395-block-time-dashboard._
+
+### 1404-FR-001 — The garage's job read (`GET /api/v1/garage/jobs/:id`, `JobDto`) MUST also return `quoteFromBani` and `quoteToBani`, whole bani, both required (non-nullable) integers: the lower and upper bound of the booking's quote, the accepted one (220-FR-009), for every role the read already serves (owner, receptionist, the job's mechanic), with the read's role and garage rules unchanged.
+
+_From 1404-predare-quote-range._
+
+### 1404-FR-002 — The two fields MUST come from the booking's quote in the one query the read already makes (the booking include that builds the summary), never a second read or a second route; the values are the quote's `from_bani` and `to_bani` (`Int` columns, passed through as they are). "One query" is one Prisma call (`job.findFirst` with a nested `booking.quote` select, which Prisma may serve with its own SELECT), not one SQL statement; the read gets the quote through its own include, never through the shared summary include.
+
+_From 1404-predare-quote-range._
+
+### 1404-FR-003 — The list's items (`GET /api/v1/garage/jobs`, `JobSummaryDto`) MUST be unchanged: neither field, and the list's include (the shared summary include) byte-identical; only the single read's include gains the quote. The test proves the items' shape (scenario 4).
+
+_From 1404-predare-quote-range._
+
+### 1404-FR-004 — No column and no migration: the range is read from the existing `quote_job` row through `BOOKING.quote_id`.
+
+_From 1404-predare-quote-range._
+
+### 1404-FR-005 — `JobDto` in the contracts library MUST declare the two fields (required, integer), the OpenAPI document (`apps/api/openapi.json`) MUST be regenerated from it and the generated client (`libs/data-access`) regenerated from the document, never edited by hand (Principle V).
+
+_From 1404-predare-quote-range._
+
+### 1404-FR-006 — Tests MUST exist before the code (Principle II), with a `// @traces` line per spec file: one Jest test on real PostgreSQL in the workshop module's garage-jobs folder (`*.integration.spec.ts`) proving the two fields on a job with a quote (scenarios 1 and 3), their absence from the list's items (scenario 4) and the unchanged refusals (scenario 2). No contracts unit test: `JobDto` is a response type with no validation to test (`libs/contracts/src/jobs.dto.spec.ts` covers only the validated input DTOs). Scenario 5 is proven by CI's `scripts/contract-check.sh` (regenerate and diff `apps/api/openapi.json` and `libs/data-access`), SC-004.
+
+_From 1404-predare-quote-range._
 
 ## Retired
 
