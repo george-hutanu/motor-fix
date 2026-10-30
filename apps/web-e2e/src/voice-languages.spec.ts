@@ -94,11 +94,14 @@ async function results(page: Page, voice: Voice, language: Language) {
 }
 
 // The review drawer opens on any driver view from the address; a job that is
-// no id opens its "not found" view, whose title is the voice's text.
+// no id opens its "not found" view, whose title is the voice's text. The
+// dialog itself is the wait: networkidle on the dashboard has outlasted the
+// 30 s test on a loaded runner, four voices at once.
 async function drawer(page: Page) {
   await page.goto('/app/driver?review=none');
-  await settled(page);
-  return page.getByRole('dialog');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  return dialog;
 }
 
 async function measure(page: Page, testInfo: TestInfo, name: string) {
