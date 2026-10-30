@@ -157,11 +157,16 @@ export class AdminLayout {
       return this.applied > turn;
     } finally {
       this.outstanding--;
-      // An account switched meanwhile has its own read: it redraws once it answers.
-      if (this.outstanding === 0 && this.server() !== undefined) {
-        this.shown.set(this.server() ?? fallback());
-      }
+      this.settle(account);
     }
+  }
+
+  // With the last save answered, Panou draws the server's layout again. An
+  // account switched meanwhile has its own read, which redraws once it answers.
+  private settle(account: string | undefined) {
+    if (this.outstanding > 0) return;
+    if (this.server() === undefined && this.account() !== account) return;
+    this.shown.set(this.server() ?? fallback());
   }
 
   private async read() {

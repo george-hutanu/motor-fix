@@ -176,6 +176,24 @@ describe('reading the admin layout', () => {
     expect(api.dashboardLayoutsControllerRead).toHaveBeenCalledTimes(2);
   });
 
+  it('puts the default back when a save fails while the first read is out', async () => {
+    const first = deferred<DashboardLayoutDto>();
+    const { layout, settle } = setup({
+      read: () => first.promise,
+      save: async () => {
+        throw new Error('down');
+      },
+    });
+    await settle();
+
+    const saved = await layout.toggle('log', false);
+    await settle();
+
+    expect(saved).toBe(false);
+    expect(hidden(layout)).toEqual([]);
+    expect(order(layout)).toEqual(KEYS);
+  });
+
   it("draws the other account's layout when it signs in while a save is out", async () => {
     const out = deferred<DashboardLayoutDto>();
     const { layout, me, settle } = setup({
