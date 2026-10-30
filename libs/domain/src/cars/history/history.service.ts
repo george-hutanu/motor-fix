@@ -6,23 +6,17 @@ import type {
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import {
-  fromPreviousOwner,
   type OwnershipRow,
   REPAIR_ORDER,
+  REPAIR_ROW_SELECT,
   repairWhere,
+  toRow,
 } from './history';
 import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
+import { localDay } from '../../bucharest';
 import type { PrismaClient } from '../../generated/prisma/client';
-
-// Who last corrected a repair, as the driver is told: a driver's own edit
-// is none.
-const CORRECTED_BY = {
-  admin: 'admin',
-  driver: null,
-  owner: 'garage',
-} as const;
 
 const day = (at: Date) => at.toISOString().slice(0, 10);
 const notFound = () =>
@@ -44,7 +38,7 @@ export class CarHistoryService {
       },
     });
     if (!row) throw notFound();
-    return this.read(row);
+    return this.read(actor, row);
   }
 
   // Every car the caller sold, newest sale first, removed or not.
@@ -84,32 +78,22 @@ export class CarHistoryService {
       },
     });
     if (!row) throw notFound();
-    return this.read(row);
+    return this.read(actor, row);
   }
 
-  private async read(row: OwnershipRow): Promise<CarRepairListDto> {
+  private async read(
+    actor: Actor,
+    row: OwnershipRow,
+  ): Promise<CarRepairListDto> {
     const repairs = await this.prisma.repair.findMany({
       orderBy: REPAIR_ORDER,
-      select: {
-        costBani: true,
-        createdAt: true,
-        doneOn: true,
-        garageName: true,
-        id: true,
-        odometerKm: true,
-        source: true,
-        updatedByRole: true,
-        what: true,
-      },
+      select: REPAIR_ROW_SELECT,
       where: repairWhere(row),
     });
+    const today = localDay(new Date());
+    const language = actor.language ?? 'ro';
     return {
-      items: repairs.map(({ createdAt, doneOn, updatedByRole, ...repair }) => ({
-        ...repair,
-        correctedBy: CORRECTED_BY[updatedByRole ?? 'driver'],
-        doneOn: day(doneOn),
-        fromPreviousOwner: fromPreviousOwner({ createdAt }, row),
-      })),
+      items: repairs.map((repair) => toRow(repair, row, language, today)),
     };
   }
 }

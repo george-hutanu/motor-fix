@@ -31,7 +31,7 @@ import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
-import { REPAIR_ORDER } from '../history/history';
+import { liveOwner, REPAIR_ORDER } from '../history/history';
 
 const LIST_LIMIT = 200;
 
@@ -124,7 +124,7 @@ export class ClientRepairsService {
           { ...before },
           after,
         );
-        const ownerId = liveOwner(saved);
+        const ownerId = liveOwner(saved.car);
         await this.events.record(tx, {
           audience: {
             ownerAccountId: ownerId,
@@ -183,12 +183,6 @@ export class ClientRepairsService {
     if (!garage) throw notFound();
     return garage.id;
   }
-}
-
-// The car's current owner, unless the account is deleted.
-function liveOwner(row: ClientRepairRow): string | null {
-  const open = row.car.ownerships[0];
-  return open && open.account.status !== 'deleted' ? open.accountId : null;
 }
 
 const REFUSED: Partial<Record<number, CorrectionOutcome>> = {
