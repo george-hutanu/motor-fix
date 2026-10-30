@@ -16,6 +16,14 @@ import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import type { PrismaClient } from '../../generated/prisma/client';
 
+// Who last corrected a repair, as the driver is told: a driver's own edit
+// is none.
+const CORRECTED_BY = {
+  admin: 'admin',
+  driver: null,
+  owner: 'garage',
+} as const;
+
 const day = (at: Date) => at.toISOString().slice(0, 10);
 const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such car');
@@ -83,18 +91,22 @@ export class CarHistoryService {
     const repairs = await this.prisma.repair.findMany({
       orderBy: REPAIR_ORDER,
       select: {
+        costBani: true,
         createdAt: true,
         doneOn: true,
         garageName: true,
         id: true,
+        odometerKm: true,
         source: true,
+        updatedByRole: true,
         what: true,
       },
       where: repairWhere(row),
     });
     return {
-      items: repairs.map(({ createdAt, doneOn, ...repair }) => ({
+      items: repairs.map(({ createdAt, doneOn, updatedByRole, ...repair }) => ({
         ...repair,
+        correctedBy: CORRECTED_BY[updatedByRole ?? 'driver'],
         doneOn: day(doneOn),
         fromPreviousOwner: fromPreviousOwner({ createdAt }, row),
       })),
