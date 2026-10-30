@@ -53,6 +53,9 @@ export class NotificationSettings implements OnInit {
   // The last press on each switch, so an older save's answer cannot undo it.
   private presses = 0;
   private readonly latest = new Map<string, number>();
+  // What the server last said each pressed switch holds, so a failed save
+  // whose re-read fails too can still put the switch back.
+  private readonly confirmed = new Map<string, boolean>();
 
   ngOnInit() {
     // The preferences event goes straight to Redis, so it is no outbox kind.
@@ -71,13 +74,16 @@ export class NotificationSettings implements OnInit {
   }
 
   // A failed re-read keeps the lists on screen; only a first read shows the error.
-  protected async load() {
+  protected async load(): Promise<boolean> {
     this.failed.set(false);
     try {
       const answer = await this.api.notificationPreferencesControllerRead();
       this.entries.set(answer.staff);
+      this.confirmed.clear();
+      return true;
     } catch {
       if (this.entries() === undefined) this.failed.set(true);
+      return false;
     }
   }
 
@@ -91,6 +97,7 @@ export class NotificationSettings implements OnInit {
     const key = `${garageId}|${type}|${channel}`;
     const press = ++this.presses;
     this.latest.set(key, press);
+    if (!this.confirmed.has(key)) this.confirmed.set(key, !enabled);
     this.set(garageId, type, channel, enabled);
     // The switch already shows the choice; a save's answer may predate a
     // later toggle, so the live update re-reads instead.
@@ -98,6 +105,7 @@ export class NotificationSettings implements OnInit {
       await this.api.notificationPreferencesControllerSave({
         body: { preferences: [{ channel, enabled, garageId, type }] },
       });
+      this.confirmed.set(key, enabled);
       // A re-read after another switch failed may have shown the row from
       // before this save; the latest press on this switch still stands.
       if (this.latest.get(key) === press)
@@ -106,7 +114,15 @@ export class NotificationSettings implements OnInit {
       // Two saves of one switch can fail in any order: only the server
       // knows what it holds, so it is read again rather than guessed.
       toast(this.i18n.t('shell.notifications.saveFailed'));
-      await this.load();
+      // With no answer from the re-read either, the latest press falls back
+      // to the last value the server confirmed.
+      const back = this.confirmed.get(key);
+      if (
+        !(await this.load()) &&
+        this.latest.get(key) === press &&
+        back !== undefined
+      )
+        this.set(garageId, type, channel, back);
     }
   }
 
