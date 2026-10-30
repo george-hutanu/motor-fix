@@ -1,6 +1,6 @@
 ---
 capability: overlays
-updated: 2026-10-25
+updated: 2026-10-30
 features:
   - 157-dialog-drawer
   - 159-form-saving
@@ -13,6 +13,7 @@ features:
   - 495-hlm-input-aria-reveal
   - 532-lost-session-home
   - 1127-bottom-sheet-size
+  - 1403-block-time-dialog
 ---
 
 # Capability: overlays
@@ -268,6 +269,18 @@ _From 1127-bottom-sheet-size._
 ### 1127-FR-008 — Every other behaviour of the sheet, the drawer and the dialog MUST stay as the overlays capability states it (mask, scroll lock, the three closes and Back, focus kept and returned, discard question, drag, motion, keyboard, stacking, 320 px without sideways scroll, axe clean in light and dark, Romanian and English).
 
 _From 1127-bottom-sheet-size._
+
+### 1403-FR-009 — Every label, message and toast MUST exist in Romanian and English; the dialog MUST show at 320 px, 390 px, a tablet and a desktop, light and dark, with no sideways scroll, every control at least 44 px tall, every message under a field announced (`role="alert"`, `aria-describedby`, `aria-invalid`), the first field focused once the options arrive (`task.focusStart()`), and axe clean.
+
+_From 1403-block-time-dialog._
+
+### 1403-FR-010 — The initial web bundle MUST stay under its 1 MB error budget (`apps/web/project.json:17-22`): the dialog, its template and its styles load on demand (FR-002); the PR's production build output is the evidence, compared with the base's.
+
+_From 1403-block-time-dialog._
+
+### 1403-FR-012 — The overlays' task API MUST let a task hold itself open while a save is in flight (`hold(true)`: X, Escape, a click outside, a drag, Back and `dismiss` do nothing until `hold(false)`; the task's own close still closes) and close through its own Renunță as the X does (`dismiss()`: closes `cancelled`, asking the shared discard question first when a field changed), additive to `OverlayTask` (review 2026-10-30: the Edge Cases' "closing while a save is in flight is ignored" and US1-9's Renunță).
+
+_From 1403-block-time-dialog._
 
 ## Retired
 
