@@ -148,7 +148,12 @@ describe('the pins on the results map', () => {
             coordinates: [26.1 + 1 / 1000, 44.4 + 1 / 1000],
             type: 'Point',
           },
-          properties: { id: 'g-1', rate: '150', stance: 'works_on' },
+          properties: {
+            id: 'g-1',
+            matches: true,
+            rate: '150',
+            stance: 'works_on',
+          },
           type: 'Feature',
         },
         {
@@ -156,7 +161,12 @@ describe('the pins on the results map', () => {
             coordinates: [26.1 + 2 / 1000, 44.4 + 2 / 1000],
             type: 'Point',
           },
-          properties: { id: 'g-2', rate: '', stance: 'does_not_take' },
+          properties: {
+            id: 'g-2',
+            matches: true,
+            rate: '',
+            stance: 'does_not_take',
+          },
           type: 'Feature',
         },
       ],
@@ -329,7 +339,12 @@ describe('a mobile mechanic on the results map', () => {
             coordinates: [ring({ lat: 44.45, lng: 26.12 }, 20)],
             type: 'Polygon',
           },
-          properties: { id: 'g-2', rate: '120', stance: 'works_on' },
+          properties: {
+            id: 'g-2',
+            matches: true,
+            rate: '120',
+            stance: 'works_on',
+          },
           type: 'Feature',
         },
       ],
@@ -349,7 +364,7 @@ describe('a mobile mechanic on the results map', () => {
     expect(layer('areas-fill')).toMatchObject({
       paint: {
         'fill-color': ['match', ['get', 'stance'], 'works_on', GREEN, RED],
-        'fill-opacity': 0.12,
+        'fill-opacity': ['case', ['get', 'matches'], 0.12, 0.048],
       },
       source: 'areas',
       type: 'fill',
@@ -551,7 +566,7 @@ describe('the lit garage on the results map', () => {
 
     expect(fill).toMatchObject({ paint: { 'fill-color': AMBER } });
     expect(fill.paint['fill-opacity']).toBeGreaterThan(
-      layer('areas-fill').paint['fill-opacity'],
+      layer('areas-fill').paint['fill-opacity'][2],
     );
     expect(fill.paint['fill-opacity']).toBeLessThan(1);
     expect(layer('areas-lit-line')).toMatchObject({
@@ -763,5 +778,79 @@ describe('the "you are here" marker on the results map', () => {
 
     expect(map.jumpTo).toHaveBeenCalledWith(jumpedTo([PLACE]));
     expect(map.jumpTo).not.toHaveBeenCalledWith(jumpedTo([]));
+  });
+});
+
+// @traces 1398-FR-010
+describe('a garage that misses the filters on the results map', () => {
+  const dim = (on: number) => ['case', ['get', 'matches'], on, 0.4];
+
+  it('carries whether each garage meets the filters on its pin and its circle', () => {
+    draw().show(
+      answer([
+        pinOf(1, { matches: false }),
+        pinOf(2, { matches: true }),
+        pinOf(3, { matches: false, serviceRadiusKm: 5 }),
+      ]),
+    );
+
+    expect(
+      lastData().features.map(
+        (f: { properties: { matches: boolean } }) => f.properties.matches,
+      ),
+    ).toEqual([false, true]);
+    expect(
+      map.sources.get('areas')?.setData.mock.calls.at(-1)?.[0].features[0]
+        .properties.matches,
+    ).toBe(false);
+  });
+
+  it('draws its dot and its rate at 40 % opacity, a matching one whole', () => {
+    draw();
+
+    expect(layer('pins-dot').paint).toMatchObject({
+      'circle-opacity': dim(1),
+      'circle-stroke-opacity': dim(1),
+    });
+    expect(layer('pins-rate').paint).toMatchObject({ 'text-opacity': dim(1) });
+  });
+
+  it('draws a mobile mechanic that misses at 40 % of its fill, outline and rate', () => {
+    draw();
+
+    expect(layer('areas-fill').paint['fill-opacity']).toEqual([
+      'case',
+      ['get', 'matches'],
+      0.12,
+      0.048,
+    ]);
+    expect(layer('areas-line').paint).toMatchObject({ 'line-opacity': dim(1) });
+    expect(layer('areas-rate').paint).toMatchObject({ 'text-opacity': dim(1) });
+  });
+
+  it('keeps the lit pin and circle whole, and a cluster whole, whatever they match', () => {
+    draw();
+
+    for (const id of [
+      'pins-lit-dot',
+      'pins-lit-rate',
+      'areas-lit-fill',
+      'areas-lit-line',
+      'pins-cluster',
+      'pins-count',
+    ]) {
+      expect(JSON.stringify(layer(id).paint)).not.toContain('matches');
+    }
+  });
+
+  it('keeps a dimmed pin tappable', () => {
+    draw().show(answer([pinOf(1, { matches: false })]));
+    map.queryRenderedFeatures.mockReturnValueOnce([
+      { properties: { id: 'g-1' } },
+    ]);
+
+    fire('click', { point: { x: 1, y: 1 } });
+
+    expect(picked).toHaveBeenCalledWith('g-1');
   });
 });

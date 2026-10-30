@@ -91,6 +91,37 @@ mf-brand-chips {
   flex-basis: 100%;
 }
 
+/* The Filtre button and a chip per filter on, on a line of their own right
+   above the sorts; on a phone beside the brand search, level with its field,
+   so the sheet's header keeps its height, and scrolling sideways inside
+   itself like the brand chips, never pushing the page. */
+.brands .filters {
+  align-items: center;
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+
+.filters-open {
+  background: none;
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-chip);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  min-height: var(--mf-tap);
+  padding-inline: var(--mf-space-4);
+}
+
+.filters .chip.filter {
+  margin-block-start: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 /* On a phone the page is one screen between the site bar and the tab bar:
    the summary, then the map with the list's sheet over it. Scrolling the
    list never scrolls the page; the footer stays below the screen. */
@@ -163,9 +194,41 @@ mf-brand-chips {
     margin: 0;
   }
 
-  mf-brand-chips,
-  .brands mf-brand-search {
+  mf-brand-chips {
     flex-basis: 100%;
+  }
+}
+
+/* The brand search and the filters line share a row on a phone, after the
+   phone screen's own rules; the padding keeps the focus ring inside the
+   scrolling line. */
+@media (max-width: 767px) {
+  .brands mf-brand-search {
+    flex: 1 1 0;
+    min-width: 9.5rem;
+  }
+
+  .brands .filters {
+    align-self: flex-end;
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+    margin: calc(-1 * var(--mf-space-1));
+    max-width: 60%;
+    overflow-x: auto;
+    padding: var(--mf-space-1);
+    scrollbar-width: none;
+  }
+
+  .brands .filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filters .filters-open,
+  .filters .chip.filter {
+    flex: none;
+    max-width: none;
+    overflow-wrap: normal;
+    white-space: nowrap;
   }
 }
 
