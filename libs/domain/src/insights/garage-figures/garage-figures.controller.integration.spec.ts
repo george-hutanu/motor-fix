@@ -134,7 +134,8 @@ describe('the weekly figures read', () => {
     const t = await team('Atelier Dinamo');
     const other = await world.garage('Service Militari');
     const third = await world.garage('Auto Berceni');
-    await approve(t.garage.id, new Date('2025-01-15T10:00:00Z'));
+    for (const id of [t.garage.id, other.id, third.id])
+      await approve(id, new Date('2025-01-15T10:00:00Z'));
     await views(t.garage.id, '2026-09-29', 400);
     await views(t.garage.id, '2026-10-04', 72);
     await views(other.id, '2026-09-29', 999);
@@ -156,6 +157,17 @@ describe('the weekly figures read', () => {
       views: 472,
     });
     expect(weeks[0]).toMatchObject({ conversion: null, requests: 0, views: 0 });
+    for (const [garage, seen] of [
+      [other, 999],
+      [third, 0],
+    ] as const) {
+      const theirs = await service.weekly(
+        garageActor(randomUUID(), garage.id),
+        garage.id,
+        NOW,
+      );
+      expect(theirs.weeks.at(-1)).toMatchObject({ requests: 1, views: seen });
+    }
   });
 
   it('answers null for the weeks before the approval', async () => {

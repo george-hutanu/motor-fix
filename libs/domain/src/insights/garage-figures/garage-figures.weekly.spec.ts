@@ -6,7 +6,7 @@ import {
   figureWeeks,
   weeklyFigures,
 } from './garage-figures.service';
-import { atLocal } from '../../bucharest';
+import { atLocal, isoWeek } from '../../bucharest';
 
 // An instant read on the Bucharest clock, "2026-10-04T23:50".
 const at = (wall: string) => {
@@ -15,10 +15,8 @@ const at = (wall: string) => {
   return new Date(atLocal(on, hour).getTime() + minute * 60_000);
 };
 
-const day = (on: string, profileViews: number) => ({
-  day: new Date(on),
-  profileViews,
-});
+// One day's views as the views read buckets it, by ISO week.
+const day = (on: string, views: number) => ({ key: isoWeek(on), views });
 
 const approvedLongAgo = new Date('2025-01-15T10:00:00Z');
 
@@ -94,15 +92,15 @@ describe('the weekly sums', () => {
   it('add the daily views of each week and count a missing day as nothing', () => {
     const weeks = weeklyFigures({
       approvedAt: approvedLongAgo,
-      days: [
+      requests: [],
+      today: '2026-10-08',
+      views: [
         day('2026-09-28', 100),
         day('2026-10-01', 300),
         day('2026-10-04', 72),
         day('2026-09-27', 9),
         day('2026-10-05', 50),
       ],
-      requests: [],
-      today: '2026-10-08',
     });
 
     expect(weeks[7]).toMatchObject({ key: '2026-W40', views: 472 });
@@ -113,7 +111,6 @@ describe('the weekly sums', () => {
   it('count a request in the Bucharest week it reached the garage', () => {
     const weeks = weeklyFigures({
       approvedAt: approvedLongAgo,
-      days: [day('2026-10-02', 472)],
       requests: [
         ...Array.from({ length: 27 }, () => at('2026-10-01T12:00')),
         at('2026-10-04T23:50'),
@@ -122,6 +119,7 @@ describe('the weekly sums', () => {
         at('2026-09-27T23:59'),
       ],
       today: '2026-10-08',
+      views: [day('2026-10-02', 472)],
     });
 
     expect(weeks[7]).toEqual({
@@ -138,7 +136,6 @@ describe('the weekly sums', () => {
   it('keep a Sunday-night request in its week across both clock changes', () => {
     const march = weeklyFigures({
       approvedAt: approvedLongAgo,
-      days: [],
       requests: [
         at('2026-03-23T00:00'),
         at('2026-03-29T23:50'),
@@ -146,6 +143,7 @@ describe('the weekly sums', () => {
         at('2026-03-22T23:59'),
       ],
       today: '2026-03-31',
+      views: [],
     });
     expect(march.at(-1)).toMatchObject({
       from: '2026-03-23',
@@ -157,7 +155,6 @@ describe('the weekly sums', () => {
 
     const october = weeklyFigures({
       approvedAt: approvedLongAgo,
-      days: [],
       requests: [
         at('2026-10-19T00:00'),
         at('2026-10-25T23:50'),
@@ -165,6 +162,7 @@ describe('the weekly sums', () => {
         at('2026-10-18T23:59'),
       ],
       today: '2026-10-27',
+      views: [],
     });
     expect(october.at(-1)).toMatchObject({
       from: '2026-10-19',
@@ -181,9 +179,9 @@ describe('the weeks before the approval', () => {
   it('are null, and the approval week counts whole', () => {
     const weeks = weeklyFigures({
       approvedAt: at('2026-09-16T11:00'),
-      days: [day('2026-09-14', 5), day('2026-09-08', 3)],
       requests: [at('2026-09-14T09:00')],
       today: '2026-10-08',
+      views: [day('2026-09-14', 5), day('2026-09-08', 3)],
     });
 
     for (const week of weeks.slice(0, 5))
@@ -205,9 +203,9 @@ describe('the weeks before the approval', () => {
     // Monday 00:30 in Bucharest is still Sunday in UTC.
     const weeks = weeklyFigures({
       approvedAt: at('2026-09-28T00:30'),
-      days: [],
       requests: [],
       today: '2026-10-08',
+      views: [],
     });
 
     expect(weeks[6]).toMatchObject({ key: '2026-W39', views: null });
@@ -217,9 +215,9 @@ describe('the weeks before the approval', () => {
   it('are all eight for a garage never approved', () => {
     const weeks = weeklyFigures({
       approvedAt: null,
-      days: [day('2026-10-01', 4)],
       requests: [at('2026-10-01T10:00')],
       today: '2026-10-08',
+      views: [day('2026-10-01', 4)],
     });
 
     expect(weeks).toHaveLength(8);

@@ -1,3 +1,4 @@
+import type { WeeklyFigureDto, WeeklyFiguresDto } from '@motor-fix/contracts';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import {
@@ -162,18 +163,7 @@ function median(values: number[]): number | null {
     : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 
-interface Week {
-  from: string;
-  // The ISO week, "2026-W40".
-  key: string;
-  to: string;
-}
-
-interface WeeklyFigure extends Week {
-  conversion: number | null;
-  requests: number | null;
-  views: number | null;
-}
+type Week = Pick<WeeklyFigureDto, 'from' | 'key' | 'to'>;
 
 const WEEKS = 8;
 
@@ -193,22 +183,21 @@ export function conversion(requests: number, views: number): number | null {
   return Math.min(1000, Math.round((requests * 1000) / views)) / 10;
 }
 
-// Each week's views and requests on the Bucharest clock. A week before the
-// week of the approval day is null; a garage never approved has no numbers.
+// Each week's views (buckets keyed by ISO week, summed) and requests on the
+// Bucharest clock. A week before the week of the approval day is null; a
+// garage never approved has no numbers.
 export function weeklyFigures(input: {
   approvedAt: Date | null;
-  days: { day: Date; profileViews: number }[];
   requests: Date[];
   today: string;
-}): WeeklyFigure[] {
+  views: { key: string; views: number }[];
+}): WeeklyFigureDto[] {
   const approvalWeek = input.approvedAt
     ? weekStart(localDay(input.approvedAt))
     : null;
   const views = new Map<string, number>();
-  for (const row of input.days) {
-    const week = weekStart(row.day.toISOString().slice(0, 10));
-    views.set(week, (views.get(week) ?? 0) + row.profileViews);
-  }
+  for (const bucket of input.views)
+    views.set(bucket.key, (views.get(bucket.key) ?? 0) + bucket.views);
   const requests = new Map<string, number>();
   for (const at of input.requests) {
     const week = weekStart(localDay(at));
@@ -217,7 +206,7 @@ export function weeklyFigures(input: {
   return figureWeeks(input.today).map((week) => {
     if (approvalWeek === null || week.from < approvalWeek)
       return { ...week, conversion: null, requests: null, views: null };
-    const seen = views.get(week.from) ?? 0;
+    const seen = views.get(week.key) ?? 0;
     const reached = requests.get(week.from) ?? 0;
     return {
       ...week,
@@ -289,8 +278,9 @@ export class GarageFiguresService {
     actor: Actor,
     garageId: string,
     now = new Date(),
-  ): Promise<{ weeks: WeeklyFigure[] }> {
-    // Another garage's staff learn nothing, its mechanic included.
+  ): Promise<WeeklyFiguresDto> {
+    // Another garage's staff learn nothing, its mechanic included. Refused
+    // before any read, though the views read gates the same way.
     assertGarage(actor, garageId);
     refuseMechanic(actor);
     requireCapability(actor, 'garage.requests');
@@ -298,11 +288,8 @@ export class GarageFiguresService {
     const weeks = figureWeeks(today);
     const from = weeks[0].from;
     const to = weeks[weeks.length - 1].to;
-    const [days, requests, garage] = await Promise.all([
-      this.prisma.garageDailyFigures.findMany({
-        select: { day: true, profileViews: true },
-        where: { day: { gte: new Date(from), lte: new Date(to) }, garageId },
-      }),
+    const [views, requests, garage] = await Promise.all([
+      this.profileViews(actor, { by: 'week', from, to }),
       this.prisma.requestRecipient.findMany({
         select: { createdAt: true },
         where: {
@@ -318,9 +305,9 @@ export class GarageFiguresService {
     return {
       weeks: weeklyFigures({
         approvedAt: garage?.approvedAt ?? null,
-        days,
         requests: requests.map((r) => r.createdAt),
         today,
+        views: views.buckets,
       }),
     };
   }
