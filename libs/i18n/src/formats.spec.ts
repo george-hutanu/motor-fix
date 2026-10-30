@@ -6,6 +6,7 @@ import {
   bucharestDayStart,
   calendarNames,
   daysUntil,
+  de,
   formatAround,
   formatClock,
   formatDay,
@@ -24,10 +25,10 @@ import {
   formatWholeLeiRange,
   relativeTime,
   requestAge,
-  requestExpiry,
   timeLeft,
 } from './formats';
 import { reportAge } from './report-age';
+import { requestExpiry } from './request-expiry';
 
 const MISSING = '—';
 const notNumbers = [null, undefined, Number.NaN, Infinity, '92'];
@@ -868,5 +869,26 @@ describe('formatAround', () => {
 
   it.each(notNumbers)('shows a dash for %p', (value) => {
     expect(formatAround(value, 'ro', now)).toBe(MISSING);
+  });
+});
+
+describe('de', () => {
+  it.each([
+    [0, ''],
+    [1, ''],
+    [19, ''],
+    [20, 'de '],
+    [99, 'de '],
+    [100, 'de '],
+    [101, ''],
+    [119, ''],
+    [120, 'de '],
+    [200, 'de '],
+    [1001, ''],
+  ])('puts "de" before %p as the Romanian plural rules do', (count, want) => {
+    expect(de(count)).toBe(want);
+    expect(new Intl.PluralRules('ro').select(count) === 'other').toBe(
+      want !== '',
+    );
   });
 });
