@@ -510,3 +510,74 @@ describe('end-to-end configuration', () => {
     expect(src).not.toMatch(/retries: 0/);
   });
 });
+
+// Split into shards, the suite must still run every integration spec, each
+// shard on its own database, and still gate CI OK and the release.
+describe('the integration suite in shards', () => {
+  const integration = jobBlock(ci, 'integration');
+  const matrix = integration.match(/^ {8}shard: (.+)$/m)?.[1] ?? '';
+  const lists = [...matrix.matchAll(/'(\[[^']*\])'/g)].map((m) =>
+    JSON.parse(m[1]),
+  );
+
+  // @traces 1406-FR-001 1406-FR-006
+  it('runs three domain slices and every other project, or the named files alone', () => {
+    expect(lists).toEqual([
+      ['named specs'],
+      ['domain 1/3', 'domain 2/3', 'domain 3/3', 'other projects'],
+    ]);
+    expect(matrix).toMatch(/^\$\{\{ fromJSON\(inputs\.specs && /);
+  });
+
+  // @traces 1406-FR-001
+  it('covers every domain slice once, so no domain spec is left out', () => {
+    const slices = lists[1]
+      .filter((s: string) => s.startsWith('domain '))
+      .map((s: string) => s.slice('domain '.length));
+    const total = Number(slices[0].split('/')[1]);
+
+    expect(slices).toEqual(
+      Array.from({ length: total }, (_, i) => `${i + 1}/${total}`),
+    );
+  });
+
+  // @traces 1406-FR-001
+  it('runs every project but domain in the other shard, and only domain in its slices', () => {
+    const script = allRuns(integration);
+
+    expect(script).toContain('--projects=domain --passWithNoTests --shard=');
+    expect(script).toContain('--exclude=domain --passWithNoTests');
+    expect(script).toMatch(/\*\) echo "::error::unknown shard/);
+  });
+
+  // @traces 1406-FR-002 1406-FR-003
+  it('gives every shard its own services, store, migration, audit clearing and database report', () => {
+    expect(integration).toMatch(/^ {4}services: &services$/m);
+    expect(jobBlock(ci, 'e2e')).toMatch(/^ {4}services: \*services$/m);
+    for (const step of [
+      'docker compose up -d --wait storage',
+      'prisma migrate deploy',
+      'node scripts/clear-activity-log.ts',
+      'pg_stat_activity',
+      'db-waits.txt',
+    ]) {
+      expect(integration).toContain(step);
+    }
+  });
+
+  // @traces 1406-FR-004 1406-FR-007
+  it("lowers the timeout below the single job's 90 minutes", () => {
+    const minutes = Number(
+      integration.match(/^ {4}timeout-minutes: (\d+)$/m)?.[1],
+    );
+    expect(minutes).toBeGreaterThan(0);
+    expect(minutes).toBeLessThan(90);
+  });
+
+  // @traces 1406-FR-005
+  it('keeps the shards in CI OK and the release waiting on the whole CI call', () => {
+    expect(jobBlock(ci, 'ci-ok')).toMatch(/needs: \[[^\]]*\bintegration\b/);
+    expect(integration).toMatch(/^ {6}fail-fast: false$/m);
+    expect(jobBlock(release, 'images')).toMatch(/^ {4}needs: checks$/m);
+  });
+});

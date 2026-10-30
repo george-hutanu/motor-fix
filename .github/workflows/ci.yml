@@ -6,12 +6,14 @@ name: CI
 # harness specs when it changes none of their inputs (scripts/ci-paths.ts).
 # A PR runs the unit suite only. The integration and end-to-end suites run on
 # demand: `gh workflow run ci.yml --ref <branch>` runs every job, those two
-# included, on every project. A release asks for the integration suite
+# included, on every project. The integration suite runs in four shards, each
+# on its own runner with its own database: domain in three Jest slices, every
+# other project in the fourth. A release asks for the integration suite
 # (input `integration`) and runs the core flows against staging instead of
 # the end-to-end suite (release.yml). A dispatch can name spec files
 # (input `specs`, space-separated paths) and a run count (`repeat`): the
-# integration and E2E jobs then run only those files, each `repeat` times
-# with no retry, to prove a fixed flaky test (`gh workflow run ci.yml --ref
+# integration job (one shard, `named specs`) and the E2E job then run only
+# those files, each `repeat` times with no retry, to prove a fixed flaky test (`gh workflow run ci.yml --ref
 # <branch> -f specs='<paths>' -f repeat=20`). The PR title has
 # its own workflow (pr-title.yml), so an edited title is re-checked without
 # re-running these jobs. Mutation testing has its own workflow (mutation.yml)
@@ -223,15 +225,24 @@ jobs:
   # The integration suite (real PostgreSQL+PostGIS and Redis), on demand only,
   # like E2E: a PR never runs it. A workflow_call carries its caller's event
   # name, so the release asks for it by input and runs it before staging.
+  # As one job it took 40 to 60 minutes (domain alone up to 43), so it runs
+  # in shards, each with its own services, store, migration and database
+  # report: domain in three Jest slices (by file), every other project in the
+  # fourth, where a project that gains integration specs lands by itself. A
+  # dispatch naming spec files has one entry instead. CI OK needs the whole
+  # matrix, so one failed shard fails it, and the release waits for CI OK.
   integration:
-    name: Integration tests
+    name: Integration tests (${{ matrix.shard }})
     needs: changes
     if: github.event_name == 'workflow_dispatch' || inputs.integration
     runs-on: ubuntu-latest
-    # The suite takes 50 to 60 minutes now (two runs of one head: 56, then
-    # cancelled at 60 with domain still running), so 60 cancels it at the edge
-    # of a finished run; 90 leaves the headroom.
-    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(inputs.specs && '["named specs"]' || '["domain 1/3", "domain 2/3", "domain 3/3", "other projects"]') }}
+    # Provisional until the first sharded run is measured: the slowest
+    # shard's job time over 0.7, rounded up to 5 minutes.
+    timeout-minutes: 45
     services: &services
       # The repository's own image (infra/postgres), as compose and staging:
       # it preloads pg_stat_statements, which the data-store specs read.
@@ -285,13 +296,16 @@ jobs:
       - name: Integration tests
         env:
           JEST_SUITE: integration
+          SHARD: ${{ matrix.shard }}
           SPECS: ${{ inputs.specs }}
           REPEAT: ${{ inputs.repeat }}
         run: |
-          if [ -z "$SPECS" ]; then
-            npx nx $NX_SCOPE -t test --passWithNoTests
-            exit
-          fi
+          case "$SHARD" in
+            'domain '*/*) npx nx $NX_SCOPE -t test --projects=domain --passWithNoTests --shard=${SHARD#domain }; exit ;;
+            'other projects') npx nx $NX_SCOPE -t test --exclude=domain --passWithNoTests; exit ;;
+            'named specs') ;;
+            *) echo "::error::unknown shard '$SHARD'"; exit 1 ;;
+          esac
           [ "$REPEAT" -ge 1 ] 2>/dev/null || { echo "::error::repeat must be 1 or more, got '$REPEAT'"; exit 1; }
           files=$(printf '%s\n' $SPECS | grep '\.integration\.spec\.ts$' || true)
           [ -n "$files" ] || exit 0

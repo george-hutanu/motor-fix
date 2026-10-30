@@ -277,7 +277,10 @@ there for one that will.
   `apps/*/project.json`, build config), Compose stack only on `docker-compose*.yml` or `infra/`, Harness
   and its browser only on `.claude/`, `.specify/`, `.husky/`, `.github/`,
   `scripts/` or `package*.json`; a change to `ci.yml` runs all three. Integration tests
-  (PostgreSQL+PostGIS and Redis services, the migrations applied) runs only
+  (PostgreSQL+PostGIS and Redis services, the migrations applied) runs as
+  four shards, each on its own runner and database (domain in three Jest
+  slices, every other project in the fourth; a dispatch naming spec files
+  runs them in one `named specs` job instead), only
   on demand and when a caller asks for it (the `workflow_call` input
   `integration`, which `release.yml` sets, so a release runs the suite before
   anything is built). The seventh job, E2E tests (Playwright `web-e2e`, four workers, servers started
