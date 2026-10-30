@@ -38,6 +38,9 @@
             </li>
           }
         </ol>
+        @if (reconnecting()) {
+          <p class="reconnecting" role="status">{{ 'driver.active.reconnecting' | t }}</p>
+        }
         @if (v.facts.length) {
           <dl class="facts">
             @for (fact of v.facts; track fact.label) {
