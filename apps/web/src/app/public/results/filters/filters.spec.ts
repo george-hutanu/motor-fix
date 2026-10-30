@@ -79,6 +79,7 @@ describe('the filters on a search request', () => {
     ).toEqual({ brand: 'bmw', near: '44.437,26.117' });
   });
 
+  // @traces 1398-FR-016
   // The API judges a match; the results page carries no filter rules
   // and no Bucharest clock (the garage profile's own chunk reads the clock).
   it('leaves the filter rules and the Bucharest clock out of the results bundle', () => {
