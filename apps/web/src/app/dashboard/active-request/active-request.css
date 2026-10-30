@@ -157,6 +157,11 @@ p {
   margin-top: var(--mf-space-4);
   color: var(--mf-text-secondary);
 }
+.reconnecting {
+  margin-top: var(--mf-space-2);
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
 .steps {
   margin-top: var(--mf-space-5);
   padding-top: var(--mf-space-4);

@@ -509,6 +509,35 @@ export const REVIEW_QUEUE_KINDS: readonly EventKind[] = [
   'review.report_closed',
 ];
 
+// The events that move the active request panel: the list's, plus every
+// change to a request, its quotes, its booking and its job the driver is sent.
+export const ACTIVE_REQUEST_EVENTS: readonly EventKind[] = [
+  ...REQUEST_EVENTS,
+  'request.expired',
+  'request.decline_undone',
+  'request.direct_answered',
+  'quote.changed',
+  'quote.withdrawn',
+  'quote.expired',
+  'quote.closed',
+  'quote.declined_by_driver',
+  'booking.moved',
+  'booking.no_show_recorded',
+  'job.received',
+  'job.started',
+  'job.paused',
+  'job.resumed',
+  'job.step_done',
+  'job.step_undone',
+  'job.steps_changed',
+  'job.eta_changed',
+  'job.done',
+  'job.handed_over',
+  'job.final_price_corrected',
+  'job.mechanic_changed',
+  'job.reopened',
+];
+
 // The events that move the assistant's approvals: the strip and the sheet
 // read again on each.
 export const APPROVAL_EVENTS: readonly EventKind[] = [
