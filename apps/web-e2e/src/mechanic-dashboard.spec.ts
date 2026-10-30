@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
-import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { ACCOUNTS, signedIn } from './accounts.js';
 import { test } from './fixtures.js';
 
 // The seeded mechanic's Panou on a phone, and a permission the owner gives her
@@ -14,21 +14,6 @@ import { test } from './fixtures.js';
 // job's steps while it changes them. A deployed address, whose run has no
 // database, leaves @database out (playwright.config.mts); every other run has
 // DATABASE_URL, so the flow fails without it.
-
-// Signs in at the width the site bar shows its button at, then goes back to
-// the phone.
-async function signedIn(page: Page, email: string) {
-  const size = page.viewportSize();
-  await page.setViewportSize({ height: 900, width: 1280 });
-  await ready(page, '/ro');
-  await page
-    .getByRole('banner')
-    .getByRole('button', { exact: true, name: 'Autentificare' })
-    .click();
-  await signIn(page, email);
-  await expect(page).toHaveURL('/app/garage');
-  if (size) await page.setViewportSize(size);
-}
 
 // On a phone the menu is the tab bar, whose entry is the short "Cereri" with
 // its count; "Cereri de ofertă" is the wide menu's, which a phone never shows.
@@ -97,7 +82,7 @@ test.describe("a mechanic's Panou on a phone @seeded @database", () => {
     // page's time.
     test.setTimeout(60_000);
     await page.setViewportSize({ height: 844, width: 390 });
-    await signedIn(page, ACCOUNTS.mechanic);
+    await signedIn(page, ACCOUNTS.mechanic, '/app/garage');
 
     const own = page.locator('mf-own-jobs-section');
     const rows = own.locator('[data-job]');

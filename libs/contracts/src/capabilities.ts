@@ -24,6 +24,7 @@ export const CAPABILITIES = [
   'garage.profile',
   'garage.feature_switches',
   'garage.audit_history',
+  'garage.client_repairs',
   'admin.garages',
   'admin.users',
   'admin.reviews',
@@ -69,6 +70,7 @@ const TABLE: Record<Role, readonly Capability[]> = {
     'garage.profile',
     'garage.feature_switches',
     'garage.audit_history',
+    'garage.client_repairs',
   ],
   mechanic: ['garage.own_jobs', 'garage.schedule', 'garage.audit_history'],
   receptionist: [

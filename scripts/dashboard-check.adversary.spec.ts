@@ -671,6 +671,7 @@ describe('the product dashboard', () => {
       'motorfix_listing_completions_total',
       'motorfix_sort_changes_total',
       'motorfix_car_transfer_accepted_notices_total',
+      'motorfix_repair_updated_notices_total',
     ]);
   });
 

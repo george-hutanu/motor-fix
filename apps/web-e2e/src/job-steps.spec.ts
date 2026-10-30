@@ -1,23 +1,13 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-import { ACCOUNTS, ready, signIn } from './accounts.js';
+import { ACCOUNTS, signedIn } from './accounts.js';
 import { test } from './fixtures.js';
 
 const STEPS = ['Mașina pe elevator', 'Etriere demontate', 'Probă pe drum'];
 
-// Signs in at the width the site bar shows its button at, then opens the job
-// at the page's own size.
+// Signs in, then opens the job at the page's own size.
 async function openJob(page: Page, email: string, landing: string) {
-  const size = page.viewportSize();
-  await page.setViewportSize({ height: 900, width: 1280 });
-  await ready(page, '/ro');
-  await page
-    .getByRole('banner')
-    .getByRole('button', { exact: true, name: 'Autentificare' })
-    .click();
-  await signIn(page, email);
-  await expect(page).toHaveURL(landing);
-  if (size) await page.setViewportSize(size);
+  await signedIn(page, email, landing);
   await page.goto('/app/garage/jobs');
   await page.locator('[data-job]', { hasText: 'B101QAT' }).first().click();
   return page.getByRole('dialog');
