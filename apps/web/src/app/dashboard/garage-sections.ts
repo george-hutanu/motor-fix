@@ -53,7 +53,12 @@ const GARAGE_SECTIONS: readonly GarageSection[] = [
   },
   planned('load', 'team', 'garage.own_jobs', { feature: 'team_mechanics' }),
   planned('sched', 'schedule', 'garage.schedule', { feature: 'lift_schedule' }),
-  planned('funnel', 'profile', 'garage.profile'),
+  {
+    capability: 'garage.profile',
+    key: 'funnel',
+    title: 'garage.home.section.funnel',
+    view: 'profile',
+  },
   planned('brands', 'profile', 'garage.profile'),
   {
     capability: 'garage.reviews',

@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   inject,
+  input,
   signal,
   untracked,
 } from '@angular/core';
@@ -39,6 +40,8 @@ const KINDS: readonly Kind[] = ['views', 'requests'];
   templateUrl: './weekly-figures-panel.html',
 })
 export class WeeklyFiguresPanel {
+  // The full view the heading links to; none where the panel sits in it.
+  readonly view = input<string>();
   private readonly api = inject(GaragesService);
   private readonly session = inject(Session);
   private readonly i18n = inject(I18n);

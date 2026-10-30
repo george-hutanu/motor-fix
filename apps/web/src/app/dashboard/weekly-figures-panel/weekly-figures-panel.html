@@ -1,5 +1,5 @@
 <section class="panel" [attr.aria-busy]="loading() || null">
-  <mf-section-title [heading]="'garage.home.section.funnel' | t" view="profile" />
+  <mf-section-title [heading]="'garage.home.section.funnel' | t" [view]="view()" />
   @if (failed()) {
     <p class="error" data-error role="alert">{{ 'garage.weekly.error' | t }}</p>
     <button hlmBtn variant="secondary" type="button" data-retry (click)="retry()">

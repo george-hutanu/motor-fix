@@ -1207,6 +1207,10 @@ describe('Profilul service-ului: the weekly figures', () => {
 
     expect(panel).not.toBeNull();
     expect(panel?.getAttribute('data-section')).toBe('funnel');
+    expect(panel?.querySelector('h2')?.textContent?.trim()).toBe(
+      'De la profil la cerere, pe săptămâni',
+    );
+    expect(panel?.querySelector('h2 a')).toBeNull();
     expect(follows(element.querySelector(PUBLIC), panel)).toBe(true);
     expect(follows(panel, element.querySelector('mf-garage-legal-check'))).toBe(
       true,

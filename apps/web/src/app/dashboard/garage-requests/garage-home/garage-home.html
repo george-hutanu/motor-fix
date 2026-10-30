@@ -47,7 +47,7 @@
         }
         @case ('funnel') {
           @defer (on idle) {
-            <mf-weekly-figures-panel data-section="funnel" />
+            <mf-weekly-figures-panel data-section="funnel" [view]="section.view" />
           } @placeholder {
             <section class="panel" data-section="funnel">
               <mf-section-title [heading]="section.title | t" [view]="section.view" />

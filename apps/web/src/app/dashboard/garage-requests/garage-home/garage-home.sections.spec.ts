@@ -446,7 +446,9 @@ describe('the weekly figures on Panou', () => {
     const shown = section(element, 'funnel') as Element;
 
     expect(shown.tagName.toLowerCase()).toBe('mf-weekly-figures-panel');
-    expect(text(shown)).not.toMatch(/^Aici apare drumul/);
+    expect(shown.querySelector('h2 a')?.getAttribute('href')).toBe(
+      '/app/garage/profile',
+    );
     expect(weeklyRead).toHaveBeenCalledWith({ garageId: 'garage-1' });
     expect(keys(element)).toEqual([
       'kpi',
