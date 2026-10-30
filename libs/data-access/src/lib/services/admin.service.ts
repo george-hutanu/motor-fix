@@ -51,6 +51,16 @@ import { AdminOverviewControllerOverview$Params } from '../fn/admin/admin-overvi
 import { adminOverviewControllerQueue } from '../fn/admin/admin-overview-controller-queue';
 import { AdminOverviewControllerQueue$Params } from '../fn/admin/admin-overview-controller-queue';
 import { AdminOverviewDto } from '../models/admin-overview-dto';
+import { AdminRepairDto } from '../models/admin-repair-dto';
+import { AdminRepairListDto } from '../models/admin-repair-list-dto';
+import { adminRepairsControllerCorrect } from '../fn/admin/admin-repairs-controller-correct';
+import { AdminRepairsControllerCorrect$Params } from '../fn/admin/admin-repairs-controller-correct';
+import { adminRepairsControllerList } from '../fn/admin/admin-repairs-controller-list';
+import { AdminRepairsControllerList$Params } from '../fn/admin/admin-repairs-controller-list';
+import { adminRepairsControllerOpen } from '../fn/admin/admin-repairs-controller-open';
+import { AdminRepairsControllerOpen$Params } from '../fn/admin/admin-repairs-controller-open';
+import { adminRepairsControllerRemove } from '../fn/admin/admin-repairs-controller-remove';
+import { AdminRepairsControllerRemove$Params } from '../fn/admin/admin-repairs-controller-remove';
 import { CatalogueJobDecisionDto } from '../models/catalogue-job-decision-dto';
 import { copyVoicesControllerChange } from '../fn/admin/copy-voices-controller-change';
 import { CopyVoicesControllerChange$Params } from '../fn/admin/copy-voices-controller-change';
@@ -311,6 +321,138 @@ export class AdminService extends BaseService {
   accountControllerDeleteOnRequest(params: AccountControllerDeleteOnRequest$Params, context?: HttpContext): Promise<void> {
     const resp = this.accountControllerDeleteOnRequest$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `adminRepairsControllerList()` */
+  static readonly AdminRepairsControllerListPath = '/api/v1/admin/accounts/{id}/repairs';
+
+  /**
+   * The logged repairs on the cars an account owns now.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminRepairsControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminRepairsControllerList$Response(params: AdminRepairsControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminRepairListDto>> {
+    const obs = adminRepairsControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The logged repairs on the cars an account owns now.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminRepairsControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminRepairsControllerList(params: AdminRepairsControllerList$Params, context?: HttpContext): Promise<AdminRepairListDto> {
+    const resp = this.adminRepairsControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminRepairListDto>): AdminRepairListDto => r.body);
+  }
+
+  /** Path part for operation `adminRepairsControllerOpen()` */
+  static readonly AdminRepairsControllerOpenPath = '/api/v1/admin/repairs/{id}';
+
+  /**
+   * Open a logged repair; the open is recorded in the activity log.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminRepairsControllerOpen()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminRepairsControllerOpen$Response(params: AdminRepairsControllerOpen$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminRepairDto>> {
+    const obs = adminRepairsControllerOpen(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Open a logged repair; the open is recorded in the activity log.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminRepairsControllerOpen$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminRepairsControllerOpen(params: AdminRepairsControllerOpen$Params, context?: HttpContext): Promise<AdminRepairDto> {
+    const resp = this.adminRepairsControllerOpen$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminRepairDto>): AdminRepairDto => r.body);
+  }
+
+  /** Path part for operation `adminRepairsControllerRemove()` */
+  static readonly AdminRepairsControllerRemovePath = '/api/v1/admin/repairs/{id}';
+
+  /**
+   * Always refused: only the driver deletes a repair.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminRepairsControllerRemove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminRepairsControllerRemove$Response(params?: AdminRepairsControllerRemove$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = adminRepairsControllerRemove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Always refused: only the driver deletes a repair.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminRepairsControllerRemove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  adminRepairsControllerRemove(params?: AdminRepairsControllerRemove$Params, context?: HttpContext): Promise<void> {
+    const resp = this.adminRepairsControllerRemove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `adminRepairsControllerCorrect()` */
+  static readonly AdminRepairsControllerCorrectPath = '/api/v1/admin/repairs/{id}';
+
+  /**
+   * Correct what was done, the day, the reading or the amount of a logged repair as MotorFix; null clears the amount.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `adminRepairsControllerCorrect()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  adminRepairsControllerCorrect$Response(params: AdminRepairsControllerCorrect$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminRepairDto>> {
+    const obs = adminRepairsControllerCorrect(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Correct what was done, the day, the reading or the amount of a logged repair as MotorFix; null clears the amount.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `adminRepairsControllerCorrect$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  adminRepairsControllerCorrect(params: AdminRepairsControllerCorrect$Params, context?: HttpContext): Promise<AdminRepairDto> {
+    const resp = this.adminRepairsControllerCorrect$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminRepairDto>): AdminRepairDto => r.body);
   }
 
   /** Path part for operation `adminBrandsControllerList()` */

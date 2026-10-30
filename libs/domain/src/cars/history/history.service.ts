@@ -6,6 +6,7 @@ import type {
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import {
+  CORRECTED_BY,
   fromPreviousOwner,
   type OwnershipRow,
   REPAIR_ORDER,
@@ -15,14 +16,6 @@ import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import type { PrismaClient } from '../../generated/prisma/client';
-
-// Who last corrected a repair, as the driver is told: a driver's own edit
-// is none.
-const CORRECTED_BY = {
-  admin: 'admin',
-  driver: null,
-  owner: 'garage',
-} as const;
 
 const day = (at: Date) => at.toISOString().slice(0, 10);
 const notFound = () =>
