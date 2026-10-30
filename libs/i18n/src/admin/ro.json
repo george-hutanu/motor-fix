@@ -637,9 +637,13 @@
     "inPeriod": "{sign}{n} {period}",
     "observability": "Observabilitate",
     "observabilityNewTab": "{name}, se deschide într‑o filă nouă",
+    "overdue": {
+      "few": "{n} peste 48 de ore",
+      "one": "{n} peste 48 de ore",
+      "other": "{n} peste 48 de ore"
+    },
     "reportedReviews": "Recenzii raportate",
     "requestsSent": "Cereri de ofertă",
-    "soon": "în curând",
     "thisMonth": "{sign}{n} luna asta",
     "unavailable": "Cifrele nu au putut fi citite",
     "why": "De ce?"
@@ -832,6 +836,63 @@
     "note": "Ce s‑a rezolvat",
     "noteOptional": "Ce s‑a rezolvat (opțional)",
     "noteRequired": "Scrie ce s‑a rezolvat"
+  },
+  "reviews": {
+    "actions": {
+      "keep": "Păstrează",
+      "keepReply": "Păstrează răspunsul",
+      "removeReply": "Șterge răspunsul",
+      "removeReview": "Șterge recenzia",
+      "soon": "În curând"
+    },
+    "all": "Vezi toate ({total})",
+    "announce": {
+      "few": "{n} recenzii raportate în așteptare",
+      "one": "{n} recenzie raportată în așteptare",
+      "other": "{n} de recenzii raportate în așteptare"
+    },
+    "edited": "editat",
+    "empty": "Nicio recenzie raportată.",
+    "facts": {
+      "account": {
+        "created": "Cont creat: {date}",
+        "deleted": "Cont șters"
+      },
+      "garageReports": "Recenzii raportate de service înainte: {n}, păstrate {k}",
+      "identical": "Recenzii identice de la același cont: {n}",
+      "job": {
+        "confirmed": "Lucrare confirmată: {work}, {car}",
+        "handedOver": "predată {date}",
+        "none": "Fără lucrare: scrisă din profil (Nu prin MotorFix)"
+      }
+    },
+    "failed": "Nu am putut citi recenziile raportate.",
+    "heading": "Recenzii raportate",
+    "lamp": {
+      "author": "Raportat de autor: {reason}",
+      "automatic": "Raportată automat: {reason}",
+      "garage": "Raportată de service: {reason}"
+    },
+    "loading": "Se încarcă recenziile raportate",
+    "more": "Mai multe",
+    "oldest": "Cea mai veche raportare așteaptă de {age}",
+    "overdue": "Peste 48 de ore",
+    "reasons": {
+      "ads": "Reclamă",
+      "fake_or_conflicted": "Falsă sau în conflict de interese",
+      "hate": "Ură sau discriminare",
+      "insults": "Insulte",
+      "off_topic": "În afara subiectului",
+      "other": "Altceva",
+      "personal_data": "Date personale",
+      "promotion": "Promovarea altui service",
+      "threats_or_legal_accusations": "Amenințări sau acuzații legale"
+    },
+    "retry": "Reîncearcă",
+    "title": {
+      "reply": "{garage} · răspuns la recenzia lui {author}",
+      "review": "{garage} · recenzie de {score}"
+    }
   },
   "suspended": {
     "alone": "suspendat",

@@ -32,6 +32,7 @@ export {
   formatSlot,
   formatWholeLeiRange,
   relativeTime,
+  reportAge,
   requestAge,
   requestExpiry,
   timeLeft,
