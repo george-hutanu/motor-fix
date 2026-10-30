@@ -12,6 +12,11 @@
           <li class="field" data-line="area">
             <span class="value" data-value>{{ area() }}</span>
           </li>
+          @if (legalCheck()) {
+            <li class="edit">
+              <button hlmBtn variant="secondary" type="button" data-edit="area" [attr.aria-label]="editLabel('area')" (click)="edit('area')">{{ 'garage.profile.edit.control' | t }}</button>
+            </li>
+          }
         } @else if (address(garage)) {
           <li class="field" data-line="address">
             <span class="label">{{ 'garage.profile.address' | t }}</span>&ngsp;<span class="value" data-value>{{ address(garage) }}</span>
@@ -44,6 +49,11 @@
         @if (garage.phone) {
           <li class="field" data-line="phone">
             <span class="label">{{ 'garage.profile.phone' | t }}&ngsp;<span class="tag" data-phone-tag>{{ 'garage.profile.phonePrivate' | t }}</span></span>&ngsp;<span class="value" data-value>{{ garage.phone }}</span>
+          </li>
+        }
+        @if (legalCheck()) {
+          <li class="edit">
+            <button hlmBtn variant="secondary" type="button" data-edit="contact" [attr.aria-label]="editLabel('contact')" (click)="edit('contact')">{{ 'garage.profile.edit.control' | t }}</button>
           </li>
         }
       </ul>

@@ -57,10 +57,6 @@ h3,
 .field.wide {
   grid-column: 1 / -1;
 }
-.field.wide > .value {
-  white-space: pre-line;
-  overflow-wrap: anywhere;
-}
 .edit button {
   min-height: 44px;
   white-space: normal;
@@ -91,6 +87,10 @@ h3,
   border-radius: var(--mf-radius-control);
   background: var(--mf-panel-raised);
   align-self: stretch;
+}
+.field.wide > .value {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 /* A field with no label (the area line) still puts its box on the value row. */
 .field > .value:only-child {

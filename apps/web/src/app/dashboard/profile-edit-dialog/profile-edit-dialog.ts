@@ -20,12 +20,18 @@ import {
   isWeeklyHours,
   type WeeklyHours,
 } from '@motor-fix/contracts/garage-hours';
-import { PROFILE_DESCRIPTION_MAX } from '@motor-fix/contracts/garage-profile-limits';
 import {
+  PROFILE_DESCRIPTION_MAX,
+  PROFILE_RADIUS_KM,
+} from '@motor-fix/contracts/garage-profile-limits';
+import {
+  isRomanianPhone,
   NAME_MAX,
   NAME_MIN,
   trimmedWithin,
 } from '@motor-fix/contracts/listing-sections';
+import { normalisePhone } from '@motor-fix/contracts/phone';
+import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
 import type { Problem } from '@motor-fix/contracts/problem';
 import { type GarageProfileDto, GaragesService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
@@ -65,6 +71,28 @@ const rule =
   (control) =>
     holds(String(control.value ?? '')) ? null : { [code]: true };
 
+// The shared normaliser's number, when it is a Romanian one.
+const romanian = (value: string) => {
+  const phone = normalisePhone(value);
+  return phone !== null && isRomanianPhone(phone) ? phone : null;
+};
+
+// Blank asks for a number; anything the normaliser refuses is the listing's
+// error, under the server's code for it.
+const phoneRule: ValidatorFn = (control) => {
+  const value = String(control.value ?? '');
+  if (!value.trim()) return { phoneNeeded: true };
+  return romanian(value) ? null : { phoneNumber: true };
+};
+
+// A whole number of km, digits only, within the shared range.
+const radiusOf = (value: string): number | null => {
+  const typed = value.trim();
+  if (!/^\d{1,3}$/.test(typed)) return null;
+  const km = Number(typed);
+  return km >= PROFILE_RADIUS_KM.min && km <= PROFILE_RADIUS_KM.max ? km : null;
+};
+
 const GROUPS: Record<ProfileGroup, readonly string[]> = {
   area: ['serviceRadiusKm'],
   contact: ['phone'],
@@ -77,13 +105,36 @@ type FormValue = Partial<{
   description: string;
   hours: WeeklyHours;
   name: string;
+  phone: string;
+  serviceRadiusKm: string;
 }>;
 
 // What the group sends: its own fields as the server takes them.
-const bodyOf = ({ description, name, ...rest }: FormValue) => ({
+const bodyOf = ({
+  description,
+  name,
+  phone,
+  serviceRadiusKm,
+  ...rest
+}: FormValue) => ({
   ...rest,
   ...(name !== undefined && { name: name.trim() }),
   ...(description !== undefined && { description: description.trim() }),
+  ...(phone !== undefined && { phone: romanian(phone) ?? phone }),
+  ...(serviceRadiusKm !== undefined && {
+    serviceRadiusKm: radiusOf(serviceRadiusKm) ?? Number(serviceRadiusKm),
+  }),
+});
+
+const valuesOf = (profile: GarageProfileDto) => ({
+  closedDays: closedDaysOf(profile),
+  description: profile.description ?? '',
+  hours: hoursOf(profile),
+  name: profile.name,
+  phone: profile.phone ?? '',
+  serviceRadiusKm: String(
+    profile.serviceRadiusKm ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+  ),
 });
 
 // One group of the garage's profile, edited in place: the fields as read,
@@ -120,25 +171,33 @@ export class ProfileEditDialog {
   private readonly garageId = this.task.data.garageId;
   private version = this.task.data.profile.version;
 
+  private readonly start = valuesOf(this.task.data.profile);
   protected readonly form = new FormGroup({
-    closedDays: new FormControl<ClosedDay[]>(
-      closedDaysOf(this.task.data.profile),
-      { nonNullable: true },
-    ),
-    description: new FormControl(this.task.data.profile.description ?? '', {
+    closedDays: new FormControl<ClosedDay[]>(this.start.closedDays, {
+      nonNullable: true,
+    }),
+    description: new FormControl(this.start.description, {
       nonNullable: true,
       validators: rule('descriptionWithin', (value) =>
         trimmedWithin(value, 0, PROFILE_DESCRIPTION_MAX),
       ),
     }),
-    hours: new FormControl<WeeklyHours>(hoursOf(this.task.data.profile), {
+    hours: new FormControl<WeeklyHours>(this.start.hours, {
       nonNullable: true,
     }),
-    name: new FormControl(this.task.data.profile.name, {
+    name: new FormControl(this.start.name, {
       nonNullable: true,
       validators: rule('nameWithin', (value) =>
         trimmedWithin(value, NAME_MIN, NAME_MAX),
       ),
+    }),
+    phone: new FormControl(this.start.phone, {
+      nonNullable: true,
+      validators: phoneRule,
+    }),
+    serviceRadiusKm: new FormControl(this.start.serviceRadiusKm, {
+      nonNullable: true,
+      validators: rule('radius', (value) => radiusOf(value) !== null),
     }),
   });
   // The hours step's section: the week and the closed days, as the form holds.
@@ -193,13 +252,15 @@ export class ProfileEditDialog {
 
   // The form as the profile reads, with every field untouched.
   private seed(profile: GarageProfileDto) {
-    this.form.reset({
-      closedDays: closedDaysOf(profile),
-      description: profile.description ?? '',
-      hours: hoursOf(profile),
-      name: profile.name,
-    });
+    this.form.reset(valuesOf(profile));
     this.section.set(this.sectionOf());
+  }
+
+  // A number she typed reads back in the form it is stored in.
+  protected normalisePhone() {
+    const control = this.form.controls.phone;
+    const phone = romanian(control.value);
+    if (phone && phone !== control.value) control.setValue(phone);
   }
 
   protected keep(section: HoursSection) {

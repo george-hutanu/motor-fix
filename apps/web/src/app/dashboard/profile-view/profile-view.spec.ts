@@ -465,6 +465,69 @@ describe('Profilul service-ului: the owner edits the name and description', () =
   });
 });
 
+// @traces 1246-FR-011
+describe('Profilul service-ului: the owner edits the phone and the service area', () => {
+  it('gives a workshop owner the texts, hours and phone controls, and no service area', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    expect(edits(element)).toEqual(['texts', 'hours', 'contact']);
+    expect(editOf(element, 'contact').getAttribute('aria-label')).toBe(
+      'Modifică profilul: Telefon',
+    );
+  });
+
+  it('gives a mobile mechanic the service area control by her area', async () => {
+    const { element, settle } = await render(async () =>
+      answer({
+        address: undefined,
+        businessKind: 'mobile',
+        serviceRadiusKm: 35,
+      }),
+    );
+    await settle();
+
+    expect(edits(element)).toEqual(['area', 'texts', 'hours', 'contact']);
+    expect(editOf(element, 'area').getAttribute('aria-label')).toBe(
+      'Modifică profilul: Zona de lucru',
+    );
+  });
+
+  it('keeps the phone control for an owner with no phone stored', async () => {
+    const { element, settle } = await render(async () =>
+      answer({ phone: null }),
+    );
+    await settle();
+
+    expect(editOf(element, 'contact')).not.toBeNull();
+  });
+
+  it('shows the saved radius at once', async () => {
+    const { element, settle } = await render(async () =>
+      answer({
+        address: undefined,
+        businessKind: 'mobile',
+        serviceRadiusKm: 35,
+      }),
+    );
+    await settle();
+    (TestBed.inject(Overlays).open as jest.Mock).mockResolvedValueOnce(
+      answer({
+        address: undefined,
+        businessKind: 'mobile',
+        serviceRadiusKm: 60,
+        version: '1',
+      }),
+    );
+
+    editOf(element, 'area').click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(text(line(element, 'area'))).toBe('Zonă de lucru: 60 km');
+  });
+});
+
 // @traces 133-FR-007
 describe('Profilul service-ului: the brands', () => {
   it('lists the brands taken with green lamps and their fuels, the refused with red lamps, in the answer order', async () => {

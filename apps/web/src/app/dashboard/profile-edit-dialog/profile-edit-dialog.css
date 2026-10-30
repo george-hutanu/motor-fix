@@ -45,3 +45,7 @@ textarea {
   font-size: var(--mf-size-small);
   color: var(--mf-text-secondary);
 }
+.tag {
+  font-weight: 400;
+  color: var(--mf-text-secondary);
+}

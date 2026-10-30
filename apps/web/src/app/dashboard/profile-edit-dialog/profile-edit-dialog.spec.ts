@@ -606,3 +606,163 @@ describe('the profile dialog: name and description', () => {
     );
   });
 });
+
+// @traces 1246-FR-013
+describe('the profile dialog: phone', () => {
+  it('holds the stored phone, marked as not public', async () => {
+    await open('contact');
+
+    expect(text(panel().querySelector('h2'))).toBe('Telefon');
+    expect(text(panel().querySelector('label[for="profile-edit-phone"]'))).toBe(
+      'Telefon nu apare public',
+    );
+    expect(control('profile-edit-phone').value).toBe('+40722123456');
+    expect(control('profile-edit-phone').type).toBe('tel');
+    expect(control('profile-edit-phone').getAttribute('autocomplete')).toBe(
+      'tel',
+    );
+  });
+
+  it.each([
+    ['a foreign number', '+44 20 7946 0958'],
+    ['letters', 'telefon'],
+    ['too few digits', '0722 123'],
+  ])(
+    "says the listing's phone error for %s as she leaves it, and sends nothing",
+    async (_, phone) => {
+      await open('contact');
+      await fill('profile-edit-phone', phone);
+      await leave('profile-edit-phone');
+
+      expect(text(panel().querySelector('#profile-edit-phone-error'))).toBe(
+        'Momentan acceptăm doar numere din România',
+      );
+      expect(control('profile-edit-phone').getAttribute('aria-invalid')).toBe(
+        'true',
+      );
+      button('Salvează')?.click();
+      await settle();
+
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('asks for a number when she empties it', async () => {
+    await open('contact');
+    await fill('profile-edit-phone', '  ');
+    await leave('profile-edit-phone');
+
+    expect(text(panel().querySelector('#profile-edit-phone-error'))).toBe(
+      'Adaugă un număr de telefon',
+    );
+  });
+
+  it('writes a typed number in its normalised form as she leaves it, and sends that alone', async () => {
+    await open('contact');
+    await fill('profile-edit-phone', '0722 123 457');
+    await leave('profile-edit-phone');
+
+    expect(control('profile-edit-phone').value).toBe('+40722123457');
+    expect(text(panel().querySelector('#profile-edit-phone-error'))).toBe('');
+    button('Salvează')?.click();
+    await settle();
+
+    expect(update).toHaveBeenCalledWith({
+      body: { phone: '+40722123457', version: '3' },
+      garageId: GARAGE,
+    });
+  });
+
+  it('speaks English in English', async () => {
+    await open('contact', profile(), 'en');
+    await fill('profile-edit-phone', 'phone');
+    await leave('profile-edit-phone');
+
+    expect(text(panel().querySelector('label[for="profile-edit-phone"]'))).toBe(
+      'Phone not shown publicly',
+    );
+    expect(text(panel().querySelector('#profile-edit-phone-error'))).toBe(
+      'We only take Romanian numbers for now',
+    );
+  });
+});
+
+const MOBILE = () =>
+  profile({ address: undefined, businessKind: 'mobile', serviceRadiusKm: 35 });
+
+// @traces 1246-FR-011 1246-FR-013
+describe('the profile dialog: service radius', () => {
+  it('holds the radius in km with its range under it', async () => {
+    await open('area', MOBILE());
+
+    expect(text(panel().querySelector('h2'))).toBe('Zona de lucru');
+    expect(control('profile-edit-radius').value).toBe('35');
+    expect(control('profile-edit-radius').getAttribute('inputmode')).toBe(
+      'numeric',
+    );
+    expect(text(panel().querySelector('#profile-edit-radius-hint'))).toBe(
+      'Între 5 și 100 km',
+    );
+  });
+
+  it('starts from 20 km when none is stored', async () => {
+    await open('area', profile({ businessKind: 'mobile' }));
+
+    expect(control('profile-edit-radius').value).toBe('20');
+  });
+
+  it.each([
+    ['4', '4'],
+    ['101', '101'],
+    ['a fraction', '12.5'],
+    ['a fraction with a comma', '12,5'],
+    ['a word', 'departe'],
+    ['nothing', ''],
+  ])(
+    'says to choose the travel radius for %s, in error style, and sends nothing',
+    async (_, km) => {
+      await open('area', MOBILE());
+      await fill('profile-edit-radius', km);
+      await leave('profile-edit-radius');
+
+      const error = panel().querySelector('#profile-edit-radius-error');
+      expect(text(error)).toBe('Alege raza de deplasare');
+      expect(error?.classList).toContain('error');
+      expect(control('profile-edit-radius').getAttribute('aria-invalid')).toBe(
+        'true',
+      );
+      button('Salvează')?.click();
+      await settle();
+
+      expect(update).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['5', 5],
+    ['100', 100],
+    [' 42 ', 42],
+  ])('sends %s km as a whole number with the stamp', async (km, sent) => {
+    await open('area', MOBILE());
+    await fill('profile-edit-radius', km);
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(update).toHaveBeenCalledWith({
+      body: { serviceRadiusKm: sent, version: '3' },
+      garageId: GARAGE,
+    });
+  });
+
+  it('says it in English', async () => {
+    await open('area', MOBILE(), 'en');
+    await fill('profile-edit-radius', '4');
+    await leave('profile-edit-radius');
+
+    expect(text(panel().querySelector('h2'))).toBe('Service area');
+    expect(text(panel().querySelector('#profile-edit-radius-error'))).toBe(
+      'Choose your travel radius',
+    );
+  });
+});

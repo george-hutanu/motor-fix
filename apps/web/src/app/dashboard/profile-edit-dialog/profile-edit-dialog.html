@@ -22,6 +22,23 @@
       </div>
     }
   }
+  @if (group === 'contact') {
+    @let phoneError = errorOf(form.controls.phone);
+    <div class="field">
+      <label hlmLabel for="profile-edit-phone">{{ 'garage.profile.phone' | t }}&ngsp;<span class="tag">{{ 'garage.profile.phonePrivate' | t }}</span></label>
+      <input hlmInput id="profile-edit-phone" type="tel" inputmode="tel" autocomplete="tel" formControlName="phone" [aria-invalid]="!!phoneError" aria-describedby="profile-edit-phone-error" (blur)="normalisePhone()" />
+      <p id="profile-edit-phone-error" class="error mf-message" role="status" aria-live="polite">{{ phoneError }}</p>
+    </div>
+  }
+  @if (group === 'area') {
+    @let radiusError = errorOf(form.controls.serviceRadiusKm);
+    <div class="field">
+      <label hlmLabel for="profile-edit-radius">{{ 'garage.profile.edit.radius' | t }}</label>
+      <input hlmInput id="profile-edit-radius" type="text" inputmode="numeric" autocomplete="off" formControlName="serviceRadiusKm" [aria-invalid]="!!radiusError" aria-describedby="profile-edit-radius-hint profile-edit-radius-error" />
+      <p id="profile-edit-radius-hint" class="hint">{{ 'garage.profile.edit.radiusHint' | t }}</p>
+      <p id="profile-edit-radius-error" class="error mf-message" role="status" aria-live="polite">{{ radiusError }}</p>
+    </div>
+  }
   @if (group === 'hours') {
     <mf-hours-step [hoursOnly]="true" [value]="section()" (valueChange)="keep($event)" />
     <p id="profile-edit-hours-error" class="error mf-message" role="status" aria-live="polite">{{ save.fieldError(form.controls.hours) }}</p>

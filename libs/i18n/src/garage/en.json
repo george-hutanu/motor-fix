@@ -482,15 +482,22 @@
         "closedDays": "A closed day is not valid. Check the days.",
         "descriptionWithin": "The description can be at most 1,000 characters.",
         "nameWithin": "The name must be 2 to 80 characters.",
+        "phoneNeeded": "Add a phone number",
+        "phoneNumber": "We only take Romanian numbers for now",
+        "radius": "Choose your travel radius",
         "weeklyHours": "The hours are not valid. Check the times."
       },
       "nameHint": "2 to 80 characters",
       "problem": {
         "profile_changed": "The profile was changed meanwhile. Reload."
       },
+      "radius": "Travel radius (km)",
+      "radiusHint": "5 to 100 km",
       "reload": "Reload",
       "save": "Save",
       "title": {
+        "area": "Service area",
+        "contact": "Phone",
         "hours": "Hours and closed days",
         "texts": "Name and description"
       }
