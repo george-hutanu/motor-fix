@@ -6,6 +6,7 @@ import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
 import { CarsView } from './cars-view';
+import { heldForDriver } from '../resources/resources.testing';
 
 const car = (id: string): CarDto => ({
   brandId: 'bmw',
@@ -38,6 +39,7 @@ async function open(url: string, answer: () => Promise<unknown>) {
     providers: [
       { provide: CarsService, useValue: { carsControllerList: list } },
       { provide: Overlays, useValue: { open: jest.fn() } },
+      ...heldForDriver(),
       provideRouter([
         { children: [{ component: CarsView, path: '**' }], path: 'cars' },
       ]),

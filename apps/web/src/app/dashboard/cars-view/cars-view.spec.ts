@@ -11,6 +11,7 @@ import { Overlays } from '@motor-fix/overlays';
 import { CarsView } from './cars-view';
 import { AddCar } from '../add-car/add-car';
 import { RemoveCar } from '../remove-car/remove-car';
+import { heldForDriver } from '../resources/resources.testing';
 
 const car = (over: Partial<CarDto> = {}): CarDto => ({
   brandId: 'bmw',
@@ -49,10 +50,16 @@ async function render(
       { provide: CarsService, useValue: { carsControllerList: list } },
       { provide: Overlays, useValue: { open } },
       provideRouter([]),
+      ...heldForDriver(),
     ],
   });
   await TestBed.inject(I18n).enter('driver');
   if (language === 'en') await TestBed.inject(I18n).use('en');
+  return { ...view(), view };
+}
+
+// A Mașinile mele built in the module render() set up, as on a return.
+function view() {
   const fixture = TestBed.createComponent(CarsView);
   const element = fixture.nativeElement as HTMLElement;
   const settle = async () => {
@@ -360,6 +367,7 @@ describe('Mașinile mele opened at a car', () => {
           useValue: { carsControllerList: async () => ({ items }) },
         },
         { provide: Overlays, useValue: { open: jest.fn() } },
+        ...heldForDriver(),
         provideRouter([
           { children: [{ component: CarsView, path: '**' }], path: 'cars' },
         ]),
@@ -793,6 +801,68 @@ describe('a car card', () => {
       expect(list).toHaveBeenCalledTimes(1);
     },
   );
+
+  // @traces 1316-FR-001 1316-FR-002
+  it('shows the cars held at once when opened again, and reads again only past 5 minutes', async () => {
+    const first = await render([car()]);
+    await first.settle();
+    first.fixture.destroy();
+
+    const again = first.view();
+    again.fixture.detectChanges();
+
+    expect(cards(again.element)).toHaveLength(1);
+    expect(again.element.querySelectorAll('.skeleton')).toHaveLength(0);
+    await again.settle();
+    expect(list).toHaveBeenCalledTimes(1);
+    again.fixture.destroy();
+
+    jest.setSystemTime(new Date('2026-10-08T09:05:00Z'));
+    const past = first.view();
+    past.fixture.detectChanges();
+
+    expect(cards(past.element)).toHaveLength(1);
+    await past.settle();
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  // @traces 1316-FR-005 1316-FR-010
+  it('shows a car added, edited and removed when opened again, with no read', async () => {
+    const first = await render([
+      car({ id: 'car-2', model: 'X1' }),
+      car({ id: 'car-1' }),
+    ]);
+    await first.settle();
+    const { element, settle } = first;
+
+    open.mockResolvedValueOnce(car({ id: 'car-3', model: 'X3' }));
+    button(element, 'Adaugă o mașină')?.click();
+    await settle();
+    await settle();
+    open.mockResolvedValueOnce(car({ id: 'car-1', model: '330d' }));
+    trigger(cards(element)[2])?.click();
+    await settle();
+    items()[0].click();
+    await settle();
+    await settle();
+    open.mockResolvedValueOnce(true);
+    trigger(cards(element)[1])?.click();
+    await settle();
+    items()[1].click();
+    await settle();
+    await settle();
+    first.fixture.destroy();
+
+    const again = first.view();
+    again.fixture.detectChanges();
+
+    expect(cards(again.element).map((c) => c.getAttribute('data-car'))).toEqual(
+      ['car-3', 'car-1'],
+    );
+    expect(lines(cards(again.element)[1])[0]).toBe('BMW 330d');
+    await again.settle();
+    expect(list).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('the car menu’s arrows', () => {

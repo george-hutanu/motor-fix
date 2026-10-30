@@ -13,6 +13,16 @@ async function driver(name = 'Andrei Ion Marin') {
 
 // @traces 220-FR-013
 describe('GET /garage/requests', () => {
+  // @traces 1316-FR-008
+  it('answers a signed-in read private, no-cache, for no shared cache to keep', async () => {
+    const dinamo = await team('Atelier Dinamo');
+
+    const res = await get('/garage/requests', bearer(dinamo.owner, 'garage'));
+
+    expect(res.status).toBe(200);
+    expect(res.headers['cache-control']).toBe('private, no-cache');
+  });
+
   it('lists the requests sent to the garage, newest first, with their count', async () => {
     const andrei = await driver();
     const dinamo = await team('Atelier Dinamo');
