@@ -1050,7 +1050,16 @@ export class Results {
     const query = untracked(this.query);
     if (query && next.open_now && !next.open_saturday)
       this.filterWarm.judge(unfiltered(query));
-    void this.write({ [key]: next[key] ? '1' : null }, { push: true });
+    // Rewritten whole, so the bar names them in the page's order.
+    const {
+      open_now: _now,
+      open_saturday: _saturday,
+      ...rest
+    } = this.route.snapshot.queryParams;
+    void this.router.navigate([], {
+      queryParams: { ...rest, ...filterParams(next) },
+      relativeTo: this.route,
+    });
   }
 
   protected clearFilters() {

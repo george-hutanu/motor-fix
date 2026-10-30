@@ -92,7 +92,8 @@ mf-brand-chips {
 }
 
 /* The Filtre button and a chip per filter on, on a line of their own right
-   under the sorts; the chips wrap, never pushing the page sideways. */
+   under the sorts; on a phone the line scrolls sideways inside itself, like
+   the brand chips, never pushing the page. */
 .brands .filters {
   align-items: center;
   display: flex;
@@ -203,6 +204,30 @@ mf-brand-chips {
    sheet's header (the chips, the brand search and the sorts): the bar lies
    over the stage instead, until it is answered, and the map and the half
    sheet keep their room. */
+/* The filters line on a phone, after the phone screen's own rules. */
+@media (max-width: 767px) {
+  .brands .filters {
+    flex-wrap: nowrap;
+    margin-inline: calc(-1 * var(--mf-space-4));
+    overflow-x: auto;
+    padding-inline: var(--mf-space-4);
+    scroll-padding-inline: var(--mf-space-4);
+    scrollbar-width: none;
+  }
+
+  .brands .filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filters .filters-open,
+  .filters .chip.filter {
+    flex: none;
+    max-width: none;
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 767px) and (max-height: 880px) {
   :host {
     height: calc(100dvh - var(--public-site-bar) - var(--tab-bar));

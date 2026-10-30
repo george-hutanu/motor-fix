@@ -3060,6 +3060,20 @@ describe('the brand chips and the brand search from a tablet up', () => {
     expect(phone).toMatch(/\.brands \{ flex-wrap: wrap;/);
     expect(phone).toMatch(/flex-basis: 100%;/);
   });
+
+  it('scrolls the filters line sideways inside itself on a phone, like the brand chips', () => {
+    const filters = [
+      ...css.matchAll(
+        /@media \(max-width: 767px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/g,
+      ),
+    ]
+      .map(([, body]) => body)
+      .find((body) => body.includes('.brands .filters {'));
+    expect(filters).toMatch(
+      /\.brands \.filters \{ flex-wrap: nowrap;[^}]*overflow-x: auto;/,
+    );
+    expect(filters).toMatch(/white-space: nowrap;/);
+  });
 });
 
 // @traces 1358-FR-001 1358-FR-002 1358-FR-006 1358-FR-007 1358-FR-008 1358-FR-010
@@ -4613,12 +4627,21 @@ describe('Results filters', () => {
       expect(navigate).toHaveBeenCalledWith(
         [],
         expect.objectContaining({
-          queryParams: { open_now: '1' },
-          queryParamsHandling: 'merge',
+          queryParams: { brand: 'bmw', near: NEAR, open_now: '1' },
         }),
       );
       expect(navigate.mock.calls.at(-1)?.[1]?.replaceUrl).toBeFalsy();
       expect(url()).toBe(`/ro/garages?brand=bmw&near=${NEAR}&open_now=1`);
+    });
+
+    it("names the filters in the page's order, whichever went on first", async () => {
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_saturday=1`);
+
+      await toggled('open_now');
+
+      expect(url()).toBe(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&open_saturday=1`,
+      );
     });
 
     it('drops the key when the filter goes off, never writing 0', async () => {
