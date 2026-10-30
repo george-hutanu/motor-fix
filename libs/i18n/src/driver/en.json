@@ -40,6 +40,8 @@
       "engine": "Engine",
       "field": {
         "km": "Write the kilometres as a whole number, at most 2,000,000.",
+        "next_service_not_above_odometer": "The value must be greater than the current odometer ({km} km).",
+        "next_service_too_far": "The value can be at most 100,000 km above the current odometer.",
         "pattern": "Write 2 to 12 letters and digits.",
         "too_far_ahead": "The date can be at most five years ahead.",
         "unknown_brand": "Choose a brand from the list."
@@ -55,6 +57,7 @@
       "km": "Kilometres",
       "lead": "We use it to show you the right garages",
       "model": "Model",
+      "nextService": "Next oil service at (km)",
       "noMatch": "No brand matches.",
       "optional": "Optional",
       "plate": "Registration plate",
@@ -97,7 +100,8 @@
     },
     "oil": {
       "due": "Oil service due in {km} km",
-      "now": "Oil service due now",
+      "missing": "Oil service: add the reading",
+      "now": "Oil service is due now",
       "overdue": "Oil service overdue by {km} km"
     },
     "rca": {

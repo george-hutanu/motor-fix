@@ -82,7 +82,7 @@
                   <p class="facts">{{ car.year }} · {{ car.odometerKm | km }}</p>
                   @for (line of top.lines; track line.kind) {
                     @if (line.kind === 'oil' && car.nextServiceKm !== null) {
-                      <mf-oil-line [nextServiceKm]="car.nextServiceKm" [odometerKm]="car.odometerKm" />
+                      <mf-oil-line [nextServiceKm]="car.nextServiceKm" [odometerKm]="car.odometerKm" [serviceDueOn]="car.serviceDueOn" />
                     } @else {
                       <mf-due-date-line [expiry]="line.expiry" [keyPrefix]="'driver.cars.' + line.kind" />
                     }

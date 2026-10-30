@@ -11,7 +11,7 @@ import { I18n, KmPipe, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton, HlmPopoverImports } from '@motor-fix/ui-cockpit';
 
-import type { DateField } from '../add-car/add-car';
+import type { CarFocus } from '../add-car/add-car';
 import { openAddCar } from '../add-car/open-add-car';
 import { DueDateLine } from '../due-date-line/due-date-line';
 import { EmptyState } from '../empty-state/empty-state';
@@ -71,7 +71,7 @@ export class CarsView implements OnInit {
   }
 
   // The answered car takes the card's place without reading the list again.
-  protected async edit(car: CarDto, focus?: DateField) {
+  protected async edit(car: CarDto, focus?: CarFocus) {
     const plates = (this.cars() ?? []).flatMap((c) => c.plate ?? []);
     const saved = await openAddCar(this.overlays, plates, {
       car,

@@ -467,7 +467,7 @@ let gone: jest.Mock;
 async function openEdit(
   language: 'ro' | 'en' = 'ro',
   car: CarDto = stored,
-  focus?: 'itpUntil' | 'rcaUntil' | 'rovinietaUntil',
+  focus?: 'itpUntil' | 'rcaUntil' | 'rovinietaUntil' | 'nextServiceKm',
 ): Promise<void> {
   search = jest.fn(async () => page(CATALOGUE));
   create = jest.fn(async () => saved);
@@ -830,6 +830,322 @@ describe('openAddCar for a car', () => {
       data: { car: stored, focus: 'itpUntil', plates: ['B123ABC'] },
       shape: 'dialog',
       title: 'driver.cars.edit.title',
+    });
+  });
+});
+
+const NEXT = 'Următorul schimb de ulei la (km)';
+const NOT_ABOVE = (km: string) =>
+  `Valoarea trebuie să fie mai mare decât kilometrajul actual (${km} km).`;
+const TOO_FAR =
+  'Valoarea poate fi cu cel mult 100.000 km peste kilometrajul actual.';
+const withNext: CarDto = { ...stored, nextServiceKm: 152000 };
+
+const saveEdit = async () => {
+  button('Salvează')?.click();
+  await settle();
+};
+
+// @traces 1386-FR-001 1386-FR-008
+describe('the next oil service field', () => {
+  it('sits after Kilometri in the add dialog, empty and typed as kilometres', async () => {
+    await open();
+
+    const next = field(NEXT);
+    expect(next.type).toBe('text');
+    expect(next.inputMode).toBe('numeric');
+    expect(next.value).toBe('');
+    expect(
+      field('Kilometri').compareDocumentPosition(next) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      next.compareDocumentPosition(field('Motorină')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(next.getAttribute('aria-describedby')).toBe(
+      'mf-car-nextServiceKm-error',
+    );
+  });
+
+  it('is filled in the edit dialog in the person’s number format', async () => {
+    await openEdit('ro', withNext);
+    expect(field(NEXT).value).toBe('152.000');
+    TestBed.resetTestingModule();
+    document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
+      n.innerHTML = '';
+    });
+
+    await openEdit('en', withNext);
+    expect(field('Next oil service at (km)').value).toBe('152,000');
+  });
+
+  it('is empty in the edit dialog of a car without one', async () => {
+    await openEdit();
+
+    expect(field(NEXT).value).toBe('');
+  });
+
+  it('takes the focus when the grey oil line opened the dialog', async () => {
+    await openEdit('ro', stored, 'nextServiceKm');
+
+    expect(document.activeElement).toBe(field(NEXT));
+  });
+});
+
+// @traces 1386-FR-001 1386-FR-002
+describe('adding a car with its next oil service', () => {
+  it.each(['152.000', '152 000', '152,000', '152000'])(
+    'reads %p as 152000 and sends it',
+    async (typed) => {
+      await open();
+      await fillCar();
+      type(field(NEXT), typed);
+      await settle();
+
+      await save();
+
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.objectContaining({ nextServiceKm: 152000 }),
+        }),
+      );
+    },
+  );
+
+  it('sends no next service when the field is left blank', async () => {
+    await open();
+    await fillCar();
+
+    await save();
+
+    expect(create.mock.calls[0][0].body).not.toHaveProperty('nextServiceKm');
+  });
+
+  it.each([
+    ['148.200', NOT_ABOVE('148.200')],
+    ['100.000', NOT_ABOVE('148.200')],
+    ['248.201', TOO_FAR],
+  ])(
+    'refuses %p against 148.200 km and sends nothing',
+    async (typed, sentence) => {
+      await open();
+      await fillCar('148.200');
+      type(field(NEXT), typed);
+      await settle();
+
+      await save();
+
+      expect(create).not.toHaveBeenCalled();
+      expect(
+        panel()
+          .querySelector('#mf-car-nextServiceKm-error')
+          ?.textContent?.trim(),
+      ).toBe(sentence);
+    },
+  );
+
+  it('takes a value exactly 100,000 km above the kilometres', async () => {
+    await open();
+    await fillCar('148.200');
+    type(field(NEXT), '248.200');
+    await settle();
+
+    await save();
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ nextServiceKm: 248200 }),
+      }),
+    );
+  });
+
+  it('says the refusal in English, with the kilometres in English writing', async () => {
+    await open('en');
+    await chooseBrand('Brand', 'bm', 'BMW');
+    type(field('Model'), '320d');
+    type(field('Year'), '2019');
+    type(field('Kilometres'), '148,200');
+    field('Diesel').click();
+    type(field('Next oil service at (km)'), '148,000');
+    await settle();
+
+    button('Add the car')?.click();
+    await settle();
+
+    expect(text()).toContain(
+      'The value must be greater than the current odometer (148,200 km).',
+    );
+    type(field('Next oil service at (km)'), '400,000');
+    await settle();
+    button('Add the car')?.click();
+    await settle();
+    expect(text()).toContain(
+      'The value can be at most 100,000 km above the current odometer.',
+    );
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('refuses on leaving the field, before any save', async () => {
+    await open();
+    await fillCar('148.200');
+    const next = field(NEXT);
+    type(next, '148.000');
+    next.dispatchEvent(new Event('blur'));
+    await settle();
+
+    expect(text()).toContain(NOT_ABOVE('148.200'));
+    expect(next.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('ties the refusal to the field and moves the focus to it', async () => {
+    await open();
+    await fillCar('148.200');
+    type(field(NEXT), '148.000');
+    await settle();
+
+    await save();
+
+    const next = field(NEXT);
+    expect(next.getAttribute('aria-invalid')).toBe('true');
+    expect(document.activeElement).toBe(next);
+  });
+
+  it('shows the API’s refusals as the same sentences, the dialog open with its values', async () => {
+    await open();
+    create.mockRejectedValueOnce(
+      refusal(400, {
+        code: 'validation_failed',
+        errors: [{ code: 'next_service_too_far', field: 'nextServiceKm' }],
+        message: 'invalid',
+      }),
+    );
+    await fillCar('148.200');
+    type(field(NEXT), '152.000');
+    await settle();
+
+    await save();
+
+    expect(text()).toContain(TOO_FAR);
+    expect(field(NEXT).value).toBe('152.000');
+    expect(button('Adaugă mașina')).toBeDefined();
+  });
+
+  it('quotes the form’s kilometres for the API’s not-above refusal', async () => {
+    await open();
+    create.mockRejectedValueOnce(
+      refusal(400, {
+        code: 'validation_failed',
+        errors: [
+          { code: 'next_service_not_above_odometer', field: 'nextServiceKm' },
+        ],
+        message: 'invalid',
+      }),
+    );
+    await fillCar('148.200');
+    type(field(NEXT), '152.000');
+    await settle();
+
+    await save();
+
+    expect(text()).toContain(NOT_ABOVE('148.200'));
+  });
+});
+
+// @traces 1386-FR-001 1386-FR-002 1386-FR-005
+describe('editing a car’s next oil service', () => {
+  it('sends a changed value', async () => {
+    await openEdit('ro', withNext);
+    type(field(NEXT), '155.000');
+    await settle();
+
+    await saveEdit();
+
+    expect(update).toHaveBeenCalledWith({
+      body: { nextServiceKm: 155000, version: '2026-10-08T07:00:00.000Z' },
+      id: 'car-1',
+    });
+  });
+
+  it('sends a blank as cleared when the car had a value', async () => {
+    await openEdit('ro', withNext);
+    type(field(NEXT), '');
+    await settle();
+
+    await saveEdit();
+
+    expect(update).toHaveBeenCalledWith({
+      body: { nextServiceKm: null, version: '2026-10-08T07:00:00.000Z' },
+      id: 'car-1',
+    });
+  });
+
+  it('neither checks nor sends the stored value in another writing', async () => {
+    await openEdit('ro', withNext);
+    type(field(NEXT), '152 000');
+    await settle();
+
+    await saveEdit();
+
+    expect(update).toHaveBeenCalledWith({
+      body: { version: '2026-10-08T07:00:00.000Z' },
+      id: 'car-1',
+    });
+  });
+
+  it('saves kilometres raised past a kept value without checking it', async () => {
+    await openEdit('ro', withNext);
+    type(field('Kilometri'), '153.000');
+    await settle();
+
+    await saveEdit();
+
+    expect(update).toHaveBeenCalledWith({
+      body: { odometerKm: 153000, version: '2026-10-08T07:00:00.000Z' },
+      id: 'car-1',
+    });
+  });
+
+  it('quotes the kilometres typed in the form, not the saved ones', async () => {
+    await openEdit('ro', withNext);
+    type(field('Kilometri'), '150.000');
+    type(field(NEXT), '149.000');
+    await settle();
+
+    await saveEdit();
+
+    expect(update).not.toHaveBeenCalled();
+    expect(text()).toContain(NOT_ABOVE('150.000'));
+  });
+
+  it('refuses before asking about lower kilometres', async () => {
+    await openEdit('ro', withNext);
+    type(field('Kilometri'), '140.000');
+    type(field(NEXT), '139.000');
+    await settle();
+
+    await saveEdit();
+
+    expect(text()).toContain(NOT_ABOVE('140.000'));
+    expect(text()).not.toContain('Kilometrajul e mai mic');
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('closes with the answered car', async () => {
+    await openEdit('ro', withNext);
+    update.mockResolvedValueOnce({
+      ...withNext,
+      nextServiceKm: 155000,
+      serviceDueOn: '2027-01-15',
+    });
+    type(field(NEXT), '155.000');
+    await settle();
+
+    await saveEdit();
+
+    await expect(edited).resolves.toMatchObject({
+      nextServiceKm: 155000,
+      serviceDueOn: '2027-01-15',
     });
   });
 });
