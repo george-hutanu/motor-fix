@@ -1,6 +1,6 @@
 ---
 capability: cars
-updated: 2026-10-29
+updated: 2026-10-30
 features:
   - 089-add-a-car
   - 090-itp-status-lamp
@@ -15,6 +15,7 @@ features:
   - 415-car-transfer-link
   - 276-job-start-done
   - 1265-car-transfer-accept
+  - 409-garage-corrects-repair
 ---
 
 # Capability: Cars
@@ -362,9 +363,9 @@ _From 1265-car-transfer-accept._
 
 _From 1265-car-transfer-accept._
 
-### 1265-FR-011 — `GET /api/v1/cars/:id/repairs` (capability `driver.cars`; 404 for another account's car or a removed one, as 091-FR-003) MUST answer the car's repairs the owner's open row may read (FR-010), newest first (date done, then creation time, both descending), each with `id`, `doneOn`, `what`, `garageName`, `source` and `fromPreviousOwner`, and no invoice or review field; ST-61 extends this answer for the history screen and keeps: a repair from a previous owner is not reviewable and never carries an invoice.
+### 409-FR-015 — The driver's history reads (`GET /api/v1/cars/:id/repairs` and `/cars/sold/:id/repairs`, 1265-FR-011 and FR-012) MUST add to each repair `odometerKm` (or null), `costBani` (or null) and `correctedBy`: `garage` when `updated_by_role` is `owner`, `admin` when it is `admin`, else null; `garageName` already on the item names the garage for the row label (title 2, FR-022); the generated client is regenerated from `apps/api/openapi.json`.
 
-_From 1265-car-transfer-accept._
+_From 409-garage-corrects-repair._
 
 ### 1265-FR-014 — After the acceptance, the seller MUST get 404 from every car route taking the car's id (`GET /api/v1/cars/:id`, the edit, the removal, the sale, the transfer cancel), and the car MUST be absent from the seller's `GET /api/v1/cars` and present in the buyer's with `plate`, `rcaUntil` and `rovinietaUntil` `null` (the existing owner check does this: the owner changed); both accounts' warm car lists (`driver-home`, 1169-FR-003) MUST be dropped in the acceptance's request.
 
@@ -377,6 +378,62 @@ _From 1265-car-transfer-accept._
 ### 1265-FR-016 — Tests MUST cover, in Jest on real PostgreSQL and Valkey (`*.integration.spec.ts` where the repository is used), each file naming its ids in one whole-line `// @traces` comment: the migration's backfill (one open row per car, removed included) and the add-car row; the read signed out, as another account, as the seller, for each gone state and with a deleted ticked repair in the count; the short name from an empty, one-word, two-word and three-word name; the acceptance's every write in one transaction, rolled back together when the audit or the event write fails; the owner's, the buyer's and the car's rows before and after; the cleared fields and the kept ITP date, kilometres and next service; the reminders moved with their stages and the two dropped; the role granted once to a garage-only account and never to a driver; 404, each 410, `own_transfer`, `car_limit` at 20 and allowed at 19 with a removed car, `open_request` in each of the four states and allowed in `done` and `closed`; two concurrent accepts: one 200, one 410; the event's payload and both channels; the notification's type, recipient, language and muting; no phone, token or plate in any log, event, audit value or answer; the owner's repairs with the flag, the unticked repair absent, a later repair unflagged, the deleted one absent; the sold list and the sold car's repairs cut at the sale date and at the closing instant, 404 to the buyer and for a car never sold; the sale read and the tick narrowed to the seller's visible repairs (a second sale); the seller's 404s and the buyer's list after the acceptance; the warm lists dropped; the public-routes list unchanged (the token route stays public; the accept route needs a session).
 
 _From 1265-car-transfer-accept._
+
+### 409-FR-001 — The repair (`REPAIR` in the `cars` module) MUST gain, in one migration: `odometer_km` (whole kilometres, optional: a MotorFix repair without a reception reading has none), `cost_bani` (optional), `shared_with_garage` (default off), `shared_at` (optional, the time sharing was last turned on), `updated_at` (set on creation and on every change; the version, as 092-FR-002), `updated_by` (the account that last changed it, optional) and `updated_by_role` (`driver`, `owner` or `admin`, optional, set with `updated_by`). Existing rows get `updated_at` = `created_at`. The driver's log, share, unshare and edit operations (ST-62, ST-63, ST-64) are not this story's.
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-002 — The system MUST add the capability `garage.client_repairs` to the garage capability table for the `garage` (owner) role only; the existing guard then answers 403 `forbidden` to a receptionist and a mechanic of the garage and 404 `not_found` to a driver and an admin (A31, `policy.ts` `requireCapability`) on every route that requires it, and 401 to a visitor without a session (`ActorGuard`, app-wide).
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-003 — `GET /api/v1/garage/client-repairs` (capability `garage.client_repairs`) MUST answer the logged repairs (`source` `logged`) whose `garage_id` is the actor's garage, with `shared_with_garage` on and `deleted_at` empty, newest `done_on` first, ties newest `created_at` first, at most the 200 newest (unpaged: a garage's shared repairs are few; the answer carries `truncated` true when more exist, so the cap is never silent); it MUST answer 404 `not_found` when the actor's garage is not `approved` (suspended or draft alike; a suspended garage cannot correct, MF-26 edge case), through the status check the garage routes already use where one exists, never a second rule.
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-004 — Each item MUST carry: `id`, `driver.shortName` (the first name and the initial of the family name, through the existing `shortName`; the deleted-author label when the car has no open owner), `car` (`brandName`, `model`, `year`), `what`, `doneOn`, `odometerKm` (or null), `costBani` (or null), `version` (`updated_at`) and `correctedAt` (the `updated_at` when `updated_by_role` is `owner`, else null); never the plate, the driver's full name, phone or e-mail.
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-005 — `PATCH /api/v1/garage/client-repairs/:id` (capability `garage.client_repairs`) MUST correct the repair's `what`, `doneOn`, `odometerKm` and `costBani` (each optional in the body; a body with none changes nothing, FR-010, as the car edit; `costBani` may be `null` to clear it; `odometerKm` may not be null) and MUST carry the required `version` the caller loaded; a body with any other field (car, garage, source, sharing) is refused 400 by the edge validation; the answer is the corrected item as FR-004 shapes it.
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-006 — The correction's limits MUST be: `what` 1 to 200 characters after trimming; `doneOn` a calendar date not after today in Europe/Bucharest; `odometerKm` a whole number from 0 to 2 000 000; `costBani` a whole number from 0 to 92 000 000 or null; each refused 400 with the field named.
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-007 — The correction MUST answer 404 `not_found` and change nothing when the repair does not exist, is deleted, is not `logged`, names another garage or no garage, is not shared with the garage (`shared_with_garage` off — including a sharing stopped after the garage loaded it), or the actor's garage is not `approved`. A garage that reads the car's history through a booking's history tick (ST-416) gains nothing from it here: only the named garage with sharing on passes.
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-008 — Refusals run in this order: 401, 403, edge validation 400 (FR-005, FR-006), 404 (FR-007), 409. The correction MUST answer 409 `stale_version` and change nothing when the body's `version` differs from the repair's `updated_at`, checked before any comparison of values (a stale version is 409 even when the body changes nothing); the check and the write run in one transaction so two concurrent saves with the same version let exactly one through.
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-009 — `DELETE /api/v1/garage/client-repairs/:id` (capability `garage.client_repairs`) MUST answer 403 `forbidden` and change nothing: the named garage never deletes a logged repair (MF-26 rule 8).
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-010 — A correction that changes no value MUST answer 200 with the unchanged item and write no audit entry, event or notification; `updated_at`, `updated_by` and `updated_by_role` MUST change only when a value changes, and then to the time of the write, the actor and `owner`.
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-011 — In the same transaction as the row, the system MUST write audit entries through the audit writer (390-FR-001, FR-003): one `update` entry per changed field (`what`, `done_on`, `odometer_km`, `cost_bani`), subject `repair`, old and new values as stored (an empty amount as none), actor the owner's account with role `owner` (390-FR-005), the garage id and the car id on the entry (390-FR-008); the rule, the audit shape and the event (FR-012) MUST be written so an admin actor (ST-1267) can reuse them with role `admin` without a second use case.
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-012 — In the same transaction, the system MUST hand to the event port `repair.updated` with: the repair id, the car id, the car's current owner's account id (the open ownership row's account when it is not deleted, or none), the garage id, the changed field names and `by` = `owner`; audience the car owner's `account` channel and the garage's `garage` channel (MF-26 live updates), so open history and client-repairs screens re-read.
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-016 — The three routes MUST be listed in `infra/observability/inventory.json` with the cars module's existing metrics, logs and traces, one counter `motorfix_repair_corrections_total` by `by` (`owner`; `admin` later) and `outcome` (`corrected`, `unchanged`, `stale`, `not_found`), counting only requests that reach the use case (a 400 or 403 is read from the status codes), the queue `repair-updated` with its counter `motorfix_repair_updated_notices_total` (`built`, `muted`, `skipped`), its log line and the worker queue alerts, one log line per correction with the repair, garage and changed fields (no values), a panel on the cars dashboard, and the alert or why none (a correction is rare and user-driven: no alert, the API error-rate alert covers failures).
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the list's membership (the six seeds of User Story 2), order and shape; each field corrected alone and together, the amount cleared, the unchanged save; every 400 limit; 403 for a receptionist and a mechanic, 404 for a driver and an admin; every 404 of FR-007; 409 and the concurrent-save race; the delete's 403; the audit entries' values and role; the event's payload and audience and the rollback on failure; REPAIR_UPDATED with the switch on and off, to the current owner after a sale, none when the car has no owner, and once on a redelivered event; the driver's reads with `correctedBy`; the capability table (the owner alone); the migration's backfill (`updated_at` = `created_at`, sharing off); the list's cap and `truncated`. Each test file carries a `// @traces` line naming its `409-FR-<n>` ids.
+
+_From 409-garage-corrects-repair._
 
 ## Retired
 
@@ -396,3 +453,4 @@ _From 1265-car-transfer-accept._
 - `092-FR-012` — superseded by `1265-FR-012` (2026-10-29)
 - `415-FR-003` — superseded by `1265-FR-013` (2026-10-29)
 - `415-FR-004` — superseded by `1265-FR-013` (2026-10-29)
+- `1265-FR-011` — superseded by `409-FR-015` (2026-10-30)

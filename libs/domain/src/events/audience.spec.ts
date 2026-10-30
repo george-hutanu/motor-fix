@@ -57,6 +57,17 @@ describe('audienceOf', () => {
     ).toEqual(['account:d1', 'garage:g1']);
   });
 
+  // @traces 409-FR-012
+  it('sends a repair of a car with no owner to the named garage alone', () => {
+    expect(
+      audienceOf({
+        ownerAccountId: null,
+        sharedGarageId: garage,
+        type: 'repair',
+      }),
+    ).toEqual(['garage:g1']);
+  });
+
   it("sends a booking to its driver, the garage and the booking's mechanic", () => {
     expect(
       audienceOf({
