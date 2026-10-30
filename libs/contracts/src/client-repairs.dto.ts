@@ -142,3 +142,66 @@ export class ClientRepairListDto {
   @ApiProperty({ description: 'More repairs exist than the list holds' })
   truncated!: boolean;
 }
+
+// A driver's logged repair in the admin's list: the day and the car alone.
+export class AdminRepairListItemDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ format: 'date' })
+  doneOn!: string;
+
+  @ApiProperty({ type: ClientRepairCarDto })
+  car!: ClientRepairCarDto;
+}
+
+export class AdminRepairListDto {
+  @ApiProperty({
+    description: 'Newest first, at most 200',
+    type: [AdminRepairListItemDto],
+  })
+  items!: AdminRepairListItemDto[];
+
+  @ApiProperty({ description: 'More repairs exist than the list holds' })
+  truncated!: boolean;
+}
+
+// A driver's logged repair as the admin opens it, shared with a garage or not.
+export class AdminRepairDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ type: ClientRepairCarDto })
+  car!: ClientRepairCarDto;
+
+  @ApiProperty({ description: 'What was done' })
+  what!: string;
+
+  @ApiProperty({
+    description: 'The garage as the driver named it, on MotorFix or not',
+  })
+  garageName!: string;
+
+  @ApiProperty({ format: 'date' })
+  doneOn!: string;
+
+  @ApiProperty({ nullable: true, type: 'integer' })
+  odometerKm!: number | null;
+
+  @ApiProperty({ description: 'In bani', nullable: true, type: 'integer' })
+  costBani!: number | null;
+
+  @ApiProperty({
+    description: 'Sent back with a correction',
+    format: 'date-time',
+  })
+  version!: string;
+
+  @ApiProperty({
+    description: 'Who last corrected it, as the driver’s history tells it',
+    enum: ['garage', 'admin'],
+    nullable: true,
+    type: String,
+  })
+  correctedBy!: 'garage' | 'admin' | null;
+}
