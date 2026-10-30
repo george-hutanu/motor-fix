@@ -135,6 +135,12 @@ export type { CarHistoryControllerSoldRepairs$Params as CarHistoryControllerSold
 export { carHistoryControllerSoldRepairs as carHistoryControllerSoldRepairs } from './fn/cars/car-history-controller-sold-repairs';
 export type { CarHistoryControllerRepairs$Params as CarHistoryControllerRepairs$Params } from './fn/cars/car-history-controller-repairs';
 export { carHistoryControllerRepairs as carHistoryControllerRepairs } from './fn/cars/car-history-controller-repairs';
+export type { ClientRepairsControllerList$Params as ClientRepairsControllerList$Params } from './fn/cars/client-repairs-controller-list';
+export { clientRepairsControllerList as clientRepairsControllerList } from './fn/cars/client-repairs-controller-list';
+export type { ClientRepairsControllerRemove$Params as ClientRepairsControllerRemove$Params } from './fn/cars/client-repairs-controller-remove';
+export { clientRepairsControllerRemove as clientRepairsControllerRemove } from './fn/cars/client-repairs-controller-remove';
+export type { ClientRepairsControllerCorrect$Params as ClientRepairsControllerCorrect$Params } from './fn/cars/client-repairs-controller-correct';
+export { clientRepairsControllerCorrect as clientRepairsControllerCorrect } from './fn/cars/client-repairs-controller-correct';
 export type { CarsControllerList$Params as CarsControllerList$Params } from './fn/cars/cars-controller-list';
 export { carsControllerList as carsControllerList } from './fn/cars/cars-controller-list';
 export type { CarsControllerCreate$Params as CarsControllerCreate$Params } from './fn/cars/cars-controller-create';

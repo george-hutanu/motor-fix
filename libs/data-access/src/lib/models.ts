@@ -79,6 +79,10 @@ export type { CatalogueJobProposalDto } from './models/catalogue-job-proposal-dt
 export type { ChangeCopyVoiceDto } from './models/change-copy-voice-dto';
 export type { ChangePlatformRuleDto } from './models/change-platform-rule-dto';
 export type { CheckSummaryDto } from './models/check-summary-dto';
+export type { ClientRepairCarDto } from './models/client-repair-car-dto';
+export type { ClientRepairDriverDto } from './models/client-repair-driver-dto';
+export type { ClientRepairDto } from './models/client-repair-dto';
+export type { ClientRepairListDto } from './models/client-repair-list-dto';
 export type { ClosedDayAheadDto } from './models/closed-day-ahead-dto';
 export type { CompareBookingDto } from './models/compare-booking-dto';
 export type { CompareGarageDto } from './models/compare-garage-dto';
@@ -98,6 +102,7 @@ export type { ContinueLinkSentDto } from './models/continue-link-sent-dto';
 export type { CopyVoiceDto } from './models/copy-voice-dto';
 export type { CopyVoicesDto } from './models/copy-voices-dto';
 export type { CopyVoiceStateDto } from './models/copy-voice-state-dto';
+export type { CorrectClientRepairDto } from './models/correct-client-repair-dto';
 export type { CorrectRarNumberDto } from './models/correct-rar-number-dto';
 export type { CourtesyCarDto } from './models/courtesy-car-dto';
 export type { CreateBrandDto } from './models/create-brand-dto';
