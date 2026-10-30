@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 240,
+    "count": 243,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -3160,6 +3160,63 @@
       "alerts": "none",
       "reason": "counts each takeover told to the seller by outcome (built, muted, skipped), with the fan-out's log line naming the transfer id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-1265"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-client-repairs",
+      "source": "libs/domain/src/cars/client-repairs/client-repairs.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garage/client-repairs",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the garage owner reads the logged repairs drivers shared with the garage, at most 200; a read changes nothing, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-409"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-client-repair",
+      "source": "libs/domain/src/cars/client-repairs/client-repairs.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garage/client-repairs/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner corrects a shared repair (PATCH) or is refused a delete (DELETE, 403); each correction counted by motorfix_repair_corrections_total by writer and outcome, one ClientRepairs log line per correction with the repair id and the changed fields, the audit rows and a repair.updated event; refusals read from the status codes",
+      "story": "ST-409"
+    },
+    {
+      "kind": "queue",
+      "name": "repair-updated",
+      "source": "libs/domain/src/notifications/repair-updated/repair-updated.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_repair_updated_notices_total (built, muted, skipped) on motorfix-product, with one RepairUpdated log line per event naming the repair id; BullMQ queue metrics cover depth and failures",
+      "story": "ST-409"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_repair_corrections_total",
+      "source": "libs/domain/src/cars/client-repairs/client-repairs.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each correction that reached the use case by writer (owner, admin) and outcome (corrected, unchanged, stale, not_found), with no repair, garage or account label; a count has no failure to alert on; the api-error-rate rule covers the service",
+      "story": "ST-409"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_repair_updated_notices_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each correction told to the driver by outcome (built, muted, skipped), with the fan-out log line naming the repair id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
+      "story": "ST-409"
     }
   ]
 }
