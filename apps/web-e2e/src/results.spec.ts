@@ -467,7 +467,10 @@ test.describe('the map beside the results @seeded', () => {
         // test fails on it instead of leaving the request hanging.
         if (!response.ok()) return route.fulfill({ response });
         const json = (await response.json()) as { total: number };
-        total = json.total;
+        // The open-now warm (1398-FR-012) reads the same pins filtered; its
+        // total is not the search's.
+        if (!new URL(route.request().url()).searchParams.has('open_now'))
+          total = json.total;
         await route.fulfill({ json, response });
       },
     );

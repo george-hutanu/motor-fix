@@ -296,6 +296,38 @@ describe('StaticMap, the overlay', () => {
 });
 
 // @traces 1196-FR-014 1196-FR-015
+// @traces 1398-FR-010
+describe('StaticMap, a garage that misses the filters', () => {
+  it('dims its pin and its circle, and no other', async () => {
+    await render();
+    fixture.componentRef.setInput('pins', {
+      pins: [
+        pinOf(1, { matches: false }),
+        pinOf(2, { lat: 44.44, lng: 26.11 }),
+        pinOf(3, { matches: false, serviceRadiusKm: 3 }),
+      ],
+      total: 3,
+    });
+    fixture.detectChanges();
+    const pins = Array.from(element().querySelectorAll('.pin'));
+
+    expect(pins.map((pin) => pin.classList.contains('dim'))).toEqual([
+      true,
+      false,
+    ]);
+    expect(element().querySelectorAll('.area.dim')).toHaveLength(1);
+  });
+
+  it('draws a dimmed pin or circle at 40 % opacity, a lit one whole', () => {
+    const css = readFileSync(join(__dirname, 'static-map.css'), 'utf8');
+
+    expect(css).toMatch(/\.pin\.dim,\s*\.area\.dim\s*\{[^}]*opacity:\s*0?\.4/);
+    expect(css).toMatch(
+      /\.pin\.dim\.lit,\s*\.area\.dim\.lit\s*\{[^}]*opacity:\s*1/,
+    );
+  });
+});
+
 describe('StaticMap, the attribution and the control', () => {
   it('credits the tiles in text that takes no focus', async () => {
     await render();
