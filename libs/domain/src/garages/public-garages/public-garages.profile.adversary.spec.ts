@@ -206,3 +206,59 @@ describe('the SQL public scope', () => {
     expect(publicGaragesSql('g').values).toEqual([]);
   });
 });
+
+// @traces 1383-FR-001 1383-FR-002
+describe("the centre of a mobile mechanic's area", () => {
+  it('rounds the position to two decimals beside the radius', async () => {
+    const { service } = build([
+      listedRow({
+        business_kind: 'mobile',
+        latitude: 44.9365,
+        longitude: 26.0129,
+      }),
+    ]);
+
+    const answer = await service.bySlug('garage');
+
+    expect(answer).toMatchObject({
+      areaLat: 44.94,
+      areaLng: 26.01,
+      serviceRadiusKm: 20,
+    });
+    expect(answer).not.toHaveProperty('latitude');
+    expect(answer).not.toHaveProperty('longitude');
+  });
+
+  it.each([
+    ['only a latitude', { latitude: 44.9365 }],
+    ['only a longitude', { longitude: 26.0129 }],
+    ['no position', {}],
+  ])('answers no centre for %s', async (_, position) => {
+    const { service } = build([
+      listedRow({ business_kind: 'mobile', ...position }),
+    ]);
+
+    const answer = await service.bySlug('garage');
+
+    expect(answer).not.toHaveProperty('areaLat');
+    expect(answer).not.toHaveProperty('areaLng');
+    expect(answer.serviceRadiusKm).toBe(20);
+  });
+
+  it('gives a workshop its exact position and no centre', async () => {
+    const { service } = build([
+      listedRow({
+        address: 'Strada Exemplu 1',
+        business_kind: 'company',
+        latitude: 44.9365,
+        longitude: 26.0129,
+      }),
+    ]);
+
+    const answer = await service.bySlug('garage');
+
+    expect(answer).toMatchObject({ latitude: 44.9365, longitude: 26.0129 });
+    expect(answer).not.toHaveProperty('areaLat');
+    expect(answer).not.toHaveProperty('areaLng');
+  });
+});

@@ -88,6 +88,7 @@ describe('the public garage read and the registered seat', () => {
     expect(raw).not.toContain('latitude');
   });
 
+  // @traces 1383-FR-002
   it('keeps the seat out when a former mobile mechanic became a workshop with the old seat still on the row', async () => {
     const created = await prisma.garage.create({
       data: {
@@ -108,8 +109,11 @@ describe('the public garage read and the registered seat', () => {
     expect(res.text).not.toContain('Sediului');
     expect(res.body).not.toHaveProperty('seatAddress');
     expect(res.body).not.toHaveProperty('serviceRadiusKm');
+    expect(res.body).not.toHaveProperty('areaLat');
+    expect(res.body).not.toHaveProperty('areaLng');
   });
 
+  // @traces 1383-FR-001
   it('keeps the position out when a former workshop became a mobile mechanic with the old address on the row', async () => {
     const created = await prisma.garage.create({
       data: {
@@ -128,12 +132,18 @@ describe('the public garage read and the registered seat', () => {
     const res = await read(created.slug);
 
     expect(res.text).not.toContain('Veche');
+    expect(res.text).not.toContain('44.4268');
     for (const key of ['address', 'latitude', 'longitude']) {
       expect(res.body).not.toHaveProperty(key);
     }
-    expect(res.body.serviceRadiusKm).toBe(20);
+    expect(res.body).toMatchObject({
+      areaLat: 44.43,
+      areaLng: 26.1,
+      serviceRadiusKm: 20,
+    });
   });
 
+  // @traces 1383-FR-002
   it('shows a mobile mechanic with no place yet with the default radius and no address or position', async () => {
     const created = await prisma.garage.create({
       data: {
@@ -147,7 +157,13 @@ describe('the public garage read and the registered seat', () => {
 
     const res = await read(created.slug);
 
-    for (const key of ['address', 'latitude', 'longitude']) {
+    for (const key of [
+      'address',
+      'latitude',
+      'longitude',
+      'areaLat',
+      'areaLng',
+    ]) {
       expect(res.body[key] ?? null).toBeNull();
     }
     expect(res.body.serviceRadiusKm).toBe(20);

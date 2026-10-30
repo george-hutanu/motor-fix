@@ -23,7 +23,7 @@ import {
   type PrismaClient,
 } from '../../generated/prisma/client';
 import { responseRateOf } from '../../insights/response-stats/response-stats';
-import { areaSql, kmOf } from '../../search/area/area-sql';
+import { areaSql, kmOf, roughly } from '../../search/area/area-sql';
 import { StorageService } from '../../storage/storage.service';
 import { brandAnswerWithFuels } from '../brand-answer';
 import {
@@ -195,10 +195,15 @@ const facilitiesOf = (row: ProfileRow) => ({
 });
 
 // A mobile mechanic is shown by the area it serves: its position is the
-// owner's seat, so it never leaves with the garage.
+// owner's seat, so only its centre rounded to about a kilometre leaves.
 const placeOf = (row: ProfileRow) =>
   row.business_kind === 'mobile'
     ? {
+        ...(row.latitude !== null &&
+          row.longitude !== null && {
+            areaLat: roughly(row.latitude),
+            areaLng: roughly(row.longitude),
+          }),
         serviceRadiusKm:
           row.service_radius_km ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM,
       }

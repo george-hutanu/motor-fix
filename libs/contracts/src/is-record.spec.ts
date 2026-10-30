@@ -20,6 +20,9 @@ describe('isRecord', () => {
     const found = execFileSync(
       'git',
       [
+        // A global submodule.recurse=true refuses --untracked.
+        '-c',
+        'submodule.recurse=false',
         'grep',
         '--untracked',
         '-lE',
