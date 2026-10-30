@@ -18,6 +18,7 @@
     "new": "New request",
     "paused": "Paused",
     "ready": "Your car is ready. You can come and pick it up.",
+    "reconnecting": "Reconnecting…",
     "retry": "Try again",
     "stage": {
       "booked": "Booked",

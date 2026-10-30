@@ -35,8 +35,9 @@ features:
   - 1263-admin-dashboard-customise
   - 1250-live-video-provider
   - 177-reported-reviews
-  - 427-time-blocks
   - 1254-assistant-approvals
+  - 275-live-stage-updates
+  - 427-time-blocks
   - 011-dashboard-sections
 ---
 
@@ -511,6 +512,10 @@ _From 011-dashboard-sections._
 ### 1254-FR-010 — The signed-in frame (once, in the frame every `/app` area shares, else once per area frame) MUST show, for an account with pending approvals,, above the view, the strip "n acțiuni așteaptă aprobarea ta" / "n actions await your approval" (Romanian plural rules: "1 acțiune", "2 acțiuni"; absent at 0) linking to the oldest pending approval's sheet; after a decision the sheet shows the next pending one or closes. The strip and an open sheet MUST re-read on `assistant_approval.requested` and `assistant_approval.decided` received on the account's live stream, so every open tab updates without a reload. The strip is one component with one mount line, so ST-368 moves it into the Asistent AI view. (AC 6; brief Live updates; build plan ST-376 ↔ ST-368)
 
 _From 1254-assistant-approvals._
+
+### 275-FR-004 — The driver's tracker MUST hear about a job through the audience its events already carry, `account:{driverAccountId}`, with the garage's staff through `garage:{garageId}` and the job's mechanic through `mechanic:{mechanicId}` (254-FR-001, 276-FR-007); no client joins a job channel and no other account's stream receives the job's, its booking's or its quotes' events. This is the brief's `job:{jobId}` realised on the server (Assumptions), and a test proves it (FR-009).
+
+_From 275-live-stage-updates._
 
 ## Retired
 

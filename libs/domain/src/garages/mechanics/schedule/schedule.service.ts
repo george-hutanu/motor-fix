@@ -3,6 +3,7 @@ import {
   DAY_OFF_NOTE_MAX,
   type Interval,
   isDay,
+  isRecord,
   isTime,
   type MechanicScheduleDto,
   storedWeek,
@@ -22,7 +23,6 @@ import { addDays, atLocal } from '../../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { effectiveHours } from '../../mechanic-hours';
-import { isRecord } from '../../plain-text';
 import {
   cardAudience,
   GarageMechanicsService,

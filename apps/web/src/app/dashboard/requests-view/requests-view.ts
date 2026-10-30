@@ -41,7 +41,12 @@ import {
 import { ActiveRequest } from '../active-request/active-request';
 import { EmptyState } from '../empty-state/empty-state';
 import { focusCard } from '../focus-card';
-import { liveResource, REQUEST_EVENTS } from '../live';
+import {
+  ACTIVE_REQUEST_EVENTS,
+  Live,
+  liveResource,
+  REQUEST_EVENTS,
+} from '../live';
 import { openRequestOf } from '../quotes-compare/compare-rules/compare-rules';
 import { QuotesCompare } from '../quotes-compare/quotes-compare';
 
@@ -102,11 +107,14 @@ export class RequestsView {
     () => this.api.requestsControllerList(),
     REQUEST_EVENTS,
   );
-  // The active request's panel above the list, moved by the same events.
+  // The active request's panel above the list, moved by every change to a
+  // request, its quotes, booking or job.
   private readonly activeRead = liveResource(
     () => this.api.activeRequestControllerGet(),
-    REQUEST_EVENTS,
+    ACTIVE_REQUEST_EVENTS,
   );
+  // The live stream down past its grace: the panel says it is reconnecting.
+  protected readonly reconnecting = inject(Live).offline;
   protected readonly active = computed(() =>
     this.activeRead.failed() && !this.activeRead.value()
       ? 'failed'

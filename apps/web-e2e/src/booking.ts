@@ -53,13 +53,13 @@ export async function accepted(request: APIRequestContext) {
   return (await acceptedBooking(request)).requestId;
 }
 
-async function acceptedBooking(request: APIRequestContext) {
+async function acceptedBooking(request: APIRequestContext, email = DRIVER) {
   const militari = await accessToken(request, MILITARI);
   const me = await request.get('/api/v1/me', { headers: bearer(militari) });
   const { garageId } = (await me.json()) as { garageId: string };
   const jobs = await request.get('/api/v1/job-types?keys=oil-service');
   const [oil] = ((await jobs.json()) as { items: { id: string }[] }).items;
-  const driver = await accessToken(request, DRIVER);
+  const driver = await accessToken(request, email);
   const cars = await request.get('/api/v1/cars', { headers: bearer(driver) });
   const { items } = (await cars.json()) as {
     items: { id: string; model: string }[];
@@ -98,10 +98,15 @@ async function acceptedBooking(request: APIRequestContext) {
   return { bookingId, requestId };
 }
 
-// One request of the driver's, accepted as above and confirmed by Militari
-// with its first mechanic on lift 1, so its booking is confirmed.
-export async function confirmed(request: APIRequestContext) {
-  const { bookingId, requestId } = await acceptedBooking(request);
+// One request of the driver's (the seeded one unless named), accepted as
+// above and confirmed by Militari on lift 1 with the mechanic named, or its
+// first one, so its booking is confirmed.
+export async function confirmed(
+  request: APIRequestContext,
+  email = DRIVER,
+  mechanicId?: string,
+) {
+  const { bookingId, requestId } = await acceptedBooking(request, email);
   const headers = bearer(await accessToken(request, MILITARI));
   const options = await request.get(
     `/api/v1/bookings/${bookingId}/confirm-options`,
@@ -112,9 +117,15 @@ export async function confirmed(request: APIRequestContext) {
     mechanics: { id: string }[];
   };
   const confirm = await request.post(`/api/v1/bookings/${bookingId}/confirm`, {
-    data: { lift: 1, ...(mechanics[0] && { mechanicId: mechanics[0].id }) },
+    data: {
+      lift: 1,
+      ...((mechanicId ?? mechanics[0]) && {
+        mechanicId: mechanicId ?? mechanics[0].id,
+      }),
+    },
     headers,
   });
   expect(confirm.ok()).toBe(true);
-  return { bookingId, requestId };
+  const { startsAt } = (await confirm.json()) as { startsAt: string };
+  return { bookingId, requestId, startsAt };
 }

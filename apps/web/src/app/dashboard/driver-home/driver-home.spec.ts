@@ -102,6 +102,7 @@ let open: jest.Mock;
 let compare: jest.Mock;
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
+let offline: ReturnType<typeof signal<boolean>>;
 
 const answer = <T>(value: Answer<T>) =>
   value instanceof Error
@@ -170,6 +171,7 @@ async function render({
   compare = jest.fn(() => new Promise<never>(() => undefined));
   events = new Subject();
   resync = new Subject();
+  offline = signal(false);
   const current = signal(
     capabilities === null
       ? null
@@ -209,7 +211,7 @@ async function render({
         provide: Live,
         useValue: {
           events,
-          offline: signal(false),
+          offline,
           on: (kinds: readonly EventKind[]) =>
             events.pipe(
               filter((m) => (kinds as readonly string[]).includes(m.kind)),
@@ -1384,5 +1386,25 @@ describe('Cererea activă as the request moves', () => {
     await settle();
 
     expect(panel(element, 'activeRequest')).toBeNull();
+  });
+});
+
+// @traces 275-FR-005
+describe('Panou while the live stream is down', () => {
+  it('passes the stream’s offline state to the active request, and drops the line once back', async () => {
+    const { element, settle } = await render({
+      cars: [car()],
+      requests: [request()],
+    });
+    const line = () => element.querySelector('mf-active-request .reconnecting');
+    expect(line()).toBeNull();
+
+    offline.set(true);
+    await settle();
+    expect(text(line())).toBe('Reconectare…');
+
+    offline.set(false);
+    await settle();
+    expect(line()).toBeNull();
   });
 });

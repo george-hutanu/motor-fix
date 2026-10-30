@@ -12,6 +12,7 @@ import { PublicJobTypeDto } from '../models/public-job-type-dto';
 import { PublicLabourDto } from '../models/public-labour-dto';
 import { PublicPriceRowDto } from '../models/public-price-row-dto';
 import { ResponseRateDto } from '../models/response-rate-dto';
+import { StoredClosedDayDto } from '../models/stored-closed-day-dto';
 export interface GarageProfileDto {
 
   /**
@@ -117,8 +118,18 @@ export interface GarageProfileDto {
   slug: string;
 
   /**
+   * Every closed day the garage stored, from today on, with its note; never public
+   */
+  storedClosedDays: Array<StoredClosedDayDto>;
+
+  /**
    * The garage's stored day of last check (its approval, then each valid monthly RAR re-check) at UTC midnight; the approval instant for a garage with no stored day; null when it has neither
    */
   verifiedAt: string | null;
+
+  /**
+   * The profile's change stamp; sent back with a save
+   */
+  version: string;
   worksOn: Array<PublicBrandDto>;
 }

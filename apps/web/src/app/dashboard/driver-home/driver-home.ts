@@ -25,7 +25,7 @@ import { carLines, compareCars } from '../car-lines/car-lines';
 import { DRIVER_PANELS, panelsToDraw } from '../driver-panels/driver-panels';
 import { DueDateLine } from '../due-date-line/due-date-line';
 import { EmptyState } from '../empty-state/empty-state';
-import { liveResource, REQUEST_EVENTS } from '../live';
+import { ACTIVE_REQUEST_EVENTS, Live, liveResource } from '../live';
 import { OilLine } from '../oil-line/oil-line';
 import { openRequestOf } from '../quotes-compare/compare-rules/compare-rules';
 import { QuotesCompare } from '../quotes-compare/quotes-compare';
@@ -94,12 +94,14 @@ export class DriverHome {
         ? 'failed'
         : this.requestsRead.value()?.items,
   );
-  // The active request, re-read on the events that move any request, and
-  // after a resync; the last read wins.
+  // The active request, re-read on every change to a request, its quotes,
+  // booking or job, and after a resync; the last read wins.
   private readonly activeRead = liveResource(
     () => this.requestsApi.activeRequestControllerGet(),
-    REQUEST_EVENTS,
+    ACTIVE_REQUEST_EVENTS,
   );
+  // The live stream down past its grace: the panel says it is reconnecting.
+  protected readonly reconnecting = inject(Live).offline;
   protected readonly active = computed(() =>
     this.activeRead.failed() && !this.activeRead.value()
       ? 'failed'
