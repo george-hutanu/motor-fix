@@ -3282,7 +3282,7 @@
     {
       "kind": "product-counter",
       "name": "motorfix_repair_edit_refusals_total",
-      "source": "libs/domain/src/cars/repair-from-job/repair-from-job.metrics.ts",
+      "source": "libs/domain/src/cars/repairs/repairs.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
       "reason": "counts each refused edit or delete of a repair by code (motorfix_repair, not_implemented), with no repair or account label; a count has no failure to alert on",

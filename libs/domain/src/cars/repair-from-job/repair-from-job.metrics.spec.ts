@@ -1,10 +1,7 @@
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 
-import {
-  recordEditRefusal,
-  recordRepairFromJob,
-} from './repair-from-job.metrics';
+import { recordRepairFromJob } from './repair-from-job.metrics';
 
 const memory = inMemory();
 const started = startTelemetry(
@@ -28,22 +25,6 @@ describe('the repair-from-job counters', () => {
       recordRepairFromJob(outcome);
 
       expect(await total(name, { outcome })).toBe(before + 1);
-    },
-  );
-
-  it.each(['motorfix_repair', 'not_implemented'] as const)(
-    'counts an edit refused with %s, apart from the other code',
-    async (code) => {
-      const name = 'motorfix_repair_edit_refusals_total';
-      const other =
-        code === 'motorfix_repair' ? 'not_implemented' : 'motorfix_repair';
-      const before = await total(name, { code });
-      const otherBefore = await total(name, { code: other });
-
-      recordEditRefusal(code);
-
-      expect(await total(name, { code })).toBe(before + 1);
-      expect(await total(name, { code: other })).toBe(otherBefore);
     },
   );
 });

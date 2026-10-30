@@ -18,12 +18,3 @@ export function recordRepairFromJob(outcome: RepairFromJobOutcome) {
     })
     .add(1, { outcome });
 }
-
-// An edit or delete of a repair the driver may not make yet, by its code.
-export function recordEditRefusal(code: 'motorfix_repair' | 'not_implemented') {
-  meter()
-    .createCounter('motorfix_repair_edit_refusals_total', {
-      description: 'Edits and deletes of a repair refused, by code',
-    })
-    .add(1, { code });
-}

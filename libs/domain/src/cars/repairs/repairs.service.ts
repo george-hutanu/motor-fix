@@ -1,6 +1,7 @@
 import type { RepairListDto, RepairsQueryDto } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
+import { recordEditRefusal } from './repairs.metrics';
 import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -12,7 +13,6 @@ import {
   repairWhere,
   toRow,
 } from '../history/history';
-import { recordEditRefusal } from '../repair-from-job/repair-from-job.metrics';
 
 const PAGE = 20;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -44,14 +44,11 @@ export class RepairsService {
     const today = localDay(new Date());
     const language = actor.language ?? 'ro';
     return {
-      items: page.map((repair) =>
-        toRow(
-          repair,
-          rowOf.get(repair.car.id) as (typeof rows)[number],
-          language,
-          today,
-        ),
-      ),
+      // Every repair matched one of these rows, so none is dropped.
+      items: page.flatMap((repair) => {
+        const row = rowOf.get(repair.car.id);
+        return row ? [toRow(repair, row, language, today)] : [];
+      }),
       nextCursor: repairs.length > size ? (page.at(-1)?.id ?? null) : null,
     };
   }

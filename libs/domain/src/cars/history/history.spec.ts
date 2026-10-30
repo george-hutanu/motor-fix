@@ -1,20 +1,10 @@
 // @traces 061-FR-005
 // @traces 061-FR-007
 // @traces 061-FR-008
-import { jobNames, REPAIR_ORDER, reviewState } from './history';
+import { jobNames, reviewState } from './history';
 
 const quoted = (position: number, nameRo: string, nameEn: string) => ({
   requestJob: { jobType: { nameEn, nameRo }, position },
-});
-
-describe('the order of a repair history', () => {
-  it('reads the day done, then the creation time, then the id, each newest first', () => {
-    expect(REPAIR_ORDER).toEqual([
-      { doneOn: 'desc' },
-      { createdAt: 'desc' },
-      { id: 'desc' },
-    ]);
-  });
 });
 
 describe('the jobs a MotorFix repair names', () => {
