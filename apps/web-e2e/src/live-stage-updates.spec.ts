@@ -214,8 +214,8 @@ test.describe('each stage change within seconds @seeded', () => {
         ).toBeVisible();
       });
 
-      // The test's driver has this one request: once finished, every page
-      // shows the stage the active read now gives, or no request at all.
+      // The test's driver has this one request: once finished, the active
+      // read gives it as done, and every page shows Gata (SC-002).
       await job.call('finish');
       const read = await request.get('/api/v1/quote-requests/active', {
         headers: bearer(await accessToken(request, job.driver)),
@@ -224,10 +224,9 @@ test.describe('each stage change within seconds @seeded', () => {
       const { request: shown } = (await read.json()) as {
         request: { stage: keyof typeof STAGE } | null;
       };
+      expect(shown?.stage).toBe('done');
       await onEach(pages, (where) =>
-        shown
-          ? expect(current(where)).toHaveText(STAGE[shown.stage], SOON)
-          : expect(stepOf(where, job.text)).toBeHidden(SOON),
+        expect(current(where)).toHaveText(STAGE.done, SOON),
       );
 
       expect(overview.url()).toMatch(/\/app\/driver$/);
