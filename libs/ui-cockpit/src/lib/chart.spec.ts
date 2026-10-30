@@ -535,6 +535,18 @@ class WeeksHost {
   readonly lastLabel = signal(false);
 }
 
+@Component({
+  imports: [BarChart],
+  template: `
+    <mf-bar-chart title="Vizualizări profil" unit="count" [points]="points">
+      <p mfChartFigure>472</p>
+    </mf-bar-chart>
+  `,
+})
+class FigureHost {
+  readonly points = WEEKS;
+}
+
 async function renderWeeks(lastLabel = false) {
   const fixture = TestBed.createComponent(WeeksHost);
   fixture.componentInstance.lastLabel.set(lastLabel);
@@ -552,6 +564,19 @@ describe('the bar chart with weeks that have no value', () => {
 
     expect(ids(plain)).toEqual([]);
     expect(ids(await renderWeeks(true))).toEqual(['mf-last-label']);
+  });
+
+  // QA lap 1: the board puts the chart's name, then the figure, then the bars.
+  it("places the host's figure under the chart's name, above the plot", async () => {
+    const fixture = TestBed.createComponent(FigureHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const order = [...el.querySelectorAll('h2, [mfChartFigure], canvas')].map(
+      (node) => node.tagName.toLowerCase(),
+    );
+
+    expect(order).toEqual(['h2', 'p', 'canvas']);
   });
 
   it('reads the missing mark in the table for a week without a value', async () => {

@@ -218,6 +218,8 @@ abstract class CockpitChart {
 
 const template = `
   <mf-panel [heading]="title()">
+    <!-- The host's own lead line: its figure, under the chart's name. -->
+    <ng-content select="[mfChartFigure]" />
     <div class="mf-chart" [attr.aria-busy]="loading() || null">
       @if (loading()) {
         <div class="mf-chart-skeleton" aria-hidden="true"></div>

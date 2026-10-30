@@ -179,7 +179,11 @@ const LAST_LABEL: Plugin<ChartType, LastLabel> = {
     ctx.font = label.font;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    ctx.fillText(label.text, bar.x, bar.y - 4);
+    // The newest bar stands last, near the canvas's right edge on a narrow
+    // chart: the label moves in until it is whole.
+    const half = ctx.measureText(label.text).width / 2;
+    const x = Math.max(half, Math.min(bar.x, chart.width - half));
+    ctx.fillText(label.text, x, bar.y - 4);
     ctx.restore();
   },
   id: 'mf-last-label',
@@ -196,12 +200,15 @@ function newestLabel(
   format: (value: unknown) => string,
 ): {
   config?: { plugins: Plugin<ChartType, LastLabel>[] };
+  layout?: { padding: { top: number } };
   options?: Record<string, LastLabel>;
 } {
   if (!on) return {};
   const config = { plugins: [LAST_LABEL] };
+  // Room over the tallest bar for its label: its size and the 4 px gap.
+  const layout = { padding: { top: (theme.labelSize ?? 12) + 6 } };
   const index = points.findLastIndex((p) => p.value !== null);
-  if (index < 0) return { config };
+  if (index < 0) return { config, layout };
   const label: LastLabel = {
     color: theme.text,
     dataset,
@@ -211,6 +218,7 @@ function newestLabel(
   };
   return {
     config,
+    layout,
     options: { [LAST_LABEL.id]: label },
   };
 }
@@ -282,6 +290,7 @@ export function chartConfig(
       animation: reducedMotion
         ? false
         : { duration: 1000, easing: 'easeOutQuart' },
+      layout: newest.layout,
       ...(horizontal && { indexAxis: 'y' as const }),
       // A lead's tooltip shows both bars of the category under its name.
       interaction: {
@@ -315,7 +324,13 @@ export function chartConfig(
         [categoryAxis]: {
           border: { display: false },
           grid: { display: false },
-          ticks: { ...ticks, autoSkip: true, maxRotation: 0, minRotation: 0 },
+          // A labelled week chart names every week under its bar.
+          ticks: {
+            ...ticks,
+            autoSkip: !newest.config,
+            maxRotation: 0,
+            minRotation: 0,
+          },
         },
         [valueAxis]: {
           beginAtZero: true,

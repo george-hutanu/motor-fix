@@ -659,6 +659,7 @@ describe('the chart with weeks that have no value', () => {
     const ctx = {
       fillText: (text: string, x: number, y: number) =>
         texts.push([text, x, y]),
+      measureText: () => ({ width: 24 }),
       restore: () => {},
       save: () => {},
     };
@@ -666,6 +667,7 @@ describe('the chart with weeks that have no value', () => {
     const chart = {
       ctx,
       getDatasetMeta: () => ({ data: bars }),
+      width: 200,
     };
     const config = weeks(true);
     const [plugin] = config.plugins;
@@ -679,5 +681,40 @@ describe('the chart with weeks that have no value', () => {
     expect(texts[0][0]).toBe('472');
     expect(texts[0][1]).toBe(60);
     expect(texts[0][2]).toBeLessThan(120);
+  });
+
+  // QA lap 1: "472" read "47:" on a narrow desktop chart, cut by the canvas.
+  it('keeps the newest label whole when its bar stands at the right edge', () => {
+    const texts: [string, number, number][] = [];
+    const ctx = {
+      fillText: (text: string, x: number, y: number) =>
+        texts.push([text, x, y]),
+      measureText: () => ({ width: 24 }),
+      restore: () => {},
+      save: () => {},
+    };
+    const bars = [null, { x: 30, y: 40 }, { x: 95, y: 120 }];
+    const chart = { ctx, getDatasetMeta: () => ({ data: bars }), width: 100 };
+    const config = weeks(true);
+    config.plugins[0].afterDatasetsDraw(
+      chart,
+      {},
+      config.options.plugins['mf-last-label'],
+    );
+
+    expect(texts[0][1] + 24 / 2).toBeLessThanOrEqual(100);
+  });
+
+  it('leaves room above the plot for the label over the tallest bar', () => {
+    expect(weeks(true).options.layout?.padding?.top).toBeGreaterThanOrEqual(
+      12 + 4,
+    );
+    expect(weeks().options.layout).toBeUndefined();
+  });
+
+  // @traces 1397-FR-003
+  it('labels every week under the bars when the host labels the newest', () => {
+    expect(weeks(true).options.scales.x.ticks.autoSkip).toBe(false);
+    expect(weeks().options.scales.x.ticks.autoSkip).toBe(true);
   });
 });
