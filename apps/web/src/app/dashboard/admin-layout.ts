@@ -164,9 +164,9 @@ export class AdminLayout {
   }
 
   private async read() {
-    // Without the admin role there is no layout to read.
+    // Without the admin role there is no layout to read: the default is drawn.
     if (!this.admin()) {
-      this.server.set(null);
+      this.redraw(null);
       return;
     }
     const account = this.account();
