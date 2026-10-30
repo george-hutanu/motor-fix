@@ -37,12 +37,13 @@ RUN mkdir /maps && if [ "${APP}" = web ]; then \
 # shell-less run) runs the migrations from inside its image, then sets the
 # monitor role's password (monitor-password.ts), and on staging seeds
 # (reset-staging.sh with SEED_ONLY=1), as the staging reset
-# (.github/workflows/reset-staging.yml) does there too: seed.ts is one file,
-# run by Node as it is, with pg already among the api's dependencies.
+# (.github/workflows/reset-staging.yml) does there too, followed there by the
+# demo data: seed.ts and demo-data.ts are one file each, run by Node as they
+# are, with pg already among the api's dependencies.
 RUN if [ "${APP}" = api ]; then \
       cp -r libs/domain/prisma libs/domain/prisma.config.ts dist/apps/api/ \
       && mkdir -p dist/apps/api/src dist/apps/api/scripts \
-      && cp libs/domain/src/seed.ts dist/apps/api/src/ \
+      && cp libs/domain/src/seed.ts libs/domain/src/demo-data.ts dist/apps/api/src/ \
       && cp scripts/api-pre-deploy.sh scripts/monitor-password.ts scripts/reset-staging.sh dist/apps/api/scripts/; fi
 
 FROM scratch AS web-maps

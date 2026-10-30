@@ -836,6 +836,18 @@
     "endCapped": "You have seen the first {max} · zoom in for fewer",
     "enterAddress": "Enter an address",
     "failed": "We couldn't load the results",
+    "filters": {
+      "button": "Filters",
+      "buttonCount": "Filters · {n}",
+      "clear": "Remove filters",
+      "filtering": "Filtering…",
+      "none": "No garage has everything you chose",
+      "openNow": "Open now",
+      "openSaturday": "Open on Saturday",
+      "remove": "Remove filter {name}",
+      "summary": "{n} with your filters",
+      "title": "Filters"
+    },
     "found": {
       "one": "{count} garage found",
       "other": "{count} garages found"
