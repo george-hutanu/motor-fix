@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-26
+updated: 2026-10-30
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -24,6 +24,7 @@ features:
   - 1368-admin-brand-list
   - 150-add-booking
   - 1241-3d-catalogue-seed
+  - 1315-optimistic-toggles
 ---
 
 # Capability: Catalogue
@@ -204,9 +205,9 @@ _From 1352-catalogue-job-visibility._
 
 _From 1352-catalogue-job-visibility._
 
-### 1352-FR-004 — Every job row of Prețuri with a default row MUST offer, while editing is on, "Ascunde" / "Hide" when the job is not hidden by the owner and "Arată" / "Show" when it is, beside "Modifică"; the press saves at once, in place, with the row locked while it saves; the row's state and lamp follow the read's reason (357-FR-012's labels), "ascuns de tine" with an amber lamp for a job the owner hid. A failed save unlocks the row, leaves its state as it was and shows the error on the row ("Nu s-a salvat. Încearcă din nou." / "Not saved. Try again.").
+### 1315-FR-006 — In `PricesView.toggle`, the row MUST show its new state before the call is sent: on hide, `public: false` with reason `hidden_by_garage` ("ascuns de tine", amber lamp); on show, `public: true` ("pe profil", green lamp); the row's buttons stay disabled while the save is in flight (`busy`, as today) and the list re-reads on the answer as today, so the server's reason wins (modifies 1352-FR-004's "leaves its state as it was" during the save).
 
-_From 1352-catalogue-job-visibility._
+_From 1315-optimistic-toggles._
 
 ### 1352-FR-005 — The API MUST accept, on `PATCH /api/v1/garages/{garageId}/prices/{priceId}`, a body `{ visible }` (`visible` a boolean, required) as a second body shape beside the range body of 173-FR-004: it sets the default row's `visible` flag and nothing else, needs no `expectedUpdatedAt` (last write wins; the same value again writes nothing and answers 200), and answers the saved row as 173-FR-004 does. The body shape is decided by the presence of `visible`: with it, any other field is refused 400 `validation_failed`. A flip that changes the flag bumps the row's `updatedAt`, so a range edit read before it answers 409 `stale` (173-FR-004's rule) and re-reads.
 
@@ -472,6 +473,10 @@ _From 1241-3d-catalogue-seed._
 
 _From 1241-3d-catalogue-seed._
 
+### 1315-FR-007 — A refused or failed flip MUST put the row back to the state it had before the press (its `public`, `reason` and `visible` as the read gave them) and show `garage.prices.notSaved` on the row, as 1352-FR-004 shows it today; a re-read in between (a live event) MUST NOT be undone by the rollback (the rollback restores the row only when the shown row is still the optimistic one).
+
+_From 1315-optimistic-toggles._
+
 ## Retired
 
 - `354-FR-001` — superseded by `109-FR-021` (2026-10-08)
@@ -488,3 +493,4 @@ _From 1241-3d-catalogue-seed._
 - `039-FR-006` — superseded by `105-FR-012` (2026-10-24)
 - `039-FR-009` — superseded by `105-FR-014` (2026-10-24)
 - `112-FR-008` — superseded by `309-FR-008` (2026-10-24)
+- `1352-FR-004` — superseded by `1315-FR-006` (2026-10-30)
