@@ -1,4 +1,27 @@
 <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  @if (group === 'texts') {
+    @let nameError = errorOf(form.controls.name);
+    <div class="field">
+      <label hlmLabel for="profile-edit-name">{{ 'garage.profile.name' | t }}</label>
+      <input hlmInput id="profile-edit-name" type="text" autocomplete="organization" formControlName="name" [aria-invalid]="!!nameError" aria-describedby="profile-edit-name-hint profile-edit-name-error" />
+      <p id="profile-edit-name-hint" class="hint">{{ 'garage.profile.edit.nameHint' | t }}</p>
+      <p id="profile-edit-name-error" class="error mf-message" role="status" aria-live="polite">{{ nameError }}</p>
+    </div>
+    @let descriptionError = errorOf(form.controls.description);
+    <div class="field">
+      <label hlmLabel for="profile-edit-description">{{ 'garage.profile.description' | t }}</label>
+      <textarea hlmInput id="profile-edit-description" rows="5" formControlName="description" [aria-invalid]="!!descriptionError" aria-describedby="profile-edit-description-hint profile-edit-description-error"></textarea>
+      <p id="profile-edit-description-hint" class="hint">{{ 'garage.profile.edit.descriptionHint' | t }}</p>
+      <p id="profile-edit-description-error" class="error mf-message" role="status" aria-live="polite">{{ descriptionError }}</p>
+    </div>
+    @if (address) {
+      <div class="field address" data-address>
+        <p class="label">{{ 'garage.profile.address' | t }}</p>
+        <p class="value">{{ address }}</p>
+        <p class="hint">{{ 'garage.profile.edit.addressNote' | t }}</p>
+      </div>
+    }
+  }
   @if (group === 'hours') {
     <mf-hours-step [hoursOnly]="true" [value]="section()" (valueChange)="keep($event)" />
     <p id="profile-edit-hours-error" class="error mf-message" role="status" aria-live="polite">{{ save.fieldError(form.controls.hours) }}</p>

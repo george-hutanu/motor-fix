@@ -5,7 +5,14 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  type AbstractControl,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  type ValidatorFn,
+} from '@angular/forms';
 import {
   type ClosedDay,
   DEFAULT_HOURS,
@@ -13,6 +20,12 @@ import {
   isWeeklyHours,
   type WeeklyHours,
 } from '@motor-fix/contracts/garage-hours';
+import { PROFILE_DESCRIPTION_MAX } from '@motor-fix/contracts/garage-profile-limits';
+import {
+  NAME_MAX,
+  NAME_MIN,
+  trimmedWithin,
+} from '@motor-fix/contracts/listing-sections';
 import type { Problem } from '@motor-fix/contracts/problem';
 import { type GarageProfileDto, GaragesService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
@@ -23,7 +36,7 @@ import {
   TaskSubmit,
   taskSave,
 } from '@motor-fix/overlays';
-import { HlmButton } from '@motor-fix/ui-cockpit';
+import { HlmButton, HlmInput, HlmLabel } from '@motor-fix/ui-cockpit';
 
 import { HoursStep } from '../../public/hours-step/hours-step';
 
@@ -45,6 +58,34 @@ const closedDaysOf = (profile: GarageProfileDto): ClosedDay[] =>
     ...(note && { note }),
   }));
 
+// A rule of the shared contract, under the code the server names it by, so
+// the field says the same whether the dialog or the server refused it.
+const rule =
+  (code: string, holds: (value: string) => boolean): ValidatorFn =>
+  (control) =>
+    holds(String(control.value ?? '')) ? null : { [code]: true };
+
+const GROUPS: Record<ProfileGroup, readonly string[]> = {
+  area: ['serviceRadiusKm'],
+  contact: ['phone'],
+  hours: ['hours', 'closedDays'],
+  texts: ['name', 'description'],
+};
+
+type FormValue = Partial<{
+  closedDays: ClosedDay[];
+  description: string;
+  hours: WeeklyHours;
+  name: string;
+}>;
+
+// What the group sends: its own fields as the server takes them.
+const bodyOf = ({ description, name, ...rest }: FormValue) => ({
+  ...rest,
+  ...(name !== undefined && { name: name.trim() }),
+  ...(description !== undefined && { description: description.trim() }),
+});
+
 // One group of the garage's profile, edited in place: the fields as read,
 // saved with the profile's stamp, closed with the saved profile. A profile
 // changed meanwhile is read again on request, into the dialog alone.
@@ -55,6 +96,8 @@ const closedDaysOf = (profile: GarageProfileDto): ClosedDay[] =>
     HoursStep,
     ReactiveFormsModule,
     TaskError,
+    HlmInput,
+    HlmLabel,
     TaskSubmit,
     TranslatePipe,
   ],
@@ -68,7 +111,12 @@ export class ProfileEditDialog {
     ProfileEditData,
     OverlayResult<GarageProfileDto>
   >();
+  private readonly i18n = inject(I18n);
   protected readonly group = this.task.data.group;
+  protected readonly address =
+    this.task.data.profile.businessKind === 'mobile'
+      ? ''
+      : (this.task.data.profile.address ?? '');
   private readonly garageId = this.task.data.garageId;
   private version = this.task.data.profile.version;
 
@@ -77,8 +125,20 @@ export class ProfileEditDialog {
       closedDaysOf(this.task.data.profile),
       { nonNullable: true },
     ),
+    description: new FormControl(this.task.data.profile.description ?? '', {
+      nonNullable: true,
+      validators: rule('descriptionWithin', (value) =>
+        trimmedWithin(value, 0, PROFILE_DESCRIPTION_MAX),
+      ),
+    }),
     hours: new FormControl<WeeklyHours>(hoursOf(this.task.data.profile), {
       nonNullable: true,
+    }),
+    name: new FormControl(this.task.data.profile.name, {
+      nonNullable: true,
+      validators: rule('nameWithin', (value) =>
+        trimmedWithin(value, NAME_MIN, NAME_MAX),
+      ),
     }),
   });
   // The hours step's section: the week and the closed days, as the form holds.
@@ -88,12 +148,14 @@ export class ProfileEditDialog {
     done: (profile: GarageProfileDto) => this.task.close(profile),
     form: this.form,
     messages: 'garage.profile.edit',
-    send: ({ closedDays = [], hours }) =>
+    send: (value) =>
       this.api.garageProfileControllerUpdate({
-        body: { closedDays, hours, version: this.version },
+        body: { ...bodyOf(value), version: this.version },
         garageId: this.garageId,
       }),
   });
+  // Moves on every change, touch and status of the form, for the messages.
+  private readonly changes = signal(0);
 
   // The 409 asks for a reload; once reloaded its line goes.
   private readonly reloaded = signal<Problem | null>(null);
@@ -104,7 +166,24 @@ export class ProfileEditDialog {
   protected readonly reloading = signal(false);
 
   constructor() {
-    void inject(I18n).enter('garage');
+    void this.i18n.enter('garage');
+    for (const [name, control] of Object.entries(this.form.controls)) {
+      if (!GROUPS[this.group].includes(name)) control.disable();
+    }
+    this.form.events
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.changes.update((n) => n + 1));
+  }
+
+  // A field's message: the server's once it answered, else the shared rule's
+  // as soon as the owner leaves the field (or the press reveals it).
+  protected errorOf(control: AbstractControl): string | null {
+    this.changes();
+    const errors = control.errors;
+    if (!errors) return null;
+    if ('server' in errors) return this.save.fieldError(control);
+    if (!control.touched) return null;
+    return this.i18n.t(`garage.profile.edit.field.${Object.keys(errors)[0]}`);
   }
 
   private sectionOf(): HoursSection {
@@ -112,8 +191,19 @@ export class ProfileEditDialog {
     return { closedDays, hours };
   }
 
+  // The form as the profile reads, with every field untouched.
+  private seed(profile: GarageProfileDto) {
+    this.form.reset({
+      closedDays: closedDaysOf(profile),
+      description: profile.description ?? '',
+      hours: hoursOf(profile),
+      name: profile.name,
+    });
+    this.section.set(this.sectionOf());
+  }
+
   protected keep(section: HoursSection) {
-    this.form.setValue({
+    this.form.patchValue({
       closedDays: section.closedDays ?? [],
       hours: section.hours ?? DEFAULT_HOURS,
     });
@@ -129,11 +219,7 @@ export class ProfileEditDialog {
         garageId: this.garageId,
       });
       this.version = profile.version;
-      this.form.setValue({
-        closedDays: closedDaysOf(profile),
-        hours: hoursOf(profile),
-      });
-      this.section.set(this.sectionOf());
+      this.seed(profile);
       this.reloaded.set(this.save.problem());
     } catch {
       // The line stays, and the reload can be pressed again.

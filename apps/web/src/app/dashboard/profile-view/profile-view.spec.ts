@@ -419,6 +419,52 @@ describe('Profilul service-ului: the owner edits in place', () => {
   });
 });
 
+// @traces 1246-FR-011 1246-FR-014
+describe('Profilul service-ului: the owner edits the name and description', () => {
+  it('shows the description under the name, and the texts control after the address', async () => {
+    const { element, settle } = await render(async () =>
+      answer({ description: 'Diesel german și cutii de viteze.' }),
+    );
+    await settle();
+
+    expect(text(line(element, 'description'))).toBe(
+      'Descriere Diesel german și cutii de viteze.',
+    );
+    expect(edits(element).slice(0, 2)).toEqual(['texts', 'hours']);
+    expect(editOf(element, 'texts').getAttribute('aria-label')).toBe(
+      'Modifică profilul: Nume și descriere',
+    );
+  });
+
+  it('shows no description line while there is none, and keeps the control', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    expect(line(element, 'description')).toBeNull();
+    expect(editOf(element, 'texts')).not.toBeNull();
+  });
+
+  it('opens the texts dialog and shows the saved name at once', async () => {
+    const { element, settle } = await render();
+    await settle();
+    const open = TestBed.inject(Overlays).open as jest.Mock;
+    open.mockResolvedValueOnce(
+      answer({ description: 'Nou', name: 'Service Militari', version: '1' }),
+    );
+
+    editOf(element, 'texts').click();
+    await settle();
+
+    expect(open.mock.calls[0][1]).toMatchObject({
+      data: { group: 'texts' },
+      title: 'garage.profile.edit.title.texts',
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(text(line(element, 'name'))).toBe('Nume Service Militari');
+    expect(text(line(element, 'description'))).toBe('Descriere Nou');
+  });
+});
+
 // @traces 133-FR-007
 describe('Profilul service-ului: the brands', () => {
   it('lists the brands taken with green lamps and their fuels, the refused with red lamps, in the answer order', async () => {

@@ -411,3 +411,198 @@ describe('the profile dialog: hours and closed days', () => {
     expect(update).not.toHaveBeenCalled();
   });
 });
+
+const control = (id: string) =>
+  panel().querySelector<HTMLInputElement | HTMLTextAreaElement>(
+    `#${id}`,
+  ) as HTMLInputElement;
+
+async function fill(id: string, value: string) {
+  const input = control(id);
+  input.focus();
+  input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  await settle();
+}
+
+async function leave(id: string) {
+  control(id).dispatchEvent(new Event('blur'));
+  await settle();
+}
+
+// @traces 1246-FR-013 1246-FR-014 1246-FR-003
+describe('the profile dialog: name and description', () => {
+  it('holds the name and description as read, their limits under them, and the address read only with its note', async () => {
+    await open('texts');
+
+    expect(text(panel().querySelector('h2'))).toBe('Nume și descriere');
+    expect(text(panel().querySelector('label[for="profile-edit-name"]'))).toBe(
+      'Nume',
+    );
+    expect(control('profile-edit-name').value).toBe('Service Auto Militari');
+    expect(control('profile-edit-name').tagName).toBe('INPUT');
+    expect(
+      text(panel().querySelector('label[for="profile-edit-description"]')),
+    ).toBe('Descriere');
+    expect(control('profile-edit-description').tagName).toBe('TEXTAREA');
+    expect(control('profile-edit-description').value).toBe(
+      'Diesel german și cutii de viteze.',
+    );
+    expect(text(panel().querySelector('#profile-edit-name-hint'))).toBe(
+      'Între 2 și 80 de caractere',
+    );
+    expect(text(panel().querySelector('#profile-edit-description-hint'))).toBe(
+      'Cel mult 1.000 de caractere',
+    );
+    expect(
+      control('profile-edit-name').getAttribute('aria-describedby'),
+    ).toContain('profile-edit-name-hint');
+    const address = panel().querySelector('[data-address]');
+    expect(text(address)).toContain('Str. Atelierului 14, Militari');
+    expect(text(address)).toContain('Schimbarea adresei trece pe la un admin.');
+    expect(address?.querySelector('input, textarea')).toBeNull();
+    expect(panel().querySelector('mf-hours-step')).toBeNull();
+  });
+
+  it.each([
+    ['one letter', 'S'],
+    ['spaces around one letter', '   S   '],
+    ['81 letters', 'S'.repeat(81)],
+  ])(
+    'says a name of %s is out of bounds as she leaves it, and sends nothing',
+    async (_, name) => {
+      await open('texts');
+      await fill('profile-edit-name', name);
+
+      expect(text(panel().querySelector('#profile-edit-name-error'))).toBe('');
+      await leave('profile-edit-name');
+
+      expect(text(panel().querySelector('#profile-edit-name-error'))).toBe(
+        'Numele trebuie să aibă între 2 și 80 de caractere.',
+      );
+      expect(control('profile-edit-name').getAttribute('aria-invalid')).toBe(
+        'true',
+      );
+      expect(
+        control('profile-edit-name').getAttribute('aria-describedby'),
+      ).toContain('profile-edit-name-error');
+
+      button('Salvează')?.click();
+      await settle();
+
+      expect(update).not.toHaveBeenCalled();
+      expect(await still()).toBe('open');
+    },
+  );
+
+  it('takes 2 and 80 letters, and a fixed name drops its error', async () => {
+    await open('texts');
+    await fill('profile-edit-name', 'S');
+    await leave('profile-edit-name');
+    await fill('profile-edit-name', 'SA');
+
+    expect(text(panel().querySelector('#profile-edit-name-error'))).toBe('');
+    expect(
+      control('profile-edit-name').getAttribute('aria-invalid'),
+    ).toBeNull();
+
+    await fill('profile-edit-name', 'S'.repeat(80));
+    button('Salvează')?.click();
+    await settle();
+
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
+  it('says a description past 1,000 letters is too long as she leaves it, and sends nothing', async () => {
+    await open('texts');
+    await fill('profile-edit-description', 'd'.repeat(1001));
+    await leave('profile-edit-description');
+
+    expect(text(panel().querySelector('#profile-edit-description-error'))).toBe(
+      'Descrierea poate avea cel mult 1.000 de caractere.',
+    );
+    button('Salvează')?.click();
+    await settle();
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('sends the trimmed name and description with the stamp, never the address, and closes with the answer', async () => {
+    await open('texts');
+    await fill('profile-edit-name', '  Service Militari  ');
+    await fill('profile-edit-description', ' '.concat('d'.repeat(1000), ' '));
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(update).toHaveBeenCalledWith({
+      body: {
+        description: 'd'.repeat(1000),
+        name: 'Service Militari',
+        version: '3',
+      },
+      garageId: GARAGE,
+    });
+    await expect(result).resolves.toMatchObject({ version: '4' });
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it('sends an emptied description as empty, which clears it', async () => {
+    await open('texts');
+    await fill('profile-edit-description', '   ');
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(update.mock.calls[0][0].body).toEqual({
+      description: '',
+      name: 'Service Auto Militari',
+      version: '3',
+    });
+  });
+
+  it("shows the server's refusal of the name under the name and focuses it", async () => {
+    await open('texts');
+    update.mockRejectedValueOnce(
+      status(400, {
+        code: 'validation_failed',
+        errors: [{ code: 'nameWithin', field: 'name' }],
+        status: 400,
+      }),
+    );
+
+    button('Salvează')?.click();
+    await settle();
+
+    expect(text(panel().querySelector('#profile-edit-name-error'))).toBe(
+      'Numele trebuie să aibă între 2 și 80 de caractere.',
+    );
+    expect(document.activeElement).toBe(control('profile-edit-name'));
+  });
+
+  it('shows a mobile mechanic no address', async () => {
+    await open(
+      'texts',
+      profile({ address: undefined, businessKind: 'mobile' }),
+    );
+
+    expect(panel().querySelector('[data-address]')).toBeNull();
+  });
+
+  it('speaks English in English', async () => {
+    await open('texts', profile(), 'en');
+    await fill('profile-edit-name', 'S');
+    await leave('profile-edit-name');
+
+    expect(text(panel().querySelector('h2'))).toBe('Name and description');
+    expect(
+      text(panel().querySelector('label[for="profile-edit-description"]')),
+    ).toBe('Description');
+    expect(text(panel().querySelector('#profile-edit-name-error'))).toBe(
+      'The name must be 2 to 80 characters.',
+    );
+    expect(text(panel().querySelector('[data-address]'))).toContain(
+      'An address change goes through an admin.',
+    );
+  });
+});

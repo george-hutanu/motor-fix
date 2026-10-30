@@ -17,6 +17,16 @@
             <span class="label">{{ 'garage.profile.address' | t }}</span>&ngsp;<span class="value" data-value>{{ address(garage) }}</span>
           </li>
         }
+        @if (garage.description) {
+          <li class="field wide" data-line="description">
+            <span class="label">{{ 'garage.profile.description' | t }}</span>&ngsp;<span class="value" data-value>{{ garage.description }}</span>
+          </li>
+        }
+        @if (legalCheck()) {
+          <li class="edit">
+            <button hlmBtn variant="secondary" type="button" data-edit="texts" [attr.aria-label]="editLabel('texts')" (click)="edit('texts')">{{ 'garage.profile.edit.control' | t }}</button>
+          </li>
+        }
         @if (hours().length) {
           <li class="field" data-line="hours">
             <span class="label">{{ 'garage.profile.hours' | t }}</span>&ngsp;<span class="value hours" data-value>

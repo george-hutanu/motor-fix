@@ -18,6 +18,10 @@ import {
   type WeeklyHours,
 } from './garage-hours';
 import {
+  PROFILE_DESCRIPTION_MAX,
+  PROFILE_RADIUS_KM,
+} from './garage-profile-limits';
+import {
   isRomanianPhone,
   NAME_MAX,
   NAME_MIN,
@@ -25,8 +29,7 @@ import {
 } from './listing-sections';
 import { normalisePhone } from './phone';
 
-export const PROFILE_DESCRIPTION_MAX = 1000;
-export const PROFILE_RADIUS_KM = { max: 100, min: 5 } as const;
+export { PROFILE_DESCRIPTION_MAX, PROFILE_RADIUS_KM };
 
 const holds = (name: string, check: (value: unknown) => boolean) =>
   ValidateBy({

@@ -40,6 +40,9 @@
       "@motor-fix/contracts/garage-hours": [
         "./libs/contracts/src/garage-hours.ts"
       ],
+      "@motor-fix/contracts/garage-profile-limits": [
+        "./libs/contracts/src/garage-profile-limits.ts"
+      ],
       "@motor-fix/contracts/garage-report-text": [
         "./libs/contracts/src/garage-report-text.ts"
       ],

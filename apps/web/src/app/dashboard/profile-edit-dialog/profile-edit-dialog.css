@@ -21,3 +21,27 @@ button {
   min-height: 54px;
   white-space: normal;
 }
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+label,
+.label {
+  margin: 0;
+  font-weight: 700;
+}
+input,
+textarea {
+  width: 100%;
+  min-height: 44px;
+}
+.hint,
+.value {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.hint {
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}

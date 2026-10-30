@@ -471,21 +471,28 @@
   "profile": {
     "address": "Address",
     "area": "Service area: {km}",
+    "description": "Description",
     "edit": {
+      "addressNote": "An address change goes through an admin.",
       "cancel": "Cancel",
       "control": "Edit profile",
       "controlFor": "Edit profile: {group}",
+      "descriptionHint": "At most 1,000 characters",
       "field": {
         "closedDays": "A closed day is not valid. Check the days.",
+        "descriptionWithin": "The description can be at most 1,000 characters.",
+        "nameWithin": "The name must be 2 to 80 characters.",
         "weeklyHours": "The hours are not valid. Check the times."
       },
+      "nameHint": "2 to 80 characters",
       "problem": {
         "profile_changed": "The profile was changed meanwhile. Reload."
       },
       "reload": "Reload",
       "save": "Save",
       "title": {
-        "hours": "Hours and closed days"
+        "hours": "Hours and closed days",
+        "texts": "Name and description"
       }
     },
     "error": "We could not load the profile.",

@@ -51,9 +51,15 @@ h3,
   row-gap: var(--mf-space-1);
   min-width: 0;
 }
-/* The owner's edit control closes its group of lines, on a row of its own. */
-.edit {
+/* The owner's edit control closes its group of lines, on a row of its own;
+   the description, a paragraph, takes the whole row too. */
+.edit,
+.field.wide {
   grid-column: 1 / -1;
+}
+.field.wide > .value {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 .edit button {
   min-height: 44px;
