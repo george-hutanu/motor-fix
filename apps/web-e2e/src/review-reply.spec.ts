@@ -138,20 +138,21 @@ test.describe('replying to a review @seeded', () => {
       await expect(card.locator('[data-reply-edited]')).toContainText('Editat');
       expect(reloads).toBe(0);
 
-      await expect
-        .poll(
-          async () => {
-            const list = await request.get('/api/v1/notifications', {
-              headers: driver,
-            });
-            const { items } = (await list.json()) as {
-              items: { text: string }[];
-            };
-            return items.map((item) => item.text);
-          },
-          { timeout: 10_000 },
-        )
-        .toContainEqual(expect.stringMatching(/ți-a răspuns la recenzie\.$/));
+      const bell = await browser.newContext();
+      const reader = await bell.newPage();
+      try {
+        await keepSeededLanguage(reader);
+        await ready(reader, '/ro');
+        await openSignIn(reader);
+        await signIn(reader, ACCOUNTS.otherDriver);
+        await expect(reader).toHaveURL(/\/app\/driver/);
+        await reader.getByRole('button', { name: /^Notificări/ }).click();
+        await expect(
+          reader.getByRole('dialog', { name: 'Notificări' }),
+        ).toContainText(/ți-a răspuns la recenzie\./, { timeout: 10_000 });
+      } finally {
+        await bell.close();
+      }
     } finally {
       await visitor.close();
       await removeJob(db, jobId);
