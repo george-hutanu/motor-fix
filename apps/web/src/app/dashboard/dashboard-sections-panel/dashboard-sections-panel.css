@@ -60,7 +60,18 @@ hlm-switch {
 .error {
   color: var(--mf-red-ink);
 }
+.moves {
+  display: flex;
+  flex: none;
+}
+.moves button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
 .actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: var(--mf-space-2);
 }
