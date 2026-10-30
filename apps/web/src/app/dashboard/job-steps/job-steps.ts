@@ -111,7 +111,8 @@ export class JobSteps {
     const role = this.session.current()?.role ?? '';
     return !!job && WRITERS.has(role) && !CLOSED.has(job.status);
   });
-  // Predare, Corectează or nothing; the 48 hours are judged on each render.
+  // Predare, Corectează or nothing, judged again when the job or the session
+  // changes; a re-read on the next event drops a window that has closed.
   protected readonly priceAction = computed(() => {
     const job = this.job();
     return job

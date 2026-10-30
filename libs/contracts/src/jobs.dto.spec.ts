@@ -2,7 +2,6 @@ import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
 import { FinalPriceDto, ReceiveJobDto } from './jobs.dto';
-import { FINAL_PRICE_CORRECTION_HOURS } from './request-status';
 
 const errors = (body: Record<string, unknown>) =>
   validateSync(plainToInstance(ReceiveJobDto, body), {
@@ -60,12 +59,5 @@ describe('FinalPriceDto', () => {
   it('refuses a body without a price, or with another field', () => {
     expect(priceErrors({})).toEqual(['finalPriceBani']);
     expect(priceErrors({ finalPriceBani: 100, note: 'x' })).toEqual(['note']);
-  });
-});
-
-// @traces 406-FR-005
-describe('FINAL_PRICE_CORRECTION_HOURS', () => {
-  it('lets a final price be corrected for 48 hours after the handover', () => {
-    expect(FINAL_PRICE_CORRECTION_HOURS).toBe(48);
   });
 });

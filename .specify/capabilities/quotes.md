@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-29
+updated: 2026-10-30
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -30,6 +30,7 @@ features:
   - 099-overview-sections
   - 406-final-price-handover
   - 427-time-blocks
+  - 1393-final-price-predare
 ---
 
 # Capability: Quotes
@@ -861,6 +862,14 @@ _From 427-time-blocks._
 ### 427-FR-015 — The OpenAPI document and the generated client MUST carry the four operations, their DTOs, the `blocks` array of the schedule answer, the new codes (`nothing_to_block`, `block_past`) and the `time_block` reason (`npx nx run data-access:generate`, never edited by hand).
 
 _From 427-time-blocks._
+
+### 1393-FR-010 — A Cererile mele row whose `booking.handedOverAt` is set MUST replace its status label with "Încheiată pe <day>" / "Closed on <day>" (the day of `handedOverAt` as the short Bucharest day-month, "3 oct." / "3 Oct"), keep the row's time, and carry the final price formatted in lei (`formatLei` of `booking.finalPriceBani`) as the amount paid at the row's right, in the board's green amount style (`data-amount`), with the accessible name "Preț final <price>" / "Final price <price>"; a row with `handedOverAt` null MUST show as today, no amount. A row with `handedOverAt` set and a null `finalPriceBani` (not reachable through 406's handover, which requires a price) shows "Încheiată pe <day>" with no amount. The largest amount ("1.000.000,00 lei") never widens the row: the status label wraps and the amount keeps its line, so the row does not scroll sideways at 320 px. The row offers no cancel (1385-FR-002 already offers none for `done`) and keeps "Compară ofertele" rules as today.
+
+_From 1393-final-price-predare._
+
+### 1393-FR-012 — The Cererile mele view MUST re-read its list within 5 seconds on `job.handed_over` and `job.final_price_corrected`, so the row of FR-010 shows the handover and a corrected amount without a reload; the list re-reads on `REQUEST_EVENTS` plus these two kinds (not all of the panel's `ACTIVE_REQUEST_EVENTS`: the list keeps ignoring `request.decline_undone`, which the driver never saw); a Jest spec proves the re-read on each.
+
+_From 1393-final-price-predare._
 
 ## Retired
 
