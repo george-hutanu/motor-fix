@@ -59,6 +59,8 @@ export class ActiveRequest {
   readonly answer = input<ActiveRequestAnswerDto | 'failed' | undefined>();
   // Link the other open requests to Cererile mele (not on that view).
   readonly more = input(false);
+  // The live stream is down past its grace: say so under the stages.
+  readonly reconnecting = input(false);
   readonly retry = output<void>();
 
   private readonly i18n = inject(I18n);
