@@ -127,6 +127,8 @@ export class GarageMap {
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
   private readonly pin = viewChild.required<ElementRef<HTMLElement>>('pin');
   private readonly box = signal<Box | undefined>(undefined);
+  // The static map's control and credit, where they sit in the box.
+  private readonly covers = signal<readonly Cover[]>([]);
   protected readonly stage = signal<'static' | 'opening' | 'leaving' | 'open'>(
     'static',
   );
@@ -149,7 +151,8 @@ export class GarageMap {
       circleBounds(this.point(), km).map(([lng, lat]) => ({ lat, lng })),
     );
     let view = fitView(bounds, box, paddingOf());
-    while (view.zoom > STATIC_MAP_ZOOM.min && !inside(area, view, box))
+    const covers = this.covers();
+    while (view.zoom > STATIC_MAP_ZOOM.min && !inside(area, view, box, covers))
       view = fitView(bounds, box, paddingOf(), view.zoom - 1);
     return view;
   });
@@ -176,6 +179,9 @@ export class GarageMap {
         const now = untracked(this.box);
         if (w > 0 && h > 0 && (now?.w !== w || now?.h !== h))
           this.box.set({ h, w });
+        const covers = coversOf(host.parentElement ?? host);
+        if (!sameCovers(covers, untracked(this.covers)))
+          this.covers.set(covers);
       };
       measure();
       if (typeof ResizeObserver === 'undefined') return;
@@ -183,6 +189,9 @@ export class GarageMap {
         if (untracked(this.stage) === 'static') measure();
       });
       resized.observe(host);
+      // The credit can wrap anew once the web font arrives.
+      for (const cover of (host.parentElement ?? host).querySelectorAll(COVERS))
+        resized.observe(cover);
       destroyRef.onDestroy(() => resized.disconnect());
     });
   }
@@ -239,14 +248,56 @@ function areaOf(
   };
 }
 
-// Inside the box less the padding the view was fitted with.
-function inside(area: GaragePinsDto, view: MapView, box: Box) {
+const COVERS = 'mf-static-map button, mf-static-map .attribution';
+
+interface Cover {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+// The static map's control and credit as they lie in the strip: on a phone
+// the control at the top right and the credit along the bottom, wider up
+// the corner at the bottom right. Hidden or unlaid ones cover nothing.
+function coversOf(strip: HTMLElement): Cover[] {
+  const origin = strip.getBoundingClientRect();
+  return [...strip.querySelectorAll(COVERS)].flatMap((element) => {
+    const { height, left, top, width } = element.getBoundingClientRect();
+    return width > 0 && height > 0
+      ? [{ h: height, w: width, x: left - origin.left, y: top - origin.top }]
+      : [];
+  });
+}
+
+const sameCovers = (a: readonly Cover[], b: readonly Cover[]) =>
+  a.length === b.length &&
+  a.every(
+    (c, i) =>
+      c.x === b[i].x && c.y === b[i].y && c.w === b[i].w && c.h === b[i].h,
+  );
+
+// Inside the box less the padding the view was fitted with, and clear of
+// the control and the credit drawn over it.
+function inside(
+  area: GaragePinsDto,
+  view: MapView,
+  box: Box,
+  covers: readonly Cover[],
+) {
   const { bottom, left, right, top } = paddingOf();
   return overlayOf(area, undefined, view, box).circles.every(
     ({ r, x, y }) =>
       x - r >= left &&
       y - r >= top &&
       x + r <= box.w - right &&
-      y + r <= box.h - bottom,
+      y + r <= box.h - bottom &&
+      covers.every(
+        (c) =>
+          Math.hypot(
+            Math.max(c.x - x, 0, x - (c.x + c.w)),
+            Math.max(c.y - y, 0, y - (c.y + c.h)),
+          ) >= r,
+      ),
   );
 }

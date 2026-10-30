@@ -182,6 +182,51 @@ describe('GarageMap, the area of a mobile mechanic', () => {
     },
   );
 
+  // The static map's own control and credit sit inside the strip: at 320 px
+  // the control at the top right and the two-line credit along the bottom,
+  // wider up the stacked corner at the bottom right.
+  it.each([
+    [
+      320,
+      {
+        attribution: { h: 50, w: 296, x: 12, y: 138 },
+        button: { h: 52, w: 120, x: 188, y: 12 },
+      },
+    ],
+    [
+      1024,
+      {
+        attribution: { h: 26, w: 220, x: 792, y: 162 },
+        button: { h: 44, w: 150, x: 862, y: 114 },
+      },
+    ],
+  ])(
+    'keeps the circle clear of the control and the credit in a %i px strip',
+    async (w, covers) => {
+      box = { h: 200, w };
+      const real = Element.prototype.getBoundingClientRect;
+      jest
+        .spyOn(Element.prototype, 'getBoundingClientRect')
+        .mockImplementation(function (this: Element) {
+          const at = this.matches('mf-static-map .attribution')
+            ? covers.attribution
+            : this.matches('mf-static-map button')
+              ? covers.button
+              : undefined;
+          return at ? new DOMRect(at.x, at.y, at.w, at.h) : real.call(this);
+        });
+      await render({ km: 20, point: CENTRE });
+      const { r, x, y } = circle();
+
+      expect(r).toBeGreaterThan(0);
+      for (const c of Object.values(covers)) {
+        const dx = Math.max(c.x - x, 0, x - (c.x + c.w));
+        const dy = Math.max(c.y - y, 0, y - (c.y + c.h));
+        expect(Math.hypot(dx, dy)).toBeGreaterThanOrEqual(r);
+      }
+    },
+  );
+
   it('fits the view to the circle, not to its centre', async () => {
     await render({ km: 20, point: CENTRE });
 
