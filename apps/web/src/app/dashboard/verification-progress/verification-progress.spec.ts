@@ -648,3 +648,99 @@ describe('the verification page on a phone', () => {
     expect(sheet).not.toMatch(/\bwidth: \d+px/);
   });
 });
+
+const CORRECT = { en: 'Correct the listing', ro: 'Corectează listarea' };
+const rejected = (code: 'address' | 'documents' | 'rar' | 'photos' | 'other') =>
+  answer('rejected', { reason: { code, note: 'Autorizația a expirat.' } });
+
+describe('the verification page, on a rejection', () => {
+  // @traces 1401-FR-001
+  it.each(['ro', 'en'] as const)(
+    'offers the owner a %s button to correct the listing, beside the contact one',
+    async (language) => {
+      api.verificationStatusControllerRead.mockResolvedValue(rejected('rar'));
+
+      const { host } = await render({ language });
+
+      const correct = button(host, CORRECT[language]);
+      const contact = button(host, TEXT[language].contact);
+      expect(correct).not.toBeNull();
+      expect(contact).not.toBeNull();
+      expect(correct?.parentElement).toBe(contact?.parentElement);
+      expect(correct?.hasAttribute('hlmBtn')).toBe(true);
+      expect(correct?.getAttribute('type')).toBe('button');
+      expect(correct?.disabled).toBe(false);
+      expect(correct?.getAttribute('tabindex')).toBeNull();
+    },
+  );
+
+  // @traces 1401-FR-001
+  it('opens the listing form under the current language', async () => {
+    api.verificationStatusControllerRead.mockResolvedValue(
+      rejected('documents'),
+    );
+    const { host } = await render();
+    const navigate = jest
+      .spyOn(TestBed.inject(Router), 'navigateByUrl')
+      .mockResolvedValue(true);
+
+    button(host, CORRECT.ro)?.click();
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(String(navigate.mock.calls[0]?.[0])).toBe('/ro/list-your-garage');
+    expect(overlays.open).not.toHaveBeenCalled();
+  });
+
+  // @traces 1401-FR-001
+  it.each(['submitted', 'in_review', 'more_requested', 'approved'] as const)(
+    'offers no correction on a %s file',
+    async (status) => {
+      api.verificationStatusControllerRead.mockResolvedValue(answer(status));
+
+      const { host } = await render();
+
+      expect(button(host, CORRECT.ro)).toBeNull();
+    },
+  );
+
+  // @traces 1401-FR-001
+  it.each(['receptionist', 'mechanic'] as const)(
+    'gives a %s of a rejected garage no button at all',
+    async (role) => {
+      api.verificationStatusControllerRead.mockResolvedValue(rejected('rar'));
+
+      const { host } = await render({ role });
+
+      expect(buttons(host)).toEqual([]);
+    },
+  );
+
+  // @traces 1401-FR-001
+  it('drops the rejection and the button within 5 seconds of the send, without a reload', async () => {
+    api.verificationStatusControllerRead.mockResolvedValue(rejected('photos'));
+    const { fixture, host } = await render();
+    expect(button(host, CORRECT.ro)).not.toBeNull();
+    api.verificationStatusControllerRead.mockResolvedValue(
+      answer('submitted', { submittedAt: '2027-03-09T10:00:00.000Z' }),
+    );
+
+    const started = Date.now();
+    await emit(fixture, 'verification.submitted');
+
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(current(host)).toBe('Trimis · 9 mart. 2027');
+    expect(button(host, CORRECT.ro)).toBeNull();
+    expect(button(host, TEXT.ro.contact)).toBeNull();
+    expect(host.querySelector('.note')).toBeNull();
+  });
+
+  // @traces 1401-FR-001 1401-FR-003
+  it('lets the two buttons wrap in the column at phone width', () => {
+    const sheet = readFileSync(
+      join(__dirname, 'verification-progress.css'),
+      'utf8',
+    );
+
+    expect(sheet).toMatch(/\.actions \{[^}]*flex-wrap: wrap/);
+  });
+});

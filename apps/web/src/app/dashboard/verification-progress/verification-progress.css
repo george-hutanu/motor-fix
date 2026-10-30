@@ -7,6 +7,12 @@ p {
   margin: 0;
   overflow-wrap: anywhere;
 }
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
 .failed {
   display: grid;
   justify-items: start;

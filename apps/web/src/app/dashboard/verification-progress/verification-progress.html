@@ -16,7 +16,10 @@
       <p class="off-map">{{ 'public.verificationStatus.offMap' | t }}</p>
     }
     @if (file.status === 'rejected') {
-      <button hlmBtn type="button" (click)="contact()">{{ 'garage.verification.contact' | t }}</button>
+      <div class="actions">
+        <button hlmBtn type="button" (click)="complete()">{{ 'garage.verification.correct' | t }}</button>
+        <button hlmBtn variant="secondary" type="button" (click)="contact()">{{ 'garage.verification.contact' | t }}</button>
+      </div>
     }
     @if (view.failed()) {
       <div class="failed">
