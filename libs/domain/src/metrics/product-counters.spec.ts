@@ -44,9 +44,10 @@ import {
   countVerificationCheck,
   countVerificationResult,
   initProductCounters,
-  RESUBMISSION_AFTER,
 } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
+
+const RESUBMISSION_AFTER = ['more_requested', 'rejected'] as const;
 
 const STAGE_MOVES = (
   ['start', 'pause', 'resume', 'finish', 'receive'] as const

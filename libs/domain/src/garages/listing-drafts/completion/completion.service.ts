@@ -5,6 +5,7 @@ import {
   isListingDraftData,
   type ListingDraftData,
   type ListingSubmittedDto,
+  normaliseRarNumber,
   stripCui,
   VERIFICATION_REASON_CODES,
 } from '@motor-fix/contracts';
@@ -431,6 +432,7 @@ export class CompletionService {
       subjectId: file.id,
       subjectType: 'verification_file',
     };
+    const rar = data.steps?.['6']?.rarNumber;
     const before = {
       declaredAt: file.declaredAt?.toISOString() ?? null,
       declaredByName: file.declaredByName,
@@ -439,7 +441,7 @@ export class CompletionService {
     const after = {
       declaredAt: data.declaredAt ?? null,
       declaredByName: data.declaredByName ?? null,
-      rarNumber: data.steps?.['6']?.rarNumber ?? null,
+      rarNumber: rar ? normaliseRarNumber(rar) : null,
     };
     if (!same(before, after)) {
       await tx.verificationFile.update({

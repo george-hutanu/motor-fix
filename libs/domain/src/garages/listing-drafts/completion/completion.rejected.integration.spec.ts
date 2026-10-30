@@ -351,6 +351,24 @@ describe('sending the corrected copy', () => {
     });
   });
 
+  it('stores the RAR number as the first send does, with no change logged for it', async () => {
+    const copy = await service.open(garage.owner);
+    await saved(copy, (data, steps) => ({
+      ...data,
+      steps: { ...steps, '6': { ...steps['6'], rarNumber: ' bv-777 ' } },
+    }));
+
+    await send(copy);
+
+    const next = await newFile();
+    expect(next.rarNumber).toBe('BV-777');
+    expect(
+      await prisma.activityLog.findMany({
+        where: { field: 'rarNumber', subjectId: next.id },
+      }),
+    ).toEqual([]);
+  });
+
   it('stores the warning on the new file when the new CUI is another garage’s', async () => {
     await prisma.garage.create({
       data: { cui: '12345674', name: 'Atelier Vecin', slug: 'atelier-vecin' },
