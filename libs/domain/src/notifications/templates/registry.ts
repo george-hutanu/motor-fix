@@ -58,7 +58,7 @@ import { QUOTE_DECLINED_BY_DRIVER } from './quote-declined-by-driver';
 import { QUOTE_EXPIRED_DRIVER, QUOTE_EXPIRED_GARAGE } from './quote-expired';
 import { QUOTE_LOST } from './quote-lost';
 import { QUOTE_RECEIVED, QUOTE_RECEIVED_GROUPED } from './quote-received';
-import { REPAIR_UPDATED } from './repair-updated';
+import { REPAIR_UPDATED, REPAIR_UPDATED_BY_ADMIN } from './repair-updated';
 import {
   REQUEST_CANCELLED,
   REQUEST_CANCELLED_CLOSED,
@@ -145,7 +145,8 @@ export const TEMPLATES: Registry = {
   QUOTE_LOST,
   QUOTE_RECEIVED,
   'QUOTE_RECEIVED.grouped': QUOTE_RECEIVED_GROUPED,
-  REPAIR_UPDATED,
+  'REPAIR_UPDATED.admin': REPAIR_UPDATED_BY_ADMIN,
+  'REPAIR_UPDATED.garage': REPAIR_UPDATED,
   REQUEST_CANCELLED,
   'REQUEST_CANCELLED.account_closed': REQUEST_CANCELLED_CLOSED,
   REQUEST_DECLINED,

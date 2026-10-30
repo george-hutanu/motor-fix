@@ -158,8 +158,8 @@ describe('converting a clip', () => {
     let reads = 0;
     // The deadline is taken at the start and the probe runs a millisecond
     // later; from the transcode on, the clock stands 1 ms short of the
-    // deadline. With 100 ms left a loaded machine could fire the kill timer
-    // after ffmpeg had finished; no transcode of a 1080p clip ends in 1 ms.
+    // deadline, far less than the transcode of a 1080p clip takes even on
+    // an idle machine, so a late timer on a loaded one still kills it.
     jest
       .spyOn(performance, 'now')
       .mockImplementation(() =>

@@ -9,6 +9,14 @@ export type OwnershipRow = {
   transferId: string | null;
 };
 
+// Who last corrected a repair, as the driver is told: a driver's own edit
+// is none.
+export const CORRECTED_BY = {
+  admin: 'admin',
+  driver: null,
+  owner: 'garage',
+} as const;
+
 // Newest first: the day done, then the creation time.
 export const REPAIR_ORDER = [
   { doneOn: 'desc' },
