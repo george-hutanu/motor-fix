@@ -11,16 +11,15 @@ import { PhoneSignInModule } from './phone-sign-in.module';
 import { AuditService } from '../../audit/audit.service';
 import { noEvents } from '../../events/event.port';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
+import { DirectSendModule } from '../../notifications/direct-send/direct-send.module';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
+  testConfig,
   testPhoneConfig,
 } from '../../notifications/notifications.testing';
-import {
-  PHONE_CONFIG,
-  type PhoneConfig,
-} from '../../notifications/phone-config';
+import type { PhoneConfig } from '../../notifications/phone-config';
 import { verifyAccessToken } from '../access-token';
 import { AccountsService } from '../accounts.service';
 import { AUTH_REDIS } from '../attempts';
@@ -44,16 +43,19 @@ let configAsBuilt: PhoneConfig;
 
 beforeAll(async () => {
   await brevo.start();
+  phoneConfig = testPhoneConfig({
+    PHONE_ALLOWLIST: '+407*',
+    WHATSAPP_TEMPLATES:
+      'motorfix_sign_in_code_ro=21,motorfix_sign_in_code_en=22',
+  });
   const moduleRef = await Test.createTestingModule({
     imports: [
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret }),
-      PhoneSignInModule.register({
-        brevo: { apiKey: 'test-key', apiUrl: brevo.url },
-        phone: testPhoneConfig({
-          PHONE_ALLOWLIST: '+407*',
-          WHATSAPP_TEMPLATES:
-            'motorfix_sign_in_code_ro=21,motorfix_sign_in_code_en=22',
-        }),
+      PhoneSignInModule.register(DirectSendModule.register(redisUrl)),
+      DirectSendModule.registerWorker({
+        email: testConfig(brevo.url),
+        phone: phoneConfig,
+        redisUrl,
       }),
     ],
   })
@@ -70,7 +72,6 @@ beforeAll(async () => {
     }),
   );
   await app.init();
-  phoneConfig = app.get(PHONE_CONFIG, { strict: false });
   configAsBuilt = { ...phoneConfig };
 });
 
@@ -796,6 +797,7 @@ describe('how often a code may be asked for', () => {
   });
 });
 
+// @traces 1379-provider-calls-worker-FR-003
 describe('a code WhatsApp does not take', () => {
   const failing: [string, () => void][] = [
     ['Brevo refuses it', () => brevo.answer({ status: 400 })],
@@ -828,6 +830,12 @@ describe('a code WhatsApp does not take', () => {
       expect(await prisma.signInCode.count()).toBe(0);
     },
   );
+
+  it('sends each code to the provider exactly once', async () => {
+    await askCode({ phone: PHONE }).expect(202);
+
+    expect(brevo.whatsapp()).toHaveLength(1);
+  });
 
   it('does not count a code that was not sent toward the hourly five', async () => {
     brevo.answer({ status: 400 });

@@ -3,14 +3,9 @@ import type { Role } from '@motor-fix/contracts/capabilities';
 import type { AuditPort } from '../../audit/audit.port';
 import type { EventPort } from '../../events/event.port';
 import type { Prisma } from '../../generated/prisma/client';
-import type { Brevo } from '../../notifications/brevo/brevo';
-import type { PhoneConfig } from '../../notifications/phone-config';
 
-// How the api sends the link to the buyer: its own Brevo, the phone
-// configuration and the web address the link points at.
+// The web address the link to the buyer points at; the worker sends it.
 export interface TransferSending {
-  brevo: Brevo;
-  config: PhoneConfig;
   // Unset where PUBLIC_WEB_URL is: no link can be made, so no send.
   webUrl: string | undefined;
 }

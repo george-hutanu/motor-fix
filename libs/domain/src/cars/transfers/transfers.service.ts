@@ -44,7 +44,7 @@ import { PRISMA } from '../../auth/prisma';
 import { localDay } from '../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
-import { sendWhatsAppDirect } from '../../notifications/whatsapp-direct';
+import { DirectSend } from '../../notifications/direct-send/direct-send.client';
 import { shortName } from '../../quotes/reads';
 import { openRow, REPAIR_ORDER, repairWhere } from '../history/history';
 import {
@@ -228,6 +228,7 @@ export class CarTransfersService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
     @Inject(TRANSFER_SENDING) private readonly sending: TransferSending,
+    private readonly directSend: DirectSend,
     private readonly accounts: AccountsService,
   ) {}
 
@@ -379,8 +380,7 @@ export class CarTransfersService {
       });
     recordSend('sent');
     const link = transferLink(webUrl, seller.language, token);
-    const failed = await sendWhatsAppDirect(
-      this.sending,
+    const failed = await this.directSend.whatsapp(
       'CAR_TRANSFER_LINK',
       seller.language,
       { car: made.car, days: CAR_TRANSFER_LINK_VALID_DAYS, link },

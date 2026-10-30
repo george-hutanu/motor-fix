@@ -159,6 +159,19 @@
     },
     {
       "kind": "queue",
+      "name": "direct-send",
+      "source": "libs/domain/src/notifications/direct-send/direct-send.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "the messages a person waits for (sign-in and phone-change codes, the staff invite, the car transfer link): the API adds one job with one attempt and waits at most 8 s; the worker's sends are motorfix_jobs_total{queue=\"direct-send\",job_name,outcome} and motorfix_job_duration_seconds, its depth shows in the by-queue panels, a provider refusal fails the job and logs one 'direct-send job <channel> failed: <kind>' line and a job_failed entry, never the payload; the send span is a child of the request's trace",
+      "story": "ST-1379"
+    },
+    {
+      "kind": "queue",
       "name": "insights",
       "source": "libs/domain/src/insights/insights.module.ts",
       "dashboard": "motorfix-queues",
@@ -555,7 +568,7 @@
         "worker-jobs-failed",
         "worker-saturation"
       ],
-      "reason": "carries e-mail and the WhatsApp sign-in and phone-change codes (ST-139: sent straight from the API, a failure logs 'phone code not sent: whatsapp_failed (<kind>)' and counts on the request-duration metric as the sign-in's 502 or the phone change's 503 send_failed, which api-error-rate covers); worker-jobs-failed and worker-saturation cover the worker's e-mail sends",
+      "reason": "carries e-mail and WhatsApp, only from the worker (ST-1379): the sign-in and phone-change codes, the staff invite and the car transfer link go through the direct-send queue, and a failure logs 'phone code not sent: whatsapp_failed (<kind>)' and counts on the request-duration metric as the sign-in's 502 or the phone change's 503 send_failed, which api-error-rate covers; worker-jobs-failed and worker-saturation cover the worker's sends",
       "story": "ST-881"
     },
     {
@@ -1655,7 +1668,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "each refusal logs one 'phone change refused: <code>' or 'e-mail change link not sent' line, never the address or number; the WhatsApp code goes out through the brevo entry and a failed send logs 'phone code not sent: whatsapp_failed (<kind>)' and answers 503 send_failed; saved changes are motorfix_account_changes_total; spans come from the HTTP and Prisma auto-instrumentation",
+      "reason": "each refusal logs one 'phone change refused: <code>' or 'e-mail change link not sent' line, never the address or number; the WhatsApp code goes out through the direct-send queue and a failed send logs 'phone code not sent: whatsapp_failed (<kind>)' and answers 503 send_failed; saved changes are motorfix_account_changes_total; spans come from the HTTP and Prisma auto-instrumentation",
       "story": "ST-139"
     },
     {
@@ -3061,7 +3074,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "a send and a cancel show on the request-duration metric by route and status code; each step is an audit row and a car_transfer.sent or car_transfer.cancelled event; the send's outcomes are motorfix_car_transfer_sends_total and its WhatsApp message motorfix_car_transfer_whatsapp_total",
+      "reason": "a send and a cancel show on the request-duration metric by route and status code; each step is an audit row and a car_transfer.sent or car_transfer.cancelled event; the send's outcomes are motorfix_car_transfer_sends_total and its WhatsApp message, sent by the worker through the direct-send queue, motorfix_car_transfer_whatsapp_total",
       "story": "ST-415"
     },
     {
@@ -3092,7 +3105,7 @@
       "source": "libs/domain/src/cars/transfers/transfers.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts the link's WhatsApp message by outcome (sent, failed) and kind (none or the provider's reason); a failed one logs one CarTransfers warn line with the transfer id and the kind only, and the seller still has the link to copy",
+      "reason": "counts the link's WhatsApp message by outcome (sent, failed) and kind (none, the provider's reason, or the direct-send queue's timeout, queue_unavailable or stale); a failed one logs one CarTransfers warn line with the transfer id and the kind only, and the seller still has the link to copy",
       "story": "ST-415"
     },
     {

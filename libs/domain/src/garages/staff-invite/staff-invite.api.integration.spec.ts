@@ -1,3 +1,4 @@
+// @traces 1379-provider-calls-worker-FR-003
 import { randomUUID } from 'node:crypto';
 
 import type { Role } from '@motor-fix/contracts/capabilities';
@@ -13,6 +14,7 @@ import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase, waitingOnLocks } from '../../auth/serial-db.testing';
 import { outboxMark } from '../../events/outbox.testing';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
+import { DirectSendModule } from '../../notifications/direct-send/direct-send.module';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -58,6 +60,11 @@ beforeAll(async () => {
     imports: [
       auth,
       notifications,
+      DirectSendModule.registerWorker({
+        email,
+        phone: options.phone,
+        redisUrl,
+      }),
       StorageModule.register(UNUSED_STORAGE),
       GaragesModule.register(email, notifications, {
         skipManualApproval: false,
