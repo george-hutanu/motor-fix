@@ -8,7 +8,7 @@ import { test } from './fixtures.js';
 // The driver whose logged repair the seed adds (libs/domain/src/seed.ts,
 // loggedRepair), and that repair.
 const DRIVER = 'cerere@example.test';
-const REPAIR = '00000000-0000-4000-8000-000000001405';
+const REPAIR = '5eed0b00-0000-4000-8000-000000000001';
 
 const sideways = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

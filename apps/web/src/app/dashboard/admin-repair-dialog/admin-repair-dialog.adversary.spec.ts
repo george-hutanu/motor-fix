@@ -191,7 +191,7 @@ describe('the repair dialog under hostile input', () => {
     });
   });
 
-  it('treats an amount typed with a comma as the same amount or refuses it, never a different one', async () => {
+  it('reads an amount typed with a comma as the same amount in bani', async () => {
     await open();
     await press('Corectează');
 
@@ -199,7 +199,7 @@ describe('the repair dialog under hostile input', () => {
     await press('Salvează');
 
     const sent = correct.mock.calls.map((c) => c[0].body.costBani);
-    expect([[], [48050]]).toContainEqual(sent);
+    expect(sent).toEqual([48050]);
   });
 
   it.each(['1e3', '0x10', 'abc', '48 0', 'Infinity', 'NaN'])(

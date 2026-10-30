@@ -754,7 +754,7 @@ async function requester(
 // correct, and the car's open ownership row the admin's list reads
 // through: the seed writes the car straight to its table, so no route opened
 // one. Once each: a database where an admin corrected it keeps the correction.
-const LOGGED_REPAIR = '00000000-0000-4000-8000-000000001405';
+const LOGGED_REPAIR = '5eed0b00-0000-4000-8000-000000000001';
 
 async function loggedRepair(db: Client) {
   const who = await requester(db);
