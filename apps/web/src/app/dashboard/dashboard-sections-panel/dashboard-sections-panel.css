@@ -65,8 +65,8 @@ hlm-switch {
   flex: none;
 }
 .moves button {
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--mf-tap);
+  min-height: var(--mf-tap);
   padding: 0;
 }
 .actions {
