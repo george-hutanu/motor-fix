@@ -22,8 +22,8 @@ const day = (on: string, profileViews: number) => ({
 
 const approvedLongAgo = new Date('2025-01-15T10:00:00Z');
 
-// @traces 144-profile-stats-weekly-FR-001
-// @traces 144-profile-stats-weekly-FR-002
+// @traces 144-FR-001
+// @traces 144-FR-002
 describe('the eight weeks answered', () => {
   it('are the complete ISO weeks before the current one, oldest first', () => {
     const weeks = figureWeeks('2026-10-08');
@@ -68,7 +68,7 @@ describe('the eight weeks answered', () => {
   });
 });
 
-// @traces 144-profile-stats-weekly-FR-004
+// @traces 144-FR-004
 describe('the conversion', () => {
   it('is requests over views in percent, one decimal, half up', () => {
     expect(conversion(29, 472)).toBe(6.1);
@@ -89,7 +89,7 @@ describe('the conversion', () => {
   });
 });
 
-// @traces 144-profile-stats-weekly-FR-003
+// @traces 144-FR-003
 describe('the weekly sums', () => {
   it('add the daily views of each week and count a missing day as nothing', () => {
     const weeks = weeklyFigures({
@@ -176,7 +176,7 @@ describe('the weekly sums', () => {
   });
 });
 
-// @traces 144-profile-stats-weekly-FR-005
+// @traces 144-FR-005
 describe('the weeks before the approval', () => {
   it('are null, and the approval week counts whole', () => {
     const weeks = weeklyFigures({
@@ -236,7 +236,7 @@ const doc = JSON.parse(
   readFileSync(join(__dirname, '../../../../../apps/api/openapi.json'), 'utf8'),
 );
 
-// @traces 144-profile-stats-weekly-FR-007
+// @traces 144-FR-007
 describe('the weekly figures in the OpenAPI document', () => {
   const get = doc.paths['/api/v1/garages/{garageId}/figures/weekly']?.get;
 
@@ -258,5 +258,31 @@ describe('the weekly figures in the OpenAPI document', () => {
     const names = get.parameters.map((p: { in: string }) => p.in);
 
     expect(names).toEqual(['path']);
+  });
+});
+
+const inventory = JSON.parse(
+  readFileSync(
+    join(__dirname, '../../../../../infra/observability/inventory.json'),
+    'utf8',
+  ),
+);
+
+// @traces 144-FR-008
+describe('the weekly figures in the observability inventory', () => {
+  it('is an endpoint watched by the route metric, its panel and alerts', () => {
+    const entry = inventory.entries.find(
+      (e: { name: string }) => e.name === 'garage-figures-weekly',
+    );
+
+    expect(entry).toMatchObject({
+      alerts: ['api-error-rate', 'api-latency'],
+      dashboard: 'motorfix-api',
+      kind: 'endpoint',
+      metric:
+        'http.server.request.duration by http.route /api/v1/garages/:garageId/figures/weekly',
+      source:
+        'libs/domain/src/insights/garage-figures/garage-figures.controller.ts',
+    });
   });
 });

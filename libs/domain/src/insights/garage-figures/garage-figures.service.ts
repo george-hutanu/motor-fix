@@ -169,7 +169,7 @@ interface Week {
   to: string;
 }
 
-export interface WeeklyFigure extends Week {
+interface WeeklyFigure extends Week {
   conversion: number | null;
   requests: number | null;
   views: number | null;

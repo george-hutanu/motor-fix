@@ -1,8 +1,9 @@
-// @traces 144-profile-stats-weekly-FR-001
-// @traces 144-profile-stats-weekly-FR-003
-// @traces 144-profile-stats-weekly-FR-005
-// @traces 144-profile-stats-weekly-FR-006
-// @traces 144-profile-stats-weekly-FR-009
+// @traces 144-FR-001
+// @traces 144-FR-003
+// @traces 144-FR-005
+// @traces 144-FR-006
+// @traces 144-FR-009
+// @traces 144-FR-010
 import { randomUUID } from 'node:crypto';
 
 import { GarageFiguresModule } from './garage-figures.module';
