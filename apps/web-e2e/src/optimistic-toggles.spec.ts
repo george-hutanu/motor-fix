@@ -1,9 +1,21 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import {
+  type APIRequestContext,
+  expect,
+  type Locator,
+  type Page,
+} from '@playwright/test';
 
-import { ACCOUNTS, openSignIn, ready, settled, signIn } from './accounts.js';
+import {
+  ACCOUNTS,
+  openSignIn,
+  PASSWORD,
+  ready,
+  settled,
+  signIn,
+} from './accounts.js';
 import { test } from './fixtures.js';
 
-// @traces 1315-optimistic-toggles-FR-010 1315-optimistic-toggles-FR-011
+// @traces 1315-FR-010 1315-FR-011 1315-FR-015
 
 // What a press must show within, measured in the page from the pointer going
 // down to the first change of the control, while the network is Slow 3G.
@@ -74,6 +86,14 @@ async function signedIn(page: Page, email: string) {
   await expect(page).toHaveURL('/app/garage');
 }
 
+async function accessToken(request: APIRequestContext, email: string) {
+  const res = await request.post('/api/v1/auth/sign-in', {
+    data: { email, password: PASSWORD, remember: false },
+  });
+  expect(res.ok()).toBe(true);
+  return ((await res.json()) as { accessToken: string }).accessToken;
+}
+
 const toast = (page: Page, text: string) =>
   page.locator('[data-sonner-toast]', { hasText: text });
 
@@ -102,35 +122,31 @@ test.describe('a toggle shows before the server answers @seeded', () => {
 
   test('a bell row reads at once, then is unread again with a message when the read fails', async ({
     page,
+    request,
   }) => {
-    const text = 'Mesaj de probă pentru citire';
-    await page.route(
-      (url) => url.pathname === '/api/v1/notifications',
-      (route) =>
-        route.fulfill({
-          json: {
-            items: [
-              {
-                at: new Date().toISOString(),
-                id: 'optimistic-row',
-                kind: 'TEST_MESSAGE',
-                readAt: null,
-                subjectId: null,
-                text,
-              },
-            ],
-            nextCursor: null,
-          },
-        }),
-    );
-    await page.route('**/api/v1/notifications/unread-count', (route) =>
-      route.fulfill({ json: { count: 1 } }),
-    );
+    const own = await accessToken(request, ACCOUNTS.garage);
+    const headers = { Authorization: `Bearer ${own}` };
+    expect(
+      (
+        await request.post('/api/v1/notifications/read-all', { headers })
+      ).status(),
+    ).toBe(204);
+    const { id } = (await (
+      await request.get('/api/v1/me', { headers })
+    ).json()) as { id: string };
+    const admin = await accessToken(request, ACCOUNTS.admin);
+    const sent = await request.post('/api/v1/admin/notifications/test', {
+      data: { accountIds: [id] },
+      headers: { Authorization: `Bearer ${admin}` },
+    });
+    expect(sent.status()).toBe(202);
     await failLater(page, '**/api/v1/notifications/*/read', 'POST');
     await signedIn(page, ACCOUNTS.garage);
     await page.getByRole('button', { name: /^Notificări/ }).click();
     const list = page.getByRole('dialog', { name: 'Notificări' });
-    const row = list.locator('li', { hasText: text });
+    const row = list
+      .locator('li', { hasText: 'Mesaj de test: notificările funcționează.' })
+      .first();
     await expect(row).toHaveClass(/unread/);
     await slow3g(page);
     await watch(row);
