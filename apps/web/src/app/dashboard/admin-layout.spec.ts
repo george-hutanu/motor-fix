@@ -194,6 +194,34 @@ describe('reading the admin layout', () => {
     expect(order(layout)).toEqual(KEYS);
   });
 
+  it('draws nothing for the other account until its own read answers, even when the save answers first', async () => {
+    const out = deferred<DashboardLayoutDto>();
+    const theirs = deferred<DashboardLayoutDto>();
+    let reads = 0;
+    const { layout, me, settle } = setup({
+      read: () =>
+        ++reads === 1 ? Promise.resolve(answer(all())) : theirs.promise,
+      save: () => out.promise,
+    });
+    await settle();
+    void layout.toggle('log', false);
+    await settle();
+
+    me.set({
+      id: 'admin-2',
+      role: 'admin',
+      roles: ['admin'],
+    } as unknown as MeDto);
+    await settle();
+    out.resolve(answer(all(['log'])));
+    await settle();
+    expect(layout.shown()).toBeNull();
+
+    theirs.resolve(answer(all(['growth'])));
+    await settle();
+    expect(hidden(layout)).toEqual(['growth']);
+  });
+
   it("draws the other account's layout when it signs in while a save is out", async () => {
     const out = deferred<DashboardLayoutDto>();
     const { layout, me, settle } = setup({
