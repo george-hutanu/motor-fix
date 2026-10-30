@@ -34,7 +34,10 @@ const NOT_FOUND =
 // The account is the session's, never the request's.
 @ApiTags('dashboard-layouts')
 @ApiBearerAuth()
-@ApiParam({ description: 'admin only for now', name: 'role' })
+@ApiParam({
+  description: 'admin, garage, receptionist or mechanic',
+  name: 'role',
+})
 @ApiUnauthorizedResponse({ description: 'sign_in_required' })
 @ApiForbiddenResponse({ description: FORBIDDEN })
 @ApiNotFoundResponse({ description: NOT_FOUND })

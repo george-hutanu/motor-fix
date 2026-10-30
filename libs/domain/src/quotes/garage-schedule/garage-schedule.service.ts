@@ -15,6 +15,7 @@ import {
 import { PRISMA } from '../../auth/prisma';
 import { addDays, atLocal, daysBetween, localDay } from '../../bucharest';
 import type { PrismaClient } from '../../generated/prisma/client';
+import { blocksOf } from '../../workshop/time-blocks/time-blocks';
 import { bookedInclude, bookedOf, shortName } from '../reads';
 
 interface ScheduleQuery {
@@ -117,7 +118,12 @@ export class GarageScheduleService {
         status: state as GarageScheduleEntryDto['status'],
       };
     });
-    return { entries, from, lifts, to };
+    const blocks = await blocksOf(
+      this.prisma,
+      { end, garageId, lift: query.lift, mechanicId, start },
+      lifts,
+    );
+    return { blocks, entries, from, lifts, to };
   }
 
   // A mechanic reads her own card's bookings only, and asks for no other,

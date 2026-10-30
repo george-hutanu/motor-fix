@@ -318,7 +318,8 @@ test.describe('the Results page @seeded', () => {
         const heights = await chips(page).evaluateAll((all) =>
           all.map((chip) => chip.getBoundingClientRect().height),
         );
-        expect(Math.min(...heights)).toBeGreaterThanOrEqual(44);
+        // Layout measures in 1/64 px, so a 44 px chip can read 43.99997.
+        expect(Math.min(...heights)).toBeGreaterThanOrEqual(44 - 1 / 64);
         expect(
           await page.evaluate(
             () =>

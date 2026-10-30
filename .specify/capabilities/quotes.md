@@ -29,6 +29,7 @@ features:
   - 1385-cancel-from-requests
   - 099-overview-sections
   - 346-quote-outcomes
+  - 427-time-blocks
 ---
 
 # Capability: Quotes
@@ -549,17 +550,17 @@ _From 389-confirm-booking-lift-mechanic._
 
 _From 150-add-booking._
 
-### 150-FR-006 — (389-FR-003 modified) The placement's refusals MUST keep their codes and gain a `reason` field in the problem details where the cause is not the code itself, with these messages, times on the Bucharest wall clock (HH:MM) and, for a segment on a day other than the booking's start day, the weekday and time ("miercuri 08:00–09:00" / "Wednesday 08:00–09:00"): 409 `lift_busy` "Elevatorul <n> e ocupat <from>–<to> (<brand> <model>)" / "Lift <n> is busy <from>–<to> (<brand> <model>)" naming the first overlapping segment's booking; 409 `mechanic_busy` "<name> are o programare <from>–<to>" / "<name> has a booking <from>–<to>"; 409 `mechanic_unavailable` with reason `ends_early` "<name> lucrează până la <to> în ziua aceea" / "<name> works until <to> that day", `day_off` "<name> e liberă în ziua aceea" / "<name> is off that day", `saturday_off` "<name> nu lucrează sâmbăta" / "<name> does not work on Saturdays", `not_working` "<name> nu lucrează în ziua aceea" / "<name> does not work that day" (a weekday with no stretch), and no reason with the shipped text for a mechanic not of the garage; 409 `outside_hours` with reason `public_holiday` "<day> e sărbătoare legală" / "<day> is a legal holiday" (the day as "1 decembrie" / "1 December"), `closed_day` "Service-ul e închis în ziua aceea" / "The garage is closed that day", `outside_opening` "În afara programului (<intervals>)" / "Outside opening hours (<intervals>)" with the garage's intervals of that weekday ("08:00–12:00, 13:00–17:00"), or "Service-ul e închis în ziua aceea" when it has none. `invalid_transition` and the 400s are unchanged. The web shows these messages where it shows today's (389-FR-014); nothing of the web changes here.
+### 427-FR-006 — (150-FR-002 and 150-FR-006 modified) `assertPlaceable` MUST read block segments beside booking segments and, when the first clash is a block row, throw the block messages of FR-005 with `reason` `time_block` (a booking row keeps the ST-150 messages), so the confirm, a move and the free slots refuse blocked time through the one check and nothing is added to the confirm; the taken-row shape gains the holder (`booking` with its car, or `time_block`).
 
-_From 150-add-booking._
+_From 427-time-blocks._
 
 ### 389-FR-006 — GARAGE MUST gain `lift_count` (integer, 0 or more, default 0), backfilled once by the migration from the garage's survey answer (`1` → 1, `2-3` → 2, `4+` → 4, `0` or no survey → 0); with `lift_schedule` on (a missing row is on) `lift` MUST be optional and, when given, an integer from 1 to `lift_count` (else 400 `validation_failed` naming `lift`); with `lift_schedule` off `lift` MUST be refused (400) and stay empty. The schedule read's `lifts` flag is unchanged.
 
 _From 389-confirm-booking-lift-mechanic._
 
-### 150-FR-001 — A new table BOOKING_SEGMENT MUST hold, per booking, one row per working stretch the booking occupies: `id`, `booking_id` (not null, cascade), `garage_id`, `mechanic_id` (nullable; a removed card is soft-removed and its segments stay until #134 reassigns them), `lift` (nullable), `starts_at`, `ends_at` (timestamptz, `ends_at` > `starts_at`, the span half-open). Two exclusion constraints on it (`btree_gist`) MUST replace the two on BOOKING, which the migration drops: one on (`mechanic_id`, [`starts_at`, `ends_at`)) where `mechanic_id` is set, one on (`garage_id`, `lift`, [`starts_at`, `ends_at`)) where `lift` is set. The migration MUST backfill one segment per `confirmed` booking from its `starts_at`, `duration_minutes`, `mechanic_id`, `lift` and `garage_id`. Segments are written only by the placement (FR-004) and by the backfill; the booking transition service MUST delete a booking's segments in the same transaction as its move to `cancelled`, `lapsed` or `no_show`, so every present and future cancel path (the account-closed cancel today, #203 and the no-show later) frees the place; a move to `completed` keeps them. An `awaiting_confirmation` booking has none.
+### 427-FR-002 — (150-FR-001 modified) BOOKING_SEGMENT MUST gain `time_block_id` (nullable, cascade from TIME_BLOCK) and `booking_id` MUST become nullable, with a check that exactly one of the two is set; the two exclusion constraints (mechanic where set; garage and lift where set) MUST cover block segments unchanged, so a block and a booking, or two blocks, never share a mechanic or a lift in time, also under two concurrent saves; the migration touches no existing row. Every read of BOOKING_SEGMENT that assumes a booking (the schedule read, the reassign and move reads, the day sheet) MUST keep working with block rows present, each listed by the tests.
 
-_From 150-add-booking._
+_From 427-time-blocks._
 
 ### 150-FR-003 — (389-FR-008 and 058-FR-011 extended) A booking's working stretches MUST be, with `team_mechanics` on, the mechanic's effective stretch for each Bucharest day (058-FR-002, Saturday only with `works_saturdays`, none on a day off, a GARAGE_CLOSED_DAY or a PUBLIC_HOLIDAY) intersected with the garage's opening intervals of that weekday (389-FR-008's `hours`; a day with two intervals gives two stretches); with `team_mechanics` off, the garage's opening intervals on such days. The start MUST lie inside a stretch (at or after its start, before its end), else the refusal names the cause (FR-006). When `durationMinutes` is at most the length of that stretch, the booking MUST end inside it (else `mechanic_unavailable` `ends_early` when the mechanic's own stretch ends first, `outside_hours` `outside_opening` when the garage's interval ends first or the team is off) and is one segment; when `durationMinutes` is longer than that stretch, the booking MUST fill the stretch from its start and continue from the start of each following stretch (the same day's next interval, then the following days, skipping days off, closed days, holidays, weekdays without a stretch and Saturdays without the switch) until its minutes are used, every segment on the same mechanic and the same lift. Stretches are searched at most 30 Bucharest days (the free-slot search horizon of #21) from the start; when the minutes are not used by then the booking is refused 409 `outside_hours`, reason `outside_opening`. Minutes are counted on the instant clock; stretch bounds are Bucharest wall-clock times, so a stretch keeps its wall-clock bounds on the last Sundays of March and October (the change at 03:00 or 04:00 falls outside an 08:00–16:00 stretch, which stays 8 real hours). `duration_minutes` stays the quote's total working minutes (389-FR-002's field, unchanged). The pure parts of this rule (the stretch list of a day, the segmentation) live beside 058-FR-011's rule and share its inputs.
 
@@ -737,9 +738,9 @@ _From 428-close-on-account-closed._
 
 _From 292-saved-garage-quote._
 
-### 150-FR-009 — The API MUST offer `GET /api/v1/garages/:garageId/schedule?from&to` (`from` and `to` Bucharest dates, `to` defaulting to `from`, `from` to today, 1 to 7 days inclusive, else 400 `validation_failed`), reusing `GarageScheduleService.list` so the MCP tool keeps working: the owner and a receptionist of that garage read every booking of the garage over those days that is not `lapsed` or `cancelled` (a day in the past is allowed, `from` only defaults to today), the day rule being the segments' for a booking that has them and `starts_at` for one that has none (an `awaiting_confirmation` booking, a `no_show` one whose segments were deleted, a `completed` one from before this story), so the board keeps what was done or missed as it shows it today; a mechanic reads only bookings whose mechanic is her card, or all of them while her card has `can_move_bookings`; the staff of another garage, a driver, an admin and an unknown garage answer 404 `not_found`, a visitor 401 `sign_in_required`. Each entry MUST carry `id`, `car` (brand, model, year), `jobs` (names in the caller's language), `customer` (the driver's short name, "Dan V."), `mechanic` (id and name, or null), `lift` (only while `lift_schedule` is on; the answer's `lifts` flag as today), `startsAt`, `durationMinutes`, `status` (the booking's), `confirmBy` and `minutesLeft` while awaiting, `jobStatus` (the JOB's, or null before one exists) and `segments` (each `startsAt`, `endsAt`, `mechanicId`, `lift`; empty while awaiting). A booking whose segments touch a day in the range appears on that day's read even when it started earlier. The `lift` and `mechanicId` filters stay, and a mechanic with `can_move_bookings` may filter by another card; the MCP tool reads through the same service and gets the same day rule (Principle V). The DTO comes from the contracts library.
+### 427-FR-011 — (150-FR-009 modified) The schedule read `GET /api/v1/garages/:garageId/schedule` MUST gain `blocks`: the blocks whose segments touch a day of the range, each `id`, `mechanic` (id and name, or null), `lift` (only while `lift_schedule` is on, as for entries), `startsAt`, `endsAt`, `note`, `segments`; the owner and a receptionist read every block, a mechanic the blocks on her own card, or all of them while her card has `can_move_bookings` (the `lift` and `mechanicId` filters apply to blocks as to entries: `mechanicId=X` matches `mechanic_id = X` only, so a lift-only block never passes it, for every role); `GarageScheduleService.list` is extended so the MCP `get_schedule` tool returns `blocks` too. The `GET time-blocks` list of FR-003 returns the same block shape.
 
-_From 150-add-booking._
+_From 427-time-blocks._
 
 ### 150-FR-010 — `booking.confirmed` and `booking.cancelled` of a booking with a mechanic MUST reach `garage:{garageId}` and `mechanic:{mechanicId}` (and the driver's account), as `audienceOf` already resolves the `booking` subject; this story verifies it by test and adds no event, channel or payload field; `booking.lapsed` keeps its driver-and-garage audience (a lapsed booking has no mechanic).
 
@@ -857,6 +858,14 @@ _From 346-quote-outcomes._
 
 _From 346-quote-outcomes._
 
+### 427-FR-014 — No public route (the `@Public()` list of `public-routes.integration.spec.ts`) and no driver-facing read MUST return a block, its note or a "blocked" wording; the four routes are not public; a driver's quote-compare and the garage's public profile stay as they are (the free slots that leave blocks out are #21's). The public live stream is not a read: it carries the kind and the block id only (FR-010, 257-FR-002).
+
+_From 427-time-blocks._
+
+### 427-FR-015 — The OpenAPI document and the generated client MUST carry the four operations, their DTOs, the `blocks` array of the schedule answer, the new codes (`nothing_to_block`, `block_past`) and the `time_block` reason (`npx nx run data-access:generate`, never edited by hand).
+
+_From 427-time-blocks._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -897,3 +906,6 @@ _From 346-quote-outcomes._
 - `222-FR-008` — superseded by `346-FR-003` (2026-10-30)
 - `314-FR-015` — superseded by `346-FR-003` (2026-10-30)
 - `344-FR-015` — superseded by `346-FR-004` (2026-10-30)
+- `150-FR-001` — superseded by `427-FR-002` (2026-10-29)
+- `150-FR-006` — superseded by `427-FR-006` (2026-10-29)
+- `150-FR-009` — superseded by `427-FR-011` (2026-10-29)

@@ -1,6 +1,6 @@
 ---
 capability: audit
-updated: 2026-10-24
+updated: 2026-10-29
 features:
   - 390-audit-history
   - 391-audit-history-api
@@ -18,6 +18,7 @@ features:
   - 105-brand-list-admin
   - 140-account-delete-export
   - 1156-retention-job
+  - 427-time-blocks
 ---
 
 # Capability: Audit history
@@ -273,6 +274,10 @@ _From 1156-retention-job._
 ### 1156-FR-012 — A decision page `docs/explanation/decisions/od-34.md` in the specs repo MUST record how audit rows age out: the options (partition drop, archive then delete, a trigger exception for a retention role, anonymise in place) and the choice (anonymise in place, owner 2026-10-11) with its reasons, and the data inventory's "Retention and lifetimes" MUST name the sweep instead of "no sweep".
 
 _From 1156-retention-job._
+
+### 427-FR-009 — Every create, change and removal MUST write through the audit writer (390-FR-001) in the same transaction, subject type `time_block`, subject id the block, garage scope the garage, `internal` true: a create one `create` entry with the new values (`mechanicId`, `mechanicName`, `lift`, `startsAt`, `endsAt`, `note`), a change one `update` entry per changed field with the old and the new value, a removal one `delete` entry with the old values; the actor and the role as the writer records them (`owner`, `receptionist`, or `system` for FR-012's removal with the removing owner as actor). The entries fall in the `bookings` area of the history read (already mapped) and never in a driver's history.
+
+_From 427-time-blocks._
 
 ## Retired
 

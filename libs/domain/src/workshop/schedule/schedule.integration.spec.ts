@@ -30,6 +30,7 @@ const place = (
   client: Prisma.TransactionClient,
   extra: {
     durationMinutes?: number;
+    language?: 'ro' | 'en';
     lift?: number | null;
     mechanicId?: string | null;
     startsAt?: Date;
@@ -89,6 +90,7 @@ describe('placing a booking on PostgreSQL', () => {
 
     expect(await refusal(prisma.$transaction((tx) => place(tx)))).toEqual({
       code: 'mechanic_busy',
+      errors: [{ code: 'busy', field: 'mechanicId' }],
       message: 'Elena Stan are o programare 11:00–12:30',
     });
   });
@@ -100,6 +102,7 @@ describe('placing a booking on PostgreSQL', () => {
       await refusal(prisma.$transaction((tx) => place(tx, { lift: 2 }))),
     ).toEqual({
       code: 'lift_busy',
+      errors: [{ code: 'busy', field: 'lift' }],
       message: 'Elevatorul 2 e ocupat 09:00–10:30 (Mini Cooper S)',
     });
   });
@@ -211,8 +214,96 @@ describe('placing a booking longer than its stretch', () => {
       ),
     ).toEqual({
       code: 'lift_busy',
+      errors: [{ code: 'busy', field: 'lift' }],
       message: 'Elevatorul 2 e ocupat vineri 09:00–10:30 (Mini Cooper S)',
     });
     expect(await prisma.bookingSegment.count()).toBe(1);
+  });
+});
+
+// @traces 427-FR-006
+// @traces 427-FR-005
+describe('placing a booking onto blocked time', () => {
+  let accountId: string;
+  beforeEach(async () => {
+    accountId = await world.account('Ana Recepție');
+  });
+
+  // A block of 09:00 to 11:00 as its service writes it: the row and its one
+  // day segment.
+  async function blocked(holder: { lift?: number; mechanicId?: string }) {
+    const row = {
+      endsAt: at(11),
+      garageId,
+      lift: holder.lift ?? null,
+      mechanicId: holder.mechanicId ?? null,
+      startsAt: at(9),
+    };
+    const { id } = await prisma.timeBlock.create({
+      data: { ...row, createdBy: accountId, updatedBy: accountId },
+    });
+    await prisma.bookingSegment.create({ data: { ...row, timeBlockId: id } });
+  }
+
+  it('refuses the blocked mechanic, naming the block', async () => {
+    await blocked({ mechanicId });
+
+    expect(await refusal(prisma.$transaction((tx) => place(tx)))).toEqual({
+      code: 'mechanic_busy',
+      errors: [{ code: 'busy', field: 'mechanicId' }],
+      message: 'Elena Stan e blocat 09:00–11:00',
+      reason: 'time_block',
+    });
+  });
+
+  it('refuses the blocked lift, in English too', async () => {
+    await blocked({ lift: 2 });
+
+    expect(
+      await refusal(
+        prisma.$transaction((tx) =>
+          place(tx, { language: 'en', lift: 2, mechanicId: null }),
+        ),
+      ),
+    ).toEqual({
+      code: 'lift_busy',
+      errors: [{ code: 'busy', field: 'lift' }],
+      message: 'Lift 2 is blocked 09:00–11:00',
+      reason: 'time_block',
+    });
+  });
+
+  it('places a booking where the block ends', async () => {
+    await blocked({ lift: 2, mechanicId });
+
+    await expect(
+      prisma.$transaction((tx) => place(tx, { lift: 2, startsAt: at(11) })),
+    ).resolves.toHaveLength(1);
+  });
+
+  it('lets a booking still awaiting its confirm stop no block', async () => {
+    await world.booked(
+      garageId,
+      at(10).toISOString(),
+      'awaiting_confirmation',
+      {
+        lift: 2,
+        mechanicId,
+      },
+    );
+
+    await expect(
+      prisma.$transaction((tx) =>
+        new ScheduleService().assertFree(tx, {
+          garageId,
+          language: 'ro',
+          lift: 2,
+          mechanicId,
+          mechanicName: 'Elena Stan',
+          segments: [{ endsAt: at(11), lift: 2, mechanicId, startsAt: at(10) }],
+          startsAt: at(10),
+        }),
+      ),
+    ).resolves.toBeUndefined();
   });
 });

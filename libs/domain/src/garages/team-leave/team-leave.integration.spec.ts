@@ -1,6 +1,8 @@
 // @traces 129-FR-007 129-FR-009 055-FR-004
 // @traces 056-FR-014
+// @traces 427-FR-012
 import { leaveTeams } from './team-leave';
+import type { AuditEntry, AuditPort } from '../../audit/audit.port';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { localDay } from '../../bucharest';
 import { audienceOf, type LiveSubject } from '../../events/audience';
@@ -22,7 +24,19 @@ const events: EventPort = {
   },
 };
 
+let audited: AuditEntry[];
+const audit: AuditPort = {
+  record: async (_tx, entry) => {
+    audited.push(entry);
+  },
+  recordChanges: async () => undefined,
+  recordMany: async (_tx, entries) => {
+    audited.push(...entries);
+  },
+};
+
 beforeEach(async () => {
+  audited = [];
   recorded = [];
   await world.reset();
 });
@@ -30,7 +44,7 @@ beforeEach(async () => {
 afterAll(() => prisma.$disconnect());
 
 const leave = (accountId: string) =>
-  prisma.$transaction((tx) => leaveTeams(tx, events, accountId));
+  prisma.$transaction((tx) => leaveTeams(tx, { audit, events }, accountId));
 
 describe('leaving the garage team when the account is deleted', () => {
   it('detaches the mechanic and takes him off the profile, keeping his name, rating, reviews and jobs', async () => {
@@ -192,5 +206,97 @@ describe('leaving the garage team when the account is deleted', () => {
     await leave(accountId);
 
     expect(recorded).toEqual([]);
+  });
+});
+
+describe("the deleted mechanic's blocked time", () => {
+  const HOUR = 3_600_000;
+  const at = (hours: number) =>
+    new Date(
+      Math.round((Date.now() + hours * HOUR) / (15 * 60_000)) * 15 * 60_000,
+    );
+
+  async function blocked(
+    garageId: string,
+    createdBy: string,
+    mechanicId: string,
+    from: Date,
+    to: Date,
+  ) {
+    const block = await prisma.timeBlock.create({
+      data: {
+        createdBy,
+        endsAt: to,
+        garageId,
+        mechanicId,
+        note: 'Concediu',
+        startsAt: from,
+        updatedBy: createdBy,
+      },
+    });
+    await prisma.bookingSegment.create({
+      data: {
+        endsAt: to,
+        garageId,
+        mechanicId,
+        startsAt: from,
+        timeBlockId: block.id,
+      },
+    });
+    return block;
+  }
+
+  it('takes her blocks still to come with her, each recorded as the system removing it, and keeps the past one', async () => {
+    const garage = await world.garage('Atelier Dinamo');
+    const owner = await world.account('Mihai Pop', ['garage']);
+    const accountId = await world.account('Elena Pop', ['mechanic']);
+    const mechanic = await prisma.mechanic.create({
+      data: { accountId, garageId: garage.id, name: 'Elena' },
+    });
+    const soon = await blocked(garage.id, owner, mechanic.id, at(24), at(26));
+    const now = await blocked(garage.id, owner, mechanic.id, at(-1), at(2));
+    const past = await blocked(garage.id, owner, mechanic.id, at(-50), at(-48));
+
+    await leave(accountId);
+
+    const left = await prisma.timeBlock.findMany({
+      where: { garageId: garage.id },
+    });
+    expect(left).toEqual([
+      expect.objectContaining({ id: past.id, mechanicId: mechanic.id }),
+    ]);
+    expect(
+      await prisma.bookingSegment.count({
+        where: { timeBlockId: { in: [soon.id, now.id] } },
+      }),
+    ).toBe(0);
+    expect(
+      await prisma.bookingSegment.count({ where: { timeBlockId: past.id } }),
+    ).toBe(1);
+    expect(audited).toHaveLength(2);
+    for (const entry of audited) {
+      expect(entry).toMatchObject({
+        action: 'delete',
+        actorId: accountId,
+        actorRole: 'system',
+        garageId: garage.id,
+        internal: true,
+        oldValue: expect.objectContaining({
+          mechanicId: mechanic.id,
+          mechanicName: 'Elena',
+          note: 'Concediu',
+        }),
+        subjectType: 'time_block',
+      });
+    }
+    expect(audited.map((entry) => entry.subjectId).sort()).toEqual(
+      [soon.id, now.id].sort(),
+    );
+    const deleted = (recorded as { kind: string; subjectId: string }[]).filter(
+      (event) => event.kind === 'time_block.deleted',
+    );
+    expect(deleted.map((event) => event.subjectId).sort()).toEqual(
+      [soon.id, now.id].sort(),
+    );
   });
 });

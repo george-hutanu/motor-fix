@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -29,6 +29,7 @@ features:
   - 1368-admin-brand-list
   - 1263-admin-dashboard-customise
   - 177-reported-reviews
+  - 011-dashboard-sections
 ---
 
 # Capability: Admin dashboard
@@ -835,9 +836,9 @@ _From 1263-admin-dashboard-customise._
 
 _From 1263-admin-dashboard-customise._
 
-### 1263-FR-006 — The three routes MUST be signed-in routes (no `@Public()`), take the account from the session and never from the request, serve `admin` only for now, and answer 404 `not_found` for any other role in the path and for a role the caller does not hold; 401 `sign_in_required` without a session and 403 `account_suspended` for a suspended account as every signed-in route, checked before the role (a suspended account gets 403 whatever role is in the path). `driver` and `garage` join the served roles with ST-1262 and #88, each with its own key list.
+### 011-FR-001 — The dashboard-layout routes of 1263-FR-003 to 1263-FR-006 MUST serve the roles `garage`, `receptionist` and `mechanic` beside `admin`, each with the key list `kpi`, `now`, `req`, `load`, `sched`, `funnel`, `brands`, `reviews` in that order (099-FR-001's list), kept in the one server-side list of 1263-FR-002; everything else about the routes (the merge on read, the whole-layout save, 400 `validation_failed` for an unknown or repeated key, the reset, 404 for a role the caller does not hold, the event of 1263-FR-007, the observability of 1263-FR-008) MUST stay as it is. No garage is stored or accepted: the layout is the person's (modifies 1263-FR-006).
 
-_From 1263-admin-dashboard-customise._
+_From 011-dashboard-sections._
 
 ### 1263-FR-008 — The three routes MUST be listed in `infra/observability/inventory.json` with their metrics, logs and traces and the panel and alert that cover them; a save, a reset and a refused save MUST each be counted by role and outcome: a key refusal (unknown or repeated key) on the layout counter, a shape refusal (answered 400 by the request validation before the service runs) on the route's request metric by status code.
 
@@ -899,3 +900,4 @@ _From 177-reported-reviews._
 - `404-FR-007` — superseded by `1368-FR-001` (2026-10-25)
 - `161-FR-013` — superseded by `1263-FR-011` (2026-10-26)
 - `161-FR-012` — superseded by `1263-FR-012` (2026-10-26)
+- `1263-FR-006` — superseded by `011-FR-001` (2026-10-29)

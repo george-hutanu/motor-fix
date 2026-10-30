@@ -22,7 +22,8 @@ describe('panelKeysOf on hostile role names', () => {
     'аdmin',
     '',
     'driver',
-    'garage',
+    'Garage',
+    'owner',
   ])('serves no list for %j', (role) => {
     expect(panelKeysOf(role)).toBeUndefined();
   });
@@ -185,5 +186,62 @@ describe('checkPanels on hostile lists', () => {
 
   it('accepts the full list in reverse order', () => {
     expect(checkPanels(ADMIN, [...DEFAULT].reverse())).toBeNull();
+  });
+});
+
+const GARAGE = [
+  'kpi',
+  'now',
+  'req',
+  'load',
+  'sched',
+  'funnel',
+  'brands',
+  'reviews',
+];
+
+// @traces 011-FR-001
+describe('the garage roles section list', () => {
+  it.each(['garage', 'receptionist', 'mechanic'])(
+    'serves the eight garage sections in order for %s',
+    (role) => {
+      expect(panelKeysOf(role)).toEqual(GARAGE);
+    },
+  );
+
+  it.each(['garage', 'receptionist', 'mechanic'])(
+    'accepts every garage key for %s in any order',
+    (role) => {
+      const keys = panelKeysOf(role) ?? [];
+      const panels = [...GARAGE]
+        .reverse()
+        .map((key) => ({ key, visible: key !== 'sched' }));
+      expect(checkPanels(keys, panels)).toBeNull();
+    },
+  );
+
+  it.each(['numbers', 'log', 'own', 'Kpi', ' kpi', 'schedule'])(
+    'refuses %j as unknown for a garage role',
+    (key) => {
+      const keys = panelKeysOf('mechanic') ?? [];
+      expect(checkPanels(keys, [{ key, visible: true }])).toBe('unknown_key');
+    },
+  );
+
+  it('refuses a garage key listed twice', () => {
+    const keys = panelKeysOf('receptionist') ?? [];
+    expect(
+      checkPanels(keys, [
+        { key: 'sched', visible: false },
+        { key: 'sched', visible: true },
+      ]),
+    ).toBe('duplicate_key');
+  });
+
+  it('keeps the admin list apart from the garage one', () => {
+    expect(panelKeysOf('admin')).not.toContain('kpi');
+    expect(
+      checkPanels(panelKeysOf('admin') ?? [], [{ key: 'kpi', visible: true }]),
+    ).toBe('unknown_key');
   });
 });
