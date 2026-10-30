@@ -3151,7 +3151,7 @@
             "name": "role",
             "required": true,
             "in": "path",
-            "description": "admin only for now",
+            "description": "admin, garage, receptionist or mechanic",
             "schema": {
               "type": "string"
             }
@@ -3195,7 +3195,7 @@
             "name": "role",
             "required": true,
             "in": "path",
-            "description": "admin only for now",
+            "description": "admin, garage, receptionist or mechanic",
             "schema": {
               "type": "string"
             }
@@ -3252,7 +3252,7 @@
             "name": "role",
             "required": true,
             "in": "path",
-            "description": "admin only for now",
+            "description": "admin, garage, receptionist or mechanic",
             "schema": {
               "type": "string"
             }
