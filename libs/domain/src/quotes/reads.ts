@@ -17,6 +17,7 @@ import type {
   Booking,
   Garage,
   GarageStatus,
+  JobStatus,
   JobType,
   Mechanic,
   Quote,
@@ -158,7 +159,7 @@ export const bookingOf = (
 // off still running or ahead and its garage's hours tell whether it is at work.
 export const bookingMechanicInclude = (today: string) =>
   ({
-    job: { select: { mechanic: true } },
+    job: { select: { mechanic: true, status: true } },
     mechanic: {
       include: {
         daysOff: {
@@ -177,7 +178,7 @@ type ScheduledMechanic = Mechanic & {
 
 export type MechanicRow = {
   mechanic: ScheduledMechanic | null;
-  job: { mechanic: Mechanic | null } | null;
+  job: { mechanic: Mechanic | null; status?: JobStatus } | null;
 };
 
 export function mechanicOf(row: MechanicRow): BookingMechanicDto | null {
@@ -250,6 +251,7 @@ export const garageBookingOf = (
   mechanicId: booking.mechanicId,
   moveCount: booking.moveCount,
   noShowAt: iso(booking.noShowAt),
+  noShowRecordedBy: booking.noShowRecordedBy,
   quoteId: booking.quoteId,
   startsAt: booking.startsAt.toISOString(),
   status: booking.status,

@@ -28,6 +28,7 @@ import type {
   QuoteRequest,
   RequestJob,
 } from '../../generated/prisma/client';
+import { noShowFlags } from '../../quotes/no-show/no-show.window';
 import {
   assertCursor,
   iso,
@@ -42,6 +43,7 @@ import {
 const SUMMARY = {
   booking: {
     include: {
+      mechanic: { select: { accountId: true } },
       request: {
         include: {
           jobs: {
@@ -66,6 +68,7 @@ const BY_START = [
 
 type SummaryRow = Job & {
   booking: Booking & {
+    mechanic: Pick<Mechanic, 'accountId'> | null;
     request: QuoteRequest & { jobs: (RequestJob & { jobType: JobType })[] };
   };
   car: Pick<Car, 'odometerKm' | 'plate'>;
@@ -76,7 +79,8 @@ type SummaryRow = Job & {
 
 // Never the driver's phone. The plate is shown to everyone who can read the
 // job: the desk sees every job, a mechanic only their own.
-function summaryOf(row: SummaryRow): JobSummaryDto {
+function summaryOf(actor: Actor, row: SummaryRow): JobSummaryDto {
+  const { booking } = row;
   return {
     bookingId: row.bookingId,
     car: {
@@ -91,8 +95,18 @@ function summaryOf(row: SummaryRow): JobSummaryDto {
     handedOverAt: iso(row.handedOverAt),
     id: row.id,
     jobs: jobsOf(row.booking.request.jobs),
+    ...noShowFlags(
+      {
+        ...booking,
+        jobStatus: row.status,
+        mechanicAccountId: booking.mechanic?.accountId ?? null,
+      },
+      actor,
+      new Date(),
+    ),
     mechanicId: row.mechanicId,
     mechanicName: row.mechanic?.name ?? null,
+    noShowAt: iso(booking.noShowAt),
     odometerKm: row.odometerKm,
     pausedAt: iso(row.pausedAt),
     receivedAt: iso(row.receivedAt),
@@ -112,11 +126,16 @@ export class GarageJobsService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
   // From the start of a Bucharest day (today unless named), with every job
-  // still in work or paused however long ago it was booked.
+  // still in work or paused however long ago it was booked. A no-show's job
+  // stays while the no-show may be withdrawn, then leaves the queue.
   async list(actor: Actor, query: JobListQueryDto = {}): Promise<JobListDto> {
-    const day = atLocal(query.from ?? localDay(new Date()), 0);
+    const today = localDay(new Date());
+    const day = atLocal(query.from ?? today, 0);
     const where: Prisma.JobWhereInput = {
       ...this.scope(actor),
+      NOT: {
+        booking: { noShowAt: { lt: atLocal(today, 0) }, status: 'no_show' },
+      },
       OR: [
         { booking: { startsAt: { gte: day } } },
         { status: { in: ['in_work', 'paused'] } },
@@ -135,7 +154,7 @@ export class GarageJobsService {
       }),
       this.prisma.job.count({ where }),
     ]);
-    return page(rows, total, summaryOf);
+    return page(rows, total, (row) => summaryOf(actor, row));
   }
 
   // A mechanic of the garage reads only their own job: another one is
@@ -160,7 +179,7 @@ export class GarageJobsService {
       throw refusal(HttpStatus.FORBIDDEN, 'forbidden', 'Not your job');
     }
     return {
-      ...summaryOf(row),
+      ...summaryOf(actor, row),
       finalPriceBani: row.finalPriceBani,
       stages: row.stages.map((stage) => ({
         actorRole: stage.actorRole,
