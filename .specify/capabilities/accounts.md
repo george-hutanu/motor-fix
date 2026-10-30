@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-29
+updated: 2026-10-30
 features:
   - 079-account-model
   - 082-sign-in
@@ -59,6 +59,7 @@ features:
   - 1381-mechanic-scope
   - 099-overview-sections
   - 011-dashboard-sections
+  - 1316-swr-resource-store
 ---
 
 # Capability: Accounts
@@ -211,9 +212,9 @@ _From 130-sign-in-gate._
 
 _From 082-sign-in._
 
-### 082-FR-020 — "Ieși din cont" MUST call sign-out, forget the session in memory even when the call fails, and open Home.
+### 1316-FR-006 — The store MUST hold nothing once the signed-in account is forgotten, whoever signs in next (the same account after a lapsed session included): at a session that lapses and opens the sign-in dialog (536-FR-001), at "Ieși din cont" and "Ieși de pe toate dispozitivele" (also when the call fails, 082-FR-020, 128-FR-008), on a `session.revoked` message (128-FR-009), and when a sign-out in another tab reaches this one (128-FR-005).
 
-_From 082-sign-in._
+_From 1316-swr-resource-store._
 
 ### 082-FR-022 — Every new text MUST exist in Romanian and English, Romanian words joined by a hyphen MUST use U+2011, and text the person typed MUST never be shown back as markup.
 
@@ -387,9 +388,9 @@ _From 394-role-switch._
 
 _From 394-role-switch._
 
-### 394-FR-006 — Tapping a chip of another role MUST switch to it (FR-001) with the tab's session, then reload the account, reopen the live connection and open that role's dashboard, without a new sign-in.
+### 1316-FR-007 — The store MUST hold nothing of the previous account or role when another account signs in on the same page or the account switches role (394-FR-006): the first view of the new account or role starts from its skeleton, and no value held before the change is observable after it.
 
-_From 394-role-switch._
+_From 1316-swr-resource-store._
 
 ### 394-FR-007 — A switch that fails (no answer, an error answer) MUST show the toast "Nu am putut schimba rolul. Încearcă din nou." / "Could not switch the role. Try again." and keep the tab's role, token and dashboard.
 
@@ -895,9 +896,9 @@ _From 029-overview-panels-own-data._
 
 _From 029-overview-panels-own-data._
 
-### 029-FR-009 — A car saved from the panel's "Adaugă o mașină" MUST show in the panel at once, placed by FR-005, without a reload (030-FR-008 unchanged).
+### 1316-FR-005 — A change the person makes to a resource in the app (a car added, edited or removed on Mașinile mele or from Panou's panel) MUST be applied to the held value at once, from the write's answer and without changing the held value's age, so that every other view of that resource shows the change on its next open without waiting for a read; 029-FR-009's at-once display of a car saved from the panel holds for the panel and now for the Mașinile mele list too.
 
-_From 029-overview-panels-own-data._
+_From 1316-swr-resource-store._
 
 ### 029-FR-011 — A pure merge of a layout (an ordered list of entries, each a panel key and whether it is hidden) onto the registry MUST return the panels to draw: with no layout, the released panels in default order; with a layout, its order without its hidden entries, ignoring keys no panel has, inserting a registered released panel the layout omits right after the nearest panel before it in the default order that the result already holds (first when none is), and never a panel behind an off release flag; a key the layout repeats counts once, at its first place, and an empty layout is the same as none. No stored layout is read in this story: reading `DASHBOARD_LAYOUT` is #280's (ST-402).
 
@@ -1619,3 +1620,6 @@ _From 011-dashboard-sections._
 - `102-FR-005` — superseded by `423-FR-001` (2026-10-25)
 - `099-FR-002` — superseded by `011-FR-002` (2026-10-29)
 - `099-FR-005` — superseded by `011-FR-003` (2026-10-29)
+- `082-FR-020` — superseded by `1316-FR-006` (2026-10-30)
+- `394-FR-006` — superseded by `1316-FR-007` (2026-10-30)
+- `029-FR-009` — superseded by `1316-FR-005` (2026-10-30)

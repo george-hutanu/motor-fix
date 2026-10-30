@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-25
+updated: 2026-10-30
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -124,6 +124,7 @@ features:
   - 1188-tail-latency
   - 1349-cockpit-chart-settle
   - 1257-quote-reminders
+  - 1315-optimistic-toggles
 ---
 
 # Capability: Platform
@@ -2977,6 +2978,34 @@ _From 1349-cockpit-chart-settle._
 ### 1257-FR-013 — Tests MUST exist before the code (Principle II). In Jest on real PostgreSQL and Valkey, with the clock injected (`now`, as BookingTimers has it) and the steps and the sweep called directly, plus one test of the delayed jobs' ids and delays: the day-2 and day-5 reminders to the waiting garages only, skipped when muted and still marked, never twice, held to 08:00 in quiet hours; the request expiry with no open quote (recipients, request, both sides told, link) and with an open quote (request stays `quoted`); the quote expiry with another quote open, as the last quote (request closes, driver told REQUEST_EXPIRED), and held while a booking awaits confirmation; the accept of an expired quote refused; every timer and the sweep idempotent (a second fire writes and sends nothing); the timers cleared when the object leaves its state; the templates in both languages for every channel. No new end-to-end flow: the driver's request page already shows a closed request, and the other-garages screen is ST-317.
 
 _From 1257-quote-reminders._
+
+### 1315-FR-008 — Each press on the three toggle surfaces (settings switch, bell read and read-all, price-list hide/show) MUST make exactly one write call, and the web MUST NOT resend a refused or failed one (the rollback ends it). The `Idempotency-Key` on these writes is the Split's second story; the brand ticks ride the draft keeper's whole-form save (idempotent by construction) and the listing's send already carries its key (`draft-keeper.ts` `submit`).
+
+_From 1315-optimistic-toggles._
+
+### 1315-FR-009 — Bookings and payments MUST stay non-optimistic: `accept-quote-dialog.ts`, `cancel-booking-dialog.ts`, `send-quote-dialog.ts`, `request-quote.ts`, `job-steps.ts` and `waiting.ts` keep waiting for the server's answer before the screen shows the outcome; a test asserts for the accept and cancel dialogs that the screen changes only after the answer (there is no payment write in the product today).
+
+_From 1315-optimistic-toggles._
+
+### 1315-FR-011 — An end-to-end spec in `apps/web-e2e` MUST, with Chromium's network emulated as Slow 3G (`Network.emulateNetworkConditions`: 400 ms latency, 500 kbit/s down, 500 kbit/s up), prove on each of the four surfaces that the screen changes within 100 ms of the tap (a `pointerdown` listener installed by `page.evaluate` stamps `performance.now()`, a `MutationObserver` stamps the change of the named node: the settings switch's `aria-checked`, the bell row's unread mark, the price row's state text, the brand tick's checked state; one measurement per surface, no retry; every Playwright project runs Chromium, so no project is skipped), and that a refused write (the route answered 500 by the test) rolls the screen back with the surface's message: the settings toast, the bell toast, the price-list row line; the brands step is proven for the 100 ms only (FR-010).
+
+_From 1315-optimistic-toggles._
+
+### 1315-FR-012 — Every change MUST live in code the initial download does not hold: the dashboard views and the listing form are lazy routes today (`app.routes.ts` `loadChildren` / `loadComponent`), and no new file joins the eager app shell; the production build's `initial` budget (1 MB error) MUST keep passing with the initial bundle no larger than before this story (the plan records the merge base's production `initial` total; the PR body states the figure after).
+
+_From 1315-optimistic-toggles._
+
+### 1315-FR-013 — No shared "optimistic" helper MUST be added unless the plan finds the same lines in at least two of the three surfaces; each surface's rollback is otherwise a few lines in its own file (Principle I).
+
+_From 1315-optimistic-toggles._
+
+### 1315-FR-014 — Every new user-facing text, if any, MUST exist in Romanian and English; this story reuses `shell.notifications.saveFailed`, `shell.bell.readFailed` and `garage.prices.notSaved` and expects to add none.
+
+_From 1315-optimistic-toggles._
+
+### 1315-FR-015 — Tests MUST come before the code (Principle II): `notification-settings.spec.ts` (two toggles, both saves failing, the switch ending on the server's row; the toast twice; the first scenario of 198-FR-014 kept), `bell.spec.ts` (the optimistic read and read-all, their rollbacks, the out-of-order first-page reloads keeping a row read), `prices-view.spec.ts` (the optimistic hide and show, the rollback with the row line, one write per press), a spec per FR-009 dialog, and the end-to-end spec of FR-011; each test file carries one whole-line `// @traces` comment naming its `1315-FR-<n>` ids.
+
+_From 1315-optimistic-toggles._
 
 ## Retired
 

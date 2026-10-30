@@ -28,11 +28,12 @@ features:
   - 1253-assistant-confirm
   - 1385-cancel-from-requests
   - 099-overview-sections
-  - 346-quote-outcomes
-  - 427-time-blocks
   - 406-final-price-handover
-  - 1395-block-time-dashboard
+  - 427-time-blocks
   - 1393-final-price-predare
+  - 1395-block-time-dashboard
+  - 1316-swr-resource-store
+  - 346-quote-outcomes
 ---
 
 # Capability: Quotes
@@ -201,9 +202,9 @@ _From 345-decline-request._
 
 _From 343-live-quote-requests._
 
-### 343-FR-011 — States: while the first read is in flight the panel and the view show three skeleton rows and no counter; with no waiting row they show "Nicio cerere nouă. Te anunțăm când apare una." / "No new requests. We will tell you when one arrives." and the counter "0 fără răspuns" / "0 unanswered"; while the live state is `reconnecting` or `polling` a thin banner "Reconectare…" / "Reconnecting…" shows above the list; once offline (the live service's `offline`, 10 seconds without the connection) the last list stays with the line "Lista poate fi veche" / "This list may be out of date". A failed read after a list was shown keeps the list (256-FR-003); a failed first read shows the shared error with a retry.
+### 1316-FR-001 — The web app MUST keep, per resource type, the last value a signed-in read answered together with the time it answered, for these types: the driver's cars, the driver's quote requests, the driver's active request, and the garage's request lists (waiting, quoted, closed); a view that opens while a last value is held MUST show it at once, without its skeleton.
 
-_From 343-live-quote-requests._
+_From 1316-swr-resource-store._
 
 ### 343-FR-015 — The web app MUST hide the panel, the menu entry, the tab and the counter from a mechanic whose `garageAccess` permissions lack `canAnswerQuotes`, and from an account with no membership, without a call; the server is the authority (FR-005) and a 404 on the read is treated as "not allowed", showing nothing and no error.
 
@@ -925,3 +926,4 @@ _From 1393-final-price-predare._
 - `150-FR-006` — superseded by `427-FR-006` (2026-10-29)
 - `150-FR-009` — superseded by `427-FR-011` (2026-10-29)
 - `427-FR-015` — superseded by `1395-FR-006` (2026-10-30)
+- `343-FR-011` — superseded by `1316-FR-001` (2026-10-30)

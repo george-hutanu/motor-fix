@@ -1,5 +1,4 @@
 import type {
-  ClientRepairDto,
   ClientRepairListDto,
   CorrectClientRepairDto,
 } from '@motor-fix/contracts';
@@ -16,7 +15,9 @@ import {
   type ClientRepairRow,
   type Corrected,
   changes,
+  LIST_LIMIT,
   ownerScope,
+  type RepairScope,
   stored,
   toItem,
   writerOf,
@@ -32,8 +33,6 @@ import { PRISMA } from '../../auth/prisma';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { REPAIR_ORDER } from '../history/history';
-
-const LIST_LIMIT = 200;
 
 const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such repair');
@@ -73,19 +72,22 @@ export class ClientRepairsService {
     };
   }
 
-  // A merge patch on the version the owner read. The row is locked first, so
-  // of two saves on one version only one goes through; the version is
-  // checked before the values, and a save that changes nothing writes nothing.
+  // A merge patch on the version the writer read, within the writer's scope.
+  // The row is locked first, so of two saves on one version only one goes
+  // through; the version is checked before the values, and a save that
+  // changes nothing writes nothing. Answers the row as it now stands.
   async correct(
     actor: Actor,
+    scope: RepairScope | null,
     id: string,
     dto: CorrectClientRepairDto,
-  ): Promise<ClientRepairDto> {
-    requireCapability(actor, 'garage.client_repairs');
+  ): Promise<ClientRepairRow> {
     const by = writerOf(actor);
+    if (scope) requireCapability(actor, scope.capability);
     try {
+      if (!scope) throw notFound();
       const answer = await this.prisma.$transaction(async (tx) => {
-        const row = await this.locked(tx, id, actor.garageId);
+        const row = await this.locked(tx, id, scope.where);
         if (row.updatedAt.getTime() !== new Date(dto.version).getTime()) {
           throw refusal(
             HttpStatus.CONFLICT,
@@ -96,8 +98,7 @@ export class ClientRepairsService {
         const before = stored(row);
         const after = changes(before, dto);
         const changed = Object.keys(after);
-        if (changed.length === 0)
-          return { item: toItem(row), outcome: 'unchanged' as const };
+        if (changed.length === 0) return { outcome: 'unchanged' as const, row };
         const saved = await tx.repair.update({
           data: {
             ...data(after),
@@ -107,17 +108,18 @@ export class ClientRepairsService {
             updatedBy: actor.accountId,
             updatedByRole: by,
           },
-          select: { ...CLIENT_REPAIR_SELECT, carId: true, garageId: true },
+          select: CLIENT_REPAIR_SELECT,
           where: { id },
         });
-        const garageId = saved.garageId as string;
+        // A garage the driver did not share the repair with is told nothing.
+        const sharedGarageId = saved.sharedWithGarage ? saved.garageId : null;
         await this.audit.recordChanges(
           tx,
           {
             actorId: actor.accountId,
             actorRole: actor.role,
             carId: saved.carId,
-            garageId,
+            ...(sharedGarageId && { garageId: sharedGarageId }),
             subjectId: id,
             subjectType: 'repair',
           },
@@ -126,29 +128,26 @@ export class ClientRepairsService {
         );
         const ownerId = liveOwner(saved);
         await this.events.record(tx, {
-          audience: {
-            ownerAccountId: ownerId,
-            sharedGarageId: garageId,
-            type: 'repair',
-          },
+          audience: { ownerAccountId: ownerId, sharedGarageId, type: 'repair' },
           kind: 'repair.updated',
           payload: {
             by,
             carId: saved.carId,
             changed,
-            garageId,
+            garageId: saved.garageId,
             ownerId,
             repairId: id,
           },
           subjectId: id,
         });
+        const writer = by === 'admin' ? 'admin' : `garage ${saved.garageId}`;
         this.logger.log(
-          `repair ${id} corrected by garage ${garageId}: ${changed.join(', ')}`,
+          `repair ${id} corrected by ${writer}: ${changed.join(', ')}`,
         );
-        return { item: toItem(saved), outcome: 'corrected' as const };
+        return { outcome: 'corrected' as const, row: saved };
       });
       recordCorrection(by, answer.outcome);
-      return answer.item;
+      return answer.row;
     } catch (error) {
       // A 400 is read from the status codes; a failure is no outcome.
       const outcome = REFUSED[statusOf(error)];
@@ -157,17 +156,16 @@ export class ClientRepairsService {
     }
   }
 
-  // The repair in the owner's scope, locked until the transaction ends.
+  // The repair in the writer's scope, locked until the transaction ends.
   private async locked(
     tx: Prisma.TransactionClient,
     id: string,
-    garageId: string | null,
+    where: Prisma.RepairWhereInput,
   ): Promise<ClientRepairRow> {
-    if (!garageId) throw notFound();
     await tx.$queryRaw`SELECT id FROM repair WHERE id = ${id}::uuid FOR UPDATE`;
     const row = await tx.repair.findFirst({
       select: CLIENT_REPAIR_SELECT,
-      where: { id, ...ownerScope(garageId) },
+      where: { ...where, id },
     });
     if (!row) throw notFound();
     return row;
