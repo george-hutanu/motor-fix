@@ -1,5 +1,6 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { NavigationEnd, provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
@@ -150,5 +151,55 @@ describe('Mașinile mele opened at a car, hostile addresses', () => {
 
     expect(focused()).toBe('c1');
     expect(scrolled).toHaveBeenCalledTimes(3);
+  });
+});
+
+@Component({ template: '' })
+class Elsewhere {}
+
+describe('Mașinile mele opened at a car whose list is already held', () => {
+  // The bell's link lands on a list read moments before: the card draws in the
+  // same pass as the navigation, and the router's own move to the top of the
+  // new screen comes after it. The card must end in view.
+  // @traces 032-FR-004
+  it('scrolls to the card after the router has taken the new screen to the top', async () => {
+    const moves: string[] = [];
+    Element.prototype.scrollIntoView = jest.fn(function (this: Element) {
+      moves.push(`card ${this.getAttribute('data-car')}`);
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        {
+          provide: CarsService,
+          useValue: {
+            carsControllerList: async () => ({ items: [car('c1'), car('c2')] }),
+          },
+        },
+        { provide: Overlays, useValue: { open: jest.fn() } },
+        ...heldForDriver(),
+        provideRouter([
+          { component: Elsewhere, path: 'home' },
+          { children: [{ component: CarsView, path: '**' }], path: 'cars' },
+        ]),
+      ],
+    });
+    await TestBed.inject(I18n).enter('driver');
+    // The router's in-memory scrolling, which TestBed does not start: a
+    // macrotask after each navigation ends, the new screen goes to the top.
+    TestBed.inject(Router).events.subscribe((event) => {
+      if (event instanceof NavigationEnd)
+        setTimeout(() => moves.push('to the top'));
+    });
+    const harness = await RouterTestingHarness.create('/cars');
+    await settled(harness);
+    await harness.navigateByUrl('/home');
+    await settled(harness);
+    moves.length = 0;
+
+    await harness.navigateByUrl('/cars/c2');
+    await settled(harness);
+
+    expect(focused()).toBe('c2');
+    expect(moves.at(-1)).toBe('card c2');
   });
 });

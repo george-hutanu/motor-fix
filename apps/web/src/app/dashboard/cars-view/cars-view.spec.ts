@@ -379,10 +379,12 @@ describe('Mașinile mele opened at a car', () => {
     return harness;
   }
 
+  // The card moves a macrotask after it draws, after the router's own scroll.
   async function settled(harness: RouterTestingHarness) {
     for (let i = 0; i < 4; i++) {
       harness.detectChanges();
       await harness.fixture.whenStable();
+      await new Promise((r) => setTimeout(r));
     }
   }
 
