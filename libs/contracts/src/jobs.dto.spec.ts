@@ -1,7 +1,11 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
-import { ReceiveJobDto } from './jobs.dto';
+import {
+  FINAL_PRICE_CORRECTION_HOURS,
+  FinalPriceDto,
+  ReceiveJobDto,
+} from './jobs.dto';
 
 const errors = (body: Record<string, unknown>) =>
   validateSync(plainToInstance(ReceiveJobDto, body), {
@@ -34,5 +38,37 @@ describe('ReceiveJobDto', () => {
     expect(errors({ odometerKm: 1, receivedAt: '2026-10-26' })).toEqual([
       expect.objectContaining({ property: 'receivedAt' }),
     ]);
+  });
+});
+
+const priceErrors = (body: Record<string, unknown>) =>
+  validateSync(plainToInstance(FinalPriceDto, body), {
+    forbidNonWhitelisted: true,
+    whitelist: true,
+  }).map((error) => error.property);
+
+// @traces 406-FR-003 406-FR-005 406-FR-011
+describe('FinalPriceDto', () => {
+  it.each([1, 125_050, 100_000_000])('takes %d bani', (finalPriceBani) => {
+    expect(priceErrors({ finalPriceBani })).toEqual([]);
+  });
+
+  it.each([[0], [-1], [1.5], [100_000_001], ['125000'], [null]])(
+    'refuses %j bani',
+    (finalPriceBani) => {
+      expect(priceErrors({ finalPriceBani })).toEqual(['finalPriceBani']);
+    },
+  );
+
+  it('refuses a body without a price, or with another field', () => {
+    expect(priceErrors({})).toEqual(['finalPriceBani']);
+    expect(priceErrors({ finalPriceBani: 100, note: 'x' })).toEqual(['note']);
+  });
+});
+
+// @traces 406-FR-005
+describe('FINAL_PRICE_CORRECTION_HOURS', () => {
+  it('lets a final price be corrected for 48 hours after the handover', () => {
+    expect(FINAL_PRICE_CORRECTION_HOURS).toBe(48);
   });
 });

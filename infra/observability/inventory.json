@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 241,
+    "count": 243,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1380,7 +1380,7 @@
       "source": "libs/domain/src/search/garage-search/garage-search.service.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "reason": "a count has no failure to alert on; the api-error-rate rule covers the service that reports it; a filtered first page counts only with log=1, so a filter toggle is not a new search",
       "story": "ST-879"
     },
     {
@@ -1596,14 +1596,14 @@
       "kind": "endpoint",
       "name": "garage-job-stages",
       "source": "libs/domain/src/workshop/job-stages/job-stages.controller.ts",
-      "metric": "http.server.request.duration by http.route /api/v1/garage/jobs/:id/start, /pause, /resume, /finish and /receive",
+      "metric": "http.server.request.duration by http.route /api/v1/garage/jobs/:id/start, /pause, /resume, /finish, /receive and /handover, and PATCH /api/v1/garage/jobs/:id/final-price",
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "each move locks the job and writes its stage, the request's move, the audit entries and the events in one PostgreSQL transaction; a start pauses the mechanic's other job in work in the same one; each refusal logs one 'job stage refused' line with the job id and its code; the counter motorfix_job_stage_moves_total counts every call by action and outcome; no outside call",
-      "story": "ST-276"
+      "reason": "each move locks the job and writes its stage, the request's move, the audit entries and the events in one PostgreSQL transaction; a start pauses the mechanic's other job in work in the same one; each refusal logs one 'job stage refused' line with the job id and its code; the counter motorfix_job_stage_moves_total counts every call by action and outcome; a handover also completes the booking and a correction queues the driver's message through the outbox; no outside call",
+      "story": "ST-276, ST-406"
     },
     {
       "kind": "product-counter",
@@ -1620,7 +1620,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts a job's stage moves and receptions by action (start, pause, resume, finish, receive) and outcome (ok, refused); a refusal is the rule working, and the api-error-rate rule covers the service that reports it",
+      "reason": "counts a job's stage moves and receptions by action (start, pause, resume, finish, receive, handover, correct) and outcome (ok, refused); a refusal is the rule working, and the api-error-rate rule covers the service that reports it",
       "story": "ST-276"
     },
     {
@@ -2187,7 +2187,7 @@
         "api-latency",
         "api-search-latency"
       ],
-      "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, new searches still count in motorfix_searches_total, and `sort` changes in motorfix_sort_changes_total",
+      "reason": "answers from the 60 s Redis cache or PostgreSQL; the cache and log outcomes are the motorfix_search_cache_total and motorfix_search_log_total entries, new searches still count in motorfix_searches_total, and `sort` changes in motorfix_sort_changes_total; the open_now and open_saturday filters narrow the same query and cache slot and add no signal",
       "story": "ST-267"
     },
     {
@@ -2227,7 +2227,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "every pin of a search for the map on Results, from the 60 s Redis cache or PostgreSQL; its answers count in motorfix_search_pins_total by outcome and mode, and a Redis fallback in motorfix_search_cache_total under the api-search-cache-fallback-rate alert; no outside call (the browser fetches the tiles from the place-step map's provider)",
+      "reason": "every pin of a search for the map on Results, from the 60 s Redis cache or PostgreSQL; its answers count in motorfix_search_pins_total by outcome and mode, and a Redis fallback in motorfix_search_cache_total under the api-search-cache-fallback-rate alert; the open_now and open_saturday filters only set each pin's matches flag and the total; no outside call (the browser fetches the tiles from the place-step map's provider)",
       "story": "ST-269"
     },
     {
@@ -2374,6 +2374,19 @@
       ],
       "reason": "one log line per job naming the booking id and whether the driver was told; BullMQ's queue metrics cover depth and failures; the confirmations themselves are counted by motorfix_booking_confirms_total",
       "story": "ST-389"
+    },
+    {
+      "kind": "queue",
+      "name": "final-price-corrected",
+      "source": "libs/domain/src/notifications/final-price-corrected/final-price-corrected.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one log line per job naming the job id and how many messages were queued; BullMQ's queue metrics cover depth and failures; the corrections themselves are counted by motorfix_job_stage_moves_total{action=\"correct\"}",
+      "story": "ST-406"
     },
     {
       "kind": "queue",

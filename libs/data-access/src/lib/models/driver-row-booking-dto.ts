@@ -5,7 +5,17 @@ import { GarageRefDto } from '../models/garage-ref-dto';
 export interface DriverRowBookingDto {
   cancelledBySide: ('driver' | 'garage' | 'system') | null;
   confirmBy: string;
+
+  /**
+   * The final price recorded at the handover, in bani
+   */
+  finalPriceBani: number | null;
   garage: GarageRefDto;
+
+  /**
+   * When the car was handed over
+   */
+  handedOverAt: string | null;
   id: string;
 
   /**

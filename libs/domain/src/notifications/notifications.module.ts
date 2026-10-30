@@ -57,6 +57,11 @@ import {
 } from './document-refused/document-refused.fan-out';
 import type { EmailConfig } from './email-config';
 import {
+  FINAL_PRICE_CORRECTED_QUEUE,
+  type FinalPriceCorrectedEvent,
+  FinalPriceCorrectedFanOut,
+} from './final-price-corrected/final-price-corrected.fan-out';
+import {
   GARAGE_REPORT_DECIDED_QUEUE,
   type GarageReportDecidedEvent,
   GarageReportDecidedFanOut,
@@ -180,6 +185,7 @@ const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const QUOTE_DECLINED_WORKER = Symbol('QUOTE_DECLINED_WORKER');
 const QUOTE_LOST_WORKER = Symbol('QUOTE_LOST_WORKER');
 const BOOKING_CONFIRMED_WORKER = Symbol('BOOKING_CONFIRMED_WORKER');
+const FINAL_PRICE_CORRECTED_WORKER = Symbol('FINAL_PRICE_CORRECTED_WORKER');
 const BOOKING_LAPSED_WORKER = Symbol('BOOKING_LAPSED_WORKER');
 const JOB_STAGE_WORKER = Symbol('JOB_STAGE_WORKER');
 const REQUEST_CANCELLED_WORKER = Symbol('REQUEST_CANCELLED_WORKER');
@@ -253,6 +259,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(BOOKING_CONFIRMED_WORKER)
     private readonly bookingConfirmedWorker?: Worker | null,
+    @Optional()
+    @Inject(FINAL_PRICE_CORRECTED_WORKER)
+    private readonly finalPriceCorrectedWorker?: Worker | null,
     @Optional()
     @Inject(JOB_STAGE_WORKER)
     private readonly jobStageWorker?: Worker | null,
@@ -697,6 +706,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        FinalPriceCorrectedFanOut,
+        {
+          inject: [FinalPriceCorrectedFanOut],
+          provide: FINAL_PRICE_CORRECTED_WORKER,
+          useFactory: (fanOut: FinalPriceCorrectedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('FinalPriceCorrected').error(
+                'PUBLIC_WEB_URL missing; corrected final price messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<FinalPriceCorrectedEvent>(
+              FINAL_PRICE_CORRECTED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('FinalPriceCorrected'));
+            return worker;
+          },
+        },
         JobStageFanOut,
         {
           inject: [JobStageFanOut],
@@ -1009,6 +1045,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.quoteDeclinedWorker?.close();
     await this.quoteLostWorker?.close();
     await this.bookingConfirmedWorker?.close();
+    await this.finalPriceCorrectedWorker?.close();
     await this.jobStageWorker?.close();
     await this.bookingLapsedWorker?.close();
     await this.requestCancelledWorker?.close();
