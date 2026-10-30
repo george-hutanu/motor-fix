@@ -175,6 +175,29 @@ describe('reading the admin layout', () => {
 
     expect(api.dashboardLayoutsControllerRead).toHaveBeenCalledTimes(2);
   });
+
+  it("draws the other account's layout when it signs in while a save is out", async () => {
+    const out = deferred<DashboardLayoutDto>();
+    const { layout, me, settle } = setup({
+      read: async () => answer(all(['growth'])),
+      save: () => out.promise,
+    });
+    await settle();
+    void layout.toggle('log', false);
+    await settle();
+
+    me.set({
+      id: 'admin-2',
+      role: 'admin',
+      roles: ['admin'],
+    } as unknown as MeDto);
+    await settle();
+    out.resolve(answer(all(['log'])));
+    await settle();
+
+    expect(hidden(layout)).toEqual(['growth']);
+    expect(order(layout)).toEqual(KEYS);
+  });
 });
 
 // @traces 1391-FR-004 1391-FR-009

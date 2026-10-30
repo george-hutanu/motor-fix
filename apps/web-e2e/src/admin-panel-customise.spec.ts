@@ -1,5 +1,10 @@
 import { CURRENT_CONSENT } from '@motor-fix/contracts/consent';
-import { type Browser, expect, type Page } from '@playwright/test';
+import {
+  type Browser,
+  type BrowserContext,
+  expect,
+  type Page,
+} from '@playwright/test';
 import { Client } from 'pg';
 
 import { openSignIn, ready, signIn } from './accounts.js';
@@ -59,11 +64,18 @@ test.describe('customising the admin Panou @seeded @database', () => {
     await signIn(page, admin.email, { password: admin.password });
     await expect(page).toHaveURL('/app/admin');
   };
+  // The second browser of a test, closed after it whether it passed or not.
+  let second: BrowserContext | undefined;
+  test.afterEach(async () => {
+    await second?.close();
+    second = undefined;
+  });
   const secondPage = async (browser: Browser) => {
     const context = await browser.newContext();
+    second = context;
     const page = await context.newPage();
     await signedIn(page);
-    return { context, page };
+    return { page };
   };
   const panel = (page: Page) =>
     page.getByRole('dialog', { name: 'Alege ce vezi pe panou' });
@@ -137,7 +149,6 @@ test.describe('customising the admin Panou @seeded @database', () => {
     await expect(other.page.getByText('5 din 5 secțiuni afișate')).toBeVisible({
       timeout: 5_000,
     });
-    await other.context.close();
   });
 
   // The language switch sits in the desktop header: the language is turned
@@ -161,11 +172,7 @@ test.describe('customising the admin Panou @seeded @database', () => {
         { resultTypes: ['violations'] },
         { include: [['[role="dialog"]']] },
       );
-      expect(
-        found
-          .filter((v) => v.impact === 'serious' || v.impact === 'critical')
-          .map((v) => `${scheme}: ${v.id}`),
-      ).toEqual([]);
+      expect(found.map((v) => `${scheme}: ${v.id}`)).toEqual([]);
     }
     await page.emulateMedia({ colorScheme: null });
   };

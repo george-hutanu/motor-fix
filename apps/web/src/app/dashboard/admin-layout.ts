@@ -41,9 +41,7 @@ export class AdminLayout {
 
   private readonly account = computed(() => this.session.current()?.id);
   private readonly admin = computed(() =>
-    ((this.session.current()?.roles ?? []) as readonly string[]).includes(
-      'admin',
-    ),
+    (this.session.current()?.roles ?? []).includes('admin'),
   );
   // The last answer: undefined while the first read is out, null if it failed.
   readonly server = signal<DashboardPanelDto[] | null | undefined>(undefined);
@@ -84,6 +82,8 @@ export class AdminLayout {
   // and Panou is back as the server has it.
   async toggle(key: string, visible: boolean): Promise<boolean> {
     if (this.pending().has(key)) return this.admin();
+    // A key the layout does not hold is neither listed nor drawn: nothing to save.
+    if (!this.current().some((panel) => panel.key === key)) return false;
     const panels = this.current().map((panel) =>
       panel.key === key ? { key, visible } : panel,
     );
@@ -157,7 +157,8 @@ export class AdminLayout {
       return this.applied > turn;
     } finally {
       this.outstanding--;
-      if (this.outstanding === 0 && this.account() === account) {
+      // An account switched meanwhile has its own read: it redraws once it answers.
+      if (this.outstanding === 0 && this.server() !== undefined) {
         this.shown.set(this.server() ?? fallback());
       }
     }
@@ -175,6 +176,8 @@ export class AdminLayout {
       const answer = await this.api.dashboardLayoutsControllerRead({
         role: 'admin',
       });
+      // An answer without a list is as unreadable as a failed read.
+      if (!Array.isArray(answer?.panels)) throw new Error('no panels');
       // An answer for an account signed out meanwhile, or overtaken by a
       // later read or save, is dropped; the first one is kept until then.
       const current = this.turn === turn || this.server() === undefined;
