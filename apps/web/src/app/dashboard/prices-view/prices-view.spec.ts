@@ -1171,3 +1171,93 @@ describe('Prețuri: proposing a job the catalogue lacks', () => {
     expect(listed.querySelector('[data-note]')).toBeNull();
   });
 });
+
+describe('Prețuri: a hide or show shows before the server answers', () => {
+  const hiddenChain = async () => ({
+    items: [
+      ...SEEDED.slice(0, 3),
+      item({
+        ...SEEDED[3],
+        public: false,
+        reason: 'hidden_by_garage',
+        visible: false,
+      }),
+      ...SEEDED.slice(4),
+    ],
+  });
+
+  // @traces 1315-FR-006 1315-FR-008
+  // @traces 1315-FR-013 1315-FR-015
+  it('shows the job hidden by the owner at once on Ascunde, with one write', async () => {
+    const { element, settle } = await editingOn();
+    setRange.mockImplementationOnce(() => new Promise(() => undefined));
+
+    action(rows(element)[0], 'Ascunde').click();
+    await settle();
+
+    const row = rows(element)[0];
+    expect(cell(row, 'state')).toBe('ascuns de tine');
+    expect(row.getAttribute('data-public')).toBe('false');
+    expect(action(row, 'Arată')).toBeDefined();
+    expect(setRange).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1315-FR-006
+  it('shows the job on the profile at once on Arată', async () => {
+    const { element, settle } = await editingOn(hiddenChain);
+    setRange.mockImplementationOnce(() => new Promise(() => undefined));
+
+    action(rows(element)[3], 'Arată').click();
+    await settle();
+
+    expect(cell(rows(element)[3], 'state')).toBe('pe profil');
+    expect(action(rows(element)[3], 'Ascunde')).toBeDefined();
+  });
+
+  // @traces 1315-FR-007
+  it('puts the row back as the list last read it, saying so on the row, when the save fails', async () => {
+    const { element, settle } = await editingOn();
+    let fail: (reason: unknown) => void = () => undefined;
+    setRange.mockImplementationOnce(
+      () => new Promise((_, reject) => (fail = reject)),
+    );
+
+    action(rows(element)[0], 'Ascunde').click();
+    await settle();
+    expect(cell(rows(element)[0], 'state')).toBe('ascuns de tine');
+    fail(new HttpErrorResponse({ status: 500 }));
+    await settle();
+
+    const row = rows(element)[0];
+    expect(cell(row, 'state')).toBe('pe profil');
+    expect(text(row.querySelector('[role="alert"]'))).toBe(
+      'Nu s‑a salvat. Încearcă din nou.',
+    );
+  });
+
+  // @traces 1315-FR-007
+  it('keeps what a live re-read showed while the save was out when the save then fails', async () => {
+    const { element, settle } = await editingOn();
+    let fail: (reason: unknown) => void = () => undefined;
+    setRange.mockImplementationOnce(
+      () => new Promise((_, reject) => (fail = reject)),
+    );
+
+    action(rows(element)[0], 'Ascunde').click();
+    await settle();
+    read.mockResolvedValueOnce(await hiddenChainWithDiagnosisHidden());
+    resync.next();
+    await settle();
+    fail(new HttpErrorResponse({ status: 500 }));
+    await settle();
+
+    expect(cell(rows(element)[0], 'state')).toBe('ascuns de tine');
+  });
+
+  const hiddenChainWithDiagnosisHidden = async () => ({
+    items: [
+      item({ public: false, reason: 'hidden_by_garage', visible: false }),
+      ...SEEDED.slice(1),
+    ],
+  });
+});
