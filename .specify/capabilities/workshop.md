@@ -337,7 +337,7 @@ _From 427-time-blocks._
 
 _From 1395-block-time-dashboard._
 
-### 1395-FR-002 — The read MUST hold the access of the four routes (427-FR-003), checked on the server before anything else: the owner and a receptionist of that garage 200; a mechanic of the garage 403 `forbidden` whatever her permissions; any other actor and an unknown garage 404 `not_found`; a visitor 401 `sign_in_required`; the route is not `@Public()`.
+### 1395-FR-002 — The read MUST hold the access of the four routes (427-FR-003), checked on the server before anything else: the owner and a receptionist of that garage 200; a mechanic of the garage 403 `forbidden` whatever her permissions; any other actor and an unknown garage 404 (Nest's bare `Not Found` body, no `code`, as the four routes answer); a visitor 401 `sign_in_required`; the route is not `@Public()`.
 
 _From 1395-block-time-dashboard._
 
