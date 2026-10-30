@@ -12,6 +12,7 @@ export * from './car-transfers.dto';
 export * from './cars.dto';
 export * from './catalogue-job-decisions.dto';
 export * from './catalogue-job-proposal.dto';
+export * from './client-repairs.dto';
 export * from './consent';
 export * from './consents.dto';
 export * from './copy-voices.dto';

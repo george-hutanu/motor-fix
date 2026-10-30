@@ -20,6 +20,21 @@ export class CarRepairDto {
     description: 'Created before the reader held the car: it came with it',
   })
   fromPreviousOwner!: boolean;
+
+  @ApiProperty({ nullable: true, type: 'integer' })
+  odometerKm!: number | null;
+
+  @ApiProperty({ description: 'In bani', nullable: true, type: 'integer' })
+  costBani!: number | null;
+
+  @ApiProperty({
+    description:
+      'Who last corrected it: the garage it names or an admin; none for the driver',
+    enum: ['garage', 'admin'],
+    nullable: true,
+    type: String,
+  })
+  correctedBy!: 'garage' | 'admin' | null;
 }
 
 export class CarRepairListDto {
