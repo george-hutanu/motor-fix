@@ -19,6 +19,7 @@ import {
   ownerScope,
   stored,
   toItem,
+  writerOf,
 } from './client-repairs';
 import {
   type CorrectionOutcome,
@@ -28,7 +29,6 @@ import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { refusal } from '../../auth/http-refusal';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
-import { localDay } from '../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { REPAIR_ORDER } from '../history/history';
@@ -82,6 +82,7 @@ export class ClientRepairsService {
     dto: CorrectClientRepairDto,
   ): Promise<ClientRepairDto> {
     requireCapability(actor, 'garage.client_repairs');
+    const by = writerOf(actor);
     try {
       const answer = await this.prisma.$transaction(async (tx) => {
         const row = await this.locked(tx, id, actor.garageId);
@@ -97,14 +98,6 @@ export class ClientRepairsService {
         const changed = Object.keys(after);
         if (changed.length === 0)
           return { item: toItem(row), outcome: 'unchanged' as const };
-        if (after.doneOn !== undefined && after.doneOn > localDay(new Date())) {
-          throw refusal(
-            HttpStatus.BAD_REQUEST,
-            'validation_failed',
-            'doneOn must not be after today',
-            [{ code: 'after_today', field: 'doneOn' }],
-          );
-        }
         const saved = await tx.repair.update({
           data: {
             ...data(after),
@@ -112,7 +105,7 @@ export class ClientRepairsService {
               Math.max(Date.now(), row.updatedAt.getTime() + 1),
             ),
             updatedBy: actor.accountId,
-            updatedByRole: 'owner',
+            updatedByRole: by,
           },
           select: { ...CLIENT_REPAIR_SELECT, carId: true, garageId: true },
           where: { id },
@@ -140,7 +133,7 @@ export class ClientRepairsService {
           },
           kind: 'repair.updated',
           payload: {
-            by: 'owner',
+            by,
             carId: saved.carId,
             changed,
             garageId,
@@ -154,12 +147,12 @@ export class ClientRepairsService {
         );
         return { item: toItem(saved), outcome: 'corrected' as const };
       });
-      recordCorrection('owner', answer.outcome);
+      recordCorrection(by, answer.outcome);
       return answer.item;
     } catch (error) {
       // A 400 is read from the status codes; a failure is no outcome.
       const outcome = REFUSED[statusOf(error)];
-      if (outcome) recordCorrection('owner', outcome);
+      if (outcome) recordCorrection(by, outcome);
       throw error;
     }
   }

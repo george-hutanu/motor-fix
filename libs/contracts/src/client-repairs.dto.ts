@@ -11,7 +11,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 
-import { calendarDay } from './cars.dto';
+import { calendarDay, notAfterToday } from './cars.dto';
 import { MAX_KM } from './plate';
 
 // The largest amount a repair may carry: 920 000 lei.
@@ -33,7 +33,8 @@ export class CorrectClientRepairDto {
     description: 'The version of the repair as read; an older one is refused',
     format: 'date-time',
   })
-  @IsISO8601()
+  @IsISO8601({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}T/, { message: 'version must be a date-time' })
   version!: string;
 
   @ApiPropertyOptional({ description: 'Trimmed', maxLength: 200, minLength: 1 })
@@ -50,6 +51,7 @@ export class CorrectClientRepairDto {
   })
   @sent()
   @calendarDay()
+  @notAfterToday()
   doneOn?: string;
 
   @ApiPropertyOptional({ maximum: MAX_KM, minimum: 0, type: 'integer' })

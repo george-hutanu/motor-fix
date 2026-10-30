@@ -25,12 +25,16 @@ export function changes(
   const after: Partial<Corrected> = {};
   for (const field of CORRECTABLE) {
     const value = dto[field];
-    if (value !== undefined && !Object.is(value, before[field])) {
+    if (value !== undefined && value !== before[field]) {
       Object.assign(after, { [field]: value });
     }
   }
   return after;
 }
+
+// Who a correction is recorded as: the garage's owner, or an admin.
+export const writerOf = (actor: { role: string }): 'owner' | 'admin' =>
+  actor.role === 'admin' ? 'admin' : 'owner';
 
 // The repairs the garage's owner may read and correct: the logged ones a
 // driver shared with his approved garage, not deleted.
@@ -94,11 +98,11 @@ export const stored = (row: ClientRepairRow): Corrected => ({
   what: row.what,
 });
 
-// The driver by first name and initial, never more; a car with no owner or a
-// deleted one shows the deleted-account label.
+// The driver by first name and initial, never more; a car with no owner, a
+// deleted one or one with no name shows the deleted-account label.
 export function toItem(row: ClientRepairRow): ClientRepairDto {
   const owner = row.car.ownerships[0]?.account;
-  const live = owner && owner.status !== 'deleted' ? owner : null;
+  const name = owner && owner.status !== 'deleted' ? shortName(owner.name) : '';
   const version = row.updatedAt.toISOString();
   return {
     car: {
@@ -107,7 +111,7 @@ export function toItem(row: ClientRepairRow): ClientRepairDto {
       year: row.car.year,
     },
     correctedAt: row.updatedByRole === 'owner' ? version : null,
-    driver: { shortName: live ? shortName(live.name) : DELETED_AUTHOR },
+    driver: { shortName: name || DELETED_AUTHOR },
     id: row.id,
     version,
     ...stored(row),

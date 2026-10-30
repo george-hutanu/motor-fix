@@ -130,9 +130,6 @@ enum RepairSource {
   @@map("repair_source")
 }
 
-// A repair in a car's history: done through MotorFix (its job set) or logged
-// by the owner by hand. `(source = 'motorfix') = (job_id IS NOT NULL)` is a
-// CHECK in the migration. A soft-deleted repair is never shown.
 // Who wrote a repair last: its driver, the named garage's owner, an admin.
 enum RepairUpdater {
   driver
@@ -142,6 +139,9 @@ enum RepairUpdater {
   @@map("repair_updater")
 }
 
+// A repair in a car's history: done through MotorFix (its job set) or logged
+// by the owner by hand. `(source = 'motorfix') = (job_id IS NOT NULL)` is a
+// CHECK in the migration. A soft-deleted repair is never shown.
 model Repair {
   id               String              @id @default(uuid()) @db.Uuid
   carId            String              @map("car_id") @db.Uuid
