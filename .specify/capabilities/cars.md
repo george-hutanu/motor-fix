@@ -17,6 +17,7 @@ features:
   - 1265-car-transfer-accept
   - 409-garage-corrects-repair
   - 1400-garage-corrects-repair-web
+  - 1267-admin-corrects-repair
 ---
 
 # Capability: Cars
@@ -420,17 +421,17 @@ _From 409-garage-corrects-repair._
 
 _From 409-garage-corrects-repair._
 
-### 409-FR-011 — In the same transaction as the row, the system MUST write audit entries through the audit writer (390-FR-001, FR-003): one `update` entry per changed field (`what`, `done_on`, `odometer_km`, `cost_bani`), subject `repair`, old and new values as stored (an empty amount as none), actor the owner's account with role `owner` (390-FR-005), the garage id and the car id on the entry (390-FR-008); the rule, the audit shape and the event (FR-012) MUST be written so an admin actor (ST-1267) can reuse them with role `admin` without a second use case.
+### 1267-FR-006 — The admin's correction MUST run through the same use case as the garage's (409-FR-011: no second use case), generalised by the scope of repairs it may reach: the garage's scope stays as it is (shared, named garage approved, 409-FR-007); the admin's scope is every logged repair not deleted, whatever its sharing, its garage or that garage's status. The row lock, the version check before the values, the unchanged save (409-FR-010), the one transaction and the refusal order (401, 404 for a non-admin, edge validation 400, 404 for the repair, 409 `stale_version`) are the same code; `updated_by` is the admin and `updated_by_role` `admin`.
 
-_From 409-garage-corrects-repair._
+_From 1267-admin-corrects-repair._
 
 ### 409-FR-012 — In the same transaction, the system MUST hand to the event port `repair.updated` with: the repair id, the car id, the car's current owner's account id (the open ownership row's account when it is not deleted, or none), the garage id, the changed field names and `by` = `owner`; audience the car owner's `account` channel and the garage's `garage` channel (MF-26 live updates), so open history and client-repairs screens re-read.
 
 _From 409-garage-corrects-repair._
 
-### 409-FR-016 — The three routes MUST be listed in `infra/observability/inventory.json` with the cars module's existing metrics, logs and traces, one counter `motorfix_repair_corrections_total` by `by` (`owner`; `admin` later) and `outcome` (`corrected`, `unchanged`, `stale`, `not_found`), counting only requests that reach the use case (a 400 or 403 is read from the status codes), the queue `repair-updated` with its counter `motorfix_repair_updated_notices_total` (`built`, `muted`, `skipped`), its log line and the worker queue alerts, one log line per correction with the repair, garage and changed fields (no values), a panel on the cars dashboard, and the alert or why none (a correction is rare and user-driven: no alert, the API error-rate alert covers failures).
+### 1267-FR-010 — The correction counter `motorfix_repair_corrections_total` (409-FR-016) MUST count the admin's corrections with `by` `admin` and the same outcomes (`corrected`, `unchanged`, `stale`, `not_found`); the one log line per correction MUST say an admin made it, naming the repair and the changed fields (no values).
 
-_From 409-garage-corrects-repair._
+_From 1267-admin-corrects-repair._
 
 ### 409-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the list's membership (the six seeds of User Story 2), order and shape; each field corrected alone and together, the amount cleared, the unchanged save; every 400 limit; 403 for a receptionist and a mechanic, 404 for a driver and an admin; every 404 of FR-007; 409 and the concurrent-save race; the delete's 403; the audit entries' values and role; the event's payload and audience and the rollback on failure; REPAIR_UPDATED with the switch on and off, to the current owner after a sale, none when the car has no owner, and once on a redelivered event; the driver's reads with `correctedBy`; the capability table (the owner alone); the migration's backfill (`updated_at` = `created_at`, sharing off); the list's cap and `truncated`. Each test file carries a `// @traces` line naming its `409-FR-<n>` ids.
 
@@ -480,6 +481,50 @@ _From 1400-garage-corrects-repair-web._
 
 _From 1400-garage-corrects-repair-web._
 
+### 1267-FR-001 — `GET /api/v1/admin/accounts/:id/repairs` (capability `admin.users`, the account page's) MUST answer the logged repairs (`source` `logged`, `deleted_at` empty) of the cars the account currently owns (an ownership row with no end, the rule 1265-FR-010 reads ownership by), newest `done_on` first, ties newest `created_at` first, at most the 200 newest with `truncated` true when more exist (as 409-FR-003); it MUST answer 404 `not_found` for an account id that is unknown, malformed or of a deleted account, as the account page does, and 404 to every actor without the capability (401 to a visitor, `ActorGuard` app-wide). Sharing and the named garage's status are not read: the admin sees every logged repair.
+
+_From 1267-admin-corrects-repair._
+
+### 1267-FR-002 — Each list item MUST carry `id`, `doneOn` and `car` (`brandName`, `model`, `year`) and nothing more: not what was done, the odometer, the amount, the garage, the version or the plate (acceptance criterion 1: "only date and car").
+
+_From 1267-admin-corrects-repair._
+
+### 1267-FR-003 — `GET /api/v1/admin/repairs/:id` (capability `admin.users`) MUST answer the repair's content: `id`, `car` (`brandName`, `model`, `year`), `what`, `garageName`, `doneOn`, `odometerKm` (or null), `costBani` (or null), `version` (`updated_at`, sent back with a correction) and `correctedBy` (`garage`, `admin` or null, as 409-FR-015 tells it); it MUST answer 404 `not_found` when the repair does not exist, the id is malformed, the repair is deleted or is not `logged`; never the plate, the driver's full name, phone or e-mail.
+
+_From 1267-admin-corrects-repair._
+
+### 1267-FR-004 — In the same transaction as the read of FR-003 (a failed write answers no content: both commit or neither), the system MUST write one audit entry through the audit writer (390-FR-001): action `open`, subject `repair`, actor the admin's account with role `admin`, the car's id and, when the repair is shared with the garage on MotorFix it names, the garage's id on the entry (an unshared repair's entries carry no garage id), no field and no values; one entry per read, a re-read included; a refused read (404) writes none; the list (FR-001) writes none.
+
+_From 1267-admin-corrects-repair._
+
+### 1267-FR-005 — `PATCH /api/v1/admin/repairs/:id` (capability `admin.users`) MUST correct the repair's `what`, `doneOn`, `odometerKm` and `costBani` with the same body as the garage's correction (`CorrectClientRepairDto`: each field optional, `costBani` nullable, the required `version`, any other field refused 400, the limits of 409-FR-006), and answer the item as FR-003 shapes it (the use case returns the saved row, each route maps it, so no driver block reaches the admin); the car, the named garage and the source are never changed.
+
+_From 1267-admin-corrects-repair._
+
+### 1267-FR-007 — The audit entries of the admin's correction MUST be the garage's (409-FR-011) with actor the admin's account and role `admin`: one `update` entry per changed field, subject `repair`, old and new values as stored, the car's id and, when the repair is shared with the garage on MotorFix it names, the garage's id on the entry (an unshared repair's entries carry no garage id).
+
+_From 1267-admin-corrects-repair._
+
+### 1267-FR-008 — The event MUST be the garage's `repair.updated` (409-FR-012) with `by` `admin`, the garage id when the repair names a garage on MotorFix (else none) and the rest unchanged; its audience MUST be the car's current owner's `account` channel and, when the repair is shared with the garage it names, that garage's `garage` channel (so an open client-repairs screen re-reads), else the owner's channel alone.
+
+_From 1267-admin-corrects-repair._
+
+### 1267-FR-009 — The admin MUST answer 404 `not_found` and write nothing on a correction of a repair that does not exist, is deleted or is not `logged` (a MotorFix repair is corrected on the job, ST-406), and 409 `stale_version` and write nothing when the body's `version` differs from the repair's (409-FR-008's rule and race).
+
+_From 1267-admin-corrects-repair._
+
+### 1267-FR-011 — `DELETE /api/v1/admin/repairs/:id` (capability `admin.users`) MUST answer 403 `forbidden` with the message "Doar șoferul poate șterge reparația" and change nothing, whether or not the repair exists (the refusal reads nothing, so an unknown, malformed or deleted id answers 403 too): an admin never deletes a logged repair (MF-26 rule 8); the garage's delete (409-FR-009) keeps its own message.
+
+_From 1267-admin-corrects-repair._
+
+### 1267-FR-013 — The four routes MUST be listed in `infra/observability/inventory.json` (story ST-1267) with the API's existing metrics, logs and traces and the counter of FR-010; the open read's record is its audit entry, so it adds no counter; no alert of its own (an admin's correction is rare and user-driven; the API error-rate alert covers failures), stated as the reason.
+
+_From 1267-admin-corrects-repair._
+
+### 1267-FR-014 — Tests MUST cover, in Jest on real PostgreSQL and Redis (`*.integration.spec.ts` where the repository is used), each file naming its ids in one whole-line `// @traces` comment: the list's membership (shared, not shared, deleted, MotorFix-sourced, a garage not on MotorFix, a car sold away and one bought), order, the item's three fields and nothing more, the cap and `truncated`, 404 for an unknown, malformed and deleted account; the open read's content and its `open` entry once per read, none on a 404, none from the list, and no content answered when the entry's write fails (rollback); each field corrected alone and together, the amount cleared, the unchanged save; every 400 limit; 404 for each non-admin role on each of the four routes, a non-admin's invalid body included (404 before 400), 401 for a visitor; the 404s of FR-009; 409 and the concurrent-save race; the delete's 403 and message; the audit entries' values, role `admin` and scopes; the event's payload, `by`, audience with and without sharing, and the rollback on failure; REPAIR_UPDATED naming MotorFix in both languages with the switch on and off, to the current owner after a sale, none when the car has no owner, once on a redelivered event; the garage's own list, correction and message unchanged (the scope generalisation changes nothing for the owner); the public-routes list unchanged (every route needs a session).
+
+_From 1267-admin-corrects-repair._
+
 ## Retired
 
 - `089-FR-008` — superseded by `090-FR-006` (2026-10-08)
@@ -499,3 +544,5 @@ _From 1400-garage-corrects-repair-web._
 - `415-FR-003` — superseded by `1265-FR-013` (2026-10-29)
 - `415-FR-004` — superseded by `1265-FR-013` (2026-10-29)
 - `1265-FR-011` — superseded by `409-FR-015` (2026-10-30)
+- `409-FR-011` — superseded by `1267-FR-006` (2026-10-30)
+- `409-FR-016` — superseded by `1267-FR-010` (2026-10-30)
