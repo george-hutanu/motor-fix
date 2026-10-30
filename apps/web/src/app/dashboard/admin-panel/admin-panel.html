@@ -31,7 +31,12 @@
         <span class="tip" role="tooltip" [id]="'mf-admin-tip-' + i" [hidden]="tip() !== tile.label">{{ tile.line }}</span>
       }
       @default {
-        <span class="number">{{ tile.number }}</span>
+        <span class="number">
+          {{ tile.number }}
+          @if (tile.alert) {
+            <span class="alert" aria-hidden="true"></span>
+          }
+        </span>
         @if (tile.line) {
           <span class="line">{{ tile.line }}</span>
         }
@@ -51,4 +56,5 @@
 }
 <mf-admin-growth />
 <mf-admin-demand overview />
+<mf-admin-reviews overview />
 <mf-admin-log />

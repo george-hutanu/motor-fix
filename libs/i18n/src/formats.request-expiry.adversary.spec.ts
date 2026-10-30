@@ -1,4 +1,4 @@
-import { requestExpiry } from './formats';
+import { requestExpiry } from './request-expiry';
 
 const MARK = requestExpiry('not a time', 'ro', new Date());
 const MIN = 60_000;
