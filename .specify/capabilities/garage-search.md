@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-25
+updated: 2026-10-30
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -27,6 +27,7 @@ features:
   - 1196-static-map-first
   - 385-share-garage-link
   - 1193-fast-nav
+  - 1260-open-now-filters
 ---
 
 # Capability: Garage search
@@ -51,13 +52,13 @@ _From 043-brand-first-garage-list._
 
 _From 042-brand-verdict._
 
-### 043-FR-005 — The answer MUST carry two counts worked out once over every garage found, not over the page: how many work on the brand (`counts.worksOn`) and how many do not take it (`counts.doesNotTake`, refusers and unmarked together), both whole numbers; with no approved garage both are zero and the list is empty, with no error.
+### 1260-FR-006 — `total`, `counts.worksOn` and `counts.doesNotTake` MUST count the matching garages only, over every garage found, not over the page (043-FR-005 otherwise unchanged); with no match all three are zero and the list is empty, with no error.
 
-_From 043-brand-first-garage-list._
+_From 1260-open-now-filters._
 
-### 328-FR-006 — The cursor (1356-FR-009) MUST carry the sort it was made under and the boundary garage's value for that sort (its distance in metres exactly as the query computed it, never rounded, or its rate in bani, besides the rating and review count it carries today), so the next page continues the same order and repeats or skips nothing; a cursor presented with a different sort, brand, group or box MUST be refused as `invalid_cursor` (043-FR-006). The cursor stays opaque and unsigned; the query takes it only as base64url (`A-Z a-z 0-9 _ -`) of at most 256 characters: a longer cursor or one with any other character is refused as a bad request (`validation_failed`), and one that does not decode, or decodes to a position that is not a page of this search, answers `invalid_cursor`.
+### 1260-FR-009 — The cursor MUST be bound to the filters it was made under: a cursor presented with another combination of `open_now` and `open_saturday` (one added, one removed) MUST be refused as `invalid_cursor`, as for another sort, brand, group or box (328-FR-006 otherwise unchanged; the cursor stays opaque and unsigned). A cursor made with no filter stays valid with none, so a page read before this story continues unchanged.
 
-_From 328-sort-results._
+_From 1260-open-now-filters._
 
 ### 328-FR-003 — `rating` MUST keep today's order inside each group (267-FR-001): rating high to low with unrated garages after every rated one, then more reviews first, then name A to Z, then id; the rating is the stored one-decimal value (`Decimal(2,1)`), so the order key and the card's number are the same.
 
@@ -135,9 +136,9 @@ _From 267-brand-results._
 
 _From 267-brand-results._
 
-### 269-FR-019 — The pins answer MUST carry `Cache-Control: no-store` and be kept in Redis for 60 seconds under the list's rules, keyed by brand, place, radius and box (267-FR-009), dropped on the same public garage events (267-FR-010), answered from PostgreSQL when Redis is unavailable (267-FR-011); the list's `bbox` joins its cache key.
+### 1260-FR-008 — `open_now` and `open_saturday` MUST be part of the cache key of a page and of the pins (269-FR-019's key, 267-FR-009's rules otherwise unchanged): a filtered answer is never served for another combination of filters, every entry is dropped on the same public garage events and expires in the same 60 seconds, which is the most an "open now" answer may be stale; the key does not carry the instant, so no new entry per minute.
 
-_From 269-map-price-pins._
+_From 1260-open-now-filters._
 
 ### 267-FR-010 — Every cached answer MUST be dropped when a public garage change passes through the API (an approval, suspension, restoration, `garage.updated`, a brand-stance change or a review kind), so a count or card read after it is fresh; 60 seconds is the longest an entry lives either way.
 
@@ -191,9 +192,9 @@ _From 1182-cache-service._
 
 _From 1169-prefetch-intent._
 
-### 269-FR-002 — The answer MUST carry `total` (every garage found, the same number the list's `total` gives for the same parameters) and `pins`, one per garage found, each with `id`, `lat`, `lng`, `rateLei` (whole lei, the hourly labour rate rounded to the nearest leu; null when not set), `stance` (`works_on`, `does_not_take` or `unstated`, read from the garage brand rows as 043-FR-010) and, for a mobile mechanic only, `serviceRadiusKm` (20 when none is set, 229-FR-011). A mobile mechanic's `lat`/`lng` is the centre of its circle rounded to 2 decimals (about 1 km), so the answer never gives its seat (X20c); no name, address, city or other field travels.
+### 1260-FR-007 — The pins answer MUST carry every garage the search finds, as today, each pin with a `matches` boolean: true when the garage meets every set filter, always true with no filter; its `total` MUST equal the list's `total` for the same parameters computed at the same instant (a live difference inside the 60 s cache life is FR-008's stale window), so the matches only (269-FR-002 otherwise unchanged: the pin's fields, the 500 cap by nearness, the mobile mechanic's rounded centre).
 
-_From 269-map-price-pins._
+_From 1260-open-now-filters._
 
 ### 269-FR-003 — The answer MUST hold at most 500 pins (`SEARCH_PINS_MAX`, a named constant in the contracts library); above that the 500 nearest the place, or the box's centre without a place, are answered and `total` still counts every garage found.
 
@@ -705,6 +706,46 @@ _From 385-share-garage-link._
 
 _From 385-share-garage-link._
 
+### 1260-FR-001 — Both `GET /api/v1/search/garages` (the list, with or without `ids`) and `GET /api/v1/search/garages/pins` MUST accept two optional filters, `open_now` and `open_saturday`, each with the value `1` only (the text as written); any other value (`true`, `0`, `yes`), an empty value (`open_now=`, a bare `?open_now` included) or a repeated key (it arrives as a list) answers 400 `validation_failed` naming the parameter, and a filter left out does not filter. Validation runs before the cursor is read: a request with both a bad filter and a stale cursor answers `validation_failed`.
+
+_From 1260-open-now-filters._
+
+### 1260-FR-002 — With `open_now=1`, a garage MUST match only when the status function of #175 (`openStatus` in the contracts library) would answer `open` at the request instant on the Europe/Bucharest wall clock: today (the Bucharest date) is neither a legal holiday (`public_holiday`) nor one of the garage's closed days (`garage_closed_day`), and the wall-clock time falls inside one of today's intervals of its weekly hours, start inclusive, end exclusive (`start <= now < end`); a lunch break, the time before the first interval and after the last do not match, and a garage without hours for today never matches (`{}`, the day missing or not a list). The query matches the stored jsonb intervals as the write path validated them; it does not re-check the week's shape (overlap, format) in SQL.
+
+_From 1260-open-now-filters._
+
+### 1260-FR-003 — The open-now rule MUST be evaluated inside the one query the search runs (not by reading every garage and filtering in the API), from one instant per request: the Bucharest date, weekday and `HH:MM` worked out once in the API from the same shared helpers the status function uses, so the query and `openStatus` cannot disagree; a test MUST prove the agreement over the status function's own case table, moved from `open-status.spec.ts` into `libs/contracts/src/clock-cases.testing.ts` so the unit spec and the integration spec import the same cases (open, before opening, after closing, a lunch break, Saturday with hours, Sunday closed, a legal holiday, a garage closed day, the nights of the March and October clock changes, no hours).
+
+_From 1260-open-now-filters._
+
+### 1260-FR-004 — With `open_saturday=1`, a garage MUST match only when its weekly hours hold at least one Saturday interval; a closed day on a Saturday or a holiday Saturday does not change it, and a garage without a valid week never matches.
+
+_From 1260-open-now-filters._
+
+### 1260-FR-005 — The filters MUST combine by AND, inside the one query, within each brand group; the groups and the chosen sort are kept (the garages that take the brand first, then those that refuse it or have not marked it, each in its sort's order), and a mobile mechanic is filtered on its own hours like any garage. The list's items are the matches only.
+
+_From 1260-open-now-filters._
+
+### 1260-FR-010 — A filter change MUST write no search-log row: the row is written only for `log=1`, as today, and the filters are not part of the row; the web (title 2) sends `log=1` on a new search only, never on a filter change. A filtered first page with `log=1` counts as one search, as today; a first page carrying any filter without `log=1` increments neither the search counter nor the sort-change counter: a deliberate change to the sort-change rule, so `sort=distance&open_now=1` without `log=1` counts nothing (the web cannot tell a filter toggle from a sort change otherwise).
+
+_From 1260-open-now-filters._
+
+### 1260-FR-011 — The two parameters and `matches` MUST be documented in the OpenAPI document with DTOs from the contracts library, validated at the edge, and the web client regenerated from it; the routes stay public and the public routes list is unchanged. The shape MUST be the one ST-1261 adds its parameters to (`specs/1261-result-filters/contracts/search-filters.md`): the same `matches` field on `GaragePinDto`, the same filtered `total` and counts, the same cursor and cache binding, so whichever story merges second adds only its own parameters and conditions; nothing of ST-1261's is edited here.
+
+_From 1260-open-now-filters._
+
+### 1260-FR-012 — This story reads `garage.hours`, `garage_closed_day` and `public_holiday` as they are stored today and changes none of their shapes (ST-1246 edits hours in place beside this story); it writes nothing: no audit entry, no event, no live update.
+
+_From 1260-open-now-filters._
+
+### 1260-FR-013 — Jest on real PostgreSQL and Redis MUST cover: `open_now` for each case of FR-003's table at a fixed instant; `open_saturday` with and without Saturday hours, with a closed Saturday and a holiday Saturday; AND across the two filters; the groups and each sort kept; `total`, the counts and `matches` on the pins; the next page under filters and `invalid_cursor` for a cursor of other filters; `ids` mode; `bbox` mode; 400 for every other value of FR-001; no search-log row without `log=1` and one with it; the cache key telling the filter combinations apart and the 60 s life; a mobile mechanic. The DTO's validation is covered in the contracts library's unit tests, before the code (Principle II).
+
+_From 1260-open-now-filters._
+
+### 1260-FR-014 — Observability: no new endpoint, service, queue or outside call; the existing search and pins counters and the latency histogram cover the filtered calls; the PR's Observability section states this.
+
+_From 1260-open-now-filters._
+
 ## Retired
 
 - `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
@@ -740,3 +781,7 @@ _From 385-share-garage-link._
 - `269-FR-013` — superseded by `1196-FR-012` (2026-10-25)
 - `269-FR-011` — superseded by `1196-FR-016` (2026-10-25)
 - `1356-FR-008` — superseded by `1193-FR-003` (2026-10-25)
+- `043-FR-005` — superseded by `1260-FR-006` (2026-10-30)
+- `269-FR-002` — superseded by `1260-FR-007` (2026-10-30)
+- `269-FR-019` — superseded by `1260-FR-008` (2026-10-30)
+- `328-FR-006` — superseded by `1260-FR-009` (2026-10-30)
