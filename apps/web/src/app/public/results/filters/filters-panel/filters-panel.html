@@ -1,0 +1,12 @@
+<ul>
+  @for (row of rows; track row.key) {
+    <li>
+      <label [for]="'mf-filter-' + row.key">{{ row.label | t }}</label>
+      <hlm-switch
+        [inputId]="'mf-filter-' + row.key"
+        [checked]="filters()[row.key]"
+        (checkedChange)="toggle(row.key)"
+      />
+    </li>
+  }
+</ul>

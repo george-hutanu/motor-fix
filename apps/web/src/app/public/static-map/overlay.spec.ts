@@ -242,3 +242,25 @@ describe('quietLabels, the rates that give way', () => {
     ).toEqual(new Set(['n']));
   });
 });
+
+// @traces 1398-FR-010
+describe('overlayOf, a garage that misses the filters', () => {
+  it('says on each pin and circle whether its garage meets the filters', () => {
+    const drawn = overlayOf(
+      answer([
+        pinOf(1, { matches: false }),
+        pinOf(2),
+        pinOf(3, { matches: false, serviceRadiusKm: 4 }),
+      ]),
+      undefined,
+      VIEW,
+      BOX,
+    );
+
+    expect(drawn.pins.map(({ id, matches }) => ({ id, matches }))).toEqual([
+      { id: 'g-1', matches: false },
+      { id: 'g-2', matches: true },
+    ]);
+    expect(drawn.circles[0]).toMatchObject({ id: 'g-3', matches: false });
+  });
+});

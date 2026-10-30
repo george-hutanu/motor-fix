@@ -75,6 +75,7 @@ const fixedOf = (answer: GaragePinsDto | undefined) =>
 
 const propertiesOf = (pin: GaragePinDto) => ({
   id: pin.id,
+  matches: pin.matches,
   rate: pin.rateLei === null ? '' : String(pin.rateLei),
   stance: pin.stance,
 });
@@ -131,6 +132,14 @@ export function drawPins(
     ['!', ['has', 'point_count']],
     isLit(),
   ];
+  // A garage outside the filters stays on the map at 40 %, tappable, and is
+  // lit at full strength when pointed (the lit layers ignore it).
+  const dim = (on: number, off = 0.4): ExpressionSpecification => [
+    'case',
+    ['get', 'matches'],
+    on,
+    off,
+  ];
   const lamp: ExpressionSpecification = [
     'match',
     ['get', 'stance'],
@@ -143,13 +152,17 @@ export function drawPins(
   const areaLayers: LayerSpecification[] = [
     {
       id: 'areas-fill',
-      paint: { 'fill-color': lamp, 'fill-opacity': 0.12 },
+      paint: { 'fill-color': lamp, 'fill-opacity': dim(0.12, 0.048) },
       source: AREAS,
       type: 'fill',
     },
     {
       id: 'areas-line',
-      paint: { 'line-color': lamp, 'line-width': 1.5 },
+      paint: {
+        'line-color': lamp,
+        'line-opacity': dim(1),
+        'line-width': 1.5,
+      },
       source: AREAS,
       type: 'line',
     },
@@ -180,6 +193,7 @@ export function drawPins(
         'text-color': ink,
         'text-halo-color': halo,
         'text-halo-width': 1.5,
+        'text-opacity': dim(1),
       },
       source: AREAS,
       type: 'symbol',
@@ -215,8 +229,10 @@ export function drawPins(
       id: 'pins-dot',
       paint: {
         'circle-color': lamp,
+        'circle-opacity': dim(1),
         'circle-radius': 7,
         'circle-stroke-color': halo,
+        'circle-stroke-opacity': dim(1),
         'circle-stroke-width': 2,
       },
       source: SOURCE,
@@ -236,6 +252,7 @@ export function drawPins(
         'text-color': ink,
         'text-halo-color': halo,
         'text-halo-width': 1.5,
+        'text-opacity': dim(1),
       },
       source: SOURCE,
       type: 'symbol',
