@@ -83,8 +83,8 @@ export class PricesView {
     () => garageOf(this.session.shown())?.role === 'owner',
   );
   protected readonly editing = signal(false);
-  // The job whose hide or show is on its way, and the one whose last failed.
-  protected readonly busy = signal<string | null>(null);
+  // The jobs whose hide or show is on its way, and the one whose last failed.
+  protected readonly busy = signal<ReadonlySet<string | undefined>>(new Set());
   protected readonly failed = signal<string | null>(null);
   // Its own garage's list changes, and a catalogue decision about a job (whose
   // subject is the job, not the garage) may change a job's state.
@@ -102,6 +102,27 @@ export class PricesView {
       retryAfter: 60_000,
     },
   );
+
+  // Each hide or show pressed, drawn over its row until the list is read
+  // again: a re-read is newer than the press, whatever the save answers. A
+  // saved one stays drawn when the re-read after it fails.
+  private readonly pending = signal<
+    ReadonlyMap<string, { reads: number; visible: boolean }>
+  >(new Map());
+  protected readonly items = computed(() => {
+    const reads = this.view.reads();
+    const pending = this.pending();
+    return (this.view.value()?.items ?? []).map((row) => {
+      const press = row.priceId ? pending.get(row.priceId) : undefined;
+      if (press?.reads !== reads) return row;
+      return {
+        ...row,
+        public: press.visible,
+        reason: press.visible ? undefined : ('hidden_by_garage' as const),
+        visible: press.visible,
+      };
+    });
+  });
 
   constructor() {
     void this.i18n.enter('garage');
@@ -194,21 +215,39 @@ export class PricesView {
   }
 
   protected async toggle(row: EditableRow) {
-    if (this.busy()) return;
-    this.busy.set(row.priceId);
+    const { priceId } = row;
+    if (this.busy().has(priceId)) return;
+    const visible = row.visible === false;
+    this.busy.update((busy) => new Set(busy).add(priceId));
     this.failed.set(null);
+    const press = { reads: this.view.reads(), visible };
+    this.pending.update((pending) => new Map(pending).set(priceId, press));
     try {
       await this.api.priceListControllerSetRange({
-        body: { visible: row.visible === false },
+        body: { visible },
         garageId: this.garageId(),
-        priceId: row.priceId,
+        priceId,
       });
-      this.view.reload();
+      await this.view.reload();
+      if (this.view.reads() !== press.reads) this.drop(priceId);
     } catch {
-      this.failed.set(row.priceId);
+      this.drop(priceId);
+      this.failed.set(priceId);
     } finally {
-      this.busy.set(null);
+      this.busy.update((busy) => {
+        const left = new Set(busy);
+        left.delete(priceId);
+        return left;
+      });
     }
+  }
+
+  private drop(priceId: string) {
+    this.pending.update((pending) => {
+      const left = new Map(pending);
+      left.delete(priceId);
+      return left;
+    });
   }
 
   protected remove(row: EditableRow) {

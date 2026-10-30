@@ -837,3 +837,254 @@ describe('BellStore: the count the stream carries', () => {
     expect(store.count()).toBe(4);
   });
 });
+
+const deferred = <T>() => {
+  let resolve: (value: T) => void = () => undefined;
+  let reject: (reason: unknown) => void = () => undefined;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, reject, resolve };
+};
+
+describe('BellStore: a read shows before the server answers', () => {
+  // @traces 1315-FR-003 1315-FR-008
+  // @traces 1315-FR-013 1315-FR-015
+  it('shows the row read and the count one lower at once, with one write', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const answer = deferred<NotificationDto>();
+    api.bellControllerRead.mockReturnValue(answer.promise);
+
+    const reading = store.read('a');
+    void store.read('a');
+
+    expect(store.items().find((n) => n.id === 'a')?.readAt).not.toBeNull();
+    expect(store.count()).toBe(1);
+    expect(api.bellControllerRead).toHaveBeenCalledTimes(1);
+    answer.resolve(row('a', { readAt: '2026-10-05T09:00:00.000Z' }));
+    await reading;
+  });
+
+  // @traces 1315-FR-003
+  it('puts the row and the count back and says so once when the read fails', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const answer = deferred<NotificationDto>();
+    api.bellControllerRead.mockReturnValue(answer.promise);
+
+    const reading = store.read('a');
+    expect(store.count()).toBe(1);
+    answer.reject(new Error('offline'));
+    await reading;
+
+    expect(store.items().find((n) => n.id === 'a')?.readAt).toBeNull();
+    expect(store.count()).toBe(2);
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1315-FR-003
+  it('keeps a newer count shown while the read was out when the read fails', async () => {
+    const { fixture, store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const answer = deferred<NotificationDto>();
+    api.bellControllerRead.mockReturnValue(answer.promise);
+
+    const reading = store.read('a');
+    events.next({
+      at: '2026-10-05T10:00:00.000Z',
+      id: 'c',
+      kind: 'notification.created',
+      unreadCount: 5,
+    });
+    await settle(fixture);
+    answer.reject(new Error('offline'));
+    await reading;
+
+    expect(store.count()).toBe(5);
+  });
+
+  // @traces 1315-FR-003 1315-FR-005
+  it('keeps the read time a reloaded page brought when the read then fails', async () => {
+    const { fixture, store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const answer = deferred<NotificationDto>();
+    api.bellControllerRead.mockReturnValue(answer.promise);
+    api.bellControllerList.mockResolvedValue({
+      items: [row('a', { readAt: '2026-10-05T09:30:00.000Z' }), row('b')],
+      nextCursor: null,
+    });
+
+    const reading = store.read('a');
+    events.next({
+      at: '2026-10-05T10:00:00.000Z',
+      id: 'c',
+      kind: 'notification.created',
+    });
+    await settle(fixture);
+    answer.reject(new Error('offline'));
+    await reading;
+
+    expect(store.items().find((n) => n.id === 'a')?.readAt).toBe(
+      '2026-10-05T09:30:00.000Z',
+    );
+  });
+
+  // @traces 1315-FR-003 1315-FR-005
+  it('keeps a row shown read while a reloaded page still lists it unread', async () => {
+    const { fixture, store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const answer = deferred<NotificationDto>();
+    api.bellControllerRead.mockReturnValue(answer.promise);
+
+    const reading = store.read('a');
+    events.next({
+      at: '2026-10-05T10:00:00.000Z',
+      id: 'c',
+      kind: 'notification.created',
+    });
+    await settle(fixture);
+
+    expect(store.items().find((n) => n.id === 'a')?.readAt).not.toBeNull();
+    answer.resolve(row('a', { readAt: '2026-10-05T09:00:00.000Z' }));
+    await reading;
+  });
+
+  // @traces 1315-FR-004 1315-FR-008
+  it('shows every row read and the count at zero at once on mark all, with one write', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const answer = deferred<undefined>();
+    api.bellControllerReadAll.mockReturnValue(answer.promise);
+
+    const reading = store.readAll();
+
+    expect(store.items().every((n) => n.readAt !== null)).toBe(true);
+    expect(store.count()).toBe(0);
+    expect(api.bellControllerReadAll).toHaveBeenCalledTimes(1);
+    answer.resolve(undefined);
+    await reading;
+  });
+
+  // @traces 1315-FR-004
+  it('puts the rows and the count back after a failed mark all, keeping rows read before it', async () => {
+    const { store } = await render(2, [
+      row('a'),
+      row('b'),
+      row('c', { readAt: '2026-10-05T07:00:00.000Z' }),
+    ]);
+    await store.load();
+    const answer = deferred<undefined>();
+    api.bellControllerReadAll.mockReturnValue(answer.promise);
+
+    const reading = store.readAll();
+    answer.reject(new Error('offline'));
+    await reading;
+
+    const readAt = (id: string) =>
+      store.items().find((n) => n.id === id)?.readAt;
+    expect(readAt('a')).toBeNull();
+    expect(readAt('b')).toBeNull();
+    expect(readAt('c')).toBe('2026-10-05T07:00:00.000Z');
+    expect(store.count()).toBe(2);
+    expect(toast).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1315-FR-003
+  it('puts both rows back in the count when two reads out at once both fail', async () => {
+    const { store } = await render(3, [row('a'), row('b'), row('c')]);
+    await store.load();
+    api.bellControllerRead.mockRejectedValue(new Error('offline'));
+
+    await Promise.all([store.read('a'), store.read('b')]);
+
+    expect(store.count()).toBe(3);
+  });
+
+  // @traces 1315-FR-004 1315-FR-008
+  it('sends one mark all for two presses and puts the whole count back when it fails', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const answer = deferred<undefined>();
+    api.bellControllerReadAll.mockReturnValue(answer.promise);
+
+    const reading = store.readAll();
+    await store.readAll();
+    answer.reject(new Error('offline'));
+    await reading;
+
+    expect(api.bellControllerReadAll).toHaveBeenCalledTimes(1);
+    expect(store.count()).toBe(2);
+  });
+
+  // @traces 1315-FR-003 1315-FR-004
+  it('keeps a row read when its own read fails after a mark all that went through', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const own = deferred<NotificationDto>();
+    api.bellControllerRead.mockReturnValueOnce(own.promise);
+
+    const reading = store.read('a');
+    await store.readAll();
+    own.reject(new Error('offline'));
+    await reading;
+
+    expect(store.items().every((n) => n.readAt !== null)).toBe(true);
+    expect(store.count()).toBe(0);
+  });
+
+  // @traces 1315-FR-003 1315-FR-004
+  it('puts back the row a read had taken when the mark all after it fails', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const own = deferred<NotificationDto>();
+    api.bellControllerRead.mockReturnValueOnce(own.promise);
+    api.bellControllerReadAll.mockRejectedValueOnce(new Error('offline'));
+
+    const reading = store.read('a');
+    await store.readAll();
+    own.reject(new Error('offline'));
+    await reading;
+
+    expect(store.items().every((n) => n.readAt === null)).toBe(true);
+    expect(store.count()).toBe(2);
+  });
+
+  // @traces 1315-FR-004 1315-FR-005
+  it('keeps the rows a mark all read when a page asked before it answers after it', async () => {
+    const { fixture, store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const older = deferred<{ items: NotificationDto[]; nextCursor: null }>();
+    api.bellControllerList.mockReturnValueOnce(older.promise);
+    events.next({
+      at: '2026-10-05T10:00:00.000Z',
+      id: 'c',
+      kind: 'notification.created',
+    });
+
+    await store.readAll();
+    older.resolve({ items: [row('a'), row('b')], nextCursor: null });
+    await settle(fixture);
+
+    expect(store.items().every((n) => n.readAt !== null)).toBe(true);
+  });
+});
+
+describe('BellStore: first pages that answer out of order', () => {
+  // @traces 1315-FR-005
+  it('keeps the newer first page when an older one answers after it', async () => {
+    const { store } = await render(0);
+    const older = deferred<{ items: NotificationDto[]; nextCursor: null }>();
+    api.bellControllerList
+      .mockReturnValueOnce(older.promise)
+      .mockResolvedValueOnce({ items: [row('new')], nextCursor: null });
+
+    const first = store.load();
+    await store.load();
+    older.resolve({ items: [row('old')], nextCursor: null });
+    await first;
+
+    expect(store.items().map((n) => n.id)).toEqual(['new']);
+  });
+});
