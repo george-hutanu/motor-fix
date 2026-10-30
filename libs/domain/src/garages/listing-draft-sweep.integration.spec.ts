@@ -304,6 +304,62 @@ describe('a copy of a live garage', () => {
   });
 });
 
+// @traces 1273-reapply-after-rejection-FR-003
+describe('a copy of a rejected garage', () => {
+  async function rejectedCopy() {
+    const garage = await prisma.garage.create({
+      data: { name: 'Service Popescu', slug: 'service-popescu' },
+    });
+    const file = await prisma.verificationFile.create({
+      data: { garageId: garage.id, reasonCode: 'address', status: 'rejected' },
+    });
+    const copy = await draft(daysAgo(120), {
+      data: { files: ['garage-photos/a.jpg'] },
+      verificationFileId: file.id,
+    });
+    return { copy, file, garage };
+  }
+  const left = (id: string) =>
+    prisma.listingDraft.findUnique({ where: { id } });
+
+  it('is kept while its file is the newest and still rejected', async () => {
+    const { copy } = await rejectedCopy();
+
+    await sweep.run(NOW);
+
+    expect(sent).toEqual([]);
+    expect(deleted).toEqual([]);
+    await expect(left(copy.id)).resolves.toMatchObject({
+      remindedAt: null,
+      status: 'open',
+    });
+  });
+
+  it('goes once a newer file follows the rejected one', async () => {
+    const { copy, file, garage } = await rejectedCopy();
+    await prisma.verificationFile.create({
+      data: { garageId: garage.id, previousFileId: file.id },
+    });
+
+    await sweep.run(NOW);
+
+    await expect(left(copy.id)).resolves.toBeNull();
+    expect(deleted).toEqual(['garage-photos/a.jpg']);
+  });
+
+  it('goes once the rejected file is reopened', async () => {
+    const { copy, file } = await rejectedCopy();
+    await prisma.verificationFile.update({
+      data: { status: 'in_review' },
+      where: { id: file.id },
+    });
+
+    await sweep.run(NOW);
+
+    await expect(left(copy.id)).resolves.toBeNull();
+  });
+});
+
 // @traces 116-FR-036
 describe('the reminder e-mail and its queue', () => {
   let refusals = 0;
