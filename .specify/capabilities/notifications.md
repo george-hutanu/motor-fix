@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-29
+updated: 2026-10-30
 features:
   - 194-email-sending
   - 195-message-templates
@@ -60,6 +60,7 @@ features:
   - 177-reported-reviews
   - 1254-assistant-approvals
   - 277-car-status-alerts
+  - 409-garage-corrects-repair
 ---
 
 # Capability: Notifications
@@ -1071,6 +1072,14 @@ _From 277-car-status-alerts._
 ### 277-FR-009 — Tests, written first: Jest unit tests of both templates in both languages (actor by mechanic, by garage with `team_mechanics` off, by garage with no mechanic; car by brand and model, no plate); integration tests of the fan-out on PostgreSQL and Valkey for each acceptance scenario of User Stories 1 and 2 (one message per event, muted JOB_STARTED sends nothing outside, JOB_READY ignores the mute and quiet hours, no SMS, WhatsApp when chosen, redelivery builds once, reopened job sends no JOB_READY, cancelled or missing job sends no JOB_STARTED, pause and resume send nothing) and FR-006's test of BOOKING_CONFIRMED; the Playwright flow of the brief is optional and not owed by this story (Assumptions). Test files carry `// @traces 277-car-status-alerts-FR-<n>` lines.
 
 _From 277-car-status-alerts._
+
+### 409-FR-013 — The notifications module MUST consume `repair.updated` with `by` other than `driver` and notify REPAIR_UPDATED to the owner account the event names (none → nothing), once per event (a redelivered event writes nothing, as the existing fan-outs do); the bell row is always written and its link opens the driver's cars (`bell.link.ts`, unchanged), while the outside channels (e-mail, push, WhatsApp) honour the driver's `reviews_history` switch as the catalogue already states (the existing `NotificationsService.notify` writes the bell row for a muted recipient and skips only the outside channels, `libs/domain/src/notifications/notifications.service.ts:194-201`; no catalogue change).
+
+_From 409-garage-corrects-repair._
+
+### 409-FR-014 — The REPAIR_UPDATED message (bell body, e-mail, push, WhatsApp) MUST name the garage ("Garaj Nordic a corectat o reparație din istoricul VW Golf 2015" / "Garaj Nordic corrected a repair in VW Golf 2015's history") in the recipient's language, the texts in the notifications module's own files as the other kinds keep theirs; the existing bell title stays.
+
+_From 409-garage-corrects-repair._
 
 ## Retired
 

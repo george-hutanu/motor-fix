@@ -271,3 +271,14 @@ describe('type scale on a phone', () => {
     expect(tablet).toMatch(/\.stage \{\s*font-size: var\(--mf-size-label\);/);
   });
 });
+
+// PR #636 lap 1: the list's stage chip was padded 2px 8px, off the 4 px grid.
+describe('the jobs list’s spacing', () => {
+  const css = readFileSync(join(__dirname, 'jobs-view.css'), 'utf8');
+
+  it('pads and spaces on the 4 px grid', () => {
+    for (const [, value] of css.matchAll(/(?:gap|padding[\w-]*):\s*([^;]+);/g))
+      for (const px of value.match(/\d+(?:\.\d+)?px/g) ?? [])
+        expect(Number.parseFloat(px) % 4).toBe(0);
+  });
+});
