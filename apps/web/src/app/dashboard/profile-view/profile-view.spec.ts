@@ -333,6 +333,20 @@ describe('Profilul service-ului: the owner edits in place', () => {
     );
   });
 
+  it('keeps every edit control quiet, a ghost button rather than a bordered one (design.md)', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    const controls = all(element, `${PUBLIC} button[data-edit]`);
+    expect(controls.length).toBeGreaterThan(0);
+    for (const control of controls) {
+      expect(control.classList).toContain('spartan-button-variant-ghost');
+      expect(control.classList).not.toContain(
+        'spartan-button-variant-secondary',
+      );
+    }
+  });
+
   it('keeps the hours control for an owner who never sent her hours', async () => {
     const { element, settle } = await render(async () => answer({ hours: {} }));
     await settle();

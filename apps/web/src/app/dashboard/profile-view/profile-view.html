@@ -14,7 +14,7 @@
           </li>
           @if (legalCheck()) {
             <li class="edit">
-              <button hlmBtn variant="secondary" type="button" data-edit="area" [attr.aria-label]="editLabel('area')" (click)="edit('area')">{{ 'garage.profile.edit.control' | t }}</button>
+              <button hlmBtn variant="ghost" type="button" data-edit="area" [attr.aria-label]="editLabel('area')" (click)="edit('area')">{{ 'garage.profile.edit.control' | t }}</button>
             </li>
           }
         } @else if (address(garage)) {
@@ -29,7 +29,7 @@
         }
         @if (legalCheck()) {
           <li class="edit">
-            <button hlmBtn variant="secondary" type="button" data-edit="texts" [attr.aria-label]="editLabel('texts')" (click)="edit('texts')">{{ 'garage.profile.edit.control' | t }}</button>
+            <button hlmBtn variant="ghost" type="button" data-edit="texts" [attr.aria-label]="editLabel('texts')" (click)="edit('texts')">{{ 'garage.profile.edit.control' | t }}</button>
           </li>
         }
         @if (hours().length) {
@@ -43,7 +43,7 @@
         }
         @if (legalCheck()) {
           <li class="edit">
-            <button hlmBtn variant="secondary" type="button" data-edit="hours" [attr.aria-label]="editLabel('hours')" (click)="edit('hours')">{{ 'garage.profile.edit.control' | t }}</button>
+            <button hlmBtn variant="ghost" type="button" data-edit="hours" [attr.aria-label]="editLabel('hours')" (click)="edit('hours')">{{ 'garage.profile.edit.control' | t }}</button>
           </li>
         }
         @if (garage.phone) {
@@ -53,7 +53,7 @@
         }
         @if (legalCheck()) {
           <li class="edit">
-            <button hlmBtn variant="secondary" type="button" data-edit="contact" [attr.aria-label]="editLabel('contact')" (click)="edit('contact')">{{ 'garage.profile.edit.control' | t }}</button>
+            <button hlmBtn variant="ghost" type="button" data-edit="contact" [attr.aria-label]="editLabel('contact')" (click)="edit('contact')">{{ 'garage.profile.edit.control' | t }}</button>
           </li>
         }
       </ul>
