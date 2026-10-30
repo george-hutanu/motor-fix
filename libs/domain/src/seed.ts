@@ -1263,8 +1263,8 @@ async function priceList(db: Client) {
 
 // Atelier Test's price list, one row in each state the owner's list shows:
 // on the profile, hidden by the owner, and hidden for want of a top price, so
-// the QA sweep's garage account has rows to read and toggle. Set once: an
-// owner's later edit is never put back.
+// the QA sweep's garage account has rows to read and toggle. An edited row
+// is kept; one the owner deleted returns on the next run.
 const TEST_PRICES = [
   ['diagnosis', 15000, 22000, true],
   ['timing-chain', 420000, 680000, false],
