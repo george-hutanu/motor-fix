@@ -10,7 +10,8 @@ import { test } from './fixtures.js';
 // open round the clock every day, Saturday included, and one has no hours; at
 // the second place only a garage without hours stands. "Open now" is the
 // API's verdict on its own clock, so the seed holds at any instant but a legal
-// holiday, which the file skips.
+// holiday, when the calendar closes every garage: then the file asserts that
+// verdict, the filtered empty state, instead of the open garage.
 // @traces 1398-FR-001 1398-FR-002 1398-FR-003 1398-FR-004 1398-FR-006 1398-FR-007 1398-FR-009 1398-FR-010 1398-FR-011 1398-FR-015
 test.describe('filtering the Results page @seeded @database', () => {
   test.describe.configure({ mode: 'serial' });
@@ -43,6 +44,7 @@ test.describe('filtering the Results page @seeded @database', () => {
     page.getByRole('list', { name: 'Service‑uri găsite' }).getByRole('heading');
   const opener = (page: Page) =>
     page.locator('.brands .filters button.filters-open');
+  const nothing = 'Niciun service nu are tot ce ai ales';
   const chip = (page: Page, name: string) =>
     page.getByRole('button', { name: `Scoate filtrul ${name}` });
 
@@ -82,10 +84,6 @@ test.describe('filtering the Results page @seeded @database', () => {
     }
   });
 
-  test.beforeEach(() => {
-    test.skip(holiday, 'today is a legal holiday: no garage is open now');
-  });
-
   test.afterAll(async () => {
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [ids]);
     await deleteBrand(db, brandId);
@@ -110,14 +108,19 @@ test.describe('filtering the Results page @seeded @database', () => {
     await expect(page).toHaveURL(/open_now=1/);
     await page.keyboard.press('Escape');
 
-    await expect(cards(page)).toHaveCount(1);
-    await expect(cards(page).first()).toHaveText(`Deschis ${stamp}`);
     await expect(opener(page)).toHaveText('Filtre · 1');
     await expect(chip(page, 'Deschis acum')).toBeVisible();
-    await expect(page.locator('.summary .tally')).toContainText(
-      '2 service‑uri găsite · 1 cu filtrele alese',
-    );
-    await expect(page.locator('mf-static-map .pin.dim')).toHaveCount(1);
+    if (holiday) {
+      await expect(page.getByRole('heading', { name: nothing })).toBeVisible();
+      await expect(page.locator('mf-static-map .pin.dim')).toHaveCount(2);
+    } else {
+      await expect(cards(page)).toHaveCount(1);
+      await expect(cards(page).first()).toHaveText(`Deschis ${stamp}`);
+      await expect(page.locator('.summary .tally')).toContainText(
+        '2 service‑uri găsite · 1 cu filtrele alese',
+      );
+      await expect(page.locator('mf-static-map .pin.dim')).toHaveCount(1);
+    }
     const after = searched.slice(before);
     expect(after.length).toBeGreaterThan(0);
     expect(after.filter((url) => /[?&]log=1/.test(url))).toEqual([]);
@@ -127,7 +130,9 @@ test.describe('filtering the Results page @seeded @database', () => {
     page,
   }) => {
     await ready(page, opened(first, '&open_now=1&open_saturday=1'));
-    await expect(cards(page)).toHaveCount(1);
+    if (holiday)
+      await expect(page.getByRole('heading', { name: nothing })).toBeVisible();
+    else await expect(cards(page)).toHaveCount(1);
     await expect(opener(page)).toHaveText('Filtre · 2');
     await expect(chip(page, 'Deschis acum')).toBeVisible();
     await expect(chip(page, 'Deschis sâmbăta')).toBeVisible();
@@ -149,11 +154,7 @@ test.describe('filtering the Results page @seeded @database', () => {
   }) => {
     await ready(page, opened(second, '&open_now=1'));
 
-    await expect(
-      page.getByRole('heading', {
-        name: 'Niciun service nu are tot ce ai ales',
-      }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: nothing })).toBeVisible();
     await expect(page.locator('mf-static-map .pin.dim')).toHaveCount(1);
 
     await page.getByRole('button', { name: 'Scoate filtrele' }).click();

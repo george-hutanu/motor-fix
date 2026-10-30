@@ -14,7 +14,7 @@ export interface Spot {
   y: number;
 }
 
-export interface OverlayPin extends Spot {
+interface OverlayPin extends Spot {
   id: string;
   // False for a garage outside the driver's filters, drawn dimmed.
   matches: boolean;

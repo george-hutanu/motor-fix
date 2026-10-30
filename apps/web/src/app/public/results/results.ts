@@ -60,6 +60,7 @@ import {
   filtersIn,
   unfiltered,
 } from './filters/filters';
+import type { FiltersPanelData } from './filters/filters-panel/filters-panel';
 import { ResultCard } from './result-card/result-card';
 import { type PinCard, ResultsMap } from './results-map/results-map';
 import { ResultsMemory } from './results-memory/results-memory';
@@ -1023,7 +1024,7 @@ export class Results {
 
   // The panel, loaded on the first tap; each switch writes the bar at once.
   protected async openFilters() {
-    await this.overlays.open(
+    await this.overlays.open<never, FiltersPanelData>(
       () =>
         import('./filters/filters-panel/filters-panel').then(
           (m) => m.FiltersPanel,
