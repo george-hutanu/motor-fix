@@ -271,7 +271,7 @@ const moreRequests = () =>
 const resubmissions = () =>
   counter(
     'motorfix_verification_resubmissions_total',
-    'Verification files sent again after a request for more',
+    'Verification sendings after a request for more or a rejection, by the decision they follow',
   );
 const reportDecisions = () =>
   counter(
@@ -538,8 +538,12 @@ export function countMoreRequest() {
   moreRequests().add(1);
 }
 
-export function countResubmission() {
-  resubmissions().add(1);
+// The decision a sending again follows: a request for more, sent back on
+// the same file, or a rejection, answered with a new file.
+type ResubmissionAfter = 'more_requested' | 'rejected';
+
+export function countResubmission(after: ResubmissionAfter) {
+  resubmissions().add(1, { after });
 }
 
 export function countReportDecision(outcome: ReportDecisionOutcome) {
@@ -761,7 +765,9 @@ const STARTS: Record<
     [decisionRefusals, each('reason', DECISION_REFUSAL_REASONS)],
     [reopenings, each('role', REOPENING_ROLES)],
     [moreRequests, [{}]],
-    [resubmissions, [{}]],
+    // A sending after a rejection starts with its first count: a few a
+    // month, and the 150-series budget has no room for it at 0.
+    [resubmissions, [{ after: 'more_requested' }]],
     [reportDecisions, each('outcome', REPORT_DECISION_OUTCOMES)],
     [notifications, [{ channel: 'in-app' }]],
     [jobSteps, each('action', STEP_ACTIONS)],

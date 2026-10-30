@@ -36,11 +36,19 @@ const keysOf = (data: unknown): string[] => {
 };
 
 // The open drafts the sweep deletes: a first listing untouched for 90 days,
-// and a copy of a live garage once its file no longer asks for more.
+// and a copy of a live garage once its file no longer asks for more, nor is
+// the garage's newest file and rejected.
 const expiredWhere = (cutoff: Date): Prisma.ListingDraftWhereInput => ({
   OR: [
     { updatedAt: { lte: cutoff }, verificationFileId: null },
-    { verificationFile: { status: { not: 'more_requested' } } },
+    {
+      verificationFile: {
+        OR: [
+          { status: { notIn: ['more_requested', 'rejected'] } },
+          { nextFile: { isNot: null }, status: 'rejected' },
+        ],
+      },
+    },
   ],
   status: 'open',
 });
