@@ -8,6 +8,7 @@ import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 
+import { prefetchAllowed } from './prefetch-allowed';
 import { ProfilePrefetch } from './profile-prefetch';
 import { sendMeasurementsTo } from '../../telemetry/browser/measure/measure';
 
@@ -362,5 +363,22 @@ describe('what a pre-fetch reports', () => {
       throw new Error('collector down');
     });
     expect(() => prefetch.take('a', undefined)).not.toThrow();
+  });
+});
+
+// @traces 1398-FR-012
+describe('the pre-fetch guard, shared with the filter warm', () => {
+  it.each([
+    [{ saveData: true }, 'visible', false],
+    [{ effectiveType: '2g' }, 'visible', false],
+    [{ effectiveType: 'slow-2g' }, 'visible', false],
+    [{ effectiveType: '4g' }, 'hidden', false],
+    [{ effectiveType: '4g', saveData: false }, 'visible', true],
+    [undefined, 'visible', true],
+  ] as const)('with %j and a %s page allows it: %s', (set, shown, allowed) => {
+    connection = set as Record<string, unknown> | undefined;
+    visibility = shown;
+
+    expect(prefetchAllowed(document)).toBe(allowed);
   });
 });

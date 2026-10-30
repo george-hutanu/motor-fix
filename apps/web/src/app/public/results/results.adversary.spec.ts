@@ -17,6 +17,7 @@ import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
 
+import { FilterWarm } from './filter-warm/filter-warm';
 import { Results } from './results';
 import type { MapEvents, MapMove } from './results-map/pins-map';
 import { RESULTS_MAP, type ResultsMapView } from './results-map/results-map';
@@ -154,6 +155,8 @@ async function configure(platform = 'browser') {
       { provide: PublicLive, useValue: live },
       { provide: REDUCED_MOTION, useValue: reduced },
       { provide: RESULTS_MAP, useValue: openMap },
+      // The open-now warm reads through the same service; it has its own spec.
+      { provide: FilterWarm, useValue: { judge: jest.fn(), warm: jest.fn() } },
     ],
   });
   await TestBed.inject(I18n).enter('public');
