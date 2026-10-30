@@ -119,8 +119,9 @@ export class PublicBrandDto extends BrandRefDto {
   fuels!: Fuel[];
 }
 
-// A taken brand in the owner's answer, with the jobs ticked for it.
-export class OwnerBrandDto extends BrandRefDto {
+// A taken brand in the owner's answer, with its fuels and the jobs ticked
+// for it.
+export class OwnerBrandDto extends PublicBrandDto {
   @ApiProperty({
     description: 'Ticked job type ids, in price-list order',
     format: 'uuid',
@@ -150,4 +151,23 @@ export class GarageBrandAnswerDto {
 export class GarageBrandOwnerAnswerDto extends GarageBrandAnswerDto {
   @ApiProperty({ type: [OwnerBrandDto] })
   declare worksOn: OwnerBrandDto[];
+}
+
+// A job of the garage's price list, named for the brands dialog's ticks.
+export class PricedJobDto {
+  @ApiProperty({ format: 'uuid' })
+  jobTypeId!: string;
+
+  @ApiProperty({ example: 'Schimb ulei' })
+  nameRo!: string;
+
+  @ApiProperty({ example: 'Oil change' })
+  nameEn!: string;
+}
+
+// The owner's read: the stored answer and the price list's jobs, once each
+// in the list's order.
+export class GarageBrandOwnerReadDto extends GarageBrandOwnerAnswerDto {
+  @ApiProperty({ type: [PricedJobDto] })
+  priceList!: PricedJobDto[];
 }

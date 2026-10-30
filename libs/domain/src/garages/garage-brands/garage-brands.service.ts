@@ -3,6 +3,8 @@ import {
   type Fuel,
   fuelColumns,
   type GarageBrandOwnerAnswerDto,
+  type GarageBrandOwnerReadDto,
+  type PricedJobDto,
   type ReplaceGarageBrandsDto,
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
@@ -60,6 +62,20 @@ function assertFuelsTaken(dto: ReplaceGarageBrandsDto) {
   );
 }
 
+// A taken brand works on at least one fuel; leaving fuels out keeps them.
+function assertFuelsGiven(dto: ReplaceGarageBrandsDto) {
+  const at = dto.brands.findIndex(
+    (b) => b.stance === 'works_on' && b.fuels?.length === 0,
+  );
+  if (at === -1) return;
+  throw refusal(
+    HttpStatus.BAD_REQUEST,
+    'validation_failed',
+    'A taken brand works on at least one fuel',
+    [{ code: 'fuels_empty', field: `brands[${at}].fuels` }],
+  );
+}
+
 // Jobs, like fuels, belong to a taken brand only.
 function assertJobsTaken(dto: ReplaceGarageBrandsDto) {
   const at = dto.brands.findIndex(
@@ -89,13 +105,50 @@ function assertJobsPriced(dto: ReplaceGarageBrandsDto, priceList: string[]) {
 }
 
 // The garage's jobs once each, in the order its price list shows them.
-async function priceListOf(tx: Prisma.TransactionClient, garageId: string) {
+async function pricedJobsOf(
+  tx: Prisma.TransactionClient,
+  garageId: string,
+): Promise<PricedJobDto[]> {
   const prices = await tx.garagePrice.findMany({
     orderBy: { position: 'asc' },
-    select: { jobTypeId: true },
+    select: { jobType: { select: { id: true, nameEn: true, nameRo: true } } },
     where: { garageId },
   });
-  return [...new Set(prices.map((p) => p.jobTypeId))];
+  const jobs = new Map<string, PricedJobDto>();
+  for (const { jobType } of prices) {
+    if (jobs.has(jobType.id)) continue;
+    const { id, nameEn, nameRo } = jobType;
+    jobs.set(id, { jobTypeId: id, nameEn, nameRo });
+  }
+  return [...jobs.values()];
+}
+
+// The stored answer as the owner reads it: each taken brand with its fuels
+// and its ticked jobs.
+async function answerOf(
+  tx: Prisma.TransactionClient,
+  garageId: string,
+  texts: Texts,
+  priceList: string[],
+) {
+  const rows = await tx.garageBrand.findMany({
+    select: {
+      brand: {
+        select: { id: true, name: true, popularity: true, slug: true },
+      },
+      diesel: true,
+      electric: true,
+      hybrid: true,
+      petrol: true,
+      stance: true,
+    },
+    where: { garageId },
+  });
+  const ticks = await tx.garageBrandJob.findMany({
+    select: { brandId: true, jobTypeId: true },
+    where: { garageId },
+  });
+  return brandAnswerWithJobs(rows, texts, ticks, priceList);
 }
 
 type Wanted = { stance: GarageBrandStance; fuels?: Fuel[]; jobs?: string[] };
@@ -119,6 +172,7 @@ export class GarageBrandsService {
   ): Promise<GarageBrandOwnerAnswerDto> {
     assertGarageOwner(actor, garageId);
     assertFuelsTaken(dto);
+    assertFuelsGiven(dto);
     assertJobsTaken(dto);
     return this.prisma.$transaction(async (tx) => {
       const garage = await lockGarage(tx, garageId);
@@ -130,7 +184,9 @@ export class GarageBrandsService {
         ]),
       );
       await assertCatalogued(tx, [...wanted.keys()]);
-      const priceList = await priceListOf(tx, garageId);
+      const priceList = (await pricedJobsOf(tx, garageId)).map(
+        (job) => job.jobTypeId,
+      );
       assertJobsPriced(dto, priceList);
       const { changed, fields } = await this.applyStances(
         tx,
@@ -159,21 +215,29 @@ export class GarageBrandsService {
           subjectId: garageId,
         });
       }
-      const rows = await tx.garageBrand.findMany({
-        select: {
-          brand: {
-            select: { id: true, name: true, popularity: true, slug: true },
-          },
-          stance: true,
-        },
-        where: { garageId },
-      });
-      const ticks = await tx.garageBrandJob.findMany({
-        select: { brandId: true, jobTypeId: true },
-        where: { garageId },
-      });
-      return brandAnswerWithJobs(rows, texts, ticks, priceList);
+      return answerOf(tx, garageId, texts, priceList);
     });
+  }
+
+  // The owner's answer and the price list's jobs, for the brands dialog.
+  async read(actor: Actor, garageId: string): Promise<GarageBrandOwnerReadDto> {
+    assertGarageOwner(actor, garageId);
+    const garage = await this.prisma.garage.findUnique({
+      select: { brandNote: true, refusalPhrase: true, status: true },
+      where: { id: garageId },
+    });
+    if (!garage) throw noGarage();
+    if (garage.status === 'suspended') {
+      throw refusal(HttpStatus.GONE, 'gone', 'This garage is no longer listed');
+    }
+    const priceList = await pricedJobsOf(this.prisma, garageId);
+    const answer = await answerOf(
+      this.prisma,
+      garageId,
+      garage,
+      priceList.map((job) => job.jobTypeId),
+    );
+    return { ...answer, priceList };
   }
 
   // Switches off the brands left out, then sets the others and the jobs of

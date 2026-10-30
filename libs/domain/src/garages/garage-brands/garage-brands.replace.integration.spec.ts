@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { FUELS } from '@motor-fix/contracts';
 import { HttpException } from '@nestjs/common';
 
 import { GarageBrandsService } from './garage-brands.service';
@@ -239,8 +240,8 @@ describe("replacing a garage's brand answer", () => {
       doesNotTake: [{ id: w.tesla, name: 'Tesla', slug: 'tesla' }],
       refusalPhrase: 'orice nu e BMW',
       worksOn: [
-        { id: w.mini, jobs: [], name: 'Mini', slug: 'mini' },
-        { id: w.bmw, jobs: [], name: 'BMW', slug: 'bmw' },
+        { fuels: FUELS, id: w.mini, jobs: [], name: 'Mini', slug: 'mini' },
+        { fuels: FUELS, id: w.bmw, jobs: [], name: 'BMW', slug: 'bmw' },
       ],
     });
   });
@@ -924,8 +925,15 @@ describe("a taken brand's jobs in the brand answer", () => {
 
     expect(answer.worksOn).toEqual(
       expect.arrayContaining([
-        { id: w.bmw, jobs: [oil, gearbox], name: 'BMW', slug: 'bmw' },
         {
+          fuels: FUELS,
+          id: w.bmw,
+          jobs: [oil, gearbox],
+          name: 'BMW',
+          slug: 'bmw',
+        },
+        {
+          fuels: FUELS,
           id: w.mini,
           jobs: [oil, brakes, gearbox],
           name: 'Mini',
