@@ -424,7 +424,8 @@ export class AddCar {
     this.noMatch.set(false);
   }
 
-  // The fields that differ from the car, a cleared one as null.
+  // The fields that differ from the car, a cleared one as null; a field a
+  // cached answer lacks counts as null, so a blank never clears it.
   private patch(car: CarDto): UpdateCarDto {
     const value = this.form.getRawValue();
     const next: Omit<UpdateCarDto, 'version'> = {
@@ -441,7 +442,7 @@ export class AddCar {
       year: Number(value.year),
     };
     const changed = Object.entries(next).filter(
-      ([field, given]) => car[field as keyof CarDto] !== given,
+      ([field, given]) => (car[field as keyof CarDto] ?? null) !== given,
     );
     return { ...Object.fromEntries(changed), version: car.updatedAt };
   }

@@ -1080,6 +1080,21 @@ describe('editing a car’s next oil service', () => {
     });
   });
 
+  it('sends no next service for a cached car answer without the field', async () => {
+    const cached: CarDto = { ...stored };
+    delete (cached as Partial<CarDto>).nextServiceKm;
+    await openEdit('ro', cached);
+    type(field('Model'), 'Seria 5');
+    await settle();
+
+    await saveEdit();
+
+    expect(update).toHaveBeenCalledWith({
+      body: { model: 'Seria 5', version: '2026-10-08T07:00:00.000Z' },
+      id: 'car-1',
+    });
+  });
+
   it('neither checks nor sends the stored value in another writing', async () => {
     await openEdit('ro', withNext);
     type(field(NEXT), '152 000');
