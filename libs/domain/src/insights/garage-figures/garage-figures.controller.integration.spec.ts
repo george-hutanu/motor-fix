@@ -208,12 +208,20 @@ describe('the weekly figures read', () => {
     const t = await team('Atelier Dinamo');
     await approve(t.garage.id, new Date('2025-01-15T10:00:00Z'));
     await views(t.garage.id, '2026-10-01', 4);
-    const before = await prisma.garageDailyFigures.findMany();
+    // The figures, the audit trail, the outbox (which carries live updates)
+    // and the notifications.
+    const written = async () => ({
+      activity: await prisma.activityLog.count(),
+      figures: await prisma.garageDailyFigures.findMany(),
+      notifications: await prisma.notification.count(),
+      outbox: await prisma.outboxEvent.count(),
+    });
+    const before = await written();
 
     await get(path(t.garage.id), bearer(t.owner, 'garage'));
     await service.weekly(owner(t), t.garage.id, NOW);
 
-    expect(await prisma.garageDailyFigures.findMany()).toEqual(before);
+    expect(await written()).toEqual(before);
     expect(
       await prisma.garage.findUnique({ where: { id: t.garage.id } }),
     ).toMatchObject({
