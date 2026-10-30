@@ -92,8 +92,9 @@ mf-brand-chips {
 }
 
 /* The Filtre button and a chip per filter on, on a line of their own right
-   under the sorts; on a phone the line scrolls sideways inside itself, like
-   the brand chips, never pushing the page. */
+   above the sorts; on a phone beside the brand search, level with its field,
+   so the sheet's header keeps its height, and scrolling sideways inside
+   itself like the brand chips, never pushing the page. */
 .brands .filters {
   align-items: center;
   display: flex;
@@ -193,25 +194,28 @@ mf-brand-chips {
     margin: 0;
   }
 
-  mf-brand-chips,
-  .brands mf-brand-search {
+  mf-brand-chips {
     flex-basis: 100%;
   }
 }
 
-/* A phone up to 880 px tall (an iPhone SE, a 375 x 812 one) with the
-   consent bar asking would leave the map a strip between the summary and the
-   sheet's header (the chips, the brand search and the sorts): the bar lies
-   over the stage instead, until it is answered, and the map and the half
-   sheet keep their room. */
-/* The filters line on a phone, after the phone screen's own rules. */
+/* The brand search and the filters line share a row on a phone, after the
+   phone screen's own rules; the padding keeps the focus ring inside the
+   scrolling line. */
 @media (max-width: 767px) {
+  .brands mf-brand-search {
+    flex: 1 1 0;
+    min-width: 9.5rem;
+  }
+
   .brands .filters {
+    align-self: flex-end;
+    flex: 0 1 auto;
     flex-wrap: nowrap;
-    margin-inline: calc(-1 * var(--mf-space-4));
+    margin: calc(-1 * var(--mf-space-1));
+    max-width: 60%;
     overflow-x: auto;
-    padding-inline: var(--mf-space-4);
-    scroll-padding-inline: var(--mf-space-4);
+    padding: var(--mf-space-1);
     scrollbar-width: none;
   }
 
@@ -228,6 +232,11 @@ mf-brand-chips {
   }
 }
 
+/* A phone up to 880 px tall (an iPhone SE, a 375 x 812 one) with the
+   consent bar asking would leave the map a strip between the summary and the
+   sheet's header (the chips, the brand search and the sorts): the bar lies
+   over the stage instead, until it is answered, and the map and the half
+   sheet keep their room. */
 @media (max-width: 767px) and (max-height: 880px) {
   :host {
     height: calc(100dvh - var(--public-site-bar) - var(--tab-bar));

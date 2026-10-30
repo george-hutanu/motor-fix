@@ -3070,9 +3070,31 @@ describe('the brand chips and the brand search from a tablet up', () => {
       .map(([, body]) => body)
       .find((body) => body.includes('.brands .filters {'));
     expect(filters).toMatch(
-      /\.brands \.filters \{ flex-wrap: nowrap;[^}]*overflow-x: auto;/,
+      /\.brands \.filters \{[^}]*flex-wrap: nowrap;[^}]*overflow-x: auto;/,
     );
     expect(filters).toMatch(/white-space: nowrap;/);
+  });
+
+  it('sets the filters line beside the brand search on a phone, level with its field, so the header grows no row', () => {
+    const filters =
+      [
+        ...css.matchAll(
+          /@media \(max-width: 767px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/g,
+        ),
+      ]
+        .map(([, body]) => body)
+        .find((body) => body.includes('.brands .filters {')) ?? '';
+    expect(filters).toMatch(
+      /\.brands mf-brand-search \{ flex: 1 1 0; min-width: 9\.5rem; \}/,
+    );
+    expect(filters).toMatch(
+      /\.brands \.filters \{ align-self: flex-end; flex: 0 1 auto;/,
+    );
+    const phone =
+      css.match(
+        /@media \(max-width: 767px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+      )?.[1] ?? '';
+    expect(phone).not.toMatch(/mf-brand-search/);
   });
 });
 
@@ -4549,6 +4571,20 @@ describe('Results filters', () => {
   }
 
   describe('the Filtre button and the panel', () => {
+    it('sets the filters line between the brand search and the sorts', async () => {
+      await shown();
+      const order = [...(page().querySelector('.brands')?.children ?? [])].map(
+        (el) =>
+          el.tagName.toLowerCase() + (el.className ? `.${el.className}` : ''),
+      );
+      expect(order).toEqual([
+        'mf-brand-chips',
+        'mf-brand-search',
+        'div.filters',
+        'mf-sort-control',
+      ]);
+    });
+
     it('reads "Filtre" with none on and "Filtre · 2" with both, opening a dialog', async () => {
       await shown();
       expect(said(opener())).toBe('Filtre');

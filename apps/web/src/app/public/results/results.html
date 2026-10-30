@@ -61,7 +61,6 @@
         (pick)="changeBrand($event)"
       />
       <mf-brand-search (chosen)="chooseBrand($event)" />
-      <mf-sort-control [sort]="sortShown()" [placeKnown]="!!near()" (pick)="changeSort($event)" />
       <div class="filters">
         <button #filtersOpen type="button" class="filters-open" aria-haspopup="dialog" (click)="openFilters()">
           @if (filterCount() > 0) {
@@ -80,6 +79,7 @@
           >{{ filter.label | t }} <span aria-hidden="true">×</span></button>
         }
       </div>
+      <mf-sort-control [sort]="sortShown()" [placeKnown]="!!near()" (pick)="changeSort($event)" />
     </div>
   }
   <div #found class="found">
