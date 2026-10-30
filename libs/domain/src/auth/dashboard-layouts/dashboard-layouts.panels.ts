@@ -1,12 +1,28 @@
 import type { DashboardPanelDto } from '@motor-fix/contracts';
 import type { Role } from '@motor-fix/contracts/capabilities';
 
+// Panou's sections in their default order. Every garage role is served the
+// whole list: which of them a person sees is the web's section filter.
+const GARAGE_KEYS = [
+  'kpi',
+  'now',
+  'req',
+  'load',
+  'sched',
+  'funnel',
+  'brands',
+  'reviews',
+] as const;
+
 // Each served role's section keys in their default order. A section joins
 // its list with the story that ships it (performance after numbers, system
-// after verification, reported after demand); driver and garage join with
-// their own dashboards.
+// after verification, reported after demand); the driver joins with its own
+// dashboard.
 const PANEL_KEYS = {
   admin: ['numbers', 'verification', 'growth', 'demand', 'log'],
+  garage: GARAGE_KEYS,
+  mechanic: GARAGE_KEYS,
+  receptionist: GARAGE_KEYS,
 } as const satisfies Partial<Record<Role, readonly string[]>>;
 
 // The section keys of a role served yet, or undefined.

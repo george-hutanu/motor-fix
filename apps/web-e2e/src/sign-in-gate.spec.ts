@@ -47,10 +47,6 @@ async function sessionEndsWhileWorking(page: Page) {
   await page.route('**/api/v1/me/consents', (route) =>
     route.fulfill({ json: { accepted: [], analytics: null } }),
   );
-  // Every signed-in view reads the assistant's pending approvals: none.
-  await page.route('**/api/v1/me/assistant/approvals', (route) =>
-    route.fulfill({ json: { items: [], pending: 0 } }),
-  );
   await page.route('**/api/v1/notifications/unread-count', (route) =>
     route.fulfill({ json: { count: 0 } }),
   );
@@ -61,6 +57,10 @@ async function sessionEndsWhileWorking(page: Page) {
   // Panou follows the driver's active request on load: none open.
   await page.route('**/api/v1/quote-requests/active', (route) =>
     route.fulfill({ json: { openCount: 0, request: null } }),
+  );
+  // The frame's approval strip reads the pending approvals on load: none.
+  await page.route(/\/api\/v1\/me\/assistant\/approvals(\?.*)?$/, (route) =>
+    route.fulfill({ json: { items: [], pending: 0 } }),
   );
   // Panou reads the saved garages on load: none saved.
   await page.route(/\/api\/v1\/me\/saved-garages(\?.*)?$/, (route) =>

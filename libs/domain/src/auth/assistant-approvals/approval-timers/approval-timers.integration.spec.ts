@@ -31,6 +31,12 @@ const MINUTE = 60_000;
 // 23:30 in Bucharest: a message that waits for the morning would be held.
 const NIGHT = new Date('2026-10-29T21:30:00Z');
 const WEB = 'https://motorfix.test';
+// Push on, so an account with a device is told by push.
+const PUSH = {
+  privateKey: 'private',
+  publicKey: 'public',
+  subject: 'mailto:ops@example.test',
+};
 
 let app: TestingModule | undefined;
 
@@ -63,11 +69,7 @@ async function start(now = NIGHT) {
           databaseUrl,
           email: testConfig('http://127.0.0.1:9'),
           phone: testPhoneConfig({ PHONE_SENDING: 'off' }),
-          push: {
-            privateKey: 'private',
-            publicKey: 'public',
-            subject: 'mailto:ops@example.test',
-          },
+          push: PUSH,
           redisUrl,
         }),
         redisUrl,
@@ -221,7 +223,6 @@ describe('the expiry of an approval nobody decided', () => {
   it('expires it from the sweep within one sweep of a lost timer', async () => {
     const a = await asked();
     const sweptAt = new Date(a.expiresAt.getTime() + 5 * MINUTE);
-    // The sweep expires at the worker's own clock, as in production.
     const timers = await start(sweptAt);
 
     expect(await timers.timers.sweep(sweptAt)).toBe(1);
