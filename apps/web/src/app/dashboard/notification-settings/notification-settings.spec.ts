@@ -379,7 +379,7 @@ describe('NotificationSettings', () => {
     expect(push()?.getAttribute('aria-checked')).toBe('true');
     expect(save).toHaveBeenCalledTimes(2);
     expect(toast).toHaveBeenCalledTimes(2);
-    expect(read.mock.calls.length).toBeGreaterThan(1);
+    expect(read).toHaveBeenCalledTimes(3);
   });
 
   // @traces 1315-FR-001 1315-FR-008

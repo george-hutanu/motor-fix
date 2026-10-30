@@ -150,7 +150,7 @@ describe('Notification switches: saves that fail', () => {
     sw(EMAIL).click();
     await settle();
 
-    expect(sw(EMAIL)).toBeDefined();
+    expect(sw(EMAIL).getAttribute('aria-checked')).toBe('false');
     expect(toast).toHaveBeenCalledTimes(1);
   });
 

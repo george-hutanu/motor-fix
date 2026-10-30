@@ -220,9 +220,8 @@ export class PricesView {
     const visible = row.visible === false;
     this.busy.update((busy) => new Set(busy).add(priceId));
     this.failed.set(null);
-    this.pending.update((pending) =>
-      new Map(pending).set(priceId, { reads: this.view.reads(), visible }),
-    );
+    const press = { reads: this.view.reads(), visible };
+    this.pending.update((pending) => new Map(pending).set(priceId, press));
     try {
       await this.api.priceListControllerSetRange({
         body: { visible },
@@ -230,12 +229,9 @@ export class PricesView {
         priceId,
       });
       await this.view.reload();
+      if (this.view.reads() !== press.reads) this.drop(priceId);
     } catch {
-      this.pending.update((pending) => {
-        const left = new Map(pending);
-        left.delete(priceId);
-        return left;
-      });
+      this.drop(priceId);
       this.failed.set(priceId);
     } finally {
       this.busy.update((busy) => {
@@ -244,6 +240,14 @@ export class PricesView {
         return left;
       });
     }
+  }
+
+  private drop(priceId: string) {
+    this.pending.update((pending) => {
+      const left = new Map(pending);
+      left.delete(priceId);
+      return left;
+    });
   }
 
   protected remove(row: EditableRow) {
