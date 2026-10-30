@@ -123,8 +123,8 @@ describe('the result filters', () => {
   });
 
   it('gives the same key for the same filters in any order', () => {
-    expect(filtersKey({ card: true, maxPrice: 150 })).toBe(
-      filtersKey({ card: true, maxPrice: 150 }),
+    expect(filtersKey({ card: true, maxPrice: 150, minRating: '3.5' })).toBe(
+      filtersKey({ card: true, maxPrice: 150, minRating: '3.5' }),
     );
   });
 });

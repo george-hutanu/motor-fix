@@ -1637,7 +1637,7 @@ const filteredPage = (
 
 const names = (page: Page) => page.items.map((item) => item.name);
 
-// @traces 1261-FR-002
+// @traces 1261-FR-002 1261-FR-012
 describe('filtering by a price ceiling', () => {
   it('keeps a garage whose rate shows at or below the ceiling and drops one above it or without a rate', async () => {
     await offer('Alfa', { bani: 20_049 });
@@ -1824,7 +1824,7 @@ describe('reading the shown cards again under filters', () => {
   });
 });
 
-// @traces 1261-FR-010
+// @traces 1261-FR-010 1261-FR-013
 describe('counting a filtered page', () => {
   it('counts an unlogged filtered first page as neither a search nor a sort change, and writes no log row', async () => {
     await offer('Alfa', { card: true, rating: 4.5 });
