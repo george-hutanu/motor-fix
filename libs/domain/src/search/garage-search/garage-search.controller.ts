@@ -45,7 +45,7 @@ export class GarageSearchController {
   @ApiOkResponse({ type: GarageSearchPageDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, bbox not a south,west,north,east box inside Romania at most 100 km on a side, or sort not rating, distance or price, or distance without near, or open_now or open_saturday other than exactly 1 or repeated; invalid_cursor: not a page of this search, of another box, of another sort or of other filters',
+      'validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, bbox not a south,west,north,east box inside Romania at most 100 km on a side, or sort not rating, distance or price, or distance without near, or open_now or open_saturday other than exactly 1 or repeated, max_price not 150, 200, 250 or 300, min_rating not 3.5, 4.0 or 4.5, or card not 1; invalid_cursor: not a page of this search, of another box, of another sort or of other filters',
   })
   @ApiNotFoundResponse({
     description: 'not_found: no brand with that slug or id',
@@ -90,7 +90,7 @@ export class GarageSearchController {
   @ApiOkResponse({ type: GaragePinsDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or bbox not a south,west,north,east box inside Romania at most 100 km on a side, or open_now or open_saturday other than exactly 1 or repeated',
+      'validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or bbox not a south,west,north,east box inside Romania at most 100 km on a side, or open_now or open_saturday other than exactly 1 or repeated, max_price not 150, 200, 250 or 300, min_rating not 3.5, 4.0 or 4.5, or card not 1',
   })
   @ApiNotFoundResponse({
     description: 'not_found: no brand with that slug or id',
