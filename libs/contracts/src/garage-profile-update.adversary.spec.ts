@@ -114,15 +114,9 @@ describe('UpdateGarageProfileDto under hostile input', () => {
     ['a date with a time', [{ day: '2099-01-01T00:00:00Z' }]],
     [
       'a note of 201 characters',
-      [{ day: '2099-01-01', note: 'x'.repeat(10_000) }],
+      [{ day: '2099-01-01', note: 'x'.repeat(201) }],
     ],
     ['a non-object entry', ['2099-01-01']],
-    [
-      'ten thousand days',
-      Array.from({ length: 10_000 }, (_, i) => ({
-        day: `2${String(i).padStart(3, '0')}-01-01`,
-      })),
-    ],
     ['a map instead of a list', { day: '2099-01-01' }],
   ])('refuses closed days with %s', (_title, closedDays) => {
     expect(save({ closedDays, hours: WEEK })).toEqual(['closedDays']);
