@@ -11338,7 +11338,7 @@
             "description": "not_found: no garage, or no file"
           },
           "409": {
-            "description": "verification_transition_refused, with currentStatus: the file asks for nothing more"
+            "description": "verification_transition_refused, with currentStatus: the garage's newest file is neither more_requested nor rejected"
           }
         },
         "security": [
@@ -11346,7 +11346,7 @@
             "bearer": []
           }
         ],
-        "summary": "Open the copy of the owner's garage that answers a request for more, or the one already open",
+        "summary": "Open the copy of the owner's garage that answers a request for more or a rejection, or the one already open",
         "tags": [
           "listing-drafts"
         ]
@@ -26570,7 +26570,7 @@
             "description": "This browser's key to the copy"
           },
           "requestedItems": {
-            "description": "What the request for more asks for",
+            "description": "What the request for more asks for, or the item a rejection names",
             "type": "array",
             "items": {
               "type": "string"

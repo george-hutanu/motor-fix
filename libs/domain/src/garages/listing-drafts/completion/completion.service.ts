@@ -5,7 +5,9 @@ import {
   isListingDraftData,
   type ListingDraftData,
   type ListingSubmittedDto,
+  normaliseRarNumber,
   stripCui,
+  VERIFICATION_REASON_CODES,
 } from '@motor-fix/contracts';
 import {
   HttpException,
@@ -61,6 +63,20 @@ const refused = (currentStatus: string) =>
     },
     HttpStatus.CONFLICT,
   );
+
+// The decisions a copy answers: a request for more, sent back on the same
+// file, and a rejection, answered with a new file after it.
+const CORRECTABLE: readonly string[] = ['more_requested', 'rejected'];
+
+// What the form starts from: the items a request for more names, or the
+// reason a rejection gave, one it does not know read as other.
+const askedItems = (file: VerificationFile): string[] =>
+  file.status === 'rejected'
+    ? [
+        VERIFICATION_REASON_CODES.find((code) => code === file.reasonCode) ??
+          'other',
+      ]
+    : file.requestedItems;
 
 // Equal whatever order the keys were saved in.
 function same(a: unknown, b: unknown): boolean {
@@ -126,7 +142,7 @@ export class CompletionService {
       held: await heldOf(this.prisma, file.id),
       id: copy.id,
       language: copy.language,
-      requestedItems: file.requestedItems,
+      requestedItems: askedItems(file),
       status: copy.status,
       step: copy.step,
       token: key.token,
@@ -152,7 +168,7 @@ export class CompletionService {
     });
   }
 
-  // The garage's live file, which must be asking for more.
+  // The garage's newest file, which must ask for more or be rejected.
   private async askingFile(actor: Actor): Promise<VerificationFile> {
     if (!actor.garageId) throw notFound();
     if (actor.role !== 'garage') throw forbidden();
@@ -161,12 +177,12 @@ export class CompletionService {
       where: { garageId: actor.garageId },
     });
     if (!file) throw notFound();
-    if (file.status !== 'more_requested') throw refused(file.status);
+    if (!CORRECTABLE.includes(file.status)) throw refused(file.status);
     return file;
   }
 
   // The copy's file, locked, which must still ask the actor's garage for
-  // more.
+  // more, or be its newest file and rejected.
   async fileFor(
     tx: Prisma.TransactionClient,
     actor: Actor,
@@ -178,12 +194,24 @@ export class CompletionService {
     });
     if (actor.garageId !== file.garageId) throw notFound();
     if (actor.role !== 'garage') throw forbidden();
-    if (file.status !== 'more_requested') throw refused(file.status);
+    if (!CORRECTABLE.includes(file.status)) throw refused(file.status);
+    if (file.status === 'rejected') {
+      const newest = await this.newestOf(tx, file.garageId);
+      if (newest.id !== file.id) throw refused(newest.status);
+    }
     return file;
   }
 
+  private newestOf(tx: Prisma.TransactionClient, garageId: string) {
+    return tx.verificationFile.findFirstOrThrow({
+      orderBy: newestFirst,
+      where: { garageId },
+    });
+  }
+
   // The copy written back over its garage, then the file sent back for
-  // verification. The survey stays as the first sending left it.
+  // verification, or a new file sent after a rejected one, which stays as
+  // the decision left it. The survey stays as the first sending left it.
   async resend(
     tx: Prisma.TransactionClient,
     actor: Actor,
@@ -198,18 +226,20 @@ export class CompletionService {
       data,
       sizes,
     );
-    await this.fileFields(tx, actor, file, data, cuiChanged ? holders : []);
-    await this.documents.replace(tx, actor, data.documents, file);
-    const sent = await this.verification.resend(tx, actor, file.id);
+    const others = cuiChanged ? holders : [];
+    const sent =
+      file.status === 'rejected'
+        ? await this.sendAfter(tx, actor, file, data, others)
+        : await this.sendBack(tx, actor, file, data, others);
     const held = new Set(
-      (await heldOf(tx, file.id)).map(
+      (await heldOf(tx, sent.id)).map(
         (document) => `documents.${document.kind}`,
       ),
     );
     return {
       dropped,
       sent: {
-        fileId: file.id,
+        fileId: sent.id,
         garageId: file.garageId,
         status: sent.status === 'approved' ? 'approved' : 'submitted',
         warnings: warnings.filter(
@@ -220,12 +250,47 @@ export class CompletionService {
     };
   }
 
-  // The refusal a sent copy answers a new key with: the file has moved on.
+  // A request for more: the copy's documents replace the file's own, then
+  // the file goes back for verification.
+  private async sendBack(
+    tx: Prisma.TransactionClient,
+    actor: Actor,
+    file: VerificationFile,
+    data: ListingDraftData,
+    holders: string[],
+  ) {
+    await this.fileFields(tx, actor, file, data, holders);
+    await this.documents.replace(tx, actor, data.documents, file);
+    return this.verification.resend(tx, actor, file.id);
+  }
+
+  // A rejection: a new file through the submit transition, holding the
+  // copy's documents and the rejected file's others.
+  private async sendAfter(
+    tx: Prisma.TransactionClient,
+    actor: Actor,
+    file: VerificationFile,
+    data: ListingDraftData,
+    holders: string[],
+  ) {
+    const next = await this.verification.submit(
+      tx,
+      actor,
+      file.garageId,
+      data.steps?.['6']?.rarNumber,
+    );
+    await this.fileFields(tx, actor, next, data, holders);
+    await this.documents.carry(tx, actor, file, next, data.documents);
+    return next;
+  }
+
+  // The refusal a sent copy answers a new key with: the garage's newest
+  // file has moved on.
   async movedOn(fileId: string): Promise<HttpException> {
     const file = await this.prisma.verificationFile.findUniqueOrThrow({
       where: { id: fileId },
     });
-    return refused(file.status);
+    return refused((await this.newestOf(this.prisma, file.garageId)).status);
   }
 
   // Each step through its own writer, and only where it differs from the
@@ -367,6 +432,7 @@ export class CompletionService {
       subjectId: file.id,
       subjectType: 'verification_file',
     };
+    const rar = data.steps?.['6']?.rarNumber;
     const before = {
       declaredAt: file.declaredAt?.toISOString() ?? null,
       declaredByName: file.declaredByName,
@@ -375,7 +441,7 @@ export class CompletionService {
     const after = {
       declaredAt: data.declaredAt ?? null,
       declaredByName: data.declaredByName ?? null,
-      rarNumber: data.steps?.['6']?.rarNumber ?? null,
+      rarNumber: rar ? normaliseRarNumber(rar) : null,
     };
     if (!same(before, after)) {
       await tx.verificationFile.update({
@@ -424,7 +490,7 @@ export class CompletionService {
           data: data as never,
           email: account.email ?? '',
           language: account.language,
-          step: askedSteps(file.requestedItems)[0] as number,
+          step: askedSteps(askedItems(file))[0] as number,
           updatedAt: at,
           verificationFileId: file.id,
         },

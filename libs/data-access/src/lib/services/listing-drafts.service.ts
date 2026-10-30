@@ -393,7 +393,7 @@ export class ListingDraftsService extends BaseService {
   static readonly CompletionControllerOpenPath = '/api/v1/listing-drafts/completion';
 
   /**
-   * Open the copy of the owner's garage that answers a request for more, or the one already open.
+   * Open the copy of the owner's garage that answers a request for more or a rejection, or the one already open.
    *
    *
    *
@@ -408,7 +408,7 @@ export class ListingDraftsService extends BaseService {
   }
 
   /**
-   * Open the copy of the owner's garage that answers a request for more, or the one already open.
+   * Open the copy of the owner's garage that answers a request for more or a rejection, or the one already open.
    *
    *
    *
