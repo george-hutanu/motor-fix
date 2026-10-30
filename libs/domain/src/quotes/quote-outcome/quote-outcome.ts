@@ -5,7 +5,7 @@ import type {
   RequestClosedReason,
 } from '@motor-fix/contracts';
 
-export interface QuoteOutcomeInput {
+interface QuoteOutcomeInput {
   booking: { status: BookingStatus } | null;
   garage: { status: string };
   quote: { status: QuoteStatus };

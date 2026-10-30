@@ -32,7 +32,7 @@ const TONES: Partial<Record<Outcome, 'amber' | 'green'>> = {
   waiting: 'amber',
 };
 
-export interface OutcomeTag {
+interface OutcomeTag {
   label: string;
   // The deadline or the slot the tag ends on, as written and as the instant.
   when?: string;
