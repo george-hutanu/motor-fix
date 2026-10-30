@@ -80,7 +80,7 @@ function latestDay() {
 const kilometres = (text: string) => text.replace(/[\s.,]/g, '');
 
 // The furthest the next oil service may be set above the odometer, as the
-// API refuses it (091-FR-003).
+// API refuses it.
 const SERVICE_REACH_KM = 100_000;
 
 const wholeKm = (digits: string) =>

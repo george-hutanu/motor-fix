@@ -998,6 +998,26 @@ describe('adding a car with its next oil service', () => {
     expect(next.getAttribute('aria-invalid')).toBe('true');
   });
 
+  it.each(['abc', '2.000.001'])(
+    'refuses %s as kilometres, on leaving the field and on save',
+    async (typed) => {
+      await open();
+      await fillCar('148.200');
+      const next = field(NEXT);
+      type(next, typed);
+      next.dispatchEvent(new Event('blur'));
+      await settle();
+
+      expect(
+        document.querySelector('#mf-car-nextServiceKm-error')?.textContent,
+      ).toContain('Scrie kilometrii ca număr întreg, cel mult 2.000.000.');
+
+      await save();
+
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
+
   it('ties the refusal to the field and moves the focus to it', async () => {
     await open();
     await fillCar('148.200');
