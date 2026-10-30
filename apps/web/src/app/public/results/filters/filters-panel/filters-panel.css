@@ -1,6 +1,6 @@
 ul {
   display: grid;
-  gap: 4px;
+  gap: var(--mf-space-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -10,8 +10,8 @@ li {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  min-height: 44px;
+  gap: var(--mf-space-4);
+  min-height: var(--mf-tap);
 }
 
 label {
