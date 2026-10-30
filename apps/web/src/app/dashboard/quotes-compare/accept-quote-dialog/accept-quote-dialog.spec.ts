@@ -168,17 +168,26 @@ describe('the accept dialog: accepting', () => {
     });
   });
 
-  it('shows a spinner and disables both buttons while sending, and sends once', async () => {
-    await open({ answers: [new Promise(() => undefined)] });
+  // @traces 1315-FR-009
+  // @traces 1315-FR-015
+  it('shows a spinner and disables everything while sending, sends once, and closes only on the answer', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    await open({ answers: [new Promise((resolve) => (answer = resolve))] });
 
     button('Confirmă')?.click();
     button('Confirmă')?.click();
     await settle();
 
     expect(accept).toHaveBeenCalledTimes(1);
+    expect(panel()).not.toBeNull();
+    expect(tick()?.disabled).toBe(true);
     expect(button('Confirmă')?.disabled).toBe(true);
     expect(button('Confirmă')?.getAttribute('aria-busy')).toBe('true');
     expect(button('Renunță')?.disabled).toBe(true);
+    answer({});
+    await settle();
+
+    await expect(result).resolves.toBe('accepted');
   });
 
   it('stays open when the network fails, and retries with the same key', async () => {
