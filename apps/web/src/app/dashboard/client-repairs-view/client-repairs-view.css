@@ -81,16 +81,12 @@ p {
 @media (min-width: 768px) {
   .row {
     grid-template-columns:
-      minmax(0, 2fr) minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)
+      minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr)
       minmax(0, 1fr) auto;
     align-items: center;
   }
   .row > * {
     grid-column: auto;
-    grid-row: 1;
-  }
-  .row > .correct {
-    grid-column: 6;
     grid-row: 1;
   }
   .day,
@@ -100,15 +96,35 @@ p {
   .corrected {
     font-size: var(--mf-size-small);
   }
-  .row > .corrected {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
   .km,
   .cost {
     text-align: end;
   }
   .skeleton {
     height: 64px;
+  }
+  /* Client and car first on the line, then what, day, km, lei (FR-002). */
+  .row > .who {
+    grid-column: 1;
+  }
+  .row > .what {
+    grid-column: 2;
+  }
+  .row > .day {
+    grid-column: 3;
+  }
+  .row > .km {
+    grid-column: 4;
+  }
+  .row > .cost {
+    grid-column: 5;
+  }
+  .row > .correct {
+    grid-column: 6;
+    grid-row: 1;
+  }
+  .row > .corrected {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }

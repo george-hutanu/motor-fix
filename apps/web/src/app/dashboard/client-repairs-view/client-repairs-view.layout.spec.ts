@@ -38,4 +38,19 @@ describe('client repairs row layout (FR-002)', () => {
     );
     expect(placing?.body).toMatch(/grid-column:\s*1 \/ -1/);
   });
+  it('reads the wide row as client · car · what · day · km · lei, then Corectează (FR-002)', () => {
+    const wide = css
+      .slice(css.indexOf('@media (min-width: 768px)'))
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    const wideRules = [...wide.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+      ([, sel, body]) => ({ body, sel: sel.trim() }),
+    );
+    const column = (name: string) =>
+      wideRules
+        .find((r) => r.sel === `.row > ${name}`)
+        ?.body.match(/grid-column:\s*(\d+)\s*;/)?.[1];
+    expect(
+      ['.who', '.what', '.day', '.km', '.cost', '.correct'].map(column),
+    ).toEqual(['1', '2', '3', '4', '5', '6']);
+  });
 });
