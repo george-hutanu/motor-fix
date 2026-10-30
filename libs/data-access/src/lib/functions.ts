@@ -309,6 +309,8 @@ export type { UpdateTimeBlock$Params as UpdateTimeBlock$Params } from './fn/gara
 export { updateTimeBlock as updateTimeBlock } from './fn/garages/update-time-block';
 export type { ProfileViewsControllerRecord$Params as ProfileViewsControllerRecord$Params } from './fn/garages/profile-views-controller-record';
 export { profileViewsControllerRecord as profileViewsControllerRecord } from './fn/garages/profile-views-controller-record';
+export type { GarageWeeklyFigures$Params as GarageWeeklyFigures$Params } from './fn/garages/garage-weekly-figures';
+export { garageWeeklyFigures as garageWeeklyFigures } from './fn/garages/garage-weekly-figures';
 export type { CatalogueJobsControllerPropose$Params as CatalogueJobsControllerPropose$Params } from './fn/garages/catalogue-jobs-controller-propose';
 export { catalogueJobsControllerPropose as catalogueJobsControllerPropose } from './fn/garages/catalogue-jobs-controller-propose';
 export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';
@@ -403,6 +405,10 @@ export type { JobStagesControllerFinish$Params as JobStagesControllerFinish$Para
 export { jobStagesControllerFinish as jobStagesControllerFinish } from './fn/garage-jobs/job-stages-controller-finish';
 export type { JobStagesControllerReceive$Params as JobStagesControllerReceive$Params } from './fn/garage-jobs/job-stages-controller-receive';
 export { jobStagesControllerReceive as jobStagesControllerReceive } from './fn/garage-jobs/job-stages-controller-receive';
+export type { JobStagesControllerHandover$Params as JobStagesControllerHandover$Params } from './fn/garage-jobs/job-stages-controller-handover';
+export { jobStagesControllerHandover as jobStagesControllerHandover } from './fn/garage-jobs/job-stages-controller-handover';
+export type { JobStagesControllerCorrect$Params as JobStagesControllerCorrect$Params } from './fn/garage-jobs/job-stages-controller-correct';
+export { jobStagesControllerCorrect as jobStagesControllerCorrect } from './fn/garage-jobs/job-stages-controller-correct';
 export type { JobStepsControllerAdd$Params as JobStepsControllerAdd$Params } from './fn/garage-jobs/job-steps-controller-add';
 export { jobStepsControllerAdd as jobStepsControllerAdd } from './fn/garage-jobs/job-steps-controller-add';
 export type { JobStepsControllerReorder$Params as JobStepsControllerReorder$Params } from './fn/garage-jobs/job-steps-controller-reorder';

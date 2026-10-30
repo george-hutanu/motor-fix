@@ -730,11 +730,13 @@ describe('Panou’s quotes panel', () => {
     ({
       cancelledBySide: null,
       confirmBy: '2026-10-18T10:00:00.000Z',
+      finalPriceBani: null,
       garage: {
         id: 'garage-1',
         name: 'Service Auto Militari',
         slug: 'service-auto-militari',
       },
+      handedOverAt: null,
       id: 'booking-1',
       jobStarted: false,
       lateCancellation: false,

@@ -37,6 +37,16 @@ export interface GarageSearchControllerForBrand$Params {
   bbox?: string;
 
 /**
+ * Keep only the garages open now on the Bucharest clock: inside one of their hours today, today neither a legal holiday nor one of their closed days. Exactly "1"
+ */
+  open_now?: '1';
+
+/**
+ * Keep only the garages whose weekly hours hold Saturday hours, whatever the closed days or holidays. Exactly "1"
+ */
+  open_saturday?: '1';
+
+/**
  * Up to 20 garage ids, comma-separated: answers those of them that are public, in the search's order, with no cursor
  */
   ids?: string;
@@ -65,6 +75,8 @@ export function garageSearchControllerForBrand(http: HttpClient, rootUrl: string
     rb.query('brandId', params.brandId, {});
     rb.query('radius', params.radius, {});
     rb.query('bbox', params.bbox, {});
+    rb.query('open_now', params.open_now, {});
+    rb.query('open_saturday', params.open_saturday, {});
     rb.query('ids', params.ids, {});
     rb.query('log', params.log, {});
     rb.query('cursor', params.cursor, {});

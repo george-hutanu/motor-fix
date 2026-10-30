@@ -151,6 +151,7 @@ describe('the pins of a search around a place', () => {
       id,
       lat: northOf(1000),
       lng: PLACE.lng,
+      matches: true,
       rateLei: 150,
       stance: 'works_on',
     });
@@ -353,6 +354,7 @@ describe('the pins of a mobile mechanic', () => {
       id,
       lat: Math.round(northOf(15_000) * 100) / 100,
       lng: Math.round(eastOf(3333) * 100) / 100,
+      matches: true,
       rateLei: 120,
       serviceRadiusKm: 20,
       stance: 'unstated',

@@ -85,6 +85,7 @@ const PIN = () => ({
   id: garageId,
   lat: 44.44,
   lng: 26.12,
+  matches: true,
   rateLei: 180,
   stance: 'works_on',
 });

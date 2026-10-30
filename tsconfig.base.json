@@ -25,6 +25,9 @@
       "@motor-fix/contracts/car-systems": [
         "./libs/contracts/src/car-systems.ts"
       ],
+      "@motor-fix/contracts/clock-cases.testing": [
+        "./libs/contracts/src/clock-cases.testing.ts"
+      ],
       "@motor-fix/contracts/consent": ["./libs/contracts/src/consent.ts"],
       "@motor-fix/contracts/demand-order": [
         "./libs/contracts/src/demand-order.ts"

@@ -14,6 +14,7 @@ const PIN: GaragePinDto = {
   id: 'militari',
   lat: 44.43,
   lng: 26.03,
+  matches: true,
   rateLei: 180,
   stance: 'works_on',
 };
