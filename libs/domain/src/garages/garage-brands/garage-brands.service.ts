@@ -9,7 +9,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { assertCatalogued } from './write-garage-brands';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
-import { refusal } from '../../auth/http-refusal';
+import { notFound, refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
@@ -20,13 +20,12 @@ import type {
 } from '../../generated/prisma/client';
 import { brandAnswerWithJobs } from '../brand-answer';
 
-export const notFound = () =>
-  refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
+export const noGarage = () => notFound('No such garage');
 
 // Only the owner answers; the garage's staff are told no, anyone else that
 // there is no such garage.
 export function assertGarageOwner(actor: Actor, garageId: string) {
-  if (actor.garageId !== garageId) throw notFound();
+  if (actor.garageId !== garageId) throw noGarage();
   if (actor.role !== 'garage') {
     throw refusal(
       HttpStatus.FORBIDDEN,
@@ -42,8 +41,8 @@ type Texts = { brandNote: string | null; refusalPhrase: string | null };
 async function lockGarage(tx: Prisma.TransactionClient, garageId: string) {
   const [garage] = await tx.$queryRaw<Texts[]>`
     SELECT brand_note AS "brandNote", refusal_phrase AS "refusalPhrase"
-    FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
-  if (!garage) throw notFound();
+    FROM garage WHERE id = ${garageId}::uuid FOR NO KEY UPDATE`;
+  if (!garage) throw noGarage();
   return garage;
 }
 
@@ -381,7 +380,7 @@ export class GarageBrandsService {
     assertGarage(actor, garageId);
     // One stance write per garage at a time: two first writes would both miss
     // the row, and the second create would fail on the primary key.
-    await tx.$executeRaw`SELECT 1 FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
+    await tx.$executeRaw`SELECT 1 FROM garage WHERE id = ${garageId}::uuid FOR NO KEY UPDATE`;
     const where = { garageId_brandId: { brandId, garageId } };
     const row = await tx.garageBrand.findUnique({ where });
     const taken = stance === 'works_on';

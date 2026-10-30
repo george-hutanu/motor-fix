@@ -1251,6 +1251,7 @@ async function priceList(db: Client) {
      JOIN garage g ON g.id = gb.garage_id AND g.slug = 'service-auto-militari'
      JOIN brand b ON b.id = gb.brand_id AND b.key = 'bmw'
      JOIN job_type j ON j.key = ANY($1)
+     WHERE gb.stance = 'works_on'
      ON CONFLICT DO NOTHING`,
     [
       MILITARI_PRICES.map(([job]) => job).filter(

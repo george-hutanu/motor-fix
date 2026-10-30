@@ -7,7 +7,7 @@ import { refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import type { PrismaClient } from '../../generated/prisma/client';
-import { notFound } from '../garage-brands/garage-brands.service';
+import { noGarage } from '../garage-brands/garage-brands.service';
 import { PublicGaragesService } from '../public-garages/public-garages';
 
 @Injectable()
@@ -54,7 +54,7 @@ export class GarageProfileService {
       },
       where: { id: garageId },
     });
-    if (!row) throw notFound();
+    if (!row) throw noGarage();
     const answer = fresh
       ? await this.publicGarages.fresh(row.slug)
       : await this.publicGarages.bySlug(row.slug);

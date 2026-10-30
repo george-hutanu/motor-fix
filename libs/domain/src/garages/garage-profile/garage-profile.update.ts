@@ -19,7 +19,7 @@ import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   assertGarageOwner,
-  notFound,
+  noGarage,
 } from '../garage-brands/garage-brands.service';
 import { writeGarageHours } from '../garage-hours';
 
@@ -105,7 +105,7 @@ async function lockGarage(
           'day', to_char(c.day, 'YYYY-MM-DD'), 'note', c.note) ORDER BY c.day)
         FROM garage_closed_day c WHERE c.garage_id = g.id), '[]') AS closed_days
     FROM garage g WHERE g.id = ${garageId}::uuid FOR UPDATE OF g`;
-  if (!row) throw notFound();
+  if (!row) throw noGarage();
   return row;
 }
 
@@ -128,7 +128,7 @@ function assertListed(row: Locked) {
   if (row.status === 'suspended') {
     throw refusal(HttpStatus.GONE, 'gone', 'This garage is no longer listed');
   }
-  if (row.status !== 'approved') throw notFound();
+  if (row.status !== 'approved') throw noGarage();
 }
 
 function assertNotVerified(body: unknown) {

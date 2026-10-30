@@ -62,6 +62,9 @@ export class GarageBrandStanceDto {
   jobs?: string[];
 }
 
+// The most brands one answer may mark; the catalogue holds far fewer.
+export const BRANDS_MAX = 200;
+
 // A garage's whole brand answer: a brand left out is not stated.
 export class ReplaceGarageBrandsDto {
   @ApiProperty({
@@ -69,6 +72,7 @@ export class ReplaceGarageBrandsDto {
     type: [GarageBrandStanceDto],
   })
   @IsArray()
+  @ArrayMaxSize(BRANDS_MAX)
   // A uuid in capitals is the same brand.
   @ArrayUnique((b: GarageBrandStanceDto) => String(b?.brandId).toLowerCase(), {
     message: 'brands must name each brand once',
