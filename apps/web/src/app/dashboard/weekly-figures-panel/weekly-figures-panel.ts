@@ -19,7 +19,8 @@ import {
   I18n,
   TranslatePipe,
 } from '@motor-fix/i18n';
-import { BarChart, type ChartPoint, HlmButton } from '@motor-fix/ui-cockpit';
+import { HlmButton } from '@motor-fix/ui-cockpit';
+import { BarChart, type ChartPoint } from '@motor-fix/ui-cockpit/chart';
 
 import { SectionTitle } from '../section-title/section-title';
 import { garageOf, Session } from '../session';

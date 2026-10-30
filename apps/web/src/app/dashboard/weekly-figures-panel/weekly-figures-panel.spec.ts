@@ -10,7 +10,7 @@ import {
   type WeeklyFiguresDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
-import { BarChart, type ChartPoint } from '@motor-fix/ui-cockpit';
+import { BarChart, type ChartPoint } from '@motor-fix/ui-cockpit/chart';
 
 import { WeeklyFiguresPanel } from './weekly-figures-panel';
 import { Session } from '../session';
