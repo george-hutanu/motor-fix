@@ -225,7 +225,7 @@
       },
       "garage": {
         "assistant": "AI assistant",
-        "clientRepairs": "Repairs added by clients",
+        "clientRepairs": "Client repairs",
         "history": "Change history",
         "jobs": "Jobs",
         "prices": "Prices",
