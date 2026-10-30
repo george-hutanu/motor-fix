@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 235,
+    "count": 239,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1153,6 +1153,58 @@
       ],
       "reason": "each changed day or the Saturday switch is audited (update, old and new value) and recorded as mechanic.updated with the fields in the same transaction; an unchanged save writes nothing; a 422 validation_failed (order, outside_opening, garage_closed_saturday) is the owner's input refused, not a failure",
       "story": "ST-58"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-time-blocks-read",
+      "source": "libs/domain/src/workshop/time-blocks/time-blocks.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/time-blocks",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a staff read of the blocked time over 1 to 31 days writes nothing; a 400 validation_failed is the range refused, a 403 is a mechanic, a 404 another garage",
+      "story": "ST-427"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-time-block-create",
+      "source": "libs/domain/src/workshop/time-blocks/time-blocks.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/time-blocks",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each block is written with its day segments, one audit create entry and time_block.created in one transaction; every 4xx logs one TimeBlocks warning with the block, the code and the garage; a 409 mechanic_busy, lift_busy or slot_taken and a 422 nothing_to_block or validation_failed are the schedule rules working, not failures",
+      "story": "ST-427"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-time-block-update",
+      "source": "libs/domain/src/workshop/time-blocks/time-blocks.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/time-blocks/:blockId",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each changed field is audited (update, old and new value) and recorded as time_block.updated in the change's transaction, the segments rewritten only when the hold or the range moved; a 409 block_past or a clash and a 422 are the rules working; each 4xx logs one TimeBlocks warning",
+      "story": "ST-427"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-time-block-delete",
+      "source": "libs/domain/src/workshop/time-blocks/time-blocks.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/time-blocks/:blockId",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the block and its segments go with one audit delete entry and time_block.deleted in one transaction; a card's removal deletes its future blocks the same way, as the system; a 409 block_past is the rule working; each 4xx logs one TimeBlocks warning",
+      "story": "ST-427"
     },
     {
       "kind": "endpoint",

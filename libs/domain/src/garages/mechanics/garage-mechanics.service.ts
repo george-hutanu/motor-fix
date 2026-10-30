@@ -27,6 +27,7 @@ import type {
   PrismaClient,
 } from '../../generated/prisma/client';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { removeMechanicBlocks } from '../../workshop/time-blocks/time-blocks';
 import { featureOn } from '../features/feature-on';
 import { assertGarageOwner } from '../garage-brands/garage-brands.service';
 import { isRecord, plainText } from '../plain-text';
@@ -557,6 +558,11 @@ export class GarageMechanicsService {
         subjectId: card.id,
         subjectType: 'mechanic',
       });
+      await removeMechanicBlocks(
+        tx,
+        { audit: this.audit, events: this.events },
+        { actorId: actor.accountId, garageId, mechanicId: card.id },
+      );
       // The card was on the profile until now: its public pages hear of it.
       await this.events.record(tx, {
         audience: cardAudience(garageId, card),

@@ -60,6 +60,7 @@ describe('catalogue', () => {
       'motorfix.read',
     ]);
     const list = jest.fn(async () => ({
+      blocks: [],
       entries: [],
       from: '2026-10-09',
       lifts: true,

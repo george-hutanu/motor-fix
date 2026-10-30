@@ -10,6 +10,7 @@ features:
   - 423-mechanic-garage-dashboard
   - 276-job-start-done
   - 275-live-stage-updates
+  - 427-time-blocks
 ---
 
 # Capability: Workshop
@@ -178,17 +179,17 @@ _From 275-live-stage-updates._
 
 _From 274-request-stages._
 
-### 150-FR-002 — The `workshop` module MUST offer one internal use case, `ScheduleService.assertPlaceable({ garageId, mechanicId: uuid | null, lift: integer | null, startsAt, durationMinutes })`, run inside the caller's transaction, that computes the segments of FR-003, reads the overlaps of each segment against BOOKING_SEGMENT (for the mechanic where set, for the garage's lift where set) and either returns the segments (each with `startsAt`, `endsAt`, `mechanicId`, `lift`) or throws the 409 of FR-006 naming the first cause met, in this order: the garage's time causes (`public_holiday`, `closed_day`, `outside_opening`), then the mechanic's (`day_off`, `saturday_off`, `not_working`, `ends_early`), then the overlaps segment by segment in time order, inside one segment the mechanic's before the lift's. The confirm (FR-004) is its first caller; the time blocks (#211) and the free slots (#21) reuse it and add nothing to the confirm. No TIME_BLOCK column, table or parameter is added here.
+### 427-FR-006 — (150-FR-002 and 150-FR-006 modified) `assertPlaceable` MUST read block segments beside booking segments and, when the first clash is a block row, throw the block messages of FR-005 with `reason` `time_block` (a booking row keeps the ST-150 messages), so the confirm, a move and the free slots refuse blocked time through the one check and nothing is added to the confirm; the taken-row shape gains the holder (`booking` with its car, or `time_block`).
 
-_From 150-add-booking._
+_From 427-time-blocks._
 
 ### 150-FR-005 — A BOOKING_SEGMENT exclusion violation raised at the write (a confirm of another booking committed between the read and the write) MUST be answered 409 `slot_taken` with the message "Locul tocmai a fost ocupat" / "The slot was just taken", never 500 and never the shipped mapping to `lift_busy` / `mechanic_busy`; two confirms racing for one place MUST end with exactly one `confirmed`. The deadlock retry stays; when the retry reads the other's segments it answers the named 409 of FR-006.
 
 _From 150-add-booking._
 
-### 150-FR-008 — With `team_mechanics` off the segments MUST carry no `mechanic_id`, so only the lift constraint and the garage's opening intervals limit the owner's bookings and two may overlap in time unless they share a lift (X04); nothing pauses or refuses a booking because the owner's jobs overlap.
+### 427-FR-005 — A block's segments MUST be its range cut at each Bucharest midnight it crosses (one row per day touched, clock-change days included), each carrying the block's `mechanic_id` (null with `team_mechanics` off) and `lift`; the create, and a change of mechanic, lift, start or end, MUST compute them, read the overlapping BOOKING_SEGMENT rows of the mechanic and of the garage's lift (excluding the block's own rows on a change) and refuse the first clash in time order through `judgeOverlaps` of 150-FR-002, the mechanic's before the lift's, with the booking messages of 150-FR-006 for a booking row ("{name} are o programare {span}", "Elevatorul {n} e ocupat {span} ({car})") and these for a block row: 409 `mechanic_busy` "{name} e blocat {span}" / "{name} is blocked {span}" and 409 `lift_busy` "Elevatorul {n} e blocat {span}" / "Lift {n} is blocked {span}", `reason` `time_block`, the span on the Bucharest wall clock, for a block row the block's whole range (not the day segment that clashed), each end with its weekday prefixed when on another day than the start asked for (150-FR-006), and the problem details naming `mechanicId` or `lift` as the field; a booking still `awaiting_confirmation` has no segments and stops no block. The mechanic's card MUST be read `FOR SHARE` in that transaction (a concurrent card removal updates the row and waits, so no future block is saved on a card removed in between, FR-012); The write MUST then be the block row, its segments, the audit entry and the event in one transaction; an exclusion violation at the write is 409 `slot_taken` (150-FR-005).
 
-_From 150-add-booking._
+_From 427-time-blocks._
 
 ### 423-FR-002 — While the first read is in flight the section MUST show three skeleton rows marked busy; with no row and no next booking it MUST say "Nicio lucrare azi" / "No jobs today"; when the read fails it MUST show the shared problem line with a retry button; tapping a row MUST open the job as Lucrări opens it; the section MUST re-read on the job event kinds Lucrări listens to (`job.mechanic_changed` included), on `booking.confirmed`, `booking.moved` and `booking.cancelled`, and when the stream reconnects.
 
@@ -266,8 +267,35 @@ _From 275-live-stage-updates._
 
 _From 275-live-stage-updates._
 
+### 427-FR-001 — A new table TIME_BLOCK (`time_block`) MUST hold `id`, `garage_id` (cascade), `mechanic_id` (nullable; set null when the card row is deleted, the soft-removed card keeps its past blocks), `lift` (nullable integer), `starts_at` and `ends_at` (timestamptz, half-open, `ends_at` > `starts_at` checked), `note` (nullable text, at most 200 characters checked), `created_by` and `updated_by` (account ids), `created_at`, `updated_at`, with a check that at least one of `mechanic_id` and `lift` is set and an index on (`garage_id`, `starts_at`); one Prisma migration in the `workshop` schema adds it.
+
+_From 427-time-blocks._
+
+### 427-FR-003 — The API MUST offer, under the `workshop` module, `GET /api/v1/garages/:garageId/time-blocks?from&to` (Bucharest dates, `to` defaulting to `from`, 1 to 31 days, else 400 `validation_failed`; the blocks whose segments touch the range), `POST /api/v1/garages/:garageId/time-blocks` (201), `PATCH /api/v1/garages/:garageId/time-blocks/:blockId` (200) and `DELETE /api/v1/garages/:garageId/time-blocks/:blockId` (204), with the body `{ mechanicId?: uuid | null, lift?: integer | null, startsAt, endsAt, note?: string | null }` (PATCH: any subset; unknown fields 400 `validation_failed` naming the field); open to the owner and a receptionist of that garage, checked on the server before anything else: a mechanic of the garage gets 403 `forbidden` whatever her permissions, any other actor and an unknown garage 404 `not_found`, a visitor 401 `sign_in_required`; a `blockId` of another garage or unknown 404 `not_found`. The DTOs come from the contracts library.
+
+_From 427-time-blocks._
+
+### 427-FR-004 — A create or change MUST be refused, in this order and before any write: 422 `nothing_to_block` when the result would hold neither a mechanic nor a lift, or when both `team_mechanics` and `lift_schedule` are off (OD-33); 404 `feature_off` for a `mechanicId` while `team_mechanics` is off or a `lift` while `lift_schedule` is off; 422 `validation_failed` naming the field for a `mechanicId` that is not a current card of this garage (`removed_at` null; the owner's row allowed), a `lift` outside 1..`lift_count`, a `startsAt` or `endsAt` off the 15-minute Bucharest grid, an `endsAt` not after `startsAt`, a range under 15 minutes or over 14 days, an `endsAt` not after now, a `note` over 200 characters (trimmed; empty saved as null; plain text, no markup stripped or interpreted).
+
+_From 427-time-blocks._
+
+### 427-FR-007 — A change (PATCH) MUST apply the given fields over the stored block, run FR-004 and FR-005 on the result, rewrite the segments only when mechanic, lift, start or end changed, and set `updated_by` and `updated_at`; a change or a removal of a block whose `ends_at` is not after now MUST be refused 409 `block_past` "Un interval blocat trecut nu se mai poate modifica" / "A past blocked interval can no longer be changed"; a change with no changed field answers 200 and writes nothing.
+
+_From 427-time-blocks._
+
+### 427-FR-008 — A removal (DELETE) MUST delete the block and its segments in one transaction with its audit entry and event; the time is free at once.
+
+_From 427-time-blocks._
+
+### 427-FR-017 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids. In Jest on real PostgreSQL and Redis: US1-1 to US1-8 (the row, the segments per day and on the clock-change days, the block and the booking refusals with their messages and `reason`, the race with exactly one block and a 409 `slot_taken`, the awaiting booking), US2-1 to US2-6 (the change, the clash on a change, the note-only change, the removal, `block_past`, the lost update), US3-1 to US3-6 (every role on every route, the schedule read per role with `blocks` and the note, the public routes list, the driver's history), US4-1 and US4-3 to US4-5 (the removal with its entries and events, each switch state, `nothing_to_block`), every FR-004 refusal at its bound, and the confirm onto blocked time through `assertPlaceable` (FR-006). In unit Jest: the day cut (`segmentsOf`), `judgeOverlaps` with block rows, the message wording in both languages. The OpenAPI document matches the running API (the existing openapi test) and the structure check passes.
+
+_From 427-time-blocks._
+
 ## Retired
 
 - `220-FR-007` — superseded by `389-FR-002` (2026-10-21)
 - `389-FR-002` — superseded by `276-FR-004` (2026-10-26)
 - `274-FR-020` — superseded by `275-FR-001` (2026-10-29)
+- `150-FR-002` — superseded by `427-FR-006` (2026-10-29)
+- `150-FR-008` — superseded by `427-FR-005` (2026-10-29)
+- `427-FR-013` — struck by 427-time-blocks at clarify (2026-10-29): no code lowers `lift_count`; the first story that writes it owns the guard

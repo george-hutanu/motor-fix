@@ -2,27 +2,38 @@
   <mf-verification-progress />
 } @else {
   <mf-suspended-banner />
-  @if (verified()) {
-    <div class="strip">
+  <div class="strip">
+    @if (verified()) {
       <p class="verified" data-verified-pill>
         <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>{{ 'garage.legal.pill' | t }}
       </p>
       @if (checkedLine(); as line) {
         <span class="muted" data-verified-line>{{ line }}</span>
       }
-    </div>
-  }
+    }
+    <span class="layout">
+      @if (count(); as line) {
+        <span class="muted" data-count aria-live="polite">{{ line }}</span>
+      }
+      <button hlmBtn variant="ghost" type="button" data-customise (click)="open()">
+        {{ 'garage.home.panel.button' | t }}
+      </button>
+    </span>
+  </div>
   @if (owner()) {
     <mf-garage-legal-check />
   }
   @if (firstSteps()) {
     <mf-first-steps-card [team]="team()" />
   }
+  @if (allHidden()) {
+    <p class="muted" data-all-hidden>{{ 'garage.home.panel.empty' | t }}</p>
+  }
   <div class="sections">
     @if (ownAfter() === -1) {
       <ng-container *ngTemplateOutlet="own" />
     }
-    @for (section of sections(); track section.key; let at = $index) {
+    @for (section of shown(); track section.key; let at = $index) {
       @switch (section.key) {
         @case ('req') {
           @if (feed.visible()) {

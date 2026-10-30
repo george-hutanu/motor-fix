@@ -52,3 +52,24 @@ describe('the dashboard layouts in the OpenAPI document', () => {
     expect(schema.properties.updatedAt.nullable).toBe(true);
   });
 });
+
+// @traces 011-FR-001
+describe('the role a layout belongs to', () => {
+  it('names the four served roles', () => {
+    const role = item().get.parameters.find(
+      (param: { name: string }) => param.name === 'role',
+    );
+    expect(role.description).toBe('admin, garage, receptionist or mechanic');
+  });
+});
+
+// @traces 011-FR-012
+describe('what the garage roles add to the contract', () => {
+  it('adds no path: the layouts keep their one path', () => {
+    expect(
+      Object.keys(doc.paths).filter((path) =>
+        path.includes('dashboard-layout'),
+      ),
+    ).toEqual(['/api/v1/me/dashboard-layouts/{role}']);
+  });
+});
