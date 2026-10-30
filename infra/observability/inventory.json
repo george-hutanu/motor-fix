@@ -3176,7 +3176,7 @@
     },
     {
       "kind": "endpoint",
-      "name": "garage-client-repair",
+      "name": "garage-client-repair-correct",
       "source": "libs/domain/src/cars/client-repairs/client-repairs.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garage/client-repairs/:id",
       "dashboard": "motorfix-api",
@@ -3184,7 +3184,20 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "the owner corrects a shared repair (PATCH) or is refused a delete (DELETE, 403); each correction counted by motorfix_repair_corrections_total by writer and outcome, one ClientRepairs log line per correction with the repair id and the changed fields, the audit rows and a repair.updated event; refusals read from the status codes",
+      "reason": "the owner corrects a shared repair (PATCH); each correction that reaches the use case counted by motorfix_repair_corrections_total by writer and outcome, one ClientRepairs log line per correction naming the repair, the garage and the changed fields (no values), the audit rows and a repair.updated event; refusals read from the status codes; no alert of its own: a correction is rare and user-driven, its failures are 5xx under api-error-rate",
+      "story": "ST-409"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-client-repair-delete",
+      "source": "libs/domain/src/cars/client-repairs/client-repairs.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garage/client-repairs/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the named garage never deletes a logged repair: DELETE always answers 403 and changes nothing, read from the status codes; no counter and no alert of its own",
       "story": "ST-409"
     },
     {
