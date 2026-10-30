@@ -1,7 +1,10 @@
 import { startTelemetry } from '@motor-fix/observability';
 import { counterTotal, inMemory } from '@motor-fix/observability/testing';
 
+import { ADMIN_SCOPE } from './client-repairs';
 import { recordCorrection } from './client-repairs.metrics';
+import { ClientRepairsService } from './client-repairs.service';
+import type { Actor } from '../../auth/policy';
 
 const memory = inMemory();
 const started = startTelemetry(
@@ -37,5 +40,34 @@ describe('the repair correction counter', () => {
 
     expect(await total({ by: 'admin', outcome: 'corrected' })).toBe(admin + 1);
     expect(await total({ by: 'owner', outcome: 'corrected' })).toBe(owner);
+  });
+
+  // @traces 1267-FR-010
+  it('counts nothing for a caller refused before the correction runs', async () => {
+    const driver: Actor = {
+      accountId: 'account-a',
+      garageId: null,
+      permissions: {
+        canAnswerQuotes: false,
+        canMoveBookings: false,
+        canRecordFinalPrice: false,
+      },
+      role: 'driver',
+      roles: ['driver'],
+    };
+    const service = new ClientRepairsService(
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    const before = await total({ by: 'owner', outcome: 'not_found' });
+
+    await expect(
+      service.correct(driver, ADMIN_SCOPE, 'repair-a', {
+        version: '2026-10-01T00:00:00.000Z',
+      }),
+    ).rejects.toMatchObject({ status: 404 });
+
+    expect(await total({ by: 'owner', outcome: 'not_found' })).toBe(before);
   });
 });
