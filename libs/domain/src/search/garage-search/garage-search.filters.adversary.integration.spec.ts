@@ -1,49 +1,42 @@
-import { type INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import { Redis } from 'ioredis';
-import request from 'supertest';
+import { randomUUID } from 'node:crypto';
 
-import { AuthModule } from '../../auth/auth.module';
+import { filtersOf, type WeeklyHours } from '@motor-fix/contracts';
+import { WEEK } from '@motor-fix/contracts/clock-cases.testing';
+import { HttpException } from '@nestjs/common';
+
+import type { GarageSearchCache } from './garage-search.cache';
+import { GarageSearchService } from './garage-search.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import {
   databaseUrl,
   fixtures,
-  redisUrlFor,
 } from '../../notifications/notifications.testing';
-import { SearchModule } from '../search.module';
+import { GaragePinsService } from '../garage-pins/garage-pins.service';
+import { SearchLogService } from '../search-log/search-log.service';
 
-const redisUrl = redisUrlFor(3);
+type Query = { open_now?: '1'; open_saturday?: '1' };
+
 const { prisma } = fixtures();
-const store = new Redis(redisUrl);
+const uncached = {
+  entry: (_key, read) => read(),
+} satisfies Pick<GarageSearchCache, 'entry'> as unknown as GarageSearchCache;
+const search = new GarageSearchService(
+  prisma,
+  uncached,
+  new SearchLogService(prisma),
+);
+const pins = new GaragePinsService(prisma, uncached);
 serialDatabase(databaseUrl);
 
-const NEAR = '46.771,23.624';
-let app: INestApplication;
-let dacia: string;
-let seq = 0;
+const PLACE = { lat: 44.437, lng: 26.117 };
+const METRES_PER_DEGREE = (6_371_008.8 * Math.PI) / 180;
+const TUESDAY = new Date('2027-11-02T10:15:00+02:00');
+const SATURDAY = new Date('2027-11-06T10:00:00+02:00');
 
-beforeAll(async () => {
-  const moduleRef = await Test.createTestingModule({
-    imports: [
-      AuthModule.register({ databaseUrl, redisUrl, tokenSecret: 'test' }),
-      SearchModule,
-    ],
-  }).compile();
-  app = moduleRef.createNestApplication();
-  app.getHttpAdapter().getInstance().set('trust proxy', 'loopback');
-  app.useGlobalPipes(
-    new ValidationPipe({
-      forbidNonWhitelisted: true,
-      transform: true,
-      whitelist: true,
-    }),
-  );
-  await app.init();
-});
+let dacia: string;
 
 beforeEach(async () => {
-  await store.flushdb();
-  await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
+  await prisma.$executeRawUnsafe('TRUNCATE account, brand, garage CASCADE');
   dacia = (
     await prisma.brand.create({
       data: { key: 'dacia', name: 'Dacia', slug: 'dacia' },
@@ -52,363 +45,261 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await app.close();
   await prisma.$disconnect();
-  await store.quit();
 });
 
-const list = (query: Record<string, string>) =>
-  request(app.getHttpServer())
-    .get('/search/garages')
-    .query({ brand: 'dacia', near: NEAR, ...query });
-const pins = (query: Record<string, string>) =>
-  request(app.getHttpServer())
-    .get('/search/garages/pins')
-    .query({ brand: 'dacia', near: NEAR, ...query });
-
-interface Spec {
-  bani?: number | null;
-  card?: boolean;
-  rating?: number;
-  stance?: 'works_on' | 'does_not_take' | null;
-  mobile?: boolean;
-}
-
-async function garage(name: string, spec: Spec = {}) {
-  seq += 1;
-  const created = await prisma.garage.create({
+async function garage(hours: unknown, closed: string[] = []) {
+  const { id } = await prisma.garage.create({
     data: {
-      labourFromBani: spec.bani ?? null,
-      latitude: 46.771 + seq / 10_000,
-      longitude: 23.624,
-      name,
-      paymentCard: spec.card ?? false,
-      slug: `${name.toLowerCase().replace(/ /g, '-')}-${seq}`,
+      businessKind: 'company',
+      hours: hours as object,
+      latitude: PLACE.lat + 1000 / METRES_PER_DEGREE,
+      longitude: PLACE.lng,
+      name: `Garage ${randomUUID()}`,
+      slug: randomUUID(),
       status: 'approved',
-      ...(spec.rating !== undefined && {
-        rating: spec.rating,
-        reviewCount: 2,
-      }),
-      ...(spec.mobile && {
-        businessKind: 'mobile' as const,
-        seatAddress: 'Strada Sediului 1, Cluj-Napoca',
-        serviceRadiusKm: 30,
-      }),
     },
   });
-  const stance = spec.stance === undefined ? 'works_on' : spec.stance;
-  if (stance) {
-    await prisma.garageBrand.create({
-      data: {
-        brandId: dacia,
-        garageId: created.id,
-        stance,
-        ...(stance === 'does_not_take' && {
-          diesel: false,
-          electric: false,
-          hybrid: false,
-          petrol: false,
-        }),
-      },
+  for (const day of closed) {
+    await prisma.garageClosedDay.create({
+      data: { day: new Date(day), garageId: id },
     });
   }
-  return created.id;
+  return id;
 }
 
-const names = (res: request.Response) =>
-  res.body.items.map((i: { name: string }) => i.name);
+const page = (query: Query, at: Date) =>
+  search.forBrand(
+    dacia,
+    undefined,
+    undefined,
+    undefined,
+    false,
+    undefined,
+    undefined,
+    filtersOf(query, at),
+  );
 
-// @traces 1261-FR-002
-describe('the price ceiling at the edges', () => {
-  it.each([
-    [14_949, true],
-    [14_950, false],
-    [15_000, true],
-    [15_049, true],
-    [15_050, false],
-    [30_049, true],
-    [30_050, false],
-  ])('a rate of %i bani against 150 lei or 300 lei', async (bani, _) => {
-    await garage('Edge', { bani });
-    const ceiling = bani > 20_000 ? '300' : '150';
-    const fits = bani < Number(ceiling) * 100 + 50;
+const pinsOf = (query: Query, at: Date) =>
+  pins.forBrand(dacia, PLACE, undefined, undefined, filtersOf(query, at));
 
-    const res = await list({ max_price: ceiling });
+const NOT_A_LIST: [string, unknown][] = [
+  ['a string', 'x'],
+  ['null', null],
+  ['an object', { 0: ['09:00', '14:00'] }],
+  ['a number', 7],
+  ['a boolean', true],
+];
 
-    expect(names(res)).toEqual(fits ? ['Edge'] : []);
-    expect(res.body.total).toBe(fits ? 1 : 0);
-  });
+// @traces 1260-FR-002 1260-FR-004
+describe('hours that are not a week, read by the filters', () => {
+  it.each(NOT_A_LIST)(
+    'never matches open on Saturday when Saturday is %s, and the search still answers',
+    async (_name, saturday) => {
+      await garage({ ...WEEK, sat: saturday });
+      const ok = await garage(WEEK);
 
-  it('leaves out a garage with no rate and one with a zero rate counts as cheap', async () => {
-    await garage('None', { bani: null });
-    await garage('Zero', { bani: 0 });
+      const found = await page({ open_saturday: '1' }, TUESDAY);
 
-    const res = await list({ max_price: '150' });
-
-    expect(names(res)).toEqual(['Zero']);
-  });
-});
-
-// @traces 1261-FR-003
-describe('the minimum rating at the edges', () => {
-  it('takes 3.5 and 4.0 exactly and leaves out 3.4 and 3.9', async () => {
-    await garage('Low', { rating: 3.4 });
-    await garage('Edge', { rating: 3.5 });
-    await garage('Just under', { rating: 3.9 });
-    await garage('Unreviewed');
-
-    expect(names(await list({ min_rating: '3.5' })).sort()).toEqual([
-      'Edge',
-      'Just under',
-    ]);
-    expect(names(await list({ min_rating: '4.0' }))).toEqual([]);
-  });
-
-  it('takes a 5.0 garage for every minimum', async () => {
-    await garage('Top', { rating: 5 });
-
-    for (const min of ['3.5', '4.0', '4.5']) {
-      expect(names(await list({ min_rating: min }))).toEqual(['Top']);
-    }
-  });
-});
-
-// @traces 1261-FR-005 1261-FR-006
-describe('filters together with groups, counts and mobile mechanics', () => {
-  it('keeps the garages that take the brand first and counts only matches', async () => {
-    await garage('Refuses card', { card: true, stance: 'does_not_take' });
-    await garage('Unstated card', { card: true, stance: null });
-    await garage('Takes card', { card: true });
-    await garage('Takes cash');
-    await garage('Mobile card', { card: true, mobile: true });
-
-    const res = await list({ card: '1' });
-
-    expect(res.status).toBe(200);
-    expect(res.body.counts.worksOn).toBe(2);
-    expect(res.body.counts.doesNotTake).toBe(2);
-    expect(res.body.total).toBe(4);
-    expect(names(res).slice(0, 2).sort()).toEqual([
-      'Mobile card',
-      'Takes card',
-    ]);
-    expect(names(res)).not.toContain('Takes cash');
-  });
-
-  it('answers all zero and an empty list when nothing matches', async () => {
-    await garage('Cash only');
-
-    const res = await list({ card: '1', max_price: '150', min_rating: '4.5' });
-
-    expect(res.status).toBe(200);
-    expect(res.body.items).toEqual([]);
-    expect(res.body.counts).toEqual({ doesNotTake: 0, worksOn: 0 });
-    expect(res.body.total).toBe(0);
-    expect(res.body.nextCursor).toBeNull();
-  });
-
-  it('counts over every match, not over the page', async () => {
-    for (let n = 0; n < 23; n += 1) await garage(`Card ${n}`, { card: true });
-    await garage('Cash');
-
-    const res = await list({ card: '1' });
-
-    expect(res.body.items).toHaveLength(20);
-    expect(res.body.total).toBe(23);
-    expect(res.body.counts.worksOn).toBe(23);
-  });
-
-  it('gives the same answer for the same filters asked twice', async () => {
-    await garage('Card', { card: true });
-    await garage('Cash');
-
-    const first = await list({ card: '1' });
-    const second = await list({ card: '1' });
-
-    expect(second.body).toEqual(first.body);
-  });
-
-  it('never serves one combination of filters for another', async () => {
-    await garage('Card', { bani: 10_000, card: true, rating: 4.5 });
-    await garage('Cash', { bani: 40_000, rating: 3.0 });
-
-    expect(names(await list({}))).toHaveLength(2);
-    expect(names(await list({ card: '1' }))).toEqual(['Card']);
-    expect(names(await list({ max_price: '150' }))).toEqual(['Card']);
-    expect(names(await list({ min_rating: '4.5' }))).toEqual(['Card']);
-    expect(names(await list({}))).toHaveLength(2);
-    expect(names(await list({ max_price: '300' }))).toEqual(['Card']);
-  });
-});
-
-// @traces 1261-FR-009
-describe('the cursor under filters', () => {
-  const seed = async () => {
-    for (let n = 0; n < 25; n += 1) {
-      await garage(`Both ${n}`, { bani: 10_000, card: true, rating: 4.5 });
-    }
-  };
-
-  it('continues a filtered page with the same filters and gives the rest', async () => {
-    await seed();
-    const first = await list({ card: '1', max_price: '150' });
-    const second = await list({
-      card: '1',
-      cursor: first.body.nextCursor,
-      max_price: '150',
-    });
-
-    expect(second.status).toBe(200);
-    expect(second.body.items).toHaveLength(5);
-    expect(new Set([...names(first), ...names(second)]).size).toBe(25);
-  });
-
-  it.each([
-    ['one added', { card: '1' }, { card: '1', min_rating: '4.0' }],
-    ['one removed', { card: '1', min_rating: '4.0' }, { card: '1' }],
-    ['one changed', { max_price: '150' }, { max_price: '200' }],
-    ['all removed', { card: '1' }, {}],
-    ['all added', {}, { card: '1' }],
-    ['rating swapped for price', { min_rating: '4.0' }, { max_price: '150' }],
-  ])('refuses a cursor with a filter %s', async (_, made, used) => {
-    await seed();
-    const first = await list(made);
-    expect(first.body.nextCursor).toEqual(expect.any(String));
-
-    const res = await list({ ...used, cursor: first.body.nextCursor });
-
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe('invalid_cursor');
-  });
-
-  it('accepts a cursor made with no filter and used with none', async () => {
-    await seed();
-    const first = await list({});
-    const second = await list({ cursor: first.body.nextCursor });
-
-    expect(second.status).toBe(200);
-    expect(second.body.items).toHaveLength(5);
-  });
-
-  it('names the bad filter rather than the stale cursor', async () => {
-    const res = await list({ cursor: 'c3RhbGU', min_rating: '4' });
-
-    expect(res.status).toBe(400);
-    expect(res.body.code).not.toBe('invalid_cursor');
-    expect(JSON.stringify(res.body.message)).toContain('min_rating');
-  });
-});
-
-// @traces 1261-FR-001 1261-FR-006
-describe('ids mode under filters', () => {
-  it('answers only the ids that match and the search totals', async () => {
-    const card = await garage('Card', { card: true });
-    const cash = await garage('Cash');
-    await garage('Other card', { card: true });
-
-    const res = await list({ card: '1', ids: [card, cash].join(',') });
-
-    expect(res.status).toBe(200);
-    expect(names(res)).toEqual(['Card']);
-    expect(res.body.total).toBe(2);
-    expect(res.body.nextCursor).toBeNull();
-  });
-
-  it('answers an empty list when no id matches', async () => {
-    const cash = await garage('Cash');
-
-    const res = await list({ card: '1', ids: cash });
-
-    expect(res.status).toBe(200);
-    expect(res.body.items).toEqual([]);
-  });
-});
-
-// @traces 1261-FR-007
-describe('the pins under filters', () => {
-  it('marks every garage found and counts the matches like the list', async () => {
-    await garage('Card', { bani: 10_000, card: true, rating: 4.5 });
-    await garage('Cash', { bani: 10_000, rating: 4.5 });
-    await garage('No rate', { card: true, rating: 4.5 });
-    await garage('Refuses', {
-      bani: 10_000,
-      card: true,
-      rating: 4.5,
-      stance: 'does_not_take',
-    });
-    const query = { card: '1', max_price: '150', min_rating: '4.5' };
-
-    const res = await pins(query);
-    const listed = await list(query);
-
-    expect(res.status).toBe(200);
-    expect(res.body.pins).toHaveLength(4);
-    expect(
-      res.body.pins.filter((p: { matches: boolean }) => p.matches),
-    ).toHaveLength(2);
-    expect(res.body.total).toBe(listed.body.total);
-    expect(res.body.total).toBe(2);
-  });
-
-  it('marks every pin true with no filter', async () => {
-    await garage('Card', { card: true });
-    await garage('Cash');
-
-    const res = await pins({});
-
-    expect(res.body.pins.map((p: { matches: boolean }) => p.matches)).toEqual([
-      true,
-      true,
-    ]);
-    expect(res.body.total).toBe(2);
-  });
-
-  it('marks the mobile mechanic by the same rules', async () => {
-    await garage('Mobile', { card: true, mobile: true });
-
-    const res = await pins({ card: '1' });
-
-    expect(res.body.pins.map((p: { matches: boolean }) => p.matches)).toEqual([
-      true,
-    ]);
-  });
-
-  it('answers no matches but all the pins when nothing matches', async () => {
-    await garage('Cash');
-
-    const res = await pins({ card: '1' });
-
-    expect(res.body.pins).toHaveLength(1);
-    expect(res.body.pins[0].matches).toBe(false);
-    expect(res.body.total).toBe(0);
-  });
-
-  it('never serves a pin answer cached under other filters', async () => {
-    await garage('Card', { card: true });
-
-    expect((await pins({})).body.pins[0].matches).toBe(true);
-    expect((await pins({ card: '1' })).body.pins[0].matches).toBe(true);
-    await prisma.garage.updateMany({ data: { paymentCard: false } });
-    await store.flushdb();
-    expect((await pins({ card: '1' })).body.pins[0].matches).toBe(false);
-  });
-
-  it.each([
-    ['max_price', '0'],
-    ['max_price', '1000000000000'],
-    ['min_rating', '5.0'],
-    ['card', '１'],
-  ])('answers 400 to %s=%s', async (key, value) => {
-    expect((await pins({ [key]: value })).status).toBe(400);
-  });
-
-  it.each(['max_price=', 'card=&brand=dacia', 'min_rating=%00'])(
-    'answers 400 to an empty or nul value in %s',
-    async (suffix) => {
-      const res = await request(app.getHttpServer()).get(
-        `/search/garages/pins?brand=dacia&${suffix}`,
-      );
-      expect(res.status).toBe(400);
+      expect(found.items.map((item) => item.id)).toEqual([ok]);
+      expect(found.total).toBe(1);
     },
   );
+
+  it.each(NOT_A_LIST)(
+    'never matches open now when Tuesday is %s, and the search still answers',
+    async (_name, tuesday) => {
+      await garage({ ...WEEK, tue: tuesday });
+      const ok = await garage(WEEK);
+
+      const found = await page({ open_now: '1' }, TUESDAY);
+
+      expect(found.items.map((item) => item.id)).toEqual([ok]);
+      expect(found.total).toBe(1);
+    },
+  );
+
+  it.each([
+    ['an array', []],
+    ['an array of strings', ['mon', 'sat']],
+    ['a string', 'always open'],
+    ['a number', 0],
+    ['an empty object', {}],
+  ])(
+    'never matches either filter when the stored hours are %s',
+    async (_n, hours) => {
+      await garage(hours);
+      await garage(WEEK);
+
+      const both = await page({ open_now: '1', open_saturday: '1' }, SATURDAY);
+      const sat = await page({ open_saturday: '1' }, TUESDAY);
+      const now = await page({ open_now: '1' }, TUESDAY);
+
+      expect([both.total, sat.total, now.total]).toEqual([1, 1, 1]);
+    },
+  );
+
+  it('never matches open on Saturday for a Saturday kept under a different key', async () => {
+    await garage({
+      ...WEEK,
+      Sat: [['09:00', '14:00']],
+      sat: undefined,
+      saturday: [['09:00', '14:00']],
+    });
+
+    expect((await page({ open_saturday: '1' }, TUESDAY)).total).toBe(0);
+  });
+
+  it('pins every garage with an unreadable week as not matching, without an error', async () => {
+    const odd = await garage({ ...WEEK, sat: 'x', tue: 'x' });
+    const ok = await garage(WEEK);
+
+    const answer = await pinsOf(
+      { open_now: '1', open_saturday: '1' },
+      SATURDAY,
+    );
+
+    expect(answer.pins.map(({ id, matches }) => [id, matches]).sort()).toEqual(
+      [
+        [odd, false],
+        [ok, true],
+      ].sort(),
+    );
+    expect(answer.total).toBe(1);
+  });
+});
+
+// @traces 1260-FR-002
+describe('open now at the millisecond edge of an interval', () => {
+  const at = (time: string) => new Date(`2027-11-02T${time}+02:00`);
+
+  it.each([
+    ['one millisecond before opening', '07:59:59.999', 0],
+    ['the opening millisecond', '08:00:00.000', 1],
+    ['the last millisecond of the last minute', '17:59:59.999', 1],
+    ['the closing millisecond', '18:00:00.000', 0],
+  ])('answers %s', async (_name, time, total) => {
+    await garage({ ...WEEK, tue: [['08:00', '18:00']] });
+
+    expect((await page({ open_now: '1' }, at(time))).total).toBe(total);
+  });
+
+  it('is open at 23:59 on an interval that ends at 24:00', async () => {
+    await garage({ ...WEEK, tue: [['20:00', '24:00']] });
+
+    expect((await page({ open_now: '1' }, at('23:59:59.999'))).total).toBe(1);
+  });
+
+  it('is closed at 00:00 the next day when the interval ended at 24:00', async () => {
+    await garage({ ...WEEK, tue: [['20:00', '24:00']], wed: [] });
+
+    expect(
+      (await page({ open_now: '1' }, new Date('2027-11-03T00:00:00+02:00')))
+        .total,
+    ).toBe(0);
+  });
+
+  it('is open on a day whose first interval starts at 00:00', async () => {
+    await garage({ ...WEEK, tue: [['00:00', '06:00']] });
+
+    expect((await page({ open_now: '1' }, at('00:00:00.000'))).total).toBe(1);
+  });
+});
+
+// @traces 1260-FR-002
+describe('closed days belong to their own garage and their own day', () => {
+  it('leaves a garage open when only another garage closed today', async () => {
+    await garage(WEEK, ['2027-11-02']);
+    const open = await garage(WEEK);
+
+    const found = await page({ open_now: '1' }, TUESDAY);
+
+    expect(found.items.map((item) => item.id)).toEqual([open]);
+  });
+
+  it('uses the Bucharest date for a closed day when the UTC date is still the day before', async () => {
+    const id = await garage(WEEK, ['2027-11-03']);
+
+    const found = await page(
+      { open_now: '1' },
+      new Date('2027-11-02T22:30:00Z'),
+    );
+
+    expect(found.items.map((item) => item.id)).not.toContain(id);
+  });
+
+  it('keeps a garage that closed a Saturday matching open on Saturday', async () => {
+    const id = await garage(WEEK, ['2027-11-06']);
+
+    const found = await page({ open_saturday: '1' }, SATURDAY);
+
+    expect(found.items.map((item) => item.id)).toEqual([id]);
+  });
+});
+
+// @traces 1260-FR-009
+describe('a hostile cursor under filters', () => {
+  const read = (cursor: string) =>
+    search
+      .forBrand(
+        dacia,
+        cursor,
+        undefined,
+        undefined,
+        false,
+        undefined,
+        undefined,
+        filtersOf({ open_now: '1' }, TUESDAY),
+      )
+      .then(
+        () => undefined,
+        (thrown: unknown) =>
+          thrown instanceof HttpException ? thrown.getResponse() : thrown,
+      );
+
+  it.each([
+    ['empty-looking base64', Buffer.from('').toString('base64url')],
+    ['json null', Buffer.from('null').toString('base64url')],
+    [
+      'json with the filters as numbers',
+      Buffer.from('{"f":1}').toString('base64url'),
+    ],
+    [
+      'json with the filters as an object',
+      Buffer.from('{"f":{"openNow":true}}').toString('base64url'),
+    ],
+    ['plain text', 'not a cursor'],
+  ])('refuses %s as invalid_cursor', async (_name, cursor) => {
+    await garage(WEEK);
+
+    expect(await read(cursor)).toMatchObject({ code: 'invalid_cursor' });
+  });
+});
+
+// @traces 1260-FR-006 1260-FR-007
+describe('a filtered search with nothing found at all', () => {
+  it('answers an empty list, zero counts and no pins for a brand with no garage', async () => {
+    const list = await page({ open_now: '1', open_saturday: '1' }, SATURDAY);
+    const answer = await pinsOf(
+      { open_now: '1', open_saturday: '1' },
+      SATURDAY,
+    );
+
+    expect(list).toMatchObject({
+      counts: { doesNotTake: 0, worksOn: 0 },
+      items: [],
+      nextCursor: null,
+      total: 0,
+    });
+    expect(answer).toMatchObject({ pins: [], total: 0 });
+  });
+
+  it('keeps the unfiltered week untouched by a filtered read', async () => {
+    const hours: WeeklyHours = { ...WEEK };
+    const id = await garage(hours);
+    await page({ open_now: '1' }, TUESDAY);
+
+    const stored = await prisma.garage.findUniqueOrThrow({ where: { id } });
+    expect(stored.hours).toEqual(hours);
+  });
 });

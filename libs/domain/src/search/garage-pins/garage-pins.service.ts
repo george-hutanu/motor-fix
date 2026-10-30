@@ -29,6 +29,13 @@ import {
   filterSql,
 } from '../garage-search/garage-search.service';
 
+interface PinnedOptions {
+  bbox?: SearchBbox;
+  filters?: SearchFilters;
+  point?: SearchPoint;
+  radiusKm?: number;
+}
+
 // Two decimals, about a kilometre: a mobile mechanic's pin stands near its
 // area's centre without giving away the seat's address.
 const roughly = (value: number) => Math.round(value * 100) / 100;
@@ -41,8 +48,9 @@ export class GaragePinsService {
   ) {}
 
   // Every garage of the search with a position, nearest first, each marked
-  // whether it meets the filters, and the total its list counts: the matches.
-  // With a box the radius plays no part, so it is not in the key either.
+  // with whether it meets the filters, and the total its list counts: the
+  // matches only. With a box the radius plays no part, so it is not in the
+  // key either.
   async forBrand(
     key: BrandKey,
     point?: SearchPoint,
@@ -60,7 +68,7 @@ export class GaragePinsService {
         near: point && nearOf(point),
         radiusKm: bbox ? undefined : radiusKm,
       },
-      () => this.pinned(brand.id, point, radiusKm, bbox, filters),
+      () => this.pinned(brand.id, { bbox, filters, point, radiusKm }),
     );
     recordSearchPins(
       answer.total > 0 ? 'results' : 'none',
@@ -71,13 +79,12 @@ export class GaragePinsService {
 
   private async pinned(
     brandId: string,
-    point?: SearchPoint,
-    radiusKm?: number,
-    bbox?: SearchBbox,
-    filters?: SearchFilters,
+    { bbox, filters, point, radiusKm }: PinnedOptions,
   ): Promise<GaragePinsDto> {
     // With neither a place nor a box the count reads no area, and the pins
-    // are the nearest garages to the middle of Romania.
+    // are the nearest garages to the middle of Romania. The count then holds
+    // the garages with no position too, which have no pin, so the matching
+    // pins number the total less those (1260-FR-007).
     const placed = Boolean(point || bbox);
     const area = areaSql({ bbox, point, radiusKm });
     const [found, rows] = await Promise.all([
@@ -96,8 +103,8 @@ export class GaragePinsService {
           garage.longitude,
           garage.business_kind IS NOT DISTINCT FROM 'mobile' AS mobile,
           garage.labour_from_bani,
-          garage.service_radius_km,
           ${filterSql(filters)} AS matches,
+          garage.service_radius_km,
           (SELECT gb.stance::text FROM garage_brand gb
             WHERE gb.garage_id = garage.id AND gb.brand_id = ${brandId}::uuid
           ) AS stance

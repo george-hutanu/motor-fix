@@ -703,3 +703,75 @@ describe('GET /search/garages with filters', () => {
     expect(await prisma.searchLog.count()).toBe(1);
   });
 });
+
+// @traces 1260-FR-001 1260-FR-010 1260-FR-011
+describe.each(['/search/garages', '/search/garages/pins'])(
+  'GET %s with open now and open on Saturday',
+  (path) => {
+    const call = (query: string) =>
+      request(app.getHttpServer()).get(`${path}?brandId=${dacia}&${query}`);
+    const named = (body: { message?: string | string[] }, name: string) =>
+      [body.message ?? []].flat().some((line) => line.startsWith(`${name} `));
+
+    it.each(['open_now', 'open_saturday'])(
+      'answers 400 naming %s to every value other than 1, an empty value, a bare key and a repeated key',
+      async (name) => {
+        for (const query of [
+          `${name}=true`,
+          `${name}=0`,
+          `${name}=yes`,
+          `${name}=`,
+          name,
+          `${name}=1&${name}=1`,
+        ]) {
+          const res = await call(query);
+          expect([query, res.status]).toEqual([query, 400]);
+          expect(named(res.body, name)).toBe(true);
+        }
+      },
+    );
+
+    it('answers both filters with 200 and no session', async () => {
+      const res = await call('open_now=1&open_saturday=1');
+
+      expect(res.status).toBe(200);
+      expect(res.body.total).toBe(0);
+    });
+  },
+);
+
+// @traces 1260-FR-001 1260-FR-010
+describe('GET /search/garages filtered, and the search log', () => {
+  const logged = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    return prisma.searchLog.count();
+  };
+
+  beforeEach(() => prisma.$executeRawUnsafe('TRUNCATE search_log'));
+
+  it('answers a bad filter with a stale cursor as validation_failed, not invalid_cursor', async () => {
+    const res = await search({
+      brandId: dacia,
+      cursor: 'bm90LWEtY3Vyc29y',
+      open_now: 'yes',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).not.toBe('invalid_cursor');
+    expect(JSON.stringify(res.body)).toContain('open_now');
+  });
+
+  it('writes no search-log row for a filtered first page without log, and one with it', async () => {
+    await prisma.garage.create({
+      data: { hours: {}, name: 'Alfa', slug: 'alfa', status: 'approved' },
+    });
+
+    const filtered = await search({ brandId: dacia, open_now: '1' });
+    expect(filtered.status).toBe(200);
+    expect(filtered.body).toMatchObject({ items: [], total: 0 });
+    expect(await logged()).toBe(0);
+
+    await search({ brandId: dacia, log: '1', open_saturday: '1' }).expect(200);
+    expect(await logged()).toBe(1);
+  });
+});

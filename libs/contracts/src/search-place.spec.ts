@@ -3,8 +3,6 @@ import {
   bboxOf,
   bboxSideKm,
   clampBbox,
-  filtersKey,
-  filtersOf,
   nearOf,
   parseBbox,
   parseNear,
@@ -95,36 +93,5 @@ describe('the visible area of the map', () => {
     expect(
       clampBbox({ east: 33, north: 47, south: 46, west: 30 }, ROMANIA_BOUNDS),
     ).toBeUndefined();
-  });
-});
-
-// @traces 1261-FR-008 1261-FR-009
-describe('the result filters', () => {
-  it('reads the filters a query sets', () => {
-    expect(filtersOf({ card: '1', max_price: 200, min_rating: '4.0' })).toEqual(
-      { card: true, maxPrice: 200, minRating: '4.0' },
-    );
-    expect(filtersOf({ min_rating: '4.5' })).toEqual({ minRating: '4.5' });
-  });
-
-  it('reads no filters from a query with none', () => {
-    expect(filtersOf({})).toEqual({});
-    expect(filtersKey(filtersOf({}))).toBeUndefined();
-    expect(filtersKey(undefined)).toBeUndefined();
-  });
-
-  it('keys each combination apart, keeping the empty slots', () => {
-    expect(filtersKey({ card: true, maxPrice: 200, minRating: '4.0' })).toBe(
-      '200,4.0,1',
-    );
-    expect(filtersKey({ maxPrice: 200 })).toBe('200,,');
-    expect(filtersKey({ minRating: '4.5' })).toBe(',4.5,');
-    expect(filtersKey({ card: true })).toBe(',,1');
-  });
-
-  it('gives the same key for the same filters in any order', () => {
-    expect(filtersKey({ card: true, maxPrice: 150, minRating: '3.5' })).toBe(
-      filtersKey({ card: true, maxPrice: 150, minRating: '3.5' }),
-    );
   });
 });

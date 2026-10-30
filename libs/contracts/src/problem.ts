@@ -10,6 +10,9 @@ export interface Problem {
   warnings?: FieldProblem[];
   // A wrong sign-in code (`code_invalid`): the tries the code has left.
   attemptsLeft?: number;
+  // A second handover (`already_handed_over`): the final price, in bani, the
+  // job was handed over at.
+  finalPriceBani?: number;
   // A refusal that lifts with time: the seconds until it does, also sent as
   // the Retry-After header.
   retryAfterSeconds?: number;

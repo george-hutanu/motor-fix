@@ -140,6 +140,25 @@ export class GaragePinsQueryDto extends NearQueryDto {
 
   @ApiPropertyOptional({
     description:
+      'Keep only the garages open now on the Bucharest clock: inside one of their hours today, today neither a legal holiday nor one of their closed days. Exactly "1"',
+    enum: ['1'],
+  })
+  // Exactly "1": a repeated key arrives as a list and is refused too.
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['1'])
+  open_now?: '1';
+
+  @ApiPropertyOptional({
+    description:
+      'Keep only the garages whose weekly hours hold Saturday hours, whatever the closed days or holidays. Exactly "1"',
+    enum: ['1'],
+  })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['1'])
+  open_saturday?: '1';
+
+  @ApiPropertyOptional({
+    description:
       'The most a garage may charge an hour, in whole lei, as its card shows the rate; a garage with no rate is left out',
     enum: SEARCH_PRICE_CEILINGS,
     type: 'integer',
@@ -362,7 +381,7 @@ export class GaragePinDto {
 
   @ApiProperty({
     description:
-      'True when the garage meets every filter set; always true with none',
+      'True when the garage meets every set filter; always true with none',
   })
   matches!: boolean;
 
@@ -381,7 +400,8 @@ export class GaragePinsDto {
   pins!: GaragePinDto[];
 
   @ApiProperty({
-    description: "Every approved garage the search finds, as the list's total",
+    description:
+      "Every approved garage the search finds that meets every set filter, as the list's total",
     type: 'integer',
   })
   total!: number;

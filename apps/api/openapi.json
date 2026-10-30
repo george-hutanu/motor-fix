@@ -3780,6 +3780,30 @@
             }
           },
           {
+            "name": "open_now",
+            "required": false,
+            "in": "query",
+            "description": "Keep only the garages open now on the Bucharest clock: inside one of their hours today, today neither a legal holiday nor one of their closed days. Exactly \"1\"",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          },
+          {
+            "name": "open_saturday",
+            "required": false,
+            "in": "query",
+            "description": "Keep only the garages whose weekly hours hold Saturday hours, whatever the closed days or holidays. Exactly \"1\"",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          },
+          {
             "name": "max_price",
             "required": false,
             "in": "query",
@@ -3881,7 +3905,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, bbox not a south,west,north,east box inside Romania at most 100 km on a side, sort not rating, distance or price, or distance without near, max_price not 150, 200, 250 or 300, min_rating not 3.5, 4.0 or 4.5, or card not 1; invalid_cursor: not a page of this search, of another box, sort or filters"
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, bbox not a south,west,north,east box inside Romania at most 100 km on a side, or sort not rating, distance or price, or distance without near, or open_now or open_saturday other than exactly 1 or repeated, max_price not 150, 200, 250 or 300, min_rating not 3.5, 4.0 or 4.5, or card not 1; invalid_cursor: not a page of this search, of another box, of another sort or of other filters"
           },
           "404": {
             "description": "not_found: no brand with that slug or id"
@@ -3955,6 +3979,30 @@
             }
           },
           {
+            "name": "open_now",
+            "required": false,
+            "in": "query",
+            "description": "Keep only the garages open now on the Bucharest clock: inside one of their hours today, today neither a legal holiday nor one of their closed days. Exactly \"1\"",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          },
+          {
+            "name": "open_saturday",
+            "required": false,
+            "in": "query",
+            "description": "Keep only the garages whose weekly hours hold Saturday hours, whatever the closed days or holidays. Exactly \"1\"",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          },
+          {
             "name": "max_price",
             "required": false,
             "in": "query",
@@ -4008,7 +4056,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, bbox not a south,west,north,east box inside Romania at most 100 km on a side, max_price not 150, 200, 250 or 300, min_rating not 3.5, 4.0 or 4.5, or card not 1"
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or bbox not a south,west,north,east box inside Romania at most 100 km on a side, or open_now or open_saturday other than exactly 1 or repeated, max_price not 150, 200, 250 or 300, min_rating not 3.5, 4.0 or 4.5, or card not 1"
           },
           "404": {
             "description": "not_found: no brand with that slug or id"
@@ -5981,6 +6029,122 @@
           }
         ],
         "summary": "Record the odometer at the reception; a repeat corrects it",
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs/{id}/handover": {
+      "post": {
+        "operationId": "JobStagesController_handover",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalPriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "403": {
+            "description": "forbidden: a mechanic; the owner and the desk record the price"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job"
+          },
+          "409": {
+            "description": "job_not_done; already_handed_over (with finalPriceBani); invalid_transition (with currentStatus) of the booking"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Hand the car over: record the final price, completing the booking",
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
+    "/api/v1/garage/jobs/{id}/final-price": {
+      "patch": {
+        "operationId": "JobStagesController_correct",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalPriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed"
+          },
+          "403": {
+            "description": "forbidden: a mechanic; the owner and the desk record the price"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job"
+          },
+          "409": {
+            "description": "not_handed_over; correction_window_closed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Correct the final price, within 48 hours of the handover",
         "tags": [
           "garage-jobs"
         ]
@@ -15581,7 +15745,7 @@
           },
           "matches": {
             "type": "boolean",
-            "description": "True when the garage meets every filter set; always true with none"
+            "description": "True when the garage meets every set filter; always true with none"
           },
           "serviceRadiusKm": {
             "type": "integer",
@@ -15609,7 +15773,7 @@
           },
           "total": {
             "type": "integer",
-            "description": "Every approved garage the search finds, as the list's total"
+            "description": "Every approved garage the search finds that meets every set filter, as the list's total"
           }
         },
         "required": [
@@ -16039,6 +16203,17 @@
           "jobStarted": {
             "type": "boolean",
             "description": "The booking’s job exists and has left to do"
+          },
+          "finalPriceBani": {
+            "type": "number",
+            "description": "The final price recorded at the handover, in bani",
+            "nullable": true
+          },
+          "handedOverAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When the car was handed over"
           }
         },
         "required": [
@@ -16049,7 +16224,9 @@
           "garage",
           "cancelledBySide",
           "lateCancellation",
-          "jobStarted"
+          "jobStarted",
+          "finalPriceBani",
+          "handedOverAt"
         ]
       },
       "RequestSummaryDto": {
@@ -16319,7 +16496,7 @@
           "jobs"
         ]
       },
-      "BookingDto": {
+      "DriverBookingDto": {
         "type": "object",
         "properties": {
           "id": {
@@ -16412,6 +16589,17 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "finalPriceBani": {
+            "type": "number",
+            "description": "The final price recorded at the handover, in bani",
+            "nullable": true
+          },
+          "handedOverAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "When the car was handed over"
           }
         },
         "required": [
@@ -16430,7 +16618,9 @@
           "lateCancellation",
           "noShowAt",
           "completedAt",
-          "createdAt"
+          "createdAt",
+          "finalPriceBani",
+          "handedOverAt"
         ]
       },
       "RequestDto": {
@@ -16510,7 +16700,7 @@
             "type": "object",
             "allOf": [
               {
-                "$ref": "#/components/schemas/BookingDto"
+                "$ref": "#/components/schemas/DriverBookingDto"
               }
             ]
           }
@@ -17460,6 +17650,120 @@
             "default": false
           }
         }
+      },
+      "BookingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quoteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "garage": {
+            "$ref": "#/components/schemas/GarageRefDto"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMinutes": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_confirmation",
+              "confirmed",
+              "lapsed",
+              "cancelled",
+              "no_show",
+              "completed"
+            ]
+          },
+          "confirmBy": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "confirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "cancelledBySide": {
+            "type": "string",
+            "enum": [
+              "driver",
+              "garage",
+              "system"
+            ],
+            "nullable": true
+          },
+          "cancelReason": {
+            "type": "string",
+            "enum": [
+              "plans_changed",
+              "found_another_garage",
+              "problem_solved",
+              "no_mechanic_free",
+              "parts_not_available",
+              "closed_that_day",
+              "driver_asked",
+              "other",
+              "garage_suspended",
+              "driver_account_closed"
+            ],
+            "nullable": true
+          },
+          "cancelNote": {
+            "type": "string",
+            "description": "What the driver wrote when cancelling, if anything",
+            "nullable": true
+          },
+          "lateCancellation": {
+            "type": "boolean",
+            "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
+          },
+          "noShowAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "quoteId",
+          "garage",
+          "startsAt",
+          "durationMinutes",
+          "status",
+          "confirmBy",
+          "confirmedAt",
+          "cancelledAt",
+          "cancelledBySide",
+          "cancelReason",
+          "cancelNote",
+          "lateCancellation",
+          "noShowAt",
+          "completedAt",
+          "createdAt"
+        ]
       },
       "CompareBookingDto": {
         "type": "object",
@@ -19893,6 +20197,20 @@
         },
         "required": [
           "odometerKm"
+        ]
+      },
+      "FinalPriceDto": {
+        "type": "object",
+        "properties": {
+          "finalPriceBani": {
+            "type": "number",
+            "description": "The final price, in bani",
+            "maximum": 100000000,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "finalPriceBani"
         ]
       },
       "JobStepTextDto": {

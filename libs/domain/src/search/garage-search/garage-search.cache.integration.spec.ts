@@ -26,6 +26,15 @@ serialDatabase(databaseUrl);
 
 const GENERATION = 'garage-search-gen:v1';
 const NEAR = '46.771,23.624';
+const SATURDAY_HOURS = {
+  fri: [],
+  mon: [],
+  sat: [['09:00', '14:00']],
+  sun: [],
+  thu: [],
+  tue: [],
+  wed: [],
+};
 
 let app: INestApplication;
 let appRedis: Redis;
@@ -63,6 +72,7 @@ beforeEach(async () => {
   garageId = (
     await prisma.garage.create({
       data: {
+        hours: SATURDAY_HOURS,
         latitude: 46.771,
         longitude: 23.624,
         name: 'Alfa Service',
@@ -435,9 +445,9 @@ describe('the search cache under filters', () => {
     expect((await entries()).sort()).toEqual(
       [
         `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:-`,
-        `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:,,1`,
-        `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:200,4.0,1`,
-        `garage-search:v2:${gen}:pins:${dacia}:${NEAR}:25:-:-:-:,4.5,`,
+        `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:,,,,1`,
+        `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:,,200,4.0,1`,
+        `garage-search:v2:${gen}:pins:${dacia}:${NEAR}:25:-:-:-:,,,4.5,`,
       ].sort(),
     );
   });
@@ -461,5 +471,68 @@ describe('the search cache under filters', () => {
     expect(card.body.total).toBe(1);
     expect(cash.body.total).toBe(0);
     expect(cardAgain.body).toEqual(card.body);
+  });
+});
+
+// @traces 1260-FR-008
+describe('the search cache for filtered searches', () => {
+  it('keeps each combination of filters under its own key, list and pins, for 60 seconds', async () => {
+    const gen = await generation();
+
+    for (const filters of [
+      {} as Record<string, string>,
+      { open_now: '1' },
+      { open_saturday: '1' },
+      { open_now: '1', open_saturday: '1' },
+    ]) {
+      await search({ brand: 'dacia', near: NEAR, ...filters }).expect(200);
+      await pins({ brand: 'dacia', near: NEAR, ...filters }).expect(200);
+    }
+
+    const keys = (await entries()).sort();
+    expect(keys).toEqual(
+      ['page', 'pins']
+        .flatMap((kind) =>
+          ['-', '1,,,,', ',1,,,', '1,1,,,'].map(
+            (filters) =>
+              `garage-search:v2:${gen}:${kind}:${dacia}:${NEAR}:25:-:-:${kind === 'page' ? 'rating' : '-'}:${filters}`,
+          ),
+        )
+        .sort(),
+    );
+    for (const key of keys) {
+      const ttl = await other.ttl(key);
+      expect(ttl).toBeGreaterThan(0);
+      expect(ttl).toBeLessThanOrEqual(60);
+    }
+  });
+
+  it('answers a filtered search again from the cache, and another combination from PostgreSQL', async () => {
+    const before = await cacheCounts();
+    await search({ brand: 'dacia', near: NEAR, open_saturday: '1' }).expect(
+      200,
+    );
+
+    await search({ brand: 'dacia', near: NEAR, open_saturday: '1' }).expect(
+      200,
+    );
+    await search({ brand: 'dacia', near: NEAR, open_now: '1' }).expect(200);
+
+    expect(await since(before)).toEqual({ fallback: 0, hit: 1, miss: 2 });
+  });
+
+  it('drops every filtered entry on a public garage event', async () => {
+    await search({ brand: 'dacia', near: NEAR, open_saturday: '1' }).expect(
+      200,
+    );
+    await pins({ brand: 'dacia', near: NEAR, open_saturday: '1' }).expect(200);
+    await rename('Nume nou');
+
+    await dropSearches(other, [`public:garage:${garageId}`]);
+
+    expect(
+      (await search({ brand: 'dacia', near: NEAR, open_saturday: '1' })).body
+        .items[0].name,
+    ).toBe('Nume nou');
   });
 });

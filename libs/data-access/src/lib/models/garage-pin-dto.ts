@@ -11,7 +11,7 @@ export interface GaragePinDto {
   lng: number;
 
   /**
-   * True when the garage meets every filter set; always true with none
+   * True when the garage meets every set filter; always true with none
    */
   matches: boolean;
 

@@ -25,7 +25,8 @@ interface SearchKey {
   cursor?: string;
   // The order of a page; the pins have none.
   sort?: string;
-  // The filters set, as their shared text.
+  // Which filters are set (filtersKey), never the instant of open now: the
+  // 60 seconds an entry lives are the most an open-now answer is behind.
   filters?: string;
 }
 

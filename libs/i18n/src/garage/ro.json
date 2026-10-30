@@ -150,8 +150,10 @@
       "title": "Lucrarea"
     },
     "problem": {
+      "correction_window_closed": "Prețul final nu mai poate fi corectat",
       "forbidden": "Doar proprietarul și mecanicul lucrării scriu pașii.",
       "job_closed": "Lucrarea e închisă, pașii nu se mai schimbă.",
+      "job_not_done": "Marchează întâi lucrarea ca gata",
       "job_not_started": "Pornește lucrarea mai întâi",
       "not_found": "Pasul nu mai există.",
       "too_many_steps": "Cel mult 20 de pași"

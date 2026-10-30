@@ -196,11 +196,13 @@ describe('GET /requests once a quote is accepted', () => {
     expect(res.body.items[0].booking).toEqual({
       cancelledBySide: null,
       confirmBy: newest.confirmBy.toISOString(),
+      finalPriceBani: null,
       garage: {
         id: militari.garage.id,
         name: militari.garage.name,
         slug: militari.garage.slug,
       },
+      handedOverAt: null,
       id: newest.id,
       jobStarted: false,
       lateCancellation: false,
@@ -354,7 +356,9 @@ describe('GET /requests/:id', () => {
       confirmedAt: booking.confirmedAt?.toISOString(),
       createdAt: booking.createdAt.toISOString(),
       durationMinutes: 90,
+      finalPriceBani: null,
       garage: garageRef,
+      handedOverAt: null,
       id: booking.id,
       lateCancellation: false,
       noShowAt: null,

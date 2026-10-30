@@ -78,6 +78,7 @@ describe('the small card on the map', () => {
   it('shows the red lamp for a garage that does not take the brand, and no rate line without a rate', async () => {
     const card = await render({
       ...PIN,
+      matches: true,
       rateLei: null,
       stance: 'does_not_take',
     });

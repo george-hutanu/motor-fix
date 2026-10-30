@@ -43,7 +43,7 @@ const GROUPS = ['works_on', 'other'] as const;
 // It names its sort, so it never pages another order, and carries the
 // boundary's exact distance in metres under distance, or its hourly rate in
 // bani (null for none) under price. It names the filters it was made under,
-// so it never pages another combination of them.
+// so a page never continues another set of filters.
 interface Cursor {
   b: string;
   c: number;
@@ -178,7 +178,7 @@ const cursorAfter = (
   row: PageRow | undefined,
   sort: SearchSort,
   box: string | undefined,
-  filters: string | undefined,
+  filters: SearchFilters | undefined,
 ) =>
   Buffer.from(
     JSON.stringify({
@@ -191,7 +191,7 @@ const cursorAfter = (
       ...(sort === 'distance' && { d: Number(row?.distance_m) }),
       ...(sort === 'price' && { p: row?.labour_bani ?? null }),
       ...(box && { x: box }),
-      ...(filters && { f: filters }),
+      ...(filters && { f: filtersKey(filters) }),
     } satisfies Cursor),
   ).toString('base64url');
 
@@ -217,27 +217,55 @@ const takes = (brandId: string | string[]) => Prisma.sql`EXISTS (
     AND ${typeof brandId === 'string' ? Prisma.sql`gb.brand_id = ${brandId}::uuid` : Prisma.sql`gb.brand_id = ANY(${brandId}::uuid[])`}
     AND gb.stance = 'works_on')`;
 
-// The garages meeting every filter set: the rate as a card shows it, rounded
-// to the leu, at most the ceiling; the rating at least the minimum; card
-// payment. A garage with no rate or no rating fails the filter on it.
+// Whether a garage meets every set filter, TRUE with none. Open now is the
+// profile's status on the request's Bucharest clock: inside one of today's
+// intervals (start included, end not), today neither a legal holiday nor one
+// of the garage's closed days. Open on Saturday reads the weekly hours only.
+// The CASE guards keep a stored value that is not a list from failing the
+// statement; such a day matches nothing. The price ceiling reads the rate as
+// a card shows it, rounded to the leu; the rating is at least the minimum;
+// card is card payment. A garage with no rate or no rating fails the filter
+// on it.
 export function filterSql(filters?: SearchFilters): Prisma.Sql {
   const conditions: Prisma.Sql[] = [];
-  if (filters?.maxPrice !== undefined) {
-    conditions.push(Prisma.sql`(garage.labour_from_bani IS NOT NULL
-      AND garage.labour_from_bani < ${filters.maxPrice * 100 + 50})`);
+  const { card, maxPrice, minRating, openNow, saturday } = filters ?? {};
+  if (openNow) {
+    const { day, time, weekday } = openNow;
+    conditions.push(Prisma.sql`EXISTS (
+      SELECT 1 FROM jsonb_array_elements(
+        CASE WHEN jsonb_typeof(garage.hours -> ${weekday}) = 'array'
+          THEN garage.hours -> ${weekday} ELSE '[]'::jsonb END) AS iv
+      WHERE jsonb_typeof(iv) = 'array'
+        AND (iv ->> 0) COLLATE "C" <= ${time}
+        AND ${time} < (iv ->> 1) COLLATE "C")
+      AND NOT EXISTS (
+        SELECT 1 FROM public_holiday WHERE public_holiday.day = ${day}::date)
+      AND NOT EXISTS (
+        SELECT 1 FROM garage_closed_day closed
+        WHERE closed.garage_id = garage.id AND closed.day = ${day}::date)`);
   }
-  if (filters?.minRating !== undefined) {
+  if (saturday) {
+    conditions.push(Prisma.sql`CASE
+      WHEN jsonb_typeof(garage.hours -> 'sat') = 'array'
+        THEN jsonb_array_length(garage.hours -> 'sat') > 0
+      ELSE FALSE END`);
+  }
+  if (maxPrice !== undefined) {
+    conditions.push(Prisma.sql`(garage.labour_from_bani IS NOT NULL
+      AND garage.labour_from_bani < ${maxPrice * 100 + 50})`);
+  }
+  if (minRating !== undefined) {
     conditions.push(
-      Prisma.sql`(garage.rating IS NOT NULL AND garage.rating >= ${filters.minRating}::numeric)`,
+      Prisma.sql`(garage.rating IS NOT NULL AND garage.rating >= ${minRating}::numeric)`,
     );
   }
-  if (filters?.card) conditions.push(Prisma.sql`garage.payment_card`);
-  return conditions.length
-    ? Prisma.sql`(${Prisma.join(conditions, ' AND ')})`
-    : Prisma.sql`TRUE`;
+  if (card) conditions.push(Prisma.sql`garage.payment_card`);
+  return conditions.length === 0
+    ? Prisma.sql`TRUE`
+    : Prisma.sql`(${Prisma.join(conditions, ' AND ')})`;
 }
 
-// The public garages of each group meeting the filters, in the area when
+// The public garages of each group that meet the filters, in the area when
 // there is one: the counts and total of a search, in one statement.
 export async function countGroups(
   prisma: PrismaClient,
@@ -295,6 +323,14 @@ interface GroupPageOptions {
   ids?: string[];
   sort?: SearchSort;
   take: number;
+}
+
+interface SearchedOptions {
+  bbox?: SearchBbox;
+  cursor?: string;
+  filters?: SearchFilters;
+  point?: SearchPoint;
+  radiusKm?: number;
 }
 
 // A row of a page: its place in the area and its hourly rate in bani.
@@ -398,8 +434,8 @@ export class GarageSearchService {
   // which never waits for it. A box is the map moved over the same search,
   // never a new one: neither logged nor counted, and the radius plays no part.
   // A named sort on an unlogged first page is the driver changing the order
-  // of the list shown: a sort change, never a search. Filters on an unlogged
-  // first page are the driver narrowing the list shown: counted as neither.
+  // of the list shown: a sort change, never a search; a filter on one is the
+  // driver narrowing the list shown, neither.
   async forBrand(
     key: BrandKey,
     cursor?: string,
@@ -413,23 +449,23 @@ export class GarageSearchService {
     const brand = await brandOf(this.prisma, key);
     const box = bbox && bboxOf(bbox);
     const order = sort ?? 'rating';
-    const filtered = filtersKey(filters);
     const page = await this.cache.entry(
       {
         bbox: box,
         brandId: brand.id,
         cursor,
-        filters: filtered,
+        filters: filtersKey(filters),
         kind: 'page',
         near: point && nearOf(point),
         radiusKm: bbox ? undefined : radiusKm,
         sort: order,
       },
-      () => this.searched(brand, order, cursor, point, radiusKm, bbox, filters),
+      () =>
+        this.searched(brand, order, { bbox, cursor, filters, point, radiusKm }),
     );
     if (bbox) return page;
-    if (cursor === undefined && (log || !filtered)) {
-      countFirstPage(page.items.length, log, sort);
+    if (cursor === undefined) {
+      countFirstPage(page.items.length, log, sort, filters !== undefined);
     }
     // Left to the next turn of the event loop: the answer goes out first.
     if (log) {
@@ -441,11 +477,7 @@ export class GarageSearchService {
   private async searched(
     brand: GarageSearchPageDto['brand'],
     sort: SearchSort,
-    cursor?: string,
-    point?: SearchPoint,
-    radiusKm?: number,
-    bbox?: SearchBbox,
-    filters?: SearchFilters,
+    { bbox, cursor, filters, point, radiusKm }: SearchedOptions,
   ): Promise<GarageSearchPageDto> {
     const brandId = brand.id;
     const box = bbox && bboxOf(bbox);
@@ -490,7 +522,7 @@ export class GarageSearchService {
       items,
       nextCursor:
         rows.length > PAGE && last
-          ? cursorAfter(brandId, last, row, sort, box, filtersKey(filters))
+          ? cursorAfter(brandId, last, row, sort, box, filters)
           : null,
     };
   }
@@ -565,8 +597,15 @@ const areaOf = (
 ) => (point || bbox ? areaSql({ bbox, point, radiusKm }) : undefined);
 
 // One search per first page; the pages after it are the same search. An
-// unlogged first page naming a sort is the list shown put in another order.
-function countFirstPage(found: number, log: boolean, sort?: SearchSort) {
+// unlogged first page naming a sort is the list shown put in another order;
+// one carrying a filter is the list shown narrowed, counted as neither.
+function countFirstPage(
+  found: number,
+  log: boolean,
+  sort: SearchSort | undefined,
+  filtered: boolean,
+) {
+  if (filtered && !log) return;
   if (sort && !log) countSortChange(sort);
   else countSearch(found > 0 ? 'results' : 'none');
 }

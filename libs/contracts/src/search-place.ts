@@ -19,33 +19,6 @@ export type SearchPriceCeiling = (typeof SEARCH_PRICE_CEILINGS)[number];
 export const SEARCH_MIN_RATINGS = ['3.5', '4.0', '4.5'] as const;
 export type SearchMinRating = (typeof SEARCH_MIN_RATINGS)[number];
 
-export interface SearchFilters {
-  card?: true;
-  maxPrice?: SearchPriceCeiling;
-  minRating?: SearchMinRating;
-}
-
-// The filters a validated query sets, by their names in the address bar.
-export const filtersOf = (query: {
-  card?: '1';
-  max_price?: SearchPriceCeiling;
-  min_rating?: SearchMinRating;
-}): SearchFilters => ({
-  ...(query.max_price !== undefined && { maxPrice: query.max_price }),
-  ...(query.min_rating !== undefined && { minRating: query.min_rating }),
-  ...(query.card === '1' && { card: true }),
-});
-
-// One text per combination, for a cache key and a cursor; none without a
-// filter, so an unfiltered search keeps its key and its cursors.
-export function filtersKey(filters: SearchFilters = {}): string | undefined {
-  const { card, maxPrice, minRating } = filters;
-  if (!card && maxPrice === undefined && minRating === undefined) {
-    return undefined;
-  }
-  return `${maxPrice ?? ''},${minRating ?? ''},${card ? '1' : ''}`;
-}
-
 // The garages one page of results shows.
 export const SEARCH_PAGE_SIZE = 20;
 // The garages a live re-read or stream names: one page's worth.
