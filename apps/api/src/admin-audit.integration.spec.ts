@@ -39,7 +39,7 @@ const FIXTURES: Record<
     path?: () => Promise<string>;
   }
 > = {
-  // @traces 1267-FR-008
+  // @traces 1267-FR-011
   // Only the driver deletes a repair: the admin is refused and nothing is
   // recorded.
   'DELETE /api/v1/admin/repairs/{id}': {
@@ -74,7 +74,7 @@ const FIXTURES: Record<
     path: async () =>
       '/api/v1/admin/platform-rule-changes?key=reviews_only_after_confirmed_job',
   },
-  // @traces 1267-FR-002
+  // @traces 1267-FR-003 1267-FR-004
   'GET /api/v1/admin/repairs/{id}': {
     entries: 1,
     path: async () => `/api/v1/admin/repairs/${await loggedRepair()}`,
@@ -142,7 +142,7 @@ const FIXTURES: Record<
       return '/api/v1/admin/platform-rules/maintenance_mode';
     },
   },
-  // @traces 1267-FR-003
+  // @traces 1267-FR-005 1267-FR-007
   'PATCH /api/v1/admin/repairs/{id}': {
     body: () => ({ version: repairSeen, what: 'Schimb ulei și filtru' }),
     path: async () => `/api/v1/admin/repairs/${await loggedRepair()}`,
