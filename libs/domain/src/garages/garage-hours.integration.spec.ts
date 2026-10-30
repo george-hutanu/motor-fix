@@ -86,6 +86,7 @@ describe("writing a garage's hours, closed days and facilities", () => {
   // write. The day is the fixed TODAY and the outcome is read back from the
   // rows, so nothing here waits on time.
   // @traces 1246-FR-021
+  // @traces 1246-FR-022
   it('writes the weekly hours, one closed day with its note and one listed facility', async () => {
     await writeGarageHours(
       prisma,
