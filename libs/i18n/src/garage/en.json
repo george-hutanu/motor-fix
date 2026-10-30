@@ -755,6 +755,52 @@
       "other": "{count} years"
     }
   },
+  "timeBlocks": {
+    "button": "Block time",
+    "cancel": "Cancel",
+    "changed": "Time changed",
+    "done": "Time blocked",
+    "from": "From",
+    "fromDay": "Start day",
+    "fromTime": "Start time",
+    "lift": "Lift",
+    "liftNumber": "Lift {n}",
+    "loading": "Loading…",
+    "mechanic": "Mechanic",
+    "noLift": "No lift",
+    "noMechanic": "No mechanic",
+    "noMechanics": "No mechanics on the team yet.",
+    "note": "Note",
+    "noteLeft": "Left: {n}",
+    "openTeam": "Open the team",
+    "problem": {
+      "feature_off": "The garage's schedule settings changed",
+      "mechanic_gone": "The mechanic is no longer on the team",
+      "no_such_lift": "There is no such lift",
+      "slot_taken": "The slot was just taken"
+    },
+    "refusal": {
+      "already_ended": "The interval has already ended",
+      "bad_time": "Pick a day and a time",
+      "end_before_start": "The end must be after the start",
+      "off_quarter": "The time must be on a quarter hour",
+      "pick_lift": "Pick a lift",
+      "pick_mechanic": "Pick a mechanic",
+      "pick_one": "Pick a mechanic or a lift",
+      "too_long": "At most 14 days"
+    },
+    "remove": "Remove",
+    "removed": "Time removed",
+    "removeQuestion": "Remove the blocked time?",
+    "retry": "Retry",
+    "save": "Save",
+    "submit": "Block",
+    "title": "Block time",
+    "titleEdit": "Change the blocked time",
+    "until": "Until",
+    "untilDay": "End day",
+    "untilTime": "End time"
+  },
   "verification": {
     "checkIn": "We check it within 1–2 working days.",
     "contact": "Contact MotorFix",

@@ -1,0 +1,145 @@
+@if (problem(); as said) {
+  <p class="problem" role="alert">{{ said }}</p>
+}
+@if (loadFailed()) {
+  <button hlmBtn variant="secondary" type="button" class="retry" (click)="load()">{{ 'garage.timeBlocks.retry' | t }}</button>
+} @else if (!options()) {
+  <p class="loading" aria-live="polite">{{ 'garage.timeBlocks.loading' | t }}</p>
+}
+<form (submit)="submit($event)" novalidate>
+  @if (showMechanic()) {
+    <div class="field">
+      <label for="mf-block-mechanic">{{ 'garage.timeBlocks.mechanic' | t }}</label>
+      <select
+        hlmInput
+        id="mf-block-mechanic"
+        aria-describedby="mf-block-mechanic-none mf-block-mechanic-error"
+        [attr.aria-invalid]="messages().mechanic ? 'true' : null"
+        [disabled]="off()"
+        (change)="edit('mechanic', () => mechanic.set($any($event.target).value))"
+      >
+        <option value="" [selected]="!mechanic()">{{ 'garage.timeBlocks.noMechanic' | t }}</option>
+        @for (one of options()?.mechanics; track one.id) {
+          <option [value]="one.id" [selected]="one.id === mechanic()">{{ one.name }}</option>
+        }
+      </select>
+      @if (noMechanics()) {
+        <p class="none" id="mf-block-mechanic-none">
+          {{ 'garage.timeBlocks.noMechanics' | t }}
+          @if (teamLink()) {
+            <a routerLink="/app/garage/team" (click)="task.close('cancelled')">{{ 'garage.timeBlocks.openTeam' | t }}</a>
+          }
+        </p>
+      }
+      <p class="error mf-message" id="mf-block-mechanic-error" role="alert">{{ messages().mechanic }}</p>
+    </div>
+  }
+  @if (showLift()) {
+    <div class="field">
+      <label for="mf-block-lift">{{ 'garage.timeBlocks.lift' | t }}</label>
+      <select
+        hlmInput
+        id="mf-block-lift"
+        aria-describedby="mf-block-lift-error"
+        [attr.aria-invalid]="messages().lift ? 'true' : null"
+        [disabled]="off()"
+        (change)="edit('lift', () => lift.set($any($event.target).value))"
+      >
+        <option value="" [selected]="!lift()">{{ 'garage.timeBlocks.noLift' | t }}</option>
+        @for (n of lifts(); track n) {
+          <option [value]="n" [selected]="'' + n === lift()">{{ 'garage.timeBlocks.liftNumber' | t: { n } }}</option>
+        }
+      </select>
+      <p class="error mf-message" id="mf-block-lift-error" role="alert">{{ messages().lift }}</p>
+    </div>
+  }
+  <fieldset class="field">
+    <legend>{{ 'garage.timeBlocks.from' | t }}</legend>
+    <div class="when">
+      <input
+        hlmInput
+        type="date"
+        id="mf-block-from-day"
+        [attr.aria-label]="'garage.timeBlocks.fromDay' | t"
+        aria-describedby="mf-block-from-error"
+        [attr.aria-invalid]="messages().from ? 'true' : null"
+        [disabled]="off()"
+        [value]="fromDay()"
+        (input)="edit('from', () => fromDay.set($any($event.target).value))"
+      />
+      <input
+        hlmInput
+        type="time"
+        step="900"
+        id="mf-block-from-time"
+        [attr.aria-label]="'garage.timeBlocks.fromTime' | t"
+        aria-describedby="mf-block-from-error"
+        [attr.aria-invalid]="messages().from ? 'true' : null"
+        [disabled]="off()"
+        [value]="fromTime()"
+        (input)="edit('from', () => fromTime.set($any($event.target).value))"
+      />
+    </div>
+    <p class="error mf-message" id="mf-block-from-error" role="alert">{{ messages().from }}</p>
+  </fieldset>
+  <fieldset class="field">
+    <legend>{{ 'garage.timeBlocks.until' | t }}</legend>
+    <div class="when">
+      <input
+        hlmInput
+        type="date"
+        id="mf-block-until-day"
+        [attr.aria-label]="'garage.timeBlocks.untilDay' | t"
+        aria-describedby="mf-block-until-error"
+        [attr.aria-invalid]="messages().until ? 'true' : null"
+        [disabled]="off()"
+        [value]="untilDay()"
+        (input)="edit('until', () => untilDay.set($any($event.target).value))"
+      />
+      <input
+        hlmInput
+        type="time"
+        step="900"
+        id="mf-block-until-time"
+        [attr.aria-label]="'garage.timeBlocks.untilTime' | t"
+        aria-describedby="mf-block-until-error"
+        [attr.aria-invalid]="messages().until ? 'true' : null"
+        [disabled]="off()"
+        [value]="untilTime()"
+        (input)="edit('until', () => untilTime.set($any($event.target).value))"
+      />
+    </div>
+    <p class="error mf-message" id="mf-block-until-error" role="alert">{{ messages().until }}</p>
+  </fieldset>
+  <div class="field">
+    <label for="mf-block-note">{{ 'garage.timeBlocks.note' | t }}</label>
+    <textarea
+      hlmInput
+      id="mf-block-note"
+      rows="3"
+      aria-describedby="mf-block-note-left"
+      [maxLength]="noteMax"
+      [disabled]="off()"
+      [value]="note()"
+      (input)="note.set($any($event.target).value)"
+    ></textarea>
+    <p class="left" id="mf-block-note-left">{{ 'garage.timeBlocks.noteLeft' | t: { n: noteLeft() } }}</p>
+  </div>
+  @if (asking()) {
+    <div class="question">
+      <p role="alert">{{ 'garage.timeBlocks.removeQuestion' | t }}</p>
+      <div class="actions">
+        <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="asking.set(false)">{{ 'garage.timeBlocks.cancel' | t }}</button>
+        <button hlmBtn type="button" [attr.aria-busy]="sending() || null" [disabled]="sending()" (click)="remove()">{{ 'garage.timeBlocks.remove' | t }}</button>
+      </div>
+    </div>
+  } @else {
+    <div class="actions">
+      @if (block) {
+        <button hlmBtn variant="ghost" type="button" class="remove" [disabled]="off()" (click)="asking.set(true)">{{ 'garage.timeBlocks.remove' | t }}</button>
+      }
+      <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close(closeAs())">{{ 'garage.timeBlocks.cancel' | t }}</button>
+      <button hlmBtn type="submit" [attr.aria-busy]="sending() || null" [disabled]="off()">{{ submitKey | t }}</button>
+    </div>
+  }
+</form>
