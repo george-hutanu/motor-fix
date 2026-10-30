@@ -17,6 +17,7 @@ import {
 } from 'class-validator';
 
 import { CarTransferLineDto } from './car-transfers.dto';
+import { todayInBucharest } from './garage-hours';
 import { FUELS, MAX_KM, normalisePlate, STORED_PLATE } from './plate';
 
 type Fuel = (typeof FUELS)[number];
@@ -55,6 +56,18 @@ export const calendarDay = () =>
           !Number.isNaN(day.getTime()) && day.toISOString().startsWith(value)
         );
       },
+    },
+  });
+
+// A day not after today as Bucharest reads it.
+export const notAfterToday = () =>
+  ValidateBy({
+    name: 'notAfterToday',
+    validator: {
+      defaultMessage: (args) =>
+        `${args?.property} must not be after today in Bucharest`,
+      validate: (value) =>
+        typeof value === 'string' && value <= todayInBucharest(),
     },
   });
 
