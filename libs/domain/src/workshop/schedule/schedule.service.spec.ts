@@ -5,6 +5,7 @@ import {
   type PlacementInput,
   placementOf,
   placeSegments,
+  ScheduleService,
   type TakenSegment,
 } from './schedule.service';
 import { atLocal } from '../../bucharest';
@@ -331,7 +332,7 @@ describe('the overlaps of each segment', () => {
   const taken = (
     extra: Partial<TakenSegment> & Pick<TakenSegment, 'startsAt' | 'endsAt'>,
   ): TakenSegment => ({
-    car: { brand: 'Dacia', model: 'Logan' },
+    holder: { car: { brand: 'Dacia', model: 'Logan' }, kind: 'booking' },
     lift: null,
     mechanicId: null,
     ...extra,
@@ -386,6 +387,7 @@ describe('the overlaps of each segment', () => {
       ]),
     ).toEqual({
       code: 'mechanic_busy',
+      errors: [{ code: 'busy', field: 'mechanicId' }],
       message: 'Elena Stan are o programare 15:15–15:45',
     });
   });
@@ -398,6 +400,7 @@ describe('the overlaps of each segment', () => {
       ),
     ).toEqual({
       code: 'lift_busy',
+      errors: [{ code: 'busy', field: 'lift' }],
       message: 'Lift 1 is busy 15:30–17:00 (Dacia Logan)',
     });
   });
@@ -414,6 +417,7 @@ describe('the overlaps of each segment', () => {
       ]),
     ).toEqual({
       code: 'mechanic_busy',
+      errors: [{ code: 'busy', field: 'mechanicId' }],
       message: 'Elena Stan are o programare miercuri 07:00–08:30',
     });
     expect(
@@ -423,7 +427,156 @@ describe('the overlaps of each segment', () => {
       ),
     ).toEqual({
       code: 'lift_busy',
+      errors: [{ code: 'busy', field: 'lift' }],
       message: 'Lift 1 is busy Wednesday 08:00–09:00 (Dacia Logan)',
     });
+  });
+});
+
+// @traces 427-FR-005
+// @traces 427-FR-006
+describe('a blocked interval among the overlaps', () => {
+  const segment = {
+    endsAt: at(TUE, 11, 30),
+    lift: 2,
+    mechanicId: 'mihai',
+    startsAt: at(TUE, 10),
+  };
+  const block = (
+    startsAt: Date,
+    endsAt: Date,
+    row: Partial<TakenSegment> = {},
+  ): TakenSegment => ({
+    endsAt: row.endsAt ?? endsAt,
+    holder: { endsAt, kind: 'time_block', startsAt },
+    lift: null,
+    mechanicId: null,
+    startsAt: row.startsAt ?? startsAt,
+    ...row,
+  });
+  const judged = (rows: TakenSegment[], language: 'ro' | 'en' = 'ro') =>
+    refused(() =>
+      judgeOverlaps([segment], rows, {
+        language,
+        mechanicName: 'Mihai Pop',
+        startsAt: at(TUE, 10),
+      }),
+    );
+
+  it('names the mechanic blocked over the whole interval, in both languages', () => {
+    const rows = [block(at(TUE, 9), at(TUE, 10, 30), { mechanicId: 'mihai' })];
+    expect(judged(rows)).toEqual({
+      code: 'mechanic_busy',
+      errors: [{ code: 'busy', field: 'mechanicId' }],
+      message: 'Mihai Pop e blocat 09:00–10:30',
+      reason: 'time_block',
+    });
+    expect(judged(rows, 'en')).toEqual({
+      code: 'mechanic_busy',
+      errors: [{ code: 'busy', field: 'mechanicId' }],
+      message: 'Mihai Pop is blocked 09:00–10:30',
+      reason: 'time_block',
+    });
+  });
+
+  it('names a blocked lift without a car', () => {
+    const rows = [block(at(TUE, 11), at(TUE, 12), { lift: 2 })];
+    expect(judged(rows)).toEqual({
+      code: 'lift_busy',
+      errors: [{ code: 'busy', field: 'lift' }],
+      message: 'Elevatorul 2 e blocat 11:00–12:00',
+      reason: 'time_block',
+    });
+    expect(judged(rows, 'en')).toEqual({
+      code: 'lift_busy',
+      errors: [{ code: 'busy', field: 'lift' }],
+      message: 'Lift 2 is blocked 11:00–12:00',
+      reason: 'time_block',
+    });
+  });
+
+  it('says the whole range of a block over several days, each end with its weekday', () => {
+    // Monday 16:00 to Wednesday 09:00: the clashing segment is Tuesday's.
+    const rows = [
+      block(at(MON, 16), at(WED, 9), {
+        endsAt: at(WED, 0),
+        lift: 2,
+        startsAt: at(TUE, 0),
+      }),
+    ];
+    expect(judged(rows)).toMatchObject({
+      message: 'Elevatorul 2 e blocat luni 16:00–miercuri 09:00',
+    });
+    expect(judged(rows, 'en')).toMatchObject({
+      message: 'Lift 2 is blocked Monday 16:00–Wednesday 09:00',
+    });
+  });
+
+  it("names the mechanic's block before the lift's booking", () => {
+    expect(
+      judged([
+        {
+          endsAt: at(TUE, 11),
+          holder: { car: { brand: 'Dacia', model: 'Logan' }, kind: 'booking' },
+          lift: 2,
+          mechanicId: null,
+          startsAt: at(TUE, 10),
+        },
+        block(at(TUE, 11), at(TUE, 12), { mechanicId: 'mihai' }),
+      ]),
+    ).toMatchObject({ code: 'mechanic_busy', reason: 'time_block' });
+  });
+
+  it('keeps the booking texts, with no reason, for a booking row', () => {
+    expect(
+      judged([
+        {
+          endsAt: at(TUE, 11),
+          holder: { car: { brand: 'Dacia', model: 'Logan' }, kind: 'booking' },
+          lift: 2,
+          mechanicId: null,
+          startsAt: at(TUE, 10),
+        },
+      ]),
+    ).toEqual({
+      code: 'lift_busy',
+      errors: [{ code: 'busy', field: 'lift' }],
+      message: 'Elevatorul 2 e ocupat 10:00–11:00 (Dacia Logan)',
+    });
+  });
+});
+
+// @traces 427-FR-005
+// @traces 427-FR-007
+describe("the rows a block's change is judged against", () => {
+  it('keeps the bookings, whose segments hold no block, beside the other blocks', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const tx = { bookingSegment: { findMany } } as never;
+
+    await new ScheduleService().assertFree(tx, {
+      exceptTimeBlockId: 'block-1',
+      garageId: 'garage-1',
+      language: 'ro',
+      lift: 2,
+      mechanicId: 'mihai',
+      mechanicName: 'Mihai Pop',
+      segments: [
+        {
+          endsAt: at(TUE, 12),
+          lift: 2,
+          mechanicId: 'mihai',
+          startsAt: at(TUE, 11),
+        },
+      ],
+      startsAt: at(TUE, 11),
+    });
+
+    // `NOT: { timeBlockId }` alone drops every row whose timeBlockId is null:
+    // every booking's segment.
+    const { where } = findMany.mock.calls[0][0];
+    expect(where.NOT).toBeUndefined();
+    expect(where.AND).toEqual([
+      { OR: [{ timeBlockId: null }, { timeBlockId: { not: 'block-1' } }] },
+    ]);
   });
 });

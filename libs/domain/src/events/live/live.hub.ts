@@ -106,6 +106,9 @@ const PUBLIC_KINDS: [RegExp, Set<string>][] = [
       'response_stats.updated',
       'recheck.recorded',
       'rating.updated',
+      'time_block.created',
+      'time_block.updated',
+      'time_block.deleted',
     ]),
   ],
   [

@@ -121,6 +121,7 @@ model Garage {
   quotes                     Quote[]
   bookings                   Booking[]
   bookingSegments            BookingSegment[]
+  timeBlocks                 TimeBlock[]
   jobs                       Job[]
   reviews                    Review[]
   liveSessions               LiveSession[]
@@ -251,6 +252,7 @@ model Mechanic {
   account             Account?         @relation(fields: [accountId], references: [id], onDelete: Cascade)
   bookings            Booking[]
   bookingSegments     BookingSegment[]
+  timeBlocks          TimeBlock[]
   invites             StaffInvite[]
   jobs                Job[]
   stageEntries        JobStageEntry[]
