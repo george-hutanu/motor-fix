@@ -176,6 +176,7 @@ describe('overlayOf, what the browser draws over the static image', () => {
 describe('quietLabels, the rates that give way', () => {
   const pin = (id: string, x: number, y: number, rate = '180') => ({
     id,
+    matches: true,
     rate,
     takes: true,
     x,
