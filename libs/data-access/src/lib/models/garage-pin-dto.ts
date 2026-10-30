@@ -11,6 +11,11 @@ export interface GaragePinDto {
   lng: number;
 
   /**
+   * True when the garage meets every set filter; always true with none
+   */
+  matches: boolean;
+
+  /**
    * The hourly labour rate it starts from, in whole lei
    */
   rateLei: number | null;

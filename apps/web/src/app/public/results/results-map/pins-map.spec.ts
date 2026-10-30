@@ -29,6 +29,7 @@ const pinOf = (n: number, over: Partial<GaragePinDto> = {}): GaragePinDto => ({
   id: `g-${n}`,
   lat: 44.4 + n / 1000,
   lng: 26.1 + n / 1000,
+  matches: true,
   rateLei: 150,
   stance: 'works_on',
   ...over,
@@ -311,7 +312,13 @@ describe('a mobile mechanic on the results map', () => {
     draw().show(
       answer([
         pinOf(1),
-        pinOf(2, { lat: 44.45, lng: 26.12, rateLei: 120, serviceRadiusKm: 20 }),
+        pinOf(2, {
+          lat: 44.45,
+          lng: 26.12,
+          matches: true,
+          rateLei: 120,
+          serviceRadiusKm: 20,
+        }),
       ]),
     );
 
