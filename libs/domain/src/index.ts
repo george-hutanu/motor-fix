@@ -122,6 +122,7 @@ export {
 export { verificationConfig } from './garages/verification/verification-config';
 export * from './health/health.module';
 export { DemandModule } from './insights/demand/demand.module';
+export { GarageFiguresModule } from './insights/garage-figures/garage-figures.module';
 export { GarageFiguresService } from './insights/garage-figures/garage-figures.service';
 export { InsightsModule } from './insights/insights.module';
 export { ProfileViewsModule } from './insights/profile-views/profile-views.module';

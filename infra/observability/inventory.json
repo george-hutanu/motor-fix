@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 241,
+    "count": 242,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -2585,6 +2585,19 @@
       ],
       "reason": "the schedule board's read of 1 to 7 days, the same service the get_schedule MCP tool reads (counted by mcp_tool_calls_total); it writes nothing, so its failures and latency are the route metric alone",
       "story": "ST-150"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-figures-weekly",
+      "source": "libs/domain/src/insights/garage-figures/garage-figures.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/figures/weekly",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner's eight-week read of profile views, requests and conversion; it writes nothing and counts nothing of its own, so its failures and latency are the route metric alone",
+      "story": "ST-144"
     },
     {
       "kind": "endpoint",
