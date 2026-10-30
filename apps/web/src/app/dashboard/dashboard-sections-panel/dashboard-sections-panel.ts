@@ -66,6 +66,8 @@ export class DashboardSectionsPanel {
   protected readonly failed = signal(false);
 
   protected async flip(key: string, shown: boolean, control: HlmSwitch) {
+    const pressed = this.switchOf(key);
+    const focused = pressed !== null && pressed === document.activeElement;
     this.pending.update((keys) => new Set(keys).add(key));
     const saved = await this.task.data.toggle(key, shown);
     this.pending.update((keys) => {
@@ -77,6 +79,30 @@ export class DashboardSectionsPanel {
     // The switch flipped itself; a failed save left the row as it was.
     const row = this.rows().find((each) => each.key === key);
     if (row) control.checked.set(row.shown);
+    // The browser drops the focus of the switch while it is disabled; a
+    // keyboard user gets it back where they were once the save answers.
+    if (focused) {
+      afterNextRender(
+        () => {
+          const again = this.switchOf(key);
+          // Unless the user has moved on to another control of the panel.
+          const now = document.activeElement;
+          const lost =
+            !now || now === again || !this.host.nativeElement.contains(now);
+          if (again && lost) again.focus();
+        },
+        { injector: this.injector },
+      );
+    }
+  }
+
+  private switchOf(key: string) {
+    const row = [
+      ...this.host.nativeElement.querySelectorAll('[data-row]'),
+    ].find((each) => each.getAttribute('data-key') === key);
+    return (
+      row?.querySelector<HTMLButtonElement>('button[role="switch"]') ?? null
+    );
   }
 
   protected async shift(key: string, direction: 'up' | 'down') {
