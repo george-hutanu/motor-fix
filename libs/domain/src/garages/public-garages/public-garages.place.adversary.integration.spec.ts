@@ -169,6 +169,28 @@ describe('the public garage read and the registered seat', () => {
     expect(res.body.serviceRadiusKm).toBe(20);
   });
 
+  // @traces 1383-FR-002
+  it.each([
+    ['a latitude', { latitude: 46.9123 }],
+    ['a longitude', { longitude: 23.6845 }],
+  ])(
+    'refuses a mobile mechanic with only %s, so no half centre is ever answered',
+    async (_, half) => {
+      await expect(
+        prisma.garage.create({
+          data: {
+            ...half,
+            businessKind: 'mobile',
+            mobileLegalForm: 'pfa',
+            name: 'Jumătate de loc',
+            slug: slug(),
+            status: 'approved',
+          },
+        }),
+      ).rejects.toThrow(/garage_position_both_or_neither/);
+    },
+  );
+
   it.each([
     ['draft', 404],
     ['suspended', 410],

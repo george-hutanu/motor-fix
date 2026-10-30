@@ -239,9 +239,14 @@ function areaOf(
   };
 }
 
+// Inside the box less the padding the view was fitted with.
 function inside(area: GaragePinsDto, view: MapView, box: Box) {
+  const { bottom, left, right, top } = paddingOf();
   return overlayOf(area, undefined, view, box).circles.every(
     ({ r, x, y }) =>
-      x - r >= 0 && y - r >= 0 && x + r <= box.w && y + r <= box.h,
+      x - r >= left &&
+      y - r >= top &&
+      x + r <= box.w - right &&
+      y + r <= box.h - bottom,
   );
 }

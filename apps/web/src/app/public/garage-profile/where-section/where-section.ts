@@ -78,7 +78,7 @@ export class WhereSection {
     if (!finite(lat) || !finite(lng)) return undefined;
     return {
       at: { lat, lng },
-      km: finite(km) && km > 0 ? km : MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+      km: km ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM,
     };
   });
   // The map went (its image or the interactive map failed); a new garage

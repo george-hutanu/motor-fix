@@ -11,7 +11,12 @@ import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { GARAGE_MAP, GarageMap } from './garage-map';
 import { ring } from '../../../map-libre/map-libre';
 import type { MapFake } from '../../../place-step/place-step.testing';
-import { boundsOf, fitView, paddingOf } from '../../../static-map/fit-view';
+import {
+  boundsOf,
+  FIT_PADDING,
+  fitView,
+  paddingOf,
+} from '../../../static-map/fit-view';
 import { StaticMap } from '../../../static-map/static-map';
 
 jest.mock('maplibre-gl', () =>
@@ -163,12 +168,15 @@ describe('GarageMap, the area of a mobile mechanic', () => {
       await render({ km, point: at });
       const { r, x, y } = circle();
       const { zoom } = piece().view() as { zoom: number };
+      // At the lowest zoom the image service gives, the box itself is all
+      // that is left to hold the circle.
+      const margin = zoom > STATIC_MAP_ZOOM.min ? FIT_PADDING : 0;
 
       expect(r).toBeGreaterThan(0);
-      expect(x - r).toBeGreaterThanOrEqual(0);
-      expect(x + r).toBeLessThanOrEqual(w);
-      expect(y - r).toBeGreaterThanOrEqual(0);
-      expect(y + r).toBeLessThanOrEqual(200);
+      expect(x - r).toBeGreaterThanOrEqual(margin);
+      expect(x + r).toBeLessThanOrEqual(w - margin);
+      expect(y - r).toBeGreaterThanOrEqual(margin);
+      expect(y + r).toBeLessThanOrEqual(200 - margin);
       expect(zoom).toBeLessThanOrEqual(15);
       expect(zoom).toBeGreaterThanOrEqual(STATIC_MAP_ZOOM.min);
     },
