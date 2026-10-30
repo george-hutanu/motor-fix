@@ -63,6 +63,35 @@
       "none": "No jobs today",
       "title": "My jobs"
     },
+    "panel": {
+      "button": "Customise dashboard",
+      "count": "{x} of {y} sections shown",
+      "description": {
+        "brands": "Which cars look for you this month",
+        "funnel": "Views and requests, by week",
+        "kpi": "New requests, bookings, rating, estimated work",
+        "load": "Hours booked per mechanic today",
+        "now": "Cars on the lifts, with photos, video and live for the customer",
+        "req": "Requests you haven’t answered yet",
+        "reviews": "Latest reviews, with a reply button",
+        "sched": "Only useful if you work on lifts"
+      },
+      "done": "Done",
+      "empty": "You have hidden every section. Switch at least one on from “Customise dashboard”.",
+      "line": "Switch off the sections you don’t need. It is saved to your account.",
+      "name": {
+        "brands": "Brands requested",
+        "funnel": "From profile view to request",
+        "kpi": "Today’s numbers",
+        "load": "Mechanic load",
+        "now": "In work now",
+        "req": "Quote requests",
+        "reviews": "New reviews",
+        "sched": "Schedule by lift"
+      },
+      "saveFailed": "We could not save. Try again.",
+      "title": "Choose what your dashboard shows"
+    },
     "section": {
       "brands": "Brands requested this month",
       "funnel": "From profile to request, by week",

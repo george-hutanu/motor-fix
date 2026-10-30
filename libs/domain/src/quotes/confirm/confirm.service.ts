@@ -23,6 +23,8 @@ import type {
 } from '../../generated/prisma/client';
 import { invalidTransition } from '../../transitions';
 import {
+  deadlockRetried,
+  isSlotTaken,
   ScheduleService,
   type Segment,
 } from '../../workshop/schedule/schedule.service';
@@ -30,8 +32,6 @@ import { bookingMechanicInclude, garageBookingOf } from '../reads';
 import { moveBooking, moveQuote, moveRecipient } from '../transitions';
 
 type Tx = Prisma.TransactionClient;
-
-const DEADLOCK_RUNS = 3;
 
 const invalidField = (field: 'mechanicId' | 'lift', message: string) =>
   refusal(HttpStatus.BAD_REQUEST, 'validation_failed', message, [
@@ -46,17 +46,6 @@ const mechanicUnavailable = (en: boolean) =>
     'mechanic_unavailable',
     en ? 'The mechanic is not available' : 'Mecanicul nu e disponibil',
   );
-
-// The overlap the database refused although the read before it found none:
-// a confirm of another booking committed in between.
-function slotTaken(error: unknown) {
-  if (!(error instanceof Error)) return false;
-  const said = `${error.message} ${JSON.stringify((error as { meta?: unknown }).meta ?? {})}`;
-  return (
-    said.includes('booking_segment_mechanic_excl') ||
-    said.includes('booking_segment_lift_excl')
-  );
-}
 
 interface Switches {
   team: boolean;
@@ -109,7 +98,7 @@ export class ConfirmService {
     try {
       return await this.storeRetried(actor, bookingId, dto);
     } catch (error) {
-      if (slotTaken(error)) {
+      if (isSlotTaken(error)) {
         throw conflict(
           'slot_taken',
           en ? 'The slot was just taken' : 'Locul tocmai a fost ocupat',
@@ -119,24 +108,16 @@ export class ConfirmService {
     }
   }
 
-  // Two confirms racing for one lift or mechanic can deadlock on the
-  // exclusion constraints. Postgres aborts one; it runs again and then reads
-  // the other's confirm, so the loser hears 409, not 500.
+  // Two confirms racing can deadlock on the exclusion constraints; the loser
+  // runs again (deadlockRetried) and hears 409, not 500.
   private async storeRetried(
     actor: Actor,
     bookingId: string,
     dto: ConfirmBookingDto,
   ): Promise<GarageBookingDto> {
-    for (let run = 1; ; run++) {
-      try {
-        return await this.prisma.$transaction((tx) =>
-          this.store(tx, actor, bookingId, dto),
-        );
-      } catch (error) {
-        const deadlocked = (error as { code?: unknown }).code === 'P2034';
-        if (!deadlocked || run === DEADLOCK_RUNS) throw error;
-      }
-    }
+    return deadlockRetried(() =>
+      this.prisma.$transaction((tx) => this.store(tx, actor, bookingId, dto)),
+    );
   }
 
   // Anyone outside the booking's garage learns nothing of it; a mechanic of

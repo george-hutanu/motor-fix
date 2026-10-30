@@ -12,6 +12,10 @@ import { StrictHttpResponse } from '../strict-http-response';
 import { BrandRangeSavedDto } from '../models/brand-range-saved-dto';
 import { catalogueJobsControllerPropose } from '../fn/garages/catalogue-jobs-controller-propose';
 import { CatalogueJobsControllerPropose$Params } from '../fn/garages/catalogue-jobs-controller-propose';
+import { createTimeBlock } from '../fn/garages/create-time-block';
+import { CreateTimeBlock$Params } from '../fn/garages/create-time-block';
+import { deleteTimeBlock } from '../fn/garages/delete-time-block';
+import { DeleteTimeBlock$Params } from '../fn/garages/delete-time-block';
 import { DocumentCycleDto } from '../models/document-cycle-dto';
 import { DocumentUploadAddressDto } from '../models/document-upload-address-dto';
 import { GarageBrandOwnerAnswerDto } from '../models/garage-brand-owner-answer-dto';
@@ -55,6 +59,10 @@ import { GarageScheduleDto } from '../models/garage-schedule-dto';
 import { garageSettingsControllerUpdate } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsControllerUpdate$Params } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsDto } from '../models/garage-settings-dto';
+import { garageTimeBlocks } from '../fn/garages/garage-time-blocks';
+import { GarageTimeBlocks$Params } from '../fn/garages/garage-time-blocks';
+import { garageWeeklyFigures } from '../fn/garages/garage-weekly-figures';
+import { GarageWeeklyFigures$Params } from '../fn/garages/garage-weekly-figures';
 import { getImageVariant } from '../fn/garages/get-image-variant';
 import { GetImageVariant$Params } from '../fn/garages/get-image-variant';
 import { LabourRangeSavedDto } from '../models/labour-range-saved-dto';
@@ -94,9 +102,14 @@ import { PublicGarageDto } from '../models/public-garage-dto';
 import { publicGaragesControllerBySlug } from '../fn/garages/public-garages-controller-by-slug';
 import { PublicGaragesControllerBySlug$Params } from '../fn/garages/public-garages-controller-by-slug';
 import { StaffInviteSentDto } from '../models/staff-invite-sent-dto';
+import { TimeBlockDto } from '../models/time-block-dto';
+import { TimeBlocksDto } from '../models/time-blocks-dto';
+import { updateTimeBlock } from '../fn/garages/update-time-block';
+import { UpdateTimeBlock$Params } from '../fn/garages/update-time-block';
 import { verificationStatusControllerRead } from '../fn/garages/verification-status-controller-read';
 import { VerificationStatusControllerRead$Params } from '../fn/garages/verification-status-controller-read';
 import { VerificationStatusDto } from '../models/verification-status-dto';
+import { WeeklyFiguresDto } from '../models/weekly-figures-dto';
 
 @Injectable({ providedIn: 'root' })
 export class GaragesService extends BaseService {
@@ -137,6 +150,138 @@ export class GaragesService extends BaseService {
     return resp.then((r: StrictHttpResponse<GarageScheduleDto>): GarageScheduleDto => r.body);
   }
 
+  /** Path part for operation `garageTimeBlocks()` */
+  static readonly GarageTimeBlocksPath = '/api/v1/garages/{garageId}/time-blocks';
+
+  /**
+   * The garage's blocked time over 1 to 31 Bucharest days.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageTimeBlocks()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageTimeBlocks$Response(params: GarageTimeBlocks$Params, context?: HttpContext): Promise<StrictHttpResponse<TimeBlocksDto>> {
+    const obs = garageTimeBlocks(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The garage's blocked time over 1 to 31 Bucharest days.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageTimeBlocks$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageTimeBlocks(params: GarageTimeBlocks$Params, context?: HttpContext): Promise<TimeBlocksDto> {
+    const resp = this.garageTimeBlocks$Response(params, context);
+    return resp.then((r: StrictHttpResponse<TimeBlocksDto>): TimeBlocksDto => r.body);
+  }
+
+  /** Path part for operation `createTimeBlock()` */
+  static readonly CreateTimeBlockPath = '/api/v1/garages/{garageId}/time-blocks';
+
+  /**
+   * Block time on a mechanic, a lift or both.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `createTimeBlock()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  createTimeBlock$Response(params: CreateTimeBlock$Params, context?: HttpContext): Promise<StrictHttpResponse<TimeBlockDto>> {
+    const obs = createTimeBlock(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Block time on a mechanic, a lift or both.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `createTimeBlock$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  createTimeBlock(params: CreateTimeBlock$Params, context?: HttpContext): Promise<TimeBlockDto> {
+    const resp = this.createTimeBlock$Response(params, context);
+    return resp.then((r: StrictHttpResponse<TimeBlockDto>): TimeBlockDto => r.body);
+  }
+
+  /** Path part for operation `deleteTimeBlock()` */
+  static readonly DeleteTimeBlockPath = '/api/v1/garages/{garageId}/time-blocks/{blockId}';
+
+  /**
+   * Free a blocked interval that has not ended.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `deleteTimeBlock()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  deleteTimeBlock$Response(params: DeleteTimeBlock$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = deleteTimeBlock(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Free a blocked interval that has not ended.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `deleteTimeBlock$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  deleteTimeBlock(params: DeleteTimeBlock$Params, context?: HttpContext): Promise<void> {
+    const resp = this.deleteTimeBlock$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `updateTimeBlock()` */
+  static readonly UpdateTimeBlockPath = '/api/v1/garages/{garageId}/time-blocks/{blockId}';
+
+  /**
+   * Change a blocked interval that has not ended.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `updateTimeBlock()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  updateTimeBlock$Response(params: UpdateTimeBlock$Params, context?: HttpContext): Promise<StrictHttpResponse<TimeBlockDto>> {
+    const obs = updateTimeBlock(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Change a blocked interval that has not ended.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `updateTimeBlock$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  updateTimeBlock(params: UpdateTimeBlock$Params, context?: HttpContext): Promise<TimeBlockDto> {
+    const resp = this.updateTimeBlock$Response(params, context);
+    return resp.then((r: StrictHttpResponse<TimeBlockDto>): TimeBlockDto => r.body);
+  }
+
   /** Path part for operation `profileViewsControllerRecord()` */
   static readonly ProfileViewsControllerRecordPath = '/api/v1/garages/{id}/views';
 
@@ -160,6 +305,39 @@ export class GaragesService extends BaseService {
   profileViewsControllerRecord(params: ProfileViewsControllerRecord$Params, context?: HttpContext): Promise<void> {
     const resp = this.profileViewsControllerRecord$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `garageWeeklyFigures()` */
+  static readonly GarageWeeklyFiguresPath = '/api/v1/garages/{garageId}/figures/weekly';
+
+  /**
+   * Profile views, requests and conversion of the eight complete weeks before this one.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageWeeklyFigures()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageWeeklyFigures$Response(params: GarageWeeklyFigures$Params, context?: HttpContext): Promise<StrictHttpResponse<WeeklyFiguresDto>> {
+    const obs = garageWeeklyFigures(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Profile views, requests and conversion of the eight complete weeks before this one.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageWeeklyFigures$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageWeeklyFigures(params: GarageWeeklyFigures$Params, context?: HttpContext): Promise<WeeklyFiguresDto> {
+    const resp = this.garageWeeklyFigures$Response(params, context);
+    return resp.then((r: StrictHttpResponse<WeeklyFiguresDto>): WeeklyFiguresDto => r.body);
   }
 
   /** Path part for operation `catalogueJobsControllerPropose()` */

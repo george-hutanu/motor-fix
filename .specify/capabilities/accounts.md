@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 079-account-model
   - 082-sign-in
@@ -58,6 +58,7 @@ features:
   - 423-mechanic-garage-dashboard
   - 1381-mechanic-scope
   - 099-overview-sections
+  - 011-dashboard-sections
 ---
 
 # Capability: Accounts
@@ -1483,9 +1484,9 @@ _From 1381-mechanic-scope._
 
 _From 099-overview-sections._
 
-### 099-FR-002 — Each section MUST declare its access in the same terms as the menu's views (`capability` typed with the table's `Capability`, `feature` a switch key, `unreleased`) and MUST be shown or left out by the order 102-FR-003 fixes: a feature switched off removes it for everyone, then the role's row, then the mechanic's permissions, then the release mark. The declared access is: `kpi` `garage.profile`; `now` `garage.profile`, unreleased in this release; `req` `garage.requests`; `load` `garage.own_jobs` with feature `team_mechanics`; `sched` `garage.schedule` with feature `lift_schedule`; `funnel` and `brands` `garage.profile`; `reviews` `garage.reviews`. So the owner sees every released section, the receptionist every released section, and a mechanic `load`, `sched` and, with `can_answer_quotes`, `req`.
+### 011-FR-002 — Panou MUST read, in the browser, the person's layout for the garage role the session holds (the first of `garage`, `receptionist`, `mechanic` it holds) before it draws its sections, and draw only the sections that are both in the person's list (099-FR-002) and visible in the layout, in the list's order: the hidden step comes after the four of 099-FR-002, so a feature switched off, a missing capability or an unreleased mark leaves a section out whatever the layout says; a section hidden by the layout is absent from Panou and its data is not requested. While the read is in flight Panou shows no section and no count (the strip row's pill and button, the legal-check panel and the first-steps card stay); a failed read draws the default (every section the person may see) (modifies 099-FR-002).
 
-_From 099-overview-sections._
+_From 011-dashboard-sections._
 
 ### 099-FR-003 — Each section's title MUST be a heading; when the person's allowed views (`allowedViews` over the same account) include the section's target view, the heading MUST be a link to it — `now` and `sched` → `schedule`, `req` → `requests`, `load` → `team`, `kpi`, `funnel` and `brands` → `profile`, `reviews` → `reviews` — that opens the view on click and on Enter or Space, with a visible focus ring, a tap target at least 44 px high on phones and the section's name as its accessible name. When the target view is not in the person's allowed views, the heading MUST be plain text and nothing is navigable.
 
@@ -1495,9 +1496,9 @@ _From 099-overview-sections._
 
 _From 099-overview-sections._
 
-### 099-FR-005 — The verified strip of 1354-FR-005 MUST stay the first element of Panou for an approved garage, above the numbers slot and every section; the suspension banner of 049-FR-012 MUST stay above everything while suspended; a `draft` garage MUST keep seeing only its verification progress (no strip, no sections, no card); the legal-check panel of the owner (210-FR-011) MUST keep its place directly under the strip. This story changes none of their content.
+### 011-FR-003 — The strip of 099-FR-005 MUST become a row holding, in order: the verified pill with its check line when the person sees it today (1354-FR-005, unchanged), the count "{x} din {y} secțiuni afișate" / "{x} of {y} sections shown" where y is the number of sections the person may see (FR-002's list before the hidden step) and x those not hidden, and the button "Personalizează panoul" / "Customise dashboard". The row is shown to everyone with sections (a verified garage's owner, a receptionist, a mechanic, a suspended garage's people) and is absent for a `draft` garage; the legal-check panel keeps its place under it (modifies 099-FR-005).
 
-_From 099-overview-sections._
+_From 011-dashboard-sections._
 
 ### 099-FR-006 — A mechanic (a person holding `garage.own_jobs` but neither `garage.profile` nor `garage.feature_switches`) MUST keep her own-jobs section and her "Foaia mea de zi" link of 423-FR-001 and 423-FR-003, placed right after `req` (or first, when `req` is absent) and before `load`; the placeholder line "shell.frame.coming.garage.dashboard" MUST no longer be shown to anyone, the section frame taking its place.
 
@@ -1530,6 +1531,42 @@ _From 099-overview-sections._
 ### 099-FR-013 — Tests MUST exist before the code (Principle II), each test file carrying one whole-line `// @traces` comment naming this feature's ids. In Jest: the section table for the owner, the receptionist, a mechanic with and without `can_answer_quotes`, each feature off, and the release mark on and off (FR-002); the default order and the keys (FR-001); the title link present and absent by the target view (FR-003); the empty states hold no data (FR-004); the own-jobs placement and the placeholder gone (FR-006); the first-steps rule in every branch (FR-008); the section list re-filtering when the account signal changes (FR-009). In Playwright, end to end: the owner of a new garage sees the strip, the first-steps card and every released section empty, in the default order, each title opening its view; with `lift_schedule` switched off the lift section is gone; a mechanic without permissions sees only her sections.
 
 _From 099-overview-sections._
+
+### 011-FR-004 — "Personalizează panoul" MUST open, as a task of the overlays capability (a drawer on the right at 768 px and wider, a bottom sheet on a phone, 1127-FR-001 and 1127-FR-002), the panel titled "Alege ce vezi pe panou" / "Choose what your dashboard shows" with the line "Oprește secțiunile de care nu ai nevoie. Se salvează în contul tău." / "Switch off the sections you don’t need. It is saved to your account.", one row per section of FR-003's y in Panou's order, and the button "Gata" / "Done". Each row shows its position (1 upwards in that list), its name and its one-line description, and a switch (`role="switch"`, named by the section's name, checked while the section is shown) that works by click, tap, Space and Enter with a visible focus ring and a tap target at least 44 px high. A row whose switch is off is dimmed (still readable: its text keeps at least 4.5:1 contrast).
+
+_From 011-dashboard-sections._
+
+### 011-FR-005 — The panel's names and descriptions MUST be: `kpi` "Cifrele zilei" / "Today's numbers" — "Cereri noi, programări, notă, lucrări estimate" / "New requests, bookings, rating, estimated work"; `now` "În lucru acum" / "In work now" — "Mașinile de pe elevatoare, cu foto, video și live pentru client" / "Cars on the lifts, with photos, video and live for the customer"; `req` "Cereri de ofertă" / "Quote requests" — "Cererile la care nu ai răspuns încă" / "Requests you haven’t answered yet"; `load` "Încărcarea mecanicilor" / "Mechanic load" — "Câte ore are fiecare mecanic azi" / "Hours booked per mechanic today"; `sched` "Programul pe elevatoare" / "Schedule by lift" — "Util doar dacă lucrezi pe elevatoare" / "Only useful if you work on lifts"; `funnel` "De la profil la cerere" / "From profile view to request" — "Vizualizări și cereri, pe săptămâni" / "Views and requests, by week"; `brands` "Mărci cerute" / "Brands requested" — "Ce mașini te caută luna asta" / "Which cars look for you this month"; `reviews` "Recenzii noi" / "New reviews" — "Ultimele recenzii, cu buton de răspuns" / "Latest reviews, with a reply button". Every text of this story MUST come from the garage area's translation files in Romanian and English (016-FR-002), with comma-below diacritics.
+
+_From 011-dashboard-sections._
+
+### 011-FR-006 — Switching a row MUST apply at once and save: Panou shows or hides the section and the count follows before the server answers; the save sends the whole layout the server last answered with that key's and every other pending switch's visibility changed (every key, the server's order; 1263-FR-004); after a failed read it sends only the pending switches and the server fills the rest visible. On a failed save the switch, the section and the count MUST return to the state the server last answered (a later save that carried the switch keeps it, and that switch counts as saved) and the panel MUST show "Nu am putut salva. Încearcă din nou." / "We could not save. Try again." as an alert (`role="alert"`), cleared by the next successful switch. A save the server refuses with a `sign_in_required` 401 shows the sign-in dialog and resends once (the web interceptor); if that is dismissed or fails, it is a failed save as above. While a save is in flight the row's switch is disabled (a press is dropped, nothing is queued) and other rows stay usable.
+
+_From 011-dashboard-sections._
+
+### 011-FR-007 — "Gata", Escape, the X and a click outside MUST close the panel at once with no discard question (nothing is pending; the task is opened with 157-FR-010's question off); focus MUST return to "Personalizează panoul" (157-FR-008); reopening MUST show the server's current layout. Closing never saves: every change was saved on its switch.
+
+_From 011-dashboard-sections._
+
+### 011-FR-008 — When every section of FR-003's y is hidden, Panou MUST show, under the strip row (and the legal-check panel and first-steps card when they apply), the line "Ai ascuns toate secțiunile. Pornește cel puțin una din „Personalizează panoul”." / "You have hidden every section. Switch at least one on from “Customise dashboard”." and no section; the strip reads "0 din {y} secțiuni afișate"; the mechanic's own-jobs section and its day-sheet link (099-FR-006), which have no switch, stay. The message goes as soon as one section is shown again.
+
+_From 011-dashboard-sections._
+
+### 011-FR-010 — The panel MUST be one shared component that knows nothing of the garage: it takes the rows (key, position, name, description, shown) and the panel line, and reports a switch as (key, shown) with a way to flip it back on failure; the garage's Panou wires it to the garage's list and the layout read and save. The admin's (ST-1391) and driver's (ST-1262) dashboards reuse it unchanged; this story builds no admin or driver wiring.
+
+_From 011-dashboard-sections._
+
+### 011-FR-011 — The panel and the strip row MUST lay out phones first: at 320 px and 390 px the row's pill, count and button wrap without sideways scroll, every panel row is readable with no text under 12 px, long names and descriptions wrap and are never truncated, in light and dark, Romanian and English; the count is a polite live region (`aria-live="polite"`) so a switch's effect on it is announced, and the dimmed row and the error line never rely on colour alone (the switch state and the alert text carry the meaning); axe MUST report no violation on Panou with the panel closed and open, for the owner, the receptionist and the mechanic.
+
+_From 011-dashboard-sections._
+
+### 011-FR-012 — This story MUST add no table, no column, no endpoint, no event, no audit entry and no new metric: the server change is the three roles and their keys joining the one list, counted by the existing layout counter by role (1263-FR-008's inventory entries cover the routes). The AI assistant gets no tool for the layout.
+
+_From 011-dashboard-sections._
+
+### 011-FR-013 — Tests MUST exist before the code (Principle II), each test file carrying one whole-line `// @traces` comment naming this feature's ids. In Jest, unit: the shared panel's rows, positions, switch names and states, the dimmed row, the failed save flipping back with its alert, "Gata"; Panou's hidden step after the four of 099-FR-002, the count for the owner, the receptionist, a mechanic with and without `can_answer_quotes`, a feature off and a hidden section, the empty message, the default on a failed read, the re-read on the event, and nothing drawn before the read answers. Against a real database: the three garage roles' layouts read, saved and read back by the same account, each with the eight keys; `driver` still 404; a mechanic's save with `sched: false` kept; another account's layout never returned; a key outside the eight refused with 400. In Playwright, end to end: the owner hides two sections, reloads, they stay hidden, the menu still opens their views, and the count reads "5 din 7 secțiuni afișate"; a mechanic without permissions sees only her two rows.
+
+_From 011-dashboard-sections._
 
 ## Retired
 
@@ -1580,3 +1617,5 @@ _From 099-overview-sections._
 - `079-FR-013` — superseded by `102-FR-007` (2026-10-25)
 - `130-FR-003` — superseded by `102-FR-007` (2026-10-25)
 - `102-FR-005` — superseded by `423-FR-001` (2026-10-25)
+- `099-FR-002` — superseded by `011-FR-002` (2026-10-29)
+- `099-FR-005` — superseded by `011-FR-003` (2026-10-29)

@@ -1,6 +1,6 @@
 ---
 capability: garage-team
-updated: 2026-10-26
+updated: 2026-10-29
 features:
   - 131-invite-garage-staff
   - 389-confirm-booking-lift-mechanic
@@ -12,6 +12,7 @@ features:
   - 1255-invite-mechanic
   - 058-mechanic-hours
   - 150-add-booking
+  - 427-time-blocks
 ---
 
 # Capability: Garage team
@@ -371,6 +372,10 @@ _From 058-mechanic-hours._
 ### 058-FR-021 — Tests MUST cover, failing first: Jest on real PostgreSQL for FR-001/FR-003 (each refusal code at its bound, the garage-closed weekday, Sunday with and without garage hours, the Saturday refusal, an unchanged save writing nothing), FR-002 (the default from the garage's hours, `isDefault`, the two-interval legacy value read as one stretch and left unchanged), FR-004/FR-005/FR-006 (a single day and a range, each refusal code, the overlap, the past removal refused, the listing by first day without past ranges, the warning with 3 confirmed bookings and the save with `acknowledgeBookings`), FR-007 (`toReassign` true for a confirmed booking ahead on a day off, false before the day off is added), FR-009 (owner 200/201/204, receptionist and mechanic 403, driver, admin and another owner 404, signed out 401, `feature_off` after the access check, unknown, removed and foreign card 404), FR-010 (one audit entry per changed field with old and new, the day-off entries, each event in the same transaction), FR-012 (a confirm for a mechanic outside her stretch, on a day off and on a Saturday with the switch off answers `mechanic_unavailable`; inside passes), FR-013 (the clip on a shortened Monday, a closed day, a closed Saturday turning the switch off, a null-hours mechanic untouched); Jest for FR-011 (the rule and the planned minutes on hours, the default, Saturday on and off, a day off, a legal holiday, a closed day, the March and October clock changes); Jest for the tab (the rows from the garage's span, "Închis" for a closed weekday, the Saturday fill, each message under its field, the warning and "Adaugă oricum", the days-off list and remove, the spinner and the kept tab on a refusal); Playwright (`web-e2e`): as an owner set Elena's hours and a day off, re-open the card and read them back, a second tab following the change live (the confirm refused on that day stays with the confirm integration spec, D22); the PR QA sweep: the tab at 320 px, 390 px, tablet and desktop, light and dark, RO and EN.
 
 _From 058-mechanic-hours._
+
+### 427-FR-012 — Removing a card from the team (`GarageMechanicsService.remove`, 1255-FR-014 lineage) MUST, in its transaction, delete every block of that card whose `ends_at` is after now with its segments, writing FR-009's `delete` entry and FR-010's `time_block.deleted` per block; blocks that already ended stay with their values; the account-deletion detach (056-FR-014) does the same through the same code.
+
+_From 427-time-blocks._
 
 ## Retired
 

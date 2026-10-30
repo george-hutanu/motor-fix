@@ -122,6 +122,7 @@ export {
 export { verificationConfig } from './garages/verification/verification-config';
 export * from './health/health.module';
 export { DemandModule } from './insights/demand/demand.module';
+export { GarageFiguresModule } from './insights/garage-figures/garage-figures.module';
 export { GarageFiguresService } from './insights/garage-figures/garage-figures.service';
 export { InsightsModule } from './insights/insights.module';
 export { ProfileViewsModule } from './insights/profile-views/profile-views.module';
@@ -164,6 +165,7 @@ export {
   inboxMailboxes,
   runInboxTest,
 } from './notifications/inbox-test/inbox-test';
+export { JOB_STAGE_CONSUMER } from './notifications/job-stage/job-stage.fan-out';
 export { NEWS_CONSUMER } from './notifications/news/news.fan-out';
 export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';

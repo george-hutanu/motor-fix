@@ -21,6 +21,18 @@ p {
   font-size: var(--mf-size-body);
   overflow-wrap: anywhere;
 }
+.layout {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  margin-inline-start: auto;
+  min-width: 0;
+}
+:host > .muted {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-body);
+}
 .verified {
   display: inline-flex;
   align-items: center;
@@ -86,5 +98,17 @@ p {
 @media (max-width: 767.98px) {
   .panel {
     padding-inline: var(--mf-space-4);
+  }
+  /* The count on its own line, the button under it with its label on the
+     count's edge: side by side, a 320 px phone squeezes the count. */
+  .layout {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--mf-space-1);
+    inline-size: 100%;
+    margin-inline-start: 0;
+  }
+  .layout button {
+    padding-inline: 0;
   }
 }

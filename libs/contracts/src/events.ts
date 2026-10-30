@@ -133,6 +133,7 @@ export const EVENT_KINDS = [
   'support.message_received',
   'time_block.created',
   'time_block.deleted',
+  'time_block.updated',
   'verification.check_recorded',
   'verification.decided',
   'verification.opened',

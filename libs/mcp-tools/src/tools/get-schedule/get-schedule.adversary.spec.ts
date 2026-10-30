@@ -29,6 +29,7 @@ const entry = (id: string, more: Record<string, unknown> = {}): Entry =>
 
 const scheduleOf = (answer: Partial<Schedule> = {}) =>
   jest.fn(async () => ({
+    blocks: [] as Schedule['blocks'],
     entries: [] as Entry[],
     from: '2026-10-09',
     lifts: true,
@@ -290,6 +291,7 @@ describe('get_schedule answers', () => {
             list: jest
               .fn()
               .mockResolvedValueOnce({
+                blocks: [],
                 entries: [],
                 from: '2026-10-09',
                 lifts: false,

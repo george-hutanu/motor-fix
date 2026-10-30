@@ -65,6 +65,35 @@
       "none": "Nicio lucrare azi",
       "title": "Lucrările mele"
     },
+    "panel": {
+      "button": "Personalizează panoul",
+      "count": "{x} din {y} secțiuni afișate",
+      "description": {
+        "brands": "Ce mașini te caută luna asta",
+        "funnel": "Vizualizări și cereri, pe săptămâni",
+        "kpi": "Cereri noi, programări, notă, lucrări estimate",
+        "load": "Câte ore are fiecare mecanic azi",
+        "now": "Mașinile de pe elevatoare, cu foto, video și live pentru client",
+        "req": "Cererile la care nu ai răspuns încă",
+        "reviews": "Ultimele recenzii, cu buton de răspuns",
+        "sched": "Util doar dacă lucrezi pe elevatoare"
+      },
+      "done": "Gata",
+      "empty": "Ai ascuns toate secțiunile. Pornește cel puțin una din „Personalizează panoul”.",
+      "line": "Oprește secțiunile de care nu ai nevoie. Se salvează în contul tău.",
+      "name": {
+        "brands": "Mărci cerute",
+        "funnel": "De la profil la cerere",
+        "kpi": "Cifrele zilei",
+        "load": "Încărcarea mecanicilor",
+        "now": "În lucru acum",
+        "req": "Cereri de ofertă",
+        "reviews": "Recenzii noi",
+        "sched": "Programul pe elevatoare"
+      },
+      "saveFailed": "Nu am putut salva. Încearcă din nou.",
+      "title": "Alege ce vezi pe panou"
+    },
     "section": {
       "brands": "Mărci cerute luna asta",
       "funnel": "De la profil la cerere, pe săptămâni",

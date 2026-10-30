@@ -299,8 +299,18 @@ export type { CancelBookingControllerCancel$Params as CancelBookingControllerCan
 export { cancelBookingControllerCancel as cancelBookingControllerCancel } from './fn/bookings/cancel-booking-controller-cancel';
 export type { GarageSchedule$Params as GarageSchedule$Params } from './fn/garages/garage-schedule';
 export { garageSchedule as garageSchedule } from './fn/garages/garage-schedule';
+export type { GarageTimeBlocks$Params as GarageTimeBlocks$Params } from './fn/garages/garage-time-blocks';
+export { garageTimeBlocks as garageTimeBlocks } from './fn/garages/garage-time-blocks';
+export type { CreateTimeBlock$Params as CreateTimeBlock$Params } from './fn/garages/create-time-block';
+export { createTimeBlock as createTimeBlock } from './fn/garages/create-time-block';
+export type { DeleteTimeBlock$Params as DeleteTimeBlock$Params } from './fn/garages/delete-time-block';
+export { deleteTimeBlock as deleteTimeBlock } from './fn/garages/delete-time-block';
+export type { UpdateTimeBlock$Params as UpdateTimeBlock$Params } from './fn/garages/update-time-block';
+export { updateTimeBlock as updateTimeBlock } from './fn/garages/update-time-block';
 export type { ProfileViewsControllerRecord$Params as ProfileViewsControllerRecord$Params } from './fn/garages/profile-views-controller-record';
 export { profileViewsControllerRecord as profileViewsControllerRecord } from './fn/garages/profile-views-controller-record';
+export type { GarageWeeklyFigures$Params as GarageWeeklyFigures$Params } from './fn/garages/garage-weekly-figures';
+export { garageWeeklyFigures as garageWeeklyFigures } from './fn/garages/garage-weekly-figures';
 export type { CatalogueJobsControllerPropose$Params as CatalogueJobsControllerPropose$Params } from './fn/garages/catalogue-jobs-controller-propose';
 export { catalogueJobsControllerPropose as catalogueJobsControllerPropose } from './fn/garages/catalogue-jobs-controller-propose';
 export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';

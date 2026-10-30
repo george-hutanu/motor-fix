@@ -1,4 +1,5 @@
 import { leaveTeams } from './team-leave';
+import type { AuditPort } from '../../audit/audit.port';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import type { DomainEvent, EventPort } from '../../events/event.port';
 import { databaseUrl } from '../../notifications/notifications.testing';
@@ -22,8 +23,17 @@ beforeEach(async () => {
 
 afterAll(() => prisma.$disconnect());
 
+// The removed card's blocks are audited elsewhere (team-leave.integration).
+const unaudited: AuditPort = {
+  record: async () => undefined,
+  recordChanges: async () => undefined,
+  recordMany: async () => undefined,
+};
+
 const leave = (accountId: string, port: EventPort = events) =>
-  prisma.$transaction((tx) => leaveTeams(tx, port, accountId));
+  prisma.$transaction((tx) =>
+    leaveTeams(tx, { audit: unaudited, events: port }, accountId),
+  );
 
 // @traces 129-FR-009
 describe('leaving the garage team, attacked', () => {

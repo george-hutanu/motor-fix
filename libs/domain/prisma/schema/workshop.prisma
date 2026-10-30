@@ -98,18 +98,48 @@ model JobStageEntry {
 // migration keep one mechanic, and one lift of a garage, to one booking at a
 // time; a booking leaves its rows when it is cancelled, lapses or is missed.
 model BookingSegment {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  bookingId  String    @map("booking_id") @db.Uuid
-  garageId   String    @map("garage_id") @db.Uuid
-  mechanicId String?   @map("mechanic_id") @db.Uuid
-  lift       Int?
-  startsAt   DateTime  @map("starts_at") @db.Timestamptz(3)
-  endsAt     DateTime  @map("ends_at") @db.Timestamptz(3)
-  booking    Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  garage     Garage    @relation(fields: [garageId], references: [id], onDelete: Cascade)
-  mechanic   Mechanic? @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // Exactly one of a booking and a time block holds the row (migration CHECK).
+  bookingId   String?    @map("booking_id") @db.Uuid
+  timeBlockId String?    @map("time_block_id") @db.Uuid
+  garageId    String     @map("garage_id") @db.Uuid
+  mechanicId  String?    @map("mechanic_id") @db.Uuid
+  lift        Int?
+  startsAt    DateTime   @map("starts_at") @db.Timestamptz(3)
+  endsAt      DateTime   @map("ends_at") @db.Timestamptz(3)
+  booking     Booking?   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  timeBlock   TimeBlock? @relation(fields: [timeBlockId], references: [id], onDelete: Cascade)
+  garage      Garage     @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  mechanic    Mechanic?  @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
 
   @@index([bookingId])
+  @@index([timeBlockId])
   @@index([garageId, startsAt])
   @@map("booking_segment")
+}
+
+// Time the garage holds on a mechanic, a lift or both, for a walk-in or a
+// phone booking: no car, customer or job. Its segments, one per Bucharest day
+// it touches, sit in booking_segment under the same exclusion constraints as
+// a booking's. created_by and updated_by carry no foreign key: the row outlives
+// the account that wrote it.
+model TimeBlock {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  garageId   String           @map("garage_id") @db.Uuid
+  mechanicId String?          @map("mechanic_id") @db.Uuid
+  lift       Int?
+  startsAt   DateTime         @map("starts_at") @db.Timestamptz(3)
+  endsAt     DateTime         @map("ends_at") @db.Timestamptz(3)
+  note       String?
+  createdBy  String           @map("created_by") @db.Uuid
+  updatedBy  String           @map("updated_by") @db.Uuid
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  garage     Garage           @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  mechanic   Mechanic?        @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
+  segments   BookingSegment[]
+
+  @@index([garageId, startsAt])
+  @@index([mechanicId])
+  @@map("time_block")
 }
