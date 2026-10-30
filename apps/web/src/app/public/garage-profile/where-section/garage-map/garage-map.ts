@@ -140,21 +140,17 @@ export class GarageMap {
   // The view the static image shows, which the interactive map opens at. The
   // snapped centre can move a fitted circle up to a sixteenth of the image
   // off its middle, so a zoom lower is taken until all of it is in the box.
+  // A control or credit over the strip's middle (the narrow desktop column,
+  // where the credit wraps) is not cleared by any zoom, so the circle is
+  // also fitted beside each cover, and the closest view that clears them
+  // all is taken.
   protected readonly still = computed<MapView | undefined>(() => {
     const box = this.box();
     if (!box) return undefined;
     const km = this.km();
     if (km === undefined)
       return fitView(boundsOf([this.point()]), box, paddingOf());
-    const area = areaOf(this.point(), km);
-    const bounds = boundsOf(
-      circleBounds(this.point(), km).map(([lng, lat]) => ({ lat, lng })),
-    );
-    let view = fitView(bounds, box, paddingOf());
-    const covers = this.covers();
-    while (view.zoom > STATIC_MAP_ZOOM.min && !inside(area, view, box, covers))
-      view = fitView(bounds, box, paddingOf(), view.zoom - 1);
-    return view;
+    return areaView(this.point(), km, box, this.covers());
   });
   private readonly reduced = inject(REDUCED_MOTION);
   private readonly open = inject(GARAGE_MAP);
@@ -276,6 +272,52 @@ const sameCovers = (a: readonly Cover[], b: readonly Cover[]) =>
     (c, i) =>
       c.x === b[i].x && c.y === b[i].y && c.w === b[i].w && c.h === b[i].h,
   );
+
+// The highest view that holds the whole circle clear of the covers, or the
+// plain fit at its lowest zoom when none can.
+function areaView(
+  point: LatLng,
+  km: number,
+  box: Box,
+  covers: readonly Cover[],
+): MapView {
+  const area = areaOf(point, km);
+  const bounds = boundsOf(
+    circleBounds(point, km).map(([lng, lat]) => ({ lat, lng })),
+  );
+  const views = besideOf(covers, box).map((padding) => {
+    let view = fitView(bounds, box, padding);
+    while (view.zoom > STATIC_MAP_ZOOM.min && !inside(area, view, box, covers))
+      view = fitView(bounds, box, padding, view.zoom - 1);
+    return view;
+  });
+  const clear = views.filter((view) => inside(area, view, box, covers));
+  return clear.reduce(
+    (a, b) => (b.zoom > a.zoom ? b : a),
+    clear[0] ?? views[0],
+  );
+}
+
+type Padding = ReturnType<typeof paddingOf>;
+
+// The room kept between the circle and a cover it is fitted beside.
+const COVER_GAP = 8;
+
+// The paddings to fit the circle with: the plain one first, then each way
+// of keeping it to one side of every cover (left of, above, right of or
+// below it), the cover's far edge plus a gap taken off that side of the box.
+function besideOf(covers: readonly Cover[], box: Box): Padding[] {
+  let ways: Padding[] = [paddingOf()];
+  for (const c of covers) {
+    ways = ways.flatMap((p) => [
+      { ...p, right: Math.max(p.right, box.w - c.x + COVER_GAP) },
+      { ...p, bottom: Math.max(p.bottom, box.h - c.y + COVER_GAP) },
+      { ...p, left: Math.max(p.left, c.x + c.w + COVER_GAP) },
+      { ...p, top: Math.max(p.top, c.y + c.h + COVER_GAP) },
+    ]);
+  }
+  return covers.length === 0 ? ways : [paddingOf(), ...ways];
+}
 
 // Inside the box less the padding the view was fitted with, and clear of
 // the control and the credit drawn over it.

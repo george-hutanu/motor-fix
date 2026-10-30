@@ -234,4 +234,31 @@ test.describe('a mobile mechanic’s area on a small map', () => {
     expect(within(box, circle)).toBe(true);
     expect(await sideways(page)).toBeLessThanOrEqual(0);
   });
+
+  // At a desktop the profile's column is narrow: the credit wraps and lifts
+  // the control over the strip's middle, and the circle stays clear of both.
+  test('keeps the circle clear of the control and the credit at 1440 px', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 900, width: 1440 });
+    await hydrated(page, MOBILE);
+    await expect(still(page).locator('img')).toBeVisible();
+    const circle = await still(page).locator('.overlay .area').boundingBox();
+    expect(circle).not.toBeNull();
+    if (!circle) return;
+    const r = circle.width / 2;
+    const x = circle.x + r;
+    const y = circle.y + circle.height / 2;
+    for (const cover of [
+      still(page).locator('button'),
+      still(page).locator('.attribution'),
+    ]) {
+      const c = await cover.boundingBox();
+      if (!c) continue;
+      const dx = Math.max(c.x - x, 0, x - (c.x + c.width));
+      const dy = Math.max(c.y - y, 0, y - (c.y + c.height));
+      // A pixel's rounding either way.
+      expect(Math.hypot(dx, dy)).toBeGreaterThanOrEqual(r - 1);
+    }
+  });
 });

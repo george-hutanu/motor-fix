@@ -200,6 +200,16 @@ describe('GarageMap, the area of a mobile mechanic', () => {
         button: { h: 44, w: 150, x: 862, y: 114 },
       },
     ],
+    // The profile's narrow column at a 1440 px desktop: the credit wraps to
+    // two lines and lifts the control over the strip's middle, where the
+    // circle's centre falls, so no lower zoom alone can clear it.
+    [
+      360,
+      {
+        attribution: { h: 44, w: 300, x: 48, y: 144 },
+        button: { h: 44, w: 150, x: 198, y: 96 },
+      },
+    ],
   ])(
     'keeps the circle clear of the control and the credit in a %i px strip',
     async (w, covers) => {
