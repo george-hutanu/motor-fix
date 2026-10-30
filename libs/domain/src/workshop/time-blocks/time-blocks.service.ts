@@ -2,6 +2,7 @@ import {
   type CreateTimeBlockDto,
   TIME_BLOCK_NOTE_MAX,
   type TimeBlockDto,
+  type TimeBlockOptionsDto,
   type TimeBlocksDto,
   type UpdateTimeBlockDto,
 } from '@motor-fix/contracts';
@@ -41,6 +42,10 @@ import {
   localDay,
 } from '../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
+import {
+  garageOptions,
+  switchesOf,
+} from '../../garages/features/garage-options';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   deadlockRetried,
@@ -167,32 +172,46 @@ export class TimeBlocksService {
     private readonly schedule: ScheduleService,
   ) {}
 
-  async list(
+  list(
     actor: Actor,
     garageId: string,
     query: { from?: string; to?: string },
   ): Promise<TimeBlocksDto> {
-    this.assertDesk(actor, garageId);
-    const from = query.from ?? localDay(new Date());
-    const to = query.to ?? from;
-    const span = daysBetween(from, to);
-    if (!(span >= 0 && span < MAX_LIST_DAYS)) {
-      throw new BadRequestException({
-        code: 'validation_failed',
-        message: `from and to span 1 to ${MAX_LIST_DAYS} days`,
-      });
-    }
-    const { lifts } = await this.switches(this.prisma, garageId);
-    const blocks = await blocksOf(
-      this.prisma,
-      {
-        end: atLocal(addDays(to, 1), 0),
+    return this.logged(garageId, undefined, async () => {
+      this.assertDesk(actor, garageId);
+      const from = query.from ?? localDay(new Date());
+      const to = query.to ?? from;
+      const span = daysBetween(from, to);
+      if (!(span >= 0 && span < MAX_LIST_DAYS)) {
+        throw new BadRequestException({
+          code: 'validation_failed',
+          message: `from and to span 1 to ${MAX_LIST_DAYS} days`,
+        });
+      }
+      const { lifts } = await switchesOf(this.prisma, garageId);
+      const blocks = await blocksOf(
+        this.prisma,
+        {
+          end: atLocal(addDays(to, 1), 0),
+          garageId,
+          start: atLocal(from, 0),
+        },
+        lifts,
+      );
+      return { blocks, from, lifts, to };
+    });
+  }
+
+  // What the block dialog may offer; it reads, it writes nothing.
+  options(actor: Actor, garageId: string): Promise<TimeBlockOptionsDto> {
+    return this.logged(garageId, undefined, async () => {
+      this.assertDesk(actor, garageId);
+      const { liftCount, mechanics } = await garageOptions(
+        this.prisma,
         garageId,
-        start: atLocal(from, 0),
-      },
-      lifts,
-    );
-    return { blocks, from, lifts, to };
+      );
+      return { liftCount, mechanics };
+    });
   }
 
   create(
@@ -417,7 +436,7 @@ export class TimeBlocksService {
   // The refusals in their order, before any write; the card is
   // read FOR SHARE so its removal waits for this block, or this block for it.
   private async judged(tx: Tx, actor: Actor, garageId: string, asked: Shape) {
-    const switches = await this.switches(tx, garageId);
+    const switches = await switchesOf(tx, garageId);
     judgeSwitches(asked, switches, actor.language === 'en');
     const mechanicName = asked.mechanicId
       ? await this.cardName(tx, garageId, asked.mechanicId)
@@ -461,15 +480,6 @@ export class TimeBlocksService {
       throw invalid('mechanicId', 'mechanicId is not a card of this garage');
     }
     return card.name;
-  }
-
-  private async switches(db: Pick<Tx, 'garageFeature'>, garageId: string) {
-    const rows = await db.garageFeature.findMany({
-      where: { garageId, key: { in: ['team_mechanics', 'lift_schedule'] } },
-    });
-    const on = (key: string) =>
-      rows.find((row) => row.key === key)?.enabled ?? true;
-    return { lifts: on('lift_schedule'), team: on('team_mechanics') };
   }
 
   private assertFree(
