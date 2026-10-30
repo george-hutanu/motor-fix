@@ -2,13 +2,10 @@ import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
 import {
-  PROFILE_RADIUS_KM,
-  PROFILE_DESCRIPTION_MAX as SHARED_DESCRIPTION_MAX,
-} from './garage-profile-limits';
-import {
   PROFILE_DESCRIPTION_MAX,
-  UpdateGarageProfileDto,
-} from './garage-profile-update.dto';
+  PROFILE_RADIUS_KM,
+} from './garage-profile-limits';
+import { UpdateGarageProfileDto } from './garage-profile-update.dto';
 
 const WEEK = {
   fri: [['08:00', '17:00']],
@@ -30,14 +27,13 @@ const failed = (body: Record<string, unknown>) =>
 const save = (fields: Record<string, unknown>) =>
   failed({ version: '0', ...fields });
 
-// @traces 1246-FR-001, 1246-FR-002, 1246-FR-003
+// @traces 1246-FR-001 1246-FR-002 1246-FR-003
 describe('UpdateGarageProfileDto', () => {
   it('describes up to a thousand characters', () => {
     expect(PROFILE_DESCRIPTION_MAX).toBe(1000);
   });
 
   it('applies the browser-safe limits the dialog shows', () => {
-    expect(SHARED_DESCRIPTION_MAX).toBe(PROFILE_DESCRIPTION_MAX);
     expect(PROFILE_RADIUS_KM).toEqual({ max: 100, min: 5 });
     expect(save({ serviceRadiusKm: PROFILE_RADIUS_KM.min - 1 })).toEqual([
       'serviceRadiusKm',
@@ -140,18 +136,6 @@ describe('UpdateGarageProfileDto', () => {
 
   it.each([4, 101, 20.5, 'x'])('refuses a radius of %p', (serviceRadiusKm) => {
     expect(save({ serviceRadiusKm })).toEqual(['serviceRadiusKm']);
-  });
-
-  it.each([
-    'address',
-    'companyName',
-    'cui',
-    'mobileLegalForm',
-    'seatAddress',
-    'rarActivities',
-    'proposedJobs',
-  ])('lets %s through to be answered as needing verification', (field) => {
-    expect(save({ [field]: 'anything' })).toEqual([]);
   });
 
   it('refuses a field it does not know', () => {

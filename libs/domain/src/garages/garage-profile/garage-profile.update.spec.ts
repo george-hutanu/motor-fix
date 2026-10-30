@@ -206,6 +206,10 @@ describe("the owner's profile save: what it refuses, in order", () => {
     ['a name of 81 characters', { name: 'N'.repeat(81) }, 'name'],
     ['a name of spaces', { name: '   ' }, 'name'],
     ['a null name', { name: null }, 'name'],
+    ['a null description', { description: null }, 'description'],
+    ['a null phone', { phone: null }, 'phone'],
+    ['null hours', { hours: null }, 'hours'],
+    ['null closed days', { closedDays: null }, 'closedDays'],
     [
       'a description of 1,001 characters',
       { description: 'd'.repeat(1001) },
@@ -460,6 +464,31 @@ describe("the owner's profile save: what it writes", () => {
       h.tx,
       expect.objectContaining({
         payload: { fields: ['closed_days'], garageId: GARAGE },
+      }),
+    );
+  });
+
+  it('keeps the stored closed days and their notes when only the week is sent', async () => {
+    const h = harness({
+      closed_days: [
+        { day: '2026-12-27', note: 'Inventar' },
+        { day: '2026-12-28', note: null },
+      ],
+    });
+
+    await h.save({ hours: SATURDAY, version: '7' });
+
+    expect(write.mock.calls[0][2]).toMatchObject({
+      closedDays: [
+        { day: '2026-12-27', note: 'Inventar' },
+        { day: '2026-12-28' },
+      ],
+      hours: SATURDAY,
+    });
+    expect(h.events.record).toHaveBeenCalledWith(
+      h.tx,
+      expect.objectContaining({
+        payload: { fields: ['hours'], garageId: GARAGE },
       }),
     );
   });

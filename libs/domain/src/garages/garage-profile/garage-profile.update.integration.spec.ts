@@ -694,6 +694,44 @@ describe('PATCH /garages/:garageId/profile: hours and closed days', () => {
     });
   });
 
+  it('keeps the stored closed days and their notes when only the week is sent', async () => {
+    const w = await world();
+    const day = dayAhead(20);
+    const later = dayAhead(21);
+    await prisma.garageClosedDay.createMany({
+      data: [
+        {
+          day: new Date(`${day}T00:00:00Z`),
+          garageId: w.nord.id,
+          note: 'Inventar',
+        },
+        { day: new Date(`${later}T00:00:00Z`), garageId: w.nord.id },
+      ],
+    });
+
+    await patch(w, { hours: SATURDAY, version: '0' }).expect(200);
+
+    expect((await stored(w.nord.id)).hours).toEqual(SATURDAY);
+    expect(await closedDays(w.nord.id)).toEqual([
+      { day, note: 'Inventar' },
+      { day: later, note: null },
+    ]);
+    expect((await events(w.nord.id))[0].payload).toEqual({
+      fields: ['hours'],
+      garageId: w.nord.id,
+    });
+  });
+
+  it('keeps the stored week when only the closed days are sent', async () => {
+    const w = await world();
+    const day = dayAhead(20);
+
+    await patch(w, { closedDays: [{ day }], version: '0' }).expect(200);
+
+    expect((await stored(w.nord.id)).hours).toEqual(WEEK);
+    expect(await closedDays(w.nord.id)).toEqual([{ day, note: null }]);
+  });
+
   it('drops a closed day on a legal holiday and counts no change for it', async () => {
     const w = await world();
     const day = dayAhead(40);

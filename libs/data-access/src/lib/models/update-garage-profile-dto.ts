@@ -4,30 +4,12 @@
 export interface UpdateGarageProfileDto {
 
   /**
-   * Refused: needs verification
-   */
-  address?: {
-};
-
-  /**
    * Every closed day the garage keeps, once each; a note up to 80 characters
    */
   closedDays?: Array<{
 'day': string;
 'note'?: string;
 }>;
-
-  /**
-   * Refused: needs verification
-   */
-  companyName?: {
-};
-
-  /**
-   * Refused: needs verification
-   */
-  cui?: {
-};
 
   /**
    * Trimmed; empty clears it
@@ -42,12 +24,6 @@ export interface UpdateGarageProfileDto {
 };
 
   /**
-   * Refused: needs verification
-   */
-  mobileLegalForm?: {
-};
-
-  /**
    * Trimmed before it is counted and stored
    */
   name?: string;
@@ -56,24 +32,6 @@ export interface UpdateGarageProfileDto {
    * As typed; a Romanian number, stored as +40 and nine digits
    */
   phone?: string;
-
-  /**
-   * Refused: needs verification
-   */
-  proposedJobs?: {
-};
-
-  /**
-   * Refused: needs verification
-   */
-  rarActivities?: {
-};
-
-  /**
-   * Refused: needs verification
-   */
-  seatAddress?: {
-};
 
   /**
    * A mobile mechanic only

@@ -71,11 +71,6 @@ const rule =
   (control) =>
     holds(String(control.value ?? '')) ? null : { [code]: true };
 
-// A rule whose words the listing form already says, under the listing's key.
-const SHARED_TEXTS: Record<string, string> = {
-  radius: 'public.listing.check.radiusNeeded',
-};
-
 // The shared normaliser's number, when it is a Romanian one.
 const romanian = (value: string) => {
   const phone = normalisePhone(value);
@@ -250,8 +245,11 @@ export class ProfileEditDialog {
     if ('server' in errors) return this.save.fieldError(control);
     if (!control.touched) return null;
     const code = Object.keys(errors)[0];
+    // The radius speaks in the listing form's words, under its key.
     return this.i18n.t(
-      SHARED_TEXTS[code] ?? `garage.profile.edit.field.${code}`,
+      code === 'radius'
+        ? 'public.listing.check.radiusNeeded'
+        : `garage.profile.edit.field.${code}`,
     );
   }
 

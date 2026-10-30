@@ -1,13 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  Allow,
   IsInt,
-  IsOptional,
   IsString,
   Length,
   Max,
   Min,
   ValidateBy,
+  ValidateIf,
 } from 'class-validator';
 
 import {
@@ -29,8 +28,6 @@ import {
 } from './listing-sections';
 import { normalisePhone } from './phone';
 
-export { PROFILE_DESCRIPTION_MAX, PROFILE_RADIUS_KM };
-
 const holds = (name: string, check: (value: unknown) => boolean) =>
   ValidateBy({
     name,
@@ -39,6 +36,9 @@ const holds = (name: string, check: (value: unknown) => boolean) =>
       validate: check,
     },
   });
+
+// Only an absent field is skipped; a null one is judged, and refused.
+const sentOnly = () => ValidateIf((_, value) => value !== undefined);
 
 const textWithin = (min: number, max: number) => (value: unknown) =>
   typeof value === 'string' && trimmedWithin(value, min, max);
@@ -60,7 +60,7 @@ export class UpdateGarageProfileDto {
     maxLength: NAME_MAX,
     minLength: NAME_MIN,
   })
-  @IsOptional()
+  @sentOnly()
   @holds('nameWithin', textWithin(NAME_MIN, NAME_MAX))
   name?: string;
 
@@ -68,14 +68,14 @@ export class UpdateGarageProfileDto {
     description: 'Trimmed; empty clears it',
     maxLength: PROFILE_DESCRIPTION_MAX,
   })
-  @IsOptional()
+  @sentOnly()
   @holds('descriptionWithin', textWithin(0, PROFILE_DESCRIPTION_MAX))
   description?: string;
 
   @ApiPropertyOptional({
     description: 'As typed; a Romanian number, stored as +40 and nine digits',
   })
-  @IsOptional()
+  @sentOnly()
   @holds('phoneNumber', (value) => {
     const phone = typeof value === 'string' ? normalisePhone(value) : null;
     return phone !== null && isRomanianPhone(phone);
@@ -96,7 +96,7 @@ export class UpdateGarageProfileDto {
       'Each weekday (mon…sun) to its intervals as "HH:MM" pairs, an empty list on a closed day; sent with closedDays',
     type: 'object',
   })
-  @IsOptional()
+  @sentOnly()
   @holds('weeklyHours', isWeeklyHours)
   hours?: WeeklyHours;
 
@@ -112,7 +112,7 @@ export class UpdateGarageProfileDto {
     },
     type: 'array',
   })
-  @IsOptional()
+  @sentOnly()
   @holds('closedDays', (value) => closedDaysError(value) === null)
   closedDays?: ClosedDay[];
 
@@ -122,38 +122,9 @@ export class UpdateGarageProfileDto {
     minimum: PROFILE_RADIUS_KM.min,
     type: 'integer',
   })
-  @IsOptional()
+  @sentOnly()
   @IsInt()
   @Min(PROFILE_RADIUS_KM.min)
   @Max(PROFILE_RADIUS_KM.max)
   serviceRadiusKm?: number;
-
-  // Admitted only to be answered 422 needs_verification by name.
-  @ApiPropertyOptional({ description: 'Refused: needs verification' })
-  @Allow()
-  address?: unknown;
-
-  @ApiPropertyOptional({ description: 'Refused: needs verification' })
-  @Allow()
-  companyName?: unknown;
-
-  @ApiPropertyOptional({ description: 'Refused: needs verification' })
-  @Allow()
-  cui?: unknown;
-
-  @ApiPropertyOptional({ description: 'Refused: needs verification' })
-  @Allow()
-  mobileLegalForm?: unknown;
-
-  @ApiPropertyOptional({ description: 'Refused: needs verification' })
-  @Allow()
-  seatAddress?: unknown;
-
-  @ApiPropertyOptional({ description: 'Refused: needs verification' })
-  @Allow()
-  rarActivities?: unknown;
-
-  @ApiPropertyOptional({ description: 'Refused: needs verification' })
-  @Allow()
-  proposedJobs?: unknown;
 }

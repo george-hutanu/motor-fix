@@ -148,18 +148,13 @@ function assertNotVerified(body: unknown) {
 function validBody(body: unknown, row: Locked): UpdateGarageProfileDto {
   if (!isRecord(body)) throw invalid([], 'Send the profile as an object');
   const dto = plainToInstance(UpdateGarageProfileDto, body);
-  const errors = [
-    ...validateSync(dto, { forbidNonWhitelisted: true, whitelist: true }).map(
-      (e) => ({
-        code: Object.keys(e.constraints ?? {})[0] ?? 'invalid',
-        field: e.property,
-      }),
-    ),
-    ...GROUPS.filter((field) => body[field] === null).map((field) => ({
-      code: 'required',
-      field,
-    })),
-  ];
+  const errors = validateSync(dto, {
+    forbidNonWhitelisted: true,
+    whitelist: true,
+  }).map((e) => ({
+    code: Object.keys(e.constraints ?? {})[0] ?? 'invalid',
+    field: e.property,
+  }));
   if (errors.length > 0) throw invalid(errors, 'The profile breaks a rule');
   if (!GROUPS.some((field) => body[field] !== undefined)) {
     throw invalid([], 'Nothing to save');
@@ -282,7 +277,12 @@ export class GarageProfileUpdate {
     if (dto.hours === undefined && dto.closedDays === undefined) return [];
     const before = { closed_days: row.closed_days, hours: row.hours };
     const sent = {
-      closed_days: dto.closedDays ?? [],
+      closed_days:
+        dto.closedDays ??
+        row.closed_days.map(({ day, note }) => ({
+          day,
+          ...(note !== null && { note }),
+        })),
       hours: dto.hours ?? row.hours,
     };
     if (movedHours(before, sent).length === 0) return [];

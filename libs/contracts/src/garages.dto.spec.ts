@@ -64,7 +64,7 @@ describe('PublicGarageDto', () => {
   });
 });
 
-// @traces 1246-FR-008, 1246-FR-010
+// @traces 1246-FR-008 1246-FR-010
 describe('the profile answers', () => {
   it('give the staff the change stamp as a string', () => {
     const version = documented(GarageProfileDto, 'version');

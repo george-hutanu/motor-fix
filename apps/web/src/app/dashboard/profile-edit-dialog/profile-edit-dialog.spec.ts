@@ -345,6 +345,32 @@ describe('the profile dialog: hours and closed days', () => {
     });
   });
 
+  it('keeps the line when the reload fails, and a second press reads again', async () => {
+    await open('hours');
+    update.mockRejectedValueOnce(
+      status(409, { code: 'profile_changed', status: 409 }),
+    );
+    read.mockRejectedValueOnce(status(0));
+
+    button('Salvează')?.click();
+    await settle();
+    button('Reîncarcă')?.click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(text(panel().querySelector('[data-stale]'))).toContain(
+      'Profilul a fost modificat între timp. Reîncarcă.',
+    );
+    expect(button('Reîncarcă')?.getAttribute('aria-busy')).toBeNull();
+    expect(await still()).toBe('open');
+
+    button('Reîncarcă')?.click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(panel().querySelector('[data-stale]')).toBeNull();
+  });
+
   it('says it in English', async () => {
     await open('hours', profile(), 'en');
     update.mockRejectedValueOnce(
@@ -705,6 +731,22 @@ describe('the profile dialog: service radius', () => {
     );
     expect(text(panel().querySelector('#profile-edit-radius-hint'))).toBe(
       'Între 5 și 100 km',
+    );
+  });
+
+  it('opens on a stored radius under 5 km with no error until she leaves the field', async () => {
+    await open('area', profile({ businessKind: 'mobile', serviceRadiusKm: 3 }));
+
+    expect(control('profile-edit-radius').value).toBe('3');
+    expect(text(panel().querySelector('#profile-edit-radius-error'))).toBe('');
+    expect(
+      control('profile-edit-radius').getAttribute('aria-invalid'),
+    ).not.toBe('true');
+
+    await leave('profile-edit-radius');
+
+    expect(text(panel().querySelector('#profile-edit-radius-error'))).toBe(
+      'Alege raza de deplasare',
     );
   });
 

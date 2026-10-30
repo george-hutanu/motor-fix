@@ -3,6 +3,7 @@ import {
   ENTRIES_MAX,
   type FieldProblem,
   fold,
+  isRecord,
   JOB_NAME_MAX,
   JOB_NAME_MIN,
   JOBS_MAX,
@@ -25,7 +26,7 @@ import type {
   Prisma,
 } from '../../../generated/prisma/client';
 import { uniqueSlug } from '../../garage-slug';
-import { isRecord, plainText } from '../../plain-text';
+import { plainText } from '../../plain-text';
 
 type Job = StartingPricesInput['jobs'][number];
 

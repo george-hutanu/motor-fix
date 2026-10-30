@@ -21619,34 +21619,6 @@
             "description": "A mobile mechanic only",
             "maximum": 100,
             "minimum": 5
-          },
-          "address": {
-            "type": "object",
-            "description": "Refused: needs verification"
-          },
-          "companyName": {
-            "type": "object",
-            "description": "Refused: needs verification"
-          },
-          "cui": {
-            "type": "object",
-            "description": "Refused: needs verification"
-          },
-          "mobileLegalForm": {
-            "type": "object",
-            "description": "Refused: needs verification"
-          },
-          "seatAddress": {
-            "type": "object",
-            "description": "Refused: needs verification"
-          },
-          "rarActivities": {
-            "type": "object",
-            "description": "Refused: needs verification"
-          },
-          "proposedJobs": {
-            "type": "object",
-            "description": "Refused: needs verification"
           }
         },
         "required": [
