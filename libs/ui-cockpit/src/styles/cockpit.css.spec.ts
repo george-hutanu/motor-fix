@@ -573,10 +573,9 @@ describe('cockpit.css phone rules', () => {
 
 // @traces 346-FR-003
 describe('cockpit.css screen-reader announcements', () => {
-  // The CDK's live announcer writes each message into an element it hides
-  // with .cdk-visually-hidden; without the CDK's a11y sheet that text sat at
-  // the foot of every page whose rows announce a change.
-  it('loads the CDK a11y sheet that hides the live announcer', () => {
-    expect(css).toMatch(/@import "@angular\/cdk\/a11y-prebuilt\.css";/);
+  // The web app's .sr-only rule hides the CDK live announcer's element; the
+  // CDK's whole a11y sheet would put the initial bundle over its budget.
+  it('leaves the CDK a11y sheet out', () => {
+    expect(css).not.toMatch(/@angular\/cdk\/a11y-prebuilt\.css/);
   });
 });
