@@ -169,6 +169,14 @@ export type { AccountControllerRestore$Params as AccountControllerRestore$Params
 export { accountControllerRestore as accountControllerRestore } from './fn/admin/account-controller-restore';
 export type { AccountControllerDeleteOnRequest$Params as AccountControllerDeleteOnRequest$Params } from './fn/admin/account-controller-delete-on-request';
 export { accountControllerDeleteOnRequest as accountControllerDeleteOnRequest } from './fn/admin/account-controller-delete-on-request';
+export type { AdminRepairsControllerList$Params as AdminRepairsControllerList$Params } from './fn/admin/admin-repairs-controller-list';
+export { adminRepairsControllerList as adminRepairsControllerList } from './fn/admin/admin-repairs-controller-list';
+export type { AdminRepairsControllerOpen$Params as AdminRepairsControllerOpen$Params } from './fn/admin/admin-repairs-controller-open';
+export { adminRepairsControllerOpen as adminRepairsControllerOpen } from './fn/admin/admin-repairs-controller-open';
+export type { AdminRepairsControllerRemove$Params as AdminRepairsControllerRemove$Params } from './fn/admin/admin-repairs-controller-remove';
+export { adminRepairsControllerRemove as adminRepairsControllerRemove } from './fn/admin/admin-repairs-controller-remove';
+export type { AdminRepairsControllerCorrect$Params as AdminRepairsControllerCorrect$Params } from './fn/admin/admin-repairs-controller-correct';
+export { adminRepairsControllerCorrect as adminRepairsControllerCorrect } from './fn/admin/admin-repairs-controller-correct';
 export type { AdminBrandsControllerList$Params as AdminBrandsControllerList$Params } from './fn/admin/admin-brands-controller-list';
 export { adminBrandsControllerList as adminBrandsControllerList } from './fn/admin/admin-brands-controller-list';
 export type { AdminBrandsControllerCreate$Params as AdminBrandsControllerCreate$Params } from './fn/admin/admin-brands-controller-create';

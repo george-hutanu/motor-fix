@@ -1,7 +1,7 @@
 import { render } from '../templates';
 
 const link = 'https://motorfix.test/app/driver?view=cars';
-const KIND = 'REPAIR_UPDATED';
+const KIND = 'REPAIR_UPDATED.garage';
 
 // @traces 409-FR-014
 describe('the repair-corrected message under hostile names', () => {

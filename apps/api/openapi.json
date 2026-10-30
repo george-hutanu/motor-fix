@@ -2749,6 +2749,170 @@
         ]
       }
     },
+    "/api/v1/admin/accounts/{id}/repairs": {
+      "get": {
+        "operationId": "AdminRepairsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRepairListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such account"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The logged repairs on the cars an account owns now",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/repairs/{id}": {
+      "get": {
+        "operationId": "AdminRepairsController_open",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRepairDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such logged repair"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Open a logged repair; the open is recorded in the activity log",
+        "tags": [
+          "admin"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminRepairsController_correct",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectClientRepairDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRepairDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad or unknown field, a day after today or a missing version"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no such logged repair"
+          },
+          "409": {
+            "description": "stale_version: the repair changed since that version"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Correct what was done, the day, the reading or the amount of a logged repair as MotorFix; null clears the amount",
+        "tags": [
+          "admin"
+        ]
+      },
+      "delete": {
+        "operationId": "AdminRepairsController_remove",
+        "parameters": [],
+        "responses": {
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: an admin never deletes a logged repair"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Always refused: only the driver deletes a repair",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/garage/client-repairs": {
       "get": {
         "operationId": "ClientRepairsController_list",
@@ -15060,19 +15224,6 @@
           "items"
         ]
       },
-      "ClientRepairDriverDto": {
-        "type": "object",
-        "properties": {
-          "shortName": {
-            "type": "string",
-            "description": "First name and initial, or the deleted-account label",
-            "example": "Andrei M."
-          }
-        },
-        "required": [
-          "shortName"
-        ]
-      },
       "ClientRepairCarDto": {
         "type": "object",
         "properties": {
@@ -15090,6 +15241,154 @@
           "brandName",
           "model",
           "year"
+        ]
+      },
+      "AdminRepairListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "doneOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "car": {
+            "$ref": "#/components/schemas/ClientRepairCarDto"
+          }
+        },
+        "required": [
+          "id",
+          "doneOn",
+          "car"
+        ]
+      },
+      "AdminRepairListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest first, at most 200",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminRepairListItemDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "More repairs exist than the list holds"
+          }
+        },
+        "required": [
+          "items",
+          "truncated"
+        ]
+      },
+      "AdminRepairDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "car": {
+            "$ref": "#/components/schemas/ClientRepairCarDto"
+          },
+          "what": {
+            "type": "string",
+            "description": "What was done"
+          },
+          "garageName": {
+            "type": "string",
+            "description": "The garage as the driver named it, on MotorFix or not"
+          },
+          "doneOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "odometerKm": {
+            "type": "integer",
+            "nullable": true
+          },
+          "costBani": {
+            "type": "integer",
+            "description": "In bani",
+            "nullable": true
+          },
+          "version": {
+            "type": "string",
+            "description": "Sent back with a correction",
+            "format": "date-time"
+          },
+          "correctedBy": {
+            "type": "string",
+            "description": "Who last corrected it, as the driver’s history tells it",
+            "enum": [
+              "garage",
+              "admin"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "car",
+          "what",
+          "garageName",
+          "doneOn",
+          "odometerKm",
+          "costBani",
+          "version",
+          "correctedBy"
+        ]
+      },
+      "CorrectClientRepairDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The version of the repair as read; an older one is refused",
+            "format": "date-time"
+          },
+          "what": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 200,
+            "minLength": 1
+          },
+          "doneOn": {
+            "type": "string",
+            "description": "Not after today in Romania",
+            "format": "date"
+          },
+          "odometerKm": {
+            "type": "integer",
+            "maximum": 2000000,
+            "minimum": 0
+          },
+          "costBani": {
+            "type": "integer",
+            "description": "In bani; null clears it",
+            "maximum": 92000000,
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "version"
+        ]
+      },
+      "ClientRepairDriverDto": {
+        "type": "object",
+        "properties": {
+          "shortName": {
+            "type": "string",
+            "description": "First name and initial, or the deleted-account label",
+            "example": "Andrei M."
+          }
+        },
+        "required": [
+          "shortName"
         ]
       },
       "ClientRepairDto": {
@@ -15164,42 +15463,6 @@
         "required": [
           "items",
           "truncated"
-        ]
-      },
-      "CorrectClientRepairDto": {
-        "type": "object",
-        "properties": {
-          "version": {
-            "type": "string",
-            "description": "The version of the repair as read; an older one is refused",
-            "format": "date-time"
-          },
-          "what": {
-            "type": "string",
-            "description": "Trimmed",
-            "maxLength": 200,
-            "minLength": 1
-          },
-          "doneOn": {
-            "type": "string",
-            "description": "Not after today in Romania",
-            "format": "date"
-          },
-          "odometerKm": {
-            "type": "integer",
-            "maximum": 2000000,
-            "minimum": 0
-          },
-          "costBani": {
-            "type": "integer",
-            "description": "In bani; null clears it",
-            "maximum": 92000000,
-            "minimum": 0,
-            "nullable": true
-          }
-        },
-        "required": [
-          "version"
         ]
       },
       "RepairListDto": {

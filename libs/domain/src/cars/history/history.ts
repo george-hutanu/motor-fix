@@ -133,7 +133,7 @@ type RepairRow = Prisma.RepairGetPayload<{
 
 // Who last corrected a repair, as the driver is told: a driver's own edit
 // is none.
-const CORRECTED_BY = {
+export const CORRECTED_BY = {
   admin: 'admin',
   driver: null,
   owner: 'garage',

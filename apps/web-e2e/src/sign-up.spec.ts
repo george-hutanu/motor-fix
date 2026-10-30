@@ -275,12 +275,15 @@ const SIZES = [
 async function openAt(page: Page, language: 'ro' | 'en') {
   const titles = TITLE[language];
   await openSignIn(page, language);
-  await dialog(page, titles.signIn)
-    .getByRole('button', {
-      name: language === 'ro' ? 'Creează un cont' : 'Create an account',
-    })
-    .click();
-  await expect(surface(page, titles.signUp)).toBeVisible();
+  const create = dialog(page, titles.signIn).getByRole('button', {
+    name: language === 'ro' ? 'Creează un cont' : 'Create an account',
+  });
+  // On a loaded runner a click landing while the sign-in dialog still opens
+  // can be lost: click again until account creation opens, never past it.
+  await expect(async () => {
+    if (await create.isVisible()) await create.click({ timeout: 2_000 });
+    await expect(surface(page, titles.signUp)).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
 }
 
 async function axeViolations(page: Page) {

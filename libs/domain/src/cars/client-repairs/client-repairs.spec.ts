@@ -1,8 +1,10 @@
 import { DELETED_AUTHOR } from '@motor-fix/contracts';
 
 import {
+  ADMIN_SCOPE,
   type ClientRepairRow,
   changes,
+  garageScope,
   ownerScope,
   toItem,
   writerOf,
@@ -29,10 +31,14 @@ const row = (over: Partial<ClientRepairRow> = {}): ClientRepairRow => ({
     ],
     year: 2015,
   },
+  carId: 'c1',
   costBani: 45_000,
   doneOn: new Date('2026-10-01T00:00:00Z'),
+  garageId: 'g1',
+  garageName: 'Garaj Nordic',
   id: 'b8a9a0b4-6a7e-4c38-9a8e-2f2c8f4b1d11',
   odometerKm: 151_000,
+  sharedWithGarage: true,
   updatedAt,
   updatedByRole: null,
   what: 'Schimb ulei',
@@ -171,5 +177,28 @@ describe('writerOf', () => {
     ['receptionist', 'owner'],
   ] as const)('records a %s as the %s', (role, writer) => {
     expect(writerOf({ role })).toBe(writer);
+  });
+});
+
+// @traces 1267-FR-006
+describe('the scope a correction is made in', () => {
+  const garageId = '0d8d1f62-9c55-4d7e-9a3c-7f3a2a1c5e10';
+
+  it('limits a garage owner to the repairs shared with the approved garage', () => {
+    expect(garageScope({ garageId })).toEqual({
+      capability: 'garage.client_repairs',
+      where: ownerScope(garageId),
+    });
+  });
+
+  it('gives an actor with no garage no scope', () => {
+    expect(garageScope({ garageId: null })).toBeNull();
+  });
+
+  it('lets an admin reach every logged repair not deleted, shared or not', () => {
+    expect(ADMIN_SCOPE).toEqual({
+      capability: 'admin.users',
+      where: { deletedAt: null, source: 'logged' },
+    });
   });
 });
