@@ -624,9 +624,9 @@
     "inPeriod": "{sign}{n} {period}",
     "observability": "Observability",
     "observabilityNewTab": "{name}, opens in a new tab",
+    "overdue": "{n} over 48 hours",
     "reportedReviews": "Reported reviews",
     "requestsSent": "Quote requests",
-    "soon": "coming soon",
     "thisMonth": "{sign}{n} this month",
     "unavailable": "The figures could not be read",
     "why": "Why?"
@@ -815,6 +815,62 @@
     "note": "What was fixed",
     "noteOptional": "What was fixed (optional)",
     "noteRequired": "Say what was fixed"
+  },
+  "reviews": {
+    "actions": {
+      "keep": "Keep",
+      "keepReply": "Keep the reply",
+      "removeReply": "Remove the reply",
+      "removeReview": "Remove the review",
+      "soon": "Coming soon"
+    },
+    "all": "See all ({total})",
+    "announce": {
+      "one": "{n} reported review pending",
+      "other": "{n} reported reviews pending"
+    },
+    "edited": "edited",
+    "empty": "No reported reviews.",
+    "facts": {
+      "account": {
+        "created": "Account created: {date}",
+        "deleted": "Account deleted"
+      },
+      "garageReports": "Reviews this garage reported before: {n}, kept {k}",
+      "identical": "Identical reviews from the same account: {n}",
+      "job": {
+        "confirmed": "Confirmed job: {work}, {car}",
+        "handedOver": "handed over {date}",
+        "none": "No job: written from the profile (Not through MotorFix)"
+      }
+    },
+    "failed": "Could not read the reported reviews.",
+    "heading": "Reported reviews",
+    "lamp": {
+      "author": "Reported by the author: {reason}",
+      "automatic": "Flagged automatically: {reason}",
+      "garage": "Reported by the garage: {reason}"
+    },
+    "loading": "Loading the reported reviews",
+    "more": "More",
+    "oldest": "The oldest report has waited {age}",
+    "overdue": "Over 48 hours",
+    "reasons": {
+      "ads": "Advertising",
+      "fake_or_conflicted": "Fake or conflict of interest",
+      "hate": "Hate or discrimination",
+      "insults": "Insults",
+      "off_topic": "Off topic",
+      "other": "Other",
+      "personal_data": "Personal data",
+      "promotion": "Promoting another garage",
+      "threats_or_legal_accusations": "Threats or legal accusations"
+    },
+    "retry": "Retry",
+    "title": {
+      "reply": "{garage} · reply to {author}'s review",
+      "review": "{garage} · {score} review"
+    }
   },
   "suspended": {
     "alone": "suspended",

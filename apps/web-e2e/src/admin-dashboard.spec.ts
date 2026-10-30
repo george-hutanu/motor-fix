@@ -36,6 +36,8 @@ const FIGURES = {
   garagesApprovedThisMonth: 9,
   garagesListed: 214,
   garagesWaiting: 2,
+  reportsOverdue: 1,
+  reportsPending: 3,
   requestsSent: 1250,
 };
 
@@ -175,8 +177,7 @@ test.describe('the admin dashboard @seeded', () => {
       }
       await expect(
         panel(page).getByRole('group', {
-          exact: true,
-          name: 'Recenzii raportate, în curând',
+          name: /^Recenzii raportate, \d+(, \d+ peste 48 de ore)?$/,
         }),
       ).toBeVisible();
       expect(await sideways(page)).toBeLessThanOrEqual(0);
@@ -217,8 +218,7 @@ test.describe('the admin dashboard @seeded', () => {
     }
     await expect(
       panel(page).getByRole('group', {
-        exact: true,
-        name: 'Reported reviews, coming soon',
+        name: /^Reported reviews, \d+(, \d+ over 48 hours)?$/,
       }),
     ).toBeVisible();
     expect(await sideways(page)).toBeLessThanOrEqual(0);
@@ -396,7 +396,7 @@ test.describe('the platform figures', () => {
         'Answer rate, 66%',
         'Bookings, 17',
         'Active drivers, 12,480, +312 this month',
-        'Reported reviews, coming soon',
+        'Reported reviews, 3, 1 over 48 hours',
       ]) {
         await expect(
           panel(page).getByRole('group', { exact: true, name }),

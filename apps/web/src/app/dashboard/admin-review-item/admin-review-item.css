@@ -1,0 +1,113 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+article {
+  display: grid;
+  gap: var(--mf-space-3);
+  padding: var(--mf-space-4);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-md);
+  background: var(--mf-panel-raised);
+  overflow-wrap: anywhere;
+}
+article:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
+  outline-offset: var(--mf-focus-offset);
+}
+/* The lamp drops under the title when the row runs out of room. */
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  min-width: 0;
+}
+.title {
+  font-weight: 700;
+  color: var(--mf-text);
+  min-width: 0;
+}
+.overdue {
+  font-weight: 700;
+  color: var(--mf-red-ink);
+}
+.text,
+.reply,
+.posted {
+  margin: 0;
+  color: var(--mf-text);
+  text-wrap: pretty;
+}
+.posted {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
+.answered {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin: 0;
+  padding-left: var(--mf-space-3);
+  border-left: 2px solid var(--mf-line-strong);
+  color: var(--mf-text-secondary);
+}
+.score {
+  font-weight: 700;
+}
+.facts {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--mf-text-secondary);
+}
+.actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-3);
+}
+.actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: var(--mf-tap);
+  max-width: 100%;
+  padding: 0 var(--mf-space-4);
+  font: inherit;
+  font-weight: 600;
+  color: var(--mf-text);
+  background: transparent;
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+  cursor: not-allowed;
+}
+.actions .remove {
+  color: var(--mf-red-ink);
+  border-color: var(--mf-red-ink);
+  font-weight: 700;
+}
+.actions button:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus, currentColor);
+  outline-offset: var(--mf-focus-offset);
+}
+/* Shown while a slot is hovered or focused; its words are each slot's
+   description all the time. */
+.tip {
+  position: absolute;
+  bottom: calc(100% + var(--mf-space-1));
+  left: 0;
+  padding: var(--mf-space-1) var(--mf-space-2);
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-text);
+  color: var(--mf-panel);
+  font-size: var(--mf-size-small);
+  white-space: nowrap;
+  visibility: hidden;
+}
+.actions:has(button:hover, button:focus-visible) .tip {
+  visibility: visible;
+}
