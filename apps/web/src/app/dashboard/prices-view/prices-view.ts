@@ -83,8 +83,8 @@ export class PricesView {
     () => garageOf(this.session.shown())?.role === 'owner',
   );
   protected readonly editing = signal(false);
-  // The job whose hide or show is on its way, and the one whose last failed.
-  protected readonly busy = signal<string | null>(null);
+  // The jobs whose hide or show is on its way, and the one whose last failed.
+  protected readonly busy = signal<ReadonlySet<string>>(new Set());
   protected readonly failed = signal<string | null>(null);
   // Its own garage's list changes, and a catalogue decision about a job (whose
   // subject is the job, not the garage) may change a job's state.
@@ -103,27 +103,25 @@ export class PricesView {
     },
   );
 
-  // A hide or show on its way, drawn over the row until the list is read
-  // again: a re-read is newer than the press, whatever the save answers.
-  private readonly pending = signal<{
-    priceId: string;
-    reads: number;
-    visible: boolean;
-  } | null>(null);
+  // Each hide or show pressed, drawn over its row until the list is read
+  // again: a re-read is newer than the press, whatever the save answers. A
+  // saved one stays drawn when the re-read after it fails.
+  private readonly pending = signal<
+    ReadonlyMap<string, { reads: number; visible: boolean }>
+  >(new Map());
   protected readonly items = computed(() => {
-    const items = this.view.value()?.items ?? [];
+    const reads = this.view.reads();
     const pending = this.pending();
-    if (!pending || pending.reads !== this.view.reads()) return items;
-    return items.map((row) =>
-      row.priceId === pending.priceId
-        ? {
-            ...row,
-            public: pending.visible,
-            reason: pending.visible ? undefined : ('hidden_by_garage' as const),
-            visible: pending.visible,
-          }
-        : row,
-    );
+    return (this.view.value()?.items ?? []).map((row) => {
+      const press = pending.get(row.priceId);
+      if (press?.reads !== reads) return row;
+      return {
+        ...row,
+        public: press.visible,
+        reason: press.visible ? undefined : ('hidden_by_garage' as const),
+        visible: press.visible,
+      };
+    });
   });
 
   constructor() {
@@ -217,27 +215,34 @@ export class PricesView {
   }
 
   protected async toggle(row: EditableRow) {
-    if (this.busy()) return;
-    this.busy.set(row.priceId);
-    this.failed.set(null);
+    const { priceId } = row;
+    if (this.busy().has(priceId)) return;
     const visible = row.visible === false;
-    this.pending.set({
-      priceId: row.priceId,
-      reads: this.view.reads(),
-      visible,
-    });
+    this.busy.update((busy) => new Set(busy).add(priceId));
+    this.failed.set(null);
+    this.pending.update((pending) =>
+      new Map(pending).set(priceId, { reads: this.view.reads(), visible }),
+    );
     try {
       await this.api.priceListControllerSetRange({
         body: { visible },
         garageId: this.garageId(),
-        priceId: row.priceId,
+        priceId,
       });
       await this.view.reload();
     } catch {
-      this.failed.set(row.priceId);
+      this.pending.update((pending) => {
+        const left = new Map(pending);
+        left.delete(priceId);
+        return left;
+      });
+      this.failed.set(priceId);
     } finally {
-      this.pending.set(null);
-      this.busy.set(null);
+      this.busy.update((busy) => {
+        const left = new Set(busy);
+        left.delete(priceId);
+        return left;
+      });
     }
   }
 

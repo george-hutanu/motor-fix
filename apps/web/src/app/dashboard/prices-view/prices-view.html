@@ -15,14 +15,14 @@
     @if (list.items.length) {
       <ul class="rows">
         @for (row of items(); track row.jobTypeId) {
-          <li data-row class="row" [attr.data-public]="row.public" [attr.aria-busy]="busy() === row.priceId ? 'true' : null">
+          <li data-row class="row" [attr.data-public]="row.public" [attr.aria-busy]="busy().has(row.priceId) ? 'true' : null">
             <span class="line">
               <span class="name" data-name>{{ name(row) }}</span>
               @if (duration(row); as time) {
                 <span class="muted" data-duration>{{ time }}</span>
               }
               @if (editing() && owner() && editable(row)) {
-                <button hlmBtn variant="secondary" type="button" class="edit" [disabled]="busy() === row.priceId" [attr.aria-label]="'garage.prices.editRow' | t: { name: name(row) }" (click)="editRow(row)">{{ 'garage.prices.edit' | t }}</button>
+                <button hlmBtn variant="secondary" type="button" class="edit" [disabled]="busy().has(row.priceId)" [attr.aria-label]="'garage.prices.editRow' | t: { name: name(row) }" (click)="editRow(row)">{{ 'garage.prices.edit' | t }}</button>
               }
             </span>
             <span class="line meta">
@@ -38,11 +38,11 @@
             @if (editing() && owner() && editable(row)) {
               <span class="actions">
                 @if (row.visible === false) {
-                  <button hlmBtn variant="ghost" type="button" [disabled]="busy() === row.priceId" [attr.aria-label]="'garage.prices.showRow' | t: { name: name(row) }" (click)="toggle(row)">{{ 'garage.prices.show' | t }}</button>
+                  <button hlmBtn variant="ghost" type="button" [disabled]="busy().has(row.priceId)" [attr.aria-label]="'garage.prices.showRow' | t: { name: name(row) }" (click)="toggle(row)">{{ 'garage.prices.show' | t }}</button>
                 } @else {
-                  <button hlmBtn variant="ghost" type="button" [disabled]="busy() === row.priceId" [attr.aria-label]="'garage.prices.hideRow' | t: { name: name(row) }" (click)="toggle(row)">{{ 'garage.prices.hide' | t }}</button>
+                  <button hlmBtn variant="ghost" type="button" [disabled]="busy().has(row.priceId)" [attr.aria-label]="'garage.prices.hideRow' | t: { name: name(row) }" (click)="toggle(row)">{{ 'garage.prices.hide' | t }}</button>
                 }
-                <button hlmBtn variant="ghost" type="button" [disabled]="busy() === row.priceId" [attr.aria-label]="'garage.prices.removeRow' | t: { name: name(row) }" (click)="remove(row)">{{ 'garage.prices.remove' | t }}</button>
+                <button hlmBtn variant="ghost" type="button" [disabled]="busy().has(row.priceId)" [attr.aria-label]="'garage.prices.removeRow' | t: { name: name(row) }" (click)="remove(row)">{{ 'garage.prices.remove' | t }}</button>
               </span>
               @if (failed() === row.priceId) {
                 <p class="failed" role="alert">{{ 'garage.prices.notSaved' | t }}</p>
@@ -54,7 +54,7 @@
                   <li data-brand class="brand">
                     {{ brand.name }} · {{ price(brand) }}
                     @if (editing() && owner()) {
-                      <button hlmBtn variant="secondary" type="button" class="edit" [disabled]="busy() === row.priceId" [attr.aria-label]="'garage.prices.editRow' | t: { name: name(row) + ' · ' + brand.name }" (click)="editBrand(row, brand)">{{ 'garage.prices.edit' | t }}</button>
+                      <button hlmBtn variant="secondary" type="button" class="edit" [disabled]="busy().has(row.priceId)" [attr.aria-label]="'garage.prices.editRow' | t: { name: name(row) + ' · ' + brand.name }" (click)="editBrand(row, brand)">{{ 'garage.prices.edit' | t }}</button>
                     }
                   </li>
                 }

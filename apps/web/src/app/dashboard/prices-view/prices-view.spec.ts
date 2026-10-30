@@ -1186,7 +1186,8 @@ describe('Prețuri: a hide or show shows before the server answers', () => {
     ],
   });
 
-  // @traces 1315-optimistic-toggles-FR-006 1315-optimistic-toggles-FR-008
+  // @traces 1315-FR-006 1315-FR-008
+  // @traces 1315-FR-013 1315-FR-015
   it('shows the job hidden by the owner at once on Ascunde, with one write', async () => {
     const { element, settle } = await editingOn();
     setRange.mockImplementationOnce(() => new Promise(() => undefined));
@@ -1201,7 +1202,7 @@ describe('Prețuri: a hide or show shows before the server answers', () => {
     expect(setRange).toHaveBeenCalledTimes(1);
   });
 
-  // @traces 1315-optimistic-toggles-FR-006
+  // @traces 1315-FR-006
   it('shows the job on the profile at once on Arată', async () => {
     const { element, settle } = await editingOn(hiddenChain);
     setRange.mockImplementationOnce(() => new Promise(() => undefined));
@@ -1213,7 +1214,7 @@ describe('Prețuri: a hide or show shows before the server answers', () => {
     expect(action(rows(element)[3], 'Ascunde')).toBeDefined();
   });
 
-  // @traces 1315-optimistic-toggles-FR-007
+  // @traces 1315-FR-007
   it('puts the row back as the list last read it, saying so on the row, when the save fails', async () => {
     const { element, settle } = await editingOn();
     let fail: (reason: unknown) => void = () => undefined;
@@ -1234,7 +1235,7 @@ describe('Prețuri: a hide or show shows before the server answers', () => {
     );
   });
 
-  // @traces 1315-optimistic-toggles-FR-007
+  // @traces 1315-FR-007
   it('keeps what a live re-read showed while the save was out when the save then fails', async () => {
     const { element, settle } = await editingOn();
     let fail: (reason: unknown) => void = () => undefined;

@@ -849,7 +849,8 @@ const deferred = <T>() => {
 };
 
 describe('BellStore: a read shows before the server answers', () => {
-  // @traces 1315-optimistic-toggles-FR-003 1315-optimistic-toggles-FR-008
+  // @traces 1315-FR-003 1315-FR-008
+  // @traces 1315-FR-013 1315-FR-015
   it('shows the row read and the count one lower at once, with one write', async () => {
     const { store } = await render(2, [row('a'), row('b')]);
     await store.load();
@@ -866,7 +867,7 @@ describe('BellStore: a read shows before the server answers', () => {
     await reading;
   });
 
-  // @traces 1315-optimistic-toggles-FR-003
+  // @traces 1315-FR-003
   it('puts the row and the count back and says so once when the read fails', async () => {
     const { store } = await render(2, [row('a'), row('b')]);
     await store.load();
@@ -883,7 +884,7 @@ describe('BellStore: a read shows before the server answers', () => {
     expect(toast).toHaveBeenCalledTimes(1);
   });
 
-  // @traces 1315-optimistic-toggles-FR-003
+  // @traces 1315-FR-003
   it('keeps a newer count shown while the read was out when the read fails', async () => {
     const { fixture, store } = await render(2, [row('a'), row('b')]);
     await store.load();
@@ -904,7 +905,7 @@ describe('BellStore: a read shows before the server answers', () => {
     expect(store.count()).toBe(5);
   });
 
-  // @traces 1315-optimistic-toggles-FR-003 1315-optimistic-toggles-FR-005
+  // @traces 1315-FR-003 1315-FR-005
   it('keeps the read time a reloaded page brought when the read then fails', async () => {
     const { fixture, store } = await render(2, [row('a'), row('b')]);
     await store.load();
@@ -930,7 +931,7 @@ describe('BellStore: a read shows before the server answers', () => {
     );
   });
 
-  // @traces 1315-optimistic-toggles-FR-003 1315-optimistic-toggles-FR-005
+  // @traces 1315-FR-003 1315-FR-005
   it('keeps a row shown read while a reloaded page still lists it unread', async () => {
     const { fixture, store } = await render(2, [row('a'), row('b')]);
     await store.load();
@@ -950,7 +951,7 @@ describe('BellStore: a read shows before the server answers', () => {
     await reading;
   });
 
-  // @traces 1315-optimistic-toggles-FR-004 1315-optimistic-toggles-FR-008
+  // @traces 1315-FR-004 1315-FR-008
   it('shows every row read and the count at zero at once on mark all, with one write', async () => {
     const { store } = await render(2, [row('a'), row('b')]);
     await store.load();
@@ -966,7 +967,7 @@ describe('BellStore: a read shows before the server answers', () => {
     await reading;
   });
 
-  // @traces 1315-optimistic-toggles-FR-004
+  // @traces 1315-FR-004
   it('puts the rows and the count back after a failed mark all, keeping rows read before it', async () => {
     const { store } = await render(2, [
       row('a'),
@@ -989,10 +990,56 @@ describe('BellStore: a read shows before the server answers', () => {
     expect(store.count()).toBe(2);
     expect(toast).toHaveBeenCalledTimes(1);
   });
+
+  // @traces 1315-FR-003
+  it('puts both rows back in the count when two reads out at once both fail', async () => {
+    const { store } = await render(3, [row('a'), row('b'), row('c')]);
+    await store.load();
+    api.bellControllerRead.mockRejectedValue(new Error('offline'));
+
+    await Promise.all([store.read('a'), store.read('b')]);
+
+    expect(store.count()).toBe(3);
+  });
+
+  // @traces 1315-FR-004 1315-FR-008
+  it('sends one mark all for two presses and puts the whole count back when it fails', async () => {
+    const { store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const answer = deferred<undefined>();
+    api.bellControllerReadAll.mockReturnValue(answer.promise);
+
+    const reading = store.readAll();
+    await store.readAll();
+    answer.reject(new Error('offline'));
+    await reading;
+
+    expect(api.bellControllerReadAll).toHaveBeenCalledTimes(1);
+    expect(store.count()).toBe(2);
+  });
+
+  // @traces 1315-FR-004 1315-FR-005
+  it('keeps the rows a mark all read when a page asked before it answers after it', async () => {
+    const { fixture, store } = await render(2, [row('a'), row('b')]);
+    await store.load();
+    const older = deferred<{ items: NotificationDto[]; nextCursor: null }>();
+    api.bellControllerList.mockReturnValueOnce(older.promise);
+    events.next({
+      at: '2026-10-05T10:00:00.000Z',
+      id: 'c',
+      kind: 'notification.created',
+    });
+
+    await store.readAll();
+    older.resolve({ items: [row('a'), row('b')], nextCursor: null });
+    await settle(fixture);
+
+    expect(store.items().every((n) => n.readAt !== null)).toBe(true);
+  });
 });
 
 describe('BellStore: first pages that answer out of order', () => {
-  // @traces 1315-optimistic-toggles-FR-005
+  // @traces 1315-FR-005
   it('keeps the newer first page when an older one answers after it', async () => {
     const { store } = await render(0);
     const older = deferred<{ items: NotificationDto[]; nextCursor: null }>();
