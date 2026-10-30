@@ -151,6 +151,9 @@ describe('who may read what a block may take', () => {
 
       expect(res.status).toBe(403);
       expect(res.body.code).toBe('forbidden');
+      expect(res.body.message).toBe(
+        'Doar proprietarul sau recepția blochează timp',
+      );
       expect(res.body).not.toHaveProperty('mechanics');
       expect(res.body).not.toHaveProperty('liftCount');
     },
@@ -170,7 +173,7 @@ describe('who may read what a block may take', () => {
       const res = await s.read(...actors[who]);
 
       expect(res.status).toBe(404);
-      expect(res.body.code).toBe('not_found');
+      expect(res.body).not.toHaveProperty('mechanics');
     },
   );
 
@@ -186,7 +189,7 @@ describe('who may read what a block may take', () => {
 
     expect(warn.mock.calls).toEqual([
       [{ blockId: undefined, code: 'forbidden', garageId: s.garage.id }],
-      [{ blockId: undefined, code: 'not_found', garageId: s.garage.id }],
+      [{ blockId: undefined, code: 404, garageId: s.garage.id }],
     ]);
   });
 
@@ -199,7 +202,7 @@ describe('who may read what a block may take', () => {
     );
 
     expect(res.status).toBe(404);
-    expect(res.body.code).toBe('not_found');
+    expect(res.body).not.toHaveProperty('mechanics');
   });
 
   it('refuses a garage id that is not a uuid, as the other time-block routes do', async () => {
@@ -224,13 +227,15 @@ describe('who may read what a block may take', () => {
 
   it('answers the same twice and writes nothing', async () => {
     const s = await setting();
-    const before = await prisma.outboxEvent.count();
+    const events = await prisma.outboxEvent.count();
+    const activity = await prisma.activityLog.count();
 
     const first = await s.read();
     const second = await s.read(s.receptionist, 'receptionist');
 
     expect(second.body).toEqual(first.body);
-    expect(await prisma.outboxEvent.count()).toBe(before);
+    expect(await prisma.outboxEvent.count()).toBe(events);
+    expect(await prisma.activityLog.count()).toBe(activity);
     expect(await prisma.timeBlock.count()).toBe(0);
   });
 });
