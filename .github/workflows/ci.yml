@@ -240,9 +240,10 @@ jobs:
       fail-fast: false
       matrix:
         shard: ${{ fromJSON(inputs.specs && '["named specs"]' || '["domain 1/4", "domain 2/4", "domain 3/4", "domain 4/4", "other projects"]') }}
-    # Provisional until the first sharded run is measured: the slowest
-    # shard's job time over 0.7, rounded up to 5 minutes.
-    timeout-minutes: 45
+    # Measured on run 41115323038: the slowest shard (domain 4/4) took 19 min,
+    # over 0.7 is 27.4, rounded up to 5 minutes. Nx prints each shard's Jest
+    # summary (--output-style=static), so the Test Suites totals can be summed.
+    timeout-minutes: 30
     services: &services
       # The repository's own image (infra/postgres), as compose and staging:
       # it preloads pg_stat_statements, which the data-store specs read.
@@ -292,7 +293,8 @@ jobs:
           while sleep 20; do
             psql "$DATABASE_URL" -XAtq -c "SELECT now()::time(0), a.pid, a.application_name, CASE WHEN l.granted THEN 'HOLDS' WHEN l.pid IS NOT NULL THEN 'turn' ELSE 'busy' END, pg_blocking_pids(a.pid), a.state, a.wait_event_type || ':' || a.wait_event, a.backend_start::time(0), a.state_change::time(0), left(regexp_replace(a.query, '\s+', ' ', 'g'), 140) FROM pg_stat_activity a LEFT JOIN pg_locks l ON l.pid = a.pid AND l.locktype = 'advisory' AND l.objid = 79079 WHERE a.datname = current_database() AND a.pid <> pg_backend_pid() AND (a.state <> 'idle' OR l.granted) ORDER BY l.granted DESC NULLS LAST, a.xact_start" >> "$RUNNER_TEMP/db-waits.txt" 2>&1
           done &
-      # Named spec files run alone, one Jest run after another.
+      # A suite shard runs its slice; named spec files run alone, one Jest run
+      # after another.
       - name: Integration tests
         env:
           JEST_SUITE: integration
@@ -301,8 +303,8 @@ jobs:
           REPEAT: ${{ inputs.repeat }}
         run: |
           case "$SHARD" in
-            'domain '*/*) npx nx $NX_SCOPE -t test --projects=domain --passWithNoTests --shard=${SHARD#domain }; exit ;;
-            'other projects') npx nx $NX_SCOPE -t test --exclude=domain --passWithNoTests; exit ;;
+            'domain '*/*) npx nx $NX_SCOPE -t test --projects=domain --passWithNoTests --output-style=static --shard=${SHARD#domain }; exit ;;
+            'other projects') npx nx $NX_SCOPE -t test --exclude=domain --passWithNoTests --output-style=static; exit ;;
             'named specs') ;;
             *) echo "::error::unknown shard '$SHARD'"; exit 1 ;;
           esac

@@ -536,23 +536,22 @@ describe('the integration suite in shards', () => {
   });
 
   // @traces 1406-FR-001
-  it('covers every domain slice once, so no domain spec is left out', () => {
-    const slices = lists[1]
-      .filter((s: string) => s.startsWith('domain '))
-      .map((s: string) => s.slice('domain '.length));
-    const total = Number(slices[0].split('/')[1]);
-
-    expect(slices).toEqual(
-      Array.from({ length: total }, (_, i) => `${i + 1}/${total}`),
-    );
+  it('takes the shard only from the matrix, nowhere else', () => {
+    expect(integration.match(/^\s+SHARD: .*$/gm)).toEqual([
+      '          SHARD: ${{ matrix.shard }}',
+    ]);
   });
 
   // @traces 1406-FR-001
   it('runs every project but domain in the other shard, and only domain in its slices', () => {
     const script = allRuns(integration);
 
-    expect(script).toContain('--projects=domain --passWithNoTests --shard=');
-    expect(script).toContain('--exclude=domain --passWithNoTests');
+    expect(script).toContain(
+      '--projects=domain --passWithNoTests --output-style=static --shard=',
+    );
+    expect(script).toContain(
+      '--exclude=domain --passWithNoTests --output-style=static',
+    );
     expect(script).toMatch(/\*\) echo "::error::unknown shard/);
   });
 
@@ -569,15 +568,6 @@ describe('the integration suite in shards', () => {
     ]) {
       expect(integration).toContain(step);
     }
-  });
-
-  // @traces 1406-FR-004 1406-FR-007
-  it("lowers the timeout below the single job's 90 minutes", () => {
-    const minutes = Number(
-      integration.match(/^ {4}timeout-minutes: (\d+)$/m)?.[1],
-    );
-    expect(minutes).toBeGreaterThan(0);
-    expect(minutes).toBeLessThan(90);
   });
 
   // @traces 1406-FR-005

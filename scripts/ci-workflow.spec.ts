@@ -172,7 +172,7 @@ describe('ci workflow', () => {
 
   // One timeout for every shard: the slowest shard's job time on a measuring
   // dispatch, over 0.7, rounded up to 5 minutes; never the old 90.
-  // @traces 1406-FR-004
+  // @traces 1406-FR-004 1406-FR-007
   it('cancels a shard well before the single job was', () => {
     const minutes = Number(setting(job('integration'), 'timeout-minutes'));
 
@@ -510,23 +510,23 @@ describe('ci workflow', () => {
     it.each([
       [
         'domain 1/4',
-        'nx run-many -t test --projects=domain --passWithNoTests --shard=1/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --output-style=static --shard=1/4',
       ],
       [
         'domain 2/4',
-        'nx run-many -t test --projects=domain --passWithNoTests --shard=2/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --output-style=static --shard=2/4',
       ],
       [
         'domain 3/4',
-        'nx run-many -t test --projects=domain --passWithNoTests --shard=3/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --output-style=static --shard=3/4',
       ],
       [
         'domain 4/4',
-        'nx run-many -t test --projects=domain --passWithNoTests --shard=4/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --output-style=static --shard=4/4',
       ],
       [
         'other projects',
-        'nx run-many -t test --exclude=domain --passWithNoTests',
+        'nx run-many -t test --exclude=domain --passWithNoTests --output-style=static',
       ],
     ])('runs its slice of the suite in the %s shard', (SHARD, call) => {
       expect(run('integration', 'Integration tests', { SHARD })).toEqual([
