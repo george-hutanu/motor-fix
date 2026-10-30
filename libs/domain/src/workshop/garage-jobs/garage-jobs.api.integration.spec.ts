@@ -4,7 +4,7 @@ import { atLocal, localDay } from '../../bucharest';
 import type { JobStatus } from '../../generated/prisma/enums';
 import { quotesApp } from '../../quotes/quotes-api.testing';
 
-const { bearer, get, team, world } = quotesApp();
+const { bearer, get, send, team, world } = quotesApp();
 const { prisma } = world;
 
 const PHONE = '+40722111222';
@@ -89,6 +89,8 @@ describe('GET /garage/jobs', () => {
             position: 0,
           },
         ],
+        lastForcedUnlock: null,
+        lock: null,
         mechanicId: s.dinamo.plainMechanic.id,
         mechanicName: 'Hand',
         odometerKm: null,
@@ -99,6 +101,7 @@ describe('GET /garage/jobs', () => {
         status: 'to_do',
         stepsDone: 0,
         stepsTotal: 0,
+        updatedAt: expect.any(String),
         workedSeconds: 0,
       });
     },
@@ -398,5 +401,56 @@ describe('GET /garage/jobs, from a day', () => {
       stepsTotal: 3,
     });
     expect(res.body.items[1]).toMatchObject({ stepsDone: 0, stepsTotal: 0 });
+  });
+});
+
+// @traces 395-FR-005 395-FR-009
+describe('a job’s lock on the garage’s reads', () => {
+  it('answers a free job with its updated time and no lock', async () => {
+    const s = await setting();
+    const owner = bearer(s.dinamo.owner, 'garage');
+
+    const one = await get(`/garage/jobs/${s.handJob.id}`, owner);
+    const list = await get('/garage/jobs', owner);
+
+    const { updatedAt } = await prisma.job.findUniqueOrThrow({
+      where: { id: s.handJob.id },
+    });
+    expect(one.body).toMatchObject({
+      lastForcedUnlock: null,
+      lock: null,
+      updatedAt: updatedAt.toISOString(),
+    });
+    expect(
+      list.body.items.find((i: { id: string }) => i.id === s.handJob.id),
+    ).toMatchObject({
+      lastForcedUnlock: null,
+      lock: null,
+      updatedAt: updatedAt.toISOString(),
+    });
+  });
+
+  it('shows the holder on the read and in the list', async () => {
+    const s = await setting();
+    const hand = bearer(s.dinamo.plain, 'mechanic');
+    const taken = await send('post', `/garage/jobs/${s.handJob.id}/lock`, hand);
+    const owner = bearer(s.dinamo.owner, 'garage');
+
+    const one = await get(`/garage/jobs/${s.handJob.id}`, owner);
+    const list = await get('/garage/jobs', owner);
+
+    const lock = {
+      holder: {
+        accountId: s.dinamo.plain,
+        firstName: 'Atelier',
+        role: 'mechanic',
+      },
+      lastChangeAt: taken.body.lastChangeAt,
+      since: taken.body.since,
+    };
+    expect(one.body.lock).toEqual(lock);
+    expect(
+      list.body.items.find((i: { id: string }) => i.id === s.handJob.id).lock,
+    ).toEqual(lock);
   });
 });

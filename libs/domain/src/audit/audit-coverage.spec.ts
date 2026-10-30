@@ -202,6 +202,12 @@ const NOT_CHANGES = new Set([
   // Watching a live stream notes who watched, the driver's first view and
   // the peak, like a read noting when it was first seen.
   'LiveSessionsService.watched',
+  // A job's edit lock is who is editing now, not a change to the job: only
+  // the owner's forced unlock enters the history (JobLockService.force).
+  'JobLockService.take',
+  'JobLockService.settle',
+  'JobLockSweep.clearExpired',
+  'JobLockSweep.remirror',
 ]);
 
 const uncovered = (source: string) =>

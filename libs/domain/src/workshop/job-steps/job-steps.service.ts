@@ -22,6 +22,8 @@ import {
   countJobStep,
   type JobStepAction,
 } from '../../metrics/product-counters';
+import { GarageJobsService } from '../garage-jobs/garage-jobs.service';
+import { type Hold, JobLockService } from '../job-lock/job-lock.service';
 
 type Tx = Prisma.TransactionClient;
 
@@ -34,6 +36,7 @@ interface LockedJob {
   mechanic_id: string | null;
   mechanic_account: string | null;
   status: JobStatus;
+  updated_at: Date;
 }
 
 interface Written<T> {
@@ -87,10 +90,18 @@ export class JobStepsService {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
+    private readonly jobs: GarageJobsService,
+    private readonly locks: JobLockService,
   ) {}
 
-  add(actor: Actor, jobId: string, key: string, text: string) {
-    return this.write(actor, jobId, async (tx, job) => {
+  add(
+    actor: Actor,
+    jobId: string,
+    key: string,
+    text: string,
+    basedOn?: string,
+  ) {
+    return this.write(actor, jobId, basedOn, async (tx, job) => {
       const again = await tx.jobStep.findUnique({
         where: { jobId_idempotencyKey: { idempotencyKey: key, jobId } },
       });
@@ -125,8 +136,14 @@ export class JobStepsService {
     });
   }
 
-  rename(actor: Actor, jobId: string, stepId: string, text: string) {
-    return this.write(actor, jobId, async (tx, job) => {
+  rename(
+    actor: Actor,
+    jobId: string,
+    stepId: string,
+    text: string,
+    basedOn?: string,
+  ) {
+    return this.write(actor, jobId, basedOn, async (tx, job) => {
       this.assertOpen(job);
       const before = await this.step(tx, jobId, stepId);
       const step = await tx.jobStep.update({
@@ -147,8 +164,8 @@ export class JobStepsService {
     });
   }
 
-  reorder(actor: Actor, jobId: string, stepIds: string[]) {
-    return this.write(actor, jobId, async (tx, job) => {
+  reorder(actor: Actor, jobId: string, stepIds: string[], basedOn?: string) {
+    return this.write(actor, jobId, basedOn, async (tx, job) => {
       this.assertOpen(job);
       const before = (
         await tx.jobStep.findMany({
@@ -185,8 +202,8 @@ export class JobStepsService {
     });
   }
 
-  remove(actor: Actor, jobId: string, stepId: string) {
-    return this.write(actor, jobId, async (tx, job) => {
+  remove(actor: Actor, jobId: string, stepId: string, basedOn?: string) {
+    return this.write(actor, jobId, basedOn, async (tx, job) => {
       this.assertOpen(job);
       const step = await this.step(tx, jobId, stepId);
       await tx.jobStep.delete({ where: { id: stepId } });
@@ -215,8 +232,14 @@ export class JobStepsService {
 
   // Idempotent: a tick of a ticked step, or an untick of an open one, answers
   // the step as it is and records nothing.
-  tick(actor: Actor, jobId: string, stepId: string, done: boolean) {
-    return this.write(actor, jobId, async (tx, job) => {
+  tick(
+    actor: Actor,
+    jobId: string,
+    stepId: string,
+    done: boolean,
+    basedOn?: string,
+  ) {
+    return this.write(actor, jobId, basedOn, async (tx, job) => {
       this.assertStarted(job, stepId);
       const before = await this.step(tx, jobId, stepId);
       if (Boolean(before.doneAt) === done) {
@@ -248,20 +271,36 @@ export class JobStepsService {
     });
   }
 
-  // Locks the job, judges who may write it, runs the change and counts it
-  // once the transaction has committed.
+  // Locks the job, judges who may write it, then that no one else holds it
+  // and that the caller read its latest version; runs the change and counts
+  // it once the transaction has committed. A write that changed nothing
+  // leaves the job's version as it was.
   private async write<T>(
     actor: Actor,
     jobId: string,
+    basedOn: string | undefined,
     change: (tx: Tx, job: LockedJob) => Promise<Written<T>>,
   ): Promise<T> {
     requireCapability(actor, 'garage.own_jobs');
-    const { action, value } = await this.prisma.$transaction(async (tx) => {
-      const job = await this.lock(tx, actor, jobId);
-      return change(tx, job);
-    });
-    if (action) countJobStep(action);
-    return value;
+    const met: { job?: LockedJob; hold?: Hold } = {};
+    let written: Written<T>;
+    try {
+      written = await this.prisma.$transaction(async (tx) => {
+        const job = await this.lock(tx, actor, jobId);
+        met.job = job;
+        met.hold = await this.locks.hold(tx, actor, job, basedOn);
+        const result = await change(tx, job);
+        if (result.action) await this.locks.settle(tx, job.id);
+        return result;
+      });
+    } catch (error) {
+      throw await this.locks.refused(actor, met.job, met.hold, error, () =>
+        this.jobs.get(actor, jobId),
+      );
+    }
+    if (met.job) await this.locks.after(actor, met.job, met.hold);
+    if (written.action) countJobStep(written.action);
+    return written.value;
   }
 
   // Another garage's job, or none, does not exist for the caller; the
@@ -269,7 +308,7 @@ export class JobStepsService {
   private async lock(tx: Tx, actor: Actor, jobId: string): Promise<LockedJob> {
     const [job] = await tx.$queryRaw<LockedJob[]>`
       SELECT j.id, j.garage_id, j.car_id, j.driver_id, j.mechanic_id,
-             m.account_id AS mechanic_account, j.status
+             m.account_id AS mechanic_account, j.status, j.updated_at
       FROM job j LEFT JOIN mechanic m ON m.id = j.mechanic_id
       WHERE j.id = ${jobId}::uuid
       FOR UPDATE OF j`;

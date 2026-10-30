@@ -1,3 +1,6 @@
+import type { Redis } from 'ioredis';
+
+import { AUTH_REDIS } from '../../auth/attempts';
 import { localDay } from '../../bucharest';
 import type {
   JobStatus,
@@ -5,7 +8,7 @@ import type {
 } from '../../generated/prisma/enums';
 import { quotesApp } from '../../quotes/quotes-api.testing';
 
-const { bearer, get, send, team, world } = quotesApp();
+const { bearer, get, provider, send, team, world } = quotesApp();
 const { prisma } = world;
 
 // The request's status that goes with a job's.
@@ -744,5 +747,110 @@ describe('reading a job', () => {
         toStatus: 'in_work',
       }),
     ]);
+  });
+});
+
+// @traces 395-FR-005
+describe('a change based on what the caller last read', () => {
+  it('goes through when the caller read the job as it stands', async () => {
+    const s = await setting();
+    const { updatedAt } = await reread(s.job.id);
+
+    const res = await receive(s.job.id, s.owner, {
+      basedOnUpdatedAt: updatedAt.toISOString(),
+      odometerKm: 120_000,
+    });
+
+    expect(res.status).toBe(200);
+    expect(Date.parse(res.body.updatedAt)).toBeGreaterThan(updatedAt.getTime());
+  });
+
+  it('goes through with no basis given', async () => {
+    const s = await setting();
+
+    const res = await receive(s.job.id, s.owner, { odometerKm: 120_000 });
+
+    expect(res.status).toBe(200);
+  });
+
+  it('refuses a change based on an older read, answering the job as it is', async () => {
+    const s = await setting();
+    const { updatedAt } = await reread(s.job.id);
+    await receive(s.job.id, s.owner, { odometerKm: 120_000 });
+    const before = await snapshot(s.job.id);
+
+    const res = await receive(s.job.id, s.hand, {
+      basedOnUpdatedAt: updatedAt.toISOString(),
+      odometerKm: 99_000,
+    });
+
+    const current = await reread(s.job.id);
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({
+      code: 'job_changed',
+      job: { id: s.job.id, odometerKm: 120_000 },
+      updatedAt: current.updatedAt.toISOString(),
+    });
+    expect(await snapshot(s.job.id)).toEqual(before);
+    expect(current.lockHolderId).toBeNull();
+  });
+
+  it('compares the basis to the millisecond', async () => {
+    const s = await setting();
+    const { updatedAt } = await reread(s.job.id);
+
+    const res = await send('post', `/garage/jobs/${s.job.id}/start`, s.hand, {
+      basedOnUpdatedAt: new Date(updatedAt.getTime() + 1).toISOString(),
+    });
+
+    expect([res.status, res.body.code]).toEqual([409, 'job_changed']);
+    expect((await reread(s.job.id)).status).toBe('to_do');
+  });
+
+  it('answers the holder’s lock before a stale basis', async () => {
+    const s = await setting();
+    await send('post', `/garage/jobs/${s.job.id}/lock`, s.hand);
+
+    const res = await send('post', `/garage/jobs/${s.job.id}/start`, s.owner, {
+      basedOnUpdatedAt: new Date(0).toISOString(),
+    });
+
+    expect([res.status, res.body.code]).toEqual([423, 'job_locked']);
+  });
+
+  it('leaves the updated time alone on a refused move', async () => {
+    const s = await setting();
+    const { updatedAt } = await reread(s.job.id);
+
+    const res = await stage(s.job.id, 'finish', s.hand);
+
+    expect(res.status).toBe(409);
+    expect((await reread(s.job.id)).updatedAt).toEqual(updatedAt);
+  });
+});
+
+// @traces 395-FR-006
+describe('a change while the lock store is unreachable', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('answers try again and applies nothing', async () => {
+    const s = await setting();
+    const before = await snapshot(s.job.id);
+    const redis = provider<Redis>(AUTH_REDIS);
+    const down = () => Promise.reject(new Error('Connection is closed.'));
+    for (const command of ['set', 'get', 'del', 'eval', 'evalsha'] as const) {
+      jest.spyOn(redis, command).mockImplementation(down as never);
+    }
+
+    const res = await stage(s.job.id, 'start', s.hand);
+    const locking = await send('post', `/garage/jobs/${s.job.id}/lock`, s.hand);
+
+    expect(res.status).toBe(503);
+    expect(res.body).toMatchObject({
+      code: 'try_again',
+      message: 'Încearcă din nou în câteva secunde',
+    });
+    expect([locking.status, locking.body.code]).toEqual([503, 'try_again']);
+    expect(await snapshot(s.job.id)).toEqual(before);
   });
 });

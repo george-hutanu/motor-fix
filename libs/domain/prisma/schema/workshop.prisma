@@ -36,12 +36,27 @@ model Job {
   // Time in work, added on every move out of in_work.
   workedSeconds          Int             @default(0) @map("worked_seconds")
   createdAt              DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  // The version a change is based on; set by every job-changing write, never by a lock write.
+  updatedAt              DateTime        @default(now()) @map("updated_at") @db.Timestamptz(3)
+  // A copy of the Redis lock for reads and recovery; Redis decides who holds it.
+  lockHolderId           String?         @map("lock_holder_id") @db.Uuid
+  // owner, receptionist or mechanic: the role the holder took the job as.
+  lockHolderRole         String?         @map("lock_holder_role")
+  lockSince              DateTime?       @map("lock_since") @db.Timestamptz(3)
+  lockLastChangeAt       DateTime?       @map("lock_last_change_at") @db.Timestamptz(3)
+  // The last forced unlock, kept until the former holder takes the job again.
+  lockForcedById         String?         @map("lock_forced_by_id") @db.Uuid
+  lockForcedAt           DateTime?       @map("lock_forced_at") @db.Timestamptz(3)
+  lockForcedHolderId     String?         @map("lock_forced_holder_id") @db.Uuid
   booking                Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   garage                 Garage          @relation(fields: [garageId], references: [id], onDelete: Cascade)
   car                    Car             @relation(fields: [carId], references: [id], onDelete: NoAction)
   driver                 Account         @relation("JobDriver", fields: [driverId], references: [id], onDelete: Cascade)
   mechanic               Mechanic?       @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
   finalPriceRecordedBy   Account?        @relation("JobFinalPriceRecordedBy", fields: [finalPriceRecordedById], references: [id], onDelete: SetNull)
+  lockHolder             Account?        @relation("JobLockHolder", fields: [lockHolderId], references: [id], onDelete: SetNull)
+  lockForcedBy           Account?        @relation("JobLockForcedBy", fields: [lockForcedById], references: [id], onDelete: SetNull)
+  lockForcedHolder       Account?        @relation("JobLockForcedHolder", fields: [lockForcedHolderId], references: [id], onDelete: SetNull)
   steps                  JobStep[]
   stages                 JobStageEntry[]
   reviews                Review[]
