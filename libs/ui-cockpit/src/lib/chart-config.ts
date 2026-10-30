@@ -324,13 +324,7 @@ export function chartConfig(
         [categoryAxis]: {
           border: { display: false },
           grid: { display: false },
-          // A labelled week chart names every week under its bar.
-          ticks: {
-            ...ticks,
-            autoSkip: !newest.config,
-            maxRotation: 0,
-            minRotation: 0,
-          },
+          ticks: { ...ticks, autoSkip: true, maxRotation: 0, minRotation: 0 },
         },
         [valueAxis]: {
           beginAtZero: true,

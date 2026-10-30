@@ -132,7 +132,7 @@ test.describe('the weekly figures on the garage overview @seeded', () => {
   });
 
   // @traces 1397-FR-004 1397-FR-012
-  test('shows a tooltip over the newest bar, the figure in its card, the charts stacked in the half-width cell', async ({
+  test('shows a tooltip over the newest bar, the figure in its card, the charts side by side across the row on a desktop', async ({
     page,
   }) => {
     await page.setViewportSize({ height: 900, width: 1280 });
@@ -147,14 +147,21 @@ test.describe('the weekly figures on the garage overview @seeded', () => {
     await expect(canvas).toHaveAttribute('width', /\d/);
     await canvas.scrollIntoViewIfNeeded();
 
-    const [viewsBox, requestsBox] = await Promise.all([
+    const [viewsBox, requestsBox, panelBox, rowBox] = await Promise.all([
       views.boundingBox(),
       requests.boundingBox(),
+      panel.boundingBox(),
+      page.locator('.sections').boundingBox(),
     ]);
-    if (!viewsBox || !requestsBox) throw new Error('a chart is not laid out');
-    expect(requestsBox.y).toBeGreaterThanOrEqual(
-      viewsBox.y + viewsBox.height - 1,
+    if (!viewsBox || !requestsBox || !panelBox || !rowBox)
+      throw new Error('a chart is not laid out');
+    // Side by side (FR-001), each wide enough for its eight week labels:
+    // the panel takes the whole row on a desktop.
+    expect(Math.abs(requestsBox.y - viewsBox.y)).toBeLessThanOrEqual(1);
+    expect(requestsBox.x).toBeGreaterThanOrEqual(
+      viewsBox.x + viewsBox.width - 1,
     );
+    expect(panelBox.width).toBeGreaterThanOrEqual(rowBox.width - 1);
 
     const before = await canvas.screenshot();
     const box = await canvas.boundingBox();

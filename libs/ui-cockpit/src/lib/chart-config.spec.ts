@@ -713,8 +713,9 @@ describe('the chart with weeks that have no value', () => {
   });
 
   // @traces 1397-FR-003
-  it('labels every week under the bars when the host labels the newest', () => {
-    expect(weeks(true).options.scales.x.ticks.autoSkip).toBe(false);
+  // QA lap 2: with skipping off, eight labels ran together at 320 px.
+  it('keeps the shared skip rule for week labels too narrow to fit', () => {
+    expect(weeks(true).options.scales.x.ticks.autoSkip).toBe(true);
     expect(weeks().options.scales.x.ticks.autoSkip).toBe(true);
   });
 });

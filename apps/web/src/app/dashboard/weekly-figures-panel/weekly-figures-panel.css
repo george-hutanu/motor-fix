@@ -3,7 +3,6 @@
   min-width: 0;
 }
 .panel {
-  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-4);
@@ -41,10 +40,6 @@
   .panel {
     padding: var(--mf-space-4);
   }
-}
-/* Eight week labels need about 36 px each: a panel narrower than two such
-   charts (a phone, or a half-width cell on desktop) stacks them. */
-@container (max-width: 640px) {
   .charts {
     grid-template-columns: minmax(0, 1fr);
   }

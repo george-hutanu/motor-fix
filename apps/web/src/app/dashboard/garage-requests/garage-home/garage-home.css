@@ -73,7 +73,8 @@ p {
   flex: 1 1 100%;
   min-width: 0;
 }
-.sections > [data-section="funnel"],
+/* The weekly panel takes the whole row: two charts side by side, each wide
+   enough to name its eight weeks under the bars. */
 .sections > [data-section="brands"] {
   flex: 1 1 420px;
 }
