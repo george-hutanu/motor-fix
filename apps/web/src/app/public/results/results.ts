@@ -575,8 +575,10 @@ export class Results {
   });
   // Nothing has every filter chosen, while the search itself found garages
   // (or its pins have not said yet).
+  // The answer shown was asked with at least one filter on.
+  protected readonly filtered = computed(() => countOf(this.askedWith()) > 0);
   protected readonly emptyFiltered = computed(() => {
-    if (countOf(this.askedWith()) === 0) return false;
+    if (!this.filtered()) return false;
     const pins = this.pinned();
     return !pins || pins.pins.length > 0;
   });
@@ -587,9 +589,8 @@ export class Results {
     const brand = answer.brand.name;
     const found = this.box() ? 'public.results.inArea' : 'public.results.found';
     // Filtered: every garage the search found (the pins), then those left.
-    const filtered = countOf(this.askedWith()) > 0;
     const pins = this.pinned()?.pins.length;
-    const head = filtered
+    const head = this.filtered()
       ? [
           ...(pins === undefined ? [] : [this.i18n.t(found, { count: pins })]),
           this.i18n.t('public.results.filters.summary', {

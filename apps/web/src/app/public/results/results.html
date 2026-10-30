@@ -3,7 +3,8 @@
     <!-- Re-created for another brand, whose name blurs in once it lands. -->
     <h1 class="title" [class.rising]="rising()">@for (shown of [answer.brand]; track shown.id) {<span class="titled">{{ voice.copy.list | t: { brand: unbroken(shown.name) } }}</span>}</h1>
     <p class="summary">
-      @if (answer.total > 0) {
+      <!-- Filtered, the line stays at 0: it says how many were found. -->
+      @if (answer.total > 0 || filtered()) {
         <span class="tally" [mfLiveChange]="tally()">{{ tally() }}</span>
       }
       @if (area(); as area) {
