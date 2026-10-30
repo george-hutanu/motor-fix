@@ -222,6 +222,136 @@ describe('GaragePinsQueryDto', () => {
   });
 });
 
+// @traces 1261-FR-001
+describe('the result filters', () => {
+  const both = [
+    ['the list', GarageSearchQueryDto],
+    ['the pins', GaragePinsQueryDto],
+  ] as const;
+  const check = (
+    dto: typeof GarageSearchQueryDto | typeof GaragePinsQueryDto,
+    query: Record<string, unknown>,
+  ) =>
+    validateSync(plainToInstance(dto, query), {
+      forbidNonWhitelisted: true,
+      whitelist: true,
+    }).flatMap((error) => Object.values(error.constraints ?? {}));
+
+  describe.each(both)('on %s', (_route, dto) => {
+    it.each(['150', '200', '250', '300'])('takes max_price %s', (value) => {
+      expect(check(dto, { brand: 'bmw', max_price: value })).toEqual([]);
+    });
+
+    it('reads max_price as the number of lei', () => {
+      expect(
+        plainToInstance(dto, { brand: 'bmw', max_price: '250' }).max_price,
+      ).toBe(250);
+    });
+
+    it.each(['3.5', '4.0', '4.5'])('takes min_rating %s', (value) => {
+      expect(check(dto, { brand: 'bmw', min_rating: value })).toEqual([]);
+    });
+
+    it('takes card 1 and all three together', () => {
+      expect(check(dto, { brand: 'bmw', card: '1' })).toEqual([]);
+      expect(
+        check(dto, {
+          brand: 'bmw',
+          card: '1',
+          max_price: '200',
+          min_rating: '4.0',
+        }),
+      ).toEqual([]);
+    });
+
+    it.each([
+      '175',
+      '200.0',
+      '0200',
+      '2e2',
+      '0x96',
+      ' 200',
+      '',
+      '-150',
+      'null',
+    ])('refuses max_price %j', (value) => {
+      expect(check(dto, { brand: 'bmw', max_price: value })).not.toEqual([]);
+    });
+
+    it.each(['4', '4,0', '4.00', '3', '5.0', '0', '', 'true'])(
+      'refuses min_rating %j',
+      (value) => {
+        expect(check(dto, { brand: 'bmw', min_rating: value })).not.toEqual([]);
+      },
+    );
+
+    it.each(['0', 'true', 'yes', '', '01'])('refuses card %j', (value) => {
+      expect(check(dto, { brand: 'bmw', card: value })).not.toEqual([]);
+    });
+
+    it.each(['max_price', 'min_rating', 'card'])(
+      'refuses a null or a repeated %s',
+      (key) => {
+        const value = { card: '1', max_price: '200', min_rating: '4.0' }[key];
+        expect(check(dto, { brand: 'bmw', [key]: null })).not.toEqual([]);
+        expect(check(dto, { brand: 'bmw', [key]: [value, value] })).not.toEqual(
+          [],
+        );
+      },
+    );
+  });
+});
+
+// @traces 1260-FR-001 1260-FR-011
+describe.each([
+  ['GarageSearchQueryDto', GarageSearchQueryDto],
+  ['GaragePinsQueryDto', GaragePinsQueryDto],
+] as const)('%s open now and open on Saturday', (_name, dto) => {
+  const check = (query: Record<string, unknown>) =>
+    validateSync(plainToInstance(dto, query), {
+      forbidNonWhitelisted: true,
+      whitelist: true,
+    }).flatMap((error) => Object.values(error.constraints ?? {}));
+
+  it('takes open_now=1, open_saturday=1 and both together', () => {
+    expect(check({ brand: 'bmw', open_now: '1' })).toEqual([]);
+    expect(check({ brand: 'bmw', open_saturday: '1' })).toEqual([]);
+    expect(check({ brand: 'bmw', open_now: '1', open_saturday: '1' })).toEqual(
+      [],
+    );
+  });
+
+  it('takes a search with neither filter', () => {
+    const query = plainToInstance(dto, { brand: 'bmw' });
+
+    expect(check({ brand: 'bmw' })).toEqual([]);
+    expect(query.open_now).toBeUndefined();
+    expect(query.open_saturday).toBeUndefined();
+  });
+
+  it.each(['open_now', 'open_saturday'])(
+    'refuses every value of %s other than 1, naming it',
+    (name) => {
+      for (const value of ['true', '0', 'yes', '', ' 1', '01']) {
+        const found = check({ brand: 'bmw', [name]: value });
+        expect(found).not.toEqual([]);
+        expect(found.every((message) => message.startsWith(`${name} `))).toBe(
+          true,
+        );
+      }
+    },
+  );
+
+  it.each(['open_now', 'open_saturday'])(
+    'refuses a repeated %s key, naming it',
+    (name) => {
+      const found = check({ brand: 'bmw', [name]: ['1', '1'] });
+      expect(found).not.toEqual([]);
+      expect(found.join()).toMatch(new RegExp(`^${name} `));
+    },
+  );
+});
+
 const NEAR = '44.437,26.117';
 
 // @traces 328-FR-001

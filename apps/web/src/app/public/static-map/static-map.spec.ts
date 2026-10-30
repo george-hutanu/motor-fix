@@ -15,6 +15,7 @@ const pinOf = (n: number, over: Partial<GaragePinDto> = {}): GaragePinDto => ({
   id: `g-${n}`,
   lat: 44.42 + n / 1000,
   lng: 26.09 + n / 1000,
+  matches: true,
   rateLei: 150,
   stance: 'works_on',
   ...over,

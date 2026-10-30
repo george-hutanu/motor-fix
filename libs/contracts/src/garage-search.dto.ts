@@ -23,9 +23,13 @@ import {
   parseBbox,
   SEARCH_BBOX_MAX_KM,
   SEARCH_IDS_MAX,
+  SEARCH_MIN_RATINGS,
   SEARCH_PINS_MAX,
+  SEARCH_PRICE_CEILINGS,
   SEARCH_RADII,
   SEARCH_SORTS,
+  type SearchMinRating,
+  type SearchPriceCeiling,
   type SearchRadius,
   type SearchSort,
 } from './search-place';
@@ -133,6 +137,57 @@ export class GaragePinsQueryDto extends NearQueryDto {
   @ValidateIf((_, value) => value !== undefined)
   @IsSearchBbox()
   bbox?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Keep only the garages open now on the Bucharest clock: inside one of their hours today, today neither a legal holiday nor one of their closed days. Exactly "1"',
+    enum: ['1'],
+  })
+  // Exactly "1": a repeated key arrives as a list and is refused too.
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['1'])
+  open_now?: '1';
+
+  @ApiPropertyOptional({
+    description:
+      'Keep only the garages whose weekly hours hold Saturday hours, whatever the closed days or holidays. Exactly "1"',
+    enum: ['1'],
+  })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['1'])
+  open_saturday?: '1';
+
+  @ApiPropertyOptional({
+    description:
+      'The most a garage may charge an hour, in whole lei, as its card shows the rate; a garage with no rate is left out',
+    enum: SEARCH_PRICE_CEILINGS,
+    type: 'integer',
+  })
+  // Only the digits as written: Number() would also read "200.0" or "2e2"
+  // as 200, and IsOptional would let a null through.
+  @ValidateIf((_, value) => value !== undefined)
+  @Transform(({ value }) =>
+    SEARCH_PRICE_CEILINGS.map(String).includes(value) ? Number(value) : value,
+  )
+  @IsIn(SEARCH_PRICE_CEILINGS)
+  max_price?: SearchPriceCeiling;
+
+  @ApiPropertyOptional({
+    description:
+      'The least rating a garage must have; a garage with no reviews is left out',
+    enum: SEARCH_MIN_RATINGS,
+  })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(SEARCH_MIN_RATINGS)
+  min_rating?: SearchMinRating;
+
+  @ApiPropertyOptional({
+    description: 'Only the garages that take a card',
+    enum: ['1'],
+  })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn(['1'])
+  card?: '1';
 }
 
 export class GarageSearchQueryDto extends GaragePinsQueryDto {
@@ -324,6 +379,12 @@ export class GaragePinDto {
   @ApiProperty({ enum: GARAGE_BRAND_ANSWERS })
   stance!: GarageBrandAnswer;
 
+  @ApiProperty({
+    description:
+      'True when the garage meets every set filter; always true with none',
+  })
+  matches!: boolean;
+
   @ApiPropertyOptional({
     description: "A mobile mechanic's area, in km; only for one",
     type: 'integer',
@@ -339,7 +400,8 @@ export class GaragePinsDto {
   pins!: GaragePinDto[];
 
   @ApiProperty({
-    description: "Every approved garage the search finds, as the list's total",
+    description:
+      "Every approved garage the search finds that meets every set filter, as the list's total",
     type: 'integer',
   })
   total!: number;

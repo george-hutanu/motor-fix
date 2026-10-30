@@ -151,6 +151,7 @@ describe('the pins of a search around a place', () => {
       id,
       lat: northOf(1000),
       lng: PLACE.lng,
+      matches: true,
       rateLei: 150,
       stance: 'works_on',
     });
@@ -353,6 +354,7 @@ describe('the pins of a mobile mechanic', () => {
       id,
       lat: Math.round(northOf(15_000) * 100) / 100,
       lng: Math.round(eastOf(3333) * 100) / 100,
+      matches: true,
       rateLei: 120,
       serviceRadiusKm: 20,
       stance: 'unstated',
@@ -401,5 +403,101 @@ describe('the pins of a mobile mechanic', () => {
       pins: [],
       total: 0,
     });
+  });
+});
+
+// @traces 1261-FR-007
+describe('the pins under filters', () => {
+  // Every combination of the three filters, none set included.
+  const combinations = [undefined, 150, 200, 250, 300].flatMap((maxPrice) =>
+    [undefined, '3.5', '4.0', '4.5'].flatMap((minRating) =>
+      [undefined, true].map(
+        (card) =>
+          ({
+            ...(maxPrice && { maxPrice }),
+            ...(minRating && { minRating }),
+            ...(card && { card }),
+          }) as Parameters<GaragePinsService['forBrand']>[4],
+      ),
+    ),
+  );
+
+  // A garage near the place with its rate, rating and card payment.
+  async function offer(
+    at: number,
+    {
+      bani,
+      card = false,
+      rating = null,
+    }: Partial<{
+      bani: number;
+      card: boolean;
+      rating: number | null;
+    }>,
+    stance?: 'works_on' | 'does_not_take',
+  ) {
+    const id = await garage({ at, bani, stance });
+    await prisma.garage.update({
+      data: { paymentCard: card, rating, reviewCount: rating === null ? 0 : 1 },
+      where: { id },
+    });
+    return id;
+  }
+
+  const matching = (answer: { pins: { id: string; matches: boolean }[] }) =>
+    answer.pins.filter((pin) => pin.matches).map((pin) => pin.id);
+
+  it('keeps every pin and marks the ones meeting every filter', async () => {
+    const both = await offer(100, { bani: 20_049, card: true }, 'works_on');
+    const dear = await offer(200, { bani: 20_050, card: true });
+    const cash = await offer(300, { bani: 15_000 }, 'does_not_take');
+    const noRate = await offer(400, { card: true });
+
+    const answer = await pins.forBrand(dacia, PLACE, 25, undefined, {
+      card: true,
+      maxPrice: 200,
+    });
+
+    expect(ids(answer)).toEqual([both, dear, cash, noRate]);
+    expect(matching(answer)).toEqual([both]);
+    expect(answer.total).toBe(1);
+  });
+
+  it('marks every pin as matching with no filter', async () => {
+    await offer(100, { bani: 30_000 });
+    await offer(200, {});
+
+    const answer = await pins.forBrand(dacia, PLACE, 25);
+
+    expect(answer.pins.map((pin) => pin.matches)).toEqual([true, true]);
+    expect(answer.total).toBe(2);
+  });
+
+  it('gives the total the list gives for every combination of filters', async () => {
+    await offer(100, { bani: 20_000, card: true, rating: 4.5 }, 'works_on');
+    await offer(200, { bani: 25_000, card: true, rating: 4.0 });
+    await offer(300, { bani: 14_000, rating: 3.5 }, 'does_not_take');
+    await offer(400, { card: true, rating: 4.9 });
+    await offer(500, { bani: 30_000, card: false, rating: null });
+
+    for (const filters of combinations) {
+      const [pinned, listed] = await Promise.all([
+        pins.forBrand(dacia, PLACE, 25, undefined, filters),
+        list.forBrand(
+          dacia,
+          undefined,
+          PLACE,
+          25,
+          false,
+          undefined,
+          undefined,
+          filters,
+        ),
+      ]);
+      expect([filters, pinned.total]).toEqual([filters, listed.total]);
+      expect(matching(pinned).sort()).toEqual(
+        listed.items.map((item) => item.id).sort(),
+      );
+    }
   });
 });
