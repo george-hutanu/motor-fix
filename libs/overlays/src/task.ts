@@ -29,6 +29,12 @@ export interface OverlayTask<D = undefined, R = never> {
   close(result: R): void;
   // After a save: closing no longer asks about the changes.
   markUnchanged(): void;
+  // The task's own Renunță: closes with "cancelled" as the X does, asking
+  // first when a field changed. A task opened not dismissible closes too.
+  dismiss(): void;
+  // While held, such as during a save, nothing closes the task (X, Escape,
+  // a click outside, a drag, Back, dismiss) but the task's own close.
+  hold(held: boolean): void;
   // Content shown after opening, such as a form behind a load, takes the
   // opening focus once rendered, unless the person moved it inside the task.
   focusStart(): void;
