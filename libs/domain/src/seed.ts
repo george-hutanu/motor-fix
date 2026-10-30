@@ -988,7 +988,7 @@ async function quoteable(db: Client) {
      ON CONFLICT DO NOTHING`,
   );
   await priceList(db);
-  // A brand is ticked only for a job on the garage's price list (1247-FR-003),
+  // A brand is ticked only for a job on the garage's price list,
   // so a garage ticked for a job its list lacks gets that job priced, at the
   // range Service Auto Militari asks, saved by its owner (a garage with no
   // owner account by the seed's own, as the price list above).

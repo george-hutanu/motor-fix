@@ -813,7 +813,6 @@ describe('seed of the listed garages', () => {
     expect(ticked('dacia')).toEqual(['oil-service']);
   });
 
-  // @traces 1247-FR-003
   it("ticks a brand only for a job on its garage's price list, so an owner's brands save back as they are", async () => {
     expect(seed('test').status).toBe(0);
     expect(seed('test').status).toBe(0);
