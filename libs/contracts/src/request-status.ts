@@ -60,6 +60,24 @@ export const BOOKING_STATUSES = [
 ] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
+// What became of a quote, as the garage that sent it reads it.
+export const QUOTE_OUTCOMES = [
+  'waiting',
+  'withdrawn_suspended',
+  'accepted',
+  'booked',
+  'no_show',
+  'lapsed',
+  'expired',
+  'withdrawn',
+  'declined',
+  'account_closed',
+  'booking_cancelled',
+  'request_cancelled',
+  'chose_other',
+] as const;
+export type QuoteOutcome = (typeof QUOTE_OUTCOMES)[number];
+
 export const JOB_STATUSES = [
   'to_do',
   'in_work',
