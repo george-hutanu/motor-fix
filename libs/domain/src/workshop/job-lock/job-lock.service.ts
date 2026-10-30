@@ -25,7 +25,7 @@ import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 
 type Tx = Prisma.TransactionClient;
 
-export const LOCK_SECONDS = 300;
+const LOCK_SECONDS = 300;
 const LOCK_MS = LOCK_SECONDS * 1000;
 
 export const lockKey = (jobId: string) => `job:lock:${jobId}`;
@@ -40,7 +40,7 @@ export interface HeldLock {
 }
 
 // The job's fields a lock reads: who it belongs to and whom a change reaches.
-export interface LockedJobRef {
+interface LockedJobRef {
   id: string;
   garage_id: string;
   mechanic_id: string | null;
@@ -80,7 +80,7 @@ if cjson.decode(v).holderId ~= ARGV[1] then return 0 end
 redis.call('DEL', KEYS[1])
 return 1`;
 
-export const holderRole = (actor: Actor): LockHolderRole =>
+const holderRole = (actor: Actor): LockHolderRole =>
   actor.role === 'garage' ? 'owner' : (actor.role as LockHolderRole);
 
 const clock = (at: Date) => {
@@ -88,10 +88,10 @@ const clock = (at: Date) => {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 };
 
-export const lockedMessage = (held: HeldLock) =>
+const lockedMessage = (held: HeldLock) =>
   `Blocat de ${held.firstName}, ${ROLE_RO[held.role]}, de la ${clock(new Date(held.since))}`;
 
-export const forcedText = (held: HeldLock) =>
+const forcedText = (held: HeldLock) =>
   `${held.firstName}, ${ROLE_RO[held.role]}, de la ${held.since}`;
 
 class JobChanged extends HttpException {

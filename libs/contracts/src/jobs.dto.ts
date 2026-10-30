@@ -39,7 +39,7 @@ const ACTOR_ROLES = [
   'system',
 ] as const;
 
-export const LOCK_HOLDER_ROLES = ['owner', 'receptionist', 'mechanic'] as const;
+const LOCK_HOLDER_ROLES = ['owner', 'receptionist', 'mechanic'] as const;
 export type LockHolderRole = (typeof LOCK_HOLDER_ROLES)[number];
 
 export class LockHolderDto {
@@ -98,7 +98,7 @@ export class LastForcedUnlockDto {
   holderId!: string;
 }
 
-export const LOCK_PURPOSES = ['edit', 'reception', 'handover'] as const;
+const LOCK_PURPOSES = ['edit', 'reception', 'handover'] as const;
 export type LockPurpose = (typeof LOCK_PURPOSES)[number];
 
 export class TakeJobLockDto {

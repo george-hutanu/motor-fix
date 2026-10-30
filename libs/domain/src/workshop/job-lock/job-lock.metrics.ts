@@ -3,7 +3,7 @@ import { metrics } from '@opentelemetry/api';
 // locked: a take or a change refused because another person holds the job;
 // stale: a change refused for a stale basedOnUpdatedAt; expired: a mirror the
 // sweep cleared after its key ran out; unavailable: Redis did not answer.
-export type JobLockAction =
+type JobLockAction =
   | 'take'
   | 'refresh'
   | 'release'
