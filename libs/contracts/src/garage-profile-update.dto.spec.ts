@@ -2,6 +2,10 @@ import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
 import {
+  PROFILE_RADIUS_KM,
+  PROFILE_DESCRIPTION_MAX as SHARED_DESCRIPTION_MAX,
+} from './garage-profile-limits';
+import {
   PROFILE_DESCRIPTION_MAX,
   UpdateGarageProfileDto,
 } from './garage-profile-update.dto';
@@ -30,6 +34,17 @@ const save = (fields: Record<string, unknown>) =>
 describe('UpdateGarageProfileDto', () => {
   it('describes up to a thousand characters', () => {
     expect(PROFILE_DESCRIPTION_MAX).toBe(1000);
+  });
+
+  it('applies the browser-safe limits the dialog shows', () => {
+    expect(SHARED_DESCRIPTION_MAX).toBe(PROFILE_DESCRIPTION_MAX);
+    expect(PROFILE_RADIUS_KM).toEqual({ max: 100, min: 5 });
+    expect(save({ serviceRadiusKm: PROFILE_RADIUS_KM.min - 1 })).toEqual([
+      'serviceRadiusKm',
+    ]);
+    expect(save({ serviceRadiusKm: PROFILE_RADIUS_KM.max + 1 })).toEqual([
+      'serviceRadiusKm',
+    ]);
   });
 
   it('takes every group at once', () => {
