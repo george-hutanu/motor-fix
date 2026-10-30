@@ -35,6 +35,21 @@ export interface GarageSearchControllerPins$Params {
  * The visible area of the map, "south,west,north,east" in Romania, at most 100 km on a side; rounded to three decimals. With it, a fixed garage counts when it stands inside the box, whatever the radius
  */
   bbox?: string;
+
+/**
+ * The most a garage may charge an hour, in whole lei, as its card shows the rate; a garage with no rate is left out
+ */
+  max_price?: 150 | 200 | 250 | 300;
+
+/**
+ * The least rating a garage must have; a garage with no reviews is left out
+ */
+  min_rating?: '3.5' | '4.0' | '4.5';
+
+/**
+ * Only the garages that take a card
+ */
+  card?: '1';
 }
 
 export function garageSearchControllerPins(http: HttpClient, rootUrl: string, params?: GarageSearchControllerPins$Params, context?: HttpContext): Observable<StrictHttpResponse<GaragePinsDto>> {
@@ -45,6 +60,9 @@ export function garageSearchControllerPins(http: HttpClient, rootUrl: string, pa
     rb.query('brandId', params.brandId, {});
     rb.query('radius', params.radius, {});
     rb.query('bbox', params.bbox, {});
+    rb.query('max_price', params.max_price, {});
+    rb.query('min_rating', params.min_rating, {});
+    rb.query('card', params.card, {});
   }
 
   return http.request(

@@ -11,8 +11,22 @@ import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
 
 const PINS: GaragePinsDto = {
   pins: [
-    { id: 'g-1', lat: 44.44, lng: 26.12, rateLei: 150, stance: 'works_on' },
-    { id: 'g-2', lat: 44.5, lng: 26.2, rateLei: null, stance: 'does_not_take' },
+    {
+      id: 'g-1',
+      lat: 44.44,
+      lng: 26.12,
+      matches: true,
+      rateLei: 150,
+      stance: 'works_on',
+    },
+    {
+      id: 'g-2',
+      lat: 44.5,
+      lng: 26.2,
+      matches: true,
+      rateLei: null,
+      stance: 'does_not_take',
+    },
   ],
   total: 2,
 };

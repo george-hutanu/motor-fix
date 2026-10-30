@@ -90,6 +90,7 @@ const pinsOf = (count: number): GaragePinsDto => ({
     id: `pin-${i}`,
     lat: 44.4 + i / 1000,
     lng: 26.1,
+    matches: true,
     rateLei: 150,
     stance: 'works_on' as const,
   })),

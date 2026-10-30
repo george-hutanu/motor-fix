@@ -3780,6 +3780,47 @@
             }
           },
           {
+            "name": "max_price",
+            "required": false,
+            "in": "query",
+            "description": "The most a garage may charge an hour, in whole lei, as its card shows the rate; a garage with no rate is left out",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                150,
+                200,
+                250,
+                300
+              ]
+            }
+          },
+          {
+            "name": "min_rating",
+            "required": false,
+            "in": "query",
+            "description": "The least rating a garage must have; a garage with no reviews is left out",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "3.5",
+                "4.0",
+                "4.5"
+              ]
+            }
+          },
+          {
+            "name": "card",
+            "required": false,
+            "in": "query",
+            "description": "Only the garages that take a card",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          },
+          {
             "name": "ids",
             "required": false,
             "in": "query",
@@ -3840,7 +3881,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, bbox not a south,west,north,east box inside Romania at most 100 km on a side, or sort not rating, distance or price, or distance without near; invalid_cursor: not a page of this search, of another box or of another sort"
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, bbox not a south,west,north,east box inside Romania at most 100 km on a side, sort not rating, distance or price, or distance without near, max_price not 150, 200, 250 or 300, min_rating not 3.5, 4.0 or 4.5, or card not 1; invalid_cursor: not a page of this search, of another box, sort or filters"
           },
           "404": {
             "description": "not_found: no brand with that slug or id"
@@ -3912,6 +3953,47 @@
               "example": "44.35,26,44.5,26.25",
               "type": "string"
             }
+          },
+          {
+            "name": "max_price",
+            "required": false,
+            "in": "query",
+            "description": "The most a garage may charge an hour, in whole lei, as its card shows the rate; a garage with no rate is left out",
+            "schema": {
+              "type": "integer",
+              "enum": [
+                150,
+                200,
+                250,
+                300
+              ]
+            }
+          },
+          {
+            "name": "min_rating",
+            "required": false,
+            "in": "query",
+            "description": "The least rating a garage must have; a garage with no reviews is left out",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "3.5",
+                "4.0",
+                "4.5"
+              ]
+            }
+          },
+          {
+            "name": "card",
+            "required": false,
+            "in": "query",
+            "description": "Only the garages that take a card",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
           }
         ],
         "responses": {
@@ -3926,7 +4008,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or bbox not a south,west,north,east box inside Romania at most 100 km on a side"
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, bbox not a south,west,north,east box inside Romania at most 100 km on a side, max_price not 150, 200, 250 or 300, min_rating not 3.5, 4.0 or 4.5, or card not 1"
           },
           "404": {
             "description": "not_found: no brand with that slug or id"
@@ -15206,6 +15288,10 @@
               "unstated"
             ]
           },
+          "matches": {
+            "type": "boolean",
+            "description": "True when the garage meets every filter set; always true with none"
+          },
           "serviceRadiusKm": {
             "type": "integer",
             "description": "A mobile mechanic's area, in km; only for one"
@@ -15216,7 +15302,8 @@
           "lat",
           "lng",
           "rateLei",
-          "stance"
+          "stance",
+          "matches"
         ]
       },
       "GaragePinsDto": {
