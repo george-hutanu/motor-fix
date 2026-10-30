@@ -102,6 +102,7 @@ const DASHBOARDS = [
       ['Panou', ''],
       ['Service‑uri', '/garages'],
       ['Utilizatori', '/users'],
+      ['Raportate', '/reviews'],
       ['Mărci', '/catalogue'],
       ['Propuse', '/proposed-jobs'],
       ['Jurnal', '/log'],

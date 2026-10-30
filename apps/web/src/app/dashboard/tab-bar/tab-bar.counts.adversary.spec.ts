@@ -95,14 +95,16 @@ describe('the admin tab bar counters', () => {
     expect(tab(e, 'settings').querySelector('.chip')).toBeNull();
   });
 
-  it('shows a skeleton on the counter tab while loading, and no number', async () => {
+  // @traces 1389-FR-001
+  it('shows a skeleton on each counter tab while loading, and no number', async () => {
     loading.set(true);
     const harness = await open();
     const e = harness.routeNativeElement as HTMLElement;
 
     expect(tab(e, 'garages').querySelector('.chip-skeleton')).not.toBeNull();
     expect(tab(e, 'garages').querySelector('.chip')).toBeNull();
-    expect(e.querySelectorAll('.chip-skeleton')).toHaveLength(1);
+    expect(tab(e, 'reviews').querySelector('.chip-skeleton')).not.toBeNull();
+    expect(e.querySelectorAll('.chip-skeleton')).toHaveLength(2);
   });
 
   it('shows the number, not a skeleton, when a count is known during a read', async () => {
