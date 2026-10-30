@@ -148,8 +148,10 @@
       "title": "The job"
     },
     "problem": {
+      "correction_window_closed": "The final price can no longer be corrected",
       "forbidden": "Only the owner and the job’s mechanic write its steps.",
       "job_closed": "The job is closed, its steps no longer change.",
+      "job_not_done": "Mark the job as done first",
       "job_not_started": "Start the job first",
       "not_found": "That step no longer exists.",
       "too_many_steps": "At most 20 steps"

@@ -1,4 +1,4 @@
-import { JobDto, ReceiveJobDto } from '@motor-fix/contracts';
+import { FinalPriceDto, JobDto, ReceiveJobDto } from '@motor-fix/contracts';
 import {
   Body,
   Controller,
@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
 } from '@nestjs/common';
 import {
@@ -28,6 +29,7 @@ const uuid = () => new ParseUUIDPipe();
 const FORBIDDEN = 'forbidden: the desk, or a mechanic not on this job';
 const MISSING = 'not_found: not this garage’s job';
 const MOVED = 'invalid_transition (with currentStatus)';
+const PRICED = 'forbidden: a mechanic; the owner and the desk record the price';
 
 // The owner and the job's own mechanic move a job through its stages; the
 // desk also records the reception. Each answers the job as the garage reads it.
@@ -103,5 +105,46 @@ export class JobStagesController {
     @Body() body: ReceiveJobDto,
   ) {
     return this.stages.receive(actor, id, body.odometerKm);
+  }
+
+  @Post('handover')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Hand the car over: record the final price, completing the booking',
+  })
+  @ApiOkResponse({ type: JobDto })
+  @ApiBadRequestResponse({ description: 'validation_failed' })
+  @ApiForbiddenResponse({ description: PRICED })
+  @ApiNotFoundResponse({ description: MISSING })
+  @ApiConflictResponse({
+    description: `job_not_done; already_handed_over (with finalPriceBani); ${MOVED} of the booking`,
+  })
+  handover(
+    @CurrentActor() actor: Actor,
+    @Param('id', uuid()) id: string,
+    @Body() body: FinalPriceDto,
+  ) {
+    return this.stages.handover(actor, id, body.finalPriceBani);
+  }
+
+  @Patch('final-price')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Correct the final price, within 48 hours of the handover',
+  })
+  @ApiOkResponse({ type: JobDto })
+  @ApiBadRequestResponse({ description: 'validation_failed' })
+  @ApiForbiddenResponse({ description: PRICED })
+  @ApiNotFoundResponse({ description: MISSING })
+  @ApiConflictResponse({
+    description: 'not_handed_over; correction_window_closed',
+  })
+  correct(
+    @CurrentActor() actor: Actor,
+    @Param('id', uuid()) id: string,
+    @Body() body: FinalPriceDto,
+  ) {
+    return this.stages.correct(actor, id, body.finalPriceBani);
   }
 }

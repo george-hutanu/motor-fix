@@ -35,6 +35,16 @@ export interface GarageSearchControllerPins$Params {
  * The visible area of the map, "south,west,north,east" in Romania, at most 100 km on a side; rounded to three decimals. With it, a fixed garage counts when it stands inside the box, whatever the radius
  */
   bbox?: string;
+
+/**
+ * Keep only the garages open now on the Bucharest clock: inside one of their hours today, today neither a legal holiday nor one of their closed days. Exactly "1"
+ */
+  open_now?: '1';
+
+/**
+ * Keep only the garages whose weekly hours hold Saturday hours, whatever the closed days or holidays. Exactly "1"
+ */
+  open_saturday?: '1';
 }
 
 export function garageSearchControllerPins(http: HttpClient, rootUrl: string, params?: GarageSearchControllerPins$Params, context?: HttpContext): Observable<StrictHttpResponse<GaragePinsDto>> {
@@ -45,6 +55,8 @@ export function garageSearchControllerPins(http: HttpClient, rootUrl: string, pa
     rb.query('brandId', params.brandId, {});
     rb.query('radius', params.radius, {});
     rb.query('bbox', params.bbox, {});
+    rb.query('open_now', params.open_now, {});
+    rb.query('open_saturday', params.open_saturday, {});
   }
 
   return http.request(

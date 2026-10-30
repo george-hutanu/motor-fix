@@ -82,6 +82,7 @@ export * from './rechecks.dto';
 export * from './request-status';
 export * from './reviews.dto';
 export * from './saved-garages.dto';
+export * from './search-filters';
 export * from './search-place';
 export * from './staff-invite.dto';
 export * from './static-map.dto';

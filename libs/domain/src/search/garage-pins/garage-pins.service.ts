@@ -1,10 +1,12 @@
 import {
   bboxOf,
+  filtersKey,
   type GaragePinDto,
   type GaragePinsDto,
   nearOf,
   SEARCH_PINS_MAX,
   type SearchBbox,
+  type SearchFilters,
   type SearchPoint,
 } from '@motor-fix/contracts';
 import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
@@ -24,7 +26,15 @@ import {
   type BrandKey,
   brandOf,
   countGroups,
+  filterSql,
 } from '../garage-search/garage-search.service';
+
+interface PinnedOptions {
+  bbox?: SearchBbox;
+  filters?: SearchFilters;
+  point?: SearchPoint;
+  radiusKm?: number;
+}
 
 // Two decimals, about a kilometre: a mobile mechanic's pin stands near its
 // area's centre without giving away the seat's address.
@@ -37,25 +47,28 @@ export class GaragePinsService {
     private readonly cache: GarageSearchCache,
   ) {}
 
-  // Every garage of the search with a position, nearest first, and the total
-  // its list counts. With a box the radius plays no part, so it is not in the
+  // Every garage of the search with a position, nearest first, each marked
+  // with whether it meets the filters, and the total its list counts: the
+  // matches only. With a box the radius plays no part, so it is not in the
   // key either.
   async forBrand(
     key: BrandKey,
     point?: SearchPoint,
     radiusKm?: number,
     bbox?: SearchBbox,
+    filters?: SearchFilters,
   ): Promise<GaragePinsDto> {
     const brand = await brandOf(this.prisma, key);
     const answer = await this.cache.entry(
       {
         bbox: bbox && bboxOf(bbox),
         brandId: brand.id,
+        filters: filtersKey(filters),
         kind: 'pins',
         near: point && nearOf(point),
         radiusKm: bbox ? undefined : radiusKm,
       },
-      () => this.pinned(brand.id, point, radiusKm, bbox),
+      () => this.pinned(brand.id, { bbox, filters, point, radiusKm }),
     );
     recordSearchPins(
       answer.total > 0 ? 'results' : 'none',
@@ -66,19 +79,20 @@ export class GaragePinsService {
 
   private async pinned(
     brandId: string,
-    point?: SearchPoint,
-    radiusKm?: number,
-    bbox?: SearchBbox,
+    { bbox, filters, point, radiusKm }: PinnedOptions,
   ): Promise<GaragePinsDto> {
     // With neither a place nor a box the count reads no area, and the pins
-    // are the nearest garages to the middle of Romania.
+    // are the nearest garages to the middle of Romania. The count then holds
+    // the garages with no position too, which have no pin, so the matching
+    // pins number the total less those (1260-FR-007).
     const placed = Boolean(point || bbox);
     const area = areaSql({ bbox, point, radiusKm });
     const [found, rows] = await Promise.all([
-      countGroups(this.prisma, brandId, placed ? area : undefined),
+      countGroups(this.prisma, brandId, placed ? area : undefined, filters),
       this.prisma.$queryRaw<
         (Omit<AreaRow, 'distance_m'> & {
           labour_from_bani: number | null;
+          matches: boolean;
           service_radius_km: number | null;
           stance: GarageBrandStance | null;
         })[]
@@ -89,6 +103,7 @@ export class GaragePinsService {
           garage.longitude,
           garage.business_kind IS NOT DISTINCT FROM 'mobile' AS mobile,
           garage.labour_from_bani,
+          ${filterSql(filters)} AS matches,
           garage.service_radius_km,
           (SELECT gb.stance::text FROM garage_brand gb
             WHERE gb.garage_id = garage.id AND gb.brand_id = ${brandId}::uuid
@@ -101,6 +116,7 @@ export class GaragePinsService {
     const pins = rows.map((row): GaragePinDto => {
       const pin = {
         id: row.id,
+        matches: row.matches,
         rateLei:
           row.labour_from_bani === null
             ? null

@@ -25,7 +25,14 @@ jest.mock('maplibre-gl', () =>
 
 const PINS: GaragePinsDto = {
   pins: [
-    { id: 'g-1', lat: 44.44, lng: 26.12, rateLei: 150, stance: 'works_on' },
+    {
+      id: 'g-1',
+      lat: 44.44,
+      lng: 26.12,
+      matches: true,
+      rateLei: 150,
+      stance: 'works_on',
+    },
   ],
   total: 1,
 };
@@ -603,6 +610,7 @@ describe('ResultsMap, the legend with a mobile mechanic', () => {
         id: 'g-2',
         lat: 44.45,
         lng: 26.13,
+        matches: true,
         rateLei: 120,
         serviceRadiusKm: 20,
         stance: 'works_on',

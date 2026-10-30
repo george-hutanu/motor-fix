@@ -17,6 +17,7 @@ import {
   Min,
 } from 'class-validator';
 
+import { PAID_BANI_MAX } from './lei-text';
 import { MAX_KM } from './plate';
 import {
   DriverNameDto,
@@ -25,6 +26,9 @@ import {
   RequestJobDto,
 } from './quotes.dto';
 import { JOB_STATUSES, JOB_STEPS_MAX, type JobStatus } from './request-status';
+
+// How long after the handover the garage may still correct the final price.
+export const FINAL_PRICE_CORRECTION_HOURS = 48;
 
 const NULLABLE_TIME = { format: 'date-time', nullable: true, type: String };
 
@@ -255,4 +259,17 @@ export class JobStepDoneDto {
   @ApiProperty({ description: 'true ticks the step, false unticks it' })
   @IsBoolean()
   done!: boolean;
+}
+
+// The price the driver paid, recorded at the handover or corrected after it.
+export class FinalPriceDto {
+  @ApiProperty({
+    description: 'The final price, in bani',
+    maximum: PAID_BANI_MAX,
+    minimum: 1,
+  })
+  @IsInt()
+  @Min(1)
+  @Max(PAID_BANI_MAX)
+  finalPriceBani!: number;
 }

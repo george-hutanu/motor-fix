@@ -15,8 +15,12 @@ import { garageJobsControllerList } from '../fn/garage-jobs/garage-jobs-controll
 import { GarageJobsControllerList$Params } from '../fn/garage-jobs/garage-jobs-controller-list';
 import { JobDto } from '../models/job-dto';
 import { JobListDto } from '../models/job-list-dto';
+import { jobStagesControllerCorrect } from '../fn/garage-jobs/job-stages-controller-correct';
+import { JobStagesControllerCorrect$Params } from '../fn/garage-jobs/job-stages-controller-correct';
 import { jobStagesControllerFinish } from '../fn/garage-jobs/job-stages-controller-finish';
 import { JobStagesControllerFinish$Params } from '../fn/garage-jobs/job-stages-controller-finish';
+import { jobStagesControllerHandover } from '../fn/garage-jobs/job-stages-controller-handover';
+import { JobStagesControllerHandover$Params } from '../fn/garage-jobs/job-stages-controller-handover';
 import { jobStagesControllerPause } from '../fn/garage-jobs/job-stages-controller-pause';
 import { JobStagesControllerPause$Params } from '../fn/garage-jobs/job-stages-controller-pause';
 import { jobStagesControllerReceive } from '../fn/garage-jobs/job-stages-controller-receive';
@@ -263,6 +267,72 @@ export class GarageJobsService extends BaseService {
    */
   jobStagesControllerReceive(params: JobStagesControllerReceive$Params, context?: HttpContext): Promise<JobDto> {
     const resp = this.jobStagesControllerReceive$Response(params, context);
+    return resp.then((r: StrictHttpResponse<JobDto>): JobDto => r.body);
+  }
+
+  /** Path part for operation `jobStagesControllerHandover()` */
+  static readonly JobStagesControllerHandoverPath = '/api/v1/garage/jobs/{id}/handover';
+
+  /**
+   * Hand the car over: record the final price, completing the booking.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStagesControllerHandover()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStagesControllerHandover$Response(params: JobStagesControllerHandover$Params, context?: HttpContext): Promise<StrictHttpResponse<JobDto>> {
+    const obs = jobStagesControllerHandover(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Hand the car over: record the final price, completing the booking.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStagesControllerHandover$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStagesControllerHandover(params: JobStagesControllerHandover$Params, context?: HttpContext): Promise<JobDto> {
+    const resp = this.jobStagesControllerHandover$Response(params, context);
+    return resp.then((r: StrictHttpResponse<JobDto>): JobDto => r.body);
+  }
+
+  /** Path part for operation `jobStagesControllerCorrect()` */
+  static readonly JobStagesControllerCorrectPath = '/api/v1/garage/jobs/{id}/final-price';
+
+  /**
+   * Correct the final price, within 48 hours of the handover.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `jobStagesControllerCorrect()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStagesControllerCorrect$Response(params: JobStagesControllerCorrect$Params, context?: HttpContext): Promise<StrictHttpResponse<JobDto>> {
+    const obs = jobStagesControllerCorrect(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Correct the final price, within 48 hours of the handover.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `jobStagesControllerCorrect$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  jobStagesControllerCorrect(params: JobStagesControllerCorrect$Params, context?: HttpContext): Promise<JobDto> {
+    const resp = this.jobStagesControllerCorrect$Response(params, context);
     return resp.then((r: StrictHttpResponse<JobDto>): JobDto => r.body);
   }
 

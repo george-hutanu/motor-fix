@@ -8,6 +8,7 @@ const pin = (n: number, over: Partial<GaragePinDto> = {}): GaragePinDto => ({
   id: `g-${n}`,
   lat: 44.4 + (n % 20) / 1000,
   lng: 26.05 + Math.floor(n / 20) / 1000,
+  matches: true,
   rateLei: 150,
   stance: 'works_on',
   ...over,

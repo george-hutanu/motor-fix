@@ -411,6 +411,10 @@ export type { JobStagesControllerFinish$Params as JobStagesControllerFinish$Para
 export { jobStagesControllerFinish as jobStagesControllerFinish } from './fn/garage-jobs/job-stages-controller-finish';
 export type { JobStagesControllerReceive$Params as JobStagesControllerReceive$Params } from './fn/garage-jobs/job-stages-controller-receive';
 export { jobStagesControllerReceive as jobStagesControllerReceive } from './fn/garage-jobs/job-stages-controller-receive';
+export type { JobStagesControllerHandover$Params as JobStagesControllerHandover$Params } from './fn/garage-jobs/job-stages-controller-handover';
+export { jobStagesControllerHandover as jobStagesControllerHandover } from './fn/garage-jobs/job-stages-controller-handover';
+export type { JobStagesControllerCorrect$Params as JobStagesControllerCorrect$Params } from './fn/garage-jobs/job-stages-controller-correct';
+export { jobStagesControllerCorrect as jobStagesControllerCorrect } from './fn/garage-jobs/job-stages-controller-correct';
 export type { JobStepsControllerAdd$Params as JobStepsControllerAdd$Params } from './fn/garage-jobs/job-steps-controller-add';
 export { jobStepsControllerAdd as jobStepsControllerAdd } from './fn/garage-jobs/job-steps-controller-add';
 export type { JobStepsControllerReorder$Params as JobStepsControllerReorder$Params } from './fn/garage-jobs/job-steps-controller-reorder';

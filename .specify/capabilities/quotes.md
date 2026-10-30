@@ -28,6 +28,7 @@ features:
   - 1253-assistant-confirm
   - 1385-cancel-from-requests
   - 099-overview-sections
+  - 406-final-price-handover
   - 427-time-blocks
 ---
 
@@ -848,6 +849,10 @@ _From 1385-cancel-from-requests._
 ### 1385-FR-010 — Tests MUST exist before the code (Principle II): in Jest on real PostgreSQL, the list summary's five new fields, `jobStarted` false with no job and with a `to_do` job, true with an `in_work` job, and the `cancelled` booking's `cancelledBySide` and `lateCancellation` as saved; in Jest for the web, the row's action for every status of FR-002 (none for a passed `startsAt`, a started job, `in_work`, `done`, `closed`; removed by the tick), the three lines of FR-003 and their absence for a garage-side cancel, each dialog's title and subject, the reason list with none chosen and the disabled confirm, the counter at 0, 120 and 500, the warning at 3 hours (absent) and 1 hour 30 (present, a status region), the body sent (reason, trimmed note, whitespace as no note), the toast and close on 200, the 409 toast and re-read, a 500 keeping the dialog with the reason and note, offline disabling the confirm, and the focus returning to the row's action; the sweep for FR-007; the end to end of FR-009. Every test file carries its `// @traces 1385-FR-<n>` line.
 
 _From 1385-cancel-from-requests._
+
+### 406-FR-008 — The driver's request list rows (`GET requests`, `booking`) and the request details (`GET requests/:id`, `booking`) MUST carry `finalPriceBani` (null until the handover) and `handedOverAt` (null until then) from the booking's job, so the list can show the amount paid and the details the final price without a second read; the active request read keeps returning `finalPriceBani` as today.
+
+_From 406-final-price-handover._
 
 ### 427-FR-014 — No public route (the `@Public()` list of `public-routes.integration.spec.ts`) and no driver-facing read MUST return a block, its note or a "blocked" wording; the four routes are not public; a driver's quote-compare and the garage's public profile stay as they are (the free slots that leave blocks out are #21's). The public live stream is not a read: it carries the kind and the block id only (FR-010, 257-FR-002).
 
