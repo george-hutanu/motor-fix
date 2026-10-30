@@ -31,6 +31,7 @@ features:
   - 346-quote-outcomes
   - 427-time-blocks
   - 406-final-price-handover
+  - 1395-block-time-dashboard
 ---
 
 # Capability: Quotes
@@ -867,9 +868,9 @@ _From 406-final-price-handover._
 
 _From 427-time-blocks._
 
-### 427-FR-015 — The OpenAPI document and the generated client MUST carry the four operations, their DTOs, the `blocks` array of the schedule answer, the new codes (`nothing_to_block`, `block_past`) and the `time_block` reason (`npx nx run data-access:generate`, never edited by hand).
+### 1395-FR-006 — The OpenAPI document (`apps/api/openapi.json`) and the generated client (`libs/data-access`, `npx nx run data-access:generate`, never edited by hand) MUST carry the one new operation and its DTO; the existing openapi test passes against the running API.
 
-_From 427-time-blocks._
+_From 1395-block-time-dashboard._
 
 ## Retired
 
@@ -914,3 +915,4 @@ _From 427-time-blocks._
 - `150-FR-001` — superseded by `427-FR-002` (2026-10-29)
 - `150-FR-006` — superseded by `427-FR-006` (2026-10-29)
 - `150-FR-009` — superseded by `427-FR-011` (2026-10-29)
+- `427-FR-015` — superseded by `1395-FR-006` (2026-10-30)
