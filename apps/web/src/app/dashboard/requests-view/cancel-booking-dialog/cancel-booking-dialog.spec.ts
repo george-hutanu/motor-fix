@@ -298,6 +298,8 @@ describe('the cancel booking dialog: cancelling', () => {
     expect(toast).toHaveBeenCalledWith('Booking cancelled');
   });
 
+  // @traces 1315-FR-009
+  // @traces 1315-FR-015
   it('disables both buttons and every field while cancelling, the dialog open', async () => {
     await open();
     await pick('Altceva');
@@ -317,6 +319,7 @@ describe('the cancel booking dialog: cancelling', () => {
     expect(radios().every((r) => r.matches(':disabled'))).toBe(true);
     expect(details().matches(':disabled')).toBe(true);
     expect(button('Păstrează programarea')?.matches(':disabled')).toBe(true);
+    expect(panel()).not.toBeNull();
 
     answer({ status: 'cancelled' });
     await settle();
