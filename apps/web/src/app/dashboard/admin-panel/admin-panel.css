@@ -112,6 +112,7 @@ button {
     font-size: var(--mf-size-heading);
   }
 }
-mf-admin-queue {
+mf-admin-queue,
+mf-admin-reviews {
   grid-column: 1 / -1;
 }

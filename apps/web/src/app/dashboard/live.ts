@@ -502,6 +502,15 @@ export const REQUEST_EVENTS: readonly EventKind[] = [
 
 // The events that move the assistant's approvals: the strip and the sheet
 // read again on each.
+// What moves the reported reviews: a report made, decided or closed, or the
+// review deleted. The admin's list, counter and tile follow them.
+export const REVIEW_QUEUE_KINDS: readonly EventKind[] = [
+  'review.reported',
+  'review.decided',
+  'review.deleted',
+  'review.report_closed',
+];
+
 export const APPROVAL_EVENTS: readonly EventKind[] = [
   'assistant_approval.requested',
   'assistant_approval.decided',

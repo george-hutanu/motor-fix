@@ -62,6 +62,14 @@ async function open(language: 'ro' | 'en' = 'ro') {
         useValue: {
           adminOverviewControllerOverview: () => answer(),
           adminOverviewControllerQueue: async () => ({ items: [], total: 0 }),
+          reportQueueControllerList: async () => ({
+            items: [],
+            oldestCreatedAt: null,
+            overdue: 0,
+            page: 1,
+            pageSize: 20,
+            total: 0,
+          }),
         },
       },
     ],
@@ -125,13 +133,23 @@ describe('AdminPanel with awkward figures', () => {
     );
   });
 
-  it('keeps the unreleased tile at a dash even when the answer carries a stray figure for it', async () => {
-    answer = async () => ({ ...FIGURES, reportedReviews: 3 }) as Answer;
+  // @traces 1389-reported-reviews-admin-FR-002
+  it('groups a large pending count and its overdue line like the other tiles', async () => {
+    answer = async () =>
+      ({ ...FIGURES, reportsOverdue: 1200, reportsPending: 12480 }) as Answer;
     const element = await open();
 
     const label = 'Recenzii raportate';
-    expect(text(tile(element, label), 'number')).toBe('—');
-    expect(text(tile(element, label), 'line')).toBe('în curând');
+    expect(text(tile(element, label), 'number')).toBe('12.480');
+    expect(text(tile(element, label), 'line')).toBe('1.200 peste 48 de ore');
+  });
+
+  // @traces 1389-reported-reviews-admin-FR-002
+  it('shows a dash, never 0, when the answer leaves the pending count out', async () => {
+    answer = async () => FIGURES;
+    const element = await open();
+
+    expect(text(tile(element, 'Recenzii raportate'), 'number')).toBe('—');
   });
 });
 

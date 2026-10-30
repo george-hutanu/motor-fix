@@ -14,7 +14,7 @@ export type Area = 'driver' | 'garage' | 'admin';
 
 // The numbers a dashboard's menu entries carry, while known.
 export type Counts = Partial<
-  Record<'garagesWaiting' | 'requestsWaiting', number>
+  Record<'garagesWaiting' | 'reportsPending' | 'requestsWaiting', number>
 >;
 
 // `label` (the menu's) and `tab` (the bar's, shorter) are shell translation keys.
@@ -120,10 +120,12 @@ export const DASHBOARDS: Record<
       },
       {
         capability: 'admin.reviews',
+        counter: 'reportsPending',
         label: 'shell.frame.nav.admin.reviews',
+        load: () =>
+          import('./admin-reviews/admin-reviews').then((m) => m.AdminReviews),
         path: 'reviews',
         tab: 'shell.frame.tab.reported',
-        unreleased: true,
       },
       {
         capability: 'admin.catalogue',

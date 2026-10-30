@@ -25,6 +25,8 @@ interface Answer {
   answerRate?: number;
   bookings: number;
   observabilityUrl?: string;
+  reportsPending?: number;
+  reportsOverdue?: number;
 }
 
 const FIGURES: Answer = {
@@ -35,6 +37,8 @@ const FIGURES: Answer = {
   garagesApprovedThisMonth: 9,
   garagesListed: 214,
   garagesWaiting: 2,
+  reportsOverdue: 0,
+  reportsPending: 0,
   requestsSent: 1250,
 };
 
@@ -45,6 +49,7 @@ const COMPUTED = [
   'Rată de răspuns',
   'Programări',
   'Șoferi activi',
+  'Recenzii raportate',
 ];
 const RO_LABELS = [
   LISTED,
@@ -67,6 +72,15 @@ const NO_DEMAND = async () => ({
   requests: 0,
 });
 let demand: () => Promise<unknown> = NO_DEMAND;
+const NO_REPORTS = async () => ({
+  items: [],
+  oldestCreatedAt: null,
+  overdue: 0,
+  page: 1,
+  pageSize: 20,
+  total: 0,
+});
+let reports: () => Promise<unknown> = NO_REPORTS;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -75,8 +89,10 @@ async function settle() {
   }
 }
 
+let events: Subject<LiveMessage>;
+
 async function open(language: 'ro' | 'en' = 'ro') {
-  const events = new Subject<LiveMessage>();
+  events = new Subject<LiveMessage>();
   resync = new Subject();
   TestBed.configureTestingModule({
     providers: [
@@ -100,6 +116,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
           adminOverviewControllerOverview: () => answer(),
           adminOverviewControllerQueue: async () => ({ items: [], total: 0 }),
           demandControllerDemand: () => demand(),
+          reportQueueControllerList: () => reports(),
           systemLogControllerList: async () => ({ items: [] }),
         },
       },
@@ -125,6 +142,7 @@ afterEach(() => {
   TestBed.resetTestingModule();
   growth = NO_MONTHS;
   demand = NO_DEMAND;
+  reports = NO_REPORTS;
 });
 
 const GRAFANA = 'https://stack.grafana.net/d/motorfix-overview?var-env=test';
@@ -378,18 +396,76 @@ describe('AdminPanel', () => {
     expect(text(tile(element, 'Programări'), 'number')).toBe('0');
   });
 
-  it('shows the reported reviews as coming soon, with a dash and no number', async () => {
-    answer = async () => FIGURES;
+  // @traces 1389-reported-reviews-admin-FR-002
+  it('shows the pending reported reviews with the ones past 48 hours', async () => {
+    answer = async () => ({ ...FIGURES, reportsOverdue: 1, reportsPending: 3 });
     const element = await open();
 
     const label = 'Recenzii raportate';
-    const soon = tile(element, label);
-    expect(text(soon, 'number')).toBe('—');
-    expect(text(soon, 'line')).toBe('în curând');
-    expect(soon.getAttribute('aria-label')).toBe(`${label}, în curând`);
+    const reported = tile(element, label);
+    expect(text(reported, 'number')).toBe('3');
+    expect(text(reported, 'line')).toBe('1 peste 48 de ore');
+    expect(reported.getAttribute('aria-label')).toBe(
+      `${label}, 3, 1 peste 48 de ore`,
+    );
+    expect(reported.textContent).not.toContain('în curând');
   });
 
-  it('shows skeletons on the computed tiles while the first read is on its way, and the coming-soon tile as it is', async () => {
+  // @traces 1389-reported-reviews-admin-FR-002
+  it('shows the reported reviews with no line when none is past 48 hours, and 0 as 0', async () => {
+    answer = async () => FIGURES;
+    const element = await open();
+
+    const reported = tile(element, 'Recenzii raportate');
+    expect(text(reported, 'number')).toBe('0');
+    expect(text(reported, 'line')).toBeUndefined();
+    expect(reported.getAttribute('aria-label')).toBe('Recenzii raportate, 0');
+  });
+
+  // @traces 1389-reported-reviews-admin-FR-002 1389-reported-reviews-admin-FR-006
+  it('moves the reported reviews tile when a review is reported, without a reload', async () => {
+    answer = async () => FIGURES;
+    const element = await open();
+
+    answer = async () => ({ ...FIGURES, reportsOverdue: 0, reportsPending: 1 });
+    events.next({
+      at: '2026-10-30T09:00:00.000Z',
+      id: 'review-1',
+      kind: 'review.reported',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await settle();
+
+    expect(text(tile(element, 'Recenzii raportate'), 'number')).toBe('1');
+  });
+
+  // @traces 1389-reported-reviews-admin-FR-002
+  it('places the reported reviews panel under the brand demand panel, before the Jurnal', async () => {
+    answer = async () => FIGURES;
+    const element = await open();
+
+    const panel = element.querySelector('mf-admin-panel') as HTMLElement;
+    const reviews = panel.querySelector('mf-admin-reviews') as HTMLElement;
+    const brands = panel.querySelector('mf-admin-demand') as Node;
+    const log = panel.querySelector('mf-admin-log') as Node;
+    expect(reviews).not.toBeNull();
+    expect(
+      brands.compareDocumentPosition(reviews) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      reviews.compareDocumentPosition(log) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(reviews.querySelector('h2')?.textContent?.trim()).toBe(
+      'Recenzii raportate',
+    );
+    expect(reviews.querySelector('.empty')?.textContent?.trim()).toBe(
+      'Nicio recenzie raportată.',
+    );
+  });
+
+  // @traces 1389-reported-reviews-admin-FR-002
+  it('shows skeletons on every tile while the first read is on its way', async () => {
     answer = () => new Promise(() => undefined);
     const element = await open();
 
@@ -400,12 +476,9 @@ describe('AdminPanel', () => {
       expect(busy.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
       expect(text(busy, 'number')).not.toMatch(/\d/);
     }
-    expect(text(tile(element, 'Recenzii raportate'), 'line')).toBe('în curând');
-    expect(
-      tile(element, 'Recenzii raportate').getAttribute('aria-busy'),
-    ).not.toBe('true');
   });
 
+  // @traces 1389-reported-reviews-admin-FR-002
   it('shows a dash and the reason on every computed tile when the read fails, never 0', async () => {
     answer = async () => {
       throw new HttpErrorResponse({ status: 503 });
@@ -419,7 +492,6 @@ describe('AdminPanel', () => {
       expect(failed.getAttribute('aria-label')).toBe(`${label}, —`);
       expect(failed.getAttribute('aria-busy')).not.toBe('true');
     }
-    expect(text(tile(element, 'Recenzii raportate'), 'line')).toBe('în curând');
   });
 
   it('drops the numbers it showed when a re-read fails, and fills them in on the next success', async () => {
@@ -614,7 +686,7 @@ describe('AdminPanel', () => {
     expect(drivers.getAttribute('aria-label')).toBe(
       'Active drivers, 12,480, +312 this month',
     );
-    expect(text(tile(element, 'Reported reviews'), 'line')).toBe('coming soon');
+    expect(text(tile(element, 'Reported reviews'), 'number')).toBe('0');
   });
 
   // @traces 301-FR-005

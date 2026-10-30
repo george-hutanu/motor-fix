@@ -94,15 +94,20 @@ describe('AdminOverview under hostile answers and event orders', () => {
     expect(overview.failed()).toBe(true);
   });
 
-  it('ignores review events and unrelated kinds', async () => {
+  // @traces 1389-reported-reviews-admin-FR-005
+  it('re-reads on review events and ignores unrelated kinds', async () => {
     answer = async () => ({ garagesWaiting: 1 });
     setUp();
     await wait(0);
+    events.next(message('account.created'));
+    await wait(450);
+
+    expect(reads).toBe(1);
     events.next(message('review.reported'));
     events.next(message('review.decided'));
     await wait(450);
 
-    expect(reads).toBe(1);
+    expect(reads).toBe(2);
   });
 
   it('reads again for each listed kind when the events are 300 ms apart', async () => {

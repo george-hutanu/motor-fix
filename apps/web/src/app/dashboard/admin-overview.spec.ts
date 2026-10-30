@@ -18,6 +18,8 @@ let answer: () => Promise<{
   garagesApprovedThisMonth?: number;
   activeDrivers?: number;
   activeDriversMonthStart?: number;
+  reportsPending?: number;
+  reportsOverdue?: number;
 }>;
 
 const FIGURES = {
@@ -139,6 +141,80 @@ describe('AdminOverview', () => {
 
     expect(reads).toBe(2);
     expect(overview.waiting()).toBe(2);
+  });
+
+  // @traces 1389-reported-reviews-admin-FR-002 1389-reported-reviews-admin-FR-006
+  it.each<EventKind>([
+    'review.reported',
+    'review.decided',
+    'review.deleted',
+    'review.report_closed',
+  ])('reads the reported reviews again on %s', async (kind) => {
+    let pending = 1;
+    answer = async () => ({
+      garagesWaiting: 0,
+      reportsOverdue: 0,
+      reportsPending: pending,
+    });
+    const overview = setUp();
+    await wait(0);
+
+    pending = 2;
+    events.next(message(kind, 'any-review'));
+    await wait(400);
+
+    expect(reads).toBe(2);
+    expect(overview.pending()).toBe(2);
+  });
+
+  // @traces 1389-reported-reviews-admin-FR-002
+  it('gives the pending and overdue reports of the whole platform from the same read', async () => {
+    answer = async () => ({
+      garagesWaiting: 0,
+      reportsOverdue: 1,
+      reportsPending: 3,
+    });
+    const overview = setUp();
+    await wait(0);
+
+    expect(overview.pending()).toBe(3);
+    expect(overview.overdue()).toBe(1);
+
+    overview.choose('bucuresti', 'today');
+    await wait(0);
+    expect(overview.pending()).toBe(3);
+    expect(reads).toBe(2);
+  });
+
+  // @traces 1389-reported-reviews-admin-FR-002
+  it('gives no reported reviews count, never 0, when a read fails', async () => {
+    answer = async () => ({
+      garagesWaiting: 0,
+      reportsOverdue: 1,
+      reportsPending: 3,
+    });
+    const overview = setUp();
+    await wait(0);
+
+    answer = async () => {
+      throw new HttpErrorResponse({ status: 503 });
+    };
+    resync.next();
+    await wait(0);
+
+    expect(overview.pending()).toBeUndefined();
+    expect(overview.overdue()).toBeUndefined();
+  });
+
+  it('reads nothing on another review kind', async () => {
+    answer = async () => ({ garagesWaiting: 0, reportsPending: 1 });
+    setUp();
+    await wait(0);
+
+    events.next(message('review.posted', 'any-review'));
+    await wait(400);
+
+    expect(reads).toBe(1);
   });
 
   it('reads once for the events of 300 ms', async () => {
