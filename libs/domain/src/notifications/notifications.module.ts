@@ -90,15 +90,10 @@ import {
 } from './news/news.fan-out';
 import { NewsService } from './news/news.service';
 import {
-  NO_SHOW_RECORDED_QUEUE,
-  type NoShowRecordedEvent,
-  NoShowRecordedFanOut,
-} from './no-show-recorded/no-show-recorded.fan-out';
-import {
-  NO_SHOW_WITHDRAWN_QUEUE,
-  type NoShowWithdrawnEvent,
-  NoShowWithdrawnFanOut,
-} from './no-show-withdrawn/no-show-withdrawn.fan-out';
+  NO_SHOW_QUEUE,
+  type NoShowEvent,
+  NoShowFanOut,
+} from './no-show/no-show.fan-out';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsProcessor, retryDelay } from './notifications.processor';
 import {
@@ -203,8 +198,7 @@ const QUOTE_LOST_WORKER = Symbol('QUOTE_LOST_WORKER');
 const BOOKING_CONFIRMED_WORKER = Symbol('BOOKING_CONFIRMED_WORKER');
 const FINAL_PRICE_CORRECTED_WORKER = Symbol('FINAL_PRICE_CORRECTED_WORKER');
 const BOOKING_LAPSED_WORKER = Symbol('BOOKING_LAPSED_WORKER');
-const NO_SHOW_RECORDED_WORKER = Symbol('NO_SHOW_RECORDED_WORKER');
-const NO_SHOW_WITHDRAWN_WORKER = Symbol('NO_SHOW_WITHDRAWN_WORKER');
+const NO_SHOW_WORKER = Symbol('NO_SHOW_WORKER');
 const JOB_STAGE_WORKER = Symbol('JOB_STAGE_WORKER');
 const REQUEST_CANCELLED_WORKER = Symbol('REQUEST_CANCELLED_WORKER');
 const BOOKING_CANCELLED_WORKER = Symbol('BOOKING_CANCELLED_WORKER');
@@ -290,11 +284,8 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Inject(BOOKING_LAPSED_WORKER)
     private readonly bookingLapsedWorker?: Worker | null,
     @Optional()
-    @Inject(NO_SHOW_RECORDED_WORKER)
-    private readonly noShowRecordedWorker?: Worker | null,
-    @Optional()
-    @Inject(NO_SHOW_WITHDRAWN_WORKER)
-    private readonly noShowWithdrawnWorker?: Worker | null,
+    @Inject(NO_SHOW_WORKER)
+    private readonly noShowWorker?: Worker | null,
     @Optional()
     @Inject(REQUEST_CANCELLED_WORKER)
     private readonly requestCancelledWorker?: Worker | null,
@@ -841,19 +832,19 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
-        NoShowRecordedFanOut,
+        NoShowFanOut,
         {
-          inject: [NoShowRecordedFanOut],
-          provide: NO_SHOW_RECORDED_WORKER,
-          useFactory: (fanOut: NoShowRecordedFanOut) => {
+          inject: [NoShowFanOut],
+          provide: NO_SHOW_WORKER,
+          useFactory: (fanOut: NoShowFanOut) => {
             if (!options.email.webUrl) {
-              new Logger('NoShowRecorded').error(
+              new Logger('NoShow').error(
                 'PUBLIC_WEB_URL missing; no-show messages wait in their queue',
               );
               return null;
             }
-            const worker = new Worker<NoShowRecordedEvent>(
-              NO_SHOW_RECORDED_QUEUE,
+            const worker = new Worker<NoShowEvent>(
+              NO_SHOW_QUEUE,
               (job) => inJob(job, () => fanOut.handle(job)),
               {
                 connection: {
@@ -864,34 +855,7 @@ export class NotificationsModule implements OnApplicationShutdown {
               },
             );
             observeWorker(worker);
-            logFinalFailure(worker, new Logger('NoShowRecorded'));
-            return worker;
-          },
-        },
-        NoShowWithdrawnFanOut,
-        {
-          inject: [NoShowWithdrawnFanOut],
-          provide: NO_SHOW_WITHDRAWN_WORKER,
-          useFactory: (fanOut: NoShowWithdrawnFanOut) => {
-            if (!options.email.webUrl) {
-              new Logger('NoShowWithdrawn').error(
-                'PUBLIC_WEB_URL missing; no-show withdrawal messages wait in their queue',
-              );
-              return null;
-            }
-            const worker = new Worker<NoShowWithdrawnEvent>(
-              NO_SHOW_WITHDRAWN_QUEUE,
-              (job) => inJob(job, () => fanOut.handle(job)),
-              {
-                connection: {
-                  maxRetriesPerRequest: null,
-                  url: options.redisUrl,
-                },
-                telemetry: queueTelemetry(),
-              },
-            );
-            observeWorker(worker);
-            logFinalFailure(worker, new Logger('NoShowWithdrawn'));
+            logFinalFailure(worker, new Logger('NoShow'));
             return worker;
           },
         },
@@ -1157,8 +1121,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.finalPriceCorrectedWorker?.close();
     await this.jobStageWorker?.close();
     await this.bookingLapsedWorker?.close();
-    await this.noShowRecordedWorker?.close();
-    await this.noShowWithdrawnWorker?.close();
+    await this.noShowWorker?.close();
     await this.requestCancelledWorker?.close();
     await this.bookingCancelledWorker?.close();
     await this.verificationResultWorker?.close();

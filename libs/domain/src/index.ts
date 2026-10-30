@@ -169,8 +169,7 @@ export {
 } from './notifications/inbox-test/inbox-test';
 export { JOB_STAGE_CONSUMER } from './notifications/job-stage/job-stage.fan-out';
 export { NEWS_CONSUMER } from './notifications/news/news.fan-out';
-export { NO_SHOW_RECORDED_CONSUMER } from './notifications/no-show-recorded/no-show-recorded.fan-out';
-export { NO_SHOW_WITHDRAWN_CONSUMER } from './notifications/no-show-withdrawn/no-show-withdrawn.fan-out';
+export { NO_SHOW_CONSUMER } from './notifications/no-show/no-show.fan-out';
 export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';
 export { phoneConfig } from './notifications/phone-config';

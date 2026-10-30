@@ -3294,28 +3294,15 @@
     },
     {
       "kind": "queue",
-      "name": "no-show-recorded",
-      "source": "libs/domain/src/notifications/no-show-recorded/no-show-recorded.fan-out.ts",
+      "name": "no-show",
+      "source": "libs/domain/src/notifications/no-show/no-show.fan-out.ts",
       "dashboard": "motorfix-queues",
       "alerts": [
         "worker-queue-backlog",
         "worker-queue-growing",
         "worker-jobs-failed"
       ],
-      "reason": "one log line per job naming the booking id and whether the driver was told; BullMQ's queue metrics cover depth and failures",
-      "story": "ST-1259"
-    },
-    {
-      "kind": "queue",
-      "name": "no-show-withdrawn",
-      "source": "libs/domain/src/notifications/no-show-withdrawn/no-show-withdrawn.fan-out.ts",
-      "dashboard": "motorfix-queues",
-      "alerts": [
-        "worker-queue-backlog",
-        "worker-queue-growing",
-        "worker-jobs-failed"
-      ],
-      "reason": "one log line per job naming the booking id and whether the driver was told; BullMQ's queue metrics cover depth and failures",
+      "reason": "one queue for a no-show recorded and withdrawn; one log line per job naming the booking id and whether the driver was told; BullMQ's queue metrics cover depth and failures",
       "story": "ST-1259"
     }
   ]

@@ -1,11 +1,8 @@
-import type { OutsideChannel } from '@motor-fix/contracts';
+import type { EventKind, OutsideChannel } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 
-import {
-  NO_SHOW_WITHDRAWN_CONSUMER,
-  NoShowWithdrawnFanOut,
-} from './no-show-withdrawn.fan-out';
+import { NO_SHOW_CONSUMER, NoShowFanOut } from './no-show.fan-out';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { quotesWorld } from '../../quotes/quotes.testing';
 import { NotificationsModule } from '../notifications.module';
@@ -59,10 +56,132 @@ async function start() {
   const notifications = app.get(NotificationsService);
   notifications.now = () => NIGHT;
   return {
-    fanOut: app.get(NoShowWithdrawnFanOut),
+    fanOut: app.get(NoShowFanOut),
     notify: jest.spyOn(notifications, 'notify'),
   };
 }
+
+// Andrei's booking at Volt Auto, recorded as a no-show by the owner, and its
+// event. The garage's owner must hear nothing back.
+async function recorded() {
+  const driverId = await account('Andrei Ion Marin', ['driver']);
+  const owner = await account('Volt Owner', ['garage']);
+  const garage = await world.garage('Volt Auto');
+  await prisma.garageMember.create({
+    data: { accountId: owner, garageId: garage.id, role: 'owner' },
+  });
+  const request = await world.request(driverId, { status: 'closed' });
+  const quote = await world.quote(request.id, garage.id, 'accepted');
+  const booking = await world.booking(quote.id, 'no_show');
+  const payload = {
+    bookingId: booking.id,
+    garageId: garage.id,
+    recordedBy: owner,
+    requestId: request.id,
+  };
+  const event = await prisma.outboxEvent.create({
+    data: {
+      audience: [`account:${driverId}`, `garage:${garage.id}`],
+      kind: 'booking.no_show_recorded',
+      payload,
+      subjectId: booking.id,
+    },
+  });
+  const job = {
+    data: {
+      id: String(event.id),
+      kind: event.kind as EventKind,
+      payload,
+      subjectId: booking.id,
+    },
+  };
+  return { booking, driverId, job, owner, request };
+}
+
+const builtRecorded = (accountId?: string) =>
+  prisma.notification.findMany({
+    where: { accountId, fallbackOf: null, kind: 'NO_SHOW_RECORDED' },
+  });
+
+// @traces 1259-FR-007
+describe('telling the driver a no-show was recorded', () => {
+  it('listens to both no-show kinds on one queue', () => {
+    expect(NO_SHOW_CONSUMER.kinds).toEqual([
+      'booking.no_show_recorded',
+      'booking.no_show_withdrawn',
+    ]);
+    expect(NO_SHOW_CONSUMER.queue).toBe('no-show');
+  });
+
+  it('tells the driver alone, naming the garage and the slot, opening the request', async () => {
+    const { booking, driverId, job, owner, request } = await recorded();
+    const { fanOut, notify } = await start();
+
+    await fanOut.handle(job);
+
+    const bell = (await builtRecorded(driverId)).find(
+      (m) => m.channel === 'in_app',
+    );
+    expect(bell?.params).toMatchObject({
+      garage: 'Volt Auto',
+      slot: booking.startsAt.toISOString(),
+    });
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify.mock.calls[0][0].params?.['link']).toBe(
+      `https://motorfix.test/app/driver/requests/${request.id}`,
+    );
+    expect(await builtRecorded(owner)).toEqual([]);
+  });
+
+  it('goes at once at night, never held for the morning', async () => {
+    const { driverId, job } = await recorded();
+    const { fanOut } = await start();
+
+    await fanOut.handle(job);
+
+    const rows = (await builtRecorded(driverId)).filter(
+      (m) => m.channel !== 'in_app',
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.status).not.toBe('held');
+      expect(row.sendAfter).toBeNull();
+    }
+  });
+
+  it('keeps only the bell when the driver muted every outside channel', async () => {
+    const { driverId, job } = await recorded();
+    for (const channel of ['email', 'push', 'whatsapp'] as OutsideChannel[]) {
+      await prisma.notificationPreference.create({
+        data: {
+          accountId: driverId,
+          channel,
+          enabled: false,
+          type: 'NO_SHOW_RECORDED',
+        },
+      });
+    }
+    const { fanOut } = await start();
+
+    await fanOut.handle(job);
+
+    expect((await builtRecorded(driverId)).map((m) => m.channel)).toEqual([
+      'in_app',
+    ]);
+  });
+
+  it('builds each message once when the same event is handled twice', async () => {
+    const { job } = await recorded();
+    const { fanOut } = await start();
+
+    await fanOut.handle(job);
+    const once = (await builtRecorded()).length;
+    await fanOut.handle(job);
+
+    expect(once).toBeGreaterThan(0);
+    expect((await builtRecorded()).length).toBe(once);
+  });
+});
 
 // Andrei's booking at Volt Auto, whose no-show the owner withdrew, and its
 // event. The garage's owner must hear nothing back.
@@ -93,7 +212,7 @@ async function withdrawn() {
   const job = {
     data: {
       id: String(event.id),
-      kind: event.kind,
+      kind: event.kind as EventKind,
       payload,
       subjectId: booking.id,
     },
@@ -101,27 +220,22 @@ async function withdrawn() {
   return { booking, driverId, job, owner, request };
 }
 
-const built = (accountId?: string) =>
+const builtWithdrawn = (accountId?: string) =>
   prisma.notification.findMany({
     where: { accountId, fallbackOf: null, kind: 'NO_SHOW_WITHDRAWN' },
   });
 
 // @traces 1259-FR-008
 describe('telling the driver a no-show was withdrawn', () => {
-  it('listens to booking.no_show_withdrawn on its own queue', () => {
-    expect(NO_SHOW_WITHDRAWN_CONSUMER.kinds).toEqual([
-      'booking.no_show_withdrawn',
-    ]);
-    expect(NO_SHOW_WITHDRAWN_CONSUMER.queue).toBe('no-show-withdrawn');
-  });
-
   it('tells the driver alone, naming the garage and the slot, opening the request', async () => {
     const { booking, driverId, job, owner, request } = await withdrawn();
     const { fanOut, notify } = await start();
 
     await fanOut.handle(job);
 
-    const bell = (await built(driverId)).find((m) => m.channel === 'in_app');
+    const bell = (await builtWithdrawn(driverId)).find(
+      (m) => m.channel === 'in_app',
+    );
     expect(bell?.params).toMatchObject({
       garage: 'Volt Auto',
       slot: booking.startsAt.toISOString(),
@@ -130,7 +244,7 @@ describe('telling the driver a no-show was withdrawn', () => {
     expect(notify.mock.calls[0][0].params?.['link']).toBe(
       `https://motorfix.test/app/driver/requests/${request.id}`,
     );
-    expect(await built(owner)).toEqual([]);
+    expect(await builtWithdrawn(owner)).toEqual([]);
   });
 
   it('goes at once at night, never held for the morning', async () => {
@@ -139,7 +253,9 @@ describe('telling the driver a no-show was withdrawn', () => {
 
     await fanOut.handle(job);
 
-    const rows = (await built(driverId)).filter((m) => m.channel !== 'in_app');
+    const rows = (await builtWithdrawn(driverId)).filter(
+      (m) => m.channel !== 'in_app',
+    );
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {
       expect(row.status).not.toBe('held');
@@ -163,7 +279,9 @@ describe('telling the driver a no-show was withdrawn', () => {
 
     await fanOut.handle(job);
 
-    expect((await built(driverId)).map((m) => m.channel)).toEqual(['in_app']);
+    expect((await builtWithdrawn(driverId)).map((m) => m.channel)).toEqual([
+      'in_app',
+    ]);
   });
 
   it('builds each message once when the same event is handled twice', async () => {
@@ -171,10 +289,10 @@ describe('telling the driver a no-show was withdrawn', () => {
     const { fanOut } = await start();
 
     await fanOut.handle(job);
-    const once = (await built()).length;
+    const once = (await builtWithdrawn()).length;
     await fanOut.handle(job);
 
     expect(once).toBeGreaterThan(0);
-    expect((await built()).length).toBe(once);
+    expect((await builtWithdrawn()).length).toBe(once);
   });
 });
