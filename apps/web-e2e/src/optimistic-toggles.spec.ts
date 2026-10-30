@@ -78,8 +78,6 @@ const toast = (page: Page, text: string) =>
   page.locator('[data-sonner-toast]', { hasText: text });
 
 test.describe('a toggle shows before the server answers @seeded', () => {
-  test.skip(({ browserName }) => browserName !== 'chromium');
-
   test('a notification switch flips at once, then comes back with a message when the save fails', async ({
     page,
   }) => {
