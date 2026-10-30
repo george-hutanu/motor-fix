@@ -2,6 +2,7 @@ import {
   BUSINESS_KINDS,
   type DetailsSection,
   type FieldProblem,
+  isRecord,
   isRomanianPhone,
   KNOWN_FOR_MAX,
   MOBILE_LEGAL_FORMS,
@@ -16,7 +17,7 @@ import { refusal } from '../../auth/http-refusal';
 import { taken } from '../../auth/sign-up.service';
 import type { Prisma } from '../../generated/prisma/client';
 import { uniqueSlug } from '../garage-slug';
-import { isRecord, plainText } from '../plain-text';
+import { plainText } from '../plain-text';
 
 const refuse = (errors: FieldProblem[]) =>
   refusal(

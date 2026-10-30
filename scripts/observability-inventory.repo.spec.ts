@@ -413,8 +413,9 @@ describe("the mechanic's reviews read and the review-ratings queue", () => {
 });
 
 // @traces 133-FR-014
-describe("the staff read of a garage's own profile", () => {
-  it('lists the route with its metric and only the shared API alerts', () => {
+// @traces 1246-FR-025
+describe("the staff read and the owner's save of a garage's own profile", () => {
+  it('lists both operations with their metric and only the shared API alerts', () => {
     const read = JSON.parse(
       readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
     ).paths['/api/v1/garages/{garageId}/profile'];
@@ -424,7 +425,7 @@ describe("the staff read of a garage's own profile", () => {
       ),
     ).flatMap((each) => (Array.isArray(each) ? each : []));
 
-    expect(Object.keys(read)).toEqual(['get']);
+    expect(Object.keys(read).sort()).toEqual(['get', 'patch']);
     expect(
       entries.find((each) => each.name === 'garage-profile'),
     ).toMatchObject({
@@ -581,9 +582,10 @@ describe('the garage members read route', () => {
 
 // @traces 427-FR-015
 // @traces 427-FR-016
+// @traces 1395-FR-007
 describe('the time-block routes', () => {
   repoIt(
-    'are four OpenAPI operations the inventory lists under the api alerts, and the schedule read carries blocks',
+    'are five OpenAPI operations the inventory lists under the api alerts, and the schedule read carries blocks',
     () => {
       const api = JSON.parse(
         readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
@@ -598,6 +600,7 @@ describe('the time-block routes', () => {
         'delete',
         'patch',
       ]);
+      expect(Object.keys(api.paths[`${base}/options`])).toEqual(['get']);
       expect(
         Object.keys(api.components.schemas.GarageScheduleDto.properties),
       ).toContain('blocks');
@@ -610,10 +613,14 @@ describe('the time-block routes', () => {
           entry.kind === 'endpoint' &&
           entry.name.startsWith('garage-time-block'),
       );
-      expect(listed).toHaveLength(4);
+      expect(listed).toHaveLength(5);
       for (const entry of listed) {
         expect(entry.alerts).toEqual(['api-error-rate', 'api-latency']);
-        expect(entry.story).toBe('ST-427');
+        expect(entry.story).toBe(
+          entry.name === 'garage-time-block-options-read'
+            ? 'ST-1395'
+            : 'ST-427',
+        );
       }
       expect(checkInventory(root)).toEqual([]);
     },
