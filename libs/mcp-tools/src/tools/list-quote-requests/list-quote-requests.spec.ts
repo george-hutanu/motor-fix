@@ -147,8 +147,8 @@ describe('list_quote_requests', () => {
 
   it('answers the dashboard’s item with the jobs named in the account’s language and the description as user text', async () => {
     const result = await call({}, inboxOf([item]), 'en');
-    // The raw description line, the close fields and the booking stay out of
-    // the answer.
+    // The raw description line, the close fields, the booking and the
+    // outcome stay out of the answer.
     const {
       booking,
       closedAt,
@@ -156,6 +156,7 @@ describe('list_quote_requests', () => {
       description,
       descriptionLine,
       jobs,
+      outcome,
       ...rest
     } = item;
     expect(result.structuredContent).toEqual({
