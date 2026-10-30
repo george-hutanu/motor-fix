@@ -176,6 +176,7 @@ export { QUOTE_ACCEPTED_CONSUMER } from './notifications/quote-accepted/quote-ac
 export { QUOTE_DECLINED_CONSUMER } from './notifications/quote-declined/quote-declined.fan-out';
 export { QUOTE_LOST_CONSUMER } from './notifications/quote-lost/quote-lost.fan-out';
 export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-received.fan-out';
+export { REPAIR_UPDATED_CONSUMER } from './notifications/repair-updated/repair-updated.fan-out';
 export { REQUEST_CANCELLED_CONSUMER } from './notifications/request-cancelled/request-cancelled.fan-out';
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
 export { REVIEW_POSTED_CONSUMER } from './notifications/review-posted/review-posted.fan-out';

@@ -336,6 +336,11 @@ const carTransferAcceptedNotices = () =>
     'motorfix_car_transfer_accepted_notices_total',
     'Car takeovers told to the seller, by outcome',
   );
+const repairUpdatedNotices = () =>
+  counter(
+    'motorfix_repair_updated_notices_total',
+    'Repair corrections told to the car owner, by outcome',
+  );
 const reviewRepliesAnnounced = () =>
   counter(
     'motorfix_review_reply_announced_total',
@@ -618,6 +623,14 @@ export function countCarTransferAcceptedNotice(
   outcome: (typeof REVIEW_ANNOUNCED_OUTCOMES)[number],
 ) {
   carTransferAcceptedNotices().add(1, { outcome });
+}
+
+// A repair correction told to the car's owner, one they muted, or one with
+// nobody or no repair left to tell about.
+export function countRepairUpdatedNotice(
+  outcome: (typeof REVIEW_ANNOUNCED_OUTCOMES)[number],
+) {
+  repairUpdatedNotices().add(1, { outcome });
 }
 
 // A verification decision told to the garage's owners, or one with nobody

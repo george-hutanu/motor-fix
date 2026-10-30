@@ -124,6 +124,11 @@ import {
   type QuoteSentEvent,
 } from './quote-received/quote-received.fan-out';
 import {
+  REPAIR_UPDATED_QUEUE,
+  type RepairUpdatedEvent,
+  RepairUpdatedFanOut,
+} from './repair-updated/repair-updated.fan-out';
+import {
   REQUEST_CANCELLED_QUEUE,
   type RequestCancelledEvent,
   RequestCancelledFanOut,
@@ -175,6 +180,7 @@ const REQUEST_RECEIVED_WORKER = Symbol('REQUEST_RECEIVED_WORKER');
 const REVIEW_POSTED_WORKER = Symbol('REVIEW_POSTED_WORKER');
 const REVIEW_REPLIED_WORKER = Symbol('REVIEW_REPLIED_WORKER');
 const CAR_TRANSFER_ACCEPTED_WORKER = Symbol('CAR_TRANSFER_ACCEPTED_WORKER');
+const REPAIR_UPDATED_WORKER = Symbol('REPAIR_UPDATED_WORKER');
 const QUOTE_RECEIVED_WORKER = Symbol('QUOTE_RECEIVED_WORKER');
 const QUOTE_ACCEPTED_WORKER = Symbol('QUOTE_ACCEPTED_WORKER');
 const QUOTE_DECLINED_WORKER = Symbol('QUOTE_DECLINED_WORKER');
@@ -238,6 +244,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(CAR_TRANSFER_ACCEPTED_WORKER)
     private readonly carTransferAcceptedWorker?: Worker | null,
+    @Optional()
+    @Inject(REPAIR_UPDATED_WORKER)
+    private readonly repairUpdatedWorker?: Worker | null,
     @Optional()
     @Inject(QUOTE_RECEIVED_WORKER)
     private readonly quoteReceivedWorker?: Worker | null,
@@ -559,6 +568,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             );
             observeWorker(worker);
             logFinalFailure(worker, new Logger('CarTransferAccepted'));
+            return worker;
+          },
+        },
+        RepairUpdatedFanOut,
+        {
+          inject: [RepairUpdatedFanOut],
+          provide: REPAIR_UPDATED_WORKER,
+          useFactory: (fanOut: RepairUpdatedFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('RepairUpdated').error(
+                'PUBLIC_WEB_URL missing; repair correction messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<RepairUpdatedEvent>(
+              REPAIR_UPDATED_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('RepairUpdated'));
             return worker;
           },
         },
@@ -1004,6 +1040,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.reviewPostedWorker?.close();
     await this.reviewRepliedWorker?.close();
     await this.carTransferAcceptedWorker?.close();
+    await this.repairUpdatedWorker?.close();
     await this.quoteReceivedWorker?.close();
     await this.quoteAcceptedWorker?.close();
     await this.quoteDeclinedWorker?.close();
