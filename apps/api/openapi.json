@@ -3780,6 +3780,30 @@
             }
           },
           {
+            "name": "open_now",
+            "required": false,
+            "in": "query",
+            "description": "Keep only the garages open now on the Bucharest clock: inside one of their hours today, today neither a legal holiday nor one of their closed days. Exactly \"1\"",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          },
+          {
+            "name": "open_saturday",
+            "required": false,
+            "in": "query",
+            "description": "Keep only the garages whose weekly hours hold Saturday hours, whatever the closed days or holidays. Exactly \"1\"",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          },
+          {
             "name": "ids",
             "required": false,
             "in": "query",
@@ -3840,7 +3864,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, bbox not a south,west,north,east box inside Romania at most 100 km on a side, or sort not rating, distance or price, or distance without near; invalid_cursor: not a page of this search, of another box or of another sort"
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, ids not up to 20 distinct uuids, bbox not a south,west,north,east box inside Romania at most 100 km on a side, or sort not rating, distance or price, or distance without near, or open_now or open_saturday other than exactly 1 or repeated; invalid_cursor: not a page of this search, of another box, of another sort or of other filters"
           },
           "404": {
             "description": "not_found: no brand with that slug or id"
@@ -3912,6 +3936,30 @@
               "example": "44.35,26,44.5,26.25",
               "type": "string"
             }
+          },
+          {
+            "name": "open_now",
+            "required": false,
+            "in": "query",
+            "description": "Keep only the garages open now on the Bucharest clock: inside one of their hours today, today neither a legal holiday nor one of their closed days. Exactly \"1\"",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          },
+          {
+            "name": "open_saturday",
+            "required": false,
+            "in": "query",
+            "description": "Keep only the garages whose weekly hours hold Saturday hours, whatever the closed days or holidays. Exactly \"1\"",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
           }
         ],
         "responses": {
@@ -3926,7 +3974,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or bbox not a south,west,north,east box inside Romania at most 100 km on a side"
+            "description": "validation_failed: neither or both of brand and brandId, a bad slug or uuid, near not a lat,lng in Romania, a radius other than 25 or 50, or bbox not a south,west,north,east box inside Romania at most 100 km on a side, or open_now or open_saturday other than exactly 1 or repeated"
           },
           "404": {
             "description": "not_found: no brand with that slug or id"
@@ -15613,6 +15661,10 @@
               "unstated"
             ]
           },
+          "matches": {
+            "type": "boolean",
+            "description": "True when the garage meets every set filter; always true with none"
+          },
           "serviceRadiusKm": {
             "type": "integer",
             "description": "A mobile mechanic's area, in km; only for one"
@@ -15623,7 +15675,8 @@
           "lat",
           "lng",
           "rateLei",
-          "stance"
+          "stance",
+          "matches"
         ]
       },
       "GaragePinsDto": {
@@ -15638,7 +15691,7 @@
           },
           "total": {
             "type": "integer",
-            "description": "Every approved garage the search finds, as the list's total"
+            "description": "Every approved garage the search finds that meets every set filter, as the list's total"
           }
         },
         "required": [

@@ -222,6 +222,56 @@ describe('GaragePinsQueryDto', () => {
   });
 });
 
+// @traces 1260-FR-001 1260-FR-011
+describe.each([
+  ['GarageSearchQueryDto', GarageSearchQueryDto],
+  ['GaragePinsQueryDto', GaragePinsQueryDto],
+] as const)('%s open now and open on Saturday', (_name, dto) => {
+  const check = (query: Record<string, unknown>) =>
+    validateSync(plainToInstance(dto, query), {
+      forbidNonWhitelisted: true,
+      whitelist: true,
+    }).flatMap((error) => Object.values(error.constraints ?? {}));
+
+  it('takes open_now=1, open_saturday=1 and both together', () => {
+    expect(check({ brand: 'bmw', open_now: '1' })).toEqual([]);
+    expect(check({ brand: 'bmw', open_saturday: '1' })).toEqual([]);
+    expect(check({ brand: 'bmw', open_now: '1', open_saturday: '1' })).toEqual(
+      [],
+    );
+  });
+
+  it('takes a search with neither filter', () => {
+    const query = plainToInstance(dto, { brand: 'bmw' });
+
+    expect(check({ brand: 'bmw' })).toEqual([]);
+    expect(query.open_now).toBeUndefined();
+    expect(query.open_saturday).toBeUndefined();
+  });
+
+  it.each(['open_now', 'open_saturday'])(
+    'refuses every value of %s other than 1, naming it',
+    (name) => {
+      for (const value of ['true', '0', 'yes', '', ' 1', '01']) {
+        const found = check({ brand: 'bmw', [name]: value });
+        expect(found).not.toEqual([]);
+        expect(found.every((message) => message.startsWith(`${name} `))).toBe(
+          true,
+        );
+      }
+    },
+  );
+
+  it.each(['open_now', 'open_saturday'])(
+    'refuses a repeated %s key, naming it',
+    (name) => {
+      const found = check({ brand: 'bmw', [name]: ['1', '1'] });
+      expect(found).not.toEqual([]);
+      expect(found.join()).toMatch(new RegExp(`^${name} `));
+    },
+  );
+});
+
 const NEAR = '44.437,26.117';
 
 // @traces 328-FR-001
