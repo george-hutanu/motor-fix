@@ -872,6 +872,7 @@ describe('formatAround', () => {
   });
 });
 
+// @traces 1389-FR-001
 describe('de', () => {
   it.each([
     [0, ''],
