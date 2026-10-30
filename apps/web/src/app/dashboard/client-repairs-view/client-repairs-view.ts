@@ -51,6 +51,7 @@ export class ClientRepairsView {
     ['repair.updated', 'repair.shared', 'repair.unshared'],
   );
   private readonly local = signal<Local | null>(null);
+  private correcting = false;
   // A garage the list answers 404 for (suspended, or no longer the owner's)
   // has nothing shared with it: the empty line, never an error.
   protected readonly list = computed<ClientRepairListDto | undefined>(() => {
@@ -72,6 +73,17 @@ export class ClientRepairsView {
   }
 
   protected async correct(item: ClientRepairDto) {
+    // One dialog at a time: a second press while one is open does nothing.
+    if (this.correcting) return;
+    this.correcting = true;
+    try {
+      await this.correctOnce(item);
+    } finally {
+      this.correcting = false;
+    }
+  }
+
+  private async correctOnce(item: ClientRepairDto) {
     const outcome = await this.overlays.open<
       CorrectRepairResult,
       CorrectRepairData
@@ -109,9 +121,12 @@ export class ClientRepairsView {
   }
 
   // The list read again, for the dialog after a 409: the repair as it is now,
-  // or nothing when its client stopped sharing it.
+  // or nothing when its client stopped sharing it or the list is gone; a
+  // failed read throws, so the dialog never takes the old row for a new one.
   private async reread(id: string) {
     await this.view.reload();
+    if (this.view.gone()) return undefined;
+    if (this.view.failed()) throw new Error('client repairs not read');
     return this.view.value()?.items.find((item) => item.id === id);
   }
 }

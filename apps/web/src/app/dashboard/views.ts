@@ -287,8 +287,6 @@ export const DASHBOARDS: Record<
         load: () =>
           import('./profile-view/profile-view').then((m) => m.ProfileView),
       },
-      // The repairs drivers logged here and share: its key is clientRepairs,
-      // its address client-repairs.
       {
         ...garageView('clientRepairs', 'garage.client_repairs'),
         load: () =>

@@ -16,6 +16,7 @@ features:
   - 276-job-start-done
   - 1265-car-transfer-accept
   - 409-garage-corrects-repair
+  - 1400-garage-corrects-repair-web
 ---
 
 # Capability: Cars
@@ -434,6 +435,50 @@ _From 409-garage-corrects-repair._
 ### 409-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the list's membership (the six seeds of User Story 2), order and shape; each field corrected alone and together, the amount cleared, the unchanged save; every 400 limit; 403 for a receptionist and a mechanic, 404 for a driver and an admin; every 404 of FR-007; 409 and the concurrent-save race; the delete's 403; the audit entries' values and role; the event's payload and audience and the rollback on failure; REPAIR_UPDATED with the switch on and off, to the current owner after a sale, none when the car has no owner, and once on a redelivered event; the driver's reads with `correctedBy`; the capability table (the owner alone); the migration's backfill (`updated_at` = `created_at`, sharing off); the list's cap and `truncated`. Each test file carries a `// @traces` line naming its `409-FR-<n>` ids.
 
 _From 409-garage-corrects-repair._
+
+### 1400-FR-001 — (409-FR-018) The garage dashboard MUST gain the view "Reparații adăugate de clienți" / "Repairs added by clients", a garage view behind the capability `garage.client_repairs` (the owner alone; hidden for a draft garage as the view registry already decides, no new status rule), reached from the garage navigation, with a title, a subtitle and the texts of a garage view in both languages; it MUST read the owner's shared logged repairs through the generated client and show them in the order the API answers.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-002 — (409-FR-018) Each row MUST read "<driver short name> · <brand> <model> <year> · <what> · <date in the locale's day format> · <odometer, grouped> km · <amount> lei" with a Corectează / Correct action, "fără sumă" / "no amount" when there is no amount, a line "Corectată pe <date>" / "Corrected on <date>" when `correctedAt` is set, and the empty state "Niciun client nu a partajat încă o reparație cu tine" / "No client has shared a repair with you yet" when the list is empty; when the answer is truncated the view MUST say the newest 200 are shown; on a phone the what, the date and the action come first with the client, the car and the figures beneath.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-003 — (constraint, Principle I and the bundle budget) The view and its dialog MUST be loaded only when the view is opened, inside the garage area's lazily loaded code; nothing of this story joins the first-page bundle and its 1 MB budget is not raised.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-004 — (409-FR-019) Corectează MUST open a `dialog` task of the overlays service using the shared form-saving helper, titled "Corectează reparația" / "Correct the repair", with the car and the client shown read-only ("<brand> <model> <year> · client <short name>") and the fields what was done, date, odometer and amount prefilled from the row; the dialog and the view MUST offer no delete action.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-005 — (409-FR-019) Before sending, the dialog MUST refuse inline a date after today in Romania and the limits of the API (what 1 to 200 characters, odometer a whole number 0 to 2 000 000, amount 0 to 920 000 lei with at most two decimals, the amount optional and clearable), the limit named at the field; an odometer below the reading the dialog loaded MUST ask the owner to check once, the next Salvează sending it; the confirmation holds for the value confirmed only, and editing the odometer or a 409 reload clears it.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-006 — (409-FR-019) Salvează / Save MUST send only the fields whose value changed, compared after normalising to the request shape (trimmed what, ISO date, integer km, amount in bani), with the version the dialog loaded; a save with nothing changed MUST close the dialog and send nothing.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-007 — (409-FR-020) On 409 the dialog MUST say "Reparația a fost modificată între timp. Am reîncărcat valorile." / "The repair changed meanwhile. We reloaded the values.", re-read the owner's list, replace all four fields (the owner's unsent edits included) with the item's current values and version and stay open; when the re-read no longer holds the item, FR-008 applies.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-008 — (409-FR-020) On 404 the dialog MUST close, the row MUST leave the list and the view MUST show "Clientul nu mai partajează această reparație" / "The client no longer shares this repair" in the dashboard's transient notice; on a 400 naming a field of the form the dialog MUST show the problem at that field and stay open (a 400 naming no known field reads as the shared "could not save" problem); on any other failure it MUST show the shared "could not save" problem and stay open.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-009 — (409-FR-020) On success the dialog MUST close and the row MUST update in place from the answer, its "Corectată pe" line now set.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-010 — (409-FR-021, the garage half) The view MUST re-read on `repair.updated`, `repair.shared` and `repair.unshared` on the garage's live channel, and on the channel's reconnection as the other live views do; an open dialog is not closed by a re-read (its save answers 404 or 409 as the API decides).
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-011 — (409-FR-023) Every text of the view, the navigation entry and the dialog MUST live in the garage and shell language files in Romanian and English; one Playwright flow MUST sign in as a garage owner with a seeded shared logged repair, open the view, correct the odometer, see the row update and "Corectată pe", then sign in as the driver and see the REPAIR_UPDATED bell row; the view and the dialog MUST pass the QA sweep at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll and no axe violation; the unit specs (Jest, colocated) MUST cover FR-002, FR-005 to FR-010 with the generated client stubbed.
+
+_From 1400-garage-corrects-repair-web._
 
 ## Retired
 

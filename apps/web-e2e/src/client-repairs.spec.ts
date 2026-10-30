@@ -18,7 +18,8 @@ test.describe('correcting a shared repair from the garage dashboard @seeded @dat
     page,
     request,
   }) => {
-    test.setTimeout(60_000);
+    // Signing in and the save, then up to 60 s for the driver's bell.
+    test.setTimeout(90_000);
     repair = await sharedRepair(request, 14_300);
     const driver = bearer(
       await accessToken(request, repair.driver.email, repair.driver.password),

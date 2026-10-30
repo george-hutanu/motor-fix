@@ -5,7 +5,7 @@ import { Client } from 'pg';
 // A repair a driver of its own logged by hand and shared with the garage the
 // seeded owner (service@example.test) runs. It writes straight to PostgreSQL,
 // as the car, its open ownership and the logged repair take three routes and
-// a share, so the caller skips without DATABASE_URL. `id` finds the repair's
+// a share, so it runs only where `@database` flows run. `id` finds the repair's
 // row; `driver` signs in as its driver; `garage` is the garage's name, as the
 // driver's bell names it; `remove` deletes what it wrote.
 export interface SharedRepair {

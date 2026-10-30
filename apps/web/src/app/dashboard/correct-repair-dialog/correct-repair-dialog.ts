@@ -182,12 +182,14 @@ export class CorrectRepairDialog {
     this.form.events
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.changes.update((n) => n + 1));
-    // A changed reading is a new one: asked about again if still lower.
+    // Editing the reading drops the confirmation: a lower one is asked
+    // about again, even when the confirmed value is typed back.
     this.form.controls.odometerKm.valueChanges
       .pipe(takeUntilDestroyed())
-      .subscribe(() => {
-        if (kmOf(this.form.controls.odometerKm.value) !== this.asked)
-          this.lower.set(null);
+      .subscribe((value) => {
+        if (kmOf(value) === this.asked) return;
+        this.asked = null;
+        this.lower.set(null);
       });
   }
 

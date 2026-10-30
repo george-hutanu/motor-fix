@@ -6,7 +6,7 @@
   @let whatError = errorOf(form.controls.what);
   <div class="field">
     <label hlmLabel for="correct-repair-what">{{ 'garage.clientRepairs.correct.what' | t }}</label>
-    <input hlmInput id="correct-repair-what" name="what" type="text" autocomplete="off" [attr.maxlength]="200" formControlName="what" [aria-invalid]="!!whatError" aria-describedby="correct-repair-what-error" />
+    <input hlmInput id="correct-repair-what" name="what" type="text" autocomplete="off" formControlName="what" [aria-invalid]="!!whatError" aria-describedby="correct-repair-what-error" />
     <p id="correct-repair-what-error" class="error mf-message" role="status" aria-live="polite">{{ whatError }}</p>
   </div>
   @let dayError = errorOf(form.controls.doneOn);
