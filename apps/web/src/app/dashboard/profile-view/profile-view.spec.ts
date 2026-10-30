@@ -681,7 +681,7 @@ describe('Profilul service-ului: the owner edits the brands', () => {
     expect(all(element, '[data-works] li').map(text)[0]).toContain('BMW');
   });
 
-  it('keeps the control after a dialog that could not load, and a second press opens it again', async () => {
+  it('keeps the control after a dialog closed with no answer, and a second press opens it again', async () => {
     const { element, settle } = await render();
     await settle();
     const open = TestBed.inject(Overlays).open as jest.Mock;

@@ -334,6 +334,25 @@ describe('the brands dialog, saving', () => {
     });
   });
 
+  it('says no requests come for a taken brand with every job unticked, and still saves it', async () => {
+    await open();
+
+    for (const job of row('BMW').querySelectorAll<HTMLInputElement>(
+      '.jobs input:checked',
+    )) {
+      job.click();
+    }
+    await settle();
+
+    expect(text(panel())).toContain('Nu vei primi cereri pentru BMW');
+    await press(button('Salvează'));
+    expect(sent().body.brands[0]).toMatchObject({
+      brandId: BMW.id,
+      jobs: [],
+      stance: 'works_on',
+    });
+  });
+
   it('opens a taken brand stored with no fuel with none ticked and the error, and sends nothing until one is ticked', async () => {
     await open(stored({ worksOn: [{ ...ref(BMW), fuels: [], jobs: [OIL] }] }));
 
