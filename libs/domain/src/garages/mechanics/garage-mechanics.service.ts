@@ -4,6 +4,7 @@ import {
   type FieldProblem,
   type GarageMechanicDto,
   type GarageMechanicsDto,
+  isRecord,
   MECHANIC_CARD_NAME_MAX,
   MECHANIC_NAME_MAX,
   MECHANIC_NAME_MIN,
@@ -30,7 +31,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { removeMechanicBlocks } from '../../workshop/time-blocks/time-blocks';
 import { featureOn } from '../features/feature-on';
 import { assertGarageOwner } from '../garage-brands/garage-brands.service';
-import { isRecord, plainText } from '../plain-text';
+import { plainText } from '../plain-text';
 
 const byName = new Intl.Collator('ro', { sensitivity: 'base' });
 

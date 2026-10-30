@@ -520,6 +520,36 @@
   "profile": {
     "address": "Adresă",
     "area": "Zonă de lucru: {km}",
+    "description": "Descriere",
+    "edit": {
+      "addressNote": "Schimbarea adresei trece pe la un admin.",
+      "cancel": "Renunță",
+      "control": "Modifică profilul",
+      "controlFor": "Modifică profilul: {group}",
+      "descriptionHint": "Cel mult 1.000 de caractere",
+      "field": {
+        "closedDays": "O zi închisă nu este validă. Verifică zilele.",
+        "descriptionWithin": "Descrierea poate avea cel mult 1.000 de caractere.",
+        "nameWithin": "Numele trebuie să aibă între 2 și 80 de caractere.",
+        "phoneNeeded": "Adaugă un număr de telefon",
+        "phoneNumber": "Momentan acceptăm doar numere din România",
+        "weeklyHours": "Programul nu este valid. Verifică orele."
+      },
+      "nameHint": "Între 2 și 80 de caractere",
+      "problem": {
+        "profile_changed": "Profilul a fost modificat între timp. Reîncarcă."
+      },
+      "radius": "Raza de deplasare (km)",
+      "radiusHint": "Între 5 și 100 km",
+      "reload": "Reîncarcă",
+      "save": "Salvează",
+      "title": {
+        "area": "Zona de lucru",
+        "contact": "Telefon",
+        "hours": "Program și zile închise",
+        "texts": "Nume și descriere"
+      }
+    },
     "error": "Nu am putut încărca profilul.",
     "hours": "Program",
     "name": "Nume",

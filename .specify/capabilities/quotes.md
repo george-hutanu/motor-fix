@@ -31,6 +31,7 @@ features:
   - 406-final-price-handover
   - 427-time-blocks
   - 1393-final-price-predare
+  - 1395-block-time-dashboard
 ---
 
 # Capability: Quotes
@@ -859,9 +860,9 @@ _From 406-final-price-handover._
 
 _From 427-time-blocks._
 
-### 427-FR-015 — The OpenAPI document and the generated client MUST carry the four operations, their DTOs, the `blocks` array of the schedule answer, the new codes (`nothing_to_block`, `block_past`) and the `time_block` reason (`npx nx run data-access:generate`, never edited by hand).
+### 1395-FR-006 — The OpenAPI document (`apps/api/openapi.json`) and the generated client (`libs/data-access`, `npx nx run data-access:generate`, never edited by hand) MUST carry the one new operation and its DTO; the existing openapi test passes against the running API.
 
-_From 427-time-blocks._
+_From 1395-block-time-dashboard._
 
 ### 1393-FR-010 — A Cererile mele row whose `booking.handedOverAt` is set MUST replace its status label with "Încheiată pe <day>" / "Closed on <day>" (the day of `handedOverAt` as the short Bucharest day-month, "3 oct." / "3 Oct"), keep the row's time, and carry the final price formatted in lei (`formatLei` of `booking.finalPriceBani`) as the amount paid at the row's right, in the board's green amount style (`data-amount`), with the accessible name "Preț final <price>" / "Final price <price>"; a row with `handedOverAt` null MUST show as today, no amount. A row with `handedOverAt` set and a null `finalPriceBani` (not reachable through 406's handover, which requires a price) shows "Încheiată pe <day>" with no amount. The largest amount ("1.000.000,00 lei") never widens the row: the status label wraps and the amount keeps its line, so the row does not scroll sideways at 320 px. The row offers no cancel (1385-FR-002 already offers none for `done`) and keeps "Compară ofertele" rules as today.
 
@@ -908,3 +909,4 @@ _From 1393-final-price-predare._
 - `150-FR-001` — superseded by `427-FR-002` (2026-10-29)
 - `150-FR-006` — superseded by `427-FR-006` (2026-10-29)
 - `150-FR-009` — superseded by `427-FR-011` (2026-10-29)
+- `427-FR-015` — superseded by `1395-FR-006` (2026-10-30)

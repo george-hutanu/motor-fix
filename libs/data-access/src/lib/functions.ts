@@ -303,6 +303,8 @@ export type { GarageTimeBlocks$Params as GarageTimeBlocks$Params } from './fn/ga
 export { garageTimeBlocks as garageTimeBlocks } from './fn/garages/garage-time-blocks';
 export type { CreateTimeBlock$Params as CreateTimeBlock$Params } from './fn/garages/create-time-block';
 export { createTimeBlock as createTimeBlock } from './fn/garages/create-time-block';
+export type { TimeBlockOptions$Params as TimeBlockOptions$Params } from './fn/garages/time-block-options';
+export { timeBlockOptions as timeBlockOptions } from './fn/garages/time-block-options';
 export type { DeleteTimeBlock$Params as DeleteTimeBlock$Params } from './fn/garages/delete-time-block';
 export { deleteTimeBlock as deleteTimeBlock } from './fn/garages/delete-time-block';
 export type { UpdateTimeBlock$Params as UpdateTimeBlock$Params } from './fn/garages/update-time-block';
@@ -323,6 +325,8 @@ export type { GarageInvitesControllerRevoke$Params as GarageInvitesControllerRev
 export { garageInvitesControllerRevoke as garageInvitesControllerRevoke } from './fn/garages/garage-invites-controller-revoke';
 export type { GarageProfileControllerRead$Params as GarageProfileControllerRead$Params } from './fn/garages/garage-profile-controller-read';
 export { garageProfileControllerRead as garageProfileControllerRead } from './fn/garages/garage-profile-controller-read';
+export type { GarageProfileControllerUpdate$Params as GarageProfileControllerUpdate$Params } from './fn/garages/garage-profile-controller-update';
+export { garageProfileControllerUpdate as garageProfileControllerUpdate } from './fn/garages/garage-profile-controller-update';
 export type { GarageReportsControllerReport$Params as GarageReportsControllerReport$Params } from './fn/garages/garage-reports-controller-report';
 export { garageReportsControllerReport as garageReportsControllerReport } from './fn/garages/garage-reports-controller-report';
 export type { GarageFeaturesControllerSet$Params as GarageFeaturesControllerSet$Params } from './fn/garages/garage-features-controller-set';
