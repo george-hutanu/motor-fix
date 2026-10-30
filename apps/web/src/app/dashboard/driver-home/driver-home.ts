@@ -25,10 +25,11 @@ import { carLines, compareCars } from '../car-lines/car-lines';
 import { DRIVER_PANELS, panelsToDraw } from '../driver-panels/driver-panels';
 import { DueDateLine } from '../due-date-line/due-date-line';
 import { EmptyState } from '../empty-state/empty-state';
-import { ACTIVE_REQUEST_EVENTS, Live, liveResource } from '../live';
+import { ACTIVE_REQUEST_EVENTS, Live } from '../live';
 import { OilLine } from '../oil-line/oil-line';
 import { openRequestOf } from '../quotes-compare/compare-rules/compare-rules';
 import { QuotesCompare } from '../quotes-compare/quotes-compare';
+import { Resources } from '../resources/resources';
 import { SavedGaragesList } from '../saved-garages/saved-garages-list';
 import { SavedGaragesPanel } from '../saved-garages/saved-garages-panel/saved-garages-panel';
 import { Session } from '../session';
@@ -73,12 +74,28 @@ export class DriverHome {
   private readonly i18n = inject(I18n);
   private readonly overlays = inject(Overlays);
   private readonly session = inject(Session);
+  private readonly resources = inject(Resources);
   protected readonly language = this.i18n.language;
-  protected readonly cars = signal<Read<CarDto>>(undefined);
+  // No event moves the driver's cars: they are read again on a resync only.
+  private readonly carsRead = this.resources.live(
+    'cars',
+    () => this.carsApi.carsControllerList().then(({ items }) => items),
+    [],
+  );
+  protected readonly cars = computed(
+    (): Read<CarDto> =>
+      // A retry shows the placeholder until it answers.
+      this.carsRead.failed() &&
+      !this.carsRead.isLoading() &&
+      !this.carsRead.value()
+        ? 'failed'
+        : this.carsRead.value(),
+  );
   // The requests, re-read when a quote is accepted, a booking is confirmed,
   // lapses or is cancelled, a request is cancelled, and after a resync; the
   // last read wins.
-  private readonly requestsRead = liveResource(
+  private readonly requestsRead = this.resources.live(
+    'requests',
     () => this.requestsApi.requestsControllerList(),
     [
       'quote.accepted',
@@ -96,7 +113,8 @@ export class DriverHome {
   );
   // The active request, re-read on every change to a request, its quotes,
   // booking or job, and after a resync; the last read wins.
-  private readonly activeRead = liveResource(
+  private readonly activeRead = this.resources.live(
+    'activeRequest',
     () => this.requestsApi.activeRequestControllerGet(),
     ACTIVE_REQUEST_EVENTS,
   );
@@ -172,7 +190,6 @@ export class DriverHome {
 
   constructor() {
     void this.i18n.enter('driver');
-    this.loadCars();
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     const tick = setInterval(() => this.now.set(new Date()), TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
@@ -183,7 +200,7 @@ export class DriverHome {
   protected async addCar() {
     const car = await openAddCar(this.overlays, []);
     if (car === 'cancelled') return;
-    this.cars.update((list) => [car, ...(Array.isArray(list) ? list : [])]);
+    this.resources.update('cars', (list) => [car, ...list]);
   }
 
   protected retryActive() {
@@ -191,15 +208,7 @@ export class DriverHome {
   }
 
   protected retryCars() {
-    this.cars.set(undefined);
-    this.loadCars();
-  }
-
-  private loadCars() {
-    this.carsApi.carsControllerList().then(
-      ({ items }) => this.cars.set(items),
-      () => this.cars.set('failed'),
-    );
+    this.carsRead.reload();
   }
 
   protected state(list: Read<unknown>) {
