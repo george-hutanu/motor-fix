@@ -100,8 +100,13 @@ export class RepairUpdatedFanOut {
       eventId,
       kind: 'REPAIR_UPDATED',
       params: {
+        by,
         car: `${car.brand.name} ${car.model} ${car.year}`,
-        garage: repair.garage?.name ?? repair.garageName,
+        // An admin corrects as MotorFix, whichever garage the repair names.
+        garage:
+          by === 'admin'
+            ? 'MotorFix'
+            : (repair.garage?.name ?? repair.garageName),
         link: `${this.config.webUrl}/app/driver?view=cars`,
       },
       recipients,

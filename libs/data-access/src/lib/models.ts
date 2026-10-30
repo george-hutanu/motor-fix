@@ -35,6 +35,9 @@ export type { AdminGaragesSummaryDto } from './models/admin-garages-summary-dto'
 export type { AdminGrowthDto } from './models/admin-growth-dto';
 export type { AdminGrowthMonthDto } from './models/admin-growth-month-dto';
 export type { AdminOverviewDto } from './models/admin-overview-dto';
+export type { AdminRepairDto } from './models/admin-repair-dto';
+export type { AdminRepairListDto } from './models/admin-repair-list-dto';
+export type { AdminRepairListItemDto } from './models/admin-repair-list-item-dto';
 export type { AnalyticsConsentDto } from './models/analytics-consent-dto';
 export type { ApproveAssistantActionDto } from './models/approve-assistant-action-dto';
 export type { ApproveAssistantSignInDto } from './models/approve-assistant-sign-in-dto';
