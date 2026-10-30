@@ -44,7 +44,8 @@ p {
 .what {
   font-weight: 700;
 }
-.correct {
+/* `.row >` outranks `.row > *` once Angular scopes both. */
+.row > .correct {
   grid-column: 2;
   grid-row: 1 / span 2;
   align-self: start;
@@ -88,13 +89,9 @@ p {
     grid-column: auto;
     grid-row: 1;
   }
-  .correct {
+  .row > .correct {
     grid-column: 6;
     grid-row: 1;
-  }
-  .corrected {
-    grid-column: 1 / -1;
-    grid-row: 2;
   }
   .day,
   .who,
@@ -102,6 +99,10 @@ p {
   .cost,
   .corrected {
     font-size: var(--mf-size-small);
+  }
+  .row > .corrected {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
   .km,
   .cost {
