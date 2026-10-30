@@ -1,6 +1,7 @@
 name: Reset staging
 
-# Started by hand: empties the staging database, migrates it and seeds it.
+# Started by hand: empties the staging database, migrates it, seeds it and
+# loads the demo data (libs/domain/src/demo-data.ts).
 # Staging's Postgres has no public address, so this runner never connects to
 # it: a short-lived Railway sandbox on staging's private network
 # (scripts/railway-sandbox.ts) runs scripts/reset-staging.sh in the staging
@@ -42,7 +43,7 @@ jobs:
       - name: Open a sandbox on the private network
         id: sandbox
         run: node scripts/railway-sandbox.ts open staging api
-      - name: Empty, migrate and seed in the staging api image
+      - name: Empty, migrate, seed and load the demo data in the staging api image
         env:
           SANDBOX_ID: ${{ steps.sandbox.outputs.id }}
           # The seed refuses staging without it: the repository is public.
