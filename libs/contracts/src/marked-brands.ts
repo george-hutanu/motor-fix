@@ -4,6 +4,7 @@
 // Browser-safe: no Nest or validator import.
 
 import { isSetOf } from './garage-hours';
+import { isRecord } from './is-record';
 import { FUELS } from './plate';
 import { JOB_NAME_MAX, JOB_NAME_MIN, JOBS_MAX } from './price-range';
 
@@ -34,9 +35,6 @@ export const NOTE_MAX = 140;
 export const PHRASE_MAX = 60;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const onlyKeys = (value: Record<string, unknown>, keys: readonly string[]) =>
   Object.keys(value).every((key) => keys.includes(key));

@@ -57,7 +57,9 @@ const answer = (over: Partial<GarageProfileDto> = {}): GarageProfileDto => ({
   responseRate: { state: 'new' },
   reviewCount: 0,
   slug: 'service-auto-militari',
+  storedClosedDays: [],
   verifiedAt: null,
+  version: '0',
   worksOn: [
     {
       fuels: ['petrol', 'diesel', 'hybrid'],
@@ -307,12 +309,236 @@ describe('Profilul service-ului: the public profile panel', () => {
       'Unmarked brands count as a refusal: you show last for them and get no requests.',
     );
   });
+});
 
-  it('renders no edit control', async () => {
+const edits = (element: HTMLElement) =>
+  all(element, `${PUBLIC} button[data-edit]`).map((b) => b.dataset['edit']);
+const editOf = (element: HTMLElement, group: string) =>
+  element.querySelector<HTMLButtonElement>(
+    `${PUBLIC} button[data-edit="${group}"]`,
+  ) as HTMLButtonElement;
+
+// @traces 1246-FR-011 1246-FR-014
+describe('Profilul service-ului: the owner edits in place', () => {
+  it('gives the owner an edit control by the hours, named for its group', async () => {
     const { element, settle } = await render();
     await settle();
 
-    expect(all(element, `${PUBLIC} button`)).toEqual([]);
+    expect(edits(element)).toContain('hours');
+    const hours = editOf(element, 'hours');
+    expect(text(hours)).toBe('Modifică profilul');
+    expect(hours.type).toBe('button');
+    expect(hours.getAttribute('aria-label')).toBe(
+      'Modifică profilul: Program și zile închise',
+    );
+  });
+
+  it('keeps every edit control quiet, a ghost button rather than a bordered one (design.md)', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    const controls = all(element, `${PUBLIC} button[data-edit]`);
+    expect(controls.length).toBeGreaterThan(0);
+    for (const control of controls) {
+      expect(control.classList).toContain('spartan-button-variant-ghost');
+      expect(control.classList).not.toContain(
+        'spartan-button-variant-secondary',
+      );
+    }
+  });
+
+  it('keeps the hours control for an owner who never sent her hours', async () => {
+    const { element, settle } = await render(async () => answer({ hours: {} }));
+    await settle();
+
+    expect(line(element, 'hours')).toBeNull();
+    expect(editOf(element, 'hours')).not.toBeNull();
+  });
+
+  it('opens the hours dialog with the profile as read, asking nothing on a cancel', async () => {
+    const { element, settle } = await render();
+    await settle();
+    const open = TestBed.inject(Overlays).open as jest.Mock;
+    open.mockResolvedValueOnce('cancelled');
+
+    editOf(element, 'hours').click();
+    await settle();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    const [source, options] = open.mock.calls[0];
+    expect(source.name).toBe('ProfileEditDialog');
+    expect(options).toEqual({
+      confirmDiscard: false,
+      data: { garageId: GARAGE, group: 'hours', profile: answer() },
+      shape: 'dialog',
+      title: 'garage.profile.edit.title.hours',
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(text(line(element, 'hours'))).toContain('Sâmbătă 09:00 – 14:00');
+  });
+
+  it('shows the saved answer at once, reading nothing more, and the next one after garage.updated', async () => {
+    let current = answer();
+    const { element, settle } = await render(async () => current);
+    await settle();
+    const saved = answer({
+      hours: { ...answer().hours, sat: [['10:00', '12:00']] },
+      version: '1',
+    });
+    (TestBed.inject(Overlays).open as jest.Mock).mockResolvedValueOnce(saved);
+
+    editOf(element, 'hours').click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(text(line(element, 'hours'))).toContain('Sâmbătă 10:00 – 12:00');
+
+    current = answer({
+      hours: { ...answer().hours, sat: [] },
+      name: 'Service Auto Militari Nou',
+      version: '2',
+    });
+    events.next(message('garage.updated', GARAGE));
+    await wait(350);
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(text(line(element, 'name'))).toBe('Nume Service Auto Militari Nou');
+    expect(text(line(element, 'hours'))).toContain('Sâmbătă – duminică Închis');
+  });
+
+  it('opens the next dialog with the saved stamp', async () => {
+    const { element, settle } = await render();
+    await settle();
+    const open = TestBed.inject(Overlays).open as jest.Mock;
+    open.mockResolvedValueOnce(answer({ version: '1' }));
+
+    editOf(element, 'hours').click();
+    await settle();
+    open.mockResolvedValueOnce('cancelled');
+    editOf(element, 'hours').click();
+    await settle();
+
+    expect(open.mock.calls[1][1].data.profile.version).toBe('1');
+  });
+
+  it('names the control in English', async () => {
+    const { element, settle } = await render(undefined, 'en');
+    await settle();
+
+    expect(text(editOf(element, 'hours'))).toBe('Edit profile');
+    expect(editOf(element, 'hours').getAttribute('aria-label')).toBe(
+      'Edit profile: Hours and closed days',
+    );
+  });
+});
+
+// @traces 1246-FR-011 1246-FR-014
+describe('Profilul service-ului: the owner edits the name and description', () => {
+  it('shows the description under the name, and the texts control after the address', async () => {
+    const { element, settle } = await render(async () =>
+      answer({ description: 'Diesel german și cutii de viteze.' }),
+    );
+    await settle();
+
+    expect(text(line(element, 'description'))).toBe(
+      'Descriere Diesel german și cutii de viteze.',
+    );
+    expect(edits(element).slice(0, 2)).toEqual(['texts', 'hours']);
+    expect(editOf(element, 'texts').getAttribute('aria-label')).toBe(
+      'Modifică profilul: Nume și descriere',
+    );
+  });
+
+  it('shows no description line while there is none, and keeps the control', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    expect(line(element, 'description')).toBeNull();
+    expect(editOf(element, 'texts')).not.toBeNull();
+  });
+
+  it('opens the texts dialog and shows the saved name at once', async () => {
+    const { element, settle } = await render();
+    await settle();
+    const open = TestBed.inject(Overlays).open as jest.Mock;
+    open.mockResolvedValueOnce(
+      answer({ description: 'Nou', name: 'Service Militari', version: '1' }),
+    );
+
+    editOf(element, 'texts').click();
+    await settle();
+
+    expect(open.mock.calls[0][1]).toMatchObject({
+      data: { group: 'texts' },
+      title: 'garage.profile.edit.title.texts',
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(text(line(element, 'name'))).toBe('Nume Service Militari');
+    expect(text(line(element, 'description'))).toBe('Descriere Nou');
+  });
+});
+
+// @traces 1246-FR-011
+describe('Profilul service-ului: the owner edits the phone and the service area', () => {
+  it('gives a workshop owner the texts, hours and phone controls, and no service area', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    expect(edits(element)).toEqual(['texts', 'hours', 'contact']);
+    expect(editOf(element, 'contact').getAttribute('aria-label')).toBe(
+      'Modifică profilul: Telefon',
+    );
+  });
+
+  it('gives a mobile mechanic the service area control by her area', async () => {
+    const { element, settle } = await render(async () =>
+      answer({
+        address: undefined,
+        businessKind: 'mobile',
+        serviceRadiusKm: 35,
+      }),
+    );
+    await settle();
+
+    expect(edits(element)).toEqual(['area', 'texts', 'hours', 'contact']);
+    expect(editOf(element, 'area').getAttribute('aria-label')).toBe(
+      'Modifică profilul: Zona de lucru',
+    );
+  });
+
+  it('keeps the phone control for an owner with no phone stored', async () => {
+    const { element, settle } = await render(async () =>
+      answer({ phone: null }),
+    );
+    await settle();
+
+    expect(editOf(element, 'contact')).not.toBeNull();
+  });
+
+  it('shows the saved radius at once', async () => {
+    const { element, settle } = await render(async () =>
+      answer({
+        address: undefined,
+        businessKind: 'mobile',
+        serviceRadiusKm: 35,
+      }),
+    );
+    await settle();
+    (TestBed.inject(Overlays).open as jest.Mock).mockResolvedValueOnce(
+      answer({
+        address: undefined,
+        businessKind: 'mobile',
+        serviceRadiusKm: 60,
+        version: '1',
+      }),
+    );
+
+    editOf(element, 'area').click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(text(line(element, 'area'))).toBe('Zonă de lucru: 60 km');
   });
 });
 

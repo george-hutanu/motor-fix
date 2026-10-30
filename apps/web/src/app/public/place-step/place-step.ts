@@ -96,11 +96,12 @@ export class PlaceStep {
     const mobile = this.mobile();
     const message = (field: string, filled: boolean) =>
       this.watch.message(check, field, { all, filled, mobile });
-    // A radius typed out of range is never kept, so the page cannot judge it.
+    // A radius typed out of range is never kept, so the page cannot judge
+    // it: the field asks for one, as it does for a missing radius.
     const typed: FieldMessage | null =
       this.radiusTyped() === null
         ? null
-        : { key: 'public.listing.place.radiusHint', warning: false };
+        : { key: 'public.listing.check.radiusNeeded', warning: false };
     return {
       address: message(ADDRESS, !!value.address?.trim()),
       position: message(POSITION, this.hasPin()),

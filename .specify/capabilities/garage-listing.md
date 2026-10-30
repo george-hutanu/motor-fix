@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-25
+updated: 2026-10-30
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -39,6 +39,7 @@ features:
   - 067-restore-suspended-garage
   - 1193-fast-nav
   - 1185-accent-search
+  - 1246-garage-profile-edit
 ---
 
 # Capability: Garage listing
@@ -275,9 +276,9 @@ _From 112-opening-hours._
 
 _From 112-opening-hours._
 
-### 112-FR-005 — The step MUST say, under the closed days, that Romania's legal holidays count as closed by themselves and need no entry, and list the next six legal holidays with their names from the public-holiday calendar (`GET /api/v1/public-holidays`, public, by year, 15 items at most for the two seeded years), in the page's language. A year outside 2000 to 2100 or a missing year is refused with 400 and a year with no rows answers an empty list (contracts/public-holidays.md). When the calendar cannot be read the line says the list is not available right now and the holiday check of FR-004 is skipped; nothing else in the step waits for it.
+### 1246-FR-017 — (from #636) A legal holiday chosen as a closed day while the holiday calendar is still loading MUST be refused once the calendar loads (the refusal is skipped only while the calendar is down), in the listing's hours step and in this story's hours dialog; a test with a delayed calendar response MUST cover it.
 
-_From 112-opening-hours._
+_From 1246-garage-profile-edit._
 
 ### 397-FR-002 — When the `courtesy_car` facility is ticked, step 5 MUST show under its chip a choice "Gratuită" / "Free" or "Contra cost" / "Paid" (one radio group, free the default) and, when paid is chosen, a field "Preț pe zi" / "Price per day" in whole lei with the unit shown; the field is the shared whole-lei input and holds bani. Unticking the chip MUST remove the choice and the price from the step and from the draft.
 
@@ -391,9 +392,9 @@ _From 109-garage-details-prices._
 
 _From 109-garage-details-prices._
 
-### 109-FR-014 — The phone MUST never leave the server for a driver: the public garage profile and every public card keep selecting explicit fields and never the phone (`libs/domain/src/garages/public-garages.ts:24`), and a test MUST assert the public response carries no phone.
+### 1246-FR-010 — The public profile read (`GET /api/v1/garages/{slug}`) MUST keep returning no phone (109-FR-014) and its `description` MUST carry the text as written up to 1,000 characters; its declared maximum rises from 160 to 1,000 (the `garage_known_for_length` CHECK is widened to 1–1,000 by an additive migration), and the listing form's step-1 limit of 160 (KNOWN_FOR_MAX) is left as it is.
 
-_From 109-garage-details-prices._
+_From 1246-garage-profile-edit._
 
 ### 109-FR-018 — The `garages` module MUST provide one write that saves the step-4 section inside the caller's transaction, taking the transaction, the garage, the actor and the section: it checks the lengths of FR-011 (code `length` on the field) and the cap of 30 (`too_many` on `mechanics`), creates one mechanic card per row with `garage_id`, `name`, `speciality` (null when blank), `account_id` empty and `on_profile` the switch's value, and records one `create` audit entry per card (subject type `mechanic`, actor the owner). The mechanic row gains a nullable `account_id` (still unique when set), `name`, `speciality` and `on_profile` (default false); mechanics with an account keep working as today (their name comes from the account until the invite story decides otherwise).
 
@@ -529,9 +530,9 @@ _From 959-map-fits-circle._
 
 _From 111-garage-address-map._
 
-### 111-FR-005 — The radius MUST accept whole numbers from 1 to 100 only, 20 being the default when none was given (one named constant, `MOBILE_SERVICE_RADIUS_DEFAULT_KM`, in the shared contracts library, read by the web app and the write); a value outside, a fraction or a non-number MUST be refused in the field with the hint of FR-001 and MUST NOT replace the last good value.
+### 1246-FR-023 — (from #1210) In the listing form's place step a radius typed out of range MUST show "Alege raza de deplasare" / "Choose how far you travel" in error style, not the "Între 1 și 100 km" hint; a place-step spec MUST cover it. The listing form's range stays 1–100 (111-FR-005); this story's edit dialog uses 5–100.
 
-_From 111-garage-address-map._
+_From 1246-garage-profile-edit._
 
 ### 111-FR-006 — The step's values MUST be the `place` key of the draft's step-5 section (`steps['5'].place`, beside ST-112's `hours`, `closedDays` and `facilities`, 112-FR-007): `address` (string, at most 200 characters, absent or empty allowed while typing, the typed or chosen text; for a mobile mechanic the registered seat), `lat` and `lng` (numbers, both present or both absent), and `radiusKm` (integer 1–100 or absent). It MUST be typed in the shared contracts library and checked by one guard where the API and the web app both read it, joined into the step-5 guard the draft envelope already runs (`libs/contracts/src/listing-drafts.dto.ts:50`): a `place` with another key, a wrong type, a 201-character address, one coordinate without the other or a radius outside the limits is refused with 400 and the draft's stable validation code; a section without `place` is accepted. The values are kept with the rest of the form (browser copy and server copy, 114-FR-002, 114-FR-005), restored on reload and through the continue link (114-FR-011), and MUST write nothing to the garage tables, the audit history or the outbox while there is no account (114-FR-018).
 
@@ -1227,6 +1228,30 @@ _From 1185-accent-search._
 
 _From 1185-accent-search._
 
+### 1246-FR-016 — (from #623) One browser-safe `isRecord` MUST be exported from the shared contracts library, and the eight private copies on main (brands-section, hours-section, step6, garage-hours, listing-sections, marked-brands, place-section, plain-text) MUST be removed, so `git grep` finds one definition; a harness or contract test MUST assert the count.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-018 — (from #334) On the hours step and in the hours dialog, "Gratuită" and "Contra cost" MUST render as round radios; "Preț pe zi" and "lei" MUST be at least 16 px at 320 and 390 px.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-019 — (from #334) The language switch MUST be 16 px on phones only (below 768 px), and the PR QA sweep's min-text rule MUST pass on the hours step.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-020 — (from #1209) The hours step's PR QA flows MUST drive a break outside the opening hours, assert that `aria-describedby` is removed after the fix, and assert the closed-day fields' `aria-describedby`; the flows MUST be proven with `precheck.mjs --check` before dispatch.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-021 — (from #671) The garage-hours integration spec's "writes the weekly hours, one closed day with its note and one listed facility" MUST not depend on wall-clock time or machine load: it waits on observable state or uses an injected clock, with no fixed sleep and no raised timeout.
+
+_From 1246-garage-profile-edit._
+
+### 1246-FR-022 — (from #671) That spec MUST pass 20 consecutive runs with 4 parallel workers: on CI's on-demand integration job (`gh workflow run ci.yml --ref 1246-garage-profile-edit -f specs='libs/domain/src/garages/garage-hours.integration.spec.ts' -f repeat=20`, no retry), since this worktree has no Docker; the run id and its result are recorded in the PR.
+
+_From 1246-garage-profile-edit._
+
 ## Retired
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
@@ -1254,3 +1279,6 @@ _From 1185-accent-search._
 - `1359-FR-011` — superseded by `116-FR-003` (2026-10-21)
 - `049-FR-012` — superseded by `067-FR-007` (2026-10-23)
 - `111-FR-002` — superseded by `1193-FR-007` (2026-10-25)
+- `109-FR-014` — superseded by `1246-FR-010` (2026-10-30)
+- `112-FR-005` — superseded by `1246-FR-017` (2026-10-30)
+- `111-FR-005` — superseded by `1246-FR-023` (2026-10-30)
