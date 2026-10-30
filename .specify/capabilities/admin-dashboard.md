@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-29
+updated: 2026-10-30
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -30,6 +30,7 @@ features:
   - 1263-admin-dashboard-customise
   - 177-reported-reviews
   - 011-dashboard-sections
+  - 1389-reported-reviews-admin
 ---
 
 # Capability: Admin dashboard
@@ -82,9 +83,9 @@ _From 161-headline-numbers._
 
 _From 250-launch-analytics-events._
 
-### 161-FR-004 — "Panou" of the admin dashboard MUST show, above its other content, six tiles in this order: "Service‑uri listate", "Cereri de ofertă azi", "Rată de răspuns", "Programări", "Șoferi activi", "Recenzii raportate" (English "Garages listed", "Quote requests today", "Answer rate", "Bookings", "Active drivers", "Reported reviews"), each with its number and one line under it.
+### 1389-FR-002 — (from 177-FR-006; modifies 161-FR-004) The overview panel "Recenzii raportate" / "Reported reviews" MUST show the five oldest items, drawn as the view draws them, and a link to the whole view when there are more ("Vezi toate ({n})" / "See all ({n})", {n} the total of pending items), or "Nicio recenzie raportată." / "No reported reviews." when there is none; and the overview tile "Recenzii raportate" / "Reported reviews" (the sixth of 161-FR-004's six tiles, in its place and order) MUST show `reportsPending` as its number, in the tiles' number format and digits face (161-FR-006), with the line "{n} peste 48 de ore" / "{n} over 48 hours" when `reportsOverdue` is above 0 and no line otherwise, its "în curând" mark removed and its accessible name made as the other tiles' (161-FR-013: label, number and line). The tile follows 161-FR-007 and 161-FR-008: a skeleton on the first read, "—" with the shared info tip on a failed read, fed by the one overview call the shell already keeps.
 
-_From 161-headline-numbers._
+_From 1389-reported-reviews-admin._
 
 ### 163-FR-011 — In a period other than `default`, the garages tile's line MUST read "+{n} {period}" / "+{n} {period}" from `garagesApprovedInPeriod` with the period's line form ("azi", "în ultimele 7 zile", "în ultimele 30 de zile", "luna asta", "în ultimele 12 luni" / "today", "in the last 7 days", "in the last 30 days", "this month", "in the last 12 months"), and the active-drivers tile's line the change since `activeDriversPeriodStart` with 161-FR-005's sign rule, absent when that figure is absent; the tiles' accessible names (161-FR-013) carry the new lines.
 
@@ -868,6 +869,38 @@ _From 1263-admin-dashboard-customise._
 
 _From 177-reported-reviews._
 
+### 1389-FR-001 — (from 177-FR-005) The admin dashboard MUST release the "Recenzii raportate" / "Reported reviews" view (path `reviews`, capability `admin.reviews`, its "în curând" mark removed) in the side menu and the tab bar with `reportsPending` as its counter (no number at 0), and the view MUST open with its heading and, under it, the line "Cea mai veche raportare așteaptă de {age}" / "The oldest report has waited {age}" ({age} from the read's `oldestCreatedAt` against the time on screen, in whole days from 24 hours, or whole hours from 60 minutes, or whole minutes from one minute, rounded down, in the language's plural forms; "sub un minut" / "under a minute" below a minute), or "Nicio recenzie raportată." / "No reported reviews." with no line when there is none. The view shows the read's first page (20 items, oldest first) and, while fewer items are shown than the total, a "Mai multe" / "More" button that appends the next page (a live re-read re-reads every shown page); the counter, the line and the totals count every pending item.
+
+_From 1389-reported-reviews-admin._
+
+### 1389-FR-003 — (from 177-FR-007) Each review item MUST show the title "{garage} · recenzie de {score}" / "{garage} · {score} review" (score with one decimal in the language's format: "1,0" / "1.0"), a red lamp with the words "Raportată de service: {reason}" / "Reported by the garage: {reason}" for source `garage`, "Raportat de autor: {reason}" / "Reported by the author: {reason}" for `author`, "Raportată automat: {reason}" / "Flagged automatically: {reason}" for `automatic` (the lamp follows the source on either target), the reporter's text after the reason when the reason is `other` and the report has a text (plain text, never markup), the review text (no text block when the review has none), and the four facts as "Lucrare confirmată: {work}, {car} · predată {date}" / "Confirmed job: {work}, {car} · handed over {date}" (the date part omitted when the read carries no handover date) or "Fără lucrare: scrisă din profil (Nu prin MotorFix)" / "No job: written from the profile (Not through MotorFix)", "Cont creat: {date}" / "Account created: {date}" or "Cont șters" / "Account deleted" when the account is gone, "Recenzii identice de la același cont: {n}" / "Identical reviews from the same account: {n}", "Recenzii raportate de service înainte: {n}, păstrate {k}" / "Reviews this garage reported before: {n}, kept {k}"; and the action slots "Păstrează" / "Keep" and "Șterge recenzia" / "Remove the review", drawn disabled with the tip "În curând" / "Coming soon" until #141 and #24 wire them. The reason words are the nine of ST-76 in the admin's language (Insulte, Date personale, Reclamă, Promovarea altui service, În afara subiectului, Ură sau discriminare, Falsă sau în conflict de interese, Amenințări sau acuzații legale, Altceva), held in the admin strings (`admin.reviews.reasons.*`) and kept equal to the shared reason texts by a test, since the browser may not import the contracts barrel and FR-010 leaves the contracts alone. The garage's name comes from the item, so a reporter whose account is gone still names the garage.
+
+_From 1389-reported-reviews-admin._
+
+### 1389-FR-004 — (from 177-FR-008) Each reply item MUST show the title "{garage} · răspuns la recenzia lui {author}" / "{garage} · reply to {author}'s review", the reply text, under it the review it answers for context (score in the language's one-decimal format, text, author's public name), who posted the reply (the garage's name) and when, and "editat" / "edited" when it was edited, and a red lamp by the report's source as in FR-003 (for the author's report "Raportat de autor: {reason}" / "Reported by the author: {reason}"; the reporter's text after the reason when the reason is `other` and the report has a text); its action slots are "Păstrează răspunsul" / "Keep the reply" and "Șterge răspunsul" / "Remove the reply", drawn disabled with the tip "În curând" / "Coming soon" until ST-178 and ST-179 wire them.
+
+_From 1389-reported-reviews-admin._
+
+### 1389-FR-005 — (from 177-FR-009) An item whose report is past its due time MUST show the mark "Peste 48 de ore" / "Over 48 hours" in red, computed from the item's `dueAt` against the time on screen (the read's overdue flag agrees with it at read time) so it appears without a re-read when the item crosses the mark while shown; the same clock serves FR-001's age.
+
+_From 1389-reported-reviews-admin._
+
+### 1389-FR-007 — (from 177-FR-015, its web part) Every new text of the view, the panel, the counter and the tile (the titles, the lamps, the facts, the oldest-wait line, the empty state, the loading and error states, the overdue mark, the tile line, the "Vezi toate" link, the "Mai multe" button, the action slots and their tip, the live-region announcement) MUST exist in Romanian and English in the shared interface files, with key parity, and follow the reader's language; a Romanian hyphenated word uses U+2011; the garage's name, the author's name, the review text, the reply text and the report text MUST never be rendered as markup; dates follow the language's locale format (the shared date formats).
+
+_From 1389-reported-reviews-admin._
+
+### 1389-FR-008 — (from 177-FR-016) The view and the panel MUST render on a 320 px and a 390 px phone, a tablet and a desktop, in light and dark, Romanian and English, with no sideways scroll at 320 px and no text under 12 px; on the phone the panel keeps its place in the dashboard's order and the view is reached from the tab bar; the lamp's colour is never the only carrier of its meaning (the words are its accessible text); each item is a labelled article whose accessible name is its title; the red text and marks (lamp words, "Peste 48 de ore") keep a contrast of at least 4.5:1 in light and dark; an item that appears or leaves while the view is open is announced in a polite live region ("{n} recenzii raportate în așteptare" / "{n} reported reviews pending", in the language's plural forms), without moving focus; the disabled action slots stay in the tab order (aria-disabled) with their tip as accessible description; the Retry button, the "Mai multe" button and the "Vezi toate" link are keyboard-operable with a visible focus. pressing "Mai multe" / "More" moves focus to the first appended item (it is the button that goes away; focus is never left on the page's top); text of any length (a long garage name, an unbroken review or report text) wraps inside its card and never widens it; the skeletons' shimmer stops under `prefers-reduced-motion`. The cards follow the admin board's design (design.md): one column on the phone, the header row wrapping so the lamp drops under the title, the buttons row wrapping.
+
+_From 1389-reported-reviews-admin._
+
+### 1389-FR-009 — (from 177-FR-018, its web part) Tests MUST be written first: component tests (Jest) for the review item and the reply item (titles, lamp texts for the three sources, the `other` reason's text as plain text, the four facts including "Fără lucrare", "Cont șters" and the omitted handover date, "editat"), the oldest-wait line in days, hours, minutes and under a minute (24 h reads "1 zi") and both languages, the lamp for each of the three sources on either target, no text block for a null text, the empty, loading and error states with Retry, the "Mai multe" button appending a page, the overdue mark crossing while shown, the counter (no number at 0, none on a failed read), the panel's five items and "Vezi toate ({n})", the tile's number, line, skeleton and "—", the re-read on each of the four kinds and on resync without a skeleton flash, and the live-region announcement; the accessibility snapshot of an item; and a Playwright flow in `web-e2e` in which a garage owner reports a review and an admin's open view shows the item with its facts without a reload. FR-007 and FR-008 are proven by the i18n key-parity check and the QA sweep with its axe pass, which run in CI. Every test names its requirement ids in one whole-line `// @traces` comment.
+
+_From 1389-reported-reviews-admin._
+
+### 1389-FR-010 — Nothing in the API, the worker, the contracts, the OpenAPI document, the generated client or `libs/domain` changes in this story; the server's admin section list gaining `reported` (1263-FR-002) is ST-1402's (see Split); the view, the panel, the counter and the tile read only the queue read and the overview read ST-177 shipped, and the action slots call nothing. No new endpoint, queue or outside call is added, so the observability inventory is unchanged.
+
+_From 1389-reported-reviews-admin._
+
 ## Retired
 
 - `160-FR-001` — superseded by `161-FR-001` (2026-10-07)
@@ -901,3 +934,4 @@ _From 177-reported-reviews._
 - `161-FR-013` — superseded by `1263-FR-011` (2026-10-26)
 - `161-FR-012` — superseded by `1263-FR-012` (2026-10-26)
 - `1263-FR-006` — superseded by `011-FR-001` (2026-10-29)
+- `161-FR-004` — superseded by `1389-FR-002` (2026-10-30)

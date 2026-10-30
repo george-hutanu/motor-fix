@@ -1,3 +1,8 @@
+import { provideHttpClient } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { REVIEW_REPORT_REASON_TEXTS } from '@motor-fix/contracts';
 import type { ReportQueueItemDto } from '@motor-fix/data-access';
@@ -266,6 +271,19 @@ describe('a reported review', () => {
     fixture.detectChanges();
 
     expect(el.innerHTML).toBe(before);
+  });
+
+  // @traces 1389-FR-010
+  it('sends nothing when either slot is pressed', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    const { el, fixture } = await render(item());
+
+    for (const button of buttons(el)) button.click();
+    fixture.detectChanges();
+
+    TestBed.inject(HttpTestingController).verify();
   });
 
   it('reads as one labelled article: title, lamp words, text, facts and slots', async () => {
