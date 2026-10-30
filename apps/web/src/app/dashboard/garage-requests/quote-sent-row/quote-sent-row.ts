@@ -7,12 +7,13 @@ import {
 } from '@angular/core';
 import type { GarageRequestSummaryDto } from '@motor-fix/data-access';
 import {
-  formatLeiRange,
+  formatLeiSpan,
   formatSlot,
   I18n,
+  requestAge,
   TranslatePipe,
-  timeLeft,
 } from '@motor-fix/i18n';
+import { formatDeadline, quoteExpiry } from '@motor-fix/i18n/quote-expiry';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
@@ -20,19 +21,59 @@ import { garageOf, Session } from '../../session';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 import { confirmBooking } from '../request-actions';
 
-// A request the garage answered: who, the car, the jobs the quote includes,
-// the range, the proposed start in Bucharest time and the driver's answer.
-// Once the driver accepts, the row waits for the garage's confirmation, with
-// the time left, the driver's phone when the reader may call and, for an
-// owner or a receptionist, the button that confirms it. A confirmed row
-// names its slot, mechanic, lift, the phone and the car's plate; a quote the
-// driver declined says so until it would have expired.
+type Outcome = NonNullable<GarageRequestSummaryDto['outcome']>;
+
+// A quote that still waits or waits for the garage is amber, a booked one
+// green, every ending grey.
+const TONES: Partial<Record<Outcome, 'amber' | 'green'>> = {
+  accepted: 'amber',
+  booked: 'green',
+  waiting: 'amber',
+};
+
+interface OutcomeTag {
+  label: string;
+  // The deadline or the slot the tag ends on, as written and as the instant.
+  when?: string;
+  at?: string;
+}
+
+// The tag of a sent quote, read from the outcome the server computed and
+// nothing else: the confirm-by time of an accepted quote, the slot of a
+// booked one.
+export function outcomeTag(
+  row: GarageRequestSummaryDto,
+  i18n: I18n,
+  now: Date,
+): OutcomeTag | null {
+  const { booking, outcome } = row;
+  if (!outcome) return null;
+  const label = i18n.t(`garage.quotes.sentList.outcome.${outcome}`);
+  const language = i18n.language();
+  if (outcome === 'accepted') {
+    const at = booking?.confirmBy;
+    return { at, label, when: formatDeadline(at, language, now) };
+  }
+  if (outcome === 'booked') {
+    const at = booking?.startsAt;
+    return { at, label, when: formatSlot(at, language, now) };
+  }
+  return { label };
+}
+
+export const spokenTag = (tag: OutcomeTag | null) =>
+  tag && (tag.when ? `${tag.label} ${tag.when}` : tag.label);
+
+// A request the garage answered: who, the car, when the quote was sent, the
+// jobs it includes, the range, the proposed start in Bucharest time and what
+// became of it, as a tag with a lamp. A waiting quote says when it expires;
+// an accepted one carries the driver's phone when the reader may call and,
+// for an owner or a receptionist, the button that confirms it; a booked one
+// names its mechanic, lift, the phone and the car's plate. An ending carries
+// neither button nor phone.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    '[class.accepted]': 'accepted() || booked()',
-    '[class.declined]': 'declined()',
-  },
+  host: { '[attr.data-tone]': 'tone()' },
   imports: [HlmButton, TranslatePipe],
   selector: 'li[mfQuoteSentRow]',
   styleUrl: './quote-sent-row.css',
@@ -42,46 +83,40 @@ export class QuoteSentRow {
   readonly row = input.required<GarageRequestSummaryDto>({
     alias: 'mfQuoteSentRow',
   });
-  // "azi" and "mâine" and the time left move with the clock.
+  // "azi" and "mâine", the age and the expiry move with the clock.
   readonly now = input<Date>();
-  private readonly language = inject(I18n).language;
+  private readonly i18n = inject(I18n);
+  private readonly language = this.i18n.language;
   private readonly session = inject(Session);
   private readonly overlays = inject(Overlays);
   private readonly feed = inject(GarageRequestsFeed, { optional: true });
+  private readonly clock = computed(() => this.now() ?? new Date());
 
-  protected readonly accepted = computed(() => {
-    const { booking, quote } = this.row();
-    return (
-      quote?.status === 'accepted' &&
-      booking?.status === 'awaiting_confirmation'
-    );
+  protected readonly outcome = computed(() => this.row().outcome);
+  protected readonly tone = computed(() => {
+    const outcome = this.outcome();
+    return outcome ? (TONES[outcome] ?? 'grey') : null;
   });
-  protected readonly declined = computed(
-    () => this.row().quote?.status === 'declined_by_driver',
+  protected readonly tag = computed(() =>
+    outcomeTag(this.row(), this.i18n, this.clock()),
   );
-  protected readonly booked = computed(
-    () => this.row().booking?.status === 'confirmed',
+  protected readonly sent = computed(() =>
+    requestAge(this.row().quote?.sentAt, this.language(), this.clock()),
+  );
+  protected readonly expires = computed(() =>
+    quoteExpiry(this.row().quote?.expiresAt, this.language(), this.clock()),
+  );
+  protected readonly callable = computed(
+    () => this.outcome() === 'accepted' || this.outcome() === 'booked',
   );
   protected readonly canConfirm = computed(() => {
     const me = this.session.shown();
     const role = me?.garageAccess ? garageOf(me)?.role : null;
-    return this.accepted() && (role === 'owner' || role === 'receptionist');
+    return (
+      this.outcome() === 'accepted' &&
+      (role === 'owner' || role === 'receptionist')
+    );
   });
-  protected readonly bookedSlot = computed(() =>
-    formatSlot(
-      this.row().booking?.startsAt,
-      this.language(),
-      this.now() ?? new Date(),
-    ),
-  );
-  protected readonly left = computed(() =>
-    timeLeft(
-      this.row().booking?.confirmBy,
-      this.language(),
-      this.now() ?? new Date(),
-    ),
-  );
-
   protected readonly jobs = computed(() => {
     const { jobs, quote } = this.row();
     const included = new Set(
@@ -94,14 +129,10 @@ export class QuoteSentRow {
   });
   protected readonly range = computed(() => {
     const quote = this.row().quote;
-    return formatLeiRange(quote?.fromBani, quote?.toBani, this.language());
+    return formatLeiSpan(quote?.fromBani, quote?.toBani, this.language());
   });
   protected readonly slot = computed(() =>
-    formatSlot(
-      this.row().quote?.slot,
-      this.language(),
-      this.now() ?? new Date(),
-    ),
+    formatSlot(this.row().quote?.slot, this.language(), this.clock()),
   );
 
   protected confirm() {

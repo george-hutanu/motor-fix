@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
@@ -79,6 +80,9 @@ async function render(
   });
   await TestBed.inject(I18n).enter('garage');
   if (language === 'en') await TestBed.inject(I18n).use('en');
+  const announce = jest
+    .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
+    .mockResolvedValue();
   const fixture = TestBed.createComponent(QuotesSentPanel);
   const element = fixture.nativeElement as HTMLElement;
   const settle = async () => {
@@ -89,7 +93,7 @@ async function render(
     }
   };
   await settle();
-  return { element, settle };
+  return { announce, element, settle };
 }
 
 const text = (el: Element | null | undefined) =>
@@ -127,26 +131,31 @@ describe('the Oferte trimise panel', () => {
     expect(text(rows(element)[0])).toContain('Waiting for the customer');
   });
 
+  // @traces 346-FR-005
   it('shows three skeleton rows while the first read is on its way', async () => {
     const { element } = await render([
       new Promise<GarageRequestListDto>(() => undefined),
     ]);
 
     expect(element.querySelectorAll('.skeleton')).toHaveLength(3);
+    expect(text(element.querySelector('[role="status"]'))).toBe(
+      'Se încarcă ofertele trimise',
+    );
     expect(element.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(rows(element)).toHaveLength(0);
   });
 
+  // @traces 346-FR-005
   it('says no quote has been sent yet, in both languages', async () => {
     const ro = await render([listOf([])]);
     expect(text(ro.element.querySelector('.empty'))).toBe(
-      'Nicio ofertă trimisă încă.',
+      'Nu ai trimis încă nicio ofertă.',
     );
     TestBed.resetTestingModule();
 
     const en = await render([listOf([])], { language: 'en' });
     expect(text(en.element.querySelector('.empty'))).toBe(
-      'No quotes sent yet.',
+      'You have not sent any quote yet.',
     );
   });
 
@@ -219,6 +228,31 @@ describe('the Oferte trimise panel kept current', () => {
     expect(element.querySelector('mf-live-pill button')).toBeNull();
   });
 
+  // @traces 346-FR-003
+  // @traces 346-FR-004
+  it('highlights a row whose outcome changed, keeps it in place and announces its new tag', async () => {
+    const shown = sentRows(1, 2);
+    const { announce, element, settle } = await render([
+      listOf(shown),
+      listOf([{ ...shown[0], outcome: 'chose_other' }, shown[1]]),
+    ]);
+    const kept = rows(element)[0];
+
+    live.emit('quote.closed', 'quote-1');
+    await wait(400);
+    await settle();
+
+    expect(ids(element)).toEqual(['req-q1', 'req-q2']);
+    expect(rows(element)[0]).toBe(kept);
+    expect(text(rows(element)[0])).toContain('A ales alt service');
+    expect(rows(element)[0].classList).toContain('mf-live-changed');
+    expect(rows(element)[1].classList).not.toContain('mf-live-changed');
+    expect(announce).toHaveBeenCalledWith(
+      expect.stringContaining('A ales alt service'),
+      'polite',
+    );
+  });
+
   it('highlights nothing on the first read', async () => {
     const { element } = await render([listOf(sentRows(1, 2))]);
 
@@ -282,43 +316,38 @@ describe('Oferte trimise after the driver answers', () => {
     ).toHaveLength(2);
   });
 
-  it('measures the time left from the re-read, so a fresh acceptance reads 23 h', async () => {
-    jest.useFakeTimers({
-      advanceTimers: true,
-      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
-    });
-    try {
-      const loaded = Date.now();
-      const [waiting] = sentRows(1, 1);
-      const accepted = {
-        ...waiting,
-        booking: {
-          confirmBy: new Date(loaded + 29_000 + 24 * HOUR).toISOString(),
-          durationMinutes: 90,
-          id: 'booking-1',
-          lift: null,
-          mechanic: null,
-          startsAt: '2026-10-20T06:00:00Z',
-          status: 'awaiting_confirmation' as const,
-        },
-        quote: waiting.quote && {
-          ...waiting.quote,
-          status: 'accepted' as const,
-        },
-      } as typeof waiting;
-      const { element, settle } = await render([
-        listOf([waiting]),
-        listOf([accepted]),
-      ]);
-      jest.setSystemTime(loaded + 30_000);
+  // @traces 346-FR-003
+  it('shows the accepted tag with the confirm-by time from the re-read', async () => {
+    const [waiting] = sentRows(1, 1);
+    const accepted = {
+      ...waiting,
+      booking: {
+        confirmBy: new Date(Date.now() + 5 * HOUR).toISOString(),
+        durationMinutes: 90,
+        id: 'booking-1',
+        lift: null,
+        mechanic: null,
+        startsAt: '2026-10-20T06:00:00Z',
+        status: 'awaiting_confirmation' as const,
+        toReassign: false,
+      },
+      outcome: 'accepted' as const,
+      quote: waiting.quote && {
+        ...waiting.quote,
+        status: 'accepted' as const,
+      },
+    };
+    const { element, settle } = await render([
+      listOf([waiting]),
+      listOf([accepted]),
+    ]);
 
-      live.emit('quote.accepted');
-      await wait(400);
-      await settle();
+    live.emit('quote.accepted');
+    await wait(400);
+    await settle();
 
-      expect(text(rows(element)[0])).toContain('încă 23 h');
-    } finally {
-      jest.useRealTimers();
-    }
+    expect(text(rows(element)[0])).toMatch(
+      /Acceptată · confirmă până la (mâine, )?\d{2}:\d{2}/,
+    );
   });
 });

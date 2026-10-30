@@ -62,6 +62,7 @@ describe('GET /garage/requests', () => {
       expiresAt: older.expiresAt.toISOString(),
       id: older.id,
       jobs: [expect.objectContaining({ nameRo: 'Schimb ulei', position: 0 })],
+      outcome: null,
       quote: null,
       recipient: {
         answeredAt: null,
@@ -1032,16 +1033,12 @@ describe('GET /garage/requests?status=quoted', () => {
     return r;
   }
 
-  it('lists only the garage’s quoted rows with a waiting quote, newest quote first, each with its quote', async () => {
+  it('lists the garage’s quoted rows, newest quote first, each with its quote', async () => {
     const andrei = await driver();
     const dinamo = await team('Atelier Dinamo');
     const militari = await team('Service Militari');
     const older = await quotedAt(andrei, dinamo.garage.id, ago(2 * HOUR));
     const newer = await quotedAt(andrei, dinamo.garage.id, ago(HOUR));
-    const withdrawn = await world.request(andrei, { status: 'quoted' });
-    await world.quote(withdrawn.id, dinamo.garage.id, 'withdrawn');
-    const accepted = await world.request(andrei, { status: 'booked' });
-    await world.quote(accepted.id, dinamo.garage.id, 'accepted');
     const waiting = await world.request(andrei);
     await world.recipient(waiting.id, dinamo.garage.id);
     await quotedAt(andrei, militari.garage.id, ago(HOUR));
@@ -1065,8 +1062,8 @@ describe('GET /garage/requests?status=quoted', () => {
     }
   });
 
-  // @traces 314-FR-015
-  it('keeps a quote the driver declined until the quote’s own expiry', async () => {
+  // @traces 346-FR-002
+  it('keeps a quote the driver declined past the quote’s own expiry', async () => {
     const andrei = await driver();
     const dinamo = await team('Atelier Dinamo');
     const declined = await world.request(andrei, { status: 'quoted' });
@@ -1087,8 +1084,13 @@ describe('GET /garage/requests?status=quoted', () => {
       bearer(dinamo.owner, 'garage'),
     );
 
-    expect(ids(res)).toEqual([declined.id]);
-    expect(res.body.items[0].quote.status).toBe('declined_by_driver');
+    expect(ids(res).sort()).toEqual([declined.id, lapsed.id].sort());
+    for (const item of res.body.items) {
+      expect([item.quote.status, item.outcome]).toEqual([
+        'declined_by_driver',
+        'declined',
+      ]);
+    }
   });
 
   it('breaks a tie on the quote’s time by id, newest id first', async () => {
@@ -1363,8 +1365,8 @@ describe('GET /garage/requests?status=quoted once the driver accepts', () => {
     });
   });
 
-  // @traces 389-FR-009
-  it('drops a confirmed row once its slot has ended, and a lapsed one at once', async () => {
+  // @traces 346-FR-002
+  it('keeps a confirmed row once its slot has ended, and a lapsed one', async () => {
     const dinamo = await team('Atelier Dinamo');
     const done = await acceptedAt(dinamo.garage.id, ago(HOUR), 'confirmed');
     await prisma.booking.update({
@@ -1385,14 +1387,27 @@ describe('GET /garage/requests?status=quoted once the driver accepts', () => {
       data: { status: 'lapsed' },
       where: { id: lapsed.booking.id },
     });
+    await prisma.quote.update({
+      data: { status: 'expired' },
+      where: { id: lapsed.quote.id },
+    });
 
     const res = await get(
       '/garage/requests?status=quoted',
       bearer(dinamo.owner, 'garage'),
     );
 
-    expect(res.body.items).toEqual([]);
-    expect(res.body.total).toBe(0);
+    expect(
+      res.body.items
+        .map((item: { id: string; outcome: string }) => [item.id, item.outcome])
+        .sort(),
+    ).toEqual(
+      [
+        [done.request.id, 'booked'],
+        [lapsed.request.id, 'lapsed'],
+      ].sort(),
+    );
+    expect(res.body.total).toBe(2);
   });
 
   // @traces 389-FR-009
@@ -1502,6 +1517,7 @@ describe('GET /garage/requests?status=quoted once the driver accepts', () => {
         'expiresAt',
         'id',
         'jobs',
+        'outcome',
         'quote',
         'recipient',
         'status',

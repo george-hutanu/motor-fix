@@ -26,6 +26,13 @@ const CHANGES: readonly EventKind[] = [
   'quote.declined_by_driver',
   'booking.confirmed',
   'booking.lapsed',
+  'quote.closed',
+  'quote.expired',
+  'quote.changed',
+  'quote.withdrawn',
+  'booking.cancelled',
+  'booking.no_show_recorded',
+  'garage.suspended',
 ];
 
 // A toast's job: the first one, else the description's first line, shortened.

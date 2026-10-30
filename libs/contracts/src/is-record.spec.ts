@@ -17,9 +17,13 @@ describe('isRecord', () => {
   });
 
   it('is defined once in the apps and libraries', () => {
+    // A machine whose git config sets submodule.recurse makes git grep
+    // recurse, which refuses --untracked: switch it off for this read.
     const found = execFileSync(
       'git',
       [
+        '-c',
+        'submodule.recurse=false',
         'grep',
         '--untracked',
         '-lE',

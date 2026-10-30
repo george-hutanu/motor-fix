@@ -578,3 +578,32 @@ describe('GarageRequestsFeed: opened again', () => {
     }
   });
 });
+
+// @traces 346-FR-004
+describe('GarageRequestsFeed: what became of a quote sent', () => {
+  it.each<EventKind>([
+    'quote.closed',
+    'quote.expired',
+    'quote.changed',
+    'quote.withdrawn',
+    'booking.cancelled',
+    'booking.no_show_recorded',
+    'garage.suspended',
+    'quote.accepted',
+    'booking.lapsed',
+  ])(
+    'reads the quoted rows again on %s, so the outcome changes in place',
+    async (kind) => {
+      const before = quotedRow({ id: 'req-q1', outcome: 'waiting' });
+      const after = quotedRow({ id: 'req-q1', outcome: 'chose_other' });
+      const feed = await start({ quoted: [listOf([before]), listOf([after])] });
+
+      live.emit(kind, 'req-q1');
+      await wait(400);
+      await settle();
+
+      expect(reads('quoted')).toHaveLength(2);
+      expect(feed.quoted()?.map((row) => row.outcome)).toEqual(['chose_other']);
+    },
+  );
+});
