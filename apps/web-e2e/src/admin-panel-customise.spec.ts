@@ -163,7 +163,22 @@ test.describe('customising the admin Panou @seeded @database', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', to);
     await page.setViewportSize({ height: 800, width });
   };
+  // The drawer pops in from no opacity: axe reading it before the pop ends
+  // blends the secondary text into the page under it. Endless animations
+  // (a live dot) never finish and are left out.
+  const settled = (page: Page) =>
+    page.evaluate(() =>
+      Promise.all(
+        document
+          .getAnimations()
+          .filter(
+            (each) => each.effect?.getComputedTiming().iterations !== Infinity,
+          )
+          .map((each) => each.finished.catch(() => undefined)),
+      ),
+    );
   const scan = async (page: Page) => {
+    await settled(page);
     for (const scheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: scheme });
       expect(await sideways(page)).toBeLessThanOrEqual(0);
