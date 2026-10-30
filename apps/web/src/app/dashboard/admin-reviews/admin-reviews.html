@@ -1,0 +1,40 @@
+<mf-panel [heading]="'admin.reviews.heading' | t">
+  @if (oldest(); as line) {
+    <p class="oldest">{{ line }}</p>
+  }
+  @switch (state()) {
+    @case ('loading') {
+      <ul class="list" aria-busy="true" [attr.aria-label]="'admin.reviews.loading' | t">
+        @for (n of skeletonRows; track n) {
+          <li class="skeleton-row"><span class="skeleton"></span></li>
+        }
+      </ul>
+    }
+    @case ('failed') {
+      <div class="failed" role="alert">
+        <p>{{ 'admin.reviews.failed' | t }}</p>
+        <button type="button" class="retry" (click)="retry()">{{ 'admin.reviews.retry' | t }}</button>
+      </div>
+    }
+    @default {
+      @if (!overview) {
+        <span class="sr-only" [mfLiveChange]="pending()" [mfLiveChangeSay]="announcement()"></span>
+      }
+      @if (items().length === 0) {
+        <p class="empty">{{ 'admin.reviews.empty' | t }}</p>
+      } @else {
+        <ul class="list">
+          @for (item of items(); track item.report.id) {
+            <li><mf-admin-review-item [item]="item" [now]="now()" /></li>
+          }
+        </ul>
+      }
+      @if (more()) {
+        <button type="button" class="retry more" (click)="showMore()">{{ 'admin.reviews.more' | t }}</button>
+      }
+      @if (all(); as label) {
+        <a class="all" [routerLink]="list">{{ label }}</a>
+      }
+    }
+  }
+</mf-panel>
