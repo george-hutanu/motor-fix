@@ -144,15 +144,18 @@ test.describe('garage views @seeded', () => {
 
     await page.goto('/app/garage/prices');
     await expect(title(page)).toHaveText('Prețuri');
-    // The test garage lists no jobs: the price list's empty panel, with the
-    // owner's switch into editing above it.
+    // The test garage's three seeded jobs, one in each state, with the
+    // owner's switch into editing above them.
+    // @traces 1411-FR-005
     await expect(page.locator('main')).toContainText('Lista de prețuri');
     await expect(
       page.locator('main').getByRole('button', { name: 'Modifică prețurile' }),
     ).toBeVisible();
-    await expect(page.locator('main')).toContainText(
-      'Nu ai încă lucrări în listă.',
-    );
+    await expect(page.locator('[data-row] [data-state]')).toHaveText([
+      'pe profil',
+      'ascuns de tine',
+      'ascuns · fără preț maxim',
+    ]);
 
     await page.goto('/app/garage/assistant');
     await expect(page).toHaveURL('/app/garage');
