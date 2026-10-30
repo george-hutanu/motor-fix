@@ -238,7 +238,7 @@ describe('a row under Oferte trimise', () => {
     expect(text(row.querySelector('.car'))).toBe('BMW X3 · 2019');
     expect(text(row.querySelector('.jobs'))).toBe('Frâne spate · Schimb ulei');
     expect(text(row)).not.toContain('Încărcare freon');
-    expect(text(row.querySelector('.range'))).toBe('650–800 lei');
+    expect(text(row.querySelector('.range'))).toBe('650 – 800 lei');
     expect(text(row.querySelector('.slot'))).toBe('mâine, 09:00');
     expect(row.querySelector('.slot')?.getAttribute('datetime')).toBe(
       '2026-10-10T06:00:00Z',
@@ -413,7 +413,7 @@ describe('a row whose quote the driver accepted', () => {
     expect(text(row.querySelector('.name'))).toBe('Irina S.');
     expect(text(row.querySelector('.car'))).toBe('BMW X3 · 2019');
     expect(text(row.querySelector('.jobs'))).toBe('Frâne spate · Schimb ulei');
-    expect(text(row.querySelector('.range'))).toBe('650–800 lei');
+    expect(text(row.querySelector('.range'))).toBe('650 – 800 lei');
     expect(text(row.querySelector('.slot'))).toBe('mâine, 09:00');
   });
 

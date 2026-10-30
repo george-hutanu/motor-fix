@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import type { GarageRequestSummaryDto } from '@motor-fix/data-access';
 import {
-  formatLeiRange,
+  formatLeiSpan,
   formatSlot,
   I18n,
   requestAge,
@@ -129,7 +129,7 @@ export class QuoteSentRow {
   });
   protected readonly range = computed(() => {
     const quote = this.row().quote;
-    return formatLeiRange(quote?.fromBani, quote?.toBani, this.language());
+    return formatLeiSpan(quote?.fromBani, quote?.toBani, this.language());
   });
   protected readonly slot = computed(() =>
     formatSlot(this.row().quote?.slot, this.language(), this.clock()),

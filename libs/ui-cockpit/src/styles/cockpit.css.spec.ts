@@ -570,3 +570,13 @@ describe('cockpit.css phone rules', () => {
     expect(topLevel).not.toContain('data-column');
   });
 });
+
+// @traces 346-FR-003
+describe('cockpit.css screen-reader announcements', () => {
+  // The CDK's live announcer writes each message into an element it hides
+  // with .cdk-visually-hidden; without the CDK's a11y sheet that text sat at
+  // the foot of every page whose rows announce a change.
+  it('loads the CDK a11y sheet that hides the live announcer', () => {
+    expect(css).toMatch(/@import "@angular\/cdk\/a11y-prebuilt\.css";/);
+  });
+});
