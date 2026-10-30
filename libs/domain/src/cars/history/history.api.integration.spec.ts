@@ -14,6 +14,7 @@ import {
 } from '../transfers/transfers.testing';
 
 // @traces 1265-FR-010 1265-FR-011 1265-FR-012
+// @traces 409-FR-015
 
 const world = transfersWorld();
 const { prisma } = world;
@@ -93,10 +94,13 @@ describe('GET /cars/:id/repairs', () => {
     expect(res.status).toBe(200);
     expect(res.body.items).toEqual([
       {
+        correctedBy: null,
+        costBani: null,
         doneOn: localDay(hers.doneOn),
         fromPreviousOwner: false,
         garageName: 'Service Popescu',
         id: hers.id,
+        odometerKm: null,
         source: 'logged',
         what: 'Hers',
       },
@@ -104,10 +108,13 @@ describe('GET /cars/:id/repairs', () => {
       expect.objectContaining({ fromPreviousOwner: true, id: older.id }),
     ]);
     expect(Object.keys(res.body.items[0]).sort()).toEqual([
+      'correctedBy',
+      'costBani',
       'doneOn',
       'fromPreviousOwner',
       'garageName',
       'id',
+      'odometerKm',
       'source',
       'what',
     ]);
@@ -257,5 +264,39 @@ describe('GET /cars/sold and /cars/sold/:id/repairs', () => {
     expect(
       (await get(andrei.auth, `/cars/sold/${car.id}/repairs`)).status,
     ).toBe(200);
+  });
+});
+
+describe('the reading, the amount and the correction on both reads', () => {
+  it('answers them to the owner and to the former owner alike', async () => {
+    const { andrei, maria } = await people();
+    const car = await world.car(andrei.id);
+    const kept = await world.logged(car.id, { daysAgo: 10, what: 'Kept' });
+    await prisma.repair.update({
+      data: {
+        costBani: 45_000,
+        odometerKm: 151_000,
+        updatedBy: andrei.id,
+        updatedByRole: 'owner',
+      },
+      where: { id: kept.id },
+    });
+    await hand(andrei, maria, car.id, [kept.id]);
+
+    for (const [auth, path] of [
+      [maria.auth, `/cars/${car.id}/repairs`],
+      [andrei.auth, `/cars/sold/${car.id}/repairs`],
+    ] as const) {
+      const res = await get(auth, path);
+      expect(res.status).toBe(200);
+      expect(res.body.items).toEqual([
+        expect.objectContaining({
+          correctedBy: 'garage',
+          costBani: 45_000,
+          id: kept.id,
+          odometerKm: 151_000,
+        }),
+      ]);
+    }
   });
 });

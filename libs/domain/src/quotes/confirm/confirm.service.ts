@@ -15,6 +15,10 @@ import { refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { EVENT_PORT, type EventPort, noEvents } from '../../events/event.port';
+import {
+  garageOptions,
+  switchesOf,
+} from '../../garages/features/garage-options';
 import type {
   Booking,
   Garage,
@@ -47,11 +51,6 @@ const mechanicUnavailable = (en: boolean) =>
     en ? 'The mechanic is not available' : 'Mecanicul nu e disponibil',
   );
 
-interface Switches {
-  team: boolean;
-  lifts: boolean;
-}
-
 // The garage confirms a booking the driver accepted: the booking, its job,
 // the request's other quotes and recipients and their events are written
 // together or not at all.
@@ -66,13 +65,7 @@ export class ConfirmService {
 
   async options(actor: Actor, bookingId: string): Promise<ConfirmOptionsDto> {
     const garageId = await this.garageOf(this.prisma, actor, bookingId);
-    const garage = await this.prisma.garage.findUniqueOrThrow({
-      where: { id: garageId },
-    });
-    const switches = await this.switches(this.prisma, garageId);
-    const mechanics = switches.team
-      ? await this.offered(this.prisma, garageId)
-      : [];
+    const options = await garageOptions(this.prisma, garageId);
     // Whether any job the quote includes is done on a lift.
     const onLift = await this.prisma.quoteJob.count({
       where: {
@@ -82,9 +75,9 @@ export class ConfirmService {
       },
     });
     return {
-      liftCount: switches.lifts ? garage.liftCount : 0,
-      mechanicRequired: switches.team,
-      mechanics: mechanics.map(({ id, name }) => ({ id, name })),
+      liftCount: options.liftCount,
+      mechanicRequired: options.team,
+      mechanics: options.mechanics,
       needsLift: onLift > 0,
     };
   }
@@ -143,23 +136,6 @@ export class ConfirmService {
     return garageId;
   }
 
-  private async switches(client: Tx, garageId: string): Promise<Switches> {
-    const rows = await client.garageFeature.findMany({
-      where: { garageId, key: { in: ['team_mechanics', 'lift_schedule'] } },
-    });
-    const on = (key: string) =>
-      rows.find((row) => row.key === key)?.enabled ?? true;
-    return { lifts: on('lift_schedule'), team: on('team_mechanics') };
-  }
-
-  // The mechanics a booking can be given: every card of the garage's team.
-  private offered(client: Tx, garageId: string) {
-    return client.mechanic.findMany({
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
-      where: { garageId, removedAt: null },
-    });
-  }
-
   private async store(
     tx: Tx,
     actor: Actor,
@@ -190,7 +166,7 @@ export class ConfirmService {
         to: 'confirmed',
       });
     }
-    const switches = await this.switches(tx, garageId);
+    const switches = await switchesOf(tx, garageId);
     this.judgeFields(dto, switches);
     const en = actor.language === 'en';
     const mechanic = await this.mechanicOf(tx, garageId, en, dto.mechanicId);
@@ -220,7 +196,10 @@ export class ConfirmService {
     return garageBookingOf(read);
   }
 
-  private judgeFields(dto: ConfirmBookingDto, switches: Switches) {
+  private judgeFields(
+    dto: ConfirmBookingDto,
+    switches: { lifts: boolean; team: boolean },
+  ) {
     if (switches.team && dto.mechanicId === undefined) {
       throw invalidField('mechanicId', 'mechanicId is required');
     }

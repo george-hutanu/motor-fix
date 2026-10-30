@@ -130,24 +130,44 @@ enum RepairSource {
   @@map("repair_source")
 }
 
+// Who wrote a repair last: its driver, the named garage's owner, an admin.
+enum RepairUpdater {
+  driver
+  owner
+  admin
+
+  @@map("repair_updater")
+}
+
 // A repair in a car's history: done through MotorFix (its job set) or logged
 // by the owner by hand. `(source = 'motorfix') = (job_id IS NOT NULL)` is a
 // CHECK in the migration. A soft-deleted repair is never shown.
 model Repair {
-  id         String              @id @default(uuid()) @db.Uuid
-  carId      String              @map("car_id") @db.Uuid
-  jobId      String?             @unique @map("job_id") @db.Uuid
-  source     RepairSource
-  what       String
-  garageName String              @map("garage_name")
-  garageId   String?             @map("garage_id") @db.Uuid
-  doneOn     DateTime            @map("done_on") @db.Date
-  deletedAt  DateTime?           @map("deleted_at") @db.Timestamptz(3)
-  createdAt  DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
-  car        Car                 @relation(fields: [carId], references: [id], onDelete: Cascade)
-  job        Job?                @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  garage     Garage?             @relation(fields: [garageId], references: [id], onDelete: SetNull)
-  transfers  CarTransferRepair[]
+  id               String              @id @default(uuid()) @db.Uuid
+  carId            String              @map("car_id") @db.Uuid
+  jobId            String?             @unique @map("job_id") @db.Uuid
+  source           RepairSource
+  what             String
+  garageName       String              @map("garage_name")
+  garageId         String?             @map("garage_id") @db.Uuid
+  doneOn           DateTime            @map("done_on") @db.Date
+  deletedAt        DateTime?           @map("deleted_at") @db.Timestamptz(3)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  // A reading and an amount the driver or a correction gave; none when not.
+  odometerKm       Int?                @map("odometer_km")
+  costBani         Int?                @map("cost_bani")
+  // The driver's choice to show the repair to the garage it names.
+  sharedWithGarage Boolean             @default(false) @map("shared_with_garage")
+  sharedAt         DateTime?           @map("shared_at") @db.Timestamptz(3)
+  // The version a correction sends back, and its last writer.
+  updatedAt        DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy        String?             @map("updated_by") @db.Uuid
+  updatedByRole    RepairUpdater?      @map("updated_by_role")
+  updater          Account?            @relation("RepairUpdater", fields: [updatedBy], references: [id], onDelete: SetNull)
+  car              Car                 @relation(fields: [carId], references: [id], onDelete: Cascade)
+  job              Job?                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  garage           Garage?             @relation(fields: [garageId], references: [id], onDelete: SetNull)
+  transfers        CarTransferRepair[]
 
   @@index([carId, doneOn(sort: Desc), createdAt(sort: Desc)])
   @@map("repair")
@@ -167,20 +187,20 @@ enum CarTransferStatus {
 // transfer (a partial unique index), and `expires_at > sent_at` and the
 // phone's shape are CHECKs in the migration.
 model CarTransfer {
-  id         String              @id @default(uuid()) @db.Uuid
-  carId      String              @map("car_id") @db.Uuid
-  sellerId   String              @map("seller_id") @db.Uuid
-  buyerPhone String              @map("buyer_phone")
-  tokenHash  String              @unique @map("token_hash")
-  status     CarTransferStatus   @default(sent)
-  sentAt     DateTime            @default(now()) @map("sent_at") @db.Timestamptz(3)
-  expiresAt  DateTime            @map("expires_at") @db.Timestamptz(3)
-  buyerId    String?             @map("buyer_id") @db.Uuid
-  saleDate   DateTime?           @map("sale_date") @db.Date
-  car        Car                 @relation(fields: [carId], references: [id], onDelete: Cascade)
-  seller     Account             @relation("TransferSeller", fields: [sellerId], references: [id], onDelete: Cascade)
-  buyer      Account?            @relation("TransferBuyer", fields: [buyerId], references: [id], onDelete: SetNull)
-  repairs    CarTransferRepair[]
+  id              String              @id @default(uuid()) @db.Uuid
+  carId           String              @map("car_id") @db.Uuid
+  sellerId        String              @map("seller_id") @db.Uuid
+  buyerPhone      String              @map("buyer_phone")
+  tokenHash       String              @unique @map("token_hash")
+  status          CarTransferStatus   @default(sent)
+  sentAt          DateTime            @default(now()) @map("sent_at") @db.Timestamptz(3)
+  expiresAt       DateTime            @map("expires_at") @db.Timestamptz(3)
+  buyerId         String?             @map("buyer_id") @db.Uuid
+  saleDate        DateTime?           @map("sale_date") @db.Date
+  car             Car                 @relation(fields: [carId], references: [id], onDelete: Cascade)
+  seller          Account             @relation("TransferSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  buyer           Account?            @relation("TransferBuyer", fields: [buyerId], references: [id], onDelete: SetNull)
+  repairs         CarTransferRepair[]
   // The buyer's ownership this transfer opened, once accepted.
   openedOwnership CarOwnership[]
 
