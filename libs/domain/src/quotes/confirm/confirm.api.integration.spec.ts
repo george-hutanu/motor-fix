@@ -1477,8 +1477,14 @@ describe('a refusal names its cause', () => {
     expected: { code: string; reason?: string; ro: string; en: string },
   ) {
     const { code, reason, ro, en } = expected;
+    const fields: Record<string, string> = {
+      lift_busy: 'lift',
+      mechanic_busy: 'mechanicId',
+    };
+    const field = fields[code];
     const problem = (message: string) => ({
       code,
+      ...(field && { errors: [{ code: 'busy', field }] }),
       message,
       ...(reason && { reason }),
     });
@@ -1944,10 +1950,12 @@ describe('a job longer than its working stretch', () => {
 
     expect(await refusedIn(t, booking.id, body, 'ro')).toEqual({
       code: 'lift_busy',
+      errors: [{ code: 'busy', field: 'lift' }],
       message: 'Elevatorul 1 e ocupat miercuri 08:00–09:30 (Mini Cooper S)',
     });
     expect(await refusedIn(t, booking.id, body, 'en')).toEqual({
       code: 'lift_busy',
+      errors: [{ code: 'busy', field: 'lift' }],
       message: 'Lift 1 is busy Wednesday 08:00–09:30 (Mini Cooper S)',
     });
     expect(await snapshot(booking.id)).toEqual(before);
