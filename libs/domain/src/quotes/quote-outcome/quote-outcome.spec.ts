@@ -1,6 +1,7 @@
 import {
   BOOKING_STATUSES,
   type BookingStatus,
+  type GarageStatus,
   QUOTE_OUTCOMES,
   QUOTE_STATUSES,
   type QuoteStatus,
@@ -9,7 +10,7 @@ import {
 
 import { outcomeOf } from './quote-outcome';
 
-type Garage = 'approved' | 'suspended';
+type Garage = GarageStatus;
 
 const outcome = (
   quote: QuoteStatus,

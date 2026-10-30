@@ -1,5 +1,6 @@
 import type {
   BookingStatus,
+  GarageStatus,
   QuoteOutcome,
   QuoteStatus,
   RequestClosedReason,
@@ -7,7 +8,7 @@ import type {
 
 interface QuoteOutcomeInput {
   booking: { status: BookingStatus } | null;
-  garage: { status: string };
+  garage: { status: GarageStatus };
   quote: { status: QuoteStatus };
   request: { closedReason: RequestClosedReason | null };
 }
