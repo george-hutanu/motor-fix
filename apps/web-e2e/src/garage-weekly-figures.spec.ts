@@ -40,7 +40,8 @@ async function signedIn(page: Page, email: string) {
 test.describe('the weekly figures on the garage overview @seeded', () => {
   let db: Client;
   let garageId: string;
-  let before: { day: string; views: number; sources: unknown }[];
+  // Set once the rows found first are read: only then were rows written.
+  let before: { day: string; views: number; sources: unknown }[] | undefined;
 
   test.beforeAll(async () => {
     db = new Client({ connectionString: process.env['DATABASE_URL'] });
@@ -73,20 +74,24 @@ test.describe('the weekly figures on the garage overview @seeded', () => {
   });
 
   test.afterAll(async () => {
-    await db.query(
-      `DELETE FROM garage_daily_figures
-       WHERE garage_id = $1 AND day IN (SELECT day FROM (${DAYS}) d)`,
-      [garageId],
-    );
-    for (const row of before) {
+    try {
+      if (!before) return;
       await db.query(
-        `INSERT INTO garage_daily_figures
-           (garage_id, day, profile_views, profile_views_by_source, written_at)
-         VALUES ($1, $2, $3, $4, now())`,
-        [garageId, row.day, row.views, row.sources],
+        `DELETE FROM garage_daily_figures
+           WHERE garage_id = $1 AND day IN (SELECT day FROM (${DAYS}) d)`,
+        [garageId],
       );
+      for (const row of before) {
+        await db.query(
+          `INSERT INTO garage_daily_figures
+               (garage_id, day, profile_views, profile_views_by_source, written_at)
+             VALUES ($1, $2, $3, $4, now())`,
+          [garageId, row.day, row.views, row.sources],
+        );
+      }
+    } finally {
+      await db.end();
     }
-    await db.end();
   });
 
   test("shows the owner last week's figures, its sentence and the eight weeks at 320 px", async ({
