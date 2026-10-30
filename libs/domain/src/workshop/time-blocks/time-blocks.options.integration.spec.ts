@@ -29,7 +29,10 @@ async function setting(off: string[] = []) {
 
 const card = (m: { id: string; name: string }) => ({ id: m.id, name: m.name });
 
-beforeEach(() => jest.spyOn(Logger.prototype, 'warn').mockImplementation());
+let warn: jest.SpyInstance;
+beforeEach(() => {
+  warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+});
 afterEach(() => jest.restoreAllMocks());
 
 // @traces 1395-FR-001
@@ -107,6 +110,7 @@ describe('what a block may take', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ liftCount: 0, mechanics: [] });
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('lists no mechanic for a team with no card yet', async () => {
@@ -169,6 +173,22 @@ describe('who may read what a block may take', () => {
       expect(res.body.code).toBe('not_found');
     },
   );
+
+  it('logs one line per refusal with the garage and the code, as the blocked-time list does', async () => {
+    const s = await setting();
+    const other = await team('Service Militari');
+
+    await s.read(s.plain, 'mechanic');
+    await get(
+      `/garages/${s.garage.id}/time-blocks`,
+      bearer(other.owner, 'garage'),
+    );
+
+    expect(warn.mock.calls).toEqual([
+      [{ blockId: undefined, code: 'forbidden', garageId: s.garage.id }],
+      [{ blockId: undefined, code: 'not_found', garageId: s.garage.id }],
+    ]);
+  });
 
   it('answers a garage that does not exist with 404', async () => {
     const s = await setting();

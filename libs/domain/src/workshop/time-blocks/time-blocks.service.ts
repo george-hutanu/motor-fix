@@ -172,39 +172,46 @@ export class TimeBlocksService {
     private readonly schedule: ScheduleService,
   ) {}
 
-  async list(
+  list(
     actor: Actor,
     garageId: string,
     query: { from?: string; to?: string },
   ): Promise<TimeBlocksDto> {
-    this.assertDesk(actor, garageId);
-    const from = query.from ?? localDay(new Date());
-    const to = query.to ?? from;
-    const span = daysBetween(from, to);
-    if (!(span >= 0 && span < MAX_LIST_DAYS)) {
-      throw new BadRequestException({
-        code: 'validation_failed',
-        message: `from and to span 1 to ${MAX_LIST_DAYS} days`,
-      });
-    }
-    const { lifts } = await switchesOf(this.prisma, garageId);
-    const blocks = await blocksOf(
-      this.prisma,
-      {
-        end: atLocal(addDays(to, 1), 0),
-        garageId,
-        start: atLocal(from, 0),
-      },
-      lifts,
-    );
-    return { blocks, from, lifts, to };
+    return this.logged(garageId, undefined, async () => {
+      this.assertDesk(actor, garageId);
+      const from = query.from ?? localDay(new Date());
+      const to = query.to ?? from;
+      const span = daysBetween(from, to);
+      if (!(span >= 0 && span < MAX_LIST_DAYS)) {
+        throw new BadRequestException({
+          code: 'validation_failed',
+          message: `from and to span 1 to ${MAX_LIST_DAYS} days`,
+        });
+      }
+      const { lifts } = await switchesOf(this.prisma, garageId);
+      const blocks = await blocksOf(
+        this.prisma,
+        {
+          end: atLocal(addDays(to, 1), 0),
+          garageId,
+          start: atLocal(from, 0),
+        },
+        lifts,
+      );
+      return { blocks, from, lifts, to };
+    });
   }
 
   // What the block dialog may offer; it reads, it writes nothing.
-  async options(actor: Actor, garageId: string): Promise<TimeBlockOptionsDto> {
-    this.assertDesk(actor, garageId);
-    const { liftCount, mechanics } = await garageOptions(this.prisma, garageId);
-    return { liftCount, mechanics };
+  options(actor: Actor, garageId: string): Promise<TimeBlockOptionsDto> {
+    return this.logged(garageId, undefined, async () => {
+      this.assertDesk(actor, garageId);
+      const { liftCount, mechanics } = await garageOptions(
+        this.prisma,
+        garageId,
+      );
+      return { liftCount, mechanics };
+    });
   }
 
   create(
