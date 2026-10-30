@@ -1,0 +1,31 @@
+<section class="panel" [attr.aria-busy]="loading() || null">
+  <mf-section-title [heading]="'garage.home.section.funnel' | t" view="profile" />
+  @if (failed()) {
+    <p class="error" data-error role="alert">{{ 'garage.weekly.error' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" data-retry (click)="retry()">
+      {{ 'shell.chart.retry' | t }}
+    </button>
+  } @else if (!loading() && empty()) {
+    <p class="muted" data-empty>{{ 'garage.weekly.empty' | t }}</p>
+  } @else {
+    <div class="charts">
+      @for (column of columns(); track column.kind) {
+        <div class="column">
+          @if (!loading()) {
+            <p class="figure" [attr.data-figure]="column.kind">{{ column.figure }}</p>
+          }
+          <mf-bar-chart
+            unit="count"
+            lastLabel
+            [title]="column.title"
+            [points]="column.points"
+            [loading]="loading()"
+          />
+        </div>
+      }
+    </div>
+    @if (!loading()) {
+      <p class="sentence" data-sentence>{{ sentence() }}</p>
+    }
+  }
+</section>

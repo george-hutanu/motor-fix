@@ -1,6 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import {
+  DeferBlockBehavior,
+  DeferBlockState,
+  TestBed,
+} from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import {
   capabilitiesOf,
@@ -63,19 +67,23 @@ async function render(
     permissions = NONE,
     reviews = () => Promise.resolve(staffPage({ items: [], total: 0 })),
     status = 'approved',
+    weekly = () => new Promise(() => undefined),
   }: {
     features?: Record<string, boolean>;
     lists?: Lists;
     permissions?: Permissions;
     reviews?: () => Promise<unknown>;
     status?: Status;
+    weekly?: () => Promise<unknown>;
   } = {},
 ) {
+  const weeklyRead = jest.fn(weekly);
   const me = signal(account(role, status, features, permissions));
   const list = jest.fn(({ status: which }: { status: keyof Lists }) =>
     (lists[which] ?? (() => Promise.resolve(listOf([]))))(),
   );
   TestBed.configureTestingModule({
+    deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [
       provideRouter([]),
       GarageRequestsFeed,
@@ -103,6 +111,7 @@ async function render(
       {
         provide: GaragesService,
         useValue: {
+          garageWeeklyFigures: weeklyRead,
           legalCheckControllerRead: () =>
             Promise.reject(new HttpErrorResponse({ status: 404 })),
           verificationStatusControllerRead: () => new Promise(() => undefined),
@@ -119,7 +128,14 @@ async function render(
     }
   };
   await settle();
-  return { element: fixture.nativeElement as HTMLElement, list, me, settle };
+  return {
+    element: fixture.nativeElement as HTMLElement,
+    fixture,
+    list,
+    me,
+    settle,
+    weeklyRead,
+  };
 }
 
 const text = (el: Element | null) =>
@@ -159,7 +175,6 @@ describe('the sections of Panou, in their default order', () => {
     ['kpi', 'Cifrele zilei', /^Aici apar cifrele zilei/],
     ['load', 'Încărcarea mecanicilor azi', /^Aici apare încărcarea/],
     ['sched', 'Programul de azi, pe elevatoare', /^Aici apare programul/],
-    ['funnel', 'De la profil la cerere, pe săptămâni', /^Aici apare drumul/],
     ['brands', 'Mărci cerute luna asta', /^Aici apar mărcile/],
   ])(
     'gives %s its title and one sentence, and no data',
@@ -408,5 +423,73 @@ describe('what the sections read', () => {
       'waiting',
     ]);
     expect(reviews).toHaveBeenCalledTimes(1);
+  });
+});
+
+// @traces 1397-FR-001 1397-FR-008 1397-FR-010 1397-FR-012
+describe('the weekly figures on Panou', () => {
+  const funnelBlock = async (
+    fixture: Awaited<ReturnType<typeof render>>['fixture'],
+  ) => {
+    const blocks = await fixture.getDeferBlocks();
+    expect(blocks).toHaveLength(1);
+    return blocks[0];
+  };
+
+  it('fills the funnel section with the weekly figures panel', async () => {
+    const { element, fixture, settle, weeklyRead } = await render('garage', {
+      weekly: () => Promise.resolve({ weeks: [] }),
+    });
+
+    await (await funnelBlock(fixture)).render(DeferBlockState.Complete);
+    await settle();
+    const shown = section(element, 'funnel') as Element;
+
+    expect(shown.tagName.toLowerCase()).toBe('mf-weekly-figures-panel');
+    expect(text(shown)).not.toMatch(/^Aici apare drumul/);
+    expect(weeklyRead).toHaveBeenCalledWith({ garageId: 'garage-1' });
+    expect(keys(element)).toEqual([
+      'kpi',
+      'req',
+      'load',
+      'sched',
+      'funnel',
+      'brands',
+      'reviews',
+    ]);
+  });
+
+  it('holds the place with the titled skeleton until the panel loads', async () => {
+    const { element, fixture, weeklyRead } = await render('garage');
+
+    await (await funnelBlock(fixture)).render(DeferBlockState.Placeholder);
+    const shown = section(element, 'funnel') as Element;
+
+    expect(shown.tagName.toLowerCase()).toBe('section');
+    expect(text(shown.querySelector('h2'))).toBe(
+      'De la profil la cerere, pe săptămâni',
+    );
+    expect(shown.querySelector('[data-chart-skeleton]')).not.toBeNull();
+    expect(weeklyRead).not.toHaveBeenCalled();
+  });
+
+  it('shows the receptionist the panel too', async () => {
+    const { element, fixture, settle } = await render('receptionist', {
+      weekly: () => Promise.resolve({ weeks: [] }),
+    });
+
+    await (await funnelBlock(fixture)).render(DeferBlockState.Complete);
+    await settle();
+
+    expect(element.querySelector('mf-weekly-figures-panel')).not.toBeNull();
+  });
+
+  it('gives a mechanic no funnel section and never reads the figures', async () => {
+    const { element, fixture, weeklyRead } = await render('mechanic');
+
+    expect(keys(element)).not.toContain('funnel');
+    expect(await fixture.getDeferBlocks()).toHaveLength(0);
+    expect(element.querySelector('mf-weekly-figures-panel')).toBeNull();
+    expect(weeklyRead).not.toHaveBeenCalled();
   });
 });

@@ -91,6 +91,13 @@ p {
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-panel);
 }
+/* The weekly panel's place while its chunk loads: about its loaded height,
+   so the sections below do not jump. */
+.chart-skeleton {
+  block-size: 280px;
+  background: var(--mf-panel-raised);
+  border-radius: var(--mf-radius-control);
+}
 .empty {
   color: var(--mf-text-secondary);
   font-size: var(--mf-size-body);

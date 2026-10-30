@@ -848,5 +848,14 @@
     "contact": "Contactează MotorFix",
     "loadFailed": "Nu am putut încărca starea verificării.",
     "title": "Profilul tău e în verificare"
+  },
+  "weekly": {
+    "empty": "Încă nu sunt date. Primele cifre apar după prima săptămână întreagă.",
+    "error": "Nu am putut încărca cifrele.",
+    "noViews": "Săptămâna trecută nu a avut vizualizări.",
+    "requests": "Cereri primite",
+    "sentence": "Săptămâna trecută, {pct} din vizualizări au devenit cereri.",
+    "views": "Vizualizări profil",
+    "week": "S"
   }
 }
