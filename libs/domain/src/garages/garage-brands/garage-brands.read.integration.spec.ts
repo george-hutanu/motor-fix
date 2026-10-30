@@ -311,6 +311,21 @@ describe('GET /garages/:garageId/brands', () => {
     expect(res.body.code).toBe('gone');
   });
 
+  it('refuses the write of a suspended garage with 410 gone, changing nothing', async () => {
+    const w = await world('suspended');
+
+    const res = await http()
+      .put(`/garages/${w.nord.id}/brands`)
+      .set('Authorization', w.owner)
+      .send({ brands: [{ brandId: w.bmw.id, stance: 'works_on' }] });
+
+    expect(res.status).toBe(410);
+    expect(res.body.code).toBe('gone');
+    expect(
+      await prisma.garageBrand.count({ where: { garageId: w.nord.id } }),
+    ).toBe(0);
+  });
+
   it('answers 401 without a session', async () => {
     const w = await world();
 

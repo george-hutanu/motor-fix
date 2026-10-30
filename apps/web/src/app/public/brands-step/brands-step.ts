@@ -50,6 +50,8 @@ import { FieldWatch, NO_PROBLEMS } from '../field-watch';
 import { jobName } from '../prices-step/prices-rows';
 
 const POPULAR = 12;
+// Fifty pages of twenty: well past any car catalogue.
+const MAX_PAGES = 50;
 const BRANDS = 'steps.2.brands';
 // The search waits for the owner to stop typing.
 const DEBOUNCE_MS = 250;
@@ -152,21 +154,29 @@ export class BrandsStep implements OnInit {
     void this.loadChips();
   }
 
+  // The server's cursor ends the walk; a cursor handed back unchanged or a
+  // catalogue past MAX_PAGES ends it too, so a bad answer never spins.
   private async loadChips() {
     let cursor: string | undefined;
     let read = false;
     try {
-      do {
+      for (let pages = 0; pages < MAX_PAGES; pages++) {
+        const asked = cursor;
         const page = await this.brands.brandsControllerSearch(
-          cursor ? { cursor } : {},
+          asked ? { cursor: asked } : {},
         );
         cursor = this.show(page);
         read = true;
-      } while (cursor);
+        if (!cursor || cursor === asked) break;
+      }
     } catch {
-      if (!this.gone) this.notice.set('public.listing.brands.searchDown');
+      this.searchDown();
     }
     if (read && !this.gone) this.tellOrder();
+  }
+
+  private searchDown() {
+    if (!this.gone) this.notice.set('public.listing.brands.searchDown');
   }
 
   // A page of chips: the popular twelve, or a page of the whole catalogue

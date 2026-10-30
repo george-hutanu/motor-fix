@@ -1,7 +1,8 @@
--- A job tick belongs to a brand the garage works on. The service already
--- clears the ticks when a brand is refused; this keeps any other writer from
--- leaving one behind. A tick with no garage_brand row is left to the
--- composite foreign key, which refuses it after this trigger.
+-- A job tick is inserted only on a brand the garage works on: any writer
+-- inserting one on a refused brand is refused here. Turning a brand refused
+-- is not checked by this trigger; the brands write (writeGarageBrands) deletes
+-- that brand's ticks in the same transaction. A tick with no garage_brand row
+-- is left to the composite foreign key, which refuses it after this trigger.
 CREATE FUNCTION "garage_brand_job_taken"() RETURNS trigger AS $$
 BEGIN
   IF EXISTS (

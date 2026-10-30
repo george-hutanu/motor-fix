@@ -1188,4 +1188,30 @@ describe('the whole catalogue', () => {
     expect(chips(step).map((c) => text(c))).toEqual(NAMES);
     expect(text(step.querySelector('.notice'))).not.toBe('');
   });
+
+  // @traces 1247-FR-011
+  it('stops reading when a page hands back the cursor it was asked with', async () => {
+    search.mockImplementation(async (params?: { cursor?: string }) =>
+      params?.cursor
+        ? { items: MORE, nextCursor: 'next', total: 23 }
+        : { items: CATALOGUE, nextCursor: 'next', total: 23 },
+    );
+    const { step } = await open('ro', 'all');
+
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(chips(step)).toHaveLength(NAMES.length + MORE.length);
+  });
+
+  // @traces 1247-FR-011
+  it('stops after fifty pages whatever the cursors say', async () => {
+    let n = 0;
+    search.mockImplementation(async () => {
+      n += 1;
+      return { items: [brand(`Marca ${n}`, 100 + n)], nextCursor: `p${n}` };
+    });
+    const { fixture } = await open('ro', 'all');
+    for (let i = 0; i < 60; i++) await settle(fixture);
+
+    expect(search).toHaveBeenCalledTimes(50);
+  });
 });

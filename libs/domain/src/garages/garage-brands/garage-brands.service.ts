@@ -39,13 +39,24 @@ export function assertGarageOwner(actor: Actor, garageId: string) {
 
 type Texts = { brandNote: string | null; refusalPhrase: string | null };
 
+// A garage drivers cannot see is not edited, as its profile is not.
+function assertListed(status: string) {
+  if (status === 'suspended') {
+    throw refusal(HttpStatus.GONE, 'gone', 'This garage is no longer listed');
+  }
+}
+
 // Two writes to one garage's brands run one after the other.
-async function lockGarage(tx: Prisma.TransactionClient, garageId: string) {
-  const [garage] = await tx.$queryRaw<Texts[]>`
-    SELECT brand_note AS "brandNote", refusal_phrase AS "refusalPhrase"
+async function lockGarage(
+  tx: Prisma.TransactionClient,
+  garageId: string,
+): Promise<Texts> {
+  const [garage] = await tx.$queryRaw<(Texts & { status: string })[]>`
+    SELECT brand_note AS "brandNote", refusal_phrase AS "refusalPhrase", status
     FROM garage WHERE id = ${garageId}::uuid FOR NO KEY UPDATE`;
   if (!garage) throw noGarage();
-  return garage;
+  assertListed(garage.status);
+  return { brandNote: garage.brandNote, refusalPhrase: garage.refusalPhrase };
 }
 
 // The DTO judges each brand alone; fuels on a refused one span two fields.
@@ -227,9 +238,7 @@ export class GarageBrandsService {
       where: { id: garageId },
     });
     if (!garage) throw noGarage();
-    if (garage.status === 'suspended') {
-      throw refusal(HttpStatus.GONE, 'gone', 'This garage is no longer listed');
-    }
+    assertListed(garage.status);
     const priceList = await pricedJobsOf(this.prisma, garageId);
     const answer = await answerOf(
       this.prisma,
