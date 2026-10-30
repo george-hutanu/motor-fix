@@ -7,7 +7,7 @@
 
 ## Summary
 
-Five specs brought up to the behaviour their features' specs require; no product code changed.
+The `notifications.processor` spec brought up to ST-277's `JOB_READY` template; the other four specs were fixed on main by #617. No product code changed.
 
 ## Changes
 
@@ -30,7 +30,7 @@ The changed tests are the fix; each was red on main in CI (runs 40959271580, 409
 
 ## Deviations from Assessment
 
-None.
+While this PR was open, #617 (ST-11, 2d6e27c) merged the same fixes for the maintenance, approval-timers and sign-in-gate specs. This PR took main's versions in the merge, so its own change is the `notifications.processor` spec alone; the on-demand run proves all five on the merged head.
 
 ## Follow-ups
 
