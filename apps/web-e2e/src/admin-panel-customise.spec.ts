@@ -177,8 +177,19 @@ test.describe('customising the admin Panou @seeded @database', () => {
           .map((each) => each.finished.catch(() => undefined)),
       ),
     );
+  // Each row's text keeps a column of its own at least 9rem wide, the move
+  // arrows below it when the panel is narrow, so no name breaks mid-word.
+  const roomy = (page: Page) =>
+    page
+      .locator('mf-dashboard-sections-panel [data-row] .text')
+      .evaluateAll((all) =>
+        all.map((el) => Math.round(el.getBoundingClientRect().width)),
+      );
   const scan = async (page: Page) => {
     await settled(page);
+    const widths = await roomy(page);
+    expect(widths.length).toBe(5);
+    for (const width of widths) expect(width).toBeGreaterThanOrEqual(144);
     for (const scheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme: scheme });
       expect(await sideways(page)).toBeLessThanOrEqual(0);

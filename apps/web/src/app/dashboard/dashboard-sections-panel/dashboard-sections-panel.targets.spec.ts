@@ -119,6 +119,20 @@ describe('the panel and the strip at a thumb’s size', () => {
     }
   });
 
+  it('puts the move arrows on a line of their own in a narrow panel, so a name keeps its words whole', () => {
+    expect(ruleOf(panelSheet, /:host\s*\{/)).toMatch(
+      /container-type:\s*inline-size/,
+    );
+    expect(ruleOf(panelSheet, /(?:^|\n)li\s*\{/)).toMatch(/flex-wrap:\s*wrap/);
+    const at = panelSheet.search(/@container \(max-width: 26rem\)\s*\{/);
+    expect(at).toBeGreaterThanOrEqual(0);
+    const narrow = panelSheet.slice(at);
+    expect(ruleOf(narrow, /\.moves\s*\{/)).toMatch(/flex-basis:\s*100%/);
+    expect(ruleOf(narrow, /\.text\s*\{/)).toMatch(/flex:\s*1 1 0/);
+    // A word breaks only when it cannot fit a line on its own.
+    expect(ruleOf(panelSheet, /\.text\s*\{/)).not.toMatch(/anywhere/);
+  });
+
   it('opens and closes the panel without its slide under a reduced-motion setting', () => {
     const at = cockpit.search(
       /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\*,/,
