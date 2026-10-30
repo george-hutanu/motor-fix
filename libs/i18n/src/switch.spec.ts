@@ -314,4 +314,15 @@ describe('the language switch buttons', () => {
     );
     expect(source).toMatch(/button \{[^}]*padding: 4px 8px;/);
   });
+
+  // @traces 1246-FR-019
+  it('read at 16 px on a phone only, at the small size from 768 px', () => {
+    const [phone, wide] = source.split('@media (min-width: 768px)');
+    expect(phone).toMatch(
+      /button \{[^}]*font-size: var\(--mf-size-body, 16px\);/,
+    );
+    expect(wide).toMatch(
+      /^ \{ button \{ font-size: var\(--mf-size-small, 13px\); \} \}/,
+    );
+  });
 });

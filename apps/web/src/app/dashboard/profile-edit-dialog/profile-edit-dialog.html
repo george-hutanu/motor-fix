@@ -1,0 +1,66 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  @if (stale()) {
+    <div class="stale" data-stale role="alert">
+      <p class="error mf-message">{{ 'garage.profile.edit.problem.profile_changed' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" [attr.aria-busy]="reloading() || null" (click)="reload()">
+        {{ 'garage.profile.edit.reload' | t }}
+      </button>
+    </div>
+  }
+  @if (group === 'texts') {
+    @let nameError = errorOf(form.controls.name);
+    <div class="field">
+      <label hlmLabel for="profile-edit-name">{{ 'garage.profile.name' | t }}</label>
+      <input hlmInput id="profile-edit-name" type="text" autocomplete="organization" formControlName="name" [aria-invalid]="!!nameError" aria-describedby="profile-edit-name-hint profile-edit-name-error" />
+      <p id="profile-edit-name-hint" class="hint">{{ 'garage.profile.edit.nameHint' | t }}</p>
+      <p id="profile-edit-name-error" class="error mf-message" role="status" aria-live="polite">{{ nameError }}</p>
+    </div>
+    @let descriptionError = errorOf(form.controls.description);
+    <div class="field">
+      <label hlmLabel for="profile-edit-description">{{ 'garage.profile.description' | t }}</label>
+      <textarea hlmInput id="profile-edit-description" rows="5" formControlName="description" [aria-invalid]="!!descriptionError" aria-describedby="profile-edit-description-hint profile-edit-description-error"></textarea>
+      <p id="profile-edit-description-hint" class="hint">{{ 'garage.profile.edit.descriptionHint' | t }}</p>
+      <p id="profile-edit-description-error" class="error mf-message" role="status" aria-live="polite">{{ descriptionError }}</p>
+    </div>
+    @if (address) {
+      <div class="field address" data-address>
+        <p class="label">{{ 'garage.profile.address' | t }}</p>
+        <p class="value">{{ address }}</p>
+        <p class="hint">{{ 'garage.profile.edit.addressNote' | t }}</p>
+      </div>
+    }
+  }
+  @if (group === 'contact') {
+    @let phoneError = errorOf(form.controls.phone);
+    <div class="field">
+      <label hlmLabel for="profile-edit-phone">{{ 'garage.profile.phone' | t }}&ngsp;<span class="tag">{{ 'garage.profile.phonePrivate' | t }}</span></label>
+      <input hlmInput id="profile-edit-phone" type="tel" inputmode="tel" autocomplete="tel" formControlName="phone" [aria-invalid]="!!phoneError" aria-describedby="profile-edit-phone-error" (blur)="normalisePhone()" />
+      <p id="profile-edit-phone-error" class="error mf-message" role="status" aria-live="polite">{{ phoneError }}</p>
+    </div>
+  }
+  @if (group === 'area') {
+    @let radiusError = errorOf(form.controls.serviceRadiusKm);
+    <div class="field">
+      <label hlmLabel for="profile-edit-radius">{{ 'garage.profile.edit.radius' | t }}</label>
+      <input hlmInput id="profile-edit-radius" type="text" inputmode="numeric" autocomplete="off" formControlName="serviceRadiusKm" [aria-invalid]="!!radiusError" aria-describedby="profile-edit-radius-hint profile-edit-radius-error" />
+      <p id="profile-edit-radius-hint" class="hint">{{ 'garage.profile.edit.radiusHint' | t }}</p>
+      <p id="profile-edit-radius-error" class="error mf-message" role="status" aria-live="polite">{{ radiusError }}</p>
+    </div>
+  }
+  @if (group === 'hours') {
+    <mf-hours-step [hoursOnly]="true" [value]="section()" (valueChange)="keep($event)" />
+    <p id="profile-edit-hours-error" class="error mf-message" role="status" aria-live="polite">{{ save.fieldError(form.controls.hours) }}</p>
+    <p id="profile-edit-closedDays-error" class="error mf-message" role="status" aria-live="polite">{{ save.fieldError(form.controls.closedDays) }}</p>
+  }
+  @if (save.problem() && !stale()) {
+    <div class="error mf-message" data-problem role="alert"><mf-task-error [save]="save" /></div>
+  }
+  <div class="actions">
+    <button hlmBtn type="submit" [mfTaskSubmit]="save">
+      {{ 'garage.profile.edit.save' | t }}
+    </button>
+    <button hlmBtn variant="ghost" type="button" (click)="task.close('cancelled')">
+      {{ 'garage.profile.edit.cancel' | t }}
+    </button>
+  </div>
+</form>

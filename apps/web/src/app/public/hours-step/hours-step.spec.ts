@@ -452,6 +452,28 @@ describe('step 5, the opening hours', () => {
     expect(step.querySelector('#hours-mon-error')).toBe(region);
     expect(text(region)).toBe('');
   });
+
+  // @traces 1246-FR-020
+  it('ties a break outside the opening hours to its error and unties it once the break fits', async () => {
+    const { fixture, step } = await open();
+    await openByDay(fixture, step);
+    const monday = step.querySelector<HTMLElement>('[data-day="mon"]');
+    if (!monday) throw new Error('no Monday');
+    await click(fixture, button(monday, 'Adaugă pauză'));
+    const fields = ['mon-1-open', 'mon-1-close'];
+
+    await choose(fixture, select(step, 'mon-1-open'), '11:00');
+
+    for (const name of fields)
+      expect(select(step, name)?.getAttribute('aria-describedby')).toBe(
+        'hours-mon-error',
+      );
+
+    await choose(fixture, select(step, 'mon-1-open'), '13:00');
+
+    for (const name of fields)
+      expect(select(step, name)?.hasAttribute('aria-describedby')).toBe(false);
+  });
 });
 
 describe('step 5, the closed days', () => {
@@ -524,6 +546,25 @@ describe('step 5, the closed days', () => {
     expect(text(region)).toBe('');
   });
 
+  // @traces 1246-FR-020
+  it("ties the closed-day fields to a refused day's reason and unties them once a day is added", async () => {
+    const { fixture, step } = await open();
+    const fields = () =>
+      ['closedDay', 'closedNote'].map((name) =>
+        step
+          .querySelector(`input[name="${name}"]`)
+          ?.getAttribute('aria-describedby'),
+      );
+
+    await add(fixture, step, '2026-10-06');
+
+    expect(fields()).toEqual(['hours-closed-error', 'hours-closed-error']);
+
+    await add(fixture, step, '2026-12-27');
+
+    expect(fields()).toEqual([null, null]);
+  });
+
   it('adds the same day once', async () => {
     const { fixture, step } = await open();
 
@@ -593,6 +634,80 @@ describe('step 5, the closed days', () => {
     expect(fixture.componentInstance.value().closedDays).toEqual([
       { day: '2026-12-01' },
     ]);
+  });
+
+  // The calendar answers late: a day taken while it loads is judged once it
+  // arrives, and kept only when the calendar is down.
+  // @traces 1246-FR-017
+  describe('while the calendar is still loading', () => {
+    let answer: (failed: boolean) => void;
+    // Until the step shows the calendar's answer: its next holidays, or that
+    // the list is not available.
+    const shows = (step: HTMLElement) => {
+      const holidays = step.querySelector('.holidays');
+      return (
+        !!holidays?.querySelector('li') ||
+        text(holidays).includes('nu e disponibilă acum')
+      );
+    };
+    const answered = async (fixture: Fixture, step: HTMLElement) => {
+      for (let i = 0; i < 20 && !shows(step); i++) await settle(fixture);
+      if (!shows(step)) throw new Error('the calendar never answered');
+    };
+    beforeEach(() => {
+      const pending = new Promise<boolean>((resolve) => {
+        answer = resolve;
+      });
+      list.mockImplementation(async ({ year }: { year: number }) => {
+        if (await pending) throw new Error('offline');
+        return CALENDAR[year] ?? [];
+      });
+    });
+
+    it('refuses a legal holiday taken meanwhile once the calendar loads', async () => {
+      const { fixture, step } = await open();
+      await add(fixture, step, '2026-12-01');
+      await add(fixture, step, '2026-12-27', 'Inventar');
+
+      answer(false);
+      await answered(fixture, step);
+
+      expect(fixture.componentInstance.value().closedDays).toEqual([
+        { day: '2026-12-27', note: 'Inventar' },
+      ]);
+      expect(text(step.querySelector('.closed-error'))).toBe(
+        'E deja zi liberă legală',
+      );
+      expect(closedDays(step)).toHaveLength(1);
+    });
+
+    it('refuses it the same way in the profile dialog', async () => {
+      const { fixture, step } = await open();
+      fixture.componentRef.setInput('hoursOnly', true);
+      await settle(fixture);
+      await add(fixture, step, '2026-12-01');
+
+      answer(false);
+      await answered(fixture, step);
+
+      expect(fixture.componentInstance.value().closedDays).toBeUndefined();
+      expect(text(step.querySelector('.closed-error'))).toBe(
+        'E deja zi liberă legală',
+      );
+    });
+
+    it('keeps the day when the calendar turns out to be down', async () => {
+      const { fixture, step } = await open();
+      await add(fixture, step, '2026-12-01');
+
+      answer(true);
+      await answered(fixture, step);
+
+      expect(fixture.componentInstance.value().closedDays).toEqual([
+        { day: '2026-12-01' },
+      ]);
+      expect(text(step.querySelector('.closed-error'))).toBe('');
+    });
   });
 });
 
@@ -1359,6 +1474,25 @@ describe('type scale', () => {
       /\n[^{}\n]*input:not\(\[type="checkbox"\], \[type="radio"\]\) \{[^}]*font-size: var\(--mf-size-field\);/,
     );
   });
+  // @traces 1246-FR-018
+  it('draws the courtesy car terms as round radios with a dot, not as ticks', () => {
+    expect(stylesheet).toMatch(
+      /\.tick input\[type="radio"\]::before \{[^}]*border-radius: 50%;/,
+    );
+    expect(stylesheet).toMatch(
+      /\.tick input\[type="radio"\]:checked::after \{[^}]*border-radius: 50%;[^}]*background: var\(--mf-text\);/,
+    );
+    expect(stylesheet).toMatch(
+      /\.tick input\[type="radio"\]:checked::after \{[^}]*transform: none;/,
+    );
+  });
+
+  // @traces 1246-FR-018
+  it('reads "Preț pe zi" and "lei" at the body size on a phone, the small size from a tablet', () => {
+    const [phone, tablet] = stylesheet.split('@media (min-width: 768px)');
+    expect(phone).toMatch(/\n\.price \{[^}]*font-size: var\(--mf-size-body\);/);
+    expect(tablet).toMatch(/\.price \{[^}]*font-size: var\(--mf-size-small\);/);
+  });
 });
 
 describe('empty messages', () => {
@@ -1378,5 +1512,106 @@ describe('empty messages', () => {
     expect(rule).not.toMatch(/display:\s*none/);
     expect(rule).toMatch(/position:\s*absolute/);
     expect(rule).toMatch(/clip-path:\s*inset\(50%\)/);
+  });
+});
+
+// @traces 1246-FR-012 1246-FR-026
+describe('step 5 inside the profile dialog: hours only', () => {
+  const headings = (step: HTMLElement) =>
+    [...step.querySelectorAll('h3')].map(text);
+
+  it('shows the week and the closed days, and no facilities, note or payments', async () => {
+    const { fixture, step } = await open();
+    fixture.componentRef.setInput('hoursOnly', true);
+    await settle(fixture);
+
+    expect(headings(step)).toEqual(['Program', 'Zile închise']);
+    expect(row(step, 'weekdays')).not.toBeNull();
+    expect(step.querySelector('input[name="closedDay"]')).not.toBeNull();
+    expect(step.querySelector('button.add-closed')).not.toBeNull();
+    expect(step.querySelector('.facilities')).toBeNull();
+    expect(step.querySelector('input[name="facilitiesNote"]')).toBeNull();
+    expect(step.querySelector('#facilities-note-error')).toBeNull();
+    expect(step.querySelector('.payments')).toBeNull();
+    expect(step.querySelector('#payments-error')).toBeNull();
+  });
+
+  it('leaves the listing form whole while the input is not set', async () => {
+    const { step } = await open();
+
+    expect(headings(step)).toEqual([
+      'Program',
+      'Zile închise',
+      'Facilități pentru clienți',
+      'Plată',
+    ]);
+    for (const id of [
+      'hours-error',
+      'hours-closed-error',
+      'facilities-note-error',
+      'payments-error',
+    ])
+      expect(step.querySelector(`#${id}`)).not.toBeNull();
+  });
+
+  it('keeps the week and the closed days as the listing does, adding nothing else to the value', async () => {
+    const { fixture, step } = await open();
+    fixture.componentRef.setInput('hoursOnly', true);
+    fixture.componentInstance.value.set({
+      closedDays: [],
+      hours: {
+        fri: [['08:00', '17:00']],
+        mon: [['08:00', '17:00']],
+        sat: [],
+        sun: [],
+        thu: [['08:00', '17:00']],
+        tue: [['08:00', '17:00']],
+        wed: [['08:00', '17:00']],
+      },
+    });
+    await settle(fixture);
+
+    await choose(fixture, select(step, 'weekdays-close'), '18:00');
+    await type(
+      fixture,
+      step.querySelector('input[type="date"][name="closedDay"]'),
+      '2026-12-27',
+    );
+    await click(
+      fixture,
+      step.querySelector<HTMLButtonElement>('button.add-closed'),
+    );
+
+    expect(Object.keys(fixture.componentInstance.value()).sort()).toEqual([
+      'closedDays',
+      'hours',
+    ]);
+    expect(fixture.componentInstance.value().hours?.mon).toEqual([
+      ['08:00', '18:00'],
+    ]);
+    expect(fixture.componentInstance.value().closedDays).toEqual([
+      { day: '2026-12-27' },
+    ]);
+  });
+
+  it('refuses a legal holiday with the same text in the dialog', async () => {
+    const { fixture, step } = await open();
+    fixture.componentRef.setInput('hoursOnly', true);
+    await settle(fixture);
+
+    await type(
+      fixture,
+      step.querySelector('input[type="date"][name="closedDay"]'),
+      '2026-12-01',
+    );
+    await click(
+      fixture,
+      step.querySelector<HTMLButtonElement>('button.add-closed'),
+    );
+
+    expect(text(step.querySelector('.closed-error'))).toBe(
+      'E deja zi liberă legală',
+    );
+    expect(fixture.componentInstance.value().closedDays).toBeUndefined();
   });
 });

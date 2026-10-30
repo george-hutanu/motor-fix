@@ -51,6 +51,16 @@ h3,
   row-gap: var(--mf-space-1);
   min-width: 0;
 }
+/* The owner's edit control closes its group of lines, on a row of its own;
+   the description, a paragraph, takes the whole row too. */
+.edit,
+.field.wide {
+  grid-column: 1 / -1;
+}
+.edit button {
+  min-height: 44px;
+  white-space: normal;
+}
 .label {
   display: flex;
   flex-wrap: wrap;
@@ -77,6 +87,10 @@ h3,
   border-radius: var(--mf-radius-control);
   background: var(--mf-panel-raised);
   align-self: stretch;
+}
+.field.wide > .value {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 /* A field with no label (the area line) still puts its box on the value row. */
 .field > .value:only-child {

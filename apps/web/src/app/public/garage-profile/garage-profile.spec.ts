@@ -951,6 +951,45 @@ describe('a profile pre-fetched from the results', () => {
     );
   });
 
+  // @traces 1246-FR-015
+  it("shows an owner's saved name, description and Saturday hours on garage.updated, with no reload", async () => {
+    jest.useFakeTimers();
+    prefetch.take.mockReturnValue(FIXED);
+    await open('/ro/garages/service-auto-militari');
+
+    send('garage.updated');
+    jest.advanceTimersByTime(300);
+    await settle();
+    await reads[0]?.answer({
+      ...FIXED,
+      description: 'Revizii și diagnoză, sâmbăta dimineața',
+      hours: {
+        fri: [['08:00', '17:00']],
+        mon: [['08:00', '17:00']],
+        sat: [['09:00', '13:00']],
+        sun: [],
+        thu: [['08:00', '17:00']],
+        tue: [['08:00', '17:00']],
+        wed: [['08:00', '17:00']],
+      },
+      name: 'Service Auto Militari Nou',
+    });
+
+    const said = (el: Element | null | undefined) =>
+      el?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    expect(said(page().querySelector('h1'))).toBe('Service Auto Militari Nou');
+    expect(said(page().querySelector('.description'))).toContain(
+      'Revizii și diagnoză, sâmbăta dimineața',
+    );
+    const rows = [
+      ...page().querySelectorAll('section[data-slot="where"] .row'),
+    ].map((row) => [
+      said(row.querySelector('.days')),
+      said(row.querySelector('.times')),
+    ]);
+    expect(rows).toContainEqual(['Sâmbătă', '09:00 – 13:00']);
+  });
+
   it('reads once as today when nothing was pre-fetched', async () => {
     await open('/ro/garages/service-auto-militari');
 

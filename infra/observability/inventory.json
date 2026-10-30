@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 245,
+    "count": 246,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1895,14 +1895,14 @@
       "kind": "endpoint",
       "name": "garage-profile",
       "source": "libs/domain/src/garages/garage-profile/garage-profile.controller.ts",
-      "metric": "http.server.request.duration by http.route GET /api/v1/garages/:garageId/profile",
+      "metric": "http.server.request.duration by http.route GET and PATCH /api/v1/garages/:garageId/profile",
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "a read with no writes, no event and no audit row, re-read by the owner's profile view on each garage change and on reconnect; it answers through the public profile's cache, so its cache fallbacks count in the API's cache-fallback rule; a 403 is a mechanic or receptionist without the view, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; its spans come from the HTTP, Prisma and Redis auto-instrumentation; no counter or alert of its own; no outside call",
-      "story": "ST-133"
+      "reason": "the GET is a read with no writes, no event and no audit row, re-read by the owner's profile view on each garage change and on reconnect; the PATCH is the owner's in-place save of name, description, phone, hours with closed days and radius, one transaction with an audit row per changed field and one garage.updated outbox event (already listed) whose relay purge drops the public profile cache, the phone never in the event, logs, labels or spans; a 409 is a stale version, a 422 a field that needs verification; it answers through the public profile's cache, so its cache fallbacks count in the API's cache-fallback rule; a 403 is a mechanic or receptionist without the view, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; its spans come from the HTTP, Prisma and Redis auto-instrumentation; no counter or alert of its own; no outside call",
+      "story": "ST-133, ST-1246"
     },
     {
       "kind": "endpoint",
