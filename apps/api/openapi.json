@@ -6599,7 +6599,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: the garage id"
+            "description": "the garage id is not a uuid"
           },
           "401": {
             "description": "sign_in_required"

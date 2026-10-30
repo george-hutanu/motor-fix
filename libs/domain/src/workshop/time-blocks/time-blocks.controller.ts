@@ -78,7 +78,7 @@ export class TimeBlocksController {
     summary: 'The lifts and the mechanics a block may take',
   })
   @ApiOkResponse({ type: TimeBlockOptionsDto })
-  @ApiBadRequestResponse({ description: 'validation_failed: the garage id' })
+  @ApiBadRequestResponse({ description: 'the garage id is not a uuid' })
   @ApiNotFoundResponse({ description: 'not_found' })
   options(
     @CurrentActor() actor: Actor,

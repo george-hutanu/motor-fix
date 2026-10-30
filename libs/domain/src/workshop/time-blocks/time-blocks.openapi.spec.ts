@@ -28,6 +28,13 @@ describe('what a block may take, in the OpenAPI document', () => {
     ]);
   });
 
+  it('describes the bad garage id as the plain 400 it answers, no code', () => {
+    const description = get?.responses['400'].description;
+
+    expect(description).toBe('the garage id is not a uuid');
+    expect(description).not.toMatch(/validation_failed/);
+  });
+
   it('holds the lift count and the mechanics, nothing else', () => {
     const dto = doc.components.schemas.TimeBlockOptionsDto;
 
