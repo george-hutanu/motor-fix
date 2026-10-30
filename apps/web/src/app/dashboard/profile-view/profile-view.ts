@@ -13,6 +13,7 @@ import { FACILITIES } from '@motor-fix/contracts/garage-hours';
 import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
 import { type GarageProfileDto, GaragesService } from '@motor-fix/data-access';
 import { formatKm, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { HlmButton, Lamp } from '@motor-fix/ui-cockpit';
 import { filter } from 'rxjs';
 
@@ -25,6 +26,11 @@ import {
 import { hoursLines } from '../../public/garage-profile/where-section/hours-lines';
 import { GarageLegalCheck } from '../garage-legal-check/garage-legal-check';
 import { Live } from '../live';
+import {
+  type ProfileEditData,
+  ProfileEditDialog,
+  type ProfileGroup,
+} from '../profile-edit-dialog/profile-edit-dialog';
 import { garageOf, Session } from '../session';
 
 const SUSPENDED = 410;
@@ -46,6 +52,7 @@ export class ProfileView {
   private readonly live = inject(Live);
   private readonly i18n = inject(I18n);
   private readonly router = inject(Router);
+  private readonly overlays = inject(Overlays);
   protected readonly skeletons = [1, 2, 3];
   private readonly garageId = computed(
     () => garageOf(this.session.shown())?.garageId ?? '',
@@ -93,9 +100,18 @@ export class ProfileView {
       'garage.feature_switches' satisfies Capability,
     ),
   );
-  protected readonly profile = computed(() =>
-    this.suspended() ? undefined : this.view.value(),
-  );
+  // A save's answer, shown at once until the next read lands.
+  private readonly saved = signal<{
+    profile: GarageProfileDto;
+    reads: number;
+  } | null>(null);
+  protected readonly profile = computed(() => {
+    if (this.suspended()) return undefined;
+    const saved = this.saved();
+    return saved && saved.reads === this.view.reads()
+      ? saved.profile
+      : this.view.value();
+  });
 
   constructor() {
     void this.i18n.enter('garage');
@@ -168,6 +184,30 @@ export class ProfileView {
       ? `/${this.i18n.language()}/garages/${encodeURIComponent(garage.slug)}`
       : '';
   });
+
+  // The owner edits a group of her profile in place; the saved answer shows
+  // at once, and the next garage.updated read replaces it.
+  protected async edit(group: ProfileGroup) {
+    const profile = this.profile();
+    if (!profile) return;
+    const result = await this.overlays.open<GarageProfileDto, ProfileEditData>(
+      ProfileEditDialog,
+      {
+        confirmDiscard: false,
+        data: { garageId: this.garageId(), group, profile },
+        shape: 'dialog',
+        title: `garage.profile.edit.title.${group}`,
+      },
+    );
+    if (result === 'cancelled') return;
+    this.saved.set({ profile: result, reads: this.view.reads() });
+  }
+
+  protected editLabel(group: ProfileGroup) {
+    return this.t('garage.profile.edit.controlFor', {
+      group: this.t(`garage.profile.edit.title.${group}`),
+    });
+  }
 
   protected address(garage: GarageProfileDto) {
     return garage.businessKind === 'mobile' ? '' : (garage.address ?? '');

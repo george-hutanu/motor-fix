@@ -80,12 +80,25 @@ const refusalOf = async (promise: Promise<unknown>) => {
 };
 
 describe("writing a garage's hours, closed days and facilities", () => {
+  // The writer runs on the client itself, not in an interactive transaction:
+  // that transaction keeps its own wall clock (2 s to get a connection, 5 s
+  // to finish), which a loaded machine overran on the file's first, coldest
+  // write. The day is the fixed TODAY and the outcome is read back from the
+  // rows, so nothing here waits on time.
+  // @traces 1246-FR-021
+  // @traces 1246-FR-022
   it('writes the weekly hours, one closed day with its note and one listed facility', async () => {
-    await write({
-      closedDays: [{ day: '2026-12-27', note: 'Inventar' }],
-      facilities: ['waiting_area'],
-      hours,
-    });
+    await writeGarageHours(
+      prisma,
+      garageId,
+      {
+        closedDays: [{ day: '2026-12-27', note: 'Inventar' }],
+        facilities: ['waiting_area'],
+        hours,
+      },
+      TODAY,
+      { actorId, audit, events: outbox },
+    );
 
     expect(await stored()).toEqual({
       closedDays: [{ day: '2026-12-27', note: 'Inventar' }],
