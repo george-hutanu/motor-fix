@@ -117,7 +117,11 @@ export const GARAGE_MAP = new InjectionToken<OpenGarageMap>('GARAGE_MAP', {
 })
 export class GarageMap {
   readonly point = input.required<LatLng>();
-  readonly km = input<number>();
+  // A radius that is not a positive number draws the point alone.
+  readonly km = input(undefined, {
+    transform: (km: number | undefined) =>
+      km !== undefined && Number.isFinite(km) && km > 0 ? km : undefined,
+  });
   readonly gone = output<void>();
 
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
@@ -127,15 +131,9 @@ export class GarageMap {
     'static',
   );
   // The area as the static map's overlay draws a mobile mechanic's circle.
-  protected readonly area = computed<GaragePinsDto | undefined>(() => {
-    const serviceRadiusKm = this.km();
-    if (serviceRadiusKm === undefined) return undefined;
-    const { lat, lng } = this.point();
-    const pin = { id: 'area', lat, lng, matches: true, rateLei: null };
-    return {
-      pins: [{ ...pin, serviceRadiusKm, stance: 'unstated' }],
-      total: 1,
-    };
+  protected readonly area = computed(() => {
+    const km = this.km();
+    return km === undefined ? undefined : areaOf(this.point(), km);
   });
   // The view the static image shows, which the interactive map opens at. The
   // snapped centre can move a fitted circle up to a sixteenth of the image
@@ -143,10 +141,10 @@ export class GarageMap {
   protected readonly still = computed<MapView | undefined>(() => {
     const box = this.box();
     if (!box) return undefined;
-    const area = this.area();
     const km = this.km();
-    if (!area || km === undefined)
+    if (km === undefined)
       return fitView(boundsOf([this.point()]), box, paddingOf());
+    const area = areaOf(this.point(), km);
     const bounds = boundsOf(
       circleBounds(this.point(), km).map(([lng, lat]) => ({ lat, lng })),
     );
@@ -228,6 +226,17 @@ export class GarageMap {
     this.left = true;
     this.gone.emit();
   }
+}
+
+function areaOf(
+  { lat, lng }: { lat: number; lng: number },
+  serviceRadiusKm: number,
+): GaragePinsDto {
+  const pin = { id: 'area', lat, lng, matches: true, rateLei: null };
+  return {
+    pins: [{ ...pin, serviceRadiusKm, stance: 'unstated' }],
+    total: 1,
+  };
 }
 
 function inside(area: GaragePinsDto, view: MapView, box: Box) {

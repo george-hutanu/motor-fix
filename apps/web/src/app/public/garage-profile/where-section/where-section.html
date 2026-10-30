@@ -1,12 +1,7 @@
 @if (!empty()) {
-  @if (circle(); as circle) {
+  @if (map(); as map) {
     @if (!mapGone()) {
-      <mf-garage-map [point]="circle.at" [km]="circle.km" (gone)="mapGone.set(true)" />
-    }
-  }
-  @if (point(); as point) {
-    @if (!mapGone()) {
-      <mf-garage-map [point]="point" (gone)="mapGone.set(true)" />
+      <mf-garage-map [point]="map.at" [km]="map.km" (gone)="mapGone.set(true)" />
     }
   }
   <h2>{{ 'public.garageProfile.where.title' | t }}</h2>

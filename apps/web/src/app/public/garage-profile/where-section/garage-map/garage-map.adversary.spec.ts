@@ -204,3 +204,118 @@ describe('GarageMap, at the edges of the globe', () => {
     expect(open.mock.calls[0]?.[2]).toEqual({ lat: 46.77, lng: 23.59 });
   });
 });
+
+// @traces 1383-FR-005
+describe('GarageMap, the area at the limits of its radius', () => {
+  const circle = () => {
+    const area = element().querySelector<HTMLElement>('.overlay .area');
+    return {
+      r: Number.parseFloat(area?.style.getPropertyValue('--r') ?? ''),
+      x: Number.parseFloat(area?.style.left ?? ''),
+      y: Number.parseFloat(area?.style.top ?? ''),
+    };
+  };
+  const INLAND = { lat: 46.9, lng: 23.68 };
+
+  it.each([
+    [1, 320],
+    [1, 390],
+    [100, 320],
+    [100, 390],
+    [37, 320],
+  ])('keeps a circle of %i km whole inside a %i px strip', async (km, w) => {
+    jest.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(w);
+    await render(undefined, km);
+    fixture.componentRef.setInput('point', INLAND);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const { r, x, y } = circle();
+
+    expect(r).toBeGreaterThan(0);
+    expect(x - r).toBeGreaterThanOrEqual(0);
+    expect(x + r).toBeLessThanOrEqual(w);
+    expect(y - r).toBeGreaterThanOrEqual(0);
+    expect(y + r).toBeLessThanOrEqual(200);
+  });
+
+  it('asks for a finite image when the radius is not a number', async () => {
+    await render(undefined, Number.NaN);
+    const src = element().querySelector('img')?.getAttribute('src') ?? '';
+
+    expect(src).not.toMatch(/NaN|undefined|Infinity/);
+  });
+});
+
+// @traces 1383-FR-006
+// @traces 1383-FR-007
+describe('GarageMap, the area asked for in odd orders', () => {
+  it('opens an area once with its radius when asked twice while loading', async () => {
+    await render(undefined, 20);
+    tap();
+    tap();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0]?.[4]).toBe(20);
+  });
+
+  it('opens the area at the zoom of the image it replaces', async () => {
+    await render(undefined, 20);
+    const zoom = piece().view()?.zoom;
+    tap();
+
+    expect(open.mock.calls[0]?.[3].zoom).toBe(zoom);
+  });
+
+  it('says it is gone once when an area map is refused after the image failed', async () => {
+    await render(undefined, 20);
+    tap();
+    piece().failed.emit();
+    refused(new Error('style'));
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    expect(gone).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws no circle once the interactive map has replaced the image', async () => {
+    await render(undefined, 20);
+    tap();
+    opened({ destroy });
+    await fixture.whenStable();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    fixture.detectChanges();
+
+    expect(element().querySelector('.overlay .area')).toBeNull();
+    expect(gone).not.toHaveBeenCalled();
+  });
+
+  it('turns a drawn area back into a marked point when the radius goes away', async () => {
+    await render(undefined, 20);
+    fixture.componentRef.setInput('km', undefined);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(element().querySelector('.overlay .area')).toBeNull();
+    expect(piece().place()).toEqual(POINT);
+  });
+
+  it('keeps the circle out of assistive technology and the image decorative', async () => {
+    await render(undefined, 20);
+    const area = element().querySelector('.overlay .area');
+
+    expect(element().querySelector('img')?.getAttribute('alt')).toBe('');
+    expect(area?.closest('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it('adds no focusable element but the control to an area', async () => {
+    await render(undefined, 20);
+    const focusable = element().querySelectorAll(
+      'a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+
+    expect(focusable).toHaveLength(1);
+    expect(focusable[0]?.tagName).toBe('BUTTON');
+  });
+});

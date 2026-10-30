@@ -30,6 +30,7 @@ features:
   - 1367-review-price-marks
   - 1366-garage-map-directions
   - 1246-garage-profile-edit
+  - 1383-mobile-service-area
 ---
 
 # Capability: Garage profile
@@ -50,9 +51,9 @@ _From 1353-verified-badge-last-check._
 
 _From 307-public-garage-profile._
 
-### 309-FR-006 — The public profile read (`GET /api/v1/garages/{slug}`, with its optional `brand`) MUST carry `closedDays`: every day from today (Bucharest) through today + 14 that is a legal holiday of the calendar or a closed day of the garage, each as `{ day, reason }` with `day` a Bucharest date ("YYYY-MM-DD") and `reason` `holiday` or `closed`, in date order, a day held once with `holiday` winning; empty when there is none. The closed day's note is not sent. The answer's key allow-list test MUST gain `closedDays` and keep failing on `phone`, `cui`, `seatAddress` and a mobile mechanic's `latitude`/`longitude`; `hours` and every other field stay as they are (modifies 308-FR-002: one more allowed key).
+### 1383-FR-001 — `GET /api/v1/garages/{slug}` (with its optional `brand`) MUST carry, for a mobile mechanic (`businessKind` `mobile`) whose row holds a position (both `latitude` and `longitude` non-null), `areaLat` and `areaLng`: the row's latitude and longitude each rounded to two decimals by the one rounding the search pins use (`Math.round(value * 100) / 100`, `roughly`, exported once and imported by both reads), beside `serviceRadiusKm` as today; the answer MUST still carry no `address`, `latitude`, `longitude` or `seatAddress` for a mobile mechanic, and the seat's text and exact coordinates MUST appear nowhere in the body. The answer's key allow-list test MUST gain `areaLat` and `areaLng` and keep failing on `phone`, `cui`, `seatAddress` and a mobile mechanic's `latitude`/`longitude` (modifies 309-FR-006: two more allowed keys).
 
-_From 309-open-now-directions._
+_From 1383-mobile-service-area._
 
 ### 1182-FR-007 — The public garage profile read MUST go through the cache service in place of its own Redis hash, slug pointer and generation: one entry per garage and brand in context (and one for none), found from the slug, tagged with the garage, a soft lifetime of 10 minutes, keeping every rule of 307-FR-001 and 307-FR-006 that the reader sees (the one public scope, the 404/410 verdicts of garages that exist read fresh every time, the brand-in-context variants, the drop on every event relayed to `public:garage:{id}`, PostgreSQL the only truth). The old keys, generation and per-module fail-open wrapper are removed, not kept beside the new service.
 
@@ -756,9 +757,9 @@ _From 1366-garage-map-directions._
 
 _From 1366-garage-map-directions._
 
-### 1366-FR-007 — When the answer carries no `latitude` or no `longitude`, or the garage is a mobile mechanic, "Unde" MUST show no map and no directions link; the mobile mechanic's section is unchanged in every other way (308-FR-011), its circle being the follow-up story's.
+### 1383-FR-004 — For a mobile mechanic whose answer carries `areaLat` and `areaLng`, "Unde" MUST show, as the section's first element above the heading (the workshop's map strip, 1366-FR-001), ST-1366's map piece with one circle of `serviceRadiusKm` (20 when absent) centred on the answer's centre and no pin, no centre marker, no price label and no brand or lamp colour: one neutral ring with a light fill (the static map's `.area` circle with `--lamp: var(--mf-text)`, never `takes` or `lit`), which follows the scheme. The rest of the section is as 308-FR-011 and 1366-FR-007 left it: the heading, the area line, the hours; no address and no directions link (modifies 1366-FR-007: the circle is now drawn; the workshop's rule and the no-link rule are unchanged).
 
-_From 1366-garage-map-directions._
+_From 1383-mobile-service-area._
 
 ### 1366-FR-008 — For a workshop with a point, "Unde" MUST show a link "Arată traseul" / "Get directions" under the hours lines, as the section's last line (the board's placement; the same place when the map is gone), whose address is the platform's: `https://maps.apple.com/?daddr={lat},{lng}` on an iPhone, iPad or iPod; `geo:{lat},{lng}?q={lat},{lng}` on an Android device; `https://www.google.com/maps/dir/?api=1&destination={lat},{lng}` anywhere else, the computer address alone opened in a new tab (`target="_blank"`, `rel="noopener noreferrer"`), the phone addresses with no `target` and no `rel`; `{lat}` and `{lng}` are the answer's numbers as `String(n)` writes them, unrounded, with a `.` decimal separator whatever the language.
 
@@ -844,6 +845,38 @@ _From 1246-garage-profile-edit._
 
 _From 1246-garage-profile-edit._
 
+### 1383-FR-002 — A workshop's answer MUST never carry `areaLat` or `areaLng` (its `address`, `latitude` and `longitude` are unchanged), and a mobile mechanic without a position (either coordinate null) MUST carry neither field (`serviceRadiusKm` as today, 20 by default).
+
+_From 1383-mobile-service-area._
+
+### 1383-FR-003 — `PublicGarageDto` MUST gain `areaLat` and `areaLng` as optional numbers described "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre", the OpenAPI document and the generated client regenerated from it (`npx nx run data-access:generate`); the profile cache's key and lifetime are unchanged, so an entry written before this change is served without the centre until it expires.
+
+_From 1383-mobile-service-area._
+
+### 1383-FR-005 — The view MUST be the largest whole zoom at which the circle's bounding box (the `span` of the radius at the centre's latitude, `circleBounds`) fits the map box less the piece's padding on every side (`paddingOf()`, 40 px), never past 15 and never below the image service's minimum (`STATIC_MAP_ZOOM.min`), centred on the circle's centre snapped as the image service snaps (1196-FR-002), computed by the shared view function (`fitView` from the circle's bounds) so the static image and the interactive map agree; the circle is drawn over the snapped image at the answer's centre with its radius in pixels from the same projection the Results circles use, so the whole circle lies inside the box at 320 px and every wider width whenever its bounds lie inside Romania (near the border the centre is snapped inside the country, 1196-FR-002, and the circle may be cut there only). A live re-read of the profile that changes the radius or the centre yields a new view, image and circle; an unchanged one requests nothing.
+
+_From 1383-mobile-service-area._
+
+### 1383-FR-006 — A tap or a click on the static map, or activating "Hartă interactivă" / "Interactive map" (the existing text), MUST open the interactive map in the same box at the view of FR-005 with the same circle (the `ring` polygon with the Results `areas` fill and line, without the lit state and without a label) and no marker, by the shared opener; a second activation while loading does nothing; the hand-over is the cross-fade of 1196-FR-019. When the static image or the interactive map fails to load, the map box MUST be removed with no message and nothing announced, the area line and the hours staying as they were (1366-FR-006).
+
+_From 1383-mobile-service-area._
+
+### 1383-FR-007 — The map box MUST keep 1366-FR-003 and FR-004: full section width, 200 px tall from 320 px up, the attribution and the control inside the box, no sideways scroll at 320 px, the dark palette under the dark scheme, a finger scrolling the page over the static image and the interactive map's cooperative gestures; the image is decorative (`alt=""`) and the circle is hidden from assistive technology: the area line is the accessible place, and the control is the one focusable element the map adds.
+
+_From 1383-mobile-service-area._
+
+### 1383-FR-008 — When the answer carries no `areaLat` or no `areaLng` (a mobile mechanic without a position, or an entry cached before this change), "Unde" MUST show no map and be in every other way exactly as today (the area line, the hours, no address, no link); a workshop's "Unde" is unchanged (1366-FR-001 to FR-010).
+
+_From 1383-mobile-service-area._
+
+### 1383-FR-009 — The change MUST add nothing to the web app's initial bundle: the map code stays behind the profile route's lazy chunk and MapLibre is fetched only on a tap (1366's `GARAGE_MAP` opener), with the initial bundle at or under its size on `main` (the 500 kB warning budget of `apps/web/project.json` is about 1 kB away); no new endpoint, outside call, text key, analytics event or `infra/observability/inventory.json` entry; the static image route's existing metric counts these renders.
+
+_From 1383-mobile-service-area._
+
+### 1383-FR-010 — Jest MUST cover, on the API side (integration, real PostgreSQL): a mobile mechanic seeded at four-decimal coordinates with a seat address answers `areaLat`/`areaLng` with at most two decimals and equal to the rounding, no `address`, `latitude`, `longitude` or `seatAddress` key and no seat text; a workshop answers no `areaLat`/`areaLng`; a mobile mechanic without a position, or with only one coordinate, answers neither; the search pins and the profile answer for one mobile mechanic carry the same centre and radius; the allow-list of keys. On the web side: the section draws one circle and no pin, no address and no link for a mobile mechanic with a centre; no map without one; the view fits the circle (every point of the circle's edge inside the box less the padding, zoom at most 15) at a 320 px and a desktop box for an inland centre; the activation opens the interactive map once with the view as `start` and the ring drawn; a failure removes the box and keeps the area line. End to end (the file's own mobile mechanic given a position, `MAP_TILES_TILEJSON_URL=off` as today): "Unde" holds one circle, no pin and no directions link, the network log holds one `maps/static` request and no `maplibre-gl` request before a tap, and at 320 px the page does not scroll sideways.
+
+_From 1383-mobile-service-area._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -869,3 +902,5 @@ _From 1246-garage-profile-edit._
 - `133-FR-001` — superseded by `1246-FR-008` (2026-10-30)
 - `133-FR-006` — superseded by `1246-FR-011` (2026-10-30)
 - `133-FR-011` — superseded by `1246-FR-014` (2026-10-30)
+- `309-FR-006` — superseded by `1383-FR-001` (2026-10-30)
+- `1366-FR-007` — superseded by `1383-FR-004` (2026-10-30)

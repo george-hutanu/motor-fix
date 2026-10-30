@@ -64,18 +64,21 @@ export class WhereSection {
   // A workshop's point, as the answer carries it.
   protected readonly point = computed(() => {
     const { latitude: lat, longitude: lng } = this.garage();
-    if (this.mobile() || typeof lat !== 'number' || typeof lng !== 'number')
-      return undefined;
+    if (this.mobile() || !finite(lat) || !finite(lng)) return undefined;
     return { lat, lng };
   });
-  // A mobile mechanic's area: its rounded centre and the radius it travels.
-  protected readonly circle = computed(() => {
-    const { areaLat: lat, areaLng: lng, serviceRadiusKm } = this.garage();
-    if (!this.mobile() || typeof lat !== 'number' || typeof lng !== 'number')
-      return undefined;
+  // What the map draws: a workshop's point, or a mobile mechanic's area as
+  // its rounded centre and the radius it travels.
+  protected readonly map = computed(() => {
+    if (!this.mobile()) {
+      const at = this.point();
+      return at && { at, km: undefined };
+    }
+    const { areaLat: lat, areaLng: lng, serviceRadiusKm: km } = this.garage();
+    if (!finite(lat) || !finite(lng)) return undefined;
     return {
       at: { lat, lng },
-      km: serviceRadiusKm ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+      km: finite(km) && km > 0 ? km : MOBILE_SERVICE_RADIUS_DEFAULT_KM,
     };
   });
   // The map went (its image or the interactive map failed); a new garage
@@ -108,3 +111,6 @@ export class WhereSection {
     this.consent.track('directions_opened', { platform: this.platform() });
   }
 }
+
+const finite = (value: number | null | undefined): value is number =>
+  Number.isFinite(value);
