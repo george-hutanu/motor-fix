@@ -14,7 +14,15 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { type LatLng, STATIC_MAP_ZOOM } from '@motor-fix/contracts/map-view';
+import {
+  bucketFor,
+  type LatLng,
+  project,
+  STATIC_MAP_ZOOM,
+  snapCentre,
+  unproject,
+} from '@motor-fix/contracts/map-view';
+import { ROMANIA_BOUNDS } from '@motor-fix/contracts/place-section';
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
@@ -137,13 +145,10 @@ export class GarageMap {
     const km = this.km();
     return km === undefined ? undefined : areaOf(this.point(), km);
   });
-  // The view the static image shows, which the interactive map opens at. The
-  // snapped centre can move a fitted circle up to a sixteenth of the image
-  // off its middle, so a zoom lower is taken until all of it is in the box.
-  // A control or credit over the strip's middle (the narrow desktop column,
-  // where the credit wraps) is not cleared by any zoom, so the circle is
-  // also fitted beside each cover, and the closest view that clears them
-  // all is taken.
+  // The view the static image shows, which the interactive map opens at:
+  // for an area, the highest zoom at which some grid centre keeps the whole
+  // circle in the padded box and clear of the control and the credit, which
+  // over the narrow desktop column's middle no lower zoom alone clears.
   protected readonly still = computed<MapView | undefined>(() => {
     const box = this.box();
     if (!box) return undefined;
@@ -273,8 +278,14 @@ const sameCovers = (a: readonly Cover[], b: readonly Cover[]) =>
       c.x === b[i].x && c.y === b[i].y && c.w === b[i].w && c.h === b[i].h,
   );
 
-// The highest view that holds the whole circle clear of the covers, or the
-// plain fit at its lowest zoom when none can.
+// The highest view that holds the whole circle in the box and clear of the
+// covers, never above the plain fit (the box less `paddingOf()` on every
+// side), or that fit at its lowest zoom when none can. The image service
+// takes its centre on a grid an eighth of the image wide, which can carry a
+// fitted circle off the room the covers leave it (the narrow desktop
+// column, where the credit wraps under a control over the middle), so at
+// each zoom every grid centre is tried and the one drawing the circle
+// nearest the box's middle is taken.
 function areaView(
   point: LatLng,
   km: number,
@@ -285,61 +296,71 @@ function areaView(
   const bounds = boundsOf(
     circleBounds(point, km).map(([lng, lat]) => ({ lat, lng })),
   );
-  const views = besideOf(covers, box).map((padding) => {
-    let view = fitView(bounds, box, padding);
-    while (view.zoom > STATIC_MAP_ZOOM.min && !inside(area, view, box, covers))
-      view = fitView(bounds, box, padding, view.zoom - 1);
-    return view;
-  });
-  const clear = views.filter((view) => inside(area, view, box, covers));
-  return clear.reduce(
-    (a, b) => (b.zoom > a.zoom ? b : a),
-    clear[0] ?? views[0],
-  );
+  const top = fitView(bounds, box, paddingOf()).zoom;
+  for (let zoom = top; zoom >= STATIC_MAP_ZOOM.min; zoom--) {
+    const found = centresOf(point, zoom, box)
+      .map((center) => ({ center, zoom }))
+      .find((view) => clear(area, view, box, covers));
+    if (found) return found;
+  }
+  return fitView(bounds, box, paddingOf(), STATIC_MAP_ZOOM.min);
 }
 
-type Padding = ReturnType<typeof paddingOf>;
+const { latMax, latMin, lngMax, lngMin } = ROMANIA_BOUNDS;
 
-// The room kept between the circle and a cover it is fitted beside.
+// The image service takes a centre inside Romania only.
+const inRomania = ({ lat, lng }: LatLng) =>
+  lat >= latMin && lat <= latMax && lng >= lngMin && lng <= lngMax;
+
+// The grid points along one axis within half the box of the point.
+function gridNear(from: number, half: number, step: number): number[] {
+  const first = Math.ceil((from - half) / step);
+  const last = Math.floor((from + half) / step);
+  return Array.from({ length: last - first + 1 }, (_, i) => (first + i) * step);
+}
+
+// The image grid's centres that draw the point inside the box, inside
+// Romania, nearest the box's middle first.
+function centresOf(point: LatLng, zoom: number, box: Box): LatLng[] {
+  const bucket = bucketFor(box.w);
+  const step = bucket / 8;
+  const at = project(point, zoom);
+  return gridNear(at.x, box.w / 2, step)
+    .flatMap((x) => gridNear(at.y, box.h / 2, step).map((y) => ({ x, y })))
+    .sort(
+      (a, b) =>
+        Math.hypot(at.x - a.x, at.y - a.y) - Math.hypot(at.x - b.x, at.y - b.y),
+    )
+    .map((p) => snapCentre(unproject(p, zoom), zoom, bucket))
+    .filter(inRomania);
+}
+
+// The room kept between the circle and the box's edge, and between it and
+// the control or the credit.
+const EDGE = 16;
 const COVER_GAP = 8;
 
-// The paddings to fit the circle with: the plain one first, then each way
-// of keeping it to one side of every cover (left of, above, right of or
-// below it), the cover's far edge plus a gap taken off that side of the box.
-function besideOf(covers: readonly Cover[], box: Box): Padding[] {
-  let ways: Padding[] = [paddingOf()];
-  for (const c of covers) {
-    ways = ways.flatMap((p) => [
-      { ...p, right: Math.max(p.right, box.w - c.x + COVER_GAP) },
-      { ...p, bottom: Math.max(p.bottom, box.h - c.y + COVER_GAP) },
-      { ...p, left: Math.max(p.left, c.x + c.w + COVER_GAP) },
-      { ...p, top: Math.max(p.top, c.y + c.h + COVER_GAP) },
-    ]);
-  }
-  return covers.length === 0 ? ways : [paddingOf(), ...ways];
-}
-
-// Inside the box less the padding the view was fitted with, and clear of
-// the control and the credit drawn over it.
-function inside(
+// Wholly in the box, an edge's room in, and clear of the control and the
+// credit drawn over it.
+function clear(
   area: GaragePinsDto,
   view: MapView,
   box: Box,
   covers: readonly Cover[],
 ) {
-  const { bottom, left, right, top } = paddingOf();
   return overlayOf(area, undefined, view, box).circles.every(
     ({ r, x, y }) =>
-      x - r >= left &&
-      y - r >= top &&
-      x + r <= box.w - right &&
-      y + r <= box.h - bottom &&
+      x - r >= EDGE &&
+      y - r >= EDGE &&
+      x + r <= box.w - EDGE &&
+      y + r <= box.h - EDGE &&
       covers.every(
         (c) =>
           Math.hypot(
             Math.max(c.x - x, 0, x - (c.x + c.w)),
             Math.max(c.y - y, 0, y - (c.y + c.h)),
-          ) >= r,
+          ) >=
+          r + COVER_GAP,
       ),
   );
 }

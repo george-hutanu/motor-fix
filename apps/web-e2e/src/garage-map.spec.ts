@@ -236,8 +236,9 @@ test.describe('a mobile mechanic’s area on a small map', () => {
   });
 
   // At a desktop the profile's column is narrow: the credit wraps and lifts
-  // the control over the strip's middle, and the circle stays clear of both.
-  test('keeps the circle clear of the control and the credit at 1440 px', async ({
+  // the control over the strip's middle, and the circle stays clear of both
+  // at the size the room beside them fits.
+  test('keeps the circle clear of the control and the credit at 1440 px, at the size the room fits', async ({
     page,
   }) => {
     await page.setViewportSize({ height: 900, width: 1440 });
@@ -249,6 +250,9 @@ test.describe('a mobile mechanic’s area on a small map', () => {
     const r = circle.width / 2;
     const x = circle.x + r;
     const y = circle.y + circle.height / 2;
+    // An area, not a dot: the zoom the room beside the covers fits is held
+    // on a neighbouring grid centre rather than dropped.
+    expect(r).toBeGreaterThanOrEqual(20);
     for (const cover of [
       still(page).locator('button'),
       still(page).locator('.attribution'),

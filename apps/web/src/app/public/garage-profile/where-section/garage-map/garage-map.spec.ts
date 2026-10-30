@@ -9,14 +9,9 @@ import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { GARAGE_MAP, GarageMap } from './garage-map';
-import { ring } from '../../../map-libre/map-libre';
+import { circleBounds, ring } from '../../../map-libre/map-libre';
 import type { MapFake } from '../../../place-step/place-step.testing';
-import {
-  boundsOf,
-  FIT_PADDING,
-  fitView,
-  paddingOf,
-} from '../../../static-map/fit-view';
+import { boundsOf, fitView, paddingOf } from '../../../static-map/fit-view';
 import { StaticMap } from '../../../static-map/static-map';
 
 jest.mock('maplibre-gl', () =>
@@ -26,6 +21,8 @@ jest.mock('maplibre-gl', () =>
 const POINT = { lat: 44.4352671, lng: 26.0123456 };
 const CENTRE = { lat: 46.9, lng: 23.68 };
 const BOX = { h: 200, w: 390 };
+// The room the circle keeps from the box's edge (garage-map.ts).
+const EDGE = 16;
 let box = BOX;
 
 let opened: (value: { destroy(): void }) => void;
@@ -168,9 +165,10 @@ describe('GarageMap, the area of a mobile mechanic', () => {
       await render({ km, point: at });
       const { r, x, y } = circle();
       const { zoom } = piece().view() as { zoom: number };
-      // At the lowest zoom the image service gives, the box itself is all
-      // that is left to hold the circle.
-      const margin = zoom > STATIC_MAP_ZOOM.min ? FIT_PADDING : 0;
+      // The zoom is the box less its padding's fit or lower; the drawn
+      // circle keeps an edge's room in. At the lowest zoom the image service
+      // gives, the box itself is all that is left to hold it.
+      const margin = zoom > STATIC_MAP_ZOOM.min ? EDGE : 0;
 
       expect(r).toBeGreaterThan(0);
       expect(x - r).toBeGreaterThanOrEqual(margin);
@@ -236,6 +234,50 @@ describe('GarageMap, the area of a mobile mechanic', () => {
       }
     },
   );
+
+  // The profile's column at a 1440 px desktop as the QA run drew it: the
+  // control over the middle and the two-line credit along the bottom leave
+  // a room 93 px tall, which the image grid's snapped centre misses at the
+  // zoom that fits it; a neighbouring grid centre holds that zoom, so the
+  // circle is drawn no smaller than it can be, as near the middle as it can.
+  it('holds the zoom the room left by the covers fits, on a neighbouring grid centre', async () => {
+    box = { h: 200, w: 398 };
+    const covers = {
+      attribution: { h: 46, w: 374, x: 12, y: 141 },
+      button: { h: 44, w: 164, x: 222, y: 93 },
+    };
+    const real = Element.prototype.getBoundingClientRect;
+    jest
+      .spyOn(Element.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: Element) {
+        const at = this.matches('mf-static-map .attribution')
+          ? covers.attribution
+          : this.matches('mf-static-map button')
+            ? covers.button
+            : undefined;
+        return at ? new DOMRect(at.x, at.y, at.w, at.h) : real.call(this);
+      });
+    await render({ km: 20, point: CENTRE });
+    const { r, x, y } = circle();
+
+    expect(r).toBeGreaterThanOrEqual(20);
+    expect(piece().view()?.zoom).toBeLessThanOrEqual(
+      fitView(
+        boundsOf(circleBounds(CENTRE, 20).map(([lng, lat]) => ({ lat, lng }))),
+        box,
+        paddingOf(),
+      ).zoom,
+    );
+    expect(x - r).toBeGreaterThanOrEqual(EDGE);
+    expect(y - r).toBeGreaterThanOrEqual(EDGE);
+    expect(x + r).toBeLessThanOrEqual(box.w - EDGE);
+    expect(y + r).toBeLessThanOrEqual(box.h - EDGE);
+    for (const c of Object.values(covers)) {
+      const dx = Math.max(c.x - x, 0, x - (c.x + c.w));
+      const dy = Math.max(c.y - y, 0, y - (c.y + c.h));
+      expect(Math.hypot(dx, dy)).toBeGreaterThanOrEqual(r);
+    }
+  });
 
   it('fits the view to the circle, not to its centre', async () => {
     await render({ km: 20, point: CENTRE });
