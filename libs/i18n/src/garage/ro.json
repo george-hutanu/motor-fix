@@ -810,6 +810,52 @@
       "other": "{count} de ani"
     }
   },
+  "timeBlocks": {
+    "button": "Blochează timp",
+    "cancel": "Renunță",
+    "changed": "Interval modificat",
+    "done": "Interval blocat",
+    "from": "De la",
+    "fromDay": "Ziua de început",
+    "fromTime": "Ora de început",
+    "lift": "Elevator",
+    "liftNumber": "Elevator {n}",
+    "loading": "Se încarcă…",
+    "mechanic": "Mecanic",
+    "noLift": "Fără elevator",
+    "noMechanic": "Fără mecanic",
+    "noMechanics": "Nu ai încă mecanici în echipă.",
+    "note": "Notă",
+    "noteLeft": "Rămase: {n}",
+    "openTeam": "Deschide echipa",
+    "problem": {
+      "feature_off": "Programul garajului s‑a schimbat",
+      "mechanic_gone": "Mecanicul nu mai e în echipă",
+      "no_such_lift": "Elevatorul nu există"
+    },
+    "refusal": {
+      "already_ended": "Intervalul s‑a încheiat deja",
+      "bad_time": "Alege ziua și ora",
+      "end_before_start": "Sfârșitul trebuie să fie după început",
+      "note_long": "Nota are cel mult 200 de caractere",
+      "off_quarter": "Ora trebuie să fie la un sfert de oră",
+      "pick_lift": "Alege un elevator",
+      "pick_mechanic": "Alege un mecanic",
+      "pick_one": "Alege un mecanic sau un elevator",
+      "too_long": "Cel mult 14 zile"
+    },
+    "remove": "Elimină",
+    "removed": "Interval eliminat",
+    "removeQuestion": "Elimini intervalul blocat?",
+    "retry": "Reîncearcă",
+    "save": "Salvează",
+    "submit": "Blochează",
+    "title": "Blochează timp",
+    "titleEdit": "Modifică intervalul blocat",
+    "until": "Până la",
+    "untilDay": "Ziua de sfârșit",
+    "untilTime": "Ora de sfârșit"
+  },
   "verification": {
     "checkIn": "O verificăm în 1–2 zile lucrătoare.",
     "contact": "Contactează MotorFix",

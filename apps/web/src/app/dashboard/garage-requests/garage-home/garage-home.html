@@ -15,6 +15,11 @@
       @if (count(); as line) {
         <span class="muted" data-count aria-live="polite">{{ line }}</span>
       }
+      @if (canBlockTime()) {
+        <button hlmBtn variant="ghost" type="button" data-block-time (click)="blockTime()">
+          {{ 'garage.timeBlocks.button' | t }}
+        </button>
+      }
       <button hlmBtn variant="ghost" type="button" data-customise (click)="open()">
         {{ 'garage.home.panel.button' | t }}
       </button>
