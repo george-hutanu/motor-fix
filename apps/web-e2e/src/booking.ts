@@ -99,9 +99,13 @@ async function acceptedBooking(request: APIRequestContext, email = DRIVER) {
 }
 
 // One request of the driver's (the seeded one unless named), accepted as
-// above and confirmed by Militari with its first mechanic on lift 1, so its
-// booking is confirmed.
-export async function confirmed(request: APIRequestContext, email = DRIVER) {
+// above and confirmed by Militari on lift 1 with the mechanic named, or its
+// first one, so its booking is confirmed.
+export async function confirmed(
+  request: APIRequestContext,
+  email = DRIVER,
+  mechanicId?: string,
+) {
   const { bookingId, requestId } = await acceptedBooking(request, email);
   const headers = bearer(await accessToken(request, MILITARI));
   const options = await request.get(
@@ -113,7 +117,12 @@ export async function confirmed(request: APIRequestContext, email = DRIVER) {
     mechanics: { id: string }[];
   };
   const confirm = await request.post(`/api/v1/bookings/${bookingId}/confirm`, {
-    data: { lift: 1, ...(mechanics[0] && { mechanicId: mechanics[0].id }) },
+    data: {
+      lift: 1,
+      ...((mechanicId ?? mechanics[0]) && {
+        mechanicId: mechanicId ?? mechanics[0].id,
+      }),
+    },
     headers,
   });
   expect(confirm.ok()).toBe(true);

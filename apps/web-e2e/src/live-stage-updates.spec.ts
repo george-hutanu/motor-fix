@@ -54,14 +54,41 @@ async function ownDriver(request: APIRequestContext) {
   return email;
 }
 
+// A mechanic card of the test's own at Militari: a mechanic works one job at
+// a time there, so another test starting a job for a shared mechanic would
+// pause this test's job behind its back.
+async function ownMechanic(
+  request: APIRequestContext,
+  garage: Record<string, string>,
+) {
+  const me = await request.get('/api/v1/me', { headers: garage });
+  const { garageId } = (await me.json()) as { garageId: string };
+  const letters = Array.from(randomUUID().replace(/-/g, '').slice(0, 6), (c) =>
+    String.fromCharCode(97 + (Number.parseInt(c, 16) % 26)),
+  ).join('');
+  const added = await request.post(`/api/v1/garages/${garageId}/mechanics`, {
+    data: { name: `Mecanic Etape ${letters}` },
+    headers: garage,
+  });
+  expect(added.status(), await added.text()).toBe(201);
+  const id = ((await added.json()) as { id: string }).id;
+  const remove = async () => {
+    await request.delete(`/api/v1/garages/${garageId}/mechanics/${id}`, {
+      headers: garage,
+    });
+  };
+  return { id, remove };
+}
+
 // A job of this test's own: a request of the test's own driver booked and
-// confirmed at Militari, received, with one step whose text no other test
-// writes. Every assertion follows that step, so other workers' writes to the
-// shared seed never move what the test waits for.
+// confirmed at Militari for the test's own mechanic, received, with one step
+// whose text no other test writes. Every assertion follows that step, so
+// other workers' writes to the shared seed never move what the test waits for.
 async function ownJob(request: APIRequestContext) {
   const garage = bearer(await accessToken(request, MILITARI));
   const driver = await ownDriver(request);
-  const { bookingId, startsAt } = await confirmed(request, driver);
+  const mechanic = await ownMechanic(request, garage);
+  const { bookingId, startsAt } = await confirmed(request, driver, mechanic.id);
   // Followed page by page: jobs in work sort first and could fill the first.
   const from = bucharestDay.format(new Date(startsAt));
   type Job = { bookingId: string; car: { odometerKm: number }; id: string };
@@ -104,13 +131,15 @@ async function ownJob(request: APIRequestContext) {
     );
     expect(res.ok()).toBe(true);
   };
-  // Leaves no job of the test's in work, whatever stage it stopped at.
+  // Leaves no job of the test's in work, whatever stage it stopped at, and
+  // takes the test's mechanic off the team.
   const close = async () => {
     for (const verb of ['resume', 'start', 'finish']) {
       await request.post(`/api/v1/garage/jobs/${id}/${verb}`, {
         headers: garage,
       });
     }
+    await mechanic.remove();
   };
   return { call, close, driver, id, text, tick };
 }
