@@ -45,7 +45,19 @@ afterAll(async () => {
 });
 
 const stance = (value: 'works_on' | 'does_not_take') =>
-  prisma.garageBrand.create({ data: { brandId, garageId, stance: value } });
+  prisma.garageBrand.create({
+    data: {
+      brandId,
+      garageId,
+      stance: value,
+      ...(value === 'does_not_take' && {
+        diesel: false,
+        electric: false,
+        hybrid: false,
+        petrol: false,
+      }),
+    },
+  });
 
 const tick = () =>
   prisma.$executeRawUnsafe(

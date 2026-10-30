@@ -525,18 +525,30 @@ describe("a taken brand's fuels in the brand answer", () => {
     expect(await events()).toEqual([]);
   });
 
-  it('unticks all four fuels with an empty list', async () => {
+  // @traces 1247-FR-002
+  it('refuses an empty fuel list on a taken brand with fuels_empty, keeping its fuels', async () => {
     const w = await world();
     await set(w, [[w.bmw, 'works_on']]);
+    await checkpoint();
 
-    await setFuels(w, [{ brandId: w.bmw, fuels: [], stance: 'works_on' }]);
+    const error = await setFuels(w, [
+      { brandId: w.bmw, fuels: [], stance: 'works_on' },
+    ]).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
 
+    expect((error as HttpException).getStatus()).toBe(400);
+    expect(JSON.stringify((error as HttpException).getResponse())).toContain(
+      'fuels_empty',
+    );
     expect(await fuelsOf(w, w.bmw)).toEqual({
-      diesel: false,
-      electric: false,
-      hybrid: false,
-      petrol: false,
+      diesel: true,
+      electric: true,
+      hybrid: true,
+      petrol: true,
     });
+    expect(await history(w)).toEqual([]);
   });
 
   it('refuses fuels on a refused brand with 400 validation_failed, changing nothing', async () => {
