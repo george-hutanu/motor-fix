@@ -14,7 +14,7 @@
   @if (view.value(); as list) {
     @if (list.items.length) {
       <ul class="rows">
-        @for (row of list.items; track row.jobTypeId) {
+        @for (row of items(); track row.jobTypeId) {
           <li data-row class="row" [attr.data-public]="row.public" [attr.aria-busy]="busy() === row.priceId ? 'true' : null">
             <span class="line">
               <span class="name" data-name>{{ name(row) }}</span>

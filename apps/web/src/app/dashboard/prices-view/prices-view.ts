@@ -103,6 +103,29 @@ export class PricesView {
     },
   );
 
+  // A hide or show on its way, drawn over the row until the list is read
+  // again: a re-read is newer than the press, whatever the save answers.
+  private readonly pending = signal<{
+    priceId: string;
+    reads: number;
+    visible: boolean;
+  } | null>(null);
+  protected readonly items = computed(() => {
+    const items = this.view.value()?.items ?? [];
+    const pending = this.pending();
+    if (!pending || pending.reads !== this.view.reads()) return items;
+    return items.map((row) =>
+      row.priceId === pending.priceId
+        ? {
+            ...row,
+            public: pending.visible,
+            reason: pending.visible ? undefined : ('hidden_by_garage' as const),
+            visible: pending.visible,
+          }
+        : row,
+    );
+  });
+
   constructor() {
     void this.i18n.enter('garage');
   }
@@ -197,16 +220,23 @@ export class PricesView {
     if (this.busy()) return;
     this.busy.set(row.priceId);
     this.failed.set(null);
+    const visible = row.visible === false;
+    this.pending.set({
+      priceId: row.priceId,
+      reads: this.view.reads(),
+      visible,
+    });
     try {
       await this.api.priceListControllerSetRange({
-        body: { visible: row.visible === false },
+        body: { visible },
         garageId: this.garageId(),
         priceId: row.priceId,
       });
-      this.view.reload();
+      await this.view.reload();
     } catch {
       this.failed.set(row.priceId);
     } finally {
+      this.pending.set(null);
       this.busy.set(null);
     }
   }
