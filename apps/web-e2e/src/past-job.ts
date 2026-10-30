@@ -6,12 +6,15 @@ import { Client } from 'pg';
 // of its own: the jobs view lists a garage's jobs from the start of the
 // Bucharest day, so a job booked before it would not show. It writes straight
 // to PostgreSQL, as no route records a finished job in one call, so the caller
-// skips without DATABASE_URL. `plate` finds the job's row; `remove` deletes
-// what it wrote.
+// skips without DATABASE_URL. `plate` finds the job's row; `driver` signs in
+// as the job's driver; `remove` deletes what it wrote.
 export interface PastJob {
   plate: string;
+  driver: { email: string; password: string };
   remove(): Promise<void>;
 }
+
+const DRIVER_PASSWORD = 'istoric-lucrari-2026';
 
 export async function pastJob(
   request: APIRequestContext,
@@ -53,7 +56,7 @@ export async function pastJob(
         email: driver,
         language: 'ro',
         name: `Cont ${stamp}`,
-        password: 'istoric-lucrari-2026',
+        password: DRIVER_PASSWORD,
       },
       headers: { 'x-forwarded-for': `198.51.100.${Date.now() % 250}` },
     });
@@ -119,5 +122,9 @@ export async function pastJob(
     await remove();
     throw error;
   }
-  return { plate, remove };
+  return {
+    driver: { email: driver, password: DRIVER_PASSWORD },
+    plate,
+    remove,
+  };
 }

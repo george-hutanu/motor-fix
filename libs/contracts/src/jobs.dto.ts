@@ -27,9 +27,6 @@ import {
 } from './quotes.dto';
 import { JOB_STATUSES, JOB_STEPS_MAX, type JobStatus } from './request-status';
 
-// How long after the handover the garage may still correct the final price.
-export const FINAL_PRICE_CORRECTION_HOURS = 48;
-
 const NULLABLE_TIME = { format: 'date-time', nullable: true, type: String };
 
 const ACTOR_ROLES = [

@@ -68,7 +68,7 @@ p {
 }
 .stage {
   margin-inline-start: auto;
-  padding: 2px var(--mf-space-2);
+  padding: 0 var(--mf-space-2);
   border: 1px solid var(--mf-line-strong);
   border-radius: var(--mf-radius-chip);
   font-family: var(--mf-font-label);
