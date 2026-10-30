@@ -413,6 +413,8 @@ export type { VerificationQueueDto } from './models/verification-queue-dto';
 export type { VerificationQueueRowDto } from './models/verification-queue-row-dto';
 export type { VerificationRejectionDto } from './models/verification-rejection-dto';
 export type { VerificationStatusDto } from './models/verification-status-dto';
+export type { WeeklyFigureDto } from './models/weekly-figure-dto';
+export type { WeeklyFiguresDto } from './models/weekly-figures-dto';
 export type { WithdrawnQuoteDto } from './models/withdrawn-quote-dto';
 export { BaseService } from './base-service';
 export { HealthService } from './services/health.service';
@@ -749,6 +751,8 @@ export type { GarageSchedule$Params as GarageSchedule$Params } from './fn/garage
 export { garageSchedule as garageSchedule } from './fn/garages/garage-schedule';
 export type { ProfileViewsControllerRecord$Params as ProfileViewsControllerRecord$Params } from './fn/garages/profile-views-controller-record';
 export { profileViewsControllerRecord as profileViewsControllerRecord } from './fn/garages/profile-views-controller-record';
+export type { GarageWeeklyFigures$Params as GarageWeeklyFigures$Params } from './fn/garages/garage-weekly-figures';
+export { garageWeeklyFigures as garageWeeklyFigures } from './fn/garages/garage-weekly-figures';
 export type { CatalogueJobsControllerPropose$Params as CatalogueJobsControllerPropose$Params } from './fn/garages/catalogue-jobs-controller-propose';
 export { catalogueJobsControllerPropose as catalogueJobsControllerPropose } from './fn/garages/catalogue-jobs-controller-propose';
 export type { GarageBrandsControllerReplace$Params as GarageBrandsControllerReplace$Params } from './fn/garages/garage-brands-controller-replace';

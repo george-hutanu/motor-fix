@@ -1,6 +1,11 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
-import { type Actor, forbidden, requireCapability } from '../../auth/policy';
+import {
+  type Actor,
+  assertGarage,
+  forbidden,
+  requireCapability,
+} from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import {
   addDays,
@@ -157,6 +162,72 @@ function median(values: number[]): number | null {
     : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 
+interface Week {
+  from: string;
+  // The ISO week, "2026-W40".
+  key: string;
+  to: string;
+}
+
+export interface WeeklyFigure extends Week {
+  conversion: number | null;
+  requests: number | null;
+  views: number | null;
+}
+
+const WEEKS = 8;
+
+// The eight complete ISO weeks before the one holding today, oldest first.
+export function figureWeeks(today: string): Week[] {
+  const last = addDays(weekStart(today), -7);
+  return Array.from({ length: WEEKS }, (_, i) => {
+    const from = addDays(last, -7 * (WEEKS - 1 - i));
+    return { from, key: isoWeek(from), to: addDays(from, 6) };
+  });
+}
+
+// Requests per hundred views, one decimal rounded half up, at most 100. The
+// tenths are rounded as a whole number, so 6.25 is 6.3.
+export function conversion(requests: number, views: number): number | null {
+  if (views === 0) return null;
+  return Math.min(1000, Math.round((requests * 1000) / views)) / 10;
+}
+
+// Each week's views and requests on the Bucharest clock. A week before the
+// week of the approval day is null; a garage never approved has no numbers.
+export function weeklyFigures(input: {
+  approvedAt: Date | null;
+  days: { day: Date; profileViews: number }[];
+  requests: Date[];
+  today: string;
+}): WeeklyFigure[] {
+  const approvalWeek = input.approvedAt
+    ? weekStart(localDay(input.approvedAt))
+    : null;
+  const views = new Map<string, number>();
+  for (const row of input.days) {
+    const week = weekStart(row.day.toISOString().slice(0, 10));
+    views.set(week, (views.get(week) ?? 0) + row.profileViews);
+  }
+  const requests = new Map<string, number>();
+  for (const at of input.requests) {
+    const week = weekStart(localDay(at));
+    requests.set(week, (requests.get(week) ?? 0) + 1);
+  }
+  return figureWeeks(input.today).map((week) => {
+    if (approvalWeek === null || week.from < approvalWeek)
+      return { ...week, conversion: null, requests: null, views: null };
+    const seen = views.get(week.from) ?? 0;
+    const reached = requests.get(week.from) ?? 0;
+    return {
+      ...week,
+      conversion: conversion(reached, seen),
+      requests: reached,
+      views: seen,
+    };
+  });
+}
+
 // The garage's own numbers over whole Bucharest days: what reached it, what it
 // quoted and won, what it worked on and how fast it answered.
 // A mechanic of the garage is told no; one with no garage is told there is
@@ -210,6 +281,48 @@ export class GarageFiguresService {
       },
     });
     return { buckets: bucketsOf(rows, from, to, query.by) };
+  }
+
+  // The eight complete weeks before this one: profile views as the night
+  // wrote them, requests counted live. Reads only.
+  async weekly(
+    actor: Actor,
+    garageId: string,
+    now = new Date(),
+  ): Promise<{ weeks: WeeklyFigure[] }> {
+    // Another garage's staff learn nothing, its mechanic included.
+    assertGarage(actor, garageId);
+    refuseMechanic(actor);
+    requireCapability(actor, 'garage.requests');
+    const today = localDay(now);
+    const weeks = figureWeeks(today);
+    const from = weeks[0].from;
+    const to = weeks[weeks.length - 1].to;
+    const [days, requests, garage] = await Promise.all([
+      this.prisma.garageDailyFigures.findMany({
+        select: { day: true, profileViews: true },
+        where: { day: { gte: new Date(from), lte: new Date(to) }, garageId },
+      }),
+      this.prisma.requestRecipient.findMany({
+        select: { createdAt: true },
+        where: {
+          createdAt: { gte: atLocal(from, 0), lt: atLocal(addDays(to, 1), 0) },
+          garageId,
+        },
+      }),
+      this.prisma.garage.findUnique({
+        select: { approvedAt: true },
+        where: { id: garageId },
+      }),
+    ]);
+    return {
+      weeks: weeklyFigures({
+        approvedAt: garage?.approvedAt ?? null,
+        days,
+        requests: requests.map((r) => r.createdAt),
+        today,
+      }),
+    };
   }
 
   private async count(garageId: string, period: Period): Promise<Counts> {

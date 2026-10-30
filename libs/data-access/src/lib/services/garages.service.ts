@@ -53,6 +53,8 @@ import { GarageScheduleDto } from '../models/garage-schedule-dto';
 import { garageSettingsControllerUpdate } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsControllerUpdate$Params } from '../fn/garages/garage-settings-controller-update';
 import { GarageSettingsDto } from '../models/garage-settings-dto';
+import { garageWeeklyFigures } from '../fn/garages/garage-weekly-figures';
+import { GarageWeeklyFigures$Params } from '../fn/garages/garage-weekly-figures';
 import { getImageVariant } from '../fn/garages/get-image-variant';
 import { GetImageVariant$Params } from '../fn/garages/get-image-variant';
 import { LabourRangeSavedDto } from '../models/labour-range-saved-dto';
@@ -95,6 +97,7 @@ import { StaffInviteSentDto } from '../models/staff-invite-sent-dto';
 import { verificationStatusControllerRead } from '../fn/garages/verification-status-controller-read';
 import { VerificationStatusControllerRead$Params } from '../fn/garages/verification-status-controller-read';
 import { VerificationStatusDto } from '../models/verification-status-dto';
+import { WeeklyFiguresDto } from '../models/weekly-figures-dto';
 
 @Injectable({ providedIn: 'root' })
 export class GaragesService extends BaseService {
@@ -158,6 +161,39 @@ export class GaragesService extends BaseService {
   profileViewsControllerRecord(params: ProfileViewsControllerRecord$Params, context?: HttpContext): Promise<void> {
     const resp = this.profileViewsControllerRecord$Response(params, context);
     return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `garageWeeklyFigures()` */
+  static readonly GarageWeeklyFiguresPath = '/api/v1/garages/{garageId}/figures/weekly';
+
+  /**
+   * Profile views, requests and conversion of the eight complete weeks before this one.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageWeeklyFigures()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageWeeklyFigures$Response(params: GarageWeeklyFigures$Params, context?: HttpContext): Promise<StrictHttpResponse<WeeklyFiguresDto>> {
+    const obs = garageWeeklyFigures(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Profile views, requests and conversion of the eight complete weeks before this one.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageWeeklyFigures$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageWeeklyFigures(params: GarageWeeklyFigures$Params, context?: HttpContext): Promise<WeeklyFiguresDto> {
+    const resp = this.garageWeeklyFigures$Response(params, context);
+    return resp.then((r: StrictHttpResponse<WeeklyFiguresDto>): WeeklyFiguresDto => r.body);
   }
 
   /** Path part for operation `catalogueJobsControllerPropose()` */

@@ -407,4 +407,6 @@ export type { VerificationQueueDto } from './models/verification-queue-dto';
 export type { VerificationQueueRowDto } from './models/verification-queue-row-dto';
 export type { VerificationRejectionDto } from './models/verification-rejection-dto';
 export type { VerificationStatusDto } from './models/verification-status-dto';
+export type { WeeklyFigureDto } from './models/weekly-figure-dto';
+export type { WeeklyFiguresDto } from './models/weekly-figures-dto';
 export type { WithdrawnQuoteDto } from './models/withdrawn-quote-dto';
