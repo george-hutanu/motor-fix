@@ -42,6 +42,7 @@ import {
 import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
 import { Consent } from '../../../consent/consent';
+import { bucharestInstant, nextQuarter } from '../../bucharest-time';
 
 export interface SendQuoteData {
   requestId: string;
@@ -112,49 +113,6 @@ const ordered = (g: AbstractControl): ValidationErrors | null => {
     ? { low_above_high: true }
     : null;
 };
-
-// Bucharest's offset from UTC at an instant, in minutes.
-function offsetAt(at: number): number {
-  const name =
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Europe/Bucharest',
-      timeZoneName: 'longOffset',
-    })
-      .formatToParts(new Date(at))
-      .find((part) => part.type === 'timeZoneName')?.value ?? 'GMT';
-  const [, sign, hh, mm] = /GMT([+-])(\d{2}):(\d{2})/.exec(name) ?? [];
-  if (!sign) return 0;
-  return (sign === '-' ? -1 : 1) * (Number(hh) * 60 + Number(mm));
-}
-
-// A Bucharest wall-clock day and time as ISO 8601 with its offset.
-function bucharestInstant(day: string, time: string): string {
-  const wall = Date.parse(`${day}T${time}:00Z`);
-  const offset = offsetAt(wall - offsetAt(wall) * 60_000);
-  const sign = offset < 0 ? '-' : '+';
-  const abs = Math.abs(offset);
-  const hh = String(Math.floor(abs / 60)).padStart(2, '0');
-  const mm = String(abs % 60).padStart(2, '0');
-  return `${day}T${time}:00${sign}${hh}:${mm}`;
-}
-
-// The next quarter hour on Bucharest's clock, "HH:MM".
-function nextQuarter(): string {
-  const [hh, mm] = new Intl.DateTimeFormat('en-GB', {
-    hour: '2-digit',
-    hourCycle: 'h23',
-    minute: '2-digit',
-    timeZone: 'Europe/Bucharest',
-  })
-    .format(new Date())
-    .split(':')
-    .map(Number);
-  const next = Math.min(
-    Math.ceil((hh * 60 + mm + 1) / SLOT_STEP_MINUTES) * SLOT_STEP_MINUTES,
-    24 * 60 - SLOT_STEP_MINUTES,
-  );
-  return `${String(Math.floor(next / 60)).padStart(2, '0')}:${String(next % 60).padStart(2, '0')}`;
-}
 
 // "Trimite oferta": a price range in lei, the job's duration, the first free
 // slot and a note, pre-filled from the garage's price list for the request's
