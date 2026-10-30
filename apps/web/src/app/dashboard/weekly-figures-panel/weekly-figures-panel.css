@@ -3,6 +3,7 @@
   min-width: 0;
 }
 .panel {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-4);
@@ -17,14 +18,8 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--mf-space-5);
 }
-.column {
-  display: flex;
-  flex-direction: column;
-  gap: var(--mf-space-2);
-  min-width: 0;
-}
 .figure {
-  margin: 0;
+  margin: 0 0 var(--mf-space-3);
   font-family: var(--mf-font-label);
   font-size: var(--mf-size-subheading);
   font-variant-numeric: tabular-nums;
@@ -46,6 +41,10 @@
   .panel {
     padding: var(--mf-space-4);
   }
+}
+/* Eight week labels need about 36 px each: a panel narrower than two such
+   charts (a phone, or a half-width cell on desktop) stacks them. */
+@container (max-width: 640px) {
   .charts {
     grid-template-columns: minmax(0, 1fr);
   }

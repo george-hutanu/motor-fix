@@ -10,18 +10,17 @@
   } @else {
     <div class="charts">
       @for (column of columns(); track column.kind) {
-        <div class="column">
+        <mf-bar-chart
+          unit="count"
+          lastLabel
+          [title]="column.title"
+          [points]="column.points"
+          [loading]="loading()"
+        >
           @if (!loading()) {
-            <p class="figure" [attr.data-figure]="column.kind">{{ column.figure }}</p>
+            <p mfChartFigure class="figure" [attr.data-figure]="column.kind">{{ column.figure }}</p>
           }
-          <mf-bar-chart
-            unit="count"
-            lastLabel
-            [title]="column.title"
-            [points]="column.points"
-            [loading]="loading()"
-          />
-        </div>
+        </mf-bar-chart>
       }
     </div>
     @if (!loading()) {

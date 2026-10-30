@@ -142,6 +142,17 @@ describe('the weekly figures panel', () => {
     expect(charts(rendered).map((c) => c.lastLabel())).toEqual([true, true]);
   });
 
+  // QA lap 1: each figure sits in its chart's card, under the chart's name.
+  it("writes each large figure inside its own chart's card", async () => {
+    const { element } = await render();
+    const cards = [...element.querySelectorAll('mf-bar-chart')];
+
+    expect(
+      cards.map((card) => text(card.querySelector('[data-figure]'))),
+    ).toEqual(['472', '29']);
+    expect(element.querySelectorAll('[data-figure]')).toHaveLength(2);
+  });
+
   // @traces 1397-FR-002 1397-FR-011
   it('groups a large figure as the language does', async () => {
     const answer = async () => ({

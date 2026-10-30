@@ -131,6 +131,38 @@ test.describe('the weekly figures on the garage overview @seeded', () => {
     expect(await sideways(page)).toBeLessThanOrEqual(0);
   });
 
+  // @traces 1397-FR-004 1397-FR-012
+  test('shows a tooltip over the newest bar, the figure in its card, the charts stacked in the half-width cell', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 900, width: 1280 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await signedIn(page, OWNER);
+
+    const panel = page.locator('mf-weekly-figures-panel');
+    const views = panel.locator('mf-bar-chart').first();
+    const requests = panel.locator('mf-bar-chart').nth(1);
+    await expect(views.locator('[data-figure="views"]')).toHaveText('1.240');
+    const canvas = views.locator('canvas');
+    await expect(canvas).toHaveAttribute('width', /\d/);
+    await canvas.scrollIntoViewIfNeeded();
+
+    const [viewsBox, requestsBox] = await Promise.all([
+      views.boundingBox(),
+      requests.boundingBox(),
+    ]);
+    if (!viewsBox || !requestsBox) throw new Error('a chart is not laid out');
+    expect(requestsBox.y).toBeGreaterThanOrEqual(
+      viewsBox.y + viewsBox.height - 1,
+    );
+
+    const before = await canvas.screenshot();
+    const box = await canvas.boundingBox();
+    if (!box) throw new Error('the views canvas is not laid out');
+    await page.mouse.move(box.x + box.width - 12, box.y + box.height / 2);
+    await expect.poll(() => canvas.screenshot()).not.toEqual(before);
+  });
+
   test("shows the garage's mechanic no panel and sends no weekly read", async ({
     page,
   }) => {
