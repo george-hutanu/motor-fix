@@ -111,6 +111,41 @@ test.describe('the garage price list @seeded', () => {
     });
   }
 
+  // @traces 1411-FR-006
+  test('the edit switch reads on one line at 320 px, in Romanian and English', async ({
+    page,
+  }) => {
+    await signedIn(page, OWNER);
+    await page.setViewportSize({ height: 640, width: 320 });
+    await page.goto('/app/garage/prices');
+    await expect(title(page)).toHaveText('Prețuri');
+
+    for (const [code, name] of [
+      ['RO', 'Modifică prețurile'],
+      ['EN', 'Edit prices'],
+    ] as const) {
+      await language(page)
+        .getByRole('button', { exact: true, name: code })
+        .click();
+      const toggle = page.locator('main button.toggle');
+      await expect(toggle).toHaveText(name, { ignoreCase: true });
+      const lines = await toggle.evaluate((button) => {
+        const range = document.createRange();
+        range.selectNodeContents(button);
+        return new Set(
+          [...range.getClientRects()].map((rect) => Math.round(rect.top)),
+        ).size;
+      });
+      expect(lines).toBe(1);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(320);
+    }
+    await language(page)
+      .getByRole('button', { exact: true, name: 'RO' })
+      .click();
+  });
+
   // @traces 172-FR-009 172-FR-011
   test('the receptionist finds no Prețuri and its address returns to the dashboard', async ({
     page,
