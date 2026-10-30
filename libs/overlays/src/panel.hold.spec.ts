@@ -92,8 +92,7 @@ async function clickOutside() {
   await settle();
 }
 
-// @traces 1403-FR-007
-// @traces 1403-FR-009
+// @traces 1403-FR-012
 describe("a task's own Renunță", () => {
   it('closes with "cancelled" at once when nothing was typed', async () => {
     const host = await openTask();

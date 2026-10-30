@@ -13,6 +13,7 @@ features:
   - 427-time-blocks
   - 406-final-price-handover
   - 1395-block-time-dashboard
+  - 1403-block-time-dialog
 ---
 
 # Capability: Workshop
@@ -356,6 +357,42 @@ _From 1395-block-time-dashboard._
 ### 1395-FR-008 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids: in Jest on real PostgreSQL, US1-1 to US1-7 (the body per switch state, the order, the removed card, the owner's own card, the empty team) and US2-1 to US2-6 (every role, the unknown garage, the visitor and the public routes list, the idempotent read, the non-uuid id); the DTO's OpenAPI shape in the contracts unit specs where the sibling DTOs have one. No web file changes in this story (the `apps/web` diff is empty; the regenerated `libs/data-access` is not counted).
 
 _From 1395-block-time-dashboard._
+
+### 1403-FR-001 — The garage dashboard (`garage-home`, the strip) MUST offer "Blochează timp" / "Block time" to a person whose role at the shown garage is `owner` or `receptionist`, while at least one of `team_mechanics` and `lift_schedule` is on (a missing key is on); a mechanic, and any garage with both switches off, sees no button (OD-33). The button is a `hlmBtn` beside "Personalizează panoul" and carries `data-block-time`.
+
+_From 1403-block-time-dialog._
+
+### 1403-FR-002 — Pressing it MUST open, through `Overlays.open` with the shape `dialog` (a bottom sheet on a phone by the overlays' own rule), a task titled "Blochează timp" / "Block time" whose code is loaded on demand (a dynamic `import()` in the opener, as `open-add-car.ts` and `open-contact.ts` do), never in the dashboard's or the app's initial bundle.
+
+_From 1403-block-time-dialog._
+
+### 1403-FR-003 — On opening, the dialog MUST read `GET garages/:garageId/time-blocks/options` once and draw: Mecanic (a select of the cards, "none" first) while `team_mechanics` is on, Elevator (a select of Elevator 1..`liftCount`, "none" first) while `lift_schedule` is on and `liftCount` is above 0, De la and Până la (a date and a time each, the time on 15-minute marks, defaulting to the next quarter hour and one hour later), Notă (a textarea, at most 200 characters, the count left shown); a team on with no card shows the team line of US2-4; a failed read shows the shared error text with Retry and keeps the fields disabled.
+
+_From 1403-block-time-dialog._
+
+### 1403-FR-004 — Before sending, the dialog MUST refuse, in the person's language under the field concerned: no mechanic and no lift (worded per the selectors drawn, under the first one); an end not after the start; a time off the quarter hour; a range over 14 days (one under 15 minutes cannot be typed on the quarter-hour grid: an end after the start is at least 15 minutes after it); an end not after now; a note over 200 characters (the textarea's `maxlength`, and a value filled past it refused under Notă); the texts in both languages from the i18n `garage` messages under one key family (`garage.timeBlocks.*`).
+
+_From 1403-block-time-dialog._
+
+### 1403-FR-005 — Saving a new block MUST call `createTimeBlock` once with `mechanicId` (only when picked), `lift` (only when picked), `startsAt` and `endsAt` as instants with the offset Europe/Bucharest has on that date (`Intl`, never the browser's zone), and `note` trimmed (left out when empty); the button is busy while in flight and a second press sends nothing; on 201 the task closes with the result `blocked` and the toast "Interval blocat" / "Time blocked".
+
+_From 1403-block-time-dialog._
+
+### 1403-FR-006 — A refusal MUST keep the dialog open with every choice: a refusal whose body's `errors[0].field` is `mechanicId` or `lift` shows its text under that field and focuses it: the server's `message` for 409 `mechanic_busy` and `lift_busy` (bilingual), the dialog's own `garage.timeBlocks.problem.*` text for a 422 `validation_failed` (the server's is English-only); a `validation_failed` on `endsAt` shows under Până la; 404 `feature_off` shows the dialog's own text above the fields; 409 `slot_taken` shows its message above the fields and re-reads the options; `nothing_to_block`, `feature_off` and a `validation_failed` on `mechanicId` or `lift` re-read the options too; any other refusal shows the server's `message` above the fields, or the shared text for its code (`shell.form.problem.<code>`), else the shared error text.
+
+_From 1403-block-time-dialog._
+
+### 1403-FR-007 — Offline or a failed save (no answer, a 5xx) MUST show an error toast in the person's language (the shared offline or error text) and leave the dialog open with the choices; nothing is queued or retried by itself.
+
+_From 1403-block-time-dialog._
+
+### 1403-FR-008 — The dialog MUST open for a given block too (the opener passes the block: id, mechanic, lift, start, end, note): the title "Modifică intervalul blocat" / "Change the blocked time", the fields prefilled, "Salvează" / "Save" calling `updateTimeBlock` with only the changed fields, a mechanic or lift un-picked sent as `null` (nothing changed: close, no call), and "Elimină" / "Remove" asking the shared confirm question then calling `deleteTimeBlock`; on success the task closes with `changed` or `removed` and the matching toast; a 409 `block_past` or a 404 shows its message and closes with `refused` on Renunță. No screen of this story calls this mode (D2).
+
+_From 1403-block-time-dialog._
+
+### 1403-FR-011 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids: Jest for `garage-home` (the button per role and switch state, US1-1, US2-3) and for the dialog (the fields per switch state and per options answer, US1-2, US2-1, US2-2, US2-4, US2-5; the client-side refusals, US1-4; the body sent, US1-3; each server refusal and where its message shows, US1-5 to US1-7; offline and a failed save, US1-8; the edit and remove mode, US3-1 to US3-4); Playwright, `@seeded`, as the seeded receptionist (`receptie@example.test`, `atelier-test`): press the button, block the first listed mechanic and Elevator 2 (or the lift the seed offers) on a day ahead 10:00–11:30, see the toast, read the block back through the API and delete it through the API as clean-up. The driver half of the brief's flow (the garage's profile no longer offers 10:00; the slot returns after the removal) waits for #21 (D4), and the removal through the dialog for the first story that draws a block (D2).
+
+_From 1403-block-time-dialog._
 
 ## Retired
 
