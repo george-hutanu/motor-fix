@@ -8,8 +8,14 @@ import {
   type Page,
 } from '@playwright/test';
 
-import { ACCOUNTS, openSignIn, ready, signIn } from './accounts.js';
-import { accessToken, bearer, confirmed, DRIVER, MILITARI } from './booking.js';
+import {
+  ACCOUNTS,
+  openSignIn,
+  ready,
+  signIn,
+  signUpDriver,
+} from './accounts.js';
+import { accessToken, bearer, confirmed, MILITARI } from './booking.js';
 import { test } from './fixtures.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
@@ -25,13 +31,37 @@ const bucharestDay = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Europe/Bucharest',
 });
 
-// A job of this test's own: one of the driver's requests booked and confirmed
-// at Militari, received, with one step whose text no other test writes. Every
-// assertion follows that step, so other workers' writes to the shared seed
-// never move what the test waits for.
+// A driver of the test's own with a Dacia Logan: a driver may send 20
+// requests a day, and the specs beside this one use the seeded driver's up.
+async function ownDriver(request: APIRequestContext) {
+  const email = await signUpDriver(request, 'live-etape');
+  const driver = bearer(await accessToken(request, email));
+  const brands = await request.get('/api/v1/brands?q=Dacia', {
+    headers: driver,
+  });
+  const [dacia] = ((await brands.json()) as { items: { id: string }[] }).items;
+  const car = await request.post('/api/v1/cars', {
+    data: {
+      brandId: dacia.id,
+      fuel: 'petrol',
+      model: 'Logan',
+      odometerKm: 98_000,
+      year: 2018,
+    },
+    headers: { ...driver, 'Idempotency-Key': randomUUID() },
+  });
+  expect(car.status(), await car.text()).toBe(201);
+  return email;
+}
+
+// A job of this test's own: a request of the test's own driver booked and
+// confirmed at Militari, received, with one step whose text no other test
+// writes. Every assertion follows that step, so other workers' writes to the
+// shared seed never move what the test waits for.
 async function ownJob(request: APIRequestContext) {
   const garage = bearer(await accessToken(request, MILITARI));
-  const { bookingId, startsAt } = await confirmed(request);
+  const driver = await ownDriver(request);
+  const { bookingId, startsAt } = await confirmed(request, driver);
   // Followed page by page: jobs in work sort first and could fill the first.
   const from = bucharestDay.format(new Date(startsAt));
   type Job = { bookingId: string; car: { odometerKm: number }; id: string };
@@ -82,16 +112,20 @@ async function ownJob(request: APIRequestContext) {
       });
     }
   };
-  return { call, close, id, text, tick };
+  return { call, close, driver, id, text, tick };
 }
 
-async function signedIn(context: BrowserContext, landing: string) {
+async function signedIn(
+  context: BrowserContext,
+  email: string,
+  landing: string,
+) {
   const page = await context.newPage();
   await page.setViewportSize({ height: 844, width: 390 });
   await keepSeededLanguage(page);
   await ready(page, '/ro');
   await openSignIn(page);
-  await signIn(page, DRIVER);
+  await signIn(page, email);
   await expect(page).toHaveURL('/app/driver');
   if (landing !== '/app/driver') await page.goto(landing);
   return page;
@@ -123,7 +157,7 @@ function writesOf(pages: Page[]) {
   return writes;
 }
 
-// @seeded: the driver and Militari of the seed.
+// @seeded: Militari of the seed, and a driver of each test's own.
 test.describe('each stage change within seconds @seeded', () => {
   // @traces 275-FR-001
   // @traces 275-FR-003
@@ -140,8 +174,8 @@ test.describe('each stage change within seconds @seeded', () => {
     let list: BrowserContext | undefined;
     try {
       list = await browser.newContext();
-      const overview = await signedIn(home, '/app/driver');
-      const requests = await signedIn(list, '/app/driver/requests');
+      const overview = await signedIn(home, job.driver, '/app/driver');
+      const requests = await signedIn(list, job.driver, '/app/driver/requests');
       // A second tab of the overview's browser shares its stream.
       const second = await home.newPage();
       await second.setViewportSize({ height: 844, width: 390 });
@@ -187,7 +221,7 @@ test.describe('each stage change within seconds @seeded', () => {
         expect(stepOf(shown, job.text)).toBeHidden(SOON),
       );
       const read = await request.get('/api/v1/quote-requests/active', {
-        headers: bearer(await accessToken(request, DRIVER)),
+        headers: bearer(await accessToken(request, job.driver)),
       });
       const { request: shown } = (await read.json()) as {
         request: { stage: keyof typeof STAGE } | null;
@@ -217,7 +251,7 @@ test.describe('each stage change within seconds @seeded', () => {
     const context = await browser.newContext();
     try {
       await job.call('start');
-      const page = await signedIn(context, '/app/driver');
+      const page = await signedIn(context, job.driver, '/app/driver');
       const step = stepOf(panel(page), job.text);
       await expect(step).toBeVisible(SOON);
       await expect(step).not.toHaveAttribute('data-state', 'done');
@@ -289,7 +323,7 @@ test.describe('each stage change within seconds @seeded', () => {
       bearer(await accessToken(request, email)).Authorization;
 
     try {
-      const mine = listen(await tokenOf(DRIVER));
+      const mine = listen(await tokenOf(job.driver));
       const theirs = listen(await tokenOf(ACCOUNTS.otherDriver));
       // Both streams open before the garage writes.
       await page.waitForFunction(

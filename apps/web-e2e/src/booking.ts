@@ -53,13 +53,13 @@ export async function accepted(request: APIRequestContext) {
   return (await acceptedBooking(request)).requestId;
 }
 
-async function acceptedBooking(request: APIRequestContext) {
+async function acceptedBooking(request: APIRequestContext, email = DRIVER) {
   const militari = await accessToken(request, MILITARI);
   const me = await request.get('/api/v1/me', { headers: bearer(militari) });
   const { garageId } = (await me.json()) as { garageId: string };
   const jobs = await request.get('/api/v1/job-types?keys=oil-service');
   const [oil] = ((await jobs.json()) as { items: { id: string }[] }).items;
-  const driver = await accessToken(request, DRIVER);
+  const driver = await accessToken(request, email);
   const cars = await request.get('/api/v1/cars', { headers: bearer(driver) });
   const { items } = (await cars.json()) as {
     items: { id: string; model: string }[];
@@ -98,10 +98,11 @@ async function acceptedBooking(request: APIRequestContext) {
   return { bookingId, requestId };
 }
 
-// One request of the driver's, accepted as above and confirmed by Militari
-// with its first mechanic on lift 1, so its booking is confirmed.
-export async function confirmed(request: APIRequestContext) {
-  const { bookingId, requestId } = await acceptedBooking(request);
+// One request of the driver's (the seeded one unless named), accepted as
+// above and confirmed by Militari with its first mechanic on lift 1, so its
+// booking is confirmed.
+export async function confirmed(request: APIRequestContext, email = DRIVER) {
+  const { bookingId, requestId } = await acceptedBooking(request, email);
   const headers = bearer(await accessToken(request, MILITARI));
   const options = await request.get(
     `/api/v1/bookings/${bookingId}/confirm-options`,
