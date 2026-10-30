@@ -396,7 +396,7 @@ describe('AdminPanel', () => {
     expect(text(tile(element, 'Programări'), 'number')).toBe('0');
   });
 
-  // @traces 1389-reported-reviews-admin-FR-002
+  // @traces 1389-FR-002
   it('shows the pending reported reviews with the ones past 48 hours', async () => {
     answer = async () => ({ ...FIGURES, reportsOverdue: 1, reportsPending: 3 });
     const element = await open();
@@ -409,9 +409,12 @@ describe('AdminPanel', () => {
       `${label}, 3, 1 peste 48 de ore`,
     );
     expect(reported.textContent).not.toContain('în curând');
+    expect(reported.querySelector('.alert')?.getAttribute('aria-hidden')).toBe(
+      'true',
+    );
   });
 
-  // @traces 1389-reported-reviews-admin-FR-002
+  // @traces 1389-FR-002
   it('shows the reported reviews with no line when none is past 48 hours, and 0 as 0', async () => {
     answer = async () => FIGURES;
     const element = await open();
@@ -420,9 +423,10 @@ describe('AdminPanel', () => {
     expect(text(reported, 'number')).toBe('0');
     expect(text(reported, 'line')).toBeUndefined();
     expect(reported.getAttribute('aria-label')).toBe('Recenzii raportate, 0');
+    expect(reported.querySelector('.alert')).toBeNull();
   });
 
-  // @traces 1389-reported-reviews-admin-FR-002 1389-reported-reviews-admin-FR-006
+  // @traces 1389-FR-002 1389-FR-006
   it('moves the reported reviews tile when a review is reported, without a reload', async () => {
     answer = async () => FIGURES;
     const element = await open();
@@ -439,7 +443,7 @@ describe('AdminPanel', () => {
     expect(text(tile(element, 'Recenzii raportate'), 'number')).toBe('1');
   });
 
-  // @traces 1389-reported-reviews-admin-FR-002
+  // @traces 1389-FR-002
   it('places the reported reviews panel under the brand demand panel, before the Jurnal', async () => {
     answer = async () => FIGURES;
     const element = await open();
@@ -464,7 +468,7 @@ describe('AdminPanel', () => {
     );
   });
 
-  // @traces 1389-reported-reviews-admin-FR-002
+  // @traces 1389-FR-002
   it('shows skeletons on every tile while the first read is on its way', async () => {
     answer = () => new Promise(() => undefined);
     const element = await open();
@@ -478,7 +482,7 @@ describe('AdminPanel', () => {
     }
   });
 
-  // @traces 1389-reported-reviews-admin-FR-002
+  // @traces 1389-FR-002
   it('shows a dash and the reason on every computed tile when the read fails, never 0', async () => {
     answer = async () => {
       throw new HttpErrorResponse({ status: 503 });

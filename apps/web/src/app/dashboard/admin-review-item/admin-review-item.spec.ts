@@ -6,7 +6,7 @@ import { I18n } from '@motor-fix/i18n';
 import { AdminReviewItem } from './admin-review-item';
 import { spoken } from '../../spoken.testing';
 
-// @traces 1389-reported-reviews-admin-FR-003 1389-reported-reviews-admin-FR-004 1389-reported-reviews-admin-FR-005 1389-reported-reviews-admin-FR-007 1389-reported-reviews-admin-FR-008 1389-reported-reviews-admin-FR-009
+// @traces 1389-FR-003 1389-FR-004 1389-FR-005 1389-FR-007 1389-FR-008 1389-FR-009
 
 const NOW = new Date('2026-10-30T10:00:00Z');
 

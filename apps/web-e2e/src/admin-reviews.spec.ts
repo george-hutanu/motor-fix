@@ -11,10 +11,9 @@ import {
 } from './review-jobs.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
-// @traces 1389-reported-reviews-admin-FR-001
-// @traces 1389-reported-reviews-admin-FR-002
-// @traces 1389-reported-reviews-admin-FR-005
-// @traces 1389-reported-reviews-admin-FR-006
+// @traces 1389-FR-001
+// @traces 1389-FR-003
+// @traces 1389-FR-006
 
 const waiting = async (page: Page) => {
   const name =

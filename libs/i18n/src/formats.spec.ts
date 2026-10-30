@@ -610,7 +610,7 @@ describe('requestAge', () => {
   });
 });
 
-// @traces 1389-reported-reviews-admin-FR-001
+// @traces 1389-FR-001
 describe('reportAge', () => {
   const now = new Date('2026-10-30T10:00:00Z');
   const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();

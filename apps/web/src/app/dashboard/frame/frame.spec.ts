@@ -1053,7 +1053,7 @@ describe('the admin header', () => {
   });
 });
 
-// @traces 1389-reported-reviews-admin-FR-001 1389-reported-reviews-admin-FR-006
+// @traces 1389-FR-001 1389-FR-006
 describe('the reported reviews counter', () => {
   afterEach(() => {
     waiting = async () => ({ garagesWaiting: 0 });

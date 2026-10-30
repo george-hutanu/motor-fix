@@ -318,7 +318,7 @@ describe('DashboardTabBar on the admin dashboard', () => {
     ]);
   });
 
-  // @traces 1389-reported-reviews-admin-FR-005
+  // @traces 1389-FR-001
   it('puts the reported reviews count on its own tab', async () => {
     const { element, harness, host } = await openAdmin();
     host.counts.set({ reportsPending: 2 });

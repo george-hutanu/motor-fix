@@ -95,7 +95,7 @@ describe('the admin tab bar counters', () => {
     expect(tab(e, 'settings').querySelector('.chip')).toBeNull();
   });
 
-  // @traces 1389-reported-reviews-admin-FR-005
+  // @traces 1389-FR-001
   it('shows a skeleton on each counter tab while loading, and no number', async () => {
     loading.set(true);
     const harness = await open();

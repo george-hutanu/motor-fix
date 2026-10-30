@@ -143,7 +143,7 @@ describe('AdminOverview', () => {
     expect(overview.waiting()).toBe(2);
   });
 
-  // @traces 1389-reported-reviews-admin-FR-002 1389-reported-reviews-admin-FR-006
+  // @traces 1389-FR-002 1389-FR-006
   it.each<EventKind>([
     'review.reported',
     'review.decided',
@@ -167,7 +167,7 @@ describe('AdminOverview', () => {
     expect(overview.pending()).toBe(2);
   });
 
-  // @traces 1389-reported-reviews-admin-FR-002
+  // @traces 1389-FR-002
   it('gives the pending and overdue reports of the whole platform from the same read', async () => {
     answer = async () => ({
       garagesWaiting: 0,
@@ -186,7 +186,7 @@ describe('AdminOverview', () => {
     expect(reads).toBe(2);
   });
 
-  // @traces 1389-reported-reviews-admin-FR-002
+  // @traces 1389-FR-002
   it('gives no reported reviews count, never 0, when a read fails', async () => {
     answer = async () => ({
       garagesWaiting: 0,

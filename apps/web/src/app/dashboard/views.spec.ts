@@ -235,7 +235,7 @@ describe('the dashboard view lists', () => {
     ]);
   });
 
-  // @traces 1389-reported-reviews-admin-FR-001
+  // @traces 1389-FR-001
   it('loads the reported reviews list as the admin Recenzii raportate view', async () => {
     const reviews = DASHBOARDS.admin.views.find(
       (view) => view.path === 'reviews',
@@ -503,7 +503,7 @@ describe('the dashboard view lists', () => {
     ]);
   });
 
-  // @traces 1389-reported-reviews-admin-FR-001
+  // @traces 1389-FR-001
   it('opens the reported reviews view to an admin who holds its permission only', () => {
     expect(paths('admin', ['admin.reviews'])).toEqual(['', 'reviews']);
     expect(paths('admin', [])).toEqual(['']);

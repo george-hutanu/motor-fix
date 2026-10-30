@@ -94,7 +94,7 @@ describe('AdminOverview under hostile answers and event orders', () => {
     expect(overview.failed()).toBe(true);
   });
 
-  // @traces 1389-reported-reviews-admin-FR-005
+  // @traces 1389-FR-006
   it('re-reads on review events and ignores unrelated kinds', async () => {
     answer = async () => ({ garagesWaiting: 1 });
     setUp();

@@ -15,7 +15,7 @@ import { filter, Subject } from 'rxjs';
 import { AdminReviews } from './admin-reviews';
 import { Live } from '../live';
 
-// @traces 1389-reported-reviews-admin-FR-001 1389-reported-reviews-admin-FR-002 1389-reported-reviews-admin-FR-005 1389-reported-reviews-admin-FR-006 1389-reported-reviews-admin-FR-008 1389-reported-reviews-admin-FR-009
+// @traces 1389-FR-001 1389-FR-002 1389-FR-005 1389-FR-006 1389-FR-008 1389-FR-009
 
 const HOUR = 3_600_000;
 
@@ -408,6 +408,22 @@ describe('live', () => {
     );
   });
 
+  it('moves no focus to an item a later re-read adds after More brought nothing', async () => {
+    answer = queue(25);
+    const el = await open();
+    answer = queue(20);
+    button(el, 'Mai multe')?.click();
+    await settle();
+    const before = document.activeElement;
+
+    answer = queue(25);
+    resync.next();
+    await settle();
+
+    expect(items(el)).toHaveLength(25);
+    expect(document.activeElement).toBe(before);
+  });
+
   it('moves no focus when an item arrives', async () => {
     const el = await open();
     const before = document.activeElement;
@@ -422,6 +438,22 @@ describe('live', () => {
 });
 
 describe('the time on screen', () => {
+  it('leaves a mark days away to the minute tick, setting no timer for it', async () => {
+    const timeout = jest.spyOn(globalThis, 'setTimeout');
+    try {
+      answer = async () => ({
+        ...(await queue(1)()),
+        items: [entry(1, '2126-10-30T10:00:00Z')],
+      });
+      await open();
+
+      const far = timeout.mock.calls.filter(([, ms]) => (ms ?? 0) > 60_000);
+      expect(far).toEqual([]);
+    } finally {
+      timeout.mockRestore();
+    }
+  });
+
   it('marks an item past 48 hours when it crosses the mark while shown, with no new read', async () => {
     jest.useFakeTimers({
       advanceTimers: true,

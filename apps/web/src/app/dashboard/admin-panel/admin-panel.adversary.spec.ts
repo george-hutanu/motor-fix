@@ -133,7 +133,7 @@ describe('AdminPanel with awkward figures', () => {
     );
   });
 
-  // @traces 1389-reported-reviews-admin-FR-002
+  // @traces 1389-FR-002
   it('groups a large pending count and its overdue line like the other tiles', async () => {
     answer = async () =>
       ({ ...FIGURES, reportsOverdue: 1200, reportsPending: 12480 }) as Answer;
@@ -144,7 +144,7 @@ describe('AdminPanel with awkward figures', () => {
     expect(text(tile(element, label), 'line')).toBe('1.200 peste 48 de ore');
   });
 
-  // @traces 1389-reported-reviews-admin-FR-002
+  // @traces 1389-FR-002
   it('shows a dash, never 0, when the answer leaves the pending count out', async () => {
     answer = async () => FIGURES;
     const element = await open();
