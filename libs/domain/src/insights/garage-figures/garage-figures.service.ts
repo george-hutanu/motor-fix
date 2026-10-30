@@ -1,6 +1,13 @@
+import type { WeeklyFiguresDto } from '@motor-fix/contracts';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
-import { type Actor, forbidden, requireCapability } from '../../auth/policy';
+import { figureWeeks, weeklyFigures } from './weekly/weekly';
+import {
+  type Actor,
+  assertGarage,
+  forbidden,
+  requireCapability,
+} from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import {
   addDays,
@@ -210,6 +217,46 @@ export class GarageFiguresService {
       },
     });
     return { buckets: bucketsOf(rows, from, to, query.by) };
+  }
+
+  // The eight complete weeks before this one: profile views as the night
+  // wrote them, requests counted live. Reads only.
+  async weekly(
+    actor: Actor,
+    garageId: string,
+    now = new Date(),
+  ): Promise<WeeklyFiguresDto> {
+    // Another garage's staff learn nothing, its mechanic included. Refused
+    // before any read, though the views read gates the same way.
+    assertGarage(actor, garageId);
+    refuseMechanic(actor);
+    requireCapability(actor, 'garage.requests');
+    const today = localDay(now);
+    const weeks = figureWeeks(today);
+    const from = weeks[0].from;
+    const to = weeks[weeks.length - 1].to;
+    const [views, requests, garage] = await Promise.all([
+      this.profileViews(actor, { by: 'week', from, to }),
+      this.prisma.requestRecipient.findMany({
+        select: { createdAt: true },
+        where: {
+          createdAt: { gte: atLocal(from, 0), lt: atLocal(addDays(to, 1), 0) },
+          garageId,
+        },
+      }),
+      this.prisma.garage.findUnique({
+        select: { approvedAt: true },
+        where: { id: garageId },
+      }),
+    ]);
+    return {
+      weeks: weeklyFigures({
+        approvedAt: garage?.approvedAt ?? null,
+        requests: requests.map((r) => r.createdAt),
+        today,
+        views: views.buckets,
+      }),
+    };
   }
 
   private async count(garageId: string, period: Period): Promise<Counts> {

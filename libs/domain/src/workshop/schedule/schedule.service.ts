@@ -29,13 +29,19 @@ export interface Segment {
   lift: number | null;
 }
 
-// A stored segment another booking holds, with the car it is for.
+// Who holds a stored segment: a booking, with the car it is for, or a time
+// block, with its whole range.
+type Holder =
+  | { kind: 'booking'; car: { brand: string; model: string } }
+  | { kind: 'time_block'; startsAt: Date; endsAt: Date };
+
+// A stored segment another booking or a time block holds.
 export interface TakenSegment {
   startsAt: Date;
   endsAt: Date;
   mechanicId: string | null;
   lift: number | null;
-  car: { brand: string; model: string };
+  holder: Holder;
 }
 
 export interface PlacementInput {
@@ -299,71 +305,148 @@ export function placementOf(input: PlacementInput): Segment[] {
   throw fail(overrunCause(input, stretches, start, opening));
 }
 
+type Asked = { language: Language; mechanicName: string; startsAt: Date };
+
+// The refusal naming the row that holds the mechanic or the lift: a booking
+// by its segment and car, a block by its whole range, each end with its
+// weekday when on another day than the start asked for.
+function busy(row: TakenSegment, on: 'mechanicId' | 'lift', asked: Asked) {
+  const en = asked.language === 'en';
+  const end = (at: Date) =>
+    localDay(at) === localDay(asked.startsAt)
+      ? clock(at)
+      : `${WEEKDAY_NAMES[wall(at).weekday][en ? 1 : 0]} ${clock(at)}`;
+  const { holder } = row;
+  const block = holder.kind === 'time_block';
+  const span = block
+    ? `${end(holder.startsAt)}–${end(holder.endsAt)}`
+    : `${end(row.startsAt)}–${clock(row.endsAt)}`;
+  const name = asked.mechanicName;
+  const lift = row.lift;
+  const car = block ? '' : ` (${holder.car.brand} ${holder.car.model})`;
+  const said: [string, string] =
+    on === 'mechanicId'
+      ? block
+        ? [`${name} e blocat ${span}`, `${name} is blocked ${span}`]
+        : [`${name} are o programare ${span}`, `${name} has a booking ${span}`]
+      : block
+        ? [
+            `Elevatorul ${lift} e blocat ${span}`,
+            `Lift ${lift} is blocked ${span}`,
+          ]
+        : [
+            `Elevatorul ${lift} e ocupat ${span}${car}`,
+            `Lift ${lift} is busy ${span}${car}`,
+          ];
+  return refusal(
+    HttpStatus.CONFLICT,
+    on === 'mechanicId' ? 'mechanic_busy' : 'lift_busy',
+    said[en ? 1 : 0],
+    [{ code: 'busy', field: on }],
+    block ? 'time_block' : undefined,
+  );
+}
+
 // The refusal for the first row overlapping one segment: its mechanic's row
 // before its lift's.
 function busyOn(
   segment: Segment,
   taken: readonly TakenSegment[],
-  booking: { language: Language; mechanicName: string; startsAt: Date },
+  asked: Asked,
 ) {
-  const en = booking.language === 'en';
   const over = taken
     .filter(
       (row) => row.startsAt < segment.endsAt && row.endsAt > segment.startsAt,
     )
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
-  const when = (row: TakenSegment) => {
-    const span = `${clock(row.startsAt)}–${clock(row.endsAt)}`;
-    if (localDay(row.startsAt) === localDay(booking.startsAt)) return span;
-    return `${WEEKDAY_NAMES[wall(row.startsAt).weekday][en ? 1 : 0]} ${span}`;
-  };
-  const name = booking.mechanicName;
   const mechanic = over.find(
     (row) =>
       segment.mechanicId !== null && row.mechanicId === segment.mechanicId,
   );
-  if (mechanic) {
-    const said: [string, string] = [
-      `${name} are o programare ${when(mechanic)}`,
-      `${name} has a booking ${when(mechanic)}`,
-    ];
-    return refusal(HttpStatus.CONFLICT, 'mechanic_busy', said[en ? 1 : 0]);
-  }
+  if (mechanic) return busy(mechanic, 'mechanicId', asked);
   const lift = over.find(
     (row) => segment.lift !== null && row.lift === segment.lift,
   );
-  if (!lift) return null;
-  const car = `${lift.car.brand} ${lift.car.model}`;
-  const said: [string, string] = [
-    `Elevatorul ${segment.lift} e ocupat ${when(lift)} (${car})`,
-    `Lift ${segment.lift} is busy ${when(lift)} (${car})`,
-  ];
-  return refusal(HttpStatus.CONFLICT, 'lift_busy', said[en ? 1 : 0]);
+  return lift ? busy(lift, 'lift', asked) : null;
 }
 
-// The first of the booking's segments, in time order, that another booking
+// The first of the asked segments, in time order, that a booking or a block
 // already holds: its mechanic before its lift.
 export function judgeOverlaps(
   segments: readonly Segment[],
   taken: readonly TakenSegment[],
-  booking: { language: Language; mechanicName: string; startsAt: Date },
+  booking: Asked,
 ) {
   const ordered = [...segments].sort(
     (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
   );
   for (const segment of ordered) {
-    const busy = busyOn(segment, taken, booking);
-    if (busy) throw busy;
+    const clash = busyOn(segment, taken, booking);
+    if (clash) throw clash;
   }
 }
 
 const dayOf = (date: Date) => date.toISOString().slice(0, 10);
+
+// The overlap the database refused although the read before it found none:
+// a confirm or a block committed in between.
+export function isSlotTaken(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const said = `${error.message} ${JSON.stringify((error as { meta?: unknown }).meta ?? {})}`;
+  return (
+    said.includes('booking_segment_mechanic_excl') ||
+    said.includes('booking_segment_lift_excl')
+  );
+}
+
+const DEADLOCK_RUNS = 3;
+
+// Two writes racing for one lift or mechanic can deadlock on the exclusion
+// constraints. Postgres aborts one; it runs again and then reads the other's
+// write, so the loser hears 409, not 500.
+export async function deadlockRetried<T>(run: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await run();
+    } catch (error) {
+      const deadlocked = (error as { code?: unknown }).code === 'P2034';
+      if (!deadlocked || attempt === DEADLOCK_RUNS) throw error;
+    }
+  }
+}
+
 const asDate = (day: string) => new Date(`${day}T00:00:00Z`);
 
 // Places a booking for a confirm: reads the calendar, the mechanic's days and
 // the segments already held, and returns the segments to write or throws the
 // refusal that names the cause. It writes nothing; the exclusion constraints
 // on booking_segment still catch a confirm that commits in between.
+function takenOf(row: {
+  startsAt: Date;
+  endsAt: Date;
+  mechanicId: string | null;
+  lift: number | null;
+  booking: { request: { carBrand: string; carModel: string } } | null;
+  timeBlock: { startsAt: Date; endsAt: Date } | null;
+}): TakenSegment {
+  const holder: Holder = row.timeBlock
+    ? { kind: 'time_block', ...row.timeBlock }
+    : {
+        car: {
+          brand: row.booking?.request.carBrand ?? '',
+          model: row.booking?.request.carModel ?? '',
+        },
+        kind: 'booking',
+      };
+  return {
+    endsAt: row.endsAt,
+    holder,
+    lift: row.lift,
+    mechanicId: row.mechanicId,
+    startsAt: row.startsAt,
+  };
+}
+
 @Injectable()
 export class ScheduleService {
   async assertPlaceable(
@@ -406,42 +489,63 @@ export class ScheduleService {
       mechanic,
       startsAt: booking.startsAt,
     });
-    const last = segments.at(-1)?.endsAt ?? booking.startsAt;
+    await this.assertFree(tx, {
+      garageId,
+      language: booking.language,
+      lift: booking.lift,
+      mechanicId,
+      mechanicName: mechanic?.name ?? '',
+      segments,
+      startsAt: booking.startsAt,
+    });
+    return segments;
+  }
+
+  // Throws the refusal naming the first booking or block that holds the
+  // segments' mechanic or lift; a block's change leaves out its own rows.
+  async assertFree(
+    tx: Tx,
+    asked: Asked & {
+      garageId: string;
+      mechanicId: string | null;
+      lift: number | null;
+      segments: readonly Segment[];
+      exceptTimeBlockId?: string;
+    },
+  ): Promise<void> {
+    const { garageId, mechanicId, lift, segments } = asked;
     const holders: Prisma.BookingSegmentWhereInput[] = [];
     if (mechanicId) holders.push({ mechanicId });
-    if (booking.lift !== null) holders.push({ garageId, lift: booking.lift });
-    if (holders.length === 0) return segments;
+    if (lift !== null) holders.push({ garageId, lift });
+    if (holders.length === 0 || segments.length === 0) return;
+    const first = segments.reduce((a, b) => (a.startsAt < b.startsAt ? a : b));
+    const last = segments.reduce((a, b) => (a.endsAt > b.endsAt ? a : b));
     const rows = await tx.bookingSegment.findMany({
       include: {
         booking: {
           select: { request: { select: { carBrand: true, carModel: true } } },
         },
+        timeBlock: { select: { endsAt: true, startsAt: true } },
       },
       where: {
-        endsAt: { gt: booking.startsAt },
+        endsAt: { gt: first.startsAt },
         OR: holders,
-        startsAt: { lt: last },
+        startsAt: { lt: last.endsAt },
+        // Not `NOT: { timeBlockId }`: SQL drops the rows whose timeBlockId
+        // is null from that, every booking's segment among them.
+        ...(asked.exceptTimeBlockId && {
+          AND: [
+            {
+              OR: [
+                { timeBlockId: null },
+                { timeBlockId: { not: asked.exceptTimeBlockId } },
+              ],
+            },
+          ],
+        }),
       },
     });
-    judgeOverlaps(
-      segments,
-      rows.map((row) => ({
-        car: {
-          brand: row.booking.request.carBrand,
-          model: row.booking.request.carModel,
-        },
-        endsAt: row.endsAt,
-        lift: row.lift,
-        mechanicId: row.mechanicId,
-        startsAt: row.startsAt,
-      })),
-      {
-        language: booking.language,
-        mechanicName: mechanic?.name ?? '',
-        startsAt: booking.startsAt,
-      },
-    );
-    return segments;
+    judgeOverlaps(segments, rows.map(takenOf), asked);
   }
 
   // Waits out a day off being added, which holds this row: the read below

@@ -56,6 +56,7 @@ import {
   type RequestSource,
   type RequestStatus,
 } from './request-status';
+import { TimeBlockDto } from './time-blocks.dto';
 
 // Far above any garage's lifts; keeps the number inside the column's range.
 const LIFT_MAX = 99;
@@ -843,6 +844,11 @@ export class GarageScheduleEntryDto {
 export class GarageScheduleDto {
   @ApiProperty({ type: [GarageScheduleEntryDto] })
   entries!: GarageScheduleEntryDto[];
+
+  // The blocked time staff read, filtered as the entries are.
+  // A thunk: time-blocks.dto imports this file.
+  @ApiProperty({ type: () => [TimeBlockDto] })
+  blocks!: TimeBlockDto[];
 
   @ApiProperty()
   from!: string;

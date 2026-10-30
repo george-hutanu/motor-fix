@@ -518,3 +518,152 @@ describe('GET /garages/:garageId/schedule', () => {
     expect(idsOf(answer).every((id) => ours.has(id))).toBe(true);
   });
 });
+
+// @traces 427-FR-011
+describe('the blocked time on the schedule read', () => {
+  // Thursday 5 November 2026 at `hour` in Bucharest, as an ISO instant.
+  const on5 = (hour: number, day = 5) =>
+    new Date(Date.UTC(2026, 10, day, hour - 2)).toISOString();
+  const read = async (t: Team, auth: string, query = 'from=2026-11-05') =>
+    (await get(`/garages/${t.garage.id}/schedule?${query}`, auth)).body;
+  const blockIds = (body: { blocks: { id: string }[] }) =>
+    body.blocks.map((b) => b.id);
+
+  // A block stored as the routes store it: the row and its one-day segment.
+  async function blocked(
+    t: Team,
+    from: string,
+    to: string,
+    holds: { mechanicId?: string; lift?: number; note?: string },
+  ) {
+    const block = await prisma.timeBlock.create({
+      data: {
+        createdBy: t.owner,
+        endsAt: new Date(to),
+        garageId: t.garage.id,
+        lift: holds.lift ?? null,
+        mechanicId: holds.mechanicId ?? null,
+        note: holds.note ?? null,
+        startsAt: new Date(from),
+        updatedBy: t.owner,
+      },
+    });
+    await prisma.bookingSegment.create({
+      data: {
+        endsAt: new Date(to),
+        garageId: t.garage.id,
+        lift: holds.lift ?? null,
+        mechanicId: holds.mechanicId ?? null,
+        startsAt: new Date(from),
+        timeBlockId: block.id,
+      },
+    });
+    return block;
+  }
+
+  it('gives the owner and the receptionist every block with its note, lift and segments', async () => {
+    const t = await team('Atelier Dinamo');
+    const hand = await blocked(t, on5(9), on5(10), {
+      lift: 2,
+      mechanicId: t.plainMechanic.id,
+      note: 'Client la telefon',
+    });
+    const lift = await blocked(t, on5(11), on5(12), { lift: 3 });
+
+    const owner = await read(t, bearer(t.owner, 'garage'));
+    const desk = await read(t, bearer(t.receptionist, 'receptionist'));
+
+    expect(owner.blocks).toEqual([
+      {
+        endsAt: on5(10),
+        id: hand.id,
+        lift: 2,
+        mechanic: { id: t.plainMechanic.id, name: 'Hand' },
+        note: 'Client la telefon',
+        segments: [{ endsAt: on5(10), startsAt: on5(9) }],
+        startsAt: on5(9),
+      },
+      expect.objectContaining({ id: lift.id, lift: 3, mechanic: null }),
+    ]);
+    expect(blockIds(desk)).toEqual([hand.id, lift.id]);
+  });
+
+  it('shows a mechanic the blocks on her own card, and all of them once she may move bookings', async () => {
+    const t = await team('Atelier Dinamo');
+    const hers = await blocked(t, on5(9), on5(10), {
+      mechanicId: t.plainMechanic.id,
+    });
+    const his = await blocked(t, on5(9), on5(10), {
+      mechanicId: t.answeringMechanic.id,
+    });
+    const lift = await blocked(t, on5(11), on5(12), { lift: 1 });
+    const auth = bearer(t.plain, 'mechanic');
+
+    expect(blockIds(await read(t, auth))).toEqual([hers.id]);
+    await prisma.mechanic.update({
+      data: { canMoveBookings: true },
+      where: { id: t.plainMechanic.id },
+    });
+    // Two blocks starting together come in id order.
+    expect(blockIds(await read(t, auth))).toEqual([
+      ...[hers.id, his.id].sort(),
+      lift.id,
+    ]);
+  });
+
+  it('filters blocks by lift and by mechanic, a lift-only block never matching a mechanic', async () => {
+    const t = await team('Atelier Dinamo');
+    const hand = await blocked(t, on5(9), on5(10), {
+      lift: 2,
+      mechanicId: t.plainMechanic.id,
+    });
+    const lift = await blocked(t, on5(11), on5(12), { lift: 2 });
+    const auth = bearer(t.owner, 'garage');
+
+    expect(
+      blockIds(
+        await read(t, auth, `from=2026-11-05&mechanicId=${t.plainMechanic.id}`),
+      ),
+    ).toEqual([hand.id]);
+    expect(blockIds(await read(t, auth, 'from=2026-11-05&lift=2'))).toEqual([
+      hand.id,
+      lift.id,
+    ]);
+    expect(blockIds(await read(t, auth, 'from=2026-11-06'))).toEqual([]);
+  });
+
+  it('carries no lift on a block while the garage schedules without lifts', async () => {
+    const t = await team('Atelier Dinamo');
+    await blocked(t, on5(9), on5(10), { lift: 2 });
+    await prisma.garageFeature.create({
+      data: { enabled: false, garageId: t.garage.id, key: 'lift_schedule' },
+    });
+
+    const answer = await read(t, bearer(t.owner, 'garage'));
+
+    expect(answer.blocks).toHaveLength(1);
+    expect(answer.blocks[0]).not.toHaveProperty('lift');
+  });
+
+  it('reads sixty bookings and twenty blocks over seven days in one request', async () => {
+    const t = await team('Atelier Dinamo');
+    for (let n = 0; n < 60; n++) {
+      const at = new Date(Date.UTC(2026, 10, 2 + (n % 7), 6 + (n % 9)));
+      await booked(t, at.toISOString(), 'confirmed');
+    }
+    for (let n = 0; n < 20; n++) {
+      const day = 2 + (n % 7);
+      const hour = 8 + 2 * Math.floor(n / 7);
+      await blocked(t, on5(hour, day), on5(hour + 1, day), { lift: 1 });
+    }
+
+    const answer = await read(
+      t,
+      bearer(t.owner, 'garage'),
+      'from=2026-11-02&to=2026-11-08',
+    );
+
+    expect(answer.entries).toHaveLength(60);
+    expect(answer.blocks).toHaveLength(20);
+  });
+});
