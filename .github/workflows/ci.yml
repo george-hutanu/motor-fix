@@ -311,7 +311,9 @@ jobs:
     needs: changes
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The suite takes 23 to 30 minutes now (three runs of one PR: 23, 29, then
+    # cancelled at 30), so 30 cancels it at the edge; 45 leaves the headroom.
+    timeout-minutes: 45
     services: *services
     env:
       APP_ENV: test

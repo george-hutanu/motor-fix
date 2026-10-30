@@ -155,6 +155,11 @@ describe('ci workflow', () => {
     expect(Number(setting(job('integration'), 'timeout-minutes'))).toBe(90);
   });
 
+  // The end-to-end suite runs 23 to 30 minutes; 30 cancelled a run at the edge.
+  it('gives the end-to-end suite three quarters of an hour before cancelling it', () => {
+    expect(Number(setting(job('e2e'), 'timeout-minutes'))).toBe(45);
+  });
+
   it('builds the docker images on a PR that changes an image input, and by hand', () => {
     expect(setting(job('docker'), 'if')).toBe(
       "github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && needs.changes.outputs.docker == 'true')",
