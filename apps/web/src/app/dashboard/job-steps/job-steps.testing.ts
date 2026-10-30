@@ -9,7 +9,7 @@ import {
   type MeDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
-import { OVERLAY_TASK } from '@motor-fix/overlays';
+import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
 import { JobSteps } from './job-steps';
@@ -86,6 +86,8 @@ export let events: Subject<LiveMessage>;
 export let api: Record<string, jest.Mock>;
 export let waiting: { add: jest.Mock; actions: ReturnType<typeof signal> };
 export let current: JobDto;
+// The dialogs the drawer opens: each answers what `opened` resolves to.
+export let overlays: { open: jest.Mock };
 
 export async function render(
   options: {
@@ -104,10 +106,12 @@ export async function render(
     jobStepsControllerReorder: jest.fn(async () => undefined),
   };
   waiting = { actions: signal([]), add: jest.fn(async () => 'key-1') };
+  overlays = { open: jest.fn(async () => 'cancelled') };
   TestBed.configureTestingModule({
     providers: [
       { provide: GarageJobsService, useValue: api },
       { provide: Waiting, useValue: waiting },
+      { provide: Overlays, useValue: overlays },
       {
         provide: Session,
         useValue: {

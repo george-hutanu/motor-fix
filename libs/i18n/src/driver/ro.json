@@ -425,7 +425,9 @@
       "title": "Anulezi cererea?",
       "toast": "Cerere anulată"
     },
+    "closedOn": "Încheiată pe {day}",
     "compare": "Compară ofertele",
+    "finalPrice": "Preț final {price}",
     "lapsed": "Service‑ul nu a confirmat. Alege altă ofertă.",
     "lateCancellation": "Anulare târzie",
     "retry": "Încearcă din nou",

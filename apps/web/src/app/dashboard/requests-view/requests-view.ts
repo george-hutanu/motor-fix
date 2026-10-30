@@ -19,6 +19,8 @@ import {
   RequestsService,
 } from '@motor-fix/data-access';
 import {
+  formatDayMonth,
+  formatLei,
   formatSlot,
   I18n,
   relativeTime,
@@ -70,6 +72,10 @@ interface Row {
   cancelledByYou?: { late: boolean };
   // The driver cancelled the booking and the request takes quotes again.
   reopened?: true;
+  // The garage handed the car over: its day, and the final price once
+  // recorded.
+  closedOn?: string;
+  price?: string;
 }
 
 const TICK_MS = 60_000;
@@ -105,7 +111,7 @@ export class RequestsView {
   protected readonly language = this.i18n.language;
   protected readonly list = liveResource(
     () => this.api.requestsControllerList(),
-    REQUEST_EVENTS,
+    [...REQUEST_EVENTS, 'job.handed_over', 'job.final_price_corrected'],
   );
   // The active request's panel above the list, moved by every change to a
   // request, its quotes, booking or job.
@@ -224,6 +230,7 @@ export class RequestsView {
     const jobs = item.jobs.map((job) =>
       language === 'en' ? job.nameEn : job.nameRo,
     );
+    const handedOverAt = booking?.handedOverAt;
     return {
       car: `${brand} ${model} ${year}`,
       id: item.id,
@@ -257,6 +264,13 @@ export class RequestsView {
       ...(item.status === 'quoted' &&
         booking?.status === 'cancelled' &&
         booking.cancelledBySide === 'driver' && { reopened: true as const }),
+      ...(handedOverAt && {
+        closedOn: formatDayMonth(handedOverAt, language),
+      }),
+      ...(handedOverAt &&
+        booking.finalPriceBani !== null && {
+          price: formatLei(booking.finalPriceBani, language),
+        }),
     };
   }
 }

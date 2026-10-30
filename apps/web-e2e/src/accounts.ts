@@ -124,6 +124,26 @@ export async function signIn(
   await dialog.getByRole('button', { name: 'Intră în cont' }).click();
 }
 
+// Signs in at the width the site bar shows its button at, waits for the
+// landing page, then goes back to the page's own size.
+export async function signedIn(
+  page: Page,
+  email: string,
+  landing: string | RegExp,
+  password = PASSWORD,
+) {
+  const size = page.viewportSize();
+  await page.setViewportSize({ height: 900, width: 1280 });
+  await ready(page, '/ro');
+  await page
+    .getByRole('banner')
+    .getByRole('button', { exact: true, name: 'Autentificare' })
+    .click();
+  await signIn(page, email, { password });
+  await expect(page).toHaveURL(landing);
+  if (size) await page.setViewportSize(size);
+}
+
 // A driver of the caller's own, signed up with the seeded password, for a
 // flow that must not share a seeded driver another spec signs in with at the
 // same time. Each sign-up comes from an address of its own (the API admits 10
