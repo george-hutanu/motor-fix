@@ -185,6 +185,7 @@
     },
     "coming": {
       "garage": {
+        "clientRepairs": "Here you will see the repairs clients share with you.",
         "history": "Here you will see who changed what in your garage.",
         "jobs": "Here you will see the garage’s jobs.",
         "prices": "Here you will see the price ranges per job.",
@@ -224,6 +225,7 @@
       },
       "garage": {
         "assistant": "AI assistant",
+        "clientRepairs": "Repairs added by clients",
         "history": "Change history",
         "jobs": "Jobs",
         "prices": "Prices",
@@ -251,6 +253,7 @@
         "settings": "Account details and notifications"
       },
       "garage": {
+        "clientRepairs": "Repairs clients logged at your garage and share with you",
         "history": "Who changed what and when",
         "jobs": "Confirmed jobs, from today on",
         "prices": "The ranges drivers see on your profile",
@@ -267,6 +270,7 @@
       "assistant": "Assistant",
       "brands": "Brands",
       "cars": "Cars",
+      "clientRepairs": "Client repairs",
       "contact": "Help and contact",
       "dashboard": "Home",
       "garages": "Garages",
@@ -298,6 +302,7 @@
       },
       "garage": {
         "assistant": "Your AI assistant",
+        "clientRepairs": "Repairs added by clients",
         "history": "Change history",
         "jobs": "Jobs",
         "prices": "Prices",

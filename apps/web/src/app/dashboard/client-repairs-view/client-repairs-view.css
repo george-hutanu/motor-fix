@@ -1,0 +1,113 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  margin: var(--mf-space-4);
+  min-width: 0;
+}
+p {
+  margin: 0;
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  min-width: 0;
+}
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row,
+.skeleton {
+  border: 1px solid var(--mf-line-strong);
+  border-radius: var(--mf-radius-control);
+}
+/* On a phone: what was done and its day beside Corectează, then the client and car, the odometer, the amount. */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--mf-space-1) var(--mf-space-3);
+  padding: var(--mf-space-3);
+  background: var(--mf-panel);
+  color: var(--mf-text);
+}
+.row > * {
+  grid-column: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.what {
+  font-weight: 700;
+}
+.correct {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
+  min-height: var(--mf-tap);
+}
+.who,
+.day,
+.km,
+.cost,
+.corrected,
+.truncated {
+  color: var(--mf-text-secondary);
+}
+.km,
+.cost {
+  font-variant-numeric: tabular-nums;
+}
+.skeleton {
+  height: 120px;
+  background: var(--mf-line);
+}
+.failed {
+  color: var(--mf-red-ink);
+  overflow-wrap: anywhere;
+}
+.retry {
+  align-self: flex-start;
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+
+/* One line per repair from a tablet up. */
+@media (min-width: 768px) {
+  .row {
+    grid-template-columns:
+      minmax(0, 2fr) minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)
+      minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  .row > * {
+    grid-column: auto;
+    grid-row: 1;
+  }
+  .correct {
+    grid-column: 6;
+    grid-row: 1;
+  }
+  .corrected {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .day,
+  .who,
+  .km,
+  .cost,
+  .corrected {
+    font-size: var(--mf-size-small);
+  }
+  .km,
+  .cost {
+    text-align: end;
+  }
+  .skeleton {
+    height: 64px;
+  }
+}

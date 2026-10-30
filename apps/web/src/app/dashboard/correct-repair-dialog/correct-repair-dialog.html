@@ -1,0 +1,39 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <p class="subject" data-subject>{{ subject }}</p>
+  @if (stale()) {
+    <p class="error" data-stale role="status" aria-live="polite">{{ 'garage.clientRepairs.correct.problem.stale_version' | t }}</p>
+  }
+  @let whatError = errorOf(form.controls.what);
+  <div class="field">
+    <label hlmLabel for="correct-repair-what">{{ 'garage.clientRepairs.correct.what' | t }}</label>
+    <input hlmInput id="correct-repair-what" name="what" type="text" autocomplete="off" [attr.maxlength]="200" formControlName="what" [aria-invalid]="!!whatError" aria-describedby="correct-repair-what-error" />
+    <p id="correct-repair-what-error" class="error mf-message" role="status" aria-live="polite">{{ whatError }}</p>
+  </div>
+  @let dayError = errorOf(form.controls.doneOn);
+  <div class="field">
+    <label hlmLabel for="correct-repair-doneOn">{{ 'garage.clientRepairs.correct.doneOn' | t }}</label>
+    <input hlmInput id="correct-repair-doneOn" name="doneOn" type="date" [max]="today" formControlName="doneOn" [aria-invalid]="!!dayError" aria-describedby="correct-repair-doneOn-error" />
+    <p id="correct-repair-doneOn-error" class="error mf-message" role="status" aria-live="polite">{{ dayError }}</p>
+  </div>
+  @let kmError = errorOf(form.controls.odometerKm);
+  <div class="field">
+    <label hlmLabel for="correct-repair-odometerKm">{{ 'garage.clientRepairs.correct.odometerKm' | t }}</label>
+    <input hlmInput id="correct-repair-odometerKm" name="odometerKm" type="text" inputmode="numeric" autocomplete="off" formControlName="odometerKm" [aria-invalid]="!!kmError" aria-describedby="correct-repair-odometerKm-error correct-repair-lower" />
+    <p id="correct-repair-odometerKm-error" class="error mf-message" role="status" aria-live="polite">{{ kmError }}</p>
+    <p id="correct-repair-lower" class="note mf-message" aria-live="polite" [attr.data-lower]="lower() === null ? null : ''">{{ lowerText() }}</p>
+  </div>
+  @let costError = errorOf(form.controls.costBani);
+  <div class="field">
+    <label hlmLabel for="correct-repair-costBani">{{ 'garage.clientRepairs.correct.costBani' | t }}</label>
+    <input hlmInput id="correct-repair-costBani" name="costBani" type="text" inputmode="decimal" autocomplete="off" formControlName="costBani" [aria-invalid]="!!costError" aria-describedby="correct-repair-costBani-hint correct-repair-costBani-error" />
+    <p id="correct-repair-costBani-hint" class="hint">{{ 'garage.clientRepairs.correct.costHint' | t }}</p>
+    <p id="correct-repair-costBani-error" class="error mf-message" role="status" aria-live="polite">{{ costError }}</p>
+  </div>
+  @if (save.problem() && !stale()) {
+    <div class="error mf-message" data-problem role="alert"><mf-task-error [save]="save" /></div>
+  }
+  <div class="actions">
+    <button hlmBtn type="submit" [mfTaskSubmit]="save">{{ 'garage.clientRepairs.correct.save' | t }}</button>
+    <button hlmBtn variant="ghost" type="button" (click)="task.close('cancelled')">{{ 'garage.clientRepairs.correct.cancel' | t }}</button>
+  </div>
+</form>

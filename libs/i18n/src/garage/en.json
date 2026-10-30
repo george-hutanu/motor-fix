@@ -1,4 +1,39 @@
 {
+  "clientRepairs": {
+    "correct": {
+      "cancel": "Cancel",
+      "costBani": "Amount (lei)",
+      "costHint": "Optional. Empty the field to remove the amount.",
+      "doneOn": "Date",
+      "field": {
+        "costDecimals": "At most two decimals",
+        "costFormat": "An amount in lei, for example 450 or 450.50",
+        "costWithin": "At most 920,000 lei",
+        "dayRequired": "Pick the day of the repair",
+        "futureDay": "The date cannot be in the future",
+        "odometerWithin": "A whole number between 0 and 2,000,000 km",
+        "whatWithin": "Between 1 and 200 characters"
+      },
+      "lower": "The odometer is lower than the one on record ({km}). Check it and press Save again.",
+      "odometerKm": "Odometer",
+      "problem": {
+        "stale_version": "The repair changed meanwhile. We reloaded the values."
+      },
+      "save": "Save",
+      "subject": "{car} · client {name}",
+      "title": "Correct the repair",
+      "what": "What was done"
+    },
+    "correctAction": "Correct",
+    "corrected": "Corrected on {day}",
+    "correctLabel": "Correct the repair from {day}",
+    "empty": "No client has shared a repair with you yet",
+    "failed": "We could not load the repairs",
+    "noAmount": "no amount",
+    "retry": "Retry",
+    "truncated": "Showing the newest 200 repairs",
+    "unshared": "The client no longer shares this repair"
+  },
   "features": {
     "confirm": {
       "cancel": "Cancel",
