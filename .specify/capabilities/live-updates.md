@@ -39,6 +39,7 @@ features:
   - 275-live-stage-updates
   - 427-time-blocks
   - 011-dashboard-sections
+  - 1316-swr-resource-store
   - 1389-reported-reviews-admin
 ---
 
@@ -188,9 +189,9 @@ _From 257-live-events._
 
 _From 257-live-events._
 
-### 256-FR-002 — The web app MUST offer a helper that loads a view's data through the API and re-reads it when an event about the shown object arrives. Events that arrive within 300 ms of each other cause one re-read, events about other objects cause none, and only one read runs at a time.
+### 1316-FR-002 — Each resource type MUST declare its own stale time; when a view opens and the held value's age (measured from the time its last full read answered) is equal to or greater than its type's stale time, the app MUST read the resource again in the background, the held value staying on screen until the answer replaces it in place (256-FR-001's structural sharing); when the held value is younger, the view's open MUST start no read. The stale time gates only that read: re-reads caused by live events, a reconnect, the polling state or a failed read's retry keep their own rules (FR-003, FR-004).
 
-_From 256-live-in-place._
+_From 1316-swr-resource-store._
 
 ### 257-FR-011 — Account sign-up (`account.created`) and sign-out everywhere (`account.signed_out_everywhere`) MUST record their events through the outbox, with the account as their subject.
 
@@ -518,6 +519,26 @@ _From 1254-assistant-approvals._
 
 _From 275-live-stage-updates._
 
+### 1316-FR-003 — A background read that fails MUST leave the held value on screen and show no error; the view MUST re-read on the next event or after 60 seconds, as 256-FR-003 says.
+
+_From 1316-swr-resource-store._
+
+### 1316-FR-004 — A re-read caused by a live event, a reconnect or the polling state (256-FR-002, 255-FR-003, 255-FR-004) MUST update the held value, so that every view showing that resource changes in place and the next visit shows the re-read's answer.
+
+_From 1316-swr-resource-store._
+
+### 1316-FR-008 — The store MUST read personal resources only through the signed-in API calls the views make today; the API's answer to each of these reads (`GET /api/v1/cars`, `GET /api/v1/requests`, `GET /api/v1/quote-requests/active`, `GET /api/v1/garage/requests`) MUST carry `Cache-Control: private, no-cache` (the existing rule of the cache interceptor for every read made with a session), so that no edge or CDN cache can hold or serve a copy.
+
+_From 1316-swr-resource-store._
+
+### 1316-FR-009 — The store MUST keep its copy in the page's memory only: nothing is written to local storage, session storage, IndexedDB or a cookie, and a page reload starts from an empty store (ST-1330 owns the copy kept across reloads).
+
+_From 1316-swr-resource-store._
+
+### 1316-FR-010 — Tests MUST cover, in Jest: a return within the stale time shows the held value and starts no read; a return past the stale time shows the held value and starts one read whose answer replaces it; two resource types with different stale times behave by their own; a failed background read keeps the held value; a live-event re-read replaces the held value for every view showing it, whatever the stale time; the store writes nothing to local storage, session storage, IndexedDB or cookies; an answer arriving after the account changed is dropped; a car added, edited and removed on one view is what another view shows next; sign-out, a revoked session, a sign-in of account B after account A and a role switch each leave the store empty, with the A-then-B test proving none of A's data is held or shown after B signs in; and the four routes' signed-in answers carry `private, no-cache`.
+
+_From 1316-swr-resource-store._
+
 ## Retired
 
 - `253-FR-006` — superseded by `254-FR-013` (2026-10-05)
@@ -543,4 +564,5 @@ _From 275-live-stage-updates._
 - `398-FR-008` — superseded by `102-FR-010` (2026-10-25)
 - `419-FR-008` — superseded by `1193-FR-001` (2026-10-25)
 - `254-FR-005` — superseded by `1250-FR-013` (2026-10-26)
+- `256-FR-002` — superseded by `1316-FR-002` (2026-10-30)
 - `177-FR-010` — superseded by `1389-FR-006` (2026-10-30)

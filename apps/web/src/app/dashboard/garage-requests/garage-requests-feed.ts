@@ -10,7 +10,8 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 
-import { Live, liveResource } from '../live';
+import { Live } from '../live';
+import { Resources } from '../resources/resources';
 import { Session } from '../session';
 
 // Every event that moves a row into, within or out of the garage's lists.
@@ -50,12 +51,19 @@ export class GarageRequestsFeed {
     () =>
       this.session.shown()?.capabilities?.includes('garage.requests') ?? false,
   );
-  private readonly waiting = liveResource(() => this.read('waiting'), CHANGES);
-  private readonly closedRows = liveResource(
+  private readonly resources = inject(Resources);
+  private readonly waiting = this.resources.live(
+    'garageWaiting',
+    () => this.read('waiting'),
+    CHANGES,
+  );
+  private readonly closedRows = this.resources.live(
+    'garageClosed',
     () => this.read('closed'),
     CHANGES,
   );
-  private readonly quotedRows = liveResource(
+  private readonly quotedRows = this.resources.live(
+    'garageQuoted',
     () => this.read('quoted'),
     CHANGES,
   );
