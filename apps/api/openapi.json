@@ -2749,6 +2749,136 @@
         ]
       }
     },
+    "/api/v1/garage/client-repairs": {
+      "get": {
+        "operationId": "ClientRepairsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientRepairListDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a receptionist or a mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found: not a garage owner, or the garage is not approved"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The logged repairs drivers shared with the caller's garage",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/garage/client-repairs/{id}": {
+      "patch": {
+        "operationId": "ClientRepairsController_correct",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectClientRepairDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientRepairDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad field or id, an unknown field, a day after today or a missing version"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a receptionist or a mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found: no such repair shared with the garage, or the garage is not approved"
+          },
+          "409": {
+            "description": "stale_version: the repair changed since that version"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Correct what was done, the day, the reading or the amount of a shared repair; null clears the amount",
+        "tags": [
+          "cars"
+        ]
+      },
+      "delete": {
+        "operationId": "ClientRepairsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the named garage never deletes a logged repair"
+          },
+          "404": {
+            "description": "not_found: not a garage owner"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Always refused: a garage never deletes a repair",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
     "/api/v1/cars": {
       "post": {
         "operationId": "CarsController_create",
@@ -14307,6 +14437,24 @@
           "fromPreviousOwner": {
             "type": "boolean",
             "description": "Created before the reader held the car: it came with it"
+          },
+          "odometerKm": {
+            "type": "integer",
+            "nullable": true
+          },
+          "costBani": {
+            "type": "integer",
+            "description": "In bani",
+            "nullable": true
+          },
+          "correctedBy": {
+            "type": "string",
+            "description": "Who last corrected it: the garage it names or an admin; none for the driver",
+            "enum": [
+              "garage",
+              "admin"
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -14315,7 +14463,10 @@
           "what",
           "garageName",
           "source",
-          "fromPreviousOwner"
+          "fromPreviousOwner",
+          "odometerKm",
+          "costBani",
+          "correctedBy"
         ]
       },
       "CarRepairListDto": {
@@ -14331,6 +14482,148 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "ClientRepairDriverDto": {
+        "type": "object",
+        "properties": {
+          "shortName": {
+            "type": "string",
+            "description": "First name and initial, or the deleted-account label",
+            "example": "Andrei M."
+          }
+        },
+        "required": [
+          "shortName"
+        ]
+      },
+      "ClientRepairCarDto": {
+        "type": "object",
+        "properties": {
+          "brandName": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "brandName",
+          "model",
+          "year"
+        ]
+      },
+      "ClientRepairDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "driver": {
+            "$ref": "#/components/schemas/ClientRepairDriverDto"
+          },
+          "car": {
+            "$ref": "#/components/schemas/ClientRepairCarDto"
+          },
+          "what": {
+            "type": "string",
+            "description": "What was done"
+          },
+          "doneOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "odometerKm": {
+            "type": "integer",
+            "nullable": true
+          },
+          "costBani": {
+            "type": "integer",
+            "description": "In bani",
+            "nullable": true
+          },
+          "version": {
+            "type": "string",
+            "description": "Sent back with a correction",
+            "format": "date-time"
+          },
+          "correctedAt": {
+            "type": "string",
+            "description": "When the garage last corrected it, if it was the last writer",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "driver",
+          "car",
+          "what",
+          "doneOn",
+          "odometerKm",
+          "costBani",
+          "version",
+          "correctedAt"
+        ]
+      },
+      "ClientRepairListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest first, at most 200",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClientRepairDto"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "More repairs exist than the list holds"
+          }
+        },
+        "required": [
+          "items",
+          "truncated"
+        ]
+      },
+      "CorrectClientRepairDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The version of the repair as read; an older one is refused",
+            "format": "date-time"
+          },
+          "what": {
+            "type": "string",
+            "description": "Trimmed",
+            "maxLength": 200,
+            "minLength": 1
+          },
+          "doneOn": {
+            "type": "string",
+            "description": "Not after today in Romania",
+            "format": "date"
+          },
+          "odometerKm": {
+            "type": "integer",
+            "maximum": 2000000,
+            "minimum": 0
+          },
+          "costBani": {
+            "type": "integer",
+            "description": "In bani; null clears it",
+            "maximum": 92000000,
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "version"
         ]
       },
       "CreateCarDto": {

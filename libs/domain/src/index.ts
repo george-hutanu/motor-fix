@@ -74,6 +74,7 @@ export { WarmModule } from './cache/warm/warm.module';
 export { warmCache } from './cache/warm-up/warm-up';
 export { CAR_ACCOUNT_DELETED_CONSUMER } from './cars/account-deleted/account-deleted';
 export { CarAccountDeletedModule } from './cars/account-deleted/account-deleted.module';
+export { ClientRepairsModule } from './cars/client-repairs/client-repairs.module';
 export { CarHistoryModule } from './cars/history/history.module';
 export { CarsModule } from './cars/my-cars/cars/cars.module';
 export {
