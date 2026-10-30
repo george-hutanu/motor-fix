@@ -6574,6 +6574,54 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/time-blocks/options": {
+      "get": {
+        "operationId": "timeBlockOptions",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeBlockOptionsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: the garage id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic of the garage"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The lifts and the mechanics a block may take",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/time-blocks/{blockId}": {
       "patch": {
         "operationId": "updateTimeBlock",
@@ -20283,6 +20331,26 @@
           "from",
           "to",
           "lifts"
+        ]
+      },
+      "TimeBlockOptionsDto": {
+        "type": "object",
+        "properties": {
+          "liftCount": {
+            "type": "number",
+            "description": "0 while the garage schedules without lifts"
+          },
+          "mechanics": {
+            "description": "Empty while the garage works without a team; ordered by name, then id",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingMechanicDto"
+            }
+          }
+        },
+        "required": [
+          "liftCount",
+          "mechanics"
         ]
       },
       "CreateTimeBlockDto": {

@@ -101,6 +101,9 @@ import { publicGaragesControllerBySlug } from '../fn/garages/public-garages-cont
 import { PublicGaragesControllerBySlug$Params } from '../fn/garages/public-garages-controller-by-slug';
 import { StaffInviteSentDto } from '../models/staff-invite-sent-dto';
 import { TimeBlockDto } from '../models/time-block-dto';
+import { timeBlockOptions } from '../fn/garages/time-block-options';
+import { TimeBlockOptions$Params } from '../fn/garages/time-block-options';
+import { TimeBlockOptionsDto } from '../models/time-block-options-dto';
 import { TimeBlocksDto } from '../models/time-blocks-dto';
 import { updateTimeBlock } from '../fn/garages/update-time-block';
 import { UpdateTimeBlock$Params } from '../fn/garages/update-time-block';
@@ -212,6 +215,39 @@ export class GaragesService extends BaseService {
   createTimeBlock(params: CreateTimeBlock$Params, context?: HttpContext): Promise<TimeBlockDto> {
     const resp = this.createTimeBlock$Response(params, context);
     return resp.then((r: StrictHttpResponse<TimeBlockDto>): TimeBlockDto => r.body);
+  }
+
+  /** Path part for operation `timeBlockOptions()` */
+  static readonly TimeBlockOptionsPath = '/api/v1/garages/{garageId}/time-blocks/options';
+
+  /**
+   * The lifts and the mechanics a block may take.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `timeBlockOptions()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  timeBlockOptions$Response(params: TimeBlockOptions$Params, context?: HttpContext): Promise<StrictHttpResponse<TimeBlockOptionsDto>> {
+    const obs = timeBlockOptions(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The lifts and the mechanics a block may take.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `timeBlockOptions$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  timeBlockOptions(params: TimeBlockOptions$Params, context?: HttpContext): Promise<TimeBlockOptionsDto> {
+    const resp = this.timeBlockOptions$Response(params, context);
+    return resp.then((r: StrictHttpResponse<TimeBlockOptionsDto>): TimeBlockOptionsDto => r.body);
   }
 
   /** Path part for operation `deleteTimeBlock()` */

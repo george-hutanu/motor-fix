@@ -303,6 +303,8 @@ export type { GarageTimeBlocks$Params as GarageTimeBlocks$Params } from './fn/ga
 export { garageTimeBlocks as garageTimeBlocks } from './fn/garages/garage-time-blocks';
 export type { CreateTimeBlock$Params as CreateTimeBlock$Params } from './fn/garages/create-time-block';
 export { createTimeBlock as createTimeBlock } from './fn/garages/create-time-block';
+export type { TimeBlockOptions$Params as TimeBlockOptions$Params } from './fn/garages/time-block-options';
+export { timeBlockOptions as timeBlockOptions } from './fn/garages/time-block-options';
 export type { DeleteTimeBlock$Params as DeleteTimeBlock$Params } from './fn/garages/delete-time-block';
 export { deleteTimeBlock as deleteTimeBlock } from './fn/garages/delete-time-block';
 export type { UpdateTimeBlock$Params as UpdateTimeBlock$Params } from './fn/garages/update-time-block';

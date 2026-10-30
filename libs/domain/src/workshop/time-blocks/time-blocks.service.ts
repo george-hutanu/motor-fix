@@ -2,6 +2,7 @@ import {
   type CreateTimeBlockDto,
   TIME_BLOCK_NOTE_MAX,
   type TimeBlockDto,
+  type TimeBlockOptionsDto,
   type TimeBlocksDto,
   type UpdateTimeBlockDto,
 } from '@motor-fix/contracts';
@@ -41,7 +42,10 @@ import {
   localDay,
 } from '../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
-import { switchesOf } from '../../garages/features/garage-options';
+import {
+  garageOptions,
+  switchesOf,
+} from '../../garages/features/garage-options';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   deadlockRetried,
@@ -194,6 +198,13 @@ export class TimeBlocksService {
       lifts,
     );
     return { blocks, from, lifts, to };
+  }
+
+  // What the block dialog may offer; it reads, it writes nothing.
+  async options(actor: Actor, garageId: string): Promise<TimeBlockOptionsDto> {
+    this.assertDesk(actor, garageId);
+    const { liftCount, mechanics } = await garageOptions(this.prisma, garageId);
+    return { liftCount, mechanics };
   }
 
   create(

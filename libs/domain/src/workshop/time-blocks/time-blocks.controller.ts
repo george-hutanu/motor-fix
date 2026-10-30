@@ -1,6 +1,7 @@
 import {
   CreateTimeBlockDto,
   TimeBlockDto,
+  TimeBlockOptionsDto,
   TimeBlocksDto,
   TimeBlocksQueryDto,
   UpdateTimeBlockDto,
@@ -68,6 +69,22 @@ export class TimeBlocksController {
     @Query() query: TimeBlocksQueryDto,
   ): Promise<TimeBlocksDto> {
     return this.blocks.list(actor, garageId.toLowerCase(), query);
+  }
+
+  @Get('options')
+  @Requires('garage.schedule')
+  @ApiOperation({
+    operationId: 'timeBlockOptions',
+    summary: 'The lifts and the mechanics a block may take',
+  })
+  @ApiOkResponse({ type: TimeBlockOptionsDto })
+  @ApiBadRequestResponse({ description: 'validation_failed: the garage id' })
+  @ApiNotFoundResponse({ description: 'not_found' })
+  options(
+    @CurrentActor() actor: Actor,
+    @Param('garageId', new ParseUUIDPipe()) garageId: string,
+  ): Promise<TimeBlockOptionsDto> {
+    return this.blocks.options(actor, garageId.toLowerCase());
   }
 
   @Post()
