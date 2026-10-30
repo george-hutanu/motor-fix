@@ -12,6 +12,7 @@ import { formatDayMonth, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
+import { openBlockTime } from '../../block-time-dialog/open-block-time';
 import {
   DashboardSectionsPanel,
   type PanelRow,
@@ -144,6 +145,20 @@ export class GarageHome {
   protected readonly team = computed(() =>
     linksTo(this.session.shown(), 'team'),
   );
+  // The owner and a receptionist hold time for a mechanic or a lift while
+  // the garage keeps either switch on (a missing key is on).
+  private readonly switches = computed(() => {
+    const features = this.garage()?.features;
+    return {
+      lifts: features?.['lift_schedule'] !== false,
+      team: features?.['team_mechanics'] !== false,
+    };
+  });
+  protected readonly canBlockTime = computed(() => {
+    const role = this.garage()?.role;
+    const { lifts, team } = this.switches();
+    return (role === 'owner' || role === 'receptionist') && (lifts || team);
+  });
   // Until the first request or review, every one of the garage's lists read
   // empty: a list still loading or failed shows no card.
   protected readonly firstSteps = computed(
@@ -186,4 +201,17 @@ export class GarageHome {
       title: 'garage.home.panel.title',
     });
   }
+
+  // One dialog at a time: a second press while it loads or shows opens none.
+  protected async blockTime() {
+    const garageId = this.garage()?.garageId;
+    if (!garageId || this.blocking) return;
+    this.blocking = true;
+    try {
+      await openBlockTime(this.overlays, { garageId, ...this.switches() });
+    } finally {
+      this.blocking = false;
+    }
+  }
+  private blocking = false;
 }
