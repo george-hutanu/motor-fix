@@ -51,6 +51,18 @@
   color: var(--mf-amber-ink);
 }
 
+.price {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--mf-text);
+}
+
+.price-action {
+  justify-self: start;
+  min-height: var(--mf-tap);
+  margin-top: var(--mf-space-2);
+}
+
 .heading {
   display: flex;
   flex-wrap: wrap;
