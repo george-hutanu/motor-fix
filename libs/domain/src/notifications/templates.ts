@@ -413,6 +413,7 @@ const TWO_WAY = new Map<string, [param: string, first: string, second: string]>(
     ['BOOKING_LAPSED', ['side', 'garage', 'driver']],
     ['CATALOGUE_JOB_DECIDED', ['decision', 'approved', 'rejected']],
     ['QUOTE_EXPIRED', ['side', 'garage', 'driver']],
+    ['REPAIR_UPDATED', ['by', 'admin', 'garage']],
     ['REQUEST_EXPIRED', ['side', 'garage', 'driver']],
     ['REVIEW_POSTED', ['source', 'profile', 'job']],
   ],
