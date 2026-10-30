@@ -1,8 +1,4 @@
-import {
-  conversion,
-  figureWeeks,
-  weeklyFigures,
-} from './garage-figures.service';
+import { conversion, figureWeeks, weeklyFigures } from './weekly/weekly';
 import { isoWeek } from '../../bucharest';
 
 const approvedLongAgo = new Date('2020-01-01T10:00:00Z');

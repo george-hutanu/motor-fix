@@ -1,11 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import {
-  conversion,
-  figureWeeks,
-  weeklyFigures,
-} from './garage-figures.service';
+import { conversion, figureWeeks, weeklyFigures } from './weekly/weekly';
 import { atLocal, isoWeek } from '../../bucharest';
 
 // An instant read on the Bucharest clock, "2026-10-04T23:50".
