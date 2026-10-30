@@ -1120,6 +1120,25 @@ describe('the driver header', () => {
     expect(title(element)).toBe('Mecanici');
     expect(subtitle(element)).toBe('Echipa ta și ce poate face fiecare');
   });
+
+  // @traces 346-FR-005
+  it('asks the garage to answer within an hour under the requests title, in both languages', async () => {
+    const { element, harness } = await render(
+      'garage',
+      '/app/garage',
+      OWNER,
+      '/app/garage/requests',
+    );
+
+    expect(subtitle(element)).toBe(
+      'Răspunde în mai puțin de o oră ca să apari primul la șofer.',
+    );
+    await TestBed.inject(I18n).use('en');
+    await settle(harness);
+    expect(subtitle(element)).toBe(
+      'Answer within an hour to appear first to the driver.',
+    );
+  });
 });
 
 // @traces 028-FR-004

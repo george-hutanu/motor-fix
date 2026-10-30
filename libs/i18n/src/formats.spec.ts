@@ -10,6 +10,7 @@ import {
   formatClock,
   formatDay,
   formatDayMonth,
+  formatDeadline,
   formatDistance,
   formatDuration,
   formatKm,
@@ -22,6 +23,7 @@ import {
   formatRating,
   formatSlot,
   formatWholeLeiRange,
+  quoteExpiry,
   relativeTime,
   requestAge,
   requestExpiry,
@@ -819,5 +821,57 @@ describe('formatAround', () => {
 
   it.each(notNumbers)('shows a dash for %p', (value) => {
     expect(formatAround(value, 'ro', now)).toBe(MISSING);
+  });
+});
+
+// @traces 346-FR-003
+describe('quoteExpiry', () => {
+  const now = new Date('2026-10-09T10:00:00Z');
+  const ahead = (ms: number) => new Date(now.getTime() + ms).toISOString();
+  const MIN = 60_000;
+  const HOUR = 60 * MIN;
+  const DAY = 24 * HOUR;
+
+  it.each([
+    [7 * DAY, 'expiră în 7 zile', 'expires in 7 days'],
+    [6 * DAY + 5 * HOUR, 'expiră în 7 zile', 'expires in 7 days'],
+    [DAY + MIN, 'expiră în 2 zile', 'expires in 2 days'],
+    [DAY, 'expiră într-o zi', 'expires in 1 day'],
+    [DAY - MIN, 'expiră în 23 h', 'expires in 23 h'],
+    [5 * HOUR + 30 * MIN, 'expiră în 5 h', 'expires in 5 h'],
+    [HOUR, 'expiră în 1 h', 'expires in 1 h'],
+    [40 * MIN, 'expiră în 40 min', 'expires in 40 min'],
+    [MIN, 'expiră în 1 min', 'expires in 1 min'],
+    [30_000, 'expiră în câteva momente', 'expires in moments'],
+    [0, 'expiră în câteva momente', 'expires in moments'],
+    [-HOUR, 'expiră în câteva momente', 'expires in moments'],
+  ])('words %p ms ahead as %p / %p', (ms, ro, en) => {
+    expect(quoteExpiry(ahead(ms), 'ro', now)).toBe(ro);
+    expect(quoteExpiry(ahead(ms), 'en', now)).toBe(en);
+  });
+
+  it.each([null, undefined, 'mâine'])('shows a dash for %p', (value) => {
+    expect(quoteExpiry(value, 'ro', now)).toBe(MISSING);
+  });
+});
+
+// @traces 346-FR-003
+describe('formatDeadline', () => {
+  // 13:00 in Bucharest, a Friday.
+  const now = new Date('2026-10-09T10:00:00Z');
+
+  it.each([
+    ['2026-10-09T11:30:00Z', '14:30', '14:30'],
+    ['2026-10-09T20:59:00Z', '23:59', '23:59'],
+    ['2026-10-10T11:30:00Z', 'mâine, 14:30', 'tomorrow, 14:30'],
+    ['2026-10-09T21:30:00Z', 'mâine, 00:30', 'tomorrow, 00:30'],
+    ['2026-10-15T11:00:00Z', 'joi, 15 oct., 14:00', 'Thu, 15 Oct, 14:00'],
+  ])('words the deadline %s in Bucharest time as %p / %p', (at, ro, en) => {
+    expect(formatDeadline(at, 'ro', now)).toBe(ro);
+    expect(formatDeadline(at, 'en', now)).toBe(en);
+  });
+
+  it.each([null, undefined, 'mâine'])('shows a dash for %p', (value) => {
+    expect(formatDeadline(value, 'ro', now)).toBe(MISSING);
   });
 });
