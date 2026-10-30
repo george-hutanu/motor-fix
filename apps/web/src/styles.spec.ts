@@ -22,7 +22,7 @@ function rule(selector: string): string | undefined {
 // @traces 248-FR-009
 describe('the shared rule for an empty message region', () => {
   it('hides an empty .mf-message visually and keeps it in the accessibility tree', () => {
-    const body = rule('.mf-message:empty');
+    const body = rule('.sr-only, .cdk-visually-hidden, .mf-message:empty');
 
     expect(body).toBeDefined();
     expect(body).toMatch(/position:\s*absolute/);
@@ -32,6 +32,22 @@ describe('the shared rule for an empty message region', () => {
     expect(body).toMatch(/clip-path:\s*inset\(50%\)/);
     expect(body).not.toMatch(/display:\s*none/);
     expect(body).not.toMatch(/visibility:\s*hidden/);
+  });
+});
+
+// @traces 346-FR-003
+describe('the CDK live announcer', () => {
+  // The CDK's live announcer writes each message into an element it hides
+  // with .cdk-visually-hidden. That class shares the .sr-only rule here, so
+  // the CDK's own a11y sheet stays out of the initial bundle.
+  it('hides its element with the .sr-only shape', () => {
+    const body = rule('.sr-only, .cdk-visually-hidden, .mf-message:empty');
+
+    expect(body).toMatch(/position:\s*absolute/);
+    expect(body).toMatch(/width:\s*1px/);
+    expect(body).toMatch(/height:\s*1px/);
+    expect(body).toMatch(/overflow:\s*hidden/);
+    expect(body).toMatch(/clip-path:\s*inset\(50%\)/);
   });
 });
 

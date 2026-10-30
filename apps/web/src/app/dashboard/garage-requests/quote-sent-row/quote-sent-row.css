@@ -4,7 +4,7 @@
       0,
       1fr
     );
-  gap: 8px var(--mf-space-4);
+  gap: var(--mf-space-2) var(--mf-space-4);
   align-items: start;
   padding: var(--mf-space-3) var(--mf-space-2);
   border-top: 1px solid var(--mf-line);
@@ -28,7 +28,9 @@ p {
   font-weight: 600;
 }
 .car,
-.slot {
+.sent,
+.slot,
+.expires {
   color: var(--mf-text-secondary);
 }
 .status {
@@ -46,17 +48,17 @@ p {
   border-radius: 50%;
   background: var(--mf-amber);
 }
-:host(.accepted) .status {
+:host([data-tone="green"]) .status {
   color: inherit;
 }
-:host(.declined) .status {
+:host([data-tone="green"]) .lamp {
+  background: var(--mf-green);
+}
+:host([data-tone="grey"]) .status {
   color: var(--mf-text-secondary);
 }
-:host(.declined) .lamp {
+:host([data-tone="grey"]) .lamp {
   background: var(--mf-text-secondary);
-}
-:host(.accepted) .lamp {
-  background: var(--mf-green);
 }
 /* The status, then the booking, the phone and the button under it, on one
    step: the status column never stretches to the cells beside it. */
@@ -106,6 +108,8 @@ p {
 /* Body size on a phone, the smaller tokens from a tablet up. */
 @media (min-width: 768px) {
   .booking,
+  .sent,
+  .expires,
   .car,
   .slot,
   .status {

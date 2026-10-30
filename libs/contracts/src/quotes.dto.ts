@@ -45,7 +45,9 @@ import {
   GARAGE_REQUEST_FILTERS,
   type GarageCloseReason,
   type GarageRequestFilter,
+  QUOTE_OUTCOMES,
   QUOTE_STATUSES,
+  type QuoteOutcome,
   type QuoteStatus,
   RECIPIENT_STATUSES,
   REQUEST_CLOSED_REASONS,
@@ -568,6 +570,14 @@ export class GarageRequestSummaryDto extends PickType(RequestSummaryDto, [
     description: 'Set with closedReason on list rows only; null on the detail',
   })
   closedAt!: string | null;
+
+  @ApiProperty({
+    description:
+      "What became of the garage's quote; set on the quoted read, null elsewhere",
+    enum: QUOTE_OUTCOMES,
+    nullable: true,
+  })
+  outcome!: QuoteOutcome | null;
 
   @ApiProperty({
     description:
