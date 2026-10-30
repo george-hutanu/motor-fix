@@ -72,6 +72,10 @@ const ALLOWED: Record<string, string[]> = {
     'recheck.recorded',
     // @traces 025-FR-009
     'rating.updated',
+    // @traces 427-FR-010
+    'time_block.created',
+    'time_block.updated',
+    'time_block.deleted',
   ],
   [`public:mechanic:${MECHANIC}`]: [
     'mechanic.updated',

@@ -240,7 +240,12 @@ export class AccountDeletionService {
       });
       await tx.assistantSignInCode.deleteMany(where);
       await tx.accountRole.deleteMany(where);
-      await leaveTeams(tx, this.events, accountId);
+      await leaveTeams(
+        tx,
+        { audit: this.audit, events: this.events },
+        accountId,
+        by.id,
+      );
       await this.audit.record(tx, {
         action: 'delete',
         actorId: by.id,

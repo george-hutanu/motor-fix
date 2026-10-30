@@ -4,6 +4,7 @@
 // @traces 374-FR-005
 // @traces 374-FR-011
 // @traces 150-FR-009
+// @traces 427-FR-011
 import { BadRequestException } from '@nestjs/common';
 
 import { getSchedule } from './get-schedule';
@@ -43,6 +44,7 @@ const vlad = { id: 'mechanic-1', name: 'Vlad Stan' };
 
 const scheduleOf = (answer: Partial<Schedule> = {}) =>
   jest.fn(async () => ({
+    blocks: [] as Schedule['blocks'],
     entries: [] as Entry[],
     from: '2026-10-09',
     lifts: true,
@@ -218,6 +220,39 @@ describe('get_schedule', () => {
 });
 
 describe('get_schedule output schema', () => {
+  it('carries the blocked time the read gives, with its note, mechanic and lift', async () => {
+    const block = {
+      endsAt: '2026-10-09T09:00:00.000Z',
+      id: 'block-1',
+      lift: 2,
+      mechanic: vlad,
+      note: 'Client la telefon',
+      segments: [
+        {
+          endsAt: '2026-10-09T09:00:00.000Z',
+          startsAt: '2026-10-09T08:00:00.000Z',
+        },
+      ],
+      startsAt: '2026-10-09T08:00:00.000Z',
+    };
+    const client = await connect(
+      [getSchedule],
+      caller({ roles: ['garage'] }, ['motorfix.read']),
+      context({
+        garage: { schedule: { list: scheduleOf({ blocks: [block] }) } },
+      }),
+    );
+    const { tools } = await client.listTools();
+    expect(tools[0].outputSchema?.properties).toHaveProperty('blocks');
+    expect(tools[0].description).toMatch(/block/i);
+    const answer = await client.callTool({
+      arguments: {},
+      name: 'get_schedule',
+    });
+    expect(answer.isError).toBeFalsy();
+    expect(answer.structuredContent).toMatchObject({ blocks: [block] });
+  });
+
   it('declares one its answer fits, as the client checks it', async () => {
     const client = await connect(
       [getSchedule],

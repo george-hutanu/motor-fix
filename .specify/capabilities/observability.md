@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-29
+updated: 2026-10-30
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -53,7 +53,9 @@ features:
   - 150-add-booking
   - 1366-garage-map-directions
   - 1257-quote-reminders
+  - 427-time-blocks
   - 277-car-status-alerts
+  - 144-profile-stats-weekly
 ---
 
 # Capability: Observability
@@ -922,9 +924,17 @@ _From 1366-garage-map-directions._
 
 _From 1257-quote-reminders._
 
+### 427-FR-016 — Observability (AGENTS.md): the four routes MUST be listed in `infra/observability/inventory.json` as endpoints with their reason (writes and a read; the API's request-duration histogram labels the route; `api-error-rate` and `api-latency` cover them); one log line per refusal naming the garage id, the block id when one exists and the code (never the note); no new alert rule; the PR's Observability section lists them.
+
+_From 427-time-blocks._
+
 ### 277-FR-008 — Observability MUST ship with the change: the new queue listed in `infra/observability/inventory.json` (kind `queue`, on the `motorfix-queues` dashboard with the three worker-queue alerts, like `booking-confirmed`), one log line per job naming the job id, the type and whether the driver was told or why the event was skipped; BullMQ's queue metrics cover depth and failures; the PR's Observability section lists them.
 
 _From 277-car-status-alerts._
+
+### 144-FR-008 — The route MUST be listed in `infra/observability/inventory.json` with its panel and alert; it is a read served by the route metrics, with no counter of its own.
+
+_From 144-profile-stats-weekly._
 
 ## Retired
 
