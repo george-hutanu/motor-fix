@@ -334,6 +334,7 @@ describe("replacing a garage's brand answer", () => {
     ]);
   });
 
+  // @traces 1247-FR-016
   it('saves one garage.updated event naming brands, for the garage, its page and each changed search', async () => {
     const w = await world();
     await set(w, [[w.bmw, 'works_on']]);

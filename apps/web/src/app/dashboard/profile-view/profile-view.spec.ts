@@ -377,6 +377,7 @@ describe('Profilul service-ului: the owner edits in place', () => {
     expect(text(line(element, 'hours'))).toContain('Sâmbătă 09:00 – 14:00');
   });
 
+  // @traces 1247-FR-016
   it('shows the saved answer at once, reading nothing more, and the next one after garage.updated', async () => {
     let current = answer();
     const { element, settle } = await render(async () => current);
