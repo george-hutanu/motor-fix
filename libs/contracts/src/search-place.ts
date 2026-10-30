@@ -1,6 +1,5 @@
 // Where a search starts from. Browser-safe: the page rounds the point before
 // it leaves, and the API reads it back the same way.
-import { bucharestClock } from './open-status';
 
 export const SEARCH_RADIUS_DEFAULT_KM = 25;
 // The areas a search may cover, in km; the wider one is offered once when the
@@ -91,29 +90,3 @@ export function clampBbox(
     ? clamped
     : undefined;
 }
-
-// What a search keeps among the garages it finds. Open now carries the
-// request's instant on the Bucharest clock, read once, so every statement of
-// one answer and the profile's status agree on it.
-export interface SearchFilters {
-  openNow?: ReturnType<typeof bucharestClock>;
-  saturday?: true;
-}
-
-export function filtersOf(
-  query: { open_now?: string; open_saturday?: string },
-  at: Date,
-): SearchFilters | undefined {
-  if (query.open_now === undefined && query.open_saturday === undefined) {
-    return undefined;
-  }
-  return {
-    ...(query.open_now !== undefined && { openNow: bucharestClock(at) }),
-    ...(query.open_saturday !== undefined && { saturday: true }),
-  };
-}
-
-// Which filters are set, never the instant: the cache key and the cursor
-// carry it, so a minute later is still the same search.
-export const filtersKey = (filters?: SearchFilters) =>
-  filters && `${filters.openNow ? '1' : ''},${filters.saturday ? '1' : ''}`;
