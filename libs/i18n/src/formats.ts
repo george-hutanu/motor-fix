@@ -2,7 +2,7 @@ import type { Language } from './languages';
 
 const LOCALES: Record<Language, string> = { en: 'en-GB', ro: 'ro-RO' };
 const ZONE = 'Europe/Bucharest';
-const MISSING = '—';
+export const MISSING = '—';
 
 // Fixed rather than taken from Intl, whose data writes "mar." and "Sept":
 // the product writes "mart." and "Sep", and server and browser must agree.
@@ -169,7 +169,7 @@ const clock = new Intl.DateTimeFormat('en-GB', {
 const ISO =
   /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2}))?$/;
 
-function instant(value: unknown): Date | undefined {
+export function instant(value: unknown): Date | undefined {
   const date =
     value instanceof Date
       ? value
@@ -328,7 +328,7 @@ const RELATIVE: Record<Language, Intl.RelativeTimeFormat> = {
   en: new Intl.RelativeTimeFormat(LOCALES.en, { numeric: 'always' }),
   ro: new Intl.RelativeTimeFormat(LOCALES.ro, { numeric: 'always' }),
 };
-const MINUTE = 60_000;
+export const MINUTE = 60_000;
 const STEPS: readonly [Intl.RelativeTimeFormatUnit, number][] = [
   ['day', 24 * 60 * MINUTE],
   ['hour', 60 * MINUTE],
@@ -365,7 +365,7 @@ const YESTERDAY: Record<Language, string> = { en: 'yesterday', ro: 'ieri' };
 // Romanian puts "de" between a number and its noun when the plural rules call
 // it "other": from 20 on, except where the last two digits run 01 to 19.
 const RO_PLURAL = new Intl.PluralRules('ro');
-const de = (count: number) =>
+export const de = (count: number) =>
   RO_PLURAL.select(count) === 'other' ? 'de ' : '';
 
 const AGO: Record<
@@ -400,50 +400,6 @@ export function requestAge(
     return AGO[language].hours(Math.floor(elapsed / (60 * MINUTE)));
   }
   return dayAndTime(date, language, now, { [-1]: YESTERDAY[language] });
-}
-
-const SPAN: Record<
-  Language,
-  {
-    under: string;
-    unit(count: number, unit: 'minute' | 'hour' | 'day'): string;
-  }
-> = {
-  en: {
-    under: 'under a minute',
-    unit: (n, unit) => `${n} ${unit}${n === 1 ? '' : 's'}`,
-  },
-  ro: {
-    under: 'sub un minut',
-    unit: (n, unit) =>
-      `${n} ${de(n)}${
-        {
-          day: n === 1 ? 'zi' : 'zile',
-          hour: n === 1 ? 'oră' : 'ore',
-          minute: n === 1 ? 'minut' : 'minute',
-        }[unit]
-      }`,
-  },
-};
-
-// How long a report has waited, in whole minutes, hours or days.
-export function reportAge(
-  value: unknown,
-  language: Language,
-  now: Date,
-): string {
-  const date = instant(value);
-  if (!date) return MISSING;
-  const elapsed = now.getTime() - date.getTime();
-  const span = SPAN[language];
-  if (elapsed < MINUTE) return span.under;
-  if (elapsed < 60 * MINUTE) {
-    return span.unit(Math.floor(elapsed / MINUTE), 'minute');
-  }
-  if (elapsed < 24 * 60 * MINUTE) {
-    return span.unit(Math.floor(elapsed / (60 * MINUTE)), 'hour');
-  }
-  return span.unit(Math.floor(elapsed / (24 * 60 * MINUTE)), 'day');
 }
 
 const UNTIL: Record<

@@ -13,7 +13,8 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AdminService, type ReportQueueDto } from '@motor-fix/data-access';
-import { formatNum, I18n, reportAge, TranslatePipe } from '@motor-fix/i18n';
+import { formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { reportAge } from '@motor-fix/i18n/report-age';
 import { Panel } from '@motor-fix/ui-cockpit';
 
 import { AdminReviewItem } from '../admin-review-item/admin-review-item';

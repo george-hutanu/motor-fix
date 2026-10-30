@@ -23,11 +23,11 @@ import {
   formatSlot,
   formatWholeLeiRange,
   relativeTime,
-  reportAge,
   requestAge,
   requestExpiry,
   timeLeft,
 } from './formats';
+import { reportAge } from './report-age';
 
 const MISSING = '—';
 const notNumbers = [null, undefined, Number.NaN, Infinity, '92'];
