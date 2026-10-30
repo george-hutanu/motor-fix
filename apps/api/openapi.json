@@ -17489,6 +17489,26 @@
             "nullable": true,
             "description": "Set with closedReason on list rows only; null on the detail"
           },
+          "outcome": {
+            "type": "string",
+            "description": "What became of the garage's quote; set on the quoted read, null elsewhere",
+            "enum": [
+              "waiting",
+              "withdrawn_suspended",
+              "accepted",
+              "booked",
+              "no_show",
+              "lapsed",
+              "expired",
+              "withdrawn",
+              "declined",
+              "account_closed",
+              "booking_cancelled",
+              "request_cancelled",
+              "chose_other"
+            ],
+            "nullable": true
+          },
           "driver": {
             "description": "The phone shows to the owner and the desk on a row whose quote the driver accepted, while the booking waits for confirmation or is confirmed",
             "allOf": [
@@ -17530,6 +17550,7 @@
           "descriptionLine",
           "closedReason",
           "closedAt",
+          "outcome",
           "driver",
           "recipient",
           "quote",
@@ -17834,6 +17855,26 @@
             "nullable": true,
             "description": "Set with closedReason on list rows only; null on the detail"
           },
+          "outcome": {
+            "type": "string",
+            "description": "What became of the garage's quote; set on the quoted read, null elsewhere",
+            "enum": [
+              "waiting",
+              "withdrawn_suspended",
+              "accepted",
+              "booked",
+              "no_show",
+              "lapsed",
+              "expired",
+              "withdrawn",
+              "declined",
+              "account_closed",
+              "booking_cancelled",
+              "request_cancelled",
+              "chose_other"
+            ],
+            "nullable": true
+          },
           "recipient": {
             "$ref": "#/components/schemas/GarageRecipientDto"
           },
@@ -17876,6 +17917,7 @@
           "descriptionLine",
           "closedReason",
           "closedAt",
+          "outcome",
           "recipient",
           "quote",
           "booking",

@@ -24,7 +24,7 @@ export const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 // an earlier run left (or a parallel one) finds the mechanic and the lift
 // free: two hour-long slots overlap about once in 3,600 draws. A Bucharest
 // public holiday is drawn again: confirming refuses it as outside the hours.
-async function freeSlot(request: APIRequestContext) {
+export async function freeSlot(request: APIRequestContext) {
   const year = new Date().getFullYear();
   const holidays = new Set<string>();
   for (const one of [year, year + 1, year + 2]) {
