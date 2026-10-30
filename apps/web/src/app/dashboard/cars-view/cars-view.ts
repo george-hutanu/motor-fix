@@ -1,9 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
-  type OnInit,
-  signal,
 } from '@angular/core';
 import { groupPlate } from '@motor-fix/contracts/plate';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
@@ -18,6 +17,7 @@ import { EmptyState } from '../empty-state/empty-state';
 import { focusCard } from '../focus-card';
 import { OilLine } from '../oil-line/oil-line';
 import { openRemoveCar } from '../remove-car/open-remove-car';
+import { Resources } from '../resources/resources';
 
 // "Mașinile mele": a card per car, newest first, and the button that adds one.
 @Component({
@@ -35,12 +35,21 @@ import { openRemoveCar } from '../remove-car/open-remove-car';
   styleUrl: './cars-view.css',
   templateUrl: './cars-view.html',
 })
-export class CarsView implements OnInit {
+export class CarsView {
   private readonly api = inject(CarsService);
   private readonly overlays = inject(Overlays);
-  protected readonly cars = signal<CarDto[] | undefined>(undefined);
-  // Stryker disable next-line BooleanLiteral: load() resets it before the first render.
-  protected readonly failed = signal(false);
+  private readonly resources = inject(Resources);
+  private readonly read = this.resources.live(
+    'cars',
+    () => this.api.carsControllerList().then(({ items }) => items),
+    [],
+  );
+  protected readonly cars = this.read.value;
+  // A retry shows the placeholder until it answers.
+  protected readonly failed = computed(
+    () =>
+      this.read.failed() && !this.read.isLoading() && this.cars() === undefined,
+  );
   protected readonly grouped = groupPlate;
   private readonly i18n = inject(I18n);
   protected readonly language = this.i18n.language;
@@ -50,24 +59,16 @@ export class CarsView implements OnInit {
     focusCard('data-car', this.cars);
   }
 
-  ngOnInit() {
-    void this.load();
-  }
-
-  protected async load() {
-    this.failed.set(false);
-    try {
-      this.cars.set((await this.api.carsControllerList()).items);
-    } catch {
-      this.failed.set(true);
-    }
+  protected load() {
+    void this.read.reload();
   }
 
   // The saved car goes first without reading the list again.
   protected async add() {
     const plates = (this.cars() ?? []).flatMap((c) => c.plate ?? []);
     const car = await openAddCar(this.overlays, plates);
-    if (car !== 'cancelled') this.cars.update((list) => [car, ...(list ?? [])]);
+    if (car !== 'cancelled')
+      this.resources.update('cars', (list) => [car, ...list]);
   }
 
   // The answered car takes the card's place without reading the list again.
@@ -79,8 +80,8 @@ export class CarsView implements OnInit {
       gone: () => this.drop(car),
     });
     if (saved !== 'cancelled')
-      this.cars.update((list) =>
-        list?.map((c) => (c.id === saved.id ? saved : c)),
+      this.resources.update('cars', (list) =>
+        list.map((c) => (c.id === saved.id ? saved : c)),
       );
   }
 
@@ -90,7 +91,9 @@ export class CarsView implements OnInit {
   }
 
   private drop(car: CarDto) {
-    this.cars.update((list) => list?.filter((c) => c.id !== car.id));
+    this.resources.update('cars', (list) =>
+      list.filter((c) => c.id !== car.id),
+    );
   }
 
   // The arrows move between the menu's items, wrapping.
