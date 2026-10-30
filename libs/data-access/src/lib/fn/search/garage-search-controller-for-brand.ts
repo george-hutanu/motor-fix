@@ -47,6 +47,21 @@ export interface GarageSearchControllerForBrand$Params {
   open_saturday?: '1';
 
 /**
+ * The most a garage may charge an hour, in whole lei, as its card shows the rate; a garage with no rate is left out
+ */
+  max_price?: 150 | 200 | 250 | 300;
+
+/**
+ * The least rating a garage must have; a garage with no reviews is left out
+ */
+  min_rating?: '3.5' | '4.0' | '4.5';
+
+/**
+ * Only the garages that take a card
+ */
+  card?: '1';
+
+/**
  * Up to 20 garage ids, comma-separated: answers those of them that are public, in the search's order, with no cursor
  */
   ids?: string;
@@ -77,6 +92,9 @@ export function garageSearchControllerForBrand(http: HttpClient, rootUrl: string
     rb.query('bbox', params.bbox, {});
     rb.query('open_now', params.open_now, {});
     rb.query('open_saturday', params.open_saturday, {});
+    rb.query('max_price', params.max_price, {});
+    rb.query('min_rating', params.min_rating, {});
+    rb.query('card', params.card, {});
     rb.query('ids', params.ids, {});
     rb.query('log', params.log, {});
     rb.query('cursor', params.cursor, {});

@@ -426,6 +426,54 @@ describe('the search cache for the map pins', () => {
   });
 });
 
+// @traces 1261-FR-008
+describe('the search cache under filters', () => {
+  it('keys a page and the pins by the filters set, each combination apart', async () => {
+    const gen = await generation();
+
+    await search({ brand: 'dacia', near: NEAR }).expect(200);
+    await search({ brand: 'dacia', card: '1', near: NEAR }).expect(200);
+    await search({
+      brand: 'dacia',
+      card: '1',
+      max_price: '200',
+      min_rating: '4.0',
+      near: NEAR,
+    }).expect(200);
+    await pins({ brand: 'dacia', min_rating: '4.5', near: NEAR }).expect(200);
+
+    expect((await entries()).sort()).toEqual(
+      [
+        `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:-`,
+        `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:,,,,1`,
+        `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:,,200,4.0,1`,
+        `garage-search:v2:${gen}:pins:${dacia}:${NEAR}:25:-:-:-:,,,4.5,`,
+      ].sort(),
+    );
+  });
+
+  it('never answers one combination of filters from the entry of another', async () => {
+    await prisma.garage.update({
+      data: { paymentCard: true },
+      where: { id: garageId },
+    });
+    const plain = await search({ brand: 'dacia', near: NEAR });
+    const card = await search({ brand: 'dacia', card: '1', near: NEAR });
+    await prisma.garage.update({
+      data: { paymentCard: false },
+      where: { id: garageId },
+    });
+
+    const cash = await search({ brand: 'dacia', max_price: '150', near: NEAR });
+    const cardAgain = await search({ brand: 'dacia', card: '1', near: NEAR });
+
+    expect(plain.body.total).toBe(1);
+    expect(card.body.total).toBe(1);
+    expect(cash.body.total).toBe(0);
+    expect(cardAgain.body).toEqual(card.body);
+  });
+});
+
 // @traces 1260-FR-008
 describe('the search cache for filtered searches', () => {
   it('keeps each combination of filters under its own key, list and pins, for 60 seconds', async () => {
@@ -445,7 +493,7 @@ describe('the search cache for filtered searches', () => {
     expect(keys).toEqual(
       ['page', 'pins']
         .flatMap((kind) =>
-          ['-', '1,', ',1', '1,1'].map(
+          ['-', '1,,,,', ',1,,,', '1,1,,,'].map(
             (filters) =>
               `garage-search:v2:${gen}:${kind}:${dacia}:${NEAR}:25:-:-:${kind === 'page' ? 'rating' : '-'}:${filters}`,
           ),

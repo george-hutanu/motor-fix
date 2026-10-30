@@ -11,6 +11,14 @@ export type SearchRadius = (typeof SEARCH_RADII)[number];
 export const SEARCH_SORTS = ['rating', 'distance', 'price'] as const;
 export type SearchSort = (typeof SEARCH_SORTS)[number];
 
+// The filters a list of results can narrow by: the hourly rate a card shows,
+// at most, in whole lei; the rating, at least, as the garage table holds it;
+// card payment.
+export const SEARCH_PRICE_CEILINGS = [150, 200, 250, 300] as const;
+export type SearchPriceCeiling = (typeof SEARCH_PRICE_CEILINGS)[number];
+export const SEARCH_MIN_RATINGS = ['3.5', '4.0', '4.5'] as const;
+export type SearchMinRating = (typeof SEARCH_MIN_RATINGS)[number];
+
 // The garages one page of results shows.
 export const SEARCH_PAGE_SIZE = 20;
 // The garages a live re-read or stream names: one page's worth.
