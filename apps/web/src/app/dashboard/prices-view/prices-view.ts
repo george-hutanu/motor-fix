@@ -84,7 +84,7 @@ export class PricesView {
   );
   protected readonly editing = signal(false);
   // The jobs whose hide or show is on its way, and the one whose last failed.
-  protected readonly busy = signal<ReadonlySet<string>>(new Set());
+  protected readonly busy = signal<ReadonlySet<string | undefined>>(new Set());
   protected readonly failed = signal<string | null>(null);
   // Its own garage's list changes, and a catalogue decision about a job (whose
   // subject is the job, not the garage) may change a job's state.
@@ -113,7 +113,7 @@ export class PricesView {
     const reads = this.view.reads();
     const pending = this.pending();
     return (this.view.value()?.items ?? []).map((row) => {
-      const press = pending.get(row.priceId);
+      const press = row.priceId ? pending.get(row.priceId) : undefined;
       if (press?.reads !== reads) return row;
       return {
         ...row,
