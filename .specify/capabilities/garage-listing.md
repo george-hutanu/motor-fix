@@ -41,6 +41,7 @@ features:
   - 1185-accent-search
   - 1246-garage-profile-edit
   - 1401-rejected-correct
+  - 1315-optimistic-toggles
 ---
 
 # Capability: Garage listing
@@ -1252,6 +1253,10 @@ _From 1246-garage-profile-edit._
 ### 1246-FR-022 — (from #671) That spec MUST pass 20 consecutive runs with 4 parallel workers: on CI's on-demand integration job (`gh workflow run ci.yml --ref 1246-garage-profile-edit -f specs='libs/domain/src/garages/garage-hours.integration.spec.ts' -f repeat=20`, no retry), since this worktree has no Docker; the run id and its result are recorded in the PR.
 
 _From 1246-garage-profile-edit._
+
+### 1315-FR-010 — The brand ticks of the listing's brands step MUST keep changing on screen at once (draft state) with no rollback and no per-tick key; the end-to-end spec proves the 100 ms under Slow 3G (FR-011).
+
+_From 1315-optimistic-toggles._
 
 ## Retired
 

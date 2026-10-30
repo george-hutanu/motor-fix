@@ -26,6 +26,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { garageScope, toItem } from './client-repairs';
 import { ClientRepairsService } from './client-repairs.service';
 import { CurrentActor, Requires } from '../../auth/actor.guard';
 import { JsonOnly } from '../../auth/auth.controller';
@@ -76,12 +77,14 @@ export class ClientRepairsController {
   @ApiConflictResponse({
     description: 'stale_version: the repair changed since that version',
   })
-  correct(
+  async correct(
     @CurrentActor() actor: Actor,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: CorrectClientRepairDto,
   ): Promise<ClientRepairDto> {
-    return this.repairs.correct(actor, id, body);
+    return toItem(
+      await this.repairs.correct(actor, garageScope(actor), id, body),
+    );
   }
 
   @Delete(':id')
