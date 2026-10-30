@@ -30,6 +30,7 @@ import {
   HealthModule,
   InsightsModule,
   JOB_STAGE_CONSUMER,
+  JobLockSweepModule,
   LIVE_RECORDINGS_CONSUMER,
   ListingPhotosWorkerModule,
   LiveIdleModule,
@@ -85,7 +86,7 @@ class WorkerModule {}
 // streams, consumes the notifications queue, sending e-mail, SMS and
 // WhatsApp, sends the contact form's e-mails, runs the monthly news, the daily reminders, the decline windows, the booking timers, the assistant approvals' expiry,
 // the listing draft sweep, the listing photos' copies, the live sessions'
-// idle stop and their recordings' deletes, and the nightly
+// idle stop and their recordings' deletes, the expired job locks, and the nightly
 // platform figures (placing the garages with no city first), checks the
 // services behind the admin dashboard's tiles and reads the data stores for
 // their figures.
@@ -258,6 +259,11 @@ export function workerModule(
       LiveIdleModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
         liveVideo,
+        redisUrl: env.REDIS_URL,
+      }),
+      // Every minute: clears the copy of a job lock whose key ran out.
+      JobLockSweepModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
         redisUrl: env.REDIS_URL,
       }),
       // After each live stop: counts a kept recording, deletes a discarded
