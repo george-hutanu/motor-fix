@@ -157,6 +157,7 @@ describe('a return', () => {
     expect(loadRequests).toHaveBeenCalledTimes(2);
   });
 
+  // @traces 1316-FR-003
   it('keeps the held value with no error when its read fails, and reads again after 60 s', async () => {
     const load = jest
       .fn<Promise<RequestListDto>, []>()

@@ -79,11 +79,16 @@ export class Resources {
     keyof Held,
     { owner: string | null; answer: Promise<unknown> }
   >();
+  // Counts the owner's changes, so a read that began before a sign-out and
+  // answers after the same account signed in again is still dropped.
+  private generation = 0;
+  private seen = untracked(this.owner);
 
   constructor() {
     // A value is hidden from another owner at once; this frees it too.
     effect(() => {
       const owner = this.owner();
+      this.stamp();
       untracked(() => {
         for (const slot of Object.values(this.slots))
           if (slot() && slot()?.owner !== owner) slot.set(undefined);
@@ -106,7 +111,9 @@ export class Resources {
       const first = opening;
       opening = false;
       const held = this.held(type);
-      if (first && held && Date.now() - held.at < STALE_FOR[type])
+      const age = held ? Date.now() - held.at : -1;
+      // A negative age is a clock set back: stale, not fresh until it catches up.
+      if (first && held && age >= 0 && age < STALE_FOR[type])
         return Promise.resolve(held.value);
       const joined = this.opening.get(type);
       if (first && joined?.owner === this.owner())
@@ -147,8 +154,13 @@ export class Resources {
     load: () => Promise<Held[K]>,
   ): Promise<Held[K]> {
     const owner = this.owner();
+    const generation = this.stamp();
     const next = await load();
-    if (owner !== null && owner === this.owner()) {
+    if (
+      owner !== null &&
+      owner === this.owner() &&
+      generation === this.stamp()
+    ) {
       const slot = this.slots[type] as WritableSignal<
         Slot<Held[K]> | undefined
       >;
@@ -159,6 +171,16 @@ export class Resources {
       });
     }
     return next;
+  }
+
+  // The owner's change count, brought up to date with the owner first.
+  private stamp(): number {
+    const owner = untracked(this.owner);
+    if (owner !== this.seen) {
+      this.generation++;
+      this.seen = owner;
+    }
+    return this.generation;
   }
 
   private held<K extends keyof Held>(type: K): Slot<Held[K]> | undefined {
