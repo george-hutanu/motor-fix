@@ -3,7 +3,7 @@ import {
   capabilitiesOf,
   type Permissions,
   ROLES,
-} from './capabilities';
+} from '@motor-fix/contracts/capabilities';
 
 const none: Permissions = {
   canAnswerQuotes: false,
