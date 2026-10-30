@@ -26,6 +26,8 @@ import { HlmButton, HlmInput, toast } from '@motor-fix/ui-cockpit';
 
 const KEY = 'driver.review';
 const STEPS = [1, 2, 3, 4, 5] as const;
+// What parseLeiText answers, worded once in the shared form texts.
+const SHARED_FIELD = new Set(['decimals', 'format', 'max', 'min']);
 
 // A refused publish that replaces the form with its own message.
 const SHOWN: Record<string, View> = {
@@ -130,8 +132,11 @@ export class ReviewTask {
     return `${KEY}.rating.${rating}`;
   }
 
+  // The amount's own answers read the shared form texts; the rest the form's.
   protected fieldError(why: string) {
-    return `${KEY}.field.${why}`;
+    return SHARED_FIELD.has(why)
+      ? `shell.form.field.${why}`
+      : `${KEY}.field.${why}`;
   }
 
   protected typePaid(event: Event) {

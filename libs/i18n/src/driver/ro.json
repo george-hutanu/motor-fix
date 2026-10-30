@@ -421,7 +421,9 @@
       "title": "Anulezi cererea?",
       "toast": "Cerere anulată"
     },
+    "closedOn": "Încheiată pe {day}",
     "compare": "Compară ofertele",
+    "finalPrice": "Preț final {price}",
     "lapsed": "Service‑ul nu a confirmat. Alege altă ofertă.",
     "lateCancellation": "Anulare târzie",
     "retry": "Încearcă din nou",
@@ -440,11 +442,7 @@
     },
     "failed": "Nu am putut publica recenzia. Încearcă din nou.",
     "field": {
-      "decimals": "Cel mult două zecimale.",
-      "format": "Scrie suma în lei, de exemplu 4.200 sau 4.200,50.",
       "length": "Cel mult 2.000 de caractere.",
-      "max": "Cel mult 1.000.000 lei.",
-      "min": "Suma trebuie să fie mai mare de 0.",
       "range": "Suma trebuie să fie între 0,01 și 1.000.000 lei."
     },
     "loadFailed": "Nu am putut încărca lucrarea.",

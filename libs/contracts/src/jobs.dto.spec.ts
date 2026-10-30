@@ -1,11 +1,8 @@
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
-import {
-  FINAL_PRICE_CORRECTION_HOURS,
-  FinalPriceDto,
-  ReceiveJobDto,
-} from './jobs.dto';
+import { FinalPriceDto, ReceiveJobDto } from './jobs.dto';
+import { FINAL_PRICE_CORRECTION_HOURS } from './request-status';
 
 const errors = (body: Record<string, unknown>) =>
   validateSync(plainToInstance(ReceiveJobDto, body), {

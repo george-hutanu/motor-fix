@@ -143,6 +143,22 @@
     "to": "E‑mail sau telefon"
   },
   "jobs": {
+    "finalPrice": {
+      "cancel": "Renunță",
+      "correct": "Corectează",
+      "correctTitle": "Corectează prețul final",
+      "field": "Preț final (lei)",
+      "handover": "Predare",
+      "line": "Preț final {price}",
+      "problem": {
+        "already_handed_over": "Prețul final a fost deja înregistrat",
+        "correction_window_closed": "Prețul final nu mai poate fi corectat",
+        "forbidden": "Doar proprietarul și recepția înregistrează prețul final",
+        "job_not_done": "Marchează întâi lucrarea ca gata",
+        "not_handed_over": "Lucrarea nu a fost încă predată"
+      },
+      "save": "Salvează"
+    },
     "noMechanic": "Fără mecanic",
     "noneToday": "Nicio lucrare azi",
     "noSteps": "Niciun pas încă",
@@ -150,10 +166,8 @@
       "title": "Lucrarea"
     },
     "problem": {
-      "correction_window_closed": "Prețul final nu mai poate fi corectat",
       "forbidden": "Doar proprietarul și mecanicul lucrării scriu pașii.",
       "job_closed": "Lucrarea e închisă, pașii nu se mai schimbă.",
-      "job_not_done": "Marchează întâi lucrarea ca gata",
       "job_not_started": "Pornește lucrarea mai întâi",
       "not_found": "Pasul nu mai există.",
       "too_many_steps": "Cel mult 20 de pași"

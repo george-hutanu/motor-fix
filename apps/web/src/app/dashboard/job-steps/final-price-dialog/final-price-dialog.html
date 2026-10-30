@@ -1,0 +1,26 @@
+<form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+  <fieldset [disabled]="sending()">
+    <label for="mf-final-price">{{ 'garage.jobs.finalPrice.field' | t }}</label>
+    <input
+      hlmInput
+      id="mf-final-price"
+      formControlName="price"
+      inputmode="decimal"
+      autocomplete="off"
+      aria-describedby="mf-final-price-error"
+    />
+    <mf-field-error id="mf-final-price-error" [save]="save" [control]="form.controls.price" />
+  </fieldset>
+  <mf-task-error [save]="save" />
+  @if (!online()) {
+    <p class="offline" role="status">{{ 'shell.form.problem.offline' | t }}</p>
+  }
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">
+      {{ 'garage.jobs.finalPrice.cancel' | t }}
+    </button>
+    <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="!online()">
+      {{ 'garage.jobs.finalPrice.save' | t }}
+    </button>
+  </div>
+</form>

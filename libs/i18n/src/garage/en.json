@@ -141,6 +141,22 @@
     "to": "E‑mail or phone"
   },
   "jobs": {
+    "finalPrice": {
+      "cancel": "Cancel",
+      "correct": "Correct",
+      "correctTitle": "Correct the final price",
+      "field": "Final price (lei)",
+      "handover": "Handover",
+      "line": "Final price {price}",
+      "problem": {
+        "already_handed_over": "The final price is already recorded",
+        "correction_window_closed": "The final price can no longer be corrected",
+        "forbidden": "Only the owner and the front desk record the final price",
+        "job_not_done": "Mark the job as done first",
+        "not_handed_over": "The job has not been handed over yet"
+      },
+      "save": "Save"
+    },
     "noMechanic": "No mechanic",
     "noneToday": "No jobs today",
     "noSteps": "No steps yet",
@@ -148,10 +164,8 @@
       "title": "The job"
     },
     "problem": {
-      "correction_window_closed": "The final price can no longer be corrected",
       "forbidden": "Only the owner and the job’s mechanic write its steps.",
       "job_closed": "The job is closed, its steps no longer change.",
-      "job_not_done": "Mark the job as done first",
       "job_not_started": "Start the job first",
       "not_found": "That step no longer exists.",
       "too_many_steps": "At most 20 steps"
