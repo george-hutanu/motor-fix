@@ -651,16 +651,28 @@
       "wide": "Intervalul este foarte larg; șoferul așteaptă un interval strâns."
     },
     "sentList": {
-      "accepted": "Acceptată · așteaptă confirmarea ta",
-      "booked": "Acceptată · programată",
       "confirm": "Confirmă programarea",
-      "declined": "Refuzată de client",
-      "empty": "Nicio ofertă trimisă încă.",
+      "empty": "Nu ai trimis încă nicio ofertă.",
       "heading": "Oferte trimise",
       "lift": "Elevator {n}",
       "loading": "Se încarcă ofertele trimise",
+      "outcome": {
+        "accepted": "Acceptată · confirmă până la",
+        "account_closed": "Contul clientului a fost închis",
+        "booked": "Acceptată · programată",
+        "booking_cancelled": "Programare anulată",
+        "chose_other": "A ales alt service",
+        "declined": "Refuzată de client",
+        "expired": "Expirată",
+        "lapsed": "Neconfirmată la timp",
+        "no_show": "Clientul nu s‑a prezentat",
+        "request_cancelled": "Cerere anulată de client",
+        "waiting": "Așteaptă răspunsul clientului",
+        "withdrawn": "Retrasă",
+        "withdrawn_suspended": "Retrasă · service suspendat"
+      },
       "phone": "Sună clientul: {phone}",
-      "waiting": "Așteaptă răspunsul clientului"
+      "sent": "trimisă {age}"
     }
   },
   "requests": {

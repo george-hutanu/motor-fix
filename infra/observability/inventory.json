@@ -1549,7 +1549,7 @@
       "source": "libs/domain/src/metrics/product-counters.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts each file a garage sends again after a request for more, with one Verification log line naming the file; a count has no failure to alert on; the api-error-rate rule covers the service that reports it",
+      "reason": "counts each file a garage sends again, labelled by `after` (more_requested: the same file after a request for more; rejected: a new file after a rejection, ST-1273), with one Verification log line naming the file; a count has no failure to alert on, the panel sums over `after`; the api-error-rate rule covers the service that reports it",
       "story": "ST-304"
     },
     {

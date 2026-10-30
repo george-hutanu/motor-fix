@@ -43,6 +43,11 @@ export interface GarageRequestSummaryDto {
   expiresAt: string;
   id: string;
   jobs: Array<GarageRequestJobDto>;
+
+  /**
+   * What became of the garage's quote; set on the quoted read, null elsewhere
+   */
+  outcome: ('waiting' | 'withdrawn_suspended' | 'accepted' | 'booked' | 'no_show' | 'lapsed' | 'expired' | 'withdrawn' | 'declined' | 'account_closed' | 'booking_cancelled' | 'request_cancelled' | 'chose_other') | null;
   quote: (GarageQuoteDto & {
 }) | null;
   recipient: GarageRecipientDto;

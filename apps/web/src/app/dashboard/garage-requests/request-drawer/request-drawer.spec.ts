@@ -61,6 +61,7 @@ const detail = (over: Partial<GarageRequestDto> = {}): GarageRequestDto => ({
   ).toISOString(),
   id: 'req-1',
   jobs: [job(), OIL],
+  outcome: null,
   quote: null,
   recipient: {
     answeredAt: null,

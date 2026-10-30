@@ -647,16 +647,28 @@
       "wide": "This range is very wide; the driver expects a narrow one."
     },
     "sentList": {
-      "accepted": "Accepted · waiting for your confirmation",
-      "booked": "Accepted · booked",
       "confirm": "Confirm the booking",
-      "declined": "Declined by the customer",
-      "empty": "No quotes sent yet.",
+      "empty": "You have not sent any quote yet.",
       "heading": "Quotes sent",
       "lift": "Lift {n}",
       "loading": "Loading the quotes sent",
+      "outcome": {
+        "accepted": "Accepted · confirm by",
+        "account_closed": "The customer's account was closed",
+        "booked": "Accepted · booked",
+        "booking_cancelled": "Booking cancelled",
+        "chose_other": "Chose another garage",
+        "declined": "Declined by the customer",
+        "expired": "Expired",
+        "lapsed": "Not confirmed in time",
+        "no_show": "The customer did not show up",
+        "request_cancelled": "Request cancelled by the customer",
+        "waiting": "Waiting for the customer",
+        "withdrawn": "Withdrawn",
+        "withdrawn_suspended": "Withdrawn · garage suspended"
+      },
       "phone": "Call the customer: {phone}",
-      "waiting": "Waiting for the customer"
+      "sent": "sent {age}"
     }
   },
   "requests": {
