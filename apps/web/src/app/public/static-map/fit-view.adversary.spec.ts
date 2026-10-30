@@ -41,11 +41,19 @@ describe('boundsOf and pointsOf, empty and many', () => {
   it('leaves out every mobile mechanic, even one with a radius of zero', () => {
     const answer = {
       pins: [
-        { id: 'a', lat: 44, lng: 25, rateLei: 1, stance: 'works_on' as const },
+        {
+          id: 'a',
+          lat: 44,
+          lng: 25,
+          matches: true,
+          rateLei: 1,
+          stance: 'works_on' as const,
+        },
         {
           id: 'b',
           lat: 45,
           lng: 26,
+          matches: true,
           rateLei: 1,
           serviceRadiusKm: 0,
           stance: 'works_on' as const,
@@ -64,7 +72,14 @@ describe('boundsOf and pointsOf, empty and many', () => {
   it('copies only lat and lng of a pin, nothing else', () => {
     const answer = {
       pins: [
-        { id: 'a', lat: 44, lng: 25, rateLei: 1, stance: 'works_on' as const },
+        {
+          id: 'a',
+          lat: 44,
+          lng: 25,
+          matches: true,
+          rateLei: 1,
+          stance: 'works_on' as const,
+        },
       ],
       total: 1,
     };

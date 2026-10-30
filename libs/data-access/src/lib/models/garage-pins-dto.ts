@@ -10,7 +10,7 @@ export interface GaragePinsDto {
   pins: Array<GaragePinDto>;
 
   /**
-   * Every approved garage the search finds, as the list's total
+   * Every approved garage the search finds that meets every set filter, as the list's total
    */
   total: number;
 }

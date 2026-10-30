@@ -26,6 +26,15 @@ serialDatabase(databaseUrl);
 
 const GENERATION = 'garage-search-gen:v1';
 const NEAR = '46.771,23.624';
+const SATURDAY_HOURS = {
+  fri: [],
+  mon: [],
+  sat: [['09:00', '14:00']],
+  sun: [],
+  thu: [],
+  tue: [],
+  wed: [],
+};
 
 let app: INestApplication;
 let appRedis: Redis;
@@ -63,6 +72,7 @@ beforeEach(async () => {
   garageId = (
     await prisma.garage.create({
       data: {
+        hours: SATURDAY_HOURS,
         latitude: 46.771,
         longitude: 23.624,
         name: 'Alfa Service',
@@ -90,7 +100,7 @@ const rename = (name: string) =>
   prisma.garage.update({ data: { name }, where: { id: garageId } });
 
 const generation = async () => (await other.get(GENERATION)) ?? '0';
-const entries = () => other.keys(`garage-search:v1:*:${dacia}:*`);
+const entries = () => other.keys(`garage-search:v2:*:${dacia}:*`);
 const pins = (query: Record<string, string>) =>
   request(app.getHttpServer()).get('/search/garages/pins').query(query);
 // Moved behind the API's back: no event, so only a cache miss sees it.
@@ -132,7 +142,7 @@ describe('the search cache', () => {
     const res = await search({ brand: 'dacia', near: NEAR });
 
     expect(res.status).toBe(200);
-    const key = `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:rating`;
+    const key = `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:-`;
     expect(JSON.parse((await other.get(key)) as string)).toEqual(res.body);
     const ttl = await other.ttl(key);
     expect(ttl).toBeGreaterThan(0);
@@ -147,8 +157,8 @@ describe('the search cache', () => {
 
     expect((await entries()).sort()).toEqual(
       [
-        `garage-search:v1:${gen}:page:${dacia}:-:25:-:-:rating`,
-        `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:rating`,
+        `garage-search:v2:${gen}:page:${dacia}:-:25:-:-:rating:-`,
+        `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:-`,
       ].sort(),
     );
   });
@@ -198,9 +208,9 @@ describe('the search cache', () => {
     expect(byDistance.body.items[0].name).toBe('Nume nou');
     expect((await entries()).sort()).toEqual(
       [
-        `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:distance`,
-        `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:price`,
-        `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:rating`,
+        `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:distance:-`,
+        `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:price:-`,
+        `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:-`,
       ].sort(),
     );
     expect(await since(before)).toEqual({ fallback: 0, hit: 1, miss: 3 });
@@ -318,7 +328,7 @@ describe('the search cache for a box on the list', () => {
     }).expect(200);
 
     expect(await entries()).toEqual([
-      `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:${BBOX}:-:rating`,
+      `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:${BBOX}:-:rating:-`,
     ]);
   });
 
@@ -343,12 +353,12 @@ describe('the search cache for the map pins', () => {
     const res = await pins({ brand: 'dacia', near: NEAR });
 
     expect(res.status).toBe(200);
-    const key = `garage-search:v1:${gen}:pins:${dacia}:${NEAR}:25:-:-:-`;
+    const key = `garage-search:v2:${gen}:pins:${dacia}:${NEAR}:25:-:-:-:-`;
     expect(JSON.parse((await other.get(key)) as string)).toEqual(res.body);
     expect(
       JSON.parse(
         (await other.get(
-          `garage-search:v1:${gen}:page:${dacia}:${NEAR}:25:-:-:rating`,
+          `garage-search:v2:${gen}:page:${dacia}:${NEAR}:25:-:-:rating:-`,
         )) as string,
       ),
     ).toEqual(page.body);
@@ -366,7 +376,7 @@ describe('the search cache for the map pins', () => {
     await pins({ bbox: BBOX, brandId: dacia, radius: '50' }).expect(200);
 
     expect(await entries()).toEqual([
-      `garage-search:v1:${gen}:pins:${dacia}:-:25:${BBOX}:-:-`,
+      `garage-search:v2:${gen}:pins:${dacia}:-:25:${BBOX}:-:-:-`,
     ]);
   });
 
@@ -413,5 +423,68 @@ describe('the search cache for the map pins', () => {
     expect(res.status).toBe(200);
     expect(res.body.total).toBe(1);
     expect(await since(before)).toEqual({ fallback: 1, hit: 0, miss: 0 });
+  });
+});
+
+// @traces 1260-FR-008
+describe('the search cache for filtered searches', () => {
+  it('keeps each combination of filters under its own key, list and pins, for 60 seconds', async () => {
+    const gen = await generation();
+
+    for (const filters of [
+      {} as Record<string, string>,
+      { open_now: '1' },
+      { open_saturday: '1' },
+      { open_now: '1', open_saturday: '1' },
+    ]) {
+      await search({ brand: 'dacia', near: NEAR, ...filters }).expect(200);
+      await pins({ brand: 'dacia', near: NEAR, ...filters }).expect(200);
+    }
+
+    const keys = (await entries()).sort();
+    expect(keys).toEqual(
+      ['page', 'pins']
+        .flatMap((kind) =>
+          ['-', '1,', ',1', '1,1'].map(
+            (filters) =>
+              `garage-search:v2:${gen}:${kind}:${dacia}:${NEAR}:25:-:-:${kind === 'page' ? 'rating' : '-'}:${filters}`,
+          ),
+        )
+        .sort(),
+    );
+    for (const key of keys) {
+      const ttl = await other.ttl(key);
+      expect(ttl).toBeGreaterThan(0);
+      expect(ttl).toBeLessThanOrEqual(60);
+    }
+  });
+
+  it('answers a filtered search again from the cache, and another combination from PostgreSQL', async () => {
+    const before = await cacheCounts();
+    await search({ brand: 'dacia', near: NEAR, open_saturday: '1' }).expect(
+      200,
+    );
+
+    await search({ brand: 'dacia', near: NEAR, open_saturday: '1' }).expect(
+      200,
+    );
+    await search({ brand: 'dacia', near: NEAR, open_now: '1' }).expect(200);
+
+    expect(await since(before)).toEqual({ fallback: 0, hit: 1, miss: 2 });
+  });
+
+  it('drops every filtered entry on a public garage event', async () => {
+    await search({ brand: 'dacia', near: NEAR, open_saturday: '1' }).expect(
+      200,
+    );
+    await pins({ brand: 'dacia', near: NEAR, open_saturday: '1' }).expect(200);
+    await rename('Nume nou');
+
+    await dropSearches(other, [`public:garage:${garageId}`]);
+
+    expect(
+      (await search({ brand: 'dacia', near: NEAR, open_saturday: '1' })).body
+        .items[0].name,
+    ).toBe('Nume nou');
   });
 });
