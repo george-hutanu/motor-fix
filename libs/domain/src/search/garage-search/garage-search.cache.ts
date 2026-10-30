@@ -9,7 +9,7 @@ import { AUTH_REDIS } from '../../auth/attempts';
 // search: a public garage change advances it, so every entry written before
 // is never read again and expires by itself. No CDN keeps an answer (the
 // route is no-store), so every search still reaches the API and its log.
-// The `v1` in the keys is the answer's shape: a change to the DTO bumps it.
+// The `v2` in the keys is the answer's shape: a change to the DTO bumps it.
 const SEARCH_SECONDS = 60;
 const SEARCH_GENERATION = 'garage-search-gen:v1';
 
@@ -25,13 +25,15 @@ interface SearchKey {
   cursor?: string;
   // The order of a page; the pins have none.
   sort?: string;
+  // The filters set, as their shared text.
+  filters?: string;
 }
 
 const searchKey = (
   generation: string,
-  { bbox, brandId, cursor, kind, near, radiusKm, sort }: SearchKey,
+  { bbox, brandId, cursor, filters, kind, near, radiusKm, sort }: SearchKey,
 ) =>
-  `garage-search:v1:${generation}:${kind}:${brandId}:${near ?? '-'}:${radiusKm ?? SEARCH_RADIUS_DEFAULT_KM}:${bbox ?? '-'}:${cursor ?? '-'}:${sort ?? '-'}`;
+  `garage-search:v2:${generation}:${kind}:${brandId}:${near ?? '-'}:${radiusKm ?? SEARCH_RADIUS_DEFAULT_KM}:${bbox ?? '-'}:${cursor ?? '-'}:${sort ?? '-'}:${filters ?? '-'}`;
 
 export const SEARCH_AUDIENCE = /^public:(garage:|search$|search:)/;
 

@@ -617,3 +617,89 @@ describe('GET /search/garages with a sort', () => {
     ]);
   });
 });
+
+// @traces 1261-FR-001 1261-FR-010 1261-FR-011
+describe('GET /search/garages with filters', () => {
+  const messages = (res: request.Response) =>
+    ([] as string[]).concat(res.body.message ?? []);
+
+  it('lists only the garages meeting the filters to a visitor without a session', async () => {
+    const card = await placed('Card', 0.01, 'works_on');
+    await placed('Cash', 0.01, 'works_on');
+    await prisma.garage.update({
+      data: {
+        labourFromBani: 20_000,
+        paymentCard: true,
+        rating: 4.5,
+        reviewCount: 3,
+      },
+      where: { id: card },
+    });
+
+    const res = await search({
+      brand: 'dacia',
+      card: '1',
+      max_price: '200',
+      min_rating: '4.5',
+      near: NEAR,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.items.map((i: { id: string }) => i.id)).toEqual([card]);
+    expect(res.body.total).toBe(1);
+  });
+
+  it.each([
+    ['max_price', '175'],
+    ['max_price', '200.0'],
+    ['max_price', ''],
+    ['min_rating', '4'],
+    ['min_rating', '4,0'],
+    ['card', '0'],
+    ['card', 'true'],
+  ])('answers 400 naming %s to %j', async (key, value) => {
+    const res = await search({ brand: 'dacia', [key]: value });
+
+    expect(res.status).toBe(400);
+    expect(messages(res).some((message) => message.startsWith(`${key} `))).toBe(
+      true,
+    );
+  });
+
+  it('answers 400 to a repeated filter key', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/search/garages')
+      .query('brand=dacia&card=1&card=1');
+
+    expect(res.status).toBe(400);
+  });
+
+  it('reads the filter before the cursor: a bad filter with a stale cursor names the filter', async () => {
+    const res = await search({
+      brand: 'dacia',
+      cursor: 'c3RhbGU',
+      max_price: '175',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).not.toBe('invalid_cursor');
+    expect(
+      messages(res).some((message) => message.startsWith('max_price ')),
+    ).toBe(true);
+  });
+
+  it('writes a search log row for a logged filtered search and none for an unlogged one', async () => {
+    await placed('Card', 0.01, 'works_on');
+
+    await search({ brand: 'dacia', card: '1', near: NEAR }).expect(200);
+    await search({ brand: 'dacia', min_rating: '3.5', near: NEAR }).expect(200);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(await prisma.searchLog.count()).toBe(0);
+
+    await search({ brand: 'dacia', card: '1', log: '1', near: NEAR }).expect(
+      200,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(await prisma.searchLog.count()).toBe(1);
+  });
+});

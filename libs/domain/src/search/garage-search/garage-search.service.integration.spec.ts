@@ -1587,3 +1587,275 @@ describe('counting a sort change', () => {
     expect(await sortChanges('price')).toBe(before.price);
   });
 });
+
+interface Offer {
+  bani?: number | null;
+  card?: boolean;
+  rating?: number | null;
+  stance?: Stance;
+}
+
+// A garage with its rate in bani, its rating and whether it takes a card; an
+// unrated one has no reviews.
+async function offer(
+  name: string,
+  { bani = null, card = false, rating = null, stance }: Offer,
+) {
+  const id = await garage(name, { stance });
+  await prisma.garage.update({
+    data: {
+      labourFromBani: bani,
+      paymentCard: card,
+      rating,
+      reviewCount: rating === null ? 0 : 1,
+    },
+    where: { id },
+  });
+  return id;
+}
+
+type Filters = Parameters<GarageSearchService['byIds']>[5];
+
+const filteredPage = (
+  filters: Filters,
+  {
+    cursor,
+    log = false,
+    sort,
+  }: { cursor?: string; log?: boolean; sort?: Sort } = {},
+) =>
+  search.forBrand(
+    dacia,
+    cursor,
+    undefined,
+    undefined,
+    log,
+    undefined,
+    sort,
+    filters,
+  );
+
+const names = (page: Page) => page.items.map((item) => item.name);
+
+// @traces 1261-FR-002
+describe('filtering by a price ceiling', () => {
+  it('keeps a garage whose rate shows at or below the ceiling and drops one above it or without a rate', async () => {
+    await offer('Alfa', { bani: 20_049 });
+    await offer('Beta', { bani: 20_050 });
+    await offer('Gamma', { bani: 15_000 });
+    await offer('Delta', { bani: null });
+
+    const page = await filteredPage({ maxPrice: 200 });
+
+    expect(names(page).sort()).toEqual(['Alfa', 'Gamma']);
+    expect(page.total).toBe(2);
+  });
+});
+
+// @traces 1261-FR-003
+describe('filtering by a minimum rating', () => {
+  it('keeps a garage rated at or above the minimum and drops one below it or without reviews', async () => {
+    await offer('Alfa', { rating: 4.0 });
+    await offer('Beta', { rating: 3.9 });
+    await offer('Gamma', { rating: 4.4 });
+    await offer('Delta', { rating: null });
+
+    expect(names(await filteredPage({ minRating: '4.0' }))).toEqual([
+      'Gamma',
+      'Alfa',
+    ]);
+    expect(names(await filteredPage({ minRating: '4.5' }))).toEqual([]);
+  });
+});
+
+// @traces 1261-FR-004
+describe('filtering by card payment', () => {
+  it('keeps only the garages that marked card payment', async () => {
+    await offer('Alfa', { card: true });
+    await offer('Beta', { card: false });
+
+    expect(names(await filteredPage({ card: true }))).toEqual(['Alfa']);
+  });
+});
+
+// @traces 1261-FR-005 1261-FR-006
+describe('combining the filters', () => {
+  it('lists only the garages meeting every filter, takers first, and counts the matches in each group', async () => {
+    await offer('Taker Match', {
+      bani: 18_000,
+      card: true,
+      rating: 4.6,
+      stance: 'works_on',
+    });
+    await offer('Taker Cash', {
+      bani: 18_000,
+      rating: 4.6,
+      stance: 'works_on',
+    });
+    await offer('Refuser Match', {
+      bani: 19_000,
+      card: true,
+      rating: 4.5,
+      stance: 'does_not_take',
+    });
+    await offer('Unstated Match', { bani: 25_000, card: true, rating: 4.9 });
+    await offer('Unstated Dear', { bani: 25_100, card: true, rating: 4.9 });
+    await offer('Unstated Low', { bani: 10_000, card: true, rating: 4.4 });
+
+    const two = await filteredPage({ maxPrice: 250, minRating: '4.5' });
+    expect(names(two)).toEqual([
+      'Taker Cash',
+      'Taker Match',
+      'Unstated Match',
+      'Refuser Match',
+    ]);
+
+    const three = await filteredPage({
+      card: true,
+      maxPrice: 250,
+      minRating: '4.5',
+    });
+    expect(names(three)).toEqual([
+      'Taker Match',
+      'Unstated Match',
+      'Refuser Match',
+    ]);
+    expect(three.total).toBe(3);
+    expect(three.counts).toEqual({ doesNotTake: 2, worksOn: 1 });
+  });
+
+  it('answers an empty list with zero counts when nothing matches', async () => {
+    await offer('Alfa', { bani: 30_000, stance: 'works_on' });
+
+    const page = await filteredPage({ maxPrice: 150 });
+
+    expect(page).toMatchObject({
+      counts: { doesNotTake: 0, worksOn: 0 },
+      items: [],
+      nextCursor: null,
+      total: 0,
+    });
+  });
+
+  it('keeps the price order among the matches', async () => {
+    await offer('Dear', { bani: 24_000, card: true, rating: 4.0 });
+    await offer('Cheap', { bani: 12_000, card: true, rating: 3.0 });
+    await offer('Cash', { bani: 10_000, rating: 5.0 });
+    await offer('Middle', { bani: 18_000, card: true, rating: 5.0 });
+
+    expect(
+      names(await filteredPage({ card: true }, { sort: 'price' })),
+    ).toEqual(['Cheap', 'Middle', 'Dear']);
+  });
+});
+
+// @traces 1261-FR-009
+describe('paging under filters', () => {
+  beforeEach(async () => {
+    for (let n = 0; n < 23; n += 1) {
+      await offer(`Card ${String(n).padStart(2, '0')}`, {
+        card: true,
+        rating: 4.0,
+        stance: n % 2 ? 'works_on' : undefined,
+      });
+      await offer(`Cash ${String(n).padStart(2, '0')}`, { rating: 4.0 });
+    }
+  });
+
+  it('reads every match once across the pages', async () => {
+    const first = await filteredPage({ card: true });
+    expect(first.nextCursor).not.toBeNull();
+    const second = await filteredPage(
+      { card: true },
+      { cursor: first.nextCursor ?? undefined },
+    );
+
+    const all = [...names(first), ...names(second)];
+    expect(all).toHaveLength(23);
+    expect(new Set(all).size).toBe(23);
+    expect(all.every((name) => name.startsWith('Card'))).toBe(true);
+    expect(second.nextCursor).toBeNull();
+    expect(second.total).toBe(23);
+  });
+
+  it('refuses a cursor made under other filters, and one made under filters presented with none', async () => {
+    const filtered = (await filteredPage({ card: true })).nextCursor;
+    const plain = (await search.forBrand(dacia)).nextCursor;
+
+    for (const other of [
+      { card: true, minRating: '4.0' },
+      { minRating: '4.0' },
+      undefined,
+    ] as Filters[]) {
+      expect(
+        await refusal(filteredPage(other, { cursor: filtered ?? undefined })),
+      ).toMatchObject({ body: { code: 'invalid_cursor' }, status: 400 });
+    }
+    expect(
+      await refusal(
+        filteredPage({ card: true }, { cursor: plain ?? undefined }),
+      ),
+    ).toMatchObject({ body: { code: 'invalid_cursor' }, status: 400 });
+    expect(
+      (await search.forBrand(dacia, plain ?? undefined)).items.length,
+    ).toBeGreaterThan(0);
+  });
+});
+
+// @traces 1261-FR-006
+describe('reading the shown cards again under filters', () => {
+  it('answers only the ids that match, with the filtered totals of the search', async () => {
+    const match = await offer('Match', { card: true, stance: 'works_on' });
+    const cash = await offer('Cash', { stance: 'works_on' });
+    await offer('Other Match', { card: true });
+
+    const page = await search.byIds(
+      dacia,
+      [match, cash],
+      undefined,
+      undefined,
+      undefined,
+      { card: true },
+    );
+
+    expect(page.items.map((item) => item.id)).toEqual([match]);
+    expect(page.total).toBe(2);
+    expect(page.counts).toEqual({ doesNotTake: 1, worksOn: 1 });
+  });
+});
+
+// @traces 1261-FR-010
+describe('counting a filtered page', () => {
+  it('counts an unlogged filtered first page as neither a search nor a sort change, and writes no log row', async () => {
+    await offer('Alfa', { card: true, rating: 4.5 });
+    const before = {
+      none: await searches('none'),
+      price: await sortChanges('price'),
+      rating: await sortChanges('rating'),
+      results: await searches('results'),
+    };
+
+    await filteredPage({ card: true });
+    await filteredPage({ minRating: '4.5' }, { sort: 'price' });
+    await settled();
+
+    expect(await prisma.searchLog.count()).toBe(0);
+    expect({
+      none: await searches('none'),
+      price: await sortChanges('price'),
+      rating: await sortChanges('rating'),
+      results: await searches('results'),
+    }).toEqual(before);
+  });
+
+  it('counts a logged filtered first page as one search and writes one log row', async () => {
+    await offer('Alfa', { card: true });
+    const results = await searches('results');
+
+    await filteredPage({ card: true }, { log: true });
+    await settled();
+
+    expect(await prisma.searchLog.count()).toBe(1);
+    expect(await searches('results')).toBe(results + 1);
+  });
+});

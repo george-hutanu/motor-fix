@@ -2,11 +2,13 @@ import {
   type BrandRefDto,
   bboxOf,
   FACILITIES,
+  filtersKey,
   type GarageSearchPageDto,
   type ListedGarageDto,
   nearOf,
   SEARCH_PAGE_SIZE,
   type SearchBbox,
+  type SearchFilters,
   type SearchPoint,
   type SearchSort,
 } from '@motor-fix/contracts';
@@ -40,11 +42,13 @@ const GROUPS = ['works_on', 'other'] as const;
 // the box, so it never pages on another box or the search around the place.
 // It names its sort, so it never pages another order, and carries the
 // boundary's exact distance in metres under distance, or its hourly rate in
-// bani (null for none) under price.
+// bani (null for none) under price. It names the filters it was made under,
+// so it never pages another combination of them.
 interface Cursor {
   b: string;
   c: number;
   d?: number;
+  f?: string;
   g: (typeof GROUPS)[number];
   i: string;
   p?: number | null;
@@ -140,6 +144,7 @@ function decode(
   brandId: string,
   sort: SearchSort,
   box?: string,
+  filters?: SearchFilters,
 ): Cursor {
   let parsed: Partial<Cursor>;
   try {
@@ -148,9 +153,10 @@ function decode(
     throw invalidCursor();
   }
   if (typeof parsed !== 'object' || parsed === null) throw invalidCursor();
-  const { b, c, g, i, r, s, x } = parsed;
+  const { b, c, f, g, i, r, s, x } = parsed;
   if (
     b !== brandId ||
+    f !== filtersKey(filters) ||
     s !== sort ||
     !sortValueOk(parsed) ||
     !GROUPS.includes(g as Cursor['g']) ||
@@ -172,6 +178,7 @@ const cursorAfter = (
   row: PageRow | undefined,
   sort: SearchSort,
   box: string | undefined,
+  filters: string | undefined,
 ) =>
   Buffer.from(
     JSON.stringify({
@@ -184,6 +191,7 @@ const cursorAfter = (
       ...(sort === 'distance' && { d: Number(row?.distance_m) }),
       ...(sort === 'price' && { p: row?.labour_bani ?? null }),
       ...(box && { x: box }),
+      ...(filters && { f: filters }),
     } satisfies Cursor),
   ).toString('base64url');
 
@@ -209,19 +217,40 @@ const takes = (brandId: string | string[]) => Prisma.sql`EXISTS (
     AND ${typeof brandId === 'string' ? Prisma.sql`gb.brand_id = ${brandId}::uuid` : Prisma.sql`gb.brand_id = ANY(${brandId}::uuid[])`}
     AND gb.stance = 'works_on')`;
 
-// The public garages of each group, in the area when there is one: the
-// counts and total of a search, in one statement.
+// The garages meeting every filter set: the rate as a card shows it, rounded
+// to the leu, at most the ceiling; the rating at least the minimum; card
+// payment. A garage with no rate or no rating fails the filter on it.
+export function filterSql(filters?: SearchFilters): Prisma.Sql {
+  const conditions: Prisma.Sql[] = [];
+  if (filters?.maxPrice !== undefined) {
+    conditions.push(Prisma.sql`(garage.labour_from_bani IS NOT NULL
+      AND garage.labour_from_bani < ${filters.maxPrice * 100 + 50})`);
+  }
+  if (filters?.minRating !== undefined) {
+    conditions.push(
+      Prisma.sql`(garage.rating IS NOT NULL AND garage.rating >= ${filters.minRating}::numeric)`,
+    );
+  }
+  if (filters?.card) conditions.push(Prisma.sql`garage.payment_card`);
+  return conditions.length
+    ? Prisma.sql`(${Prisma.join(conditions, ' AND ')})`
+    : Prisma.sql`TRUE`;
+}
+
+// The public garages of each group meeting the filters, in the area when
+// there is one: the counts and total of a search, in one statement.
 export async function countGroups(
   prisma: PrismaClient,
   brandId: string,
   area?: AreaSql,
+  filters?: SearchFilters,
 ) {
   const [row] = await prisma.$queryRaw<{ other: number; works_on: number }[]>`
     SELECT
       COUNT(*) FILTER (WHERE ${takes(brandId)})::int AS works_on,
       COUNT(*) FILTER (WHERE NOT ${takes(brandId)})::int AS other
     FROM garage
-    WHERE ${publicGaragesSql()} AND ${within(area)}`;
+    WHERE ${publicGaragesSql()} AND ${within(area)} AND ${filterSql(filters)}`;
   return {
     counts: { doesNotTake: row.other, worksOn: row.works_on },
     total: row.works_on + row.other,
@@ -241,7 +270,7 @@ export function groupPageSql(
   brandId: string | string[],
   group: Group,
   area: AreaSql | undefined,
-  { after, ids, sort = 'rating', take }: GroupPageOptions,
+  { after, filters, ids, sort = 'rating', take }: GroupPageOptions,
 ) {
   return Prisma.sql`
     SELECT
@@ -252,7 +281,7 @@ export function groupPageSql(
       garage.longitude,
       garage.business_kind IS NOT DISTINCT FROM 'mobile' AS mobile
     FROM garage
-    WHERE ${publicGaragesSql()} AND ${within(area)}
+    WHERE ${publicGaragesSql()} AND ${within(area)} AND ${filterSql(filters)}
       AND ${group === 'works_on' ? takes(brandId) : Prisma.sql`NOT ${takes(brandId)}`}
       ${after ? Prisma.sql`AND ${beyond(after, area)}` : Prisma.empty}
       ${ids ? Prisma.sql`AND garage.id = ANY(${ids}::uuid[])` : Prisma.empty}
@@ -262,6 +291,7 @@ export function groupPageSql(
 
 interface GroupPageOptions {
   after?: After;
+  filters?: SearchFilters;
   ids?: string[];
   sort?: SearchSort;
   take: number;
@@ -368,7 +398,8 @@ export class GarageSearchService {
   // which never waits for it. A box is the map moved over the same search,
   // never a new one: neither logged nor counted, and the radius plays no part.
   // A named sort on an unlogged first page is the driver changing the order
-  // of the list shown: a sort change, never a search.
+  // of the list shown: a sort change, never a search. Filters on an unlogged
+  // first page are the driver narrowing the list shown: counted as neither.
   async forBrand(
     key: BrandKey,
     cursor?: string,
@@ -377,24 +408,29 @@ export class GarageSearchService {
     log = false,
     bbox?: SearchBbox,
     sort?: SearchSort,
+    filters?: SearchFilters,
   ): Promise<GarageSearchPageDto> {
     const brand = await brandOf(this.prisma, key);
     const box = bbox && bboxOf(bbox);
     const order = sort ?? 'rating';
+    const filtered = filtersKey(filters);
     const page = await this.cache.entry(
       {
         bbox: box,
         brandId: brand.id,
         cursor,
+        filters: filtered,
         kind: 'page',
         near: point && nearOf(point),
         radiusKm: bbox ? undefined : radiusKm,
         sort: order,
       },
-      () => this.searched(brand, order, cursor, point, radiusKm, bbox),
+      () => this.searched(brand, order, cursor, point, radiusKm, bbox, filters),
     );
     if (bbox) return page;
-    if (cursor === undefined) countFirstPage(page.items.length, log, sort);
+    if (cursor === undefined && (log || !filtered)) {
+      countFirstPage(page.items.length, log, sort);
+    }
     // Left to the next turn of the event loop: the answer goes out first.
     if (log) {
       setImmediate(() => this.searchLog.record({ brandId: brand.id, point }));
@@ -409,20 +445,22 @@ export class GarageSearchService {
     point?: SearchPoint,
     radiusKm?: number,
     bbox?: SearchBbox,
+    filters?: SearchFilters,
   ): Promise<GarageSearchPageDto> {
     const brandId = brand.id;
     const box = bbox && bboxOf(bbox);
     const after =
       cursor === undefined
         ? undefined
-        : await this.after(decode(cursor, brandId, sort, box));
+        : await this.after(decode(cursor, brandId, sort, box, filters));
     const area = areaOf(point, radiusKm, bbox);
-    const found = await countGroups(this.prisma, brandId, area);
+    const found = await countGroups(this.prisma, brandId, area, filters);
     const rows: PageRow[] = [];
     if (after?.g !== 'other') {
       rows.push(
         ...(await groupPage(this.prisma, brandId, 'works_on', area, {
           after,
+          filters,
           sort,
           take: PAGE + 1,
         })),
@@ -432,6 +470,7 @@ export class GarageSearchService {
       rows.push(
         ...(await groupPage(this.prisma, brandId, 'other', area, {
           after: after?.g === 'other' ? after : undefined,
+          filters,
           sort,
           take: PAGE + 1 - rows.length,
         })),
@@ -451,13 +490,13 @@ export class GarageSearchService {
       items,
       nextCursor:
         rows.length > PAGE && last
-          ? cursorAfter(brandId, last, row, sort, box)
+          ? cursorAfter(brandId, last, row, sort, box, filtersKey(filters))
           : null,
     };
   }
 
   // The cards a page already shows, read again: the public ones among the
-  // ids, in the search's order and with its counts. Not a search of its own,
+  // ids meeting the filters, in the search's order and with its counts. Not a search of its own,
   // so it is never counted.
   async byIds(
     key: BrandKey,
@@ -465,12 +504,13 @@ export class GarageSearchService {
     point?: SearchPoint,
     radiusKm?: number,
     bbox?: SearchBbox,
+    filters?: SearchFilters,
   ): Promise<GarageSearchPageDto> {
     const brand = await brandOf(this.prisma, key);
     const area = areaOf(point, radiusKm, bbox);
-    const among = { ids, take: ids.length };
+    const among = { filters, ids, take: ids.length };
     const [found, takers, others] = await Promise.all([
-      countGroups(this.prisma, brand.id, area),
+      countGroups(this.prisma, brand.id, area, filters),
       groupPage(this.prisma, brand.id, 'works_on', area, among),
       groupPage(this.prisma, brand.id, 'other', area, among),
     ]);
