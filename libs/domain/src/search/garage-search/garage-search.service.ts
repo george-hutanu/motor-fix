@@ -233,8 +233,8 @@ export function filterSql(filters?: SearchFilters): Prisma.Sql {
         CASE WHEN jsonb_typeof(garage.hours -> ${weekday}) = 'array'
           THEN garage.hours -> ${weekday} ELSE '[]'::jsonb END) AS iv
       WHERE jsonb_typeof(iv) = 'array'
-        AND iv ->> 0 COLLATE "C" <= ${time}
-        AND ${time} < iv ->> 1 COLLATE "C")
+        AND (iv ->> 0) COLLATE "C" <= ${time}
+        AND ${time} < (iv ->> 1) COLLATE "C")
       AND NOT EXISTS (
         SELECT 1 FROM public_holiday WHERE public_holiday.day = ${day}::date)
       AND NOT EXISTS (
