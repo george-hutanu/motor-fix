@@ -7,9 +7,15 @@
       formControlName="price"
       inputmode="decimal"
       autocomplete="off"
-      aria-describedby="mf-final-price-error"
+      aria-describedby="mf-final-price-error mf-final-price-quote"
     />
     <mf-field-error id="mf-final-price-error" [save]="save" [control]="form.controls.price" />
+    <p class="quote" id="mf-final-price-quote" data-quote aria-live="polite">
+      <span data-quote-range>{{ 'garage.jobs.finalPrice.quote' | t: { range: range() } }}</span>
+      @if (above()) {
+        <strong class="above" data-above-quote>{{ 'garage.jobs.finalPrice.aboveQuote' | t }}</strong>
+      }
+    </p>
   </fieldset>
   <mf-task-error [save]="save" />
   @if (!online()) {
