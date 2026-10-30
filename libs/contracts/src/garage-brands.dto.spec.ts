@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 
-import { BRANDS_MAX, ReplaceGarageBrandsDto } from './garage-brands.dto';
+import { ReplaceGarageBrandsDto } from './garage-brands.dto';
 
 const problems = (dto: object) =>
   validateSync(dto, { forbidNonWhitelisted: true, whitelist: true }).map(
@@ -54,7 +54,6 @@ describe('ReplaceGarageBrandsDto', () => {
         stance: 'works_on',
       }));
 
-    expect(BRANDS_MAX).toBe(200);
     expect(problems(replace({ brands: brands(200) }))).toEqual([]);
     expect(problems(replace({ brands: brands(201) }))).toEqual(['brands']);
   });

@@ -63,7 +63,7 @@ export class GarageBrandStanceDto {
 }
 
 // The most brands one answer may mark; the catalogue holds far fewer.
-export const BRANDS_MAX = 200;
+const BRANDS_MAX = 200;
 
 // A garage's whole brand answer: a brand left out is not stated.
 export class ReplaceGarageBrandsDto {
