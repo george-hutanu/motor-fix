@@ -301,6 +301,28 @@ describe('sending an invite', () => {
     expect(row.status).toBe('sent');
   });
 
+  // @traces 1379-FR-003
+  it('keeps the invite and answers the link when e-mail sending is off', async () => {
+    const { dinamo, mihai } = await world();
+    email.sending = false;
+    try {
+      const res = await send(dinamo.id, bearer(mihai, 'garage'));
+
+      expect(res.status).toBe(201);
+      expect(res.body.emailSent).toBe(false);
+      expect(res.body.link).toMatch(
+        /^https:\/\/motorfix\.test\/ro\/invite\/[A-Za-z0-9_-]{43}$/,
+      );
+      expect(brevo.emails()).toHaveLength(0);
+      const row = await prisma.staffInvite.findUniqueOrThrow({
+        where: { id: res.body.id },
+      });
+      expect(row.status).toBe('sent');
+    } finally {
+      email.sending = true;
+    }
+  });
+
   it('stores nothing and sends nothing while the web address is not set', async () => {
     const { dinamo, mihai } = await world();
     const { webUrl } = email;
