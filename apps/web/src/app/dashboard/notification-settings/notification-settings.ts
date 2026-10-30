@@ -50,6 +50,9 @@ export class NotificationSettings implements OnInit {
     undefined,
   );
   protected readonly failed = signal(false);
+  // The last press on each switch, so an older save's answer cannot undo it.
+  private presses = 0;
+  private readonly latest = new Map<string, number>();
 
   ngOnInit() {
     // The preferences event goes straight to Redis, so it is no outbox kind.
@@ -85,6 +88,9 @@ export class NotificationSettings implements OnInit {
     enabled: boolean,
   ) {
     const { garageId } = entry;
+    const key = `${garageId}|${type}|${channel}`;
+    const press = ++this.presses;
+    this.latest.set(key, press);
     this.set(garageId, type, channel, enabled);
     // The switch already shows the choice; a save's answer may predate a
     // later toggle, so the live update re-reads instead.
@@ -92,9 +98,15 @@ export class NotificationSettings implements OnInit {
       await this.api.notificationPreferencesControllerSave({
         body: { preferences: [{ channel, enabled, garageId, type }] },
       });
+      // A re-read after another switch failed may have shown the row from
+      // before this save; the latest press on this switch still stands.
+      if (this.latest.get(key) === press)
+        this.set(garageId, type, channel, enabled);
     } catch {
-      this.set(garageId, type, channel, !enabled);
+      // Two saves of one switch can fail in any order: only the server
+      // knows what it holds, so it is read again rather than guessed.
       toast(this.i18n.t('shell.notifications.saveFailed'));
+      await this.load();
     }
   }
 
