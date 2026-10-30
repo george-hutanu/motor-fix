@@ -598,3 +598,86 @@ describe('chartConfig with a lead figure under odd input', () => {
     expect(data.datasets[0].backgroundColor).toBe('rgba(255, 176, 0, 0.5)');
   });
 });
+
+describe('the chart with weeks that have no value', () => {
+  // @traces 1397-FR-009
+  const WEEKS = [
+    { label: 'S38', value: null },
+    { label: 'S39', tooltip: 'S39 · 21 – 27 sept.: 1.240', value: 1240 },
+    { label: 'S40', tooltip: 'S40 · 28 sept. – 4 oct.: 472', value: 472 },
+    { label: 'S41', value: null },
+  ];
+  const weeks = (lastLabel?: boolean): Loose =>
+    chartConfig(
+      'bar',
+      WEEKS,
+      'count',
+      'ro',
+      dark,
+      false,
+      false,
+      undefined,
+      lastLabel,
+    );
+
+  it('draws no bar for a week without a value', () => {
+    expect(weeks().data.datasets[0].data).toEqual([null, 1240, 472, null]);
+  });
+
+  it('shows no tooltip over a week without a value', () => {
+    const { filter } = weeks().options.plugins.tooltip;
+
+    expect(filter({ dataIndex: 0, raw: null })).toBe(false);
+    expect(filter({ dataIndex: 1, raw: 1240 })).toBe(true);
+  });
+
+  it("writes a point's own tooltip text in place of the label and value", () => {
+    const { label } = weeks().options.plugins.tooltip.callbacks;
+
+    expect(label({ dataIndex: 2, label: 'S40', raw: 472 })).toBe(
+      'S40 · 28 sept. – 4 oct.: 472',
+    );
+    expect(
+      bar().options.plugins.tooltip.callbacks.label({
+        dataIndex: 2,
+        label: 'Martie 2027',
+        raw: 125000,
+      }),
+    ).toBe('Martie 2027 · 1.250 lei');
+  });
+
+  it('adds the newest bar label only when the host asks for it', () => {
+    expect(weeks().plugins ?? []).toEqual([]);
+    expect(bar().plugins ?? []).toEqual([]);
+    expect(weeks(true).plugins.map((p: Loose) => p.id)).toEqual([
+      'mf-last-label',
+    ]);
+  });
+
+  it('writes the value of the last week that has one above its bar', () => {
+    const texts: [string, number, number][] = [];
+    const ctx = {
+      fillText: (text: string, x: number, y: number) =>
+        texts.push([text, x, y]),
+      restore: () => {},
+      save: () => {},
+    };
+    const bars = [null, { x: 30, y: 40 }, { x: 60, y: 120 }, { x: 90, y: 200 }];
+    const chart = {
+      ctx,
+      getDatasetMeta: () => ({ data: bars }),
+    };
+    const config = weeks(true);
+    const [plugin] = config.plugins;
+    plugin.afterDatasetsDraw(
+      chart,
+      {},
+      config.options.plugins['mf-last-label'],
+    );
+
+    expect(texts).toHaveLength(1);
+    expect(texts[0][0]).toBe('472');
+    expect(texts[0][1]).toBe(60);
+    expect(texts[0][2]).toBeLessThan(120);
+  });
+});

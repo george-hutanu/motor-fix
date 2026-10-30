@@ -44,6 +44,8 @@ abstract class CockpitChart {
   readonly error = input(false, { transform: booleanAttribute });
   // Bars across, one row per point, the plot as tall as its rows.
   readonly horizontal = input(false, { transform: booleanAttribute });
+  // The newest value written above its bar.
+  readonly lastLabel = input(false, { transform: booleanAttribute });
   // The host's own words for no data; the shared text otherwise.
   readonly empty = input<string>();
   // The host's word for the table's name column; "period" otherwise.
@@ -60,7 +62,7 @@ abstract class CockpitChart {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly scheme = signal(0);
-  private chart?: Chart<ChartType, number[], string | string[]>;
+  private chart?: Chart<ChartType, (number | null)[], string | string[]>;
 
   protected readonly tableId = inject(_IdGenerator).getId('mf-chart-table-');
   protected readonly tableShown = signal(false);
@@ -99,7 +101,9 @@ abstract class CockpitChart {
     const points = this.points();
     const language = this.i18n.language();
     const byValue = points
-      .filter((p) => Number.isFinite(p.value))
+      .filter((p): p is ChartPoint & { value: number } =>
+        Number.isFinite(p.value),
+      )
       .sort((a, b) => b.value - a.value);
     const [high, low] = [byValue[0], byValue.at(-1)];
     const first = points[0]?.label ?? '';
@@ -145,6 +149,7 @@ abstract class CockpitChart {
         reduced,
         this.horizontal(),
         this.headings(),
+        this.lastLabel(),
       );
       if (!this.chart) {
         this.chart = new Chart(canvas, config);
