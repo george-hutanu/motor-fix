@@ -18,6 +18,9 @@ interface Tile {
   number?: string;
   line?: string;
   name: string;
+  // A red light beside the number while something waits on the admin; the
+  // number says it too, so the light is decoration.
+  alert?: boolean;
 }
 
 // In a chosen period the lines count from its start; `today`
@@ -115,11 +118,11 @@ export class AdminPanel {
     const line =
       overdue > 0
         ? this.i18n.t('admin.panel.overdue', {
-            count: overdue,
             n: formatNum(overdue, language),
           })
         : undefined;
     return {
+      alert: pending > 0,
       label,
       line,
       name: [label, number, line].filter(Boolean).join(', '),

@@ -637,11 +637,7 @@
     "inPeriod": "{sign}{n} {period}",
     "observability": "Observabilitate",
     "observabilityNewTab": "{name}, se deschide într‑o filă nouă",
-    "overdue": {
-      "few": "{n} peste 48 de ore",
-      "one": "{n} peste 48 de ore",
-      "other": "{n} peste 48 de ore"
-    },
+    "overdue": "{n} peste 48 de ore",
     "reportedReviews": "Recenzii raportate",
     "requestsSent": "Cereri de ofertă",
     "thisMonth": "{sign}{n} luna asta",

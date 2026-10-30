@@ -362,8 +362,11 @@ const WEEKDAYS_SHORT: Record<Language, readonly string[]> = {
 };
 const YESTERDAY: Record<Language, string> = { en: 'yesterday', ro: 'ieri' };
 
-// Romanian puts "de" between a number from 20 on and its noun.
-const de = (count: number) => (count >= 20 ? 'de ' : '');
+// Romanian puts "de" between a number and its noun when the plural rules call
+// it "other": from 20 on, except where the last two digits run 01 to 19.
+const RO_PLURAL = new Intl.PluralRules('ro');
+const de = (count: number) =>
+  RO_PLURAL.select(count) === 'other' ? 'de ' : '';
 
 const AGO: Record<
   Language,

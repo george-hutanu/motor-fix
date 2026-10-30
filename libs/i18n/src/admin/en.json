@@ -624,10 +624,7 @@
     "inPeriod": "{sign}{n} {period}",
     "observability": "Observability",
     "observabilityNewTab": "{name}, opens in a new tab",
-    "overdue": {
-      "one": "{n} over 48 hours",
-      "other": "{n} over 48 hours"
-    },
+    "overdue": "{n} over 48 hours",
     "reportedReviews": "Reported reviews",
     "requestsSent": "Quote requests",
     "thisMonth": "{sign}{n} this month",

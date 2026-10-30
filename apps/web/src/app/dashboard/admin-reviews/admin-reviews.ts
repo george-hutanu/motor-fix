@@ -92,9 +92,15 @@ export class AdminReviews {
   private focusAt?: number;
 
   showMore() {
-    this.focusAt = this.items().length;
+    const at = this.items().length;
+    this.focusAt = at;
     this.pages.update((n) => n + 1);
-    this.queue.reload();
+    // A page that brought nothing drops the wish, so a later live re-read
+    // that adds an item does not take the focus.
+    void this.queue.reload().then(() => {
+      if (this.focusAt === at && this.items().length <= at)
+        this.focusAt = undefined;
+    });
   }
 
   retry() {
@@ -144,7 +150,9 @@ export class AdminReviews {
           .map((item) => new Date(item.report.dueAt).getTime())
           .filter((at) => at > now),
       );
-      if (Number.isFinite(next)) {
+      // Further out than a tick, the tick reaches it first; a timer that far
+      // could also pass the 24.8-day limit and fire at once.
+      if (next - now <= TICK_MS) {
         due = setTimeout(() => this.now.set(new Date()), next - now);
       }
     });
