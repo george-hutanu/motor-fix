@@ -41,6 +41,19 @@ describe('what became of a quote the garage sent', () => {
     expect(outcome('accepted', 'awaiting_confirmation')).toBe('accepted');
   });
 
+  it('reads an accepted quote with no booking yet as accepted', () => {
+    expect(outcome('accepted')).toBe('accepted');
+  });
+
+  it('names an outcome for every booking status, and refuses one it does not know', () => {
+    for (const booking of BOOKING_STATUSES) {
+      expect(QUOTE_OUTCOMES).toContain(outcome('accepted', booking));
+    }
+    expect(() => outcome('accepted', 'on_hold' as BookingStatus)).toThrow(
+      /on_hold/,
+    );
+  });
+
   it.each(['confirmed', 'completed'] as const)(
     'reads an accepted quote whose booking is %s as booked',
     (booking) => {

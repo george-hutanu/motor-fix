@@ -54,8 +54,13 @@ function acceptedOutcome(booking: BookingStatus | undefined): QuoteOutcome {
       return 'lapsed';
     case 'cancelled':
       return 'booking_cancelled';
-    default:
+    case 'awaiting_confirmation':
+    case undefined:
       return 'accepted';
+    default: {
+      const unmapped: never = booking;
+      throw new Error(`No outcome for booking status ${String(unmapped)}`);
+    }
   }
 }
 
