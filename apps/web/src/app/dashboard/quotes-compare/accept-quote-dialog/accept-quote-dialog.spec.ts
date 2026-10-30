@@ -181,6 +181,24 @@ describe('the accept dialog: accepting', () => {
     expect(button('Renunță')?.disabled).toBe(true);
   });
 
+  // @traces 1315-optimistic-toggles-FR-009
+  it('stays open with nothing to press until the accept answers, then closes accepted', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    await open({ answers: [new Promise((resolve) => (answer = resolve))] });
+
+    button('Confirmă')?.click();
+    await settle();
+
+    expect(panel()).not.toBeNull();
+    expect(tick()?.disabled).toBe(true);
+    expect(button('Confirmă')?.disabled).toBe(true);
+    expect(button('Renunță')?.disabled).toBe(true);
+    answer({});
+    await settle();
+
+    await expect(result).resolves.toBe('accepted');
+  });
+
   it('stays open when the network fails, and retries with the same key', async () => {
     await open({
       answers: [new HttpErrorResponse({ status: 0 }), Promise.resolve({})],
