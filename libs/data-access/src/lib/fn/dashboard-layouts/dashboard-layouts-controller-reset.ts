@@ -12,7 +12,7 @@ import { DashboardLayoutDto } from '../../models/dashboard-layout-dto';
 export interface DashboardLayoutsControllerReset$Params {
 
 /**
- * admin only for now
+ * admin, garage, receptionist or mechanic
  */
   role: string;
 }

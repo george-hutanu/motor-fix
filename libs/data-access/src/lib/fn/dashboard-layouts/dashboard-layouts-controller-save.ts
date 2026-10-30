@@ -13,7 +13,7 @@ import { PutDashboardLayoutDto } from '../../models/put-dashboard-layout-dto';
 export interface DashboardLayoutsControllerSave$Params {
 
 /**
- * admin only for now
+ * admin, garage, receptionist or mechanic
  */
   role: string;
       body: PutDashboardLayoutDto
