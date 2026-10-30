@@ -5,6 +5,7 @@ import {
   changes,
   ownerScope,
   toItem,
+  writerOf,
 } from './client-repairs';
 
 const stored = {
@@ -159,5 +160,16 @@ describe('ownerScope', () => {
       sharedWithGarage: true,
       source: 'logged',
     });
+  });
+});
+
+// @traces 409-FR-011
+describe('writerOf', () => {
+  it.each([
+    ['admin', 'admin'],
+    ['garage', 'owner'],
+    ['receptionist', 'owner'],
+  ] as const)('records a %s as the %s', (role, writer) => {
+    expect(writerOf({ role })).toBe(writer);
   });
 });

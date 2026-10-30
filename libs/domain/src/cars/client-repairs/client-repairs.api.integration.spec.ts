@@ -53,8 +53,19 @@ async function scene(name = 'Garaj Nordic') {
   const staff = await team(name);
   const driverId = await world.account('Andrei Ion Marin');
   const car = await world.car(driverId);
-  const repair = (over: Over = {}) => {
+  // A repair done through MotorFix carries its own job, as the table's check
+  // requires.
+  const motorFixJob = async () => {
+    const { booking } = await world.chain(driverId, staff.garage.id);
+    await prisma.quoteRequest.update({
+      data: { carId: car.id },
+      where: { id: booking.requestId },
+    });
+    return (await world.job(booking.id, 'done')).id;
+  };
+  const repair = async (over: Over = {}) => {
     const { shared, ...rest } = over;
+    const jobId = rest.source === 'motorfix' ? await motorFixJob() : null;
     return prisma.repair.create({
       data: {
         carId: car.id,
@@ -62,6 +73,7 @@ async function scene(name = 'Garaj Nordic') {
         doneOn: new Date('2026-10-01T00:00:00Z'),
         garageId: staff.garage.id,
         garageName: name,
+        jobId,
         odometerKm: 151_000,
         source: 'logged',
         what: 'Schimb ulei',
@@ -504,7 +516,7 @@ describe('PATCH /garage/client-repairs/:id', () => {
     });
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe('validation_failed');
+    expect(JSON.stringify(res.body)).toContain(field);
     expect((await reread(row.id)).updatedAt).toEqual(row.updatedAt);
   });
 
@@ -682,7 +694,7 @@ describe('PATCH /garage/client-repairs/:id', () => {
     expect(invalid.status).toBe(400);
     expect(absent.status).toBe(404);
     expect(stale.status).toBe(400);
-    expect(stale.body.code).toBe('validation_failed');
+    expect(JSON.stringify(stale.body)).toContain('doneOn');
     expect((await reread(row.id)).doneOn).toEqual(row.doneOn);
   });
 

@@ -261,7 +261,7 @@ describe('toItem under odd rows', () => {
         },
       }),
     );
-    expect(item.driver.shortName).not.toBe('');
+    expect(item.driver.shortName).toBe(DELETED_AUTHOR);
   });
 
   it.each([
