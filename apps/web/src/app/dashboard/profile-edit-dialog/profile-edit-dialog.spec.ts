@@ -322,6 +322,9 @@ describe('the profile dialog: hours and closed days', () => {
     expect(text(panel().querySelector('[data-stale]'))).toContain(
       'Profilul a fost modificat între timp. Reîncarcă.',
     );
+    expect(panel().querySelector('form')?.firstElementChild).toBe(
+      panel().querySelector('[data-stale]'),
+    );
     button('Reîncarcă')?.click();
     await settle();
 
