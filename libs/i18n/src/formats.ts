@@ -2,7 +2,7 @@ import type { Language } from './languages';
 
 const LOCALES: Record<Language, string> = { en: 'en-GB', ro: 'ro-RO' };
 const ZONE = 'Europe/Bucharest';
-const MISSING = '—';
+export const MISSING = '—';
 
 // Fixed rather than taken from Intl, whose data writes "mar." and "Sept":
 // the product writes "mart." and "Sep", and server and browser must agree.
@@ -169,7 +169,7 @@ const clock = new Intl.DateTimeFormat('en-GB', {
 const ISO =
   /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2}))?$/;
 
-function instant(value: unknown): Date | undefined {
+export function instant(value: unknown): Date | undefined {
   const date =
     value instanceof Date
       ? value
@@ -260,7 +260,7 @@ export function bucharestDayStart(now: Date): Date {
 }
 
 const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
-const DAY_MS = 86_400_000;
+export const DAY_MS = 86_400_000;
 
 // A calendar day as UTC midnight, or undefined: Date rolls 30 February into
 // March, and an expiry that does not exist must not become one that does.
@@ -328,7 +328,7 @@ const RELATIVE: Record<Language, Intl.RelativeTimeFormat> = {
   en: new Intl.RelativeTimeFormat(LOCALES.en, { numeric: 'always' }),
   ro: new Intl.RelativeTimeFormat(LOCALES.ro, { numeric: 'always' }),
 };
-const MINUTE = 60_000;
+export const MINUTE = 60_000;
 const STEPS: readonly [Intl.RelativeTimeFormatUnit, number][] = [
   ['day', 24 * 60 * MINUTE],
   ['hour', 60 * MINUTE],
@@ -363,7 +363,7 @@ const WEEKDAYS_SHORT: Record<Language, readonly string[]> = {
 const YESTERDAY: Record<Language, string> = { en: 'yesterday', ro: 'ieri' };
 
 // Romanian puts "de" between a number from 20 on and its noun.
-const de = (count: number) => (count >= 20 ? 'de ' : '');
+export const de = (count: number) => (count >= 20 ? 'de ' : '');
 
 const AGO: Record<
   Language,
@@ -478,7 +478,10 @@ export function timeLeft(
 }
 
 const TODAY: Record<Language, string> = { en: 'today', ro: 'azi' };
-const TOMORROW: Record<Language, string> = { en: 'tomorrow', ro: 'mâine' };
+export const TOMORROW: Record<Language, string> = {
+  en: 'tomorrow',
+  ro: 'mâine',
+};
 
 // A proposed start: today or tomorrow with the Bucharest time, else the
 // weekday and the day: "mâine, 09:00", "joi, 15 oct., 14:00".
@@ -532,7 +535,7 @@ export function appliedAt(
 
 // "<word>, 14:00" for a Bucharest day `named` has a word for (by days from
 // today), else "joi, 15 oct., 14:00".
-function dayAndTime(
+export function dayAndTime(
   date: Date,
   language: Language,
   now: Date,
@@ -550,65 +553,4 @@ function dayAndTime(
   if (word) return `${word}, ${time}`;
   const weekday = WEEKDAYS_SHORT[language][new Date(start).getUTCDay()];
   return `${weekday}, ${day.day} ${MONTHS_SHORT[language][day.month - 1]}, ${time}`;
-}
-
-const EXPIRES: Record<
-  Language,
-  {
-    day: string;
-    days(count: number): string;
-    hours(count: number): string;
-    minutes(count: number): string;
-    moments: string;
-  }
-> = {
-  en: {
-    day: 'expires in 1 day',
-    days: (n) => `expires in ${n} days`,
-    hours: (n) => `expires in ${n} h`,
-    minutes: (n) => `expires in ${n} min`,
-    moments: 'expires in moments',
-  },
-  ro: {
-    day: 'expiră într-o zi',
-    days: (n) => `expiră în ${n} ${de(n)}zile`,
-    hours: (n) => `expiră în ${n} h`,
-    minutes: (n) => `expiră în ${n} min`,
-    moments: 'expiră în câteva momente',
-  },
-};
-
-// How long a sent quote still stands: from a day on, the days it touches
-// (rounded up, so a fresh seven-day quote reads seven days); under a day,
-// whole hours, then whole minutes, then moments, also once it has passed.
-export function quoteExpiry(
-  value: unknown,
-  language: Language,
-  now: Date,
-): string {
-  const date = instant(value);
-  if (!date) return MISSING;
-  const left = date.getTime() - now.getTime();
-  const words = EXPIRES[language];
-  if (left >= DAY_MS) {
-    const days = Math.ceil(left / DAY_MS);
-    return days === 1 ? words.day : words.days(days);
-  }
-  if (left >= 60 * MINUTE) return words.hours(Math.floor(left / (60 * MINUTE)));
-  if (left >= MINUTE) return words.minutes(Math.floor(left / MINUTE));
-  return words.moments;
-}
-
-// A deadline: the Bucharest time alone today, "mâine, 09:00" tomorrow, else
-// "joi, 15 oct., 14:00".
-export function formatDeadline(
-  value: unknown,
-  language: Language,
-  now: Date,
-): string {
-  const date = instant(value);
-  if (!date) return MISSING;
-  return bucharestDayStart(date).getTime() === bucharestDayStart(now).getTime()
-    ? clock.format(date)
-    : dayAndTime(date, language, now, { 1: TOMORROW[language] });
 }

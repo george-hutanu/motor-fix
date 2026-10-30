@@ -1,4 +1,4 @@
-import { formatDeadline, quoteExpiry } from './formats';
+import { formatDeadline, quoteExpiry } from './quote-expiry';
 
 const MISSING = '—';
 

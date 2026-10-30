@@ -10,7 +10,6 @@ import {
   formatClock,
   formatDay,
   formatDayMonth,
-  formatDeadline,
   formatDistance,
   formatDuration,
   formatKm,
@@ -23,12 +22,12 @@ import {
   formatRating,
   formatSlot,
   formatWholeLeiRange,
-  quoteExpiry,
   relativeTime,
   requestAge,
   requestExpiry,
   timeLeft,
 } from './formats';
+import { formatDeadline, quoteExpiry } from './quote-expiry';
 
 const MISSING = '—';
 const notNumbers = [null, undefined, Number.NaN, Infinity, '92'];
