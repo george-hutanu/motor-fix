@@ -29,6 +29,7 @@ features:
   - 1193-fast-nav
   - 1260-open-now-filters
   - 1261-result-filters
+  - 1398-open-now-results-filters
 ---
 
 # Capability: Garage search
@@ -177,17 +178,17 @@ _From 267-brand-results._
 
 _From 267-brand-results._
 
-### 1355-FR-011 — While a search runs the page MUST show six skeleton cards, except after a brand change: then the previous answer's cards MUST stay in place, dimmed to half opacity and not tappable, under a progress bar at most 4 px tall exposed to assistive technology as a progress indicator labelled with the new brand's name, and the chips and the search MUST stay usable. On an API error or no answer the page MUST show "Nu am putut încărca rezultatele" with "Reîncearcă", which runs the same request again (not logged); the page MUST never scroll sideways at 320 px.
+### 1398-FR-008 — While a filter change's first page loads, the page MUST show the brand-change loading state of 1355-FR-011 (the previous cards at half opacity and not tappable under the progress bar at most 4 px tall, exposed as a progress indicator labelled "Se filtrează…" / "Filtering…"), never skeletons; the chips, the "Filtre" button, the sort control and the brand controls stay usable; when the answer lands the list is at its top with its first card selected.
 
-_From 1355-results-brand-chips._
+_From 1398-open-now-results-filters._
 
 ### 267-FR-017 — Without a place, zero garages read "Niciun service găsit" with "Schimbă locul" only, and `radius` is ignored (no `validation_failed`). With a place and zero garages the page MUST show "Niciun service în 25 km" with "Caută în 50 km" (offered once per place: after it the empty state at 50 km offers "Schimbă locul" only) and "Schimbă locul", which opens the existing place dialog; a place chosen there runs a new, logged search at 25 km.
 
 _From 267-brand-results._
 
-### 267-FR-022 — Warming the result for the most common next filter is recorded as not applicable until the filters exist (#210): this story has no next request to warm (no filters, no sort UI, no second page without ST-273), and the 60-second cache of FR-009 is the warm store #210 will fill once a brand and place are chosen. The story's finish comment records this; #210 carries the warm rule, its hit-rate panel and its alert.
+### 1398-FR-012 — When a brand and a place are chosen, no filter is on, no box is set, and the unfiltered first page has landed from the API (not from the kept results of a way back), the page MUST warm once per distinct unfiltered request (brand, place, radius, sort) the same request's first page and its pins with `open_now=1` and without `log=1` or a cursor, discarding the answers, so the API's 60 s cache (1260-FR-008) holds them; the warm MUST obey 1169-FR-009's guards (`Save-Data`, `2g`/`slow-2g`, a hidden tab, never on the server), MUST be a read only, and a failure MUST be silent.
 
-_From 267-brand-results._
+_From 1398-open-now-results-filters._
 
 ### 267-FR-023 — The PR MUST list in its Observability section and in `infra/observability/inventory.json`: a counter of search-log rows written and failed, a counter of cache hits, misses and fallbacks (Redis unavailable), and the search latency histogram with a panel on the MotorFix dashboard and an alert when the fallback rate or the log-failure rate stays above 5% for 10 minutes; `motorfix_searches_total` stays as it is.
 
@@ -395,9 +396,9 @@ _From 1355-results-brand-chips._
 
 _From 1355-results-brand-chips._
 
-### 1355-FR-005 — A brand change MUST keep every other search setting the address bar carries (the place, the radius, and the sort and filters once they exist) and MUST forget a map area the driver had moved to, as a new search from the address bar does today.
+### 1398-FR-006 — A brand change (1355-FR-005), a place change, a widening and a reload MUST keep the filters on; a filter change MUST keep the brand, the place, the radius, the sort and the map's box (as a sort change keeps the box), and the sheet's position (1358-FR-008). Opening a link carrying the parameters restores them before the first read.
 
-_From 1355-results-brand-chips._
+_From 1398-open-now-results-filters._
 
 ### 1355-FR-007 — A brand change MUST be a step in the browser's history: the back button returns to the previous brand with its results, and a brand reached by back or forward records no search.
 
@@ -435,9 +436,9 @@ _From 1355-results-brand-chips._
 
 _From 1355-results-brand-chips._
 
-### 1358-FR-002 — The summary bar MUST show the brand (the page's title), the place line (the area, or the "în zona hărții" counts in visible-area mode) and the total found, plus the actions the summary carries today ("Schimbă locul", "Înapoi la 25 km", the "Reîncarcă" chip when a newer answer exists), in both languages with the texts that exist; the title stays the page's one heading. While the place is unknown it holds the address field, and while locating, the status line, as the header does today.
+### 1398-FR-009 — With at least one filter on, the summary line MUST read, after the found count, "· {n} cu filtrele alese" / "· {n} with your filters" with `n` the API's filtered `total`, then the two group counts as the API answers them (the matches', 1260-FR-006); the found count MUST be the number of garages the search found, taken from the pins answer (one pin per garage found, 1260-FR-007, at most 500) with today's found / in-area wording, and left out while the pins have not answered or failed, the line then starting at "{n} cu filtrele alese" with no leading "·"; the summary stays the tally the page already announces politely to assistive technology (`mfLiveChange`), so a toggle's new matching total is announced; with no filter the summary is unchanged.
 
-_From 1358-results-phone-map-list._
+_From 1398-open-now-results-filters._
 
 ### 1358-FR-003 — The sheet MUST rest in exactly one of three positions: **low** (its handle and its header visible, the map large), **half** (about half the screen, the map visible above it), and **full** (the list fills the screen below the summary bar; the map may be covered). It opens at half. The handle is a drag target at least 44 px tall; a drag released rests the sheet at the position nearest to where it was let go, a drag shorter than 10 % of the screen height returns it to where it started, one long drag may skip a position, and there is no velocity rule; the move uses the theme's motion and none under reduced motion.
 
@@ -799,6 +800,50 @@ _From 1261-result-filters._
 
 _From 1261-result-filters._
 
+### 1398-FR-001 — Results MUST show a button "Filtre" / "Filters" beside the sort control on every size (on a phone, in the sheet's header, 1358-FR-006 amended), at least 44 px tall, which reads "Filtre · {n}" / "Filters · {n}" while `n` ≥ 1 filters are on and "Filtre" at zero; it opens the filters panel.
+
+_From 1398-open-now-results-filters._
+
+### 1398-FR-002 — The filters panel MUST be a task of the overlays service in the `dialog` shape (a centred small panel from 768 px, the bottom sheet below, 158-FR-001 and 158-FR-010), titled "Filtre" / "Filters", holding two switches labelled "Deschis acum" / "Open now" and "Deschis sâmbăta" / "Open on Saturday", each reflecting the bar, and nothing else; a switch toggles its filter at once (no apply button, no discard question), the panel stays open until closed by X, Escape, outside or the sheet's drag, and closing returns the focus to the "Filtre" button (157-FR-008). The panel's code loads on the first open, not with the page.
+
+_From 1398-open-now-results-filters._
+
+### 1398-FR-003 — Each filter on MUST show as a chip beside the "Filtre" button in the order Deschis acum, Deschis sâmbăta, drawn in the amber selected style of the brand chips (`--mf-amber-tint`, `--mf-amber-ink`) with a × glyph, the chip being one button at least 44 px tall whose accessible name says it removes that filter ("Scoate filtrul Deschis acum" / "Remove filter Open now"); activating it turns that filter off.
+
+_From 1398-open-now-results-filters._
+
+### 1398-FR-004 — The filters MUST live in the address bar as `open_now=1` and `open_saturday=1`, each present exactly when on and absent when off; a filter change MUST write the bar as a sort change does today (a step in the history, `push`); a filter reads as on only when the key's first value is exactly `1`, so the page never sends the API a value it would refuse.
+
+_From 1398-open-now-results-filters._
+
+### 1398-FR-005 — The first page, every later page and the pins MUST be requested with the filters on in the bar as `open_now` and `open_saturday` of the generated client (`GarageSearchControllerForBrand$Params`, `GarageSearchControllerPins$Params`), and with nothing else new; the `ids=` reads (a pin's small card, a live re-read) stay by-id lookups without the filters; the web MUST NOT import `libs/contracts/src/search-filters.ts` or the Bucharest clock helpers (the bundle budget), the API's answer being the only judge of a match.
+
+_From 1398-open-now-results-filters._
+
+### 1398-FR-007 — A filter change MUST send no `log=1` on any request (1260-FR-010: the API writes a search-log row for `log=1` only) and MUST NOT mark a sort change; a new search that starts with filters on (a brand or place change, the opening of a link) is logged as today, with the filters on the request and not in the log.
+
+_From 1398-open-now-results-filters._
+
+### 1398-FR-010 — On the interactive map and on the static-first view (1196-FR-012) a pin or mobile-mechanic circle whose `matches` is false MUST be drawn at 40 % opacity (dot, rate label and circle alike), stay on the map, stay tappable and lit as today when pointed or selected; a cluster counts every garage in it; with no filter every pin is drawn as today.
+
+_From 1398-open-now-results-filters._
+
+### 1398-FR-011 — When at least one filter is on, the answer's `total` is 0 and the pins did not answer with 0 pins (the search found something, or the pins have not answered), the list area MUST show the state "Niciun service nu are tot ce ai ales" / "No garage has everything you chose" with one button "Scoate filtrele" / "Remove filters", which turns every filter off in one bar write (no `log=1`); with no filter on, or when the pins answered with 0 pins, the empty state of today ("Niciun service în {km} km", widen and place actions) is unchanged. The map keeps every found pin, dimmed.
+
+_From 1398-open-now-results-filters._
+
+### 1398-FR-014 — Every new text MUST exist in Romanian and English in the shared public i18n file; the controls MUST hold at 320 px, 390 px, tablet and desktop, in light and dark, Romanian and English, with no sideways page scroll at 320 px (1358-FR-011) and the kit's 44 px targets and 12 px minimum text; the panel, the switches and the chips MUST pass the QA sweep's axe checks.
+
+_From 1398-open-now-results-filters._
+
+### 1398-FR-015 — Tests before code (Principle II). Web unit tests (Jest, colocated) MUST cover: the bar read for each value (`1`, other, empty, repeated) and the bar write for each toggle and for "Scoate filtrele"; the parameters on the list, page and pins requests, none on the `ids=` reads, and no `log=1` on a toggle; the filters kept across a brand change and a filter change keeping the box; the loading state on a toggle; the summary with and without filters and without a pins answer; the filtered empty state against the unfiltered one; the chips' order, names and removal; the button's count; the pins' opacity by `matches` on both map views; the warm (once per search, both requests, not with a filter, a box or kept results, the guards, the four outcomes). Playwright end to end (`apps/web-e2e`, `@seeded @database`) MUST, with the browser clock fixed on a Tuesday at 10:15 Europe/Bucharest and garages seeded so the API's verdict does not depend on the run's instant (one open every day of the week with Saturday hours, one without hours, near a place of its own), turn "Deschis acum" on and check the summary's matching total and the dimmed pin, change the brand and check the filters kept in the bar and the chips, open a place whose only garage has no hours and use "Scoate filtrele" on the empty state, and assert no request carried `log=1` after the toggle; on a legal holiday, when the calendar closes every garage, the flow asserts that verdict (the filtered empty state, every pin dimmed) in place of the open garage, never a skip.
+
+_From 1398-open-now-results-filters._
+
+### 1398-FR-016 — The story changes nothing on the API, in the contracts library or in the generated client (ST-1260 merged them); it adds no control for price, rating or card (ST-1261's web half plugs into the same panel and chip row later, with no placeholder or code for them here, Principle I) and touches nothing of ST-1395 or ST-409.
+
+_From 1398-open-now-results-filters._
+
 ## Retired
 
 - `043-FR-004` — superseded by `042-FR-012` (2026-10-07)
@@ -842,3 +887,7 @@ _From 1261-result-filters._
 - `269-FR-002` — superseded by `1261-FR-007` (2026-10-30)
 - `269-FR-019` — superseded by `1261-FR-008` (2026-10-30)
 - `328-FR-006` — superseded by `1261-FR-009` (2026-10-30)
+- `1355-FR-005` — superseded by `1398-FR-006` (2026-10-30)
+- `1355-FR-011` — superseded by `1398-FR-008` (2026-10-30)
+- `1358-FR-002` — superseded by `1398-FR-009` (2026-10-30)
+- `267-FR-022` — superseded by `1398-FR-012` (2026-10-30)
