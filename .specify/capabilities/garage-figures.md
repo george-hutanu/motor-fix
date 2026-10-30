@@ -1,9 +1,10 @@
 ---
 capability: garage-figures
-updated: 2026-10-11
+updated: 2026-10-30
 features:
   - 143-profile-views
   - 243-terms-privacy
+  - 144-profile-stats-weekly
 ---
 
 # Capability: garage-figures
@@ -56,9 +57,9 @@ _From 143-profile-views._
 
 _From 143-profile-views._
 
-### 143-FR-013 — The garage figures MUST offer a read of profile views for one garage over a span by day or by ISO week (Monday to Sunday, Europe/Bucharest): each bucket covers only the span's days, is labelled by its ISO week (`YYYY-Www`), and answers the sum of `profile_views` and the summed `profile_views_by_source` of its days, a day without a row counting 0. It is reachable only through the garage figures (the garage's owner and receptionist; a mechanic gets 404, as the figures give today); the admin performance views are a later story; the raw counters are never readable.
+### 144-FR-006 — The garage MUST be the signed-in membership's; the path `garageId` is only compared with it, and any other id answers 404 `not_found` as an unknown id does. The owner and the receptionist (the `garage.requests` capability) are allowed; a mechanic of the garage is answered 403 whatever her permissions; a mechanic with no garage, a driver, an admin or a visitor get the shipped figures service's refusals (404 for the first three, 401 `sign_in_required` for a visitor). No assistant tool reads it.
 
-_From 143-profile-views._
+_From 144-profile-stats-weekly._
 
 ### 143-FR-014 — The beacon's endpoint and the night job MUST be observable: beacons accepted, dropped (bot, staff, no key) and lost (Redis), and the job's rows written and gaps, as metrics in the API and worker, listed in `infra/observability/inventory.json` with the panel and alert they feed.
 
@@ -79,3 +80,39 @@ _From 243-terms-privacy._
 ### 243-FR-015 — Monitoring traces sent to the monitoring provider MUST NOT carry the client's connection address or browser description (the span attributes `client.address`, `network.peer.address`, `user_agent.original`, their older names and the request-header forms of the address and browser description are dropped from span, event and link attributes before export, and the browser error reports carry no user-agent string), so the profile-view section's statement that the address and browser description are used only for the daily key holds; a test MUST pin it.
 
 _From 243-terms-privacy._
+
+### 144-FR-001 — The API MUST offer `GET /api/v1/garages/{garageId}/figures/weekly` answering 200 with `{ weeks: [...] }`: exactly eight entries, oldest first, one per complete ISO week (Monday 00:00 to Sunday 24:00 Europe/Bucharest) ending before the current Bucharest day; the week holding today is never among them, whatever the time of day.
+
+_From 144-profile-stats-weekly._
+
+### 144-FR-002 — Each entry MUST carry the week's ISO key (`"2026-W40"`, the year of the week's Thursday), its first day and its last day as calendar days (`"2026-09-28"`, `"2026-10-04"`), `views`, `requests` and `conversion`.
+
+_From 144-profile-stats-weekly._
+
+### 144-FR-003 — `views` MUST be the sum of GARAGE_DAILY_FIGURES `profile_views` over the week's seven days (a day without a row counting 0) and `requests` the number of this garage's REQUEST_RECIPIENT rows whose `created_at` falls in the week on the Bucharest clock, counted live at read time, whatever their status now; the clock-change weeks of March and October are seven Bucharest days long like any other.
+
+_From 144-profile-stats-weekly._
+
+### 144-FR-004 — `conversion` MUST be `requests ÷ views × 100` rounded half up to one decimal, capped at 100, and null when `views` is 0; the rounding is exact on the decimal digit (6.25 → 6.3), not subject to binary floating-point error.
+
+_From 144-profile-stats-weekly._
+
+### 144-FR-005 — A week wholly before the week that holds the garage's approval date (`approvedAt`, its day taken on the Bucharest clock) MUST answer `views`, `requests` and `conversion` as null (the screen half draws no bar); the approval week and every later week carry numbers, the approval week whole. A garage never approved answers eight null weeks.
+
+_From 144-profile-stats-weekly._
+
+### 144-FR-007 — The answer's shape MUST be a DTO in the contracts library, the route documented in the OpenAPI document (`apps/api/openapi.json`) with its 200, 400 (`validation_failed`, a `garageId` that is not a UUID), 401, 403 and 404 answers (as the schedule route documents its own), and the `data-access` client regenerated from it, so the second half consumes a typed call.
+
+_From 144-profile-stats-weekly._
+
+### 144-FR-009 — The read MUST write nothing: no GARAGE_DAILY_FIGURES column, no audit entry, no outbox event, no notification, no live update and no new night-job work.
+
+_From 144-profile-stats-weekly._
+
+### 144-FR-010 — Jest tests MUST cover: the ISO-week bucketing in Europe/Bucharest with the Sunday 23:50 and Monday 00:05 edges and a clock-change week (unit); the conversion rounding (29 ÷ 472 = 6.1), zero views (null) and the 100 cap (unit); a request to several garages counting once per garage, the weeks before approval null and the never-approved garage (integration); the route's answers for the owner, the receptionist, the garage's mechanic (403) and another garage's owner (404) (integration); and the OpenAPI document carrying the operation.
+
+_From 144-profile-stats-weekly._
+
+## Retired
+
+- `143-FR-013` — superseded by `144-FR-006` (2026-10-30)
