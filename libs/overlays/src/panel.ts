@@ -334,7 +334,8 @@ export class OverlayPanel {
   protected readonly task = signal<Type<unknown> | null>(null);
   protected readonly failed = signal(false);
   protected changed = false;
-  private held = false;
+  // Held by the task, such as during a save: nothing closes it but its close.
+  declare private held?: boolean;
   private focusedBeforeAsking: HTMLElement | null = null;
   // How far the grip is pulled down, and where the pull started.
   protected readonly drag = signal<string | null>(null);
@@ -347,7 +348,7 @@ export class OverlayPanel {
   private readonly taskApi: OverlayTask<unknown, unknown> = {
     close: (result) => this.close(result),
     data: this.context.data,
-    dismiss: () => this.leave(),
+    dismiss: () => this.dismiss(true),
     // A focus still on the panel, or left outside it by a dialog asked over
     // it, moves; one inside the task stays where the person put it.
     focusStart: () =>
@@ -413,11 +414,9 @@ export class OverlayPanel {
         this.dialog.close(this.leaving.result);
         return;
       }
-      if (!this.asking()) this.dismiss();
       // Asking or staying instead of closing: the entry comes back, so Back
       // asks again.
-      if (this.asking() || this.context.dismissible === false || this.held)
-        mark();
+      if (this.asking() || this.dismiss()) mark();
     };
     // A page nobody has touched yet: Chrome skips an entry pushed now when
     // Back is pressed, so the entry waits for the first touch or key.
@@ -555,23 +554,20 @@ export class OverlayPanel {
     });
   }
 
-  // X, Escape, a click outside and a drag down: ask first when a field changed.
-  protected dismiss() {
-    if (this.context.dismissible === false) return;
-    this.leave();
-  }
-
-  // Closes, asking first when a field changed; nothing while held.
-  private leave() {
-    if (this.held) return;
+  // X, Escape, a click outside, a drag down and Back, or the task's own
+  // dismiss (own: it closes a task opened not dismissible too): ask first
+  // when a field changed; nothing while held. True while the task stays.
+  protected dismiss(own?: boolean): boolean {
+    if (this.held || (!own && this.context.dismissible === false)) return true;
     if (!this.changed || this.context.confirmDiscard === false) {
       this.close();
-      return;
+      return false;
     }
     const active = this.window?.document.activeElement;
     this.focusedBeforeAsking = active instanceof HTMLElement ? active : null;
     this.asking.set(true);
     this.afterRender(() => this.keepButton()?.nativeElement.focus());
+    return true;
   }
 
   protected keep() {
