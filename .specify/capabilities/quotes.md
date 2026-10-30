@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-26
+updated: 2026-10-30
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -28,6 +28,7 @@ features:
   - 1253-assistant-confirm
   - 1385-cancel-from-requests
   - 099-overview-sections
+  - 346-quote-outcomes
 ---
 
 # Capability: Quotes
@@ -75,10 +76,6 @@ _From 221-quote-request._
 ### 220-FR-011 — Every status change through the transition service MUST, in the caller's transaction, write one audit entry through the existing audit writer (390-FR-001: action `update`, subject type the entity's singular lowercase key (`quote_request`, `request_recipient`, `quote`, `booking`, `job`), subject id, field `status`, old and new value, the actor and role the caller gives, `garage_id`, `car_id` and `job_id` when known) and one outbox event through the existing event port (the kind the caller names from the contracts' event kinds, the subject id, and the audience: the driver's account and the garage, or the garages, concerned). When either write fails, the status change MUST roll back with it. This story emits no event of its own and notifies nobody; it gives later stories the transition service that writes both.
 
 _From 220-requests-quotes-bookings._
-
-### 389-FR-009 — The garage's Oferte trimise list and detail reads (222-FR-005 lineage) MUST also return rows whose booking is `confirmed` while `starts_at` + `duration_minutes` is ahead (the job board owns the booking afterwards), each carrying the booking's `status`, `startsAt`, `mechanic` (id and name; the owner's row with `team_mechanics` off) and `lift`, and for the owner and a receptionist the driver's phone and, from confirmation only, the car's plate (347-FR-005 unchanged); the dialog's data (driver short name, car, jobs, slot, duration, `confirmBy`) MUST come from the row the garage already holds, with no extra read.
-
-_From 389-confirm-booking-lift-mechanic._
 
 ### 344-FR-007 — `GET /api/v1/garage/requests/:id` MUST gain, per job, the garage's pre-fill (`price`: `fromBani`, `toBani` (nullable), `durationMinutes` (nullable), in bani like the price list's own reads, or null when the garage has no row for the job): the GARAGE_PRICE row for the job and the car's brand where one exists, else the job's default row (no brand), else null; a row not `visible` counts the same as a visible one. The shape is unchanged otherwise; the read's policy (343-FR-005) is unchanged.
 
@@ -240,9 +237,9 @@ _From 344-send-quote._
 
 _From 344-send-quote._
 
-### 344-FR-008 — `GET /api/v1/garage/requests` MUST accept a third `status` value, `quoted`: the garage's recipients `quoted` whose quote is `waiting`, newest quote first (`sent_at` descending, equal times by id), with the existing shape, paging and `total` (343-FR-002); each row MUST carry its quote summary (`quote`: the shipped quote summary, id, `fromBani`, `toBani`, `durationMinutes`, `slot`, `sentAt`, `expiresAt`, status); a `waiting` row carries null `quote`, and a `closed` row keeps the quote it had, as shipped (343). A value outside the three answers 400 `validation_failed` naming `status`.
+### 346-FR-002 — `GET /api/v1/garage/requests?status=quoted` (344-FR-008, 389-FR-009) MUST answer every QUOTE of the garage (recipient `quoted`, no status or time filter), newest `sent_at` first (ties by request id as today), 20 at a time with the shipped cursor and `total` counting all of them; each row the shipped `GarageRequestSummaryDto` plus `outcome` (FR-001) and, as today, its `quote` (with `sentAt`, `expiresAt`, `withdrawnAt`, status as `shownStatus` gives it) and its `booking` (status, `startsAt`, `confirmBy`, mechanic, lift) when the quote has one. The driver's phone MUST ride the row for the owner and a receptionist only while the quote's booking is `awaiting_confirmation` or `confirmed`, never for a mechanic and never on an ending; the plate from confirmation only, as today (347-FR-005, 389-FR-009). Readers, 403 for a mechanic without `can_answer_quotes` and 404 outside the garage are 343-FR-002 unchanged; the `waiting` and `closed` reads, the counters, Panou's section and the prefetch are unchanged. `outcome` is set on the `quoted` read only: on the `waiting` and `closed` reads and on the single-request read it is `null` (an additive nullable field, so a client generated before it and a cached response keep working, and the web shows no tag for `null`). The DTO comes from the contracts library, `apps/api/openapi.json` carries `outcome` and `libs/data-access` is regenerated (`npx nx run data-access:generate`), never edited by hand.
 
-_From 344-send-quote._
+_From 346-quote-outcomes._
 
 ### 344-FR-009 — Each waiting row on Panou and in the Cereri de ofertă view MUST show a primary button "Trimite oferta" / "Send a quote" in its actions column for the owner, the receptionist and a mechanic with `can_answer_quotes` (the session's `garageAccess` permissions, 343-FR-015), absent for every other reader; it opens the send dialog in the shared overlay (`dialog` shape from 768 px, the bottom sheet under it; 157, 158, 491) for that request.
 
@@ -264,13 +261,13 @@ _From 344-send-quote._
 
 _From 344-send-quote._
 
-### 344-FR-014 — The Cereri de ofertă view MUST gain, under the waiting panel, a panel "Oferte trimise" / "Quotes sent" listing the `quoted` rows of FR-008 newest first, 20 at a time with the same infinite scroll, each row showing the driver's short name, the car ("<brand> <model> · <year>"), the included jobs' names, the range "650–800 lei", the slot in Europe/Bucharest in the person's language ("mâine, 09:00" / "tomorrow, 09:00" when the Bucharest date is the next day, "azi, 16:00" / "today, 16:00" the same day, else "joi, 15 oct., 14:00" / "Thu, 15 Oct, 14:00") and the status line "Așteaptă răspunsul clientului" / "Waiting for the customer"; with no row it shows "Nicio ofertă trimisă încă." / "No quotes sent yet."; while loading, three skeleton rows. The panel is present for the same readers as the waiting panel (343-FR-006) and has no row action in this story (changing and withdrawing come with their story); it shows the waiting state only, the outcomes being ST-346's.
+### 346-FR-003 — Each Oferte trimise row (344-FR-014, 222-FR-008, 389-FR-014, 314-FR-015) MUST show the driver's short name, the car, the included jobs, the range in lei with a dot for thousands ("760 – 1.100 lei"), "trimisă acum 5 min" / "sent 5 min ago" from `sentAt` in the shipped age wording, and the outcome as a tag with a lamp, one text per `outcome` in Romanian and English: `waiting` "Așteaptă răspunsul clientului" / "Waiting for the customer" plus "expiră în 7 zile" / "expires in 7 days" from `expiresAt` ("expiră în N h" / "expires in N h" under a day, "expiră în N min" / "expires in N min" under an hour, "expiră în câteva momente" / "expires in moments" under a minute or past), amber; `accepted` "Acceptată · confirmă până la 14:30" / "Accepted · confirm by 14:30" (the `confirmBy` time in Europe/Bucharest, with "mâine, " / "tomorrow, " when it falls on the next Bucharest day), amber, with the Confirmă programarea button for the owner and a receptionist opening the shipped confirmation (389-FR-014) and the phone as a `tel:` link when the row carries it; `booked` "Acceptată · programată azi, 12:30" / "Accepted · booked today, 12:30" (the shipped slot wording), green, with the mechanic, the lift, the plate and, only while the booking is `confirmed` (never once `completed`, FR-002), the phone; `lapsed` "Neconfirmată la timp" / "Not confirmed in time"; `chose_other` "A ales alt service" / "Chose another garage"; `expired` "Expirată" / "Expired"; `withdrawn` "Retrasă" / "Withdrawn"; `withdrawn_suspended` "Retrasă · service suspendat" / "Withdrawn · garage suspended"; `request_cancelled` "Cerere anulată de client" / "Request cancelled by the customer"; `booking_cancelled` "Programare anulată" / "Booking cancelled"; `account_closed` "Contul clientului a fost închis" / "The customer's account was closed"; `declined` "Refuzată de client" / "Declined by the customer"; `no_show` "Clientul nu s-a prezentat" / "The customer did not show up"; every outcome from `lapsed` on grey (`--mf-text-secondary`, the shipped declined style), with no button and no phone. The row keeps the mock's tag and lamp style; the tag is the only place the outcome is read from. The outcome is carried by the tag's text, never by colour alone: the lamp is decorative (`aria-hidden`), and a row whose outcome changes live is announced through the feed's polite live region with the new tag text (256-FR-009).
 
-_From 344-send-quote._
+_From 346-quote-outcomes._
 
-### 344-FR-015 — The waiting panel, the view's counters and the Oferte trimise panel MUST re-read on `quote.sent` through the existing live helper (343-FR-009 already names the kind); a sent quote MUST leave the waiting list and appear under Oferte trimise within 5 seconds of the commit on every staff screen of the garage, without a reload, the first visible row kept in place (256-FR-008) and the changed row highlighted (256-FR-009). `quote.sent` on `account:{driverId}` MUST re-read the driver's request views through the same helper, so the driver's request read shows the quote within 5 seconds; the driver's comparison screen itself is its own story.
+### 346-FR-004 — The garage requests feed MUST re-read its lists also on `quote.closed`, `quote.expired`, `quote.changed`, `quote.withdrawn`, `booking.cancelled`, `booking.no_show_recorded` and `garage.suspended` (beside the shipped `request.created`, `quote.sent`, `request.declined`, `request.decline_undone`, `request.cancelled`, `request.expired`, `quote.accepted`, `quote.declined_by_driver`, `booking.confirmed`, `booking.lapsed`), so a row's outcome changes within 5 seconds of the commit on every open staff screen of the garage, without a reload, the first visible row kept in place and the changed row highlighted and announced (256-FR-005, 256-FR-008, 256-FR-009, 256-FR-010). The view's "Reconectare…" line (the requests panel's, shown while the stream reconnects or polls) and the re-read on reopen (255-FR-004) are unchanged; the quotes-sent panel adds no banner of its own.
 
-_From 344-send-quote._
+_From 346-quote-outcomes._
 
 ### 344-FR-019 — Tests MUST cover, before the code (Principle II): in Jest on real PostgreSQL — every FR-001 rule (both prices, low ≤ high, the price bounds, the duration range and grid, the future slot, the note length, the required key) as 400 naming the field; 201 for the owner, the receptionist and the permitted mechanic; 403 for the unpermitted mechanic; 404 for another garage's owner and a request not sent to the garage; the QUOTE, QUOTE_JOB (included flags following the brand's ticks; none for a request with no jobs), recipient and request moves with `answered_at`, `sent_at` and `expires_at`; `quote.sent` and the audit entry in the same transaction and nothing written on a failure; 409 on a second quote, on a declined recipient, on a cancelled, expired and booked request and for a suspended garage; two concurrent sends ending with one quote; the same key answering the first answer; the pre-fill with a brand row, with only a default row, with an open-ended row and with none; the `quoted` filter and its quote summary; the consumer building one QUOTE_RECEIVED for the driver, honouring the mute, the no-device fallback and building once per event; the single templates in both languages. In Jest, web — the button's presence per permission, the dialog's title line and left-out jobs, the pre-fill sums, every FR-012 rule and the wide-range warning, the 15-minute pickers refusing the past, the sending, 201, 409, 400, error and offline states, the Oferte trimise row format and slot wording in both languages and its empty and loading states. End to end (Playwright): the seeded owner sends 650–800 lei, 2 h, tomorrow 09:00 on a waiting request; the row moves to Oferte trimise within 5 seconds; signed in as the driver, the request shows the quote.
 
@@ -433,10 +430,6 @@ _From 222-booking-from-quote._
 _From 389-confirm-booking-lift-mechanic._
 
 ### 222-FR-007 — The driver's Cererile mele row of a `booked` request whose booking is `awaiting_confirmation` MUST show, under the existing status label Programată / Booked, the line "Așteaptă confirmarea service‑ului · încă N h" / "Waiting for the garage · N h left", N the whole hours left until `confirmBy` (rounded down), "încă N min" / "N min left" under one hour, "încă câteva secunde" / "moments left" under one minute or past; the line re-renders at least every minute while shown and shows for no other booking status.
-
-_From 222-booking-from-quote._
-
-### 222-FR-008 — The garage's Oferte trimise row of an accepted quote (FR-005) MUST read "Acceptată · așteaptă confirmarea ta" / "Accepted · waiting for your confirmation" in place of "În așteptare", followed by the time left in FR-007's wording ("încă N h" / "N h left"), and, when the row carries it, the driver's phone as a `tel:` link; the row keeps the request's name, car, jobs, range and slot, and its lamp takes a distinct accepted colour. The request drawer opened from the row MUST show the phone as it does today.
 
 _From 222-booking-from-quote._
 
@@ -656,10 +649,6 @@ _From 314-accept-quote._
 
 _From 314-accept-quote._
 
-### 314-FR-015 — The garage's Oferte trimise MUST show a declined quote as "Refuzată de client", live, until the quote's own expiry moment, like its other closed quotes.
-
-_From 314-accept-quote._
-
 ### 314-FR-016 — The accept call's refusals MUST be worded in the caller's language (Romanian and English).
 
 _From 314-accept-quote._
@@ -848,6 +837,26 @@ _From 1385-cancel-from-requests._
 
 _From 1385-cancel-from-requests._
 
+### 346-FR-001 — The quotes domain MUST hold one pure function (`libs/domain/src/quotes/`) mapping a garage's QUOTE (status, `expires_at`), its own BOOKING when it has one (status), its QUOTE_REQUEST (`closed_reason`) and the garage's status to one outcome, the typed set `QuoteOutcome` in the contracts library: `waiting` (quote `waiting`, garage not `suspended`; including a waiting quote held past `expires_at` while its request is `booked`, R3, and a quote whose request another garage's acceptance moved to `booked` but whose booking is not confirmed, Q01), `withdrawn_suspended` (quote `waiting`, garage `suspended`, the `shownStatus` rule), `accepted` (quote `accepted`, booking `awaiting_confirmation`), `booked` (quote `accepted`, booking `confirmed` or `completed`), `no_show` (quote `accepted`, booking `no_show`), `lapsed` (quote `expired`, own booking `lapsed`), `expired` (quote `expired`, no own booking or one not `lapsed`), `withdrawn` (quote `withdrawn`), `declined` (quote `declined_by_driver`), and for a `lost` quote, in this order: `account_closed` (request `closed_reason` `account_closed`), `booking_cancelled` (own booking `cancelled`), `request_cancelled` (request `closed_reason` `cancelled`), else `chose_other`. The function is exhaustive over the quote and booking statuses (a status without a mapping fails to compile or fails its test); nothing is written. Every row of FR-002 carries `outcome` computed by it; the web never derives an outcome from the statuses.
+
+_From 346-quote-outcomes._
+
+### 346-FR-005 — The Cereri de ofertă view MUST show, under its title, "Răspunde în mai puțin de o oră ca să apari primul la șofer." / "Answer within an hour to appear first to the driver." in the body size and the secondary colour; the Oferte trimise empty state MUST read "Nu ai trimis încă nicio ofertă." / "You have not sent any quote yet." (replacing 344-FR-014's text); the loading state keeps its three skeleton rows and its `role="status"` text.
+
+_From 346-quote-outcomes._
+
+### 346-FR-006 — On `/app/garage/requests` every margin, padding and gap MUST be a multiple of 4 px, written as a `--mf-space-*` token (the two panels' padding `--mf-space-6` on the sides and `--mf-space-5` top and bottom from 768 px, `--mf-space-4` on the sides under it; the row's `8px` gap becomes `--mf-space-2`), and every font size MUST come from the `--mf-size-*` tokens of the Cockpit scale (050-FR-005): no literal `font-size` remains in the stylesheets of `apps/web/src/app/dashboard/garage-requests/` that the route renders; the PR QA sweep's grid and type-scale checks MUST report no finding for the route at 320 px, 390 px, tablet and desktop, light and dark. A 1 px line, a 44 px touch floor and the 8 px lamp are sizes, not spacing, and stay.
+
+_From 346-quote-outcomes._
+
+### 346-FR-007 — Observability: this story adds no endpoint, service, queue, outside call or metric; the list route is already in `infra/observability/inventory.json` and the outcome is computed in the same read. The PR's Observability section says so, and `node scripts/observability-inventory.ts` MUST pass unchanged.
+
+_From 346-quote-outcomes._
+
+### 346-FR-008 — Tests MUST exist before the code (Principle II). In Jest, domain (pure): the outcome mapping for every combination of FR-001, including R3 (waiting held past expiry on a booked request), Q01 (another garage accepted, not confirmed), the lapsed booking, the own cancelled booking with the request `quoted` and with it closed `booking_cancelled`, the request cancelled with a waiting and with an accepted quote, the account closed with and without an own booking, the suspended garage's waiting, accepted and booked quotes, `completed` and `no_show`, and an exhaustiveness check over the quote and booking statuses. In Jest on real PostgreSQL, API: the `quoted` read answering every quote of the garage in every state, newest first, with `outcome` and `total`, 20 then the rest by cursor; the phone present for the owner and a receptionist on `accepted` and `booked` rows only, absent for a mechanic and on every ending; the plate from confirmation only; 403 for a mechanic without the permission and 404 for another garage's owner; `openapi.json` carrying `outcome`. In Jest, web: each outcome's tag text and lamp class in both languages, the sent-age and expiry wording at 7 days, under a day, under an hour and past, the confirm button and phone per role and outcome, the feed re-reading on each kind of FR-004, the subtitle, the empty and loading states, and the route's stylesheets holding no spacing off the grid and no literal font size. End to end (Playwright), one test: the seeded owner sends a quote; the seeded driver accepts it through the API from the browser session; the owner's row changes to "Acceptată · confirmă până la …" within 5 seconds without a reload; the owner confirms it from the row and sees "programată". Every test file carries its `// @traces 346-FR-<n>` line.
+
+_From 346-quote-outcomes._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -882,3 +891,9 @@ _From 1385-cancel-from-requests._
 - `058-FR-012` — superseded by `150-FR-004` (2026-10-26)
 - `345-FR-017` — superseded by `1253-FR-008` (2026-10-26)
 - `343-FR-006` — superseded by `099-FR-014` (2026-10-26)
+- `344-FR-008` — superseded by `346-FR-002` (2026-10-30)
+- `389-FR-009` — superseded by `346-FR-002` (2026-10-30)
+- `344-FR-014` — superseded by `346-FR-003` (2026-10-30)
+- `222-FR-008` — superseded by `346-FR-003` (2026-10-30)
+- `314-FR-015` — superseded by `346-FR-003` (2026-10-30)
+- `344-FR-015` — superseded by `346-FR-004` (2026-10-30)

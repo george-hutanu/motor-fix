@@ -48,6 +48,7 @@ const item: Inbox['items'][number] = {
       position: 1,
     },
   ],
+  outcome: null,
   quote: null,
   recipient: {
     answeredAt: null,
