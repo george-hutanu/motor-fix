@@ -4914,6 +4914,16 @@ describe('Results filters', () => {
       );
     });
 
+    it('keeps the line when nothing has every filter chosen', async () => {
+      pinsAnswer = pinsOf(3);
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1`,
+        pageOf({ counts: { doesNotTake: 0, worksOn: 0 }, items: [], total: 0 }),
+      );
+
+      expect(tally()).toMatch(/^3 service‑uri găsite · 0 cu filtrele alese · /);
+    });
+
     it('reads as today with no filter on', async () => {
       await shown();
       expect(tally()).toBe(

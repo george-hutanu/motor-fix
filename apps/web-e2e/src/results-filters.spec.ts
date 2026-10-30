@@ -84,6 +84,13 @@ test.describe('filtering the Results page @seeded @database', () => {
     }
   });
 
+  // The browser's clock stands on a Tuesday at 10:15 in Bucharest (UTC+2 in
+  // late October), so nothing the page draws from its own clock moves with
+  // the run's instant; the verdict stays the API's, which the seed holds.
+  test.beforeEach(async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-27T08:15:00Z'));
+  });
+
   test.afterAll(async () => {
     await db.query('DELETE FROM garage WHERE id = ANY($1)', [ids]);
     await deleteBrand(db, brandId);
