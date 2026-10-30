@@ -1671,7 +1671,7 @@ describe("a removed card's blocked time", () => {
     ).toEqual([{ timeBlockId: past.id }]);
     const audit = await prisma.activityLog.findMany({
       orderBy: { at: 'asc' },
-      where: { subjectType: 'time_block' },
+      where: { garageId: dinamo.id, subjectType: 'time_block' },
     });
     expect(audit.map((entry) => entry.subjectId).sort()).toEqual(
       [first.id, second.id].sort(),
@@ -1709,7 +1709,9 @@ describe("a removed card's blocked time", () => {
       ),
     ).toEqual([kept.id]);
     expect(
-      await prisma.activityLog.count({ where: { subjectType: 'time_block' } }),
+      await prisma.activityLog.count({
+        where: { garageId: dinamo.id, subjectType: 'time_block' },
+      }),
     ).toBe(0);
     expect(await outbox('time_block.deleted')).toEqual([]);
   });
