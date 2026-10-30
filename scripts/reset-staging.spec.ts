@@ -93,9 +93,9 @@ describe('reset-staging workflow', () => {
 });
 
 describe('api image', () => {
-  it('carries the seed next to the migrations, and only in the api', () => {
+  it('carries the seed and the demo data next to the migrations, and only in the api', () => {
     expect(dockerfile).toMatch(
-      /if \[ "\$\{APP\}" = api \]; then[\s\S]*libs\/domain\/src\/seed\.ts dist\/apps\/api\/src\//,
+      /if \[ "\$\{APP\}" = api \]; then[\s\S]*libs\/domain\/src\/seed\.ts libs\/domain\/src\/demo-data\.ts dist\/apps\/api\/src\//,
     );
   });
 
@@ -110,16 +110,22 @@ describe('api image', () => {
 });
 
 describe('reset-staging.sh', () => {
-  // A fake npx records what would have run, so nothing touches a database.
-  function run(env: Record<string, string>, exit = 0) {
+  // A fake npx and node record what would have run, so nothing touches a
+  // database; node exits with `nodeExit`.
+  function run(env: Record<string, string>, exit = 0, nodeExit = 0) {
     const dir = mkdtempSync(join(tmpdir(), 'reset-staging-'));
     const log = join(dir, 'npx.log');
-    const npx = join(dir, 'npx');
-    writeFileSync(
-      npx,
-      `#!/bin/sh\necho "$(pwd) $* SEED_PASSWORD=\${SEED_PASSWORD:+set}" >> "${log}"\nexit ${exit}\n`,
-    );
-    chmodSync(npx, 0o755);
+    for (const [name, prefix, code] of [
+      ['npx', '', exit],
+      ['node', 'node ', nodeExit],
+    ] as const) {
+      const fake = join(dir, name);
+      writeFileSync(
+        fake,
+        `#!/bin/sh\necho "$(pwd) ${prefix}$* SEED_PASSWORD=\${SEED_PASSWORD:+set}" >> "${log}"\nexit ${code}\n`,
+      );
+      chmodSync(fake, 0o755);
+    }
     const result = spawnSync('sh', ['-s'], {
       encoding: 'utf8',
       env: { APP_DIR: dir, PATH: `${dir}:/usr/bin:/bin`, ...env },
@@ -138,13 +144,14 @@ describe('reset-staging.sh', () => {
     SEED_PASSWORD: 'not-a-real-password',
   };
 
-  it('empties and migrates, then seeds, in the app directory', () => {
+  it('empties and migrates, seeds, then loads the demo data, in the app directory', () => {
     const { calls, dir, result } = run(staging);
 
     expect(result.status).toBe(0);
     expect(calls).toEqual([
       `${dir} prisma migrate reset --force SEED_PASSWORD=set`,
       `${dir} prisma db seed SEED_PASSWORD=set`,
+      `${dir} node src/demo-data.ts SEED_PASSWORD=set`,
     ]);
     expect(result.stdout + result.stderr).not.toContain('not-a-real-password');
   });
@@ -165,6 +172,17 @@ describe('reset-staging.sh', () => {
 
   // The release seeds staging after each deploy, so a seed account added
   // since the last reset exists before the end-to-end run signs in as it.
+  it('names the demo data and exits non-zero when it fails', () => {
+    const { calls, result } = run(staging, 0, 4);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(
+      'staging demo data failed: node src/demo-data.ts',
+    );
+    expect(calls).toHaveLength(3);
+  });
+
+  // A deploy's seed leaves the demo data from the last reset as it is.
   it('with SEED_ONLY=1, only seeds: nothing is emptied', () => {
     const { calls, dir, result } = run({ ...staging, SEED_ONLY: '1' });
 
