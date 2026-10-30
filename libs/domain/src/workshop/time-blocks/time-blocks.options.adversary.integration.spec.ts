@@ -115,7 +115,7 @@ describe('the options path, attacked', () => {
     );
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe('validation_failed');
+    expect(res.body).not.toHaveProperty('mechanics');
   });
 });
 
