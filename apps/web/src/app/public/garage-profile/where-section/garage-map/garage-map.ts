@@ -24,6 +24,7 @@ import {
   keepOutOfTabOrder,
   type MapStart,
   openMapLibre,
+  ring,
   styleFor,
 } from '../../../map-libre/map-libre';
 import {
@@ -44,21 +45,49 @@ type OpenGarageMap = (
   pin: HTMLElement,
   at: LatLng,
   start: MapStart,
+  km?: number,
 ) => Promise<{ destroy(): void }>;
 
 // Opens the garage's map in the browser at the static map's view, with one
-// marker at the garage's own point; MapLibre is fetched only once the driver
-// asks.
+// marker at the garage's own point, or with `km` the area round it as the
+// Results map rings one, in the text colour; MapLibre is fetched only once
+// the driver asks.
 export const GARAGE_MAP = new InjectionToken<OpenGarageMap>('GARAGE_MAP', {
   factory: () => {
     const document = inject(DOCUMENT);
-    return async (host, pin, at, start) => {
+    return async (host, pin, at, start, km) => {
       const stop = keepOutOfTabOrder(host);
       let map: Awaited<ReturnType<typeof openMapLibre>> | undefined;
       try {
         map = await openMapLibre(host, styleFor(document), undefined, start);
-        const { Marker } = await import('maplibre-gl');
-        new Marker({ element: pin }).setLngLat([at.lng, at.lat]).addTo(map);
+        if (km === undefined) {
+          const { Marker } = await import('maplibre-gl');
+          new Marker({ element: pin }).setLngLat([at.lng, at.lat]).addTo(map);
+        } else {
+          const ink = getComputedStyle(host)
+            .getPropertyValue('--mf-text')
+            .trim();
+          map.addSource('area', {
+            data: {
+              geometry: { coordinates: [ring(at, km)], type: 'Polygon' },
+              properties: {},
+              type: 'Feature',
+            },
+            type: 'geojson',
+          });
+          map.addLayer({
+            id: 'areas-fill',
+            paint: { 'fill-color': ink, 'fill-opacity': 0.12 },
+            source: 'area',
+            type: 'fill',
+          });
+          map.addLayer({
+            id: 'areas-line',
+            paint: { 'line-color': ink, 'line-width': 1.5 },
+            source: 'area',
+            type: 'line',
+          });
+        }
         const opened = map;
         return {
           destroy: () => {
@@ -174,6 +203,7 @@ export class GarageMap {
         this.pin().nativeElement,
         this.point(),
         { center: [still.center.lng, still.center.lat], zoom: still.zoom },
+        this.km(),
       );
     } catch {
       return this.leave();

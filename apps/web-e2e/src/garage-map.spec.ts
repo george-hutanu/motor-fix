@@ -190,3 +190,48 @@ test.describe('the garage on a small map, with directions', () => {
     ).toBeGreaterThanOrEqual(44);
   });
 });
+
+const MOBILE = '/ro/garages/mecanic-mobil-cluj';
+
+// The seeded mobile mechanic's area, round its centre in Cluj.
+// @traces 1383-FR-010
+test.describe('a mobile mechanic’s area on a small map', () => {
+  test.beforeEach(async ({ page }) => {
+    await ownMap(page);
+  });
+
+  test('draws one plain circle in the strip, with no pin, no address and no directions, and no MapLibre until asked', async ({
+    page,
+  }) => {
+    const statics: string[] = [];
+    const libre: string[] = [];
+    page.on('request', (request) => {
+      const url = request.url();
+      if (url.includes('/api/v1/maps/static')) statics.push(url);
+      if (/maplibre-gl/i.test(url)) libre.push(url);
+    });
+    await hydrated(page, MOBILE);
+
+    await expect(still(page).locator('img')).toBeVisible();
+    await expect(still(page).locator('.overlay .area')).toHaveCount(1);
+    await expect(still(page).locator('.overlay .here')).toHaveCount(0);
+    await expect(still(page).locator('.overlay .pin')).toHaveCount(0);
+    await expect(directions(page)).toHaveCount(0);
+    await expect(where(page).locator('.address')).toHaveCount(0);
+    expect(statics).toHaveLength(1);
+    expect(libre).toHaveLength(0);
+  });
+
+  test('keeps the whole circle inside the box at 320 px, with no sideways scroll', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 800, width: 320 });
+    await hydrated(page, MOBILE);
+    await expect(still(page).locator('img')).toBeVisible();
+    const box = await map(page).boundingBox();
+    const circle = await still(page).locator('.overlay .area').boundingBox();
+
+    expect(within(box, circle)).toBe(true);
+    expect(await sideways(page)).toBeLessThanOrEqual(0);
+  });
+});

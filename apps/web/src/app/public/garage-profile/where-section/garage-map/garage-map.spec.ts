@@ -9,6 +9,7 @@ import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 
 import { GARAGE_MAP, GarageMap } from './garage-map';
+import { ring } from '../../../map-libre/map-libre';
 import type { MapFake } from '../../../place-step/place-step.testing';
 import { boundsOf, fitView, paddingOf } from '../../../static-map/fit-view';
 import { StaticMap } from '../../../static-map/static-map';
@@ -18,6 +19,7 @@ jest.mock('maplibre-gl', () =>
 );
 
 const POINT = { lat: 44.4352671, lng: 26.0123456 };
+const CENTRE = { lat: 46.9, lng: 23.68 };
 const BOX = { h: 200, w: 390 };
 let box = BOX;
 
@@ -30,6 +32,7 @@ const open = jest.fn(
     _pin: HTMLElement,
     _at: { lat: number; lng: number },
     _start: { center: [number, number]; zoom: number },
+    _km?: number,
   ) =>
     new Promise<{ destroy(): void }>((resolve, reject) => {
       opened = resolve;
@@ -136,8 +139,6 @@ describe('GarageMap, the static map of one garage', () => {
 // @traces 1383-FR-005
 // @traces 1383-FR-007
 describe('GarageMap, the area of a mobile mechanic', () => {
-  const CENTRE = { lat: 46.9, lng: 23.68 };
-
   const circle = () => {
     const area = element().querySelector<HTMLElement>('.overlay .area');
     return {
@@ -264,7 +265,39 @@ describe('GarageMap, the interactive map', () => {
       element().querySelector('.pin'),
       POINT,
       { center: [center.lng, center.lat], zoom },
+      undefined,
     );
+  });
+
+  // @traces 1383-FR-006
+  it('opens an area once, at its static view and with its radius', async () => {
+    await render({ km: 20, point: CENTRE });
+    const { center, zoom } = piece().view() as {
+      center: { lat: number; lng: number };
+      zoom: number;
+    };
+    tap();
+    tap();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledWith(
+      element().querySelector('.canvas'),
+      element().querySelector('.pin'),
+      CENTRE,
+      { center: [center.lng, center.lat], zoom },
+      20,
+    );
+  });
+
+  // @traces 1383-FR-006
+  it('says an area is gone once when its interactive map fails to load', async () => {
+    await render({ km: 20, point: CENTRE });
+    tap();
+    refused(new Error('style'));
+    await fixture.whenStable();
+    await Promise.resolve();
+
+    expect(gone).toHaveBeenCalledTimes(1);
   });
 
   it('opens it from a tap anywhere on the static map', async () => {
@@ -396,6 +429,60 @@ describe('GARAGE_MAP, the opener', () => {
     expect(at).toHaveBeenCalledWith([POINT.lng, POINT.lat]);
     map.destroy();
     expect(fake.map.remove).toHaveBeenCalled();
+    host.remove();
+  });
+
+  // @traces 1383-FR-006
+  // @traces 1383-FR-009
+  it('draws an area as the Results ring in the text colour, with no marker', async () => {
+    const host = document.createElement('div');
+    host.style.setProperty('--mf-text', 'rgb(20, 20, 20)');
+    document.body.append(host);
+    const { Map: Built, Marker } = jest.requireMock<{
+      Map: {
+        prototype: {
+          addLayer(layer: unknown): void;
+          addSource(id: string, source: unknown): void;
+        };
+      };
+      Marker: { prototype: { addTo(): unknown } };
+    }>('maplibre-gl');
+    const source = jest.spyOn(Built.prototype, 'addSource');
+    const layer = jest.spyOn(Built.prototype, 'addLayer');
+    const marker = jest.spyOn(Marker.prototype, 'addTo');
+
+    const map = await TestBed.inject(GARAGE_MAP)(
+      host,
+      document.createElement('div'),
+      CENTRE,
+      START,
+      20,
+    );
+
+    expect(source).toHaveBeenCalledWith('area', {
+      data: {
+        geometry: { coordinates: [ring(CENTRE, 20)], type: 'Polygon' },
+        properties: {},
+        type: 'Feature',
+      },
+      type: 'geojson',
+    });
+    expect(layer.mock.calls.map(([added]) => added)).toEqual([
+      {
+        id: 'areas-fill',
+        paint: { 'fill-color': 'rgb(20, 20, 20)', 'fill-opacity': 0.12 },
+        source: 'area',
+        type: 'fill',
+      },
+      {
+        id: 'areas-line',
+        paint: { 'line-color': 'rgb(20, 20, 20)', 'line-width': 1.5 },
+        source: 'area',
+        type: 'line',
+      },
+    ]);
+    expect(marker).not.toHaveBeenCalled();
+    map.destroy();
     host.remove();
   });
 
