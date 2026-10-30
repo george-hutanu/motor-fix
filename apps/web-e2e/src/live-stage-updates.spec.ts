@@ -214,21 +214,21 @@ test.describe('each stage change within seconds @seeded', () => {
         ).toBeVisible();
       });
 
-      // Done ranks after every request in work: the panel
-      // moves on to what the read now puts first.
+      // The test's driver has this one request: once finished, every page
+      // shows the stage the active read now gives, or no request at all.
       await job.call('finish');
-      await onEach(pages, (shown) =>
-        expect(stepOf(shown, job.text)).toBeHidden(SOON),
-      );
       const read = await request.get('/api/v1/quote-requests/active', {
         headers: bearer(await accessToken(request, job.driver)),
       });
+      expect(read.ok()).toBe(true);
       const { request: shown } = (await read.json()) as {
         request: { stage: keyof typeof STAGE } | null;
       };
-      if (shown) {
-        await expect(current(panel(overview))).toHaveText(STAGE[shown.stage]);
-      }
+      await onEach(pages, (where) =>
+        shown
+          ? expect(current(where)).toHaveText(STAGE[shown.stage], SOON)
+          : expect(stepOf(where, job.text)).toBeHidden(SOON),
+      );
 
       expect(overview.url()).toMatch(/\/app\/driver$/);
       expect(requests.url()).toMatch(/\/app\/driver\/requests$/);
