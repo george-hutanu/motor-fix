@@ -28,15 +28,26 @@ const ALL_VOICES_ON =
 // body a signed-in admin can send and get a 2xx for. A logged read sets
 // `entries: 1`; every other GET must leave the admin's history unchanged. A
 // call that only says who is looking (presence) sets `entries: 0`. A
-// route with path parameters gives `path`, which makes what it acts on.
+// route with path parameters gives `path`, which makes what it acts on. A
+// route that always refuses gives the status it answers with, `answers`.
 const FIXTURES: Record<
   string,
   {
+    answers?: number;
     body?: (admin: string) => object;
     entries?: number;
     path?: () => Promise<string>;
   }
 > = {
+  // @traces 1267-FR-011
+  // Only the driver deletes a repair: the admin is refused and nothing is
+  // recorded.
+  'DELETE /api/v1/admin/repairs/{id}': {
+    answers: 403,
+    body: () => ({}),
+    entries: 0,
+    path: async () => `/api/v1/admin/repairs/${await loggedRepair()}`,
+  },
   // Who else has the file open: a hint kept for a minute, never recorded.
   'DELETE /api/v1/admin/verification-files/{id}/presence': {
     body: () => ({}),
@@ -48,6 +59,10 @@ const FIXTURES: Record<
   'GET /api/v1/admin/accounts/{id}': {
     path: async () => `/api/v1/admin/accounts/${await driver()}`,
   },
+  // @traces 1267-FR-001
+  'GET /api/v1/admin/accounts/{id}/repairs': {
+    path: async () => `/api/v1/admin/accounts/${await driver()}/repairs`,
+  },
   // @traces 105-FR-019
   'GET /api/v1/admin/brands': {},
   // @traces 414-FR-002
@@ -58,6 +73,11 @@ const FIXTURES: Record<
   'GET /api/v1/admin/platform-rule-changes': {
     path: async () =>
       '/api/v1/admin/platform-rule-changes?key=reviews_only_after_confirmed_job',
+  },
+  // @traces 1267-FR-003 1267-FR-004
+  'GET /api/v1/admin/repairs/{id}': {
+    entries: 1,
+    path: async () => `/api/v1/admin/repairs/${await loggedRepair()}`,
   },
   'GET /api/v1/admin/system-log': {
     path: async () =>
@@ -121,6 +141,11 @@ const FIXTURES: Record<
       );
       return '/api/v1/admin/platform-rules/maintenance_mode';
     },
+  },
+  // @traces 1267-FR-005 1267-FR-007
+  'PATCH /api/v1/admin/repairs/{id}': {
+    body: () => ({ version: repairSeen, what: 'Schimb ulei și filtru' }),
+    path: async () => `/api/v1/admin/repairs/${await loggedRepair()}`,
   },
   'POST /api/v1/admin/accounts/{id}/delete-on-request': {
     body: () => ({
@@ -339,6 +364,31 @@ async function storedBrand() {
   return row.id;
 }
 
+// A repair a driver logged on the car they own, and the version an admin's
+// correction sends back.
+let repairSeen = '';
+async function loggedRepair() {
+  const owner = await driver();
+  const row = (
+    await db.query(
+      `WITH b AS (INSERT INTO brand (id, key, name, slug, updated_at)
+         VALUES (gen_random_uuid(), $2, $2, $2, now()) RETURNING id),
+       c AS (INSERT INTO car (id, owner_id, brand_id, model, year, fuel, odometer_km)
+         SELECT gen_random_uuid(), $1, id, 'Cooper S', 2019, 'petrol', 82000
+         FROM b RETURNING id),
+       o AS (INSERT INTO car_ownership (id, car_id, account_id, access, from_date, opened_at)
+         SELECT gen_random_uuid(), id, $1, 'owner', current_date, now() FROM c)
+       INSERT INTO repair (id, car_id, source, what, garage_name, done_on)
+       SELECT gen_random_uuid(), id, 'logged', 'Schimb ulei', 'Garaj Nordic',
+         current_date - 1
+       FROM c RETURNING id, updated_at`,
+      [owner, `audit-${randomUUID()}`],
+    )
+  ).rows[0] as { id: string; updated_at: Date };
+  repairSeen = row.updated_at.toISOString();
+  return row.id;
+}
+
 // A driver's account for the account actions, suspended when asked.
 async function driver(status: 'active' | 'suspended' = 'active') {
   const { id } = await app.get(AccountsService).createAccount({
@@ -478,6 +528,10 @@ const entries = async () =>
     ).rows[0].n,
   );
 
+// The answer a route owes: the status its fixture names, or else a 2xx.
+const answered = (status: number, answers?: number) =>
+  answers === undefined ? status >= 200 && status <= 299 : status === answers;
+
 // What is wrong with one route's call, if anything: its answer, or how many
 // entries the admin gained by it.
 const check = async (route: string) => {
@@ -492,7 +546,7 @@ const check = async (route: string) => {
     .set('Authorization', authorization)
     .send(fixture?.body?.(admin) ?? {});
   const gained = (await entries()) - before;
-  if (res.status < 200 || res.status > 299) {
+  if (!answered(res.status, fixture?.answers)) {
     return `${route}: answered ${res.status}`;
   }
   const expected =
