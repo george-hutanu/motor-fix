@@ -36,7 +36,7 @@ export interface CarRepairDto {
   odometerKm: number | null;
 
   /**
-   * Null on every row until the review drawer (ST-26) fills it for a MotorFix repair
+   * Null on every row until the review drawer ships and fills it for a MotorFix repair
    */
   review: (RepairReviewDto & {
 }) | null;

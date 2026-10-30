@@ -465,13 +465,13 @@ describe('PATCH and DELETE /repairs/:id under hostile input', () => {
   const methods = ['patch', 'delete'] as const;
 
   it.each(methods)(
-    '%s answers 400 validation_failed to an id that is no uuid',
+    '%s answers 400 naming the uuid to an id that is no uuid',
     async (method) => {
       const { andrei } = await people();
 
       const res = await call(method, andrei.auth, '/repairs/not-a-uuid');
 
-      // The API's ProblemFilter names a bare 400 `validation_failed`.
+      // The test app has no ProblemFilter, so the body is Nest's own 400.
       expect(res.status).toBe(400);
       expect(res.body.message).toMatch(/uuid/);
     },

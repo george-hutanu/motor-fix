@@ -161,7 +161,7 @@ export function toRow(
     doneOn: day(doneOn),
     fromPreviousOwner: fromPreviousOwner({ createdAt }, row),
     mechanicName: job?.mechanic?.name ?? null,
-    // Empty for every row until the review drawer (ST-26, #91) fills it.
+    // Empty for every row until the review drawer ships.
     review: null,
     what:
       (motorfix && job && jobNames(job.booking.quote.jobs, language)) ||
