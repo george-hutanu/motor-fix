@@ -39,8 +39,21 @@ p {
   margin: 0;
   overflow-wrap: anywhere;
 }
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+  align-items: baseline;
+  justify-content: space-between;
+}
 .car {
   font-weight: 700;
+}
+.amount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--mf-green-ink);
+  white-space: nowrap;
 }
 .meta {
   display: flex;
