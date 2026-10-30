@@ -28,6 +28,7 @@ import { NO_BRAND } from '../public-garages/public-garages';
 
 // @traces 1246-FR-001 1246-FR-002 1246-FR-003 1246-FR-004 1246-FR-005
 // @traces 1246-FR-006 1246-FR-007 1246-FR-008 1246-FR-009 1246-FR-010
+// @traces 1246-FR-027
 
 const redisUrl = redisUrlFor(2);
 const tokenSecret = 'test-secret';

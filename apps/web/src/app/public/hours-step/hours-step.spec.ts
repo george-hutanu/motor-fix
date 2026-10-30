@@ -452,6 +452,28 @@ describe('step 5, the opening hours', () => {
     expect(step.querySelector('#hours-mon-error')).toBe(region);
     expect(text(region)).toBe('');
   });
+
+  // @traces 1246-FR-020
+  it('ties a break outside the opening hours to its error and unties it once the break fits', async () => {
+    const { fixture, step } = await open();
+    await openByDay(fixture, step);
+    const monday = step.querySelector<HTMLElement>('[data-day="mon"]');
+    if (!monday) throw new Error('no Monday');
+    await click(fixture, button(monday, 'Adaugă pauză'));
+    const fields = ['mon-1-open', 'mon-1-close'];
+
+    await choose(fixture, select(step, 'mon-1-open'), '11:00');
+
+    for (const name of fields)
+      expect(select(step, name)?.getAttribute('aria-describedby')).toBe(
+        'hours-mon-error',
+      );
+
+    await choose(fixture, select(step, 'mon-1-open'), '13:00');
+
+    for (const name of fields)
+      expect(select(step, name)?.hasAttribute('aria-describedby')).toBe(false);
+  });
 });
 
 describe('step 5, the closed days', () => {
@@ -522,6 +544,25 @@ describe('step 5, the closed days', () => {
 
     expect(step.querySelector('#hours-closed-error')).toBe(region);
     expect(text(region)).toBe('');
+  });
+
+  // @traces 1246-FR-020
+  it("ties the closed-day fields to a refused day's reason and unties them once a day is added", async () => {
+    const { fixture, step } = await open();
+    const fields = () =>
+      ['closedDay', 'closedNote'].map((name) =>
+        step
+          .querySelector(`input[name="${name}"]`)
+          ?.getAttribute('aria-describedby'),
+      );
+
+    await add(fixture, step, '2026-10-06');
+
+    expect(fields()).toEqual(['hours-closed-error', 'hours-closed-error']);
+
+    await add(fixture, step, '2026-12-27');
+
+    expect(fields()).toEqual([null, null]);
   });
 
   it('adds the same day once', async () => {

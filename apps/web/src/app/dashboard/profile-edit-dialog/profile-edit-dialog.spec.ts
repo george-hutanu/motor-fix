@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
@@ -767,4 +770,74 @@ describe('the profile dialog: service radius', () => {
       'Choose how far you travel',
     );
   });
+});
+
+// Every text of the four dialogs and the view's controls lives in the garage
+// area's files, in Romanian and in English, under the same keys.
+// @traces 1246-FR-024 1246-FR-027
+describe('the profile edit texts in Romanian and English', () => {
+  type Texts = { [key: string]: string | Texts };
+  const area = (language: 'ro' | 'en') =>
+    JSON.parse(
+      readFileSync(
+        join(
+          __dirname,
+          `../../../../../../libs/i18n/src/garage/${language}.json`,
+        ),
+        'utf8',
+      ),
+    ) as Texts;
+  const flat = (texts: Texts, prefix = ''): Record<string, string> =>
+    Object.fromEntries(
+      Object.entries(texts).flatMap(([key, value]) =>
+        typeof value === 'string'
+          ? [[`${prefix}${key}`, value]]
+          : Object.entries(flat(value, `${prefix}${key}.`)),
+      ),
+    );
+  const edit = (language: 'ro' | 'en') => flat(area(language), 'garage.');
+  const used = () =>
+    [
+      'profile-edit-dialog/profile-edit-dialog.html',
+      'profile-edit-dialog/profile-edit-dialog.ts',
+      'profile-view/profile-view.html',
+      'profile-view/profile-view.ts',
+    ]
+      .flatMap((file) => [
+        ...readFileSync(join(__dirname, '..', file), 'utf8').matchAll(
+          /'(garage\.profile\.edit\.[A-Za-z_.]*[A-Za-z_])'/g,
+        ),
+      ])
+      .map((match) => match[1] as string);
+
+  it('has the same keys in both languages, none empty', () => {
+    const ro = edit('ro');
+    const en = edit('en');
+    const keys = (texts: Record<string, string>) =>
+      Object.keys(texts)
+        .filter((key) => key.startsWith('garage.profile.edit.'))
+        .sort();
+
+    expect(keys(en)).toEqual(keys(ro));
+    for (const key of keys(ro)) {
+      expect(ro[key]?.trim()).not.toBe('');
+      expect(en[key]?.trim()).not.toBe('');
+    }
+  });
+
+  it.each(['ro', 'en'] as const)(
+    'holds every key the dialogs and the view use in %s',
+    (language) => {
+      const texts = edit(language);
+      const keys = [
+        ...used(),
+        ...['hours', 'texts', 'contact', 'area'].map(
+          (group) => `garage.profile.edit.title.${group}`,
+        ),
+      ];
+
+      expect(keys.length).toBeGreaterThan(10);
+      expect(keys.filter((key) => !texts[key])).toEqual([]);
+    },
+  );
 });
