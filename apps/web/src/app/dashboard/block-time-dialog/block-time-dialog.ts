@@ -33,7 +33,7 @@ import {
 } from '../bucharest-time';
 import { Session } from '../session';
 
-type Field = 'mechanic' | 'lift' | 'from' | 'until';
+type Field = 'mechanic' | 'lift' | 'from' | 'until' | 'note';
 // A field's refusal before sending: its key and the control to focus.
 interface Wrong {
   field: Field;
@@ -91,7 +91,6 @@ const wallMinutes = (day: string, time: string) =>
 // choice and says what to change, under the field it concerns.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '(keydown.escape)': 'holdWhileSending($event)' },
   imports: [HlmButton, HlmInput, RouterLink, TranslatePipe],
   selector: 'mf-block-time-dialog',
   styleUrl: './block-time-dialog.css',
@@ -115,6 +114,7 @@ export class BlockTimeDialog {
   protected readonly noteMax = NOTE_MAX;
 
   protected readonly options = signal<TimeBlockOptionsDto | null>(null);
+  private reads = 0;
   protected readonly loadFailed = signal(false);
   // The team was switched off under a mechanic this dialog sent.
   private readonly teamOff = signal(false);
@@ -184,6 +184,7 @@ export class BlockTimeDialog {
       from: of('from'),
       lift: of('lift'),
       mechanic: of('mechanic'),
+      note: of('note'),
       until: of('until'),
     };
   });
@@ -194,9 +195,12 @@ export class BlockTimeDialog {
   }
 
   protected load(featureOff = false) {
+    const read = ++this.reads;
     this.garages
       .timeBlockOptions({ garageId: this.data.garageId })
       .then((offered) => {
+        // A later read answers for the options now.
+        if (read !== this.reads) return;
         if (featureOff && this.sentMechanic && !offered.mechanics.length)
           this.teamOff.set(true);
         const first = !this.options();
@@ -209,18 +213,17 @@ export class BlockTimeDialog {
       })
       .catch(() => {
         // A re-read that fails keeps the options already drawn.
-        if (this.options()) return;
+        if (read !== this.reads || this.options()) return;
         this.loadFailed.set(true);
         this.problem.set(this.i18n.t('shell.form.problem.error'));
       });
   }
 
-  // Closing waits for a save in flight, so no block is made behind a closed
-  // dialog.
-  protected holdWhileSending(event: Event) {
-    if (!this.sending()) return;
-    event.preventDefault();
-    event.stopPropagation();
+  // Renunță asks first when something was typed, as Escape does; after a
+  // block ended or gone it tells the opener to re-read.
+  protected cancel() {
+    if (this.closeAs() === 'refused') this.task.close('refused');
+    else this.task.dismiss();
   }
 
   protected submit(event: Event) {
@@ -267,9 +270,13 @@ export class BlockTimeDialog {
 
   // A new block names only what was picked.
   private create(asked: Asked) {
-    const body = Object.fromEntries(
-      Object.entries(asked).filter(([, value]) => value !== null),
-    ) as unknown as CreateTimeBlockDto;
+    const { lift, mechanicId, note, ...when } = asked;
+    const body: CreateTimeBlockDto = {
+      ...when,
+      ...(lift !== null && { lift }),
+      ...(mechanicId !== null && { mechanicId }),
+      ...(note !== null && { note }),
+    };
     this.send(
       this.garages.createTimeBlock({ body, garageId: this.data.garageId }),
       'blocked',
@@ -319,8 +326,17 @@ export class BlockTimeDialog {
       this.nothingPicked() ??
       this.timeWrong('from', this.fromDay(), this.fromTime()) ??
       this.timeWrong('until', this.untilDay(), this.untilTime()) ??
-      this.rangeWrong()
+      this.rangeWrong() ??
+      this.noteWrong()
     );
+  }
+
+  // The textarea's maxlength holds what is typed; a pasted or filled value
+  // past it is said too.
+  private noteWrong(): Wrong | null {
+    return this.note().trim().length > NOTE_MAX
+      ? { field: 'note', focus: 'note', key: 'note_long' }
+      : null;
   }
 
   private nothingPicked(): Wrong | null {
@@ -373,6 +389,7 @@ export class BlockTimeDialog {
     said: 'done' | 'changed' | 'removed',
   ) {
     this.sending.set(true);
+    this.task.hold(true);
     this.problem.set(null);
     this.fieldProblem.set(null);
     call
@@ -385,7 +402,10 @@ export class BlockTimeDialog {
         this.asking.set(false);
         this.refused(failure);
       })
-      .finally(() => this.sending.set(false));
+      .finally(() => {
+        this.sending.set(false);
+        this.task.hold(false);
+      });
   }
 
   private refused(failure: unknown) {

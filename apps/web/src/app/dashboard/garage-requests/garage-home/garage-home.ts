@@ -202,9 +202,16 @@ export class GarageHome {
     });
   }
 
-  protected blockTime() {
+  // One dialog at a time: a second press while it loads or shows opens none.
+  protected async blockTime() {
     const garageId = this.garage()?.garageId;
-    if (garageId)
-      void openBlockTime(this.overlays, { garageId, ...this.switches() });
+    if (!garageId || this.blocking) return;
+    this.blocking = true;
+    try {
+      await openBlockTime(this.overlays, { garageId, ...this.switches() });
+    } finally {
+      this.blocking = false;
+    }
   }
+  private blocking = false;
 }

@@ -334,6 +334,7 @@ export class OverlayPanel {
   protected readonly task = signal<Type<unknown> | null>(null);
   protected readonly failed = signal(false);
   protected changed = false;
+  private held = false;
   private focusedBeforeAsking: HTMLElement | null = null;
   // How far the grip is pulled down, and where the pull started.
   protected readonly drag = signal<string | null>(null);
@@ -346,6 +347,7 @@ export class OverlayPanel {
   private readonly taskApi: OverlayTask<unknown, unknown> = {
     close: (result) => this.close(result),
     data: this.context.data,
+    dismiss: () => this.leave(),
     // A focus still on the panel, or left outside it by a dialog asked over
     // it, moves; one inside the task stays where the person put it.
     focusStart: () =>
@@ -357,6 +359,9 @@ export class OverlayPanel {
         if (!active || active === own || !own.contains(active))
           this.focusStart();
       }),
+    hold: (held) => {
+      this.held = held;
+    },
     markUnchanged: () => {
       this.changed = false;
     },
@@ -411,7 +416,8 @@ export class OverlayPanel {
       if (!this.asking()) this.dismiss();
       // Asking or staying instead of closing: the entry comes back, so Back
       // asks again.
-      if (this.asking() || this.context.dismissible === false) mark();
+      if (this.asking() || this.context.dismissible === false || this.held)
+        mark();
     };
     // A page nobody has touched yet: Chrome skips an entry pushed now when
     // Back is pressed, so the entry waits for the first touch or key.
@@ -552,6 +558,12 @@ export class OverlayPanel {
   // X, Escape, a click outside and a drag down: ask first when a field changed.
   protected dismiss() {
     if (this.context.dismissible === false) return;
+    this.leave();
+  }
+
+  // Closes, asking first when a field changed; nothing while held.
+  private leave() {
+    if (this.held) return;
     if (!this.changed || this.context.confirmDiscard === false) {
       this.close();
       return;

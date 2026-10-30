@@ -776,13 +776,13 @@
     "problem": {
       "feature_off": "The garage's schedule settings changed",
       "mechanic_gone": "The mechanic is no longer on the team",
-      "no_such_lift": "There is no such lift",
-      "slot_taken": "The slot was just taken"
+      "no_such_lift": "There is no such lift"
     },
     "refusal": {
       "already_ended": "The interval has already ended",
       "bad_time": "Pick a day and a time",
       "end_before_start": "The end must be after the start",
+      "note_long": "The note has at most 200 characters",
       "off_quarter": "The time must be on a quarter hour",
       "pick_lift": "Pick a lift",
       "pick_mechanic": "Pick a mechanic",

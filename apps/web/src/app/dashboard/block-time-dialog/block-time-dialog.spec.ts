@@ -609,9 +609,13 @@ describe('the block-time dialog: saving a new block', () => {
     mechanic()?.dispatchEvent(
       new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }),
     );
+    document
+      .querySelector<HTMLElement>('.cdk-overlay-backdrop')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await settle();
     expect(settled).toBeUndefined();
     expect(panel()).not.toBeNull();
+    expect(document.querySelector('[role="alertdialog"]')).toBeNull();
 
     answer(BLOCK);
     await settle();
@@ -635,6 +639,34 @@ describe('the block-time dialog: what the server refuses', () => {
     await press();
     return reads;
   }
+
+  it('draws the options of the latest read when an earlier one answers last', async () => {
+    let first: (offered: TimeBlockOptionsDto) => void = () => undefined;
+    const reads = jest
+      .fn()
+      .mockResolvedValueOnce(OPTIONS)
+      .mockImplementationOnce(
+        () => new Promise<TimeBlockOptionsDto>((resolve) => (first = resolve)),
+      )
+      .mockResolvedValue({ ...OPTIONS, liftCount: 1 });
+    await open({ reads });
+    create.mockRejectedValue(
+      refusal(409, {
+        code: 'slot_taken',
+        message: 'Locul tocmai a fost ocupat',
+      }),
+    );
+    await set('mechanic', 'mech-1');
+    await when(SUMMER, '10:00', SUMMER, '11:30');
+    await press();
+    await press();
+
+    first(OPTIONS);
+    await settle();
+
+    expect(reads).toHaveBeenCalledTimes(3);
+    expect(choices(lift())).toHaveLength(2);
+  });
 
   it('says a busy mechanic under Mecanic, in the server’s words, and keeps every choice', async () => {
     const reads = await refusedWith(

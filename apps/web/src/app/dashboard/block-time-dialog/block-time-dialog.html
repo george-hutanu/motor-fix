@@ -117,13 +117,15 @@
       hlmInput
       id="mf-block-note"
       rows="3"
-      aria-describedby="mf-block-note-left"
+      aria-describedby="mf-block-note-left mf-block-note-error"
+      [attr.aria-invalid]="messages().note ? 'true' : null"
       [maxLength]="noteMax"
       [disabled]="off()"
       [value]="note()"
-      (input)="note.set($any($event.target).value)"
+      (input)="edit('note', () => note.set($any($event.target).value))"
     ></textarea>
     <p class="left" id="mf-block-note-left">{{ 'garage.timeBlocks.noteLeft' | t: { n: noteLeft() } }}</p>
+    <p class="error mf-message" id="mf-block-note-error" role="alert">{{ messages().note }}</p>
   </div>
   @if (asking()) {
     <div class="question">
@@ -138,7 +140,7 @@
       @if (block) {
         <button hlmBtn variant="ghost" type="button" class="remove" [disabled]="off()" (click)="asking.set(true)">{{ 'garage.timeBlocks.remove' | t }}</button>
       }
-      <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close(closeAs())">{{ 'garage.timeBlocks.cancel' | t }}</button>
+      <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="cancel()">{{ 'garage.timeBlocks.cancel' | t }}</button>
       <button hlmBtn type="submit" [attr.aria-busy]="sending() || null" [disabled]="off()">{{ submitKey | t }}</button>
     </div>
   }
