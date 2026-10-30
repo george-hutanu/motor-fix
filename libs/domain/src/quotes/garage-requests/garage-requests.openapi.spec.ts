@@ -8,7 +8,7 @@ const doc = JSON.parse(
   readFileSync(join(__dirname, '../../../../../apps/api/openapi.json'), 'utf8'),
 );
 
-// @traces 346-FR-002
+// @traces 346-FR-002 346-FR-008
 describe('a garage request row in the OpenAPI document', () => {
   const row = doc.components.schemas.GarageRequestSummaryDto;
 

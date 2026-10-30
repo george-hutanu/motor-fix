@@ -31,6 +31,8 @@ describe('the repository inventory', () => {
     },
   );
 
+  // The quotes sent read gained a field, not an operation.
+  // @traces 346-FR-007
   repoIt('counts every OpenAPI operation and misses nothing', () => {
     expect(checkInventory(root)).toEqual([]);
   });
