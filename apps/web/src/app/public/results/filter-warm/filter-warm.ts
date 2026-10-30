@@ -10,6 +10,8 @@ import { prefetchAllowed } from '../../profile-prefetch/prefetch-allowed';
 
 // How long a warmed answer counts as a hit after it landed.
 export const LIFE_MS = 60_000;
+// How many searches it remembers, the oldest forgotten first.
+const CAP = 20;
 
 type Query = Omit<GarageSearchControllerForBrand$Params, 'cursor' | 'ids'>;
 type Outcome = 'fetched' | 'hit' | 'expired' | 'skipped';
@@ -37,12 +39,25 @@ export class FilterWarm {
     const key = JSON.stringify(query);
     if (this.warmed.has(key)) return;
     this.warmed.add(key);
+    for (const old of this.warmed) {
+      if (this.warmed.size <= CAP) break;
+      this.warmed.delete(old);
+      this.landed.delete(old);
+    }
     const { sort: _, ...pins } = query;
     const started = Date.now();
-    Promise.all([
-      this.search.garageSearchControllerForBrand({ ...query, open_now: '1' }),
-      this.search.garageSearchControllerPins({ ...pins, open_now: '1' }),
-    ]).then(
+    // A client that throws at once is a failed read ahead too: never the page's.
+    new Promise<unknown>((done) =>
+      done(
+        Promise.all([
+          this.search.garageSearchControllerForBrand({
+            ...query,
+            open_now: '1',
+          }),
+          this.search.garageSearchControllerPins({ ...pins, open_now: '1' }),
+        ]),
+      ),
+    ).then(
       () => {
         this.landed.set(key, Date.now());
         this.report('fetched', Date.now() - started);

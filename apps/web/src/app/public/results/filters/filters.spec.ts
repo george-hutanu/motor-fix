@@ -79,7 +79,7 @@ describe('the filters on a search request', () => {
     ).toEqual({ brand: 'bmw', near: '44.437,26.117' });
   });
 
-  // SC-006: the API judges a match; the results page carries no filter rules
+  // The API judges a match; the results page carries no filter rules
   // and no Bucharest clock (the garage profile's own chunk reads the clock).
   it('leaves the filter rules and the Bucharest clock out of the results bundle', () => {
     const files = (dir: string): string[] =>
@@ -95,6 +95,10 @@ describe('the filters on a search request', () => {
 
     expect(files(web).length).toBeGreaterThan(100);
     expect(importing(web, /contracts\/search-filters'/)).toEqual([]);
+    // Nor through the contracts barrel, by any of the module's names.
+    expect(importing(web, /\b(filtersOf|filtersKey|SearchFilters)\b/)).toEqual(
+      [],
+    );
     expect(importing(results, /contracts\/open-status'/)).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 import type { ParamMap } from '@angular/router';
 
 // The filters of the results page, as the address bar names them. The API
-// judges which garages match (ST-1260); the page only carries the choice.
+// judges which garages match; the page only carries the choice.
 export type FilterKey = 'open_now' | 'open_saturday';
 export type Filters = Record<FilterKey, boolean>;
 

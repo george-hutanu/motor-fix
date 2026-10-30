@@ -164,7 +164,7 @@ test.describe('filtering the Results page @seeded @database', () => {
     await expect(cards(page).first()).toHaveText(`Departe ${stamp}`);
   });
 
-  // FR-014: the chip row holds at 320 px without a sideways scroll.
+  // The chip row holds at 320 px without a sideways scroll.
   test('holds both chips at 320 px with no sideways scroll', async ({
     page,
   }) => {

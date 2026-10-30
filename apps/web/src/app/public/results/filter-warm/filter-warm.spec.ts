@@ -109,6 +109,18 @@ describe('warming the open-now answer of a search', () => {
     expect(lists[1].params['brand']).toBe('audi');
   });
 
+  it('forgets the oldest search past twenty, and warms it again', async () => {
+    setUp();
+
+    for (let n = 0; n <= 20; n++) warm.warm({ ...QUERY, near: `44.4,26.${n}` });
+    await land();
+    warm.warm({ ...QUERY, near: '44.4,26.20' });
+    warm.warm({ ...QUERY, near: '44.4,26.0' });
+
+    expect(lists).toHaveLength(22);
+    expect(lists[21].params['near']).toBe('44.4,26.0');
+  });
+
   it.each([
     ['Save-Data is on', () => (connection = { saveData: true })],
     ['the connection is 2g', () => (connection = { effectiveType: '2g' })],

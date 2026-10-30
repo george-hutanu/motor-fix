@@ -189,7 +189,7 @@ export class Results {
     this.near() && this.bar().get('radius') === String(WIDE) ? WIDE : undefined,
   );
   protected readonly sort = computed(() => sortIn(this.bar().get('sort')));
-  // The filters the bar names (ST-1398); a value but 1 reads as off.
+  // The filters the bar names; a value but 1 reads as off.
   protected readonly filters = computed(() => filtersIn(this.bar()), {
     equal: (a, b) => JSON.stringify(a) === JSON.stringify(b),
   });
@@ -797,15 +797,11 @@ export class Results {
   // The unfiltered first page landed: its open-now answer is read ahead, once
   // per search; never for kept results, a map box or a filtered list.
   private warmOpenNow() {
-    let warmed: string | undefined;
     effect(() => {
       const page = this.searched();
       const query = untracked(this.query);
       if (!page || !query || query.bbox || this.restored) return;
       if (countOf(untracked(this.filters)) > 0) return;
-      const key = JSON.stringify(query);
-      if (key === warmed) return;
-      warmed = key;
       untracked(() => this.filterWarm.warm(query));
     });
   }
