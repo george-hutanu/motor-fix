@@ -8,12 +8,12 @@ import {
 } from '@motor-fix/data-access';
 import type { Subscription } from 'rxjs';
 
+import { prefetchAllowed } from './prefetch-allowed';
 import { measure } from '../../telemetry/browser/measure/measure';
 
 const CAP = 3;
 const LIFE_MS = 120_000;
 const GONE = [404, 410];
-const SLOW = ['2g', 'slow-2g'];
 
 type Entry = { at: number; garage?: PublicGarageDto };
 type Wanted = { key: string; slug: string; brand: string | undefined };
@@ -40,7 +40,7 @@ export class ProfilePrefetch {
 
   want(slug: string, brand: string | undefined): void {
     if (!this.browser) return;
-    if (!this.allowed()) {
+    if (!prefetchAllowed(this.document)) {
       if (!this.skipped) this.report('skipped');
       this.skipped = true;
       return;
@@ -84,19 +84,6 @@ export class ProfilePrefetch {
   // The profile route's own chunk, so opening the card loads no code.
   private preload(): Promise<unknown> {
     return import('../garage-profile/garage-profile');
-  }
-
-  private allowed(): boolean {
-    const connection = (
-      this.document.defaultView?.navigator as
-        | { connection?: { saveData?: boolean; effectiveType?: string } }
-        | undefined
-    )?.connection;
-    return (
-      !connection?.saveData &&
-      !SLOW.includes(connection?.effectiveType ?? '') &&
-      this.document.visibilityState === 'visible'
-    );
   }
 
   private young(entry: Entry): boolean {

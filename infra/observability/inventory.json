@@ -782,7 +782,7 @@
         "web-error-rate",
         "web-latency"
       ],
-      "reason": "the browser's collector; besides the web vitals and errors it receives the prefetch measurement (context path profile, outcome fetched, cancelled, hit, expired or skipped, and a fetch's duration), shown on the web-vitals dashboard's pre-fetch panel; since ST-1191 also the upload measurement (context purpose garage_photo or legal_document, outcome queued, resumed, sent or failed, and a sent upload's duration from its first attempt; no file name, draft id or key), shown on the uploads panel; since ST-947, under analytics consent only, a per-tab session id and the journey events session_start, session_resume and view_changed (route templates), so Frontend Observability lists sessions and route walks",
+      "reason": "the browser's collector; besides the web vitals and errors it receives the prefetch measurement (context path profile, outcome fetched, cancelled, hit, expired or skipped, and a fetch's duration; since ST-1398 also context path filter, the Results page's open-now warm, outcome fetched, hit, expired or skipped, naming no brand or place), shown on the web-vitals dashboard's pre-fetch panel; since ST-1191 also the upload measurement (context purpose garage_photo or legal_document, outcome queued, resumed, sent or failed, and a sent upload's duration from its first attempt; no file name, draft id or key), shown on the uploads panel; since ST-947, under analytics consent only, a per-tab session id and the journey events session_start, session_resume and view_changed (route templates), so Frontend Observability lists sessions and route walks",
       "story": "ST-877"
     },
     {
