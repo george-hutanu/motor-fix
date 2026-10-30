@@ -1,0 +1,47 @@
+form {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+p {
+  margin: 0;
+}
+.sub {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+  overflow-wrap: anywhere;
+}
+label {
+  margin-top: var(--mf-space-2);
+  font-weight: 600;
+}
+textarea {
+  width: 100%;
+  min-height: 120px;
+  box-sizing: border-box;
+  resize: vertical;
+}
+.hint,
+.count {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
+.count {
+  font-variant-numeric: tabular-nums;
+}
+.count.over {
+  color: var(--mf-red-ink);
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--mf-space-2);
+}
+.actions button {
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
+.actions button[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

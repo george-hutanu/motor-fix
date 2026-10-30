@@ -14,13 +14,16 @@ import { EVENT_KINDS } from '@motor-fix/contracts/events';
 import {
   type GarageStaffReviewDto,
   type GarageStaffReviewsPageDto,
+  type ReviewReplyDto,
   ReviewsService,
 } from '@motor-fix/data-access';
 import { formatNum, formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { liveView } from '../../../live/view';
 import { Live } from '../../live';
+import { openReply } from '../../reply-dialog/open-reply';
 import { SectionTitle } from '../../section-title/section-title';
 import { garageOf, Session } from '../../session';
 import { GarageReviewRow } from '../garage-review-row/garage-review-row';
@@ -40,7 +43,8 @@ const SCORES = [
 // noi": that many rows, the links to the public profile and to the view. Without
 // one it is the Recenzii view: the rating, how many reviews gave each score,
 // and every row, 20 a page. A review or rating message reads the first page
-// again, dropping the pages loaded since.
+// again, dropping the pages loaded since. The owner replies from a row: the
+// reply the API answers shows on it at once, until the next first-page read.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -60,12 +64,22 @@ export class GarageReviewsPanel {
   private readonly api = inject(ReviewsService);
   private readonly session = inject(Session);
   private readonly live = inject(Live);
+  private readonly overlays = inject(Overlays);
   protected readonly i18n = inject(I18n);
   protected readonly now = signal(new Date());
 
   private readonly garageId = computed(
     () => garageOf(this.session.shown())?.garageId ?? '',
   );
+  protected readonly owner = computed(
+    () => garageOf(this.session.shown())?.role === 'owner',
+  );
+  // The replies answered here, by review id, as of the first-page read they
+  // were answered after; a later read carries them itself.
+  private readonly replied = signal<{
+    byId: ReadonlyMap<string, ReviewReplyDto>;
+    reads: number;
+  }>({ byId: new Map(), reads: -1 });
   // Moves on every read of the first page, so an older page's answer is dropped.
   private generation = 0;
   private readonly pages = signal(1);
@@ -86,9 +100,16 @@ export class GarageReviewsPanel {
     const page = this.view.value();
     if (!page) return [];
     const limit = this.limit();
-    return limit === undefined
-      ? [...page.items, ...this.extra()]
-      : page.items.slice(0, limit);
+    const rows =
+      limit === undefined
+        ? [...page.items, ...this.extra()]
+        : page.items.slice(0, limit);
+    const { byId, reads } = this.replied();
+    if (reads !== this.view.reads() || byId.size === 0) return rows;
+    return rows.map((review) => {
+      const reply = byId.get(review.id);
+      return reply ? { ...review, canReply: false, reply } : review;
+    });
   });
   protected readonly profileHref = computed(() => {
     const slug = this.view.value()?.slug;
@@ -132,6 +153,16 @@ export class GarageReviewsPanel {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     const tick = setInterval(() => this.now.set(new Date()), AGE_TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
+  }
+
+  protected reply(review: GarageStaffReviewDto): void {
+    void openReply(this.overlays, review, (answer) => {
+      const reads = this.view.reads();
+      const held = this.replied();
+      const byId = new Map(held.reads === reads ? held.byId : []);
+      byId.set(review.id, answer);
+      this.replied.set({ byId, reads });
+    });
   }
 
   protected more(): void {
