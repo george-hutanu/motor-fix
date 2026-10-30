@@ -56,6 +56,7 @@ features:
   - 427-time-blocks
   - 277-car-status-alerts
   - 144-profile-stats-weekly
+  - 1395-block-time-dashboard
 ---
 
 # Capability: Observability
@@ -924,9 +925,9 @@ _From 1366-garage-map-directions._
 
 _From 1257-quote-reminders._
 
-### 427-FR-016 — Observability (AGENTS.md): the four routes MUST be listed in `infra/observability/inventory.json` as endpoints with their reason (writes and a read; the API's request-duration histogram labels the route; `api-error-rate` and `api-latency` cover them); one log line per refusal naming the garage id, the block id when one exists and the code (never the note); no new alert rule; the PR's Observability section lists them.
+### 1395-FR-007 — Observability (AGENTS.md): the route MUST be listed in `infra/observability/inventory.json` as an endpoint (`garage-time-block-options-read`, source the controller, the API's request-duration histogram by its route, dashboard `motorfix-api`, alerts `api-error-rate` and `api-latency`) with its reason: a staff read that writes nothing, a 403 is a mechanic, a 404 another garage; no new alert rule and no new log kind (a 403 or 404 writes the four routes' refusal line through their shared access check, 427-FR-016); the PR's Observability section lists it.
 
-_From 427-time-blocks._
+_From 1395-block-time-dashboard._
 
 ### 277-FR-008 — Observability MUST ship with the change: the new queue listed in `infra/observability/inventory.json` (kind `queue`, on the `motorfix-queues` dashboard with the three worker-queue alerts, like `booking-confirmed`), one log line per job naming the job id, the type and whether the driver was told or why the event was skipped; BullMQ's queue metrics cover depth and failures; the PR's Observability section lists them.
 
@@ -962,3 +963,4 @@ _From 144-profile-stats-weekly._
 - `877-FR-017` — superseded by `947-FR-010` (2026-10-24)
 - `280-FR-023` — superseded by `056-FR-024` (2026-10-24)
 - `389-FR-018` — superseded by `150-FR-012` (2026-10-26)
+- `427-FR-016` — superseded by `1395-FR-007` (2026-10-30)

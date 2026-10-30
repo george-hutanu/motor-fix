@@ -582,9 +582,10 @@ describe('the garage members read route', () => {
 
 // @traces 427-FR-015
 // @traces 427-FR-016
+// @traces 1395-FR-007
 describe('the time-block routes', () => {
   repoIt(
-    'are four OpenAPI operations the inventory lists under the api alerts, and the schedule read carries blocks',
+    'are five OpenAPI operations the inventory lists under the api alerts, and the schedule read carries blocks',
     () => {
       const api = JSON.parse(
         readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
@@ -599,6 +600,7 @@ describe('the time-block routes', () => {
         'delete',
         'patch',
       ]);
+      expect(Object.keys(api.paths[`${base}/options`])).toEqual(['get']);
       expect(
         Object.keys(api.components.schemas.GarageScheduleDto.properties),
       ).toContain('blocks');
@@ -611,10 +613,14 @@ describe('the time-block routes', () => {
           entry.kind === 'endpoint' &&
           entry.name.startsWith('garage-time-block'),
       );
-      expect(listed).toHaveLength(4);
+      expect(listed).toHaveLength(5);
       for (const entry of listed) {
         expect(entry.alerts).toEqual(['api-error-rate', 'api-latency']);
-        expect(entry.story).toBe('ST-427');
+        expect(entry.story).toBe(
+          entry.name === 'garage-time-block-options-read'
+            ? 'ST-1395'
+            : 'ST-427',
+        );
       }
       expect(checkInventory(root)).toEqual([]);
     },

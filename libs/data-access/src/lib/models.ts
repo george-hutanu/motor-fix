@@ -378,6 +378,7 @@ export type { SystemLogEntryDto } from './models/system-log-entry-dto';
 export type { TestMessageDto } from './models/test-message-dto';
 export type { TestMessageQueuedDto } from './models/test-message-queued-dto';
 export type { TimeBlockDto } from './models/time-block-dto';
+export type { TimeBlockOptionsDto } from './models/time-block-options-dto';
 export type { TimeBlocksDto } from './models/time-blocks-dto';
 export type { TimeBlockSegmentDto } from './models/time-block-segment-dto';
 export type { UnreadCountDto } from './models/unread-count-dto';

@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 246,
+    "count": 247,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1166,6 +1166,19 @@
       ],
       "reason": "a staff read of the blocked time over 1 to 31 days writes nothing; a 400 validation_failed is the range refused, a 403 is a mechanic, a 404 another garage",
       "story": "ST-427"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-time-block-options-read",
+      "source": "libs/domain/src/workshop/time-blocks/time-blocks.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/time-blocks/options",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a staff read of the lifts and the cards a block may take writes nothing; a 400 is a garage id that is not a uuid, a 403 is a mechanic, a 404 another garage",
+      "story": "ST-1395"
     },
     {
       "kind": "endpoint",
