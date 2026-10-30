@@ -61,6 +61,7 @@ features:
   - 1254-assistant-approvals
   - 277-car-status-alerts
   - 409-garage-corrects-repair
+  - 1315-optimistic-toggles
 ---
 
 # Capability: Notifications
@@ -409,9 +410,9 @@ _From 198-staff-notification-preferences._
 
 _From 198-staff-notification-preferences._
 
-### 198-FR-014 — A switch MUST save on toggle, optimistically; a refused or failed save MUST revert the switch and show a toast "Setarea nu a putut fi salvată" / "The setting could not be saved". While loading, the panel MUST show skeleton rows; when the read fails, it MUST show "Nu am putut încărca setările" / "Could not load the settings" with "Reîncearcă" / "Try again".
+### 1315-FR-001 — In `NotificationSettings.toggle`, a refused or failed save MUST re-read the lists (`load()`) instead of setting the switch to `!enabled`, so that after any number of failed saves of one switch the switch shows the server's row (modifies 198-FR-014's "revert the switch").
 
-_From 198-staff-notification-preferences._
+_From 1315-optimistic-toggles._
 
 ### 198-FR-015 — The panel MUST read the lists again, without a reload, on `notification_preferences.updated` for the caller's account and on `garage.features_changed` for any garage it shows.
 
@@ -1081,6 +1082,22 @@ _From 409-garage-corrects-repair._
 
 _From 409-garage-corrects-repair._
 
+### 1315-FR-002 — The `shell.notifications.saveFailed` toast MUST show once per failed save. The re-read of FR-001 replaces the lists wholesale; a save that succeeds after it MUST re-apply its own choice to its switch, so the screen ends on the server's rows.
+
+_From 1315-optimistic-toggles._
+
+### 1315-FR-003 — `BellStore.read(id)` MUST mark the row read (`readAt` set to the tap's instant) and lower the badge by one before the call is sent; on the answer the row takes the server's `readAt`; on a refusal or failure the row gets back `readAt: null` only while it still holds the optimistic instant, the badge goes back up by one only while no newer count has been shown since the press, and `shell.bell.readFailed` toasts once. The existing "one read in flight per row" rule stays, and the existing count rules (`refreshCount` after the answer, the live echo) are unchanged.
+
+_From 1315-optimistic-toggles._
+
+### 1315-FR-004 — `BellStore.readAll()` MUST mark every unread row read and set the badge to 0 before the call is sent; on a refusal or failure each row still holding the optimistic instant gets back the `readAt` it had (null for the ones that were unread) and the badge goes back up by the number it took off while no newer count has been shown since, with the same toast.
+
+_From 1315-optimistic-toggles._
+
+### 1315-FR-005 — `BellStore` MUST number its first-page reads (the reloads of `arrived`, `readElsewhere` and `load`) in the order they are sent and MUST ignore the answer of an older read when a newer one has already answered (a request generation check in `merge`); a row read (optimistically or by its echo) between an older and a newer reload stays read. The pages added by `loadMore` are unchanged.
+
+_From 1315-optimistic-toggles._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -1109,3 +1126,4 @@ _From 409-garage-corrects-repair._
 - `032-FR-006` — superseded by `094-FR-013` (2026-10-25)
 - `032-FR-007` — superseded by `094-FR-014` (2026-10-25)
 - `428-FR-010` — superseded by `1258-FR-005` (2026-10-25)
+- `198-FR-014` — superseded by `1315-FR-001` (2026-10-30)
