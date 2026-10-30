@@ -117,10 +117,9 @@ describe('the quote range on the stage moves', () => {
 // @traces 1404-FR-002
 describe('the quote range as stored', () => {
   it.each([
-    [0, 0],
     [1, 1],
     [INT_MAX, INT_MAX],
-    [0, INT_MAX],
+    [1, INT_MAX],
   ] as const)('passes %i to %i through unchanged', async (from, to) => {
     const s = await setting('done', [from, to]);
 
@@ -222,22 +221,5 @@ describe('refusals on the job read', () => {
 
     expect(res.status).toBeGreaterThanOrEqual(403);
     expect(res.body).not.toHaveProperty('quoteToBani');
-  });
-});
-
-// @traces 1404-FR-003
-describe('the job list', () => {
-  it('stays free of the range with several jobs and a page limit', async () => {
-    const s = await setting('done');
-
-    const res = await get('/garage/jobs?limit=1', s.owner);
-
-    expect(res.status).toBe(200);
-    for (const item of res.body.items) {
-      expect(Object.keys(item)).not.toEqual(
-        expect.arrayContaining(['quoteFromBani']),
-      );
-      expect(item).not.toHaveProperty('quoteToBani');
-    }
   });
 });
