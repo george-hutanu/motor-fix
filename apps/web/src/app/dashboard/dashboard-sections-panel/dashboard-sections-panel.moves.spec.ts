@@ -116,7 +116,7 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-// @traces 1391-admin-dashboard-customise-FR-015
+// @traces 1391-FR-015
 describe('a panel given no moves', () => {
   it('has no arrows and no reset, only the switches and "Gata"', async () => {
     await open({ withMoves: false });
@@ -128,7 +128,7 @@ describe('a panel given no moves', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-004 1391-admin-dashboard-customise-FR-005
+// @traces 1391-FR-004 1391-FR-005
 describe('the arrows of each row', () => {
   it('names each arrow with its row and the switch by its label', async () => {
     await open();
@@ -222,7 +222,7 @@ describe('the arrows of each row', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-006 1391-admin-dashboard-customise-FR-009
+// @traces 1391-FR-006 1391-FR-009
 describe('going back to the default', () => {
   it('offers the reset before "Gata" and reports it', async () => {
     const { reset } = await open();

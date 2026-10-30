@@ -164,7 +164,7 @@ afterEach(() => {
   jest.dontMock('../dashboard-sections-panel/dashboard-sections-panel');
 });
 
-// @traces 1391-admin-dashboard-customise-FR-001 1391-admin-dashboard-customise-FR-007
+// @traces 1391-FR-001 1391-FR-007
 describe('the strip at the top of Panou', () => {
   it('holds the button and the count of the listed sections shown', async () => {
     const { element } = await open({
@@ -190,7 +190,7 @@ describe('the strip at the top of Panou', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-010
+// @traces 1391-FR-010
 describe('waiting for the layout', () => {
   it('draws no section and no count, busy, until the layout answers', async () => {
     const pending = deferred<DashboardLayoutDto>();
@@ -232,7 +232,7 @@ describe('waiting for the layout', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-004 1391-admin-dashboard-customise-FR-014 1391-admin-dashboard-customise-FR-017
+// @traces 1391-FR-004 1391-FR-014 1391-FR-017
 describe('the sections Panou draws', () => {
   it('follows the layout order, the reviews overview right before the log', async () => {
     const { element } = await open({
@@ -295,7 +295,7 @@ describe('the sections Panou draws', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-008
+// @traces 1391-FR-008
 describe('every section switched off', () => {
   it('says so and draws nothing else', async () => {
     const { element } = await open({
@@ -310,7 +310,7 @@ describe('every section switched off', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-001 1391-admin-dashboard-customise-FR-002 1391-admin-dashboard-customise-FR-003 1391-admin-dashboard-customise-FR-018
+// @traces 1391-FR-001 1391-FR-002 1391-FR-003 1391-FR-016 1391-FR-018
 describe('the panel "Personalizează panoul" opens', () => {
   it('lists the sections in the layout order with their texts', async () => {
     const { element } = await open({
@@ -378,7 +378,7 @@ describe('the panel "Personalizează panoul" opens', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-004 1391-admin-dashboard-customise-FR-005 1391-admin-dashboard-customise-FR-006 1391-admin-dashboard-customise-FR-009 1391-admin-dashboard-customise-FR-017
+// @traces 1391-FR-004 1391-FR-005 1391-FR-006 1391-FR-009 1391-FR-017
 describe('a change made in the panel', () => {
   it('hides a section from Panou at once and saves the whole layout', async () => {
     const { admin, element, layout } = await open({
@@ -460,7 +460,7 @@ describe('a change made in the panel', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-011
+// @traces 1391-FR-011
 describe('a change made in another tab', () => {
   it('redraws Panou and the open panel', async () => {
     let panels = all();

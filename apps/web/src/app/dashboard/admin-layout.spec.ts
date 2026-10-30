@@ -87,7 +87,7 @@ function setup({
   return { api, layout, live, me, settle };
 }
 
-// @traces 1391-admin-dashboard-customise-FR-010
+// @traces 1391-FR-010
 describe('reading the admin layout', () => {
   it('reads the admin layout once in the browser', async () => {
     const { api, layout, settle } = setup({
@@ -177,7 +177,7 @@ describe('reading the admin layout', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-004 1391-admin-dashboard-customise-FR-009
+// @traces 1391-FR-004 1391-FR-009
 describe('switching a section', () => {
   it('hides it at once and saves the whole layout in order', async () => {
     const saved = deferred<DashboardLayoutDto>();
@@ -241,7 +241,7 @@ describe('switching a section', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-005 1391-admin-dashboard-customise-FR-009
+// @traces 1391-FR-005 1391-FR-009
 describe('moving a section', () => {
   it('swaps the two sections at once and saves the whole layout', async () => {
     const saved = deferred<DashboardLayoutDto>();
@@ -403,7 +403,7 @@ describe('moving a section', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-006 1391-admin-dashboard-customise-FR-009
+// @traces 1391-FR-006 1391-FR-009
 describe('going back to the default', () => {
   it('shows every section in the default order at once and resets on the server', async () => {
     const answered = deferred<DashboardLayoutDto>();
@@ -449,7 +449,7 @@ describe('going back to the default', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-011
+// @traces 1391-FR-011
 describe('a change made elsewhere', () => {
   it('re-reads on the layout event', async () => {
     let panels = all();

@@ -85,7 +85,7 @@ test.describe('customising the admin Panou @seeded @database', () => {
       () => document.documentElement.scrollWidth - window.innerWidth,
     );
 
-  // @traces 1391-admin-dashboard-customise-FR-013 1391-admin-dashboard-customise-FR-011 1391-admin-dashboard-customise-FR-006
+  // @traces 1391-FR-013 1391-FR-011 1391-FR-006
   test('the admin hides and moves sections, keeps them everywhere and goes back to the default', async ({
     browser,
     page,
@@ -170,7 +170,7 @@ test.describe('customising the admin Panou @seeded @database', () => {
     await page.emulateMedia({ colorScheme: null });
   };
 
-  // @traces 1391-admin-dashboard-customise-FR-012 1391-admin-dashboard-customise-FR-018
+  // @traces 1391-FR-012 1391-FR-018
   for (const width of [320, 390]) {
     test(`the open panel fits ${width} px in both schemes and languages, with no axe finding`, async ({
       page,

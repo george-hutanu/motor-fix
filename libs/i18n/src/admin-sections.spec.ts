@@ -32,7 +32,7 @@ const PATHS = [
   ...KEYS.flatMap((key) => [`name.${key}`, `description.${key}`]),
 ].map((path) => `panel.sections.${path}`);
 
-// @traces 1391-admin-dashboard-customise-FR-018
+// @traces 1391-FR-018
 describe('the admin dashboard customise texts', () => {
   it.each(
     (['ro', 'en'] as const).flatMap((language) =>
@@ -58,7 +58,7 @@ describe('the admin dashboard customise texts', () => {
   });
 });
 
-// @traces 1391-admin-dashboard-customise-FR-002 1391-admin-dashboard-customise-FR-003 1391-admin-dashboard-customise-FR-007
+// @traces 1391-FR-002 1391-FR-003 1391-FR-007
 describe('the admin dashboard customise wording', () => {
   it.each([
     [
