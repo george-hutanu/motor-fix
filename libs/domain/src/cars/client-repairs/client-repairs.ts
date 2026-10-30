@@ -131,6 +131,12 @@ export const stored = (row: ClientRepairRow): Corrected => ({
   what: row.what,
 });
 
+export const carOf = (car: {
+  brand: { name: string };
+  model: string;
+  year: number;
+}) => ({ brandName: car.brand.name, model: car.model, year: car.year });
+
 // The driver by first name and initial, never more; a car with no owner, a
 // deleted one or one with no name shows the deleted-account label.
 export function toItem(row: ClientRepairRow): ClientRepairDto {
@@ -138,11 +144,7 @@ export function toItem(row: ClientRepairRow): ClientRepairDto {
   const name = owner && owner.status !== 'deleted' ? shortName(owner.name) : '';
   const version = row.updatedAt.toISOString();
   return {
-    car: {
-      brandName: row.car.brand.name,
-      model: row.car.model,
-      year: row.car.year,
-    },
+    car: carOf(row.car),
     correctedAt: row.updatedByRole === 'owner' ? version : null,
     driver: { shortName: name || DELETED_AUTHOR },
     id: row.id,

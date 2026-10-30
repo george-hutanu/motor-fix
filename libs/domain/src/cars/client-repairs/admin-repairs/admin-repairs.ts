@@ -8,7 +8,7 @@ import { isUUID } from 'class-validator';
 import { refusal } from '../../../auth/http-refusal';
 import type { Prisma } from '../../../generated/prisma/client';
 import { CORRECTED_BY } from '../../history/history';
-import { type ClientRepairRow, stored } from '../client-repairs';
+import { type ClientRepairRow, carOf, stored } from '../client-repairs';
 
 // A malformed id names nothing, so it answers as an unknown one.
 export function idOr404(id: string, noun: 'account' | 'repair'): string {
@@ -32,12 +32,6 @@ type ListRow = {
   doneOn: Date;
   id: string;
 };
-
-const carOf = (car: ListRow['car']) => ({
-  brandName: car.brand.name,
-  model: car.model,
-  year: car.year,
-});
 
 export const toListItem = (row: ListRow): AdminRepairListItemDto => ({
   car: carOf(row.car),
