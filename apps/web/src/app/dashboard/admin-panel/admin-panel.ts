@@ -7,20 +7,22 @@ import { AdminGrowth } from '../admin-growth/admin-growth';
 import { AdminLog } from '../admin-log/admin-log';
 import { AdminOverview } from '../admin-overview';
 import { AdminQueue } from '../admin-queue/admin-queue';
+import { AdminReviews } from '../admin-reviews/admin-reviews';
 
 type Figures = NonNullable<ReturnType<AdminOverview['figures']>>;
 type Figure = Exclude<keyof Figures, 'observabilityUrl'>;
 
 interface Tile {
   label: string;
-  state: 'loading' | 'value' | 'failed' | 'soon';
+  state: 'loading' | 'value' | 'failed';
   number?: string;
   line?: string;
   name: string;
+  // A red light beside the number while something waits on the admin; the
+  // number says it too, so the light is decoration.
+  alert?: boolean;
 }
 
-// The figures with no data behind them yet show "în curând" until their
-// stories ship them.
 // In a chosen period the lines count from its start; `today`
 // has no active-drivers line, its start row being the same day.
 const inPeriod = (f: Figures) => f.period !== 'default';
@@ -30,7 +32,6 @@ const TILES: readonly {
   key: string;
   line?: (f: Figures) => number | null;
   percent?: true;
-  soon?: true;
   // The line in place of a figure the answer leaves out.
   none?: string;
 }[] = [
@@ -53,14 +54,13 @@ const TILES: readonly {
       return sinceStart(f.activeDrivers, f.activeDriversPeriodStart);
     },
   },
-  { key: 'reportedReviews', soon: true },
 ];
 
 const MISSING = '—';
 
 @Component({
   host: { '[attr.aria-busy]': "regionBusy() ? 'true' : null" },
-  imports: [AdminDemand, AdminGrowth, AdminLog, AdminQueue],
+  imports: [AdminDemand, AdminGrowth, AdminLog, AdminQueue, AdminReviews],
   selector: 'mf-admin-panel',
   styleUrl: './admin-panel.css',
   templateUrl: './admin-panel.html',
@@ -97,12 +97,39 @@ export class AdminPanel {
     const loading = this.busy();
     return TILES.map((tile): Tile => {
       const label = this.t(tile.key);
-      if (tile.soon) return this.missing(label, 'soon', this.t('soon'));
       if (figures) return this.shown(label, tile, figures);
       if (loading) return { label, name: label, state: 'loading' };
-      return this.missing(label, 'failed', this.t('unavailable'));
-    });
+      return this.failed(label);
+    }).concat(this.reported(loading));
   });
+
+  // The reported reviews: the platform's count, whatever the choice, with
+  // the ones past 48 hours as its line.
+  private reported(loading: boolean): Tile {
+    const label = this.t('reportedReviews');
+    const pending = this.overview.pending();
+    if (pending === undefined) {
+      if (loading) return { label, name: label, state: 'loading' };
+      return this.failed(label);
+    }
+    const language = this.i18n.language();
+    const number = formatNum(pending, language);
+    const overdue = this.overview.overdue() ?? 0;
+    const line =
+      overdue > 0
+        ? this.i18n.t('admin.panel.overdue', {
+            n: formatNum(overdue, language),
+          })
+        : undefined;
+    return {
+      alert: pending > 0,
+      label,
+      line,
+      name: [label, number, line].filter(Boolean).join(', '),
+      number,
+      state: 'value',
+    };
+  }
 
   protected readonly why = computed(() => this.t('why'));
 
@@ -137,15 +164,14 @@ export class AdminPanel {
     return this.value(label, figure, change, figures.period, percent);
   }
 
-  private missing(label: string, state: 'soon' | 'failed', line: string): Tile {
-    const name =
-      state === 'soon' ? `${label}, ${line}` : `${label}, ${MISSING}`;
+  private failed(label: string): Tile {
+    const line = this.t('unavailable');
     return {
       label,
       line,
-      name,
+      name: `${label}, ${MISSING}`,
       number: MISSING,
-      state,
+      state: 'failed',
     };
   }
 

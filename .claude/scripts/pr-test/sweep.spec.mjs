@@ -601,7 +601,7 @@ describe('a route checked against the router (app.routes.ts and dashboard/views.
   });
 
   it('refuses an unknown path with one line naming it', () => {
-    for (const bad of ['/app/garage/nope@garage', '/nope', '/:lang/no-such', '/app', '/:lang/garages/x/y', '/app/driver/prices@driver', '/app/admin/reviews@admin']) {
+    for (const bad of ['/app/garage/nope@garage', '/nope', '/:lang/no-such', '/app', '/:lang/garages/x/y', '/app/driver/prices@driver', '/app/admin/assistant@admin']) {
       const problem = routeProblem(bad, table);
       assert.equal(typeof problem, 'string', bad);
       assert.ok(problem.startsWith(`${bad}: `), problem);

@@ -21,6 +21,7 @@ import { AdminLogView } from './admin-log-view/admin-log-view';
 import { AdminOverview } from './admin-overview';
 import { AdminPanel } from './admin-panel/admin-panel';
 import { AdminProposedJobs } from './admin-proposed-jobs/admin-proposed-jobs';
+import { AdminReviews } from './admin-reviews/admin-reviews';
 import { AdminUsers } from './admin-users/admin-users';
 import { CarsView } from './cars-view/cars-view';
 import { DriverHome } from './driver-home/driver-home';
@@ -234,6 +235,15 @@ describe('the dashboard view lists', () => {
     ]);
   });
 
+  // @traces 1389-FR-001
+  it('loads the reported reviews list as the admin Recenzii raportate view', async () => {
+    const reviews = DASHBOARDS.admin.views.find(
+      (view) => view.path === 'reviews',
+    );
+
+    expect(await reviews?.load?.()).toBe(AdminReviews);
+  });
+
   it('lists the admin views with their labels, capabilities, release marks and counter', () => {
     expect(DASHBOARDS.admin.views).toEqual([
       {
@@ -259,10 +269,11 @@ describe('the dashboard view lists', () => {
       },
       {
         capability: 'admin.reviews',
+        counter: 'reportsPending',
         label: 'shell.frame.nav.admin.reviews',
+        load: expect.any(Function),
         path: 'reviews',
         tab: 'shell.frame.tab.reported',
-        unreleased: true,
       },
       {
         capability: 'admin.catalogue',
@@ -484,6 +495,7 @@ describe('the dashboard view lists', () => {
       '',
       'garages',
       'users',
+      'reviews',
       'catalogue',
       'proposed-jobs',
       'log',
@@ -491,8 +503,10 @@ describe('the dashboard view lists', () => {
     ]);
   });
 
-  it('hides an unreleased view even from a role that may open it', () => {
-    expect(paths('admin', ['admin.reviews'])).toEqual(['']);
+  // @traces 1389-FR-001
+  it('opens the reported reviews view to an admin who holds its permission only', () => {
+    expect(paths('admin', ['admin.reviews'])).toEqual(['', 'reviews']);
+    expect(paths('admin', [])).toEqual(['']);
   });
 
   // @traces 097-FR-002
@@ -755,6 +769,8 @@ async function open(
           figures: signal(undefined),
           figuresLoading: signal(false),
           loading: signal(true),
+          overdue: signal(undefined),
+          pending: signal(undefined),
           period: signal('default'),
         },
       },
@@ -968,7 +984,7 @@ describe('the dashboard view routes', () => {
     expect(TestBed.inject(Router).url).toBe('/app/garage');
   });
 
-  it.each(['reviews', 'assistant'])(
+  it.each(['assistant'])(
     'sends an admin who types the unreleased %s address to the dashboard',
     async (path) => {
       await open(`/app/admin/${path}`, ADMIN, 'admin');

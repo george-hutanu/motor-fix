@@ -8,12 +8,8 @@ import {
 import type { EventKind } from '@motor-fix/contracts';
 import { GARAGE_CLOSE_REASONS } from '@motor-fix/contracts/request-status';
 import { GarageRequestsService } from '@motor-fix/data-access';
-import {
-  I18n,
-  requestAge,
-  requestExpiry,
-  TranslatePipe,
-} from '@motor-fix/i18n';
+import { I18n, requestAge, TranslatePipe } from '@motor-fix/i18n';
+import { requestExpiry } from '@motor-fix/i18n/request-expiry';
 import {
   injectOverlayTask,
   type OverlayResult,

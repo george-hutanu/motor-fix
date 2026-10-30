@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-29
+updated: 2026-10-30
 features:
   - 253-live-connection
   - 254-live-audience
@@ -39,6 +39,7 @@ features:
   - 275-live-stage-updates
   - 427-time-blocks
   - 011-dashboard-sections
+  - 1389-reported-reviews-admin
 ---
 
 # Capability: Live updates
@@ -497,9 +498,9 @@ _From 074-garage-reviews._
 
 _From 1263-admin-dashboard-customise._
 
-### 177-FR-010 — The queue, the panel, the counter and the tile MUST re-read on `review.reported`, `review.decided`, `review.deleted` and `review.report_closed` arriving on the admin's live connection, so a new item is on screen within 5 seconds and a decided or deleted one leaves within 5 seconds, and MUST re-read when the connection resyncs after a loss; these review kinds, and no other review kind, MUST reach the `admin` channel (today the review audience reaches the garage, the mechanic and the author only), carrying the same event payload those audiences already receive and nothing more (the reporter, the reason and the facts stay in the admin-only read of FR-001); a re-read keeps the items already shown until the new ones arrive (no skeleton flash); the first read shows skeletons; a failed read shows "Nu am putut citi recenziile raportate." / "Could not read the reported reviews." with a Reîncearcă / Retry button.
+### 1389-FR-006 — (from 177-FR-010, its web part; modifies 177-FR-010) The view, the panel, the counter and the tile MUST re-read on `review.reported`, `review.decided`, `review.deleted` and `review.report_closed` arriving on the admin's live connection, so a new item is on screen within 5 seconds and a decided, deleted or closed one leaves within 5 seconds, and MUST re-read when the connection resyncs after a loss; these review kinds, and no other review kind, reach the `admin` channel, carrying the same event payload the review audiences receive and nothing more (built by ST-177, unchanged here: the reporter, the reason and the facts stay in the admin-only read); the queue and the overview re-read through the dashboard's shared live re-read, so a re-read keeps the items and numbers already shown until the new ones arrive (no skeleton flash), events within 300 ms cause one read, and a failed re-read keeps what is shown; the first read of the queue shows skeletons in the view and the panel; a failed first read shows "Nu am putut citi recenziile raportate." / "Could not read the reported reviews." with a "Reîncearcă" / "Retry" button that reads again. The view and the panel add no polling and no cache.
 
-_From 177-reported-reviews._
+_From 1389-reported-reviews-admin._
 
 ### 427-FR-010 — Each write MUST record its event in the same transaction through the outbox (257-FR-001): `time_block.created`, `time_block.updated` (added to the kinds), `time_block.deleted`, subject `time_block` with `blockId`, `garageId`, `mechanicId`, `lift`, `startsAt`, `endsAt` in the payload and never the note; the audience resolver gains the `time_block` subject: `garage:{garageId}`, `mechanic:{mechanicId}` when set, `public:garage:{garageId}` (so open profiles re-read their free slots; the public stream carries the kind and the id only, as every event). The live hub MUST deliver the three kinds to the owner and a receptionist and, through her `mechanic:` channel, to the mechanic (as it does the unclaimed `booking.confirmed`: no `KIND_CAPABILITY` entry is added, plan.md R4), and the `public:garage:` allow-list gains the three kinds. Nobody is notified.
 
@@ -542,3 +543,4 @@ _From 275-live-stage-updates._
 - `398-FR-008` — superseded by `102-FR-010` (2026-10-25)
 - `419-FR-008` — superseded by `1193-FR-001` (2026-10-25)
 - `254-FR-005` — superseded by `1250-FR-013` (2026-10-26)
+- `177-FR-010` — superseded by `1389-FR-006` (2026-10-30)
