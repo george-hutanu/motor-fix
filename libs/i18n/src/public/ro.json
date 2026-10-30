@@ -104,6 +104,10 @@
         "paid": "Plătit, după șofer: {amount}",
         "quote": "Ofertă {amount}"
       },
+      "reply": {
+        "edited": "Editat · {day}",
+        "label": "Răspunsul service‑ului"
+      },
       "retry": "Încearcă din nou",
       "score": "{rating} / 5",
       "stars": {

@@ -42,6 +42,19 @@
           <span class="edited">{{ 'public.garageProfile.reviewsSection.edited' | t }} <span aria-hidden="true">·</span> {{ review.edited }}</span>
         }
       </p>
+      @if (review.reply; as reply) {
+        <div class="reply" data-reply>
+          <p class="reply-label">{{ 'public.garageProfile.reviewsSection.reply.label' | t }}</p>
+          <p class="reply-text" data-reply-text>{{ reply.text }}</p>
+          <p class="reply-by">
+            <span data-reply-day>{{ reply.day }}</span>
+            @if (reply.edited) {
+              <span aria-hidden="true">·</span>
+              <span data-reply-edited>{{ reply.edited }}</span>
+            }
+          </p>
+        </div>
+      }
     </article>
   }
   @if (moreFailed()) {
