@@ -1,5 +1,6 @@
+import { observeQueue, observeWorker } from '@motor-fix/observability';
 import { Logger } from '@nestjs/common';
-import { Queue, QueueEvents } from 'bullmq';
+import { Queue, QueueEvents, Worker } from 'bullmq';
 
 import { DIRECT_SEND_QUEUE, DIRECT_SEND_WAIT_MS } from './direct-send';
 import { DirectSend } from './direct-send.client';
@@ -8,7 +9,12 @@ import { DirectSendModule } from './direct-send.module';
 jest.mock('bullmq', () => ({
   Queue: jest.fn(),
   QueueEvents: jest.fn(),
-  Worker: jest.fn(),
+  Worker: jest.fn(() => ({ on: jest.fn() })),
+}));
+jest.mock('@motor-fix/observability', () => ({
+  ...jest.requireActual('@motor-fix/observability'),
+  observeQueue: jest.fn(),
+  observeWorker: jest.fn(),
 }));
 
 const TO = '+40710000001';
@@ -38,9 +44,9 @@ const code = (s: DirectSend) =>
 
 afterEach(() => jest.useRealTimers());
 
-// @traces 1379-provider-calls-worker-FR-001
-// @traces 1379-provider-calls-worker-FR-004
-// @traces 1379-provider-calls-worker-FR-005
+// @traces 1379-FR-001
+// @traces 1379-FR-004
+// @traces 1379-FR-005
 describe('DirectSend', () => {
   it('adds one job with one attempt, removed soon after it ends', async () => {
     const c = client(async () => undefined);
@@ -189,8 +195,8 @@ describe('DirectSend', () => {
   });
 });
 
-// @traces 1379-provider-calls-worker-FR-007
-// @traces 1379-provider-calls-worker-FR-010
+// @traces 1379-FR-007
+// @traces 1379-FR-010
 describe('DirectSendModule.register', () => {
   it('builds the queue and its listener on the broker, never retrying a command forever', () => {
     const module = DirectSendModule.register('redis://valkey.test:6379/2');
@@ -212,5 +218,35 @@ describe('DirectSendModule.register', () => {
       expect.objectContaining({ connection }),
     );
     expect(module.exports).toContain(DirectSend);
+  });
+});
+
+// @traces 1379-FR-009
+// @traces 1379-FR-010
+describe('DirectSendModule.registerWorker', () => {
+  it('consumes the queue with its metrics and gauges, never retrying a command forever', () => {
+    const module = DirectSendModule.registerWorker({
+      email: { apiUrl: 'http://brevo.test' } as never,
+      phone: {} as never,
+      redisUrl: 'redis://valkey.test:6379/2',
+    });
+    for (const provider of module.providers ?? []) {
+      const factory = (provider as { useFactory?: () => unknown }).useFactory;
+      factory?.();
+    }
+
+    expect(Worker).toHaveBeenCalledWith(
+      DIRECT_SEND_QUEUE,
+      expect.any(Function),
+      expect.objectContaining({
+        autorun: false,
+        connection: {
+          maxRetriesPerRequest: null,
+          url: 'redis://valkey.test:6379/2',
+        },
+      }),
+    );
+    expect(observeWorker).toHaveBeenCalled();
+    expect(observeQueue).toHaveBeenCalled();
   });
 });

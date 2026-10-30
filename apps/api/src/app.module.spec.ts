@@ -122,9 +122,9 @@ function importsBrevo(text: string): boolean {
   );
 }
 
-// @traces 1379-provider-calls-worker-FR-006
-// @traces 1379-provider-calls-worker-FR-007
-// @traces 1379-provider-calls-worker-FR-008
+// @traces 1379-FR-006
+// @traces 1379-FR-007
+// @traces 1379-FR-008
 describe('AppModule holds no provider sending client', () => {
   it('builds no Brevo while the module tree is put together', () => {
     built.mockClear();

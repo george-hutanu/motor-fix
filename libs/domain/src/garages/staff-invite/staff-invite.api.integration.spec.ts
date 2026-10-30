@@ -1,4 +1,4 @@
-// @traces 1379-provider-calls-worker-FR-003
+// @traces 1379-FR-003
 import { randomUUID } from 'node:crypto';
 
 import type { Role } from '@motor-fix/contracts/capabilities';

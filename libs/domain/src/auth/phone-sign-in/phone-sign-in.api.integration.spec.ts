@@ -797,7 +797,7 @@ describe('how often a code may be asked for', () => {
   });
 });
 
-// @traces 1379-provider-calls-worker-FR-003
+// @traces 1379-FR-003
 describe('a code WhatsApp does not take', () => {
   const failing: [string, () => void][] = [
     ['Brevo refuses it', () => brevo.answer({ status: 400 })],

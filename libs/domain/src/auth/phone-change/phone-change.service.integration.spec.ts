@@ -2,7 +2,7 @@
 // @traces 139-FR-012
 // @traces 139-FR-013
 // @traces 139-FR-017
-// @traces 1379-provider-calls-worker-FR-003
+// @traces 1379-FR-003
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger, NotFoundException, ValidationPipe } from '@nestjs/common';

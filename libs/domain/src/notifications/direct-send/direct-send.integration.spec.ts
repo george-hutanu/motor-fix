@@ -66,9 +66,9 @@ afterAll(async () => {
 
 beforeEach(() => brevo.reset());
 
-// @traces 1379-provider-calls-worker-FR-001
-// @traces 1379-provider-calls-worker-FR-002
-// @traces 1379-provider-calls-worker-FR-011
+// @traces 1379-FR-001
+// @traces 1379-FR-002
+// @traces 1379-FR-011
 describe('direct-send through the worker', () => {
   it('carries the code from the api to the provider once', async () => {
     expect(await code(send)).toBeNull();
@@ -102,8 +102,8 @@ describe('direct-send through the worker', () => {
   });
 });
 
-// @traces 1379-provider-calls-worker-FR-004
-// @traces 1379-provider-calls-worker-FR-005
+// @traces 1379-FR-004
+// @traces 1379-FR-005
 describe('direct-send, once and gone', () => {
   it('never sends a job picked up after the wait cap', async () => {
     const job = await queue.add(
@@ -137,8 +137,8 @@ describe('direct-send, once and gone', () => {
   });
 });
 
-// @traces 1379-provider-calls-worker-FR-003
-// @traces 1379-provider-calls-worker-FR-010
+// @traces 1379-FR-003
+// @traces 1379-FR-010
 describe('direct-send without a worker or a broker', () => {
   it('answers timeout within the cap when no worker runs', async () => {
     await worker?.close();

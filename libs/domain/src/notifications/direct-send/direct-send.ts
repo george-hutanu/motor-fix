@@ -29,7 +29,7 @@ export interface DirectSendJob {
   name?: string;
 }
 
-export interface DirectSender {
+interface DirectSender {
   brevo: Pick<Brevo, 'send' | 'sendWhatsApp'>;
   email: EmailConfig;
   phone: PhoneConfig;
