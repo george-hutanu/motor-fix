@@ -70,7 +70,7 @@ const button = (row: HTMLElement) =>
 
 afterEach(() => TestBed.resetTestingModule());
 
-// @traces 1387-review-reply-web-FR-001
+// @traces 1387-FR-001
 describe('the review-edited mark against the reply date', () => {
   const reply = { postedAt: '2026-10-20T09:00:00.000Z' };
 
@@ -130,7 +130,7 @@ describe('the review-edited mark against the reply date', () => {
   });
 });
 
-// @traces 1387-review-reply-web-FR-001
+// @traces 1387-FR-001
 describe('who sees the reply button', () => {
   it('shows a receptionist no button even on a review the API marks as answerable', async () => {
     const [row] = await render([staffReview({ canReply: true })], {
@@ -210,7 +210,7 @@ describe('who sees the reply button', () => {
   });
 });
 
-// @traces 1387-review-reply-web-FR-001
+// @traces 1387-FR-001
 describe('the reply text on a row', () => {
   it('draws markup in the reply as plain text and keeps its blank lines', async () => {
     const typed = '<img src=x onerror=1>\n\n<b>Mulțumim</b> &amp; la revedere';

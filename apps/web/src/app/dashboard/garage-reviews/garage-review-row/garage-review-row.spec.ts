@@ -153,7 +153,8 @@ describe('a review row on the garage dashboard', () => {
 const replyButton = (row: HTMLElement) =>
   row.querySelector<HTMLButtonElement>('button[data-reply-button]');
 
-// @traces 1387-review-reply-web-FR-001 1387-review-reply-web-FR-005
+// @traces 1387-FR-001 1387-FR-005
+// @traces 1387-FR-001 1387-FR-005
 describe('the reply button on a review row', () => {
   it('offers the owner "Răspunde" on a review that can be answered, and says so when pressed', async () => {
     const row = await render(staffReview({ canReply: true }));
@@ -233,7 +234,7 @@ describe('the reply button on a review row', () => {
   });
 });
 
-// @traces 1387-review-reply-web-FR-001 1387-review-reply-web-FR-005
+// @traces 1387-FR-001 1387-FR-005
 describe('the reply under a review on the dashboard', () => {
   it('shows the reply whole, labelled, with the day it was posted', async () => {
     const row = await render(repliedReview());
@@ -352,7 +353,7 @@ describe('the reply under a review on the dashboard', () => {
   });
 });
 
-// @traces 1387-review-reply-web-FR-001 1387-review-reply-web-FR-005
+// @traces 1387-FR-001 1387-FR-005
 describe('the reply’s styles on the row', () => {
   const css = readFileSync(join(__dirname, 'garage-review-row.css'), 'utf8');
 

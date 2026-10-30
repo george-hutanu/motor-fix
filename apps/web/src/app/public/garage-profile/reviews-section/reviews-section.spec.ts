@@ -881,7 +881,8 @@ describe('the prices and the marks under a review', () => {
   });
 });
 
-// @traces 1387-review-reply-web-FR-004 1387-review-reply-web-FR-005
+// @traces 1387-FR-004 1387-FR-005
+// @traces 1387-FR-004 1387-FR-005
 describe('the garage’s reply under a review', () => {
   beforeEach(() => configure());
 
@@ -998,7 +999,7 @@ describe('the reviews section’s styles', () => {
     expect(css).toMatch(/\.breakdown\s*{[^}]*max-width:\s*420px;/);
   });
 
-  // @traces 1387-review-reply-web-FR-004
+  // @traces 1387-FR-004
   it('indents the reply behind a line and keeps its line breaks, wrapping at any width', () => {
     expect(css).toMatch(/\.reply\s*{[^}]*margin-inline-start:/);
     expect(css).toMatch(/\.reply\s*{[^}]*border-inline-start:\s*2px solid/);

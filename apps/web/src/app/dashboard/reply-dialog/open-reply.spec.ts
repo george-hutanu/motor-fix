@@ -10,7 +10,7 @@ import {
   staffReview,
 } from '../garage-reviews/garage-reviews.testing';
 
-// @traces 1387-review-reply-web-FR-002 1387-review-reply-web-FR-006
+// @traces 1387-FR-002 1387-FR-006
 describe('opening the reply dialog', () => {
   const overlays = () => {
     const open = jest.fn().mockResolvedValue('cancelled');

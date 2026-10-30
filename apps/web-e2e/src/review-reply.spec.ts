@@ -11,7 +11,7 @@ import {
 } from './review-jobs.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
-// @traces 1387-review-reply-web-FR-001 1387-review-reply-web-FR-002 1387-review-reply-web-FR-003 1387-review-reply-web-FR-004 1387-review-reply-web-FR-007
+// @traces 1387-FR-001 1387-FR-002 1387-FR-003 1387-FR-004 1387-FR-007
 
 async function signedIn(page: Page, email: string) {
   await keepSeededLanguage(page);

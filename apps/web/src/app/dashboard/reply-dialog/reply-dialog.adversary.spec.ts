@@ -118,7 +118,8 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 1387-review-reply-web-FR-002
+// @traces 1387-FR-002
+// @traces 1387-FR-002 1387-FR-003
 describe('the reply dialog at the 1,000 code point limit', () => {
   it('counts a base letter and its combining accent as two code points', async () => {
     await open();
@@ -182,7 +183,7 @@ describe('the reply dialog at the 1,000 code point limit', () => {
   });
 });
 
-// @traces 1387-review-reply-web-FR-002
+// @traces 1387-FR-002
 describe('the reply dialog with text that is not text', () => {
   it.each([
     ['spaces', '     '],
@@ -254,7 +255,7 @@ describe('the reply dialog with text that is not text', () => {
   });
 });
 
-// @traces 1387-review-reply-web-FR-003
+// @traces 1387-FR-003
 describe('the reply dialog while a save is in flight', () => {
   it('sends one request when the form is submitted twice before the answer', async () => {
     let answer: (reply: ReviewReplyDto) => void = () => undefined;
@@ -331,7 +332,7 @@ describe('the reply dialog while a save is in flight', () => {
   });
 });
 
-// @traces 1387-review-reply-web-FR-003
+// @traces 1387-FR-003
 describe('the reply dialog after a refusal', () => {
   it('shows the refusal, then publishes the corrected text and confirms with the error gone', async () => {
     const reply = staffReply({ id: 'rep-2' });

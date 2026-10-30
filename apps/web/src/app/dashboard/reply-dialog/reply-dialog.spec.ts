@@ -132,7 +132,8 @@ afterEach(() => {
   TestBed.resetTestingModule();
 });
 
-// @traces 1387-review-reply-web-FR-002 1387-review-reply-web-FR-005
+// @traces 1387-FR-002 1387-FR-005
+// @traces 1387-FR-002 1387-FR-003 1387-FR-005
 describe('the reply dialog: what it shows', () => {
   it('titles the reply and names the review: author, day and mechanic', async () => {
     await open();
@@ -218,7 +219,7 @@ describe('the reply dialog: what it shows', () => {
   });
 });
 
-// @traces 1387-review-reply-web-FR-002
+// @traces 1387-FR-002
 describe('the reply dialog: the counter and the publish button', () => {
   it('counts the trimmed text in code points, as the API does', async () => {
     await open();
@@ -273,7 +274,7 @@ describe('the reply dialog: the counter and the publish button', () => {
   });
 });
 
-// @traces 1387-review-reply-web-FR-003 1387-review-reply-web-FR-005
+// @traces 1387-FR-003 1387-FR-005
 describe('the reply dialog: publishing', () => {
   it('posts the trimmed text, confirms in place and hands the reply to the opener at once', async () => {
     const reply = staffReply({ id: 'rep-9', text: 'Mulțumim!' });
@@ -335,7 +336,7 @@ describe('the reply dialog: publishing', () => {
   });
 });
 
-// @traces 1387-review-reply-web-FR-003 1387-review-reply-web-FR-005
+// @traces 1387-FR-003 1387-FR-005
 describe('the reply dialog: refusals and failures', () => {
   it.each([
     [403, 'forbidden', 'Doar proprietarul poate răspunde.'],
