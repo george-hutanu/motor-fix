@@ -521,10 +521,16 @@ describe('the integration suite in shards', () => {
   );
 
   // @traces 1406-FR-001 1406-FR-006
-  it('runs three domain slices and every other project, or the named files alone', () => {
+  it('runs four domain slices and every other project, or the named files alone', () => {
     expect(lists).toEqual([
       ['named specs'],
-      ['domain 1/3', 'domain 2/3', 'domain 3/3', 'other projects'],
+      [
+        'domain 1/4',
+        'domain 2/4',
+        'domain 3/4',
+        'domain 4/4',
+        'other projects',
+      ],
     ]);
     expect(matrix).toMatch(/^\$\{\{ fromJSON\(inputs\.specs && /);
   });

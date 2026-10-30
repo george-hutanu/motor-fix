@@ -278,8 +278,8 @@ there for one that will.
   and its browser only on `.claude/`, `.specify/`, `.husky/`, `.github/`,
   `scripts/` or `package*.json`; a change to `ci.yml` runs all three. Integration tests
   (PostgreSQL+PostGIS and Redis services, the migrations applied) runs as
-  four shards, each on its own runner and database (domain in three Jest
-  slices, every other project in the fourth; a dispatch naming spec files
+  five shards, each on its own runner and database (domain in four Jest
+  slices, every other project in the fifth; a dispatch naming spec files
   runs them in one `named specs` job instead), only
   on demand and when a caller asks for it (the `workflow_call` input
   `integration`, which `release.yml` sets, so a release runs the suite before

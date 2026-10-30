@@ -153,16 +153,16 @@ describe('ci workflow', () => {
   });
 
   // As one job the suite ran 40 to 60 minutes against 90. Split, domain runs
-  // in three slices and every other project in a fourth, each on its own
+  // in four slices and every other project in a fifth, each on its own
   // runner and database; a dispatch naming spec files runs them in one job.
   // @traces 1406-FR-001 1406-FR-006
-  it('runs the suite in four shards, or the named files in one job', () => {
+  it('runs the suite in five shards, or the named files in one job', () => {
     const block = job('integration');
 
     expect(setting(block, 'fail-fast')).toBe('false');
     expect(setting(block, 'shard')).toBe(
       gh(
-        `fromJSON(inputs.specs && '["named specs"]' || '["domain 1/3", "domain 2/3", "domain 3/3", "other projects"]')`,
+        `fromJSON(inputs.specs && '["named specs"]' || '["domain 1/4", "domain 2/4", "domain 3/4", "domain 4/4", "other projects"]')`,
       ),
     );
     expect(setting(step(block, 'Integration tests'), 'SHARD')).toBe(
@@ -509,16 +509,20 @@ describe('ci workflow', () => {
     // @traces 1406-FR-001
     it.each([
       [
-        'domain 1/3',
-        'nx run-many -t test --projects=domain --passWithNoTests --shard=1/3',
+        'domain 1/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --shard=1/4',
       ],
       [
-        'domain 2/3',
-        'nx run-many -t test --projects=domain --passWithNoTests --shard=2/3',
+        'domain 2/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --shard=2/4',
       ],
       [
-        'domain 3/3',
-        'nx run-many -t test --projects=domain --passWithNoTests --shard=3/3',
+        'domain 3/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --shard=3/4',
+      ],
+      [
+        'domain 4/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --shard=4/4',
       ],
       [
         'other projects',

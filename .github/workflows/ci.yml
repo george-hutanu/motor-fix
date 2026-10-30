@@ -6,9 +6,9 @@ name: CI
 # harness specs when it changes none of their inputs (scripts/ci-paths.ts).
 # A PR runs the unit suite only. The integration and end-to-end suites run on
 # demand: `gh workflow run ci.yml --ref <branch>` runs every job, those two
-# included, on every project. The integration suite runs in four shards, each
-# on its own runner with its own database: domain in three Jest slices, every
-# other project in the fourth. A release asks for the integration suite
+# included, on every project. The integration suite runs in five shards, each
+# on its own runner with its own database: domain in four Jest slices, every
+# other project in the fifth. A release asks for the integration suite
 # (input `integration`) and runs the core flows against staging instead of
 # the end-to-end suite (release.yml). A dispatch can name spec files
 # (input `specs`, space-separated paths) and a run count (`repeat`): the
@@ -227,8 +227,8 @@ jobs:
   # name, so the release asks for it by input and runs it before staging.
   # As one job it took 40 to 60 minutes (domain alone up to 43), so it runs
   # in shards, each with its own services, store, migration and database
-  # report: domain in three Jest slices (by file), every other project in the
-  # fourth, where a project that gains integration specs lands by itself. A
+  # report: domain in four Jest slices (by file), every other project in the
+  # fifth, where a project that gains integration specs lands by itself. A
   # dispatch naming spec files has one entry instead. CI OK needs the whole
   # matrix, so one failed shard fails it, and the release waits for CI OK.
   integration:
@@ -239,7 +239,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ${{ fromJSON(inputs.specs && '["named specs"]' || '["domain 1/3", "domain 2/3", "domain 3/3", "other projects"]') }}
+        shard: ${{ fromJSON(inputs.specs && '["named specs"]' || '["domain 1/4", "domain 2/4", "domain 3/4", "domain 4/4", "other projects"]') }}
     # Provisional until the first sharded run is measured: the slowest
     # shard's job time over 0.7, rounded up to 5 minutes.
     timeout-minutes: 45
