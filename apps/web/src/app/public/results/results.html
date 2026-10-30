@@ -62,6 +62,24 @@
       />
       <mf-brand-search (chosen)="chooseBrand($event)" />
       <mf-sort-control [sort]="sortShown()" [placeKnown]="!!near()" (pick)="changeSort($event)" />
+      <div class="filters">
+        <button #filtersOpen type="button" class="filters-open" aria-haspopup="dialog" (click)="openFilters()">
+          @if (filterCount() > 0) {
+            {{ 'public.results.filters.buttonCount' | t: { n: filterCount() } }}
+          } @else {
+            {{ 'public.results.filters.button' | t }}
+          }
+        </button>
+        @for (filter of activeFilters(); track filter.key) {
+          <button
+            type="button"
+            class="chip filter"
+            [attr.data-filter]="filter.key"
+            [attr.aria-label]="'public.results.filters.remove' | t: { name: (filter.label | t) }"
+            (click)="toggle(filter.key)"
+          >{{ filter.label | t }} <span aria-hidden="true">×</span></button>
+        }
+      </div>
     </div>
   }
   <div #found class="found">
@@ -126,6 +144,14 @@
         }
       }
       @case ('empty') {
+        @if (emptyFiltered()) {
+          <section class="state filtered" aria-live="polite">
+            <h2>{{ 'public.results.filters.none' | t }}</h2>
+            <div class="actions">
+              <button type="button" class="primary" (click)="clearFilters()">{{ 'public.results.filters.clear' | t }}</button>
+            </div>
+          </section>
+        } @else {
         <section class="state" aria-live="polite">
           <h2>{{ 'public.results.noneNear' | t: { km: km() } }}</h2>
           <div class="actions">
@@ -135,6 +161,7 @@
             <button type="button" (click)="changePlace()">{{ 'public.results.changePlace' | t }}</button>
           </div>
         </section>
+        }
       }
       @case ('failed') {
         <section class="state" role="alert">

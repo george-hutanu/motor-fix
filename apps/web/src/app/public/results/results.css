@@ -91,6 +91,35 @@ mf-brand-chips {
   flex-basis: 100%;
 }
 
+/* The Filtre button and a chip per filter on, on a line of their own right
+   under the sorts; the chips wrap, never pushing the page sideways. */
+.brands .filters {
+  align-items: center;
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+
+.filters-open {
+  background: none;
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-chip);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  min-height: var(--mf-tap);
+  padding-inline: var(--mf-space-4);
+}
+
+.filters .chip.filter {
+  margin-block-start: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 /* On a phone the page is one screen between the site bar and the tab bar:
    the summary, then the map with the list's sheet over it. Scrolling the
    list never scrolls the page; the footer stays below the screen. */

@@ -50,6 +50,16 @@ import { Layout, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter } from 'rxjs';
 
 import { BrandChips, type BrandPick } from './brand-chips/brand-chips';
+import { FilterWarm } from './filter-warm/filter-warm';
+import {
+  countOf,
+  FILTERS,
+  type FilterKey,
+  type Filters,
+  filterParams,
+  filtersIn,
+  unfiltered,
+} from './filters/filters';
 import { ResultCard } from './result-card/result-card';
 import { type PinCard, ResultsMap } from './results-map/results-map';
 import { ResultsMemory } from './results-memory/results-memory';
@@ -157,6 +167,7 @@ export class Results {
   private readonly destroyRef = inject(DestroyRef);
   private readonly saved = inject(SavedGarages);
   private readonly memory = inject(ResultsMemory);
+  private readonly filterWarm = inject(FilterWarm);
   protected readonly i18n = inject(I18n);
   protected readonly voice = inject(Voice);
   protected readonly unbroken = unbroken;
@@ -177,6 +188,14 @@ export class Results {
     this.near() && this.bar().get('radius') === String(WIDE) ? WIDE : undefined,
   );
   protected readonly sort = computed(() => sortIn(this.bar().get('sort')));
+  // The filters the bar names (ST-1398); a value but 1 reads as off.
+  protected readonly filters = computed(() => filtersIn(this.bar()), {
+    equal: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+  });
+  protected readonly activeFilters = computed(() =>
+    FILTERS.filter(({ key }) => this.filters()[key]),
+  );
+  protected readonly filterCount = computed(() => countOf(this.filters()));
   // The sort the control marks: distance waits for a place, the rating order
   // showing meanwhile.
   protected readonly sortShown = computed(() =>
@@ -247,23 +266,34 @@ export class Results {
   // Only the brand or the sort changed in the bar, and its answer has not
   // landed yet: the list shown waits, dimmed, for it instead of turning into
   // skeletons.
+  // A filter turned on or off swaps the list the same way.
   private readonly swap = linkedSignal<
     {
       brand: string;
+      filters: string;
       near: string | undefined;
       radius: number | undefined;
       sort: SearchSort;
     },
-    boolean
+    false | 'brand' | 'filter'
   >({
-    computation: (now, previous) =>
-      !!previous &&
-      (previous.source.brand !== now.brand ||
-        previous.source.sort !== now.sort) &&
-      previous.source.near === now.near &&
-      previous.source.radius === now.radius,
+    computation: (now, previous) => {
+      if (
+        !previous ||
+        previous.source.near !== now.near ||
+        previous.source.radius !== now.radius
+      )
+        return false;
+      if (
+        previous.source.brand !== now.brand ||
+        previous.source.sort !== now.sort
+      )
+        return 'brand';
+      return previous.source.filters !== now.filters ? 'filter' : false;
+    },
     source: () => ({
       brand: this.brand(),
+      filters: JSON.stringify(this.filters()),
       near: this.near(),
       radius: this.radius(),
       sort: this.sort(),
@@ -289,6 +319,8 @@ export class Results {
     source: () => this.searched(),
   });
   protected readonly changing = computed(() => {
+    if (this.swap() === 'filter')
+      return this.i18n.t('public.results.filters.filtering');
     const name = this.names().get(this.brand());
     return name
       ? this.i18n.t('public.results.changing', { brand: name })
@@ -439,6 +471,8 @@ export class Results {
     source: this.searched,
   });
   private readonly found = viewChild<ElementRef<HTMLElement>>('found');
+  private readonly filtersOpen =
+    viewChild<ElementRef<HTMLButtonElement>>('filtersOpen');
   // What the live stream is asked to name for this list.
   private readonly view = computed(() => ({
     brand: this.answer()?.brand.id,
@@ -531,13 +565,39 @@ export class Results {
 
   protected readonly skeletons = [0, 1, 2, 3, 4, 5];
 
+  // The filters the answer shown was asked with: a filter change loading
+  // leaves the previous answer's summary as it was.
+  private readonly askedWith = linkedSignal<Page | undefined, Filters>({
+    computation: (page, previous) =>
+      page || !previous ? untracked(this.filters) : previous.value,
+    source: () => this.searched(),
+  });
+  // Nothing has every filter chosen, while the search itself found garages
+  // (or its pins have not said yet).
+  protected readonly emptyFiltered = computed(() => {
+    if (countOf(this.askedWith()) === 0) return false;
+    const pins = this.pinned();
+    return !pins || pins.pins.length > 0;
+  });
+
   protected readonly tally = computed(() => {
     const answer = this.answer();
     if (!answer) return '';
     const brand = answer.brand.name;
     const found = this.box() ? 'public.results.inArea' : 'public.results.found';
+    // Filtered: every garage the search found (the pins), then those left.
+    const filtered = countOf(this.askedWith()) > 0;
+    const pins = this.pinned()?.pins.length;
+    const head = filtered
+      ? [
+          ...(pins === undefined ? [] : [this.i18n.t(found, { count: pins })]),
+          this.i18n.t('public.results.filters.summary', {
+            n: answer.total,
+          }),
+        ]
+      : [this.i18n.t(found, { count: answer.total })];
     return [
-      this.i18n.t(found, { count: answer.total }),
+      ...head,
       this.i18n.t('public.results.takers', {
         brand,
         count: answer.counts.worksOn,
@@ -647,6 +707,7 @@ export class Results {
     });
     this.keepShown();
     this.watchEnd();
+    this.warmOpenNow();
     // The kept results read again in place once they show.
     effect(() => {
       if (this.searched() && this.refreshWanted)
@@ -703,6 +764,7 @@ export class Results {
       ...(radius ? { radius } : {}),
       // The rating order is the list's own.
       ...(sort !== 'rating' ? { sort } : {}),
+      ...filterParams(this.filters()),
     };
   }
 
@@ -728,6 +790,22 @@ export class Results {
         page: { ...shown.page, items },
         scrollY: this.leftAt ?? this.scrolled(),
       });
+    });
+  }
+
+  // The unfiltered first page landed: its open-now answer is read ahead, once
+  // per search; never for kept results, a map box or a filtered list.
+  private warmOpenNow() {
+    let warmed: string | undefined;
+    effect(() => {
+      const page = this.searched();
+      const query = untracked(this.query);
+      if (!page || !query || query.bbox || this.restored) return;
+      if (countOf(untracked(this.filters)) > 0) return;
+      const key = JSON.stringify(query);
+      if (key === warmed) return;
+      warmed = key;
+      untracked(() => this.filterWarm.warm(query));
     });
   }
 
@@ -943,6 +1021,45 @@ export class Results {
     void this.write({ sort: sort === 'rating' ? null : sort }, { push: true });
   }
 
+  // The panel, loaded on the first tap; each switch writes the bar at once.
+  protected async openFilters() {
+    await this.overlays.open(
+      () =>
+        import('./filters/filters-panel/filters-panel').then(
+          (m) => m.FiltersPanel,
+        ),
+      {
+        confirmDiscard: false,
+        data: {
+          filters: this.filters,
+          toggle: (key: FilterKey) => this.toggle(key),
+        },
+        shape: 'dialog',
+        title: 'public.results.filters.title',
+      },
+    );
+    // Back to the button, unless the driver has already moved the focus.
+    const active =
+      typeof document === 'undefined' ? null : document.activeElement;
+    if (!active || active === document.body)
+      this.filtersOpen()?.nativeElement.focus();
+  }
+
+  // A filter on or off: a new entry in the history, never logged, the box,
+  // brand, place and sort kept; an off filter leaves the bar.
+  protected toggle(key: FilterKey) {
+    const now = untracked(this.filters);
+    const next = { ...now, [key]: !now[key] };
+    const query = untracked(this.query);
+    if (query && next.open_now && !next.open_saturday)
+      this.filterWarm.judge(unfiltered(query));
+    void this.write({ [key]: next[key] ? '1' : null }, { push: true });
+  }
+
+  protected clearFilters() {
+    void this.write({ open_now: null, open_saturday: null }, { push: true });
+  }
+
   protected chooseBrand(brand: BrandDto) {
     const answered = untracked(this.searched)?.brand;
     if (brand.id !== answered?.id) this.chosenBrand.set(brand);
@@ -1003,8 +1120,9 @@ export class Results {
     if (!query) return;
     let page: Page | undefined;
     try {
+      // Named outright: a pin that matches no filter still opens its card.
       page = await this.search.garageSearchControllerForBrand({
-        ...query,
+        ...unfiltered(query),
         ids: id,
       });
     } catch {
@@ -1097,8 +1215,13 @@ export class Results {
     } else if (this.wanted.size > 0) {
       const ids = [...this.wanted].join(',');
       this.wanted.clear();
+      // Read without the filters, its counts are not the filtered search's:
+      // a filtered list takes its cards only, its counts from a counts read.
+      const filtered = countOf(untracked(this.filters)) > 0;
       await this.read(ids, (page, now) =>
-        this.counted(page, this.withCards(page, now)),
+        filtered
+          ? this.withCards(page, now)
+          : this.counted(page, this.withCards(page, now)),
       );
     } else if (this.countsWanted) {
       this.countsWanted = false;
@@ -1121,10 +1244,9 @@ export class Results {
     if (!query) return false;
     let page: Page;
     try {
-      page = await this.search.garageSearchControllerForBrand({
-        ...query,
-        ...(ids ? { ids } : {}),
-      });
+      page = await this.search.garageSearchControllerForBrand(
+        ids ? { ...unfiltered(query), ids } : query,
+      );
     } catch {
       return false;
     }

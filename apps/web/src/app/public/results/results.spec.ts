@@ -32,6 +32,9 @@ import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { Layout, type LayoutName, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
 
+import { FilterWarm } from './filter-warm/filter-warm';
+import type { FilterKey, Filters } from './filters/filters';
+import { FiltersPanel } from './filters/filters-panel/filters-panel';
 import { Results } from './results';
 import type { MapEvents, MapMove } from './results-map/pins-map';
 import { RESULTS_MAP, type ResultsMapView } from './results-map/results-map';
@@ -192,6 +195,10 @@ const brandsApi = {
 };
 const carsApi = { carsControllerList: jest.fn(async () => ({ items: [] })) };
 
+// The warm of the filtered answer: its own reads would join every search
+// these tests count, so Results gets a stand-in and FilterWarm has its spec.
+const warmer = { judge: jest.fn(), warm: jest.fn() };
+
 let harness: RouterTestingHarness;
 
 async function settle() {
@@ -214,6 +221,7 @@ async function configure(platform = 'browser', more: Route[] = []) {
       { provide: Layout, useValue: { current: layout } },
       { provide: BrandsService, useValue: brandsApi },
       { provide: CarsService, useValue: carsApi },
+      { provide: FilterWarm, useValue: warmer },
     ],
   });
   await TestBed.inject(I18n).enter('public');
@@ -232,6 +240,8 @@ beforeEach(() => {
   mapView.fit.mockClear();
   mapView.light.mockClear();
   overlays.open.mockClear();
+  warmer.warm.mockClear();
+  warmer.judge.mockClear();
   live.register.mockClear();
   live.names.mockReset().mockImplementation(() => true);
   reduced.set(false);
@@ -4467,5 +4477,538 @@ describe('Results sorting', () => {
     await pick('Notă');
 
     expect(TestBed.inject(Router).url).not.toContain('sort=');
+  });
+});
+
+// @traces 1398-FR-001 1398-FR-002 1398-FR-003 1398-FR-004 1398-FR-005 1398-FR-006 1398-FR-007 1398-FR-008 1398-FR-009 1398-FR-011 1398-FR-012 1398-FR-013 1398-FR-014 1398-FR-015
+describe('Results filters', () => {
+  beforeEach(async () => {
+    brandsApi.popularBrandsControllerTiles.mockClear();
+    await configure();
+    Element.prototype.scrollTo = jest.fn();
+    window.scrollTo = jest.fn();
+  });
+
+  afterEach(() => {
+    pinsApi.mockImplementation((_params) => Promise.resolve(pinsAnswer));
+    jest.restoreAllMocks();
+  });
+
+  type PanelData = {
+    filters: () => Filters;
+    toggle: (key: FilterKey) => void;
+  };
+  const opener = () =>
+    page().querySelector<HTMLButtonElement>(
+      '.brands .filters button.filters-open',
+    );
+  const chips = () => [
+    ...page().querySelectorAll<HTMLButtonElement>(
+      '.brands .filters button.chip.filter',
+    ),
+  ];
+  const tally = () => said(page().querySelector('.summary .tally'));
+  const pinsAsked = () => pinsApi.mock.calls.map(([q]) => q);
+  const url = () => TestBed.inject(Router).url;
+  const BOX = '44.4,26,44.5,26.2';
+  async function shown(
+    bar = `/ro/garages?brand=bmw&near=${NEAR}`,
+    answer = pageOf(),
+  ) {
+    await open(bar);
+    await reads[0]?.answer(answer);
+  }
+  async function panel(): Promise<PanelData> {
+    opener()?.click();
+    await settle();
+    const options = (overlays.open.mock.calls.at(-1) as unknown[])[1] as {
+      data: PanelData;
+    };
+    return options.data;
+  }
+  async function toggled(key: FilterKey) {
+    const data = await panel();
+    data.toggle(key);
+    await settle();
+    await settle();
+    return data;
+  }
+
+  describe('the Filtre button and the panel', () => {
+    it('reads "Filtre" with none on and "Filtre · 2" with both, opening a dialog', async () => {
+      await shown();
+      expect(said(opener())).toBe('Filtre');
+      expect(opener()?.getAttribute('aria-haspopup')).toBe('dialog');
+      expect(opener()?.type).toBe('button');
+
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&open_saturday=1`,
+      );
+      expect(said(opener())).toBe('Filtre · 2');
+    });
+
+    it('speaks English', async () => {
+      await open(`/en/garages?brand=bmw&near=${NEAR}&open_now=1`, {
+        language: 'en',
+      });
+      await reads[0]?.answer();
+
+      expect(said(opener())).toBe('Filters · 1');
+      expect(said(chips()[0])).toBe('Open now ×');
+      expect(chips()[0]?.getAttribute('aria-label')).toBe(
+        'Remove filter Open now',
+      );
+    });
+
+    it('opens the panel, loaded on demand, as a dialog that asks nothing on close', async () => {
+      await shown();
+
+      await panel();
+
+      expect(overlays.open).toHaveBeenCalledTimes(1);
+      const [source, options] = overlays.open.mock.calls[0] as unknown as [
+        () => Promise<unknown>,
+        Record<string, unknown>,
+      ];
+      await expect(source()).resolves.toBe(FiltersPanel);
+      expect(options).toEqual(
+        expect.objectContaining({
+          confirmDiscard: false,
+          shape: 'dialog',
+          title: 'public.results.filters.title',
+        }),
+      );
+    });
+
+    it('hands the panel the filters the bar holds', async () => {
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_saturday=1`);
+
+      const data = await panel();
+
+      expect(data.filters()).toEqual({
+        open_now: false,
+        open_saturday: true,
+      });
+    });
+
+    it('gives the focus back to the Filtre button when the panel closes', async () => {
+      await shown();
+      await panel();
+
+      dialog('cancelled');
+      await settle();
+      await settle();
+
+      expect(document.activeElement).toBe(opener());
+    });
+  });
+
+  describe('the address bar', () => {
+    it('writes open_now=1 as a history step, keeping brand and place', async () => {
+      await shown();
+      const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+
+      await toggled('open_now');
+
+      expect(navigate).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          queryParams: { open_now: '1' },
+          queryParamsHandling: 'merge',
+        }),
+      );
+      expect(navigate.mock.calls.at(-1)?.[1]?.replaceUrl).toBeFalsy();
+      expect(url()).toBe(`/ro/garages?brand=bmw&near=${NEAR}&open_now=1`);
+    });
+
+    it('drops the key when the filter goes off, never writing 0', async () => {
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&open_saturday=1`,
+      );
+
+      await toggled('open_now');
+
+      expect(url()).toBe(`/ro/garages?brand=bmw&near=${NEAR}&open_saturday=1`);
+      expect(url()).not.toContain('=0');
+    });
+
+    it('restores both filters from a link: chips, count and the first request', async () => {
+      await open(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&open_saturday=1`,
+      );
+
+      expect(searches()[0]).toEqual({
+        brand: 'bmw',
+        log: '1',
+        near: NEAR,
+        open_now: '1',
+        open_saturday: '1',
+      });
+      await reads[0]?.answer();
+      expect(chips().map((c) => c.dataset['filter'])).toEqual([
+        'open_now',
+        'open_saturday',
+      ]);
+      expect(chips().map(said)).toEqual([
+        'Deschis acum ×',
+        'Deschis sâmbăta ×',
+      ]);
+    });
+
+    it.each(['open_now=yes', 'open_now=', 'open_now=0'])(
+      'reads %s as off, sends nothing and leaves the bar as it is',
+      async (value) => {
+        await shown(`/ro/garages?brand=bmw&near=${NEAR}&${value}`);
+
+        expect(searches()[0]).not.toHaveProperty('open_now');
+        expect(pinsAsked()[0]).not.toHaveProperty('open_now');
+        expect(chips()).toHaveLength(0);
+        expect(said(opener())).toBe('Filtre');
+        expect(url()).toContain(value);
+      },
+    );
+
+    it('lets the first value of a repeated key decide', async () => {
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_now=1&open_now=yes`);
+
+      expect(searches()[0]).toEqual(expect.objectContaining({ open_now: '1' }));
+    });
+
+    it('keeps the filters and the chip across a brand change', async () => {
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_now=1`);
+      await settle();
+      const audi = [
+        ...page().querySelectorAll<HTMLButtonElement>('mf-brand-chips button'),
+      ].find((b) => said(b) === 'Audi');
+
+      audi?.click();
+      await settle();
+      await settle();
+
+      expect(url()).toBe(`/ro/garages?brand=audi&near=${NEAR}&open_now=1`);
+      expect(searches().at(-1)).toEqual({
+        brand: 'audi',
+        log: '1',
+        near: NEAR,
+        open_now: '1',
+      });
+      expect(chips().map(said)).toEqual(['Deschis acum ×']);
+    });
+
+    it('keeps the filters across a place change, which still logs', async () => {
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_saturday=1`);
+      page().querySelector<HTMLButtonElement>('.summary .change')?.click();
+      await settle();
+
+      dialog({ ...PLACE, lat: 46.7712, lng: 23.6236 });
+      await settle();
+      await settle();
+
+      expect(url()).toContain('open_saturday=1');
+      expect(searches().at(-1)).toEqual(
+        expect.objectContaining({ log: '1', open_saturday: '1' }),
+      );
+    });
+
+    it('keeps the map box on a filter change, as a sort change does', async () => {
+      // The kept place, rounded as the bar names it.
+      const KEPT = '44.447,26.117';
+      keep(PLACE);
+      await shown('/ro/garages?brand=bmw');
+      mapMoved({ bbox: BOX });
+      await settle();
+      await reads[1]?.answer();
+
+      await toggled('open_now');
+
+      expect(searches().at(-1)).toEqual({
+        bbox: BOX,
+        brand: 'bmw',
+        near: KEPT,
+        open_now: '1',
+      });
+      expect(pinsAsked().at(-1)).toEqual({
+        bbox: BOX,
+        brand: 'bmw',
+        near: KEPT,
+        open_now: '1',
+      });
+    });
+  });
+
+  describe('the chips', () => {
+    it('removes a filter from its chip, named "Scoate filtrul …"', async () => {
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&open_saturday=1`,
+      );
+      const [now] = chips();
+      expect(now?.getAttribute('aria-label')).toBe(
+        'Scoate filtrul Deschis acum',
+      );
+      expect(now?.querySelector('[aria-hidden="true"]')?.textContent).toBe('×');
+      expect(now?.type).toBe('button');
+
+      now?.click();
+      await settle();
+      await settle();
+
+      expect(url()).toBe(`/ro/garages?brand=bmw&near=${NEAR}&open_saturday=1`);
+      expect(chips().map((c) => c.dataset['filter'])).toEqual([
+        'open_saturday',
+      ]);
+    });
+
+    it('shows no chip with no filter on', async () => {
+      await shown();
+      expect(chips()).toHaveLength(0);
+    });
+  });
+
+  describe('the requests', () => {
+    it('asks the list and the pins with the filter on', async () => {
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_now=1`);
+
+      expect(searches()[0]).toEqual({
+        brand: 'bmw',
+        log: '1',
+        near: NEAR,
+        open_now: '1',
+      });
+      expect(pinsAsked()[0]).toEqual({
+        brand: 'bmw',
+        near: NEAR,
+        open_now: '1',
+      });
+    });
+
+    it('asks the next page with the cursor and the filter', async () => {
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_saturday=1`,
+        pageOf({ nextCursor: 'c1' }),
+      );
+
+      page().querySelector<HTMLButtonElement>('button.more')?.click();
+      await settle();
+
+      expect(searches().at(-1)).toEqual({
+        brand: 'bmw',
+        cursor: 'c1',
+        near: NEAR,
+        open_saturday: '1',
+      });
+    });
+
+    it('reads a pin outside the list by ids= with no filter', async () => {
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_now=1`);
+
+      mapPicked('pin-3');
+      await settle();
+
+      expect(reads.at(-1)?.params).toEqual({
+        brand: 'bmw',
+        ids: 'pin-3',
+        near: NEAR,
+      });
+    });
+
+    it('logs no search and marks no sort change on a toggle', async () => {
+      await shown();
+
+      await toggled('open_saturday');
+
+      expect(searches().at(-1)).toEqual({
+        brand: 'bmw',
+        near: NEAR,
+        open_saturday: '1',
+      });
+    });
+
+    it('sends nothing new with no filter on', async () => {
+      await shown();
+      expect(searches()[0]).toEqual({ brand: 'bmw', log: '1', near: NEAR });
+      expect(pinsAsked()[0]).toEqual({ brand: 'bmw', near: NEAR });
+    });
+  });
+
+  describe('the summary', () => {
+    it('reads the found pins, the filtered total, then the two groups', async () => {
+      pinsAnswer = pinsOf(5);
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1`,
+        pageOf({ counts: { doesNotTake: 1, worksOn: 1 }, total: 2 }),
+      );
+
+      expect(tally()).toBe(
+        '5 service‑uri găsite · 2 cu filtrele alese · 1 lucrează pe BMW · 1 nu o primește',
+      );
+    });
+
+    it('starts at the filtered total while the pins have not answered', async () => {
+      pinsApi.mockImplementation(() => new Promise(() => undefined));
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1`,
+        pageOf({ counts: { doesNotTake: 1, worksOn: 1 }, total: 2 }),
+      );
+
+      expect(tally()).toBe(
+        '2 cu filtrele alese · 1 lucrează pe BMW · 1 nu o primește',
+      );
+    });
+
+    it('reads as today with no filter on', async () => {
+      await shown();
+      expect(tally()).toBe(
+        '48 de service‑uri găsite · 31 lucrează pe BMW · 17 nu o primesc',
+      );
+    });
+  });
+
+  describe('when nothing has everything chosen', () => {
+    const none = () =>
+      pageOf({ counts: { doesNotTake: 0, worksOn: 0 }, items: [], total: 0 });
+    const state = () => page().querySelector('section.state.filtered');
+
+    it('says so and offers "Scoate filtrele" while the search found garages', async () => {
+      pinsAnswer = pinsOf(3);
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&open_saturday=1`,
+        none(),
+      );
+
+      expect(said(state()?.querySelector('h2'))).toBe(
+        'Niciun service nu are tot ce ai ales',
+      );
+      expect(said(state()?.querySelector('button.primary'))).toBe(
+        'Scoate filtrele',
+      );
+    });
+
+    it('clears both filters in one write, without logging', async () => {
+      pinsAnswer = pinsOf(3);
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&open_saturday=1`,
+        none(),
+      );
+      const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+
+      state()?.querySelector<HTMLButtonElement>('button.primary')?.click();
+      await settle();
+      await settle();
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(url()).toBe(`/ro/garages?brand=bmw&near=${NEAR}`);
+      expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR });
+    });
+
+    it('shows the state while the pins have not answered', async () => {
+      pinsApi.mockImplementation(() => new Promise(() => undefined));
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_now=1`, none());
+
+      expect(state()).not.toBeNull();
+    });
+
+    it("shows today's nothing-near state when the pins found nothing", async () => {
+      pinsAnswer = pinsOf(0);
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_now=1`, none());
+
+      expect(state()).toBeNull();
+      expect(said(page().querySelector('section.state h2'))).toBe(
+        'Niciun service în 25 km',
+      );
+    });
+
+    it("shows today's nothing-near state with no filter on", async () => {
+      pinsAnswer = pinsOf(3);
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}`, none());
+
+      expect(state()).toBeNull();
+      expect(said(page().querySelector('section.state h2'))).toBe(
+        'Niciun service în 25 km',
+      );
+    });
+  });
+
+  describe('while a filter change loads', () => {
+    it('dims the previous cards under a "Se filtrează…" bar, with no skeletons', async () => {
+      await shown();
+
+      await toggled('open_now');
+
+      expect(page().querySelector('.cards.swapping[inert]')).not.toBeNull();
+      expect(
+        page()
+          .querySelector('.progress[role="progressbar"]')
+          ?.getAttribute('aria-label'),
+      ).toBe('Se filtrează…');
+      expect(page().querySelector('.card.skeleton')).toBeNull();
+      expect(opener()?.disabled).toBeFalsy();
+      expect(chips().map(said)).toEqual(['Deschis acum ×']);
+    });
+
+    it('selects the first card of the filtered answer', async () => {
+      await shown();
+      await toggled('open_now');
+
+      await reads
+        .at(-1)
+        ?.answer(pageOf({ items: [garageOf('two', 'Service Doi')], total: 1 }));
+
+      expect(page().querySelector('.cards.swapping')).toBeNull();
+      const selected = [...page().querySelectorAll('mf-result-card')].filter(
+        (card) => card.querySelector('article.card.selected'),
+      );
+      expect(selected.map((card) => said(card.querySelector('h2')))).toEqual([
+        'Service Doi',
+      ]);
+    });
+  });
+
+  describe('the warm of "Deschis acum"', () => {
+    it('warms once after the unfiltered first page lands', async () => {
+      await open(`/ro/garages?brand=bmw&near=${NEAR}`);
+      expect(warmer.warm).not.toHaveBeenCalled();
+
+      await reads[0]?.answer();
+      await settle();
+
+      expect(warmer.warm).toHaveBeenCalledTimes(1);
+      expect(warmer.warm).toHaveBeenCalledWith({ brand: 'bmw', near: NEAR });
+    });
+
+    it('warms nothing with a filter on', async () => {
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_saturday=1`);
+      await settle();
+      expect(warmer.warm).not.toHaveBeenCalled();
+    });
+
+    it('warms nothing for a map box', async () => {
+      keep(PLACE);
+      await shown('/ro/garages?brand=bmw');
+      warmer.warm.mockClear();
+
+      mapMoved({ bbox: BOX });
+      await settle();
+      await reads[1]?.answer();
+      await settle();
+
+      expect(warmer.warm).not.toHaveBeenCalled();
+    });
+
+    it('judges the warm when the next state is "Deschis acum" alone', async () => {
+      await shown();
+
+      await toggled('open_now');
+
+      expect(warmer.judge).toHaveBeenCalledTimes(1);
+      expect(warmer.judge).toHaveBeenCalledWith({ brand: 'bmw', near: NEAR });
+    });
+
+    it('judges nothing for "Deschis sâmbăta"', async () => {
+      await shown();
+
+      await toggled('open_saturday');
+
+      expect(warmer.judge).not.toHaveBeenCalled();
+    });
   });
 });
