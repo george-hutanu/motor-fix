@@ -3,7 +3,7 @@
     @case ('active_request') {
       @switch (firstRow()) {
         @case ('active') {
-          <mf-active-request data-panel="activeRequest" [class.wide]="wide.has(key)" [answer]="active()" [more]="true" (retry)="retryActive()" />
+          <mf-active-request data-panel="activeRequest" [class.wide]="wide.has(key)" [answer]="active()" [more]="true" [reconnecting]="reconnecting()" (retry)="retryActive()" />
         }
         @case ('invite') {
           <div class="invitations" [class.wide]="wide.has(key)">
