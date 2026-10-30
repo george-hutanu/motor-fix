@@ -15,7 +15,7 @@ import { calendarDay } from './cars.dto';
 import { MAX_KM } from './plate';
 
 // The largest amount a repair may carry: 920 000 lei.
-export const MAX_REPAIR_COST_BANI = 92_000_000;
+const MAX_REPAIR_COST_BANI = 92_000_000;
 
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;

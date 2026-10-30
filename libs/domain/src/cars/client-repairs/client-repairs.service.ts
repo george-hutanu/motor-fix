@@ -33,7 +33,7 @@ import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { REPAIR_ORDER } from '../history/history';
 
-export const LIST_LIMIT = 200;
+const LIST_LIMIT = 200;
 
 const notFound = () =>
   refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such repair');

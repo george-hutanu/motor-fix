@@ -8,12 +8,7 @@ import type { Prisma, RepairUpdater } from '../../generated/prisma/client';
 import { shortName } from '../../quotes/reads';
 
 // The four fields a correction may change, as the answer shows them.
-export const CORRECTABLE = [
-  'what',
-  'doneOn',
-  'odometerKm',
-  'costBani',
-] as const;
+const CORRECTABLE = ['what', 'doneOn', 'odometerKm', 'costBani'] as const;
 type Correctable = (typeof CORRECTABLE)[number];
 export type Corrected = {
   what: string;
