@@ -131,14 +131,14 @@ export class GarageJobsService {
   async list(actor: Actor, query: JobListQueryDto = {}): Promise<JobListDto> {
     const today = localDay(new Date());
     const day = atLocal(query.from ?? today, 0);
+    const dayStart = atLocal(today, 0);
     const where: Prisma.JobWhereInput = {
       ...this.scope(actor),
-      NOT: {
-        booking: { noShowAt: { lt: atLocal(today, 0) }, status: 'no_show' },
-      },
+      NOT: { booking: { noShowAt: { lt: dayStart }, status: 'no_show' } },
       OR: [
         { booking: { startsAt: { gte: day } } },
         { status: { in: ['in_work', 'paused'] } },
+        { booking: { noShowAt: { gte: dayStart }, status: 'no_show' } },
       ],
     };
     const from = await assertCursor(query.cursor, (id) =>

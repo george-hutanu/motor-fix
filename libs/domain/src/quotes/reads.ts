@@ -178,7 +178,7 @@ type ScheduledMechanic = Mechanic & {
 
 export type MechanicRow = {
   mechanic: ScheduledMechanic | null;
-  job: { mechanic: Mechanic | null; status?: JobStatus } | null;
+  job: { mechanic: Mechanic | null; status: JobStatus } | null;
 };
 
 export function mechanicOf(row: MechanicRow): BookingMechanicDto | null {

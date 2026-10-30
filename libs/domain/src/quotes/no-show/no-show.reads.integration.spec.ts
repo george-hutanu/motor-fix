@@ -92,6 +92,16 @@ describe('what the reads say a no-show allows', () => {
     expect(await jobSummary(fixer(volt), booking.id)).toBeUndefined();
   });
 
+  it('keeps yesterday’s booking with a no-show recorded today in the jobs while it may be withdrawn', async () => {
+    const { booking, volt } = await due({ job: 'to_do', minutes: -26 * 60 });
+    expect((await recordNoShow(booking.id, owner(volt))).status).toBe(200);
+
+    expect(await jobSummary(fixer(volt), booking.id)).toMatchObject({
+      canWithdrawNoShow: true,
+      status: 'cancelled',
+    });
+  });
+
   it('never offers either to a mechanic who is not the booking’s', async () => {
     const { booking, volt } = await due({ job: 'to_do' });
     await prisma.mechanic.update({

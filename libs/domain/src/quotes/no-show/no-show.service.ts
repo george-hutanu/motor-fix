@@ -10,7 +10,11 @@ import {
 } from '@nestjs/common';
 
 import { noShowUndoOpen } from './no-show.window';
-import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
+import {
+  AUDIT_PORT,
+  type AuditEntry,
+  type AuditPort,
+} from '../../audit/audit.port';
 import { refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
@@ -66,29 +70,22 @@ export class NoShowService {
   ) {}
 
   record(actor: Actor, bookingId: string): Promise<GarageBookingDto> {
-    return this.run(actor, bookingId, 'recorded', (tx, booking) =>
-      this.storeRecord(tx, actor, bookingId, booking),
-    );
+    return this.run(actor, bookingId, 'recorded');
   }
 
   withdraw(actor: Actor, bookingId: string): Promise<GarageBookingDto> {
-    return this.run(actor, bookingId, 'withdrawn', (tx, booking) =>
-      this.storeWithdrawal(tx, actor, bookingId, booking),
-    );
+    return this.run(actor, bookingId, 'withdrawn');
   }
 
   private async run(
     actor: Actor,
     bookingId: string,
     action: Action,
-    store: (tx: Tx, booking: Locked) => Promise<void>,
   ): Promise<GarageBookingDto> {
     let booking: Locked;
     try {
       booking = await this.prisma.$transaction(async (tx) => {
-        const locked = await this.lock(tx, actor, bookingId, action);
-        await store(tx, locked);
-        return locked;
+        return this.store(tx, actor, bookingId, action);
       });
     } catch (error) {
       if (error instanceof HttpException && error.getStatus() === 409) {
@@ -111,6 +108,21 @@ export class NoShowService {
     return garageBookingOf(read);
   }
 
+  private async store(
+    tx: Tx,
+    actor: Actor,
+    bookingId: string,
+    action: Action,
+  ): Promise<Locked> {
+    const locked = await this.lock(tx, actor, bookingId, action);
+    if (action === 'recorded') {
+      await this.storeRecord(tx, actor, bookingId, locked);
+    } else {
+      await this.storeWithdrawal(tx, actor, bookingId, locked);
+    }
+    return locked;
+  }
+
   // Locks the booking, then lets in its garage's owner and front desk and
   // the booking's own mechanic; another mechanic of the garage is told no,
   // anyone else learns nothing.
@@ -120,14 +132,13 @@ export class NoShowService {
     bookingId: string,
     action: Action,
   ): Promise<Locked> {
-    const [booking] = await tx.$queryRaw<Locked[]>`
+    const [booking] = await tx.$queryRaw<Omit<Locked, 'garageName'>[]>`
       SELECT b.driver_id AS "driverId", b.duration_minutes AS "durationMinutes",
-        b.garage_id AS "garageId", g.name AS "garageName", b.lift,
+        b.garage_id AS "garageId", b.lift,
         b.mechanic_id AS "mechanicId", b.no_show_at AS "noShowAt",
         b.request_id AS "requestId", b.starts_at AS "startsAt",
         b.status::text AS status
-      FROM booking b JOIN garage g ON g.id = b.garage_id
-      WHERE b.id = ${bookingId}::uuid FOR UPDATE OF b`;
+      FROM booking b WHERE b.id = ${bookingId}::uuid FOR UPDATE`;
     if (!booking) throw new NotFoundException();
     assertGarage(actor, booking.garageId);
     if (actor.role === 'mechanic') {
@@ -146,7 +157,11 @@ export class NoShowService {
     } else {
       requireCapability(actor, 'garage.requests');
     }
-    return booking;
+    const garage = await tx.garage.findUniqueOrThrow({
+      select: { name: true },
+      where: { id: booking.garageId },
+    });
+    return { ...booking, garageName: garage.name };
   }
 
   private by(actor: Actor): TransitionActor {
@@ -219,7 +234,10 @@ export class NoShowService {
       id: booking.requestId,
       to: 'closed',
     });
-    await this.told(tx, actor, bookingId, booking, 'recorded');
+    await this.audit.record(
+      tx,
+      this.told(actor, bookingId, booking, 'recorded'),
+    );
     await this.events.record(tx, {
       ...event,
       payload: {
@@ -300,7 +318,10 @@ export class NoShowService {
       id: booking.requestId,
       to: 'booked',
     });
-    await this.told(tx, actor, bookingId, booking, 'withdrawn');
+    await this.audit.record(
+      tx,
+      this.told(actor, bookingId, booking, 'withdrawn'),
+    );
     await this.events.record(tx, {
       ...event,
       payload: {
@@ -315,13 +336,12 @@ export class NoShowService {
 
   // The driver's history names the garage, never the person at it.
   private told(
-    tx: Tx,
     actor: Actor,
     bookingId: string,
     booking: Locked,
     action: Action,
-  ) {
-    return this.audit.record(tx, {
+  ): AuditEntry {
+    return {
       action: 'update',
       actorId: actor.accountId,
       actorLabel: booking.garageName,
@@ -332,6 +352,6 @@ export class NoShowService {
       oldValue: null,
       subjectId: bookingId,
       subjectType: 'booking',
-    });
+    };
   }
 }

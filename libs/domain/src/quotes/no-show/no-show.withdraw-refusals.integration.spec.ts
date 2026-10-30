@@ -141,9 +141,10 @@ describe('refusing a withdrawal', () => {
     expect(res.body.code).toBe('invalid_transition');
   });
 
-  it('answers 403 to another mechanic and 404 outside the garage', async () => {
+  it('answers 403 to another mechanic and 404 outside the garage, to the driver and to an admin', async () => {
     const { booking, volt } = await recorded();
     const nordic = await team('Garaj Nordic');
+    const admin = await world.account('Ada Admin', ['admin']);
 
     const other = await send(
       'delete',
@@ -155,6 +156,7 @@ describe('refusing a withdrawal', () => {
     for (const auth of [
       bearer(nordic.owner, 'garage'),
       bearer(booking.driverId, 'driver'),
+      bearer(admin, 'admin'),
     ]) {
       expect((await send('delete', path(booking.id), auth)).status).toBe(404);
     }
