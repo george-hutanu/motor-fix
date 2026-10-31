@@ -750,6 +750,32 @@ async function requester(
   };
 }
 
+// A repair the requester logged on his car, for the admin to open and
+// correct, and the car's open ownership row the admin's list reads
+// through: the seed writes the car straight to its table, so no route opened
+// one. Once each: a database where an admin corrected it keeps the correction.
+const LOGGED_REPAIR = '5eed0b00-0000-4000-8000-000000000001';
+
+async function loggedRepair(db: Client) {
+  const who = await requester(db);
+  if (!who) return;
+  await db.query(
+    `INSERT INTO car_ownership (id, car_id, account_id, access, from_date, opened_at)
+     SELECT gen_random_uuid(), $1, $2, 'owner', current_date, now()
+     WHERE NOT EXISTS (
+       SELECT 1 FROM car_ownership
+       WHERE car_id = $1 AND account_id = $2 AND to_date IS NULL
+     )`,
+    [who.carId, who.driverId],
+  );
+  await db.query(
+    `INSERT INTO repair (id, car_id, source, what, garage_name, done_on, odometer_km, cost_bani)
+     VALUES ($1, $2, 'logged', 'Schimb ulei și filtre', 'Garaj Nordic', '2025-03-12', 91300, 45000)
+     ON CONFLICT (id) DO NOTHING`,
+    [LOGGED_REPAIR, who.carId],
+  );
+}
+
 // The seed's own requests carry this key prefix, so clearDay() knows them.
 const OWN_KEY = 'seed-';
 
@@ -1432,6 +1458,7 @@ async function seed(db: Client, secret: string): Promise<string> {
   );
   const cleared = await clearDay(db);
   await requests(db);
+  await loggedRepair(db);
   await reviewed(db);
   await startOlderJob(db);
   await quoteable(db);

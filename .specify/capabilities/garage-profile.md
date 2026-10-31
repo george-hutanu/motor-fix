@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -30,6 +30,7 @@ features:
   - 1367-review-price-marks
   - 1366-garage-map-directions
   - 1246-garage-profile-edit
+  - 1248-facilities-edit
   - 1247-brand-fuel-edit
 ---
 
@@ -844,6 +845,42 @@ _From 1246-garage-profile-edit._
 ### 1246-FR-027 — Tests MUST exist before the code (Principle II) and name this feature's ids in `// @traces` lines: Jest on real PostgreSQL and Redis for FR-001 to FR-010 (each limit's boundary, 422 for every verification field, 403/404/410, the per-field audit entries and the one event in one transaction, 409 on a stale stamp, the cache drop); component tests for the view's controls per role and business kind, each dialog's field checks, the 400 and 409 handling, the no-second-read close, and the reused hours block; the PR QA flows of FR-020 and a flow that saves Saturday's hours and sees the public profile update.
 
 _From 1246-garage-profile-edit._
+
+### 1248-FR-001 — The owner's profile write `PATCH /api/v1/garages/{garageId}/profile` (1246-FR-001) MUST accept one more optional group, `facilities`, sent whole (`facilities` and `paymentMethods` required, `courtesyCar` present exactly when `courtesy_car` is ticked, `facilitiesNote` optional), holding the listing's step-5 facility keys (`facilities`: the ticked keys among `courtesy_car`, `pickup_dropoff`, `waiting_area`; `facilitiesNote`: at most 200 code points after trimming, empty stored as none; `courtesyCar`: `paid` and, when paid, `pricePerDayBani` from 100 to 200,000 in steps of 100; `paymentMethods`: `cash`, `card`, `transfer`, at least one true) through the shared contracts' guards that step 5 and the settings write already use, under the body's `version` stamp (1246-FR-008); every other field keeps 1246-FR-001's rules. The settings write `PATCH /api/v1/garages/{garageId}` is left unchanged.
+
+_From 1248-facilities-edit._
+
+### 1248-FR-002 — A group missing `facilities` or `paymentMethods`, or a value outside its limits (an unknown facility key, a duplicate key, a note of 201 code points or holding a control character, a price of 99 or 200,100 bani, one not on the 100-bani step, a paid car without a price, a free car with a price, no payment method ticked) MUST answer 400 `validation_failed` naming the field, and nothing MUST be written.
+
+_From 1248-facilities-edit._
+
+### 1248-FR-003 — Courtesy-car terms MUST be accepted only when the body's `facilities` holds `courtesy_car`, and MUST be sent when it does; otherwise the answer is 400 `validation_failed` with the code `no_courtesy_car` on `courtesyCar` and nothing is written. The payment and courtesy-car rules MUST be the ones the settings write applies today (its guards and refusals), not a second copy (Principle V): the settings write's courtesy-car guard becomes one function taking whether the car is listed, called by both writes.
+
+_From 1248-facilities-edit._
+
+### 1248-FR-004 — The facility rows and the note MUST be written through the listing's one hours write (112-FR-009), the use case handing it the garage's current weekly hours and closed days unchanged, so `garage_facility` stays the single source of the facilities and the write's own `create`/`delete` audit entries (subject `garage_facility`) and its `facilitiesNote` entry are the facility history; the hours write itself is not changed (1246-FR-026). The hours write MUST be called only when the facilities (as a set) or the trimmed note differ from the stored values.
+
+_From 1248-facilities-edit._
+
+### 1248-FR-006 — A successful save MUST write, in one transaction with the row lock of 1246-FR-005: the facility rows, the note, the courtesy-car columns and the payment columns that changed; one audit entry per changed field through the audit writer (390-FR-001, 390-FR-003: `facilitiesNote`, `courtesy_car_paid`, `courtesy_car_price_per_day_bani`, `payment_cash`, `payment_card`, `payment_transfer`, plus the write's facility entries); exactly one `garage.updated` outbox event for the garage whose `fields` name each changed group (`facilities`, `facilities_note`, `courtesy_car`, `payment_methods`) and whose audience carries `results: true` when the facilities or the payment methods changed (a facility or a payment method moves the garage in search); and the new stamp. A field sent with its current value is not a change; a save that changes nothing writes no entry, no event and keeps the stamp. If any write fails, none stays (Principle VI).
+
+_From 1248-facilities-edit._
+
+### 1248-FR-007 — The answer MUST be the owner's profile as `GET /api/v1/garages/{garageId}/profile` answers it (133-FR-001, 1246-FR-007), with the new facilities, note, courtesy-car terms, payment methods and stamp.
+
+_From 1248-facilities-edit._
+
+### 1248-FR-008 — After `garage.updated` the public profile cache for the garage MUST be dropped (1246-FR-009) and every cached search answer dropped (267-FR-010), so `GET /api/v1/garages/{slug}` lists the new facilities and note (330-FR-005) and terms, `GET /api/v1/garages?card=1` matches a garage that just ticked card (1261-FR-004), and the facilities filter of ST-329 (#183), when it ships, reads the new rows; no review and no admin step.
+
+_From 1248-facilities-edit._
+
+### 1248-FR-014 — The group's new fields and the `garage.updated` fields it emits MUST be recorded in `infra/observability/inventory.json` (the existing endpoint's entry grows; the event is already listed), the OpenAPI document and the generated client regenerated; no new service, queue, outside call or endpoint is added. Nothing of ST-1247 (brands and fuels, in flight) is touched.
+
+_From 1248-facilities-edit._
+
+### 1248-FR-015 — Tests MUST exist before the code (Principle II) and name this feature's ids in `// @traces` lines: Jest on real PostgreSQL and Redis for FR-001 to FR-008 (each limit's boundary, `no_courtesy_car`, 403/404/410, the per-field and facility audit entries and the one event with its `fields` and audience in one transaction, the no-op save, 409 on a stale stamp, the public and search cache drops, `card=1` matching after the save); component tests for the view's control per role, the reused block in the dialog, the field checks, the 400 and 409 handling and the no-second-read close; and one PR QA flow that ticks "Preluare și predare" and card, sets the paid car at 150 lei and sees the public profile's facilities, terms and payment line update.
+
+_From 1248-facilities-edit._
 
 ### 1247-FR-012 — The dialog MUST open on FR-001's read (a skeleton while it loads, the retry text on failure) and never on the profile answer's lists alone; a brand that becomes taken in the dialog starts with all four fuels and every job ticked; a brand turned refused or unstated loses its ticks in the dialog; the last ticked fuel of a taken brand is disabled with "Cel puțin un carburant rămâne bifat" / "At least one fuel type stays ticked" beside it; a taken brand stored with no fuel (possible under 397-FR-010) opens with no fuel ticked and the same text as an error, and Save stays blocked until one is ticked; a re-taken brand within one dialog session starts fresh (all four fuels, every job) and the dialog always sends `fuels` and `jobs` for each taken brand; a taken brand with every job unticked shows the brands step's existing warning "Nu vei primi cereri pentru {brand}" (`public.listing.brands.noRequests`), which does not block the save; the last-fuel rule lives in the shared brands step, so the listing form gains it too (research.md R8); a note over 140 or a phrase over 60 characters shows the limit error under the field and blocks the send.
 
