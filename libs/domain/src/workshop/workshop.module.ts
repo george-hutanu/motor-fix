@@ -4,6 +4,8 @@ import { ActiveRequestController } from './active-request/active-request.control
 import { ActiveRequestService } from './active-request/active-request.service';
 import { GarageJobsController } from './garage-jobs/garage-jobs.controller';
 import { GarageJobsService } from './garage-jobs/garage-jobs.service';
+import { JobLockController } from './job-lock/job-lock.controller';
+import { JobLockService } from './job-lock/job-lock.service';
 import { JobStagesController } from './job-stages/job-stages.controller';
 import { JobStagesService } from './job-stages/job-stages.service';
 import { JobStepsController } from './job-steps/job-steps.controller';
@@ -21,6 +23,7 @@ import { AuditService } from '../audit/audit.service';
   controllers: [
     ActiveRequestController,
     GarageJobsController,
+    JobLockController,
     JobStagesController,
     JobStepsController,
     TimeBlocksController,
@@ -29,6 +32,7 @@ import { AuditService } from '../audit/audit.service';
   providers: [
     ActiveRequestService,
     GarageJobsService,
+    JobLockService,
     JobStagesService,
     JobStepsService,
     ScheduleService,

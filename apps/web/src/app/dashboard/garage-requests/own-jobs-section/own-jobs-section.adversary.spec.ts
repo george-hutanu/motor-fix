@@ -34,6 +34,8 @@ const base: JobSummaryDto = {
       position: 0,
     },
   ],
+  lastForcedUnlock: null,
+  lock: null,
   mechanicId: 'm',
   mechanicName: 'Elena Stan',
   odometerKm: null,
@@ -44,6 +46,7 @@ const base: JobSummaryDto = {
   status: 'to_do',
   stepsDone: 0,
   stepsTotal: 0,
+  updatedAt: '2026-10-08T09:00:00.000Z',
   workedSeconds: 0,
 };
 const job = (id: string, over: Partial<JobSummaryDto> = {}): JobSummaryDto => ({

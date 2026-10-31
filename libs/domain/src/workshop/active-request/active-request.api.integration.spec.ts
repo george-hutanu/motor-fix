@@ -407,3 +407,30 @@ describe('the cost of the read', () => {
     features.mockRestore();
   });
 });
+
+// @traces 395-FR-009
+describe('the driver’s active request and a held job lock', () => {
+  it('tells the driver nothing of the lock or a forced unlock', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const dinamo = await team('Atelier Dinamo');
+    const { job } = await working(andrei, dinamo.garage.id, 'in_work', {
+      mechanicId: dinamo.plainMechanic.id,
+    });
+    await prisma.job.update({
+      data: {
+        lockForcedAt: new Date(),
+        lockForcedById: dinamo.owner,
+        lockHolderId: dinamo.plain,
+        lockLastChangeAt: new Date(),
+        lockSince: new Date(),
+      },
+      where: { id: job.id },
+    });
+
+    const body = JSON.stringify(await read(andrei));
+
+    expect(body).not.toContain('lock');
+    expect(body).not.toContain('lastForcedUnlock');
+    expect(body).not.toContain(dinamo.plain);
+  });
+});

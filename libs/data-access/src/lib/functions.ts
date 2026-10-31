@@ -421,6 +421,10 @@ export type { GarageJobsControllerList$Params as GarageJobsControllerList$Params
 export { garageJobsControllerList as garageJobsControllerList } from './fn/garage-jobs/garage-jobs-controller-list';
 export type { GarageJobsControllerGet$Params as GarageJobsControllerGet$Params } from './fn/garage-jobs/garage-jobs-controller-get';
 export { garageJobsControllerGet as garageJobsControllerGet } from './fn/garage-jobs/garage-jobs-controller-get';
+export type { JobLockControllerTake$Params as JobLockControllerTake$Params } from './fn/garage-jobs/job-lock-controller-take';
+export { jobLockControllerTake as jobLockControllerTake } from './fn/garage-jobs/job-lock-controller-take';
+export type { JobLockControllerRelease$Params as JobLockControllerRelease$Params } from './fn/garage-jobs/job-lock-controller-release';
+export { jobLockControllerRelease as jobLockControllerRelease } from './fn/garage-jobs/job-lock-controller-release';
 export type { JobStagesControllerStart$Params as JobStagesControllerStart$Params } from './fn/garage-jobs/job-stages-controller-start';
 export { jobStagesControllerStart as jobStagesControllerStart } from './fn/garage-jobs/job-stages-controller-start';
 export type { JobStagesControllerPause$Params as JobStagesControllerPause$Params } from './fn/garage-jobs/job-stages-controller-pause';

@@ -6232,6 +6232,108 @@
         ]
       }
     },
+    "/api/v1/garage/jobs/{id}/lock": {
+      "post": {
+        "operationId": "JobLockController_take",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TakeJobLockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobLockTakenDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden: a mechanic not on this job; the desk for anything but reception or handover"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job"
+          },
+          "423": {
+            "description": "job_locked (with holder)"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable; nothing changed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Take the job, or refresh the caller’s own lock",
+        "tags": [
+          "garage-jobs"
+        ]
+      },
+      "delete": {
+        "operationId": "JobLockController_release",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "force",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Released, or nothing to release"
+          },
+          "403": {
+            "description": "forbidden: force by anyone but the owner"
+          },
+          "404": {
+            "description": "not_found: not this garage’s job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable; nothing changed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Release the caller’s lock; the owner forces another’s",
+        "tags": [
+          "garage-jobs"
+        ]
+      }
+    },
     "/api/v1/garage/jobs/{id}/start": {
       "post": {
         "operationId": "JobStagesController_start",
@@ -6245,6 +6347,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BasedOnUpdatedAtDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -6263,7 +6375,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "not_received; invalid_transition (with currentStatus)"
+            "description": "job_changed (with job); not_received; invalid_transition (with currentStatus)"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6290,6 +6408,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BasedOnUpdatedAtDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -6308,7 +6436,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "invalid_transition (with currentStatus)"
+            "description": "job_changed (with job); invalid_transition (with currentStatus)"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6335,6 +6469,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BasedOnUpdatedAtDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -6353,7 +6497,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "invalid_transition (with currentStatus)"
+            "description": "job_changed (with job); invalid_transition (with currentStatus)"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6380,6 +6530,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BasedOnUpdatedAtDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -6398,7 +6558,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "job_not_started; invalid_transition (with currentStatus)"
+            "description": "job_changed (with job); job_not_started; invalid_transition (with currentStatus)"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6456,7 +6622,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "job_closed; invalid_state"
+            "description": "job_changed (with job); job_closed; invalid_state"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6514,7 +6686,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "job_not_done; already_handed_over (with finalPriceBani); invalid_transition (with currentStatus) of the booking"
+            "description": "job_changed (with job); job_not_done; already_handed_over (with finalPriceBani); invalid_transition (with currentStatus) of the booking"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6572,7 +6750,13 @@
             "description": "not_found: not this garage’s job"
           },
           "409": {
-            "description": "not_handed_over; correction_window_closed"
+            "description": "job_changed (with job); not_handed_over; correction_window_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6639,7 +6823,13 @@
             "description": "not_found: not this garage’s job, or not its step"
           },
           "409": {
-            "description": "too_many_steps; job_closed"
+            "description": "job_changed (with job); too_many_steps; job_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6690,7 +6880,13 @@
             "description": "not_found: not this garage’s job, or not its step"
           },
           "409": {
-            "description": "job_closed"
+            "description": "job_changed (with job); job_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6756,7 +6952,13 @@
             "description": "not_found: not this garage’s job, or not its step"
           },
           "409": {
-            "description": "job_closed"
+            "description": "job_changed (with job); job_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6787,6 +6989,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "basedOnUpdatedAt",
+            "required": false,
+            "in": "query",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -6803,7 +7015,13 @@
             "description": "not_found: not this garage’s job, or not its step"
           },
           "409": {
-            "description": "job_closed"
+            "description": "job_changed (with job); job_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -6869,7 +7087,13 @@
             "description": "not_found: not this garage’s job, or not its step"
           },
           "409": {
-            "description": "job_not_started; job_closed"
+            "description": "job_changed (with job); job_not_started; job_closed"
+          },
+          "423": {
+            "description": "job_locked (with holder): another person holds the job"
+          },
+          "503": {
+            "description": "try_again: the lock store is unreachable"
           }
         },
         "security": [
@@ -20787,6 +21011,95 @@
           "odometerKm"
         ]
       },
+      "LockHolderDto": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "receptionist",
+              "mechanic"
+            ]
+          }
+        },
+        "required": [
+          "accountId",
+          "firstName",
+          "role"
+        ]
+      },
+      "JobLockDto": {
+        "type": "object",
+        "properties": {
+          "holder": {
+            "$ref": "#/components/schemas/LockHolderDto"
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastChangeAt": {
+            "type": "string",
+            "description": "The holder's last take or change; the lock ends 5 minutes after it",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "holder",
+          "since",
+          "lastChangeAt"
+        ]
+      },
+      "ForcedByDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "receptionist",
+              "mechanic"
+            ]
+          }
+        },
+        "required": [
+          "firstName",
+          "role"
+        ]
+      },
+      "LastForcedUnlockDto": {
+        "type": "object",
+        "properties": {
+          "by": {
+            "$ref": "#/components/schemas/ForcedByDto"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "holderId": {
+            "type": "string",
+            "description": "Who held the lock",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "by",
+          "at",
+          "holderId"
+        ]
+      },
       "JobSummaryDto": {
         "type": "object",
         "properties": {
@@ -20885,6 +21198,29 @@
           "stepsTotal": {
             "type": "number",
             "description": "Steps written, 0 to 20"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "The job's version, to send back as basedOnUpdatedAt",
+            "format": "date-time"
+          },
+          "lock": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JobLockDto"
+              }
+            ]
+          },
+          "lastForcedUnlock": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LastForcedUnlockDto"
+              }
+            ]
           }
         },
         "required": [
@@ -20907,7 +21243,10 @@
           "jobs",
           "mechanicName",
           "stepsDone",
-          "stepsTotal"
+          "stepsTotal",
+          "updatedAt",
+          "lock",
+          "lastForcedUnlock"
         ]
       },
       "JobListDto": {
@@ -21140,6 +21479,29 @@
             "type": "number",
             "description": "Steps written, 0 to 20"
           },
+          "updatedAt": {
+            "type": "string",
+            "description": "The job's version, to send back as basedOnUpdatedAt",
+            "format": "date-time"
+          },
+          "lock": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JobLockDto"
+              }
+            ]
+          },
+          "lastForcedUnlock": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LastForcedUnlockDto"
+              }
+            ]
+          },
           "finalPriceBani": {
             "type": "number",
             "nullable": true
@@ -21186,6 +21548,9 @@
           "mechanicName",
           "stepsDone",
           "stepsTotal",
+          "updatedAt",
+          "lock",
+          "lastForcedUnlock",
           "finalPriceBani",
           "quoteFromBani",
           "quoteToBani",
@@ -21193,9 +21558,72 @@
           "stages"
         ]
       },
+      "TakeJobLockDto": {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "default": "edit",
+            "description": "A receptionist takes a job for its reception or handover only",
+            "enum": [
+              "edit",
+              "reception",
+              "handover"
+            ]
+          }
+        }
+      },
+      "JobLockTakenDto": {
+        "type": "object",
+        "properties": {
+          "holder": {
+            "$ref": "#/components/schemas/LockHolderDto"
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastChangeAt": {
+            "type": "string",
+            "description": "The holder's last take or change; the lock ends 5 minutes after it",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "The job's version, to send back as basedOnUpdatedAt",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "holder",
+          "since",
+          "lastChangeAt",
+          "expiresAt",
+          "updatedAt"
+        ]
+      },
+      "BasedOnUpdatedAtDto": {
+        "type": "object",
+        "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          }
+        }
+      },
       "ReceiveJobDto": {
         "type": "object",
         "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          },
           "odometerKm": {
             "type": "integer",
             "description": "The odometer reading, in km",
@@ -21210,6 +21638,11 @@
       "FinalPriceDto": {
         "type": "object",
         "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          },
           "finalPriceBani": {
             "type": "number",
             "description": "The final price, in bani",
@@ -21224,6 +21657,11 @@
       "JobStepTextDto": {
         "type": "object",
         "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          },
           "text": {
             "type": "string",
             "description": "Trimmed, 2 to 80 characters",
@@ -21238,6 +21676,11 @@
       "ReorderJobStepsDto": {
         "type": "object",
         "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          },
           "stepIds": {
             "description": "Every step of the job, once each, in the new order",
             "maxItems": 20,
@@ -21256,6 +21699,11 @@
       "JobStepDoneDto": {
         "type": "object",
         "properties": {
+          "basedOnUpdatedAt": {
+            "type": "string",
+            "description": "The job's updatedAt the change was made from; a change from an older read is refused",
+            "format": "date-time"
+          },
           "done": {
             "type": "boolean",
             "description": "true ticks the step, false unticks it"

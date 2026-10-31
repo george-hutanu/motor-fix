@@ -1,6 +1,6 @@
 ---
 capability: audit
-updated: 2026-10-29
+updated: 2026-10-30
 features:
   - 390-audit-history
   - 391-audit-history-api
@@ -19,6 +19,7 @@ features:
   - 140-account-delete-export
   - 1156-retention-job
   - 427-time-blocks
+  - 395-job-lock
 ---
 
 # Capability: Audit history
@@ -278,6 +279,10 @@ _From 1156-retention-job._
 ### 427-FR-009 — Every create, change and removal MUST write through the audit writer (390-FR-001) in the same transaction, subject type `time_block`, subject id the block, garage scope the garage, `internal` true: a create one `create` entry with the new values (`mechanicId`, `mechanicName`, `lift`, `startsAt`, `endsAt`, `note`), a change one `update` entry per changed field with the old and the new value, a removal one `delete` entry with the old values; the actor and the role as the writer records them (`owner`, `receptionist`, or `system` for FR-012's removal with the removing owner as actor). The entries fall in the `bookings` area of the history read (already mapped) and never in a driver's history.
 
 _From 427-time-blocks._
+
+### 395-FR-012 — A forced unlock MUST write one audit entry through the shared writer in the same transaction as the mirror clear: action `update`, subject `job`, field `lock_holder_id`, old value the former holder's account id, new value null, kind `job.lock_forced`, text "{holder first name}, {role}, de la {since ISO}", the owner as actor, `internal` true, the garage and job ids. Taking, refreshing, releasing and expiry write no audit entry; the changes themselves are recorded by their own use cases.
+
+_From 395-job-lock._
 
 ## Retired
 
