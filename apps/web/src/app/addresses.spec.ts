@@ -9,7 +9,7 @@ import {
   UrlSegment,
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { HealthService } from '@motor-fix/data-access';
+import { CarsService, HealthService } from '@motor-fix/data-access';
 import {
   I18n,
   LanguageChoice,
@@ -321,6 +321,18 @@ describe('language addresses', () => {
       document.head.querySelectorAll('link[rel="canonical"]'),
     ).toHaveLength(1);
     expect(href('link[rel="canonical"]')).toBe(`${ORIGIN}/ro/`);
+  });
+
+  // @traces 1392-FR-005
+  it('keeps a car transfer link out of search engines', async () => {
+    TestBed.overrideProvider(CarsService, {
+      useValue: { carTransferLinkControllerRead: async () => ({}) },
+    });
+    await open('/ro/transfer/abc123');
+
+    expect(robots()).toEqual(['noindex']);
+    expect(href('link[rel="canonical"]')).toBeUndefined();
+    expect(document.head.querySelectorAll('link[hreflang]')).toHaveLength(0);
   });
 
   it('shows the not-found page in Romanian for an unknown language prefix', async () => {

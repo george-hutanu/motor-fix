@@ -51,6 +51,8 @@ export const publicChildren: Routes = [
     path: 'invite/:token',
   },
   {
+    // A buyer's private link: never indexed (`addresses.ts`).
+    data: { noindex: true },
     loadComponent: () =>
       import('./transfer/transfer').then((m) => m.TransferPage),
     path: 'transfer/:token',

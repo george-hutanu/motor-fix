@@ -9,6 +9,7 @@ import { I18n } from '@motor-fix/i18n';
 
 import { TransferPage } from './transfer';
 import { PUBLIC_READ } from '../../public-read';
+import { publicChildren } from '../routes';
 
 const refusal = (status: number, code?: string) =>
   new HttpErrorResponse({
@@ -58,12 +59,6 @@ const page = () => harness.routeNativeElement as HTMLElement;
 const said = () => (page().textContent ?? '').replace(/\s+/g, ' ').trim();
 const heading = () => page().querySelector('h1')?.textContent?.trim();
 const title = () => TestBed.inject(Title).getTitle();
-
-afterEach(() => {
-  document.head.querySelectorAll('meta[name="robots"]').forEach((m) => {
-    m.remove();
-  });
-});
 
 // @traces 1392-FR-005 1392-FR-006 1392-FR-007 1392-SC-003
 describe('the public transfer page', () => {
@@ -178,14 +173,10 @@ describe('the public transfer page', () => {
     expect(page().querySelector('[aria-busy="true"]')).toBeNull();
   });
 
-  it('asks search engines not to index the page', async () => {
-    await open(async () => ({ status: 'sent' }));
-
+  it('is routed as a page search engines must not index', () => {
     expect(
-      document.head
-        .querySelector('meta[name="robots"]')
-        ?.getAttribute('content'),
-    ).toBe('noindex');
+      publicChildren.find((route) => route.path === 'transfer/:token')?.data,
+    ).toEqual({ noindex: true });
   });
 
   it('offers no sign-in prompt and no action in its body', async () => {

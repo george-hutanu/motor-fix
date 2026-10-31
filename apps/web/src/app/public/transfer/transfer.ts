@@ -1,4 +1,3 @@
-import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,12 +10,11 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
-import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { CarsService } from '@motor-fix/data-access';
 import { I18n, TranslatePipe } from '@motor-fix/i18n';
 import { toProblem } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
-import { filter, take } from 'rxjs';
 
 import { publicRead } from '../../public-read';
 
@@ -47,8 +45,8 @@ function refused(code: string, status: number): State {
 
 // The buyer's link from the sale dialog, opened by anyone: one line saying
 // whether the link still holds. It shows nothing the answer carries (car,
-// seller, repairs; ST-1394 builds the buyer's view), is never indexed, and an
-// unknown or ended link is served 404 or 410.
+// seller, repairs), is never indexed (its route's `noindex`), and an unknown
+// or ended link is served 404 or 410.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
@@ -60,8 +58,7 @@ export class TransferPage {
   private readonly cars = inject(CarsService);
   private readonly pending = inject(PendingTasks);
   private readonly response = inject(RESPONSE_INIT, { optional: true });
-  private readonly token: string =
-    inject(ActivatedRoute).snapshot.paramMap.get('token') ?? '';
+  private readonly route = inject(ActivatedRoute);
   private readonly i18n = inject(I18n);
   protected readonly state = signal<State>('loading');
   protected readonly line = computed(() => `public.transfer.${this.state()}`);
@@ -69,8 +66,10 @@ export class TransferPage {
   constructor() {
     const title = inject(Title);
     effect(() => title.setTitle(this.i18n.t(this.line())));
-    this.keepOutOfSearch();
-    void this.read();
+    // A link opened from another link reuses the page: each token is read.
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
+      void this.read();
+    });
   }
 
   protected async read() {
@@ -78,7 +77,7 @@ export class TransferPage {
     const done = this.pending.add();
     try {
       await this.cars.carTransferLinkControllerRead(
-        { token: this.token },
+        { token: this.route.snapshot.paramMap.get('token') ?? '' },
         publicRead(),
       );
       this.state.set('valid');
@@ -86,35 +85,10 @@ export class TransferPage {
       const { code, status } = toProblem(error);
       const state = refused(code, status);
       this.state.set(state);
-      if (this.response && (state === 'unknown' || ENDED[code] === state))
+      if (this.response && (status === 404 || status === 410))
         this.response.status = status;
     } finally {
       done();
     }
-  }
-
-  // The site writes each public page's canonical address once the navigation
-  // ends; this page's own tags follow it.
-  private keepOutOfSearch() {
-    const document = inject(DOCUMENT);
-    inject(Router)
-      .events.pipe(
-        filter((event) => event instanceof NavigationEnd),
-        take(1),
-        takeUntilDestroyed(),
-      )
-      .subscribe(() => {
-        document.head
-          .querySelectorAll(
-            'link[rel="canonical"], link[rel="alternate"][hreflang], meta[name="robots"]',
-          )
-          .forEach((tag) => {
-            tag.remove();
-          });
-        const robots = document.createElement('meta');
-        robots.setAttribute('name', 'robots');
-        robots.setAttribute('content', 'noindex');
-        document.head.appendChild(robots);
-      });
   }
 }
