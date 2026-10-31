@@ -521,6 +521,17 @@ describe('deleting the input of a start that did not commit', () => {
     ]);
   });
 
+  it('counts the empty answer Cloudflare gives a delete as deleted', async () => {
+    answer = (_req, res) => {
+      res.writeHead(200);
+      res.end();
+    };
+
+    await expect(cloudflare().deleteInput('input-uid-1')).resolves.toBe(
+      undefined,
+    );
+  });
+
   it('counts an input the provider no longer has as deleted', async () => {
     answer = json(404, { success: false });
 

@@ -116,6 +116,7 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
       'DELETE',
       `/live_inputs/${encodeURIComponent(inputId)}`,
     );
+    // Cloudflare answers the delete with no body, which reads as malformed.
     if (call.failed && call.failed !== '404' && call.failed !== 'malformed') {
       throw new Error(`live input delete failed: ${call.failed}`);
     }
