@@ -6,7 +6,7 @@ import {
   type Page,
 } from '@playwright/test';
 
-import { headers, ready, signIn } from './accounts.js';
+import { headers, openSignIn, ready, signIn } from './accounts.js';
 import { bucharestDay } from './bucharest-day.js';
 import { test } from './fixtures.js';
 import { keepSeededLanguage } from './seeded-language.js';
@@ -23,10 +23,8 @@ interface Schedule {
 async function signedIn(page: Page) {
   await keepSeededLanguage(page);
   await ready(page, '/ro');
-  await page
-    .getByRole('banner')
-    .getByRole('button', { exact: true, name: 'Autentificare' })
-    .click();
+  // A phone opens the dialog from the tab bar, a desktop from the top bar.
+  await openSignIn(page);
   await signIn(page, RECEPTIONIST);
   await expect(page).toHaveURL('/app/garage');
 }
@@ -78,7 +76,9 @@ function bucharest(day: string, at: number): Date {
 // from the next quarter hour while an hour fits before closing, else from the
 // axis's last hour on to an hour after now (an ended interval is a 422); a
 // 409 (a seeded booking holds the slot) tries the next quarter. Gives the
-// block's length in minutes with the answer.
+// length in minutes of the block's part on `day` with the answer: the schedule
+// read cuts a block at each Bucharest midnight it crosses, so a run late in
+// the evening sees only the stretch up to midnight.
 async function blockLiftOne(
   request: APIRequestContext,
   auth: Record<string, string>,
@@ -92,6 +92,10 @@ async function blockLiftOne(
   },
 ): Promise<{ made: APIResponse; minutes: number }> {
   const QUARTER = 15 * 60_000;
+  const next = new Date(Date.parse(`${slot.day}T12:00:00Z`) + 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const midnight = bucharest(next, 0).getTime();
   const soon = Math.ceil(slot.now / QUARTER) * QUARTER + 60 * 60_000;
   const quarter = Math.ceil(minutes(wallClock(new Date(slot.now))) / 15) * 15;
   let at =
@@ -119,7 +123,9 @@ async function blockLiftOne(
     if (made.status() !== 409 || at >= slot.end)
       return {
         made,
-        minutes: Math.round((endsAt - startsAt.getTime()) / 60_000),
+        minutes: Math.round(
+          (Math.min(endsAt, midnight) - startsAt.getTime()) / 60_000,
+        ),
       };
   }
 }
