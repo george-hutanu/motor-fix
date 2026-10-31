@@ -124,3 +124,14 @@ describe('the final price texts', () => {
     },
   );
 });
+
+// @traces 1410-FR-003
+describe('the quote hint texts', () => {
+  it.each([
+    ['jobs.finalPrice.quote', 'Ofertă {range}', 'Quote {range}'],
+    ['jobs.finalPrice.aboveQuote', 'Peste ofertă', 'Above the quote'],
+  ] as const)('garage %s reads in both languages', (path, ro, en) => {
+    expect(at(bundle('garage', 'ro'), path)).toBe(ro);
+    expect(at(bundle('garage', 'en'), path)).toBe(en);
+  });
+});
