@@ -763,6 +763,7 @@ async function open(
       {
         provide: GaragesService,
         useValue: {
+          garageSchedule: () => new Promise(() => undefined),
           verificationStatusControllerRead: () => new Promise(() => undefined),
         },
       },
@@ -874,15 +875,22 @@ describe('the garage menu of each role, read from the table', () => {
 });
 
 describe('the dashboard view routes', () => {
-  // @traces 097-FR-004
+  // @traces 097-FR-004 151-FR-016
   it('opens an allowed view at its own address, with the empty state of that view', async () => {
-    const { element } = await open('/app/garage/schedule', OWNER);
+    // Programări keeps its sentence while the garage schedules no lifts.
+    const { element } = await open(
+      '/app/garage/schedule',
+      OWNER,
+      'garage',
+      access('approved', { lift_schedule: false }),
+    );
 
     expect(TestBed.inject(Router).url).toBe('/app/garage/schedule');
     expect(element.textContent).toContain(
       'Aici vei vedea programările pe zile, pe mecanici și pe elevatoare.',
     );
     expect(element.textContent).not.toContain('Nimic aici încă.');
+    expect(element.querySelector('[data-lift-schedule]')).toBeNull();
   });
 
   // @traces 030-FR-009

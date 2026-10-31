@@ -1,0 +1,114 @@
+@if (shown()) {
+  <section
+    class="panel"
+    data-lift-schedule
+    [attr.data-state]="state()"
+    [attr.data-offline]="offline() ? '' : null"
+    [attr.aria-busy]="state() === 'loading'"
+  >
+    <div class="head">
+      <mf-section-title [heading]="'garage.home.section.sched' | t" [view]="view()" />
+      <span class="corner">
+        @if (offline()) {
+          <span class="lamp" data-offline-lamp role="img" [attr.aria-label]="'garage.liftSchedule.offline' | t" [attr.title]="'garage.liftSchedule.offline' | t"></span>
+        }
+        <span class="now" data-now>{{ 'garage.liftSchedule.now' | t: { time: clock() } }}</span>
+      </span>
+    </div>
+    @switch (state()) {
+      @case ('loading') {
+        <div class="skeletons" aria-hidden="true">
+          @for (n of skeletons; track n) {
+            <div class="skeleton" data-skeleton></div>
+          }
+        </div>
+      }
+      @case ('failed') {
+        <div class="failed">
+          <p role="alert">{{ 'garage.liftSchedule.failed' | t }}</p>
+          <button hlmBtn type="button" variant="outline" data-retry (click)="data.reload()">{{ 'garage.liftSchedule.retry' | t }}</button>
+        </div>
+      }
+      @case ('closed') {
+        <p class="note" data-closed>{{ 'garage.liftSchedule.closed' | t }}</p>
+      }
+      @default {
+        @if (state() === 'empty') {
+          <p class="note" data-empty>{{ 'garage.liftSchedule.empty' | t }}</p>
+        }
+        <div #scroller class="scroller" role="region" tabindex="0" [attr.aria-label]="'garage.home.section.sched' | t">
+          <div class="canvas" [style.min-width.px]="width()">
+            <div class="axis">
+              <span class="names"></span>
+              <span class="track">
+                @for (label of axis()?.labels ?? []; track label.text) {
+                  <span class="label" data-axis-label [attr.data-align]="label.align" [style.left.%]="label.at">{{ label.text }}</span>
+                }
+              </span>
+            </div>
+            @for (row of rows(); track row.key) {
+              <div class="row" [attr.data-row]="row.key" [attr.data-sub-rows]="row.subRows" [style.--subs]="row.subRows">
+                <span class="names" data-row-name>{{ rowName(row) }}</span>
+                <span class="track">
+                  @for (hour of hours(); track hour) {
+                    <span class="hairline" aria-hidden="true" [style.left.%]="hour"></span>
+                  }
+                  @for (item of row.items; track item.id) {
+                    @if (editable(item)) {
+                      <button
+                        type="button"
+                        class="block"
+                        data-block
+                        [attr.data-live-id]="item.liveId"
+                        [attr.data-kind]="item.kind"
+                        [attr.data-style]="item.style"
+                        [attr.aria-label]="label(item)"
+                        [style.left.%]="item.left"
+                        [style.width.%]="item.width"
+                        [style.--sub]="item.sub"
+                        (click)="edit(item)"
+                      >
+                        <span class="line" data-label>{{ blockLabel(item) }}</span>
+                        <span class="tooltip" data-tooltip aria-hidden="true">{{ label(item) }}</span>
+                      </button>
+                    } @else {
+                      <div
+                        class="block"
+                        data-block
+                        role="group"
+                        tabindex="0"
+                        [attr.data-live-id]="item.liveId"
+                        [attr.data-kind]="item.kind"
+                        [attr.data-style]="item.style"
+                        [attr.aria-label]="label(item)"
+                        [style.left.%]="item.left"
+                        [style.width.%]="item.width"
+                        [style.--sub]="item.sub"
+                      >
+                        @if (item.kind === 'block') {
+                          <span class="line" data-label aria-hidden="true">{{ blockLabel(item) }}</span>
+                        } @else {
+                          <span class="line car" data-car aria-hidden="true">{{ car(item) }}</span>
+                          @if (!item.short) {
+                            <span class="line" data-jobs aria-hidden="true">{{ jobs(item) }}</span>
+                          }
+                        }
+                        <span class="tooltip" data-tooltip aria-hidden="true">{{ label(item) }}</span>
+                      </div>
+                    }
+                  }
+                </span>
+              </div>
+            }
+            <div class="overlay" aria-hidden="true">
+              @let at = nowLine();
+              @if (at !== null) {
+                <span class="now-line" data-now-line aria-hidden="true" [style.left.%]="at"></span>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    }
+  </section>
+}
