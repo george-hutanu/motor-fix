@@ -618,6 +618,57 @@ describe("writing a garage's job ticks from step 2", () => {
     ).toBe('draft');
   });
 
+  // @traces 1247-FR-003
+  it('refuses with no price list an unticked uuid that names no catalogue job, writing nothing', async () => {
+    const { oil } = await jobs();
+
+    const refused = await refusalOf(
+      write({
+        brands: [
+          {
+            brandId: bmw,
+            name: 'BMW',
+            stance: 'works_on',
+            unticked: [oil],
+          },
+          {
+            brandId: dacia,
+            name: 'Dacia',
+            stance: 'works_on',
+            unticked: [randomUUID()],
+          },
+        ],
+      }),
+    );
+
+    expect(refused.status).toBe(400);
+    expect(refused.body).toMatchObject({
+      code: 'validation_failed',
+      errors: [{ code: 'unknown_job', field: 'brands[1].unticked' }],
+    });
+    expect((await stored()).brands).toEqual({});
+    expect(await entries()).toEqual([]);
+  });
+
+  // @traces 1247-FR-003
+  it('lets a catalogue job uuid or a proposed name wait with no price list', async () => {
+    const { brakes } = await jobs();
+
+    await write({
+      brands: [
+        {
+          brandId: dacia,
+          name: 'Dacia',
+          stance: 'works_on',
+          unticked: [brakes.toUpperCase(), 'Reglaj faruri'],
+        },
+      ],
+    });
+
+    expect(Object.keys((await stored()).brands)).toEqual([dacia]);
+    expect(await ticks()).toEqual([]);
+  });
+
   // The prices step refuses a brand range for a brand not yet taken, so a
   // listing with brand ranges writes its brands, then its prices, then the
   // brands again with the jobs the prices returned.
