@@ -15,7 +15,7 @@ import { test } from './fixtures.js';
 // verdict, the filtered empty state, instead of the open garage. The open
 // garage alone also asks at most 180 lei/h, is rated 4.6 and takes cards; the
 // other two ask 260 lei/h, carry no rating and take no card.
-// @traces 1399-FR-001 1399-FR-002 1399-FR-003 1399-FR-004 1399-FR-007 1399-FR-008
+// @traces 1399-FR-001 1399-FR-002 1399-FR-003 1399-FR-004 1399-FR-007 1399-FR-008 1399-FR-010
 // @traces 1398-FR-001 1398-FR-002 1398-FR-003 1398-FR-004 1398-FR-006 1398-FR-007 1398-FR-009 1398-FR-010 1398-FR-011 1398-FR-014 1398-FR-015
 test.describe('filtering the Results page @seeded @database', () => {
   test.describe.configure({ mode: 'serial' });
@@ -210,6 +210,12 @@ test.describe('filtering the Results page @seeded @database', () => {
       'aria-pressed',
       'true',
     );
+    await expect(opener(page)).toHaveText('Filtre · 1');
+    await expect(cards(page)).toHaveCount(1);
+    await expect(page.locator('.summary .tally')).toContainText(
+      '2 service‑uri găsite · 1 cu filtrele alese',
+    );
+    await expect(page.locator('mf-static-map .pin.dim')).toHaveCount(1);
     await page
       .getByRole('group', { name: 'Notă minimă' })
       .getByRole('button', { name: '4,5+' })
@@ -234,22 +240,30 @@ test.describe('filtering the Results page @seeded @database', () => {
     await expect(opener(page)).toBeFocused();
   });
 
-  test('restores the price filter from a link, keeps it through a brand change, and "Scoate filtrele" clears it', async ({
+  test('"150" at the second place finds nothing and "Scoate filtrele" clears it; a link restores the choice through a brand change', async ({
     page,
   }) => {
-    await ready(page, opened(second, '&max_price=150&card=1'));
+    await ready(page, opened(second));
+    await expect(cards(page)).toHaveCount(1);
+    await opener(page).click();
+    await page
+      .getByRole('group', { name: 'Manoperă până la … lei/oră' })
+      .getByRole('button', { name: '150' })
+      .click();
+    await expect(page).toHaveURL(/max_price=150/);
+    await page.keyboard.press('Escape');
 
     await expect(page.getByRole('heading', { name: nothing })).toBeVisible();
     await expect(chip(page, 'Până la 150 lei/oră')).toBeVisible();
-    await expect(opener(page)).toHaveText('Filtre · 2');
+    await expect(opener(page)).toHaveText('Filtre · 1');
 
     await page.getByRole('button', { name: 'Scoate filtrele' }).click();
 
-    await expect(page).not.toHaveURL(/max_price|card=/);
+    await expect(page).not.toHaveURL(/max_price/);
     await expect(cards(page)).toHaveCount(1);
     await expect(cards(page).first()).toHaveText(`Departe ${stamp}`);
 
-    await ready(page, opened(first, '&max_price=200'));
+    await ready(page, opened(first, '&max_price=200&min_rating=4.5&card=1'));
     await expect(cards(page)).toHaveCount(1);
     await opener(page).click();
     await expect(
@@ -257,6 +271,14 @@ test.describe('filtering the Results page @seeded @database', () => {
         .getByRole('group', { name: 'Manoperă până la … lei/oră' })
         .getByRole('button', { name: '200' }),
     ).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      page
+        .getByRole('group', { name: 'Notă minimă' })
+        .getByRole('button', { name: '4,5+' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      page.getByRole('switch', { name: 'Plată cu cardul' }),
+    ).toBeChecked();
     await page.keyboard.press('Escape');
     await page
       .getByRole('group', { name: 'Marca' })
@@ -264,8 +286,10 @@ test.describe('filtering the Results page @seeded @database', () => {
       .first()
       .click();
     await expect(page).not.toHaveURL(new RegExp(`brand=${brand.slug}`));
-    await expect(page).toHaveURL(/max_price=200/);
+    await expect(page).toHaveURL(/max_price=200&min_rating=4\.5&card=1/);
     await expect(chip(page, 'Până la 200 lei/oră')).toBeVisible();
+    await expect(chip(page, 'Notă 4,5+')).toBeVisible();
+    await expect(chip(page, 'Plată cu cardul')).toBeVisible();
   });
 
   // The controls the QA sweep cannot reach without a place: the button, the

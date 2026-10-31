@@ -32,6 +32,7 @@ const ALL: Filters = {
 };
 
 // @traces 1398-FR-004
+// @traces 1399-FR-010
 describe('the filters the address bar names', () => {
   it('reads a switch as on only for the value 1', () => {
     expect(filtersIn(bar('open_now=1&open_saturday=1'))).toEqual({
@@ -211,5 +212,29 @@ describe('the filters on a search request', () => {
       [],
     );
     expect(importing(results, /contracts\/open-status'/)).toEqual([]);
+  });
+});
+
+// @traces 1399-FR-009
+// No new signal: the two search routes' inventory entries name the five
+// filters that narrow their query.
+describe('the observability inventory of the filtered search', () => {
+  it('names the five filters on the search and the pins routes', () => {
+    const inventory = readFileSync(
+      join(
+        __dirname,
+        '../../../../../../../infra/observability/inventory.json',
+      ),
+      'utf8',
+    );
+    const naming = inventory
+      .split('\n')
+      .filter((line) =>
+        line.includes(
+          'open_now, open_saturday, max_price, min_rating and card filters',
+        ),
+      );
+
+    expect(naming).toHaveLength(2);
   });
 });

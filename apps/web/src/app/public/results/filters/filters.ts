@@ -76,7 +76,7 @@ export function countOf(filters: Filters): number {
   return ORDER.filter((key) => on(filters, key)).length;
 }
 
-export interface FilterParams {
+interface FilterParams {
   open_now?: '1';
   open_saturday?: '1';
   max_price?: SearchPriceCeiling;
