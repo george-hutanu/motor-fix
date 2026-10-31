@@ -7,7 +7,7 @@ import { I18n } from '@motor-fix/i18n';
 
 import { ContactPage } from './contact-page';
 import { PUBLIC_PATHS } from '../../../addresses';
-import { routes } from '../../../app.routes';
+import { publicChildren } from '../../routes';
 
 // @traces 280-FR-001 280-FR-011
 
@@ -78,10 +78,7 @@ describe('the contact page', () => {
 
   it('is a public address in both languages', () => {
     expect(PUBLIC_PATHS).toContain('contact');
-    const language = routes.find((route) => route.path === ':lang');
-    expect(language?.children?.some((route) => route.path === 'contact')).toBe(
-      true,
-    );
+    expect(publicChildren.some((route) => route.path === 'contact')).toBe(true);
   });
 });
 
