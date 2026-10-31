@@ -38,6 +38,10 @@ function captionError(caption: unknown, field: string): GalleryError[] {
 const isPhotoKey = (key: unknown): key is string =>
   typeof key === 'string' && key.startsWith('garage_photo/') && isFileKey(key);
 
+// An id names one photo in any letter case.
+const sameCase = (id: unknown) =>
+  typeof id === 'string' ? id.toLowerCase() : id;
+
 // The rules the list's shape cannot say, each naming the entry it refuses:
 // exactly one of `id` and `key`, neither sent twice, and the caption's limits.
 export function galleryErrors(photos: unknown): GalleryError[] {
@@ -52,7 +56,7 @@ export function galleryErrors(photos: unknown): GalleryError[] {
     const reference =
       id === undefined
         ? referenceError(key, keys, isPhotoKey(key), `${at}.key`)
-        : referenceError(id, ids, isId(id), `${at}.id`);
+        : referenceError(sameCase(id), ids, isId(id), `${at}.id`);
     const errors = captionError(caption, `${at}.caption`);
     return reference ? [reference, ...errors] : errors;
   });
