@@ -219,13 +219,25 @@ const pathOf = (url) => {
   }
 };
 
+const lastSegment = (path) => path?.split("?")[0].split("/").filter(Boolean).pop() ?? null;
+
+/**
+ * The API read of the thing a page names (`/api/v1/car-transfers/x` behind `/ro/transfer/x`): its expected status
+ * is why the page answers it.
+ */
+const isLookup = (o) => {
+  const path = pathOf(o.url);
+  const named = lastSegment(o.href ?? o.path);
+  return Boolean(path?.startsWith("/api/") && named && lastSegment(path) === named);
+};
+
 /** Without the error response, and the console line it logs, that a route's expected status causes. */
 export const dropExpected = (observations) =>
   observations.filter(
     (o) =>
       !o.expect ||
       !(
-        (o.kind === "http" && o.status === o.expect && pathOf(o.url) === (o.href ?? o.path)) ||
+        (o.kind === "http" && o.status === o.expect && (pathOf(o.url) === (o.href ?? o.path) || isLookup(o))) ||
         (o.kind === "console" && String(o.text).includes(`status of ${o.expect}`))
       ),
   );

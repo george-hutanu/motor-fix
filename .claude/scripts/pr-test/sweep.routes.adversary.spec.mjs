@@ -181,6 +181,18 @@ describe('expected status', () => {
     const odd = http({ url: 'not a url' });
     assert.deepEqual(dropExpected([odd]), [odd]);
   });
+
+  it("drops the API read of the thing the page names, which is why it answers its expected status", () => {
+    const page = { path: '/:lang/transfer/nu-exista', href: '/ro/transfer/nu-exista' };
+    const lookup = http({ ...page, url: 'http://127.0.0.1:3000/api/v1/car-transfers/nu-exista' });
+    const keep = [
+      http({ ...page, url: 'http://127.0.0.1:3000/api/v1/car-transfers/nu-exista', status: 500 }),
+      http({ ...page, url: 'http://127.0.0.1:3000/api/v1/garages/altceva' }),
+      http({ ...page, url: 'http://127.0.0.1:4200/assets/nu-exista' }),
+      http({ ...page, url: 'http://127.0.0.1:3000/api/v1/car-transfers/nu-exista', expect: null }),
+    ];
+    assert.deepEqual(dropExpected([lookup, ...keep]), keep);
+  });
 });
 
 describe('the signed-in cookie', () => {
