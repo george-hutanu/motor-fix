@@ -158,6 +158,8 @@ model GaragePhoto {
   height      Int?
   variantPath String?  @unique @map("variant_path")
   thumbhash   String?
+  // CHECK in the migration: 1 to 80 characters, no control character.
+  caption     String?  @db.VarChar(80)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   garage      Garage   @relation(fields: [garageId], references: [id], onDelete: Cascade)
 

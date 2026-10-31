@@ -112,6 +112,7 @@ export { GarageMechanicsService } from './garages/mechanics/garage-mechanics.ser
 export { GaragePhotosService } from './garages/photos/garage-photos.service';
 export { ListingPhotosModule } from './garages/photos/listing-photos/listing-photos.module';
 export { ListingPhotosWorkerModule } from './garages/photos/listing-photos/listing-photos.worker';
+export { OwnerPhotosModule } from './garages/photos/owner-photos/owner-photos.module';
 export { GaragePlaceService } from './garages/place/garage-place.service';
 export { GaragePricesService } from './garages/prices/garage-prices/garage-prices.service';
 export { applySurvey } from './garages/survey/survey';
