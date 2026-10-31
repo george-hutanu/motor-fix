@@ -23,13 +23,18 @@ export class GaragePhotosService {
     actorId: string,
   ): Promise<void> {
     const before = await tx.garagePhoto.findMany({
-      select: { fileKey: true, id: true, position: true },
+      select: { caption: true, fileKey: true, id: true, position: true },
       where: { garageId },
     });
+    // A photo kept keeps the caption its owner gave it.
+    const captions = new Map(
+      before.map(({ caption, fileKey }) => [fileKey, caption]),
+    );
     await tx.garagePhoto.deleteMany({ where: { garageId } });
     const rows = await tx.garagePhoto.createManyAndReturn({
       data: photos.map(
         ({ height, key, thumbhash, variantPath, width }, position) => ({
+          caption: captions.get(key) ?? null,
           fileKey: key,
           garageId,
           height,
