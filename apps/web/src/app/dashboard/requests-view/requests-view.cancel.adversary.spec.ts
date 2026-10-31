@@ -145,6 +145,7 @@ const booking = (over: Partial<Booking> = {}): Booking => ({
   id: 'booking-1',
   jobStarted: false,
   lateCancellation: false,
+  noShowAt: null,
   startsAt: new Date(Date.now() + 24 * HOURS).toISOString(),
   status: 'confirmed',
   ...over,

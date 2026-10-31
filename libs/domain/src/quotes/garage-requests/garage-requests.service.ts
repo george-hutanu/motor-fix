@@ -31,6 +31,7 @@ import type {
   RequestRecipient,
 } from '../../generated/prisma/client';
 import { ANSWERING } from '../answers';
+import { noShowFlags } from '../no-show/no-show.window';
 import { outcomeOf } from '../quote-outcome/quote-outcome';
 import { PAGE_SIZE } from '../quotes-config';
 import {
@@ -141,6 +142,7 @@ function closedOf(
 }
 
 function summaryOf(
+  actor: Actor,
   row: SummaryRow,
   offered: Offered,
   closed?: Closed,
@@ -148,6 +150,7 @@ function summaryOf(
   const [recipient] = row.recipients;
   const [quote] = row.quotes;
   const [booking] = row.bookings;
+  const now = new Date();
   return {
     booking: booking
       ? {
@@ -156,7 +159,17 @@ function summaryOf(
           id: booking.id,
           lift: booking.lift,
           mechanic: mechanicOf(booking),
-          toReassign: toReassign(booking, new Date()),
+          noShowAt: iso(booking.noShowAt),
+          ...noShowFlags(
+            {
+              ...booking,
+              jobStatus: booking.job?.status ?? null,
+              mechanicAccountId: booking.mechanic?.accountId ?? null,
+            },
+            actor,
+            now,
+          ),
+          toReassign: toReassign(booking, now),
         }
       : null,
     car: snapshotOf(row),
@@ -224,7 +237,7 @@ export class GarageRequestsService {
     query: GarageRequestsQueryDto,
   ): Promise<GarageRequestListDto> {
     const garageId = this.garageOf(actor);
-    if (query.status === 'closed') return this.closed(garageId);
+    if (query.status === 'closed') return this.closed(actor, garageId);
     if (query.status === 'quoted') {
       return this.quoted(actor, garageId, query.cursor);
     }
@@ -237,7 +250,7 @@ export class GarageRequestsService {
         : { recipients: { some: { garageId } } };
     const { rows, total } = await this.rows(garageId, where, query.cursor);
     const offered = await this.offered(garageId, rows);
-    return page(rows, total, (row) => summaryOf(row, offered));
+    return page(rows, total, (row) => summaryOf(actor, row, offered));
   }
 
   async inbox(actor: Actor, query: InboxQuery): Promise<InboxPage> {
@@ -249,7 +262,7 @@ export class GarageRequestsService {
     const { rows, total } = await this.rows(garageId, where, query.cursor);
     const offered = await this.offered(garageId, rows);
     return page(rows, total, (row) => {
-      const summary = summaryOf(row, offered);
+      const summary = summaryOf(actor, row, offered);
       return {
         ...summary,
         description: row.description,
@@ -283,7 +296,10 @@ export class GarageRequestsService {
   // one page. A decline closes at declined_at. Otherwise a recipient has no
   // close column: the close time is its newest status move, else the
   // request's, else when it was sent to the garage.
-  private async closed(garageId: string): Promise<GarageRequestListDto> {
+  private async closed(
+    actor: Actor,
+    garageId: string,
+  ): Promise<GarageRequestListDto> {
     const hits = await this.prisma.$queryRaw<
       { closed_at: Date; id: string; total: bigint }[]
     >`
@@ -337,7 +353,7 @@ export class GarageRequestsService {
           row.quotes[0]?.status === 'accepted',
         );
         return [
-          summaryOf(row, offered, {
+          summaryOf(actor, row, offered, {
             closedAt: hit.closed_at.toISOString(),
             closedReason,
           }),
@@ -384,7 +400,7 @@ export class GarageRequestsService {
     const rows = hits.flatMap((hit) => byId.get(hit.requestId) ?? []);
     const offered = await this.offered(garageId, rows);
     return page(rows, total, (row) => {
-      const summary = summaryOf(row, offered);
+      const summary = summaryOf(actor, row, offered);
       const contact = listContactOf(row, actor);
       const [quote] = row.quotes;
       return {
@@ -486,7 +502,7 @@ export class GarageRequestsService {
         where: { firstSeenAt: null, garageId, requestId: id },
       }),
     ]);
-    const summary = summaryOf(row, offered, closedOf(row));
+    const summary = summaryOf(actor, row, offered, closedOf(row));
     const [booking] = row.bookings;
     // The plate shows from confirmation on, as it does on the job, even once
     // the booking is cancelled; a mechanic sees it only on their own booking.
