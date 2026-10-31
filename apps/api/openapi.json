@@ -5991,6 +5991,141 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/free-slots": {
+      "get": {
+        "operationId": "garageFreeSlots",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "duration",
+            "required": true,
+            "in": "query",
+            "description": "Minutes the job takes",
+            "schema": {
+              "minimum": 15,
+              "maximum": 2400,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "jobTypeIds",
+            "required": false,
+            "in": "query",
+            "description": "The jobs of the work; any of them needing a lift makes the job need one",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "needsLift",
+            "required": false,
+            "in": "query",
+            "description": "The job needs a lift, whatever its job types say",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "earliest",
+            "required": false,
+            "in": "query",
+            "description": "The first start to offer; an hour from now when left out, now when past, rounded up to the next half hour of the Bucharest clock",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "horizonDays",
+            "required": false,
+            "in": "query",
+            "description": "Bucharest days to look through, the earliest start's day the first",
+            "schema": {
+              "minimum": 1,
+              "maximum": 30,
+              "default": 30,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "count",
+            "required": false,
+            "in": "query",
+            "description": "Starts to answer at most",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10,
+              "default": 3,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": false,
+            "in": "query",
+            "description": "Only the starts at which this current card of the garage is free; refused while the team is off",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "excludeBookingId",
+            "required": false,
+            "in": "query",
+            "description": "A booking of the garage whose own time does not block, as when it is moved; a driver's must be hers",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeSlotsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bound, an unparsable earliest, a mechanicId or excludeBookingId the garage does not have"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic of the garage with neither right"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The first starts at which a job of the asked length fits",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garage/jobs": {
       "get": {
         "operationId": "GarageJobsController_list",
@@ -20505,6 +20640,46 @@
         "required": [
           "request",
           "openCount"
+        ]
+      },
+      "FreeSlotDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "Where the job ends, over every working day it takes",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "FreeSlotsDto": {
+        "type": "object",
+        "properties": {
+          "slots": {
+            "description": "Ascending by start, at most the count asked for",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FreeSlotDto"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "description": "Present only when no start fits inside the horizon",
+            "enum": [
+              "none_in_horizon"
+            ]
+          }
+        },
+        "required": [
+          "slots"
         ]
       },
       "JobCarDto": {

@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 253-live-connection
   - 254-live-audience
@@ -41,6 +41,7 @@ features:
   - 011-dashboard-sections
   - 1316-swr-resource-store
   - 1389-reported-reviews-admin
+  - 154-free-slots
 ---
 
 # Capability: Live updates
@@ -325,10 +326,6 @@ _From 267-brand-results._
 
 _From 419-live-garage-updates._
 
-### 419-FR-004 — A public stream MUST receive only the public kinds: through `public:garage:{garageId}` — `garage.updated`, `price_list.updated`, `mechanic.updated`, `facility.removed`, `facility.re_add_decided`, `review.posted`, `review.edited`, `review.deleted`, `review.replied`, `review.reply_edited`, `review.reported`, `review.decided`, `review.appeal_decided`, `garage.suspended`, `garage.restored` and `garage.slots_changed`; through `public:mechanic:{mechanicId}` — `mechanic.updated` and the same review kinds; through `public:search` — `verification.decided`, `garage.suspended`, `garage.restored` and `garage.updated`; through `public:search:{brandId}` — `garage.updated`; through `system` — the platform kinds every connection gets. Any other kind MUST NOT reach a public connection, whatever audience the publisher named (an allow-list on the public keys, keeping 254-FR-009's rule as a consequence).
-
-_From 419-live-garage-updates._
-
 ### 419-FR-005 — Every message of a public stream MUST be `{ kind, id, at }` and nothing else, the `id` being the garage, mechanic, review, verification file or garage the kind is about; no personal data, no account id and no payload travels on it (253-FR-005 holds for the public stream).
 
 _From 419-live-garage-updates._
@@ -384,9 +381,9 @@ _From 1175-valkey._
 ### 290-FR-008 — In the same transaction the system MUST hand `saved_garage.added` and `saved_garage.removed` (both already in the contracts' event kinds) to the event port with `{ accountId, garageId, savedAt }`; an idempotent save and a removal of nothing emit nothing. Their audience MUST be `account:{accountId}` alone (the live-updates audience resolver learns the two kinds); no garage, mechanic or public channel ever receives them, and nobody is notified.
 
 _From 290-save-garage._
-### 067-FR-007 — The `garage.restored` event MUST reach, through the existing audience resolver (049-FR-007's audience for the pair): the garage's staff channel `garage:{garageId}`, `public:garage:{garageId}`, `public:search` and `admin`. On it: an open results page re-reads its counts and map pins without a reload, as it does today for any garage it has not loaded (`results.ts` `heard`: a card is added only by a new search, never pushed into the shown list), so the restored garage's card shows on the next search; the Service-uri counts line, the suspended panel and the re-check list re-read (066-FR-008, 1351-FR-010, existing) and an open file drawer re-reads the file; the garage dashboard MUST re-read the session's garage and drop the red suspension banner without a reload (049-FR-012 names `garage.suspended` only; `garage.restored` joins its list) and the legal panel re-reads its date.
+### 154-FR-014 — (from #620; modifies 067-FR-007 and 419-FR-004) `garage.suspended` and `garage.restored` MUST reach, besides `admin`, `garage:{garageId}`, `public:garage:{garageId}` and `public:search`, also `public:search:{brandId}` for each brand the garage takes at that moment, the brands read inside the suspension's or the restore's transaction and the event written in that same transaction; the public hub MUST allow the two kinds through `public:search:{brandId}`.
 
-_From 067-restore-suspended-garage._
+_From 154-free-slots._
 
 ### 270-FR-006 — When the selected garage's card fades out (267-FR-019) the selection MUST pass to the first card left in the list (none when the list is empty); a pointed garage whose card fades out MUST stop being pointed.
 
@@ -539,6 +536,18 @@ _From 1316-swr-resource-store._
 
 _From 1316-swr-resource-store._
 
+### 154-FR-013 — (from #620) On each schedule event of FR-012 the relay's consumer that drops the cache MUST record, through the outbox, one `garage.slots_changed` event with the garage as subject and audience `public_garage` (`results: false`), so it reaches `garage:{garageId}` and `public:garage:{garageId}` (419-FR-004 already allows the kind); one such event per relayed schedule event, none for any other kind.
+
+_From 154-free-slots._
+
+### 154-FR-015 — (from #620) The events of a review being posted (`review.posted`), hidden (`review.decided` with a confirmed report) and restored (`review.appeal_decided`) MUST reach `public:garage:{garageId}`, proven by an integration test on the outbox row `review.posted` leaves and, for `review.decided` and `review.appeal_decided` (no write records them until the open moderation and appeal stories, plan.md Complexity Tracking), by a unit test on `audienceOf` for the review subject; the audience resolver already names it (419-FR-006) and this story changes it only if that test fails.
+
+_From 154-free-slots._
+
+### 154-FR-016 — (from #620) A Jest test MUST list every public event kind the live hub allows through its public keys (the hub exposes that list) and fail, naming the kind, when no domain source file outside the tests records an event of that kind and the kind is not in the test's `UNBUILT` map (kind → the open story that will feed it, plan.md Complexity Tracking); it also fails when an `UNBUILT` kind gains a publisher, so the map only shrinks; it passes once `garage.slots_changed` has its publisher (FR-013) and is not in the map.
+
+_From 154-free-slots._
+
 ## Retired
 
 - `253-FR-006` — superseded by `254-FR-013` (2026-10-05)
@@ -566,3 +575,5 @@ _From 1316-swr-resource-store._
 - `254-FR-005` — superseded by `1250-FR-013` (2026-10-26)
 - `256-FR-002` — superseded by `1316-FR-002` (2026-10-30)
 - `177-FR-010` — superseded by `1389-FR-006` (2026-10-30)
+- `067-FR-007` — superseded by `154-FR-014` (2026-10-31)
+- `419-FR-004` — superseded by `154-FR-014` (2026-10-31)
