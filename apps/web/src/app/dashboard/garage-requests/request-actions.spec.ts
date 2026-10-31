@@ -84,11 +84,14 @@ describe('confirmBooking', () => {
   const row = quotedRow(
     {
       booking: {
+        canRecordNoShow: false,
+        canWithdrawNoShow: false,
         confirmBy: '2026-10-16T18:00:00.000Z',
         durationMinutes: 90,
         id: 'booking-1',
         lift: null,
         mechanic: null,
+        noShowAt: null,
         startsAt: '2026-10-17T06:00:00.000Z',
         status: 'awaiting_confirmation',
         toReassign: false,

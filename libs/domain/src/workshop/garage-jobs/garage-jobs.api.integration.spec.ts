@@ -65,6 +65,8 @@ describe('GET /garage/jobs', () => {
       ]);
       expect(res.body.items[0]).toEqual({
         bookingId: s.handJob.bookingId,
+        canRecordNoShow: false,
+        canWithdrawNoShow: false,
         car: {
           brand: 'Mini',
           engine: '2.0 turbo',
@@ -91,6 +93,7 @@ describe('GET /garage/jobs', () => {
         ],
         mechanicId: s.dinamo.plainMechanic.id,
         mechanicName: 'Hand',
+        noShowAt: null,
         odometerKm: null,
         pausedAt: null,
         receivedAt: null,

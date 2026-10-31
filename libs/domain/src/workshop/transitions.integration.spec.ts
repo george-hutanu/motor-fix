@@ -57,10 +57,12 @@ const statuses = Object.values(JobStatus);
 // @traces 220-FR-007
 // @traces 220-FR-008
 // @traces 276-FR-001 276-FR-003
+// @traces 1259-FR-003
+// @traces 1259-FR-006
 describe('moveJob', () => {
   it('holds exactly the moves of the job diagram', () => {
     expect(JOB_MOVES).toEqual({
-      cancelled: [],
+      cancelled: ['to_do'],
       done: [],
       in_work: ['paused', 'done'],
       paused: ['in_work', 'done'],

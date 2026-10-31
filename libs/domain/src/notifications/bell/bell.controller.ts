@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -25,6 +26,15 @@ import {
 import { BellService } from './bell.service';
 import { CurrentActor } from '../../auth/actor.guard';
 import type { Actor } from '../../auth/policy';
+
+// The two bell writes take the same optional key, unread.
+const KEY = {
+  description:
+    'One per press; optional and unread: the write is idempotent by value',
+  name: 'Idempotency-Key',
+  required: false,
+  schema: { maxLength: 64, minLength: 1, type: 'string' as const },
+};
 
 // The signed-in person's own bell; no route names another account.
 @ApiTags('notifications')
@@ -51,6 +61,7 @@ export class BellController {
   // Declared before `:id/read`, so the path is never read as an id.
   @Post('read-all')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiHeader(KEY)
   @ApiNoContentResponse()
   readAll(@CurrentActor() actor: Actor): Promise<void> {
     return this.bell.readAll(actor.accountId);
@@ -58,6 +69,7 @@ export class BellController {
 
   @Post(':id/read')
   @HttpCode(HttpStatus.OK)
+  @ApiHeader(KEY)
   @ApiOkResponse({ type: NotificationDto })
   @ApiNotFoundResponse()
   read(

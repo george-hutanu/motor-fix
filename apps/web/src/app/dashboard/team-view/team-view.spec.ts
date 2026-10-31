@@ -43,8 +43,10 @@ const mechanic = (
   rating: '4.9',
   reviewCount: 58,
   roleTitle: null,
+  shown: false,
   speciality: 'Frâne, suspensie',
   specialties: ['Frâne', 'suspensie'],
+  takesDirectRequests: true,
   years: null,
   ...over,
 });
@@ -53,6 +55,7 @@ const BRANDS = [{ id: 'brand-dacia', name: 'Dacia' }];
 const listOf = (items: GarageMechanicDto[]): GarageMechanicsDto => ({
   brands: BRANDS,
   items,
+  teamOnProfile: true,
 });
 const OWNER = mechanic({
   hasAccount: true,

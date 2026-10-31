@@ -4,10 +4,13 @@ import { HttpException } from '@nestjs/common';
 
 import { GaragePinsService } from './garage-pins.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import type { CacheService } from '../../cache/cache.service';
+import { PublicGaragesService } from '../../garages/public-garages/public-garages';
 import {
   databaseUrl,
   fixtures,
 } from '../../notifications/notifications.testing';
+import type { StorageService } from '../../storage/storage.service';
 import { watchGarageReads } from '../area/area.testing';
 import type { GarageSearchCache } from '../garage-search/garage-search.cache';
 import { GarageSearchService } from '../garage-search/garage-search.service';
@@ -358,6 +361,30 @@ describe('the pins of a mobile mechanic', () => {
       rateLei: 120,
       serviceRadiusKm: 20,
       stance: 'unstated',
+    });
+  });
+
+  // @traces 1383-FR-010
+  it('answers the same centre and radius as the profile of the same mechanic', async () => {
+    const id = await mobile(15_000, 25);
+    const { slug } = await prisma.garage.findUniqueOrThrow({ where: { id } });
+    const profiles = new PublicGaragesService(
+      prisma,
+      {
+        read: async (spec: { read: () => Promise<{ value: unknown }> }) =>
+          (await spec.read()).value,
+      } as unknown as CacheService,
+      {} as StorageService,
+    );
+
+    const [pin] = (await pins.forBrand(dacia, PLACE)).pins;
+    const profile = await profiles.bySlug(slug);
+
+    expect(pin?.serviceRadiusKm).toBe(25);
+    expect(profile).toMatchObject({
+      areaLat: pin?.lat,
+      areaLng: pin?.lng,
+      serviceRadiusKm: pin?.serviceRadiusKm,
     });
   });
 
