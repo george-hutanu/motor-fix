@@ -54,8 +54,7 @@ function job(
   } as Job<DirectSendJob>;
 }
 
-// @traces 1379-FR-002
-// @traces 415-FR-006
+// @traces 1379-FR-002 415-FR-006
 describe('sendDirect, WhatsApp', () => {
   it('sends the rendered template through the provider once and answers null', async () => {
     const s = sender();
@@ -133,8 +132,7 @@ describe('sendDirect, e-mail', () => {
   });
 });
 
-// @traces 1379-FR-004
-// @traces 1379-FR-008
+// @traces 1379-FR-004 1379-FR-008
 describe('sendDirect, once and never late', () => {
   it('answers stale and calls nothing for a job older than the wait cap', async () => {
     const s = sender();

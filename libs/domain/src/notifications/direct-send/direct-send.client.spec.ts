@@ -47,9 +47,7 @@ const code = (s: DirectSend) =>
 
 afterEach(() => jest.useRealTimers());
 
-// @traces 1379-FR-001
-// @traces 1379-FR-004
-// @traces 1379-FR-005
+// @traces 1379-FR-001 1379-FR-004 1379-FR-005
 describe('DirectSend', () => {
   it('adds one job with one attempt, removed soon after it ends', async () => {
     const c = client(async () => undefined);
@@ -260,8 +258,7 @@ describe('DirectSend', () => {
   });
 });
 
-// @traces 1379-FR-007
-// @traces 1379-FR-010
+// @traces 1379-FR-007 1379-FR-010
 describe('DirectSendModule.register', () => {
   it('builds the queue and its listener on the broker, never retrying a command forever', () => {
     const module = DirectSendModule.register('redis://valkey.test:6379/2');
@@ -290,8 +287,7 @@ describe('DirectSendModule.register', () => {
   });
 });
 
-// @traces 1379-FR-009
-// @traces 1379-FR-010
+// @traces 1379-FR-009 1379-FR-010
 describe('DirectSendModule.registerWorker', () => {
   it('consumes the queue with its metrics and gauges, never retrying a command forever', () => {
     const module = DirectSendModule.registerWorker({
