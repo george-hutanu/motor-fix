@@ -629,4 +629,11 @@ describe('the read cache', () => {
     gh(['run', 'view', '77', '--log-failed'], f, {});
     assert.deepEqual(f.calls.map((c) => c.args), [['run', 'view', '77', '--log-failed']]);
   });
+
+  it('passes a run view asking for a field REST does not answer through to gh', () => {
+    const f = fake(routes);
+    const r = gh(['run', 'view', '77', '--json', 'status,jobs'], f, {});
+    assert.equal(r.code, 0, r.stderr);
+    assert.deepEqual(f.calls.map((c) => c.args), [['run', 'view', '77', '--json', 'status,jobs']]);
+  });
 });

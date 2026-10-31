@@ -341,8 +341,6 @@ const RUN_FIELDS = { status: (r) => r.status, conclusion: (r) => r.conclusion ??
 function runView(run, flags) {
   const r = rest(run, "GET", `actions/runs/${flags._[0]}`);
   const fields = String(flags.json).split(",");
-  const unknown = fields.find((f) => !RUN_FIELDS[f]);
-  if (unknown) throw new GhError(`Unknown JSON field: "${unknown}" (not read over REST by gh-rest.mjs)`);
   return { stdout: print(run, Object.fromEntries(fields.map((f) => [f, RUN_FIELDS[f](r)])), flags) };
 }
 
@@ -363,7 +361,8 @@ function translate(args, cloud) {
   if (group === "pr" && Object.hasOwn(PR, verb) && (cloud || READS.has(verb))) return (run, sleep) => PR[verb](run, flagsOf(rest_, BARE), sleep);
   if (group === "run" && verb === "view") {
     const flags = flagsOf(rest_, BARE);
-    if (flags.json !== undefined && flags._.length === 1 && Object.keys(flags).every((k) => ["_", "json", "jq", "q"].includes(k))) return (run) => runView(run, flags);
+    const answered = typeof flags.json === "string" && flags.json.split(",").every((f) => Object.hasOwn(RUN_FIELDS, f));
+    if (answered && flags._.length === 1 && Object.keys(flags).every((k) => ["_", "json", "jq", "q"].includes(k))) return (run) => runView(run, flags);
   }
   if (cloud && group === "label" && verb === "create") return (run) => labelCreate(run, flagsOf(rest_, BARE));
   return null;
