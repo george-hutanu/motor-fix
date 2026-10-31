@@ -41,10 +41,11 @@ const SECTION = "Agent review";
 /** `gh` as a function: { code, stdout, stderr }, never throws. */
 export function realGh(args, { input, cwd, timeout = 60000 } = {}) {
   try {
-    const stdout = execFileSync("gh", args, { cwd, encoding: "utf8", input, stdio: ["pipe", "pipe", "pipe"], timeout });
+    // A compare across a busy main runs past execFileSync's 1 MB default (ENOBUFS).
+    const stdout = execFileSync("gh", args, { cwd, encoding: "utf8", input, stdio: ["pipe", "pipe", "pipe"], timeout, maxBuffer: 64 * 1024 * 1024 });
     return { code: 0, stdout, stderr: "" };
   } catch (error) {
-    return { code: error.status ?? 1, stdout: `${error.stdout ?? ""}`, stderr: `${error.stderr ?? error.message}` };
+    return { code: error.status || 1, stdout: `${error.stdout ?? ""}`, stderr: `${error.stderr || error.message}` };
   }
 }
 

@@ -575,3 +575,19 @@ describe('ciOkOn', () => {
     assert.equal(ciOkOn(on([check('CI OK later', 'success')]), 'sha1'), false);
   });
 });
+
+describe('spawnRun', () => {
+  it('returns a stdout larger than spawnSync default 1 MB buffer, as a big compare response is', async () => {
+    const { spawnRun } = await import('./gh-rest.mjs');
+    const r = spawnRun()(process.execPath, ['-e', 'process.stdout.write("x".repeat(3 * 1024 * 1024))']);
+    assert.equal(r.code, 0);
+    assert.equal(r.stdout.length, 3 * 1024 * 1024);
+  });
+
+  it('names the spawn error when the command cannot run, rather than an empty stderr', async () => {
+    const { spawnRun } = await import('./gh-rest.mjs');
+    const r = spawnRun()('/nonexistent/st-1406-no-such-binary', []);
+    assert.notEqual(r.code, 0);
+    assert.match(r.stderr, /ENOENT/);
+  });
+});

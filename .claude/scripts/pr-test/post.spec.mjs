@@ -346,3 +346,21 @@ describe('a lap that left no report', () => {
     assert.ok(status.args.some((x) => /^description=.*SIGKILL/.test(x)));
   });
 });
+
+describe('realGh', () => {
+  it('returns a gh reply larger than the 1 MB default buffer, as a compare across a busy main is', async () => {
+    const { realGh } = await import('./post.mjs');
+    const bin = mkdtempSync(join(tmpdir(), 'st1406-gh-'));
+    writeFileSync(join(bin, 'gh'), `#!${process.execPath}\nprocess.stdout.write("x".repeat(3 * 1024 * 1024));\n`);
+    chmodSync(join(bin, 'gh'), 0o755);
+    const path = process.env.PATH;
+    process.env.PATH = `${bin}:${path}`;
+    try {
+      const r = realGh(['api', 'repos/o/r/compare/a...b']);
+      assert.equal(r.code, 0);
+      assert.equal(r.stdout.length, 3 * 1024 * 1024);
+    } finally {
+      process.env.PATH = path;
+    }
+  });
+});

@@ -18,12 +18,16 @@ export const isCloud = (env = process.env) => env.CLAUDE_CODE_REMOTE === "true";
 
 const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
+// A compare across a busy main runs past spawnSync's 1 MB default (ENOBUFS).
+const MAX_BUFFER = 64 * 1024 * 1024;
+
 /** A run that spawns the command with the given cwd, env and timeout. */
 export const spawnRun =
   ({ cwd, env = process.env, timeout } = {}) =>
   (file, args, opts = {}) => {
-    const r = spawnSync(file, args, { cwd, env, encoding: "utf8", input: opts.input, timeout });
-    return { code: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr ?? String(r.error ?? "") };
+    const r = spawnSync(file, args, { cwd, env, encoding: "utf8", input: opts.input, timeout, maxBuffer: MAX_BUFFER });
+    const stderr = [r.stderr, r.error && String(r.error)].filter(Boolean).join("\n");
+    return { code: r.error ? (r.status || 1) : (r.status ?? 1), stdout: r.stdout ?? "", stderr };
   };
 
 class GhError extends Error {
