@@ -1,7 +1,8 @@
 // @traces 105-FR-016
+// @traces 1247-FR-009
 import { HttpException, HttpStatus } from '@nestjs/common';
 
-import { refusal } from './http-refusal';
+import { notFound, refusal } from './http-refusal';
 
 describe('refusal', () => {
   it('answers with the status, the code and the message', () => {
@@ -21,5 +22,24 @@ describe('refusal', () => {
     expect(
       refusal(HttpStatus.BAD_REQUEST, 'invalid', 'Bad', errors).getResponse(),
     ).toEqual({ code: 'invalid', errors, message: 'Bad' });
+  });
+});
+
+describe('notFound', () => {
+  it('answers 404 not_found with the plain message', () => {
+    const error = notFound();
+
+    expect(error.getStatus()).toBe(404);
+    expect(error.getResponse()).toEqual({
+      code: 'not_found',
+      message: 'Not found',
+    });
+  });
+
+  it('carries the message its caller names', () => {
+    expect(notFound('No such garage').getResponse()).toEqual({
+      code: 'not_found',
+      message: 'No such garage',
+    });
   });
 });

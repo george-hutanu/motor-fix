@@ -54,7 +54,10 @@ const page = (items: Brand[]) => ({
 
 let search: jest.Mock;
 
-async function open(language: 'ro' | 'en' = 'ro') {
+async function open(
+  language: 'ro' | 'en' = 'ro',
+  catalogue?: 'popular' | 'all',
+) {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
@@ -66,6 +69,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
   await i18n.enter('public');
   if (language === 'en') await i18n.use('en');
   const fixture = TestBed.createComponent(BrandsStep);
+  if (catalogue) fixture.componentRef.setInput('catalogue', catalogue);
   await settle(fixture);
   const step = fixture.nativeElement as HTMLElement;
   return { fixture, i18n, step };
@@ -473,8 +477,22 @@ const fuel = (step: HTMLElement, name: string, label: string) => {
   if (!found) throw new Error(`no fuel ${label} under ${name}`);
   return found;
 };
+// The last-fuel text under a taken brand's fuels.
+const lastFuel = (step: HTMLElement, name: string) =>
+  chip(step, name).closest('li')?.querySelector('.fuel-last') ?? null;
+// The page's warning under a brand, past the last-fuel text.
 const quiet = (step: HTMLElement, name: string) =>
-  chip(step, name).closest('li')?.querySelector('[role="status"]') ?? null;
+  chip(step, name)
+    .closest('li')
+    ?.querySelector('[role="status"]:not(.fuel-last)') ?? null;
+
+// The brand as a draft or a stored answer may hold it: taken, no fuel.
+function withNoFuel(fixture: Fixture, name: string) {
+  fixture.componentInstance.value.update((v) => ({
+    ...v,
+    brands: v.brands.map((b) => (b.name === name ? { ...b, fuels: [] } : b)),
+  }));
+}
 
 async function press(fixture: Fixture, button: HTMLButtonElement) {
   button.click();
@@ -554,15 +572,19 @@ describe('step 2, the fuels of a taken brand', () => {
     ]);
   });
 
-  it('says politely that no requests come for a brand with every fuel unticked', async () => {
+  // A taken brand kept with no fuel (a draft or an answer stored before the
+  // last-fuel rule) still says no requests come for it.
+  it('says politely that no requests come for a brand kept with no fuel', async () => {
     const { fixture, step } = await open();
     await tap(fixture, step, 'Dacia');
     expect(quiet(step, 'Dacia')).toBeNull();
 
-    for (const label of ['Benzină', 'Diesel', 'Hibrid', 'Electric'])
-      await press(fixture, fuel(step, 'Dacia', label));
+    withNoFuel(fixture, 'Dacia');
+    await settle(fixture);
 
-    expect(text(quiet(step, 'Dacia'))).toBe('Nu vei primi cereri pentru Dacia');
+    expect(quietLines(step, 'Dacia').map(text)).toContain(
+      'Nu vei primi cereri pentru Dacia',
+    );
     expect(fixture.componentInstance.value().brands[0].fuels).toEqual([]);
   });
 
@@ -583,8 +605,8 @@ describe('step 2, the fuels of a taken brand', () => {
   it('shows the fuels and the line in English, keeping the ticks', async () => {
     const { fixture, i18n, step } = await open();
     await tap(fixture, step, 'Dacia');
-    for (const label of ['Benzină', 'Diesel', 'Hibrid', 'Electric'])
-      await press(fixture, fuel(step, 'Dacia', label));
+    withNoFuel(fixture, 'Dacia');
+    await settle(fixture);
 
     await i18n.use('en');
     await settle(fixture);
@@ -595,7 +617,7 @@ describe('step 2, the fuels of a taken brand', () => {
       'Dacia, Hybrid',
       'Dacia, Electric',
     ]);
-    expect(text(quiet(step, 'Dacia'))).toBe(
+    expect(quietLines(step, 'Dacia').map(text)).toContain(
       'You will not receive requests for Dacia',
     );
     expect(fixture.componentInstance.value().brands[0].fuels).toEqual([]);
@@ -830,7 +852,7 @@ describe('step 2, the jobs of a taken brand', () => {
       'Nu vei primi cereri pentru Dacia',
     ]);
 
-    for (const label of ['Benzină', 'Diesel', 'Hibrid', 'Electric'])
+    for (const label of ['Benzină', 'Diesel', 'Hibrid'])
       await press(fixture, fuel(step, 'Dacia', label));
     expect(quietLines(step, 'Dacia').map(text)).toEqual([
       'Nu vei primi cereri pentru Dacia',
@@ -1048,5 +1070,148 @@ describe('step 2, judged by the page', () => {
       'steps.2.brands[1]',
     );
     expect(chip(step, 'Audi').hasAttribute('data-field')).toBe(false);
+  });
+});
+
+describe('the last fuel of a taken brand', () => {
+  // @traces 1247-FR-012
+  it('keeps the last ticked fuel ticked, marked unavailable, with its reason tied to it', async () => {
+    const { fixture, step } = await open();
+    await tap(fixture, step, 'Dacia');
+    expect(text(lastFuel(step, 'Dacia'))).toBe('');
+
+    for (const label of ['Benzină', 'Diesel', 'Hibrid'])
+      await press(fixture, fuel(step, 'Dacia', label));
+
+    const last = fuel(step, 'Dacia', 'Electric');
+    expect(last.getAttribute('aria-pressed')).toBe('true');
+    expect(last.getAttribute('aria-disabled')).toBe('true');
+    const reason = lastFuel(step, 'Dacia') as HTMLElement;
+    expect(text(reason)).toBe('Cel puțin un carburant rămâne bifat');
+    expect(last.getAttribute('aria-describedby')).toBe(reason.id);
+    for (const label of ['Benzină', 'Diesel', 'Hibrid'])
+      expect(fuel(step, 'Dacia', label).hasAttribute('aria-disabled')).toBe(
+        false,
+      );
+
+    await press(fixture, last);
+    expect(last.getAttribute('aria-pressed')).toBe('true');
+    expect(fixture.componentInstance.value().brands[0].fuels).toEqual([
+      'electric',
+    ]);
+
+    await press(fixture, fuel(step, 'Dacia', 'Diesel'));
+    expect(last.hasAttribute('aria-disabled')).toBe(false);
+    expect(last.hasAttribute('aria-describedby')).toBe(false);
+    expect(text(lastFuel(step, 'Dacia'))).toBe('');
+  });
+
+  // @traces 1247-FR-012
+  it('says it in English', async () => {
+    const { fixture, step } = await open('en');
+    await tap(fixture, step, 'Dacia');
+    for (const label of ['Petrol', 'Diesel', 'Hybrid'])
+      await press(fixture, fuel(step, 'Dacia', label));
+
+    expect(text(lastFuel(step, 'Dacia'))).toBe(
+      'At least one fuel type stays ticked',
+    );
+  });
+
+  // @traces 1247-FR-012
+  it('shows a brand kept with no fuel with none ticked and the same text as an error, until one is ticked', async () => {
+    const { fixture, step } = await open();
+    await tap(fixture, step, 'Dacia');
+    withNoFuel(fixture, 'Dacia');
+    await settle(fixture);
+
+    for (const f of fuels(step, 'Dacia')) {
+      expect(f.getAttribute('aria-pressed')).toBe('false');
+      expect(f.hasAttribute('aria-disabled')).toBe(false);
+    }
+    const reason = lastFuel(step, 'Dacia') as HTMLElement;
+    expect(text(reason)).toBe('Cel puțin un carburant rămâne bifat');
+    expect(reason.classList).toContain('error');
+    expect(reason.getAttribute('role')).toBe('status');
+    expect(fuelRow(step, 'Dacia')?.getAttribute('aria-describedby')).toBe(
+      reason.id,
+    );
+
+    await press(fixture, fuel(step, 'Dacia', 'Diesel'));
+    expect(lastFuel(step, 'Dacia')?.classList).not.toContain('error');
+    expect(fixture.componentInstance.value().brands[0].fuels).toEqual([
+      'diesel',
+    ]);
+  });
+});
+
+describe('the whole catalogue', () => {
+  const MORE = ['Lancia', 'Jeep', 'Lada'].map((name, i) => brand(name, 20 + i));
+  beforeEach(() => {
+    search = jest.fn(async (params?: { cursor?: string; q?: string }) =>
+      params?.cursor === 'next'
+        ? { items: MORE, nextCursor: null, total: 23 }
+        : { items: CATALOGUE, nextCursor: 'next', total: 23 },
+    );
+  });
+
+  // @traces 1247-FR-011
+  it('lists every active brand, page after page, in catalogue order', async () => {
+    const { step } = await open('ro', 'all');
+
+    expect(chips(step).map((c) => text(c))).toEqual([
+      ...NAMES,
+      'Lancia',
+      'Jeep',
+      'Lada',
+    ]);
+    expect(search).toHaveBeenCalledWith({});
+    expect(search).toHaveBeenCalledWith({ cursor: 'next' });
+  });
+
+  // @traces 1247-FR-011
+  it('keeps the twelve most popular by default, reading one page', async () => {
+    const { step } = await open();
+
+    expect(chips(step).map((c) => text(c))).toEqual(NAMES.slice(0, 12));
+    expect(search).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1247-FR-011
+  it('keeps the pages it read when a later page fails, and says the search is down', async () => {
+    search.mockImplementation(async (params?: { cursor?: string }) => {
+      if (params?.cursor) throw new Error('offline');
+      return { items: CATALOGUE, nextCursor: 'next', total: 23 };
+    });
+    const { step } = await open('ro', 'all');
+
+    expect(chips(step).map((c) => text(c))).toEqual(NAMES);
+    expect(text(step.querySelector('.notice'))).not.toBe('');
+  });
+
+  // @traces 1247-FR-011
+  it('stops reading when a page hands back the cursor it was asked with', async () => {
+    search.mockImplementation(async (params?: { cursor?: string }) =>
+      params?.cursor
+        ? { items: MORE, nextCursor: 'next', total: 23 }
+        : { items: CATALOGUE, nextCursor: 'next', total: 23 },
+    );
+    const { step } = await open('ro', 'all');
+
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(chips(step)).toHaveLength(NAMES.length + MORE.length);
+  });
+
+  // @traces 1247-FR-011
+  it('stops after fifty pages whatever the cursors say', async () => {
+    let n = 0;
+    search.mockImplementation(async () => {
+      n += 1;
+      return { items: [brand(`Marca ${n}`, 100 + n)], nextCursor: `p${n}` };
+    });
+    const { fixture } = await open('ro', 'all');
+    for (let i = 0; i < 60; i++) await settle(fixture);
+
+    expect(search).toHaveBeenCalledTimes(50);
   });
 });
