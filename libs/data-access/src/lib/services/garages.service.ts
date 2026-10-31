@@ -19,6 +19,9 @@ import { DeleteTimeBlock$Params } from '../fn/garages/delete-time-block';
 import { DocumentCycleDto } from '../models/document-cycle-dto';
 import { DocumentUploadAddressDto } from '../models/document-upload-address-dto';
 import { GarageBrandOwnerAnswerDto } from '../models/garage-brand-owner-answer-dto';
+import { GarageBrandOwnerReadDto } from '../models/garage-brand-owner-read-dto';
+import { garageBrandsControllerRead } from '../fn/garages/garage-brands-controller-read';
+import { GarageBrandsControllerRead$Params } from '../fn/garages/garage-brands-controller-read';
 import { garageBrandsControllerReplace } from '../fn/garages/garage-brands-controller-replace';
 import { GarageBrandsControllerReplace$Params } from '../fn/garages/garage-brands-controller-replace';
 import { garageFeaturesControllerSet } from '../fn/garages/garage-features-controller-set';
@@ -409,6 +412,39 @@ export class GaragesService extends BaseService {
   catalogueJobsControllerPropose(params: CatalogueJobsControllerPropose$Params, context?: HttpContext): Promise<PriceRangeSavedDto> {
     const resp = this.catalogueJobsControllerPropose$Response(params, context);
     return resp.then((r: StrictHttpResponse<PriceRangeSavedDto>): PriceRangeSavedDto => r.body);
+  }
+
+  /** Path part for operation `garageBrandsControllerRead()` */
+  static readonly GarageBrandsControllerReadPath = '/api/v1/garages/{garageId}/brands';
+
+  /**
+   * The garage's brand answer for its owner, with the price list's jobs.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageBrandsControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageBrandsControllerRead$Response(params: GarageBrandsControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageBrandOwnerReadDto>> {
+    const obs = garageBrandsControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The garage's brand answer for its owner, with the price list's jobs.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageBrandsControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageBrandsControllerRead(params: GarageBrandsControllerRead$Params, context?: HttpContext): Promise<GarageBrandOwnerReadDto> {
+    const resp = this.garageBrandsControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageBrandOwnerReadDto>): GarageBrandOwnerReadDto => r.body);
   }
 
   /** Path part for operation `garageBrandsControllerReplace()` */

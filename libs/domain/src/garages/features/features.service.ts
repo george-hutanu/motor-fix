@@ -15,7 +15,7 @@ import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { stopLiveSessions } from '../../live-video/stop-sessions';
 import {
   assertGarageOwner,
-  notFound,
+  noGarage,
 } from '../garage-brands/garage-brands.service';
 
 const isFeatureKey = (key: string): key is FeatureKey =>
@@ -28,7 +28,7 @@ const isFeatureKey = (key: string): key is FeatureKey =>
 async function lockGarage(tx: Prisma.TransactionClient, garageId: string) {
   const [row] = await tx.$queryRaw<{ id: string }[]>`
     SELECT id FROM garage WHERE id = ${garageId}::uuid FOR NO KEY UPDATE`;
-  if (!row) throw notFound();
+  if (!row) throw noGarage();
 }
 
 async function switches(

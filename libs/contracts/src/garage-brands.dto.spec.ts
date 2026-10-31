@@ -1,3 +1,4 @@
+// @traces 1247-FR-004
 import { randomUUID } from 'node:crypto';
 
 import { plainToInstance } from 'class-transformer';
@@ -44,6 +45,17 @@ describe('ReplaceGarageBrandsDto', () => {
 
     expect(problems(dto)).toEqual([]);
     expect(dto.brands.map((b) => b.fuels)).toEqual([['petrol', 'diesel'], []]);
+  });
+
+  it('takes at most two hundred brands', () => {
+    const brands = (n: number) =>
+      Array.from({ length: n }, () => ({
+        brandId: randomUUID(),
+        stance: 'works_on',
+      }));
+
+    expect(problems(replace({ brands: brands(200) }))).toEqual([]);
+    expect(problems(replace({ brands: brands(201) }))).toEqual(['brands']);
   });
 
   it('takes an empty set, which switches every brand off', () => {
