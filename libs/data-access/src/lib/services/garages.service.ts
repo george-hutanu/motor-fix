@@ -48,6 +48,8 @@ import { GarageMechanicsDto } from '../models/garage-mechanics-dto';
 import { garageMembersControllerList } from '../fn/garages/garage-members-controller-list';
 import { GarageMembersControllerList$Params } from '../fn/garages/garage-members-controller-list';
 import { GarageMembersDto } from '../models/garage-members-dto';
+import { GaragePhotosDto } from '../models/garage-photos-dto';
+import { GaragePhotoUploadDto } from '../models/garage-photo-upload-dto';
 import { garageProfileControllerRead } from '../fn/garages/garage-profile-controller-read';
 import { GarageProfileControllerRead$Params } from '../fn/garages/garage-profile-controller-read';
 import { garageProfileControllerUpdate } from '../fn/garages/garage-profile-controller-update';
@@ -85,6 +87,19 @@ import { ownerDocumentsControllerSubmit } from '../fn/garages/owner-documents-co
 import { OwnerDocumentsControllerSubmit$Params } from '../fn/garages/owner-documents-controller-submit';
 import { ownerDocumentsControllerUploadUrl } from '../fn/garages/owner-documents-controller-upload-url';
 import { OwnerDocumentsControllerUploadUrl$Params } from '../fn/garages/owner-documents-controller-upload-url';
+import { ownerPhotosControllerConfirm } from '../fn/garages/owner-photos-controller-confirm';
+import { OwnerPhotosControllerConfirm$Params } from '../fn/garages/owner-photos-controller-confirm';
+import { ownerPhotosControllerList } from '../fn/garages/owner-photos-controller-list';
+import { OwnerPhotosControllerList$Params } from '../fn/garages/owner-photos-controller-list';
+import { ownerPhotosControllerRemoveUpload } from '../fn/garages/owner-photos-controller-remove-upload';
+import { OwnerPhotosControllerRemoveUpload$Params } from '../fn/garages/owner-photos-controller-remove-upload';
+import { ownerPhotosControllerSave } from '../fn/garages/owner-photos-controller-save';
+import { OwnerPhotosControllerSave$Params } from '../fn/garages/owner-photos-controller-save';
+import { ownerPhotosControllerUpload } from '../fn/garages/owner-photos-controller-upload';
+import { OwnerPhotosControllerUpload$Params } from '../fn/garages/owner-photos-controller-upload';
+import { ownerPhotosControllerUploadAddress } from '../fn/garages/owner-photos-controller-upload-address';
+import { OwnerPhotosControllerUploadAddress$Params } from '../fn/garages/owner-photos-controller-upload-address';
+import { PhotoUploadAddressDto } from '../models/photo-upload-address-dto';
 import { priceListControllerAdd } from '../fn/garages/price-list-controller-add';
 import { PriceListControllerAdd$Params } from '../fn/garages/price-list-controller-add';
 import { priceListControllerRead } from '../fn/garages/price-list-controller-read';
@@ -1360,6 +1375,204 @@ export class GaragesService extends BaseService {
   verificationStatusControllerRead(params: VerificationStatusControllerRead$Params, context?: HttpContext): Promise<VerificationStatusDto> {
     const resp = this.verificationStatusControllerRead$Response(params, context);
     return resp.then((r: StrictHttpResponse<VerificationStatusDto>): VerificationStatusDto => r.body);
+  }
+
+  /** Path part for operation `ownerPhotosControllerList()` */
+  static readonly OwnerPhotosControllerListPath = '/api/v1/garages/{garageId}/photos';
+
+  /**
+   * The garage's gallery in order, with its stamp.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `ownerPhotosControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  ownerPhotosControllerList$Response(params: OwnerPhotosControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<GaragePhotosDto>> {
+    const obs = ownerPhotosControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The garage's gallery in order, with its stamp.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `ownerPhotosControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  ownerPhotosControllerList(params: OwnerPhotosControllerList$Params, context?: HttpContext): Promise<GaragePhotosDto> {
+    const resp = this.ownerPhotosControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GaragePhotosDto>): GaragePhotosDto => r.body);
+  }
+
+  /** Path part for operation `ownerPhotosControllerSave()` */
+  static readonly OwnerPhotosControllerSavePath = '/api/v1/garages/{garageId}/photos';
+
+  /**
+   * Save the whole gallery in its new order: kept photos by id, new uploads by key, each with its caption.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `ownerPhotosControllerSave()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  ownerPhotosControllerSave$Response(params: OwnerPhotosControllerSave$Params, context?: HttpContext): Promise<StrictHttpResponse<GaragePhotosDto>> {
+    const obs = ownerPhotosControllerSave(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Save the whole gallery in its new order: kept photos by id, new uploads by key, each with its caption.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `ownerPhotosControllerSave$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  ownerPhotosControllerSave(params: OwnerPhotosControllerSave$Params, context?: HttpContext): Promise<GaragePhotosDto> {
+    const resp = this.ownerPhotosControllerSave$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GaragePhotosDto>): GaragePhotosDto => r.body);
+  }
+
+  /** Path part for operation `ownerPhotosControllerUploadAddress()` */
+  static readonly OwnerPhotosControllerUploadAddressPath = '/api/v1/garages/{garageId}/photos/upload-url';
+
+  /**
+   * Sign an upload of a photo for the gallery.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `ownerPhotosControllerUploadAddress()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  ownerPhotosControllerUploadAddress$Response(params: OwnerPhotosControllerUploadAddress$Params, context?: HttpContext): Promise<StrictHttpResponse<PhotoUploadAddressDto>> {
+    const obs = ownerPhotosControllerUploadAddress(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Sign an upload of a photo for the gallery.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `ownerPhotosControllerUploadAddress$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  ownerPhotosControllerUploadAddress(params: OwnerPhotosControllerUploadAddress$Params, context?: HttpContext): Promise<PhotoUploadAddressDto> {
+    const resp = this.ownerPhotosControllerUploadAddress$Response(params, context);
+    return resp.then((r: StrictHttpResponse<PhotoUploadAddressDto>): PhotoUploadAddressDto => r.body);
+  }
+
+  /** Path part for operation `ownerPhotosControllerConfirm()` */
+  static readonly OwnerPhotosControllerConfirmPath = '/api/v1/garages/{garageId}/photos/uploads';
+
+  /**
+   * Keep an uploaded photo under the garage and make its copies.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `ownerPhotosControllerConfirm()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  ownerPhotosControllerConfirm$Response(params: OwnerPhotosControllerConfirm$Params, context?: HttpContext): Promise<StrictHttpResponse<GaragePhotoUploadDto>> {
+    const obs = ownerPhotosControllerConfirm(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Keep an uploaded photo under the garage and make its copies.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `ownerPhotosControllerConfirm$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  ownerPhotosControllerConfirm(params: OwnerPhotosControllerConfirm$Params, context?: HttpContext): Promise<GaragePhotoUploadDto> {
+    const resp = this.ownerPhotosControllerConfirm$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GaragePhotoUploadDto>): GaragePhotoUploadDto => r.body);
+  }
+
+  /** Path part for operation `ownerPhotosControllerUpload()` */
+  static readonly OwnerPhotosControllerUploadPath = '/api/v1/garages/{garageId}/photos/uploads/{id}';
+
+  /**
+   * An upload not yet saved, as its copies are made.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `ownerPhotosControllerUpload()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  ownerPhotosControllerUpload$Response(params: OwnerPhotosControllerUpload$Params, context?: HttpContext): Promise<StrictHttpResponse<GaragePhotoUploadDto>> {
+    const obs = ownerPhotosControllerUpload(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * An upload not yet saved, as its copies are made.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `ownerPhotosControllerUpload$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  ownerPhotosControllerUpload(params: OwnerPhotosControllerUpload$Params, context?: HttpContext): Promise<GaragePhotoUploadDto> {
+    const resp = this.ownerPhotosControllerUpload$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GaragePhotoUploadDto>): GaragePhotoUploadDto => r.body);
+  }
+
+  /** Path part for operation `ownerPhotosControllerRemoveUpload()` */
+  static readonly OwnerPhotosControllerRemoveUploadPath = '/api/v1/garages/{garageId}/photos/uploads/{id}';
+
+  /**
+   * Drop an upload not yet saved, with its copies.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `ownerPhotosControllerRemoveUpload()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  ownerPhotosControllerRemoveUpload$Response(params: OwnerPhotosControllerRemoveUpload$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = ownerPhotosControllerRemoveUpload(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Drop an upload not yet saved, with its copies.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `ownerPhotosControllerRemoveUpload$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  ownerPhotosControllerRemoveUpload(params: OwnerPhotosControllerRemoveUpload$Params, context?: HttpContext): Promise<void> {
+    const resp = this.ownerPhotosControllerRemoveUpload$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `ownerDocumentsControllerUploadUrl()` */

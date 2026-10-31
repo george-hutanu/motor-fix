@@ -389,6 +389,18 @@ export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerByS
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { VerificationStatusControllerRead$Params as VerificationStatusControllerRead$Params } from './fn/garages/verification-status-controller-read';
 export { verificationStatusControllerRead as verificationStatusControllerRead } from './fn/garages/verification-status-controller-read';
+export type { OwnerPhotosControllerList$Params as OwnerPhotosControllerList$Params } from './fn/garages/owner-photos-controller-list';
+export { ownerPhotosControllerList as ownerPhotosControllerList } from './fn/garages/owner-photos-controller-list';
+export type { OwnerPhotosControllerSave$Params as OwnerPhotosControllerSave$Params } from './fn/garages/owner-photos-controller-save';
+export { ownerPhotosControllerSave as ownerPhotosControllerSave } from './fn/garages/owner-photos-controller-save';
+export type { OwnerPhotosControllerUploadAddress$Params as OwnerPhotosControllerUploadAddress$Params } from './fn/garages/owner-photos-controller-upload-address';
+export { ownerPhotosControllerUploadAddress as ownerPhotosControllerUploadAddress } from './fn/garages/owner-photos-controller-upload-address';
+export type { OwnerPhotosControllerConfirm$Params as OwnerPhotosControllerConfirm$Params } from './fn/garages/owner-photos-controller-confirm';
+export { ownerPhotosControllerConfirm as ownerPhotosControllerConfirm } from './fn/garages/owner-photos-controller-confirm';
+export type { OwnerPhotosControllerUpload$Params as OwnerPhotosControllerUpload$Params } from './fn/garages/owner-photos-controller-upload';
+export { ownerPhotosControllerUpload as ownerPhotosControllerUpload } from './fn/garages/owner-photos-controller-upload';
+export type { OwnerPhotosControllerRemoveUpload$Params as OwnerPhotosControllerRemoveUpload$Params } from './fn/garages/owner-photos-controller-remove-upload';
+export { ownerPhotosControllerRemoveUpload as ownerPhotosControllerRemoveUpload } from './fn/garages/owner-photos-controller-remove-upload';
 export type { OwnerDocumentsControllerUploadUrl$Params as OwnerDocumentsControllerUploadUrl$Params } from './fn/garages/owner-documents-controller-upload-url';
 export { ownerDocumentsControllerUploadUrl as ownerDocumentsControllerUploadUrl } from './fn/garages/owner-documents-controller-upload-url';
 export type { OwnerDocumentsControllerSubmit$Params as OwnerDocumentsControllerSubmit$Params } from './fn/garages/owner-documents-controller-submit';
