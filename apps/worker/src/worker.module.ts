@@ -32,9 +32,11 @@ import {
   InsightsModule,
   JOB_STAGE_CONSUMER,
   JobLockSweepModule,
+  LIVE_INPUTS_CONSUMER,
   LIVE_RECORDINGS_CONSUMER,
   ListingPhotosWorkerModule,
   LiveIdleModule,
+  LiveInputsModule,
   LiveRecordingsModule,
   liveVideoConfig,
   MediaProcessingModule,
@@ -144,6 +146,7 @@ export function workerModule(
           GARAGE_REPORT_DECIDED_CONSUMER,
           GARAGE_RESTORED_CONSUMER,
           GARAGE_SUSPENDED_CONSUMER,
+          LIVE_INPUTS_CONSUMER,
           LIVE_RECORDINGS_CONSUMER,
           MODERATION_TIMERS_CONSUMER,
           NEWS_CONSUMER,
@@ -280,6 +283,12 @@ export function workerModule(
       // Every minute: clears the copy of a job lock whose key ran out.
       JobLockSweepModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
+        redisUrl: env.REDIS_URL,
+      }),
+      // After each live stop: closes the session's input at the provider.
+      LiveInputsModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
+        liveVideo,
         redisUrl: env.REDIS_URL,
       }),
       // After each live stop: counts a kept recording, deletes a discarded
