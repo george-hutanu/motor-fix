@@ -82,6 +82,9 @@ export {
   RemindersModule,
 } from './cars/reminders/reminders.module';
 export { reminderDayMs } from './cars/reminders/reminders-config';
+export { REPAIR_FROM_JOB_CONSUMER } from './cars/repair-from-job/repair-from-job';
+export { RepairFromJobModule } from './cars/repair-from-job/repair-from-job.module';
+export { RepairsModule } from './cars/repairs/repairs.module';
 export { SavedGaragesModule } from './cars/saved-garages/saved-garages.module';
 export { CarTransfersModule } from './cars/transfers/transfers.module';
 export { BrandLoader } from './catalogue/brand-loader';

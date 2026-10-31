@@ -437,6 +437,27 @@ describe("the staff read and the owner's save of a garage's own profile", () => 
         'libs/domain/src/garages/garage-profile/garage-profile.controller.ts',
     });
   });
+
+  // @traces 1248-FR-014
+  it("records the save's facilities group in the document and the inventory", () => {
+    const schemas = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    ).components.schemas;
+    const entry = Object.values(
+      JSON.parse(
+        readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+      ),
+    )
+      .flatMap((each) => (Array.isArray(each) ? each : []))
+      .find((each) => each.name === 'garage-profile');
+
+    expect(schemas.UpdateGarageProfileDto.properties.facilities).toBeDefined();
+    expect(schemas.FacilitiesGroupDto.required).toEqual(
+      expect.arrayContaining(['facilities', 'paymentMethods']),
+    );
+    expect(entry.story).toContain('ST-1248');
+    expect(entry.reason).toContain('no_courtesy_car');
+  });
 });
 
 // @traces 055-FR-015
