@@ -976,6 +976,16 @@
         "owner": "owner of {name}",
         "receptionist": "reception at {name}"
       },
+      "repairs": {
+        "empty": "No repair added by this account",
+        "failed": "The repairs did not load.",
+        "gone": "The repair no longer exists",
+        "heading": "Added repairs",
+        "more": "and more",
+        "open": "Open",
+        "openFailed": "The repair did not open. Try again.",
+        "openLabel": "Open the repair of {day}, {car}"
+      },
       "roles": "Roles",
       "state": "State"
     },
@@ -1017,6 +1027,37 @@
         "identity": "Identity was checked",
         "reference": "Request reference",
         "title": "Delete at the holder's request"
+      },
+      "repair": {
+        "amount": "Amount",
+        "cancel": "Cancel",
+        "car": "Car",
+        "changed": "The repair changed meanwhile. We reloaded the values.",
+        "close": "Close",
+        "correct": "Correct",
+        "correctedBy": {
+          "admin": "Corrected by MotorFix",
+          "garage": "Corrected by {garage}"
+        },
+        "date": "Date",
+        "field": {
+          "costBani": "An amount from 0 to 920,000 lei, with at most two decimals",
+          "doneOn": "Pick a day up to today",
+          "odometerKm": "A whole number from 0 to 2,000,000",
+          "what": "Write what was done, at most 200 characters"
+        },
+        "fields": {
+          "amount": "Amount, in lei",
+          "odometer": "Odometer, in km"
+        },
+        "garage": "Garage",
+        "odometer": "Odometer",
+        "recorded": "This opening is recorded in the history",
+        "rereadFailed": "The repair changed meanwhile and did not reload. Close it and open it again.",
+        "save": "Save",
+        "saved": "The correction is saved.",
+        "title": "Repair added by the driver",
+        "what": "What was done"
       },
       "reset": {
         "confirm": "Reset",

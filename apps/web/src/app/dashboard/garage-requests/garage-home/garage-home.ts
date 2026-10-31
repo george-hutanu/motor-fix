@@ -25,6 +25,7 @@ import { homeSections, linksTo } from '../../garage-sections';
 import { SectionTitle } from '../../section-title/section-title';
 import { garageOf, Session } from '../../session';
 import { VerificationProgress } from '../../verification-progress/verification-progress';
+import { WeeklyFiguresPanel } from '../../weekly-figures-panel/weekly-figures-panel';
 import { FirstStepsCard } from '../first-steps-card/first-steps-card';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 import { GarageRequestsPanel } from '../garage-requests-panel/garage-requests-panel';
@@ -62,6 +63,7 @@ import { SuspendedBanner } from '../suspended-banner/suspended-banner';
     SuspendedBanner,
     TranslatePipe,
     VerificationProgress,
+    WeeklyFiguresPanel,
   ],
   selector: 'mf-garage-home',
   styleUrl: './garage-home.css',
