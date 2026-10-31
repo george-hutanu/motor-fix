@@ -1148,7 +1148,19 @@
     "/api/v1/notifications/read-all": {
       "post": {
         "operationId": "BellController_readAll",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per press; optional and unread: the write is idempotent by value",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": ""
@@ -1174,6 +1186,17 @@
             "in": "path",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per press; optional and unread: the write is idempotent by value",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
             }
           }
         ],
@@ -1265,7 +1288,19 @@
       },
       "put": {
         "operationId": "NotificationPreferencesController_save",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per press; optional and unread: the write is idempotent by value",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -10128,6 +10163,17 @@
             "schema": {
               "format": "uuid",
               "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per press; optional and unread: the write is idempotent by value",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
             }
           }
         ],
