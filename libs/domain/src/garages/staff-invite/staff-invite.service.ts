@@ -30,7 +30,7 @@ import { DirectSend } from '../../notifications/direct-send/direct-send.client';
 import type { EmailConfig } from '../../notifications/email-config';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { featureOn } from '../features/feature-on';
-import { cardAudience } from '../mechanics/garage-mechanics.service';
+import { cardAudienceNow } from '../mechanics/garage-mechanics.service';
 
 export const INVITE_EMAIL = Symbol('INVITE_EMAIL');
 
@@ -432,7 +432,7 @@ export class StaffInviteService {
     });
     if (count === 0) throw invalid();
     await this.events.record(tx, {
-      audience: cardAudience(garageId, { id: mechanicId, onProfile: true }),
+      audience: await cardAudienceNow(tx, garageId, mechanicId),
       kind: 'mechanic.updated',
       payload: { fields: ['account'], garageId, mechanicId },
       subjectId: mechanicId,

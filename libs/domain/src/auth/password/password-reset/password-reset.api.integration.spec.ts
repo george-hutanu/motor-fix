@@ -759,7 +759,10 @@ describe('completing a reset', () => {
     vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await complete(token).expect(500);
     expect(await resetEmails(id, 'password_changed')).toHaveLength(1);
-    await until('the background work', () => published.length > 0);
+    // Other events (the reset's own) may be published first: wait for this one.
+    await until('the background work', () =>
+      published.join().includes('session.revoked'),
+    );
     expect(published.join()).toContain('session.revoked');
   });
 
