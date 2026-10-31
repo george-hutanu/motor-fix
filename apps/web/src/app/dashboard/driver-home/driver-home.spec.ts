@@ -973,6 +973,29 @@ describe('Mașinile mele filled with the driver’s cars', () => {
     ]);
   });
 
+  // @traces 1386-FR-003
+  it('judges the oil lamp by the estimated service date', async () => {
+    const { element } = await render({
+      cars: [{ ...BMW, itpUntil: '2027-06-30', serviceDueOn: '2026-10-20' }],
+    });
+
+    expect(lines(cards(element)[0])).toEqual([
+      ['amber', 'Schimb de ulei peste 3.800 km'],
+      ['green', 'ITP valabil până în iunie 2027'],
+    ]);
+  });
+
+  // @traces 1386-FR-004
+  it('shows no oil line for a car without a next service', async () => {
+    const { element } = await render({
+      cars: [{ ...BMW, nextServiceKm: null }],
+    });
+    const [card] = cards(element);
+
+    expect(text(card)).not.toContain('ulei');
+    expect(card.querySelector('button')).toBeNull();
+  });
+
   // @traces 029-FR-002 029-FR-004
   it('keeps the two most urgent of a car’s four lines', async () => {
     const { element } = await render({
