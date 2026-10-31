@@ -557,19 +557,30 @@ test.describe('the rating dial needle @seeded', () => {
     const needle = dialArea(page).locator('.mf-dial-needle');
     await expect(needle).toHaveCount(0);
 
+    // Heard as it starts, so a slow runner cannot miss a finished swing.
+    await dialArea(page).evaluate((area) => {
+      const runs: string[][] = [];
+      Object.assign(window, { needleRuns: runs });
+      area.addEventListener('transitionrun', (event) => {
+        const target = event.target as Element;
+        if (target.classList.contains('mf-dial-needle')) {
+          runs.push([
+            (event as TransitionEvent).propertyName,
+            getComputedStyle(target).transitionDuration,
+          ]);
+        }
+      });
+    });
     await tile(page, 'Dacia').click();
     await expect(dialValue(page)).toHaveText('5,0');
     // The swing lasts 1100 ms (--mf-motion-dial), from the 0 mark.
-    expect(
-      await needle.evaluate((n) =>
-        n
-          .getAnimations()
-          .map((a) => [
-            (a as CSSTransition).transitionProperty,
-            Number(a.effect?.getTiming().duration),
-          ]),
-      ),
-    ).toEqual([['transform', 1100]]);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as unknown as { needleRuns: string[][] }).needleRuns,
+        ),
+      )
+      .toEqual([['transform', '1.1s']]);
   });
 });
 
