@@ -1,0 +1,36 @@
+<p class="subject">{{ subject() }}</p>
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <fieldset class="reasons" [disabled]="sending()">
+    <legend>{{ 'garage.reviews.report.reasons' | t }}</legend>
+    @for (reason of reasons; track reason.code) {
+      <label class="reason">
+        <input type="radio" name="reason" formControlName="reason" [value]="reason.code" />
+        <span>{{ reason.label | t }}</span>
+      </label>
+    }
+  </fieldset>
+  @if (other() === 'other') {
+    <div class="told">
+      <label hlmLabel for="mf-report-text">{{ 'garage.reviews.report.text' | t }}</label>
+      <textarea
+        hlmInput
+        id="mf-report-text"
+        rows="4"
+        required
+        formControlName="text"
+        aria-describedby="mf-report-count"
+        [aria-invalid]="count() > max"
+        [readOnly]="sending()"
+      ></textarea>
+      <span id="mf-report-count" class="count" [class.over]="count() > max" data-counter>{{
+        'garage.reviews.report.count' | t: { n: count(), max: max }
+      }}</span>
+    </div>
+  }
+  <p class="note">{{ 'garage.reviews.report.note' | t }}</p>
+  <mf-task-error [save]="save" />
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" [disabled]="sending()" (click)="task.close('cancelled')">{{ 'garage.reviews.report.cancel' | t }}</button>
+    <button hlmBtn type="submit" [mfTaskSubmit]="save" [disabled]="blocked()">{{ 'garage.reviews.report.submit' | t }}</button>
+  </div>
+</form>

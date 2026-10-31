@@ -186,6 +186,24 @@ describe('audienceOf', () => {
     ).toEqual(['garage:g1', 'public:garage:g1', 'public:search']);
   });
 
+  // @traces 059-FR-005
+  it("also sends a public change that moves the team to each card's page, before the results", () => {
+    expect(
+      audienceOf({
+        garageId: garage,
+        mechanicIds: ['m1', 'm2'],
+        results: true,
+        type: 'public_garage',
+      }),
+    ).toEqual([
+      'garage:g1',
+      'public:garage:g1',
+      'public:mechanic:m1',
+      'public:mechanic:m2',
+      'public:search',
+    ]);
+  });
+
   // @traces 025-FR-009
   it("sends a mechanic's new figures to the garage, its public page, the results and the mechanic's page", () => {
     expect(
