@@ -48,6 +48,13 @@ import { clientRepairsControllerList } from '../fn/cars/client-repairs-controlle
 import { ClientRepairsControllerList$Params } from '../fn/cars/client-repairs-controller-list';
 import { clientRepairsControllerRemove } from '../fn/cars/client-repairs-controller-remove';
 import { ClientRepairsControllerRemove$Params } from '../fn/cars/client-repairs-controller-remove';
+import { RepairListDto } from '../models/repair-list-dto';
+import { repairsControllerEdit } from '../fn/cars/repairs-controller-edit';
+import { RepairsControllerEdit$Params } from '../fn/cars/repairs-controller-edit';
+import { repairsControllerList } from '../fn/cars/repairs-controller-list';
+import { RepairsControllerList$Params } from '../fn/cars/repairs-controller-list';
+import { repairsControllerRemove } from '../fn/cars/repairs-controller-remove';
+import { RepairsControllerRemove$Params } from '../fn/cars/repairs-controller-remove';
 import { SoldCarListDto } from '../models/sold-car-list-dto';
 
 @Injectable({ providedIn: 'root' })
@@ -417,6 +424,105 @@ export class CarsService extends BaseService {
   clientRepairsControllerCorrect(params: ClientRepairsControllerCorrect$Params, context?: HttpContext): Promise<ClientRepairDto> {
     const resp = this.clientRepairsControllerCorrect$Response(params, context);
     return resp.then((r: StrictHttpResponse<ClientRepairDto>): ClientRepairDto => r.body);
+  }
+
+  /** Path part for operation `repairsControllerList()` */
+  static readonly RepairsControllerListPath = '/api/v1/repairs';
+
+  /**
+   * The caller's repairs across every car he owns, newest first.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `repairsControllerList()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  repairsControllerList$Response(params?: RepairsControllerList$Params, context?: HttpContext): Promise<StrictHttpResponse<RepairListDto>> {
+    const obs = repairsControllerList(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The caller's repairs across every car he owns, newest first.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `repairsControllerList$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  repairsControllerList(params?: RepairsControllerList$Params, context?: HttpContext): Promise<RepairListDto> {
+    const resp = this.repairsControllerList$Response(params, context);
+    return resp.then((r: StrictHttpResponse<RepairListDto>): RepairListDto => r.body);
+  }
+
+  /** Path part for operation `repairsControllerRemove()` */
+  static readonly RepairsControllerRemovePath = '/api/v1/repairs/{id}';
+
+  /**
+   * Delete a repair: refused until editing ships.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `repairsControllerRemove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  repairsControllerRemove$Response(params: RepairsControllerRemove$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = repairsControllerRemove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Delete a repair: refused until editing ships.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `repairsControllerRemove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  repairsControllerRemove(params: RepairsControllerRemove$Params, context?: HttpContext): Promise<void> {
+    const resp = this.repairsControllerRemove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
+  }
+
+  /** Path part for operation `repairsControllerEdit()` */
+  static readonly RepairsControllerEditPath = '/api/v1/repairs/{id}';
+
+  /**
+   * Edit a repair: refused until editing ships.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `repairsControllerEdit()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  repairsControllerEdit$Response(params: RepairsControllerEdit$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = repairsControllerEdit(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Edit a repair: refused until editing ships.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `repairsControllerEdit$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  repairsControllerEdit(params: RepairsControllerEdit$Params, context?: HttpContext): Promise<void> {
+    const resp = this.repairsControllerEdit$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `carsControllerList()` */

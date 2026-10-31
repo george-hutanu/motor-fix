@@ -23,6 +23,10 @@ jest.mock('@motor-fix/ui-cockpit/sample', () => {
   };
 });
 
+// Each case boots the whole router and lazy-loads its first page; on a loaded
+// machine that alone passes 5 s.
+jest.setTimeout(20_000);
+
 const ORIGIN = 'https://motorfix.ro';
 const GARAGES = 'Service‑uri';
 

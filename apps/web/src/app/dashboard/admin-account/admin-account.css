@@ -66,6 +66,13 @@ ul {
 .text {
   color: var(--mf-text-secondary);
 }
+.skeleton {
+  display: block;
+  height: 1em;
+  width: 60%;
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-line);
+}
 .history li {
   display: grid;
   gap: var(--mf-space-1);

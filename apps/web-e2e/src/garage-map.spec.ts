@@ -190,3 +190,79 @@ test.describe('the garage on a small map, with directions', () => {
     ).toBeGreaterThanOrEqual(44);
   });
 });
+
+const MOBILE = '/ro/garages/mecanic-mobil-cluj';
+
+// The seeded mobile mechanic's area, round its centre in Cluj.
+// @traces 1383-FR-010
+test.describe('a mobile mechanic’s area on a small map', () => {
+  test.beforeEach(async ({ page }) => {
+    await ownMap(page);
+  });
+
+  test('draws one plain circle in the strip, with no pin, no address and no directions, and no MapLibre until asked', async ({
+    page,
+  }) => {
+    const statics: string[] = [];
+    const libre: string[] = [];
+    page.on('request', (request) => {
+      const url = request.url();
+      if (url.includes('/api/v1/maps/static')) statics.push(url);
+      if (/maplibre-gl/i.test(url)) libre.push(url);
+    });
+    await hydrated(page, MOBILE);
+
+    await expect(still(page).locator('img')).toBeVisible();
+    await expect(still(page).locator('.overlay .area')).toHaveCount(1);
+    await expect(still(page).locator('.overlay .here')).toHaveCount(0);
+    await expect(still(page).locator('.overlay .pin')).toHaveCount(0);
+    await expect(directions(page)).toHaveCount(0);
+    await expect(where(page).locator('.address')).toHaveCount(0);
+    expect(statics).toHaveLength(1);
+    expect(libre).toHaveLength(0);
+  });
+
+  test('keeps the whole circle inside the box at 320 px, with no sideways scroll', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 800, width: 320 });
+    await hydrated(page, MOBILE);
+    await expect(still(page).locator('img')).toBeVisible();
+    const box = await map(page).boundingBox();
+    const circle = await still(page).locator('.overlay .area').boundingBox();
+
+    expect(within(box, circle)).toBe(true);
+    expect(await sideways(page)).toBeLessThanOrEqual(0);
+  });
+
+  // At a desktop the profile's column is narrow: the credit wraps and lifts
+  // the control over the strip's middle, and the circle stays clear of both
+  // at the size the room beside them fits.
+  test('keeps the circle clear of the control and the credit at 1440 px, at the size the room fits', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 900, width: 1440 });
+    await hydrated(page, MOBILE);
+    await expect(still(page).locator('img')).toBeVisible();
+    const circle = await still(page).locator('.overlay .area').boundingBox();
+    expect(circle).not.toBeNull();
+    if (!circle) return;
+    const r = circle.width / 2;
+    const x = circle.x + r;
+    const y = circle.y + circle.height / 2;
+    // An area, not a dot: the zoom the room beside the covers fits is held
+    // on a neighbouring grid centre rather than dropped.
+    expect(r).toBeGreaterThanOrEqual(20);
+    for (const cover of [
+      still(page).locator('button'),
+      still(page).locator('.attribution'),
+    ]) {
+      const c = await cover.boundingBox();
+      if (!c) continue;
+      const dx = Math.max(c.x - x, 0, x - (c.x + c.width));
+      const dy = Math.max(c.y - y, 0, y - (c.y + c.height));
+      // A pixel's rounding either way.
+      expect(Math.hypot(dx, dy)).toBeGreaterThanOrEqual(r - 1);
+    }
+  });
+});

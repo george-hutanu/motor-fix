@@ -20,6 +20,16 @@ export interface PublicGarageDto {
   address?: string;
 
   /**
+   * A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre
+   */
+  areaLat?: number;
+
+  /**
+   * A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre
+   */
+  areaLng?: number;
+
+  /**
    * Only when the read named a catalogue brand
    */
   brand?: PublicGarageBrandDto;

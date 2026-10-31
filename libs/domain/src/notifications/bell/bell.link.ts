@@ -47,6 +47,7 @@ export const VIEW_OF_KIND: Readonly<Record<string, View>> = {
   MEDIA_REMOVED: 'requests',
   MESSAGE_RECEIVED: 'requests',
   NO_SHOW_RECORDED: 'requests',
+  NO_SHOW_WITHDRAWN: 'requests',
   QUOTE_CHANGED: 'requests',
   QUOTE_EXPIRED: 'requests',
   QUOTE_RECEIVED: 'requests',

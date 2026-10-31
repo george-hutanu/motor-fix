@@ -18,6 +18,10 @@ import { confirmControllerOptions } from '../fn/bookings/confirm-controller-opti
 import { ConfirmControllerOptions$Params } from '../fn/bookings/confirm-controller-options';
 import { ConfirmOptionsDto } from '../models/confirm-options-dto';
 import { GarageBookingDto } from '../models/garage-booking-dto';
+import { noShowControllerRecord } from '../fn/bookings/no-show-controller-record';
+import { NoShowControllerRecord$Params } from '../fn/bookings/no-show-controller-record';
+import { noShowControllerWithdraw } from '../fn/bookings/no-show-controller-withdraw';
+import { NoShowControllerWithdraw$Params } from '../fn/bookings/no-show-controller-withdraw';
 
 @Injectable({ providedIn: 'root' })
 export class BookingsService extends BaseService {
@@ -122,6 +126,72 @@ export class BookingsService extends BaseService {
   cancelBookingControllerCancel(params: CancelBookingControllerCancel$Params, context?: HttpContext): Promise<BookingDto> {
     const resp = this.cancelBookingControllerCancel$Response(params, context);
     return resp.then((r: StrictHttpResponse<BookingDto>): BookingDto => r.body);
+  }
+
+  /** Path part for operation `noShowControllerRecord()` */
+  static readonly NoShowControllerRecordPath = '/api/v1/bookings/{id}/no-show';
+
+  /**
+   * Record that the driver did not come to a confirmed booking whose time has come; no fee, no penalty.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `noShowControllerRecord()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  noShowControllerRecord$Response(params: NoShowControllerRecord$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageBookingDto>> {
+    const obs = noShowControllerRecord(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Record that the driver did not come to a confirmed booking whose time has come; no fee, no penalty.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `noShowControllerRecord$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  noShowControllerRecord(params: NoShowControllerRecord$Params, context?: HttpContext): Promise<GarageBookingDto> {
+    const resp = this.noShowControllerRecord$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageBookingDto>): GarageBookingDto => r.body);
+  }
+
+  /** Path part for operation `noShowControllerWithdraw()` */
+  static readonly NoShowControllerWithdrawPath = '/api/v1/bookings/{id}/no-show';
+
+  /**
+   * Withdraw a no-show recorded today (Bucharest time): the booking stands again in its place.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `noShowControllerWithdraw()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  noShowControllerWithdraw$Response(params: NoShowControllerWithdraw$Params, context?: HttpContext): Promise<StrictHttpResponse<GarageBookingDto>> {
+    const obs = noShowControllerWithdraw(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Withdraw a no-show recorded today (Bucharest time): the booking stands again in its place.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `noShowControllerWithdraw$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  noShowControllerWithdraw(params: NoShowControllerWithdraw$Params, context?: HttpContext): Promise<GarageBookingDto> {
+    const resp = this.noShowControllerWithdraw$Response(params, context);
+    return resp.then((r: StrictHttpResponse<GarageBookingDto>): GarageBookingDto => r.body);
   }
 
 }

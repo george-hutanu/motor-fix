@@ -11,12 +11,18 @@ import { NotificationPreferencesDto } from '../../models/notification-preference
 import { UpdateNotificationPreferencesDto } from '../../models/update-notification-preferences-dto';
 
 export interface NotificationPreferencesControllerSave$Params {
+
+/**
+ * One per press; optional and unread: the write is idempotent by value
+ */
+  'Idempotency-Key'?: string;
       body: UpdateNotificationPreferencesDto
 }
 
 export function notificationPreferencesControllerSave(http: HttpClient, rootUrl: string, params: NotificationPreferencesControllerSave$Params, context?: HttpContext): Observable<StrictHttpResponse<NotificationPreferencesDto>> {
   const rb = new RequestBuilder(rootUrl, notificationPreferencesControllerSave.PATH, 'put');
   if (params) {
+    rb.header('Idempotency-Key', params['Idempotency-Key'], {});
     rb.body(params.body, 'application/json');
   }
 

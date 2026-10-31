@@ -38,6 +38,11 @@ export interface GarageStaffReviewDto {
    */
   reply: (ReviewReplyDto & {
 }) | null;
+
+  /**
+   * Why the owner may not report the review now, as the report operation would refuse it; null when it may
+   */
+  reportRefusal: ('already_reported' | 'already_kept') | null;
   source: 'job' | 'profile';
   status: 'published' | 'reported';
   text: string | null;

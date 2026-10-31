@@ -80,6 +80,7 @@ const summaryOf = ({
         id: booking.id,
         jobStarted: booking.job !== null && booking.job.status !== 'to_do',
         lateCancellation: booking.lateCancellation,
+        noShowAt: iso(booking.noShowAt),
       }
     : null,
   car: snapshotOf(row),

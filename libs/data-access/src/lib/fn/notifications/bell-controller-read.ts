@@ -11,12 +11,18 @@ import { NotificationDto } from '../../models/notification-dto';
 
 export interface BellControllerRead$Params {
   id: string;
+
+/**
+ * One per press; optional and unread: the write is idempotent by value
+ */
+  'Idempotency-Key'?: string;
 }
 
 export function bellControllerRead(http: HttpClient, rootUrl: string, params: BellControllerRead$Params, context?: HttpContext): Observable<StrictHttpResponse<NotificationDto>> {
   const rb = new RequestBuilder(rootUrl, bellControllerRead.PATH, 'post');
   if (params) {
     rb.path('id', params.id, {});
+    rb.header('Idempotency-Key', params['Idempotency-Key'], {});
   }
 
   return http.request(

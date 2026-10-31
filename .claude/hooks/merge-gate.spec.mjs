@@ -58,8 +58,10 @@ describe('merge gate — the decision', () => {
   });
 
   // A PR skips E2E and Integration tests (on demand only) and the path-filtered Docker builds.
+  // A skipped matrix reports one check under its unexpanded name.
+  // @traces 1406-FR-008
   it('counts skipped and neutral checks as green', () => {
-    assert.equal(decideMerge(pr([...green, run('E2E tests', 'SKIPPED'), run('Integration tests', 'SKIPPED'), run('Docker build (web)', 'SKIPPED'), run('Lint', 'NEUTRAL'), review('SUCCESS')])), null);
+    assert.equal(decideMerge(pr([...green, run('E2E tests', 'SKIPPED'), run('Integration tests (${{ matrix.shard }})', 'SKIPPED'), run('Docker build (web)', 'SKIPPED'), run('Lint', 'NEUTRAL'), review('SUCCESS')])), null);
   });
 
   // The PR tester now runs beside CI rather than after it, so agent-review

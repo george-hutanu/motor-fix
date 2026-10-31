@@ -118,6 +118,8 @@
           }
         </section>
 
+        <mf-admin-account-repairs [accountId]="a.id" />
+
         <section class="history" aria-labelledby="mf-account-history" data-part="history">
           <h3 id="mf-account-history">{{ 'admin.users.account.history' | t }}</h3>
           @if (lines().length > 0) {

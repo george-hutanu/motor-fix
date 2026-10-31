@@ -90,6 +90,11 @@ import {
   NewsFanOut,
 } from './news/news.fan-out';
 import { NewsService } from './news/news.service';
+import {
+  NO_SHOW_QUEUE,
+  type NoShowEvent,
+  NoShowFanOut,
+} from './no-show/no-show.fan-out';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsProcessor, retryDelay } from './notifications.processor';
 import {
@@ -195,6 +200,7 @@ const QUOTE_LOST_WORKER = Symbol('QUOTE_LOST_WORKER');
 const BOOKING_CONFIRMED_WORKER = Symbol('BOOKING_CONFIRMED_WORKER');
 const FINAL_PRICE_CORRECTED_WORKER = Symbol('FINAL_PRICE_CORRECTED_WORKER');
 const BOOKING_LAPSED_WORKER = Symbol('BOOKING_LAPSED_WORKER');
+const NO_SHOW_WORKER = Symbol('NO_SHOW_WORKER');
 const JOB_STAGE_WORKER = Symbol('JOB_STAGE_WORKER');
 const REQUEST_CANCELLED_WORKER = Symbol('REQUEST_CANCELLED_WORKER');
 const BOOKING_CANCELLED_WORKER = Symbol('BOOKING_CANCELLED_WORKER');
@@ -279,6 +285,9 @@ export class NotificationsModule implements OnApplicationShutdown {
     @Optional()
     @Inject(BOOKING_LAPSED_WORKER)
     private readonly bookingLapsedWorker?: Worker | null,
+    @Optional()
+    @Inject(NO_SHOW_WORKER)
+    private readonly noShowWorker?: Worker | null,
     @Optional()
     @Inject(REQUEST_CANCELLED_WORKER)
     private readonly requestCancelledWorker?: Worker | null,
@@ -823,6 +832,33 @@ export class NotificationsModule implements OnApplicationShutdown {
             return worker;
           },
         },
+        NoShowFanOut,
+        {
+          inject: [NoShowFanOut],
+          provide: NO_SHOW_WORKER,
+          useFactory: (fanOut: NoShowFanOut) => {
+            if (!options.email.webUrl) {
+              new Logger('NoShow').error(
+                'PUBLIC_WEB_URL missing; no-show messages wait in their queue',
+              );
+              return null;
+            }
+            const worker = new Worker<NoShowEvent>(
+              NO_SHOW_QUEUE,
+              (job) => inJob(job, () => fanOut.handle(job)),
+              {
+                connection: {
+                  maxRetriesPerRequest: null,
+                  url: options.redisUrl,
+                },
+                telemetry: queueTelemetry(),
+              },
+            );
+            observeWorker(worker);
+            logFinalFailure(worker, new Logger('NoShow'));
+            return worker;
+          },
+        },
         RequestCancelledFanOut,
         {
           inject: [RequestCancelledFanOut],
@@ -1085,6 +1121,7 @@ export class NotificationsModule implements OnApplicationShutdown {
     await this.finalPriceCorrectedWorker?.close();
     await this.jobStageWorker?.close();
     await this.bookingLapsedWorker?.close();
+    await this.noShowWorker?.close();
     await this.requestCancelledWorker?.close();
     await this.bookingCancelledWorker?.close();
     await this.verificationResultWorker?.close();

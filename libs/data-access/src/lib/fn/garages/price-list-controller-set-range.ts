@@ -13,6 +13,11 @@ import { PriceRangeSavedDto } from '../../models/price-range-saved-dto';
 export interface PriceListControllerSetRange$Params {
   garageId: string;
   priceId: string;
+
+/**
+ * One per press; optional and unread: the write is idempotent by value
+ */
+  'Idempotency-Key'?: string;
       body: PriceRangeDto
 }
 
@@ -21,6 +26,7 @@ export function priceListControllerSetRange(http: HttpClient, rootUrl: string, p
   if (params) {
     rb.path('garageId', params.garageId, {});
     rb.path('priceId', params.priceId, {});
+    rb.header('Idempotency-Key', params['Idempotency-Key'], {});
     rb.body(params.body, 'application/json');
   }
 

@@ -115,26 +115,6 @@ describe('the Cloudflare live video provider', () => {
     ]);
   });
 
-  it('closes an input by its id', async () => {
-    answer = json(200, { result: null, success: true });
-
-    await cloudflare().closeInput('input-uid-1');
-
-    expect(seen).toEqual([
-      expect.objectContaining({
-        auth: 'Bearer secret-api-token',
-        method: 'DELETE',
-        url: '/accounts/acct-1/stream/live_inputs/input-uid-1',
-      }),
-    ]);
-  });
-
-  it('throws when an input cannot be closed', async () => {
-    answer = json(500, { success: false });
-
-    await expect(cloudflare().closeInput('input-uid-1')).rejects.toThrow();
-  });
-
   it('gives up after five seconds and says it timed out', async () => {
     answer = () => undefined;
     const started = Date.now();
@@ -447,6 +427,124 @@ describe('reading the publisher state of a live input at Cloudflare', () => {
 
     await expect(cloudflare().inputStatus('input-uid-1')).rejects.toThrow(
       'input status failed',
+    );
+  });
+});
+
+// @traces 1390-FR-002 1390-FR-005
+describe('closing a live input at Cloudflare', () => {
+  const closedAnswer = json(200, {
+    result: { enabled: false, uid: 'input-uid-1' },
+    success: true,
+  });
+
+  it('disables the input, keeping its signed recording settings, and leaves it in place', async () => {
+    answer = closedAnswer;
+
+    await cloudflare().closeInput('input-uid-1');
+
+    expect(seen).toEqual([
+      {
+        auth: 'Bearer secret-api-token',
+        body: {
+          enabled: false,
+          recording: { mode: 'automatic', requireSignedURLs: true },
+        },
+        method: 'PUT',
+        url: '/accounts/acct-1/stream/live_inputs/input-uid-1',
+      },
+    ]);
+  });
+
+  it('counts an input the provider no longer has as closed', async () => {
+    answer = json(404, { success: false });
+
+    await expect(cloudflare().closeInput('input-uid-1')).resolves.toBe(
+      undefined,
+    );
+  });
+
+  it.each([
+    ['a server error', json(500, { success: false }), '500'],
+    ['a refusal', json(200, { result: null, success: false }), 'rejected'],
+    [
+      'an input still enabled',
+      json(200, { result: { enabled: true }, success: true }),
+      'still_enabled',
+    ],
+    [
+      'an answer without the input',
+      json(200, { result: null, success: true }),
+      'still_enabled',
+    ],
+    ['an answer that is not JSON', json(200, 'ok'), 'malformed'],
+  ])('throws on %s, naming only the reason', async (_name, given, reason) => {
+    answer = given;
+
+    await expect(cloudflare().closeInput('input-uid-1')).rejects.toThrow(
+      new Error(`live input close failed: ${reason}`),
+    );
+  });
+
+  it('gives up after five seconds and says it timed out', async () => {
+    answer = () => undefined;
+
+    await expect(cloudflare().closeInput('input-uid-1')).rejects.toThrow(
+      new Error('live input close failed: timeout'),
+    );
+  }, 10_000);
+
+  it('still lists the recordings of an input after closing it', async () => {
+    const provider = cloudflare();
+    answer = closedAnswer;
+    await provider.closeInput('input-uid-1');
+    answer = json(200, { result: [], success: true });
+
+    await provider.deleteRecording('input-uid-1');
+
+    expect(seen.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'PUT /accounts/acct-1/stream/live_inputs/input-uid-1',
+      'GET /accounts/acct-1/stream/live_inputs/input-uid-1/videos',
+    ]);
+  });
+});
+
+// @traces 1390-FR-002
+describe('deleting the input of a start that did not commit', () => {
+  it('deletes the input, which never served a session', async () => {
+    answer = json(200, { result: null, success: true });
+
+    await cloudflare().deleteInput('input-uid-1');
+
+    expect(seen.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'DELETE /accounts/acct-1/stream/live_inputs/input-uid-1',
+    ]);
+  });
+
+  it('counts the empty answer Cloudflare gives a delete as deleted', async () => {
+    answer = (_req, res) => {
+      res.writeHead(200);
+      res.end();
+    };
+
+    await expect(cloudflare().deleteInput('input-uid-1')).resolves.toBe(
+      undefined,
+    );
+  });
+
+  it('counts an input the provider no longer has as deleted', async () => {
+    answer = json(404, { success: false });
+
+    await expect(cloudflare().deleteInput('input-uid-1')).resolves.toBe(
+      undefined,
+    );
+  });
+
+  it('throws on a server error, naming only the reason', async () => {
+    answer = json(500, { success: false });
+
+    await expect(cloudflare().deleteInput('input-uid-1')).rejects.toThrow(
+      new Error('live input delete failed: 500'),
     );
   });
 });

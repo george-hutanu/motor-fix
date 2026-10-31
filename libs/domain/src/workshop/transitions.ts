@@ -11,7 +11,8 @@ import {
 } from '../transitions';
 
 export const JOB_MOVES: Record<JobStatus, readonly JobStatus[]> = {
-  cancelled: [],
+  // Within the no-show undo only; the caller checks.
+  cancelled: ['to_do'],
   done: [],
   in_work: ['paused', 'done'],
   paused: ['in_work', 'done'],

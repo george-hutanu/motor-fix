@@ -68,6 +68,60 @@ describe('the copy of a live garage', () => {
     expect(copy.steps?.['4']).toEqual(sent.steps?.['4']);
   });
 
+  // @traces 059-FR-003
+  it("writes step 4's switch on the garage, keeps the cards off the profile and reads it back", async () => {
+    const sent = full(closedDay());
+    const steps = sent.steps ?? {};
+    const hidden = {
+      ...sent,
+      steps: { ...steps, '4': { ...steps['4'], onProfile: false } },
+    } as ListingDraftData;
+    const garage = await listed(account, 'ion', hidden);
+
+    const stored = await prisma.garage.findUniqueOrThrow({
+      include: { mechanics: { where: { isOwner: false } } },
+      where: { id: garage.garageId },
+    });
+    expect(stored.teamOnProfile).toBe(false);
+    expect(stored.mechanics.map((card) => card.onProfile)).toEqual(
+      stored.mechanics.map(() => false),
+    );
+    expect(
+      await prisma.activityLog.findMany({
+        select: { field: true, newValue: true },
+        where: {
+          field: 'team_on_profile',
+          garageId: garage.garageId,
+          subjectType: 'garage',
+        },
+      }),
+    ).toEqual([{ field: 'team_on_profile', newValue: false }]);
+    expect((await copyOf(prisma, garage.garageId)).steps?.['4']).toEqual(
+      hidden.steps?.['4'],
+    );
+  });
+
+  // @traces 059-FR-003
+  it("reads step 4's switch from the garage, not from a mechanic's own consent", async () => {
+    const sent = full(closedDay());
+    const garage = await listed(account, 'ion', sent);
+    await prisma.mechanic.updateMany({
+      data: { onProfile: false },
+      where: { garageId: garage.garageId },
+    });
+
+    expect((await copyOf(prisma, garage.garageId)).steps?.['4']).toEqual(
+      expect.objectContaining({ onProfile: true }),
+    );
+    expect(
+      (
+        await prisma.mechanic.findMany({
+          where: { garageId: garage.garageId, isOwner: false },
+        })
+      ).every((card) => !card.onProfile),
+    ).toBe(true);
+  });
+
   it('writes the stored values, the defaults the writers filled in included', async () => {
     const sent = plain();
     const garage = await listed(account, 'ana', sent);

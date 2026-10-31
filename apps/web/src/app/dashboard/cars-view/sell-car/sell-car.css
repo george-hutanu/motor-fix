@@ -1,0 +1,119 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-6);
+}
+p {
+  margin: 0;
+}
+form,
+section,
+.done {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-4);
+}
+.muted {
+  color: var(--mf-text-secondary);
+}
+.note {
+  font-size: var(--mf-size-small);
+}
+.error {
+  color: var(--mf-red-ink);
+}
+.choice {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+.choice button {
+  width: 100%;
+  white-space: normal;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--mf-space-3);
+}
+ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-3);
+  max-height: 40vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mf-space-3);
+}
+.dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 0.45em;
+  border: 2px solid var(--mf-amber);
+  border-radius: 50%;
+  background: var(--mf-amber);
+}
+.logged .dot {
+  background: transparent;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  min-width: 0;
+}
+.what {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--mf-space-2);
+  min-height: 44px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.what input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}
+.tag {
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}
+.meta {
+  flex-basis: 100%;
+  font-size: var(--mf-size-small);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+}
+[data-part="link"] {
+  display: block;
+  padding: var(--mf-space-3);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-control);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-2);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

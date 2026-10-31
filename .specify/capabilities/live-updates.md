@@ -1,6 +1,6 @@
 ---
 capability: live-updates
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 253-live-connection
   - 254-live-audience
@@ -41,6 +41,7 @@ features:
   - 011-dashboard-sections
   - 1316-swr-resource-store
   - 1389-reported-reviews-admin
+  - 059-profile-direct-requests
 ---
 
 # Capability: Live updates
@@ -321,9 +322,9 @@ _From 419-live-garage-updates._
 
 _From 267-brand-results._
 
-### 419-FR-003 — A public stream MUST join `system`, plus `public:garage:{garageId}` when the id names an approved garage, `public:mechanic:{mechanicId}` when the id names a mechanic of an approved garage (no hidden state exists yet; the mechanic-page story adds that check), and `public:search:{brandId}` together with the all-brands results channel `public:search` when the id names a brand of the catalogue (retired brands included); an id that names nothing, or a garage that is not approved, MUST be ignored silently: the stream opens, joins nothing for it and answers exactly as for an unknown id.
+### 059-FR-010 — (#622) The public live channel's join of `public:mechanic:{mechanicId}` (419-FR-003) MUST use FR-001: the stream joins it only when the id names a mechanic shown on the profile; an id that names a hidden one, a card without an account, a removed card or a mechanic of a garage with the switch or the feature off is left out silently, as an unknown id is today.
 
-_From 419-live-garage-updates._
+_From 059-profile-direct-requests._
 
 ### 419-FR-004 — A public stream MUST receive only the public kinds: through `public:garage:{garageId}` — `garage.updated`, `price_list.updated`, `mechanic.updated`, `facility.removed`, `facility.re_add_decided`, `review.posted`, `review.edited`, `review.deleted`, `review.replied`, `review.reply_edited`, `review.reported`, `review.decided`, `review.appeal_decided`, `garage.suspended`, `garage.restored` and `garage.slots_changed`; through `public:mechanic:{mechanicId}` — `mechanic.updated` and the same review kinds; through `public:search` — `verification.decided`, `garage.suspended`, `garage.restored` and `garage.updated`; through `public:search:{brandId}` — `garage.updated`; through `system` — the platform kinds every connection gets. Any other kind MUST NOT reach a public connection, whatever audience the publisher named (an allow-list on the public keys, keeping 254-FR-009's rule as a consequence).
 
@@ -566,3 +567,4 @@ _From 1316-swr-resource-store._
 - `254-FR-005` — superseded by `1250-FR-013` (2026-10-26)
 - `256-FR-002` — superseded by `1316-FR-002` (2026-10-30)
 - `177-FR-010` — superseded by `1389-FR-006` (2026-10-30)
+- `419-FR-003` — superseded by `059-FR-010` (2026-10-31)

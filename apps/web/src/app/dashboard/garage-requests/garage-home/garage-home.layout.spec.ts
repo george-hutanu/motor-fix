@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import {
   capabilitiesOf,
@@ -108,6 +108,7 @@ async function render(
     ),
   };
   TestBed.configureTestingModule({
+    deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [
       provideRouter([]),
       GarageRequestsFeed,

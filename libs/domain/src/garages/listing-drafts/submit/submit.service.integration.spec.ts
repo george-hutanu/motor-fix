@@ -554,13 +554,15 @@ describe("the owner's mechanic row", () => {
   });
 
   it('is never matched, changed or deleted by a re-save of the team step', async () => {
+    // A re-save that moves the team switch tells the garage's pages.
+    const quiet = { record: async () => undefined } as never;
     const actor = await driver();
     const { id, token } = await draft();
     const sent = await service.submit(actor, id, token, 'key-1');
     const [before] = await ownerRows(sent.garageId);
 
     await prisma.$transaction((tx) =>
-      new GarageMechanicsService(audit, {} as never, {} as never).saveAgain(
+      new GarageMechanicsService(audit, quiet, {} as never).saveAgain(
         tx,
         sent.garageId,
         actor.accountId,
@@ -571,7 +573,7 @@ describe("the owner's mechanic row", () => {
       ),
     );
     await prisma.$transaction((tx) =>
-      new GarageMechanicsService(audit, {} as never, {} as never).saveAgain(
+      new GarageMechanicsService(audit, quiet, {} as never).saveAgain(
         tx,
         sent.garageId,
         actor.accountId,

@@ -430,6 +430,7 @@ describe('PATCH /garages/:garageId', () => {
     expect(res.body).toEqual({
       courtesyCar: { paid: true, pricePerDayBani: 12000 },
       paymentMethods: cashAndCard,
+      teamOnProfile: true,
     });
     expect(await stored(w.nord.id)).toEqual({
       courtesyCarPaid: true,
@@ -472,6 +473,7 @@ describe('PATCH /garages/:garageId', () => {
     expect(res.body).toEqual({
       courtesyCar: { paid: false },
       paymentMethods: { card: false, cash: false, transfer: false },
+      teamOnProfile: true,
     });
     expect(await stored(w.nord.id)).toMatchObject({
       courtesyCarPaid: false,
@@ -485,7 +487,10 @@ describe('PATCH /garages/:garageId', () => {
     const res = await patch(w, { paymentMethods: cashAndCard });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ paymentMethods: cashAndCard });
+    expect(res.body).toEqual({
+      paymentMethods: cashAndCard,
+      teamOnProfile: true,
+    });
   });
 
   it('records one history entry per changed field, by the owner', async () => {
@@ -575,7 +580,7 @@ describe('PATCH /garages/:garageId', () => {
     const res = await patch(w, body);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(body);
+    expect(res.body).toEqual({ ...body, teamOnProfile: true });
     expect(await history(w.nord.id)).toEqual([]);
     expect(await events(w.nord.id)).toEqual([]);
   });
@@ -679,5 +684,131 @@ describe('PATCH /garages/:garageId', () => {
       .send({ paymentMethods: cashAndCard });
 
     expect(res.status).toBe(404);
+  });
+});
+
+// @traces 059-FR-004 059-FR-005 059-FR-008
+describe('PATCH /garages/:garageId with teamOnProfile', () => {
+  const teamOnProfile = (garageId: string) =>
+    prisma.garage
+      .findUniqueOrThrow({
+        select: { teamOnProfile: true },
+        where: { id: garageId },
+      })
+      .then((g) => g.teamOnProfile);
+
+  it('starts a garage with its team on the profile', async () => {
+    const w = await world();
+
+    expect(await teamOnProfile(w.nord.id)).toBe(true);
+  });
+
+  it('turns the team off alone and answers it with the payment methods', async () => {
+    const w = await world({ courtesyCar: false });
+
+    const res = await patch(w, { teamOnProfile: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      paymentMethods: { card: false, cash: false, transfer: false },
+      teamOnProfile: false,
+    });
+    expect(await teamOnProfile(w.nord.id)).toBe(false);
+  });
+
+  it('writes it beside the payment methods in one request', async () => {
+    const w = await world({ courtesyCar: false });
+
+    const res = await patch(w, {
+      paymentMethods: cashAndCard,
+      teamOnProfile: false,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      paymentMethods: cashAndCard,
+      teamOnProfile: false,
+    });
+    expect(await teamOnProfile(w.nord.id)).toBe(false);
+    expect((await stored(w.nord.id)).paymentCash).toBe(true);
+  });
+
+  it('records one history entry with the old and new value, by the owner', async () => {
+    const w = await world();
+
+    await patch(w, { teamOnProfile: false });
+
+    expect(
+      (await history(w.nord.id)).map((e) => [
+        e.field,
+        e.oldValue,
+        e.newValue,
+        e.actorId,
+        e.actorRole,
+      ]),
+    ).toEqual([['team_on_profile', true, false, w.mihai, 'owner']]);
+  });
+
+  it("tells the garage, its page and every current card's page, never the search", async () => {
+    const w = await world();
+    const [vlad] = await prisma.mechanic.findMany({
+      where: { garageId: w.nord.id },
+    });
+    const elena = await prisma.mechanic.create({
+      data: { garageId: w.nord.id, name: 'Elena Stan' },
+    });
+    await prisma.mechanic.create({
+      data: { garageId: w.nord.id, name: 'Plecat', removedAt: new Date() },
+    });
+
+    await patch(w, { teamOnProfile: false });
+
+    const saved = await events(w.nord.id);
+    expect(saved).toHaveLength(1);
+    expect(saved[0].payload).toMatchObject({
+      fields: ['team_on_profile'],
+      garageId: w.nord.id,
+    });
+    expect([...saved[0].audience].sort()).toEqual(
+      [
+        `garage:${w.nord.id}`,
+        `public:garage:${w.nord.id}`,
+        `public:mechanic:${vlad.id}`,
+        `public:mechanic:${elena.id}`,
+      ].sort(),
+    );
+  });
+
+  it('records nothing and emits nothing when the value does not change', async () => {
+    const w = await world();
+
+    const res = await patch(w, { teamOnProfile: true });
+
+    expect(res.status).toBe(200);
+    expect(await history(w.nord.id)).toEqual([]);
+    expect(await events(w.nord.id)).toEqual([]);
+  });
+
+  it('answers 400 to a value that is not a boolean', async () => {
+    const w = await world();
+
+    const res = await patch(w, { teamOnProfile: 'no' });
+
+    expect(res.status).toBe(400);
+    expect(await teamOnProfile(w.nord.id)).toBe(true);
+  });
+
+  it('answers 401 without a session, 403 to staff and 404 to anyone else', async () => {
+    const w = await world();
+
+    expect((await patch(w, { teamOnProfile: false }, null)).status).toBe(401);
+    for (const as of [w.receptionist, w.mechanic]) {
+      expect((await patch(w, { teamOnProfile: false }, as)).status).toBe(403);
+    }
+    for (const as of [w.other, w.driver, w.admin]) {
+      expect((await patch(w, { teamOnProfile: false }, as)).status).toBe(404);
+    }
+    expect(await teamOnProfile(w.nord.id)).toBe(true);
+    expect(await events(w.nord.id)).toEqual([]);
   });
 });

@@ -190,6 +190,20 @@ export class PublicGarageDto extends GarageBrandAnswerDto {
   longitude?: number;
 
   @ApiPropertyOptional({
+    description:
+      "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
+    format: 'double',
+  })
+  areaLat?: number;
+
+  @ApiPropertyOptional({
+    description:
+      "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
+    format: 'double',
+  })
+  areaLng?: number;
+
+  @ApiPropertyOptional({
     description: 'A mobile mechanic only: how far from its base it travels.',
     maximum: 100,
     minimum: 1,

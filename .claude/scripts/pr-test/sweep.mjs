@@ -93,15 +93,16 @@ export function parseRoute(spec) {
  * The routes the web app serves, read from the checkout's source without
  * booting Angular: each a list of segments, `:x` matching any one segment
  * (`:lang` only the literal `/:lang` the sweep fills in), a trailing `**` any
- * rest. app.routes.ts gives the top level and the language node's children
- * (keys are sorted, so a parent's `children` come before its `path`);
+ * rest. app.routes.ts gives the top level and the language node's children,
+ * written there or loaded on demand from another file (keys are sorted, so a
+ * parent's `children` or `loadChildren` come before its `path`);
  * dashboard/views.ts gives `/app/<area>/<view>` for every released view, which
  * owns its sub-paths. Null when the checkout has no app.routes.ts.
  */
 export function routerTable(root) {
   const app = join(root, "apps", "web", "src", "app");
   if (!existsSync(join(app, "app.routes.ts"))) return null;
-  const text = readFileSync(join(app, "app.routes.ts"), "utf8").replace(/^\s*\/\/.*$/gm, "");
+  const text = lazyChildren(app, readFileSync(join(app, "app.routes.ts"), "utf8").replace(/^\s*\/\/.*$/gm, ""));
   const lists = {};
   const token = /\(\[([^\]]*)\] as const\)\.map\(\((\w+)\)|path:\s*(?:'([^']*)'|`([^`]*)`|(\w+))|placeholder\('([^']*)'|matcher:|\[|\]/g;
   const patterns = [];
@@ -138,6 +139,16 @@ export function routerTable(root) {
   return patterns;
 }
 
+// A node whose children load on demand (`loadChildren: () => import('./x').then((m) => m.list)`)
+// gets that file's `export const list: Routes = [...]` written in as its `children`.
+const lazyChildren = (app, text) =>
+  text.replace(/loadChildren:\s*\(\)\s*=>\s*import\('([^']+)'\)\.then\(\(\w+\)\s*=>\s*\w+\.(\w+)\),?/g, (whole, from, name) => {
+    const file = join(app, `${from.replace(/\.ts$/, "")}.ts`);
+    if (!existsSync(file)) return whole;
+    const source = readFileSync(file, "utf8").replace(/^\s*\/\/.*$/gm, "");
+    const list = source.split(new RegExp(`^export const ${name}\\b[^=]*=\\s*\\[`, "m"))[1]?.split(/^\];/m)[0];
+    return list === undefined ? whole : `children: [${list}],`;
+  });
 const segments = (path) => path.split("/").filter(Boolean);
 const expand = (template, lists) => {
   const name = template.match(/\$\{(\w+)\}/)?.[1];
@@ -208,13 +219,25 @@ const pathOf = (url) => {
   }
 };
 
+const lastSegment = (path) => path?.split("?")[0].split("/").filter(Boolean).pop() ?? null;
+
+/**
+ * The API read of the thing a page names (`/api/v1/car-transfers/x` behind `/ro/transfer/x`): its expected status
+ * is why the page answers it.
+ */
+const isLookup = (o) => {
+  const path = pathOf(o.url);
+  const named = lastSegment(o.href ?? o.path);
+  return Boolean(path?.startsWith("/api/") && named && lastSegment(path) === named);
+};
+
 /** Without the error response, and the console line it logs, that a route's expected status causes. */
 export const dropExpected = (observations) =>
   observations.filter(
     (o) =>
       !o.expect ||
       !(
-        (o.kind === "http" && o.status === o.expect && pathOf(o.url) === (o.href ?? o.path)) ||
+        (o.kind === "http" && o.status === o.expect && (pathOf(o.url) === (o.href ?? o.path) || isLookup(o))) ||
         (o.kind === "console" && String(o.text).includes(`status of ${o.expect}`))
       ),
   );

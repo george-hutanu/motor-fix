@@ -17,6 +17,7 @@ import {
   DELETED_AUTHOR,
   PAID_BANI_MAX,
   REVIEW_REPLY_TEXT_MAX,
+  REVIEW_REPORT_REASONS,
   REVIEW_REPORT_TEXT_MAX,
   REVIEW_TEXT_MAX,
 } from './lei-text';
@@ -390,19 +391,6 @@ export class GarageReviewsPageDto {
   items!: GarageReviewDto[];
 }
 
-// The reasons a garage may report a review for, in the order the task lists
-// them.
-const REVIEW_REPORT_REASONS = [
-  'insults',
-  'personal_data',
-  'ads',
-  'promotion',
-  'off_topic',
-  'hate',
-  'fake_or_conflicted',
-  'threats_or_legal_accusations',
-  'other',
-] as const;
 export type ReviewReportReason = (typeof REVIEW_REPORT_REASONS)[number];
 
 // Each report reason as the admins read it, in both languages.
@@ -428,7 +416,8 @@ export const REVIEW_REPORT_REASON_TEXTS: Record<
 };
 
 // Why a review may not be reported again.
-export type ReportRefusal = 'already_reported' | 'already_kept';
+const REPORT_REFUSALS = ['already_reported', 'already_kept'] as const;
+export type ReportRefusal = (typeof REPORT_REFUSALS)[number];
 
 // Only the types are checked here: whether the text fits the reason is the
 // service's 422, after the 409s.
@@ -513,6 +502,15 @@ export class GarageStaffReviewDto extends GarageReviewDto {
 
   @ApiProperty()
   canReport!: boolean;
+
+  @ApiProperty({
+    description:
+      'Why the owner may not report the review now, as the report operation would refuse it; null when it may',
+    enum: REPORT_REFUSALS,
+    nullable: true,
+    type: String,
+  })
+  reportRefusal!: ReportRefusal | null;
 }
 
 export class GarageStaffReviewsPageDto {

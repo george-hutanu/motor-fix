@@ -67,15 +67,17 @@ const count = (table: Record<string, readonly string[]>) =>
 
 // @traces 220-FR-008
 // @traces 220-FR-017
+// @traces 1259-FR-003
+// @traces 1259-FR-006
 describe('the transition tables', () => {
   it('hold exactly the moves of the state diagrams', () => {
-    expect(count(REQUEST_MOVES)).toBe(8);
+    expect(count(REQUEST_MOVES)).toBe(9);
     expect(count(RECIPIENT_MOVES)).toBe(5);
     expect(count(QUOTE_MOVES)).toBe(7);
-    expect(count(BOOKING_MOVES)).toBe(6);
+    expect(count(BOOKING_MOVES)).toBe(7);
     expect(REQUEST_MOVES).toEqual({
       booked: ['quoted', 'in_work', 'closed'],
-      closed: [],
+      closed: ['booked'],
       done: [],
       in_work: ['done'],
       quoted: ['booked', 'closed'],
@@ -108,7 +110,7 @@ describe('the transition tables', () => {
       completed: [],
       confirmed: ['cancelled', 'no_show', 'completed'],
       lapsed: [],
-      no_show: [],
+      no_show: ['confirmed'],
     });
   });
 });
@@ -208,6 +210,7 @@ describe('moveRequest', () => {
       };
     },
     stamps: () => ({
+      booked: { closedAt: null, closedReason: null },
       closed: { closedAt: anyDate, closedReason: 'cancelled' },
     }),
     statuses: Object.values(QuoteRequestStatus),
@@ -425,11 +428,67 @@ describe('moveBooking', () => {
         cancelReason: 'parts_not_available',
       },
       completed: { completedAt: anyDate },
-      confirmed: { confirmedAt: anyDate, confirmedBy: owner },
+      confirmed: {
+        confirmedAt: anyDate,
+        noShowAt: null,
+        noShowRecordedBy: null,
+      },
       no_show: { noShowAt: anyDate, noShowRecordedBy: owner },
     }),
     statuses: Object.values(BookingStatus),
     table: BOOKING_MOVES,
+  });
+
+  const confirm = (id: string) =>
+    prisma.$transaction((tx) =>
+      moveBooking(tx, ports, {
+        actor: byGarage(),
+        event: {
+          audience: {
+            driverAccountId: driver,
+            garageId,
+            mechanicId: null,
+            type: 'booking',
+          },
+          kind: 'booking.confirmed',
+        },
+        id,
+        to: 'confirmed',
+      }),
+    );
+
+  it('stamps who confirmed a booking awaiting confirmation', async () => {
+    const { booking } = await world.chain(driver, garageId, {
+      booking: 'awaiting_confirmation',
+    });
+
+    await confirm(booking.id);
+
+    expect(
+      await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } }),
+    ).toMatchObject({ confirmedAt: anyDate, confirmedBy: owner });
+  });
+
+  // @traces 1259-FR-006
+  it('takes a no-show back to confirmed, clearing it and keeping the confirmation', async () => {
+    const { booking } = await world.chain(driver, garageId, {
+      booking: 'no_show',
+    });
+    const before = await prisma.booking.findUniqueOrThrow({
+      where: { id: booking.id },
+    });
+
+    await confirm(booking.id);
+
+    expect(
+      await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } }),
+    ).toMatchObject({
+      confirmedAt: before.confirmedAt,
+      confirmedBy: before.confirmedBy,
+      noShowAt: null,
+      noShowRecordedBy: null,
+      status: 'confirmed',
+    });
   });
 
   it('records a cancellation reason as a key change for the driver’s history', async () => {

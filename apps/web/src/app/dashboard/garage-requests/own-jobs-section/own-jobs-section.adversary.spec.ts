@@ -10,6 +10,8 @@ import { Live } from '../../live';
 
 const base: JobSummaryDto = {
   bookingId: 'b',
+  canRecordNoShow: false,
+  canWithdrawNoShow: false,
   car: {
     brand: 'Dacia',
     engine: '1.5 dCi',
@@ -36,6 +38,7 @@ const base: JobSummaryDto = {
   ],
   mechanicId: 'm',
   mechanicName: 'Elena Stan',
+  noShowAt: null,
   odometerKm: null,
   pausedAt: null,
   receivedAt: null,

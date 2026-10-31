@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
@@ -92,6 +92,7 @@ async function render(
   read = jest.fn(load);
   navigate = jest.fn(async () => true);
   TestBed.configureTestingModule({
+    deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [
       {
         provide: GaragesService,

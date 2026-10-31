@@ -6,6 +6,19 @@ export const PAID_BANI_MAX = 100_000_000;
 export const REVIEW_TEXT_MAX = 2000;
 // The "something else" text of a review report, in characters after the trim.
 export const REVIEW_REPORT_TEXT_MAX = 500;
+// The reasons a garage may report a review for, in the order the task lists
+// them.
+export const REVIEW_REPORT_REASONS = [
+  'insults',
+  'personal_data',
+  'ads',
+  'promotion',
+  'off_topic',
+  'hate',
+  'fake_or_conflicted',
+  'threats_or_legal_accusations',
+  'other',
+] as const;
 // A garage's reply to a review, in characters after the trim; the dialog
 // counts against the same limit.
 export const REVIEW_REPLY_TEXT_MAX = 1000;

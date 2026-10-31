@@ -5,6 +5,7 @@ import {
 import { Body, Controller, Get, Put } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiHeader,
   ApiOkResponse,
   ApiTags,
   ApiUnprocessableEntityResponse,
@@ -28,6 +29,13 @@ export class NotificationPreferencesController {
   }
 
   @Put()
+  @ApiHeader({
+    description:
+      'One per press; optional and unread: the write is idempotent by value',
+    name: 'Idempotency-Key',
+    required: false,
+    schema: { maxLength: 64, minLength: 1, type: 'string' },
+  })
   @ApiOkResponse({ type: NotificationPreferencesDto })
   @ApiUnprocessableEntityResponse({
     description:

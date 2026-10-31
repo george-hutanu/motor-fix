@@ -68,10 +68,9 @@ describe('the sections of Panou', () => {
       'kpi',
       'load',
       'sched',
-      'funnel',
       'brands',
     ]);
-    expect(new Set(empty.map((section) => section.empty)).size).toBe(5);
+    expect(new Set(empty.map((section) => section.empty)).size).toBe(4);
   });
 });
 

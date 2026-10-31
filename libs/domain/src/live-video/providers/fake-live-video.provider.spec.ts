@@ -33,6 +33,31 @@ describe('the stand-in live video provider', () => {
   });
 });
 
+// @traces 1390-FR-002
+describe('closing an input at the stand-in', () => {
+  it('records each input it closed, in order', async () => {
+    const fake = new FakeLiveVideo();
+
+    await fake.closeInput('input-1');
+    await fake.closeInput('input-2');
+
+    expect(fake.closed).toEqual(['input-1', 'input-2']);
+  });
+
+  it('records an input deleted apart from one closed', async () => {
+    const fake = new FakeLiveVideo();
+
+    await fake.deleteInput('input-1');
+
+    expect(fake.deletedInputs).toEqual(['input-1']);
+    expect(fake.closed).toEqual([]);
+  });
+
+  it('deletes nothing, without a word, when no provider is configured', async () => {
+    await expect(NONE.deleteInput('input-1')).resolves.toBeUndefined();
+  });
+});
+
 // @traces 333-FR-018
 describe('deleting a kept recording', () => {
   it('records each recording the stand-in deleted', async () => {

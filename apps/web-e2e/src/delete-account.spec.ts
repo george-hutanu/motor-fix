@@ -138,10 +138,14 @@ for (const [label, viewport] of [
         .getByRole('button', { exact: true, name: TEXT.ro.button })
         .click();
       const dialog = page.getByRole('dialog', { name: TEXT.ro.dialog });
-      await dialog.getByLabel(TEXT.ro.field).fill(email);
-      await dialog
-        .getByRole('button', { exact: true, name: TEXT.ro.button })
-        .click();
+      const field = dialog.getByLabel(TEXT.ro.field);
+      await field.fill(email);
+      await expect(
+        dialog.getByRole('button', { exact: true, name: TEXT.ro.button }),
+      ).toBeEnabled();
+      // This driver's car is in work, so a live toast can land over the
+      // dialog's button on a phone and take the click: submit from the field.
+      await field.press('Enter');
 
       await expect(
         dialog.getByText(

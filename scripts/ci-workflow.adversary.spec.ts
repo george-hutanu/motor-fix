@@ -510,3 +510,70 @@ describe('end-to-end configuration', () => {
     expect(src).not.toMatch(/retries: 0/);
   });
 });
+
+// Split into shards, the suite must still run every integration spec, each
+// shard on its own database, and still gate CI OK and the release.
+describe('the integration suite in shards', () => {
+  const integration = jobBlock(ci, 'integration');
+  const matrix = integration.match(/^ {8}shard: (.+)$/m)?.[1] ?? '';
+  const lists = [...matrix.matchAll(/'(\[[^']*\])'/g)].map((m) =>
+    JSON.parse(m[1]),
+  );
+
+  // @traces 1406-FR-001 1406-FR-006
+  it('runs four domain slices and every other project, or the named files alone', () => {
+    expect(lists).toEqual([
+      ['named specs'],
+      [
+        'domain 1/4',
+        'domain 2/4',
+        'domain 3/4',
+        'domain 4/4',
+        'other projects',
+      ],
+    ]);
+    expect(matrix).toMatch(/^\$\{\{ fromJSON\(inputs\.specs && /);
+  });
+
+  // @traces 1406-FR-001
+  it('takes the shard only from the matrix, nowhere else', () => {
+    expect(integration.match(/^\s+SHARD: .*$/gm)).toEqual([
+      '          SHARD: ${{ matrix.shard }}',
+    ]);
+  });
+
+  // @traces 1406-FR-001
+  it('runs every project but domain in the other shard, and only domain in its slices', () => {
+    const script = allRuns(integration);
+
+    expect(script).toContain(
+      '--projects=domain --passWithNoTests --output-style=static --shard=',
+    );
+    expect(script).toContain(
+      '--exclude=domain --passWithNoTests --output-style=static',
+    );
+    expect(script).toMatch(/\*\) echo "::error::unknown shard/);
+  });
+
+  // @traces 1406-FR-002 1406-FR-003
+  it('gives every shard its own services, store, migration, audit clearing and database report', () => {
+    expect(integration).toMatch(/^ {4}services: &services$/m);
+    expect(jobBlock(ci, 'e2e')).toMatch(/^ {4}services: \*services$/m);
+    for (const step of [
+      'docker compose up -d --wait storage',
+      'prisma migrate deploy',
+      'node scripts/clear-activity-log.ts',
+      'pg_stat_activity',
+      'db-waits.txt',
+    ]) {
+      expect(integration).toContain(step);
+    }
+  });
+
+  // @traces 1406-FR-005
+  it('keeps the shards in CI OK and the release waiting on the whole CI call', () => {
+    expect(jobBlock(ci, 'ci-ok')).toMatch(/needs: \[[^\]]*\bintegration\b/);
+    expect(integration).toMatch(/^ {6}fail-fast: false$/m);
+    expect(jobBlock(release, 'images')).toMatch(/^ {4}needs: checks$/m);
+  });
+});

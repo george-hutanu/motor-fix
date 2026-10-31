@@ -7,10 +7,12 @@ type StartOutcome =
   | 'unavailable'
   | 'stopped';
 type RecordingOutcome = 'discarded' | 'discard_failed';
+type CloseOutcome = 'closed' | 'close_failed';
 type ViewOutcome = 'issued' | 'refused' | 'ended' | 'unavailable';
 type Operation =
   | 'create_input'
   | 'close_input'
+  | 'delete_input'
   | 'delete_recording'
   | 'input_status';
 
@@ -31,6 +33,14 @@ export function countLiveRecording(outcome: RecordingOutcome) {
     .createCounter('motorfix_live_recordings_total', {
       description:
         'Live recording deletes at the provider, the API at the stop and the worker after it, by outcome',
+    })
+    .add(1, { outcome });
+}
+
+export function countLiveInputClose(outcome: CloseOutcome) {
+  meter()
+    .createCounter('motorfix_live_input_closes_total', {
+      description: 'Live input closes at the provider after a stop, by outcome',
     })
     .add(1, { outcome });
 }

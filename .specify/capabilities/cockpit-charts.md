@@ -1,10 +1,11 @@
 ---
 capability: cockpit-charts
-updated: 2026-10-10
+updated: 2026-10-30
 features:
   - 052-chart-style
   - 470-chart-reduced-motion
   - 508-chart-motion-tests
+  - 1397-dashboard-weekly-views
 ---
 
 # Capability: Cockpit charts
@@ -29,9 +30,9 @@ _From 052-chart-style._
 
 _From 052-chart-style._
 
-### 052-FR-005 — Hovering a bar or point on a pointer device MUST show a tooltip of one line, "label · value"; tapping a bar or point on a touch device MUST show the same tooltip, and tapping anywhere else MUST hide it.
+### 1397-FR-009 — The panel MUST draw its charts in the shared chart style (`cockpit-charts`): the shared bar chart with its tokens, grid, tooltip surface, skeleton, retry, assistive summary and "Vezi ca tabel" table, the table reading the missing mark for a null week; the shared chart MUST gain only what this panel needs, a point with no value drawing no bar, an optional value label on the newest bar and an optional per-point tooltip text, each off unless asked for, so every existing chart keeps its look. The bars are not keyboard stops: a keyboard or screen-reader user reaches every week's value through the shared chart's assistive summary and its "Vezi ca tabel" table, and the skeleton is hidden from assistive technology.
 
-_From 052-chart-style._
+_From 1397-dashboard-weekly-views._
 
 ### 052-FR-006 — Every chart colour (bars, line, fill, grid, axis text, tooltip surface and text) MUST come from the Cockpit tokens of the current theme, and a chart on screen MUST redraw in the other theme's tokens when the device switches between dark and light, without a reload.
 
@@ -118,3 +119,5 @@ _From 508-chart-motion-tests._
 _From 508-chart-motion-tests._
 
 ## Retired
+
+- `052-FR-005` — superseded by `1397-FR-009` (2026-10-30)

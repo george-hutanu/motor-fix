@@ -14,7 +14,7 @@ import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 
 import { AdminAccount, type AdminAccountResult } from './admin-account';
 
-// @traces 003-FR-011 003-FR-013 003-FR-017 003-FR-018 003-FR-019
+// @traces 003-FR-011 003-FR-013 003-FR-017 003-FR-018 003-FR-019 1405-FR-001
 
 @Component({ template: '<button id="opener">open</button>' })
 class Host {
@@ -67,6 +67,7 @@ const entry = (
 });
 
 let read: jest.Mock;
+let repairs: jest.Mock;
 let history: jest.Mock;
 let pageAddress: jest.Mock;
 let changed: jest.Mock;
@@ -90,10 +91,26 @@ async function open(
   history ??= jest.fn(async () => ({ items: [], nextCursor: null, total: 0 }));
   pageAddress = jest.fn(async () => ({ url: 'https://files.test/p1' }));
   changed = jest.fn();
+  repairs = jest.fn(async () => ({
+    items: [
+      {
+        car: { brandName: 'Dacia', model: 'Logan', year: 2018 },
+        doneOn: '2025-03-12',
+        id: 'r-1',
+      },
+    ],
+    truncated: false,
+  }));
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
-      { provide: AdminService, useValue: { accountControllerRead: read } },
+      {
+        provide: AdminService,
+        useValue: {
+          accountControllerRead: read,
+          adminRepairsControllerList: repairs,
+        },
+      },
       {
         provide: AuditHistoryService,
         useValue: { auditHistoryControllerList: history },
@@ -310,6 +327,31 @@ describe('the account drawer', () => {
         "Delete at the holder's request",
       ]),
     );
+  });
+});
+
+describe("the account's added repairs", () => {
+  it("lists the account's repairs between its actions and its history", async () => {
+    await open();
+
+    expect(repairs).toHaveBeenCalledWith({ id: 'acc-1' });
+    const headings = [...panel().querySelectorAll('h3')].map((h) => text(h));
+    expect(headings).toEqual([
+      'Detalii',
+      'Acțiuni',
+      'Reparații adăugate',
+      'Istoric',
+    ]);
+    const row = [...panel().querySelectorAll('mf-admin-account-repairs li')];
+    expect(row.map((li) => text(li))).toEqual([
+      '12 mart. 2025 · Dacia Logan 2018 Deschide',
+    ]);
+  });
+
+  it('lists them on an admin account too', async () => {
+    await open(page({ isAdmin: true }));
+
+    expect(panel().querySelector('mf-admin-account-repairs')).not.toBeNull();
   });
 });
 

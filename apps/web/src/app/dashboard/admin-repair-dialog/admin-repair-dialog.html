@@ -1,0 +1,93 @@
+<p class="said mf-message" aria-live="polite" data-part="said">{{ said() }}</p>
+@if (mode() === 'view') {
+  <div class="view">
+    <dl>
+      @for (l of lines(); track l.label) {
+        <dt>{{ l.label }}</dt>
+        <dd>{{ l.value }}</dd>
+      }
+    </dl>
+    @if (corrected()) {
+      <p class="corrected">{{ corrected() }}</p>
+    }
+    <p class="recorded">{{ 'admin.users.dialogs.repair.recorded' | t }}</p>
+    <div class="actions">
+      <button hlmBtn type="button" (click)="correct()">{{ 'admin.users.dialogs.repair.correct' | t }}</button>
+      <button hlmBtn variant="ghost" type="button" (click)="task.close('cancelled')">
+        {{ 'admin.users.dialogs.repair.close' | t }}
+      </button>
+    </div>
+  </div>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save.submit()" novalidate>
+    <dl>
+      <dt>{{ 'admin.users.dialogs.repair.car' | t }}</dt>
+      <dd>{{ car() }}</dd>
+      <dt>{{ 'admin.users.dialogs.repair.garage' | t }}</dt>
+      <dd>{{ repair().garageName }}</dd>
+    </dl>
+    <div class="field">
+      <label for="mf-repair-what">{{ 'admin.users.dialogs.repair.what' | t }}</label>
+      <input
+        hlmInput
+        id="mf-repair-what"
+        type="text"
+        autocomplete="off"
+        formControlName="what"
+        aria-describedby="mf-repair-what-error"
+      />
+      <mf-field-error id="mf-repair-what-error" [save]="save" [control]="form.controls.what" />
+    </div>
+    <div class="field">
+      <label for="mf-repair-date">{{ 'admin.users.dialogs.repair.date' | t }}</label>
+      <input
+        hlmInput
+        id="mf-repair-date"
+        type="date"
+        formControlName="doneOn"
+        [max]="today"
+        aria-describedby="mf-repair-date-error"
+      />
+      <mf-field-error id="mf-repair-date-error" [save]="save" [control]="form.controls.doneOn" />
+    </div>
+    <div class="field">
+      <label for="mf-repair-km">{{ 'admin.users.dialogs.repair.fields.odometer' | t }}</label>
+      <input
+        hlmInput
+        id="mf-repair-km"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        formControlName="odometerKm"
+        aria-describedby="mf-repair-km-error"
+      />
+      <mf-field-error id="mf-repair-km-error" [save]="save" [control]="form.controls.odometerKm" />
+    </div>
+    <div class="field">
+      <label for="mf-repair-amount">{{ 'admin.users.dialogs.repair.fields.amount' | t }}</label>
+      <input
+        hlmInput
+        id="mf-repair-amount"
+        type="text"
+        inputmode="decimal"
+        autocomplete="off"
+        formControlName="costBani"
+        aria-describedby="mf-repair-amount-error"
+      />
+      <mf-field-error id="mf-repair-amount-error" [save]="save" [control]="form.controls.costBani" />
+    </div>
+    @if (failedOtherwise()) {
+      <mf-task-error [save]="save" />
+    }
+    <div class="actions">
+      <button hlmBtn type="submit" [mfTaskSubmit]="save">{{ 'admin.users.dialogs.repair.save' | t }}</button>
+      <button
+        hlmBtn
+        variant="ghost"
+        type="button"
+        [disabled]="save.state() === 'sending'"
+        (click)="cancel()"
+      >{{ 'admin.users.dialogs.repair.cancel' | t }}</button>
+    </div>
+  </form>
+}

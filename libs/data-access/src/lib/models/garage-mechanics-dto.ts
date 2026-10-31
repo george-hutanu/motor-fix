@@ -6,4 +6,5 @@ import { GarageMechanicDto } from '../models/garage-mechanic-dto';
 export interface GarageMechanicsDto {
   brands: Array<GarageBrandOptionDto>;
   items: Array<GarageMechanicDto>;
+  teamOnProfile: boolean;
 }

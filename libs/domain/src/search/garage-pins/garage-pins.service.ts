@@ -18,7 +18,7 @@ import type {
   GarageBrandStance,
   PrismaClient,
 } from '../../generated/prisma/client';
-import { areaSql, within } from '../area/area-sql';
+import { areaSql, roughly, within } from '../area/area-sql';
 import type { AreaRow } from '../area/search-area';
 import { GarageSearchCache } from '../garage-search/garage-search.cache';
 import { recordSearchPins } from '../garage-search/garage-search.metrics';
@@ -35,10 +35,6 @@ interface PinnedOptions {
   point?: SearchPoint;
   radiusKm?: number;
 }
-
-// Two decimals, about a kilometre: a mobile mechanic's pin stands near its
-// area's centre without giving away the seat's address.
-const roughly = (value: number) => Math.round(value * 100) / 100;
 
 @Injectable()
 export class GaragePinsService {

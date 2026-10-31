@@ -6,27 +6,18 @@ import {
   assistantTexts,
   cockpitTexts,
   languageAddress,
-  languageRoot,
   publicTexts,
   toLanguageAddress,
 } from './addresses';
 import { areaGuard } from './dashboard/area.guard';
 import { Home } from './home/home';
 import { NotFound } from './not-found/not-found';
-import { signedInToDashboard } from './public/account.guard';
-import { Placeholder } from './public/placeholder/placeholder';
 
 const frame = () => import('./dashboard/frame/frame').then((m) => m.Frame);
 // On demand, like every other page: the site bar keeps it out of the first
 // download's budget.
 const publicFrame = () =>
   import('./public/frame/frame').then((m) => m.PublicFrame);
-
-const placeholder = (path: string, title: string) => ({
-  component: Placeholder,
-  data: { title },
-  path,
-});
 
 // canMatch, not canActivate: a refused area is never downloaded.
 export const routes: Routes = [
@@ -88,88 +79,9 @@ export const routes: Routes = [
   // Public pages: one address per language, the same path after the prefix.
   {
     canMatch: [languageAddress],
-    children: [
-      { component: Home, matcher: languageRoot },
-      {
-        loadComponent: () =>
-          import('./public/reset-password/reset-password').then(
-            (m) => m.ResetPassword,
-          ),
-        path: 'reset-password/:token',
-      },
-      {
-        loadComponent: () =>
-          import('./public/sign-in-return/sign-in-return').then(
-            (m) => m.SignInReturn,
-          ),
-        path: 'sign-in/return',
-      },
-      {
-        loadComponent: () =>
-          import('./public/results/results').then((m) => m.Results),
-        path: 'garages',
-      },
-      {
-        loadComponent: () =>
-          import('./public/garage-profile/garage-profile').then(
-            (m) => m.GarageProfile,
-          ),
-        path: 'garages/:garage',
-      },
-      placeholder('mechanics/:mechanic', 'public.placeholder.mechanics'),
-      {
-        loadComponent: () =>
-          import('./public/confirm-email/confirm-email').then(
-            (m) => m.ConfirmEmail,
-          ),
-        path: 'confirm-email/:token',
-      },
-      {
-        loadComponent: () =>
-          import('./public/unsubscribe/unsubscribe').then((m) => m.Unsubscribe),
-        path: 'unsubscribe/:token',
-      },
-      {
-        loadComponent: () =>
-          import('./public/invite/invite').then((m) => m.InvitePage),
-        path: 'invite/:token',
-      },
-      {
-        loadComponent: () =>
-          import('./public/list-your-garage/list-your-garage').then(
-            (m) => m.ListYourGarage,
-          ),
-        path: 'list-your-garage',
-        title: () => inject(I18n).t('public.listing.heading'),
-      },
-      {
-        loadComponent: () =>
-          import('./public/contact/contact-page/contact-page').then(
-            (m) => m.ContactPage,
-          ),
-        path: 'contact',
-        title: () => inject(I18n).t('public.contact.heading'),
-      },
-      ...(['terms', 'privacy'] as const).map((text) => ({
-        data: { text },
-        loadComponent: () =>
-          import('./public/legal/legal').then((m) => m.Legal),
-        path: text,
-        title: () => inject(I18n).t(`public.legal.${text}.title`),
-      })),
-      {
-        loadComponent: () =>
-          import('./public/review-rules/review-rules').then(
-            (m) => m.ReviewRules,
-          ),
-        path: 'review-rules',
-        title: () => inject(I18n).t('public.reviewRules.title'),
-      },
-      {
-        ...placeholder('account', 'public.placeholder.account'),
-        canActivate: [signedInToDashboard],
-      },
-    ],
+    // On demand with the frame: the pages' entries stay out of the first
+    // download, whose budget the production build enforces.
+    loadChildren: () => import('./public/routes').then((m) => m.publicChildren),
     loadComponent: publicFrame,
     path: ':lang',
   },

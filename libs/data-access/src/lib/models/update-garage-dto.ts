@@ -14,4 +14,9 @@ export interface UpdateGarageDto {
    * All three; at least one true
    */
   paymentMethods?: PaymentMethodsDto;
+
+  /**
+   * Whether the team appears on the public profile
+   */
+  teamOnProfile?: boolean;
 }

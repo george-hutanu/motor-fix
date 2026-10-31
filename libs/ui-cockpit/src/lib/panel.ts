@@ -46,8 +46,11 @@ import { RouterLink } from '@angular/router';
     :host(:nth-child(n + 12 of mf-panel)) {
       --mf-panel-step: 11;
     }
+    /* A host lays panels side by side and reserves the lines the longest
+       title takes, so one that wraps does not push its panel's rows down. */
     h2 {
       margin: 0 0 var(--mf-space-4);
+      min-block-size: var(--mf-panel-heading-block, auto);
       color: var(--mf-text-secondary);
     }
     h2 a {

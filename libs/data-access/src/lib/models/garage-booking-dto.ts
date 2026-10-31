@@ -34,6 +34,11 @@ export interface GarageBookingDto {
   mechanicId: string | null;
   moveCount: number;
   noShowAt: string | null;
+
+  /**
+   * The account that recorded the no-show
+   */
+  noShowRecordedBy: string | null;
   quoteId: string;
   startsAt: string;
   status: 'awaiting_confirmation' | 'confirmed' | 'lapsed' | 'cancelled' | 'no_show' | 'completed';

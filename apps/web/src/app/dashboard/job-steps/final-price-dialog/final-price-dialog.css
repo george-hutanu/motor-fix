@@ -20,6 +20,19 @@ input {
   min-height: var(--mf-tap);
   box-sizing: border-box;
 }
+.quote {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1) var(--mf-space-2);
+  margin: 0;
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+  overflow-wrap: anywhere;
+}
+.above {
+  color: var(--mf-amber-ink);
+  font-weight: 600;
+}
 .offline {
   margin: 0;
   color: var(--mf-red-ink);

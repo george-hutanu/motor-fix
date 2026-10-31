@@ -20,7 +20,8 @@ import { hoursLines } from './hours-lines';
 import { Consent } from '../../../consent/consent';
 
 // Where the garage is and when it is open. A mobile mechanic is shown by the
-// area it comes to, never by an address; with neither a place nor hours the
+// area it comes to, never by an address, and on a map of that area when the
+// answer carries its rounded centre; with neither a place nor hours the
 // section shows nothing. A workshop with a point also gets a small map of it
 // and directions in the maps app of the driver's device.
 @Component({
@@ -63,9 +64,22 @@ export class WhereSection {
   // A workshop's point, as the answer carries it.
   protected readonly point = computed(() => {
     const { latitude: lat, longitude: lng } = this.garage();
-    if (this.mobile() || typeof lat !== 'number' || typeof lng !== 'number')
-      return undefined;
+    if (this.mobile() || !finite(lat) || !finite(lng)) return undefined;
     return { lat, lng };
+  });
+  // What the map draws: a workshop's point, or a mobile mechanic's area as
+  // its rounded centre and the radius it travels.
+  protected readonly map = computed(() => {
+    if (!this.mobile()) {
+      const at = this.point();
+      return at && { at, km: undefined };
+    }
+    const { areaLat: lat, areaLng: lng, serviceRadiusKm: km } = this.garage();
+    if (!finite(lat) || !finite(lng)) return undefined;
+    return {
+      at: { lat, lng },
+      km: km ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM,
+    };
   });
   // The map went (its image or the interactive map failed); a new garage
   // tries again.
@@ -97,3 +111,6 @@ export class WhereSection {
     this.consent.track('directions_opened', { platform: this.platform() });
   }
 }
+
+const finite = (value: number | null | undefined): value is number =>
+  Number.isFinite(value);

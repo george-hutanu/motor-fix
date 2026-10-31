@@ -12,26 +12,35 @@
         <article [attr.data-car]="car.id" tabindex="-1">
           <div class="head">
             <p class="name">{{ car.brandName }} {{ car.model }}</p>
-            <hlm-popover align="end" sideOffset="4">
-              <button
-                type="button"
-                class="more"
-                hlmPopoverTrigger
-                [attr.aria-haspopup]="'menu'"
-                [attr.aria-label]="'driver.cars.menu.name' | t: { car: car.brandName + ' ' + car.model }"
-              >
-                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                  <circle cx="4" cy="10" r="1.75" />
-                  <circle cx="10" cy="10" r="1.75" />
-                  <circle cx="16" cy="10" r="1.75" />
-                </svg>
-              </button>
-              <div hlmPopoverContent class="menu" role="menu" *hlmPopoverPortal="let ctx" (keydown)="moveIn($event)">
-                <button type="button" role="menuitem" (click)="ctx.close(); edit(car)">{{ 'driver.cars.menu.edit' | t }}</button>
-                <button type="button" role="menuitem" (click)="ctx.close(); remove(car)">{{ 'driver.cars.menu.remove' | t }}</button>
-              </div>
-            </hlm-popover>
+            @if (!car.transfer) {
+              <hlm-popover align="end" sideOffset="4">
+                <button
+                  type="button"
+                  class="more"
+                  hlmPopoverTrigger
+                  [attr.aria-haspopup]="'menu'"
+                  [attr.aria-label]="'driver.cars.menu.name' | t: { car: car.brandName + ' ' + car.model }"
+                >
+                  <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <circle cx="4" cy="10" r="1.75" />
+                    <circle cx="10" cy="10" r="1.75" />
+                    <circle cx="16" cy="10" r="1.75" />
+                  </svg>
+                </button>
+                <div hlmPopoverContent class="menu" role="menu" *hlmPopoverPortal="let ctx" (keydown)="moveIn($event)">
+                  <button type="button" role="menuitem" (click)="ctx.close(); edit(car)">{{ 'driver.cars.menu.edit' | t }}</button>
+                  <button type="button" role="menuitem" (click)="ctx.close(); remove(car)">{{ 'driver.cars.menu.remove' | t }}</button>
+                  <button type="button" role="menuitem" (click)="ctx.close(); sell(car)">{{ 'driver.cars.menu.sell' | t }}</button>
+                </div>
+              </hlm-popover>
+            }
           </div>
+          @if (car.transfer; as transfer) {
+            <p class="transfer">
+              <span>{{ 'driver.cars.transfer.line' | t: { day: transferDay(transfer.expiresAt) } }}</span>
+              <button type="button" (click)="cancelTransfer(car)">{{ 'driver.cars.transfer.cancel' | t }}</button>
+            </p>
+          }
           <p>{{ car.year }} · {{ car.odometerKm | km }}</p>
           @if (car.plate) {
             <p>{{ grouped(car.plate) }}</p>

@@ -405,11 +405,14 @@ describe('GarageRequestsFeed: the quotes sent', () => {
     const accepted = quotedRow(
       {
         booking: {
+          canRecordNoShow: false,
+          canWithdrawNoShow: false,
           confirmBy: new Date(Date.now() + 3_600_000).toISOString(),
           durationMinutes: 90,
           id: 'booking-1',
           lift: null,
           mechanic: null,
+          noShowAt: null,
           startsAt: new Date(Date.now() + 86_400_000).toISOString(),
           status: 'awaiting_confirmation',
           toReassign: false,
@@ -441,11 +444,14 @@ describe('GarageRequestsFeed: the quotes sent', () => {
       const awaiting = quotedRow(
         {
           booking: {
+            canRecordNoShow: false,
+            canWithdrawNoShow: false,
             confirmBy: new Date(Date.now() + 3_600_000).toISOString(),
             durationMinutes: 90,
             id: 'booking-1',
             lift: null,
             mechanic: null,
+            noShowAt: null,
             startsAt: new Date(Date.now() + 86_400_000).toISOString(),
             status: 'awaiting_confirmation',
             toReassign: false,

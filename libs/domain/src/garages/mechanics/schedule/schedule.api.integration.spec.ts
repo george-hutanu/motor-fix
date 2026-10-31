@@ -897,6 +897,39 @@ describe('removing a day off', () => {
 
 // @traces 058-FR-010
 describe('the history and the live channel of a schedule', () => {
+  // @traces 059-FR-011
+  it("reaches the mechanic's public page only while the profile shows the card", async () => {
+    const { dinamo, owner, vlad } = await world();
+    await prisma.garage.update({
+      data: { status: 'approved' },
+      where: { id: dinamo.id },
+    });
+    const card = await prisma.mechanic.update({
+      data: { onProfile: true },
+      where: { accountId: vlad },
+    });
+    const hours = {
+      workingHours: week([['08:00', '16:30']], { sat: [['09:00', '13:00']] }),
+      worksSaturdays: false,
+    };
+
+    await write(dinamo.id, card.id, hours, owner);
+    await prisma.garage.update({
+      data: { teamOnProfile: false },
+      where: { id: dinamo.id },
+    });
+    await write(dinamo.id, card.id, { ...hours, worksSaturdays: true }, owner);
+
+    const [shown, hidden] = await outbox();
+    expect(shown.audience).toEqual(
+      expect.arrayContaining([`public:mechanic:${card.id}`]),
+    );
+    expect(hidden.audience).toEqual([
+      `garage:${dinamo.id}`,
+      `mechanic:${card.id}`,
+    ]);
+  });
+
   it('records one entry per changed field with the old and new value, and none for one unchanged', async () => {
     const { dinamo, elena, mihai, owner } = await world();
     const hours = week([['08:00', '16:30']], { sat: [['09:00', '13:00']] });

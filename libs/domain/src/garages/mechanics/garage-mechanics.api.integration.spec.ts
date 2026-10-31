@@ -116,12 +116,17 @@ const edit = (
 const remove = (garageId: string, mechanicId: string, auth?: string) =>
   signed(http().delete(`/garages/${garageId}/mechanics/${mechanicId}`), auth);
 
-// Atelier Dinamo: its owner Mihai (who has a card of his own), a receptionist,
-// a mechanic with an account, and cards with none; Atelier Nord with its owner.
+// Atelier Dinamo (approved): its owner Mihai (who has a card of his own), a
+// receptionist, a mechanic with an account, and cards with none; Atelier Nord
+// with its owner.
 // `ownerRow` marks Mihai's card as the owner's row garage creation writes.
 async function world({ ownerRow = false } = {}) {
   const dinamo = await prisma.garage.create({
-    data: { name: 'Atelier Dinamo', slug: `dinamo-${randomUUID()}` },
+    data: {
+      name: 'Atelier Dinamo',
+      slug: `dinamo-${randomUUID()}`,
+      status: 'approved',
+    },
   });
   const nord = await prisma.garage.create({
     data: { name: 'Atelier Nord', slug: `nord-${randomUUID()}` },
@@ -320,8 +325,10 @@ const blank = {
   rating: null,
   reviewCount: 0,
   roleTitle: null,
+  shown: false,
   speciality: null,
   specialties: [],
+  takesDirectRequests: true,
   years: null,
 };
 
@@ -360,9 +367,11 @@ describe("reading the garage's team", () => {
           onProfile: true,
           rating: '4.9',
           reviewCount: 58,
+          shown: true,
           speciality: 'Frâne, suspensie',
         },
       ],
+      teamOnProfile: true,
     });
   });
 
@@ -372,7 +381,7 @@ describe("reading the garage's team", () => {
     const res = await team(nord.id, bearer(radu, 'garage'));
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ brands: [], items: [] });
+    expect(res.body).toEqual({ brands: [], items: [], teamOnProfile: true });
   });
 
   // @traces 055-FR-004

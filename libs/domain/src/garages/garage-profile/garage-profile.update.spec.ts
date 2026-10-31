@@ -506,3 +506,171 @@ describe("the owner's profile save: what it writes", () => {
     expect(h.events.record).not.toHaveBeenCalled();
   });
 });
+
+const GROUP = {
+  courtesyCar: { paid: true, pricePerDayBani: 15000 },
+  facilities: ['courtesy_car', 'waiting_area'],
+  facilitiesNote: 'Cafea',
+  paymentMethods: { card: false, cash: true, transfer: true },
+};
+
+// @traces 1248-FR-003
+// @traces 1248-FR-004
+describe("the owner's profile save: the facilities group", () => {
+  it('answers 400 no_courtesy_car to terms without the car before a stale stamp, writing nothing', async () => {
+    const h = harness();
+
+    const r = await refused(
+      h.save({
+        facilities: { ...GROUP, facilities: ['waiting_area'] },
+        version: '3',
+      }),
+    );
+
+    expect(r).toMatchObject({
+      errors: [{ code: 'no_courtesy_car', field: 'courtesyCar' }],
+      status: 400,
+    });
+    nothingWritten(h);
+  });
+
+  it('answers 400 no_courtesy_car to the car ticked without terms', async () => {
+    const h = harness();
+
+    const r = await refused(
+      h.save({
+        facilities: { ...GROUP, courtesyCar: undefined },
+        version: '7',
+      }),
+    );
+
+    expect(fieldsOf(r)).toEqual(['courtesyCar']);
+    nothingWritten(h);
+  });
+
+  it('names a broken field by its path inside the group', async () => {
+    const h = harness();
+
+    const r = await refused(
+      h.save({
+        facilities: {
+          ...GROUP,
+          courtesyCar: { paid: true, pricePerDayBani: 99 },
+        },
+        version: '7',
+      }),
+    );
+
+    expect(fieldsOf(r)).toEqual(['facilities.courtesyCar.pricePerDayBani']);
+  });
+
+  it('skips the hours write when the facilities and note are the same', async () => {
+    const h = harness();
+
+    await h.save({
+      facilities: {
+        ...GROUP,
+        facilities: ['waiting_area', 'courtesy_car'],
+        facilitiesNote: ' Cafea ',
+      },
+      version: '7',
+    });
+
+    nothingWritten(h);
+  });
+
+  it('hands the hours write the stored week and closed days with the new facilities', async () => {
+    const h = harness({
+      closed_days: [{ day: '2026-12-27', note: 'Inventar' }],
+    });
+
+    await h.save({
+      facilities: { ...GROUP, facilities: ['courtesy_car', 'pickup_dropoff'] },
+      version: '7',
+    });
+
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write.mock.calls[0][2]).toEqual({
+      closedDays: [{ day: '2026-12-27', note: 'Inventar' }],
+      courtesyCar: { paid: true, pricePerDayBani: 15000 },
+      facilities: ['courtesy_car', 'pickup_dropoff'],
+      facilitiesNote: 'Cafea',
+      hours: WEEK,
+      payments: ['cash', 'transfer'],
+    });
+    expect(h.events.record).toHaveBeenCalledWith(
+      h.tx,
+      expect.objectContaining({
+        audience: { garageId: GARAGE, results: true, type: 'public_garage' },
+        payload: { fields: ['facilities'], garageId: GARAGE },
+      }),
+    );
+  });
+
+  it('writes the payment and courtesy columns it changed, one entry each, without the hours write', async () => {
+    const h = harness();
+
+    await h.save({
+      facilities: {
+        ...GROUP,
+        courtesyCar: { paid: false },
+        paymentMethods: { card: true, cash: true, transfer: true },
+      },
+      version: '7',
+    });
+
+    expect(write).not.toHaveBeenCalled();
+    expect(h.tx.garage.updateMany).toHaveBeenCalledWith({
+      data: {
+        courtesyCarPaid: false,
+        courtesyCarPricePerDayBani: null,
+        paymentCard: true,
+        profileVersion: { increment: 1 },
+      },
+      where: { id: GARAGE, profileVersion: 7 },
+    });
+    expect(h.audit.recordChanges).toHaveBeenCalledWith(
+      h.tx,
+      expect.objectContaining({ subjectType: 'garage' }),
+      {
+        courtesy_car_paid: true,
+        courtesy_car_price_per_day_bani: 15000,
+        payment_card: false,
+      },
+      {
+        courtesy_car_paid: false,
+        courtesy_car_price_per_day_bani: null,
+        payment_card: true,
+      },
+    );
+    expect(h.events.record).toHaveBeenCalledWith(
+      h.tx,
+      expect.objectContaining({
+        audience: { garageId: GARAGE, results: true, type: 'public_garage' },
+        payload: {
+          fields: ['courtesy_car', 'payment_methods'],
+          garageId: GARAGE,
+        },
+      }),
+    );
+  });
+
+  it('keeps the stored terms when the car is unticked', async () => {
+    const h = harness();
+
+    await h.save({
+      facilities: {
+        ...GROUP,
+        courtesyCar: undefined,
+        facilities: ['waiting_area'],
+      },
+      version: '7',
+    });
+
+    expect(h.tx.garage.updateMany).toHaveBeenCalledWith({
+      data: { profileVersion: { increment: 1 } },
+      where: { id: GARAGE, profileVersion: 7 },
+    });
+    expect(h.audit.recordChanges).not.toHaveBeenCalled();
+  });
+});

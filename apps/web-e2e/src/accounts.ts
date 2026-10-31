@@ -61,6 +61,20 @@ export async function settled(page: Page) {
   await page.waitForFunction(() => !document.querySelector('[ngh]'));
 }
 
+// Hydrated is not yet listening: with event replay, Angular holds a hydrated
+// node's listeners back and queues what the person does until the app is
+// first stable, then replays it and clears its early event contract
+// (window._ejsas[appId]). A key pressed before that may land only seconds
+// later. Wait for the contract to be cleared before asserting what a key does.
+export async function listening(page: Page, path?: string) {
+  await hydrated(page, path);
+  await page.waitForFunction(() =>
+    Object.values(
+      (window as { _ejsas?: Record<string, unknown> })._ejsas ?? {},
+    ).every((contract) => contract === undefined),
+  );
+}
+
 // The results map shows a static image until the driver asks for the
 // interactive one: a test that drives MapLibre asks for it first, through the
 // map's control, and waits for the static layer to go (it also goes when the

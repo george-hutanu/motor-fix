@@ -21,6 +21,7 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import { SearchModule } from '../../search/search.module';
 import { UNUSED_STORAGE } from '../../storage/s3-test-store';
 import { StorageModule } from '../../storage/storage.module';
 import { GaragesModule } from '../garages.module';
@@ -65,6 +66,7 @@ beforeAll(async () => {
       auth,
       notifications,
       StorageModule.register(UNUSED_STORAGE),
+      SearchModule,
       GaragesModule.register(email, notifications, {
         skipManualApproval: false,
       }),
@@ -773,5 +775,603 @@ describe('PATCH /garages/:garageId/profile: hours and closed days', () => {
       expect.objectContaining({ field: 'hours' }),
     ]);
     await nothingWritten(w, before);
+  });
+});
+
+// A cash-only garage with the waiting area and a free courtesy car.
+const CASH = { card: false, cash: true, transfer: false };
+const listing = (data: Parameters<typeof world>[0] = {}) =>
+  world({ paymentCash: true, ...data });
+
+const facilitiesGroup = (group: object = {}) => ({
+  courtesyCar: { paid: false },
+  facilities: ['courtesy_car', 'waiting_area'],
+  facilitiesNote: 'Cafea și Wi-Fi',
+  paymentMethods: CASH,
+  ...group,
+});
+
+const saveGroup = (w: World, group: object = {}, version = '0') =>
+  patch(w, { facilities: facilitiesGroup(group), version });
+
+const terms = (garageId: string) =>
+  prisma.garage.findUniqueOrThrow({
+    select: {
+      courtesyCarPaid: true,
+      courtesyCarPricePerDayBani: true,
+      facilitiesNote: true,
+      paymentCard: true,
+      paymentCash: true,
+      paymentTransfer: true,
+      profileVersion: true,
+    },
+    where: { id: garageId },
+  });
+
+const facilityHistory = async (garageId: string) =>
+  (
+    await prisma.activityLog.findMany({
+      orderBy: { action: 'asc' },
+      where: { at: { gte: since }, garageId, subjectType: 'garage_facility' },
+    })
+  ).map((e) => [e.action, e.oldValue ?? e.newValue]);
+
+const changes = async (garageId: string) =>
+  (await history(garageId)).map((e) => [e.field, e.oldValue, e.newValue]);
+
+const fieldsOf = async (garageId: string) => {
+  const saved = await events(garageId);
+  expect(saved).toHaveLength(1);
+  return saved[0];
+};
+
+// @traces 1248-FR-004
+// @traces 1248-FR-006
+// @traces 1248-FR-007
+describe('PATCH /garages/:garageId/profile: the facilities', () => {
+  it('ticks a facility: one row, one create entry, one event searched', async () => {
+    const w = await listing();
+
+    const res = await saveGroup(w, {
+      facilities: ['courtesy_car', 'pickup_dropoff', 'waiting_area'],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      facilities: ['courtesy_car', 'pickup_dropoff', 'waiting_area'],
+      version: '1',
+    });
+    expect(await facilities(w.nord.id)).toEqual([
+      'courtesy_car',
+      'pickup_dropoff',
+      'waiting_area',
+    ]);
+    expect(await facilityHistory(w.nord.id)).toEqual([
+      ['create', { facility: 'pickup_dropoff' }],
+    ]);
+    const event = await fieldsOf(w.nord.id);
+    expect(event.payload).toEqual({
+      fields: ['facilities'],
+      garageId: w.nord.id,
+    });
+    expect(event.audience).toContain('public:search');
+  });
+
+  it('unticks a facility: the row goes with one delete entry', async () => {
+    const w = await listing();
+
+    await saveGroup(w, {
+      courtesyCar: undefined,
+      facilities: ['waiting_area'],
+    }).expect(200);
+
+    expect(await facilities(w.nord.id)).toEqual(['waiting_area']);
+    expect(await facilityHistory(w.nord.id)).toEqual([
+      ['delete', { facility: 'courtesy_car' }],
+    ]);
+  });
+
+  it('ticks one and unticks another in one save under one event', async () => {
+    const w = await listing();
+
+    await saveGroup(w, {
+      facilities: ['courtesy_car', 'pickup_dropoff'],
+    }).expect(200);
+
+    expect(await facilityHistory(w.nord.id)).toEqual([
+      ['create', { facility: 'pickup_dropoff' }],
+      ['delete', { facility: 'waiting_area' }],
+    ]);
+    expect((await fieldsOf(w.nord.id)).payload).toEqual({
+      fields: ['facilities'],
+      garageId: w.nord.id,
+    });
+  });
+
+  it('answers what GET answers, with the new stamp', async () => {
+    const w = await listing();
+
+    const res = await saveGroup(w, {
+      facilities: ['courtesy_car', 'pickup_dropoff', 'waiting_area'],
+    });
+
+    const read = await http()
+      .get(`/garages/${w.nord.id}/profile`)
+      .set('Authorization', w.owner);
+    expect(res.body).toEqual(read.body);
+  });
+
+  it('keeps the week and every closed day when only the facilities move', async () => {
+    const w = await listing();
+    const day = dayAhead(20);
+    await prisma.garageClosedDay.create({
+      data: {
+        day: new Date(`${day}T00:00:00Z`),
+        garageId: w.nord.id,
+        note: 'Inventar',
+      },
+    });
+
+    await saveGroup(w, {
+      facilities: ['courtesy_car', 'pickup_dropoff', 'waiting_area'],
+    }).expect(200);
+
+    expect((await stored(w.nord.id)).hours).toEqual(WEEK);
+    expect(await closedDays(w.nord.id)).toEqual([{ day, note: 'Inventar' }]);
+    expect(await changes(w.nord.id)).toEqual([]);
+  });
+
+  it('saves the facilities with the hours in one save and one event', async () => {
+    const w = await listing();
+
+    await patch(w, {
+      facilities: facilitiesGroup({
+        facilities: ['courtesy_car', 'pickup_dropoff', 'waiting_area'],
+      }),
+      hours: SATURDAY,
+      version: '0',
+    }).expect(200);
+
+    expect((await stored(w.nord.id)).hours).toEqual(SATURDAY);
+    expect(await facilities(w.nord.id)).toContain('pickup_dropoff');
+    expect((await fieldsOf(w.nord.id)).payload).toEqual({
+      fields: ['hours', 'facilities'],
+      garageId: w.nord.id,
+    });
+  });
+
+  it.each([
+    ['an unknown facility', { facilities: ['valet'] }, 'facilities.facilities'],
+    [
+      'a facility twice',
+      { courtesyCar: undefined, facilities: ['waiting_area', 'waiting_area'] },
+      'facilities.facilities',
+    ],
+    ['no facilities key', { facilities: undefined }, 'facilities.facilities'],
+    [
+      'no payment methods key',
+      { paymentMethods: undefined },
+      'facilities.paymentMethods',
+    ],
+  ])(
+    'answers 400 to %s naming it, and writes nothing',
+    async (_, group, field) => {
+      const w = await listing();
+      const before = await stored(w.nord.id);
+
+      const res = await saveGroup(w, group);
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('validation_failed');
+      expect(res.body.errors.map((e: { field: string }) => e.field)).toEqual([
+        field,
+      ]);
+      await nothingWritten(w, before);
+      expect(await facilityHistory(w.nord.id)).toEqual([]);
+    },
+  );
+});
+
+// @traces 1248-FR-008
+describe('PATCH /garages/:garageId/profile: the facilities on the public read', () => {
+  it('drops the cached public profile so it lists the new facility', async () => {
+    const w = await listing();
+    await http().get(`/garages/${w.nord.slug}`).expect(200);
+    const key = cacheKey('profile', w.nord.slug, NO_BRAND);
+    expect(await redis.get(key)).not.toBeNull();
+
+    await saveGroup(w, {
+      facilities: ['courtesy_car', 'pickup_dropoff', 'waiting_area'],
+    }).expect(200);
+    await purgeAudience(redis, (await fieldsOf(w.nord.id)).audience);
+
+    expect(await redis.get(key)).toBeNull();
+    const open = await http().get(`/garages/${w.nord.slug}`);
+    expect(open.body.facilities).toContain('pickup_dropoff');
+  });
+
+  it('carries the search audience whenever the facilities or payments move', async () => {
+    const w = await listing();
+
+    await saveGroup(w, {
+      paymentMethods: { card: true, cash: true, transfer: false },
+    }).expect(200);
+
+    const event = await fieldsOf(w.nord.id);
+    expect(event.payload).toEqual({
+      fields: ['payment_methods'],
+      garageId: w.nord.id,
+    });
+    expect(event.audience).toContain('public:search');
+  });
+
+  it('lets a card search find the garage on the first read after the save', async () => {
+    const w = await listing({ latitude: 46.771, longitude: 23.624 });
+    const slug = `dacia-${randomUUID()}`;
+    const { id: brandId } = await prisma.brand.create({
+      data: { key: slug, name: 'Dacia', slug },
+    });
+    await prisma.garageBrand.create({
+      data: { brandId, garageId: w.nord.id, stance: 'works_on' },
+    });
+    const search = () =>
+      http()
+        .get('/search/garages')
+        .query({ brand: slug, card: '1', near: '46.771,23.624' });
+    expect((await search().expect(200)).body.total).toBe(0);
+
+    await saveGroup(w, {
+      paymentMethods: { card: true, cash: true, transfer: false },
+    }).expect(200);
+    await purgeAudience(redis, (await fieldsOf(w.nord.id)).audience);
+
+    expect((await search().expect(200)).body.total).toBe(1);
+  });
+
+  it('keeps search out of the audience for the note alone', async () => {
+    const w = await listing();
+
+    await saveGroup(w, { facilitiesNote: 'Cafea' }).expect(200);
+
+    expect((await fieldsOf(w.nord.id)).audience).not.toContain('public:search');
+  });
+});
+
+// @traces 1248-FR-002
+// @traces 1248-FR-003
+// @traces 1248-FR-006
+describe('PATCH /garages/:garageId/profile: the courtesy car', () => {
+  it('prices the car at 150 lei a day with one entry per column', async () => {
+    const w = await listing();
+
+    const res = await saveGroup(w, {
+      courtesyCar: { paid: true, pricePerDayBani: 15_000 },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.courtesyCar).toEqual({
+      paid: true,
+      pricePerDayBani: 15_000,
+    });
+    expect(await terms(w.nord.id)).toMatchObject({
+      courtesyCarPaid: true,
+      courtesyCarPricePerDayBani: 15_000,
+    });
+    expect(await changes(w.nord.id)).toEqual([
+      ['courtesy_car_paid', false, true],
+      ['courtesy_car_price_per_day_bani', null, 15_000],
+    ]);
+    for (const entry of await history(w.nord.id)) {
+      expect(entry).toMatchObject({ action: 'update', actorId: w.mihai });
+    }
+    expect((await fieldsOf(w.nord.id)).payload).toEqual({
+      fields: ['courtesy_car'],
+      garageId: w.nord.id,
+    });
+  });
+
+  it('makes a paid car free and clears its price', async () => {
+    const w = await listing({
+      courtesyCarPaid: true,
+      courtesyCarPricePerDayBani: 15_000,
+    });
+
+    await saveGroup(w, { courtesyCar: { paid: false } }).expect(200);
+
+    expect(await terms(w.nord.id)).toMatchObject({
+      courtesyCarPaid: false,
+      courtesyCarPricePerDayBani: null,
+    });
+  });
+
+  it('ticks the car and prices it in one save', async () => {
+    const w = await listing();
+    await prisma.garageFacility.deleteMany({
+      where: { facility: 'courtesy_car', garageId: w.nord.id },
+    });
+
+    await saveGroup(w, {
+      courtesyCar: { paid: true, pricePerDayBani: 5000 },
+    }).expect(200);
+
+    expect(await facilities(w.nord.id)).toContain('courtesy_car');
+    expect((await terms(w.nord.id)).courtesyCarPricePerDayBani).toBe(5000);
+  });
+
+  it('keeps the stored terms, unaudited, when the car is unticked', async () => {
+    const w = await listing({
+      courtesyCarPaid: true,
+      courtesyCarPricePerDayBani: 15_000,
+    });
+
+    const res = await saveGroup(w, {
+      courtesyCar: undefined,
+      facilities: ['waiting_area'],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.courtesyCar).toBeUndefined();
+    expect(await terms(w.nord.id)).toMatchObject({
+      courtesyCarPaid: true,
+      courtesyCarPricePerDayBani: 15_000,
+    });
+    expect(await changes(w.nord.id)).toEqual([]);
+  });
+
+  it.each([100, 200_000])('takes a price of %p bani', async (price) => {
+    const w = await listing();
+
+    await saveGroup(w, {
+      courtesyCar: { paid: true, pricePerDayBani: price },
+    }).expect(200);
+
+    expect((await terms(w.nord.id)).courtesyCarPricePerDayBani).toBe(price);
+  });
+
+  it.each([
+    ['99 bani', { paid: true, pricePerDayBani: 99 }],
+    ['200,100 bani', { paid: true, pricePerDayBani: 200_100 }],
+    ['150 bani, off the step', { paid: true, pricePerDayBani: 150 }],
+    ['paid without a price', { paid: true }],
+    ['free with a price', { paid: false, pricePerDayBani: 5000 }],
+  ])('answers 400 to %s naming the price', async (_, courtesyCar) => {
+    const w = await listing();
+    const before = await stored(w.nord.id);
+
+    const res = await saveGroup(w, { courtesyCar });
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors.map((e: { field: string }) => e.field)).toEqual([
+      'facilities.courtesyCar.pricePerDayBani',
+    ]);
+    await nothingWritten(w, before);
+  });
+
+  it.each([
+    [
+      'terms without the car',
+      { courtesyCar: { paid: false }, facilities: ['waiting_area'] },
+    ],
+    ['the car without terms', { courtesyCar: undefined }],
+  ])(
+    'answers 400 no_courtesy_car to %s, and writes nothing',
+    async (_, group) => {
+      const w = await listing();
+      const before = await stored(w.nord.id);
+
+      const res = await saveGroup(w, group);
+
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({
+        code: 'validation_failed',
+        errors: [{ code: 'no_courtesy_car', field: 'courtesyCar' }],
+      });
+      await nothingWritten(w, before);
+      expect(await facilityHistory(w.nord.id)).toEqual([]);
+    },
+  );
+});
+
+// @traces 1248-FR-002
+// @traces 1248-FR-006
+// @traces 1248-FR-008
+describe('PATCH /garages/:garageId/profile: the payment methods', () => {
+  it.each([
+    ['card', { card: true, cash: true, transfer: false }],
+    ['transfer', { card: false, cash: true, transfer: true }],
+  ])('ticks %s with one entry', async (method, paymentMethods) => {
+    const w = await listing();
+
+    const res = await saveGroup(w, { paymentMethods });
+
+    expect(res.status).toBe(200);
+    expect(res.body.paymentMethods).toEqual(paymentMethods);
+    expect(await changes(w.nord.id)).toEqual([
+      [`payment_${method}`, false, true],
+    ]);
+  });
+
+  it('swaps cash for card with one entry each', async () => {
+    const w = await listing();
+
+    await saveGroup(w, {
+      paymentMethods: { card: true, cash: false, transfer: false },
+    }).expect(200);
+
+    expect(await changes(w.nord.id)).toEqual([
+      ['payment_card', false, true],
+      ['payment_cash', true, false],
+    ]);
+  });
+
+  it('answers 400 when no method is ticked, and writes nothing', async () => {
+    const w = await listing();
+    const before = await stored(w.nord.id);
+
+    const res = await saveGroup(w, {
+      paymentMethods: { card: false, cash: false, transfer: false },
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors.map((e: { field: string }) => e.field)).toEqual([
+      'facilities.paymentMethods',
+    ]);
+    await nothingWritten(w, before);
+  });
+});
+
+// @traces 1248-FR-001
+// @traces 1248-FR-002
+// @traces 1248-FR-006
+describe('PATCH /garages/:garageId/profile: the facilities note', () => {
+  it('stores the note trimmed with one facilitiesNote entry', async () => {
+    const w = await listing();
+
+    await saveGroup(w, { facilitiesNote: '  Cafea, Wi-Fi și ziare ' }).expect(
+      200,
+    );
+
+    expect((await terms(w.nord.id)).facilitiesNote).toBe(
+      'Cafea, Wi-Fi și ziare',
+    );
+    expect(await changes(w.nord.id)).toEqual([
+      ['facilitiesNote', 'Cafea și Wi-Fi', 'Cafea, Wi-Fi și ziare'],
+    ]);
+    expect((await fieldsOf(w.nord.id)).payload).toEqual({
+      fields: ['facilities_note'],
+      garageId: w.nord.id,
+    });
+  });
+
+  it.each([[''], ['   '], [undefined]])(
+    'clears the note sent as %p',
+    async (facilitiesNote) => {
+      const w = await listing();
+
+      await saveGroup(w, { facilitiesNote }).expect(200);
+
+      expect((await terms(w.nord.id)).facilitiesNote).toBeNull();
+    },
+  );
+
+  it('takes a note of 200 characters', async () => {
+    const w = await listing();
+    const note = 'ș'.repeat(200);
+
+    const res = await saveGroup(w, { facilitiesNote: note });
+
+    expect(res.status).toBe(200);
+    expect(res.body.facilitiesNote).toBe(note);
+  });
+
+  it.each([
+    ['201 characters', 'ș'.repeat(201)],
+    ['a line break', 'Cafea\nWi-Fi'],
+  ])('answers 400 to a note of %s naming it', async (_, facilitiesNote) => {
+    const w = await listing();
+    const before = await stored(w.nord.id);
+
+    const res = await saveGroup(w, { facilitiesNote });
+
+    expect(res.status).toBe(400);
+    expect(res.body.errors.map((e: { field: string }) => e.field)).toEqual([
+      'facilities.facilitiesNote',
+    ]);
+    await nothingWritten(w, before);
+  });
+});
+
+// @traces 1248-FR-006
+// @traces 1248-FR-007
+// @traces 1248-FR-015
+describe('PATCH /garages/:garageId/profile: the facilities group, refused or unchanged', () => {
+  it('answers 403 to the receptionist and writes nothing', async () => {
+    const w = await listing();
+    const before = await stored(w.nord.id);
+
+    const res = await patch(
+      w,
+      { facilities: facilitiesGroup(), version: '0' },
+      w.receptionist,
+    );
+
+    expect(res.status).toBe(403);
+    await nothingWritten(w, before);
+  });
+
+  it("answers 404 to another garage's owner", async () => {
+    const w = await listing();
+
+    const res = await patch(
+      w,
+      { facilities: facilitiesGroup(), version: '0' },
+      w.other,
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  it('answers 410 for a suspended garage', async () => {
+    const w = await listing({ status: 'suspended' });
+
+    const res = await saveGroup(w);
+
+    expect(res.status).toBe(410);
+  });
+
+  it('answers the second of two saves at one stamp 409 and writes nothing of it', async () => {
+    const w = await listing();
+    await saveGroup(w, {
+      facilities: ['courtesy_car', 'pickup_dropoff', 'waiting_area'],
+    }).expect(200);
+    await checkpoint();
+    const before = await stored(w.nord.id);
+
+    const res = await saveGroup(w, {
+      courtesyCar: undefined,
+      facilities: ['waiting_area'],
+    });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('profile_changed');
+    await nothingWritten(w, before);
+    expect(await facilityHistory(w.nord.id)).toEqual([]);
+    expect(await facilities(w.nord.id)).toContain('pickup_dropoff');
+  });
+
+  it('writes nothing and keeps the stamp when the group is unchanged', async () => {
+    const w = await listing();
+    const before = await stored(w.nord.id);
+
+    const res = await saveGroup(w, {
+      facilities: ['waiting_area', 'courtesy_car'],
+      facilitiesNote: ' Cafea și Wi-Fi ',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.version).toBe('0');
+    await nothingWritten(w, before);
+    expect(await facilityHistory(w.nord.id)).toEqual([]);
+  });
+
+  it('leaves no row, entry or event when a write of the save fails', async () => {
+    const w = await listing();
+    const before = await stored(w.nord.id);
+    jest
+      .spyOn(outbox, 'record')
+      .mockRejectedValueOnce(new Error('outbox down'));
+
+    const res = await saveGroup(w, {
+      facilities: ['courtesy_car', 'pickup_dropoff'],
+      paymentMethods: { card: true, cash: true, transfer: false },
+    });
+
+    expect(res.status).toBe(500);
+    await nothingWritten(w, before);
+    expect(await facilities(w.nord.id)).toEqual([
+      'courtesy_car',
+      'waiting_area',
+    ]);
+    expect((await terms(w.nord.id)).paymentCard).toBe(false);
   });
 });

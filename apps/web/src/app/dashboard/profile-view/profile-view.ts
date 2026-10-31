@@ -37,6 +37,7 @@ import {
   type ProfileGroup,
 } from '../profile-edit-dialog/profile-edit-dialog';
 import { garageOf, Session } from '../session';
+import { WeeklyFiguresPanel } from '../weekly-figures-panel/weekly-figures-panel';
 
 const SUSPENDED = 410;
 
@@ -46,7 +47,13 @@ const SUSPENDED = 410;
 // from the same labels, so the two read the same.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GarageLegalCheck, HlmButton, Lamp, TranslatePipe],
+  imports: [
+    GarageLegalCheck,
+    HlmButton,
+    Lamp,
+    TranslatePipe,
+    WeeklyFiguresPanel,
+  ],
   selector: 'mf-profile-view',
   styleUrl: './profile-view.css',
   templateUrl: './profile-view.html',

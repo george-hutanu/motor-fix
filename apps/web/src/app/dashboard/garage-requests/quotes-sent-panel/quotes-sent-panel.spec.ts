@@ -322,11 +322,14 @@ describe('Oferte trimise after the driver answers', () => {
     const accepted = {
       ...waiting,
       booking: {
+        canRecordNoShow: false,
+        canWithdrawNoShow: false,
         confirmBy: new Date(Date.now() + 5 * HOUR).toISOString(),
         durationMinutes: 90,
         id: 'booking-1',
         lift: null,
         mechanic: null,
+        noShowAt: null,
         startsAt: '2026-10-20T06:00:00Z',
         status: 'awaiting_confirmation' as const,
         toReassign: false,

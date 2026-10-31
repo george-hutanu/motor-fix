@@ -4,6 +4,7 @@ import type { DataPoint, Histogram } from '@opentelemetry/sdk-metrics';
 
 import {
   countLiveIdleStop,
+  countLiveInputClose,
   countLiveRecording,
   countLiveSession,
   countViewToken,
@@ -120,4 +121,19 @@ describe('the idle stop measures', () => {
     const points = (histogram?.dataPoints ?? []) as DataPoint<Histogram>[];
     expect(points.reduce((n, p) => n + p.value.count, 0)).toBeGreaterThan(0);
   });
+});
+
+// @traces 1390-FR-003
+describe('the live input close counter', () => {
+  it.each(['closed', 'close_failed'] as const)(
+    'counts a close that ended %s',
+    async (outcome) => {
+      const name = 'motorfix_live_input_closes_total';
+      const before = await total(name, { outcome });
+
+      countLiveInputClose(outcome);
+
+      expect(await total(name, { outcome })).toBe(before + 1);
+    },
+  );
 });

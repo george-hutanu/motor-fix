@@ -50,6 +50,8 @@ const EXCEPTIONS: Record<string, string> = {
   'garages/garage-hours.ts#writeGarageHours': OWN_NEW_GARAGE,
   'garages/garage-settings/write-garage-payments.ts#writeGaragePayments':
     OWN_NEW_GARAGE,
+  'garages/garage-settings/write-team-on-profile.ts#writeTeamOnProfile':
+    OWN_NEW_GARAGE,
   'garages/listing-drafts/completion/completion.copy.ts#copyOf': OWN_COPY,
   'garages/listing-drafts/completion/completion.service.ts#writeGarage':
     OWN_COPY,

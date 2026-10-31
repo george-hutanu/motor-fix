@@ -159,6 +159,7 @@ describe('a row’s state', () => {
       id: 'booking-1',
       jobStarted: false,
       lateCancellation: false,
+      noShowAt: null,
       startsAt: '2026-10-20T06:00:00.000Z',
       status: 'awaiting_confirmation' as const,
     };
@@ -183,6 +184,7 @@ describe('a row’s state', () => {
       id: 'booking-1',
       jobStarted: false,
       lateCancellation: false,
+      noShowAt: null,
       startsAt: '2026-10-20T06:00:00.000Z',
       status: 'lapsed' as const,
     };
@@ -288,6 +290,7 @@ describe('the request the overview shows', () => {
         id: 'booking-1',
         jobStarted: false,
         lateCancellation: false,
+        noShowAt: null,
         startsAt: '2026-10-20T06:00:00.000Z',
         status: 'awaiting_confirmation',
       },
@@ -309,6 +312,7 @@ describe('the request the overview shows', () => {
         id: 'booking-1',
         jobStarted: false,
         lateCancellation: false,
+        noShowAt: null,
         startsAt: '2026-10-20T06:00:00.000Z',
         status: 'confirmed',
       },

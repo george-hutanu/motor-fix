@@ -21,7 +21,10 @@ import { OpenInMaintenance, Public } from '../auth/actor.guard';
 import { clientOf } from '../auth/attempts';
 import { refusal } from '../auth/http-refusal';
 import { PRISMA } from '../auth/prisma';
-import { publicGarages } from '../garages/public-garages/public-garages';
+import {
+  publicGarages,
+  shownOnProfile,
+} from '../garages/public-garages/public-garages';
 import type { PrismaClient } from '../generated/prisma/client';
 
 // A visitor's stream: no session, no token read, nothing written. An id that
@@ -72,10 +75,11 @@ export class PublicLiveController {
             where: { id: { in: garages.split(',') }, ...publicGarages() },
           })
         : [],
+      // A mechanic the profile does not show is left out without a word.
       mechanics &&
         this.prisma.mechanic.findFirst({
           select: { id: true },
-          where: { garage: publicGarages(), id: mechanics },
+          where: { id: mechanics, ...shownOnProfile() },
         }),
       // A retired brand's page still shows its results.
       brand &&

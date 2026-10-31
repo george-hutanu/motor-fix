@@ -512,3 +512,94 @@ describe('a bar chart laid on its side', () => {
     expect(el.querySelector('.more')).toBeNull();
   });
 });
+
+const WEEKS: ChartPoint[] = [
+  { label: 'S38', value: null },
+  { label: 'S39', value: 1240 },
+  { label: 'S40', value: 472 },
+];
+
+@Component({
+  imports: [BarChart],
+  template: `
+    <mf-bar-chart
+      title="Vizualizări profil"
+      unit="count"
+      [points]="points"
+      [lastLabel]="lastLabel()"
+    />
+  `,
+})
+class WeeksHost {
+  readonly points = WEEKS;
+  readonly lastLabel = signal(false);
+}
+
+@Component({
+  imports: [BarChart],
+  template: `
+    <mf-bar-chart title="Vizualizări profil" unit="count" [points]="points">
+      <p mfChartFigure>472</p>
+    </mf-bar-chart>
+  `,
+})
+class FigureHost {
+  readonly points = WEEKS;
+}
+
+async function renderWeeks(lastLabel = false) {
+  const fixture = TestBed.createComponent(WeeksHost);
+  fixture.componentInstance.lastLabel.set(lastLabel);
+  fixture.detectChanges();
+  await fixture.whenStable();
+  return fixture.nativeElement as HTMLElement;
+}
+
+describe('the bar chart with weeks that have no value', () => {
+  // @traces 1397-FR-009
+  it('writes the newest value above its bar only when asked', async () => {
+    const plain = await renderWeeks();
+    const ids = (el: HTMLElement) =>
+      (chartOf(el)?.config.plugins ?? []).map((p) => p.id);
+
+    expect(ids(plain)).toEqual([]);
+    expect(ids(await renderWeeks(true))).toEqual(['mf-last-label']);
+  });
+
+  // QA lap 1: the board puts the chart's name, then the figure, then the bars.
+  it("places the host's figure under the chart's name, above the plot", async () => {
+    const fixture = TestBed.createComponent(FigureHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const order = [...el.querySelectorAll('h2, [mfChartFigure], canvas')].map(
+      (node) => node.tagName.toLowerCase(),
+    );
+
+    expect(order).toEqual(['h2', 'p', 'canvas']);
+  });
+
+  it('reads the missing mark in the table for a week without a value', async () => {
+    const el = await renderWeeks();
+    buttonNamed(el, 'Vezi ca tabel')?.click();
+    TestBed.tick();
+
+    expect(
+      [...el.querySelectorAll('tbody tr')].map((tr) =>
+        [...tr.querySelectorAll('td')].map((td) => td.textContent?.trim()),
+      ),
+    ).toEqual([
+      ['S38', '—'],
+      ['S39', '1.240'],
+      ['S40', '472'],
+    ]);
+  });
+
+  it('leaves a week without a value out of the extremes', async () => {
+    const el = await renderWeeks();
+
+    expect(canvasOf(el)?.getAttribute('aria-label')).toBe(
+      'Vizualizări profil, S38 – S40. Cea mai mare valoare: 1.240, S39. Cea mai mică: 472, S40.',
+    );
+  });
+});

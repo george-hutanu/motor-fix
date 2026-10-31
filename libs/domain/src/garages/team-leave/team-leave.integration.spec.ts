@@ -109,6 +109,27 @@ describe('leaving the garage team when the account is deleted', () => {
     );
   });
 
+  // @traces 059-FR-011
+  it('keeps the removal off the public channels while the garage hides its team', async () => {
+    const garage = await world.garage('Atelier Dinamo');
+    await prisma.garage.update({
+      data: { teamOnProfile: false },
+      where: { id: garage.id },
+    });
+    const accountId = await world.account('Elena Pop', ['mechanic']);
+    const mechanic = await prisma.mechanic.create({
+      data: { accountId, garageId: garage.id, name: 'Elena', onProfile: true },
+    });
+
+    await leave(accountId);
+
+    const [{ audience }] = recorded as { audience: LiveSubject }[];
+    expect(audienceOf(audience)).toEqual([
+      `garage:${garage.id}`,
+      `mechanic:${mechanic.id}`,
+    ]);
+  });
+
   it("leaves the card's future confirmed booking to reassign, and a past one not", async () => {
     const garage = await world.garage('Atelier Dinamo');
     const accountId = await world.account('Elena Pop', ['mechanic']);

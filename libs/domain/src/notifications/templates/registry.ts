@@ -51,6 +51,8 @@ import { JOB_READY } from './job-ready';
 import { JOB_STARTED } from './job-started';
 import { LISTING_CONTINUE_LINK, LISTING_REMINDER } from './listing';
 import { NEWS } from './news';
+import { NO_SHOW_RECORDED } from './no-show-recorded';
+import { NO_SHOW_WITHDRAWN } from './no-show-withdrawn';
 import { PHONE_CHANGE_CODE } from './phone-change-code';
 import { PUSH_TEST } from './push-test';
 import { QUOTE_ACCEPTED } from './quote-accepted';
@@ -136,6 +138,8 @@ export const TEMPLATES: Registry = {
   LISTING_CONTINUE_LINK,
   LISTING_REMINDER,
   NEWS,
+  NO_SHOW_RECORDED,
+  NO_SHOW_WITHDRAWN,
   PHONE_CHANGE_CODE,
   PUSH_TEST,
   QUOTE_ACCEPTED,

@@ -5,6 +5,7 @@ features:
   - 143-profile-views
   - 243-terms-privacy
   - 144-profile-stats-weekly
+  - 1397-dashboard-weekly-views
 ---
 
 # Capability: garage-figures
@@ -112,6 +113,50 @@ _From 144-profile-stats-weekly._
 ### 144-FR-010 — Jest tests MUST cover: the ISO-week bucketing in Europe/Bucharest with the Sunday 23:50 and Monday 00:05 edges and a clock-change week (unit); the conversion rounding (29 ÷ 472 = 6.1), zero views (null) and the 100 cap (unit); a request to several garages counting once per garage, the weeks before approval null and the never-approved garage (integration); the route's answers for the owner, the receptionist, the garage's mechanic (403) and another garage's owner (404) (integration); and the OpenAPI document carrying the operation.
 
 _From 144-profile-stats-weekly._
+
+### 1397-FR-001 — The garage overview MUST show the section "De la profil la cerere" (its existing title and position among the customisable sections) as a panel with two bar charts, "Vizualizări profil" / "Profile views" and "Cereri primite" / "Requests received", over the eight weeks the weekly figures read answers, oldest left, newest right; the two charts sit side by side on a desktop and stacked on a phone, and the panel replaces the section's "not built yet" sentence.
+
+_From 1397-dashboard-weekly-views._
+
+### 1397-FR-002 — Above each chart the panel MUST write the latest week's figure large, formatted with the language's grouping ("1.240" in Romanian, "1,240" in English), and the latest week's bar in each chart MUST carry its value as a label.
+
+_From 1397-dashboard-weekly-views._
+
+### 1397-FR-003 — Each chart MUST label its weeks under the bars from the read's week key: "S40" in Romanian, "W40" in English; a week whose `views` or `requests` is null MUST show its label but no bar and no value label.
+
+_From 1397-dashboard-weekly-views._
+
+### 1397-FR-004 — Hovering or tapping a bar MUST show a one-line tooltip of the week, its first and last day and the value: "S40 · 28 sept. – 4 oct.: 472" in Romanian, "W40 · 28 Sep – 4 Oct: 472" in English, the days from the read's `from` and `to`, the value with the language's grouping; the days are the calendar dates as the read writes them, never shifted by the viewer's time zone.
+
+_From 1397-dashboard-weekly-views._
+
+### 1397-FR-005 — Under the charts the panel MUST show one sentence computed from the latest week's `conversion`: with a number, "Săptămâna trecută, 6,1% din vizualizări au devenit cereri." / "Last week, 6.1% of views turned into requests.", the percentage with one decimal and the language's decimal mark; with null, "Săptămâna trecută nu a avut vizualizări." / "Last week had no views." with no percentage.
+
+_From 1397-dashboard-weekly-views._
+
+### 1397-FR-006 — The view "Profilul service-ului" MUST show the same panel (charts, figures, sentence, states) after the public profile panel and before the legal check panel, for whoever sees the public profile panel.
+
+_From 1397-dashboard-weekly-views._
+
+### 1397-FR-007 — While the read is pending the panel MUST show a skeleton of the charts' height; when all eight weeks are null it MUST show "Încă nu sunt date. Primele cifre apar după prima săptămână întreagă." / "No data yet. The first figures appear after the first full week." instead of charts, figures and sentence; when the read fails it MUST show "Nu am putut încărca cifrele." / "We could not load the figures." with a "Reîncearcă" / "Retry" button that repeats the read, and the failure MUST NOT affect any other panel of the screen; the failure text is announced to assistive technology when it appears (an alert), and the retry is a native button reachable by keyboard.
+
+_From 1397-dashboard-weekly-views._
+
+### 1397-FR-008 — The panel MUST be shown only to a person holding the garage's profile capability (the owner and the receptionist); a mechanic of the garage MUST see no panel on the overview and no profile view, and the weekly figures read MUST NOT be sent for her.
+
+_From 1397-dashboard-weekly-views._
+
+### 1397-FR-010 — The panel and the chart code it draws with MUST load deferred, after the dashboard shell, so they add nothing to the first-page bundle; the web app's initial budget (1 MB error, 500 kB warning) MUST NOT be raised.
+
+_From 1397-dashboard-weekly-views._
+
+### 1397-FR-011 — Every piece of text the panel shows (title, chart names, sentence, states, week prefix, tooltip) MUST come from translation keys present in Romanian and English, and every number MUST be written through the shared locale formats.
+
+_From 1397-dashboard-weekly-views._
+
+### 1397-FR-012 — Jest tests MUST cover the panel's states (loading, empty, error with retry, figures), the sentence and its no-views variant, Romanian and English formatting of figures, percentage and tooltip, null weeks without a bar, the latest bar's label, the panel's position in the profile view and its absence for a mechanic; a Playwright flow MUST seed eight weeks of figures, open the overview as the owner and check the two large figures, one tooltip and the sentence, then open the same garage as a mechanic and see no panel.
+
+_From 1397-dashboard-weekly-views._
 
 ## Retired
 

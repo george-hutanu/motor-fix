@@ -62,9 +62,9 @@ afterEach(() => jest.restoreAllMocks());
 
 // @traces 1250-FR-005
 describe('a start while the provider misbehaves', () => {
-  it('answers 503 within the five-second limit when the provider is late, and closes the input it opens afterwards', async () => {
+  it('answers 503 within the five-second limit when the provider is late, and deletes the input it opens afterwards', async () => {
     const s = await setting();
-    const close = jest.spyOn(fake(), 'closeInput');
+    const close = jest.spyOn(fake(), 'deleteInput');
     jest
       .spyOn(fake(), 'createInput')
       .mockImplementation(
@@ -150,9 +150,9 @@ describe('a start while the provider misbehaves', () => {
     expect(create.mock.calls[0]?.[0]).toEqual({ id: res.body.liveSessionId });
   });
 
-  it('answers 409 and closes the created input when a live session appears during the provider call', async () => {
+  it('answers 409 and deletes the created input when a live session appears during the provider call', async () => {
     const s = await setting();
-    const close = jest.spyOn(fake(), 'closeInput');
+    const close = jest.spyOn(fake(), 'deleteInput');
     const real = fake().createInput.bind(fake());
     let made = '';
     jest.spyOn(fake(), 'createInput').mockImplementation(async (session) => {
@@ -178,10 +178,10 @@ describe('a start while the provider misbehaves', () => {
     expect(await rows(s.job.id)).toHaveLength(1);
   });
 
-  it('still answers 409 when closing the loser’s input throws', async () => {
+  it('still answers 409 when deleting the loser’s input throws', async () => {
     const s = await setting();
     jest
-      .spyOn(fake(), 'closeInput')
+      .spyOn(fake(), 'deleteInput')
       .mockRejectedValue(new Error('close failed'));
     const real = fake().createInput.bind(fake());
     jest.spyOn(fake(), 'createInput').mockImplementation(async (session) => {

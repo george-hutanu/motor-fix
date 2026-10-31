@@ -65,7 +65,8 @@ const rows = (count: number) =>
   Array.from({ length: count }, (_, i) => ({ name: `Mecanic ${i}` }));
 
 describe('GarageMechanicsService.saveCards', () => {
-  it('creates one card per row, without an account, the switch on each', async () => {
+  // @traces 059-FR-003
+  it('creates one card per row, without an account, each off the profile until its mechanic agrees', async () => {
     const { ids } = await save({
       mechanics: [
         { name: '  Ion Marin ', speciality: ' Diagnoză ' },
@@ -78,13 +79,13 @@ describe('GarageMechanicsService.saveCards', () => {
       expect.objectContaining({
         accountId: null,
         name: 'Ana Pop',
-        onProfile: true,
+        onProfile: false,
         speciality: null,
       }),
       expect.objectContaining({
         accountId: null,
         name: 'Ion Marin',
-        onProfile: true,
+        onProfile: false,
         speciality: 'Diagnoză',
       }),
     ]);
@@ -289,7 +290,7 @@ describe('GarageMechanicsService.saveAgain', () => {
 
     expect([kept.onProfile, kept.removedAt]).toEqual([false, expect.any(Date)]);
     expect(fresh).toEqual([
-      expect.objectContaining({ onProfile: true, removedAt: null }),
+      expect.objectContaining({ onProfile: false, removedAt: null }),
     ]);
     expect((await cards()).map((card) => card.id)).toEqual(
       expect.arrayContaining([mihai?.id]),
@@ -303,5 +304,114 @@ describe('GarageMechanicsService.saveAgain', () => {
       { code: 'length', field: 'mechanics[0].name' },
     ]);
     expect(await cards()).toEqual(before);
+  });
+});
+
+// @traces 059-FR-003
+describe("step 4's switch on the garage", () => {
+  let recorded: { kind: string; payload: unknown }[] = [];
+  const announced = new GarageMechanicsService(
+    new AuditService(),
+    {
+      record: async (
+        _tx: unknown,
+        event: { kind: string; payload: unknown },
+      ) => {
+        recorded.push(event);
+      },
+    } as never,
+    {} as never,
+  );
+  const first = (section: MechanicsSection) =>
+    prisma.$transaction((tx) =>
+      announced.saveCards(tx, garage, owner, section),
+    );
+  const later = (section: MechanicsSection) =>
+    prisma.$transaction((tx) =>
+      announced.saveAgain(tx, garage, owner, section),
+    );
+  const teamOnProfile = async () =>
+    (
+      await prisma.garage.findUniqueOrThrow({
+        select: { teamOnProfile: true },
+        where: { id: garage },
+      })
+    ).teamOnProfile;
+  const switchEntries = () =>
+    prisma.activityLog.findMany({
+      orderBy: { at: 'asc' },
+      where: {
+        at: { gte: since },
+        field: 'team_on_profile',
+        subjectType: 'garage',
+      },
+    });
+
+  beforeEach(() => {
+    recorded = [];
+  });
+
+  it('writes the switch off at creation, recorded as a field of the creation, and no event', async () => {
+    await first({ mechanics: [{ name: 'Ion Marin' }], onProfile: false });
+
+    expect(await teamOnProfile()).toBe(false);
+    expect(
+      (await switchEntries()).map((e) => [e.subjectId, e.action, e.newValue]),
+    ).toEqual([[garage, 'create', false]]);
+    expect(recorded).toEqual([]);
+    expect((await cards()).map((card) => card.onProfile)).toEqual([false]);
+  });
+
+  it('records the switch left on at creation as a field of the creation', async () => {
+    await first({ mechanics: [{ name: 'Ion Marin' }], onProfile: true });
+
+    expect(await teamOnProfile()).toBe(true);
+    expect((await switchEntries()).map((e) => [e.action, e.newValue])).toEqual([
+      ['create', true],
+    ]);
+    expect(recorded).toEqual([]);
+  });
+
+  it('keeps the default when the section leaves the switch out', async () => {
+    await first({ mechanics: [{ name: 'Ion Marin' }] });
+
+    expect(await teamOnProfile()).toBe(true);
+    expect(await switchEntries()).toEqual([]);
+  });
+
+  it("writes a later change to the garage, with its history entry and garage.updated, leaving each mechanic's consent alone", async () => {
+    await first({ mechanics: [{ name: 'Ion Marin' }], onProfile: true });
+    const [ion] = await cards();
+    const accountId = await account('Ion Marin', ['mechanic']);
+    await prisma.mechanic.update({
+      data: { accountId, onProfile: true },
+      where: { id: ion?.id },
+    });
+
+    await later({ mechanics: [{ name: 'Ion Marin' }], onProfile: false });
+
+    expect(await teamOnProfile()).toBe(false);
+    expect(
+      (await switchEntries()).map((e) => [e.action, e.oldValue, e.newValue]),
+    ).toEqual([
+      ['create', null, true],
+      ['update', true, false],
+    ]);
+    expect(recorded).toEqual([
+      expect.objectContaining({
+        kind: 'garage.updated',
+        payload: { fields: ['team_on_profile'], garageId: garage },
+      }),
+    ]);
+    expect((await cards())[0]).toMatchObject({ accountId, onProfile: true });
+  });
+
+  it('writes nothing for a later save that keeps the switch', async () => {
+    await first({ mechanics: [{ name: 'Ion Marin' }], onProfile: true });
+
+    await later({ mechanics: [{ name: 'Ion Marin' }], onProfile: true });
+
+    expect((await switchEntries()).map((e) => e.action)).toEqual(['create']);
+    expect(recorded).toEqual([]);
   });
 });

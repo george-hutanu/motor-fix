@@ -590,7 +590,7 @@ export class GaragesService extends BaseService {
   static readonly GarageProfileControllerUpdatePath = '/api/v1/garages/{garageId}/profile';
 
   /**
-   * Change the garage's name, description, phone, hours with closed days or service radius in place.
+   * Change the garage's name, description, phone, hours with closed days, service radius or facilities with payment methods in place.
    *
    *
    *
@@ -605,7 +605,7 @@ export class GaragesService extends BaseService {
   }
 
   /**
-   * Change the garage's name, description, phone, hours with closed days or service radius in place.
+   * Change the garage's name, description, phone, hours with closed days, service radius or facilities with payment methods in place.
    *
    *
    *

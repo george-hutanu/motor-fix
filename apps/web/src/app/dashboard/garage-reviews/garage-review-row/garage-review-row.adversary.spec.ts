@@ -11,7 +11,7 @@ import { hoursAgo, NOW, staffReview } from '../garage-reviews.testing';
 
 @Component({
   imports: [GarageReviewRow],
-  template: `<article mf-garage-review-row [review]="review()" [now]="now"></article>`,
+  template: `<article mf-garage-review-row [review]="review()" [now]="now" [owner]="true"></article>`,
 })
 class Host {
   readonly review = signal<GarageStaffReviewDto>(staffReview());

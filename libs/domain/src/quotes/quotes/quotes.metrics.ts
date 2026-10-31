@@ -228,3 +228,18 @@ export function recordCancellation(
 ) {
   cancellations().add(1, { kind, late: String(late), outcome });
 }
+
+// Each no-show a garage records or withdraws, by whether it went through;
+// never who or which.
+const noShows = () =>
+  meter().createCounter('motorfix_no_shows_total', {
+    description:
+      'No-shows garages recorded and withdrew, by action and outcome',
+  });
+
+export function recordNoShow(
+  action: 'recorded' | 'withdrawn',
+  outcome: 'done' | 'refused',
+) {
+  noShows().add(1, { action, outcome });
+}

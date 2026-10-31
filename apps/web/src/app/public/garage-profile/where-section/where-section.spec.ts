@@ -219,6 +219,7 @@ const PARTS: [string, string][] = [
   ['mf-garage-map', 'map'],
   ['h2', 'title'],
   ['.address', 'address'],
+  ['.area', 'area'],
   ['.hours', 'hours'],
   ['.directions', 'directions'],
 ];
@@ -427,5 +428,58 @@ describe('where a placed workshop is, once its map cannot show', () => {
     await show({ ...PLACED, id: 'g-2', latitude: 45.75, longitude: 21.22 });
 
     expect(map()).not.toBeNull();
+  });
+});
+
+// @traces 1383-FR-004
+// @traces 1383-FR-008
+describe('where a mobile mechanic with a centre works, on a map', () => {
+  const AREA = { areaLat: 46.9, areaLng: 23.68 };
+  const piece = () =>
+    fixture.debugElement.query(By.directive(GarageMap))?.componentInstance as
+      | GarageMap
+      | undefined;
+
+  it('draws its area first, then the title, the area line and the hours, with no address or directions', async () => {
+    await show({ ...MOBILE, ...AREA });
+
+    expect(order()).toEqual(['map', 'title', 'area', 'hours']);
+    expect(piece()?.point()).toEqual({ lat: 46.9, lng: 23.68 });
+    expect(piece()?.km()).toBe(35);
+    expect(section().querySelector('.address')).toBeNull();
+    expect(link()).toBeNull();
+  });
+
+  it('draws the usual 20 km when the mechanic gave no radius', async () => {
+    await show({ ...MOBILE, ...AREA, serviceRadiusKm: undefined });
+
+    expect(piece()?.km()).toBe(20);
+  });
+
+  it.each([
+    ['no centre', {}],
+    ['a latitude only', { areaLat: 46.9 }],
+    ['a longitude only', { areaLng: 23.68 }],
+  ])('shows no map with %s', async (_, centre) => {
+    await show({ ...MOBILE, ...centre });
+
+    expect(map()).toBeNull();
+    expect(order()).toEqual(['title', 'area', 'hours']);
+  });
+
+  it('keeps the area line and the hours when its map cannot show', async () => {
+    await show({ ...MOBILE, ...AREA });
+    piece()?.gone.emit();
+    await settle();
+
+    expect(map()).toBeNull();
+    expect(order()).toEqual(['title', 'area', 'hours']);
+  });
+
+  it('draws a workshop as before, at its own point and with no area', async () => {
+    await show({ ...PLACED, ...AREA });
+
+    expect(piece()?.km()).toBeUndefined();
+    expect(piece()?.point()).toEqual({ lat: LAT, lng: LNG });
   });
 });

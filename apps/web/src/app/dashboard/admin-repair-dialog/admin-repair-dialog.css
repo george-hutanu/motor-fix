@@ -1,0 +1,69 @@
+:host {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+.view,
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+p,
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.said {
+  font-weight: 600;
+}
+dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--mf-space-1) var(--mf-space-4);
+  margin: 0;
+}
+dt {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
+dd {
+  margin-bottom: var(--mf-space-2);
+}
+@media (min-width: 30rem) {
+  dl {
+    grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
+  }
+  dd {
+    margin-bottom: 0;
+  }
+}
+.corrected {
+  font-weight: 600;
+}
+.recorded {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+label {
+  font-weight: 700;
+}
+input {
+  width: 100%;
+  min-height: var(--mf-tap);
+  box-sizing: border-box;
+}
+.actions {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+button {
+  width: 100%;
+  min-height: var(--mf-tap);
+  white-space: normal;
+}

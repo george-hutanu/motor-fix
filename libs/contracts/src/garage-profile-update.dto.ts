@@ -1,18 +1,29 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  ArrayUnique,
+  IsArray,
+  IsDefined,
+  IsIn,
   IsInt,
+  IsObject,
   IsString,
   Length,
   Max,
   Min,
   ValidateBy,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 
 import {
   CLOSED_NOTE_MAX,
   type ClosedDay,
   closedDaysError,
+  FACILITIES,
+  FACILITIES_NOTE_MAX,
+  type Facility,
+  isFacilitiesNote,
   isWeeklyHours,
   type WeeklyHours,
 } from './garage-hours';
@@ -20,6 +31,11 @@ import {
   PROFILE_DESCRIPTION_MAX,
   PROFILE_RADIUS_KM,
 } from './garage-profile-limits';
+import {
+  atLeastOnePayment,
+  CourtesyCarDto,
+  PaymentMethodsDto,
+} from './garage-settings.dto';
 import {
   isRomanianPhone,
   NAME_MAX,
@@ -42,6 +58,50 @@ const sentOnly = () => ValidateIf((_, value) => value !== undefined);
 
 const textWithin = (min: number, max: number) => (value: unknown) =>
   typeof value === 'string' && trimmedWithin(value, min, max);
+
+// The listing's step 5 facilities block, sent whole: whether the courtesy
+// car's terms belong with the ticked facilities is the use case's to judge.
+class FacilitiesGroupDto {
+  @ApiProperty({
+    description: 'Every facility the garage lists, once each',
+    enum: FACILITIES,
+    isArray: true,
+    uniqueItems: true,
+  })
+  @IsArray()
+  @IsIn(FACILITIES, { each: true })
+  @ArrayUnique()
+  facilities!: Facility[];
+
+  @ApiPropertyOptional({
+    description: 'Trimmed; empty or absent clears it; one line',
+    maxLength: FACILITIES_NOTE_MAX,
+  })
+  @sentOnly()
+  @holds('facilitiesNote', isFacilitiesNote)
+  facilitiesNote?: string;
+
+  @ApiPropertyOptional({
+    description: 'Exactly when facilities lists courtesy_car',
+    type: CourtesyCarDto,
+  })
+  @sentOnly()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => CourtesyCarDto)
+  courtesyCar?: CourtesyCarDto;
+
+  @ApiProperty({
+    description: 'All three; at least one true',
+    type: PaymentMethodsDto,
+  })
+  @IsDefined()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => PaymentMethodsDto)
+  @atLeastOnePayment()
+  paymentMethods!: PaymentMethodsDto;
+}
 
 // All optional but the stamp; which groups were sent, and whether any was,
 // is the use case's to judge.
@@ -127,4 +187,15 @@ export class UpdateGarageProfileDto {
   @Min(PROFILE_RADIUS_KM.min)
   @Max(PROFILE_RADIUS_KM.max)
   serviceRadiusKm?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'The facilities, their note, the courtesy car terms and the payment methods, sent whole',
+    type: FacilitiesGroupDto,
+  })
+  @sentOnly()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => FacilitiesGroupDto)
+  facilities?: FacilitiesGroupDto;
 }

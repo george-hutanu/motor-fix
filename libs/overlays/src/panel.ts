@@ -223,7 +223,7 @@ function nextEntry(window: Window | null) {
         (lostpointercapture)="letGo($event)"
       ></div>
     }
-    <header
+    <div
       class="mf-overlay-header"
       [class.mf-overlay-header-fixed]="context.dismissible === false"
     >
@@ -251,7 +251,7 @@ function nextEntry(window: Window | null) {
         </svg>
       </button>
       }
-    </header>
+    </div>
     <div
       #body
       class="mf-overlay-body"

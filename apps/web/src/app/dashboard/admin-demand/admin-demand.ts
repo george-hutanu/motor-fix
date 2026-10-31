@@ -13,7 +13,8 @@ import {
 } from '@motor-fix/contracts/demand-order';
 import { type AdminDemandDto, AdminService } from '@motor-fix/data-access';
 import { formatDay, formatNum, I18n, TranslatePipe } from '@motor-fix/i18n';
-import { BarChart, type ChartPoint, HlmButton } from '@motor-fix/ui-cockpit';
+import { HlmButton } from '@motor-fix/ui-cockpit';
+import { BarChart, type ChartPoint } from '@motor-fix/ui-cockpit/chart';
 
 import { AdminBrands } from '../admin-brands/admin-brands';
 

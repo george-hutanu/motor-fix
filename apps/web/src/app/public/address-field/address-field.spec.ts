@@ -215,11 +215,23 @@ describe('the address field', () => {
 
   it('asks once, 300 ms after the last key, in the page language', async () => {
     await mount({ language: 'en' });
-
-    await type('Clu', 100);
-    await type('Cluj', 100);
-    expect(search).not.toHaveBeenCalled();
-    await wait(250);
+    // On the clock the test controls, so a loaded machine cannot let the
+    // 300 ms pass between two keys.
+    const key = (value: string) => {
+      field().value = value;
+      field().dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    jest.useFakeTimers();
+    try {
+      key('Clu');
+      jest.advanceTimersByTime(299);
+      key('Cluj');
+      jest.advanceTimersByTime(299);
+      expect(search).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(1);
+    } finally {
+      jest.useRealTimers();
+    }
     await settle();
 
     expect(search).toHaveBeenCalledTimes(1);

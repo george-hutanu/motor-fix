@@ -149,6 +149,15 @@ export class ReviewsSection implements OnInit {
       id: review.id,
       month: formatShortMonthYear(review.postedAt, language),
       price: profile ? '' : this.price(review, language),
+      reply: review.reply && {
+        day: formatDay(review.reply.postedAt, language),
+        edited:
+          review.reply.editedAt &&
+          this.i18n.t(`${SECTION}.reply.edited`, {
+            day: formatDay(review.reply.editedAt, language),
+          }),
+        text: review.reply.text,
+      },
       score: this.i18n.t(`${SECTION}.score`, {
         rating: formatRating(review.rating, language),
       }),

@@ -352,3 +352,80 @@ describe('what each row of the garage’s list shows', () => {
     expect(text).not.toMatch(/"plate"|"phone"|"email"|"accountId"/);
   });
 });
+
+// A decision on an earlier report, as the admin's stories will write it.
+const decided = (reviewId: string, decidedAt: Date) =>
+  prisma.reviewReport.create({
+    data: {
+      decidedAt,
+      decision: 'kept',
+      dueAt: new Date(decidedAt.getTime() - 3_600_000),
+      reason: 'insults',
+      reviewId,
+      source: 'garage',
+      status: 'decided',
+    },
+  });
+
+const edited = (reviewId: string, editedAt: Date) =>
+  prisma.review.update({ data: { editedAt }, where: { id: reviewId } });
+
+// @traces 1382-FR-006
+describe('why a row may not be reported', () => {
+  it('answers no refusal for a published review nobody decided on', async () => {
+    const { andrei, asOwner, garage } = await dinamo();
+    await review(garage.id, andrei);
+
+    const read = await staffList(garage.id, asOwner);
+
+    expect(read.body.items[0].reportRefusal).toBeNull();
+  });
+
+  it('answers already_reported for a reported review', async () => {
+    const { andrei, asOwner, garage } = await dinamo();
+    await review(garage.id, andrei, { status: 'reported' });
+
+    const read = await staffList(garage.id, asOwner);
+
+    expect(read.body.items[0].reportRefusal).toBe('already_reported');
+  });
+
+  it('answers already_kept for a review an admin kept after its last edit, and only for it', async () => {
+    const { andrei, asOwner, garage } = await dinamo();
+    const kept = await review(garage.id, andrei, { minutesAgo: 120 });
+    const other = await review(garage.id, andrei, { minutesAgo: 60 });
+    await edited(kept.id, new Date('2026-10-10T09:00:00.000Z'));
+    await decided(kept.id, new Date('2026-10-01T09:00:00.000Z'));
+    await decided(kept.id, new Date('2026-10-12T09:00:00.000Z'));
+
+    const read = await staffList(garage.id, asOwner);
+
+    expect(read.body.items).toEqual([
+      expect.objectContaining({ id: other.id, reportRefusal: null }),
+      expect.objectContaining({ id: kept.id, reportRefusal: 'already_kept' }),
+    ]);
+  });
+
+  it('answers no refusal again once the author edits after the decision', async () => {
+    const { andrei, asOwner, garage } = await dinamo();
+    const one = await review(garage.id, andrei);
+    await decided(one.id, new Date('2026-10-10T09:00:00.000Z'));
+    await edited(one.id, new Date('2026-10-12T09:00:00.000Z'));
+
+    const read = await staffList(garage.id, asOwner);
+
+    expect(read.body.items[0].reportRefusal).toBeNull();
+  });
+
+  it('answers the receptionist the same refusal and leaves it off the public read', async () => {
+    const { andrei, asOwner, asReceptionist, garage } = await dinamo();
+    const one = await review(garage.id, andrei);
+    await decided(one.id, new Date());
+
+    const mine = await staffList(garage.id, asReceptionist);
+    const shown = await get(`/reviews/garage/${garage.id}`, asOwner);
+
+    expect(mine.body.items[0].reportRefusal).toBe('already_kept');
+    expect(JSON.stringify(shown.body)).not.toContain('reportRefusal');
+  });
+});

@@ -194,6 +194,8 @@ export class JobSteps {
       {
         data: {
           jobId: job.id,
+          quoteFromBani: job.quoteFromBani,
+          quoteToBani: job.quoteToBani,
           recorded: action === 'correct' ? job.finalPriceBani : null,
           reread: () => this.view.reload(),
         },

@@ -11,7 +11,7 @@ import { linksTo } from '../garage-sections';
 import { Session } from '../session';
 
 // A Panou section's one heading: the link to its full view while the person's
-// menu holds that view, its text alone otherwise.
+// menu holds that view, its text alone otherwise or with no view named.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
@@ -21,11 +21,12 @@ import { Session } from '../session';
 })
 export class SectionTitle {
   readonly heading = input.required<string>();
-  readonly view = input.required<string>();
+  readonly view = input<string>();
   private readonly session = inject(Session);
-  protected readonly href = computed(() =>
-    linksTo(this.session.shown(), this.view())
-      ? `/app/garage/${this.view()}`
-      : null,
-  );
+  protected readonly href = computed(() => {
+    const view = this.view();
+    return view && linksTo(this.session.shown(), view)
+      ? `/app/garage/${view}`
+      : null;
+  });
 }

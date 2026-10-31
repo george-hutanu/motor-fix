@@ -24,7 +24,7 @@ import { EVENT_PORT, type EventPort } from '../../../events/event.port';
 import type { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import { effectiveHours } from '../../mechanic-hours';
 import {
-  cardAudience,
+  cardAudienceNow,
   GarageMechanicsService,
 } from '../garage-mechanics.service';
 
@@ -250,7 +250,7 @@ export class MechanicScheduleService {
         after,
       );
       await this.events.record(tx, {
-        audience: cardAudience(garageId, card),
+        audience: await cardAudienceNow(tx, garageId, card.id),
         kind: 'mechanic.updated',
         payload: {
           fields: changed.map((key) =>
@@ -407,13 +407,13 @@ export class MechanicScheduleService {
     });
   }
 
-  private daysOffChanged(
+  private async daysOffChanged(
     tx: Prisma.TransactionClient,
     garageId: string,
-    card: { id: string; onProfile: boolean },
+    card: { id: string },
   ) {
     return this.events.record(tx, {
-      audience: cardAudience(garageId, card),
+      audience: await cardAudienceNow(tx, garageId, card.id),
       kind: 'mechanic.updated',
       payload: { fields: ['days_off'], garageId, mechanicId: card.id },
       subjectId: card.id,

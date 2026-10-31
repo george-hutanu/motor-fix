@@ -99,7 +99,8 @@
     "menu": {
       "edit": "Modifică",
       "name": "Acțiuni pentru {car}",
-      "remove": "Șterge mașina"
+      "remove": "Șterge mașina",
+      "sell": "Am vândut mașina"
     },
     "oil": {
       "due": "Schimb de ulei peste {km} km",
@@ -137,6 +138,52 @@
       "missing": "Rovinietă: adaugă data",
       "today": "Rovinieta expiră azi",
       "valid": "Rovinieta e valabilă până în {month}"
+    },
+    "sale": {
+      "added": "Adăugată de tine",
+      "back": "Înapoi",
+      "close": "Închide",
+      "copied": "Copiat",
+      "copy": "Copiază linkul",
+      "done": "Gata",
+      "empty": "Nicio reparație încă. Cumpărătorul preia mașina fără istoric.",
+      "failed": "Nu am putut trimite linkul pe WhatsApp. Copiază‑l și trimite‑l tu cumpărătorului.",
+      "field": {
+        "invalid_phone": "Scrie un număr de telefon valid.",
+        "own_phone": "Nu poți trimite linkul pe numărul tău.",
+        "pattern": "Scrie un număr de telefon valid."
+      },
+      "keep": "Nu transmit istoricul",
+      "link": "Linkul pentru cumpărător",
+      "loading": "Citim reparațiile mașinii…",
+      "note": "Reparațiile făcute prin MotorFix se transmit întotdeauna. Bifează ce ai adăugat tu și vrei să transmiți. Facturile nu se transmit.",
+      "pass": "Transmit istoricul noului proprietar",
+      "passes": "Se transmite",
+      "phone": "Telefonul cumpărătorului",
+      "phoneNote": "Îi trimitem un link pe WhatsApp, valabil 7 zile.",
+      "problem": {
+        "open_request": "Mașina are o cerere în curs. Poți vinde mașina după ce se încheie.",
+        "repair_not_tickable": "O reparație bifată nu mai poate fi transmisă. Închide și deschide din nou."
+      },
+      "question": "Transmiți istoricul reparațiilor noului proprietar?",
+      "repairs": "Reparațiile mașinii",
+      "retry": "Reîncearcă",
+      "send": "Trimite",
+      "sent": "Linkul a plecat pe WhatsApp",
+      "title": "Ai vândut {car}?"
+    },
+    "transfer": {
+      "cancel": "Anulează transferul",
+      "confirm": {
+        "back": "Înapoi",
+        "confirm": "Anulează transferul",
+        "problem": {
+          "not_sent": "Transferul nu mai este activ."
+        },
+        "text": "Linkul trimis nu va mai funcționa.",
+        "title": "Anulezi transferul?"
+      },
+      "line": "Transfer trimis · expiră pe {day}"
     }
   },
   "details": {

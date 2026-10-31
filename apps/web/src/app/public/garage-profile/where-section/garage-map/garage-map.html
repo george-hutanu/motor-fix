@@ -3,9 +3,11 @@
 @if (stage() !== 'open') {
   <mf-static-map
     [class.leaving]="stage() === 'leaving'"
+    [class.plain]="area() !== undefined"
     [attr.inert]="stage() === 'leaving' ? '' : null"
     [view]="still()"
-    [place]="point()"
+    [place]="area() ? undefined : point()"
+    [pins]="area()"
     (activate)="activate()"
     (failed)="broken()"
   />

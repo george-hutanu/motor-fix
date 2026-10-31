@@ -111,6 +111,24 @@ export class JobSummaryDto {
 
   @ApiProperty({ description: 'Steps written, 0 to 20' })
   stepsTotal!: number;
+
+  @ApiProperty({
+    description: 'When the garage recorded that the driver did not come',
+    ...NULLABLE_TIME,
+  })
+  noShowAt!: string | null;
+
+  @ApiProperty({
+    description:
+      "The reader may record a no-show: the booking's time has come and the job has not started",
+  })
+  canRecordNoShow!: boolean;
+
+  @ApiProperty({
+    description:
+      'The reader may withdraw the no-show: recorded today, Bucharest time',
+  })
+  canWithdrawNoShow!: boolean;
 }
 
 export class JobStepDto {
@@ -188,6 +206,18 @@ export class ReceiveJobDto {
 export class JobDto extends JobSummaryDto {
   @ApiProperty({ nullable: true, type: Number })
   finalPriceBani!: number | null;
+
+  @ApiProperty({
+    description: "The accepted quote's lower bound, in bani",
+    type: 'integer',
+  })
+  quoteFromBani!: number;
+
+  @ApiProperty({
+    description: "The accepted quote's upper bound, in bani",
+    type: 'integer',
+  })
+  quoteToBani!: number;
 
   @ApiProperty({ type: [JobStepDto] })
   steps!: JobStepDto[];

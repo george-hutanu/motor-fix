@@ -139,7 +139,7 @@ export class LiveSessionsService {
           return row.startedAt;
         })
         .catch(async (error: unknown) => {
-          await this.close(input.inputId);
+          await this.dropInput(input.inputId);
           throw isUniqueClash(error)
             ? await this.alreadyOn(this.prisma, actor, jobId)
             : error;
@@ -443,7 +443,7 @@ export class LiveSessionsService {
     ]).finally(() => clearTimeout(timer));
     if (input === timedOut)
       void pending.then(async (late) => {
-        if ('inputId' in late) await this.close(late.inputId);
+        if ('inputId' in late) await this.dropInput(late.inputId);
       });
     if (!('unavailable' in input)) return input;
     countLiveSession(
@@ -510,10 +510,11 @@ export class LiveSessionsService {
     }
   }
 
-  private async close(inputId: string) {
-    await this.provider.closeInput(inputId).catch((error: unknown) => {
+  // A start that did not commit: its input served nobody, so it goes.
+  private async dropInput(inputId: string) {
+    await this.provider.deleteInput(inputId).catch((error: unknown) => {
       this.logger.warn(
-        `live input not closed: ${inputId} ${error instanceof Error ? error.name : 'error'}`,
+        `live input not deleted: ${inputId} ${error instanceof Error ? error.name : 'error'}`,
       );
     });
   }

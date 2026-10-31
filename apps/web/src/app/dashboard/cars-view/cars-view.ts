@@ -1,15 +1,20 @@
+import { DOCUMENT } from '@angular/common';
 import {
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
   inject,
 } from '@angular/core';
 import { groupPlate } from '@motor-fix/contracts/plate';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
-import { I18n, KmPipe, TranslatePipe } from '@motor-fix/i18n';
+import { formatDayMonth, I18n, KmPipe, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton, HlmPopoverImports } from '@motor-fix/ui-cockpit';
 
+import { openCancelTransfer } from './cancel-transfer/open-cancel-transfer';
+import { openSellCar } from './sell-car/open-sell-car';
 import type { CarFocus } from '../add-car/add-car';
 import { openAddCar } from '../add-car/open-add-car';
 import { DueDateLine } from '../due-date-line/due-date-line';
@@ -42,7 +47,13 @@ export class CarsView {
   private readonly read = this.resources.live(
     'cars',
     () => this.api.carsControllerList().then(({ items }) => items),
-    [],
+    // A transfer's change shows on its car's card.
+    [
+      'car_transfer.sent',
+      'car_transfer.cancelled',
+      'car_transfer.expired',
+      'car_transfer.accepted',
+    ],
   );
   protected readonly cars = this.read.value;
   // A retry shows the placeholder until it answers.
@@ -54,9 +65,25 @@ export class CarsView {
   private readonly i18n = inject(I18n);
   protected readonly language = this.i18n.language;
 
+  // After a sale or a cancel the card swaps its "⋯" and its transfer line, so
+  // the button that opened the dialog may be gone: once the re-read draws the
+  // card, a focus left on nothing goes to the card.
+  private refocus?: string;
+
   constructor() {
     void this.i18n.enter('driver');
     focusCard('data-car', this.cars);
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    const document = inject(DOCUMENT);
+    afterRenderEffect(() => {
+      this.cars();
+      const id = this.refocus;
+      if (!id) return;
+      this.refocus = undefined;
+      const active = document.activeElement;
+      if (active && active !== document.body && active.isConnected) return;
+      host.querySelector<HTMLElement>(`[data-car="${id}"]`)?.focus();
+    });
   }
 
   protected load() {
@@ -88,6 +115,27 @@ export class CarsView {
   // Once the removal is confirmed and done, the card leaves at once.
   protected async remove(car: CarDto) {
     if ((await openRemoveCar(this.overlays, car)) === true) this.drop(car);
+  }
+
+  // "Am vândut mașina": a "no" to passing the history goes on to the removal;
+  // any other close may have sent a link, so the cars are read again.
+  protected async sell(car: CarDto) {
+    const answer = await openSellCar(this.overlays, car);
+    if (answer === 'remove') return this.remove(car);
+    this.refocus = car.id;
+    this.load();
+  }
+
+  // The cancel may have been refused because the transfer ended meanwhile,
+  // so the cars are read again whatever the answer.
+  protected async cancelTransfer(car: CarDto) {
+    await openCancelTransfer(this.overlays, car);
+    this.refocus = car.id;
+    this.load();
+  }
+
+  protected transferDay(expiresAt: string) {
+    return formatDayMonth(expiresAt, this.language());
   }
 
   private drop(car: CarDto) {

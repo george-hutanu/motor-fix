@@ -1,11 +1,12 @@
 ---
 capability: live-video
-updated: 2026-10-29
+updated: 2026-10-31
 features:
   - 1250-live-video-provider
   - 333-media-storage
   - 1251-live-recording
   - 1252-live-viewers
+  - 1390-live-input-close
 ---
 
 # Capability: Live video
@@ -14,9 +15,9 @@ Live video from the workshop to the job's driver: the provider behind its port, 
 
 ## Requirements
 
-### 1251-FR-001 — The port `LiveVideoProvider`'s one recording delete, `deleteRecording(ref)` (333-FR-018), MUST delete every recording the provider holds for a live recording's reference, which is the session's live input id (`provider_input_id`, the reference a live MEDIA_ITEM carries in `provider_ref`, FR-003): the `cloudflare` adapter lists the live input's videos (`GET /live_inputs/{ref}/videos`) and deletes each (`DELETE /{videoUid}`), a 404 on the list or on a video counting as deleted and an empty list as success, so a second call is a no-op; any other failure throws so the caller keeps its own row; each call times out after 5 seconds and carries the child span and the duration histogram (operation `delete_recording`) as the port's other calls do. `fake` records the call and `none` is a no-op, as ST-333 built them. No second operation is added.
+### 1390-FR-002 — The port `LiveVideoProvider`'s `closeInput(inputId)` MUST close an input without deleting it: afterwards the input accepts no publisher, and its recordings stay reachable by the input id for the port's `viewUrl` and `deleteRecording` (1251-FR-001, unchanged: the `cloudflare` adapter lists `GET /live_inputs/{ref}/videos` and deletes each, 404 and an empty list counting as deleted, every other failure throwing, 5 s cut, span and histogram with operation `delete_recording`; `fake` records the call; `none` is a no-op). For `closeInput`: an input already closed or no longer at the provider counts as closed (the call returns); any other failure throws. The `cloudflare` adapter updates the input (`PUT /live_inputs/{id}`) with `enabled: false` and the recording settings the start set (`recording: { mode: 'automatic', requireSignedURLs: true }`, resent so the update cannot turn signed URLs off), succeeds when the answer's `result.enabled` is `false`, treats a 404 as closed, and throws on any other non-2xx, on a network failure, on the 5 s cut (`LIVE_PROVIDER_TIMEOUT_MS`) and on an answer whose `result.enabled` is not `false`; the call carries the child span `live-video.close_input` and the histogram operation `close_input` (already named, `sessions.metrics.ts:13`), never the URL query, body or a secret. The `fake` adapter records the closed input ids in order (`closed`, as `deleted`) for the tests; `none` stays a no-op. The start's cleanup of an input whose session did not commit (1250-FR-005: the row failed to commit, or a late provider answer) keeps deleting it, through a new port operation `deleteInput(inputId)`: nobody was given that input's publish link, so it holds no recording. The `cloudflare` adapter sends `DELETE /live_inputs/{id}` (span `live-video.delete_input`, histogram operation `delete_input`), a 404 or an empty answer counting as deleted, any other failure throwing `live input delete failed: <reason>`; `fake` records the ids in `deletedInputs`; `none` is a no-op. A session with no input id is skipped by the consumer, nothing counted.
 
-_From 1251-live-recording._
+_From 1390-live-input-close._
 
 ### 1250-FR-002 — The API MUST offer `POST /api/v1/jobs/:id/live` (start), for the job's mechanic (the mechanic row of the job belonging to the caller's account) and the owner of the job's garage. It MUST, in one transaction after the provider's input is created: insert the LIVE_SESSION in `live` (FR-007) with `started_by` the actor, `started_at` now and `provider_input_id`; record one audit entry (action `create`, subject type `live_session`, subject id the session, garage id and job id, the actor and their role); and write one event `live.started` `{ liveSessionId, jobId }` to the job's audience (the driver's account, the garage, the job's mechanic; the `job` audience the stage events use). It answers 201 with `{ liveSessionId, startedAt, publish: { url, expiresAt, constraints: { audio: false, video: { maxHeight: 720, maxBitrateKbps: 1500 } } } }`; `expiresAt` is 2 minutes after the start, the window in which the sender must begin publishing. No microphone is asked for and no audio is published by a client honouring the constraints; the provider cannot refuse an audio track at ingest (a known limit, Assumptions).
 
@@ -102,6 +103,22 @@ _From 1252-live-viewers._
 
 _From 1252-live-viewers._
 
+### 1390-FR-001 — The worker MUST close the provider's input of every live session that stops: a consumer of `live.stopped` on its own queue, `live-inputs` (job id = event id, so a redelivered event runs once; three tries a minute apart, as `live-recordings`), reads the session's `provider` and `provider_input_id`, skips a session that no longer exists or whose provider is not this worker's (as `recordings.ts:66-71` does), and calls the port's `closeInput(providerInputId)`; it reads `liveSessionId` only and ignores `reason` and `keep`. A failed try throws so the queue retries it; the recording's keep or discard stays the `live-recordings` consumer's (1251-FR-013), and the two jobs are independent in order and outcome. Registered in the worker application (`apps/worker/src/worker.module.ts`) beside the recordings consumer.
+
+_From 1390-live-input-close._
+
+### 1390-FR-003 — Observability MUST ship in the same PR: the counter `motorfix_live_input_closes_total{outcome}` (`closed`, counted for a close that succeeded or found the input closed or missing; `close_failed`, counted once, on the last failed try); one warning log line per failed try with the session id, the input id, the try number and the failure's reason token (the adapter's status, `timeout`, `network`, `malformed`, `rejected` or `still_enabled`), never a URL, body, token or the provider's message; the span and histogram of FR-002; the live panel of the api dashboard (`infra/observability/grafana/dashboards/motorfix-api.json`, uid `motorfix-api`, the panel holding `motorfix_live_recordings_total`) extended with the closes counter by outcome; no new alert rule: the last failed try is a failed job, which `worker-jobs-failed` (`infra/observability/alerts/worker.json`, summing `motorfix_jobs_total{outcome="failed"}` by queue) already alerts on, so the total stays at 50 rules; and `infra/observability/inventory.json` gains the queue entry `live-inputs` (its consumer, metric, log, dashboard and alert) and the metric, with the outside service `cloudflare-stream`'s reason naming the close, `node scripts/observability-inventory.ts` passing.
+
+_From 1390-live-input-close._
+
+### 1390-FR-004 — Nothing else changes: no contract, DTO, OpenAPI operation, schema or migration; the `live.stopped` payload, the stop routine (1251-FR-007), the recordings consumer and ST-1379's code are untouched; no screen.
+
+_From 1390-live-input-close._
+
+### 1390-FR-005 — Tests MUST exist before the code (Principle II), in Jest with their `// @traces 1390-FR-<n>` line: the consumer with the `fake` provider or a stub — one close per stop for `job_closed`, `feature_off`, `sender` and `idle`, the already-closed and missing input counting `closed`, a session of another provider and a missing session skipped, the retry (a warning per try, nothing counted before the last) and `close_failed` with the failed job on the third try, success on the third try counting `closed` only; the Cloudflare adapter against a stubbed HTTP server — the `PUT` body (`enabled: false` with the recording settings), success on `result.enabled: false`, 404 as closed, 500 throwing, `result.enabled` not `false` throwing, the 5 s cut, the span's attributes, and `GET /live_inputs/{id}/videos` still answering after the close; an integration spec on real PostgreSQL and Valkey that a committed system stop's `live.stopped` reaches the `live-inputs` consumer through the worker module's wiring and closes the input at the `fake` provider, and that the `live-recordings` job's delete is unchanged; the metrics and the inventory check.
+
+_From 1390-live-input-close._
+
 ## Retired
 
 - `1250-FR-001` — superseded by `333-FR-018` (2026-10-29)
@@ -111,3 +128,4 @@ _From 1252-live-viewers._
 - `1251-FR-002` — superseded by `1252-FR-001` (2026-10-29)
 - `1250-FR-003` — superseded by `1252-FR-002` (2026-10-29)
 - `1251-FR-005` — superseded by `1252-FR-004` (2026-10-29)
+- `1251-FR-001` — superseded by `1390-FR-002` (2026-10-31)

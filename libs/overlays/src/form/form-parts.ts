@@ -56,14 +56,15 @@ export class TaskError {
   readonly save = input.required<TaskSave<unknown>>();
 }
 
-// The main button: busy and inert while the save is on its way. It stays
-// focusable, so the focus does not jump while it waits.
+// The main button: busy and inert while the save is on its way, and inert while
+// the form says it cannot be sent (`mfTaskSubmitOff`). It stays focusable, so
+// the focus does not jump while it waits.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     '[attr.aria-busy]': 'busy() || null',
-    '[attr.aria-disabled]': 'busy() || null',
-    '[attr.data-disabled]': 'busy() || null',
+    '[attr.aria-disabled]': 'busy() || off() || null',
+    '[attr.data-disabled]': 'busy() || off() || null',
   },
   imports: [TranslatePipe],
   selector: 'button[mfTaskSubmit]',
@@ -101,6 +102,7 @@ export class TaskError {
 })
 export class TaskSubmit {
   readonly save = input.required<TaskSave<unknown>>({ alias: 'mfTaskSubmit' });
+  readonly off = input(false, { alias: 'mfTaskSubmitOff' });
   protected readonly busy = computed(() => this.save().state() === 'sending');
 }
 

@@ -25,6 +25,7 @@ import {
 import { injectOverlayTask, Overlays } from '@motor-fix/overlays';
 import { HlmButton, Lamp } from '@motor-fix/ui-cockpit';
 
+import { AdminAccountRepairs } from './admin-account-repairs/admin-account-repairs';
 import {
   type AccountAction,
   type AccountActionResult,
@@ -63,7 +64,7 @@ const plain = (value: unknown) =>
 // its history, in a drawer over "Utilizatori" at /app/admin/users/<id>.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [HlmButton, Lamp, RouterLink, TranslatePipe],
+  imports: [AdminAccountRepairs, HlmButton, Lamp, RouterLink, TranslatePipe],
   selector: 'mf-admin-account',
   styleUrl: './admin-account.css',
   templateUrl: './admin-account.html',
