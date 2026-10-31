@@ -49,9 +49,14 @@ export async function freeSlot(request: APIRequestContext) {
 
 // One request of the driver's, quoted by Militari and accepted by the driver,
 // so its booking waits for the garage's confirmation; at the slot given, so
-// two bookings can contend for one place.
-export async function accepted(request: APIRequestContext, slot?: string) {
-  return (await acceptedBooking(request, DRIVER, slot)).requestId;
+// two bookings can contend for one place, and of the driver named, so a test
+// can spare the seeded driver's 20 requests a day.
+export async function accepted(
+  request: APIRequestContext,
+  slot?: string,
+  email = DRIVER,
+) {
+  return (await acceptedBooking(request, email, slot)).requestId;
 }
 
 async function acceptedBooking(
