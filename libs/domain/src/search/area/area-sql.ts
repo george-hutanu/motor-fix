@@ -34,6 +34,10 @@ const centreOf = ({ south, west, north, east }: SearchBbox): SearchPoint => ({
 
 export const kmOf = (metres: number) => Math.round(metres / 100) / 10;
 
+// Two decimals, about a kilometre: a mobile mechanic's pin and profile stand
+// near its area's centre without giving away the seat's address.
+export const roughly = (value: number) => Math.round(value * 100) / 100;
+
 const at = ({ lat, lng }: SearchPoint) =>
   Prisma.sql`ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography`;
 
