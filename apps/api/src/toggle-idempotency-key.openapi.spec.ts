@@ -53,3 +53,29 @@ describe('the toggle writes, in the OpenAPI document', () => {
     },
   );
 });
+
+// The generated client's four functions, in the order of `writes`.
+const client = [
+  'notifications/notification-preferences-controller-save.ts',
+  'notifications/bell-controller-read.ts',
+  'notifications/bell-controller-read-all.ts',
+  'garages/price-list-controller-set-range.ts',
+].map((file) => [file]);
+
+// @traces 1407-FR-006
+describe('the toggle writes, in the generated client', () => {
+  it.each(client)(
+    '%s takes an optional key and sends it as the header',
+    (file) => {
+      const source = readFileSync(
+        join(__dirname, '../../../libs/data-access/src/lib/fn', file),
+        'utf8',
+      );
+
+      expect(source).toContain("'Idempotency-Key'?: string;");
+      expect(source).toContain(
+        "rb.header('Idempotency-Key', params['Idempotency-Key'], {});",
+      );
+    },
+  );
+});
