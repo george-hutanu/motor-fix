@@ -9,6 +9,7 @@ import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
 
 import { AdminPanel } from './admin-panel';
+import { adminLayoutProviders } from './admin-panel.testing';
 import { AdminOverview } from '../admin-overview';
 import { Live } from '../live';
 
@@ -97,6 +98,7 @@ async function open(language: 'ro' | 'en' = 'ro') {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      ...adminLayoutProviders(),
       AdminOverview,
       {
         provide: Live,
