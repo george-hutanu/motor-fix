@@ -2,11 +2,7 @@ import { startTelemetry } from '@motor-fix/observability';
 import { inMemory } from '@motor-fix/observability/testing';
 import type { DataPoint } from '@opentelemetry/sdk-metrics';
 
-import {
-  countRetention,
-  initProductCounters,
-  startsAtFirstCount,
-} from './product-counters';
+import { countRetention, initProductCounters } from './product-counters';
 import { TEMPLATES } from '../notifications/templates/registry';
 import { RETENTION_KINDS } from '../retention/retention.config';
 
@@ -49,7 +45,7 @@ describe("the worker's product counters at start", () => {
 
     const all = await series();
     const emails = Object.entries(TEMPLATES).filter(
-      ([name, text]) => text.email && !startsAtFirstCount(name),
+      ([name, text]) => text.email && !name.startsWith('REVIEW_DECIDED.'),
     );
     expect(named(all, 'motorfix_emails_sent_total')).toHaveLength(
       emails.length,

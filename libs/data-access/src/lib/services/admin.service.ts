@@ -645,7 +645,7 @@ export class AdminService extends BaseService {
   static readonly ReportQueueControllerDecidePath = '/api/v1/admin/review-reports/{reviewId}/decision';
 
   /**
-   * Decide a review's pending report; this story removes.
+   * Decide a review's pending report: remove the review or its reply.
    *
    *
    *
@@ -660,7 +660,7 @@ export class AdminService extends BaseService {
   }
 
   /**
-   * Decide a review's pending report; this story removes.
+   * Decide a review's pending report: remove the review or its reply.
    *
    *
    *

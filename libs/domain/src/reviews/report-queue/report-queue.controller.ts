@@ -63,13 +63,13 @@ export class ReportQueueController {
     });
   }
 
-  // Decides the review's one pending report; this story removes. The review
-  // or reply, the report, the audit entries and the event go together.
+  // Decides the review's one pending report by removing the review or its
+  // reply; the review or reply, the report, the audit entries and the event go together.
   @Post(':reviewId/decision')
   @HttpCode(200)
   @Requires('admin.reviews')
   @ApiOperation({
-    summary: "Decide a review's pending report; this story removes",
+    summary: "Decide a review's pending report: remove the review or its reply",
   })
   @ApiOkResponse({ type: ReviewDecisionResultDto })
   @ApiBadRequestResponse({

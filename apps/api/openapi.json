@@ -5851,7 +5851,7 @@
             "bearer": []
           }
         ],
-        "summary": "Decide a review's pending report; this story removes",
+        "summary": "Decide a review's pending report: remove the review or its reply",
         "tags": [
           "admin"
         ]

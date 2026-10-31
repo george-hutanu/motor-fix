@@ -350,7 +350,7 @@ const reviewRepliesAnnounced = () =>
   );
 // A removal notice is sent a few times a month, and the 150-series budget
 // has no room for its four forms at 0: each starts with its first e-mail.
-export const startsAtFirstCount = (template: string) =>
+const startsAtFirstCount = (template: string) =>
   template.startsWith('REVIEW_DECIDED.');
 
 const reviewDecisionsAnnounced = () =>

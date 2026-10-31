@@ -450,8 +450,7 @@ const REVIEW_REMOVAL_REASONS = REVIEW_REPORT_REASONS.filter(
 export type ReviewRemovalReason = (typeof REVIEW_REMOVAL_REASONS)[number];
 
 // Why a decision was refused once nothing was written.
-const DECISION_REFUSALS = ['already_decided', 'no_pending_report'] as const;
-export type DecisionRefusal = (typeof DECISION_REFUSALS)[number];
+export type DecisionRefusal = 'already_decided' | 'no_pending_report';
 
 export class ReviewDecisionDto {
   @ApiProperty({ enum: ['remove'] })
