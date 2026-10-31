@@ -8542,7 +8542,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: a limit broken (errors[].field names it), an unknown field, an empty save, a radius for a workshop (radius_not_applicable)"
+            "description": "validation_failed: a limit broken (errors[].field names it), an unknown field, an empty save, a radius for a workshop (radius_not_applicable), courtesy-car terms without the car or the car without its terms (no_courtesy_car)"
           },
           "401": {
             "description": "sign_in_required"
@@ -8568,7 +8568,7 @@
             "bearer": []
           }
         ],
-        "summary": "Change the garage's name, description, phone, hours with closed days or service radius in place",
+        "summary": "Change the garage's name, description, phone, hours with closed days, service radius or facilities with payment methods in place",
         "tags": [
           "garages"
         ]
@@ -23275,6 +23275,49 @@
           "storedClosedDays"
         ]
       },
+      "FacilitiesGroupDto": {
+        "type": "object",
+        "properties": {
+          "facilities": {
+            "type": "array",
+            "description": "Every facility the garage lists, once each",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "courtesy_car",
+                "pickup_dropoff",
+                "waiting_area"
+              ]
+            }
+          },
+          "facilitiesNote": {
+            "type": "string",
+            "description": "Trimmed; empty or absent clears it; one line",
+            "maxLength": 200
+          },
+          "courtesyCar": {
+            "description": "Exactly when facilities lists courtesy_car",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CourtesyCarDto"
+              }
+            ]
+          },
+          "paymentMethods": {
+            "description": "All three; at least one true",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentMethodsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "facilities",
+          "paymentMethods"
+        ]
+      },
       "UpdateGarageProfileDto": {
         "type": "object",
         "properties": {
@@ -23339,6 +23382,14 @@
             "description": "A mobile mechanic only",
             "maximum": 100,
             "minimum": 5
+          },
+          "facilities": {
+            "description": "The facilities, their note, the courtesy car terms and the payment methods, sent whole",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FacilitiesGroupDto"
+              }
+            ]
           }
         },
         "required": [
