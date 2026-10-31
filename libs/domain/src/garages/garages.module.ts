@@ -75,7 +75,6 @@ import { AUDIT_PORT } from '../audit/audit.port';
 import { AuditService } from '../audit/audit.service';
 import { AUTH_REDIS } from '../auth/attempts';
 import { CacheModule } from '../cache/cache.module';
-import { Brevo } from '../notifications/brevo/brevo';
 import type { EmailConfig } from '../notifications/email-config';
 
 // Apart from the AuthModule, which the notifications module imports: the
@@ -175,11 +174,6 @@ export class GaragesModule {
           ? [{ provide: OBSERVABILITY_URL, useValue: observabilityUrl }]
           : []),
         { provide: INVITE_EMAIL, useValue: email },
-        {
-          provide: Brevo,
-          useFactory: () =>
-            new Brevo({ apiKey: email.apiKey ?? '', apiUrl: email.apiUrl }),
-        },
         { provide: AUDIT_PORT, useClass: AuditService },
       ],
     };

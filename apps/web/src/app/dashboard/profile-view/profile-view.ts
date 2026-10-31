@@ -11,7 +11,11 @@ import { Router } from '@angular/router';
 import type { Capability } from '@motor-fix/contracts/capabilities';
 import { FACILITIES } from '@motor-fix/contracts/garage-hours';
 import { MOBILE_SERVICE_RADIUS_DEFAULT_KM } from '@motor-fix/contracts/place-section';
-import { type GarageProfileDto, GaragesService } from '@motor-fix/data-access';
+import {
+  type GarageBrandOwnerAnswerDto,
+  type GarageProfileDto,
+  GaragesService,
+} from '@motor-fix/data-access';
 import { formatKm, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton, Lamp } from '@motor-fix/ui-cockpit';
@@ -24,6 +28,7 @@ import {
   paymentLine,
 } from '../../public/garage-profile/details-section/detail-lines';
 import { hoursLines } from '../../public/garage-profile/where-section/hours-lines';
+import type { BrandsEditData } from '../brands-edit-dialog/brands-edit-dialog';
 import { GarageLegalCheck } from '../garage-legal-check/garage-legal-check';
 import { Live } from '../live';
 import {
@@ -203,7 +208,41 @@ export class ProfileView {
     this.saved.set({ profile: result, reads: this.view.reads() });
   }
 
-  protected editLabel(group: ProfileGroup) {
+  // The brands open a dialog of their own, loaded only when pressed; the
+  // saved answer replaces the lists at once, as a group's save does.
+  protected async editBrands() {
+    const profile = this.profile();
+    if (!profile) return;
+    const result = await this.overlays.open<
+      GarageBrandOwnerAnswerDto,
+      BrandsEditData
+    >(
+      () =>
+        import('../brands-edit-dialog/brands-edit-dialog').then(
+          (m) => m.BrandsEditDialog,
+        ),
+      {
+        confirmDiscard: false,
+        data: { garageId: this.garageId() },
+        shape: 'dialog',
+        title: 'garage.profile.edit.title.brands',
+      },
+    );
+    if (result === 'cancelled') return;
+    const { brandNote, doesNotTake, refusalPhrase, worksOn } = result;
+    this.saved.set({
+      profile: {
+        ...profile,
+        brandNote,
+        doesNotTake,
+        refusalPhrase,
+        worksOn: worksOn.map(({ jobs: _, ...brand }) => brand),
+      },
+      reads: this.view.reads(),
+    });
+  }
+
+  protected editLabel(group: ProfileGroup | 'brands') {
     return this.t('garage.profile.edit.controlFor', {
       group: this.t(`garage.profile.edit.title.${group}`),
     });

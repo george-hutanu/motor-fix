@@ -126,6 +126,7 @@ features:
   - 1257-quote-reminders
   - 1315-optimistic-toggles
   - 1406-integration-shards
+  - 1379-provider-calls-worker
 ---
 
 # Capability: Platform
@@ -3039,6 +3040,42 @@ _From 1406-integration-shards._
 ### 1406-FR-010 — The `ci.yml` header, `.claude/skills/speckit-auto/lifecycle.md` ("CI, tests and release"), `docs/speed-and-cost-plan.md` (row 17) and the `platform` capability (through the Spec Delta) MUST say the integration suite runs as shards with a database per shard, and how a named-specs dispatch runs; no other in-repo document MAY be left saying the suite runs as one job (the specs repo's `docs/` say "on demand and before every release", which stays true).
 
 _From 1406-integration-shards._
+
+### 1379-FR-001 — The four direct sends — the WhatsApp sign-in code (SIGN_IN_CODE), the phone change code (PHONE_CHANGE_CODE), the staff invite by e-mail and by WhatsApp (STAFF_INVITE), and the car transfer link by WhatsApp (CAR_TRANSFER_LINK) — MUST be handed to the provider by the worker process only. The API MUST add one job to a new BullMQ queue `direct-send` on the existing broker (one attempt, no retry) carrying the template, language, recipient and template values, and MUST await that job's result for at most a fixed cap of 8000 ms (one named constant) before answering the request.
+
+_From 1379-provider-calls-worker._
+
+### 1379-FR-002 — The worker MUST consume `direct-send` with a provider client of its own (the 5 s timeout of FR-004, beside the notifications worker's) and the phone and e-mail configuration it already holds, render the template there, apply the blocked-recipient, allow-list and template-registered checks there, call the provider once, and return `null` when the message left. An expected outcome (the blocked reason, `template_missing`, `stale`) completes the job with the kind as its value; a provider refusal or timeout fails the job with the provider's reason or `provider_error` as its failed reason, so it counts as a failed job and alerts as the other queues' failures do.
+
+_From 1379-provider-calls-worker._
+
+### 1379-FR-004 — A direct send MUST be attempted exactly once end to end: the job has one attempt, the API never re-adds it, and the worker never hedges or retries it. A job the worker picks up after it is older than the API's wait cap MUST NOT be sent and completes as `stale` (the person was already answered); the worker's provider timeout stays 5 s. The same age guard covers a job the broker hands out a second time after a stalled worker, so a crash mid-send cannot cause a second provider call.
+
+_From 1379-provider-calls-worker._
+
+### 1379-FR-005 — Finished and failed `direct-send` jobs MUST be removed from the broker shortly after they end (a short age or count, not kept), so the code, recipient and link do not stay in Valkey; the job's payload MUST never be logged, and the failure logs keep today's rule: the failure kind and, for a transfer, its id, never the number, address, code or link.
+
+_From 1379-provider-calls-worker._
+
+### 1379-FR-006 — No code under `apps/api/src` or `apps/web/src` MUST import the provider client module (`libs/domain/src/notifications/brevo/brevo`) or build a provider sending client; the API's root module graph MUST hold no `Brevo` instance. The modules that today take a `brevo` option in `apps/api/src/app.module.ts` (phone sign-in, car transfers, garages) and in their own `register` MUST take the queue instead; the Brevo clients stay in `apps/worker` alone.
+
+_From 1379-provider-calls-worker._
+
+### 1379-FR-007 — A unit test MUST assert FR-006 without PostgreSQL or Valkey: it builds `AppModule.register(env)` with the `Brevo` constructor spied, asserts no `Brevo` was constructed, then walks the returned module tree (imports, providers) and asserts no provider is the `Brevo` class token or a `Brevo` instance; a second assertion scans the sources of `apps/api/src` and `apps/web/src` (tests excluded) for imports of the provider client module. A unit test of the API's direct-send client MUST assert each job is added with `attempts: 1`.
+
+_From 1379-provider-calls-worker._
+
+### 1379-FR-008 — Only idempotent reads to outside providers MAY be hedged; no hedging is added by this story (none exists today), and the four moved sends MUST NOT be hedged or retried (FR-004). The outside calls that stay in the API are: the OAuth/OpenID token exchange, the place and static-map lookups (idempotent reads, A40), the live-video provider's input lifecycle, and the inbound provider webhooks (which are received, not made); the contact form's e-mails and the status probes already run in the worker (`SupportModule.registerWorker`, `StatusModule.registerWorker`).
+
+_From 1379-provider-calls-worker._
+
+### 1379-FR-010 — The API's job add MUST carry the request's trace context so the worker's send span is a child of the request's trace (876-FR-005), and every connection option of the new Queue, QueueEvents listener and Worker MUST carry `maxRetriesPerRequest: null` (1175-FR-008); the API's `GET /health/ready` is unchanged (the queue is not a readiness check).
+
+_From 1379-provider-calls-worker._
+
+### 1379-FR-011 — Tests MUST be written first and cover, in Jest on real PostgreSQL and Valkey: each of the four sends succeeding and answering as today; each failure kind of FR-003 once at the direct-send client (provider refusal, provider timeout, template missing, blocked recipient, allow-list, worker absent within the cap, broker unreachable), since a caller maps every kind alike, and per caller at least one kind that completes the job and one provider refusal that fails it, each answering the caller's contract; the sign-in code's uncounted hourly share on failure; exactly one provider call per send on success and on failure; a stale job not sent; the job removed after it finishes; and the FR-007 graph and source tests. Each spec file carries one whole-line `// @traces` comment naming `1379-FR-<n>` ids.
+
+_From 1379-provider-calls-worker._
 
 ## Retired
 

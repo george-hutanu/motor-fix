@@ -1,0 +1,129 @@
+import { Inject, Injectable, type OnApplicationShutdown } from '@nestjs/common';
+import type { Queue, QueueEvents } from 'bullmq';
+
+import { DIRECT_SEND_WAIT_MS, type DirectSendJob } from './direct-send';
+
+export const DIRECT_SEND_JOBS = Symbol('DIRECT_SEND_JOBS');
+export const DIRECT_SEND_EVENTS = Symbol('DIRECT_SEND_EVENTS');
+
+// BullMQ's own default length of a queue's events stream.
+const EVENTS_KEPT = 10_000;
+
+// One attempt, and gone from Valkey once answered: the job carries a code, a
+// number or a link. The age options cover a job whose answer nobody read,
+// removed when a later job ends.
+const JOB_OPTIONS = {
+  attempts: 1,
+  removeOnComplete: { age: 60 },
+  removeOnFail: { age: 60 },
+};
+
+// A failed job's reason is one of the worker's kinds; anything else is not
+// passed on, as it may carry what the logs must not.
+function failureKind(error: unknown): string {
+  const message = error instanceof Error ? error.message : '';
+  if (message.startsWith('Job wait')) return 'timeout';
+  return /^[a-z0-9_]+$/.test(message) ? message : 'provider_error';
+}
+
+// The API's side of direct-send: adds the job and waits for the worker's
+// answer, at most DIRECT_SEND_WAIT_MS in all. Answers null when the message
+// left, otherwise why it did not. Logs nothing; the callers log the kind.
+@Injectable()
+export class DirectSend implements OnApplicationShutdown {
+  constructor(
+    @Inject(DIRECT_SEND_JOBS) private readonly queue: Queue<DirectSendJob>,
+    @Inject(DIRECT_SEND_EVENTS)
+    private readonly listen: (lastEventId: string) => QueueEvents,
+  ) {}
+
+  // Built on the first send, never at boot: a listener that never reached the
+  // broker never closes.
+  private events?: QueueEvents;
+  private listening?: Promise<QueueEvents>;
+
+  whatsapp(
+    template: string,
+    language: 'ro' | 'en',
+    values: Record<string, unknown>,
+    to: string,
+  ): Promise<string | null> {
+    return this.send('whatsapp', { language, template, to, values });
+  }
+
+  email(
+    template: string,
+    language: 'ro' | 'en',
+    values: Record<string, unknown>,
+    to: { email: string; name?: string },
+  ): Promise<string | null> {
+    return this.send('email', {
+      language,
+      name: to.name,
+      template,
+      to: to.email,
+      values,
+    });
+  }
+
+  async onApplicationShutdown() {
+    await this.events?.close();
+    await this.queue.close();
+  }
+
+  private async send(
+    name: 'whatsapp' | 'email',
+    data: DirectSendJob,
+  ): Promise<string | null> {
+    let timer: NodeJS.Timeout | undefined;
+    const cap = new Promise<string>((resolve) => {
+      timer = setTimeout(() => resolve('timeout'), DIRECT_SEND_WAIT_MS);
+    });
+    try {
+      return await Promise.race([this.run(name, data), cap]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // The listener reads the events stream from a mark written before the
+  // first job is added, so no finish is lost while it starts.
+  private listener(): Promise<QueueEvents> {
+    this.listening ??= Promise.resolve()
+      .then(() =>
+        this.queue
+          .getBackend()
+          .publishEvent({ event: 'listening' }, EVENTS_KEPT),
+      )
+      .then((mark) => {
+        this.events = this.listen(mark);
+        return this.events;
+      });
+    this.listening.catch(() => {
+      this.listening = undefined;
+    });
+    return this.listening;
+  }
+
+  private async run(
+    name: 'whatsapp' | 'email',
+    data: DirectSendJob,
+  ): Promise<string | null> {
+    const events = await this.listener().catch(() => null);
+    if (!events) return 'queue_unavailable';
+    const job = await Promise.resolve()
+      .then(() => this.queue.add(name, data, JOB_OPTIONS))
+      .catch(() => null);
+    if (!job) return 'queue_unavailable';
+    const ready = await events.waitUntilReady().then(
+      () => true,
+      () => false,
+    );
+    if (!ready) return 'queue_unavailable';
+    const answer = await job
+      .waitUntilFinished(events, DIRECT_SEND_WAIT_MS)
+      .then((result: string | null) => result ?? null, failureKind);
+    await job.remove().catch(() => undefined);
+    return answer;
+  }
+}
