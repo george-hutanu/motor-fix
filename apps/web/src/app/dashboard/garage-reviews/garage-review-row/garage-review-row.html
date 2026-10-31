@@ -22,7 +22,7 @@
 @if (review().text; as said) {
   <p class="text" data-text>{{ said }}</p>
 }
-<p class="by">
+<p class="by" [id]="id + '-by'">
   <span data-author>{{ author() }}</span>
   <span aria-hidden="true">·</span>
   <span data-time>{{ time() }}</span>
@@ -31,3 +31,42 @@
     <span data-mechanic>{{ mechanic.shortName }}</span>
   }
 </p>
+@if (answer(); as reply) {
+  <div class="reply" data-reply>
+    <p class="reply-label">{{ 'garage.reviews.reply.label' | t }}</p>
+    <p class="reply-text" data-reply-text>{{ reply.text }}</p>
+    <p class="marks">
+      <span data-reply-day>{{ replyDay() }}</span>
+      @if (replyEdited(); as mark) {
+        <span class="mark"><span class="dot" aria-hidden="true">·</span><span data-reply-edited>{{ mark }}</span></span>
+      }
+      @if (reply.status === 'reported') {
+        <span class="mark"
+          ><span class="dot" aria-hidden="true">·</span
+          ><span class="reported" data-reply-reported [id]="id + '-rep'">{{ 'garage.reviews.reply.reported' | t }}</span></span
+        >
+      }
+      @if (reviewEditedAfter()) {
+        <span class="mark"
+          ><span class="dot" aria-hidden="true">·</span
+          ><span data-review-edited-after>{{ 'garage.reviews.reply.reviewEdited' | t }}</span></span
+        >
+      }
+    </p>
+  </div>
+}
+@if (action(); as label) {
+  <div class="actions">
+    <button
+      hlmBtn
+      variant="secondary"
+      type="button"
+      data-reply-button
+      [attr.aria-disabled]="editOff() || null"
+      [attr.aria-describedby]="id + '-by' + (editOff() ? ' ' + id + '-rep' : '')"
+      (click)="press()"
+    >
+      {{ label | t }}
+    </button>
+  </div>
+}
