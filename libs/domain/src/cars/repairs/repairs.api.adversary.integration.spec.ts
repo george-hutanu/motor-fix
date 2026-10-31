@@ -11,9 +11,11 @@ import { RepairsModule } from './repairs.module';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
+import { DirectSendModule } from '../../notifications/direct-send/direct-send.module';
 import {
   databaseUrl,
   redisUrlFor,
+  testConfig,
   testPhoneConfig,
 } from '../../notifications/notifications.testing';
 import { CarHistoryModule } from '../history/history.module';
@@ -48,14 +50,18 @@ beforeAll(async () => {
       CarHistoryModule,
       CarsModule,
       RepairsModule,
-      CarTransfersModule.register({
-        brevo: { apiKey: 'test-key', apiUrl: brevo.url },
+      CarTransfersModule.register(
+        WEB_URL,
+        DirectSendModule.register(redisUrlFor(15)),
+      ),
+      DirectSendModule.registerWorker({
+        email: testConfig(brevo.url),
         phone: testPhoneConfig({
           PHONE_ALLOWLIST: '+407*',
           WHATSAPP_TEMPLATES:
             'motorfix_car_transfer_link_ro=41,motorfix_car_transfer_link_en=42',
         }),
-        webUrl: WEB_URL,
+        redisUrl: redisUrlFor(15),
       }),
     ],
   }).compile();
