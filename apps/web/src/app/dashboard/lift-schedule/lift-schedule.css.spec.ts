@@ -9,9 +9,9 @@ const rule = (selector: string) =>
   )?.[2] ?? '';
 
 describe('the lift names in the gutter', () => {
-  it('read as the board draws them: 14px, weight 600, in the primary ink', () => {
+  it('read as the board draws them: weight 600 in the primary ink, at the scale step nearest its 14px', () => {
     const names = rule('.names');
-    expect(names).toMatch(/font-size:\s*14px;/);
+    expect(names).toMatch(/font-size:\s*var\(--mf-size-small\);/);
     expect(names).toMatch(/font-weight:\s*600;/);
     expect(names).toMatch(/color:\s*var\(--mf-text\);/);
   });
