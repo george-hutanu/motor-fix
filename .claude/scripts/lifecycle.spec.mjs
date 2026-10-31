@@ -469,6 +469,18 @@ describe('check caps the memory of the affected Jest runs', () => {
     assert.equal(env.JEST_IDLE_MEMORY, '2GB');
   });
 
+  // The Angular projects test on Vitest, which reads no Jest variable: heavy.sh's
+  // heap and its two parallel Nx tasks are their bound.
+  // @traces 1332-angular-vitest-FR-014
+  it('runs the affected tests through heavy.sh, two Nx tasks at a time on a 3072 MB heap', () => {
+    const h = harness({ answers: [MERGE_BASE] });
+    assert.equal(step(['check'], h.io).ok, true);
+    assert.match(h.envs.find((e) => e.cmd.startsWith('sh scripts/heavy.sh')).cmd, /npx nx affected -t typecheck test/);
+    const heavy = readFileSync(join(root, 'scripts', 'heavy.sh'), 'utf8');
+    assert.match(heavy, /NX_PARALLEL="\$\{NX_PARALLEL:-2\}"/);
+    assert.match(heavy, /--max-old-space-size=3072/);
+  });
+
   it('caps only the test step: the other checks run with the env as it was', () => {
     const h = harness({ answers: [MERGE_BASE] });
     assert.equal(step(['check'], h.io).ok, true);

@@ -433,9 +433,7 @@ describe('toProblem', () => {
   });
 
   it('calls no answer while the browser is offline an offline failure', () => {
-    const online = jest
-      .spyOn(navigator, 'onLine', 'get')
-      .mockReturnValue(false);
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     try {
       expect(toProblem(problem(0, null))).toEqual({
         code: 'offline',
@@ -448,7 +446,7 @@ describe('toProblem', () => {
 
   describe("the service worker's 504", () => {
     const offline = () =>
-      jest.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
 
     it.each([
       ['no body', null],

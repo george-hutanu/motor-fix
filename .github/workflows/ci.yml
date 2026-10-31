@@ -218,7 +218,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           JEST_SUITE: unit
-        run: npx nx $NX_SCOPE -t test --passWithNoTests
+        run: npx nx $NX_SCOPE -t test
 
   # The integration suite (real PostgreSQL+PostGIS and Redis), on demand only,
   # like E2E: a PR never runs it. A workflow_call carries its caller's event
@@ -288,8 +288,9 @@ jobs:
           SPECS: ${{ inputs.specs }}
           REPEAT: ${{ inputs.repeat }}
         run: |
+          # The Angular projects run on Vitest and hold no integration spec.
           if [ -z "$SPECS" ]; then
-            npx nx $NX_SCOPE -t test --passWithNoTests
+            npx nx $NX_SCOPE -t test --exclude web,ui-cockpit,overlays,i18n,media
             exit
           fi
           [ "$REPEAT" -ge 1 ] 2>/dev/null || { echo "::error::repeat must be 1 or more, got '$REPEAT'"; exit 1; }

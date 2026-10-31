@@ -9,6 +9,7 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import {
   FileUploader,
@@ -27,12 +28,12 @@ describe('FileUploader second round of hostile conditions', () => {
   let uploader: FileUploader;
   let events: UploadEvent<string>[];
   let failure: unknown;
-  let ask: jest.Mock;
-  let confirm: jest.Mock;
+  let ask: Mock;
+  let confirm: Mock;
   const file = new Blob(['jpeg bytes'], { type: 'image/jpeg' });
 
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
@@ -41,13 +42,13 @@ describe('FileUploader second round of hostile conditions', () => {
     events = [];
     failure = undefined;
     let asked = 0;
-    ask = jest.fn(() => of(address(++asked)));
-    confirm = jest.fn((key: string) => of(`final:${key}`));
+    ask = vi.fn(() => of(address(++asked)));
+    confirm = vi.fn((key: string) => of(`final:${key}`));
   });
 
   afterEach(() => {
     http.verify();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   const start = () =>
@@ -59,7 +60,7 @@ describe('FileUploader second round of hostile conditions', () => {
     });
 
   // Lets the checksum of the blob resolve so the address is asked for.
-  const flush = () => jest.advanceTimersByTimeAsync(0);
+  const flush = () => vi.advanceTimersByTimeAsync(0);
 
   const drop = () =>
     http
@@ -70,17 +71,17 @@ describe('FileUploader second round of hostile conditions', () => {
     start();
     await flush();
     drop();
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     drop();
 
-    jest.advanceTimersByTime(1999);
+    vi.advanceTimersByTime(1999);
     http.expectNone((r) => r.url.startsWith('https://store.example/'));
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
     drop();
 
-    jest.advanceTimersByTime(3999);
+    vi.advanceTimersByTime(3999);
     http.expectNone((r) => r.url.startsWith('https://store.example/'));
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
     http
       .expectOne((r) => r.url.startsWith('https://store.example/'))
       .flush(null, { status: 200, statusText: 'OK' });
@@ -118,7 +119,7 @@ describe('FileUploader second round of hostile conditions', () => {
       expect(confirm).not.toHaveBeenCalled();
       expect(failure).toBeInstanceOf(HttpErrorResponse);
       expect((failure as HttpErrorResponse).status).toBe(status);
-      jest.advanceTimersByTime(10_000);
+      vi.advanceTimersByTime(10_000);
     },
   );
 

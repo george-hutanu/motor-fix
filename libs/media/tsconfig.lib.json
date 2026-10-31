@@ -3,7 +3,7 @@
     "outDir": "../../dist/out-tsc",
     "types": []
   },
-  "exclude": ["jest.config.cts", "src/**/*.spec.ts", "src/test-setup.ts"],
+  "exclude": ["src/**/*.spec.ts", "src/test-setup.ts"],
   "extends": "./tsconfig.json",
   "include": ["src/**/*.ts"]
 }

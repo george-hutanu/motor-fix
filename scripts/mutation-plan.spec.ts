@@ -14,6 +14,7 @@ import {
   mutatedFiles,
   mutationProjects,
   plan,
+  projectFloor,
   readShardFile,
   shardScope,
 } from './mutation-plan.ts';
@@ -385,5 +386,37 @@ describe('the repository shard file', () => {
       4,
     );
     expect(Object.keys(projects.web?.shards ?? {}).length).toBeGreaterThan(2);
+  });
+
+  // @traces 1332-angular-vitest-FR-009 1332-angular-vitest-FR-010
+  it('keeps the Angular projects in the matrix with their shards, timeouts and floors', () => {
+    const angular = ['web', 'ui-cockpit', 'overlays', 'i18n', 'media'];
+    const jobs = plan(real, {})
+      .filter((e) => angular.includes(e.project))
+      .map((e) => `${e.id} ${e.root} ${e.timeout}`)
+      .sort();
+    const floors = mutationProjects(real)
+      .filter((p) => angular.includes(p.name))
+      .map((p) => [p.name, projectFloor(join(real, p.root))]);
+
+    expect(jobs).toEqual([
+      'i18n libs/i18n 30',
+      'media libs/media 30',
+      'overlays libs/overlays 30',
+      'ui-cockpit libs/ui-cockpit 45',
+      'web-dashboard-admin apps/web 120',
+      'web-dashboard-core apps/web 360',
+      'web-dashboard-garage apps/web 360',
+      'web-public-core apps/web 120',
+      'web-public-steps apps/web 120',
+      'web-rest apps/web 360',
+    ]);
+    expect(Object.fromEntries(floors)).toEqual({
+      i18n: 85,
+      media: 85,
+      overlays: 76,
+      'ui-cockpit': 66,
+      web: 79,
+    });
   });
 });
