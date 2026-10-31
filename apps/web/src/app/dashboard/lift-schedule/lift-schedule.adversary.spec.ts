@@ -1,6 +1,7 @@
 // @traces 151-FR-001 151-FR-006 151-FR-013 151-FR-015 151-FR-016
 import { HttpErrorResponse } from '@angular/common/http';
 
+import { LiftSchedule } from './lift-schedule';
 import {
   block,
   blocks,
@@ -239,7 +240,7 @@ describe('the lift schedule panel and its switch', () => {
       features: { lift_schedule: false },
     });
 
-    expect(fixture.componentInstance.shown()).toBe(false);
+    expect((fixture.componentInstance as LiftSchedule).shown()).toBe(false);
   });
 
   it('is shown when the switch is on', async () => {
@@ -247,7 +248,7 @@ describe('the lift schedule panel and its switch', () => {
       features: { lift_schedule: true },
     });
 
-    expect(fixture.componentInstance.shown()).toBe(true);
+    expect((fixture.componentInstance as LiftSchedule).shown()).toBe(true);
   });
 
   it('goes away without a read when the switch is off', async () => {
@@ -261,7 +262,7 @@ describe('the lift schedule panel and its switch', () => {
   it('stays shown for a mechanic without can_move_bookings and shows the lift names', async () => {
     const { element, fixture } = await renderPanel({ role: 'mechanic' });
 
-    expect(fixture.componentInstance.shown()).toBe(true);
+    expect((fixture.componentInstance as LiftSchedule).shown()).toBe(true);
     expect(element.querySelectorAll('[data-row-name]')).toHaveLength(3);
   });
 });
