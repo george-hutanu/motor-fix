@@ -1,6 +1,6 @@
 ---
 capability: reviews
-updated: 2026-10-26
+updated: 2026-10-31
 features:
   - 022-review-drawer
   - 023-review-confirmed-job
@@ -14,6 +14,7 @@ features:
   - 075-review-reply
   - 099-overview-sections
   - 177-reported-reviews
+  - 1382-report-review-button
 ---
 
 # Capability: Reviews
@@ -338,9 +339,9 @@ _From 074-garage-reviews._
 
 _From 074-garage-reviews._
 
-### 074-FR-007 — On the web, the owner and the receptionist MUST see the panel and the view (the receptionist with no Răspunde or Raportează control: none is drawn here for anyone; #111 and #11 draw theirs from FR-009's flags); a mechanic MUST have neither (the capability table already leaves `garage.reviews` out of the mechanic's); a driver, an admin or a visitor has no garage area.
+### 1382-FR-001 — (076-FR-001) Each row of the "Recenzii noi" panel and the "Recenzii" view whose `canReport` is true and whose status is `published` MUST show a quiet "Raportează" / "Report" button, at least 44 px tall, keyboard-reachable with a visible focus, in the row's actions line after its text and author line; a row with `canReport` false MUST show no button, and a `reported` row MUST show no button (its reported tag stands in its place).
 
-_From 074-garage-reviews._
+_From 1382-report-review-button._
 
 ### 074-FR-008 — The system MUST expose `GET /api/v1/garages/{garageId}/reviews?page=` requiring a session: the owner and the receptionist of that garage get 200; a mechanic of that garage 403 `forbidden`; a member of another garage, a driver, an admin or any other signed-in account 404 `not_found` with one body for every case; no session 401 `sign_in_required`. `page` below 1 or not an integer MUST answer 400 `validation_failed`; a missing `page` is page 1; a page past the last answers an empty list with the figures. A `garageId` that is not a valid id answers the same 404 `not_found` body. The read answers by capability alone, whatever the garage's status.
 
@@ -494,6 +495,38 @@ _From 177-reported-reviews._
 
 _From 177-reported-reviews._
 
+### 1382-FR-002 — (076-FR-002) A row whose `reportRefusal` is `already_kept` MUST show the button with `aria-disabled` (kept in the tab order, opening nothing) and the visible hint "Păstrată de un admin; poate fi raportată din nou doar după ce autorul o editează." / "Kept by an admin; it can be reported again only after the author edits it." joined by `aria-describedby`; a row whose `reportRefusal` is null MUST show it enabled.
+
+_From 1382-report-review-button._
+
+### 1382-FR-003 — (076-FR-003) Pressing the button MUST open the shared task (`dialog` shape: centred from 768 px, the bottom sheet below) titled "Raportează recenzia" / "Report the review", whose subtitle is the author's short name and the posted month and year joined with " · ", holding in this order: a required radio group "Motivul" / "Reason" with the nine options of 076-FR-003 in its order mapped to its codes, none preselected; when `other` is picked, a required multi-line field "Spune-ne ce nu e în regulă" / "Tell us what is wrong" (1 to 500 characters after trimming, with a live "n / 500" counter) right under the group, hidden with its value kept when another reason is picked; the note "Recenzia e ascunsă de pe profil până decide un admin, în cel mult 48 de ore." / "The review is hidden from the profile until an admin decides, within 48 hours."; and the buttons "Trimite raportul" / "Send the report" and "Renunță" / "Cancel".
+
+_From 1382-report-review-button._
+
+### 1382-FR-004 — (076-FR-004) The send button MUST be disabled until a reason is picked and, for `other`, the trimmed text is 1 to 500 characters, and busy while the request is in flight; the task MUST send `text` only for `other`. The task MUST follow the overlay rules: focus on the first option on a computer, focus kept inside and returned on close, the discard question once a reason is picked or text typed, and 320 px without sideways scroll with no text under 12 px, in light and dark, Romanian and English.
+
+_From 1382-report-review-button._
+
+### 1382-FR-005 — (076-FR-005) On 201 the task MUST close with the answer, the dashboard MUST show the toast "Raportată. Un admin decide în 48 de ore." / "Reported. An admin decides within 48 hours." and update that row from the answer at once (status `reported`: the tag, no button), held by the panel until the next first-page read; on 409, 403 or 404 the task MUST close, show the refusal's message as a toast (a web text per code in the owner's language, else the answer's `detail`) and the list MUST re-read; on a network error or a 5xx the task MUST stay open with the shared error line and a retry, the reason and the text kept. On a `review.reported` message the panel and the view re-read as ST-74 already does.
+
+_From 1382-report-review-button._
+
+### 1382-FR-006 — (076-FR-010a) The staff read (`GET /api/v1/garages/{garageId}/reviews`) MUST carry on each item, beside `canReport`, `reportRefusal`: `already_reported` for a `reported` review, `already_kept` for a `published` review the 076-FR-007 kept rule refuses, else null; computed with `reportRefusalOf` from the review's newest `decided` report, the rows the operation reads, so the button and the operation never disagree. The public reads and the driver's reads MUST carry nothing of it.
+
+_From 1382-report-review-button._
+
+### 1382-FR-007 — (076-FR-012, the web part) Every new web text (the button, the hint, the task's title, subtitle, legend, reasons, field, counter, note and buttons, the toast, the refusals) MUST live in the garage language files in Romanian and English and follow the owner's language; the row and the task MUST render at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll, no text under 12 px, and pass the QA sweep's accessibility checks.
+
+_From 1382-report-review-button._
+
+### 1382-FR-008 — (constraint, Principle I and the bundle budget) The report task MUST be loaded on the first press, inside the dashboard's lazily loaded code; nothing of this story joins the first-page bundle and its 1 MB budget is not raised.
+
+_From 1382-report-review-button._
+
+### 1382-FR-009 — (076-FR-014, the web part and the staff read) Tests MUST be written first: Jest on real PostgreSQL for `reportRefusal` on the staff read in each state (null, `already_reported`, `already_kept`, null again after an author edit); colocated Jest specs for the row (the button and its three states, the receptionist's none, both languages) and the task (nine options in order, none picked, the `other` field and counter, the disabled send at 0, 500 and 501 characters, `text` sent only for `other`, the 201 toast and the closing answer, each 409/403/404 toast and the closing refusal, the network error with the kept values), the panel (the row updated from the answer, the re-read on a refusal); one Playwright flow: the owner reports a review and the row shows the tag.
+
+_From 1382-report-review-button._
+
 ## Retired
 
 - `022-FR-012` — superseded by `023-FR-015` (2026-10-21)
@@ -509,3 +542,4 @@ _From 177-reported-reviews._
 - `024-FR-020` — superseded by `1367-FR-011` (2026-10-25)
 - `074-FR-009` — superseded by `075-FR-009` (2026-10-26)
 - `074-FR-001` — superseded by `099-FR-015` (2026-10-26)
+- `074-FR-007` — superseded by `1382-FR-001` (2026-10-31)
