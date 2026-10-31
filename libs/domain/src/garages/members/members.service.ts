@@ -7,10 +7,10 @@ import type { Actor } from '../../auth/policy';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { NotificationsService } from '../../notifications/notifications.service';
-import {
-  assertGarageOwner,
-  notFound,
-} from '../garage-brands/garage-brands.service';
+import { assertGarageOwner } from '../garage-brands/garage-brands.service';
+
+const notFound = () =>
+  refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such receptionist');
 
 const byName = new Intl.Collator('ro', { sensitivity: 'base' });
 const RANK: Record<GarageMemberDto['role'], number> = {
@@ -19,23 +19,28 @@ const RANK: Record<GarageMemberDto['role'], number> = {
   receptionist: 1,
 };
 
-// The garage's open receptionist invites to the person, by e-mail (any case)
-// or phone; her mechanic invites are the owner's to keep or revoke.
+// The garage's open receptionist invites to the person, by e-mail (any case,
+// compared whole: a `_` or `%` in it is a letter, not a wildcard) or phone;
+// her mechanic invites are the owner's to keep or revoke.
 async function revokeInvites(
   tx: Prisma.TransactionClient,
   garageId: string,
   { email, phone }: { email: string | null; phone: string | null },
 ) {
-  const to = [
-    ...(email
-      ? [{ email: { equals: email, mode: 'insensitive' as const } }]
-      : []),
-    ...(phone ? [{ phone }] : []),
-  ];
-  if (to.length === 0) return;
+  if (!email && !phone) return;
+  const open = await tx.staffInvite.findMany({
+    select: { email: true, id: true, phone: true },
+    where: { garageId, kind: 'receptionist', status: 'sent' },
+  });
+  const hers = open.filter(
+    (i) =>
+      (email && i.email?.toLowerCase() === email.toLowerCase()) ||
+      (phone && i.phone === phone),
+  );
+  if (hers.length === 0) return;
   await tx.staffInvite.updateMany({
     data: { status: 'revoked' },
-    where: { garageId, kind: 'receptionist', OR: to, status: 'sent' },
+    where: { id: { in: hers.map((i) => i.id) }, status: 'sent' },
   });
 }
 

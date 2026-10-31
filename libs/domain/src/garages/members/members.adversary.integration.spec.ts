@@ -435,7 +435,8 @@ describe('the receptionist removal under hostile callers', () => {
       await remove(a.garage.id, 'not-a-uuid', bearer(stranger, 'driver')),
     ];
 
-    // The API's problem filter words a pipe's 400 validation_failed.
+    // The API's problem filter words a pipe's 400 validation_failed, which
+    // apps/api/src/validation-problem.integration.spec.ts proves for this route.
     expect(answers.map((r) => r.status)).toEqual([400, 400, 400]);
     expect(await still(a.garage.id, s.desk)).toBe(1);
   });
@@ -521,27 +522,5 @@ describe('the receptionist removal under hostile callers', () => {
 
     expect([res.status, res.body.code]).toEqual([404, 'not_found']);
     expect(await still(b.garage.id, t.desk)).toBe(1);
-  });
-
-  it('answers every refusal with the code and message the problem filter maps', async () => {
-    const a = await garage('Dinamo');
-    const s = await staff(a.garage.id);
-
-    const refusals = [
-      await remove(a.garage.id, s.desk),
-      await remove(a.garage.id, s.desk, bearer(s.fixer, 'mechanic')),
-      await remove(a.garage.id, a.owner, bearer(a.owner, 'garage')),
-      await remove(a.garage.id, s.fixer, bearer(a.owner, 'garage')),
-    ];
-
-    // The API's problem filter turns each into application/problem+json.
-    for (const res of refusals) {
-      expect(res.body).toEqual(
-        expect.objectContaining({
-          code: expect.any(String),
-          message: expect.any(String),
-        }),
-      );
-    }
   });
 });

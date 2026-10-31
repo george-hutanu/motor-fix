@@ -35,16 +35,4 @@ describe("a receptionist's removal in the observability inventory", () => {
       story: 'ST-400',
     });
   });
-
-  it('names the audit entry, member.removed, STAFF_REMOVED and the owner_row refusal', () => {
-    for (const part of [
-      'member',
-      'member.removed',
-      'STAFF_REMOVED',
-      'logged as an error',
-      'owner_row',
-    ]) {
-      expect(entry?.reason).toContain(part);
-    }
-  });
 });

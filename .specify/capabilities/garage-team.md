@@ -1,6 +1,6 @@
 ---
 capability: garage-team
-updated: 2026-10-29
+updated: 2026-10-31
 features:
   - 131-invite-garage-staff
   - 389-confirm-booking-lift-mechanic
@@ -13,6 +13,7 @@ features:
   - 058-mechanic-hours
   - 150-add-booking
   - 427-time-blocks
+  - 400-receptionist
 ---
 
 # Capability: Garage team
@@ -177,9 +178,9 @@ _From 056-mechanic-dialog._
 
 _From 058-mechanic-hours._
 
-### 056-FR-009 — The catalogue MUST gain STAFF_REMOVED (trigger event, channels e-mail and push, no group, transactional: never WhatsApp and never muted), with templates in Romanian and English (bell "Nu mai faci parte din echipa {garage}." / "You are no longer part of the team of {garage}.", e-mail with the same line and a button to the app's home in the account's language; never muted as STAFF_INVITE's e-mail is not, by the same catalogue attribute), sent to the removed card's account after the commit, in the account's language; a card with no account gets nothing.
+### 400-FR-004 — After the commit the removed account MUST be notified STAFF_REMOVED (056-FR-009: e-mail and push, transactional, params `{ garage }`) with `eventId` `member.removed:{garageId}:{accountId}:{joinedAt epoch ms}` (unique per membership, so a second removal of the same person after a new invite is a new notification, `notifications.prisma:57`), `garageId`, `subjectId` her account id, recipient her account; a failed send MUST be logged as an error naming the account and garage ids and MUST NOT undo the removal (as `garage-mechanics.service.ts:584-599`).
 
-_From 056-mechanic-dialog._
+_From 400-receptionist._
 
 ### 056-FR-010 — The live hub MUST carry `mechanic.added` and `mechanic.removed` as the `garage.team` family carries `mechanic.updated` (`KIND_CAPABILITY`), MUST re-read access on `mechanic.removed` as on `mechanic.updated` (`REREAD_ACCESS`), and MUST let `public:garage:` and `public:mechanic:` streams hear both.
 
@@ -377,6 +378,26 @@ _From 058-mechanic-hours._
 
 _From 427-time-blocks._
 
+### 400-FR-001 — The API MUST offer `DELETE /api/v1/garages/{garageId}/members/{accountId}` answering 204 for the garage's owner, checked first through the held `assertGarageOwner` (`garage-brands.service.ts:28`): a receptionist or a mechanic of the garage 403 `forbidden`; any other actor 404 `not_found`; no session 401 `sign_in_required`; a non-uuid id 400 `validation_failed`; an upper-case uuid is accepted as the list accepts it (102-FR-011). The route MUST work whatever `team_mechanics` says. Then the target: the owner's own account 409 `owner_row`; an account without a `receptionist` membership row at this garage (a mechanic, a stranger, an already removed receptionist) 404 `not_found`. Every refusal is an RFC 9457 problem body. The checks run in this order: session (401) → id format (400) → `assertGarageOwner` (404, then 403) → target (409, then 404); a signed-out call with a malformed id answers 401.
+
+_From 400-receptionist._
+
+### 400-FR-002 — The removal MUST run in one transaction: delete the membership row by a conditional delete (zero rows → 404, so two removals at once end in one 204 and one 404); set the garage's `sent` invites of kind `receptionist` to `revoked` where the e-mail equals hers without case or, when the account has a phone, the phone equals hers; write one audit entry through the shared writer (390-FR-001) with `action: 'delete'`, `subjectType: 'member'`, `subjectId` her account id, `garageId`, `oldValue: { name, role: 'receptionist' }` (`name` the full `account.name`, as the members list returns it; the history's renderer shortens it), the owner as actor; record `member.removed` through the outbox (audience `{ type: 'garage', garageIds: [garageId] }`, payload `{ accountId, garageId }`, `subjectId` her account id) in the same transaction. The subject is her account, not the garage `team-leave.ts:62` names: the outbox relay sends `subject_id` as the live message's id (`outbox-relay.ts:159-166`) and the hub drops the connections of the account that id names (`live.hub.ts:462-466`, `live.api.integration.spec.ts:713`); on an account deletion `account.deleted` ends her streams anyway, so team-leave's subject is left as it is. No `left_at` mark is added: the row goes, as on an account deletion. The revoked invites get no `invite.revoked` event and no audit entry of their own: the bare update is the mechanic removal's shape (`garage-mechanics.service.ts:539-551`), and the one `member` entry and `member.removed` are the trail.
+
+_From 400-receptionist._
+
+### 400-FR-006 — The route MUST be listed in `infra/observability/inventory.json` as an endpoint `garage-members-remove` (source `members.controller.ts`, metric the API's request-duration histogram by route `/api/v1/garages/:garageId/members/:accountId`, dashboard `motorfix-api`, alerts `api-error-rate` and `api-latency`, story ST-400) with its reason: the audit `delete` entry and `member.removed` in the same transaction are the product trail, the STAFF_REMOVED send is counted by the notifications pipeline's own entries, a failed send is one error log line, a 409 `owner_row` is the rule working. `scripts/observability-inventory.ts` MUST pass, and the PR's Notes MUST say so.
+
+_From 400-receptionist._
+
+### 400-FR-007 — A role-check table test on real PostgreSQL MUST walk the receptionist's scope: for the seeded receptionist each allowed endpoint (requests inbox, schedule, bookings, the garage's jobs list, reviews read, profile read, audit history, garage figures, a day sheet, the confirm options (its mechanics and lifts, the planning read MF-36 grants her), a time block on a lift (X07, MF-36 rule 15)) answers 2xx; each forbidden endpoint (price list write, profile write, job stage move to "în lucru", job step, review reply, review report, members read, members removal, mechanics list, staff invite send, feature switch change, settings write) answers 403 `forbidden`; the same calls on another garage's ids answer 404 `not_found`; and, after her removal (FR-001), every allowed call answers 404, never 403. Where a case is already proven by a test named in "What `main` already does", the table MAY reference it instead of repeating the call, but the job stage move's 403 and the after-removal 404s MUST be new.
+
+_From 400-receptionist._
+
+### 400-FR-008 — Tests MUST be written first (Principle II) and carry `// @traces 400-FR-<n>` lines: Jest on real PostgreSQL for FR-001 (each status in order: 401, 400, 404 stranger, 403 receptionist and mechanic, 409 owner, 404 mechanic target, 404 unknown, 404 second removal, 204, the switch off), FR-002 (the row gone, the `receptionist` invite revoked by e-mail and by phone and the `mechanic` one kept, the audit entry's exact fields, the outbox event, one transaction: a failing audit write leaves the row), FR-003 (the removed account's 404 on a garage route and on the live hub's access re-read, the role kept, a new invite accepted after), FR-004 (the notification call and the logged failure); Jest on the panel for FR-005 (the button on receptionist rows only, the dialog's texts in both languages, the call with the row's id, busy, the failed state, the Romanian and English blocks key-equal); FR-006 by `scripts/observability-inventory.ts`; FR-007 as its own table spec; and one Playwright case (`@seeded @mailbox`, research R9): the owner removes a receptionist she invited in the test, from "Persoane cu acces", and that receptionist's signed-in dashboard, in a second context, shows "Nu mai ai acces la acest service".
+
+_From 400-receptionist._
+
 ## Retired
 
 - `129-FR-009` — superseded by `055-FR-004` (2026-10-24)
@@ -394,3 +415,4 @@ _From 427-time-blocks._
 - `056-FR-006` — superseded by `1255-FR-014` (2026-10-25)
 - `056-FR-008` — superseded by `058-FR-007` (2026-10-25)
 - `058-FR-011` — superseded by `150-FR-003` (2026-10-26)
+- `056-FR-009` — superseded by `400-FR-004` (2026-10-31)
