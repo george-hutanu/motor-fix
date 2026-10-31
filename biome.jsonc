@@ -169,6 +169,7 @@
         "apps/web/src/app/dashboard/tab-bar/tab-bar.html",
         "apps/web/src/app/dashboard/view/view.html",
         "apps/web/src/app/dashboard/verification-file/verification-file.html",
+        "apps/web/src/app/dashboard/block-time-dialog/block-time-dialog.html",
         "apps/web/src/app/dashboard/garage-requests/confirm-booking-dialog/confirm-booking-dialog.html",
         "apps/web/src/app/dashboard/garage-requests/first-steps-card/first-steps-card.html",
         "apps/web/src/app/dashboard/garage-requests/garage-home/garage-home.html",
@@ -246,7 +247,8 @@
         "apps/web/src/app/dashboard/admin-log-filters/log-pickers/log-pickers.html",
         "apps/web/src/app/consent/cookie-settings/cookie-settings.html",
         "apps/web/src/app/dashboard/notification-settings/notification-settings.html",
-        "apps/web/src/app/public/garage-profile/prices-section/prices-section.html"
+        "apps/web/src/app/public/garage-profile/prices-section/prices-section.html",
+        "apps/web/src/app/public/results/filters/filters-panel/filters-panel.html"
       ],
       "linter": {
         "rules": {

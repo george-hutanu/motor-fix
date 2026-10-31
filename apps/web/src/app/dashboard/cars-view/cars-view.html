@@ -45,8 +45,9 @@
           />
           <mf-due-date-line [expiry]="car.rcaUntil" keyPrefix="driver.cars.rca" [addable]="true" (add)="edit(car, 'rcaUntil')" />
           <mf-due-date-line [expiry]="car.rovinietaUntil" keyPrefix="driver.cars.rovinieta" [addable]="true" (add)="edit(car, 'rovinietaUntil')" />
-          @if (car.nextServiceKm != null) {
-            <mf-oil-line [nextServiceKm]="car.nextServiceKm" [odometerKm]="car.odometerKm" />
+          <!-- An answer cached before the field existed has no nextServiceKm at all. -->
+          @if (car.nextServiceKm !== undefined) {
+            <mf-oil-line [nextServiceKm]="car.nextServiceKm" [odometerKm]="car.odometerKm" [serviceDueOn]="car.serviceDueOn" [addable]="true" (add)="edit(car, 'nextServiceKm')" />
           }
         </article>
       }

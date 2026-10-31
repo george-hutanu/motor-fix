@@ -277,6 +277,28 @@ describe('Mașinile mele', () => {
     expect(list).toHaveBeenCalledTimes(1);
   });
 
+  // @traces 1386-FR-005
+  it('shows the oil line of a car added with a next service at once', async () => {
+    const { element, settle } = await render([]);
+    await settle();
+    open.mockResolvedValueOnce(
+      car({ nextServiceKm: 152000, serviceDueOn: '2027-01-01' }),
+    );
+
+    button(element, 'Adaugă o mașină')?.click();
+    await settle();
+    await settle();
+
+    const oil = cards(element)[0].querySelector<HTMLElement>(
+      'mf-oil-line mf-lamp',
+    );
+    expect((oil?.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      'Schimb de ulei peste 3.800 km',
+    );
+    expect(oil?.getAttribute('data-state')).toBe('green');
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
   it('opens the dialog with the plates already held and puts the saved car first without reading again', async () => {
     const { element, settle } = await render([
       car({ id: 'car-1', plate: 'CJ12ABC' }),
@@ -607,12 +629,97 @@ describe('a car card', () => {
     );
   });
 
-  // @traces 029-FR-007
-  it('shows no oil-service line without a next service', async () => {
+  // @traces 1386-FR-004 1386-FR-007
+  it('asks for the next oil service on a grey line after the rovinietă line', async () => {
     const { element, settle } = await render([car()]);
     await settle();
 
-    expect(cards(element)[0].querySelector('mf-oil-line')).toBeNull();
+    const card = cards(element)[0];
+    const lamps = [...card.querySelectorAll<HTMLElement>('mf-lamp')];
+    expect(lamps).toHaveLength(4);
+    expect(lamps[3].closest('mf-oil-line')).not.toBeNull();
+    expect(lamps[3].getAttribute('data-state')).toBe('grey');
+    expect(card.querySelector('mf-oil-line button')?.textContent?.trim()).toBe(
+      'Schimb de ulei: adaugă kilometrajul',
+    );
+  });
+
+  // @traces 1386-FR-004
+  it('opens the edit dialog at the next oil service from its grey line, then shows the judged line', async () => {
+    const { element, settle } = await render([
+      car({ id: 'car-1', plate: 'CJ12ABC' }),
+    ]);
+    await settle();
+    open.mockResolvedValueOnce(
+      car({
+        id: 'car-1',
+        nextServiceKm: 152000,
+        plate: 'CJ12ABC',
+        serviceDueOn: '2027-01-01',
+      }),
+    );
+
+    (
+      cards(element)[0].querySelector('mf-oil-line button') as HTMLButtonElement
+    ).click();
+    await settle();
+    await settle();
+
+    expect(open).toHaveBeenCalledWith(AddCar, {
+      data: {
+        car: car({ id: 'car-1', plate: 'CJ12ABC' }),
+        focus: 'nextServiceKm',
+        gone: expect.any(Function),
+        plates: ['CJ12ABC'],
+      },
+      shape: 'dialog',
+      title: 'driver.cars.edit.title',
+    });
+    const oil = cards(element)[0].querySelector<HTMLElement>(
+      'mf-oil-line mf-lamp',
+    );
+    expect(oil?.getAttribute('data-state')).toBe('green');
+    expect((oil?.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      'Schimb de ulei peste 3.800 km',
+    );
+    expect(cards(element)[0].querySelector('mf-oil-line button')).toBeNull();
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  // @traces 1386-FR-003 1386-FR-005
+  it('judges the oil line by the estimated date and updates it from the edit answer', async () => {
+    const { element, settle } = await render([
+      car({
+        id: 'car-1',
+        nextServiceKm: 152000,
+        serviceDueOn: '2027-01-01',
+      }),
+    ]);
+    await settle();
+    open.mockResolvedValueOnce(
+      car({
+        id: 'car-1',
+        nextServiceKm: 152000,
+        odometerKm: 150500,
+        serviceDueOn: '2026-11-23',
+      }),
+    );
+
+    trigger(cards(element)[0])?.click();
+    await settle();
+    items()[0].click();
+    await settle();
+    await settle();
+
+    expect(lines(cards(element)[0])).toContain('2019 · 150.500 km');
+    const oil = cards(element)[0].querySelector<HTMLElement>(
+      'mf-oil-line mf-lamp',
+    );
+    expect(oil?.getAttribute('data-state')).toBe('amber');
+    expect((oil?.textContent ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      'Schimb de ulei peste 1.500 km',
+    );
+    expect(list).toHaveBeenCalledTimes(1);
   });
 
   // @traces 029-FR-007

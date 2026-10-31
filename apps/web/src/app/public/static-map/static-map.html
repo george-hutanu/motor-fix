@@ -7,13 +7,13 @@
 @if (overlay(); as drawn) {
   <div class="overlay" aria-hidden="true">
     @for (area of drawn.circles; track area.id) {
-      <span class="area" [class.takes]="area.takes" [class.lit]="area.id === lit()" [style.left.px]="area.x" [style.top.px]="area.y" [style.--r]="area.r + 'px'">{{ quiet().has(area.id) ? '' : area.rate }}</span>
+      <span class="area" [class.takes]="area.takes" [class.dim]="!area.matches" [class.lit]="area.id === lit()" [style.left.px]="area.x" [style.top.px]="area.y" [style.--r]="area.r + 'px'">{{ quiet().has(area.id) ? '' : area.rate }}</span>
     }
     @for (cluster of drawn.clusters; track $index) {
       <span class="cluster" [style.left.px]="cluster.x" [style.top.px]="cluster.y">{{ cluster.count }}</span>
     }
     @for (pin of drawn.pins; track pin.id) {
-      <span class="pin" [class.takes]="pin.takes" [class.lit]="pin.id === lit()" [style.left.px]="pin.x" [style.top.px]="pin.y">{{ quiet().has(pin.id) ? '' : pin.rate }}</span>
+      <span class="pin" [class.takes]="pin.takes" [class.dim]="!pin.matches" [class.lit]="pin.id === lit()" [style.left.px]="pin.x" [style.top.px]="pin.y">{{ quiet().has(pin.id) ? '' : pin.rate }}</span>
     }
     @if (drawn.marker; as marker) {
       <span class="here" [style.left.px]="marker.x" [style.top.px]="marker.y"></span>
