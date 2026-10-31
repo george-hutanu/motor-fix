@@ -4,12 +4,16 @@
 /* Half is halfway, or on a short stage (a small phone with the consent bar
    open) just under the map's zoom buttons, never past low. Under a header
    taller than half the stage it still shows the list's first 6rem, rising
-   as far as under the zoom buttons. */
+   as far as under the zoom buttons. Under a header taller than the whole
+   stage every rest is the cell's top: the sheet never rises out of it. */
 :host {
-  --rest: min(
-    max(50%, 6.5rem),
-    max(6.5rem, calc(100% - var(--sheet-top, 160px) - 6rem)),
-    calc(100% - var(--sheet-top, 160px))
+  --rest: max(
+    0px,
+    min(
+      max(50%, 6.5rem),
+      max(6.5rem, calc(100% - var(--sheet-top, 160px) - 6rem)),
+      calc(100% - var(--sheet-top, 160px))
+    )
   );
   background: var(--mf-panel);
   border-radius: var(--mf-radius-panel) var(--mf-radius-panel) 0 0;
@@ -26,7 +30,7 @@
 }
 
 :host([data-position="low"]) {
-  --rest: calc(100% - var(--sheet-top, 160px));
+  --rest: max(0px, calc(100% - var(--sheet-top, 160px)));
 }
 
 .top {
