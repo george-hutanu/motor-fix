@@ -627,6 +627,33 @@
     "overdue": "{n} over 48 hours",
     "reportedReviews": "Reported reviews",
     "requestsSent": "Quote requests",
+    "sections": {
+      "button": "Customise the dashboard",
+      "count": "{x} of {y} sections shown",
+      "description": {
+        "demand": "Which cars are looking for a garage",
+        "growth": "Garages and drivers, month by month",
+        "log": "What happened on the platform today",
+        "numbers": "Garages, requests, bookings, drivers, reviews",
+        "verification": "Applications waiting for a decision"
+      },
+      "done": "Done",
+      "empty": "You hid every section. Switch at least one on in “Customise the dashboard”.",
+      "hide": "Hide: {name}",
+      "line": "Switch off the sections you don’t need and move them into the order you work in. It is saved in your account.",
+      "moveDown": "Move down: {name}",
+      "moveUp": "Move up: {name}",
+      "name": {
+        "demand": "Requests by brand, 30 days",
+        "growth": "Growth, last 12 months",
+        "log": "Log",
+        "numbers": "Platform numbers",
+        "verification": "Garages to verify"
+      },
+      "reset": "Back to the default",
+      "saveFailed": "Could not save. Try again.",
+      "title": "Choose what the dashboard shows"
+    },
     "thisMonth": "{sign}{n} this month",
     "unavailable": "The figures could not be read",
     "why": "Why?"
