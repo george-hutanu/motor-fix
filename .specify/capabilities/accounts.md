@@ -63,6 +63,7 @@ features:
   - 1391-admin-dashboard-customise
   - 1379-provider-calls-worker
   - 151-lift-timeline
+  - 165-admin-roles
 ---
 
 # Capability: Accounts
@@ -1635,6 +1636,10 @@ _From 151-lift-timeline._
 ### 151-FR-019 — The change MUST ship with its observability: the schedule read's entry in `infra/observability/inventory.json` stays as it is (no new endpoint, queue, service or outside call); a failed read already lands in the web app's `web-error-rate` signal, so nothing is added (no web metric pipeline exists, and Principle I forbids inventing one for this panel).
 
 _From 151-lift-timeline._
+
+### 165-FR-001 — The system MUST have one admin role at launch (A39): the `admin` row of the capabilities table holds every capability whose name starts with `admin.` and no other role's row holds any of them; there is no second admin role, no per-admin scope list, no role grant and no screen for them until a decision page names the roles and their `admin/*` capabilities (none exists on 2026-10-31). A test MUST fail when an `admin.*` capability is missing from the admin row or present in another row.
+
+_From 165-admin-roles._
 
 ## Retired
 

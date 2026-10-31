@@ -968,6 +968,7 @@
   "verification": {
     "checkIn": "O verificăm în 1–2 zile lucrătoare.",
     "contact": "Contactează MotorFix",
+    "correct": "Corectează listarea",
     "loadFailed": "Nu am putut încărca starea verificării.",
     "title": "Profilul tău e în verificare"
   },
