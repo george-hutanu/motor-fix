@@ -30,8 +30,10 @@ function failureKind(error: unknown): string {
 export class DirectSend implements OnApplicationShutdown {
   constructor(
     @Inject(DIRECT_SEND_JOBS) private readonly queue: Queue<DirectSendJob>,
-    @Inject(DIRECT_SEND_EVENTS) private readonly events: QueueEvents,
+    @Inject(DIRECT_SEND_EVENTS) private readonly listen: () => QueueEvents,
   ) {}
+
+  private events?: QueueEvents;
 
   whatsapp(
     template: string,
@@ -58,7 +60,7 @@ export class DirectSend implements OnApplicationShutdown {
   }
 
   async onApplicationShutdown() {
-    await this.events.close();
+    await this.events?.close();
     await this.queue.close();
   }
 
@@ -87,13 +89,15 @@ export class DirectSend implements OnApplicationShutdown {
     if (!job) return 'queue_unavailable';
     // The listener reads finish events from when it is ready; BullMQ checks
     // the job's own state too, so one that finished first is not missed.
-    const ready = await this.events.waitUntilReady().then(
+    this.events ??= this.listen();
+    const { events } = this;
+    const ready = await events.waitUntilReady().then(
       () => true,
       () => false,
     );
     if (!ready) return 'queue_unavailable';
     const answer = await job
-      .waitUntilFinished(this.events, DIRECT_SEND_WAIT_MS)
+      .waitUntilFinished(events, DIRECT_SEND_WAIT_MS)
       .then((result: string | null) => result ?? null, failureKind);
     await job.remove().catch(() => undefined);
     return answer;

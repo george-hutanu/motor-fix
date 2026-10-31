@@ -66,7 +66,7 @@ function client(
     close: jest.fn(async () => undefined),
   };
   const events = { close: jest.fn(), waitUntilReady: jest.fn(ready) };
-  return { queue, send: new DirectSend(queue as never, events as never) };
+  return { queue, send: new DirectSend(queue as never, () => events as never) };
 }
 
 const code = (s: DirectSend) =>
@@ -293,7 +293,7 @@ describe('DirectSend failure paths', () => {
       close: jest.fn(),
     };
     const events = { close: jest.fn(), waitUntilReady: async () => undefined };
-    const s = new DirectSend(queue as never, events as never);
+    const s = new DirectSend(queue as never, () => events as never);
 
     const [a, b] = await Promise.all([code(s), code(s)]);
 

@@ -36,7 +36,7 @@ function client(
     close: jest.fn(async () => undefined),
     waitUntilReady: jest.fn(async () => undefined),
   };
-  const send = new DirectSend(queue as never, events as never);
+  const send = new DirectSend(queue as never, () => events as never);
   return { events, queue, remove, send, waitUntilFinished };
 }
 
@@ -204,11 +204,23 @@ describe('DirectSend', () => {
 
   it('closes the queue and the listener on shutdown', async () => {
     const c = client(async () => undefined);
+    await code(c.send);
 
     await c.send.onApplicationShutdown();
 
     expect(c.queue.close).toHaveBeenCalled();
     expect(c.events.close).toHaveBeenCalled();
+  });
+
+  it('builds the listener on the first send only, and once', async () => {
+    const queue = { add: jest.fn(), close: jest.fn(async () => undefined) };
+    const listen = jest.fn();
+    const idle = new DirectSend(queue as never, listen);
+
+    await idle.onApplicationShutdown();
+
+    expect(listen).not.toHaveBeenCalled();
+    expect(queue.close).toHaveBeenCalled();
   });
 });
 
@@ -218,8 +230,12 @@ describe('DirectSendModule.register', () => {
   it('builds the queue and its listener on the broker, never retrying a command forever', () => {
     const module = DirectSendModule.register('redis://valkey.test:6379/2');
     for (const provider of module.providers ?? []) {
-      const factory = (provider as { useFactory?: () => unknown }).useFactory;
-      factory?.();
+      const { useFactory, useValue } = provider as {
+        useFactory?: () => unknown;
+        useValue?: unknown;
+      };
+      useFactory?.();
+      if (typeof useValue === 'function') useValue();
     }
 
     const connection = {
