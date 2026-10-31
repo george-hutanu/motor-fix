@@ -193,6 +193,14 @@ describe('expected status', () => {
     ];
     assert.deepEqual(dropExpected([lookup, ...keep]), keep);
   });
+
+  it('drops that lookup on each language page and with a query, and keeps another status of it', () => {
+    const at = (lang, url, over = {}) => http({ path: '/:lang/transfer/nu-exista', href: `/${lang}/transfer/nu-exista`, url, ...over });
+    const api = 'http://127.0.0.1:34109/api/v1/car-transfers/nu-exista';
+    const dropped = [at('ro', api), at('en', api), at('en', `${api}?fields=status`)];
+    const kept = [at('en', api, { status: 410 }), at('ro', 'http://127.0.0.1:34109/api/v1/car-transfers/alt')];
+    assert.deepEqual(dropExpected([...dropped, ...kept]), kept);
+  });
 });
 
 describe('the signed-in cookie', () => {
