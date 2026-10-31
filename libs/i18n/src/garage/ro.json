@@ -823,6 +823,35 @@
       "title": "Răspunde la recenzie",
       "titleEdit": "Editează răspunsul"
     },
+    "report": {
+      "button": "Raportează",
+      "cancel": "Renunță",
+      "count": "{n} / {max}",
+      "done": "Raportată. Un admin decide în 48 de ore.",
+      "kept": "Păstrată de un admin; poate fi raportată din nou doar după ce autorul o editează.",
+      "note": "Recenzia e ascunsă de pe profil până decide un admin, în cel mult 48 de ore.",
+      "problem": {
+        "already_kept": "Păstrată de un admin; poate fi raportată din nou doar după ce autorul o editează.",
+        "already_reported": "Recenzia e deja raportată.",
+        "forbidden": "Doar proprietarul poate raporta o recenzie.",
+        "not_found": "Recenzia nu mai este disponibilă."
+      },
+      "reason": {
+        "ads": "Reclame",
+        "fake_or_conflicted": "Recenzie falsă sau cu conflict de interese",
+        "hate": "Ură sau discriminare",
+        "insults": "Insulte",
+        "off_topic": "În afara subiectului",
+        "other": "Altceva",
+        "personal_data": "Date personale",
+        "promotion": "Promovarea altor servicii",
+        "threats_or_legal_accusations": "Amenințări sau acuzații legale"
+      },
+      "reasons": "Motivul",
+      "submit": "Trimite raportul",
+      "text": "Spune‑ne ce nu e în regulă",
+      "title": "Raportează recenzia"
+    },
     "reported": "Raportată · ascunsă de pe profil până decide un admin",
     "retry": "Încearcă din nou",
     "score": "{rating} / 5",

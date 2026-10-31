@@ -10,4 +10,9 @@ export interface GarageSettingsDto {
    */
   courtesyCar?: CourtesyCarDto;
   paymentMethods: PaymentMethodsDto;
+
+  /**
+   * Whether the team appears on the public profile
+   */
+  teamOnProfile: boolean;
 }

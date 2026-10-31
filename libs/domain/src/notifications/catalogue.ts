@@ -105,6 +105,7 @@ const ENTRIES: Record<string, Entry> = {
   MESSAGE_RECEIVED: ['event', EPW, 'offers'],
   NEWS: ['timer', ['email'], 'news'],
   NO_SHOW_RECORDED: ['event', EPW, 'bookings'],
+  NO_SHOW_WITHDRAWN: ['event', EPW, 'bookings'],
   PHONE_CHANGE_CODE: ['direct', ['whatsapp'], null, 'transactional'],
   PUSH_TEST: ['direct', ['push'], null, 'transactional'],
   QUOTE_ACCEPTED: ['event', EPW, null],

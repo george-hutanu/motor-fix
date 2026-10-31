@@ -661,6 +661,25 @@ describe('the send-quote dialog: sending', () => {
     );
   });
 
+  it.each([
+    [{ detail: 'Cererea a fost mutată' }, 'Cererea a fost mutată'],
+    [{}, 'Ceva nu a mers. Încearcă din nou.'],
+  ])(
+    'closes on a 409 code it has no text for with its detail, else the shared line',
+    async (extra, message) => {
+      await open();
+      await fillValid();
+      send.mockRejectedValueOnce(
+        refusal(409, { code: 'brand_new_refusal', status: 409, ...extra }),
+      );
+
+      await press();
+
+      await expect(result).resolves.toBe('refused');
+      expect(toast).toHaveBeenCalledWith(message);
+    },
+  );
+
   it('closes on request_not_open with its message in English', async () => {
     await open(detail(), { language: 'en' });
     await fill('Price from (lei)', '650');

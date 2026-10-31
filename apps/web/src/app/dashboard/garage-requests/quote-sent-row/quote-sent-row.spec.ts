@@ -153,11 +153,14 @@ const awaiting = (
 ) => {
   const base = withOutcome('accepted', {
     booking: {
+      canRecordNoShow: false,
+      canWithdrawNoShow: false,
       confirmBy: new Date(NOW.getTime() + confirmIn).toISOString(),
       durationMinutes: 90,
       id: 'booking-1',
       lift: null,
       mechanic: null,
+      noShowAt: null,
       startsAt: '2026-10-10T06:00:00Z',
       status: 'awaiting_confirmation',
       toReassign: false,
@@ -178,8 +181,11 @@ const booked = (
     ...base,
     booking: {
       ...(base.booking as NonNullable<GarageRequestSummaryDto['booking']>),
+      canRecordNoShow: false,
+      canWithdrawNoShow: false,
       lift: 2,
       mechanic: { id: 'mech-1', name: 'Ion Popescu' },
+      noShowAt: null,
       status: 'confirmed',
       toReassign: false,
       ...booking,
