@@ -539,6 +539,40 @@ test.describe('the rating dial far from every garage @seeded', () => {
   });
 });
 
+// @traces 455-FR-001 455-FR-002
+test.describe('the rating dial needle @seeded', () => {
+  test('leaves no needle at "—", then swings one in when a rating follows', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+    await expect(dialValue(page)).toHaveText('5,0');
+
+    await chooseTesla(page);
+    await expect(previewRows(page).first().locator('mf-lamp')).toHaveAttribute(
+      'data-state',
+      'red',
+    );
+    await expect(dialValue(page)).toHaveText('—');
+    const needle = dialArea(page).locator('.mf-dial-needle');
+    await expect(needle).toHaveCount(0);
+
+    await tile(page, 'Dacia').click();
+    await expect(dialValue(page)).toHaveText('5,0');
+    // The swing lasts 1100 ms (--mf-motion-dial), from the 0 mark.
+    expect(
+      await needle.evaluate((n) =>
+        n
+          .getAnimations()
+          .map((a) => [
+            (a as CSSTransition).transitionProperty,
+            Number(a.effect?.getTiming().duration),
+          ]),
+      ),
+    ).toEqual([['transform', 1100]]);
+  });
+});
+
 test.describe('the rating dial with reduced motion @seeded', () => {
   test.use({ reducedMotion: 'reduce' });
 

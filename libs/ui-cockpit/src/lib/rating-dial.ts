@@ -131,7 +131,7 @@ export class RatingDial {
   });
   // A rating arriving after none swings the needle in from the 0 mark; a host
   // binding, so it sees every change and not only those the needle renders.
-  protected readonly swingIn = linkedSignal<number | undefined, boolean>({
+  protected readonly swingIn = linkedSignal({
     computation: (rating, previous) =>
       rating !== undefined &&
       previous !== undefined &&

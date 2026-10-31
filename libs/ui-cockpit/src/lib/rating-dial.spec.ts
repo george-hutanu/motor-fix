@@ -102,6 +102,7 @@ describe('RatingDial', () => {
     expect(needle(0.1).style.getPropertyValue('--mf-dial-needle')).toBe(
       '-115.2deg',
     );
+    expect(render(4.9).centre()).toBe('4,9');
   });
 
   // @traces 455-FR-002
