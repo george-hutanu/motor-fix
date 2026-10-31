@@ -57,7 +57,7 @@ describe('the garage dashboard views under odd input', () => {
 
   // @traces 097-FR-001
   // @traces 424-FR-012
-  it('lists eleven views in the specified order', () => {
+  it('lists twelve views in the specified order', () => {
     expect(paths(DASHBOARDS.garage.views)).toEqual([
       '',
       'requests',
@@ -67,6 +67,7 @@ describe('the garage dashboard views under odd input', () => {
       'prices',
       'reviews',
       'profile',
+      'client-repairs',
       'assistant',
       'settings',
       'history',
@@ -74,13 +75,13 @@ describe('the garage dashboard views under odd input', () => {
   });
 
   // @traces 102-FR-004
-  it('still lists eleven views when the table gives a role fewer of them', () => {
+  it('still lists twelve views when the table gives a role fewer of them', () => {
     const none = {
       canAnswerQuotes: false,
       canMoveBookings: false,
       canRecordFinalPrice: false,
     };
-    expect(DASHBOARDS.garage.views).toHaveLength(11);
+    expect(DASHBOARDS.garage.views).toHaveLength(12);
     expect(
       paths(allowedViews('garage', capabilitiesOf('mechanic', none))),
     ).toHaveLength(5);
@@ -105,6 +106,7 @@ describe('the garage dashboard views under odd input', () => {
       ['prices', false],
       ['reviews', false],
       ['profile', false],
+      ['client-repairs', false],
     ] as const) {
       expect([path, matches(path, mechanic)]).toEqual([path, allowed]);
       TestBed.resetTestingModule();
