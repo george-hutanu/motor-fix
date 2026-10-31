@@ -57,7 +57,7 @@ describe('large dial needle with hostile values', () => {
     {},
     { valueOf: () => 4.8 },
     Number.MIN_VALUE,
-    0n,
+    BigInt(0),
     Symbol('x'),
     () => 4.8,
   ])('draws no needle and reads "—" for %p', (v) => {
