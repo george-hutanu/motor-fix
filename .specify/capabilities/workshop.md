@@ -16,6 +16,7 @@ features:
   - 1395-block-time-dashboard
   - 395-job-lock
   - 1403-block-time-dialog
+  - 1404-predare-quote-range
 ---
 
 # Capability: Workshop
@@ -443,6 +444,31 @@ _From 395-job-lock._
 ### 395-FR-018 — Tests MUST exist before the code (Principle II), with a `// @traces` line per spec file: Jest on real PostgreSQL and Redis for take, refresh and release; the release after one change by a one-tap action and by a held lock; expiry after 5 idle minutes with a fake clock and the sweep clearing the mirror and publishing; the owner's forced unlock with its audit entry and its mirror; 403 for a receptionist's and a mechanic's force and for a receptionist's `edit` purpose; 200 for a receptionist's `reception` and `handover`; 403 for a mechanic not on the job and 404 for another garage, a driver and an admin; 423 with the holder's details on every job-changing route; 409 `job_changed` on a stale `basedOnUpdatedAt` and success without the field; the set-if-absent race (two concurrent takes, one winner); the audience of `job.lock_changed` holding the garage and mechanic channels and never a driver's; 503 `try_again` with Redis down and no change applied. The web's component tests and the end-to-end flow are ST-1409's (see Split).
 
 _From 395-job-lock._
+
+### 1404-FR-001 — The garage's job read (`GET /api/v1/garage/jobs/:id`, `JobDto`) MUST also return `quoteFromBani` and `quoteToBani`, whole bani, both required (non-nullable) integers: the lower and upper bound of the booking's quote, the accepted one (220-FR-009), for every role the read already serves (owner, receptionist, the job's mechanic), with the read's role and garage rules unchanged.
+
+_From 1404-predare-quote-range._
+
+### 1404-FR-002 — The two fields MUST come from the booking's quote in the one query the read already makes (the booking include that builds the summary), never a second read or a second route; the values are the quote's `from_bani` and `to_bani` (`Int` columns, passed through as they are). "One query" is one Prisma call (`job.findFirst` with a nested `booking.quote` select, which Prisma may serve with its own SELECT), not one SQL statement; the read gets the quote through its own include, never through the shared summary include.
+
+_From 1404-predare-quote-range._
+
+### 1404-FR-003 — The list's items (`GET /api/v1/garage/jobs`, `JobSummaryDto`) MUST be unchanged: neither field, and the list's include (the shared summary include) byte-identical; only the single read's include gains the quote. The test proves the items' shape (scenario 4).
+
+_From 1404-predare-quote-range._
+
+### 1404-FR-004 — No column and no migration: the range is read from the existing `quote_job` row through `BOOKING.quote_id`.
+
+_From 1404-predare-quote-range._
+
+### 1404-FR-005 — `JobDto` in the contracts library MUST declare the two fields (required, integer), the OpenAPI document (`apps/api/openapi.json`) MUST be regenerated from it and the generated client (`libs/data-access`) regenerated from the document, never edited by hand (Principle V).
+
+_From 1404-predare-quote-range._
+
+### 1404-FR-006 — Tests MUST exist before the code (Principle II), with a `// @traces` line per spec file: one Jest test on real PostgreSQL in the workshop module's garage-jobs folder (`*.integration.spec.ts`) proving the two fields on a job with a quote (scenarios 1 and 3), their absence from the list's items (scenario 4) and the unchanged refusals (scenario 2). No contracts unit test: `JobDto` is a response type with no validation to test (`libs/contracts/src/jobs.dto.spec.ts` covers only the validated input DTOs). Scenario 5 is proven by CI's `scripts/contract-check.sh` (regenerate and diff `apps/api/openapi.json` and `libs/data-access`), SC-004.
+
+_From 1404-predare-quote-range._
+
 ### 1403-FR-001 — The garage dashboard (`garage-home`, the strip) MUST offer "Blochează timp" / "Block time" to a person whose role at the shown garage is `owner` or `receptionist`, while at least one of `team_mechanics` and `lift_schedule` is on (a missing key is on); a mechanic, and any garage with both switches off, sees no button (OD-33). The button is a `hlmBtn` beside "Personalizează panoul" and carries `data-block-time`.
 
 _From 1403-block-time-dialog._
