@@ -623,6 +623,19 @@ describe('ResultsSheet holding the pointer', () => {
 });
 
 describe('ResultsSheet forced full across 768 px', () => {
+  it('goes back to half when forcing ends while it still rests full', async () => {
+    await render();
+    fixture.componentInstance.forced.set(true);
+    await settle();
+    expect(position()).toBe('full');
+
+    fixture.componentInstance.forced.set(false);
+    await settle();
+
+    expect(position()).toBe('half');
+    expect(push).not.toHaveBeenCalled();
+    expect(back).not.toHaveBeenCalled();
+  });
   it('stays full when the map failed', async () => {
     layout.set('tablet');
     await render();

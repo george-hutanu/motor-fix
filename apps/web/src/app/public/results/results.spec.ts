@@ -3133,18 +3133,31 @@ describe('the brand chips and the brand search from a tablet up', () => {
     expect(phone).toMatch(/flex-basis: 100%;/);
   });
 
-  it('scrolls the filters line sideways inside itself on a phone, like the brand chips', () => {
-    const filters = [
-      ...css.matchAll(
-        /@media \(max-width: 767px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/g,
-      ),
-    ]
-      .map(([, body]) => body)
-      .find((body) => body.includes('.brands .filters {'));
-    expect(filters).toMatch(
-      /\.brands \.filters \{[^}]*flex-wrap: nowrap;[^}]*overflow-x: auto;/,
-    );
-    expect(filters).toMatch(/white-space: nowrap;/);
+  // PR #672 QA lap 5: a sideways-scrolling line at 390 px cut the price
+  // chip mid-word and hid the rating and card chips past the screen's edge.
+  it('gives the filters line its own row on a phone once a filter is on, every chip whole', () => {
+    const filters =
+      [
+        ...css.matchAll(
+          /@media \(max-width: 767px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/g,
+        ),
+      ]
+        .map(([, body]) => body)
+        .find((body) => body.includes('.brands .filters {')) ?? '';
+    const on =
+      filters.match(
+        /\.brands \.filters:has\(\.chip\.filter\) \{([^}]*)\}/,
+      )?.[1] ?? '';
+    expect(on).toMatch(/flex-basis: 100%;/);
+    expect(on).toMatch(/flex-wrap: wrap;/);
+    expect(on).toMatch(/max-width: none;/);
+    expect(on).toMatch(/overflow-x: visible;/);
+    const chip =
+      filters.match(
+        /\.filters:has\(\.chip\.filter\) \.chip\.filter \{([^}]*)\}/,
+      )?.[1] ?? '';
+    expect(chip).toMatch(/max-width: 100%;/);
+    expect(chip).toMatch(/white-space: normal;/);
   });
 
   it('sets the filters line beside the brand search on a phone, level with its field, so the header grows no row', () => {
@@ -5131,6 +5144,27 @@ describe('Results filters', () => {
       expect(said(state()?.querySelector('button.primary'))).toBe(
         'Scoate filtrele',
       );
+    });
+
+    // @traces 1399-FR-007 1399-FR-008
+    // PR #672 QA lap 5: at 390 px the half sheet cut the state's heading.
+    it('takes the sheet full on a phone so the state shows whole, and back to half once the filters are cleared', async () => {
+      pinsAnswer = pinsOf(3);
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&max_price=300&min_rating=4.5&card=1`,
+        none(),
+      );
+      const position = () =>
+        page().querySelector('mf-results-sheet')?.getAttribute('data-position');
+
+      expect(position()).toBe('full');
+
+      state()?.querySelector<HTMLButtonElement>('button.primary')?.click();
+      await settle();
+      await reads.at(-1)?.answer();
+      await settle();
+
+      expect(position()).toBe('half');
     });
 
     it('clears both filters in one write, without logging', async () => {

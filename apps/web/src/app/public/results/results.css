@@ -223,12 +223,27 @@ mf-brand-chips {
     display: none;
   }
 
+  /* A filter on: the line takes its own row and wraps, so every chip reads
+     whole at 390 px and 320 px rather than cut at the screen's edge. */
+  .brands .filters:has(.chip.filter) {
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    max-width: none;
+    overflow-x: visible;
+  }
+
   .filters .filters-open,
   .filters .chip.filter {
     flex: none;
     max-width: none;
     overflow-wrap: normal;
     white-space: nowrap;
+  }
+
+  .filters:has(.chip.filter) .chip.filter {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 }
 

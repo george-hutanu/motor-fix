@@ -584,6 +584,11 @@ export class Results {
     const pins = this.pinned();
     return !pins || pins.pins.length > 0;
   });
+  // On a phone the half sheet would cut the filtered empty state: the
+  // sheet takes the screen while it shows.
+  protected readonly filteredEmptyShown = computed(
+    () => this.state() === 'empty' && this.emptyFiltered(),
+  );
 
   protected readonly tally = computed(() => {
     const answer = this.answer();

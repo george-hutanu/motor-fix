@@ -52,7 +52,7 @@
     (picked)="picked($event)"
   />
 }
-<mf-results-sheet [forcedFull]="mapFailed()">
+<mf-results-sheet [forcedFull]="mapFailed() || filteredEmptyShown()">
   @if (brand() && state() !== 'placeless') {
     <div class="brands">
       <mf-brand-chips

@@ -51,7 +51,8 @@ const NEXT: Record<SheetPosition, SheetPosition> = {
   templateUrl: './results-sheet.html',
 })
 export class ResultsSheet {
-  // The map failed: the list takes the screen, with no history step.
+  // The map failed, or a state the half sheet would cut: the list takes the
+  // screen, with no history step.
   readonly forcedFull = input(false);
 
   private readonly layout = inject(Layout);
@@ -88,8 +89,16 @@ export class ResultsSheet {
   private staleAt: number | undefined;
 
   constructor() {
+    // Forcing ends: a sheet still full only by force goes back to half.
+    let wasForced = false;
     effect(() => {
-      if (this.forcedFull()) untracked(() => this.position.set('full'));
+      const forced = this.forcedFull();
+      untracked(() => {
+        if (forced) this.position.set('full');
+        else if (wasForced && !this.stepped && this.position() === 'full')
+          this.position.set('half');
+      });
+      wasForced = forced;
     });
     // Across 768 px the sheet starts again at half.
     let wasPhone: boolean | undefined;
