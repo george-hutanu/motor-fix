@@ -1269,21 +1269,27 @@ describe('the price list a profile carries', () => {
     ]);
   });
 
-  it('lists the ticked jobs of a brand the garage does not take', async () => {
+  // @traces 1247-FR-007
+  it('lists every public job for a brand the garage does not take, which holds no ticks', async () => {
     const dacia = await catalogueBrand('Dacia');
     const { approved, jobType, price } = await priced();
     const brakes = await jobType('Frâne față', 'Front brakes');
     const oil = await jobType('Schimb ulei', 'Oil change');
     await price(brakes.id, 0);
     await price(oil.id, 1);
-    await tick(approved.id, dacia.id, 'does_not_take', [oil.id]);
+    await tick(approved.id, dacia.id, 'does_not_take', []);
+    await expect(
+      prisma.garageBrandJob.create({
+        data: { brandId: dacia.id, garageId: approved.id, jobTypeId: oil.id },
+      }),
+    ).rejects.toThrow(/garage_brand_job_taken/);
 
     const res = await readWith(approved.slug, { brand: dacia.slug });
 
     expect(res.body.brand).toMatchObject({ stance: 'does_not_take' });
     expect(
       res.body.prices.map((row: Record<string, unknown>) => row['jobTypeId']),
-    ).toEqual([oil.id]);
+    ).toEqual([brakes.id, oil.id]);
   });
 
   it('never lists a hidden job for a brand that ticked it with a complete range', async () => {

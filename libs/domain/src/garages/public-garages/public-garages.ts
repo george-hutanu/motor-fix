@@ -13,7 +13,7 @@ import {
 import type { SearchPoint } from '@motor-fix/contracts/search-place';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
-import { refusal } from '../../auth/http-refusal';
+import { notFound, refusal } from '../../auth/http-refusal';
 import { PRISMA } from '../../auth/prisma';
 import { CacheService, cacheKey, type Filled } from '../../cache/cache.service';
 import {
@@ -105,8 +105,6 @@ const present = <T extends Record<string, unknown>>(fields: T) =>
   Object.fromEntries(
     Object.entries(fields).filter(([, value]) => value !== null),
   ) as { [K in keyof T]?: NonNullable<T[K]> };
-
-const notFound = () => refusal(HttpStatus.NOT_FOUND, 'not_found', 'Not found');
 
 // A profile entry lives ten minutes before it is refreshed.
 const PROFILE_SECONDS = 600;
