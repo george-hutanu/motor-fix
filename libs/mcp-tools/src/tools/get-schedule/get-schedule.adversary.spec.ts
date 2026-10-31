@@ -30,8 +30,11 @@ const entry = (id: string, more: Record<string, unknown> = {}): Entry =>
 const scheduleOf = (answer: Partial<Schedule> = {}) =>
   vi.fn(async () => ({
     blocks: [] as Schedule['blocks'],
+    days: [] as Schedule['days'],
     entries: [] as Entry[],
     from: '2026-10-09',
+    hoursSet: false,
+    liftCount: 0,
     lifts: true,
     to: '2026-10-09',
     ...answer,
@@ -292,8 +295,11 @@ describe('get_schedule answers', () => {
               .fn()
               .mockResolvedValueOnce({
                 blocks: [],
+                days: [{ day: '2026-10-09', open: [] }],
                 entries: [],
                 from: '2026-10-09',
+                hoursSet: false,
+                liftCount: 0,
                 lifts: false,
                 to: '2026-10-09',
               })

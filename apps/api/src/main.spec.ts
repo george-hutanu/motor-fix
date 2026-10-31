@@ -27,6 +27,8 @@ vi.mock('@motor-fix/contracts', () => ({
   STORAGE_ENV: ['S3_BUCKET'],
 }));
 vi.mock('@motor-fix/domain', () => ({
+  AREAS: ['the area file'],
+  AreaLoader: class AreaLoader {},
   BRANDS: ['the brand file'],
   BrandLoader: class BrandLoader {},
   CAR_MODELS: ['the car model file'],
@@ -169,6 +171,25 @@ describe('api entry point', () => {
     ]);
     expect(mockLoad).toHaveBeenNthCalledWith(3, ['the car model file']);
     expect(mockLoad.mock.invocationCallOrder[2]).toBeLessThan(
+      mockApp.listen.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  // @traces 106-FR-001
+  it('loads the areas after the catalogues, before it serves', async () => {
+    await run([]);
+
+    const loaders = (mockApp.get.mock.calls as [{ name: string }][]).map(
+      ([loader]) => loader.name,
+    );
+    expect(loaders.slice(0, 4)).toEqual([
+      'BrandLoader',
+      'JobTypeLoader',
+      'Models3dLoader',
+      'AreaLoader',
+    ]);
+    expect(mockLoad).toHaveBeenNthCalledWith(4, ['the area file']);
+    expect(mockLoad.mock.invocationCallOrder[3]).toBeLessThan(
       mockApp.listen.mock.invocationCallOrder[0] ?? 0,
     );
   });

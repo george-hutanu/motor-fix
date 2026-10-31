@@ -1014,6 +1014,7 @@ async function quoteable(db: Client) {
      ON CONFLICT DO NOTHING`,
   );
   await priceList(db);
+  await testPrices(db);
   // A brand is ticked only for a job on the garage's price list,
   // so a garage ticked for a job its list lacks gets that job priced, at the
   // range Service Auto Militari asks, saved by its owner (a garage with no
@@ -1300,6 +1301,36 @@ async function priceList(db: Client) {
       ),
     ],
   );
+}
+
+// Atelier Test's price list, one row in each state the owner's list shows:
+// on the profile, hidden by the owner, and hidden for want of a top price, so
+// the QA sweep's garage account has rows to read and toggle. An edited row
+// is kept; one the owner deleted returns on the next run.
+const TEST_PRICES = [
+  ['diagnosis', 15000, 22000, true],
+  ['timing-chain', 420000, 680000, false],
+  ['suspension-alignment', 35000, null, true],
+  // Ticked for Dacia above, so priced, at Service Auto Militari's range.
+  ['oil-service', 25000, 40000, true],
+] as const;
+
+async function testPrices(db: Client) {
+  for (const [position, [job, from, to, visible]] of TEST_PRICES.entries()) {
+    await db.query(
+      `INSERT INTO garage_price (id, garage_id, job_type_id, from_bani, to_bani, visible, position, updated_at, updated_by)
+       SELECT gen_random_uuid(), g.id, j.id, $2, $3, $4, $5, now(), a.id
+       FROM garage g
+       JOIN job_type j ON j.key = $1
+       JOIN account a ON a.email = 'service@example.test'
+       WHERE g.slug = 'atelier-test'
+         AND NOT EXISTS (
+           SELECT 1 FROM garage_price p
+           WHERE p.garage_id = g.id AND p.job_type_id = j.id AND p.brand_id IS NULL
+         )`,
+      [job, from, to, visible, position],
+    );
+  }
 }
 
 // Runs the whole seed and returns its summary line, printed once committed:

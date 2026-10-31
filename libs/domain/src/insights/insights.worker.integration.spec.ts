@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { Queue, QueueEvents } from 'bullmq';
 import { Redis } from 'ioredis';
 
+import { AREAS, AreaLoader } from './areas/areas';
 import { INSIGHTS_QUEUE, InsightsModule } from './insights.module';
 import { writeSnapshot } from './platform-figures';
 import { serialDatabase } from '../auth/serial-db.testing';
@@ -189,6 +190,56 @@ describe('the night job', () => {
         where: { dimension: 'total', key: 'all' },
       }),
     ).toBe(29);
+  });
+
+  // @traces 106-FR-010
+  it('writes the brand-area rows of every closed day with the demand rows, and logs their count', async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE demand_daily, area');
+    await new AreaLoader(prisma).load(AREAS);
+    const brand = await prisma.brand.upsert({
+      create: { key: 'worker-bmw', name: 'Worker BMW', slug: 'worker-bmw' },
+      update: {},
+      where: { name: 'Worker BMW' },
+    });
+    // A search from a Sector 3 cell two days ago, a closed day of the window.
+    await prisma.searchLog.create({
+      data: {
+        areaCell: 'sxfse',
+        at: new Date(Date.now() - 2 * 86_400_000),
+        brandId: brand.id,
+      },
+    });
+    const info = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    const app = await boot();
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    try {
+      const job = await queue.add('demand-daily', {});
+      await job.waitUntilFinished(events, 10_000);
+
+      expect(
+        await prisma.demandDaily.count({
+          where: { dimension: 'brand_area', key: 'all' },
+        }),
+      ).toBe(29);
+      expect(
+        await prisma.demandDaily.count({
+          where: { dimension: 'brand_area', key: 'sector-3:Worker BMW' },
+        }),
+      ).toBe(1);
+      expect(info).toHaveBeenCalledWith(
+        expect.stringMatching(/^demand-daily brand_area written \d+ for /),
+      );
+    } finally {
+      info.mockRestore();
+      await events.close();
+      await app.close();
+    }
   });
 
   // @traces 228-FR-012 228-FR-013

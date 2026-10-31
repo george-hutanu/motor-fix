@@ -198,12 +198,17 @@ describe('LiveHub public stream hostile input', () => {
     expect(sink.events()).toEqual([]);
   });
 
-  it('does not let a brand channel carry anything but garage.updated', async () => {
+  // retired test: "does not let a brand channel carry anything but garage.updated" a suspension and a restoration now reach the brand search channels too
+  it('lets a brand channel carry only garage updates, suspensions and restorations', async () => {
     const sink = openPublic(['public:search:b1']);
 
     for (const kind of EVENT_KINDS) await send(['public:search:b1'], kind);
 
-    expect(sink.events()).toEqual(['garage.updated']);
+    expect(sink.events()).toEqual([
+      'garage.restored',
+      'garage.suspended',
+      'garage.updated',
+    ]);
   });
 
   it('carries no kind to a public stream that joined nothing', async () => {

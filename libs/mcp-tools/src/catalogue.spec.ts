@@ -61,8 +61,11 @@ describe('catalogue', () => {
     ]);
     const list = vi.fn(async () => ({
       blocks: [],
+      days: [],
       entries: [],
       from: '2026-10-09',
+      hoursSet: false,
+      liftCount: 0,
       lifts: true,
       to: '2026-10-09',
     }));

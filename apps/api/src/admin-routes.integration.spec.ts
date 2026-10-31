@@ -3,12 +3,13 @@ import { randomUUID } from 'node:crypto';
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import {
   AccountsService,
+  ActorGuard,
   MAINTENANCE,
   type Maintenance,
   signAccessToken,
 } from '@motor-fix/domain';
 import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
-import type { INestApplication } from '@nestjs/common';
+import type { HttpException, INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request from 'supertest';
 
@@ -24,6 +25,8 @@ const KNOWN = [
   'GET /api/v1/admin/brands',
   // @traces 103-FR-002 404-FR-006
   'GET /api/v1/admin/demand',
+  // @traces 106-FR-008
+  'GET /api/v1/admin/demand/supply',
   // @traces 066-FR-005
   'GET /api/v1/admin/garages',
   'GET /api/v1/admin/garages/summary',
@@ -93,6 +96,7 @@ beforeAll(async () => {
 
 afterAll(() => api.stop());
 
+// @traces 165-FR-004
 describe('the admin routes', () => {
   it('include the overview and the admin tools', () => {
     const listed = routes.map((r) => `${r.method.toUpperCase()} ${r.path}`);
@@ -128,6 +132,50 @@ describe('the admin routes', () => {
     }
   });
 
+  // @traces 165-FR-002
+  it('admit an active admin on every operation', async () => {
+    const decide = vi.spyOn(
+      app.get(ActorGuard, { strict: false }),
+      'canActivate',
+    );
+    const authorization = bearer(await account('admin'), 'admin');
+    const answers: string[] = [];
+    try {
+      for (const { method, path } of routes) {
+        decide.mockClear();
+        const res = await call(method, path, authorization);
+        const [guarded] = decide.mock.results;
+        const decision = guarded
+          ? await (guarded.value as Promise<boolean>).then(
+              (admitted) => (admitted ? 'admitted' : 'refused'),
+              (refusal: HttpException) =>
+                (refusal.getResponse() as { code?: string }).code ??
+                'not_found',
+            )
+          : 'unguarded';
+        const status = [401, 403].includes(res.status)
+          ? `${res.status} ${res.body?.code}`
+          : 'open';
+        answers.push(`${method} ${path} ${decision} ${status}`);
+      }
+    } finally {
+      decide.mockRestore();
+    }
+
+    // The route's own rule, after the access check admits: only the driver
+    // deletes a logged repair.
+    const ownRefusals: Record<string, string> = {
+      'delete /api/v1/admin/repairs/{id}': '403 forbidden',
+    };
+    expect(answers).toEqual(
+      routes.map(({ method, path }) => {
+        const key = `${method} ${path}`;
+        return `${key} admitted ${ownRefusals[key] ?? 'open'}`;
+      }),
+    );
+  });
+
+  // @traces 165-FR-003
   it('answer account_suspended to a suspended admin', async () => {
     const id = await account('admin');
     const db = new Client({
@@ -143,13 +191,16 @@ describe('the admin routes', () => {
       await db.end();
     }
 
-    const res = await call(
-      'get',
-      '/api/v1/admin/overview',
-      bearer(id, 'admin'),
-    );
+    const answers: unknown[] = [];
+    for (const path of ['/api/v1/admin/overview', '/api/v1/admin/growth']) {
+      const res = await call('get', path, bearer(id, 'admin'));
+      answers.push([path, res.status, res.body?.code]);
+    }
 
-    expect([res.status, res.body?.code]).toEqual([403, 'account_suspended']);
+    expect(answers).toEqual([
+      ['/api/v1/admin/overview', 403, 'account_suspended'],
+      ['/api/v1/admin/growth', 403, 'account_suspended'],
+    ]);
   });
 });
 

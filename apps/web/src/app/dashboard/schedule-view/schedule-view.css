@@ -1,0 +1,7 @@
+mf-lift-schedule {
+  margin: var(--mf-space-4);
+}
+/* The plain line sits inset as far as the frame's title. */
+p {
+  margin: var(--mf-space-4);
+}
