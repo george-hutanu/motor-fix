@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   FormControl,
@@ -42,7 +42,7 @@ let current: SampleTask;
         <input id="email" formControlName="email" aria-describedby="email-error" />
         <mf-field-error id="email-error" [save]="save" [control]="form.controls.email" />
         <mf-task-error [save]="save" />
-        <button id="save" type="submit" [mfTaskSubmit]="save">Salvează</button>
+        <button id="save" type="submit" [mfTaskSubmit]="save" [mfTaskSubmitOff]="off()">Salvează</button>
       </form>
     }
   `,
@@ -50,6 +50,7 @@ let current: SampleTask;
 class SampleTask {
   private readonly task = injectOverlayTask<undefined, string>();
   readonly sent: Sent[] = [];
+  readonly off = signal(false);
   readonly form = new FormGroup({
     email: new FormControl('', {
       nonNullable: true,
@@ -174,6 +175,20 @@ describe('saving a task', () => {
     expect(current.sent[0].key).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     );
+  });
+
+  it('marks the button inert, without busy, while the form says it cannot be sent', async () => {
+    await openTask();
+    const button = $<HTMLButtonElement>('#save');
+    expect(button?.hasAttribute('aria-disabled')).toBe(false);
+
+    current.off.set(true);
+    await settle();
+
+    expect(button?.getAttribute('aria-disabled')).toBe('true');
+    expect(button?.hasAttribute('data-disabled')).toBe(true);
+    expect(button?.hasAttribute('aria-busy')).toBe(false);
+    expect(button?.disabled).toBe(false);
   });
 
   it('is busy while sending and sends nothing more on further presses', async () => {
