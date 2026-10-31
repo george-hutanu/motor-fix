@@ -86,11 +86,14 @@ const row = (
 });
 
 const booking = (status: 'awaiting_confirmation' | 'confirmed') => ({
+  canRecordNoShow: false,
+  canWithdrawNoShow: false,
   confirmBy: '2026-10-09T15:30:00Z',
   durationMinutes: 90,
   id: 'booking-1',
   lift: null,
   mechanic: null,
+  noShowAt: null,
   startsAt: '2026-10-10T06:00:00Z',
   status,
   toReassign: false,
