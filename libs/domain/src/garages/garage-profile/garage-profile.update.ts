@@ -266,9 +266,10 @@ export class GarageProfileUpdate {
     private readonly profile: GarageProfileService,
   ) {}
 
-  // The owner's name, description, phone, hours with closed days and radius,
-  // in place and with no review. Refused in order: who asks, the garage's
-  // state, the verified fields, the limits, then a stale stamp.
+  // The owner's name, description, phone, hours with closed days, radius and
+  // facilities with their terms, in place and with no review. Refused in
+  // order: who asks, the garage's state, the verified fields, the limits,
+  // then a stale stamp.
   async save(
     actor: Actor,
     garageId: string,
