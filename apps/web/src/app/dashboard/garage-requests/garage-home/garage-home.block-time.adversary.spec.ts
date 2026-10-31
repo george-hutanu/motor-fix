@@ -1,5 +1,5 @@
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import {
@@ -49,6 +49,7 @@ const account = (
 async function render(me: MeDto) {
   const shown = signal(me);
   TestBed.configureTestingModule({
+    deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [
       provideRouter([]),
       GarageRequestsFeed,

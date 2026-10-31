@@ -44,8 +44,14 @@ export type LiveSubject =
   // search of each brand whose stance changed.
   | { type: 'garage_brands'; garageId: string; brandIds: readonly string[] }
   // A change a visitor sees on the garage's public page; `results` when it can
-  // also move the garage in search results.
-  | { type: 'public_garage'; garageId: string; results: boolean }
+  // also move the garage in search results; `mechanicIds` when it can also
+  // show or hide those cards on their own pages.
+  | {
+      type: 'public_garage';
+      garageId: string;
+      mechanicIds?: readonly string[];
+      results: boolean;
+    }
   // A decision on a garage's reports: the admins and the drivers who sent
   // them, never the garage.
   | { type: 'garage_report'; reporterIds: readonly string[] }
@@ -143,6 +149,7 @@ export function audienceOf(subject: LiveSubject): string[] {
       return [
         garage(subject.garageId),
         `public:garage:${subject.garageId}`,
+        ...(subject.mechanicIds ?? []).map((id) => `public:mechanic:${id}`),
         ...when(subject.results, 'public:search'),
       ];
     case 'garage_report':

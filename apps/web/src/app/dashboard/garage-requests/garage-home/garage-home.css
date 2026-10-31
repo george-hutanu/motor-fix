@@ -73,7 +73,8 @@ p {
   flex: 1 1 100%;
   min-width: 0;
 }
-.sections > [data-section="funnel"],
+/* The weekly panel takes the whole row: two charts side by side, each wide
+   enough to name its eight weeks under the bars. */
 .sections > [data-section="brands"] {
   flex: 1 1 420px;
 }
@@ -90,6 +91,13 @@ p {
   background: var(--mf-panel);
   border: 1px solid var(--mf-line);
   border-radius: var(--mf-radius-panel);
+}
+/* The weekly panel's place while its chunk loads: about its loaded height,
+   so the sections below do not jump. */
+.chart-skeleton {
+  block-size: 280px;
+  background: var(--mf-panel-raised);
+  border-radius: var(--mf-radius-control);
 }
 .empty {
   color: var(--mf-text-secondary);

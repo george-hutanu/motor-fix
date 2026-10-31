@@ -23,7 +23,8 @@ export const REQUEST_MOVES: Record<
   readonly QuoteRequestStatus[]
 > = {
   booked: ['quoted', 'in_work', 'closed'],
-  closed: [],
+  // Within the no-show undo only; the caller checks.
+  closed: ['booked'],
   done: [],
   in_work: ['done'],
   quoted: ['booked', 'closed'],
@@ -57,7 +58,8 @@ export const BOOKING_MOVES: Record<BookingStatus, readonly BookingStatus[]> = {
   completed: [],
   confirmed: ['cancelled', 'no_show', 'completed'],
   lapsed: [],
-  no_show: [],
+  // Within the no-show undo only; the caller checks.
+  no_show: ['confirmed'],
 };
 
 type Data = Record<string, unknown>;
@@ -123,10 +125,13 @@ export function moveRequest(tx: Tx, ports: TransitionPorts, move: RequestMove) {
   return applyTransition(tx, REQUEST, ports, {
     ...move,
     scope: (row) => ({ carId: row.car_id }),
-    set: () =>
-      move.to === 'closed'
-        ? { closedAt: new Date(), closedReason: move.closedReason }
-        : {},
+    set: () => {
+      if (move.to === 'closed')
+        return { closedAt: new Date(), closedReason: move.closedReason };
+      // Only a closed request reaches booked again: its no-show undone.
+      if (move.to === 'booked') return { closedAt: null, closedReason: null };
+      return {};
+    },
   });
 }
 
@@ -208,13 +213,17 @@ interface Cancellation {
 
 function bookingColumns(
   to: BookingStatus,
+  from: string,
   by: string | null,
   cancellation?: Cancellation,
 ): Data {
   const now = new Date();
   switch (to) {
     case 'confirmed':
-      return { confirmedAt: now, confirmedBy: by };
+      // A withdrawn no-show keeps the confirmation it had.
+      return from === 'no_show'
+        ? { noShowAt: null, noShowRecordedBy: null }
+        : { confirmedAt: now, confirmedBy: by };
     case 'cancelled':
       return {
         cancelledAt: now,
@@ -256,7 +265,13 @@ export async function moveBooking(
   const moved = await applyTransition(tx, BOOKING, ports, {
     ...rest,
     scope: inGarage,
-    set: () => bookingColumns(move.to, move.actor.accountId, cancellation),
+    set: (row) =>
+      bookingColumns(
+        move.to,
+        row.status_text,
+        move.actor.accountId,
+        cancellation,
+      ),
   });
   // A booking that will not happen gives its place back in the same
   // transaction; a completed one keeps its segments as the record of the work.

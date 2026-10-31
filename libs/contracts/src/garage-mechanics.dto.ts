@@ -48,11 +48,20 @@ export class GarageMechanicDto {
   @ApiProperty()
   futureBookings!: number;
 
+  // The mechanic's own consent to appear on the profile.
   @ApiProperty()
   onProfile!: boolean;
 
   @ApiProperty()
   hasAccount!: boolean;
+
+  // Whether the public profile shows this card now, by the one rule.
+  @ApiProperty()
+  shown!: boolean;
+
+  // Whether a driver may ask for this mechanic by name.
+  @ApiProperty()
+  takesDirectRequests!: boolean;
 
   // One decimal ("4.9"); null exactly when no review counts.
   @ApiProperty({ example: '4.9', nullable: true, type: String })
@@ -82,12 +91,17 @@ export class GarageMechanicsDto {
   // The garage's works_on brands, A to Z.
   @ApiProperty({ type: [GarageBrandOptionDto] })
   brands!: GarageBrandOptionDto[];
+
+  // The garage's switch over the whole team on the public profile.
+  @ApiProperty()
+  teamOnProfile!: boolean;
 }
 
 // The fields of a card the owner writes. The limits are judged by the
 // service, which answers 422 with every problem at once; `@Allow` only lets
 // each field through the global whitelist. The photo, the bio and the
-// languages are the mechanic's and are refused with 403 mechanic_owned_field.
+// languages, and the consent to appear on the profile, are the mechanic's and
+// are refused with 403 mechanic_owned_field.
 class MechanicCardFieldsDto {
   @ApiPropertyOptional({
     description: 'null clears it',
@@ -139,6 +153,9 @@ class MechanicCardFieldsDto {
 
   @Allow()
   languages?: never;
+
+  @Allow()
+  onProfile?: never;
 }
 
 export class CreateMechanicDto extends MechanicCardFieldsDto {
@@ -158,6 +175,14 @@ export class UpdateMechanicDto extends MechanicCardFieldsDto {
   })
   @Allow()
   name?: string;
+
+  // Not on a new card, which takes direct requests until the owner says not.
+  @ApiPropertyOptional({
+    description: 'Whether a driver may ask for this mechanic by name',
+    type: Boolean,
+  })
+  @Allow()
+  takesDirectRequests?: boolean;
 }
 
 const WEEK_SCHEMA = {

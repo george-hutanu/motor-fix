@@ -128,6 +128,7 @@ features:
   - 1411-1315-qa-fixes
   - 1379-provider-calls-worker
   - 1407-toggle-idempotency
+  - 1406-integration-shards
 ---
 
 # Capability: Platform
@@ -1786,13 +1787,13 @@ _From 1159-mutation-shards._
 
 _From 1170-integration-on-demand._
 
-### 1170-FR-002 — An "Integration tests" job runs the integration suite (`JEST_SUITE=integration`) on a GitHub runner with the repository's own PostgreSQL 18 + PostGIS 3.6 image (`ghcr.io/george-hutanu/motor-fix-postgres:18`, `pg_stat_statements` preloaded by the image, no `ALTER SYSTEM` step) and Redis service containers and the migrations applied. It runs when CI is run by hand (`gh workflow run ci.yml --ref <branch>`, which runs every job on every project) and when a caller of the workflow asks for it (`workflow_call` input `integration: true`); it never runs on `pull_request`.
+### 1406-FR-001 — The `integration` job of `.github/workflows/ci.yml` MUST run as a matrix of shards: `N` shards for `libs/domain`, each running `domain:test` with `JEST_SUITE=integration` and Jest `--shard=i/N` (`i` = 1..`N`), and one shard for every other Nx project (`run-many`, `domain` excluded, `--passWithNoTests`), so that together the shards run every `*.integration.spec.ts` of the repository exactly once per run. The matrix MUST keep the job's trigger: `workflow_dispatch` or the `workflow_call` input `integration`, never `pull_request`.
 
-_From 1170-integration-on-demand._
+_From 1406-integration-shards._
 
-### 1170-FR-003 — `CI OK` needs the integration job and counts it skipped as passed, as it does the E2E job; the merge gate is unchanged (a skipped check is green; a later skip never hides an on-demand run's failure, as for E2E).
+### 1406-FR-005 — `ci-ok` MUST need the sharded job so that a failed or cancelled shard fails `CI OK` and a skipped matrix (a `pull_request` run) counts as passed; `release.yml`'s `checks` call (`integration: true`) MUST be unchanged and MUST keep `images`, `staging` and `production` waiting for every shard.
 
-_From 1170-integration-on-demand._
+_From 1406-integration-shards._
 
 ### 1170-FR-004 — A release (merge to `main`) runs the integration suite before anything is built or deployed: `release.yml`'s `checks` job calls `ci.yml` with `integration: true`, so `images`, `staging` and `production` wait for it and a failure stops the release.
 
@@ -3020,15 +3021,37 @@ _From 1411-1315-qa-fixes._
 
 ### 1407-FR-005 — `apps/api/openapi.json` MUST be regenerated from the API and committed with the four declarations, and the regenerated document MUST differ from a regeneration of the branch's merge base only by the four header parameters: no other operation, schema or response changes (drift `main`'s own code brings is kept, never hand-pruned, and listed in the PR).
 
-_From 1407-toggle-idempotency._
+### 1406-FR-002 — Every shard MUST have its own PostgreSQL (`ghcr.io/george-hutanu/motor-fix-postgres:18`) and Valkey service containers, its own compose object store, its own `prisma migrate deploy` and its own `scripts/clear-activity-log.ts` run before its tests, plus ffmpeg and the setup action, exactly as the single job has today; the `services` anchor the E2E job shares stays shared.
 
-### 1407-FR-006 — `libs/data-access` MUST be regenerated from that document (`npx nx run data-access:generate`, never edited by hand) and committed; the four generated methods MUST accept an optional `'Idempotency-Key'` parameter, and a fresh generation on the branch head MUST leave no diff.
+_From 1406-integration-shards._
 
-_From 1407-toggle-idempotency._
+### 1406-FR-003 — Every shard MUST keep the "Watch the database" sampler and the "Database waits" step (`if: always()`), each printing that shard's own samples.
 
-### 1407-FR-007 — API integration tests (real PostgreSQL and Valkey) MUST prove, for each of the four writes, that the header is accepted and changes nothing: without the header, with a 1-character key, a 64-character key, a 65-character key, an empty value, and twice with the same key, each call MUST answer with the status and body the route gives today and leave the row the value-idempotent write leaves; a key outside 1 to 64 characters MUST NOT be refused by the server. The test file MUST carry a whole-line `// @traces` comment naming this feature's FR ids (Principle II).
+_From 1406-integration-shards._
 
-_From 1407-toggle-idempotency._
+### 1406-FR-004 — The matrix job MUST have one `timeout-minutes` strictly lower than 90, written beside the measured duration it derives from (the slowest shard's job wall time, setup included, on a first dispatch, ÷ 0.7 and rounded up to 5 minutes), and on the proving run (a second dispatch on the final head, FR-009) the job time of every shard, the slowest included, MUST be at most 70 % of it (measured time plus at least 30 %, the rule of `1159-FR-005`). `N` MUST be chosen so that this holds for the slowest domain shard.
+
+_From 1406-integration-shards._
+
+### 1406-FR-006 — A dispatch with the `specs` input set MUST run each named `*.integration.spec.ts` file `repeat` times (`--runInBand`, the audit history cleared before each run, `repeat` validated as 1 or more) in exactly one job: with `specs` set the matrix holds that one entry ("named specs") and no suite shard runs at all. A `specs` input naming no integration file MUST leave every shard green with nothing run.
+
+_From 1406-integration-shards._
+
+### 1406-FR-007 — No spec file, Jest config, worker setting or test assertion MAY be changed, skipped or weakened by this change, and no shard's timeout MAY be the whole suite's 90 raised or kept: the change splits the work.
+
+_From 1406-integration-shards._
+
+### 1406-FR-008 — `scripts/ci-workflow.spec.ts` and `scripts/ci-workflow.adversary.spec.ts` MUST describe the new shape first (the matrix, the per-shard services, migration, audit clearing and Database waits, the timeout rule, `ci-ok`'s need, the named-specs path in one shard, never on `pull_request`) and fail against `main`'s `ci.yml`; the `merge-gate.spec.mjs` fixture row that names "Integration tests" MUST name the check a skipped matrix shows on a real PR run of the branch, and nothing else in the repository MAY still assume one integration job.
+
+_From 1406-integration-shards._
+
+### 1406-FR-009 — The change MUST be proved by an on-demand `workflow_dispatch` run of `ci.yml` on the PR branch with every shard green, and the PR body's Notes MUST list the run id and each shard's name and duration beside the single job's 38 to 60 minutes.
+
+_From 1406-integration-shards._
+
+### 1406-FR-010 — The `ci.yml` header, `.claude/skills/speckit-auto/lifecycle.md` ("CI, tests and release"), `docs/speed-and-cost-plan.md` (row 17) and the `platform` capability (through the Spec Delta) MUST say the integration suite runs as shards with a database per shard, and how a named-specs dispatch runs; no other in-repo document MAY be left saying the suite runs as one job (the specs repo's `docs/` say "on demand and before every release", which stays true).
+
+_From 1406-integration-shards._
 
 ### 1379-FR-001 — The four direct sends — the WhatsApp sign-in code (SIGN_IN_CODE), the phone change code (PHONE_CHANGE_CODE), the staff invite by e-mail and by WhatsApp (STAFF_INVITE), and the car transfer link by WhatsApp (CAR_TRANSFER_LINK) — MUST be handed to the provider by the worker process only. The API MUST add one job to a new BullMQ queue `direct-send` on the existing broker (one attempt, no retry) carrying the template, language, recipient and template values, and MUST await that job's result for at most a fixed cap of 8000 ms (one named constant) before answering the request.
 
@@ -3178,3 +3201,5 @@ _From 1379-provider-calls-worker._
 - `703-FR-009` — superseded by `493-FR-004` (2026-10-24)
 - `1315-FR-011` — superseded by `1411-FR-003` (2026-10-30)
 - `1315-FR-008` — superseded by `1411-FR-007` (2026-10-30)
+- `1170-FR-002` — superseded by `1406-FR-001` (2026-10-30)
+- `1170-FR-003` — superseded by `1406-FR-005` (2026-10-30)
