@@ -242,6 +242,14 @@ const MONTHS_LONG: Record<Language, readonly string[]> = {
   ],
 };
 
+// The Bucharest day with its month written out: "31 octombrie 2026".
+export function formatLongDay(value: unknown, language: Language): string {
+  const date = instant(value);
+  if (!date) return MISSING;
+  const { day, month, year } = bucharestDay(date);
+  return `${day} ${MONTHS_LONG[language][month - 1]} ${year}`;
+}
+
 function bucharestDay(date: Date) {
   const { day, month, year } = Object.fromEntries(
     dayParts.formatToParts(date).map((p) => [p.type, Number(p.value)]),

@@ -84,6 +84,9 @@
     },
     "findGarage": "Find a garage",
     "findGarageFor": "Find a garage for {car}",
+    "history": {
+      "previousOwner": "from the previous owner"
+    },
     "itp": {
       "days": {
         "one": "ITP expires tomorrow",
@@ -167,6 +170,16 @@
       "send": "Send",
       "sent": "The link went by WhatsApp",
       "title": "Sold your {car}?"
+    },
+    "sold": {
+      "empty": "No repairs up to the sale.",
+      "hide": "Hide the history",
+      "hideFor": "Hide the history for {car}",
+      "line": "{car} · sold on {day}",
+      "loading": "Reading the history…",
+      "show": "See the history",
+      "showFor": "See the history for {car}",
+      "title": "Sold cars"
     },
     "transfer": {
       "cancel": "Cancel the transfer",
