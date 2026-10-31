@@ -36,6 +36,12 @@ function sources(dir: string): string[] {
   );
 }
 
+// The Angular projects run on Vitest; what follows about a Jest config holds
+// for the others.
+const onJest = mutated.filter((root) =>
+  existsSync(join(repo, root, 'jest.config.cts')),
+);
+
 const sourceFiles = mutated
   .filter((root) => root !== 'scripts')
   .flatMap((root) => sources(`${root}/src`));
@@ -56,21 +62,18 @@ describe('mutation setup', () => {
   // Stryker reads a Jest config without its preset, so an environment that
   // only the preset sets falls back to node and every browser spec fails.
   // A project may name its own environment file under <rootDir>.
-  it.each(mutated)(
-    '%s names its test environment in its own config',
-    (root) => {
-      const named = read(`${root}/jest.config.cts`).match(
-        /^\s*testEnvironment: '(node|jsdom|<rootDir>\/[^']+)',$/m,
-      )?.[1];
-      expect(named).toBeDefined();
-      const file = named?.replace('<rootDir>', root) ?? '';
-      if (file !== named) expect(existsSync(join(repo, file))).toBe(true);
-    },
-  );
+  it.each(onJest)('%s names its test environment in its own config', (root) => {
+    const named = read(`${root}/jest.config.cts`).match(
+      /^\s*testEnvironment: '(node|jsdom|<rootDir>\/[^']+)',$/m,
+    )?.[1];
+    expect(named).toBeDefined();
+    const file = named?.replace('<rootDir>', root) ?? '';
+    if (file !== named) expect(existsSync(join(repo, file))).toBe(true);
+  });
 
   // Stryker reads the config without normalising it, so it would look for a
   // module called "<rootDir>/…"; strykerOptions hands it the resolved file.
-  it.each(mutated)(
+  it.each(onJest)(
     '%s gives Stryker an environment file it can load',
     (root) => {
       process.chdir(repo);

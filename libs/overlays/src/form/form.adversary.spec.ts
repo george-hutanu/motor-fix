@@ -478,9 +478,7 @@ describe('toProblem with hostile input', () => {
   });
 
   it('keeps a 500 while offline as a server error', () => {
-    const online = jest
-      .spyOn(navigator, 'onLine', 'get')
-      .mockReturnValue(false);
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     try {
       expect(toProblem(problem(500, null)).code).toBe('internal_error');
     } finally {
@@ -494,9 +492,7 @@ describe('toProblem with hostile input', () => {
     ['a number', 504, 'offline'],
     ['an array', [{ code: 'x' }], 'offline'],
   ])('reads a 504 carrying %s while offline', (_, body, code) => {
-    const online = jest
-      .spyOn(navigator, 'onLine', 'get')
-      .mockReturnValue(false);
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     try {
       expect(toProblem(problem(504, body)).code).toBe(code);
     } finally {
@@ -505,7 +501,7 @@ describe('toProblem with hostile input', () => {
   });
 
   it('keeps a bare 504 as a server error where there is no browser', () => {
-    const browser = jest
+    const browser = vi
       .spyOn(globalThis, 'navigator', 'get')
       .mockReturnValue(undefined as unknown as Navigator);
     try {

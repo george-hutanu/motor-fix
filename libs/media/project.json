@@ -5,6 +5,26 @@
   "sourceRoot": "libs/media/src",
   "tags": [],
   "targets": {
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "buildTarget": "media:test-build:development",
+        "isolate": true,
+        "runner": "vitest",
+        "runnerConfig": "libs/media/vitest.config.ts",
+        "setupFiles": ["libs/media/src/test-setup.ts"],
+        "tsConfig": "libs/media/tsconfig.spec.json"
+      }
+    },
+    "test-build": {
+      "configurations": {
+        "development": {}
+      },
+      "executor": "@angular/build:application",
+      "options": {
+        "tsConfig": "libs/media/tsconfig.lib.json"
+      }
+    },
     "test:mutation": {},
     "typecheck": {
       "cache": true,

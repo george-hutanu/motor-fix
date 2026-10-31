@@ -23,9 +23,9 @@ function browserWith(
 ) {
   const drawn: Drawn[] = [];
   const decoded: unknown[] = [];
-  const close = jest.fn();
+  const close = vi.fn();
   const g = globalThis as Record<string, unknown>;
-  g['createImageBitmap'] = jest.fn(async (_file: Blob, options: unknown) => {
+  g['createImageBitmap'] = vi.fn(async (_file: Blob, options: unknown) => {
     decoded.push(options);
     if (failDecode) throw new DOMException('bad image', 'InvalidStateError');
     return { close, height, width };
@@ -36,7 +36,7 @@ function browserWith(
       readonly height: number,
     ) {}
     getContext() {
-      return { drawImage: jest.fn() };
+      return { drawImage: vi.fn() };
     }
     async convertToBlob(options: { type: string; quality: number }) {
       drawn.push({ height: this.height, width: this.width, ...options });

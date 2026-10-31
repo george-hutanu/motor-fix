@@ -6,6 +6,26 @@
   "sourceRoot": "libs/overlays/src",
   "tags": [],
   "targets": {
+    "test": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "buildTarget": "overlays:test-build:development",
+        "isolate": true,
+        "runner": "vitest",
+        "runnerConfig": "libs/overlays/vitest.config.ts",
+        "setupFiles": ["libs/overlays/src/test-setup.ts"],
+        "tsConfig": "libs/overlays/tsconfig.spec.json"
+      }
+    },
+    "test-build": {
+      "configurations": {
+        "development": {}
+      },
+      "executor": "@angular/build:application",
+      "options": {
+        "tsConfig": "libs/overlays/tsconfig.lib.json"
+      }
+    },
     "test:mutation": {},
     "typecheck": {
       "cache": true,

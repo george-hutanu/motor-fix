@@ -1,4 +1,5 @@
 // @traces 1191-FR-006
+
 import { HttpEventType, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -6,6 +7,7 @@ import {
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import {
   FileUploader,
@@ -24,11 +26,11 @@ describe('FileUploader against a hostile store', () => {
   let uploader: FileUploader;
   let events: UploadEvent<string>[];
   let failure: unknown;
-  let ask: jest.Mock;
-  let confirm: jest.Mock;
+  let ask: Mock;
+  let confirm: Mock;
 
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
@@ -37,13 +39,13 @@ describe('FileUploader against a hostile store', () => {
     events = [];
     failure = undefined;
     let asked = 0;
-    ask = jest.fn(() => of(address(++asked)));
-    confirm = jest.fn((key: string) => of(`final:${key}`));
+    ask = vi.fn(() => of(address(++asked)));
+    confirm = vi.fn((key: string) => of(`final:${key}`));
   });
 
   afterEach(() => {
     http.verify();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   async function start(file: Blob, retries?: number) {
@@ -55,7 +57,7 @@ describe('FileUploader against a hostile store', () => {
         },
         next: (e) => events.push(e),
       });
-    await jest.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
     return subscription;
   }
 
@@ -73,7 +75,7 @@ describe('FileUploader against a hostile store', () => {
     const req = http.expectOne(address(1).url);
 
     subscription.unsubscribe();
-    await jest.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(10_000);
 
     expect(req.cancelled).toBe(true);
     expect(confirm).not.toHaveBeenCalled();
@@ -113,7 +115,7 @@ describe('FileUploader against a hostile store', () => {
       http
         .expectOne(address(1).url)
         .flush('<Error/>', { status, statusText: 'Error' });
-      await jest.advanceTimersByTimeAsync(60_000);
+      await vi.advanceTimersByTimeAsync(60_000);
 
       http.expectNone(address(1).url);
       expect(failure).toMatchObject({ status });
@@ -148,11 +150,11 @@ describe('FileUploader against a hostile store', () => {
     http
       .expectOne(address(1).url)
       .error(new ProgressEvent('error'), { status: 0, statusText: '' });
-    await jest.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(1000);
     http
       .expectOne(address(1).url)
       .error(new ProgressEvent('error'), { status: 0, statusText: '' });
-    await jest.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
 
     http.expectNone(address(1).url);
     expect(failure).toMatchObject({ status: 0 });

@@ -74,14 +74,14 @@ beforeEach(() => {
     value: undefined,
   });
   Element.prototype.setPointerCapture = () => {};
-  Element.prototype.scrollIntoView = jest.fn();
-  jest
-    .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
-    .mockImplementation(() => sheetHeight);
+  Element.prototype.scrollIntoView = vi.fn();
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(
+    () => sheetHeight,
+  );
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   document.querySelector('.cdk-overlay-container')?.remove();
 });
 
@@ -234,8 +234,8 @@ describe('the deferred history entry: when it is pushed', () => {
 // @traces 532-FR-008
 describe('the deferred history entry: when the task closes first', () => {
   it('stops listening for the first interaction once it closes', async () => {
-    const add = jest.spyOn(window, 'addEventListener');
-    const remove = jest.spyOn(window, 'removeEventListener');
+    const add = vi.spyOn(window, 'addEventListener');
+    const remove = vi.spyOn(window, 'removeEventListener');
     await untouched();
     const added = add.mock.calls.filter(
       ([type]) => type === 'pointerdown' || type === 'keydown',
