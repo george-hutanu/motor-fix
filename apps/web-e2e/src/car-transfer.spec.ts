@@ -3,12 +3,26 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
 import { signedIn } from './accounts.js';
+import { bucharestDay } from './bucharest-day.js';
 import { MAILBOX, test } from './fixtures.js';
 import { freshPhone } from './fresh-phone.js';
-import { removeDriver, type SoldCar, soldCar } from './sold-car.js';
+import {
+  plateOf,
+  removeDriver,
+  SOLD_PLATE,
+  type SoldCar,
+  soldCar,
+} from './sold-car.js';
 import { lastCode } from './whatsapp-code.js';
 
 const WAITING = 'O mașină te așteaptă.';
+// Today's sale date as the sold line writes it, in Bucharest.
+const LONG_DAY = new Intl.DateTimeFormat('ro-RO', {
+  day: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+  year: 'numeric',
+});
 
 // The seller's sale dialog, sending the link with the logged repair ticked;
 // the dialog stays open on the sent link.
@@ -148,7 +162,9 @@ test.describe('selling a car and its transfer link @seeded @database', () => {
       });
       await expect(card).toBeVisible();
       await expect(card).toContainText('2018');
-      await expect(card).not.toContainText(/[A-Z]{1,2} ?\d{2,3} ?[A-Z]{3}/);
+      await expect(card).not.toContainText(SOLD_PLATE);
+      const taken = new URL(buyer.url()).pathname.split('/').at(-1) ?? '';
+      expect(await plateOf(taken)).toBeNull();
       await visitor.close();
 
       await page.reload();
@@ -157,7 +173,7 @@ test.describe('selling a car and its transfer link @seeded @database', () => {
         section.getByRole('heading', { name: 'Mașini vândute' }),
       ).toBeVisible();
       await expect(section).toContainText(
-        /Dacia Logan 2018 · vândută pe \d{1,2} \p{L}+ \d{4}/u,
+        `Dacia Logan 2018 · vândută pe ${LONG_DAY.format(new Date(`${bucharestDay()}T12:00:00Z`))}`,
       );
       await section
         .getByRole('button', { name: 'Vezi istoricul pentru Dacia Logan' })

@@ -35,6 +35,24 @@ export async function removeDriver(
   }
 }
 
+// The plate the seller's car carries; the buyer never inherits it.
+export const SOLD_PLATE = 'B123TST';
+
+// A car's plate as stored, null when it has none.
+export async function plateOf(car: string): Promise<string | null> {
+  const db = new Client({ connectionString: process.env['DATABASE_URL'] });
+  await db.connect();
+  try {
+    const found = await db.query<{ plate: string | null }>(
+      'SELECT plate FROM car WHERE id = $1',
+      [car],
+    );
+    return found.rows[0]?.plate ?? null;
+  } finally {
+    await db.end();
+  }
+}
+
 export async function soldCar(request: APIRequestContext): Promise<SoldCar> {
   const email = await signUpDriver(request, 'vanzare');
   const db = new Client({ connectionString: process.env['DATABASE_URL'] });
@@ -47,11 +65,11 @@ export async function soldCar(request: APIRequestContext): Promise<SoldCar> {
 
   try {
     const made = await db.query<{ car_id: string; driver_id: string }>(
-      `INSERT INTO car (id, owner_id, brand_id, model, year, fuel, odometer_km, idempotency_key)
-       SELECT gen_random_uuid(), a.id, b.id, 'Logan', 2018, 'petrol', 120000, gen_random_uuid()::text
+      `INSERT INTO car (id, owner_id, brand_id, model, year, fuel, odometer_km, plate, idempotency_key)
+       SELECT gen_random_uuid(), a.id, b.id, 'Logan', 2018, 'petrol', 120000, $2, gen_random_uuid()::text
        FROM account a, brand b WHERE a.email = $1 AND b.key = 'dacia'
        RETURNING id AS car_id, owner_id AS driver_id`,
-      [email],
+      [email, SOLD_PLATE],
     );
     const own = made.rows[0];
     if (!own) throw new Error('soldCar: the driver has no car to sell');
