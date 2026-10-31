@@ -5273,3 +5273,24 @@ describe('Results filters', () => {
     });
   });
 });
+
+describe('the pill buttons on the 4 px grid', () => {
+  // The Jest transform drops component styles, so they are read from the source.
+  const css = readFileSync(join(__dirname, 'results.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ');
+  const rule = (selector: string) =>
+    [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].find(
+      ([, sel]) => sel.trim() === selector,
+    )?.[2] ?? '';
+
+  // A button keeps the browser's 1px block padding unless the rule sets it:
+  // QA measured "Filtre · 3", the filter chips and "Scoate filtrele" at 1px 16px.
+  it.each(['.filters-open', '.chip', '.actions > *, .more'])(
+    'sets the block padding of %s to zero beside its 16px sides',
+    (selector) => {
+      expect(rule(selector)).toMatch(/padding: 0 var\(--mf-space-4\);/);
+      expect(rule(selector)).not.toMatch(/padding-inline:/);
+    },
+  );
+});
