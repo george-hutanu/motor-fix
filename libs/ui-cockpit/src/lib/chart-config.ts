@@ -10,6 +10,7 @@ import {
   LinearScale,
   LineController,
   LineElement,
+  type Plugin,
   PointElement,
   type ScriptableContext,
   Tooltip,
@@ -33,10 +34,14 @@ export type ChartType = 'bar' | 'line';
 export type ChartUnit = 'lei' | 'km' | 'count';
 export interface ChartPoint {
   readonly label: string;
-  readonly value: number;
+  // null: a period with no figure, drawn as a gap with no tooltip.
+  readonly value: number | null;
   // A second figure drawn before the value, as its own lighter bar.
   readonly lead?: number;
+  // The whole tooltip line, when the host words it itself.
+  readonly tooltip?: string;
 }
+type Values = (number | null)[];
 // The names of the two figures when a point carries a lead.
 export interface ChartHeadings {
   readonly leadHeading: string;
@@ -83,9 +88,9 @@ export function readTheme(el: Element): ChartTheme {
 
 function dataset(
   type: ChartType,
-  values: number[],
+  values: Values,
   theme: ChartTheme,
-): ChartDataset<ChartType, number[]> {
+): ChartDataset<ChartType, Values> {
   if (type === 'bar')
     return {
       backgroundColor: theme.amber,
@@ -120,9 +125,9 @@ function dataset(
 // The lead's bar: the value's amber at half strength.
 function leadDataset(
   type: ChartType,
-  values: number[],
+  values: Values,
   theme: ChartTheme,
-): ChartDataset<ChartType, number[]> {
+): ChartDataset<ChartType, Values> {
   const amber = color(theme.amber);
   const fill = amber.valid ? amber.alpha(0.5).rgbString() : theme.amber;
   return {
@@ -155,6 +160,113 @@ export function nameLines(label: string): string[] {
   return lines.length ? lines : [label];
 }
 
+interface LastLabel {
+  color: string;
+  dataset: number;
+  font: string;
+  index: number;
+  text: string;
+}
+
+const LAST_LABEL: Plugin<ChartType, LastLabel> = {
+  afterDatasetsDraw: (chart, _args, label) => {
+    if (!label.text) return;
+    const bar = chart.getDatasetMeta(label.dataset)?.data[label.index];
+    if (!bar) return;
+    const { ctx } = chart;
+    ctx.save();
+    ctx.fillStyle = label.color;
+    ctx.font = label.font;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    // The newest bar stands last, near the canvas's right edge on a narrow
+    // chart: the label moves in until it is whole.
+    const half = ctx.measureText(label.text).width / 2;
+    const x = Math.max(half, Math.min(bar.x, chart.width - half));
+    ctx.fillText(label.text, x, bar.y - 4);
+    ctx.restore();
+  },
+  id: 'mf-last-label',
+};
+
+// Room kept for the value axis when choosing which week labels to write: the
+// same on every chart, so two charts side by side write the same weeks.
+const VALUE_AXIS_EMS = 6;
+const LABEL_GAP = 10;
+
+interface WeekScale {
+  chart: { width: number };
+  ctx: { font: string; measureText(text: string): { width: number } };
+  getLabelForValue(value: number): string;
+}
+
+// Every stride-th label, counted back from the newest week, whose bar carries
+// the value: the fewest skipped that still fit the canvas.
+function weekTicks(theme: ChartTheme) {
+  const size = theme.labelSize ?? 12;
+  return {
+    autoSkip: false,
+    callback(
+      this: WeekScale,
+      value: number | string,
+      index: number,
+      all: { value: number }[],
+    ) {
+      const label = this.getLabelForValue(Number(value));
+      const font = this.ctx.font;
+      this.ctx.font = `${size}px ${theme.font}`;
+      const widest = Math.max(
+        ...all.map(
+          (t) => this.ctx.measureText(this.getLabelForValue(t.value)).width,
+        ),
+      );
+      this.ctx.font = font;
+      const room = this.chart.width - VALUE_AXIS_EMS * size;
+      const fit = Math.max(1, Math.floor(room / (widest + LABEL_GAP)));
+      let stride = 1;
+      while (Math.ceil(all.length / stride) > fit) stride++;
+      return (all.length - 1 - index) % stride === 0 ? label : '';
+    },
+  };
+}
+
+// An update replaces the options, never the plugins: the plugin is registered
+// whenever the chart may label, and what it writes travels in its options so
+// new points or a new language reach it.
+function newestLabel(
+  on: boolean,
+  points: readonly ChartPoint[],
+  dataset: number,
+  theme: ChartTheme,
+  format: (value: unknown) => string,
+): {
+  config?: { plugins: Plugin<ChartType, LastLabel>[] };
+  layout?: { padding: { top: number } };
+  options?: Record<string, LastLabel>;
+  ticks?: ReturnType<typeof weekTicks>;
+} {
+  if (!on) return {};
+  const config = { plugins: [LAST_LABEL] };
+  const ticks = weekTicks(theme);
+  // Room over the tallest bar for its label: its size and the 4 px gap.
+  const layout = { padding: { top: (theme.labelSize ?? 12) + 6 } };
+  const index = points.findLastIndex((p) => p.value !== null);
+  if (index < 0) return { config, layout, ticks };
+  const label: LastLabel = {
+    color: theme.text,
+    dataset,
+    font: `600 ${theme.labelSize ?? 12}px ${theme.font}`,
+    index,
+    text: format(points[index].value),
+  };
+  return {
+    config,
+    layout,
+    options: { [LAST_LABEL.id]: label },
+    ticks,
+  };
+}
+
 export function chartConfig(
   type: ChartType,
   points: readonly ChartPoint[],
@@ -166,7 +278,9 @@ export function chartConfig(
   horizontal = false,
   // With a lead on the points: two bars per category, both figures as text.
   headings?: ChartHeadings,
-): ChartConfiguration<ChartType, number[], ChartLabel> {
+  // Upright bars only: the newest value written above its bar.
+  lastLabel = false,
+): ChartConfiguration<ChartType, Values, ChartLabel> {
   const format = (value: unknown) => formatValue(unit, value, language);
   const lead = points.some((p) => p.lead !== undefined) ? headings : undefined;
   const value = dataset(
@@ -203,15 +317,24 @@ export function chartConfig(
     color: theme.textSecondary,
     font: { family: theme.font, size: theme.labelSize },
   };
+  const newest = newestLabel(
+    lastLabel && !horizontal,
+    points,
+    datasets.length - 1,
+    theme,
+    format,
+  );
   const [categoryAxis, valueAxis] = horizontal
     ? (['y', 'x'] as const)
     : (['x', 'y'] as const);
   return {
+    ...newest.config,
     data: { datasets, labels },
     options: {
       animation: reducedMotion
         ? false
         : { duration: 1000, easing: 'easeOutQuart' },
+      layout: newest.layout,
       ...(horizontal && { indexAxis: 'y' as const }),
       // A lead's tooltip shows both bars of the category under its name.
       interaction: {
@@ -221,12 +344,14 @@ export function chartConfig(
       },
       maintainAspectRatio: false,
       plugins: {
+        ...newest.options,
         tooltip: {
           backgroundColor: theme.text,
           bodyColor: theme.bg,
           bodyFont: { family: theme.font, size: theme.labelSize, weight: 600 },
           callbacks: {
             label: (item: TooltipItem<ChartType>) =>
+              points[item.dataIndex]?.tooltip ??
               `${lead ? item.dataset.label : (points[item.dataIndex]?.label ?? item.label)} · ${format(item.raw)}`,
             title: (items: TooltipItem<ChartType>[]) =>
               lead ? (points[items[0]?.dataIndex]?.label ?? '') : '',
@@ -234,6 +359,8 @@ export function chartConfig(
           caretSize: 0,
           cornerRadius: 7,
           displayColors: false,
+          // A period with no figure has no bar to explain.
+          filter: (item: TooltipItem<ChartType>) => item.raw != null,
           padding: { x: 8, y: 5 },
         },
       },
@@ -241,7 +368,13 @@ export function chartConfig(
         [categoryAxis]: {
           border: { display: false },
           grid: { display: false },
-          ticks: { ...ticks, autoSkip: true, maxRotation: 0, minRotation: 0 },
+          ticks: {
+            ...ticks,
+            autoSkip: true,
+            maxRotation: 0,
+            minRotation: 0,
+            ...newest.ticks,
+          },
         },
         [valueAxis]: {
           beginAtZero: true,

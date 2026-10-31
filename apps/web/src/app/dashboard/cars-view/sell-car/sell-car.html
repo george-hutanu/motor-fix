@@ -1,0 +1,91 @@
+@let state = read();
+@if (save.state() === 'done' && sent(); as answer) {
+  <div class="done">
+    @if (answer.whatsapp === 'sent') {
+      <p role="status">{{ 'driver.cars.sale.sent' | t }}</p>
+    } @else {
+      <p role="status">{{ 'driver.cars.sale.failed' | t }}</p>
+    }
+    <div class="link">
+      <span class="muted">{{ 'driver.cars.sale.link' | t }}</span>
+      <span data-part="link">{{ answer.link }}</span>
+    </div>
+    <span class="visually-hidden" aria-live="polite">
+      @if (copied()) {
+        {{ 'driver.cars.sale.copied' | t }}
+      }
+    </span>
+    <div class="actions">
+      @if (canCopy) {
+        <button hlmBtn variant="secondary" type="button" (click)="copy(answer.link)">
+          @if (copied()) {
+            {{ 'driver.cars.sale.copied' | t }}
+          } @else {
+            {{ 'driver.cars.sale.copy' | t }}
+          }
+        </button>
+      }
+      <button hlmBtn type="button" (click)="task.close('sent')">{{ 'driver.cars.sale.done' | t }}</button>
+    </div>
+  </div>
+} @else if (state.state === 'loading') {
+  <p class="muted" aria-busy="true">{{ 'driver.cars.sale.loading' | t }}</p>
+} @else if (state.state === 'failed') {
+  <p role="alert" class="error">{{ 'shell.form.problem.error' | t }}</p>
+  <div class="actions">
+    <button hlmBtn variant="secondary" type="button" (click)="load()">{{ 'driver.cars.sale.retry' | t }}</button>
+  </div>
+} @else if (!state.sale.canStart) {
+  <p>{{ 'driver.cars.sale.problem.open_request' | t }}</p>
+  <div class="actions">
+    <button hlmBtn type="button" (click)="task.close('cancelled')">{{ 'driver.cars.sale.close' | t }}</button>
+  </div>
+} @else if (step() === 'choice') {
+  <p>{{ 'driver.cars.sale.question' | t }}</p>
+  <div class="choice">
+    <button hlmBtn type="button" (click)="step.set('list')">{{ 'driver.cars.sale.pass' | t }}</button>
+    <button hlmBtn variant="secondary" type="button" (click)="task.close('remove')">{{ 'driver.cars.sale.keep' | t }}</button>
+  </div>
+} @else {
+  <form [formGroup]="form" (ngSubmit)="save.submit()">
+    <section aria-labelledby="sell-car-repairs">
+      <h3 class="visually-hidden" id="sell-car-repairs">{{ 'driver.cars.sale.repairs' | t }}</h3>
+      @if (state.sale.repairs.length) {
+        <ul>
+          @for (repair of state.sale.repairs; track repair.id) {
+            <li [attr.data-repair]="repair.id" [class.logged]="repair.source !== 'motorfix'">
+              <span class="dot" aria-hidden="true"></span>
+              <div class="row">
+                @if (repair.source === 'motorfix') {
+                  <span class="what">{{ repair.what }}</span>
+                  <span class="tag">{{ 'driver.cars.sale.passes' | t }}</span>
+                } @else {
+                  <label class="what">
+                    <input type="checkbox" [checked]="ticked().has(repair.id)" (change)="tick(repair.id, $any($event.target).checked)" />
+                    {{ repair.what }}
+                  </label>
+                  <span class="tag">{{ 'driver.cars.sale.added' | t }}</span>
+                }
+                <span class="muted meta">{{ day(repair) }} · {{ repair.garageName }}</span>
+              </div>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="muted">{{ 'driver.cars.sale.empty' | t }}</p>
+      }
+      <p class="muted note">{{ 'driver.cars.sale.note' | t }}</p>
+    </section>
+    <div class="field">
+      <label hlmLabel for="sell-car-phone">{{ 'driver.cars.sale.phone' | t }}</label>
+      <input hlmInput id="sell-car-phone" type="tel" inputmode="tel" autocomplete="tel" formControlName="phone" aria-describedby="sell-car-phone-note sell-car-phone-error" />
+      <span class="muted note" id="sell-car-phone-note">{{ 'driver.cars.sale.phoneNote' | t }}</span>
+      <mf-field-error id="sell-car-phone-error" [save]="save" [control]="form.controls.phone" />
+    </div>
+    <mf-task-error [save]="save" />
+    <div class="actions">
+      <button hlmBtn variant="secondary" type="button" (click)="step.set('choice')">{{ 'driver.cars.sale.back' | t }}</button>
+      <button hlmBtn type="submit" [mfTaskSubmit]="save">{{ 'driver.cars.sale.send' | t }}</button>
+    </div>
+  </form>
+}
