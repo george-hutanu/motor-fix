@@ -74,9 +74,11 @@ function bucharest(day: string, at: number): Date {
   return new Date(`${day}T${clock}:00${offset || '+00:00'}`);
 }
 
-// Blocks a free hour on lift 1 of today's axis, from the next quarter hour
-// when it is still on the axis; a 409 (a seeded booking holds the slot) tries
-// the next quarter.
+// Blocks lift 1 for at least an hour of today's axis that has not ended:
+// from the next quarter hour while an hour fits before closing, else from the
+// axis's last hour on to an hour after now (an ended interval is a 422); a
+// 409 (a seeded booking holds the slot) tries the next quarter. Gives the
+// block's length in minutes with the answer.
 async function blockLiftOne(
   request: APIRequestContext,
   auth: Record<string, string>,
@@ -88,17 +90,24 @@ async function blockLiftOne(
     now: number;
     start: number;
   },
-): Promise<APIResponse> {
+): Promise<{ made: APIResponse; minutes: number }> {
+  const QUARTER = 15 * 60_000;
+  const soon = Math.ceil(slot.now / QUARTER) * QUARTER + 60 * 60_000;
   const quarter = Math.ceil(minutes(wallClock(new Date(slot.now))) / 15) * 15;
   let at =
-    quarter >= slot.start && quarter + 60 <= slot.end ? quarter : slot.start;
+    quarter < slot.start
+      ? slot.start
+      : quarter + 60 > slot.end
+        ? Math.max(slot.start, slot.end - 60)
+        : quarter;
   for (;;) {
     const startsAt = bucharest(slot.day, at);
+    const endsAt = Math.max(startsAt.getTime() + 60 * 60_000, soon);
     const made = await request.post(
       `/api/v1/garages/${slot.garageId}/time-blocks`,
       {
         data: {
-          endsAt: new Date(startsAt.getTime() + 60 * 60_000).toISOString(),
+          endsAt: new Date(endsAt).toISOString(),
           lift: 1,
           note: slot.note,
           startsAt: startsAt.toISOString(),
@@ -107,7 +116,11 @@ async function blockLiftOne(
       },
     );
     at += 15;
-    if (made.status() !== 409 || at + 60 > slot.end) return made;
+    if (made.status() !== 409 || at >= slot.end)
+      return {
+        made,
+        minutes: Math.round((endsAt - startsAt.getTime()) / 60_000),
+      };
   }
 }
 
@@ -149,7 +162,7 @@ test.describe('today’s lift schedule on Panou @seeded', () => {
 
     const now = Date.now();
     const note = `Linia de azi ${now}`;
-    const made = await blockLiftOne(request, auth, {
+    const { made, minutes: long } = await blockLiftOne(request, auth, {
       day,
       end: axisEnd(schedule, day),
       garageId,
@@ -167,7 +180,7 @@ test.describe('today’s lift schedule on Panou @seeded', () => {
         timeout: 5_000,
       });
       await expect(block).toHaveAccessibleName(
-        new RegExp(`^Blocat · ${note} · \\d{2}:\\d{2}, 60 min$`),
+        new RegExp(`^Blocat · ${note} · \\d{2}:\\d{2}, ${long} min$`),
       );
     } finally {
       await request.delete(`/api/v1/garages/${garageId}/time-blocks/${id}`, {
