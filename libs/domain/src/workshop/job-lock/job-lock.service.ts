@@ -408,6 +408,7 @@ export class JobLockService {
       if (held) return { fresh: false, held };
       if (stored) await this.unavailable(() => this.redis.del(lockKey(jobId)));
     }
+    this.logger.warn(`job lock not claimed: job=${jobId} after two tries`);
     throw this.tryAgain();
   }
 

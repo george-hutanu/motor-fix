@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
 import { AUTH_REDIS } from '../../auth/attempts';
@@ -579,5 +580,20 @@ describe('with the lock store unreachable', () => {
       before.status,
       before.updatedAt,
     ]);
+  });
+
+  // @traces 395-FR-016
+  it('logs a warning when a take gives up after its two tries', async () => {
+    const s = await setting();
+    jest.spyOn(store, 'set').mockResolvedValue(null as never);
+    jest.spyOn(store, 'eval').mockResolvedValue(null);
+    const warn = jest.spyOn(Logger.prototype, 'warn');
+
+    const res = await take(s.lock, s.hand);
+
+    expect([res.status, res.body.code]).toEqual([503, 'try_again']);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(`job lock not claimed: job=${s.job.id}`),
+    );
   });
 });
