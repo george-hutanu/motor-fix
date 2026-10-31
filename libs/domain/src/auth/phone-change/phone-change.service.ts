@@ -10,11 +10,7 @@ import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 import { countAccountChange } from '../../metrics/product-counters';
-import type { Brevo } from '../../notifications/brevo/brevo';
-import {
-  PHONE_CONFIG,
-  type PhoneConfig,
-} from '../../notifications/phone-config';
+import { DirectSend } from '../../notifications/direct-send/direct-send.client';
 import { AUTH_OPTIONS, type AuthOptions } from '../actor.guard';
 import { Attempts } from '../attempts';
 import { refusal } from '../http-refusal';
@@ -25,7 +21,6 @@ import {
   codeHash,
   newCode,
 } from '../phone-sign-in/phone-sign-in';
-import { PHONE_BREVO } from '../phone-sign-in/phone-sign-in.service';
 import { sendWhatsAppCode } from '../phone-sign-in/whatsapp-code';
 import type { Actor } from '../policy';
 import { PRISMA } from '../prisma';
@@ -46,8 +41,7 @@ export class PhoneChangeService {
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUTH_OPTIONS) private readonly options: AuthOptions,
-    @Inject(PHONE_BREVO) private readonly brevo: Brevo,
-    @Inject(PHONE_CONFIG) private readonly phone: PhoneConfig,
+    private readonly directSend: DirectSend,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
     private readonly attempts: Attempts,
@@ -80,7 +74,7 @@ export class PhoneChangeService {
     const code = newCode();
     try {
       await sendWhatsAppCode(
-        { brevo: this.brevo, config: this.phone, logger: this.logger },
+        { directSend: this.directSend, logger: this.logger },
         'PHONE_CHANGE_CODE',
         phone,
         account.language,
