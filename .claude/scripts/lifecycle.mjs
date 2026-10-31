@@ -44,7 +44,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { typeLabel } from "../hooks/pr-lifecycle-gate.mjs";
 import { isEntryPoint } from "./lib/entry.mjs";
-import { ghRun } from "./lib/gh-rest.mjs";
+import { ghRun, spawnRun } from "./lib/gh-rest.mjs";
 import { activeFeature, featureKey, featuresRoot, locateFeature } from "./lib/feature.mjs";
 import { pointFeature } from "./level.mjs";
 import { carriedFrom, carryKind, findingCount, latestReview, statusesArgs } from "./pr-test/carry.mjs";
@@ -97,15 +97,13 @@ export function runGates(repo, command, env) {
   return { code: 0, stderr: "" };
 }
 
-function realIo() {
+export function realIo() {
   const repo = spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).stdout.trim() || process.cwd();
   return {
     repo,
     env: process.env,
-    run: (file, args, opts = {}) => {
-      const r = spawnSync(file, args, { cwd: repo, env: opts.env ?? process.env, encoding: "utf8", input: opts.input });
-      return { code: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr ?? String(r.error ?? "") };
-    },
+    // spawnRun lifts spawnSync's 1 MB cap: a compare across main merges passes it.
+    run: (file, args, opts = {}) => spawnRun({ cwd: repo, env: opts.env ?? process.env })(file, args, opts),
     gate: (command, env) => runGates(repo, command, env),
   };
 }
