@@ -361,6 +361,8 @@ export type { SaveGarageDto } from './models/save-garage-dto';
 export type { SaveListingDraftDto } from './models/save-listing-draft-dto';
 export type { SavePushSubscriptionDto } from './models/save-push-subscription-dto';
 export type { ScheduleCarDto } from './models/schedule-car-dto';
+export type { ScheduleDayDto } from './models/schedule-day-dto';
+export type { ScheduleIntervalDto } from './models/schedule-interval-dto';
 export type { SendNewsDto } from './models/send-news-dto';
 export type { SendQuoteDto } from './models/send-quote-dto';
 export type { SessionDto } from './models/session-dto';
