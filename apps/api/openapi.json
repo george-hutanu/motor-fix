@@ -23378,6 +23378,12 @@
           "hasAccount": {
             "type": "boolean"
           },
+          "shown": {
+            "type": "boolean"
+          },
+          "takesDirectRequests": {
+            "type": "boolean"
+          },
           "rating": {
             "type": "string",
             "example": "4.9",
@@ -23409,6 +23415,8 @@
           "futureBookings",
           "onProfile",
           "hasAccount",
+          "shown",
+          "takesDirectRequests",
           "rating",
           "reviewCount",
           "invite"
@@ -23444,11 +23452,15 @@
             "items": {
               "$ref": "#/components/schemas/GarageBrandOptionDto"
             }
+          },
+          "teamOnProfile": {
+            "type": "boolean"
           }
         },
         "required": [
           "items",
-          "brands"
+          "brands",
+          "teamOnProfile"
         ]
       },
       "CreateMechanicDto": {
@@ -23541,6 +23553,10 @@
             "type": "string",
             "maxLength": 80,
             "minLength": 2
+          },
+          "takesDirectRequests": {
+            "type": "boolean",
+            "description": "Whether a driver may ask for this mechanic by name"
           }
         }
       },
@@ -23842,6 +23858,10 @@
                 "$ref": "#/components/schemas/CourtesyCarDto"
               }
             ]
+          },
+          "teamOnProfile": {
+            "type": "boolean",
+            "description": "Whether the team appears on the public profile"
           }
         }
       },
@@ -23858,10 +23878,15 @@
                 "$ref": "#/components/schemas/CourtesyCarDto"
               }
             ]
+          },
+          "teamOnProfile": {
+            "type": "boolean",
+            "description": "Whether the team appears on the public profile"
           }
         },
         "required": [
-          "paymentMethods"
+          "paymentMethods",
+          "teamOnProfile"
         ]
       },
       "InviteTokenDto": {

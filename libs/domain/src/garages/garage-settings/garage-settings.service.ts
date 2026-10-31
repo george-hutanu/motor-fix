@@ -1,6 +1,7 @@
 import type { GarageSettingsDto, UpdateGarageDto } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
+import { teamCardIds } from './write-team-on-profile';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
 import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
@@ -19,6 +20,7 @@ type Stored = {
   payment_transfer: boolean;
   courtesy_car_paid: boolean;
   courtesy_car_price_per_day_bani: number | null;
+  team_on_profile: boolean;
 };
 
 const PAYMENT_FIELDS = [
@@ -35,7 +37,7 @@ const COURTESY_FIELDS = [
 async function lockGarage(tx: Prisma.TransactionClient, garageId: string) {
   const [row] = await tx.$queryRaw<(Stored & { listed: boolean })[]>`
     SELECT payment_cash, payment_card, payment_transfer, courtesy_car_paid,
-      courtesy_car_price_per_day_bani,
+      courtesy_car_price_per_day_bani, team_on_profile,
       EXISTS (SELECT 1 FROM garage_facility f
         WHERE f.garage_id = g.id AND f.facility = 'courtesy_car') AS listed
     FROM garage g WHERE id = ${garageId}::uuid FOR UPDATE`;
@@ -44,7 +46,7 @@ async function lockGarage(tx: Prisma.TransactionClient, garageId: string) {
 }
 
 function applied(before: Stored, dto: UpdateGarageDto): Stored {
-  const { courtesyCar, paymentMethods } = dto;
+  const { courtesyCar, paymentMethods, teamOnProfile } = dto;
   return {
     ...before,
     ...(paymentMethods && {
@@ -56,6 +58,7 @@ function applied(before: Stored, dto: UpdateGarageDto): Stored {
       courtesy_car_paid: courtesyCar.paid,
       courtesy_car_price_per_day_bani: courtesyCar.pricePerDayBani ?? null,
     }),
+    ...(teamOnProfile !== undefined && { team_on_profile: teamOnProfile }),
   };
 }
 
@@ -73,6 +76,7 @@ function answer(row: Stored, listed: boolean): GarageSettingsDto {
         ...(price !== null && { pricePerDayBani: price }),
       },
     }),
+    teamOnProfile: row.team_on_profile,
   };
 }
 
@@ -84,7 +88,8 @@ export class GarageSettingsService {
     @Inject(EVENT_PORT) private readonly events: EventPort,
   ) {}
 
-  // The owner's payment methods and courtesy car price; no re-approval.
+  // The owner's payment methods, courtesy car price and whether the team
+  // shows on the profile; no re-approval.
   async update(
     actor: Actor,
     garageId: string,
@@ -118,7 +123,8 @@ export class GarageSettingsService {
       fields.some((field) => before[field] !== after[field]);
     const payments = moved(PAYMENT_FIELDS);
     const courtesy = moved(COURTESY_FIELDS);
-    if (!payments && !courtesy) return;
+    const team = moved(['team_on_profile']);
+    if (!payments && !courtesy && !team) return;
     await tx.garage.update({
       data: {
         courtesyCarPaid: after.courtesy_car_paid,
@@ -126,6 +132,7 @@ export class GarageSettingsService {
         paymentCard: after.payment_card,
         paymentCash: after.payment_cash,
         paymentTransfer: after.payment_transfer,
+        teamOnProfile: after.team_on_profile,
       },
       where: { id: garageId },
     });
@@ -142,13 +149,20 @@ export class GarageSettingsService {
       after,
     );
     await this.events.record(tx, {
-      // A payment method can move the garage in search results.
-      audience: { garageId, results: payments, type: 'public_garage' },
+      // A payment method can move the garage in search results; the team
+      // switch shows or hides each card's own page.
+      audience: {
+        garageId,
+        ...(team && { mechanicIds: await teamCardIds(tx, garageId) }),
+        results: payments,
+        type: 'public_garage',
+      },
       kind: 'garage.updated',
       payload: {
         fields: [
           ...(payments ? ['payment_methods'] : []),
           ...(courtesy ? ['courtesy_car'] : []),
+          ...(team ? ['team_on_profile'] : []),
         ],
         garageId,
       },

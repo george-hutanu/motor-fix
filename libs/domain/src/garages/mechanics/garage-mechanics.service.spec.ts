@@ -68,10 +68,12 @@ const card = (over: Record<string, unknown>) => ({
   name: 'Ion',
   onProfile: true,
   rating: null,
+  removedAt: null,
   reviewCount: 0,
   roleTitle: null,
   speciality: null,
   specialties: [],
+  takesDirectRequests: true,
   years: null,
   ...over,
 });
@@ -124,6 +126,12 @@ const listed = (
   brands: { id: string; name: string }[] = [],
 ) => {
   const prisma = fakeDb({
+    garage: {
+      findUniqueOrThrow: jest.fn(async () => ({
+        status: 'approved',
+        teamOnProfile: true,
+      })),
+    },
     garageBrand: {
       findMany: jest.fn(async () =>
         brands.map((brand) => ({
@@ -233,6 +241,7 @@ describe("GarageMechanicsService listing a garage's cards", () => {
       isOwner: false,
       roleTitle: null,
       specialties: [],
+      takesDirectRequests: true,
       years: null,
     };
     expect(await list(actorOf('garage'))).toEqual({
@@ -246,6 +255,7 @@ describe("GarageMechanicsService listing a garage's cards", () => {
           onProfile: true,
           rating: '5.0',
           reviewCount: 58,
+          shown: true,
           speciality: 'Frâne',
         },
         {
@@ -256,9 +266,11 @@ describe("GarageMechanicsService listing a garage's cards", () => {
           onProfile: false,
           rating: null,
           reviewCount: 0,
+          shown: false,
           speciality: null,
         },
       ],
+      teamOnProfile: true,
     });
   });
 });

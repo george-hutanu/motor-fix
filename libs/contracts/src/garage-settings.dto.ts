@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsDefined,
   IsObject,
+  IsOptional,
   ValidateBy,
   ValidateIf,
   ValidateNested,
@@ -72,7 +73,7 @@ const atLeastOnePayment = () =>
     },
   });
 
-// Either key or both; an empty body changes nothing and is refused.
+// Any of the keys; an empty body changes nothing and is refused.
 export class UpdateGarageDto {
   @ApiPropertyOptional({
     description: 'All three; at least one true',
@@ -80,7 +81,8 @@ export class UpdateGarageDto {
   })
   @ValidateIf(
     (o: UpdateGarageDto) =>
-      o.courtesyCar === undefined || o.paymentMethods !== undefined,
+      (o.courtesyCar === undefined && o.teamOnProfile === undefined) ||
+      o.paymentMethods !== undefined,
   )
   @IsDefined()
   @IsObject()
@@ -98,6 +100,13 @@ export class UpdateGarageDto {
   @ValidateNested()
   @Type(() => CourtesyCarDto)
   courtesyCar?: CourtesyCarDto;
+
+  @ApiPropertyOptional({
+    description: 'Whether the team appears on the public profile',
+  })
+  @IsOptional()
+  @IsBoolean()
+  teamOnProfile?: boolean;
 }
 
 // What is stored after the write.
@@ -110,4 +119,9 @@ export class GarageSettingsDto {
     type: CourtesyCarDto,
   })
   courtesyCar?: CourtesyCarDto;
+
+  @ApiProperty({
+    description: 'Whether the team appears on the public profile',
+  })
+  teamOnProfile!: boolean;
 }

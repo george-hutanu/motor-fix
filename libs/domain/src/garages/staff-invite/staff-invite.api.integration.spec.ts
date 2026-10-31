@@ -103,11 +103,15 @@ const http = () => request(app.getHttpServer());
 const bearer = (accountId: string, role: Role) =>
   `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
 
-// Atelier Dinamo with its owner Mihai (Romanian), a receptionist and a
-// mechanic; Atelier Nord with its owner and a mechanic.
+// Atelier Dinamo (approved) with its owner Mihai (Romanian), a receptionist
+// and a mechanic; Atelier Nord with its owner and a mechanic.
 async function world() {
   const dinamo = await prisma.garage.create({
-    data: { name: 'Atelier Dinamo', slug: `dinamo-${randomUUID()}` },
+    data: {
+      name: 'Atelier Dinamo',
+      slug: `dinamo-${randomUUID()}`,
+      status: 'approved',
+    },
   });
   const nord = await prisma.garage.create({
     data: { name: 'Atelier Nord', slug: `nord-${randomUUID()}` },
@@ -1152,6 +1156,29 @@ describe('accepting an invite from a card', () => {
       token: body['phone'] ? whatsappToken() : tokenOf().token,
     };
   }
+
+  // @traces 059-FR-011 059-FR-009
+  it('turns the consent on but tells no public channel while the garage hides its team', async () => {
+    const { dinamo, elenaCard, token } = await invited();
+    await prisma.garage.update({
+      data: { teamOnProfile: false },
+      where: { id: dinamo.id },
+    });
+    const ana = await account('ana', ['driver']);
+
+    const res = await accept(token, bearer(ana, 'driver'));
+
+    expect(res.status).toBe(204);
+    expect(
+      (await prisma.mechanic.findUniqueOrThrow({ where: { id: elenaCard.id } }))
+        .onProfile,
+    ).toBe(true);
+    const [linked] = await outbox('mechanic.updated');
+    expect(linked.audience).toEqual([
+      `garage:${dinamo.id}`,
+      `mechanic:${elenaCard.id}`,
+    ]);
+  });
 
   // @traces 1255-FR-006 1255-FR-008
   it('links the card to the account, puts it on the profile and keeps its fields', async () => {
