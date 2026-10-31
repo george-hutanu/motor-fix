@@ -77,8 +77,9 @@ async function countBrandArea(
     SELECT brand, area, COUNT(DISTINCT id)::int AS n FROM (
       SELECT qr.id, qr.car_brand AS brand, ${areaOf(Prisma.sql`g.position`)} AS area
       FROM quote_request qr
-      JOIN request_recipient rr ON rr.request_id = qr.id
-      JOIN garage g ON g.id = rr.garage_id
+      -- A request sent to no garage still counts once, under unknown (SC-002).
+      LEFT JOIN request_recipient rr ON rr.request_id = qr.id
+      LEFT JOIN garage g ON g.id = rr.garage_id
       WHERE (${within(at, days)}) ${unmet}
     ) sent GROUP BY brand, area`;
   const [searches, requests, unmet] = await Promise.all([

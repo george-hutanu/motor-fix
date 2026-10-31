@@ -8,7 +8,7 @@ import request from 'supertest';
 
 import { apiBoot, TEST_TOKEN_SECRET } from './api-boot.testing';
 
-// @traces 106-FR-008
+// @traces 106-FR-008 106-FR-006
 
 const api = apiBoot();
 let app: INestApplication;
@@ -46,5 +46,28 @@ describe('GET /api/v1/admin/demand/supply through the API', () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toMatchObject({ code: 'validation_failed', status: 400 });
+  });
+
+  it('answers 404 not_found to a driver and 401 sign_in_required without a token', async () => {
+    const { id } = await app.get(AccountsService).createAccount({
+      consent: CURRENT_CONSENT,
+      identity: { method: 'google', subject: `driver-${randomUUID()}` },
+      name: 'driver',
+      roles: ['driver'],
+    });
+    const driver = `Bearer ${signAccessToken({ accountId: id, role: 'driver' } as never, TEST_TOKEN_SECRET, Date.now())}`;
+
+    const denied = await request(app.getHttpServer())
+      .get('/api/v1/admin/demand/supply')
+      .set('Authorization', driver);
+    const anonymous = await request(app.getHttpServer()).get(
+      '/api/v1/admin/demand/supply',
+    );
+
+    expect([denied.status, denied.body.code]).toEqual([404, 'not_found']);
+    expect([anonymous.status, anonymous.body.code]).toEqual([
+      401,
+      'sign_in_required',
+    ]);
   });
 });

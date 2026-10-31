@@ -97,6 +97,28 @@ describe('the areas file', () => {
         delete (f as Record<string, unknown>)['features'];
       },
     ],
+    [
+      'a ring of one point',
+      (f: typeof FILE) => {
+        f.features[0].geometry = { coordinates: [[[26, 44]]], type: 'Polygon' };
+      },
+    ],
+    [
+      'a ring that is not closed',
+      (f: typeof FILE) => {
+        f.features[0].geometry = {
+          coordinates: [
+            [
+              [26, 44],
+              [26.1, 44],
+              [26.1, 44.1],
+              [26, 44.1],
+            ],
+          ],
+          type: 'Polygon',
+        };
+      },
+    ],
   ])('refuses a file with %s', (_, change) => {
     expect(() => readAreas(changed(change))).toThrow(/areas file/);
   });

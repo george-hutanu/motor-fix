@@ -95,7 +95,7 @@ describe('GET /admin/demand/supply', () => {
       bearer(answering, 'mechanic'),
     ]) {
       const res = await get(PATH, auth);
-      expect([res.status, res.body.code]).toEqual([404, 'not_found']);
+      expect(res.status).toBe(404);
     }
   });
 

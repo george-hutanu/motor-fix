@@ -45,7 +45,23 @@ function outlineOf(
     coordinates.some((part) => !Array.isArray(part) || part.length === 0)
   )
     refuse(`${code} has an empty outline`);
+  const polygons = type === 'Polygon' ? [coordinates] : coordinates;
+  if (
+    !polygons.every((rings) => Array.isArray(rings) && rings.every(closedRing))
+  )
+    refuse(`${code} has a ring that is not closed or has under 4 points`);
   return { coordinates, type };
+}
+
+const isPosition = (p: unknown): p is number[] =>
+  Array.isArray(p) && p.length >= 2 && p.every(Number.isFinite);
+
+// A GeoJSON linear ring: at least 4 positions, the last the first.
+function closedRing(ring: unknown): boolean {
+  if (!Array.isArray(ring) || ring.length < 4 || !ring.every(isPosition))
+    return false;
+  const [first, last] = [ring[0], ring[ring.length - 1]];
+  return first[0] === last[0] && first[1] === last[1];
 }
 
 function areaOfFeature(feature: unknown, i: number): AreaRecord {
@@ -99,6 +115,8 @@ export class AreaLoader {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
   async load(areas: readonly AreaRecord[]) {
+    // An outline PostGIS would store without complaint is refused before any write.
+    for (const { code, geometry } of areas) outlineOf(code, { ...geometry });
     const changed = await this.prisma.$transaction(
       async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('area_loader'))`;

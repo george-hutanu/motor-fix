@@ -69,7 +69,15 @@ async function garageAt(
   for (const [brand, stance] of Object.entries(brands)) {
     const { id } = await brandNamed(brand);
     await prisma.garageBrand.create({
-      data: { brandId: id, garageId: garage.id, stance },
+      // Fuels stay only on a brand worked on (garage_brand_fuel_check).
+      data: {
+        brandId: id,
+        garageId: garage.id,
+        stance,
+        ...(stance === 'works_on'
+          ? {}
+          : { diesel: false, electric: false, hybrid: false, petrol: false }),
+      },
     });
   }
   return garage;
