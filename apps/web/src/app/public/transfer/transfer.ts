@@ -217,8 +217,12 @@ export class TransferPage {
     } catch {
       // The car is taken over: its page reads the session on its own.
     }
-    await this.router.navigateByUrl(`/app/driver/cars/${carId}`);
-    this.accepting.set(false);
+    try {
+      // One segment, encoded, whatever the id holds.
+      await this.router.navigate(['/app/driver/cars', carId]);
+    } finally {
+      this.accepting.set(false);
+    }
   }
 
   private refusedAccept(error: unknown) {

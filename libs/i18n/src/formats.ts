@@ -173,10 +173,18 @@ export function instant(value: unknown): Date | undefined {
   const date =
     value instanceof Date
       ? value
-      : (typeof value === 'string' && ISO.test(value)) || isNumber(value)
+      : (typeof value === 'string' && ISO.test(value) && realDay(value)) ||
+          isNumber(value)
         ? new Date(value)
         : undefined;
   return date && !Number.isNaN(date.getTime()) ? date : undefined;
+}
+
+// "2026-02-30" parses as 2 March: a day the calendar lacks is no date.
+function realDay(value: string): boolean {
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
 // The Bucharest day and short month of a value, and its year.

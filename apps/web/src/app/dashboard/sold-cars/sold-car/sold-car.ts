@@ -4,8 +4,8 @@ import {
   computed,
   inject,
   input,
+  linkedSignal,
   output,
-  signal,
 } from '@angular/core';
 import {
   type CarRepairDto,
@@ -35,9 +35,20 @@ export class SoldCar {
   readonly car = input.required<SoldCarDto>();
   // The sold car is no longer the reader's to see: the list reads again.
   readonly gone = output<void>();
-  protected readonly open = signal(false);
-  protected readonly history = signal<History>('closed');
-  protected readonly rows = signal<CarRepairDto[] | undefined>(undefined);
+  // Another car in the same card starts closed and unread.
+  private readonly id = computed(() => this.car().id);
+  protected readonly open = linkedSignal({
+    computation: () => false,
+    source: this.id,
+  });
+  protected readonly history = linkedSignal<string, History>({
+    computation: () => 'closed',
+    source: this.id,
+  });
+  protected readonly rows = linkedSignal<string, CarRepairDto[] | undefined>({
+    computation: () => undefined,
+    source: this.id,
+  });
   protected readonly name = computed(
     () => `${this.car().brandName} ${this.car().model}`,
   );
@@ -59,14 +70,15 @@ export class SoldCar {
   }
 
   protected async read() {
+    const id = this.id();
     this.history.set('loading');
     try {
-      const { items } = await this.api.carHistoryControllerSoldRepairs({
-        id: this.car().id,
-      });
+      const { items } = await this.api.carHistoryControllerSoldRepairs({ id });
+      if (id !== this.id()) return;
       this.rows.set(items);
       this.history.set('shown');
     } catch (error) {
+      if (id !== this.id()) return;
       this.history.set('failed');
       if (toProblem(error).status === 404) this.gone.emit();
     }
