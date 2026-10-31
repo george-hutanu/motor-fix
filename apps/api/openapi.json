@@ -19368,6 +19368,15 @@
           },
           "canReport": {
             "type": "boolean"
+          },
+          "reportRefusal": {
+            "type": "string",
+            "description": "Why the owner may not report the review now, as the report operation would refuse it; null when it may",
+            "enum": [
+              "already_reported",
+              "already_kept"
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -19387,7 +19396,8 @@
           "status",
           "mechanic",
           "canReply",
-          "canReport"
+          "canReport",
+          "reportRefusal"
         ]
       },
       "GarageStaffReviewsPageDto": {
