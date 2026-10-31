@@ -1,13 +1,20 @@
 import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import type { Period } from '@motor-fix/contracts/figure-choices';
 import { formatNum, formatPct, I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
+import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { AdminDemand } from '../admin-demand/admin-demand';
 import { AdminGrowth } from '../admin-growth/admin-growth';
+import { AdminLayout } from '../admin-layout';
 import { AdminLog } from '../admin-log/admin-log';
 import { AdminOverview } from '../admin-overview';
 import { AdminQueue } from '../admin-queue/admin-queue';
 import { AdminReviews } from '../admin-reviews/admin-reviews';
+import type {
+  PanelRow,
+  SectionsPanelData,
+} from '../dashboard-sections-panel/dashboard-sections-panel';
 
 type Figures = NonNullable<ReturnType<AdminOverview['figures']>>;
 type Figure = Exclude<keyof Figures, 'observabilityUrl'>;
@@ -58,9 +65,31 @@ const TILES: readonly {
 
 const MISSING = '—';
 
+const SECTIONS = 'admin.panel.sections';
+// The keys Panou has a section for. A key becomes a row of the panel once it
+// has its texts (`name.<key>`, `description.<key>`); until `reported` has its
+// own, the reviews overview travels with `log`.
+const DRAWN = new Set([
+  'numbers',
+  'verification',
+  'growth',
+  'demand',
+  'reported',
+  'log',
+]);
+
 @Component({
-  host: { '[attr.aria-busy]': "regionBusy() ? 'true' : null" },
-  imports: [AdminDemand, AdminGrowth, AdminLog, AdminQueue, AdminReviews],
+  host: {
+    '[attr.aria-busy]': "!layout.ready() || regionBusy() ? 'true' : null",
+  },
+  imports: [
+    AdminDemand,
+    AdminGrowth,
+    AdminLog,
+    AdminQueue,
+    AdminReviews,
+    HlmButton,
+  ],
   selector: 'mf-admin-panel',
   styleUrl: './admin-panel.css',
   templateUrl: './admin-panel.html',
@@ -68,6 +97,8 @@ const MISSING = '—';
 export class AdminPanel {
   private readonly overview = inject(AdminOverview);
   private readonly i18n = inject(I18n);
+  private readonly overlays = inject(Overlays);
+  protected readonly layout = inject(AdminLayout);
   // The label of the failed tile whose reason shows: one at a time, opened
   // and closed by a press, never by focus alone.
   protected readonly tip = signal<string | null>(null);
@@ -132,6 +163,102 @@ export class AdminPanel {
   }
 
   protected readonly why = computed(() => this.t('why'));
+  protected readonly button = computed(() => this.i18n.t(`${SECTIONS}.button`));
+  protected readonly empty = computed(() => this.i18n.t(`${SECTIONS}.empty`));
+
+  // The panel's rows: the layout's keys that have a section and its texts.
+  protected readonly rows = computed(() => {
+    const rows: PanelRow[] = [];
+    for (const { key, visible } of this.layout.shown() ?? []) {
+      const name = DRAWN.has(key) ? this.text(`name.${key}`) : undefined;
+      if (name === undefined) continue;
+      rows.push({
+        description: this.text(`description.${key}`) ?? '',
+        key,
+        label: this.i18n.t(`${SECTIONS}.hide`, { name }),
+        name,
+        position: rows.length + 1,
+        shown: visible,
+      });
+    }
+    return rows;
+  });
+
+  protected readonly count = computed(() => {
+    if (!this.layout.ready()) return null;
+    const rows = this.rows();
+    return this.i18n.t(`${SECTIONS}.count`, {
+      x: rows.filter((row) => row.shown).length,
+      y: rows.length,
+    });
+  });
+
+  protected readonly allHidden = computed(() => {
+    const rows = this.rows();
+    return rows.length > 0 && rows.every((row) => !row.shown);
+  });
+
+  // The sections Panou draws, in the layout's order.
+  protected readonly sections = computed(() => {
+    const listed = new Set(this.rows().map((row) => row.key));
+    return (this.layout.shown() ?? [])
+      .filter(
+        ({ key, visible }) =>
+          visible && DRAWN.has(key) && (key !== 'reported' || listed.has(key)),
+      )
+      .map(({ key }) => key);
+  });
+  protected readonly reviewsWithLog = computed(
+    () => !this.rows().some((row) => row.key === 'reported'),
+  );
+
+  private opening = false;
+
+  // The panel's code loads on the first press; when it cannot, nothing
+  // opens and the next press tries again.
+  protected async open() {
+    if (this.opening) return;
+    this.opening = true;
+    try {
+      const { DashboardSectionsPanel } = await import(
+        '../dashboard-sections-panel/dashboard-sections-panel'
+      );
+      void this.overlays.open<'done', SectionsPanelData>(
+        DashboardSectionsPanel,
+        {
+          confirmDiscard: false,
+          data: {
+            messages: SECTIONS,
+            move: (key, direction) => this.move(key, direction),
+            reset: () => this.layout.reset(),
+            rows: this.rows,
+            toggle: (key, shown) => this.layout.toggle(key, shown),
+          },
+          shape: 'drawer',
+          title: `${SECTIONS}.title`,
+        },
+      );
+    } catch {
+      // Left closed: the press is the retry.
+    } finally {
+      this.opening = false;
+    }
+  }
+
+  // Swaps with the next listed row, past any key the panel does not list.
+  private move(key: string, direction: 'up' | 'down') {
+    const rows = this.rows();
+    const at = rows.findIndex((row) => row.key === key);
+    const other = rows[direction === 'up' ? at - 1 : at + 1];
+    return other ? this.layout.swap(key, other.key) : Promise.resolve(true);
+  }
+
+  // A section's text, or undefined while it has none.
+  private text(key: string) {
+    const id = `${SECTIONS}.${key}`;
+    const text = this.i18n.t(id);
+    return text === id ? undefined : text;
+  }
 
   protected toggle(label: string) {
     this.tip.update((open) => (open === label ? null : label));

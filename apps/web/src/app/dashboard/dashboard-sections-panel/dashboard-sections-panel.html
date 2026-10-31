@@ -1,7 +1,7 @@
 <p class="line">{{ text.line | t }}</p>
 <ol>
-  @for (row of rows(); track row.key) {
-    <li data-row [attr.data-off]="row.shown ? null : ''">
+  @for (row of rows(); track row.key; let first = $first, last = $last) {
+    <li data-row [attr.data-key]="row.key" [attr.data-off]="row.shown ? null : ''">
       <span class="position">{{ row.position }}</span>
       <span class="text">
         <span class="name" aria-hidden="true">{{ row.name }}</span>
@@ -11,10 +11,40 @@
         #control
         [checked]="row.shown"
         [disabled]="pending().has(row.key)"
-        [aria-label]="row.name"
+        [aria-label]="row.label ?? row.name"
         [aria-describedby]="'sections-panel-' + row.key"
         (checkedChange)="flip(row.key, $event, control)"
       />
+      @if (moves) {
+        <span class="moves">
+          <button
+            hlmBtn
+            variant="ghost"
+            type="button"
+            data-move="up"
+            [disabled]="first"
+            [attr.aria-label]="text.moveUp | t: { name: row.name }"
+            (click)="shift(row.key, 'up')"
+          >
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+              <path d="M3 10l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" />
+            </svg>
+          </button>
+          <button
+            hlmBtn
+            variant="ghost"
+            type="button"
+            data-move="down"
+            [disabled]="last"
+            [attr.aria-label]="text.moveDown | t: { name: row.name }"
+            (click)="shift(row.key, 'down')"
+          >
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16">
+              <path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" />
+            </svg>
+          </button>
+        </span>
+      }
     </li>
   }
 </ol>
@@ -22,5 +52,8 @@
   <p role="alert" class="error">{{ text.saveFailed | t }}</p>
 }
 <div class="actions">
+  @if (task.data.reset) {
+    <button hlmBtn variant="ghost" type="button" data-reset (click)="reset()">{{ text.reset | t }}</button>
+  }
   <button hlmBtn type="button" (click)="task.close('done')">{{ text.done | t }}</button>
 </div>
