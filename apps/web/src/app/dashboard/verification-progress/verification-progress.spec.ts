@@ -681,7 +681,7 @@ describe('the verification page, on a rejection', () => {
       rejected('documents'),
     );
     const { host } = await render();
-    const navigate = jest
+    const navigate = vi
       .spyOn(TestBed.inject(Router), 'navigateByUrl')
       .mockResolvedValue(true);
 
