@@ -34,6 +34,8 @@ export type LiveSubject =
       // A status change the public sees (an approval, a suspension): the
       // garage's public page and the results of every brand.
       published?: true;
+      // The brands it takes then: their searches hear a published change.
+      brandIds?: readonly string[];
     }
   // The garages' staff only: an invite, a mechanic row.
   | { type: 'garage'; garageIds: readonly string[] }
@@ -67,6 +69,8 @@ export type LiveSubject =
 const account = (id: string) => `account:${id}`;
 const garage = (id: string) => `garage:${id}`;
 const when = (condition: unknown, ...keys: string[]) => (condition ? keys : []);
+const brandSearches = (ids: readonly string[] = []) =>
+  ids.map((id) => `public:search:${id}`);
 
 // The channel keys of everyone who may read the subject through the API.
 export function audienceOf(subject: LiveSubject): string[] {
@@ -143,6 +147,7 @@ export function audienceOf(subject: LiveSubject): string[] {
           subject.published,
           `public:garage:${subject.garageId}`,
           'public:search',
+          ...brandSearches(subject.brandIds),
         ),
       ];
     case 'public_garage':

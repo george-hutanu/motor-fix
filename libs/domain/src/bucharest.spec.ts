@@ -6,6 +6,7 @@ import {
   isoWeek,
   local,
   localDay,
+  localIso,
   monthStart,
   weekStart,
 } from './bucharest';
@@ -140,5 +141,16 @@ describe('local', () => {
     ['2026-10-24T11:05:00.000Z', 14, 5],
   ])('reads %s as %i:%i on the clock in Bucharest', (at, hour, minute) => {
     expect(local(new Date(at))).toMatchObject({ hour, minute });
+  });
+});
+
+describe('localIso', () => {
+  it.each([
+    ['2026-11-10T06:00:00.000Z', '2026-11-10T08:00:00+02:00'],
+    ['2026-07-10T05:00:00.000Z', '2026-07-10T08:00:00+03:00'],
+    ['2026-10-25T00:30:00.000Z', '2026-10-25T03:30:00+03:00'],
+    ['2026-10-25T01:30:00.000Z', '2026-10-25T03:30:00+02:00'],
+  ])('reads %s on the Bucharest clock as %s', (at, wall) => {
+    expect(localIso(new Date(at))).toBe(wall);
   });
 });
