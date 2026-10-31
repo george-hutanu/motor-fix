@@ -200,13 +200,13 @@ _From 199-notification-bell._
 
 _From 1190-live-reconnects._
 
-### 199-FR-004 — `POST /api/v1/notifications/:id/read` MUST set `read_at` once (a second call keeps the first time) and return the item; a row that is not the caller's own `in_app` row answers 404.
+### 1407-FR-002 — `POST /api/v1/notifications/:id/read` MUST declare the same optional header as FR-001, unread and unvalidated; its answer MUST stay as 199-FR-004 gives it (`read_at` set once, a second call keeps the first time, 404 for a row not the caller's).
 
-_From 199-notification-bell._
+_From 1407-toggle-idempotency._
 
-### 199-FR-005 — `POST /api/v1/notifications/read-all` MUST set `read_at` on every unread `in_app` row of the caller and no one else's.
+### 1407-FR-003 — `POST /api/v1/notifications/read-all` MUST declare the same optional header as FR-001, unread and unvalidated; its answer MUST stay as 199-FR-005 gives it.
 
-_From 199-notification-bell._
+_From 1407-toggle-idempotency._
 
 ### 199-FR-006 — Marking read (one or all) MUST publish `notification.read` on `account:{accountId}`; a Redis failure is logged and does not fail the call.
 
@@ -384,9 +384,9 @@ _From 198-staff-notification-preferences._
 
 _From 198-staff-notification-preferences._
 
-### 198-FR-007 — `PUT /api/v1/notification-preferences` MUST accept staff choices as per-type choices of ST-197 that carry the garage (none for an admin type), the type, the channel and `enabled`, and MUST answer the preferences as FR-001 reads them after the save; a save MUST stay one transaction with one audit history entry per changed row (who, garage, type, channel, old and new value) and MUST publish `notification_preferences.updated` on `account:{accountId}` as ST-197 does.
+### 1407-FR-001 — `PUT /api/v1/notification-preferences` MUST declare an optional request header `Idempotency-Key` in the OpenAPI document: `in: header`, `required: false`, `schema: { type: string, minLength: 1, maxLength: 64 }`, with a one-line description saying the key is one per press and that the write is idempotent by value. The server MUST NOT read or validate it, and the operation's answer MUST stay as 198-FR-007 gives it, with or without the header and whatever its value.
 
-_From 198-staff-notification-preferences._
+_From 1407-toggle-idempotency._
 
 ### 198-FR-008 — A staff choice MUST be refused with 422, nothing changed, when: the type is not in the caller's list for that garage (or, with no garage, not in the admin list or the account is not an admin), code `type_not_in_list`; the channel is SMS, code `channel_not_allowed`; the channel is locked for the type and `enabled` is false, code `channel_locked`; the channel is WhatsApp, `enabled` is true, and WhatsApp cannot be chosen for that entry (FR-002), code `whatsapp_unavailable`; the type is DOCUMENT_DUE or DOCUMENT_OVERDUE and the save would leave every one of its channels off, code `last_channel`, judged on the state the whole save leaves (push on and e-mail off in one save is accepted). A channel the catalogue does not give the type stays 400 `channel_not_allowed`, as in ST-197. A garage the caller is not staff of MUST answer 404 as ST-197 does. The routes stay the caller's own: no call names another account, so another person's preferences cannot be changed (the brief's 403 case cannot arise).
 
