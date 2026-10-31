@@ -1,0 +1,31 @@
+<p class="line">{{ line() }}</p>
+<button
+  hlmBtn
+  variant="secondary"
+  type="button"
+  [attr.aria-expanded]="open()"
+  [attr.aria-label]="(open() ? 'driver.cars.sold.hideFor' : 'driver.cars.sold.showFor') | t: { car: name() }"
+  (click)="toggle()"
+>
+  {{ (open() ? 'driver.cars.sold.hide' : 'driver.cars.sold.show') | t }}
+</button>
+@if (open()) {
+  <div class="history" aria-live="polite" [attr.aria-busy]="history() === 'loading' || null">
+    @switch (history()) {
+      @case ('loading') {
+        <p class="note">{{ 'driver.cars.sold.loading' | t }}</p>
+      }
+      @case ('failed') {
+        <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+        <button hlmBtn variant="secondary" type="button" (click)="read()">{{ 'driver.cars.retry' | t }}</button>
+      }
+      @case ('shown') {
+        @if (rows()?.length) {
+          <mf-repair-rows [rows]="rows() ?? []" />
+        } @else {
+          <p class="note">{{ 'driver.cars.sold.empty' | t }}</p>
+        }
+      }
+    }
+  </div>
+}
