@@ -297,8 +297,18 @@ describe('a chosen suite', () => {
       env,
     });
     if (run.status !== 0) throw new Error(run.stderr);
-    return JSON.parse(run.stdout) as { passWithNoTests?: boolean };
+    return JSON.parse(run.stdout) as {
+      passWithNoTests?: boolean;
+      sequence?: { hooks?: string };
+    };
   };
+
+  // @traces 1338-FR-007
+  // database-turn.setup.ts registers its afterAll before the spec's own, so
+  // the turn goes back after the spec's teardown only while hooks run as a stack.
+  it('runs Vitest hooks as a stack, so a setup file afterAll runs last', () => {
+    expect(preset('vitest', 'unit').sequence?.hooks).toBe('stack');
+  });
 
   describe.each<Runner>(['jest', 'vitest'])('under %s', (runner) => {
     it.each(['unit', 'integration'])(

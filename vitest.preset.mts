@@ -52,6 +52,9 @@ export function nestPreset(
       globals: true,
       include: files.include,
       passWithNoTests: suite !== undefined,
+      // A setup file's afterAll runs after the spec's own (database-turn.setup.ts
+      // gives the turn back only after the spec's teardown).
+      sequence: { hooks: 'stack' },
       setupFiles,
       ...(maxWorkers && { maxWorkers }),
     },
