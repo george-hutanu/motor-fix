@@ -134,7 +134,9 @@ async function unread(request: APIRequestContext, count: number) {
 }
 
 const bell = (page: Page) => page.getByRole('button', { name: /^Notificări/ });
-const badge = (page: Page) => bell(page).locator('.badge');
+// By its element, not its role: an open bell list hides the page behind it,
+// the bell too, from the accessibility tree.
+const badge = (page: Page) => page.locator('mf-bell .badge');
 
 test.describe('a toggle shows before the server answers @seeded', () => {
   test('a notification switch flips at once, then comes back with a message when the save fails', async ({
@@ -212,8 +214,9 @@ test.describe('a toggle shows before the server answers @seeded', () => {
     await expect(badge(page)).toHaveText('3');
     await bell(page).click();
     const list = page.getByRole('dialog', { name: 'Notificări' });
-    const rows = list.locator('li', { hasText: TEST_MESSAGE });
-    await expect(rows).toHaveCount(3);
+    // Only this test's three are unread: earlier runs leave their rows, read.
+    const unreadRows = list.locator('li.unread', { hasText: TEST_MESSAGE });
+    await expect(unreadRows).toHaveCount(3);
 
     await list
       .getByRole('button', { exact: true, name: 'Marchează tot ca citit' })
@@ -222,7 +225,7 @@ test.describe('a toggle shows before the server answers @seeded', () => {
     await expect(list.locator('li.unread')).toHaveCount(0);
     await expect(badge(page)).toHaveCount(0);
     release();
-    for (const row of await rows.all()) await expect(row).toHaveClass(/unread/);
+    await expect(unreadRows).toHaveCount(3);
     await expect(badge(page)).toHaveText('3');
     await expect(
       toast(page, 'Notificarea nu a putut fi marcată ca citită.'),
