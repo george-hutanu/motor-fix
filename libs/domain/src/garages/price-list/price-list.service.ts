@@ -26,7 +26,7 @@ import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   assertGarageOwner,
-  notFound,
+  noGarage,
 } from '../garage-brands/garage-brands.service';
 import {
   approvedNames,
@@ -198,7 +198,7 @@ export class PriceListService {
       },
       where: { id: garageId },
     });
-    if (!garage) throw notFound();
+    if (!garage) throw noGarage();
     const { labourFromBani, labourToBani } = garage;
     return {
       items: priceListJobs(garage.prices, garage.rarActivities),
@@ -241,7 +241,7 @@ export class PriceListService {
         where: { garageId, jobTypeId },
       }),
     ]);
-    if (!garage) throw notFound();
+    if (!garage) throw noGarage();
     const range = rangeOf(body, false);
     const errors = [...range.errors];
     if (!brand) errors.push({ code: 'unknown_brand', field: 'brandId' });
@@ -403,7 +403,7 @@ export class PriceListService {
     const { durationMinutes, fromBani, toBani, warnings } = range;
     const { row, slug } = await this.prisma.$transaction(async (tx) => {
       const [garage] = await lockGarage(tx, garageId);
-      if (!garage) throw notFound();
+      if (!garage) throw noGarage();
       const rows = await tx.garagePrice.findMany({
         select: { brandId: true, jobTypeId: true, position: true },
         where: { garageId },
@@ -471,7 +471,7 @@ export class PriceListService {
       },
       where: { brandId: null, garageId, id: priceId },
     });
-    if (!row) throw notFound();
+    if (!row) throw noGarage();
     const range = rangeOf(body, true);
     if (range.errors.length > 0) throw refuse(range.errors);
     const { expectedUpdatedAt } = rest;
@@ -563,7 +563,7 @@ export class PriceListService {
         where: { ...where, visible: !visible },
       });
       const saved = await tx.garagePrice.findFirst({ select, where });
-      if (!saved) throw notFound();
+      if (!saved) throw noGarage();
       if (count === 0) return { ...saved, flipped: false };
       await this.audit.record(tx, {
         ...this.scopeOf(actor, garageId, 'garage_price'),
@@ -595,7 +595,7 @@ export class PriceListService {
       select: { labourFromBani: true, labourToBani: true, slug: true },
       where: { id: garageId },
     });
-    if (!garage) throw notFound();
+    if (!garage) throw noGarage();
     const range = rangeOf(body, false);
     if (range.errors.length > 0) throw refuse(range.errors);
     const { fromBani, warnings } = range;
@@ -638,14 +638,14 @@ export class PriceListService {
       },
       where: { brandId, garageId, jobTypeId },
     });
-    if (!own?.brand) throw notFound();
+    if (!own?.brand) throw noGarage();
     const brandSlug = own.brand.slug;
     await this.prisma.$transaction(async (tx) => {
       // A removal racing this one took the row first.
       const { count } = await tx.garagePrice.deleteMany({
         where: { id: own.id },
       });
-      if (count === 0) throw notFound();
+      if (count === 0) throw noGarage();
       await this.audit.record(tx, {
         ...this.scopeOf(actor, garageId, 'garage_price'),
         action: 'delete',
@@ -666,7 +666,7 @@ export class PriceListService {
       select: { garage: { select: { slug: true } }, jobTypeId: true },
       where: { brandId: null, garageId, id: priceId },
     });
-    if (!job) throw notFound();
+    if (!job) throw noGarage();
     const { jobTypeId } = job;
     const where = { garageId, jobTypeId };
     const brandIds = await this.prisma.$transaction(async (tx) => {
@@ -687,7 +687,7 @@ export class PriceListService {
         tx.garageBrandJob.findMany({ select: { brandId: true }, where }),
       ]);
       // A removal racing this one took the default row first.
-      if (!rows.some((row) => row.id === priceId)) throw notFound();
+      if (!rows.some((row) => row.id === priceId)) throw noGarage();
       await tx.garagePrice.deleteMany({ where });
       await tx.garageBrandJob.deleteMany({ where });
       const scope = this.scopeOf(actor, garageId, 'garage_price');

@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 251,
+    "count": 252,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1025,6 +1025,19 @@
       "alerts": "none",
       "reason": "counts each garage reply announced to the review's author by outcome (built, muted, skipped), with the fan-out's log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-75"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-brands",
+      "source": "libs/domain/src/garages/garage-brands/garage-brands.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/brands (GET and PUT)",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner's read answers the stored brands, fuels, ticked jobs and the price list's jobs, writing nothing; the write audits each brand, fuel and job change and records one garage.updated event in the same transaction under the garage row's key-share-safe lock; a 400 (fuels_empty, job_not_priced, unknown_brand), 403 or 410 is the rule working",
+      "story": "ST-1247"
     },
     {
       "kind": "endpoint",

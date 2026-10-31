@@ -3,11 +3,10 @@ import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import { todayInBucharest } from '@motor-fix/contracts/garage-hours';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import { refusal } from '../../auth/http-refusal';
+import { notFound, refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import type { PrismaClient } from '../../generated/prisma/client';
-import { notFound } from '../garage-brands/garage-brands.service';
 import { PublicGaragesService } from '../public-garages/public-garages';
 
 @Injectable()
@@ -54,7 +53,7 @@ export class GarageProfileService {
       },
       where: { id: garageId },
     });
-    if (!row) throw notFound();
+    if (!row) throw notFound('No such garage');
     const answer = fresh
       ? await this.publicGarages.fresh(row.slug)
       : await this.publicGarages.bySlug(row.slug);
