@@ -158,6 +158,8 @@ describe('POST /garage/jobs/:id/lock', () => {
     expect(changed(s.job.id)).toEqual([]);
   });
 
+  // The exception as the use case throws it; the body the API sends, through
+  // its ProblemFilter, is pinned in apps/api/src/job-lock.problem.integration.spec.ts.
   it('refuses another person while one holds it, naming the holder', async () => {
     const s = await setting();
     const held = await take(s.lock, s.hand);
