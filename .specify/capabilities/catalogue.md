@@ -1,6 +1,6 @@
 ---
 capability: catalogue
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 039-brand-catalogue
   - 112-opening-hours
@@ -26,6 +26,7 @@ features:
   - 1241-3d-catalogue-seed
   - 1315-optimistic-toggles
   - 1411-1315-qa-fixes
+  - 1407-toggle-idempotency
 ---
 
 # Capability: Catalogue
@@ -210,9 +211,9 @@ _From 1352-catalogue-job-visibility._
 
 _From 1315-optimistic-toggles._
 
-### 1352-FR-005 — The API MUST accept, on `PATCH /api/v1/garages/{garageId}/prices/{priceId}`, a body `{ visible }` (`visible` a boolean, required) as a second body shape beside the range body of 173-FR-004: it sets the default row's `visible` flag and nothing else, needs no `expectedUpdatedAt` (last write wins; the same value again writes nothing and answers 200), and answers the saved row as 173-FR-004 does. The body shape is decided by the presence of `visible`: with it, any other field is refused 400 `validation_failed`. A flip that changes the flag bumps the row's `updatedAt`, so a range edit read before it answers 409 `stale` (173-FR-004's rule) and re-reads.
+### 1407-FR-004 — `PATCH /api/v1/garages/{garageId}/prices/{priceId}` MUST declare the same optional header as FR-001 on the operation (both body shapes of 1352-FR-005 and 173-FR-004), unread and unvalidated; its answers MUST stay as 1352-FR-005 and 173-FR-004 give them, the 409 `stale` rule included.
 
-_From 1352-catalogue-job-visibility._
+_From 1407-toggle-idempotency._
 
 ### 1352-FR-006 — Every job row with a default row MUST offer, while editing is on, "Șterge" / "Remove"; it opens the confirmation "Ștergi lucrarea din listă?" / "Remove the job from the list?" with the line "Cererile deschise și ofertele trimise rămân. Șoferii noi nu vor mai vedea lucrarea." / "Open requests and sent quotes are kept. New drivers will no longer see the job." and the buttons "Șterge" / "Remove" and "Renunță" / "Cancel"; confirming removes the job at once. A failed removal keeps the confirmation open with the error; a 404 (already removed by another session) closes it and reloads the list.
 
@@ -503,3 +504,4 @@ _From 1411-1315-qa-fixes._
 - `039-FR-009` — superseded by `105-FR-014` (2026-10-24)
 - `112-FR-008` — superseded by `309-FR-008` (2026-10-24)
 - `1352-FR-004` — superseded by `1315-FR-006` (2026-10-30)
+- `1352-FR-005` — superseded by `1407-FR-004` (2026-10-31)

@@ -1069,6 +1069,29 @@ describe('the inventory lists the rules', () => {
     }
   });
 
+  // @traces 1390-FR-003
+  it("alerts on a live input close that failed its last try, through worker-jobs-failed's failed-job arm", () => {
+    const rule = rulesOf(files['worker.json'] as AlertFile).find(
+      (r) => r.uid === 'worker-jobs-failed',
+    );
+    const expr = query(rule as Rule)?.model.expr ?? '';
+    expect(expr).toContain('motorfix_jobs_total{outcome="failed"');
+    expect(expr).not.toMatch(/queue!?=~?"[^"]*live-inputs/);
+    expect(entry('queue', 'live-inputs')?.alerts).toContain(
+      'worker-jobs-failed',
+    );
+    expect(entry('outside-service', 'cloudflare-stream')?.alerts).toEqual(
+      expect.arrayContaining([
+        'api-error-rate',
+        'api-latency',
+        'worker-jobs-failed',
+      ]),
+    );
+    expect(entry('outside-service', 'cloudflare-stream')?.reason).toContain(
+      'worker-jobs-failed',
+    );
+  });
+
   // @traces 880-FR-015
   it('lists the search, MCP memory and queue growth rules where they watch', () => {
     expect(entry('endpoint', 'search-garages')?.alerts).toContain(
