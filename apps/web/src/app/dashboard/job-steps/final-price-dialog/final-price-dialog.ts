@@ -6,6 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   type AbstractControl,
   FormControl,
@@ -14,7 +15,7 @@ import {
 } from '@angular/forms';
 import { parseLeiText } from '@motor-fix/contracts/lei-text';
 import { GarageJobsService, type JobDto } from '@motor-fix/data-access';
-import { formatLei, TranslatePipe } from '@motor-fix/i18n';
+import { formatLei, LeiPipe, TranslatePipe } from '@motor-fix/i18n';
 import {
   FieldError,
   injectOverlayTask,
@@ -27,6 +28,9 @@ import { HlmButton, HlmInput } from '@motor-fix/ui-cockpit';
 
 export interface FinalPriceData {
   jobId: string;
+  // The accepted quote's bounds, in bani, from the job read the drawer holds.
+  quoteFromBani: number;
+  quoteToBani: number;
   // The price recorded at the handover, in bani: set, the dialog corrects it.
   recorded: number | null;
   // A refusal that says the job moved on: the drawer behind reads it again.
@@ -51,6 +55,7 @@ const lei = (control: AbstractControl<string>) => {
     FieldError,
     HlmButton,
     HlmInput,
+    LeiPipe,
     ReactiveFormsModule,
     TaskError,
     TaskSubmit,
@@ -66,7 +71,7 @@ export class FinalPriceDialog {
     FinalPriceData,
     OverlayResult<JobDto>
   >();
-  private readonly data = this.task.data;
+  protected readonly data = this.task.data;
 
   protected readonly online = signal(globalThis.navigator?.onLine !== false);
   // The field takes the Romanian format in both languages, as typed.
@@ -77,6 +82,16 @@ export class FinalPriceDialog {
         : formatLei(this.data.recorded, 'ro').replace(/\s*lei$/, ''),
       { nonNullable: true, validators: lei },
     ),
+  });
+
+  // Whether the typed amount is above the accepted quote: an advisory hint,
+  // the amount still saves.
+  private readonly typed = toSignal(this.form.controls.price.valueChanges, {
+    initialValue: this.form.controls.price.value,
+  });
+  protected readonly above = computed(() => {
+    const read = parseLeiText(this.typed());
+    return 'bani' in read && read.bani > this.data.quoteToBani;
   });
 
   protected readonly save = taskSave({
