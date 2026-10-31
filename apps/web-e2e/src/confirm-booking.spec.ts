@@ -109,6 +109,7 @@ test.describe('confirming a booking @seeded', () => {
     await one.mechanic.selectOption({ label: names[1] });
     await lift.selectOption({ label: 'Elevator 1' });
     await dialog.getByRole('button', { exact: true, name: 'Confirmă' }).click();
+    await expect(page.getByText('Programare confirmată')).toBeVisible();
     await expect(dialog).toBeHidden();
     await expect(one.row.locator('.mechanic')).toHaveText(names[1]);
     await expect(one.row.locator('.lift')).toHaveText('Elevator 1');
