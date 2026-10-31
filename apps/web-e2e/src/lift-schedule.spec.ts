@@ -1,5 +1,10 @@
 // @traces 151-FR-006 151-FR-007 151-FR-011 151-FR-012 151-FR-013 151-FR-018
-import { expect, type Page } from '@playwright/test';
+import {
+  type APIRequestContext,
+  type APIResponse,
+  expect,
+  type Page,
+} from '@playwright/test';
 
 import { headers, ready, signIn } from './accounts.js';
 import { bucharestDay } from './bucharest-day.js';
@@ -9,7 +14,6 @@ import { keepSeededLanguage } from './seeded-language.js';
 // @seeded: Service Auto Militari schedules its lifts; its receptionist sees
 // today's lift schedule on Panou and may block time on a lift.
 const RECEPTIONIST = 'receptie-militari@example.test';
-const QUARTER = 15 * 60_000;
 
 interface Schedule {
   days: { day: string; open: { from: string; to: string }[] }[];
@@ -32,26 +36,79 @@ const minutes = (time: string) => {
   return hh * 60 + mm;
 };
 
-// Whether the next hour sits on today's axis (the opening hours rounded out
-// to whole hours, 8 to 18 when none are set).
-function onAxis(schedule: Schedule, day: string, now: Date) {
+// The first whole hour of today's axis (the opening hours rounded out to whole
+// hours, 8:00 while none are set); null on a closed day.
+function axisStart(schedule: Schedule, day: string): number | null {
+  if (!schedule.hoursSet) return 8 * 60;
   const open = schedule.days.find((d) => d.day === day)?.open ?? [];
-  const [start, end] = schedule.hoursSet
-    ? [
-        Math.floor(Math.min(...open.map((o) => minutes(o.from))) / 60) * 60,
-        Math.ceil(Math.max(...open.map((o) => minutes(o.to))) / 60) * 60,
-      ]
-    : [8 * 60, 18 * 60];
-  const wall = new Intl.DateTimeFormat('en-GB', {
+  if (open.length === 0) return null;
+  return Math.floor(Math.min(...open.map((o) => minutes(o.from))) / 60) * 60;
+}
+
+// The last whole hour of today's axis (18:00 while no hours are set).
+function axisEnd(schedule: Schedule, day: string): number {
+  if (!schedule.hoursSet) return 18 * 60;
+  const open = schedule.days.find((d) => d.day === day)?.open ?? [];
+  return Math.ceil(Math.max(...open.map((o) => minutes(o.to))) / 60) * 60;
+}
+
+const wallClock = (at: Date) =>
+  new Intl.DateTimeFormat('en-GB', {
     hour: '2-digit',
     hourCycle: 'h23',
     minute: '2-digit',
     timeZone: 'Europe/Bucharest',
-  }).format(now);
-  const at = minutes(wall);
-  return (
-    (open.length > 0 || !schedule.hoursSet) && at >= start && at + 60 <= end
-  );
+  }).format(at);
+
+// A Bucharest wall time of `day` as an instant.
+function bucharest(day: string, at: number): Date {
+  const noon = new Date(`${day}T12:00:00Z`);
+  const offset = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Bucharest',
+    timeZoneName: 'longOffset',
+  })
+    .formatToParts(noon)
+    .find((part) => part.type === 'timeZoneName')
+    ?.value.replace('GMT', '');
+  const clock = `${String(Math.floor(at / 60)).padStart(2, '0')}:${String(at % 60).padStart(2, '0')}`;
+  return new Date(`${day}T${clock}:00${offset || '+00:00'}`);
+}
+
+// Blocks a free hour on lift 1 of today's axis, from the next quarter hour
+// when it is still on the axis; a 409 (a seeded booking holds the slot) tries
+// the next quarter.
+async function blockLiftOne(
+  request: APIRequestContext,
+  auth: Record<string, string>,
+  slot: {
+    day: string;
+    end: number;
+    garageId: string;
+    note: string;
+    now: number;
+    start: number;
+  },
+): Promise<APIResponse> {
+  const quarter = Math.ceil(minutes(wallClock(new Date(slot.now))) / 15) * 15;
+  let at =
+    quarter >= slot.start && quarter + 60 <= slot.end ? quarter : slot.start;
+  for (;;) {
+    const startsAt = bucharest(slot.day, at);
+    const made = await request.post(
+      `/api/v1/garages/${slot.garageId}/time-blocks`,
+      {
+        data: {
+          endsAt: new Date(startsAt.getTime() + 60 * 60_000).toISOString(),
+          lift: 1,
+          note: slot.note,
+          startsAt: startsAt.toISOString(),
+        },
+        headers: auth,
+      },
+    );
+    at += 15;
+    if (made.status() !== 409 || at + 60 > slot.end) return made;
+  }
 }
 
 test.describe('today’s lift schedule on Panou @seeded', () => {
@@ -78,25 +135,27 @@ test.describe('today’s lift schedule on Panou @seeded', () => {
       'Programul de azi, pe elevatoare',
     );
     await expect(panel.locator('[data-now]')).toHaveText(/^acum, \d{2}:\d{2}$/);
-    const state = await panel.getAttribute('data-state');
-    test.skip(state === 'closed', 'the seeded garage is closed today');
+    const start = axisStart(schedule, day);
+    if (start === null) {
+      // A closed day draws no rows, only its sentence.
+      await expect(panel).toHaveAttribute('data-state', 'closed');
+      await expect(panel.locator('[data-closed]')).toBeVisible();
+      return;
+    }
     await expect(panel.locator('[data-row^="lift:"]')).toHaveCount(
       Math.max(schedule.liftCount, 1),
       { timeout: 5_000 },
     );
 
-    const now = new Date();
-    test.skip(!onAxis(schedule, day, now), 'the next hour is off today’s axis');
-    const startsAt = new Date(Math.ceil(now.getTime() / QUARTER) * QUARTER);
-    const note = `Linia de azi ${now.getTime()}`;
-    const made = await request.post(`/api/v1/garages/${garageId}/time-blocks`, {
-      data: {
-        endsAt: new Date(startsAt.getTime() + 60 * 60_000).toISOString(),
-        lift: 1,
-        note,
-        startsAt: startsAt.toISOString(),
-      },
-      headers: auth,
+    const now = Date.now();
+    const note = `Linia de azi ${now}`;
+    const made = await blockLiftOne(request, auth, {
+      day,
+      end: axisEnd(schedule, day),
+      garageId,
+      note,
+      now,
+      start,
     });
     expect(made.ok(), await made.text()).toBe(true);
     const { id } = (await made.json()) as { id: string };
@@ -124,13 +183,10 @@ test.describe('today’s lift schedule on Panou @seeded', () => {
     await signedIn(page);
     const panel = page.locator('[data-lift-schedule]');
     await expect(panel).toHaveAttribute('data-state', /empty|drawn|closed/);
-    test.skip(
-      (await panel.getAttribute('data-state')) === 'closed',
-      'the seeded garage is closed today',
-    );
+    const closed = (await panel.getAttribute('data-state')) === 'closed';
 
-    const scroller = panel.locator('.scroller');
-    await expect(scroller).toBeVisible();
+    // A closed day has no timeline to scroll; the page still never widens.
+    await expect(panel.locator('.scroller')).toHaveCount(closed ? 0 : 1);
     const sizes = await page.evaluate(() => {
       const box = document.querySelector<HTMLElement>(
         '[data-lift-schedule] .scroller',
@@ -142,6 +198,6 @@ test.describe('today’s lift schedule on Panou @seeded', () => {
       };
     });
     expect(sizes.page).toBeLessThanOrEqual(sizes.view);
-    expect(sizes.scroller).toBeGreaterThan(0);
+    expect(sizes.scroller > 0).toBe(!closed);
   });
 });

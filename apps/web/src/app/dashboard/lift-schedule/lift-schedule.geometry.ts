@@ -18,21 +18,21 @@ const SHORTEST = 30;
 const UNSET = { end: 18 * HOUR, start: 8 * HOUR };
 const SKIPPED = new Set(['awaiting_confirmation', 'no_show']);
 
-export interface AxisLabel {
+interface AxisLabel {
   align: 'start' | 'middle' | 'end';
   at: number;
   text: string;
 }
 
-export interface Axis {
+interface Axis {
   // Minutes since midnight on the Bucharest wall clock.
   start: number;
   end: number;
   labels: AxisLabel[];
 }
 
-export type BlockStyle = 'todo' | 'work' | 'done' | 'blocked';
-export type BlockState = 'todo' | 'work' | 'paused' | 'done' | 'blocked';
+type BlockStyle = 'todo' | 'work' | 'done' | 'blocked';
+type BlockState = 'todo' | 'work' | 'paused' | 'done' | 'blocked';
 
 export interface Placed {
   id: string;

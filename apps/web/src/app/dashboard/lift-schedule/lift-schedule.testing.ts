@@ -113,7 +113,7 @@ const account = (
     garageId: 'garage-1',
   }) as unknown as MeDto;
 
-export interface RenderOptions {
+interface RenderOptions {
   role?: Role;
   features?: Record<string, boolean>;
   permissions?: Permissions;
