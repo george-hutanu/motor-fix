@@ -17,6 +17,7 @@ features:
   - 1404-predare-quote-range
   - 1403-block-time-dialog
   - 293-save-garage-suggest
+  - 1410-predare-quote-dialog
 ---
 
 # Capability: Workshop
@@ -472,6 +473,26 @@ _From 1403-block-time-dialog._
 ### 293-FR-005 — The `saveSuggestion` field MUST be declared on the active request DTO in the contracts library, required and nullable as `booking` and `job` are (the garage's id and name, or null); the dismiss route MUST be in the OpenAPI document with its 204, 400, 401, 403 and 404 answers; the data-access client MUST be regenerated from it in the same change (Principle V).
 
 _From 293-save-garage-suggest._
+
+### 1410-FR-001 — (origin 1404-FR-007) The Predare and Corectează dialog (1393-FR-002, FR-006) MUST show under "Preț final (lei)" the hint "Ofertă <range>" / "Quote <range>", the range written by `formatLeiRange(quoteFromBani, quoteToBani, language)` ("890–1.400 lei"; one amount when the ends are equal), from the job read the drawer already holds, handed to the dialog with the data it opens with: no second read, no new route.
+
+_From 1410-predare-quote-dialog._
+
+### 1410-FR-002 — (origin 1404-FR-008) While the typed text parses (`parseLeiText`) to strictly more bani than `quoteToBani` (equal is not above), the dialog MUST show "Peste ofertă" / "Above the quote" beside the range hint, re-judged on every change of the field's value (each keystroke) and on open (a pre-filled correction included), and Salvează MUST still save the amount: the hint is advisory, no confirmation, no second step. While the text is empty or does not parse (`parseLeiText` returns an error, `max` included), "Peste ofertă" does not show; when the field's own message appears is unchanged (1393-FR-003).
+
+_From 1410-predare-quote-dialog._
+
+### 1410-FR-003 — (origin 1404-FR-009) Both labels MUST exist in Romanian and English in the garage's texts, beside the dialog's existing `garage.jobs.finalPrice.*` keys (the garage bundle, as 1393-FR-003 places them); nothing is added to the first page's bundle.
+
+_From 1410-predare-quote-dialog._
+
+### 1410-FR-004 — (origin 1404-FR-010) The "above the quote" state MUST be in the PR's QA sweep (`specs/1410-predare-quote-dialog/qa-flows.mjs`, the pattern of `specs/1393-final-price-predare/qa-flows.mjs`) at 320 px and 390 px, light and dark, Romanian and English, with no sideways scroll at 320 px; the job read it drives the dialog with is a stub, a Playwright `page.route` intercept of the garage's job reads answering with the two fields, so nothing in the QA database changes.
+
+_From 1410-predare-quote-dialog._
+
+### 1410-FR-005 — (origin 1404-FR-011) Tests MUST exist before the code (Principle II), with a `// @traces` line per spec file: colocated Jest specs for the dialog proving the hint from the read's two fields, "Peste ofertă" above `quoteToBani` and not at it, not on an invalid text, at once on a pre-filled correction, the save still sent, and the texts in both languages.
+
+_From 1410-predare-quote-dialog._
 
 ## Retired
 
