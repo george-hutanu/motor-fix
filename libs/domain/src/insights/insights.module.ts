@@ -16,6 +16,7 @@ import type { Redis } from 'ioredis';
 
 import { writeDailyFigures } from './daily-figures/daily-figures';
 import { writeDemandDaily } from './demand/demand';
+import { writeBrandAreaDaily } from './demand/supply/supply';
 import { placeGarages } from './place-garages';
 import { writeSnapshot } from './platform-figures';
 import { writeResponseStats } from './response-stats/response-stats';
@@ -103,6 +104,11 @@ export class InsightsModule
                 );
                 logger.log(
                   `${DEMAND} written ${written} for ${days.join(', ') || 'no day'}`,
+                );
+                // Their own marker: a day written before them is caught up.
+                const brandArea = await writeBrandAreaDaily(prisma, new Date());
+                logger.log(
+                  `${DEMAND} brand_area written ${brandArea.written} for ${brandArea.days.join(', ') || 'no day'}`,
                 );
                 // A ranking that fails fails the attempt, which is retried;
                 // the brands keep the ranks they had.
