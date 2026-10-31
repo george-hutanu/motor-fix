@@ -189,6 +189,18 @@ export class JobDto extends JobSummaryDto {
   @ApiProperty({ nullable: true, type: Number })
   finalPriceBani!: number | null;
 
+  @ApiProperty({
+    description: "The accepted quote's lower bound, in bani",
+    type: 'integer',
+  })
+  quoteFromBani!: number;
+
+  @ApiProperty({
+    description: "The accepted quote's upper bound, in bani",
+    type: 'integer',
+  })
+  quoteToBani!: number;
+
   @ApiProperty({ type: [JobStepDto] })
   steps!: JobStepDto[];
 
