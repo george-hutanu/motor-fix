@@ -45,11 +45,11 @@ interface Locked {
 
 const NOT_YOURS = {
   recorded: {
-    en: 'You cannot record a no-show for another mechanic’s booking',
+    en: 'You cannot record a no-show on another mechanic’s booking',
     ro: 'Nu poți înregistra neprezentarea pentru programarea altui mecanic',
   },
   withdrawn: {
-    en: 'You cannot withdraw a no-show for another mechanic’s booking',
+    en: 'You cannot withdraw a no-show on another mechanic’s booking',
     ro: 'Nu poți retrage neprezentarea pentru programarea altui mecanic',
   },
 };

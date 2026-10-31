@@ -153,6 +153,18 @@ describe('refusing a withdrawal', () => {
     );
     expect(other.status).toBe(403);
     expect(other.body.code).toBe('forbidden');
+    await prisma.account.update({
+      data: { language: 'en' },
+      where: { id: volt.plain },
+    });
+    const inEnglish = await send(
+      'delete',
+      path(booking.id),
+      bearer(volt.plain, 'mechanic'),
+    );
+    expect(inEnglish.body.message).toBe(
+      'You cannot withdraw a no-show on another mechanic’s booking',
+    );
     for (const auth of [
       bearer(nordic.owner, 'garage'),
       bearer(booking.driverId, 'driver'),

@@ -103,6 +103,21 @@ describe('refusing a no-show', () => {
     expect(await snapshot(booking.id)).toEqual(before);
   });
 
+  it('answers that 403 in English to a mechanic who reads English', async () => {
+    const { booking, volt } = await due();
+    await prisma.account.update({
+      data: { language: 'en' },
+      where: { id: volt.plain },
+    });
+
+    const res = await record(booking.id, bearer(volt.plain, 'mechanic'));
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toBe(
+      'You cannot record a no-show on another mechanic’s booking',
+    );
+  });
+
   it('answers 404 to another garage’s owner, the driver and an admin', async () => {
     const { booking } = await due();
     const nordic = await team('Garaj Nordic');
