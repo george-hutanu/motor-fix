@@ -111,6 +111,12 @@ export class PublicGaragePhotoDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
 
+  @ApiPropertyOptional({
+    description: "The owner's caption, when the photo has one",
+    maxLength: 80,
+  })
+  caption?: string;
+
   @ApiProperty({
     description: 'The thumbnail copy (400 px), signed for an hour',
     format: 'uri',

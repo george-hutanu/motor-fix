@@ -53,6 +53,7 @@ type BrandRow = {
 // The admin's verification file leaves out the variants: a garage in review
 // is not served by the public image route.
 type PhotoRow = {
+  caption?: string | null;
   fileKey: string;
   height: number | null;
   id: string;
@@ -361,7 +362,8 @@ export class PublicGaragesService {
             WHERE gb.garage_id = g.id
           ), '[]'::jsonb) AS brands,
           COALESCE((
-            SELECT jsonb_agg(jsonb_build_object('fileKey', ph.file_key,
+            SELECT jsonb_agg(jsonb_build_object('caption', ph.caption,
+              'fileKey', ph.file_key,
               'height', ph.height, 'id', ph.id, 'thumbhash', ph.thumbhash,
               'variantPath', ph.variant_path, 'width', ph.width)
               ORDER BY ph.position, ph.id)
@@ -461,48 +463,51 @@ export class PublicGaragesService {
   // The admin's verification file signs the gallery the same way.
   async photos(rows: PhotoRow[]): Promise<PublicGaragePhotoDto[]> {
     const answered = await Promise.all(
-      rows.map(async ({ fileKey, id, thumbhash, variantPath, ...size }) => {
-        const thumb = this.storage.derivedKey(fileKey, 'thumb');
-        let { height, width } = size;
-        if (width === null) {
-          const meta = await this.storage.metadataOf(thumb).then(
-            (found) => {
-              this.storageDown = false;
-              return found;
-            },
-            (error) => {
-              if (!this.storageDown) {
-                this.logger.warn(`photo copies unreadable: ${String(error)}`);
-                this.storageDown = true;
-              }
-              return null;
-            },
-          );
-          if (!meta) return null;
-          width = Number(meta['width']) || null;
-          height = Number(meta['height']) || null;
-        }
-        const [thumbnailUrl, displayUrl] = await Promise.all(
-          [thumb, this.storage.derivedKey(fileKey, 'display')].map((key) =>
-            this.storage.createDownloadUrl(
-              key,
-              undefined,
-              'inline',
-              PUBLIC_IMAGE_URL_MINUTES,
+      rows.map(
+        async ({ caption, fileKey, id, thumbhash, variantPath, ...size }) => {
+          const thumb = this.storage.derivedKey(fileKey, 'thumb');
+          let { height, width } = size;
+          if (width === null) {
+            const meta = await this.storage.metadataOf(thumb).then(
+              (found) => {
+                this.storageDown = false;
+                return found;
+              },
+              (error) => {
+                if (!this.storageDown) {
+                  this.logger.warn(`photo copies unreadable: ${String(error)}`);
+                  this.storageDown = true;
+                }
+                return null;
+              },
+            );
+            if (!meta) return null;
+            width = Number(meta['width']) || null;
+            height = Number(meta['height']) || null;
+          }
+          const [thumbnailUrl, displayUrl] = await Promise.all(
+            [thumb, this.storage.derivedKey(fileKey, 'display')].map((key) =>
+              this.storage.createDownloadUrl(
+                key,
+                undefined,
+                'inline',
+                PUBLIC_IMAGE_URL_MINUTES,
+              ),
             ),
-          ),
-        );
-        return {
-          displayUrl,
-          id,
-          thumbnailUrl,
-          ...present({ height, width }),
-          ...(variantPath && {
-            imageBase: `${imageBaseUrl()}/${variantPath}`,
-            ...present({ thumbhash: thumbhash ?? null }),
-          }),
-        };
-      }),
+          );
+          return {
+            ...(caption && { caption }),
+            displayUrl,
+            id,
+            thumbnailUrl,
+            ...present({ height, width }),
+            ...(variantPath && {
+              imageBase: `${imageBaseUrl()}/${variantPath}`,
+              ...present({ thumbhash: thumbhash ?? null }),
+            }),
+          };
+        },
+      ),
     );
     return answered.filter((photo) => photo !== null);
   }
