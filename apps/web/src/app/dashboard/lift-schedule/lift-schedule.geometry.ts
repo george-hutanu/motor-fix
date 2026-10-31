@@ -16,7 +16,8 @@ const DAY = 24 * HOUR;
 const SHORTEST = 30;
 // The axis while the garage has set no opening hours.
 const UNSET = { end: 18 * HOUR, start: 8 * HOUR };
-const SKIPPED = new Set(['awaiting_confirmation', 'no_show']);
+// Only a confirmed or completed booking holds its lift.
+const DRAWN = new Set(['confirmed', 'completed']);
 
 interface AxisLabel {
   align: 'start' | 'middle' | 'end';
@@ -171,7 +172,7 @@ function bookings(schedule: GarageScheduleDto, axis: Axis): Unplaced[] {
   const nameOf = (id: string | null, e: GarageScheduleEntryDto) =>
     id ? (names.get(id) ?? null) : (e.mechanic?.name ?? null);
   return schedule.entries
-    .filter((e) => !SKIPPED.has(e.status))
+    .filter((e) => DRAWN.has(e.status))
     .flatMap((e) => {
       const [style, state] = STYLES[e.jobStatus ?? ''] ?? ['todo', 'todo'];
       return segmentsOf(e).flatMap((segment, i) => {

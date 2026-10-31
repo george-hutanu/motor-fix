@@ -101,7 +101,7 @@ export class LiftSchedule {
     const s = this.schedule();
     return s
       ? axisOf(
-          s.days.find((d) => d.day === s.from),
+          s.days?.find((d) => d.day === s.from),
           s.hoursSet,
         )
       : null;
@@ -116,8 +116,8 @@ export class LiftSchedule {
       if (!this.axis()) return 'closed';
       return this.rows().some((r) => r.items.length) ? 'drawn' : 'empty';
     }
-    const failed = this.data.error() !== undefined || this.data.gone();
-    return failed && !this.data.isLoading() ? 'failed' : 'loading';
+    // An error, a 404 or a read that answered nothing.
+    return this.data.isLoading() ? 'loading' : 'failed';
   });
   protected readonly width = computed(() => {
     const axis = this.axis();
@@ -189,8 +189,8 @@ export class LiftSchedule {
   // The jobs, then the mechanic's first name.
   protected jobs(item: Placed) {
     const jobs = item.entry?.jobs.join(', ') ?? '';
-    const first = item.mechanic?.split(' ')[0];
-    return first ? `${jobs} · ${first}` : jobs;
+    const first = item.mechanic?.trim().split(/\s+/)[0];
+    return [jobs, first].filter(Boolean).join(' · ');
   }
 
   protected blockLabel(item: Placed) {

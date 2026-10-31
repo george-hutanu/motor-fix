@@ -47,7 +47,7 @@
               </span>
             </div>
             @for (row of rows(); track row.key) {
-              <div class="row" [attr.data-row]="row.key" [attr.data-sub-rows]="row.subRows" [style.--subs]="row.subRows">
+              <div class="row" [attr.data-row]="row.key" [style.--subs]="row.subRows">
                 <span class="names" data-row-name>{{ rowName(row) }}</span>
                 <span class="track">
                   @for (hour of hours(); track hour) {

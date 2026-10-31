@@ -116,7 +116,6 @@ const account = (
 interface RenderOptions {
   role?: Role;
   features?: Record<string, boolean>;
-  permissions?: Permissions;
   read?: () => Promise<GarageScheduleDto>;
   language?: 'ro' | 'en';
   // A page that holds the panel, in place of the panel on its own.
@@ -128,7 +127,6 @@ export async function renderPanel({
   features = {},
   host,
   language = 'ro',
-  permissions = NONE,
   read = () => Promise.resolve(schedule()),
   role = 'garage',
 }: RenderOptions = {}) {
@@ -137,7 +135,7 @@ export async function renderPanel({
     doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
     now: NOW,
   });
-  const me = signal(account(role, features, permissions));
+  const me = signal(account(role, features, NONE));
   const live = fakeLive();
   const garageSchedule = jest.fn(read);
   const open = jest.fn(async () => 'changed');

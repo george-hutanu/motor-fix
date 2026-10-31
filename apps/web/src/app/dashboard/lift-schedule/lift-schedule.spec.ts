@@ -202,6 +202,31 @@ describe('the lift schedule panel', () => {
   });
 });
 
+// @traces 151-FR-012
+describe('the first drawing', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('scrolls the timeline once so the now line stands mid-view', async () => {
+    // 8:00 to 18:00 at 48 px an hour beside the 104 px names: 584 px wide.
+    jest
+      .spyOn(HTMLElement.prototype, 'scrollWidth', 'get')
+      .mockReturnValue(584);
+    jest
+      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockReturnValue(300);
+    const scrolled = jest.spyOn(Element.prototype, 'scrollLeft', 'set');
+
+    const { live, settle } = await renderPanel();
+
+    // 13:00 is half the axis: 104 + 240 px, less half the view.
+    expect(scrolled.mock.calls).toEqual([[194]]);
+    live.emit('booking.moved', 'b-1');
+    await jest.advanceTimersByTimeAsync(300);
+    await settle();
+    expect(scrolled).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('blocked time and bookings without a lift', () => {
   it('adds the "Fără elevator" row last, and a row for a lift above the count', async () => {
     const { element } = await renderPanel({
@@ -234,16 +259,12 @@ describe('blocked time and bookings without a lift', () => {
         }),
     });
 
-    expect(
+    const subs = (key: string) =>
       element
-        .querySelector('[data-row="lift:1"]')
-        ?.getAttribute('data-sub-rows'),
-    ).toBe('2');
-    expect(
-      element
-        .querySelector('[data-row="lift:2"]')
-        ?.getAttribute('data-sub-rows'),
-    ).toBe('1');
+        .querySelector<HTMLElement>(`[data-row="${key}"]`)
+        ?.style.getPropertyValue('--subs');
+    expect(subs('lift:1')).toBe('2');
+    expect(subs('lift:2')).toBe('1');
   });
 
   it.each([
