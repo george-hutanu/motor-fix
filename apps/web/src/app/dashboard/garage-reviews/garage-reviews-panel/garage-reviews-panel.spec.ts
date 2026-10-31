@@ -9,18 +9,25 @@ import {
   ReviewsService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
 import { GarageReviewsPanel } from './garage-reviews-panel';
 import { Live } from '../../live';
+import type { ReplyData } from '../../reply-dialog/open-reply';
 import { openReportReview } from '../../report-review-dialog/open-report-review';
 import { Session } from '../../session';
-import { staffPage, staffReview } from '../garage-reviews.testing';
+import {
+  repliedReview,
+  staffPage,
+  staffReply,
+  staffReview,
+} from '../garage-reviews.testing';
 
 jest.mock('../../report-review-dialog/open-report-review', () => ({
   openReportReview: jest.fn(),
 }));
-const opened = openReportReview as jest.Mock;
+const reportOpened = openReportReview as jest.Mock;
 
 const GARAGE = 'garage-1';
 const SLUG = 'service-auto-militari';
@@ -45,6 +52,7 @@ class Host {
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let read: jest.Mock;
+let opened: jest.Mock;
 
 const rows = (count: number) =>
   Array.from({ length: count }, (_, i) => staffReview({ id: `r-${i + 1}` }));
@@ -66,9 +74,11 @@ async function render({
   events = new Subject();
   resync = new Subject();
   read = jest.fn(answer);
+  opened = jest.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      { provide: Overlays, useValue: { open: opened } },
       {
         provide: ReviewsService,
         useValue: { garageReviewsControllerRead: read },
@@ -444,12 +454,13 @@ describe('live', () => {
 
 // @traces 074-FR-007 1382-FR-001
 describe('what a row offers by role', () => {
-  it('offers the owner Raportează and no reply', async () => {
+  it('offers the owner Răspunde and Raportează', async () => {
     const { element, settle } = await render({ role: 'owner' });
     await settle();
 
     const labels = [...element.querySelectorAll('button')].map(text);
     expect(labels.filter((label) => label !== 'Vezi mai multe')).toEqual([
+      'Răspunde',
       'Raportează',
     ]);
   });
@@ -483,18 +494,18 @@ describe('reporting a review from the panel', () => {
     status: 'pending',
   };
 
-  afterEach(() => opened.mockReset());
+  afterEach(() => reportOpened.mockReset());
 
   it('opens the task for the row and shows it reported at once, without a re-read', async () => {
-    opened.mockResolvedValue(ANSWER);
+    reportOpened.mockResolvedValue(ANSWER);
     const { element, settle } = await render();
     await settle();
 
     reportButton(element)?.click();
     await settle();
 
-    expect(opened).toHaveBeenCalledTimes(1);
-    expect(opened.mock.calls[0][1]).toMatchObject({ id: 'r-1' });
+    expect(reportOpened).toHaveBeenCalledTimes(1);
+    expect(reportOpened.mock.calls[0][1]).toMatchObject({ id: 'r-1' });
     expect(read).toHaveBeenCalledTimes(1);
     const [row] = shown(element);
     expect(row.querySelector('[data-reported]')).not.toBeNull();
@@ -502,7 +513,7 @@ describe('reporting a review from the panel', () => {
   });
 
   it('holds the reported row only until the next first-page read', async () => {
-    opened.mockResolvedValue(ANSWER);
+    reportOpened.mockResolvedValue(ANSWER);
     const { element, settle } = await render();
     await settle();
     reportButton(element)?.click();
@@ -518,7 +529,7 @@ describe('reporting a review from the panel', () => {
   });
 
   it('reads the first page again when the task closes on a refusal', async () => {
-    opened.mockResolvedValue('refused');
+    reportOpened.mockResolvedValue('refused');
     const { element, settle } = await render();
     await settle();
 
@@ -529,7 +540,7 @@ describe('reporting a review from the panel', () => {
   });
 
   it('changes nothing when the task is cancelled', async () => {
-    opened.mockResolvedValue('cancelled');
+    reportOpened.mockResolvedValue('cancelled');
     const { element, settle } = await render();
     await settle();
 
@@ -542,7 +553,7 @@ describe('reporting a review from the panel', () => {
 
   it('opens one task at a time, and again after a chunk that failed to load', async () => {
     let close: (value: unknown) => void = () => undefined;
-    opened.mockReturnValueOnce(
+    reportOpened.mockReturnValueOnce(
       new Promise((resolve) => {
         close = resolve;
       }),
@@ -553,17 +564,130 @@ describe('reporting a review from the panel', () => {
     reportButton(element)?.click();
     reportButton(element)?.click();
     await settle();
-    expect(opened).toHaveBeenCalledTimes(1);
+    expect(reportOpened).toHaveBeenCalledTimes(1);
     close('cancelled');
     await settle();
 
-    opened.mockRejectedValueOnce(new Error('ChunkLoadError'));
+    reportOpened.mockRejectedValueOnce(new Error('ChunkLoadError'));
     reportButton(element)?.click();
     await settle();
-    opened.mockResolvedValueOnce('cancelled');
+    reportOpened.mockResolvedValueOnce('cancelled');
     reportButton(element)?.click();
     await settle();
 
-    expect(opened).toHaveBeenCalledTimes(3);
+    expect(reportOpened).toHaveBeenCalledTimes(3);
+  });
+});
+
+// @traces 1387-FR-001 1387-FR-003
+describe('replying from the panel', () => {
+  const replyButton = (row: HTMLElement | undefined) =>
+    row?.querySelector<HTMLButtonElement>('button[data-reply-button]');
+  const dialogData = () =>
+    opened.mock.calls[0]?.[1]?.data as ReplyData | undefined;
+
+  it('offers the owner Răspunde, and a receptionist no reply button', async () => {
+    const owner = await render();
+    await owner.settle();
+    expect(text(replyButton(shown(owner.element)[0]))).toBe('Răspunde');
+    TestBed.resetTestingModule();
+
+    const receptionist = await render({
+      answer: async () =>
+        staffPage({ items: [staffReview({ canReply: false })], slug: SLUG }),
+      role: 'receptionist',
+    });
+    await receptionist.settle();
+    expect(replyButton(shown(receptionist.element)[0])).toBeNull();
+  });
+
+  it('offers the owner the edit of a reply, from the role, not from canReply', async () => {
+    const { element, settle } = await render({
+      answer: async () => staffPage({ items: [repliedReview()], slug: SLUG }),
+    });
+    await settle();
+
+    expect(text(replyButton(shown(element)[0]))).toBe('Editează răspunsul');
+  });
+
+  it('opens the dialog for the pressed review, titled for a reply', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    replyButton(shown(element)[0])?.click();
+    await settle();
+
+    expect(opened).toHaveBeenCalledTimes(1);
+    expect(opened.mock.calls[0][1].title).toBe('garage.reviews.reply.title');
+    expect(dialogData()?.review.id).toBe('r-1');
+  });
+
+  it('shows the answered reply on the row at once, before any re-read', async () => {
+    const { element, settle } = await render();
+    await settle();
+    replyButton(shown(element)[0])?.click();
+    await settle();
+
+    dialogData()?.saved(staffReply({ text: 'Mulțumim, Andrei!' }));
+    await settle();
+
+    const row = shown(element)[0];
+    expect(text(row?.querySelector('[data-reply-text]'))).toBe(
+      'Mulțumim, Andrei!',
+    );
+    expect(text(replyButton(row))).toBe('Editează răspunsul');
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops the held reply once the first page is read again', async () => {
+    let items = [staffReview()];
+    const { element, settle } = await render({
+      answer: async () => staffPage({ items, slug: SLUG }),
+    });
+    await settle();
+    replyButton(shown(element)[0])?.click();
+    await settle();
+    dialogData()?.saved(staffReply({ text: 'Ținut de panou' }));
+    await settle();
+
+    items = [repliedReview({}, { text: 'Citit din nou' })];
+    events.next(message('review.replied'));
+    await wait(350);
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(text(shown(element)[0]?.querySelector('[data-reply-text]'))).toBe(
+      'Citit din nou',
+    );
+  });
+
+  it('holds a reply on a row of a later page too', async () => {
+    const first = Array.from({ length: 20 }, (_, i) =>
+      staffReview({ id: `r-${i + 1}` }),
+    );
+    const { element, settle } = await render({
+      answer: async ({ page }) =>
+        page === 1
+          ? staffPage({ items: first, slug: SLUG, total: 21 })
+          : staffPage({
+              items: [staffReview({ id: 'r-21' })],
+              page: 2,
+              slug: SLUG,
+              total: 21,
+            }),
+    });
+    await settle();
+    button(element, 'Vezi mai multe')?.click();
+    await settle();
+
+    const last = shown(element)[20];
+    replyButton(last)?.click();
+    await settle();
+    dialogData()?.saved(staffReply({ text: 'Pe pagina a doua' }));
+    await settle();
+
+    expect(text(shown(element)[20]?.querySelector('[data-reply-text]'))).toBe(
+      'Pe pagina a doua',
+    );
   });
 });

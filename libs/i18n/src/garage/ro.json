@@ -799,6 +799,31 @@
     "moreFailed": "Nu am putut încărca mai multe recenzii.",
     "new": "Nou",
     "notViaMotorfix": "Nu prin MotorFix",
+    "reply": {
+      "button": "Răspunde",
+      "count": "{n} / {max}",
+      "done": "Răspunsul e public, sub recenzie.",
+      "editButton": "Editează răspunsul",
+      "edited": "Editat · {day}",
+      "field": {
+        "length": "Răspunsul are între 1 și 1.000 de caractere."
+      },
+      "hint": "Răspunsul e public și apare sub recenzie.",
+      "label": "Răspunsul tău",
+      "problem": {
+        "already_replied": "Recenzia are deja un răspuns.",
+        "forbidden": "Doar proprietarul poate răspunde.",
+        "not_found": "Recenzia nu mai există.",
+        "reply_not_public": "Răspunsul e raportat și nu poate fi editat acum.",
+        "reply_removed": "Răspunsul a fost eliminat de un admin.",
+        "review_not_public": "Recenzia nu mai e publică."
+      },
+      "reported": "Raportat · ascuns până decide un admin",
+      "reviewEdited": "Recenzia a fost editată după răspunsul tău",
+      "submit": "Publică răspunsul",
+      "title": "Răspunde la recenzie",
+      "titleEdit": "Editează răspunsul"
+    },
     "report": {
       "button": "Raportează",
       "cancel": "Renunță",

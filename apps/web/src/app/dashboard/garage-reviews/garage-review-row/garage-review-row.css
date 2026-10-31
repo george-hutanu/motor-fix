@@ -63,6 +63,38 @@ p {
   color: var(--mf-text-secondary);
   overflow-wrap: anywhere;
 }
+.reply {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin-inline-start: var(--mf-space-3);
+  padding-inline-start: var(--mf-space-3);
+  border-inline-start: 2px solid var(--mf-line);
+  min-width: 0;
+}
+.reply-label {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+  color: var(--mf-text-secondary);
+}
+.reply-text {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1);
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
+/* A "·" travels with the mark after it: a wrapped mark never leaves a dot ending the line above. */
+.marks .mark {
+  display: inline-flex;
+  gap: var(--mf-space-1);
+}
 .actions {
   display: flex;
   flex-wrap: wrap;

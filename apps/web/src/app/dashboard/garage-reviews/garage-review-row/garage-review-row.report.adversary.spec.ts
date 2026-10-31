@@ -8,7 +8,7 @@ import { NOW, staffReview } from '../garage-reviews.testing';
 
 @Component({
   imports: [GarageReviewRow],
-  template: `<article mf-garage-review-row [review]="review()" [now]="now" (report)="reports = reports + 1"></article>`,
+  template: `<article mf-garage-review-row [review]="review()" [now]="now" [owner]="true" (report)="reports = reports + 1"></article>`,
 })
 class Host {
   readonly review = signal<GarageStaffReviewDto>(staffReview());

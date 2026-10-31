@@ -1,6 +1,7 @@
 import type {
   GarageStaffReviewDto,
   GarageStaffReviewsPageDto,
+  ReviewReplyDto,
 } from '@motor-fix/data-access';
 
 // The moment every review spec reads as "now".
@@ -47,6 +48,25 @@ export const staffReview = (
   text: 'Lucrare curată, predată la timp.',
   ...over,
 });
+
+// The garage's answer to Andrei, on two lines, posted an hour ago.
+export const staffReply = (
+  over: Partial<ReviewReplyDto> = {},
+): ReviewReplyDto => ({
+  editedAt: null,
+  id: 'rep-1',
+  postedAt: hoursAgo(1),
+  status: 'published',
+  text: 'Mulțumim, Andrei!\nTe mai așteptăm.',
+  ...over,
+});
+
+// A review the garage already answered: the API offers no second reply.
+export const repliedReview = (
+  over: Partial<GarageStaffReviewDto> = {},
+  reply: Partial<ReviewReplyDto> = {},
+): GarageStaffReviewDto =>
+  staffReview({ canReply: false, reply: staffReply(reply), ...over });
 
 export const staffPage = (
   over: Partial<GarageStaffReviewsPageDto> = {},

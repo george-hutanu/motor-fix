@@ -792,6 +792,31 @@
     "moreFailed": "We could not load more reviews.",
     "new": "New",
     "notViaMotorfix": "Not through MotorFix",
+    "reply": {
+      "button": "Reply",
+      "count": "{n} / {max}",
+      "done": "Your reply is public, under the review.",
+      "editButton": "Edit the reply",
+      "edited": "Edited · {day}",
+      "field": {
+        "length": "The reply is between 1 and 1,000 characters."
+      },
+      "hint": "Your reply is public and appears under the review.",
+      "label": "Your reply",
+      "problem": {
+        "already_replied": "The review already has a reply.",
+        "forbidden": "Only the owner can reply.",
+        "not_found": "The review no longer exists.",
+        "reply_not_public": "The reply is reported and cannot be edited now.",
+        "reply_removed": "The reply was removed by an admin.",
+        "review_not_public": "The review is no longer public."
+      },
+      "reported": "Reported · hidden until an admin decides",
+      "reviewEdited": "The review was edited after your reply",
+      "submit": "Publish the reply",
+      "title": "Reply to the review",
+      "titleEdit": "Edit the reply"
+    },
     "report": {
       "button": "Report",
       "cancel": "Cancel",
