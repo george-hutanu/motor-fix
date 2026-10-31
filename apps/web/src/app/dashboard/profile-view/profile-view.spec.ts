@@ -3,8 +3,12 @@ import { join } from 'node:path';
 
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
+import {
+  DeferBlockBehavior,
+  DeferBlockState,
+  TestBed,
+} from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import {
@@ -118,7 +122,8 @@ let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let read: jest.Mock;
 let legal: jest.Mock;
-let navigate: jest.Mock;
+let weekly: jest.Mock;
+let navigate: jest.SpyInstance;
 // Every GaragesService member the view touches beyond the two reads.
 let touched: string[];
 
@@ -131,13 +136,15 @@ async function render(
   resync = new Subject();
   read = jest.fn(load);
   legal = jest.fn(legalLoad);
-  navigate = jest.fn(async () => true);
+  weekly = jest.fn(async () => ({ weeks: [] }));
   touched = [];
   const reads: Record<string, unknown> = {
     garageProfileControllerRead: read,
+    garageWeeklyFigures: weekly,
     legalCheckControllerRead: legal,
   };
   TestBed.configureTestingModule({
+    deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [
       {
         provide: GaragesService,
@@ -157,7 +164,7 @@ async function render(
       },
       { provide: Overlays, useValue: { open: jest.fn() } },
       { provide: Session, useValue: { shown: signal(me) } },
-      { provide: Router, useValue: { navigateByUrl: navigate } },
+      provideRouter([]),
       {
         provide: Live,
         useValue: {
@@ -171,6 +178,9 @@ async function render(
       },
     ],
   });
+  navigate = jest
+    .spyOn(TestBed.inject(Router), 'navigateByUrl')
+    .mockResolvedValue(true);
   const i18n = TestBed.inject(I18n);
   await i18n.enter('garage');
   await i18n.enter('public');
@@ -953,13 +963,17 @@ describe('Profilul service-ului: the legal check panel', () => {
 
     expect(legal).toHaveBeenCalledTimes(1);
     expect(legal).toHaveBeenCalledWith({ garageId: GARAGE });
-    const panels = all(element, 'section[aria-labelledby]');
+    const panels = all(element, 'section[aria-labelledby]').filter(
+      (p) => !p.closest('[data-section="funnel"]'),
+    );
     expect(panels.map((p) => p.getAttribute('aria-labelledby'))).toEqual([
       'mf-profile-public',
       'legal-check-title',
     ]);
     const host = element.querySelector('mf-garage-legal-check');
-    expect(host?.previousElementSibling?.matches(PUBLIC)).toBe(true);
+    expect(
+      host?.previousElementSibling?.previousElementSibling?.matches(PUBLIC),
+    ).toBe(true);
     expect(text(element.querySelector('#legal-check-title'))).toBe(
       'Verificare legală',
     );
@@ -1300,5 +1314,81 @@ describe('Profilul service-ului for the receptionist', () => {
     expect(buttons).not.toContain('Modifică profilul');
     expect(buttons).not.toContain('Răspunde');
     expect(buttons).toEqual([]);
+  });
+});
+
+// @traces 1397-FR-006 1397-FR-012
+describe('Profilul service-ului: the weekly figures', () => {
+  const PANEL = 'mf-weekly-figures-panel';
+  const follows = (first: Element | null, then: Element | null) =>
+    !!first &&
+    !!then &&
+    !!(first.compareDocumentPosition(then) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  afterEach(() => {
+    me = OWNER;
+  });
+
+  async function completed() {
+    const rendered = await render();
+    await rendered.settle();
+    const blocks = await rendered.fixture.getDeferBlocks();
+    expect(blocks).toHaveLength(1);
+    await blocks[0].render(DeferBlockState.Complete);
+    await rendered.settle();
+    return rendered;
+  }
+
+  it('puts the panel after the public profile and before the legal check', async () => {
+    const { element } = await completed();
+    const panel = element.querySelector(PANEL);
+
+    expect(panel).not.toBeNull();
+    expect(panel?.getAttribute('data-section')).toBe('funnel');
+    expect(panel?.querySelector('h2')?.textContent?.trim()).toBe(
+      'De la profil la cerere, pe săptămâni',
+    );
+    expect(panel?.querySelector('h2 a')).toBeNull();
+    expect(follows(element.querySelector(PUBLIC), panel)).toBe(true);
+    expect(follows(panel, element.querySelector('mf-garage-legal-check'))).toBe(
+      true,
+    );
+    expect(weekly).toHaveBeenCalledWith({ garageId: GARAGE });
+  });
+
+  it('shows the receptionist the panel too', async () => {
+    me = RECEPTIONIST;
+    const { element } = await completed();
+
+    expect(element.querySelector(PANEL)).not.toBeNull();
+    expect(weekly).toHaveBeenCalledWith({ garageId: GARAGE });
+  });
+
+  it('holds the place with the titled skeleton until the panel loads', async () => {
+    const { element, fixture, settle } = await render();
+    await settle();
+    const [block] = await fixture.getDeferBlocks();
+    await block.render(DeferBlockState.Placeholder);
+    const shown = element.querySelector('[data-section="funnel"]');
+
+    expect(shown?.tagName.toLowerCase()).toBe('section');
+    expect(text(shown?.querySelector('h2'))).toBe(
+      'De la profil la cerere, pe săptămâni',
+    );
+    expect(shown?.querySelector('[data-chart-skeleton]')).not.toBeNull();
+    expect(weekly).not.toHaveBeenCalled();
+  });
+
+  it('shows a suspended garage no panel and reads no figures', async () => {
+    const { element, fixture, settle } = await render(async () => {
+      throw status(410);
+    });
+    await settle();
+
+    expect(element.querySelector('[data-suspended]')).not.toBeNull();
+    expect(element.querySelector('mf-garage-legal-check')).not.toBeNull();
+    expect(await fixture.getDeferBlocks()).toHaveLength(0);
+    expect(element.querySelector('[data-section="funnel"]')).toBeNull();
+    expect(weekly).not.toHaveBeenCalled();
   });
 });
