@@ -288,7 +288,7 @@ const joined = (specialties: string[]) => specialties.join(', ') || null;
 
 // The live audience of a card: its public pages only while the profile
 // shows it.
-export const cardAudience = (
+const cardAudience = (
   garageId: string,
   card: { id: string; shown: boolean },
 ) => ({
@@ -299,7 +299,7 @@ export const cardAudience = (
 });
 
 // Whether the profile shows the card now, read in the caller's transaction.
-export async function isShownNow(
+async function isShownNow(
   db: Pick<Prisma.TransactionClient, 'mechanic'>,
   mechanicId: string,
 ) {
