@@ -4,7 +4,10 @@ import { I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK } from '@motor-fix/overlays';
 
 import { FiltersPanel } from './filters-panel';
-import { type Filters, OFF } from '../filters';
+import { type Filters } from '../filters';
+
+// Every filter off, as an empty address bar reads.
+const OFF: Filters = { card: false, open_now: false, open_saturday: false };
 
 const filters = signal<Filters>(OFF);
 const change = jest.fn<void, [Partial<Filters>]>();

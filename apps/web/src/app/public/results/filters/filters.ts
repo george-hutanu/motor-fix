@@ -19,12 +19,6 @@ export interface Filters {
   card: boolean;
 }
 
-export const OFF: Filters = {
-  card: false,
-  open_now: false,
-  open_saturday: false,
-};
-
 export const SWITCHES: readonly { key: SwitchKey; label: string }[] = [
   { key: 'open_now', label: 'public.results.filters.openNow' },
   { key: 'open_saturday', label: 'public.results.filters.openSaturday' },
@@ -32,7 +26,7 @@ export const SWITCHES: readonly { key: SwitchKey; label: string }[] = [
 ];
 
 // The page's order: the bar, the request, the chips and the panel follow it.
-export const ORDER: readonly FilterKey[] = [
+const ORDER: readonly FilterKey[] = [
   'open_now',
   'open_saturday',
   'max_price',
@@ -67,10 +61,12 @@ export function filtersIn(bar: ParamMap): Filters {
   return filters;
 }
 
+// A ceiling or a rating, set or not, as against a switch on or off.
+export const isChoice = (key: FilterKey): key is 'max_price' | 'min_rating' =>
+  key === 'max_price' || key === 'min_rating';
+
 const on = (filters: Filters, key: FilterKey) =>
-  key === 'max_price' || key === 'min_rating'
-    ? filters[key] !== undefined
-    : filters[key];
+  isChoice(key) ? filters[key] !== undefined : filters[key];
 
 export function countOf(filters: Filters): number {
   return ORDER.filter((key) => on(filters, key)).length;
@@ -90,12 +86,12 @@ export function filterParams(filters: Filters): FilterParams {
   return Object.fromEntries(
     ORDER.filter((key) => on(filters, key)).map((key) => [
       key,
-      key === 'max_price' || key === 'min_rating' ? filters[key] : '1',
+      isChoice(key) ? filters[key] : '1',
     ]),
   );
 }
 
-export interface Chip {
+interface Chip {
   key: FilterKey;
   label: string;
   params?: Record<string, string | number>;

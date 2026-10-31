@@ -4998,9 +4998,10 @@ describe('Results filters', () => {
       });
     });
 
-    it('asks the next page with the cursor and the filter', async () => {
+    // @traces 1399-FR-004
+    it('asks the next page with the cursor and the filters', async () => {
       await shown(
-        `/ro/garages?brand=bmw&near=${NEAR}&open_saturday=1`,
+        `/ro/garages?brand=bmw&near=${NEAR}&open_saturday=1&max_price=250&min_rating=3.5&card=1`,
         pageOf({ nextCursor: 'c1' }),
       );
 
@@ -5009,14 +5010,20 @@ describe('Results filters', () => {
 
       expect(searches().at(-1)).toEqual({
         brand: 'bmw',
+        card: '1',
         cursor: 'c1',
+        max_price: 250,
+        min_rating: '3.5',
         near: NEAR,
         open_saturday: '1',
       });
     });
 
+    // @traces 1399-FR-004
     it('reads a pin outside the list by ids= with no filter', async () => {
-      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_now=1`);
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&max_price=150&min_rating=4.5&card=1`,
+      );
 
       mapPicked('pin-3');
       await settle();

@@ -58,6 +58,7 @@ import {
   type Filters,
   filterParams,
   filtersIn,
+  isChoice,
   NONE,
   unfiltered,
 } from './filters/filters';
@@ -259,7 +260,7 @@ export class Results {
   private leftAt: number | undefined;
   private popped = false;
   // The kept results were shown again: the stream then opens for them, and
-  // their one first-page read covers that opening (1356-FR-008).
+  // their one first-page read covers that opening.
   private restored = false;
 
   // The brand last picked in the search beside the chips.
@@ -1064,8 +1065,7 @@ export class Results {
   // A chip takes its filter off; the focus goes to the Filtre button, the
   // chip itself being gone.
   protected async remove(key: FilterKey) {
-    const off = key === 'max_price' || key === 'min_rating' ? undefined : false;
-    await this.change({ [key]: off });
+    await this.change({ [key]: isChoice(key) ? undefined : false });
     this.filtersOpen()?.nativeElement.focus();
   }
 

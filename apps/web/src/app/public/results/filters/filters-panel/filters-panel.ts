@@ -29,8 +29,10 @@ type ChoiceKey = 'max_price' | 'min_rating';
 export class FiltersPanel {
   private readonly task = injectOverlayTask<FiltersPanelData, never>();
   private readonly i18n = inject(I18n);
-  protected readonly hours = SWITCHES.slice(0, 2);
-  protected readonly card = SWITCHES[2];
+  protected readonly hours = SWITCHES.filter((s) => s.key !== 'card');
+  protected readonly card = SWITCHES.find(
+    (s) => s.key === 'card',
+  ) as (typeof SWITCHES)[number];
   protected readonly prices = SEARCH_PRICE_CEILINGS;
   protected readonly ratings = SEARCH_MIN_RATINGS;
   protected readonly filters = this.task.data.filters;

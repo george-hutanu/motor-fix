@@ -10,10 +10,12 @@ import {
   filterParams,
   filtersIn,
   NONE,
-  OFF,
   SWITCHES,
   unfiltered,
 } from './filters';
+
+// Every filter off, as an empty address bar reads.
+const OFF: Filters = { card: false, open_now: false, open_saturday: false };
 
 const bar = (query: string) => {
   const params: Record<string, string[]> = {};

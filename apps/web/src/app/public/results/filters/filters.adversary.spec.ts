@@ -1,6 +1,15 @@
 import { convertToParamMap } from '@angular/router';
 
-import { countOf, filterParams, filtersIn, OFF, unfiltered } from './filters';
+import {
+  countOf,
+  type Filters,
+  filterParams,
+  filtersIn,
+  unfiltered,
+} from './filters';
+
+// Every filter off, as an empty address bar reads.
+const OFF: Filters = { card: false, open_now: false, open_saturday: false };
 
 const bar = (params: Record<string, string | string[]>) =>
   convertToParamMap(params);
