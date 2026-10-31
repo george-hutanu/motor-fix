@@ -14,6 +14,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { PlatformRules } from './platform-rules';
 import { RuleOffRequest } from './rule-off-request/rule-off-request';
@@ -83,13 +84,13 @@ const request = (
 
 const NO_REQUESTS: PlatformRuleChangesDto = { decided: [], waiting: null };
 
-let list: jest.Mock;
-let change: jest.Mock;
-let requests: jest.Mock;
-let approve: jest.Mock;
-let refuse: jest.Mock;
-let cancel: jest.Mock;
-let open: jest.Mock;
+let list: Mock;
+let change: Mock;
+let requests: Mock;
+let approve: Mock;
+let refuse: Mock;
+let cancel: Mock;
+let open: Mock;
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 
@@ -97,15 +98,15 @@ async function render(
   answer: PlatformRulesDto | Promise<never> = testing(),
   language: 'ro' | 'en' = 'ro',
 ) {
-  list = jest.fn(() =>
+  list = vi.fn(() =>
     answer instanceof Promise ? answer : Promise.resolve(answer),
   );
-  change = jest.fn(() => new Promise(() => undefined));
-  requests = jest.fn(async () => NO_REQUESTS);
-  approve = jest.fn(async () => request({ status: 'approved' }));
-  refuse = jest.fn(async () => request({ status: 'refused' }));
-  cancel = jest.fn(async () => request({ status: 'cancelled' }));
-  open = jest.fn(async () => 'cancelled');
+  change = vi.fn(() => new Promise(() => undefined));
+  requests = vi.fn(async () => NO_REQUESTS);
+  approve = vi.fn(async () => request({ status: 'approved' }));
+  refuse = vi.fn(async () => request({ status: 'refused' }));
+  cancel = vi.fn(async () => request({ status: 'cancelled' }));
+  open = vi.fn(async () => 'cancelled');
   events = new Subject();
   resync = new Subject();
   TestBed.configureTestingModule({
@@ -172,7 +173,7 @@ const changed = (key: string): LiveMessage =>
     kind: 'platform_rule.changed',
   }) as LiveMessage;
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 describe('PlatformRules', () => {
   it('opens with the heading and the line, then the four rules in order', async () => {
@@ -408,13 +409,13 @@ describe('PlatformRules', () => {
   it('reads the rules again once per burst of changes from the live connection', async () => {
     const { element, settle } = await render();
     await settle();
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     list.mockResolvedValue(testing({ maintenance_mode: true }));
 
     events.next(changed('maintenance_mode'));
     events.next(changed('skip_rar_check'));
-    jest.advanceTimersByTime(300);
-    jest.useRealTimers();
+    vi.advanceTimersByTime(300);
+    vi.useRealTimers();
     await settle();
 
     expect(list).toHaveBeenCalledTimes(2);
@@ -433,11 +434,11 @@ describe('PlatformRules', () => {
         reread = r;
       }),
     );
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     events.next(changed('maintenance_mode'));
-    jest.advanceTimersByTime(300);
-    jest.useRealTimers();
+    vi.advanceTimersByTime(300);
+    vi.useRealTimers();
     await settle();
     expect(checked(element, 'Mod mentenanță')).toBe('true');
     expect(switches(element)).toHaveLength(4);
@@ -715,11 +716,11 @@ describe('PlatformRules, live requests', () => {
       list.mockClear();
       requests.mockClear();
       requests.mockResolvedValue({ decided: [], waiting: request() });
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       events.next(live(kind));
-      jest.advanceTimersByTime(300);
-      jest.useRealTimers();
+      vi.advanceTimersByTime(300);
+      vi.useRealTimers();
       await settle();
 
       expect(list).toHaveBeenCalledTimes(1);

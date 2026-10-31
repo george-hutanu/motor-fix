@@ -36,11 +36,11 @@ const DRIVER = {
 function garageSetup() {
   const parts = setup({
     auth: {
-      authControllerSignIn: jest.fn(() =>
+      authControllerSignIn: vi.fn(() =>
         Promise.resolve({ accessToken: 'signed-in' }),
       ),
     },
-    me: { meControllerMe: jest.fn(() => Promise.resolve(GARAGE)) },
+    me: { meControllerMe: vi.fn(() => Promise.resolve(GARAGE)) },
   });
   return {
     authControllerRefresh: parts.auth.authControllerRefresh,

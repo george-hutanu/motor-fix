@@ -56,7 +56,7 @@ async function open(
     order.set(next);
     rows.set(placed(next));
   };
-  const move = jest.fn(async (key: string, direction: 'up' | 'down') => {
+  const move = vi.fn(async (key: string, direction: 'up' | 'down') => {
     const before = order();
     apply(key, direction);
     const saved = extra.move ? await extra.move(key, direction) : true;
@@ -66,7 +66,7 @@ async function open(
     }
     return saved;
   });
-  const reset = jest.fn(extra.reset ?? (async () => true));
+  const reset = vi.fn(extra.reset ?? (async () => true));
   await TestBed.inject(I18n).enter('admin');
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const host = TestBed.createComponent(Host);
@@ -113,7 +113,7 @@ const alert = () => body().querySelector('[role="alert"]');
 
 afterEach(() => {
   document.body.innerHTML = '';
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // @traces 1391-FR-015
@@ -247,7 +247,7 @@ describe('going back to the default', () => {
 
   it('keeps nothing in the browser', async () => {
     await open();
-    const stored = jest.spyOn(Storage.prototype, 'setItem');
+    const stored = vi.spyOn(Storage.prototype, 'setItem');
 
     arrow('log', 'up').click();
     button('Revino la varianta implicită').click();

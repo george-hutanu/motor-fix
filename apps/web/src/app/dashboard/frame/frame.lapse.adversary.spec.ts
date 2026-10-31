@@ -32,34 +32,34 @@ const me = (role: string, landing: string) =>
   }) as unknown as MeDto;
 
 async function render(role: string, landing: string, answer: unknown = true) {
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = vi.fn();
   const current = signal<MeDto | null>(me(role, landing));
   // The account the sign-in gate keeps on screen while it is open.
   const kept = signal<MeDto | null>(null);
   const session = {
     current,
-    deletingAccount: jest.fn(() => false),
+    deletingAccount: vi.fn(() => false),
     ended: new Subject<void>(),
     garageGone: () => false,
-    keepsThroughRevoke: jest.fn(() => false),
+    keepsThroughRevoke: vi.fn(() => false),
     kept,
-    renew: jest.fn(async () => true),
-    revoked: jest.fn(() => current.set(null)),
+    renew: vi.fn(async () => true),
+    revoked: vi.fn(() => current.set(null)),
     shown: computed(() => current() ?? kept()),
-    signOut: jest.fn(async () => current.set(null)),
-    signOutEverywhere: jest.fn(async () => current.set(null)),
+    signOut: vi.fn(async () => current.set(null)),
+    signOutEverywhere: vi.fn(async () => current.set(null)),
     token: () => 'access',
   };
   const live = {
-    close: jest.fn(),
+    close: vi.fn(),
     events: new Subject<LiveMessage>(),
     offline: signal(false),
     on: () => NEVER,
-    open: jest.fn(),
+    open: vi.fn(),
     resync: new Subject<void>(),
     state: signal('open'),
   };
-  const overlays = { open: jest.fn(async () => answer) };
+  const overlays = { open: vi.fn(async () => answer) };
   TestBed.configureTestingModule({
     providers: [
       provideRouter(
@@ -97,7 +97,7 @@ async function render(role: string, landing: string, answer: unknown = true) {
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(landing);
   harness.detectChanges();
-  const navigate = jest
+  const navigate = vi
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
   const element = harness.fixture.nativeElement as HTMLElement;

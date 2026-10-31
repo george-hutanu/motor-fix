@@ -108,7 +108,7 @@ const me = {
 } as unknown as MeDto;
 
 async function open(url: string) {
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = vi.fn();
   const current = signal<MeDto | null>(me);
   TestBed.configureTestingModule({
     providers: [
@@ -126,18 +126,18 @@ async function open(url: string) {
           ended: new Subject<void>(),
           garageGone: () => false,
           shown: current,
-          signOut: jest.fn(),
+          signOut: vi.fn(),
           token: () => 'access',
         },
       },
       {
         provide: Live,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           events: new Subject(),
           offline: signal(false),
           on: () => NEVER,
-          open: jest.fn(),
+          open: vi.fn(),
           resync: new Subject(),
         },
       },

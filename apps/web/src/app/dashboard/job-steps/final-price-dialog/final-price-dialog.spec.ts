@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { GarageJobsService, type JobDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { type FinalPriceData, FinalPriceDialog } from './final-price-dialog';
 
@@ -14,9 +15,9 @@ class Host {
 
 const answered = { finalPriceBani: 125050, id: 'job-1' } as JobDto;
 
-let handover: jest.Mock;
-let correct: jest.Mock;
-let reread: jest.Mock;
+let handover: Mock;
+let correct: Mock;
+let reread: Mock;
 let result: Promise<OverlayResult<JobDto>>;
 
 async function settle() {
@@ -37,9 +38,9 @@ async function open({
   quoteToBani?: number;
   recorded?: number | null;
 } = {}) {
-  handover = jest.fn(async () => answered);
-  correct = jest.fn(async () => answered);
-  reread = jest.fn();
+  handover = vi.fn(async () => answered);
+  correct = vi.fn(async () => answered);
+  reread = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       {

@@ -25,11 +25,11 @@ function setup(
   } = {},
 ) {
   const session = {
-    current: jest.fn(() => me),
-    load: jest.fn(async () => me),
-    takeReturnTo: jest.fn(() => returnTo),
+    current: vi.fn(() => me),
+    load: vi.fn(async () => me),
+    takeReturnTo: vi.fn(() => returnTo),
   };
-  const dialog = { returned: jest.fn(async () => returned) };
+  const dialog = { returned: vi.fn(async () => returned) };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -42,11 +42,11 @@ function setup(
       { provide: SignInDialog, useValue: dialog },
       {
         provide: HealthService,
-        useValue: { healthControllerReady: jest.fn(async () => null) },
+        useValue: { healthControllerReady: vi.fn(async () => null) },
       },
     ],
   });
-  const navigate = jest
+  const navigate = vi
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
   const fixture = TestBed.createComponent(SignInReturn);

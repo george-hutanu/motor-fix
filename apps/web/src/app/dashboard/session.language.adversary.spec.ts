@@ -10,7 +10,7 @@ interface Pending {
 
 function savingSetup(signedIn: MeDto | null, update?: () => Promise<MeDto>) {
   const pending: Pending[] = [];
-  const meControllerUpdate = jest.fn(
+  const meControllerUpdate = vi.fn(
     ({ body }: { body: { language: string } }) =>
       update
         ? update()
@@ -18,7 +18,7 @@ function savingSetup(signedIn: MeDto | null, update?: () => Promise<MeDto>) {
             pending.push({ language: body.language, reject, resolve }),
           ),
   );
-  const meControllerMe = jest.fn(() =>
+  const meControllerMe = vi.fn(() =>
     signedIn ? Promise.resolve(signedIn) : Promise.reject(new Error('401')),
   );
   const parts = setup({

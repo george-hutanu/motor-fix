@@ -7,7 +7,7 @@ import { staffReview } from '../garage-reviews/garage-reviews.testing';
 // @traces 1382-FR-003 1382-FR-008
 describe('opening the report task', () => {
   it('opens the dialog shape with the review, titled Raportează recenzia', async () => {
-    const open = jest.fn(async () => 'cancelled');
+    const open = vi.fn(async () => 'cancelled');
     const review = staffReview();
 
     const result = await openReportReview(

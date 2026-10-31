@@ -25,7 +25,7 @@ async function mount(
         provide: RequestsService,
         useValue: {
           activeRequestControllerGet: active,
-          requestsControllerList: jest.fn(answer),
+          requestsControllerList: vi.fn(answer),
         },
       },
       {

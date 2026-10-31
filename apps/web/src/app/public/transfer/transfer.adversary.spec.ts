@@ -6,6 +6,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { CarsService, type CarTransferLinkDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { TransferPage } from './transfer';
 import { provideLanguageAddresses, SITE_ORIGIN } from '../../addresses';
@@ -16,7 +17,7 @@ const refusal = (status: number, code?: string) =>
     status,
   });
 
-let read: jest.Mock;
+let read: Mock;
 let response: { status?: number };
 let harness: RouterTestingHarness;
 
@@ -32,7 +33,7 @@ async function open(
   language: 'ro' | 'en' = 'ro',
   server = true,
 ) {
-  read = jest.fn(answer);
+  read = vi.fn(answer);
   response = {};
   TestBed.configureTestingModule({
     providers: [
@@ -114,7 +115,7 @@ describe('the public transfer page under odd answers', () => {
   });
 
   it('passes a token with encoded characters on as the address decoded it', async () => {
-    read = jest.fn(async () => ({ status: 'sent' }) as CarTransferLinkDto);
+    read = vi.fn(async () => ({ status: 'sent' }) as CarTransferLinkDto);
     response = {};
     TestBed.configureTestingModule({
       providers: [

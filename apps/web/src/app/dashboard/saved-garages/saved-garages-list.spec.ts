@@ -7,6 +7,7 @@ import {
   SavedGaragesService,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import {
   fakeSavedGarages,
@@ -21,8 +22,8 @@ import { fakeLive, wait } from '../garage-requests/garage-requests.testing';
 import { Live } from '../live';
 import { Session } from '../session';
 
-let list: jest.Mock;
-let search: jest.Mock;
+let list: Mock;
+let search: Mock;
 let live: ReturnType<typeof fakeLive>;
 let saved: ReturnType<typeof fakeSavedGarages>;
 
@@ -43,13 +44,13 @@ async function start({
   live = fakeLive();
   saved = fakeSavedGarages();
   let call = 0;
-  list = jest.fn(async ({ cursor }: { cursor?: string; near?: string }) => {
+  list = vi.fn(async ({ cursor }: { cursor?: string; near?: string }) => {
     if (cursor) return pageOf([savedItem({ garageId: `after-${cursor}` })]);
     const answer = answers[Math.min(call++, answers.length - 1)];
     if (answer instanceof Error) throw answer;
     return answer;
   });
-  search = jest.fn(async () => ({
+  search = vi.fn(async () => ({
     items: [{ label: 'Cluj-Napoca', lat: 46.77123, lng: 23.62345 }],
   }));
   const me = signal({

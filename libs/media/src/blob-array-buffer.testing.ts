@@ -1,6 +1,6 @@
 // Test setup for the projects whose code reads a Blob's bytes.
-// The jsdom jest-environment-jsdom ships (26) has no Blob.arrayBuffer; every
-// browser has. The uploader reads the bytes for their checksum.
+// jsdom's Blob has no arrayBuffer; every browser has. The uploader reads
+// the bytes for their checksum.
 Blob.prototype.arrayBuffer ??= function arrayBuffer(this: Blob) {
   const impl = Object.getOwnPropertySymbols(this).find(
     (symbol) => symbol.description === 'impl',

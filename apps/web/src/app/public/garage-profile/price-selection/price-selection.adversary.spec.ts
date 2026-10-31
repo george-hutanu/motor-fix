@@ -31,7 +31,7 @@ const on = (s: PriceSelection) => [...s.on()].sort();
 
 beforeEach(() => sessionStorage.clear());
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
 });
 
@@ -111,7 +111,7 @@ describe('the stored selection, read hostile', () => {
   it('keeps working after a write that was refused once', () => {
     const s = selection();
     s.sync(MILITARI);
-    const set = jest
+    const set = vi
       .spyOn(Storage.prototype, 'setItem')
       .mockImplementationOnce(() => {
         throw new Error('quota');

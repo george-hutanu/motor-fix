@@ -11,6 +11,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   RequestQuote,
@@ -125,12 +126,12 @@ const BUCHAREST = {
   origin: 'address' as const,
 };
 
-let list: jest.Mock;
-let send: jest.Mock;
-let nearby: jest.Mock;
-let onSent: jest.Mock;
-let track: jest.Mock;
-let gate: jest.Mock;
+let list: Mock;
+let send: Mock;
+let nearby: Mock;
+let onSent: Mock;
+let track: Mock;
+let gate: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -156,12 +157,12 @@ async function open(
     jobTypeIds?: string[];
   } = {},
 ) {
-  list = jest.fn(async () => ({ items: options.cars ?? [LOGAN] }));
-  gate = jest.fn(async () => options.signsIn ?? false);
-  send = jest.fn(async () => options.reply ?? sent([GARAGE.name]));
-  nearby = jest.fn(async () => ({ items: options.candidates ?? [] }));
-  onSent = jest.fn();
-  track = jest.fn();
+  list = vi.fn(async () => ({ items: options.cars ?? [LOGAN] }));
+  gate = vi.fn(async () => options.signsIn ?? false);
+  send = vi.fn(async () => options.reply ?? sent([GARAGE.name]));
+  nearby = vi.fn(async () => ({ items: options.candidates ?? [] }));
+  onSent = vi.fn();
+  track = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -249,7 +250,7 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // @traces 356-FR-011

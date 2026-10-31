@@ -6,6 +6,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { CarsService, type CarTransferLinkDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { TransferPage } from './transfer';
 import { PUBLIC_READ } from '../../public-read';
@@ -17,7 +18,7 @@ const refusal = (status: number, code?: string) =>
     status,
   });
 
-let read: jest.Mock;
+let read: Mock;
 let response: { status?: number };
 let harness: RouterTestingHarness;
 
@@ -33,7 +34,7 @@ async function open(
   language: 'ro' | 'en' = 'ro',
   server = true,
 ) {
-  read = jest.fn(answer);
+  read = vi.fn(answer);
   response = {};
   TestBed.configureTestingModule({
     providers: [

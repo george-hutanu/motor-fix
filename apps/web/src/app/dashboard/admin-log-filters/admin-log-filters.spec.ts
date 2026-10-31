@@ -30,9 +30,9 @@ async function settle() {
 }
 
 beforeEach(() => {
-  jest.useFakeTimers({
-    doNotFake: ['queueMicrotask', 'nextTick', 'setImmediate', 'setTimeout'],
+  vi.useFakeTimers({
     now: new Date('2026-10-17T12:00:00.000Z'),
+    toNotFake: ['queueMicrotask', 'nextTick', 'setImmediate', 'setTimeout'],
   });
   globalThis.matchMedia = (query: string) =>
     ({
@@ -46,7 +46,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
   document.body.innerHTML = '';
 });

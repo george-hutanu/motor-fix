@@ -12,12 +12,12 @@ function gatedSetup(me: MeDto | null, gate?: Promise<void>) {
           : Promise.reject(new Error('401')),
     },
     me: {
-      meControllerMe: jest.fn(async () => {
+      meControllerMe: vi.fn(async () => {
         await gate;
         if (!me) throw new Error('401');
         return me;
       }),
-      meControllerUpdate: jest.fn(),
+      meControllerUpdate: vi.fn(),
     },
   });
 }

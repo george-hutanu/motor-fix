@@ -25,12 +25,12 @@ function setup(signedIn: MeDto | null, ...answers: Answer[]) {
   const current = signal<MeDto | null>(signedIn);
   const session = {
     current,
-    keepShownWhile: jest.fn(<T>(open: Promise<T>) => open),
-    load: jest.fn(async () => current()),
+    keepShownWhile: vi.fn(<T>(open: Promise<T>) => open),
+    load: vi.fn(async () => current()),
     roleHint: signal<MeDto['role'] | null>(signedIn ? 'garage' : null),
-    takeReturnTo: jest.fn((): string | null => null),
+    takeReturnTo: vi.fn((): string | null => null),
   };
-  const open = jest.fn(async (..._: unknown[]) => {
+  const open = vi.fn(async (..._: unknown[]) => {
     const answer = answers.shift() ?? 'cancelled';
     if (answer === 'signed-in') current.set(GARAGE);
     return answer;
@@ -43,7 +43,7 @@ function setup(signedIn: MeDto | null, ...answers: Answer[]) {
       { provide: PlatformStatus, useValue: { showPage: down } },
     ],
   });
-  const navigate = jest
+  const navigate = vi
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
   return {
@@ -652,7 +652,7 @@ describe('coming back to the view asked for', () => {
           provide: Session,
           useValue: {
             current,
-            keepReturnTo: jest.fn(),
+            keepReturnTo: vi.fn(),
             keepShownWhile: <T>(open: Promise<T>) => open,
             load: async () => current(),
             takeReturnTo: () => kept,

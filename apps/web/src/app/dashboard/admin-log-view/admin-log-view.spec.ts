@@ -73,8 +73,9 @@ class Observer {
 }
 
 beforeEach(() => {
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    now: NOW,
+    toNotFake: [
       'queueMicrotask',
       'nextTick',
       'setImmediate',
@@ -84,7 +85,6 @@ beforeEach(() => {
       'clearInterval',
       'requestAnimationFrame',
     ],
-    now: NOW,
   });
   reads = [];
   seen = undefined;
@@ -101,8 +101,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
   document.body.innerHTML = '';
 });
@@ -603,7 +603,7 @@ describe('the new entries bar', () => {
   });
 
   it('never polls', async () => {
-    const every = jest.spyOn(globalThis, 'setInterval');
+    const every = vi.spyOn(globalThis, 'setInterval');
     await open();
 
     expect(every).not.toHaveBeenCalled();

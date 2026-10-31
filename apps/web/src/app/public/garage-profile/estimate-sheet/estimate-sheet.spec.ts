@@ -8,6 +8,7 @@ import {
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { EstimateSheet } from './estimate-sheet';
 import { Consent } from '../../../consent/consent';
@@ -43,10 +44,10 @@ const GARAGE = {
   worksOn: [],
 } as PublicGarageDto;
 
-let open: jest.Mock;
+let open: Mock;
 
 async function render() {
-  open = jest.fn(async () => undefined);
+  open = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -54,20 +55,20 @@ async function render() {
       {
         provide: OVERLAY_TASK,
         useFactory: () => ({
-          close: jest.fn(),
+          close: vi.fn(),
           data: { garage: signal(GARAGE), selection: inject(PriceSelection) },
-          focusStart: jest.fn(),
-          markUnchanged: jest.fn(),
+          focusStart: vi.fn(),
+          markUnchanged: vi.fn(),
         }),
       },
       { provide: Overlays, useValue: { open } },
-      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Consent, useValue: { track: vi.fn() } },
       {
         provide: Session,
         useValue: {
           current: signal(null),
-          load: jest.fn(async () => null),
-          renew: jest.fn(async () => true),
+          load: vi.fn(async () => null),
+          renew: vi.fn(async () => true),
           roleHint: signal(null),
         },
       },

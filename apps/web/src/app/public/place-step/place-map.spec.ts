@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { PLACE_ZOOM } from '@motor-fix/contracts/place-section';
+import * as maplibre from 'maplibre-gl';
 
 import { PLACE_MAP, type PlaceMap, viewFor } from './place-map';
 import type { MapFake } from './place-step.testing';
 import { circleBounds, type LatLng } from '../map-libre/map-libre';
 
-jest.mock('maplibre-gl', () => jest.requireActual('./place-step.testing'));
-const { fake } = jest.requireMock<MapFake>('maplibre-gl');
+vi.mock('maplibre-gl', () => import('./place-step.testing'));
+const { fake } = maplibre as unknown as MapFake;
 
 const sheets = () =>
   Array.from(
@@ -281,8 +282,8 @@ describe('the place map, how it frames the pin and the circle', () => {
 });
 
 describe('the place map when MapLibre raises an error', () => {
-  const failed = jest.fn();
-  const recovered = jest.fn();
+  const failed = vi.fn();
+  const recovered = vi.fn();
   const open = () =>
     TestBed.inject(PLACE_MAP)(document.createElement('div'), {
       dragged: () => {},

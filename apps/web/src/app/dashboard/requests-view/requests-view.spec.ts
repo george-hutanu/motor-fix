@@ -13,6 +13,7 @@ import {
 import { formatSlot, I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { CancelBookingDialog } from './cancel-booking-dialog/cancel-booking-dialog';
 import { CancelRequestDialog } from './cancel-request-dialog/cancel-request-dialog';
@@ -51,9 +52,9 @@ const row = (over: Partial<RequestSummaryDto> = {}): RequestSummaryDto => ({
 });
 
 let events: Subject<LiveMessage>;
-let list: jest.Mock;
-let compare: jest.Mock;
-let active: jest.Mock;
+let list: Mock;
+let compare: Mock;
+let active: Mock;
 let activeAnswer: ActiveRequestAnswerDto = { openCount: 0, request: null };
 
 // The active read left pending, for the specs about the list alone.
@@ -61,13 +62,13 @@ const idle = () => new Promise<never>(() => undefined);
 
 // The comparison panel's own reads; its behaviour is quotes-compare's spec.
 const comparing = () => {
-  compare = jest.fn(() => new Promise<never>(() => undefined));
+  compare = vi.fn(() => new Promise<never>(() => undefined));
   return [
     {
       provide: QuoteRequestsService,
       useValue: { compareControllerGet: compare },
     },
-    { provide: QuotesService, useValue: { acceptControllerAccept: jest.fn() } },
+    { provide: QuotesService, useValue: { acceptControllerAccept: vi.fn() } },
   ];
 };
 
@@ -76,9 +77,9 @@ async function render(
   language: 'ro' | 'en' = 'ro',
 ) {
   events = new Subject();
-  active = jest.fn(async () => activeAnswer);
+  active = vi.fn(async () => activeAnswer);
   let call = 0;
-  list = jest.fn(async () => {
+  list = vi.fn(async () => {
     const items = answers[Math.min(call++, answers.length - 1)];
     if (items instanceof Error) throw items;
     return { items, nextCursor: null, total: items.length };
@@ -209,20 +210,20 @@ describe('Cererile mele once a quote is accepted', () => {
   });
 
   it('counts the time down as the minutes pass', async () => {
-    jest.useFakeTimers({
-      advanceTimers: true,
-      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    vi.useFakeTimers({
+      shouldAdvanceTime: true,
+      toNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
     });
     try {
       const { element, settle } = await render([[booked(61 * 60_000)]]);
       expect(text(waiting(element) as Element)).toContain('încă 1 h');
 
-      jest.advanceTimersByTime(2 * 60_000);
+      vi.advanceTimersByTime(2 * 60_000);
       await settle();
 
       expect(text(waiting(element) as Element)).toContain('încă 59 min');
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -250,9 +251,9 @@ describe('Cererile mele’s clock after an acceptance', () => {
   const HOUR = 3_600_000;
 
   it('measures the time left from the re-read, so a fresh acceptance reads 23 h', async () => {
-    jest.useFakeTimers({
-      advanceTimers: true,
-      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    vi.useFakeTimers({
+      shouldAdvanceTime: true,
+      toNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
     });
     try {
       const loaded = Date.now();
@@ -284,7 +285,7 @@ describe('Cererile mele’s clock after an acceptance', () => {
           }),
         ],
       ]);
-      jest.setSystemTime(loaded + 30_000);
+      vi.setSystemTime(loaded + 30_000);
 
       events.next({
         at: new Date().toISOString(),
@@ -299,7 +300,7 @@ describe('Cererile mele’s clock after an acceptance', () => {
         'Așteaptă confirmarea service‑ului · încă 23 h',
       );
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });
@@ -567,13 +568,13 @@ describe('Cererile mele', () => {
 });
 
 describe('Cererile mele opened at a request', () => {
-  let scrolled: jest.Mock;
+  let scrolled: Mock;
 
   async function open(url: string) {
     events = new Subject();
-    scrolled = jest.fn();
+    scrolled = vi.fn();
     Element.prototype.scrollIntoView = scrolled;
-    list = jest.fn(async () => {
+    list = vi.fn(async () => {
       const items = [row(), row({ id: 'req-2' })];
       return { items, nextCursor: null, total: items.length };
     });
@@ -684,7 +685,7 @@ describe('Cererile mele comparing a request’s quotes', () => {
 
   async function open(url: string, items = ITEMS) {
     events = new Subject();
-    list = jest.fn(async () => ({
+    list = vi.fn(async () => ({
       items,
       nextCursor: null,
       total: items.length,
@@ -944,9 +945,9 @@ const cancelButton = (element: HTMLElement) =>
 
 // The dialogs' own behaviour is their specs'; here only what the row hands
 // them and what it does with the answer.
-let opened: jest.Mock;
+let opened: Mock;
 const dialogs = (answer: string) => {
-  opened = jest.fn(async () => answer);
+  opened = vi.fn(async () => answer);
   TestBed.overrideProvider(Overlays, { useValue: { open: opened } });
 };
 
@@ -1241,7 +1242,7 @@ describe('Cererile mele: a cancel no longer possible', () => {
   });
 
   it('takes the action away once the minute tick passes the start', async () => {
-    jest.useFakeTimers({ advanceTimers: true });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       const { element, settle } = await render([
         [
@@ -1256,13 +1257,13 @@ describe('Cererile mele: a cancel no longer possible', () => {
       ]);
       expect(cancelButton(element)).not.toBeNull();
 
-      jest.advanceTimersByTime(120_000);
+      vi.advanceTimersByTime(120_000);
       await settle();
 
       expect(cancelButton(element)).toBeNull();
       expect(list).toHaveBeenCalledTimes(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 

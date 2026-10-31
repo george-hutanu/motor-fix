@@ -11,15 +11,15 @@ import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
 import { GarageHome } from './garage-home';
-import { openBlockTime } from '../../block-time-dialog/open-block-time';
 import { Live } from '../../live';
 import { Session } from '../../session';
 import { fakeLive, listOf, wait } from '../garage-requests.testing';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 
-jest.mock('../../block-time-dialog/open-block-time', () => ({
-  openBlockTime: jest.fn(async () => 'cancelled'),
-}));
+// The dialog opens through Overlays.open once its chunk has loaded.
+const open = vi.fn<(...args: unknown[]) => Promise<string>>(
+  async () => 'cancelled',
+);
 
 const ALL = {
   canAnswerQuotes: true,
@@ -55,7 +55,7 @@ async function render(me: MeDto) {
       GarageRequestsFeed,
       { provide: Live, useValue: fakeLive() },
       { provide: Session, useValue: { current: shown, shown } },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open } },
       {
         provide: GarageRequestsService,
         useValue: {
@@ -84,8 +84,8 @@ const button = (el: HTMLElement) =>
   el.querySelector<HTMLButtonElement>('[data-block-time]');
 
 afterEach(() => {
-  (openBlockTime as jest.Mock).mockReset();
-  (openBlockTime as jest.Mock).mockResolvedValue('cancelled');
+  open.mockReset();
+  open.mockResolvedValue('cancelled');
   TestBed.resetTestingModule();
 });
 
@@ -118,16 +118,14 @@ describe('the dashboard strip: Blochează timp under odd switches', () => {
 describe('the dashboard strip: pressing Blochează timp twice', () => {
   it('opens one dialog while the first is still open', async () => {
     let close: (r: string) => void = () => undefined;
-    (openBlockTime as jest.Mock).mockImplementation(
-      () => new Promise((resolve) => (close = resolve)),
-    );
+    open.mockImplementation(() => new Promise((resolve) => (close = resolve)));
     const el = await render(account('owner', {}));
 
     button(el)?.click();
     button(el)?.click();
     await wait(0);
 
-    expect(openBlockTime).toHaveBeenCalledTimes(1);
+    expect(open).toHaveBeenCalledTimes(1);
     close('cancelled');
   });
 
@@ -139,6 +137,6 @@ describe('the dashboard strip: pressing Blochează timp twice', () => {
     button(el)?.click();
     await wait(0);
 
-    expect(openBlockTime).toHaveBeenCalledTimes(2);
+    expect(open).toHaveBeenCalledTimes(2);
   });
 });

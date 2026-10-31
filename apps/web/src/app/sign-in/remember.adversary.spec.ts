@@ -24,13 +24,13 @@ async function settle() {
 async function open(screen: 'sign-in' | 'phone', language: 'ro' | 'en') {
   TestBed.configureTestingModule({
     providers: [
-      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Consent, useValue: { track: vi.fn() } },
       {
         provide: Session,
         useValue: {
-          phoneCode: jest.fn(),
-          signIn: jest.fn(),
-          signInWithPhone: jest.fn(),
+          phoneCode: vi.fn(),
+          signIn: vi.fn(),
+          signInWithPhone: vi.fn(),
         },
       },
       {

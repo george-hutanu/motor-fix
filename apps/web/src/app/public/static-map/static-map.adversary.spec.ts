@@ -10,15 +10,15 @@ let box = { height: 500, width: 390 };
 let fixture: ComponentFixture<StaticMap>;
 const element = () => fixture.nativeElement as HTMLElement;
 const image = () => element().querySelector('img');
-const activated = jest.fn();
+const activated = vi.fn();
 const win = window as unknown as { matchMedia?: unknown };
 
 async function render(withMedia = true) {
   if (withMedia) {
-    win.matchMedia = jest.fn(() => ({
-      addEventListener: jest.fn(),
+    win.matchMedia = vi.fn(() => ({
+      addEventListener: vi.fn(),
       matches: false,
-      removeEventListener: jest.fn(),
+      removeEventListener: vi.fn(),
     }));
   }
   TestBed.configureTestingModule({
@@ -37,17 +37,17 @@ async function render(withMedia = true) {
 beforeEach(() => {
   box = { height: 500, width: 390 };
   activated.mockClear();
-  jest
-    .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
-    .mockImplementation(() => box.width);
-  jest
-    .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
-    .mockImplementation(() => box.height);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(
+    () => box.width,
+  );
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(
+    () => box.height,
+  );
 });
 
 afterEach(() => {
   delete win.matchMedia;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // @traces 1196-FR-013

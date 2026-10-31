@@ -18,32 +18,33 @@ import {
 import { startFaro } from './faro';
 import { Consent, isValid } from '../../consent/consent';
 
-jest.mock('@grafana/faro-web-sdk', () => {
+vi.mock('@grafana/faro-web-sdk', async (importOriginal) => {
   const api = {
-    pushEvent: jest.fn(),
-    pushMeasurement: jest.fn(),
-    setSession: jest.fn(),
-    setView: jest.fn(),
+    pushEvent: vi.fn(),
+    pushMeasurement: vi.fn(),
+    setSession: vi.fn(),
+    setView: vi.fn(),
   };
   let ids = 0;
   return {
-    ErrorsInstrumentation: jest.fn(),
+    ErrorsInstrumentation: vi.fn(),
     EVENT_SESSION_EXTEND: 'session_extend',
     EVENT_SESSION_RESUME: 'session_resume',
     EVENT_SESSION_START: 'session_start',
     EVENT_VIEW_CHANGED: 'view_changed',
     faro: { api },
-    genShortID: jest.fn(() => `Gen${String(++ids).padStart(7, '0')}`),
+    genShortID: vi.fn(() => `Gen${String(++ids).padStart(7, '0')}`),
     InternalLoggerLevel: { OFF: 0 },
-    initializeFaro: jest.fn(),
+    initializeFaro: vi.fn(),
     STORAGE_KEY: 'com.grafana.faro.session',
-    TransportItemType: jest.requireActual('@grafana/faro-web-sdk')
-      .TransportItemType,
-    WebVitalsInstrumentation: jest.fn(),
+    TransportItemType: (
+      await importOriginal<typeof import('@grafana/faro-web-sdk')>()
+    ).TransportItemType,
+    WebVitalsInstrumentation: vi.fn(),
   };
 });
-jest.mock('@grafana/faro-web-tracing', () => ({
-  TracingInstrumentation: jest.fn(),
+vi.mock('@grafana/faro-web-tracing', () => ({
+  TracingInstrumentation: vi.fn(),
 }));
 
 @Component({ template: '' })
@@ -56,8 +57,8 @@ const grantAt = (at: Date, textVersion = ANALYTICS_CONSENT_VERSION) =>
 const grant = () => grantAt(new Date());
 
 beforeEach(async () => {
-  jest.clearAllMocks();
-  jest.mocked(initializeFaro).mockReset();
+  vi.clearAllMocks();
+  vi.mocked(initializeFaro).mockReset();
   sessionStorage.clear();
   localStorage.clear();
   stored.set(null);
@@ -88,12 +89,12 @@ const start = () =>
     version: 'abc1234',
   });
 const sessionIds = () =>
-  jest
+  vi
     .mocked(faro.api.setSession)
     .mock.calls.map(([session]) => session?.id)
     .filter(Boolean);
 const journeys = () =>
-  jest
+  vi
     .mocked(faro.api.pushEvent)
     .mock.calls.filter(([name]) => name === EVENT_VIEW_CHANGED)
     .map(([, attributes]) => attributes);

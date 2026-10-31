@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { type AdminBrandDto, AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { AdminBrands } from './admin-brands';
 
@@ -30,9 +31,9 @@ const SEED = [
 const conflict = (body: Record<string, unknown>) =>
   new HttpErrorResponse({ error: { status: 409, ...body }, status: 409 });
 
-let list: jest.Mock;
-let update: jest.Mock;
-let openDialog: jest.Mock;
+let list: Mock;
+let update: Mock;
+let openDialog: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -92,8 +93,8 @@ async function startRename(el: HTMLElement, name: string, to: string) {
 }
 
 beforeEach(() => {
-  list = jest.fn(async () => ({ items: SEED.map((b) => ({ ...b })) }));
-  update = jest.fn(
+  list = vi.fn(async () => ({ items: SEED.map((b) => ({ ...b })) }));
+  update = vi.fn(
     async ({ id, body }: { id: string; body: Record<string, unknown> }) => {
       const before = SEED.find((b) => b.id === id) as AdminBrandDto;
       return {
@@ -106,7 +107,7 @@ beforeEach(() => {
       };
     },
   );
-  openDialog = jest.fn(async () => 'cancelled');
+  openDialog = vi.fn(async () => 'cancelled');
 });
 
 afterEach(() => TestBed.resetTestingModule());
@@ -164,7 +165,7 @@ describe('the brand list under hostile input', () => {
     const many = Array.from({ length: 2000 }, (_, i) =>
       brand(`Brand ${String(i).padStart(5, '0')}`),
     );
-    list = jest.fn(async () => ({ items: many }));
+    list = vi.fn(async () => ({ items: many }));
 
     const el = await open();
 
@@ -175,7 +176,7 @@ describe('the brand list under hostile input', () => {
 
   // @traces 1368-FR-001
   it('shows a name made of markup as text', async () => {
-    list = jest.fn(async () => ({
+    list = vi.fn(async () => ({
       items: [brand('<img src=x onerror=alert(1)>')],
     }));
 
@@ -200,7 +201,7 @@ describe('the brand list under hostile input', () => {
 
   // @traces 1368-FR-008
   it('shows skeleton rows again while a retry is read', async () => {
-    list = jest.fn(async () => {
+    list = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 500 });
     });
     const el = await open();
@@ -219,7 +220,7 @@ describe('the brand list under hostile input', () => {
 
   // @traces 1368-FR-008
   it('fails again on a second failed retry and still offers retry', async () => {
-    list = jest.fn(async () => {
+    list = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 500 });
     });
     const el = await open();
@@ -234,7 +235,7 @@ describe('the brand list under hostile input', () => {
 
   // @traces 1368-FR-008
   it('shows the read error, not an empty list, when the list read fails', async () => {
-    list = jest.fn(async () => {
+    list = vi.fn(async () => {
       throw new Error('boom');
     });
     const el = await open();
@@ -286,7 +287,7 @@ describe('adding a brand under hostile input', () => {
 
   // @traces 1368-FR-003
   it('adds a brand to a list that was empty', async () => {
-    list = jest.fn(async () => ({ items: [] }));
+    list = vi.fn(async () => ({ items: [] }));
     openDialog.mockImplementation(async () => brand('Xpeng'));
     const el = await open();
 

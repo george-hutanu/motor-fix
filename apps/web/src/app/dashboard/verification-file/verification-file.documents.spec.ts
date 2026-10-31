@@ -15,6 +15,7 @@ import { appliedAt, I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { VerificationFile } from './verification-file';
 import { AdminRestoreGarage } from '../admin-restore-garage/admin-restore-garage';
@@ -23,9 +24,9 @@ import { Live } from '../live';
 
 // @traces 068-FR-012
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 const FILE = 'file-1';
@@ -137,13 +138,13 @@ const decision = (
 let events: Subject<LiveMessage>;
 let answer: () => Promise<VerificationFileDto>;
 let api: {
-  documentReviewControllerAccept: jest.Mock;
-  documentReviewControllerRefuse: jest.Mock;
-  verificationFileControllerOpen: jest.Mock;
-  verificationFileControllerRead: jest.Mock;
+  documentReviewControllerAccept: Mock;
+  documentReviewControllerRefuse: Mock;
+  verificationFileControllerOpen: Mock;
+  verificationFileControllerRead: Mock;
 };
-let pages: { legalDocumentsControllerPageAddress: jest.Mock };
-let overlays: { open: jest.Mock };
+let pages: { legalDocumentsControllerPageAddress: Mock };
+let overlays: { open: Mock };
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -160,8 +161,8 @@ async function open(
   events = new Subject();
   answer = async () => file;
   api = {
-    documentReviewControllerAccept: jest.fn(async () => decision()),
-    documentReviewControllerRefuse: jest.fn(async () =>
+    documentReviewControllerAccept: vi.fn(async () => decision()),
+    documentReviewControllerRefuse: vi.fn(async () =>
       decision({
         document: {
           decidedAt: '2026-10-23T09:00:00.000Z',
@@ -171,20 +172,21 @@ async function open(
         },
       }),
     ),
-    verificationFileControllerOpen: jest.fn(() => answer()),
-    verificationFileControllerRead: jest.fn(() => answer()),
+    verificationFileControllerOpen: vi.fn(() => answer()),
+    verificationFileControllerRead: vi.fn(() => answer()),
   };
   pages = {
-    legalDocumentsControllerPageAddress: jest.fn(async () => ({
+    legalDocumentsControllerPageAddress: vi.fn(async () => ({
       expiresAt: '2026-10-23T09:05:00.000Z',
       url: 'https://store.test/signed',
     })),
   };
-  overlays = { open: jest.fn() };
-  jest
-    .spyOn(window, 'open')
-    .mockReturnValue({ close: jest.fn(), location: { href: '' } } as never);
-  jest.mocked(toast).mockClear();
+  overlays = { open: vi.fn() };
+  vi.spyOn(window, 'open').mockReturnValue({
+    close: vi.fn(),
+    location: { href: '' },
+  } as never);
+  vi.mocked(toast).mockClear();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -194,9 +196,9 @@ async function open(
       {
         provide: OVERLAY_TASK,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           data: part ? { fileId: FILE, part } : { fileId: FILE },
-          markUnchanged: jest.fn(),
+          markUnchanged: vi.fn(),
         },
       },
       {
@@ -238,7 +240,7 @@ const press = (el: Element | null, name: string) =>
 afterEach(() => {
   TestBed.resetTestingModule();
   document.body.innerHTML = '';
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('a yearly document under review in the drawer', () => {

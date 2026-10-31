@@ -20,13 +20,13 @@ const OTHER = { ...QUERY, brand: 'audi' };
 
 let lists: Pending[];
 let pins: Pending[];
-const measured = jest.fn();
+const measured = vi.fn();
 let warm: FilterWarm;
 let connection: Record<string, unknown> | undefined;
 let visibility: DocumentVisibilityState;
 
 const pending = (into: () => Pending[]) =>
-  jest.fn(
+  vi.fn(
     (params: Record<string, unknown>) =>
       new Promise((resolve, reject) =>
         into().push({ params, reject, resolve }),
@@ -80,7 +80,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   sendMeasurementsTo(undefined);
 });
 
@@ -166,10 +166,10 @@ describe('warming the open-now answer of a search', () => {
 // @traces 1398-FR-013
 describe('what a warm reports', () => {
   it('reports a fetch with its duration once both answers landed', async () => {
-    jest.useFakeTimers({ now: 1_000_000 });
+    vi.useFakeTimers({ now: 1_000_000 });
     setUp();
     warm.warm(QUERY);
-    jest.advanceTimersByTime(70);
+    vi.advanceTimersByTime(70);
     lists[0].resolve({});
     await flush();
 
@@ -186,11 +186,11 @@ describe('what a warm reports', () => {
   });
 
   it(`counts a hit within ${LIFE_MS / 1000} s of the answers landing, then forgets it`, async () => {
-    jest.useFakeTimers({ now: 1_000_000 });
+    vi.useFakeTimers({ now: 1_000_000 });
     setUp();
     warm.warm(QUERY);
     await land();
-    jest.advanceTimersByTime(LIFE_MS - 1);
+    vi.advanceTimersByTime(LIFE_MS - 1);
 
     warm.judge(QUERY);
     warm.judge(QUERY);
@@ -199,11 +199,11 @@ describe('what a warm reports', () => {
   });
 
   it('counts an expiry later than that', async () => {
-    jest.useFakeTimers({ now: 1_000_000 });
+    vi.useFakeTimers({ now: 1_000_000 });
     setUp();
     warm.warm(QUERY);
     await land();
-    jest.advanceTimersByTime(LIFE_MS);
+    vi.advanceTimersByTime(LIFE_MS);
 
     warm.judge(QUERY);
 

@@ -25,6 +25,7 @@ import {
 import { I18n, LanguageChoice } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { BrandChoice } from './brand-choice/brand-choice';
 import { BrandSearch } from './brand-picker/brand-search/brand-search';
@@ -82,7 +83,7 @@ type Read = {
 };
 let reads: Read[];
 const homeApi = {
-  homeControllerForBrand: jest.fn(
+  homeControllerForBrand: vi.fn(
     ({ brand: slug, near }: { brand: string; near?: string }) =>
       new Promise<HomeDto>((resolve, reject) => {
         reads.push({
@@ -108,18 +109,18 @@ const homeApi = {
   ),
 };
 const tilesApi = {
-  brandsControllerSearch: jest.fn(),
-  popularBrandsControllerTiles: jest.fn(),
+  brandsControllerSearch: vi.fn(),
+  popularBrandsControllerTiles: vi.fn(),
 };
-const healthApi = { healthControllerReady: jest.fn() };
-const placesApi = { placesControllerSearch: jest.fn() };
+const healthApi = { healthControllerReady: vi.fn() };
+const placesApi = { placesControllerSearch: vi.fn() };
 const session = {
   current: signal<MeDto | null>(null),
-  load: jest.fn<Promise<MeDto | null>, []>(),
+  load: vi.fn<(...args: []) => Promise<MeDto | null>>(),
 };
 let dialog: (value: OverlayResult<Place>) => void;
 const overlays = {
-  open: jest.fn(
+  open: vi.fn(
     () =>
       new Promise<OverlayResult<Place>>((resolve) => {
         dialog = resolve;
@@ -127,7 +128,7 @@ const overlays = {
   ),
 };
 const reduced = signal(false);
-const consent = { track: jest.fn() };
+const consent = { track: vi.fn() };
 
 let fixture: ComponentFixture<Home>;
 
@@ -172,7 +173,7 @@ async function configure(platform = 'browser') {
 }
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   Reflect.deleteProperty(document, 'hidden');
 });
 
@@ -651,7 +652,7 @@ describe('Home on the server when the API does not answer', () => {
       ],
     });
     await TestBed.inject(I18n).enter('public');
-    globalThis.fetch = jest.fn(
+    globalThis.fetch = vi.fn(
       (_url: string, init: RequestInit) =>
         new Promise<Response>((_resolve, reject) => {
           init.signal?.addEventListener('abort', () =>
@@ -666,7 +667,7 @@ describe('Home on the server when the API does not answer', () => {
   });
 
   it('renders with no tiles and an unknown status once the 3 s cap ends both reads', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     fixture = TestBed.createComponent(Home);
     fixture.detectChanges();
     let stable = false;
@@ -674,15 +675,15 @@ describe('Home on the server when the API does not answer', () => {
       stable = true;
     });
 
-    await jest.advanceTimersByTimeAsync(2_999);
+    await vi.advanceTimersByTimeAsync(2_999);
     expect(stable).toBe(false);
 
     // The cap, then the render's own scheduling: well inside 4 s.
-    await jest.advanceTimersByTimeAsync(1 + 100);
+    await vi.advanceTimersByTimeAsync(1 + 100);
     await settle();
 
     expect(stable).toBe(true);
-    const fetched = (globalThis.fetch as jest.Mock).mock.calls as [
+    const fetched = (globalThis.fetch as Mock).mock.calls as [
       string,
       RequestInit,
     ][];
@@ -742,11 +743,11 @@ describe('Home opened from another screen in the app', () => {
 
 describe('Home brand cycling', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   async function tick(ms: number) {
-    jest.advanceTimersByTime(ms);
+    vi.advanceTimersByTime(ms);
     await settle();
   }
 
@@ -899,7 +900,7 @@ describe('Home brand cycling', () => {
 
   it('leaves no timer behind once the page is gone', async () => {
     await render();
-    const clear = jest.spyOn(globalThis, 'clearInterval');
+    const clear = vi.spyOn(globalThis, 'clearInterval');
 
     fixture.destroy();
 
@@ -955,9 +956,9 @@ describe('Home on the way back from a card', () => {
   });
 
   it('starts at the first tile while nobody chose, the cycle aside', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await render();
-    jest.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(5000);
     await settle();
 
     await again();
@@ -968,11 +969,11 @@ describe('Home on the way back from a card', () => {
   it('stays on the kept tile instead of cycling on', async () => {
     await render();
     await choose('Audi');
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     await again();
     for (let step = 0; step < 8; step++) {
-      jest.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(5000);
       await settle();
       expect(checked()).toBe('Audi');
     }
@@ -1655,10 +1656,10 @@ describe('Home brand events', () => {
   });
 
   it('tells nothing for the brands the picker moves through by itself', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await render();
 
-    jest.advanceTimersByTime(5000 * 3);
+    vi.advanceTimersByTime(5000 * 3);
     await settle();
 
     expect(checked()).not.toBe('BMW');
@@ -1751,12 +1752,12 @@ describe('Home brand strip', () => {
   });
 
   it('stops the brand changing on its own once the strip is tapped', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await render(SIXTEEN);
 
     stripButton('Audi')?.click();
     await settle();
-    jest.advanceTimersByTime(30000);
+    vi.advanceTimersByTime(30000);
     await settle();
 
     expect(checked()).toBe('Audi');
@@ -2128,10 +2129,10 @@ describe('Home headline swap', () => {
 
   // @traces 007-FR-002
   it('blurs the headline in on the automatic change too', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await render();
 
-    jest.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(5000);
     await settle();
 
     expect(checked()).toBe('Mini');

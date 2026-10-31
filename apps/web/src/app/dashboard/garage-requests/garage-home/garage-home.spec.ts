@@ -14,6 +14,7 @@ import {
   ReviewsService,
 } from '@motor-fix/data-access';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { GarageHome } from './garage-home';
 import { Live } from '../../live';
@@ -37,9 +38,9 @@ const ANSWERING_MECHANIC = rowOf('mechanic', {
 });
 const MECHANIC = rowOf('mechanic');
 
-let list: jest.Mock;
-let jobs: jest.Mock;
-let reviews: jest.Mock;
+let list: Mock;
+let jobs: Mock;
+let reviews: Mock;
 
 // The membership's role string follows the row unless a test sets it, so a
 // test can prove a section follows the capabilities and not the role.
@@ -86,12 +87,12 @@ async function render(
     status?: 'draft' | 'approved' | 'suspended';
   } = {},
 ) {
-  list = jest.fn(({ status: filter }: { status: string }) =>
+  list = vi.fn(({ status: filter }: { status: string }) =>
     filter === 'waiting' ? answer() : Promise.resolve(listOf([])),
   );
-  jobs = jest.fn(async () => ({ items: [], nextCursor: null, total: 0 }));
+  jobs = vi.fn(async () => ({ items: [], nextCursor: null, total: 0 }));
   // The reviews panel has its own spec; here it waits.
-  reviews = jest.fn(() => new Promise(() => undefined));
+  reviews = vi.fn(() => new Promise(() => undefined));
   const me = signal(account(capabilities, status, role, features));
   TestBed.configureTestingModule({
     deferBlockBehavior: DeferBlockBehavior.Manual,
@@ -109,7 +110,7 @@ async function render(
         provide: GarageJobsService,
         useValue: { garageJobsControllerList: jobs },
       },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
       {
         provide: ReviewsService,
         useValue: { garageReviewsControllerRead: reviews },

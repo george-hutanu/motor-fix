@@ -11,6 +11,7 @@ import {
   runInInjectionContext,
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import type { Mock } from 'vitest';
 
 import { PublicLive, publicLiveResource } from './live';
 
@@ -51,10 +52,10 @@ class Body {
 
 let bodies: Body[];
 let answers: ('open' | 'fail' | number)[];
-let fetchMock: jest.Mock;
+let fetchMock: Mock;
 
-const settle = () => jest.advanceTimersByTimeAsync(0);
-const elapse = (ms: number) => jest.advanceTimersByTimeAsync(ms);
+const settle = () => vi.advanceTimersByTimeAsync(0);
+const elapse = (ms: number) => vi.advanceTimersByTimeAsync(ms);
 
 const event = (kind: string, id = 'g-1') =>
   `event: ${kind}\ndata: ${JSON.stringify({ at: '2026-10-07T12:00:00.000Z', id, kind })}\n\n`;
@@ -62,8 +63,8 @@ const event = (kind: string, id = 'g-1') =>
 function setUp(platform = 'browser') {
   bodies = [];
   answers = [];
-  jest.spyOn(Math, 'random').mockImplementation(() => 0.5);
-  fetchMock = jest.fn(async (_url: string, init: RequestInit) => {
+  vi.spyOn(Math, 'random').mockImplementation(() => 0.5);
+  fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
     const answer = answers.shift() ?? 'open';
     if (answer === 'fail') throw new TypeError('Failed to fetch');
     const body = new Body();
@@ -94,11 +95,11 @@ function view() {
   return createEnvironmentInjector([], TestBed.inject(EnvironmentInjector));
 }
 
-beforeEach(() => jest.useFakeTimers());
+beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
   TestBed.resetTestingModule();
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe('PublicLive under hostile use', () => {
@@ -318,7 +319,7 @@ describe('publicLiveResource under hostile use', () => {
     setUp();
     let running = 0;
     let peak = 0;
-    const load = jest.fn(async () => {
+    const load = vi.fn(async () => {
       running++;
       peak = Math.max(peak, running);
       await new Promise((ok) => setTimeout(ok, 1_000));
@@ -346,7 +347,7 @@ describe('publicLiveResource under hostile use', () => {
 
   it('re-reads for any object when no id is given', async () => {
     setUp();
-    const load = jest.fn(async () => ({ items: [] }));
+    const load = vi.fn(async () => ({ items: [] }));
     runInInjectionContext(view(), () =>
       publicLiveResource(load, PROFILE, () => ({ brand: 'b-1' })),
     );
@@ -361,7 +362,7 @@ describe('publicLiveResource under hostile use', () => {
 
   it('shows no error and keeps no value when the first read fails, and never retries on a timer', async () => {
     setUp();
-    const load = jest.fn(async () => {
+    const load = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 500 });
     });
     const ref = runInInjectionContext(view(), () =>
@@ -388,7 +389,7 @@ describe('publicLiveResource under hostile use', () => {
   it('clears gone when a later re-read succeeds again', async () => {
     setUp();
     let status: number | null = null;
-    const load = jest.fn(async () => {
+    const load = vi.fn(async () => {
       if (status) throw new HttpErrorResponse({ status });
       return { name: 'Atelier' };
     });
@@ -415,7 +416,7 @@ describe('publicLiveResource under hostile use', () => {
 
   it('keeps the same value object when a re-read answers identical data', async () => {
     setUp();
-    const load = jest.fn(async () => ({ list: [{ id: 1 }, { id: 2 }] }));
+    const load = vi.fn(async () => ({ list: [{ id: 1 }, { id: 2 }] }));
     const ref = runInInjectionContext(view(), () =>
       publicLiveResource(
         load,

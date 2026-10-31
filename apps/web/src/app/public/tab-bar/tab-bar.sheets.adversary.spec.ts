@@ -24,18 +24,18 @@ async function open(platform = 'browser') {
         useValue: {
           current,
           ended: new Subject<void>(),
-          keepReturnTo: jest.fn(),
-          load: jest.fn(async () => null),
+          keepReturnTo: vi.fn(),
+          load: vi.fn(async () => null),
           roleHint: signal(null),
           shown: current,
-          takeReturnTo: jest.fn((): string | null => null),
+          takeReturnTo: vi.fn((): string | null => null),
           token: () => 'access',
         },
       },
       { provide: PLATFORM_ID, useValue: platform },
       {
         provide: Overlays,
-        useValue: { open: jest.fn(async () => 'cancelled') },
+        useValue: { open: vi.fn(async () => 'cancelled') },
       },
     ],
   });

@@ -11,6 +11,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { ApprovalStrip } from './approval-strip';
 import { Live } from '../../dashboard/live';
@@ -39,11 +40,11 @@ const waiting = (...ids: string[]): AssistantActionApprovalListDto => ({
 });
 
 let events: Subject<LiveMessage>;
-let list: jest.Mock;
+let list: Mock;
 
 async function render(answer: AssistantActionApprovalListDto, language = 'ro') {
   events = new Subject();
-  list = jest.fn(async () => answer);
+  list = vi.fn(async () => answer);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),

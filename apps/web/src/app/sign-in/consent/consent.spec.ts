@@ -17,7 +17,7 @@ import { Consent, consentControl } from './consent';
   `,
 })
 class OtherSignUp {
-  readonly sent = jest.fn(async () => 'ok');
+  readonly sent = vi.fn(async () => 'ok');
   readonly form = new FormGroup({ consent: consentControl() });
   readonly save = taskSave({ form: this.form, send: this.sent });
 }

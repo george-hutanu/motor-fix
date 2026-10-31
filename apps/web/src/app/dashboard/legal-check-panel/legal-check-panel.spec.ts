@@ -249,7 +249,7 @@ describe('while the panel loads or fails', () => {
   it('says the check could not be loaded and offers to try again', async () => {
     const fixture = await render({ failed: true });
     const element: HTMLElement = fixture.nativeElement;
-    const retried = jest.fn();
+    const retried = vi.fn();
     fixture.componentInstance.retry.subscribe(retried);
 
     expect(text(element.querySelector('[role="alert"]'))).toContain(

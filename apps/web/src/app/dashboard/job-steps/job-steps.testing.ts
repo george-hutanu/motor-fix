@@ -11,6 +11,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { JobSteps } from './job-steps';
 import { Live } from '../live';
@@ -88,11 +89,11 @@ export const refused = (status: number, code: string, message: string) =>
   new HttpErrorResponse({ error: { code, message }, status });
 
 export let events: Subject<LiveMessage>;
-export let api: Record<string, jest.Mock>;
-export let waiting: { add: jest.Mock; actions: ReturnType<typeof signal> };
+export let api: Record<string, Mock>;
+export let waiting: { add: Mock; actions: ReturnType<typeof signal> };
 export let current: JobDto;
 // The dialogs the drawer opens: each answers what `opened` resolves to.
-export let overlays: { open: jest.Mock };
+export let overlays: { open: Mock };
 
 export async function render(
   options: {
@@ -104,14 +105,14 @@ export async function render(
   events = new Subject();
   current = job(options.job);
   api = {
-    garageJobsControllerGet: jest.fn(async () => current),
-    jobStepsControllerAdd: jest.fn(async () => step(4, { label: 'Nou' })),
-    jobStepsControllerRemove: jest.fn(async () => undefined),
-    jobStepsControllerRename: jest.fn(async () => step(2, { label: 'Altul' })),
-    jobStepsControllerReorder: jest.fn(async () => undefined),
+    garageJobsControllerGet: vi.fn(async () => current),
+    jobStepsControllerAdd: vi.fn(async () => step(4, { label: 'Nou' })),
+    jobStepsControllerRemove: vi.fn(async () => undefined),
+    jobStepsControllerRename: vi.fn(async () => step(2, { label: 'Altul' })),
+    jobStepsControllerReorder: vi.fn(async () => undefined),
   };
-  waiting = { actions: signal([]), add: jest.fn(async () => 'key-1') };
-  overlays = { open: jest.fn(async () => 'cancelled') };
+  waiting = { actions: signal([]), add: vi.fn(async () => 'key-1') };
+  overlays = { open: vi.fn(async () => 'cancelled') };
   TestBed.configureTestingModule({
     providers: [
       { provide: GarageJobsService, useValue: api },
@@ -126,9 +127,9 @@ export async function render(
       {
         provide: OVERLAY_TASK,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           data: { id: 'job-1' },
-          markUnchanged: jest.fn(),
+          markUnchanged: vi.fn(),
         },
       },
       {

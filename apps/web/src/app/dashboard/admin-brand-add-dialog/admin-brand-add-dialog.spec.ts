@@ -8,6 +8,7 @@ import { TestBed } from '@angular/core/testing';
 import { type AdminBrandDto, AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { AdminBrandAddDialog, BRAND_NAME } from './admin-brand-add-dialog';
 
@@ -27,7 +28,7 @@ const created = (name: string): AdminBrandDto => ({
   updatedBy: null,
 });
 
-let create: jest.Mock;
+let create: Mock;
 let result: Promise<OverlayResult<AdminBrandDto>>;
 
 async function settle() {
@@ -38,7 +39,7 @@ async function settle() {
 }
 
 async function open(language: 'ro' | 'en' = 'ro') {
-  create = jest.fn(async ({ body }: { body: { name: string } }) =>
+  create = vi.fn(async ({ body }: { body: { name: string } }) =>
     created(body.name),
   );
   TestBed.configureTestingModule({

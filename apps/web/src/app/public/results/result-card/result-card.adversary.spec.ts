@@ -50,7 +50,7 @@ beforeEach(async () => {
   picks = 0;
   fixture.componentInstance.point.subscribe((on) => points.push(on));
   fixture.componentInstance.pick.subscribe(() => picks++);
-  jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+  vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 });
 
 const card = () => fixture.nativeElement as HTMLElement;
@@ -158,7 +158,7 @@ describe('a result card pointer and focus, under attack', () => {
 // @traces 270-FR-004
 describe('a result card reveal, under attack', () => {
   it('reveals the same way twice', () => {
-    const scroll = jest.fn();
+    const scroll = vi.fn();
     card().scrollIntoView = scroll;
 
     fixture.componentInstance.reveal(true);

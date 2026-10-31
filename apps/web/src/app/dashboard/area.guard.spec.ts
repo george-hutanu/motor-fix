@@ -36,7 +36,7 @@ function run(area: 'driver' | 'garage' | 'admin', who: MeDto | null) {
     providers: [
       {
         provide: Session,
-        useValue: { keepReturnTo: jest.fn(), load: async () => who },
+        useValue: { keepReturnTo: vi.fn(), load: async () => who },
       },
     ],
   });
@@ -89,7 +89,7 @@ describe('areaGuard', () => {
       providers: [
         {
           provide: Session,
-          useValue: { keepReturnTo: jest.fn(), load: async () => null },
+          useValue: { keepReturnTo: vi.fn(), load: async () => null },
         },
       ],
     });
@@ -111,7 +111,7 @@ describe('areaGuard', () => {
 class Page {}
 
 async function visit(address: string, who: MeDto | null) {
-  const keepReturnTo = jest.fn();
+  const keepReturnTo = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([

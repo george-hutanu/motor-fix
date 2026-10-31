@@ -10,12 +10,13 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { ReviewTask } from './review-task';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 @Component({ template: '' })
@@ -72,9 +73,9 @@ const review = (over: Partial<ReviewDto> = {}): ReviewDto => ({
   ...over,
 });
 
-let read: jest.Mock;
-let publish: jest.Mock;
-let askAgain: jest.Mock;
+let read: Mock;
+let publish: Mock;
+let askAgain: Mock;
 let result: Promise<OverlayResult<ReviewDto>>;
 
 async function settle() {
@@ -91,9 +92,9 @@ async function open(
     language?: 'ro' | 'en';
   } = {},
 ) {
-  read = jest.fn(options.answer ?? (async () => context()));
-  publish = jest.fn(async () => review());
-  askAgain = jest.fn(async () => undefined);
+  read = vi.fn(options.answer ?? (async () => context()));
+  publish = vi.fn(async () => review());
+  askAgain = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       {
@@ -180,7 +181,7 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.mocked(toast).mockClear();
+  vi.mocked(toast).mockClear();
   TestBed.resetTestingModule();
 });
 

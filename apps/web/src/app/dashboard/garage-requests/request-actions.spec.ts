@@ -1,4 +1,5 @@
 import type { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { ConfirmBookingDialog } from './confirm-booking-dialog/confirm-booking-dialog';
 import { DeclineRequestDialog } from './decline-request-dialog/decline-request-dialog';
@@ -6,13 +7,13 @@ import { quotedRow, requestRow } from './garage-requests.testing';
 import { confirmBooking, declineRequest, sendQuote } from './request-actions';
 import { SendQuoteDialog } from './send-quote-dialog/send-quote-dialog';
 
-let open: jest.Mock;
-let feed: { reload: jest.Mock; sent: jest.Mock };
+let open: Mock;
+let feed: { reload: Mock; sent: Mock };
 const overlays = () => ({ open }) as unknown as Overlays;
 
 beforeEach(() => {
-  open = jest.fn(async () => 'cancelled');
-  feed = { reload: jest.fn(), sent: jest.fn() };
+  open = vi.fn(async () => 'cancelled');
+  feed = { reload: vi.fn(), sent: vi.fn() };
 });
 
 // @traces 347-FR-006

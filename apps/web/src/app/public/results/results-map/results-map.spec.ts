@@ -7,6 +7,8 @@ import { By } from '@angular/platform-browser';
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Layout, type LayoutName, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import * as maplibre from 'maplibre-gl';
+import type { Mocked } from 'vitest';
 
 import type { MapEvents, MapMove } from './pins-map';
 import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
@@ -19,9 +21,7 @@ import {
 } from '../../static-map/fit-view';
 import { StaticMap } from '../../static-map/static-map';
 
-jest.mock('maplibre-gl', () =>
-  jest.requireActual('../../place-step/place-step.testing'),
-);
+vi.mock('maplibre-gl', () => import('../../place-step/place-step.testing'));
 
 const PINS: GaragePinsDto = {
   pins: [
@@ -38,13 +38,13 @@ const PINS: GaragePinsDto = {
 };
 const PLACE = { lat: 44.437, lng: 26.117 };
 
-let view: jest.Mocked<ResultsMapView>;
+let view: Mocked<ResultsMapView>;
 let opened: (value: ResultsMapView) => void;
 let failed: (error: unknown) => void;
 let moved: (move: MapMove) => void;
 let tapped: (id: string | undefined) => void;
 let shifted: () => void;
-const open = jest.fn(
+const open = vi.fn(
   (
     _host: HTMLElement,
     on: MapEvents,
@@ -118,12 +118,12 @@ const legend = () =>
 beforeEach(() => {
   open.mockClear();
   view = {
-    destroy: jest.fn(),
-    fit: jest.fn(),
-    light: jest.fn(),
-    mark: jest.fn(),
-    show: jest.fn(),
-    spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 120, y: 40 })),
+    destroy: vi.fn(),
+    fit: vi.fn(),
+    light: vi.fn(),
+    mark: vi.fn(),
+    show: vi.fn(),
+    spot: vi.fn((_at: { lat: number; lng: number }) => ({ x: 120, y: 40 })),
   };
 });
 
@@ -169,15 +169,11 @@ describe('ResultsMap, the static map first', () => {
   const still = () =>
     element().querySelector('mf-static-map') as HTMLElement | null;
   beforeEach(() => {
-    jest
-      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
-      .mockReturnValue(800);
-    jest
-      .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
-      .mockReturnValue(600);
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(800);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('shows the static map and loads no MapLibre on render, pins, place or scheme', async () => {
     await render({ activated: false });
@@ -261,15 +257,10 @@ describe('ResultsMap, the static map under a phone sheet that moves', () => {
   };
   beforeEach(() => {
     sheetTop = 700;
-    jest
-      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
-      .mockReturnValue(390);
-    jest
-      .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
-      .mockReturnValue(600);
-    jest
-      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-      .mockImplementation(function (this: HTMLElement) {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(390);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: HTMLElement) {
         const [top, bottom] = band(this);
         return {
           bottom,
@@ -282,12 +273,13 @@ describe('ResultsMap, the static map under a phone sheet that moves', () => {
           x: 0,
           y: top,
         } as DOMRect;
-      });
+      },
+    );
   });
 
   afterEach(() => {
     sheet?.remove();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   async function withSheet() {
@@ -919,7 +911,7 @@ describe('ResultsMap, a move of the map', () => {
 
 // @traces 248-FR-004
 describe('RESULTS_MAP, the map while it loads', () => {
-  const { fake } = jest.requireMock<MapFake>('maplibre-gl');
+  const { fake } = maplibre as unknown as MapFake;
 
   afterEach(() => {
     fake.manualLoad = false;
@@ -932,9 +924,9 @@ describe('RESULTS_MAP, the map while it loads', () => {
     void TestBed.inject(RESULTS_MAP)(
       host,
       {
-        moved: jest.fn(),
-        picked: jest.fn(),
-        shifted: jest.fn(),
+        moved: vi.fn(),
+        picked: vi.fn(),
+        shifted: vi.fn(),
       },
       document.createElement('div'),
       { center: [26.1, 44.43], zoom: 12 },
@@ -954,10 +946,10 @@ describe('RESULTS_MAP, the map while it loads', () => {
 
   // @traces 1196-FR-015
   it('leaves no map and no watcher behind when the pins cannot be drawn on it', async () => {
-    const { Map: Built } = jest.requireMock<{
+    const { Map: Built } = maplibre as unknown as {
       Map: { prototype: { addSource(): void } };
-    }>('maplibre-gl');
-    jest.spyOn(Built.prototype, 'addSource').mockImplementationOnce(() => {
+    };
+    vi.spyOn(Built.prototype, 'addSource').mockImplementationOnce(() => {
       throw new Error('source');
     });
     const host = document.createElement('div');
@@ -966,7 +958,7 @@ describe('RESULTS_MAP, the map while it loads', () => {
     await expect(
       TestBed.inject(RESULTS_MAP)(
         host,
-        { moved: jest.fn(), picked: jest.fn(), shifted: jest.fn() },
+        { moved: vi.fn(), picked: vi.fn(), shifted: vi.fn() },
         document.createElement('div'),
         { center: [26.1, 44.43], zoom: 12 },
       ),

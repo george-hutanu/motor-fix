@@ -1,16 +1,15 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
-jest.mock('@motor-fix/observability', () => ({
-  logEntry: jest.fn(),
-  startTelemetry: jest.fn(),
-  telemetryStarted: jest.fn(),
+import { type Mock, vi } from 'vitest';
+
+vi.mock('@motor-fix/observability', () => ({
+  logEntry: vi.fn(),
+  startTelemetry: vi.fn(),
+  telemetryStarted: vi.fn(),
 }));
 
 type Observability = {
-  logEntry: jest.Mock;
-  startTelemetry: jest.Mock;
-  telemetryStarted: jest.Mock;
+  logEntry: Mock;
+  startTelemetry: Mock;
+  telemetryStarted: Mock;
 };
 
 async function load(started: boolean, faro: string | undefined) {
@@ -21,13 +20,12 @@ async function load(started: boolean, faro: string | undefined) {
   let observability: Observability | undefined;
   let failure: unknown;
   try {
-    await jest.isolateModulesAsync(async () => {
-      observability = jest.requireMock<Observability>(
-        '@motor-fix/observability',
-      );
-      observability.telemetryStarted.mockReturnValue(started);
-      await import('./telemetry');
-    });
+    vi.resetModules();
+    observability = (await import(
+      '@motor-fix/observability'
+    )) as unknown as Observability;
+    observability.telemetryStarted.mockReturnValue(started);
+    await import('./telemetry');
   } catch (error) {
     failure = error;
   } finally {

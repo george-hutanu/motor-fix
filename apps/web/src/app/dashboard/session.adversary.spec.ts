@@ -6,12 +6,12 @@ import { account, settle, setup } from './signed-in.testing';
 
 // Each load asks the server through the given answer.
 function answering(answer: () => Promise<MeDto>) {
-  const parts = setup({ me: { meControllerMe: jest.fn(answer) } });
+  const parts = setup({ me: { meControllerMe: vi.fn(answer) } });
   return { ...parts, meControllerMe: parts.me.meControllerMe };
 }
 
 beforeEach(() => localStorage.clear());
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('Session language at sign-in', () => {
   it('asks the server once for two loads in flight and applies English', async () => {
@@ -101,8 +101,8 @@ describe('Session language at sign-in', () => {
     const blocked = () => {
       throw new DOMException('insecure', 'SecurityError');
     };
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(blocked);
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(blocked);
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(blocked);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(blocked);
     const { i18n, session } = answering(() =>
       Promise.resolve(account({ language: 'en' })),
     );

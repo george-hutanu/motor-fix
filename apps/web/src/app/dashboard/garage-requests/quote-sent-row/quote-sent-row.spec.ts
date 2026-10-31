@@ -6,6 +6,7 @@ import { TestBed } from '@angular/core/testing';
 import type { GarageRequestSummaryDto, MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { QuoteSentRow } from './quote-sent-row';
 import { Session } from '../../session';
@@ -46,8 +47,8 @@ const me = (role: Role, canAnswerQuotes = false) =>
     garageId: 'garage-1',
   }) as unknown as MeDto;
 
-let open: jest.Mock;
-let reload: jest.Mock;
+let open: Mock;
+let reload: Mock;
 
 async function render(
   row: GarageRequestSummaryDto,
@@ -55,13 +56,13 @@ async function render(
   account: MeDto = me('owner'),
 ) {
   const shown = signal(account);
-  open = jest.fn(async () => 'cancelled');
-  reload = jest.fn();
+  open = vi.fn(async () => 'cancelled');
+  reload = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       { provide: Session, useValue: { current: shown, shown } },
       { provide: Overlays, useValue: { open } },
-      { provide: GarageRequestsFeed, useValue: { reload, sent: jest.fn() } },
+      { provide: GarageRequestsFeed, useValue: { reload, sent: vi.fn() } },
     ],
   });
   await TestBed.inject(I18n).enter('garage');

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 // @traces 1385-FR-002
 
 import { signal } from '@angular/core';
@@ -50,22 +51,22 @@ const row = (over: Partial<RequestSummaryDto> = {}): RequestSummaryDto => ({
 });
 
 let events: Subject<LiveMessage>;
-let list: jest.Mock;
-let compare: jest.Mock;
-let active: jest.Mock;
+let list: Mock;
+let compare: Mock;
+let active: Mock;
 const activeAnswer: ActiveRequestAnswerDto = { openCount: 0, request: null };
 
 // The active read left pending, for the specs about the list alone.
 
 // The comparison panel's own reads; its behaviour is quotes-compare's spec.
 const comparing = () => {
-  compare = jest.fn(() => new Promise<never>(() => undefined));
+  compare = vi.fn(() => new Promise<never>(() => undefined));
   return [
     {
       provide: QuoteRequestsService,
       useValue: { compareControllerGet: compare },
     },
-    { provide: QuotesService, useValue: { acceptControllerAccept: jest.fn() } },
+    { provide: QuotesService, useValue: { acceptControllerAccept: vi.fn() } },
   ];
 };
 
@@ -74,9 +75,9 @@ async function render(
   language: 'ro' | 'en' = 'ro',
 ) {
   events = new Subject();
-  active = jest.fn(async () => activeAnswer);
+  active = vi.fn(async () => activeAnswer);
   let call = 0;
-  list = jest.fn(async () => {
+  list = vi.fn(async () => {
     const items = answers[Math.min(call++, answers.length - 1)];
     if (items instanceof Error) throw items;
     return { items, nextCursor: null, total: items.length };
@@ -161,9 +162,9 @@ const lineOf = (element: HTMLElement, name: string) => {
 const cancelButton = (element: HTMLElement) =>
   element.querySelector<HTMLButtonElement>('[data-request] .actions button');
 
-let opened: jest.Mock;
+let opened: Mock;
 const dialogs = (answer: string) => {
-  opened = jest.fn(async () => answer);
+  opened = vi.fn(async () => answer);
   TestBed.overrideProvider(Overlays, { useValue: { open: opened } });
 };
 const noCancel = (element: HTMLElement) =>
@@ -172,9 +173,9 @@ const noCancel = (element: HTMLElement) =>
 // @traces 1385-FR-002
 describe('Cererile mele: the cancel action on odd rows', () => {
   it('offers no cancel when the booking starts exactly now', async () => {
-    jest.useFakeTimers({
-      advanceTimers: true,
+    vi.useFakeTimers({
       now: new Date('2026-10-26T10:00:00Z'),
+      shouldAdvanceTime: true,
     });
     try {
       const { element } = await render([
@@ -188,7 +189,7 @@ describe('Cererile mele: the cancel action on odd rows', () => {
 
       expect(noCancel(element)).toBe(0);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -369,7 +370,7 @@ describe('Cererile mele: the answer of a cancel dialog', () => {
   });
 
   it('opens one dialog when the action is tapped twice before the first answers', async () => {
-    opened = jest.fn(() => new Promise<string>(() => undefined));
+    opened = vi.fn(() => new Promise<string>(() => undefined));
     TestBed.overrideProvider(Overlays, { useValue: { open: opened } });
     const { element, settle } = await render([[row({ status: 'sent' })]]);
 

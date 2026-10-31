@@ -9,6 +9,7 @@ import { FEATURE_KEYS } from '@motor-fix/contracts';
 import type { MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { FeatureSwitches } from './feature-switches';
 import { Session } from '../session';
@@ -66,21 +67,21 @@ const allOn = () =>
     boolean
   >;
 
-let open: jest.Mock;
+let open: Mock;
 let http: HttpTestingController;
 
 async function render(
   features: Record<string, boolean> = {},
   language: 'ro' | 'en' = 'ro',
 ) {
-  open = jest.fn(async () => true);
+  open = vi.fn(async () => true);
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
       {
         provide: Session,
-        useValue: { current: signal(me(features)), reload: jest.fn() },
+        useValue: { current: signal(me(features)), reload: vi.fn() },
       },
       { provide: Overlays, useValue: { open } },
     ],

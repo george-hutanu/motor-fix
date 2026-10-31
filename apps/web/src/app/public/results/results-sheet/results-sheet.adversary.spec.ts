@@ -2,6 +2,7 @@ import { Component, PLATFORM_ID, signal, viewChild } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { Layout, type LayoutName } from '@motor-fix/ui-cockpit';
+import type { MockInstance } from 'vitest';
 
 import { ResultsSheet } from './results-sheet';
 
@@ -26,8 +27,8 @@ const SHEET = 600;
 const TOP = 120;
 const layout = signal<LayoutName>('phone');
 let fixture: ComponentFixture<Host>;
-let push: jest.SpyInstance;
-let back: jest.SpyInstance;
+let push: MockInstance;
+let back: MockInstance;
 
 async function settle() {
   for (let i = 0; i < 4; i++) {
@@ -96,18 +97,18 @@ beforeEach(async () => {
     value: 800,
   });
   Element.prototype.setPointerCapture = () => {};
-  Element.prototype.scrollTo = jest.fn();
-  jest
-    .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
-    .mockImplementation(function (this: HTMLElement) {
+  Element.prototype.scrollTo = vi.fn();
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(
+    function (this: HTMLElement) {
       return this.classList.contains('top') ? TOP : SHEET;
-    });
-  push = jest.spyOn(history, 'pushState');
-  back = jest.spyOn(history, 'back').mockImplementation(() => undefined);
+    },
+  );
+  push = vi.spyOn(history, 'pushState');
+  back = vi.spyOn(history, 'back').mockImplementation(() => undefined);
   await render();
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 1358-FR-003
 describe('ResultsSheet drags under hostile pointers', () => {

@@ -1,6 +1,3 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import { createHash } from 'node:crypto';
 import {
   createServer,

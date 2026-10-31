@@ -22,14 +22,23 @@ function aliases() {
     }));
 }
 
+/** Web's specs that run in node (its test-node target), under apps/web/src. */
+export const WEB_NODE_SPECS = ['server/**/*.spec.ts', 'app/app.config.spec.ts'];
+
 /**
  * The Vitest config of an Angular project. The project's `test` target (the
  * Angular unit-test builder, which compiles the specs and initialises TestBed
  * itself) reads only the test options from it; Stryker and the edit hooks run
  * Vitest on it directly, so it also compiles Angular, resolves the aliases and
  * runs the setup file. MUTATION_SPECS narrows the specs to one shard's.
+ * `only` and `skip` are spec globs under `<root>/src`, so web's server specs
+ * run in node on their own config and stay out of its jsdom one.
  */
-export function angularTest(root: string, environment = 'jsdom') {
+export function angularTest(
+  root: string,
+  environment = 'jsdom',
+  { only, skip = [] }: { only?: string[]; skip?: string[] } = {},
+) {
   const test = { clearMocks: true, environment, globals: true, isolate: true };
   const target = process.env['NX_TASK_TARGET_TARGET'];
   if (target === 'test' || target === 'test-node')
@@ -46,8 +55,14 @@ export function angularTest(root: string, environment = 'jsdom') {
     root: workspace,
     test: {
       ...test,
-      exclude: ['**/node_modules/**', ...(shard?.exclude ?? [])],
-      include: shard?.include ?? [`${root}/src/**/*.spec.ts`],
+      exclude: [
+        '**/node_modules/**',
+        ...skip.map((glob) => `${root}/src/${glob}`),
+        ...(shard?.exclude ?? []),
+      ],
+      include:
+        shard?.include ??
+        (only ?? ['**/*.spec.ts']).map((glob) => `${root}/src/${glob}`),
       setupFiles: [join(workspace, root, 'src/test-setup.ts')],
     },
   });

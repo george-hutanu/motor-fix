@@ -72,7 +72,7 @@ async function render(
   const fixture = TestBed.createComponent(ActiveRequest);
   fixture.componentRef.setInput('answer', answer);
   fixture.componentRef.setInput('more', options.more ?? false);
-  const retried = jest.fn();
+  const retried = vi.fn();
   fixture.componentInstance.retry.subscribe(retried);
   fixture.detectChanges();
   await fixture.whenStable();

@@ -11,6 +11,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { ProfileView } from './profile-view';
 import { Live } from '../live';
@@ -80,8 +81,8 @@ const me = {
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
-let read: jest.Mock;
-let navigate: jest.Mock;
+let read: Mock;
+let navigate: Mock;
 
 async function render(
   load: () => Promise<GarageProfileDto> = async () => answer(),
@@ -89,8 +90,8 @@ async function render(
 ) {
   events = new Subject();
   resync = new Subject();
-  read = jest.fn(load);
-  navigate = jest.fn(async () => true);
+  read = vi.fn(load);
+  navigate = vi.fn(async () => true);
   TestBed.configureTestingModule({
     deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [

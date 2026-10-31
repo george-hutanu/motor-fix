@@ -9,6 +9,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { openSellCar } from './open-sell-car';
 import type { SellCarResult } from './sell-car';
@@ -72,8 +73,8 @@ const sentAnswer = (
 const refusal = (status: number, body: object) =>
   new HttpErrorResponse({ error: body, status });
 
-let sale: jest.Mock;
-let send: jest.Mock;
+let sale: Mock;
+let send: Mock;
 let result: Promise<OverlayResult<SellCarResult>>;
 
 async function settle() {
@@ -90,8 +91,8 @@ async function open(
     answer?: () => Promise<CarTransferSentDto>;
   } = {},
 ) {
-  sale = jest.fn(options.read ?? (async () => history));
-  send = jest.fn(options.answer ?? (async () => sentAnswer()));
+  sale = vi.fn(options.read ?? (async () => history));
+  send = vi.fn(options.answer ?? (async () => sentAnswer()));
   TestBed.configureTestingModule({
     providers: [
       {
@@ -319,7 +320,7 @@ describe('closing the sale dialog', () => {
     (document.activeElement ?? document.body).dispatchEvent(
       new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }),
     );
-  const clipboard = { writeText: jest.fn(async () => undefined) };
+  const clipboard = { writeText: vi.fn(async () => undefined) };
 
   beforeEach(() => {
     clipboard.writeText.mockReset();

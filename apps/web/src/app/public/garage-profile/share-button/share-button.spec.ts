@@ -1,20 +1,21 @@
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { ShareButton } from './share-button';
 import { SITE_ORIGIN } from '../../../addresses';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 const ORIGIN = 'https://motorfix.ro';
 
 let fixture: ComponentFixture<ShareButton>;
-let share: jest.Mock | undefined;
-let writeText: jest.Mock | undefined;
+let share: Mock | undefined;
+let writeText: Mock | undefined;
 
 function offer(property: 'share' | 'clipboard', value: unknown): void {
   Object.defineProperty(navigator, property, {
@@ -24,7 +25,7 @@ function offer(property: 'share' | 'clipboard', value: unknown): void {
 }
 
 beforeEach(async () => {
-  jest.mocked(toast).mockReset();
+  vi.mocked(toast).mockReset();
   share = undefined;
   writeText = undefined;
   offer('share', undefined);
@@ -41,12 +42,12 @@ afterAll(() => {
 });
 
 function withShare(answer: Promise<void> = Promise.resolve()) {
-  share = jest.fn(() => answer);
+  share = vi.fn(() => answer);
   offer('share', share);
 }
 
 function withClipboard(answer: Promise<void> = Promise.resolve()) {
-  writeText = jest.fn(() => answer);
+  writeText = vi.fn(() => answer);
   offer('clipboard', { writeText });
 }
 
@@ -160,7 +161,7 @@ describe('sharing through the share menu', () => {
 
     await press(host);
 
-    const { url } = (share as jest.Mock).mock.calls[0][0] as { url: string };
+    const { url } = (share as Mock).mock.calls[0][0] as { url: string };
     expect(url.startsWith(`${ORIGIN}/`)).toBe(true);
     expect(url).not.toContain(location.origin);
   });

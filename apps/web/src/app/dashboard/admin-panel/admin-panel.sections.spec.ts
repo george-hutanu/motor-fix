@@ -8,6 +8,7 @@ import {
   type DashboardPanelDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
 
 import { AdminPanel } from './admin-panel';
@@ -55,8 +56,8 @@ async function open({
 } = {}) {
   events = new Subject<LiveMessage>();
   const admin = {
-    adminOverviewControllerGrowth: jest.fn(async () => ({ months: [] })),
-    adminOverviewControllerOverview: jest.fn(async () => ({
+    adminOverviewControllerGrowth: vi.fn(async () => ({ months: [] })),
+    adminOverviewControllerOverview: vi.fn(async () => ({
       activeDrivers: 10,
       answerRate: 50,
       bookings: 1,
@@ -68,18 +69,18 @@ async function open({
       reportsPending: 0,
       requestsSent: 3,
     })),
-    adminOverviewControllerQueue: jest.fn(async () => ({
+    adminOverviewControllerQueue: vi.fn(async () => ({
       items: [],
       total: 0,
     })),
-    demandControllerDemand: jest.fn(async () => ({
+    demandControllerDemand: vi.fn(async () => ({
       brands: [],
       firstDay: '2026-09-18',
       jobs: [],
       lastDay: '2026-10-17',
       requests: 0,
     })),
-    reportQueueControllerList: jest.fn(async () => ({
+    reportQueueControllerList: vi.fn(async () => ({
       items: [],
       oldestCreatedAt: null,
       overdue: 0,
@@ -87,12 +88,12 @@ async function open({
       pageSize: 20,
       total: 0,
     })),
-    systemLogControllerList: jest.fn(async () => ({ items: [] })),
+    systemLogControllerList: vi.fn(async () => ({ items: [] })),
   };
   const layout = {
-    dashboardLayoutsControllerRead: jest.fn(read),
-    dashboardLayoutsControllerReset: jest.fn(async () => layoutAnswer()),
-    dashboardLayoutsControllerSave: jest.fn(
+    dashboardLayoutsControllerRead: vi.fn(read),
+    dashboardLayoutsControllerReset: vi.fn(async () => layoutAnswer()),
+    dashboardLayoutsControllerSave: vi.fn(
       async ({ body }: { body: { panels: DashboardPanelDto[] } }) =>
         layoutAnswer(body.panels),
     ),
@@ -161,7 +162,6 @@ const rows = () =>
 
 afterEach(() => {
   document.body.innerHTML = '';
-  jest.dontMock('../dashboard-sections-panel/dashboard-sections-panel');
 });
 
 // @traces 1391-FR-001 1391-FR-007
@@ -362,7 +362,9 @@ describe('the panel "Personalizează panoul" opens', () => {
 
   it('opens nothing when its code cannot be fetched, and tries again on the next press', async () => {
     const { element } = await open();
-    jest.doMock('../dashboard-sections-panel/dashboard-sections-panel', () => {
+    // The import and the open share one try, so a failed open stands for a
+    // chunk that could not be fetched (the builder bundles the panel's module).
+    vi.spyOn(TestBed.inject(Overlays), 'open').mockImplementationOnce(() => {
       throw new Error('chunk failed');
     });
 
@@ -371,7 +373,6 @@ describe('the panel "Personalizează panoul" opens', () => {
     expect(drawer()).toBeNull();
     expect(sections(element)).toHaveLength(7);
 
-    jest.dontMock('../dashboard-sections-panel/dashboard-sections-panel');
     customise(element)?.click();
     await settle();
     expect(drawer()).not.toBeNull();

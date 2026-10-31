@@ -1,10 +1,8 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import { createServer, request as httpRequest, type Server } from 'node:http';
 import type { AddressInfo, Socket } from 'node:net';
 
 import express from 'express';
+import { type MockInstance, vi } from 'vitest';
 
 import { mountEdge } from './edge';
 
@@ -48,12 +46,12 @@ describe('web edge proxy with an API that resets connections', () => {
   let connections: number;
   let bodies: string[];
   let reset: (socket: Socket) => void;
-  let spies: jest.SpyInstance[];
+  let spies: MockInstance[];
 
   beforeEach(async () => {
     spies = [
-      jest.spyOn(process.stdout, 'write').mockImplementation(() => true),
-      jest.spyOn(process.stderr, 'write').mockImplementation(() => true),
+      vi.spyOn(process.stdout, 'write').mockImplementation(() => true),
+      vi.spyOn(process.stderr, 'write').mockImplementation(() => true),
     ];
     connections = 0;
     bodies = [];

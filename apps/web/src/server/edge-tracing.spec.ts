@@ -1,6 +1,3 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import { createServer, type Server } from 'node:http';
 import { type AddressInfo, connect } from 'node:net';
 
@@ -9,6 +6,7 @@ import { inMemory, patchForJest } from '@motor-fix/observability/testing';
 import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 import express from 'express';
+import { type MockInstance, vi } from 'vitest';
 
 import { mountEdge } from './edge';
 
@@ -95,11 +93,11 @@ async function problems() {
 }
 
 const quiet = () => ({
-  err: jest.spyOn(console, 'error').mockImplementation(() => {}),
-  out: jest.spyOn(console, 'log').mockImplementation(() => {}),
+  err: vi.spyOn(console, 'error').mockImplementation(() => {}),
+  out: vi.spyOn(console, 'log').mockImplementation(() => {}),
 });
 
-const parsed = (spy: jest.SpyInstance) =>
+const parsed = (spy: MockInstance) =>
   spy.mock.calls.map(([line]) => JSON.parse(String(line)));
 
 describe('the web edge, traced', () => {
@@ -171,7 +169,7 @@ describe('the web edge, traced', () => {
     const server = createServer(down);
     const downBase = await listen(server);
     const lines: string[] = [];
-    const error = jest
+    const error = vi
       .spyOn(console, 'error')
       .mockImplementation((line: string) => lines.push(line));
 
@@ -202,7 +200,7 @@ describe('the web edge, traced', () => {
 
 // @traces 1345-FR-009
 describe('the web edge, reporting an API call that failed', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('logs one error line and one ERROR record naming the method and the masked path', async () => {
     const down = express();
@@ -240,7 +238,7 @@ describe('the web edge, reporting an API call that failed', () => {
 
 // @traces 1345-FR-010
 describe('the web edge, when an answer is cut short', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('gives one WARN record and cuts the browser off when the API closes after the headers', async () => {
     const { err, out } = quiet();
@@ -293,7 +291,7 @@ describe('the web edge, when an answer is cut short', () => {
 
 // @traces 1345-FR-011
 describe('the web edge, retrying a stale connection', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('writes no record when the second attempt answers', async () => {
     const { err, out } = quiet();

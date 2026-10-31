@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { AuthService, type MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { ConfirmEmail } from './confirm-email';
 import { Session } from '../../dashboard/session';
@@ -14,9 +15,9 @@ const TOKEN = 'A'.repeat(43);
 const problem = (status: number, code: string) =>
   new HttpErrorResponse({ error: { code, status }, status });
 
-let confirm: jest.Mock;
-let resend: jest.Mock;
-let reload: jest.Mock;
+let confirm: Mock;
+let resend: Mock;
+let reload: Mock;
 
 async function open(
   options: {
@@ -25,9 +26,9 @@ async function open(
     signedIn?: boolean;
   } = {},
 ) {
-  confirm ??= jest.fn(async () => ({ status: 'confirmed' }));
-  resend ??= jest.fn(async () => undefined);
-  reload = jest.fn(async () => undefined);
+  confirm ??= vi.fn(async () => ({ status: 'confirmed' }));
+  resend ??= vi.fn(async () => undefined);
+  reload = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -79,8 +80,8 @@ const button = (harness: RouterTestingHarness, name: string) =>
   );
 
 beforeEach(() => {
-  confirm = undefined as unknown as jest.Mock;
-  resend = undefined as unknown as jest.Mock;
+  confirm = undefined as unknown as Mock;
+  resend = undefined as unknown as Mock;
 });
 
 describe('ConfirmEmail', () => {
@@ -107,7 +108,7 @@ describe('ConfirmEmail', () => {
   });
 
   it('shows the busy state until the answer arrives', async () => {
-    confirm = jest.fn(() => new Promise(() => undefined));
+    confirm = vi.fn(() => new Promise(() => undefined));
     const harness = await open();
 
     expect(text(harness)).toContain('Confirmăm adresa…');
@@ -127,7 +128,7 @@ describe('ConfirmEmail', () => {
     [410, 'link_expired'],
     [400, 'validation_failed'],
   ])('offers a new link when the link is spent (%s)', async (status, code) => {
-    confirm = jest.fn(async () => {
+    confirm = vi.fn(async () => {
       throw problem(status, code);
     });
     const harness = await open();
@@ -137,7 +138,7 @@ describe('ConfirmEmail', () => {
   });
 
   it('sends a new link from the expired page', async () => {
-    confirm = jest.fn(async () => {
+    confirm = vi.fn(async () => {
       throw problem(410, 'link_expired');
     });
     const harness = await open();
@@ -150,10 +151,10 @@ describe('ConfirmEmail', () => {
   });
 
   it('says the address is confirmed when a new link is no longer needed', async () => {
-    confirm = jest.fn(async () => {
+    confirm = vi.fn(async () => {
       throw problem(410, 'link_expired');
     });
-    resend = jest.fn(async () => {
+    resend = vi.fn(async () => {
       throw problem(409, 'email_already_confirmed');
     });
     const harness = await open();
@@ -165,10 +166,10 @@ describe('ConfirmEmail', () => {
   });
 
   it('asks to wait when links were asked too often', async () => {
-    confirm = jest.fn(async () => {
+    confirm = vi.fn(async () => {
       throw problem(410, 'link_expired');
     });
-    resend = jest.fn(async () => {
+    resend = vi.fn(async () => {
       throw problem(429, 'too_many_attempts');
     });
     const harness = await open();
@@ -183,10 +184,10 @@ describe('ConfirmEmail', () => {
   });
 
   it('points to the account when this link cannot ask for a new one', async () => {
-    confirm = jest.fn(async () => {
+    confirm = vi.fn(async () => {
       throw problem(410, 'link_expired');
     });
-    resend = jest.fn(async () => {
+    resend = vi.fn(async () => {
       throw problem(410, 'link_expired');
     });
     const harness = await open();
@@ -201,7 +202,7 @@ describe('ConfirmEmail', () => {
   });
 
   it('offers to try again when the confirmation could not be done', async () => {
-    confirm = jest
+    confirm = vi
       .fn()
       .mockRejectedValueOnce(new HttpErrorResponse({ status: 0 }))
       .mockResolvedValueOnce({ status: 'confirmed' });
@@ -216,10 +217,10 @@ describe('ConfirmEmail', () => {
   });
 
   it('says when the new link could not be sent', async () => {
-    confirm = jest.fn(async () => {
+    confirm = vi.fn(async () => {
       throw problem(410, 'link_expired');
     });
-    resend = jest.fn(async () => {
+    resend = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 503 });
     });
     const harness = await open();
@@ -237,7 +238,7 @@ describe('ConfirmEmail', () => {
 // @traces 139-FR-008
 describe('the link of an e-mail change whose address was taken', () => {
   it('says another account uses the address and offers no new link', async () => {
-    confirm = jest.fn(async () => {
+    confirm = vi.fn(async () => {
       throw problem(409, 'email_taken');
     });
 
@@ -253,10 +254,10 @@ describe('the link of an e-mail change whose address was taken', () => {
 
   // @traces 139-FR-009
   it('says the address is taken when a new link finds it taken meanwhile', async () => {
-    confirm = jest.fn(async () => {
+    confirm = vi.fn(async () => {
       throw problem(410, 'link_expired');
     });
-    resend = jest.fn(async () => {
+    resend = vi.fn(async () => {
       throw problem(409, 'email_taken');
     });
     const harness = await open();
@@ -269,7 +270,7 @@ describe('the link of an e-mail change whose address was taken', () => {
   });
 
   it('says it in English on the English address', async () => {
-    confirm = jest.fn(async () => {
+    confirm = vi.fn(async () => {
       throw problem(409, 'email_taken');
     });
 
@@ -295,7 +296,7 @@ describe('the expired page of either kind of link', () => {
       'A confirmation link works once: for 72 hours after sign-up, or 24 hours when you change your address.',
     ],
   ] as const)('states both lifetimes (%s)', async (language, line) => {
-    confirm = jest.fn(async () => {
+    confirm = vi.fn(async () => {
       throw problem(410, 'link_expired');
     });
 

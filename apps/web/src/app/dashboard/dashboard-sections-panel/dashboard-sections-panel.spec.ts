@@ -55,7 +55,7 @@ async function open(
   await TestBed.inject(I18n).enter('garage');
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const host = TestBed.createComponent(Host);
-  const spy = jest.fn(toggle);
+  const spy = vi.fn(toggle);
   result = host.componentInstance.overlays.open<'done', SectionsPanelData>(
     DashboardSectionsPanel,
     {

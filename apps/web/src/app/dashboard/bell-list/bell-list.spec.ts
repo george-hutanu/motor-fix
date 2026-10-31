@@ -8,6 +8,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { ago, BellList } from './bell-list';
 import { BellStore } from '../bell/bell';
@@ -29,10 +30,10 @@ const row = (id: string, overrides: Partial<NotificationDto> = {}) =>
   }) as NotificationDto;
 
 let api: {
-  bellControllerList: jest.Mock;
-  bellControllerRead: jest.Mock;
-  bellControllerReadAll: jest.Mock;
-  bellControllerUnreadCount: jest.Mock;
+  bellControllerList: Mock;
+  bellControllerRead: Mock;
+  bellControllerReadAll: Mock;
+  bellControllerUnreadCount: Mock;
 };
 
 @Component({ template: '' })
@@ -55,12 +56,12 @@ async function render(
   { load = true } = {},
 ) {
   api = {
-    bellControllerList: jest.fn(list),
-    bellControllerRead: jest.fn(async ({ id }: { id: string }) =>
+    bellControllerList: vi.fn(list),
+    bellControllerRead: vi.fn(async ({ id }: { id: string }) =>
       row(id, { readAt: new Date().toISOString() }),
     ),
-    bellControllerReadAll: jest.fn(async () => undefined),
-    bellControllerUnreadCount: jest.fn(async () => ({ count: 0 })),
+    bellControllerReadAll: vi.fn(async () => undefined),
+    bellControllerUnreadCount: vi.fn(async () => ({ count: 0 })),
   };
   TestBed.configureTestingModule({
     providers: [
@@ -169,7 +170,7 @@ describe('BellList', () => {
     // The list's close steps back in history and the router replays that
     // address after it: a navigation started before the close settles is
     // undone, so the list never navigates itself.
-    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
 
     element.querySelector<HTMLButtonElement>('li button')?.click();
     await settle();
@@ -186,7 +187,7 @@ describe('BellList', () => {
       items: [row('a')],
       nextCursor: null,
     }));
-    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
 
     element.querySelector<HTMLButtonElement>('li button')?.click();
     await settle();

@@ -1,3 +1,5 @@
+import * as maplibre from 'maplibre-gl';
+
 import {
   circleBounds,
   closeMapLibre,
@@ -9,10 +11,8 @@ import {
 } from './map-libre';
 import type { MapFake } from '../place-step/place-step.testing';
 
-jest.mock('maplibre-gl', () =>
-  jest.requireActual('../place-step/place-step.testing'),
-);
-const { fake } = jest.requireMock<MapFake>('maplibre-gl');
+vi.mock('maplibre-gl', () => import('../place-step/place-step.testing'));
+const { fake } = maplibre as unknown as MapFake;
 
 type TestWindow = {
   __MF_MAP?: unknown;
@@ -30,13 +30,13 @@ afterEach(() => {
   delete view.__MF_MAP_STYLE;
   delete view.matchMedia;
   fake.manualLoad = false;
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 // @traces 269-FR-011
 describe('styleFor, the tiles a map reads', () => {
   const scheme = (dark: boolean) => {
-    view.matchMedia = jest.fn((query: string) => ({
+    view.matchMedia = vi.fn((query: string) => ({
       matches: dark && query === '(prefers-color-scheme: dark)',
     }));
   };
@@ -155,7 +155,7 @@ describe('openMapLibre, a map that loads or says it cannot', () => {
   });
 
   it('answers the map once it has loaded, telling the caller at the load itself', async () => {
-    const loaded = jest.fn();
+    const loaded = vi.fn();
     const opening = openMapLibre(document.createElement('div'), LIGHT, loaded);
     await built();
 
@@ -205,26 +205,26 @@ describe('openMapLibre, a map that loads or says it cannot', () => {
   });
 
   it('gives up on a map that has not loaded within 10 seconds', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const opening = openMapLibre(document.createElement('div'), LIGHT);
     const rejected = expect(opening).rejects.toThrow();
 
-    await jest.advanceTimersByTimeAsync(9999);
+    await vi.advanceTimersByTimeAsync(9999);
     expect(fake.map.remove).not.toHaveBeenCalled();
-    await jest.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(1);
 
     await rejected;
     expect(fake.map.remove).toHaveBeenCalledTimes(1);
   });
 
   it('keeps a loaded map standing through a tile error, and past the 10 seconds', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const opening = openMapLibre(document.createElement('div'), LIGHT);
-    await jest.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
 
     fake.map.fire('load');
     fake.map.fire('error', { error: new Error('tile 404') });
-    await jest.advanceTimersByTimeAsync(20_000);
+    await vi.advanceTimersByTimeAsync(20_000);
 
     await expect(opening).resolves.toBe(fake.map);
     expect(fake.map.remove).not.toHaveBeenCalled();

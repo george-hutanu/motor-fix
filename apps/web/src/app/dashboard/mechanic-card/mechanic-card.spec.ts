@@ -13,13 +13,14 @@ import type { GarageMechanicDto, MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { MechanicCard, type MechanicCardData } from './mechanic-card';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 @Component({ template: '' })
@@ -62,7 +63,7 @@ const me = {
 
 let http: HttpTestingController;
 let result: Promise<OverlayResult<'saved' | 'removed'>>;
-let refresh: jest.Mock<Promise<GarageMechanicDto | undefined>, []>;
+let refresh: Mock<(...args: []) => Promise<GarageMechanicDto | undefined>>;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -88,7 +89,7 @@ async function open(
   await TestBed.inject(I18n).enter('garage');
   if (language === 'en') await TestBed.inject(I18n).use('en');
   http = TestBed.inject(HttpTestingController);
-  refresh = jest.fn(async () => existing);
+  refresh = vi.fn(async () => existing);
   const host = TestBed.createComponent(Host);
   result = host.componentInstance.overlays.open<
     'saved' | 'removed',
@@ -187,7 +188,7 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.mocked(toast).mockReset();
+  vi.mocked(toast).mockReset();
   TestBed.resetTestingModule();
 });
 
@@ -605,11 +606,11 @@ const invited = (
 // @traces 1255-FR-013 1255-FR-016
 describe('the card dialog, inviting the mechanic', () => {
   beforeEach(() => {
-    jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    vi.spyOn(Date, 'now').mockReturnValue(NOW);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('offers Invită on a saved card with no account and no invite', async () => {

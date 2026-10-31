@@ -7,6 +7,7 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { I18n } from '@motor-fix/i18n';
 import { OpenSheets } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { DashboardTabBar } from './tab-bar';
 import { spoken } from '../../spoken.testing';
@@ -23,7 +24,7 @@ class Host {
   readonly views = signal(DASHBOARDS.garage.views.slice(0, 5));
 }
 
-let scrolled: jest.Mock;
+let scrolled: Mock;
 
 // jsdom lays nothing out: the bar is 199.5 px wide (a phone's fractional
 // pixels) and each tab 80 px, placed by the bar's own horizontal scroll.
@@ -38,11 +39,11 @@ function layout(this: Element): DOMRect {
 }
 
 async function open(url: string) {
-  scrolled = jest.fn();
+  scrolled = vi.fn();
   Element.prototype.scrollIntoView = scrolled;
-  jest
-    .spyOn(Element.prototype, 'getBoundingClientRect')
-    .mockImplementation(layout);
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+    layout,
+  );
   TestBed.configureTestingModule({
     providers: [
       provideRouter([

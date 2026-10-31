@@ -45,7 +45,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
   document.body.innerHTML = '';
 });
@@ -99,8 +99,8 @@ const text = (el: Element | null | undefined) =>
 
 // Real time is too coarse to tell 299 ms from 300 ms; these move a fake clock.
 const fakeClock = () =>
-  jest.useFakeTimers({
-    doNotFake: ['queueMicrotask', 'nextTick', 'setImmediate'],
+  vi.useFakeTimers({
+    toNotFake: ['queueMicrotask', 'nextTick', 'setImmediate'],
   });
 
 // @traces 002-FR-008 002-FR-013
@@ -173,12 +173,12 @@ describe('the search text it commits', () => {
     fakeClock();
 
     type(element, 'an');
-    jest.advanceTimersByTime(200);
+    vi.advanceTimersByTime(200);
     type(element, 'andrei');
-    jest.advanceTimersByTime(299);
+    vi.advanceTimersByTime(299);
     expect(host.searched).toEqual([]);
 
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
     expect(host.searched).toEqual(['andrei']);
   });
 
@@ -188,7 +188,7 @@ describe('the search text it commits', () => {
 
     // Ș written as S and a combining comma below.
     type(element, '  S\u0326tefan   Marin ');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
 
     expect(host.searched).toEqual(['Ștefan Marin']);
   });
@@ -198,7 +198,7 @@ describe('the search text it commits', () => {
     fakeClock();
 
     type(element, 'a'.repeat(95));
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
 
     expect(host.searched).toEqual(['a'.repeat(80)]);
     expect(box(element).maxLength).toBe(80);
@@ -209,7 +209,7 @@ describe('the search text it commits', () => {
     fakeClock();
 
     type(element, 'andrei ');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     expect(host.searched).toEqual(['andrei']);
 
     host.q.set('andrei');
@@ -217,7 +217,7 @@ describe('the search text it commits', () => {
     expect(box(element).value).toBe('andrei ');
 
     type(element, 'andrei mar');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     expect(host.searched).toEqual(['andrei', 'andrei mar']);
   });
 
@@ -226,7 +226,7 @@ describe('the search text it commits', () => {
     fakeClock();
 
     type(element, 'andrei ');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     host.q.set('andrei');
     TestBed.tick();
 

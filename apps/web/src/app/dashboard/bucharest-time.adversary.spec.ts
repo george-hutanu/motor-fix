@@ -24,7 +24,7 @@ describe('the Bucharest clock under hostile days and zones', () => {
 
   afterEach(() => {
     process.env['TZ'] = zone;
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe.each(['UTC', 'Pacific/Kiritimati', 'Asia/Kathmandu'])(
@@ -99,19 +99,19 @@ describe('the Bucharest clock under hostile days and zones', () => {
       });
 
       it('moves to the following quarter when now is exactly on one, and a millisecond either side', () => {
-        jest.useFakeTimers({ now: new Date('2026-01-15T08:14:59.999Z') });
+        vi.useFakeTimers({ now: new Date('2026-01-15T08:14:59.999Z') });
         expect(nextQuarter()).toBe('10:15');
-        jest.setSystemTime(new Date('2026-01-15T08:15:00.000Z'));
+        vi.setSystemTime(new Date('2026-01-15T08:15:00.000Z'));
         expect(nextQuarter()).toBe('10:30');
-        jest.setSystemTime(new Date('2026-01-15T08:15:00.001Z'));
+        vi.setSystemTime(new Date('2026-01-15T08:15:00.001Z'));
         expect(nextQuarter()).toBe('10:30');
       });
 
       it('gives a quarter mark across the spring change day', () => {
-        jest.useFakeTimers({ now: new Date('2026-03-29T00:50:00.000Z') });
+        vi.useFakeTimers({ now: new Date('2026-03-29T00:50:00.000Z') });
 
         expect(nextQuarter()).toBe('03:00');
-        jest.setSystemTime(new Date('2026-03-29T01:00:00.000Z'));
+        vi.setSystemTime(new Date('2026-03-29T01:00:00.000Z'));
         expect(nextQuarter()).toBe('04:15');
       });
     },

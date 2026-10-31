@@ -51,9 +51,9 @@ function setup({
 } = {}) {
   const live = fakeLive();
   const api = {
-    dashboardLayoutsControllerRead: jest.fn(read),
-    dashboardLayoutsControllerReset: jest.fn(reset),
-    dashboardLayoutsControllerSave: jest.fn(save),
+    dashboardLayoutsControllerRead: vi.fn(read),
+    dashboardLayoutsControllerReset: vi.fn(reset),
+    dashboardLayoutsControllerSave: vi.fn(save),
   };
   const me = signal<MeDto | null>({
     id: 'admin-1',

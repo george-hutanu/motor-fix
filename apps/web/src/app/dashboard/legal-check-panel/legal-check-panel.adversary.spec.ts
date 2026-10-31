@@ -93,7 +93,7 @@ describe('the legal check panel adversary', () => {
   // @traces 210-FR-010
   it('emits retry on every click', async () => {
     const fixture = await render({ failed: true });
-    const spy = jest.fn();
+    const spy = vi.fn();
     fixture.componentInstance.retry.subscribe(spy);
     const button = fixture.nativeElement.querySelector(
       'button',

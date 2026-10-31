@@ -5,6 +5,7 @@ import { GarageRequestsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import {
   type DeclineRequestData,
@@ -13,9 +14,9 @@ import {
 } from './decline-request-dialog';
 import { Consent } from '../../../consent/consent';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 @Component({ template: '' })
@@ -37,8 +38,8 @@ const DECLINED = {
   status: 'declined',
 };
 
-let decline: jest.Mock;
-let track: jest.Mock;
+let decline: Mock;
+let track: Mock;
 let result: Promise<DeclineRequestResult | 'cancelled'>;
 
 async function settle() {
@@ -49,8 +50,8 @@ async function settle() {
 }
 
 async function open({ language = 'ro' }: { language?: 'ro' | 'en' } = {}) {
-  decline = jest.fn(async () => DECLINED);
-  track = jest.fn();
+  decline = vi.fn(async () => DECLINED);
+  track = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       { provide: Consent, useValue: { track } },
@@ -111,8 +112,8 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  (toast as unknown as jest.Mock).mockClear();
-  jest.restoreAllMocks();
+  (toast as unknown as Mock).mockClear();
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
 });
 
@@ -303,7 +304,7 @@ describe('the decline dialog: declining', () => {
   });
 
   it('disables Refuză offline with Ești offline and keeps the reason', async () => {
-    const online = jest.spyOn(navigator, 'onLine', 'get');
+    const online = vi.spyOn(navigator, 'onLine', 'get');
     online.mockReturnValue(false);
     await open();
     await pick('Suntem ocupați complet');

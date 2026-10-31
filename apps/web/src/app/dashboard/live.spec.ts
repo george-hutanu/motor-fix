@@ -7,6 +7,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
+import type { Mock } from 'vitest';
 
 import { Live, liveResource } from './live';
 import { Session } from './session';
@@ -50,9 +51,9 @@ class Body {
 }
 
 let bodies: Body[];
-let fetchMock: jest.Mock;
+let fetchMock: Mock;
 let tokens: string[];
-let renew: jest.Mock;
+let renew: Mock;
 
 const flush = async () => {
   for (let i = 0; i < 10; i++) await Promise.resolve();
@@ -61,11 +62,11 @@ const flush = async () => {
 function setUp(platform = 'browser') {
   bodies = [];
   tokens = ['token-1', 'token-2', 'token-3'];
-  renew = jest.fn(async () => {
+  renew = vi.fn(async () => {
     tokens.shift();
     return true;
   });
-  fetchMock = jest.fn(async () => {
+  fetchMock = vi.fn(async () => {
     const body = new Body();
     bodies.push(body);
     return {
@@ -174,7 +175,7 @@ describe('Live', () => {
   it.each(['expired', 'shutdown'])(
     'renews the token and reconnects within 3 seconds after bye %s',
     async (reason) => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       try {
         const { live } = setUp();
         live.open();
@@ -183,7 +184,7 @@ describe('Live', () => {
         bodies[0]?.send(event('bye', { reason }));
         bodies[0]?.end();
         await flush();
-        jest.advanceTimersByTime(3_000);
+        vi.advanceTimersByTime(3_000);
         await flush();
 
         expect(renew).toHaveBeenCalledTimes(1);
@@ -191,7 +192,7 @@ describe('Live', () => {
         const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
         expect(init.headers).toMatchObject({ Authorization: 'Bearer token-2' });
       } finally {
-        jest.useRealTimers();
+        vi.useRealTimers();
       }
     },
   );
@@ -406,7 +407,7 @@ describe('liveResource', () => {
   });
 
   it('reads again 60 seconds after a failed re-read', async () => {
-    jest.useFakeTimers({ advanceTimers: true });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       let fail = false;
       let reads = 0;
@@ -420,23 +421,23 @@ describe('liveResource', () => {
       fail = false;
       expect(reads).toBe(2);
 
-      jest.advanceTimersByTime(59_000);
+      vi.advanceTimersByTime(59_000);
       await flush();
       expect(reads).toBe(2);
-      jest.advanceTimersByTime(1_000);
+      vi.advanceTimersByTime(1_000);
       await flush();
 
       expect(reads).toBe(3);
       expect(ref.value()).toEqual({ reads: 3 });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it.each([400, 403])(
     'does not read again after a read refused with %s',
     async (status) => {
-      jest.useFakeTimers({ advanceTimers: true });
+      vi.useFakeTimers({ shouldAdvanceTime: true });
       try {
         let reads = 0;
         const { ref } = await viewOf(async () => {
@@ -444,13 +445,13 @@ describe('liveResource', () => {
           throw new HttpErrorResponse({ status });
         });
 
-        jest.advanceTimersByTime(120_000);
+        vi.advanceTimersByTime(120_000);
         await flush();
 
         expect(reads).toBe(1);
         expect((ref.error() as HttpErrorResponse).status).toBe(status);
       } finally {
-        jest.useRealTimers();
+        vi.useRealTimers();
       }
     },
   );
@@ -471,7 +472,7 @@ describe('liveResource', () => {
   });
 
   it('leaves no retry behind when the view is gone before its re-read fails', async () => {
-    jest.useFakeTimers({ advanceTimers: true });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       let reads = 0;
       let fail: (() => void) | undefined;
@@ -490,12 +491,12 @@ describe('liveResource', () => {
       fail?.();
       await flush();
 
-      expect(jest.getTimerCount()).toBe(0);
-      jest.advanceTimersByTime(60_000);
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(60_000);
       await flush();
       expect(reads).toBe(2);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -591,7 +592,7 @@ const created = (position: string) =>
 // @traces 1190-FR-008
 describe('Live: where a stream picks up', () => {
   it('names no position on its first stream, and the latest it saw on every one after', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const { live } = setUp();
       live.open();
@@ -602,14 +603,14 @@ describe('Live: where a stream picks up', () => {
       bodies[0]?.send(event('live.test'));
       bodies[0]?.end();
       await flush();
-      jest.advanceTimersByTime(3_500);
+      vi.advanceTimersByTime(3_500);
       await flush();
 
       expect(headersOf(0)).not.toHaveProperty('Last-Event-ID');
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(headersOf(1)).toMatchObject({ 'Last-Event-ID': '9' });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -639,7 +640,7 @@ describe('Live: where a stream picks up', () => {
 // @traces 1190-FR-006
 describe('Live: the wait the server asks for', () => {
   it('waits the retry the server sent before its first reopen after a drop', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const { live } = setUp();
       live.open();
@@ -649,21 +650,21 @@ describe('Live: the wait the server asks for', () => {
 
       bodies[0]?.end();
       await flush();
-      jest.advanceTimersByTime(2_999);
+      vi.advanceTimersByTime(2_999);
       await flush();
       expect(fetchMock).toHaveBeenCalledTimes(1);
 
-      jest.advanceTimersByTime(1);
+      vi.advanceTimersByTime(1);
       await flush();
       expect(fetchMock).toHaveBeenCalledTimes(2);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it('keeps its own backoff for the tries after that', async () => {
-    jest.useFakeTimers();
-    jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
     try {
       const { live } = setUp();
       live.open();
@@ -672,19 +673,19 @@ describe('Live: the wait the server asks for', () => {
       fetchMock.mockRejectedValueOnce(new TypeError('network'));
       bodies[0]?.end();
       await flush();
-      jest.advanceTimersByTime(3_000);
+      vi.advanceTimersByTime(3_000);
       await flush();
       expect(fetchMock).toHaveBeenCalledTimes(2);
 
-      jest.advanceTimersByTime(1_999);
+      vi.advanceTimersByTime(1_999);
       await flush();
       expect(fetchMock).toHaveBeenCalledTimes(2);
-      jest.advanceTimersByTime(1);
+      vi.advanceTimersByTime(1);
       await flush();
       expect(fetchMock).toHaveBeenCalledTimes(3);
     } finally {
-      jest.restoreAllMocks();
-      jest.useRealTimers();
+      vi.restoreAllMocks();
+      vi.useRealTimers();
     }
   });
 });
@@ -692,7 +693,7 @@ describe('Live: the wait the server asks for', () => {
 // @traces 1190-FR-009
 describe('Live: leaving the page for the back/forward cache', () => {
   it('closes its stream on pagehide, keeps it closed, and wants it again on pageshow from its latest position', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const { live } = setUp();
       live.open();
@@ -704,7 +705,7 @@ describe('Live: leaving the page for the back/forward cache', () => {
       window.dispatchEvent(new Event('pagehide'));
       bodies[0]?.end();
       await flush();
-      jest.advanceTimersByTime(60_000);
+      vi.advanceTimersByTime(60_000);
       await flush();
       expect(first.signal?.aborted).toBe(true);
       expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -714,7 +715,7 @@ describe('Live: leaving the page for the back/forward cache', () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(headersOf(1)).toMatchObject({ 'Last-Event-ID': '12' });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -736,11 +737,11 @@ function tabsOf(count: number) {
   const locks = withTabs();
   bodies = [];
   tokens = ['token-1', 'token-2', 'token-3'];
-  renew = jest.fn(async () => {
+  renew = vi.fn(async () => {
     tokens.shift();
     return true;
   });
-  fetchMock = jest.fn(async () => {
+  fetchMock = vi.fn(async () => {
     const body = new Body();
     bodies.push(body);
     return { body: { getReader: () => body.reader }, ok: true, status: 200 };
@@ -799,7 +800,7 @@ describe('Live: one stream per browser', () => {
   });
 
   it('keeps the lock through a drop, fans out reconnecting and the re-read, and reopens itself', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const { tabs } = tabsOf(2);
       const [holder, follower] = tabs;
@@ -814,14 +815,14 @@ describe('Live: one stream per browser', () => {
       await flush();
       expect(follower?.live.state()).toBe('reconnecting');
 
-      jest.advanceTimersByTime(1_200);
+      vi.advanceTimersByTime(1_200);
       await flush();
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(follower?.live.state()).toBe('open');
       expect(follower?.resyncs()).toBe(1);
       expect(holder?.resyncs()).toBe(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 

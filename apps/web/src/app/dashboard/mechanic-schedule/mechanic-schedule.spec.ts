@@ -10,13 +10,14 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { MechanicSchedule } from './mechanic-schedule';
 import { Live } from '../live';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 type Message = { id: string; kind: string };
@@ -63,10 +64,10 @@ const refusal = (status: number, error: unknown) =>
 
 let events: Subject<Message>;
 let api: {
-  mechanicScheduleControllerAddDayOff: jest.Mock;
-  mechanicScheduleControllerRead: jest.Mock;
-  mechanicScheduleControllerRemoveDayOff: jest.Mock;
-  mechanicScheduleControllerWrite: jest.Mock;
+  mechanicScheduleControllerAddDayOff: Mock;
+  mechanicScheduleControllerRead: Mock;
+  mechanicScheduleControllerRemoveDayOff: Mock;
+  mechanicScheduleControllerWrite: Mock;
 };
 
 async function render(
@@ -75,10 +76,10 @@ async function render(
 ) {
   events = new Subject();
   api = {
-    mechanicScheduleControllerAddDayOff: jest.fn(),
-    mechanicScheduleControllerRead: jest.fn(async () => first),
-    mechanicScheduleControllerRemoveDayOff: jest.fn(async () => undefined),
-    mechanicScheduleControllerWrite: jest.fn(),
+    mechanicScheduleControllerAddDayOff: vi.fn(),
+    mechanicScheduleControllerRead: vi.fn(async () => first),
+    mechanicScheduleControllerRemoveDayOff: vi.fn(async () => undefined),
+    mechanicScheduleControllerWrite: vi.fn(),
   };
   TestBed.configureTestingModule({
     providers: [
@@ -156,7 +157,7 @@ const addField = (element: HTMLElement, id: string) =>
 const dayAhead = (days: number) =>
   new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
-afterEach(() => jest.clearAllMocks());
+afterEach(() => vi.clearAllMocks());
 
 // @traces 058-FR-014
 describe("the Program tab's week", () => {

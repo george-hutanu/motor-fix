@@ -19,13 +19,13 @@ const OWNER = {
 function phoneSetup() {
   const { auth, session } = setup({
     auth: {
-      authControllerRefresh: jest.fn(() => Promise.reject(new Error('401'))),
-      phoneSignInControllerPhoneCode: jest.fn(() => Promise.resolve()),
-      phoneSignInControllerPhoneSignIn: jest.fn(() =>
+      authControllerRefresh: vi.fn(() => Promise.reject(new Error('401'))),
+      phoneSignInControllerPhoneCode: vi.fn(() => Promise.resolve()),
+      phoneSignInControllerPhoneSignIn: vi.fn(() =>
         Promise.resolve({ accessToken: 'by-phone' }),
       ),
     },
-    me: { meControllerMe: jest.fn(() => Promise.resolve(OWNER)) },
+    me: { meControllerMe: vi.fn(() => Promise.resolve(OWNER)) },
   });
   return { api: auth, session };
 }

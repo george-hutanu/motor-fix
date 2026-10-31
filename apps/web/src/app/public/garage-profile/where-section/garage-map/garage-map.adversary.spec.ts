@@ -3,20 +3,19 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { GARAGE_MAP, GarageMap } from './garage-map';
 import { StaticMap } from '../../../static-map/static-map';
 
-jest.mock('maplibre-gl', () =>
-  jest.requireActual('../../../place-step/place-step.testing'),
-);
+vi.mock('maplibre-gl', () => import('../../../place-step/place-step.testing'));
 
 const POINT = { lat: 44.4352671, lng: 26.0123456 };
-const destroy = jest.fn();
-const gone = jest.fn();
+const destroy = vi.fn();
+const gone = vi.fn();
 let opened: (value: { destroy(): void }) => void;
 let refused: (error: unknown) => void;
-let open: jest.Mock;
+let open: Mock;
 
 let fixture: ComponentFixture<GarageMap>;
 const element = () => fixture.nativeElement as HTMLElement;
@@ -25,10 +24,10 @@ const piece = () =>
   fixture.debugElement.query(By.directive(StaticMap))
     ?.componentInstance as StaticMap;
 
-async function render(opener?: jest.Mock, km?: number) {
+async function render(opener?: Mock, km?: number) {
   open =
     opener ??
-    jest.fn(
+    vi.fn(
       () =>
         new Promise<{ destroy(): void }>((resolve, reject) => {
           opened = resolve;
@@ -60,11 +59,11 @@ function tap() {
 beforeEach(() => {
   destroy.mockClear();
   gone.mockClear();
-  jest.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(390);
-  jest.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(200);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(390);
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(200);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 1366-FR-006
 describe('GarageMap, failing in odd orders', () => {
@@ -91,7 +90,7 @@ describe('GarageMap, failing in odd orders', () => {
 
   it('says it is gone once when the opener throws before it returns a promise', async () => {
     await render(
-      jest.fn(() => {
+      vi.fn(() => {
         throw new Error('sync');
       }),
     );
@@ -114,9 +113,7 @@ describe('GarageMap, failing in odd orders', () => {
   it('says nothing when the opener rejects after the page has gone', async () => {
     // A destroyed output drops the call and warns NG0953, so the warning is
     // what shows the component tried to speak.
-    const warn = jest
-      .spyOn(console, 'warn')
-      .mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     await render();
     tap();
     fixture.destroy();
@@ -224,7 +221,7 @@ describe('GarageMap, the area at the limits of its radius', () => {
     [100, 390],
     [37, 320],
   ])('keeps a circle of %i km whole inside a %i px strip', async (km, w) => {
-    jest.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(w);
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(w);
     await render(undefined, km);
     fixture.componentRef.setInput('point', INLAND);
     fixture.detectChanges();

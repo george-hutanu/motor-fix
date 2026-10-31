@@ -2,6 +2,7 @@ import { Component, inject, signal, type WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { GaragesService, type MeDto } from '@motor-fix/data-access';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { InviteStaff } from './invite-staff';
 import { Session } from '../session';
@@ -11,7 +12,7 @@ class Host {
   readonly overlays = inject(Overlays);
 }
 
-let send: jest.Mock;
+let send: Mock;
 let current: WritableSignal<MeDto | null>;
 
 const entry = (garageId: string, features?: Record<string, unknown>) => ({
@@ -34,7 +35,7 @@ async function settle() {
 }
 
 async function open(me: MeDto | null, garageId = 'garage-1') {
-  send = jest.fn(async () => ({ emailSent: true, id: 'invite-1' }));
+  send = vi.fn(async () => ({ emailSent: true, id: 'invite-1' }));
   current = signal(me);
   TestBed.configureTestingModule({
     providers: [
@@ -42,7 +43,7 @@ async function open(me: MeDto | null, garageId = 'garage-1') {
       {
         provide: GaragesService,
         useValue: {
-          garageInvitesControllerResend: jest.fn(),
+          garageInvitesControllerResend: vi.fn(),
           garageInvitesControllerSend: send,
         },
       },

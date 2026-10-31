@@ -9,6 +9,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayOptions, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { AdminAccountRepairs } from './admin-account-repairs';
 import type { AdminRepairData } from '../../admin-repair-dialog/admin-repair-dialog';
@@ -40,9 +41,9 @@ const repair = (extra: Partial<AdminRepairDto> = {}): AdminRepairDto => ({
   ...extra,
 });
 
-let list: jest.Mock;
-let openRead: jest.Mock;
-let overlayOpen: jest.Mock;
+let list: Mock;
+let openRead: Mock;
+let overlayOpen: Mock;
 let element: HTMLElement;
 
 async function settle() {
@@ -61,12 +62,12 @@ async function mount(
   },
   language: 'ro' | 'en' = 'ro',
 ) {
-  list = jest.fn(async () => {
+  list = vi.fn(async () => {
     if (answer instanceof HttpErrorResponse) throw answer;
     return answer;
   });
-  openRead ??= jest.fn(async ({ id }: { id: string }) => repair({ id }));
-  overlayOpen ??= jest.fn(async () => 'cancelled');
+  openRead ??= vi.fn(async ({ id }: { id: string }) => repair({ id }));
+  overlayOpen ??= vi.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       {
@@ -100,8 +101,8 @@ const openButtons = () => [
 ];
 
 beforeEach(() => {
-  openRead = undefined as unknown as jest.Mock;
-  overlayOpen = undefined as unknown as jest.Mock;
+  openRead = undefined as unknown as Mock;
+  overlayOpen = undefined as unknown as Mock;
 });
 
 afterEach(() => {
@@ -164,7 +165,7 @@ describe("the account's added repairs", () => {
 
   it('shows a skeleton while the list is read', async () => {
     let answer: (value: unknown) => void = () => undefined;
-    list = jest.fn(
+    list = vi.fn(
       () =>
         new Promise((resolve) => {
           answer = resolve;
@@ -176,7 +177,7 @@ describe("the account's added repairs", () => {
           provide: AdminService,
           useValue: { adminRepairsControllerList: list },
         },
-        { provide: Overlays, useValue: { open: jest.fn() } },
+        { provide: Overlays, useValue: { open: vi.fn() } },
       ],
     });
     await TestBed.inject(I18n).enter('admin');
@@ -239,7 +240,7 @@ describe("the account's added repairs", () => {
   });
 
   it('opens no dialog and removes the row when the repair is gone', async () => {
-    openRead = jest.fn(async () => {
+    openRead = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 404 });
     });
     await mount();
@@ -255,7 +256,7 @@ describe("the account's added repairs", () => {
   });
 
   it('opens no dialog and keeps the row when the read fails otherwise', async () => {
-    openRead = jest.fn(async () => {
+    openRead = vi.fn(async () => {
       throw new HttpErrorResponse({ status: 503 });
     });
     await mount();
@@ -271,7 +272,7 @@ describe("the account's added repairs", () => {
   });
 
   it('updates the row in place when the dialog saves a correction, without reading the list again', async () => {
-    overlayOpen = jest.fn(
+    overlayOpen = vi.fn(
       async (_source: unknown, options: OverlayOptions<AdminRepairData>) => {
         options.data?.saved(repair({ doneOn: '2023-01-05', id: 'r-1' }));
         return 'cancelled';
@@ -290,7 +291,7 @@ describe("the account's added repairs", () => {
   });
 
   it('removes the row and says so when the dialog closes on a repair that is gone', async () => {
-    overlayOpen = jest.fn(async () => 'gone');
+    overlayOpen = vi.fn(async () => 'gone');
     await mount();
 
     openButtons()[0].click();

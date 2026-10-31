@@ -14,6 +14,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { GarageMembers } from './garage-members';
 import { Live } from '../live';
@@ -102,14 +103,14 @@ const SEEDED: GarageMembersDto = {
 const me = { garageId: GARAGE } as unknown as MeDto;
 
 let events: Subject<LiveMessage>;
-let list: jest.Mock;
+let list: Mock;
 
 async function render(
   answer: () => Promise<GarageMembersDto> = async () => SEEDED,
   language: 'ro' | 'en' = 'ro',
 ) {
   events = new Subject();
-  list = jest.fn(answer);
+  list = vi.fn(answer);
   TestBed.configureTestingModule({
     providers: [
       {

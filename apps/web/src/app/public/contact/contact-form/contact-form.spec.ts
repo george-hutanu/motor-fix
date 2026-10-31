@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { SupportService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { ContactForm } from './contact-form';
 
@@ -11,7 +12,7 @@ const NAME = 'Ana Pop';
 const EMAIL = 'ana@example.test';
 const MESSAGE = 'Nu văd cererea pe care am trimis‑o ieri.';
 
-let send: jest.Mock;
+let send: Mock;
 let fixture: ComponentFixture<ContactForm>;
 
 async function settle() {
@@ -28,7 +29,7 @@ async function open(
     inTask?: boolean;
   } = {},
 ) {
-  send = jest.fn(async () => ({ reference: 'MF-2026-000042' }));
+  send = vi.fn(async () => ({ reference: 'MF-2026-000042' }));
   TestBed.configureTestingModule({
     providers: [
       {
@@ -48,7 +49,7 @@ async function open(
 
 afterEach(() => {
   fixture?.nativeElement.remove();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const root = () => fixture.nativeElement as HTMLElement;
@@ -260,7 +261,7 @@ describe('the contact form', () => {
 
   it('says the message was not sent while offline, and offers to try again', async () => {
     await open();
-    jest.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
 
     await sendWith(new HttpErrorResponse({ status: 0 }));
 
@@ -354,7 +355,7 @@ describe('the contact form', () => {
 
   it('in a task, offers Close after the confirmation', async () => {
     await open({ inTask: true });
-    const closed = jest.fn();
+    const closed = vi.fn();
     fixture.componentInstance.closed.subscribe(closed);
     fill();
 

@@ -7,14 +7,15 @@ import {
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { Bell, BellStore } from './bell';
 import { Live } from '../live';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 const READ_AT = '2026-10-05T09:00:00.000Z';
@@ -31,28 +32,28 @@ const row = (id: string, overrides: Partial<NotificationDto> = {}) =>
   }) as NotificationDto;
 
 let api: {
-  bellControllerList: jest.Mock;
-  bellControllerRead: jest.Mock;
-  bellControllerReadAll: jest.Mock;
-  bellControllerUnreadCount: jest.Mock;
+  bellControllerList: Mock;
+  bellControllerRead: Mock;
+  bellControllerReadAll: Mock;
+  bellControllerUnreadCount: Mock;
 };
 let events: Subject<LiveMessage>;
 
 function setup(count: number, items: NotificationDto[]) {
   api = {
-    bellControllerList: jest.fn(async () => ({ items, nextCursor: null })),
-    bellControllerRead: jest.fn(async ({ id }: { id: string }) =>
+    bellControllerList: vi.fn(async () => ({ items, nextCursor: null })),
+    bellControllerRead: vi.fn(async ({ id }: { id: string }) =>
       row(id, { readAt: READ_AT }),
     ),
-    bellControllerReadAll: jest.fn(async () => undefined),
-    bellControllerUnreadCount: jest.fn(async () => ({ count })),
+    bellControllerReadAll: vi.fn(async () => undefined),
+    bellControllerUnreadCount: vi.fn(async () => ({ count })),
   };
   events = new Subject();
   TestBed.configureTestingModule({
     providers: [
       { provide: NotificationsService, useValue: api },
       { provide: Live, useValue: { events } },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
       { provide: Session, useValue: { token: () => 'access' } },
     ],
   });
@@ -93,7 +94,7 @@ const tick = () => wait(0);
 const ids = (store: BellStore) => store.items().map((n) => n.id);
 const readAts = (store: BellStore) => store.items().map((n) => n.readAt);
 
-beforeEach(() => jest.mocked(toast).mockClear());
+beforeEach(() => vi.mocked(toast).mockClear());
 afterEach(() => TestBed.resetTestingModule());
 
 // @traces 1315-FR-003

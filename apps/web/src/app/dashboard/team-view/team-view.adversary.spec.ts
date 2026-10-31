@@ -12,6 +12,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { TeamView } from './team-view';
 import { Live } from '../live';
@@ -73,9 +74,9 @@ const me = {
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
-let list: jest.Mock;
-let open: jest.Mock;
-let navigateByUrl: jest.Mock;
+let list: Mock;
+let open: Mock;
+let navigateByUrl: Mock;
 
 async function render(
   answer: () => Promise<GarageMechanicsDto> = async () => ({
@@ -87,9 +88,9 @@ async function render(
 ) {
   events = new Subject();
   resync = new Subject();
-  list = jest.fn(answer);
-  open = jest.fn(async () => 'cancelled');
-  navigateByUrl = jest.fn(async () => true);
+  list = vi.fn(answer);
+  open = vi.fn(async () => 'cancelled');
+  navigateByUrl = vi.fn(async () => true);
   TestBed.configureTestingModule({
     providers: [
       {

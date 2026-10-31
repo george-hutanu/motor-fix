@@ -39,8 +39,8 @@ async function render(
   capabilities: string[] = [],
   language: 'ro' | 'en' = 'ro',
 ) {
-  Element.prototype.scrollIntoView = jest.fn();
-  const overlays = { open: jest.fn(async () => 'cancelled') };
+  Element.prototype.scrollIntoView = vi.fn();
+  const overlays = { open: vi.fn(async () => 'cancelled') };
   const landing = url.split('/').slice(0, 3).join('/');
   const account = signal<MeDto | null>(me(role, landing, capabilities));
   TestBed.configureTestingModule({
@@ -65,11 +65,11 @@ async function render(
       {
         provide: Live,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           events: new Subject<LiveMessage>(),
           offline: signal(false),
           on: () => NEVER,
-          open: jest.fn(),
+          open: vi.fn(),
           resync: new Subject<void>(),
           state: signal('open'),
         },

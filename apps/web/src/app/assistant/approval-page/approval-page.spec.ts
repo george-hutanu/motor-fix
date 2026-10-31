@@ -5,6 +5,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { ApprovalPage } from './approval-page';
 import { Live } from '../../dashboard/live';
@@ -14,13 +15,13 @@ import { ApprovalSheet } from '../approval-sheet/approval-sheet';
 // @traces 1254-FR-004
 // @traces 1254-FR-010
 
-let get: jest.Mock;
-let open: jest.Mock;
+let get: Mock;
+let open: Mock;
 let order: string[];
 
 async function visit(id: string, answers: unknown[]) {
   order = [];
-  get = jest.fn(async ({ id }: { id: string }) => {
+  get = vi.fn(async ({ id }: { id: string }) => {
     order.push('get');
     if (id === 'gone')
       throw new HttpErrorResponse({
@@ -29,7 +30,7 @@ async function visit(id: string, answers: unknown[]) {
       });
     return { assistantName: id === 'unnamed' ? null : 'Claude', id };
   });
-  open = jest.fn();
+  open = vi.fn();
   for (const answer of answers) open.mockResolvedValueOnce(answer);
   open.mockReturnValue(new Promise(() => undefined));
   TestBed.configureTestingModule({
@@ -43,7 +44,7 @@ async function visit(id: string, answers: unknown[]) {
         useValue: { assistantApprovalsControllerGet: get },
       },
       { provide: Overlays, useValue: { open } },
-      { provide: Live, useValue: { close: jest.fn(), open: jest.fn() } },
+      { provide: Live, useValue: { close: vi.fn(), open: vi.fn() } },
       {
         provide: Session,
         useValue: {

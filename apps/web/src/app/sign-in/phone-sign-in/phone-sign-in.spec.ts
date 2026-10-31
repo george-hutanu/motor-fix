@@ -6,6 +6,7 @@ import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { PhoneSignIn } from './phone-sign-in';
 import { Consent } from '../../consent/consent';
@@ -18,9 +19,9 @@ class Host {
   readonly overlays = inject(Overlays);
 }
 
-let phoneCode: jest.Mock;
-let signInWithPhone: jest.Mock;
-let track: jest.Mock;
+let phoneCode: Mock;
+let signInWithPhone: Mock;
+let track: Mock;
 let result: Promise<OverlayResult<'signed-in' | AuthSwitch>>;
 
 async function settle() {
@@ -31,9 +32,9 @@ async function settle() {
 }
 
 async function open(language: 'ro' | 'en' = 'ro', data?: AuthData) {
-  phoneCode = jest.fn(async () => undefined);
-  signInWithPhone = jest.fn(async () => ({ landing: '/app/garage' }));
-  track = jest.fn();
+  phoneCode = vi.fn(async () => undefined);
+  signInWithPhone = vi.fn(async () => ({ landing: '/app/garage' }));
+  track = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       { provide: Consent, useValue: { track } },
@@ -110,7 +111,7 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('the phone step', () => {
@@ -517,7 +518,7 @@ describe('what the dialog says to each answer', () => {
     const start = Date.now();
     await open();
     await sendCode();
-    jest.spyOn(Date, 'now').mockReturnValue(start + 301_000);
+    vi.spyOn(Date, 'now').mockReturnValue(start + 301_000);
 
     await new Promise((resolve) => setTimeout(resolve, 1100));
     await settle();
@@ -565,7 +566,7 @@ describe('what the dialog says to each answer', () => {
     const start = Date.now();
     await open();
     await sendCode();
-    jest.spyOn(Date, 'now').mockReturnValue(start + 61_000);
+    vi.spyOn(Date, 'now').mockReturnValue(start + 61_000);
     await new Promise((resolve) => setTimeout(resolve, 1100));
     await settle();
     phoneCode.mockRejectedValueOnce(refusal(502, { code: 'whatsapp_failed' }));
@@ -587,7 +588,7 @@ describe('what the dialog says to each answer', () => {
   });
 
   it('shows the shared offline message when the code is asked for and when it is entered', async () => {
-    jest.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     const offline = new HttpErrorResponse({ status: 0 });
     await open();
     phoneCode.mockRejectedValueOnce(offline);

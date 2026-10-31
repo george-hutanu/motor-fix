@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { openCancelTransfer } from './open-cancel-transfer';
 
@@ -35,7 +36,7 @@ const bmw: CarDto = {
 const refusal = (status: number, body: object) =>
   new HttpErrorResponse({ error: body, status });
 
-let cancel: jest.Mock;
+let cancel: Mock;
 let result: Promise<OverlayResult<boolean>>;
 
 async function settle() {
@@ -49,7 +50,7 @@ async function open(
   language: 'ro' | 'en' = 'ro',
   answer: () => Promise<void> = async () => undefined,
 ) {
-  cancel = jest.fn(answer);
+  cancel = vi.fn(answer);
   TestBed.configureTestingModule({
     providers: [
       { provide: CarsService, useValue: { carSaleControllerCancel: cancel } },

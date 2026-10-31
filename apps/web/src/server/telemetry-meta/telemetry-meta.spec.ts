@@ -1,6 +1,3 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import { withTelemetryMeta } from './telemetry-meta';
 
 const page = '<html><head><title>MotorFix</title></head><body></body></html>';

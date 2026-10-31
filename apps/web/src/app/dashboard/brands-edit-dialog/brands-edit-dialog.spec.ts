@@ -13,6 +13,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { type BrandsEditData, BrandsEditDialog } from './brands-edit-dialog';
 
@@ -65,11 +66,11 @@ class Host {
   readonly overlays = inject(Overlays);
 }
 
-let read: jest.Mock;
-let replace: jest.Mock;
-let profileRead: jest.Mock;
-let search: jest.Mock;
-let navigate: jest.Mock;
+let read: Mock;
+let replace: Mock;
+let profileRead: Mock;
+let search: Mock;
+let navigate: Mock;
 let result: Promise<OverlayResult<GarageBrandOwnerAnswerDto>>;
 
 async function settle() {
@@ -83,11 +84,11 @@ async function open(
   start: GarageBrandOwnerReadDto | Promise<GarageBrandOwnerReadDto> = stored(),
   language: 'ro' | 'en' = 'ro',
 ) {
-  read = jest.fn(() => Promise.resolve(start));
-  replace = jest.fn(async () => ANSWER);
-  profileRead = jest.fn();
-  navigate = jest.fn(async () => true);
-  search = jest.fn(async () => ({
+  read = vi.fn(() => Promise.resolve(start));
+  replace = vi.fn(async () => ANSWER);
+  profileRead = vi.fn();
+  navigate = vi.fn(async () => true);
+  search = vi.fn(async () => ({
     items: [BMW, DACIA, TESLA, AUDI],
     nextCursor: null,
     total: 4,

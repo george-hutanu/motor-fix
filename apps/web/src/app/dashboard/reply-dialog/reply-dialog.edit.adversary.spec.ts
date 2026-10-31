@@ -8,6 +8,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import type { ReplyData } from './open-reply';
 import { ReplyDialog } from './reply-dialog';
@@ -24,9 +25,9 @@ class Host {
   readonly overlays = inject(Overlays);
 }
 
-let post: jest.Mock;
-let edit: jest.Mock;
-let saved: jest.Mock;
+let post: Mock;
+let edit: Mock;
+let saved: Mock;
 let result: Promise<ReviewReplyDto | 'cancelled'>;
 let settled: ReviewReplyDto | 'cancelled' | undefined;
 
@@ -46,9 +47,9 @@ async function open({
   language?: 'ro' | 'en';
   review?: GarageStaffReviewDto;
 } = {}) {
-  post = jest.fn(answer);
-  edit = jest.fn(answer);
-  saved = jest.fn();
+  post = vi.fn(answer);
+  edit = vi.fn(answer);
+  saved = vi.fn();
   settled = undefined;
   TestBed.configureTestingModule({
     providers: [

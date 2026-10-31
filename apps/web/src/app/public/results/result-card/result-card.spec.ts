@@ -7,6 +7,7 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import type { BrandRefDto, ListedGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { MockInstance } from 'vitest';
 
 import { ResultCard } from './result-card';
 import { RED_LAMP } from '../../../red-lamp.testing';
@@ -249,8 +250,8 @@ describe('a result card about to be opened', () => {
     observed: Element[];
     disconnected: boolean;
   }[];
-  let want: jest.SpyInstance;
-  let cancel: jest.SpyInstance;
+  let want: MockInstance;
+  let cancel: MockInstance;
 
   beforeEach(() => {
     observers = [];
@@ -272,12 +273,12 @@ describe('a result card about to be opened', () => {
       }
     };
     const prefetch = TestBed.inject(ProfilePrefetch);
-    want = jest.spyOn(prefetch, 'want').mockImplementation(() => undefined);
-    cancel = jest.spyOn(prefetch, 'cancel').mockImplementation(() => undefined);
+    want = vi.spyOn(prefetch, 'want').mockImplementation(() => undefined);
+    cancel = vi.spyOn(prefetch, 'cancel').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     delete (globalThis as Record<string, unknown>)['IntersectionObserver'];
   });
 
@@ -294,12 +295,12 @@ describe('a result card about to be opened', () => {
 
   it('pre-fetches its garage, with the brand, after the pointer rests on it for 100 ms', async () => {
     const card = await render(garageOf());
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     card.dispatchEvent(pointer('pointerenter'));
-    jest.advanceTimersByTime(99);
+    vi.advanceTimersByTime(99);
     expect(want).not.toHaveBeenCalled();
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
 
     expect(want).toHaveBeenCalledTimes(1);
     expect(want).toHaveBeenCalledWith('service-auto-militari', 'bmw');
@@ -307,12 +308,12 @@ describe('a result card about to be opened', () => {
 
   it('cancels when the pointer leaves first, and never pre-fetches', async () => {
     const card = await render(garageOf());
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     card.dispatchEvent(pointer('pointerenter'));
-    jest.advanceTimersByTime(50);
+    vi.advanceTimersByTime(50);
     card.dispatchEvent(pointer('pointerleave'));
-    jest.advanceTimersByTime(500);
+    vi.advanceTimersByTime(500);
 
     expect(cancel).toHaveBeenCalledWith('service-auto-militari', 'bmw');
     expect(want).not.toHaveBeenCalled();
@@ -447,7 +448,7 @@ describe('a result card linked with its pin', () => {
   it('is picked by a tap anywhere on it but its link and its bookmark', async () => {
     const card = await linked();
     // The link still navigates; here to nowhere, so the router is stubbed.
-    jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 
     card
       .querySelector('h2')
@@ -493,7 +494,7 @@ describe('a result card linked with its pin', () => {
 
   it('scrolls itself into view at the nearest edge, smoothly or at once, without taking the focus', async () => {
     const card = await linked();
-    const scroll = jest.fn();
+    const scroll = vi.fn();
     card.scrollIntoView = scroll;
     const focused = document.activeElement;
 
@@ -514,9 +515,9 @@ describe('a result card linked with its pin', () => {
     box.style.overflowY = 'auto';
     card.before(box);
     box.append(card);
-    const page = jest.fn();
+    const page = vi.fn();
     card.scrollIntoView = page;
-    const scrolled = jest.fn();
+    const scrolled = vi.fn();
     box.scrollBy = scrolled as typeof box.scrollBy;
     box.getBoundingClientRect = () => ({ bottom: 300, top: 100 }) as DOMRect;
     const at = (top: number, bottom: number) => {
@@ -550,9 +551,9 @@ describe('a result card linked with its pin', () => {
     box.style.display = 'contents';
     card.before(box);
     box.append(card);
-    const page = jest.fn();
+    const page = vi.fn();
     card.scrollIntoView = page;
-    const scrolled = jest.fn();
+    const scrolled = vi.fn();
     box.scrollBy = scrolled as typeof box.scrollBy;
 
     fixture.componentInstance.reveal(true);

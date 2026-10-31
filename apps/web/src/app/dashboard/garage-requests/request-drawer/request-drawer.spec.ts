@@ -12,6 +12,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { RequestDrawer } from './request-drawer';
 import { Live } from '../../live';
@@ -93,9 +94,9 @@ const owner = {
   garageId: 'garage-1',
 } as unknown as MeDto;
 
-let read: jest.Mock;
-let open: jest.Mock;
-let close: jest.Mock;
+let read: Mock;
+let open: Mock;
+let close: Mock;
 let live: ReturnType<typeof fakeLive>;
 
 const httpError = (status: number) =>
@@ -105,12 +106,12 @@ async function render(
   answer: GarageRequestDto | HttpErrorResponse | Promise<never> = detail(),
   language: 'ro' | 'en' = 'ro',
 ) {
-  read = jest.fn(async () => {
+  read = vi.fn(async () => {
     if (answer instanceof HttpErrorResponse) throw answer;
     return answer;
   });
-  open = jest.fn(async () => 'cancelled');
-  close = jest.fn();
+  open = vi.fn(async () => 'cancelled');
+  close = vi.fn();
   live = fakeLive();
   const me = signal(owner);
   TestBed.configureTestingModule({
@@ -124,7 +125,7 @@ async function render(
       },
       {
         provide: OVERLAY_TASK,
-        useValue: { close, data: { id: 'req-1' }, markUnchanged: jest.fn() },
+        useValue: { close, data: { id: 'req-1' }, markUnchanged: vi.fn() },
       },
     ],
   });

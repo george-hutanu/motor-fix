@@ -11,15 +11,16 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { BlockTimeDialog } from './block-time-dialog';
 import type { BlockTimeData, BlockTimeResult } from './open-block-time';
 import { nextQuarter } from '../bucharest-time';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 @Component({
@@ -52,10 +53,10 @@ const BLOCK: TimeBlockDto = {
   startsAt: '2030-07-11T07:00:00.000Z',
 };
 
-let read: jest.Mock;
-let create: jest.Mock;
-let update: jest.Mock;
-let remove: jest.Mock;
+let read: Mock;
+let create: Mock;
+let update: Mock;
+let remove: Mock;
 let result: Promise<BlockTimeResult | 'cancelled'>;
 let settled: BlockTimeResult | 'cancelled' | undefined;
 
@@ -80,13 +81,13 @@ async function open({
   language?: 'ro' | 'en';
   lifts?: boolean;
   offered?: TimeBlockOptionsDto;
-  reads?: jest.Mock;
+  reads?: Mock;
   team?: boolean;
 } = {}) {
-  read = reads ?? jest.fn(async () => offered);
-  create = jest.fn(async () => ({ ...BLOCK, id: 'block-2' }));
-  update = jest.fn(async () => BLOCK);
-  remove = jest.fn(async () => undefined);
+  read = reads ?? vi.fn(async () => offered);
+  create = vi.fn(async () => ({ ...BLOCK, id: 'block-2' }));
+  update = vi.fn(async () => BLOCK);
+  remove = vi.fn(async () => undefined);
   settled = undefined;
   TestBed.configureTestingModule({
     providers: [
@@ -186,7 +187,7 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  (toast as unknown as jest.Mock).mockClear();
+  (toast as unknown as Mock).mockClear();
   if (online) Object.defineProperty(Navigator.prototype, 'onLine', online);
   TestBed.resetTestingModule();
 });
@@ -288,7 +289,7 @@ describe('the block-time dialog: what it draws', () => {
   });
 
   it('keeps the fields and Blochează off while the options load', async () => {
-    await open({ reads: jest.fn(() => new Promise(() => undefined)) });
+    await open({ reads: vi.fn(() => new Promise(() => undefined)) });
 
     expect(text()).toContain('Se încarcă…');
     expect(button('Blochează')?.disabled).toBe(true);
@@ -297,7 +298,7 @@ describe('the block-time dialog: what it draws', () => {
   });
 
   it('says a failed read with Reîncearcă, the fields off, and reads again on it', async () => {
-    const reads = jest
+    const reads = vi
       .fn()
       .mockRejectedValueOnce(refusal(500, {}))
       .mockResolvedValueOnce(OPTIONS);
@@ -627,7 +628,7 @@ describe('the block-time dialog: saving a new block', () => {
 // @traces 1403-FR-006
 describe('the block-time dialog: what the server refuses', () => {
   async function refusedWith(error: HttpErrorResponse, reread = OPTIONS) {
-    const reads = jest
+    const reads = vi
       .fn()
       .mockResolvedValueOnce(OPTIONS)
       .mockResolvedValue(reread);
@@ -642,7 +643,7 @@ describe('the block-time dialog: what the server refuses', () => {
 
   it('draws the options of the latest read when an earlier one answers last', async () => {
     let first: (offered: TimeBlockOptionsDto) => void = () => undefined;
-    const reads = jest
+    const reads = vi
       .fn()
       .mockResolvedValueOnce(OPTIONS)
       .mockImplementationOnce(

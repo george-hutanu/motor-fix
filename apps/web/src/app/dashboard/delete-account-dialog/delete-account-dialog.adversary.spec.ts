@@ -5,6 +5,7 @@ import { provideRouter, Router } from '@angular/router';
 import { AuthService } from '@motor-fix/data-access';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { DeleteAccountDialog } from './delete-account-dialog';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
@@ -12,9 +13,9 @@ import { Live } from '../live';
 import { PushDevice } from '../push-device';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 @Component({ template: '' })
@@ -22,11 +23,11 @@ class Host {
   readonly overlays = inject(Overlays);
 }
 
-let remove: jest.Mock;
+let remove: Mock;
 let release: () => void;
-let revoked: jest.Mock;
+let revoked: Mock;
 let result: Promise<OverlayResult<true>>;
-let dropped: jest.Mock;
+let dropped: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -39,9 +40,9 @@ async function open(
   answer: () => Promise<unknown>,
   me: Record<string, unknown> = {},
 ) {
-  remove = jest.fn(answer);
-  revoked = jest.fn();
-  dropped = jest.fn(async () => undefined);
+  remove = vi.fn(answer);
+  revoked = vi.fn();
+  dropped = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       {
@@ -56,13 +57,13 @@ async function open(
           revoked,
         },
       },
-      { provide: SignInDialog, useValue: { gate: jest.fn(async () => true) } },
-      { provide: Live, useValue: { close: jest.fn() } },
+      { provide: SignInDialog, useValue: { gate: vi.fn(async () => true) } },
+      { provide: Live, useValue: { close: vi.fn() } },
       { provide: PushDevice, useValue: { dropped } },
       provideRouter([]),
     ],
   });
-  jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+  vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   const host = TestBed.createComponent(Host);
   result = host.componentInstance.overlays.open<true>(DeleteAccountDialog, {
     shape: 'dialog',
@@ -92,7 +93,7 @@ const pending = () =>
     release = resolve;
   });
 
-beforeEach(() => jest.mocked(toast).mockClear());
+beforeEach(() => vi.mocked(toast).mockClear());
 
 afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {

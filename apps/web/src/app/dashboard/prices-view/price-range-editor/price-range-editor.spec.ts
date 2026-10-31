@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { GaragesService, type PriceListDto } from '@motor-fix/data-access';
 import { formatDuration, I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import {
   type EditableRow,
@@ -54,12 +55,12 @@ const LABOUR: PriceRangeEditorData = {
   labour: { fromBani: 18_000, toBani: 24_000 },
 };
 
-let setRange: jest.Mock;
-let setBrandRange: jest.Mock;
-let setLabour: jest.Mock;
-let add: jest.Mock;
-let propose: jest.Mock;
-let read: jest.Mock;
+let setRange: Mock;
+let setBrandRange: Mock;
+let setLabour: Mock;
+let add: Mock;
+let propose: Mock;
+let read: Mock;
 let result: Promise<PriceRangeEditorResult | 'cancelled'>;
 
 async function settle() {
@@ -76,29 +77,29 @@ async function open(
     title = BRAKES.nameRo,
   }: { language?: 'ro' | 'en'; title?: string } = {},
 ) {
-  setRange = jest.fn(async ({ body }) => ({
+  setRange = vi.fn(async ({ body }) => ({
     jobTypeId: 'brakes',
     priceId: 'price-brakes',
     updatedAt: NEWER,
     warnings: [],
     ...body,
   }));
-  setBrandRange = jest.fn(async ({ body }) => ({ ...body, warnings: [] }));
-  setLabour = jest.fn(async ({ body }) => ({ ...body, warnings: [] }));
-  add = jest.fn(async ({ body }) => ({
+  setBrandRange = vi.fn(async ({ body }) => ({ ...body, warnings: [] }));
+  setLabour = vi.fn(async ({ body }) => ({ ...body, warnings: [] }));
+  add = vi.fn(async ({ body }) => ({
     priceId: 'price-ac',
     updatedAt: NEWER,
     warnings: [],
     ...body,
   }));
-  propose = jest.fn(async ({ body }) => ({
+  propose = vi.fn(async ({ body }) => ({
     jobTypeId: 'job-new',
     priceId: 'price-new',
     updatedAt: NEWER,
     warnings: [],
     ...body,
   }));
-  read = jest.fn(
+  read = vi.fn(
     async (): Promise<PriceListDto> => ({
       items: [
         {
@@ -600,7 +601,7 @@ describe('the range editor: a job new to the list', () => {
   });
 
   it('asks the opener to reload the list on a duplicate, the editor still open', async () => {
-    const listed = jest.fn();
+    const listed = vi.fn();
     await open({ ...NEW, listed }, { title: 'Încărcare freon climă' });
     add.mockRejectedValueOnce(
       refusal(422, {
@@ -617,7 +618,7 @@ describe('the range editor: a job new to the list', () => {
   });
 
   it('does not ask for a reload on another refusal', async () => {
-    const listed = jest.fn();
+    const listed = vi.fn();
     await open({ ...NEW, listed }, { title: 'Încărcare freon climă' });
     add.mockRejectedValueOnce(
       refusal(422, {

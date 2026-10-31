@@ -11,7 +11,7 @@ import { TestBed } from '@angular/core/testing';
 import { serverTimeoutInterceptor } from './server-timeout.interceptor';
 
 // An API that never answers: the call ends only when its signal aborts.
-const silentApi = jest.fn(
+const silentApi = vi.fn(
   (_url: string, init: RequestInit) =>
     new Promise<Response>((_resolve, reject) => {
       init.signal?.addEventListener('abort', () => reject(init.signal?.reason));
@@ -44,13 +44,13 @@ function call(platform: 'server' | 'browser') {
 }
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  vi.useFakeTimers();
   silentApi.mockClear();
   globalThis.fetch = silentApi as unknown as typeof fetch;
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
 });
 
@@ -59,10 +59,10 @@ describe('the server-side cap on API calls', () => {
   it('ends a server call the API does not answer after 3 s, as a failed call', async () => {
     const outcome = call('server');
 
-    await jest.advanceTimersByTimeAsync(2999);
+    await vi.advanceTimersByTimeAsync(2999);
     expect(outcome.settled).toBe(false);
 
-    await jest.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(1);
     expect(outcome.error).toBeInstanceOf(HttpErrorResponse);
     expect((outcome.error as HttpErrorResponse).status).toBe(0);
     expect(silentApi).toHaveBeenCalledTimes(1);
@@ -71,7 +71,7 @@ describe('the server-side cap on API calls', () => {
   it('leaves a call in the browser without a cap', async () => {
     const outcome = call('browser');
 
-    await jest.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
     expect(outcome.settled).toBe(false);
   });
 });

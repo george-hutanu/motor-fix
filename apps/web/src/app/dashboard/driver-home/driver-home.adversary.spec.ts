@@ -13,6 +13,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { DriverHome } from './driver-home';
 import { SavedGarages } from '../../public/saved-garages/saved-garages';
@@ -82,10 +83,10 @@ interface Setup {
   language?: 'ro' | 'en';
 }
 
-let carsList: jest.Mock;
-let requestsList: jest.Mock;
-let activeRead: jest.Mock;
-let open: jest.Mock;
+let carsList: Mock;
+let requestsList: Mock;
+let activeRead: Mock;
+let open: Mock;
 
 const answer = <T>(value: Answer<T>) =>
   value instanceof Error
@@ -143,10 +144,10 @@ async function render({
   capabilities = DRIVER,
   language = 'ro',
 }: Setup = {}) {
-  carsList = jest.fn(() => answer(cars));
-  requestsList = jest.fn(() => answer(requests));
-  activeRead = jest.fn(() => activeAnswer(active ?? activeOf(requests)));
-  open = jest.fn(async () => 'cancelled');
+  carsList = vi.fn(() => answer(cars));
+  requestsList = vi.fn(() => answer(requests));
+  activeRead = vi.fn(() => activeAnswer(active ?? activeOf(requests)));
+  open = vi.fn(async () => 'cancelled');
   const current = signal({ capabilities, role: 'driver' } as unknown as MeDto);
   TestBed.configureTestingModule({
     providers: [

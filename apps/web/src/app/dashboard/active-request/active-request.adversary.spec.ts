@@ -64,7 +64,7 @@ async function render(
   const fixture = TestBed.createComponent(ActiveRequest);
   fixture.componentRef.setInput('answer', answer);
   fixture.componentRef.setInput('more', options.more ?? false);
-  const retried = jest.fn();
+  const retried = vi.fn();
   fixture.componentInstance.retry.subscribe(retried);
   fixture.detectChanges();
   await fixture.whenStable();
@@ -81,7 +81,7 @@ const link = (element: Element, name: string) =>
 const stages = (element: Element) => [...element.querySelectorAll('ol > li')];
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
 });
 
@@ -341,9 +341,9 @@ describe('the panel moving between states', () => {
 // @traces 274-FR-013
 describe('the time left while the panel stays open', () => {
   it('is worked out again a minute later', async () => {
-    jest.useFakeTimers({
-      doNotFake: ['nextTick', 'queueMicrotask'],
+    vi.useFakeTimers({
       now: new Date('2026-10-09T10:00:00.000Z'),
+      toNotFake: ['nextTick', 'queueMicrotask'],
     });
     const { element, fixture } = await render({
       openCount: 1,
@@ -358,7 +358,7 @@ describe('the time left while the panel stays open', () => {
     });
     expect(text(element)).toContain('încă 1 h');
 
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
     fixture.detectChanges();
 
     expect(text(element)).toContain('încă 59 min');

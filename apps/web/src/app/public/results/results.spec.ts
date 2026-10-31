@@ -32,6 +32,7 @@ import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { Layout, type LayoutName, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
+import type { Mock, Mocked } from 'vitest';
 
 import { FilterWarm } from './filter-warm/filter-warm';
 import type { FilterKey, Filters } from './filters/filters';
@@ -93,7 +94,7 @@ type Read = {
 };
 let reads: Read[];
 const searchApi = {
-  garageSearchControllerForBrand: jest.fn(
+  garageSearchControllerForBrand: vi.fn(
     (params: GarageSearchControllerForBrand$Params) =>
       new Promise<GarageSearchPageDto>((resolve, reject) => {
         reads.push({
@@ -131,28 +132,28 @@ const pinsOf = (count: number): GaragePinsDto => ({
   total: count,
 });
 let pinsAnswer: GaragePinsDto;
-const pinsApi = jest.fn((_params: GarageSearchControllerPins$Params) =>
+const pinsApi = vi.fn((_params: GarageSearchControllerPins$Params) =>
   Promise.resolve(pinsAnswer),
 );
 Object.assign(searchApi, { garageSearchControllerPins: pinsApi });
-const mapView: jest.Mocked<ResultsMapView> = {
-  destroy: jest.fn(),
-  fit: jest.fn(),
-  light: jest.fn(),
-  mark: jest.fn(),
-  show: jest.fn(),
-  spot: jest.fn((_at: { lat: number; lng: number }) => ({ x: 100, y: 200 })),
+const mapView: Mocked<ResultsMapView> = {
+  destroy: vi.fn(),
+  fit: vi.fn(),
+  light: vi.fn(),
+  mark: vi.fn(),
+  show: vi.fn(),
+  spot: vi.fn((_at: { lat: number; lng: number }) => ({ x: 100, y: 200 })),
 };
 let mapMoved: (move: MapMove) => void;
 let mapPicked: (id: string | undefined) => void;
-const openMap = jest.fn((_host: HTMLElement, on: MapEvents) => {
+const openMap = vi.fn((_host: HTMLElement, on: MapEvents) => {
   mapMoved = on.moved;
   mapPicked = on.picked;
   return Promise.resolve(mapView);
 });
 let dialog: (value: OverlayResult<Place>) => void;
 const overlays = {
-  open: jest.fn(
+  open: vi.fn(
     () =>
       new Promise<OverlayResult<Place>>((resolve) => {
         dialog = resolve;
@@ -163,10 +164,10 @@ const overlays = {
 const messages = new Subject<LiveMessage>();
 const resync = new Subject<void>();
 const live = {
-  names: jest.fn((_view: unknown) => true),
+  names: vi.fn((_view: unknown) => true),
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
-  register: jest.fn((_view: unknown) => () => undefined),
+  register: vi.fn((_view: unknown) => () => undefined),
   resync,
 };
 const reduced = signal(false);
@@ -174,7 +175,7 @@ const reduced = signal(false);
 const layout = signal<LayoutName>('phone');
 // The address look-up of the field Results shows when it has no place.
 const placesApi = {
-  placesControllerSearch: jest.fn(
+  placesControllerSearch: vi.fn(
     async (_params: { lang: string; q: string }) => ({
       items: [] as { label: string; lat: number; lng: number }[],
     }),
@@ -185,20 +186,20 @@ const placesApi = {
 const AUDI = { id: 'b-audi', name: 'Audi', slug: 'audi' };
 const DACIA = { id: 'b-dacia', name: 'Dacia', slug: 'dacia' };
 const brandsApi = {
-  brandsControllerSearch: jest.fn(async () => ({
+  brandsControllerSearch: vi.fn(async () => ({
     items: [],
     nextCursor: null,
   })),
-  popularBrandsControllerTiles: jest.fn(
+  popularBrandsControllerTiles: vi.fn(
     async (): Promise<BrandDto[]> =>
       [BMW, AUDI, DACIA].map((b, i) => ({ ...b, popularity: i + 1 })),
   ),
 };
-const carsApi = { carsControllerList: jest.fn(async () => ({ items: [] })) };
+const carsApi = { carsControllerList: vi.fn(async () => ({ items: [] })) };
 
 // The warm of the filtered answer: its own reads would join every search
 // these tests count, so Results gets a stand-in and FilterWarm has its spec.
-const warmer = { judge: jest.fn(), warm: jest.fn() };
+const warmer = { judge: vi.fn(), warm: vi.fn() };
 
 let harness: RouterTestingHarness;
 
@@ -249,7 +250,7 @@ beforeEach(() => {
   layout.set('phone');
 });
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 // Results searches only from a place: a page opened with a brand and neither
 // a place in the bar nor a kept one gets the bar's, unless the test wants
@@ -339,7 +340,7 @@ describe('Results', () => {
     it('searches near the kept place and writes it into the bar without a history entry', async () => {
       keep(PLACE);
       const router = TestBed.inject(Router);
-      const navigate = jest.spyOn(router, 'navigate');
+      const navigate = vi.spyOn(router, 'navigate');
 
       await open('/ro/garages?brand=bmw');
 
@@ -713,14 +714,14 @@ describe('Results', () => {
   describe('kept live', () => {
     beforeEach(async () => {
       await configure();
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     const send = (kind: string, id = 'x-1') =>
       messages.next({ at: '2026-10-11T12:00:00.000Z', id, kind });
     // The 300 ms burst window, then the read it starts.
     const coalesce = async () => {
-      await jest.advanceTimersByTimeAsync(300);
+      await vi.advanceTimersByTimeAsync(300);
       await settle();
     };
     const cards = () => [...page().querySelectorAll('.cards > li')];
@@ -733,7 +734,7 @@ describe('Results', () => {
         (b) => said(b) === 'Reîncarcă',
       );
     const quietly = () =>
-      jest.spyOn(TestBed.inject(LiveAnnouncer), 'announce').mockResolvedValue();
+      vi.spyOn(TestBed.inject(LiveAnnouncer), 'announce').mockResolvedValue();
 
     async function loaded() {
       await open('/ro/garages?brand=bmw');
@@ -928,11 +929,11 @@ describe('Results', () => {
 
       expect(cards()[0]?.classList).toContain('leaving');
       expect(names()).toEqual(['Atelier Unu', 'Service Doi']);
-      await jest.advanceTimersByTimeAsync(299);
+      await vi.advanceTimersByTimeAsync(299);
       await settle();
       expect(names()).toHaveLength(2);
 
-      await jest.advanceTimersByTimeAsync(1);
+      await vi.advanceTimersByTimeAsync(1);
       await settle();
 
       expect(names()).toEqual(['Service Doi']);
@@ -983,7 +984,7 @@ describe('Results', () => {
 
       send('garage.suspended', 'one');
       await coalesce();
-      await jest.advanceTimersByTimeAsync(300);
+      await vi.advanceTimersByTimeAsync(300);
       await settle();
       // Two garages were approved while the suspension was written: the
       // re-read counts them and leaves the suspended one out.
@@ -1062,7 +1063,7 @@ describe('Results', () => {
     it('offers "Reîncarcă" when the total rose, and changes the list only when it is tapped', async () => {
       await loaded();
       const router = TestBed.inject(Router);
-      const navigate = jest.spyOn(router, 'navigate');
+      const navigate = vi.spyOn(router, 'navigate');
 
       send('verification.decided', 'verification-1');
       await coalesce();
@@ -1126,7 +1127,7 @@ describe('Results', () => {
       await open('/ro/garages?brand=bmw&near=46.77,23.59');
       await reads[0]?.answer();
       const router = TestBed.inject(Router);
-      const navigate = jest.spyOn(router, 'navigate');
+      const navigate = vi.spyOn(router, 'navigate');
       const change = [...page().querySelectorAll('button')].find(
         (b) => said(b) === 'Schimbă locul',
       );
@@ -1139,7 +1140,7 @@ describe('Results', () => {
       await settle();
       for (const read of reads.slice(1)) await read.answer();
       send('garage.suspended', 'two');
-      await jest.advanceTimersByTimeAsync(300);
+      await vi.advanceTimersByTimeAsync(300);
       await settle();
 
       expect(reads.length).toBeGreaterThanOrEqual(3);
@@ -1651,12 +1652,12 @@ describe('Results', () => {
 
   // @traces 270-FR-001 270-FR-002 270-FR-003 270-FR-004 270-FR-005 270-FR-006 270-FR-009 270-FR-010 270-FR-013
   describe('a card and its pin', () => {
-    let scroll: jest.Mock;
+    let scroll: Mock;
 
     beforeEach(async () => {
       await configure();
-      jest.useFakeTimers();
-      scroll = jest.fn();
+      vi.useFakeTimers();
+      scroll = vi.fn();
       Object.defineProperty(Element.prototype, 'scrollIntoView', {
         configurable: true,
         value: scroll,
@@ -1666,7 +1667,7 @@ describe('Results', () => {
     const send = (kind: string, id = 'x-1') =>
       messages.next({ at: '2026-10-17T12:00:00.000Z', id, kind });
     const coalesce = async () => {
-      await jest.advanceTimersByTimeAsync(300);
+      await vi.advanceTimersByTimeAsync(300);
       await settle();
     };
     const hosts = () => [...page().querySelectorAll('mf-result-card')];
@@ -2080,7 +2081,7 @@ describe('Results', () => {
       await loaded();
 
       send('garage.suspended', 'one');
-      await jest.advanceTimersByTimeAsync(300);
+      await vi.advanceTimersByTimeAsync(300);
       await settle();
 
       expect(amber()).toEqual(['Service Doi']);
@@ -2095,7 +2096,7 @@ describe('Results', () => {
       );
 
       send('garage.suspended', 'one');
-      await jest.advanceTimersByTimeAsync(300);
+      await vi.advanceTimersByTimeAsync(300);
       await settle();
 
       expect(mapView.light).toHaveBeenLastCalledWith(undefined);
@@ -2107,7 +2108,7 @@ describe('Results', () => {
       await point('Service Doi', 'pointerenter');
 
       send('garage.suspended', 'two');
-      await jest.advanceTimersByTimeAsync(300);
+      await vi.advanceTimersByTimeAsync(300);
       await settle();
 
       expect(lit()).toBe('one');
@@ -2176,7 +2177,7 @@ type Ask = {
 };
 let asks: Ask[];
 const geolocation = {
-  getCurrentPosition: jest.fn(
+  getCurrentPosition: vi.fn(
     (
       ok: PositionCallback,
       fail?: PositionErrorCallback | null,
@@ -2496,14 +2497,14 @@ describe('Results waiting for an address the driver types', () => {
   });
 
   it('shows it after 10 s of silence, and not before', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages?brand=bmw', { placed: false });
 
-    await jest.advanceTimersByTimeAsync(9_999);
+    await vi.advanceTimersByTimeAsync(9_999);
     await settle();
     expect(field()).toBeNull();
 
-    await jest.advanceTimersByTimeAsync(1);
+    await vi.advanceTimersByTimeAsync(1);
     await settle();
     await settle();
     shown();
@@ -2577,9 +2578,9 @@ describe('Results waiting for an address the driver types', () => {
   });
 
   it('drops a location that answers after an address was picked', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages?brand=bmw', { placed: false });
-    await jest.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(10_000);
     await settle();
     TestBed.inject(PlaceStore).set(PLACE);
     await settle();
@@ -2665,7 +2666,7 @@ describe('Results changing the brand', () => {
   it('pushes a history entry naming only the new brand, keeping the place and radius', async () => {
     await shown();
     const router = TestBed.inject(Router);
-    const navigate = jest.spyOn(router, 'navigate');
+    const navigate = vi.spyOn(router, 'navigate');
 
     await tap('Audi');
 
@@ -2688,7 +2689,7 @@ describe('Results changing the brand', () => {
 
   it('still writes a place change into the bar without a history entry', async () => {
     await shown();
-    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
 
     page().querySelector<HTMLButtonElement>('.summary .change')?.click();
     await settle();
@@ -2703,7 +2704,7 @@ describe('Results changing the brand', () => {
 
   it('changes nothing for the brand already shown, by its slug or its id', async () => {
     await shown(`/ro/garages?brand=b-bmw&near=${NEAR}`);
-    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
 
     await tap('BMW');
     brandSearch()?.componentInstance.chosen.emit({ ...BMW, popularity: 1 });
@@ -2977,7 +2978,7 @@ describe('Results changing the brand', () => {
   });
 
   it("announces the new brand's tally as a new search is", async () => {
-    const announce = jest
+    const announce = vi
       .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
       .mockResolvedValue();
     await shown();
@@ -3102,21 +3103,21 @@ describe('the brand chips and the brand search from a tablet up', () => {
 
 // @traces 1358-FR-001 1358-FR-002 1358-FR-006 1358-FR-007 1358-FR-008 1358-FR-010
 describe('Results on a phone, with the list in a sheet over the map', () => {
-  let scroll: jest.Mock;
+  let scroll: Mock;
 
   beforeEach(async () => {
     brandsApi.popularBrandsControllerTiles.mockClear();
     await configure();
-    scroll = jest.fn();
+    scroll = vi.fn();
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
       value: scroll,
     });
-    Element.prototype.scrollTo = jest.fn();
-    window.scrollTo = jest.fn();
+    Element.prototype.scrollTo = vi.fn();
+    window.scrollTo = vi.fn();
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   const sheet = () => page().querySelector<HTMLElement>('mf-results-sheet');
   const position = () => sheet()?.getAttribute('data-position');
@@ -3199,7 +3200,7 @@ describe('Results on a phone, with the list in a sheet over the map', () => {
 
   // @traces 1358-FR-007 1358-FR-015
   it("raises the sheet before it brings a listed garage's card into view on a pin tap", async () => {
-    const raise = jest.spyOn(ResultsSheet.prototype, 'raise');
+    const raise = vi.spyOn(ResultsSheet.prototype, 'raise');
     await shown();
 
     mapPicked('two');
@@ -3214,7 +3215,7 @@ describe('Results on a phone, with the list in a sheet over the map', () => {
 
   // @traces 1358-FR-007
   it('moves the sheet nowhere for a pin whose garage is not in the list', async () => {
-    const raise = jest.spyOn(ResultsSheet.prototype, 'raise');
+    const raise = vi.spyOn(ResultsSheet.prototype, 'raise');
     await shown();
 
     mapPicked('pin-5');
@@ -3226,7 +3227,7 @@ describe('Results on a phone, with the list in a sheet over the map', () => {
 
   // @traces 1358-FR-008
   it("keeps the position on a brand change and sends the list to the sheet's top", async () => {
-    const top = jest.spyOn(ResultsSheet.prototype, 'toTop');
+    const top = vi.spyOn(ResultsSheet.prototype, 'toTop');
     await shown();
 
     page()
@@ -3248,7 +3249,7 @@ describe('Results on a phone, with the list in a sheet over the map', () => {
 
   // @traces 1358-FR-008
   it('keeps the position and the list where it is on a map move', async () => {
-    const top = jest.spyOn(ResultsSheet.prototype, 'toTop');
+    const top = vi.spyOn(ResultsSheet.prototype, 'toTop');
     await shown();
 
     mapMoved({ bbox: '44.4,26,44.5,26.2' });
@@ -3261,7 +3262,7 @@ describe('Results on a phone, with the list in a sheet over the map', () => {
 
   // @traces 1358-FR-010
   it('rests the sheet at full with no history step and says so in the summary when the map fails', async () => {
-    const push = jest.spyOn(history, 'pushState');
+    const push = vi.spyOn(history, 'pushState');
     openMap.mockImplementationOnce(() => Promise.reject(new Error('style')));
     await shown();
     await settle();
@@ -3427,12 +3428,12 @@ describe('Results loading more', () => {
     }
     unobserve() {}
   }
-  let scroll: jest.Mock;
+  let scroll: Mock;
 
   beforeEach(async () => {
     observers = [];
     Object.assign(window, { IntersectionObserver: FakeObserver });
-    scroll = jest.fn();
+    scroll = vi.fn();
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
       value: scroll,
@@ -3768,7 +3769,7 @@ describe('Results loading more', () => {
 
   // @traces 1356-FR-012
   it('follows and reads again by ids the first page garages only', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await loaded();
     await scrolledToEnd();
     await reads[1]?.answer(
@@ -3785,7 +3786,7 @@ describe('Results loading more', () => {
       id: 'review-1',
       kind: 'review.posted',
     });
-    await jest.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(300);
     await settle();
 
     expect(reads[2]?.params).toEqual({
@@ -3799,7 +3800,7 @@ describe('Results loading more', () => {
       kind: 'garage.updated',
     });
     await reads[2]?.answer(pageOf({ items: garages(0, 20) }));
-    await jest.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(300);
     await settle();
     const idsReads = searches().filter((q) => q.ids);
     expect(idsReads.every((q) => (q.ids?.split(',').length ?? 0) <= 20)).toBe(
@@ -4011,9 +4012,9 @@ describe('Results loading more', () => {
 
   // @traces 1356-FR-008
   it("scrolls the phone's sheet back to where the list was on the way back, not the page", async () => {
-    jest.spyOn(ResultsSheet.prototype, 'scrolled').mockReturnValue(640);
-    const back = jest.spyOn(ResultsSheet.prototype, 'scrollBack');
-    window.scrollTo = jest.fn();
+    vi.spyOn(ResultsSheet.prototype, 'scrolled').mockReturnValue(640);
+    const back = vi.spyOn(ResultsSheet.prototype, 'scrollBack');
+    window.scrollTo = vi.fn();
     await loaded();
     await harness.navigateByUrl('/ro/elsewhere');
     await settle();
@@ -4022,14 +4023,14 @@ describe('Results loading more', () => {
 
     expect(back).toHaveBeenCalledWith(640);
     expect(window.scrollTo).not.toHaveBeenCalled();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // @traces 1356-FR-008
   it('scrolls the page back from a tablet up, where the sheet does not scroll', async () => {
     layout.set('tablet');
-    const back = jest.spyOn(ResultsSheet.prototype, 'scrollBack');
-    window.scrollTo = jest.fn();
+    const back = vi.spyOn(ResultsSheet.prototype, 'scrollBack');
+    window.scrollTo = vi.fn();
     Object.defineProperty(window, 'scrollY', {
       configurable: true,
       value: 900,
@@ -4043,7 +4044,7 @@ describe('Results loading more', () => {
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 900 });
     expect(back).not.toHaveBeenCalled();
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // The page is torn down after the next screen is chosen: by then the list
@@ -4063,15 +4064,15 @@ describe('Results loading more', () => {
         .subscribe(() => {
           gone = true;
         });
-      jest
-        .spyOn(ResultsSheet.prototype, 'scrolled')
-        .mockImplementation(() => (gone ? 0 : y));
+      vi.spyOn(ResultsSheet.prototype, 'scrolled').mockImplementation(() =>
+        gone ? 0 : y,
+      );
       Object.defineProperty(window, 'scrollY', {
         configurable: true,
         get: () => (gone ? 0 : y),
       });
-      const back = jest.spyOn(ResultsSheet.prototype, 'scrollBack');
-      window.scrollTo = jest.fn();
+      const back = vi.spyOn(ResultsSheet.prototype, 'scrollBack');
+      window.scrollTo = vi.fn();
       await loaded();
       gone = false;
       await harness.navigateByUrl('/ro/elsewhere');
@@ -4085,7 +4086,7 @@ describe('Results loading more', () => {
         configurable: true,
         value: 0,
       });
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     },
   );
 
@@ -4106,10 +4107,8 @@ describe('Results loading more', () => {
   ] as const)('%s', async (_, driverScrolls, calls) => {
     let top = 640;
     let tall = 600;
-    jest
-      .spyOn(ResultsSheet.prototype, 'scrolled')
-      .mockImplementation(() => top);
-    const scrolls = jest
+    vi.spyOn(ResultsSheet.prototype, 'scrolled').mockImplementation(() => top);
+    const scrolls = vi
       .spyOn(ResultsSheet.prototype, 'scrollBack')
       .mockImplementation((y) => {
         top = Math.min(y, tall);
@@ -4129,12 +4128,12 @@ describe('Results loading more', () => {
 
     expect(scrolls.mock.calls).toEqual(calls);
     expect(top).toBe(driverScrolls ? 300 : 640);
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   // @traces 1356-FR-001
   it("asks for no page with the previous brand's cursor while another brand loads", async () => {
-    Element.prototype.scrollTo = jest.fn();
+    Element.prototype.scrollTo = vi.fn();
     await loaded();
 
     page()
@@ -4205,7 +4204,7 @@ describe('Results loading more', () => {
 
   // @traces 1356-FR-008
   it('keeps nothing for the new brand when Results is left while it loads', async () => {
-    Element.prototype.scrollTo = jest.fn();
+    Element.prototype.scrollTo = vi.fn();
     await loaded();
     page()
       .querySelectorAll<HTMLButtonElement>('mf-brand-chips button')[1]
@@ -4262,11 +4261,11 @@ describe('Results in the visit’s voice', () => {
 describe('Results sorting', () => {
   beforeEach(async () => {
     await configure();
-    Element.prototype.scrollTo = jest.fn();
-    window.scrollTo = jest.fn();
+    Element.prototype.scrollTo = vi.fn();
+    window.scrollTo = vi.fn();
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   const control = () => page().querySelector('mf-sort-control');
   const buttons = () => [
@@ -4322,7 +4321,7 @@ describe('Results sorting', () => {
 
   it('writes the sort into the bar as a new history entry and asks again, unlogged, from the first page', async () => {
     await shown();
-    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
 
     await pick('Preț');
 
@@ -4375,7 +4374,7 @@ describe('Results sorting', () => {
 
   it('changes nothing for the sort already shown', async () => {
     await shown();
-    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
 
     await pick('Notă');
 
@@ -4450,8 +4449,8 @@ describe('Results sorting', () => {
   });
 
   it('changes a card in place on a live rating change, never re-ordering the sorted list', async () => {
-    jest.useFakeTimers();
-    jest.spyOn(TestBed.inject(LiveAnnouncer), 'announce').mockResolvedValue();
+    vi.useFakeTimers();
+    vi.spyOn(TestBed.inject(LiveAnnouncer), 'announce').mockResolvedValue();
     await shown(`/ro/garages?brand=bmw&near=${NEAR}&sort=price`);
     const [first, second] = page().querySelectorAll('.cards > li');
 
@@ -4460,7 +4459,7 @@ describe('Results sorting', () => {
       id: 'review-9',
       kind: 'review.posted',
     });
-    await jest.advanceTimersByTimeAsync(300);
+    await vi.advanceTimersByTimeAsync(300);
     await settle();
     expect(reads).toHaveLength(2);
     expect(reads[1]?.params).toEqual(
@@ -4480,7 +4479,7 @@ describe('Results sorting', () => {
     expect(now[0]).toBe(first);
     expect(now[1]).toBe(second);
     expect(searches().filter((q) => !q.ids)).toHaveLength(1);
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('turns Distanță off, saying why, until a place is known, and shows the rating order meanwhile', async () => {
@@ -4523,13 +4522,13 @@ describe('Results filters', () => {
   beforeEach(async () => {
     brandsApi.popularBrandsControllerTiles.mockClear();
     await configure();
-    Element.prototype.scrollTo = jest.fn();
-    window.scrollTo = jest.fn();
+    Element.prototype.scrollTo = vi.fn();
+    window.scrollTo = vi.fn();
   });
 
   afterEach(() => {
     pinsApi.mockImplementation((_params) => Promise.resolve(pinsAnswer));
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   type PanelData = {
@@ -4658,7 +4657,7 @@ describe('Results filters', () => {
   describe('the address bar', () => {
     it('writes open_now=1 as a history step, keeping brand and place', async () => {
       await shown();
-      const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
 
       await toggled('open_now');
 
@@ -4960,7 +4959,7 @@ describe('Results filters', () => {
         `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&open_saturday=1`,
         none(),
       );
-      const navigate = jest.spyOn(TestBed.inject(Router), 'navigate');
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
 
       state()?.querySelector<HTMLButtonElement>('button.primary')?.click();
       await settle();

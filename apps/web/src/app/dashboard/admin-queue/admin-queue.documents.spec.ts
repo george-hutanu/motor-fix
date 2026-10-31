@@ -195,7 +195,7 @@ describe('a yearly documents row in the queue', () => {
 
 describe('the file named with its Documente part', () => {
   it('opens the drawer asking for the Documente part', async () => {
-    const overlays = { open: jest.fn(() => new Promise(() => undefined)) };
+    const overlays = { open: vi.fn(() => new Promise(() => undefined)) };
     await open('ro', [
       { provide: Overlays, useValue: overlays },
       {

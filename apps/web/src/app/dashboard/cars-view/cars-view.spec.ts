@@ -7,6 +7,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { CancelTransfer } from './cancel-transfer/cancel-transfer';
 import { CarsView } from './cars-view';
@@ -38,17 +39,17 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
   ...over,
 });
 
-let list: jest.Mock;
-let open: jest.Mock;
+let list: Mock;
+let open: Mock;
 
 async function render(
   answer: CarDto[] | Promise<never> = [car()],
   language: 'ro' | 'en' = 'ro',
 ) {
-  list = jest.fn(() =>
+  list = vi.fn(() =>
     answer instanceof Promise ? answer : Promise.resolve({ items: answer }),
   );
-  open = jest.fn(async () => 'cancelled');
+  open = vi.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       { provide: CarsService, useValue: { carsControllerList: list } },
@@ -100,8 +101,9 @@ const lines = (card: HTMLElement) =>
 describe('Mașinile mele', () => {
   // Only Date is faked: Angular's stability checks still need real timers.
   beforeEach(() =>
-    jest.useFakeTimers({
-      doNotFake: [
+    vi.useFakeTimers({
+      now: new Date('2026-10-08T09:00:00Z'),
+      toNotFake: [
         'nextTick',
         'setImmediate',
         'clearImmediate',
@@ -117,10 +119,9 @@ describe('Mașinile mele', () => {
         'hrtime',
         'performance',
       ],
-      now: new Date('2026-10-08T09:00:00Z'),
     }),
   );
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it('reads the cars once and shows a card per car with its name and its year and kilometres', async () => {
     const { element, settle } = await render();
@@ -381,10 +382,10 @@ describe('Mașinile mele', () => {
 });
 
 describe('Mașinile mele opened at a car', () => {
-  let scrolled: jest.Mock;
+  let scrolled: Mock;
 
   async function open(url: string, items = [car(), car({ id: 'car-2' })]) {
-    scrolled = jest.fn();
+    scrolled = vi.fn();
     Element.prototype.scrollIntoView = scrolled;
     TestBed.configureTestingModule({
       providers: [
@@ -392,7 +393,7 @@ describe('Mașinile mele opened at a car', () => {
           provide: CarsService,
           useValue: { carsControllerList: async () => ({ items }) },
         },
-        { provide: Overlays, useValue: { open: jest.fn() } },
+        { provide: Overlays, useValue: { open: vi.fn() } },
         ...heldForDriver(),
         provideRouter([
           { children: [{ component: CarsView, path: '**' }], path: 'cars' },
@@ -458,8 +459,9 @@ describe('Mașinile mele opened at a car', () => {
 
 describe('a car card', () => {
   beforeEach(() =>
-    jest.useFakeTimers({
-      doNotFake: [
+    vi.useFakeTimers({
+      now: new Date('2026-10-08T09:00:00Z'),
+      toNotFake: [
         'nextTick',
         'setImmediate',
         'clearImmediate',
@@ -475,11 +477,10 @@ describe('a car card', () => {
         'hrtime',
         'performance',
       ],
-      now: new Date('2026-10-08T09:00:00Z'),
     }),
   );
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
       n.innerHTML = '';
     });
@@ -934,7 +935,7 @@ describe('a car card', () => {
     expect(list).toHaveBeenCalledTimes(1);
     again.fixture.destroy();
 
-    jest.setSystemTime(new Date('2026-10-08T09:05:00Z'));
+    vi.setSystemTime(new Date('2026-10-08T09:05:00Z'));
     const past = first.view();
     past.fixture.detectChanges();
 
@@ -1042,8 +1043,9 @@ describe('the car menu’s arrows', () => {
 // @traces 1392-FR-001 1392-FR-004 1392-FR-007 1392-FR-009
 describe('selling a car from its card', () => {
   beforeEach(() =>
-    jest.useFakeTimers({
-      doNotFake: [
+    vi.useFakeTimers({
+      now: new Date('2026-10-08T09:00:00Z'),
+      toNotFake: [
         'nextTick',
         'setImmediate',
         'clearImmediate',
@@ -1059,11 +1061,10 @@ describe('selling a car from its card', () => {
         'hrtime',
         'performance',
       ],
-      now: new Date('2026-10-08T09:00:00Z'),
     }),
   );
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
       n.innerHTML = '';
     });
@@ -1217,7 +1218,7 @@ describe('selling a car from its card', () => {
     'car_transfer.accepted',
   ] as const)('reads the list again on %s', async (kind) => {
     // The re-read waits 300 ms on the clock, which a frozen Date never reaches.
-    jest.useRealTimers();
+    vi.useRealTimers();
     const { settle } = await render();
     await settle();
 

@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { SignUp } from './sign-up';
 import { Consent } from '../../consent/consent';
@@ -24,7 +25,7 @@ const problem = (
     status,
   });
 
-let signUp: jest.Mock;
+let signUp: Mock;
 let result: Promise<OverlayResult<'signed-in' | AuthSwitch>>;
 
 async function settle() {
@@ -35,11 +36,11 @@ async function settle() {
 }
 
 async function open(language: 'ro' | 'en' = 'ro', email?: string) {
-  signUp = jest.fn(async () => ({ landing: '/app/driver' }));
+  signUp = vi.fn(async () => ({ landing: '/app/driver' }));
   TestBed.configureTestingModule({
     providers: [
       { provide: Session, useValue: { signUp } },
-      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Consent, useValue: { track: vi.fn() } },
     ],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
@@ -102,14 +103,14 @@ async function submit(name: string, email: string, password: string) {
 }
 
 beforeEach(() => {
-  jest.spyOn(navigator, 'onLine', 'get').mockImplementation(() => true);
+  vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => true);
 });
 
 afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('what the person typed is never markup', () => {

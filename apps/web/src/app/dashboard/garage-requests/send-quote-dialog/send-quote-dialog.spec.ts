@@ -15,6 +15,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import {
   type SendQuoteData,
@@ -23,9 +24,9 @@ import {
 } from './send-quote-dialog';
 import { Consent } from '../../../consent/consent';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 @Component({ template: '' })
@@ -89,9 +90,9 @@ const detail = (over: Partial<GarageRequestDto> = {}): GarageRequestDto => ({
 
 const QUOTE = { id: 'quote-1' } as GarageQuoteDto;
 
-let read: jest.Mock;
-let send: jest.Mock;
-let track: jest.Mock;
+let read: Mock;
+let send: Mock;
+let track: Mock;
 let result: Promise<SendQuoteResult | 'cancelled'>;
 
 async function settle() {
@@ -108,10 +109,10 @@ async function open(
     readFails = false,
   }: { language?: 'ro' | 'en'; readFails?: boolean } = {},
 ) {
-  read = jest.fn(async () => request);
+  read = vi.fn(async () => request);
   if (readFails) read.mockRejectedValueOnce(new Error('network'));
-  send = jest.fn(async () => QUOTE);
-  track = jest.fn();
+  send = vi.fn(async () => QUOTE);
+  track = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       { provide: Consent, useValue: { track } },
@@ -214,8 +215,8 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  (toast as unknown as jest.Mock).mockClear();
-  jest.restoreAllMocks();
+  (toast as unknown as Mock).mockClear();
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
 });
 
@@ -737,7 +738,7 @@ describe('the send-quote dialog: sending', () => {
   });
 
   it('disables Trimite offline with Ești offline and keeps what was typed', async () => {
-    const online = jest.spyOn(navigator, 'onLine', 'get');
+    const online = vi.spyOn(navigator, 'onLine', 'get');
     online.mockReturnValue(false);
     await open();
     await fillValid();

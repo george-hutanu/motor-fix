@@ -1,17 +1,15 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import { startTelemetry } from '@motor-fix/observability';
+import { type Mock, vi } from 'vitest';
 
-jest.mock('@motor-fix/observability', () => ({
-  logEntry: jest.fn(),
-  startTelemetry: jest.fn(),
-  telemetryStarted: jest.fn(),
+vi.mock('@motor-fix/observability', () => ({
+  logEntry: vi.fn(),
+  startTelemetry: vi.fn(),
+  telemetryStarted: vi.fn(),
 }));
 
 type Observability = {
-  logEntry: jest.Mock;
-  telemetryStarted: jest.Mock;
+  logEntry: Mock;
+  telemetryStarted: Mock;
 };
 
 describe('the web server telemetry entry', () => {
@@ -25,7 +23,7 @@ describe('the web server telemetry entry', () => {
 
 // @traces 1345-FR-005
 describe('the web server telemetry entry and the browser collector', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   // Each case loads the entry in a fresh registry, so the mocks it calls are
   // the ones that registry made.
@@ -36,13 +34,12 @@ describe('the web server telemetry entry and the browser collector', () => {
     else process.env['FARO_URL'] = faro;
     let observability: Observability | undefined;
     try {
-      await jest.isolateModulesAsync(async () => {
-        observability = jest.requireMock<Observability>(
-          '@motor-fix/observability',
-        );
-        observability.telemetryStarted.mockReturnValue(started);
-        await import('./telemetry');
-      });
+      vi.resetModules();
+      observability = (await import(
+        '@motor-fix/observability'
+      )) as unknown as Observability;
+      observability.telemetryStarted.mockReturnValue(started);
+      await import('./telemetry');
     } finally {
       process.env = saved;
     }

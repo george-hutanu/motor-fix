@@ -11,6 +11,7 @@ import {
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { EstimateSection } from './estimate-section';
 import { Consent } from '../../../consent/consent';
@@ -81,21 +82,21 @@ class Host {
 }
 
 let fixture: ComponentFixture<Host>;
-let open: jest.Mock;
+let open: Mock;
 
 async function render(garage = GARAGE) {
-  open = jest.fn(async () => 'cancelled');
+  open = vi.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
       { provide: Overlays, useValue: { open } },
-      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Consent, useValue: { track: vi.fn() } },
       {
         provide: Session,
         useValue: {
           current: signal(null),
-          load: jest.fn(async () => null),
-          renew: jest.fn(async () => true),
+          load: vi.fn(async () => null),
+          renew: vi.fn(async () => true),
           roleHint: signal(null),
         },
       },

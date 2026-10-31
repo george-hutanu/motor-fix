@@ -9,6 +9,7 @@ import type { MeDto } from '@motor-fix/data-access';
 import { LanguageChoice } from '@motor-fix/i18n';
 import { OpenSheets, Overlays } from '@motor-fix/overlays';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { provideLanguageAddresses, SITE_ORIGIN } from '../../addresses';
 import { routes } from '../../app.routes';
@@ -31,13 +32,13 @@ const DRIVER = {
 } as unknown as MeDto;
 
 let signedIn: MeDto | null;
-let overlays: { open: jest.Mock };
+let overlays: { open: Mock };
 
 function setUp(platform = 'browser') {
   signedIn = null;
-  overlays = { open: jest.fn(async () => 'cancelled') };
+  overlays = { open: vi.fn(async () => 'cancelled') };
   const current = signal<MeDto | null>(null);
-  const load = jest.fn(async () => {
+  const load = vi.fn(async () => {
     current.set(signedIn);
     return signedIn;
   });
@@ -51,11 +52,11 @@ function setUp(platform = 'browser') {
         useValue: {
           current,
           ended: new Subject<void>(),
-          keepReturnTo: jest.fn(),
+          keepReturnTo: vi.fn(),
           load,
           roleHint: signal(null),
           shown: current,
-          takeReturnTo: jest.fn((): string | null => null),
+          takeReturnTo: vi.fn((): string | null => null),
           token: () => 'access',
         },
       },

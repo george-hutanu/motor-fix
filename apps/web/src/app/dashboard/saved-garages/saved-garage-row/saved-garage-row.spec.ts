@@ -30,10 +30,10 @@ async function render(
       provideRouter([]),
       {
         provide: GaragesService,
-        useValue: { publicGaragesControllerBySlug: jest.fn() },
+        useValue: { publicGaragesControllerBySlug: vi.fn() },
       },
-      { provide: Overlays, useValue: { open: jest.fn() } },
-      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
+      { provide: Consent, useValue: { track: vi.fn() } },
       { provide: Voice, useValue: { voice: 1 } },
     ],
   });

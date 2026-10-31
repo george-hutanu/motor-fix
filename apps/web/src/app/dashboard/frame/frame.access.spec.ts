@@ -57,11 +57,11 @@ const account = (
   }) as unknown as MeDto;
 
 async function render(url: string, first = account(OWNER)) {
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = vi.fn();
   const events = new Subject<LiveMessage>();
   const current = signal<MeDto | null>(first);
   const garageGone = signal(false);
-  const reload = jest.fn(async (): Promise<void> => undefined);
+  const reload = vi.fn(async (): Promise<void> => undefined);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -79,23 +79,23 @@ async function render(url: string, first = account(OWNER)) {
           garageGone,
           reload,
           shown: current,
-          signOut: jest.fn(),
+          signOut: vi.fn(),
           token: () => 'access',
         },
       },
       {
         provide: Live,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           events,
           offline: signal(false),
           on: () => new Subject<LiveMessage>(),
-          open: jest.fn(),
+          open: vi.fn(),
           resync: new Subject<void>(),
           state: signal('open'),
         },
       },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
     ],
   });
   const harness = await RouterTestingHarness.create();

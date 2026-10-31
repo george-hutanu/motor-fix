@@ -1,6 +1,3 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 import { trace } from '@opentelemetry/api';
 
 describe('the web server telemetry entry with telemetry off', () => {

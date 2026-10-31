@@ -41,8 +41,9 @@ const GARAGES: NonNullable<Link> = {
 
 // Only Date is faked: Angular's stability checks still need real timers.
 function clockAt(at: string) {
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    now: new Date(at),
+    toNotFake: [
       'nextTick',
       'setImmediate',
       'clearImmediate',
@@ -58,11 +59,10 @@ function clockAt(at: string) {
       'hrtime',
       'performance',
     ],
-    now: new Date(at),
   });
 }
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 // What a parent does when anything on the card changes: the line is checked
 // again with the same inputs.
@@ -150,7 +150,7 @@ describe('the due-date line', () => {
     const line = await render('2026-10-08');
     expect(line.sentence()).toBe('ITP‑ul expiră azi');
 
-    jest.setSystemTime(new Date('2026-10-08T21:00:00Z'));
+    vi.setSystemTime(new Date('2026-10-08T21:00:00Z'));
     redraw(line.fixture);
     expect(line.sentence()).toBe('ITP‑ul a expirat pe 8 oct. 2026');
     expect(line.state()).toBe('red');
@@ -160,7 +160,7 @@ describe('the due-date line', () => {
     const line = await render('2026-10-16');
     expect(line.state()).toBe('amber');
 
-    jest.setSystemTime(new Date('2026-10-09T09:00:00Z'));
+    vi.setSystemTime(new Date('2026-10-09T09:00:00Z'));
     redraw(line.fixture);
 
     expect(line.state()).toBe('red');
@@ -235,7 +235,7 @@ describe('the line across midnight and summer time', () => {
       const line = await render(expiry);
       expect(line.sentence()).toBe('ITP‑ul expiră mâine');
 
-      jest.setSystemTime(new Date(after));
+      vi.setSystemTime(new Date(after));
       redraw(line.fixture);
 
       expect(line.sentence()).toBe('ITP‑ul expiră azi');
@@ -359,7 +359,7 @@ describe('the due-date line at the edges', () => {
       const line = await render(expiry);
       expect([line.state(), line.sentence()]).toEqual([stateBefore, before]);
 
-      jest.setSystemTime(new Date('2026-10-08T21:00:00.000Z'));
+      vi.setSystemTime(new Date('2026-10-08T21:00:00.000Z'));
       redraw(line.fixture);
 
       expect([line.state(), line.sentence()]).toEqual([stateAfter, after]);
@@ -420,7 +420,7 @@ describe('the due-date line at the edges', () => {
     const line = await render('2026-10-08', 'ro', GARAGES);
     expect(line.anchors().length).toBe(0);
 
-    jest.setSystemTime(new Date('2026-10-08T21:00:00.000Z'));
+    vi.setSystemTime(new Date('2026-10-08T21:00:00.000Z'));
     redraw(line.fixture);
 
     expect(line.anchors().length).toBe(1);
@@ -431,7 +431,7 @@ describe('the due-date line at the edges', () => {
     const line = await render('2026-12-08');
     expect(line.state()).toBe('green');
 
-    jest.setSystemTime(new Date('2026-10-08T21:00:00.000Z'));
+    vi.setSystemTime(new Date('2026-10-08T21:00:00.000Z'));
     redraw(line.fixture);
 
     expect(line.state()).toBe('amber');

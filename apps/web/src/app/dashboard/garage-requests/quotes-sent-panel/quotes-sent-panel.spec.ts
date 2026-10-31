@@ -11,6 +11,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { QuotesSentPanel } from './quotes-sent-panel';
 import { Live } from '../../live';
@@ -27,7 +28,7 @@ import { GarageRequestsFeed } from '../garage-requests-feed';
 type Answer = GarageRequestListDto | Promise<GarageRequestListDto>;
 
 let live: ReturnType<typeof fakeLive>;
-let list: jest.Mock;
+let list: Mock;
 let observers: ReturnType<typeof fakeObservers>;
 
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
@@ -55,7 +56,7 @@ async function render(
   observers = fakeObservers();
   live = fakeLive();
   let call = 0;
-  list = jest.fn(
+  list = vi.fn(
     async ({ cursor, status }: { cursor?: string; status: string }) => {
       if (status !== 'quoted') return listOf([]);
       if (cursor) return pages[cursor];
@@ -80,7 +81,7 @@ async function render(
   });
   await TestBed.inject(I18n).enter('garage');
   if (language === 'en') await TestBed.inject(I18n).use('en');
-  const announce = jest
+  const announce = vi
     .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
     .mockResolvedValue();
   const fixture = TestBed.createComponent(QuotesSentPanel);

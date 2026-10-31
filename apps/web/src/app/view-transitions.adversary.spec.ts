@@ -2,6 +2,7 @@ import { ApplicationRef, Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet } from '@angular/router';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { screenTransitions } from './view-transitions';
 
@@ -15,7 +16,7 @@ class Page {}
 })
 class Root {}
 
-type Started = { skipTransition: jest.Mock };
+type Started = { skipTransition: Mock };
 
 // @traces 1193-FR-004
 describe('the view transitions under hostile navigation', () => {
@@ -27,12 +28,12 @@ describe('the view transitions under hostile navigation', () => {
     started = [];
     const doc = document as { startViewTransition?: unknown };
     doc.startViewTransition = withApi
-      ? jest.fn((update: () => Promise<void>) => {
+      ? vi.fn((update: () => Promise<void>) => {
           const done = Promise.resolve().then(update);
           const transition = {
             finished: done,
             ready: done,
-            skipTransition: jest.fn(),
+            skipTransition: vi.fn(),
             updateCallbackDone: done,
           };
           started.push(transition);

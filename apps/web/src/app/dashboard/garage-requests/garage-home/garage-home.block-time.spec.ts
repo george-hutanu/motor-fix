@@ -9,17 +9,13 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { GarageHome } from './garage-home';
-import { openBlockTime } from '../../block-time-dialog/open-block-time';
 import { Live } from '../../live';
 import { Session } from '../../session';
 import { fakeLive, listOf, wait } from '../garage-requests.testing';
 import { GarageRequestsFeed } from '../garage-requests-feed';
-
-jest.mock('../../block-time-dialog/open-block-time', () => ({
-  openBlockTime: jest.fn(async () => 'cancelled'),
-}));
 
 type Role = 'owner' | 'receptionist' | 'mechanic';
 
@@ -45,7 +41,7 @@ const account = (role: Role, features: Record<string, boolean>) =>
     garageId: 'garage-1',
   }) as unknown as MeDto;
 
-let overlays: { open: jest.Mock };
+let overlays: { open: Mock };
 
 async function render(
   role: Role,
@@ -53,7 +49,8 @@ async function render(
   language: 'ro' | 'en' = 'ro',
 ) {
   const me = signal(account(role, features));
-  overlays = { open: jest.fn() };
+  // The dialog opens through Overlays.open once its chunk has loaded.
+  overlays = { open: vi.fn(async () => 'cancelled') };
   TestBed.configureTestingModule({
     deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [
@@ -92,7 +89,6 @@ const button = (el: HTMLElement) =>
   el.querySelector<HTMLButtonElement>('.strip button[data-block-time]');
 
 afterEach(() => {
-  (openBlockTime as jest.Mock).mockClear();
   TestBed.resetTestingModule();
 });
 
@@ -163,12 +159,13 @@ describe('the dashboard strip: pressing Blochează timp', () => {
       button(el)?.click();
       await wait(0);
 
-      expect(openBlockTime).toHaveBeenCalledTimes(1);
-      expect(openBlockTime).toHaveBeenCalledWith(overlays, {
-        garageId: 'garage-1',
-        lifts,
-        team,
-      });
+      expect(overlays.open).toHaveBeenCalledTimes(1);
+      expect(overlays.open).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          data: { garageId: 'garage-1', lifts, team },
+        }),
+      );
     },
   );
 });

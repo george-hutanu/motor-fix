@@ -11,6 +11,7 @@ import {
   type MeDto,
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { GarageRequestsPanel } from './garage-requests-panel';
 import { Live } from '../../live';
@@ -29,7 +30,7 @@ class Host {
 type Answer = GarageRequestListDto | Error | Promise<GarageRequestListDto>;
 
 let live: ReturnType<typeof fakeLive>;
-let list: jest.Mock;
+let list: Mock;
 
 async function render(
   waiting: Answer[],
@@ -41,7 +42,7 @@ async function render(
 ) {
   live = fakeLive();
   let call = 0;
-  list = jest.fn(async ({ status }: { status: string }) => {
+  list = vi.fn(async ({ status }: { status: string }) => {
     if (status !== 'waiting') return listOf([]);
     const answer = waiting[Math.min(call++, waiting.length - 1)];
     if (answer instanceof Error) throw answer;
@@ -67,7 +68,7 @@ async function render(
     ],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
-  const announce = jest
+  const announce = vi
     .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
     .mockResolvedValue();
   const fixture = TestBed.createComponent(Host);
@@ -94,7 +95,7 @@ const counter = (element: HTMLElement) =>
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
 });
 
@@ -194,16 +195,16 @@ describe('the requests panel rows', () => {
   });
 
   it('brings the age up to date at least once a minute', async () => {
-    jest.useFakeTimers({ doNotFake: ['queueMicrotask'] });
+    vi.useFakeTimers({ toNotFake: ['queueMicrotask'] });
     const created = new Date(Date.now() - 30_000).toISOString();
     const pending = render([listOf([requestRow({ createdAt: created })])]);
-    await jest.advanceTimersByTimeAsync(10);
+    await vi.advanceTimersByTimeAsync(10);
     const { element, settle } = await pending;
     expect(text(element.querySelector('time'))).toBe('acum câteva secunde');
 
-    await jest.advanceTimersByTimeAsync(61_000);
+    await vi.advanceTimersByTimeAsync(61_000);
     const done = settle();
-    await jest.advanceTimersByTimeAsync(10);
+    await vi.advanceTimersByTimeAsync(10);
     await done;
 
     expect(text(element.querySelector('time'))).toBe('acum 1 min');

@@ -10,6 +10,7 @@ import {
 import { formatSlot, I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import {
   type ConfirmBookingData,
@@ -19,9 +20,9 @@ import {
 import { Session } from '../../session';
 import { quotedRow } from '../garage-requests.testing';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 @Component({
@@ -75,8 +76,8 @@ const TEAM: ConfirmOptionsDto = {
   needsLift: false,
 };
 
-let confirm: jest.Mock;
-let options: jest.Mock;
+let confirm: Mock;
+let options: Mock;
 let result: Promise<ConfirmBookingResult | 'cancelled'>;
 
 async function settle() {
@@ -95,8 +96,8 @@ async function open({
   language?: 'ro' | 'en';
   offered?: ConfirmOptionsDto;
 } = {}) {
-  confirm = jest.fn(async () => ({ id: 'booking-1', status: 'confirmed' }));
-  options = jest.fn(async () => offered);
+  confirm = vi.fn(async () => ({ id: 'booking-1', status: 'confirmed' }));
+  options = vi.fn(async () => offered);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([{ children: [], path: '**' }]),
@@ -181,7 +182,7 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  (toast as unknown as jest.Mock).mockClear();
+  (toast as unknown as Mock).mockClear();
   TestBed.resetTestingModule();
 });
 

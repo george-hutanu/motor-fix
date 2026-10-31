@@ -11,6 +11,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { PricesView } from './prices-view';
 import { Live } from '../live';
@@ -91,8 +92,8 @@ const me = {
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
-let read: jest.Mock;
-let open: jest.Mock;
+let read: Mock;
+let open: Mock;
 
 async function render(
   answer: () => Promise<PriceListDto> = async () => ({
@@ -104,8 +105,8 @@ async function render(
 ) {
   events = new Subject();
   resync = new Subject();
-  read = jest.fn(answer);
-  open = jest.fn(async () => 'saved');
+  read = vi.fn(answer);
+  open = vi.fn(async () => 'saved');
   TestBed.configureTestingModule({
     providers: [
       { provide: GaragesService, useValue: { priceListControllerRead: read } },
@@ -256,8 +257,8 @@ describe('Prețuri: the editing switch under odd lists', () => {
     const shown = signal<MeDto>(me);
     events = new Subject();
     resync = new Subject();
-    read = jest.fn(async () => ({ items: SEEDED, labour: LABOUR }));
-    open = jest.fn(async () => 'saved');
+    read = vi.fn(async () => ({ items: SEEDED, labour: LABOUR }));
+    open = vi.fn(async () => 'saved');
     TestBed.configureTestingModule({
       providers: [
         {

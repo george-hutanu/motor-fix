@@ -27,7 +27,7 @@ const me = (landing: string, capabilities: string[]) =>
   }) as unknown as MeDto;
 
 async function open(capabilities: string[] | null, area: Area, url: string) {
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = vi.fn();
   const current = signal<MeDto | null>(
     capabilities ? me(`/app/${area}`, capabilities) : null,
   );
@@ -47,7 +47,7 @@ async function open(capabilities: string[] | null, area: Area, url: string) {
           ended: new Subject<void>(),
           garageGone: () => false,
           shown: current,
-          signOut: jest.fn(),
+          signOut: vi.fn(),
           token: () => 'access',
         },
       },
@@ -60,11 +60,11 @@ async function open(capabilities: string[] | null, area: Area, url: string) {
       {
         provide: Live,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           events: new Subject(),
           offline: signal(false),
           on: () => NEVER,
-          open: jest.fn(),
+          open: vi.fn(),
           resync: new Subject(),
         },
       },

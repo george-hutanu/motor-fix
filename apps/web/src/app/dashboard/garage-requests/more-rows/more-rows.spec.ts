@@ -25,7 +25,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve));
 
 describe('the rows after a list’s first page', () => {
   it('reads the next page when the end comes into view', async () => {
-    const page = jest.fn(async (cursor: string) => ({
+    const page = vi.fn(async (cursor: string) => ({
       items: [cursor],
       nextCursor: null,
     }));
@@ -48,7 +48,7 @@ describe('the rows after a list’s first page', () => {
   it('stops re-reading the shown depth at a page with no rows', async () => {
     const first = signal(1);
     let reads = 0;
-    const page = jest.fn(
+    const page = vi.fn(
       async (
         cursor: string,
       ): Promise<{ items: string[]; nextCursor: string }> =>
@@ -79,7 +79,7 @@ describe('the rows after a list’s first page', () => {
   // @traces 291-FR-009
   it('says a further page failed, keeps the rows shown and reads it again on retry', async () => {
     let fail = true;
-    const page = jest.fn(async (cursor: string) => {
+    const page = vi.fn(async (cursor: string) => {
       if (fail) throw new Error('offline');
       return { items: [cursor], nextCursor: null };
     });

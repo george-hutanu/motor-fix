@@ -244,7 +244,7 @@ function changing(reduced = false) {
   TestBed.configureTestingModule({
     providers: [{ provide: REDUCED_MOTION, useValue: signal(reduced) }],
   });
-  const announce = jest
+  const announce = vi
     .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
     .mockResolvedValue();
   const fixture = TestBed.createComponent(Changing);
@@ -399,7 +399,7 @@ describe('LivePill and LiveAnchor', () => {
 
   it('shows the held rows and scrolls up to the first one when the pill is tapped', () => {
     const { element, fixture } = list();
-    const scroll = jest.fn();
+    const scroll = vi.fn();
     Element.prototype.scrollIntoView = scroll;
     fixture.componentInstance.shown.set([
       { id: 'z', price: 0 },
@@ -421,7 +421,7 @@ describe('LivePill and LiveAnchor', () => {
   });
 
   it('keeps the first visible row where it was on screen when a row above it leaves', () => {
-    const scrollBy = jest.fn();
+    const scrollBy = vi.fn();
     window.scrollBy = scrollBy as unknown as typeof window.scrollBy;
     Object.defineProperty(window, 'scrollY', {
       configurable: true,

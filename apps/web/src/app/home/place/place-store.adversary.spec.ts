@@ -19,7 +19,7 @@ function store(platform = 'browser') {
 }
 
 beforeEach(() => localStorage.clear());
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('parsePlace against hostile values', () => {
   it.each([
@@ -88,14 +88,14 @@ describe('PlaceStore reading local storage', () => {
   });
 
   it('starts with no place when reading storage throws', () => {
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('denied');
     });
     expect(store().place()).toBeNull();
   });
 
   it('keeps the place for the visit when storage refuses the write', () => {
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota');
     });
     const s = store();

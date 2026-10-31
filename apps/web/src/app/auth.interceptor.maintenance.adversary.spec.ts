@@ -22,11 +22,11 @@ function setup(token: string | null) {
   const session = {
     deletingAccount: () => false,
     epoch: () => 0,
-    renew: jest.fn(async () => false),
+    renew: vi.fn(async () => false),
     token: () => token,
   };
-  const gate = jest.fn(async () => false);
-  const platformStatus = { on: jest.fn() };
+  const gate = vi.fn(async () => false);
+  const platformStatus = { on: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),

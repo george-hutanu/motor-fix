@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { SwPush } from '@angular/service-worker';
 import { NotificationsService } from '@motor-fix/data-access';
 import { BehaviorSubject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { PushDevice } from './push-device';
 import { PUSH_ENV, type PushEnv } from './push-support';
@@ -17,16 +18,16 @@ let permission: NotificationPermission;
 let current: BehaviorSubject<PushSubscription | null>;
 let sw: {
   isEnabled: boolean;
-  requestSubscription: jest.Mock;
+  requestSubscription: Mock;
   subscription: BehaviorSubject<PushSubscription | null>;
-  unsubscribe: jest.Mock;
+  unsubscribe: Mock;
 };
 let token: string | null;
 let api: {
-  pushSubscriptionsControllerKey: jest.Mock;
-  pushSubscriptionsControllerRemove: jest.Mock;
-  pushSubscriptionsControllerSave: jest.Mock;
-  pushSubscriptionsControllerTest: jest.Mock;
+  pushSubscriptionsControllerKey: Mock;
+  pushSubscriptionsControllerRemove: Mock;
+  pushSubscriptionsControllerSave: Mock;
+  pushSubscriptionsControllerTest: Mock;
 };
 
 function device(env: Partial<PushEnv> = {}, withSw = true) {
@@ -34,15 +35,15 @@ function device(env: Partial<PushEnv> = {}, withSw = true) {
   current = new BehaviorSubject<PushSubscription | null>(null);
   sw = {
     isEnabled: true,
-    requestSubscription: jest.fn(async () => subscription),
+    requestSubscription: vi.fn(async () => subscription),
     subscription: current,
-    unsubscribe: jest.fn(async () => undefined),
+    unsubscribe: vi.fn(async () => undefined),
   };
   api = {
-    pushSubscriptionsControllerKey: jest.fn(async () => ({ publicKey: 'KEY' })),
-    pushSubscriptionsControllerRemove: jest.fn(async () => undefined),
-    pushSubscriptionsControllerSave: jest.fn(async () => ({ id: 'dev-1' })),
-    pushSubscriptionsControllerTest: jest.fn(async () => ({ queued: 1 })),
+    pushSubscriptionsControllerKey: vi.fn(async () => ({ publicKey: 'KEY' })),
+    pushSubscriptionsControllerRemove: vi.fn(async () => undefined),
+    pushSubscriptionsControllerSave: vi.fn(async () => ({ id: 'dev-1' })),
+    pushSubscriptionsControllerTest: vi.fn(async () => ({ queued: 1 })),
   };
   TestBed.configureTestingModule({
     providers: [

@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { type MeDto, MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { PhoneChangeDialog } from './phone-change-dialog';
 
@@ -17,8 +18,8 @@ const problem = (status: number, code: string) =>
 
 const ME = { id: 'a1', phone: '+40722123456', phoneConfirmed: true } as MeDto;
 
-let request: jest.Mock;
-let confirm: jest.Mock;
+let request: Mock;
+let confirm: Mock;
 let result: Promise<OverlayResult<MeDto>>;
 
 async function settle() {
@@ -29,8 +30,8 @@ async function settle() {
 }
 
 async function open(language: 'ro' | 'en' = 'ro') {
-  request = jest.fn(async () => undefined);
-  confirm = jest.fn(async () => ME);
+  request = vi.fn(async () => undefined);
+  confirm = vi.fn(async () => ME);
   TestBed.configureTestingModule({
     providers: [
       {

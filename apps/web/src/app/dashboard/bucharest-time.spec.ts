@@ -6,7 +6,7 @@ describe('the Bucharest clock, whatever the browser’s zone', () => {
 
   afterEach(() => {
     process.env['TZ'] = zone;
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe.each(['UTC', 'America/New_York', 'Asia/Tokyo'])('under %s', (tz) => {
@@ -53,16 +53,16 @@ describe('the Bucharest clock, whatever the browser’s zone', () => {
     });
 
     it('rounds now up to the next quarter hour on the Bucharest clock', () => {
-      jest.useFakeTimers({ now: new Date('2026-07-15T07:07:00.000Z') });
+      vi.useFakeTimers({ now: new Date('2026-07-15T07:07:00.000Z') });
       expect(nextQuarter()).toBe('10:15');
-      jest.setSystemTime(new Date('2026-01-15T08:00:00.000Z'));
+      vi.setSystemTime(new Date('2026-01-15T08:00:00.000Z'));
       expect(nextQuarter()).toBe('10:15');
-      jest.setSystemTime(new Date('2026-01-15T08:44:00.000Z'));
+      vi.setSystemTime(new Date('2026-01-15T08:44:00.000Z'));
       expect(nextQuarter()).toBe('10:45');
     });
 
     it('stays on the same day late in the evening', () => {
-      jest.useFakeTimers({ now: new Date('2026-01-15T21:50:00.000Z') });
+      vi.useFakeTimers({ now: new Date('2026-01-15T21:50:00.000Z') });
       expect(nextQuarter()).toBe('23:45');
     });
   });

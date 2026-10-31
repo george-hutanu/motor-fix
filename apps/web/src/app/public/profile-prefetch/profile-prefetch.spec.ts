@@ -7,6 +7,7 @@ import {
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { PublicGarageDto } from '@motor-fix/data-access';
+import type { MockInstance } from 'vitest';
 
 import { prefetchAllowed } from './prefetch-allowed';
 import { ProfilePrefetch } from './profile-prefetch';
@@ -37,8 +38,8 @@ const PATH = /\/api\/v1\/garages\/([^/?]+)/;
 
 let http: HttpTestingController;
 let prefetch: ProfilePrefetch;
-let chunk: jest.SpyInstance;
-const measured = jest.fn();
+let chunk: MockInstance;
+const measured = vi.fn();
 
 function setUp(platform: 'browser' | 'server' = 'browser') {
   TestBed.configureTestingModule({
@@ -50,7 +51,7 @@ function setUp(platform: 'browser' | 'server' = 'browser') {
   });
   http = TestBed.inject(HttpTestingController);
   seen = [];
-  chunk = jest
+  chunk = vi
     .spyOn(ProfilePrefetch.prototype as never, 'preload' as never)
     .mockImplementation((() => Promise.resolve()) as never);
   prefetch = TestBed.inject(ProfilePrefetch);
@@ -103,7 +104,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   chunk?.mockRestore();
   sendMeasurementsTo(undefined);
 });
@@ -193,7 +194,7 @@ describe('pre-fetching a garage profile', () => {
   });
 
   it('sends no beacon and records no view', () => {
-    const beacon = jest.fn();
+    const beacon = vi.fn();
     Object.defineProperty(navigator, 'sendBeacon', {
       configurable: true,
       value: beacon,
@@ -222,12 +223,12 @@ describe('the pre-fetched profile', () => {
   });
 
   it('is dropped once older than 120 s, and read again on the next signal', () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     setUp();
     prefetch.want('a', undefined);
     answer('a');
 
-    jest.advanceTimersByTime(121_000);
+    vi.advanceTimersByTime(121_000);
 
     expect(prefetch.take('a', undefined)).toBeUndefined();
     prefetch.want('a', undefined);
@@ -237,7 +238,7 @@ describe('the pre-fetched profile', () => {
   it.each([404, 410])(
     'remembers a %i for 120 s, never serves it and reads it again after',
     (status) => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       setUp();
       prefetch.want('a', undefined);
       answer('a', null, { status, statusText: 'Gone' });
@@ -246,7 +247,7 @@ describe('the pre-fetched profile', () => {
       expect(open()).toHaveLength(0);
       expect(prefetch.take('a', undefined)).toBeUndefined();
 
-      jest.advanceTimersByTime(121_000);
+      vi.advanceTimersByTime(121_000);
       prefetch.want('a', undefined);
       expect(open()).toHaveLength(1);
     },
@@ -307,10 +308,10 @@ describe('when pre-fetching stays off', () => {
 // @traces 1169-FR-011
 describe('what a pre-fetch reports', () => {
   it('reports a fetch with its duration', () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     setUp();
     prefetch.want('a', undefined);
-    jest.advanceTimersByTime(40);
+    vi.advanceTimersByTime(40);
     answer('a');
 
     expect(measured).toHaveBeenCalledWith(
@@ -321,14 +322,14 @@ describe('what a pre-fetch reports', () => {
   });
 
   it('reports a cancel, a hit, an expiry and one skip per page', () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     setUp();
     prefetch.want('a', undefined);
     prefetch.cancel('a', undefined);
     prefetch.want('b', undefined);
     answer('b');
     prefetch.take('b', undefined);
-    jest.advanceTimersByTime(121_000);
+    vi.advanceTimersByTime(121_000);
     prefetch.take('b', undefined);
     connection = { saveData: true };
     prefetch.want('c', undefined);

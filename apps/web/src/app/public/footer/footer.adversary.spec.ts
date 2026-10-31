@@ -5,18 +5,19 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { PublicFooter } from './footer';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 
-let signIn: { start: jest.Mock };
+let signIn: { start: Mock };
 
 async function render(language: 'ro' | 'en' = 'ro') {
-  signIn = { start: jest.fn(async () => undefined) };
+  signIn = { start: vi.fn(async () => undefined) };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
       { provide: SignInDialog, useValue: signIn },
     ],
   });

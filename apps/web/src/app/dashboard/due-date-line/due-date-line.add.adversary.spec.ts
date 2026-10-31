@@ -22,8 +22,9 @@ class Host {
 }
 
 function clockAt(at: string) {
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    now: new Date(at),
+    toNotFake: [
       'nextTick',
       'setImmediate',
       'clearImmediate',
@@ -39,7 +40,6 @@ function clockAt(at: string) {
       'hrtime',
       'performance',
     ],
-    now: new Date(at),
   });
 }
 
@@ -64,7 +64,7 @@ async function render(language: 'ro' | 'en' = 'ro') {
 }
 
 beforeEach(() => clockAt('2026-10-08T09:00:00Z'));
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 // @traces 092-FR-009
 describe('the grey line that adds a date, under change', () => {

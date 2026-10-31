@@ -8,6 +8,7 @@ import {
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { RequestQuoteButton } from './request-quote-button';
 import { Consent } from '../../../consent/consent';
@@ -35,8 +36,8 @@ const GARAGE: PublicGarageDto = {
   worksOn: [],
 };
 
-let open: jest.Mock;
-let track: jest.Mock;
+let open: Mock;
+let track: Mock;
 
 async function render(
   options: {
@@ -46,8 +47,8 @@ async function render(
     textKey?: string;
   } = {},
 ) {
-  open = jest.fn(async () => 'cancelled');
-  track = jest.fn();
+  open = vi.fn(async () => 'cancelled');
+  track = vi.fn();
   const role = options.role ?? null;
   TestBed.configureTestingModule({
     providers: [
@@ -58,8 +59,8 @@ async function render(
         provide: Session,
         useValue: {
           current: signal(role ? { role } : null),
-          load: jest.fn(async () => null),
-          renew: jest.fn(async () => true),
+          load: vi.fn(async () => null),
+          renew: vi.fn(async () => true),
           roleHint: signal(null),
         },
       },

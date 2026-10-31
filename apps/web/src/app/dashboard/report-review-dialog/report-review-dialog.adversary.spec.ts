@@ -5,6 +5,7 @@ import { type ReviewReportDto, ReviewsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import {
   type ReportReviewData,
@@ -13,9 +14,9 @@ import {
 } from './report-review-dialog';
 import { staffReview } from '../garage-reviews/garage-reviews.testing';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 @Component({ template: '' })
@@ -31,7 +32,7 @@ const ANSWER: ReviewReportDto = {
   status: 'pending',
 };
 
-let send: jest.Mock;
+let send: Mock;
 let result: Promise<ReportReviewResult | 'cancelled'>;
 
 async function settle() {
@@ -44,7 +45,7 @@ async function settle() {
 async function open(
   review = staffReview({ id: 'r-1', postedAt: '2026-09-14T10:00:00.000Z' }),
 ) {
-  send = jest.fn(async () => ANSWER);
+  send = vi.fn(async () => ANSWER);
   TestBed.configureTestingModule({
     providers: [
       {
@@ -94,8 +95,8 @@ afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  (toast as unknown as jest.Mock).mockClear();
-  jest.restoreAllMocks();
+  (toast as unknown as Mock).mockClear();
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
 });
 
@@ -272,7 +273,7 @@ describe('the report task: sending twice and failing oddly', () => {
     await settle();
 
     await expect(result).resolves.toBe('refused');
-    const [said] = (toast as unknown as jest.Mock).mock.calls[0];
+    const [said] = (toast as unknown as Mock).mock.calls[0];
     expect(said).toBe('Recenzia nu mai este disponibilă.');
   });
 
@@ -285,7 +286,7 @@ describe('the report task: sending twice and failing oddly', () => {
     await settle();
 
     await expect(result).resolves.toBe('refused');
-    const [said] = (toast as unknown as jest.Mock).mock.calls[0];
+    const [said] = (toast as unknown as Mock).mock.calls[0];
     expect(said).not.toMatch(/undefined|garage\.reviews|^$/);
   });
 

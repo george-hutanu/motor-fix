@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { SignUp } from './sign-up';
 import { Consent } from '../../consent/consent';
@@ -24,8 +25,8 @@ const problem = (
     status,
   });
 
-let signUp: jest.Mock;
-let track: jest.Mock;
+let signUp: Mock;
+let track: Mock;
 let result: Promise<OverlayResult<'signed-in' | AuthSwitch>>;
 let online = true;
 
@@ -41,8 +42,8 @@ async function open(
   email?: string,
   name?: string,
 ) {
-  signUp = jest.fn(async () => ({ landing: '/app/driver' }));
-  track = jest.fn();
+  signUp = vi.fn(async () => ({ landing: '/app/driver' }));
+  track = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       { provide: Session, useValue: { signUp } },
@@ -122,14 +123,14 @@ async function submit(
 
 beforeEach(() => {
   online = true;
-  jest.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
+  vi.spyOn(navigator, 'onLine', 'get').mockImplementation(() => online);
 });
 
 afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
     n.innerHTML = '';
   });
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('the sign-up dialog', () => {

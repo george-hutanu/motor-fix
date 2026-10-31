@@ -8,7 +8,7 @@ import { SignInDialog } from '../sign-in/sign-in-dialog';
 class HomeStub {}
 
 function render(platform = 'browser') {
-  const start = jest.fn(async () => undefined);
+  const start = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       { provide: SignInDialog, useValue: { start } },

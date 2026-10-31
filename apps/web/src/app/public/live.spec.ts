@@ -12,6 +12,7 @@ import {
   signal,
 } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import type { Mock } from 'vitest';
 
 import { followPublicView, PublicLive, publicLiveResource } from './live';
 
@@ -52,10 +53,10 @@ class Body {
 
 let bodies: Body[];
 let answers: ('open' | 'fail' | number)[];
-let fetchMock: jest.Mock;
+let fetchMock: Mock;
 
-const settle = () => jest.advanceTimersByTimeAsync(0);
-const elapse = (ms: number) => jest.advanceTimersByTimeAsync(ms);
+const settle = () => vi.advanceTimersByTimeAsync(0);
+const elapse = (ms: number) => vi.advanceTimersByTimeAsync(ms);
 
 const event = (kind: string, id = 'g-1') =>
   `event: ${kind}\ndata: ${JSON.stringify({ at: '2026-10-07T12:00:00.000Z', id, kind })}\n\n`;
@@ -63,8 +64,8 @@ const event = (kind: string, id = 'g-1') =>
 function setUp(platform = 'browser') {
   bodies = [];
   answers = [];
-  jest.spyOn(Math, 'random').mockImplementation(() => 0.5);
-  fetchMock = jest.fn(async (_url: string, init: RequestInit) => {
+  vi.spyOn(Math, 'random').mockImplementation(() => 0.5);
+  fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
     const answer = answers.shift() ?? 'open';
     if (answer === 'fail') throw new TypeError('Failed to fetch');
     const body = new Body();
@@ -95,11 +96,11 @@ function view() {
   return createEnvironmentInjector([], TestBed.inject(EnvironmentInjector));
 }
 
-beforeEach(() => jest.useFakeTimers());
+beforeEach(() => vi.useFakeTimers());
 afterEach(() => {
   TestBed.resetTestingModule();
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 // @traces 267-FR-018
@@ -268,9 +269,9 @@ describe('PublicLive', () => {
     async (hiddenFor, streams) => {
       const live = setUp();
       let visibility: DocumentVisibilityState = 'visible';
-      jest
-        .spyOn(document, 'visibilityState', 'get')
-        .mockImplementation(() => visibility);
+      vi.spyOn(document, 'visibilityState', 'get').mockImplementation(
+        () => visibility,
+      );
       live.register({ garage: 'g-1' });
       await settle();
 
@@ -332,7 +333,7 @@ describe('publicLiveResource', () => {
 
   it('reads at once, and not again when the stream first opens: the view has just read its data', async () => {
     setUp();
-    const load = jest.fn(async () => ({ name: 'Atelier' }));
+    const load = vi.fn(async () => ({ name: 'Atelier' }));
     const ref = runInInjectionContext(view(), () =>
       publicLiveResource(
         load,
@@ -350,7 +351,7 @@ describe('publicLiveResource', () => {
 
   it('re-reads on its kinds about its object, once for a burst, and not for another object', async () => {
     setUp();
-    const load = jest.fn(async () => ({ name: 'Atelier' }));
+    const load = vi.fn(async () => ({ name: 'Atelier' }));
     runInInjectionContext(view(), () =>
       publicLiveResource(
         load,
@@ -372,7 +373,7 @@ describe('publicLiveResource', () => {
 
   it('re-reads a results view on a change to any garage', async () => {
     setUp();
-    const load = jest.fn(async () => ({ items: [] }));
+    const load = vi.fn(async () => ({ items: [] }));
     runInInjectionContext(view(), () =>
       publicLiveResource(
         load,
@@ -405,7 +406,7 @@ describe('publicLiveResource', () => {
 
   it('re-reads on every re-open of the stream', async () => {
     setUp();
-    const load = jest.fn(async () => ({ name: 'Atelier' }));
+    const load = vi.fn(async () => ({ name: 'Atelier' }));
     runInInjectionContext(view(), () =>
       publicLiveResource(
         load,
@@ -427,7 +428,7 @@ describe('publicLiveResource', () => {
   it('keeps what it showed when a re-read fails, and tries again on no timer', async () => {
     setUp();
     let fail = false;
-    const load = jest.fn(async () => {
+    const load = vi.fn(async () => {
       if (fail) throw new HttpErrorResponse({ status: 503 });
       return { name: 'Atelier' };
     });
@@ -460,7 +461,7 @@ describe('publicLiveResource', () => {
     async (status) => {
       setUp();
       let answer: number | null = null;
-      const load = jest.fn(async () => {
+      const load = vi.fn(async () => {
         if (answer) throw new HttpErrorResponse({ status: answer });
         return { name: 'Atelier' };
       });
@@ -640,9 +641,9 @@ describe('PublicLive and the back/forward cache', () => {
   it('opens one stream, not two, when the page turns visible after its pageshow', async () => {
     const live = setUp();
     let visibility: DocumentVisibilityState = 'visible';
-    jest
-      .spyOn(document, 'visibilityState', 'get')
-      .mockImplementation(() => visibility);
+    vi.spyOn(document, 'visibilityState', 'get').mockImplementation(
+      () => visibility,
+    );
     live.register({ garage: 'g-1' });
     await settle();
 
@@ -674,7 +675,7 @@ describe('PublicLive and the back/forward cache', () => {
 
   it('has its views re-read their data when the page comes back from the cache', async () => {
     setUp();
-    const load = jest.fn(async () => ({ name: 'Atelier' }));
+    const load = vi.fn(async () => ({ name: 'Atelier' }));
     runInInjectionContext(view(), () =>
       publicLiveResource(
         load,

@@ -13,14 +13,14 @@ import {
 // @traces 1387-FR-002 1387-FR-006
 describe('opening the reply dialog', () => {
   const overlays = () => {
-    const open = jest.fn().mockResolvedValue('cancelled');
+    const open = vi.fn().mockResolvedValue('cancelled');
     return { open, overlays: { open } as unknown as Overlays };
   };
 
   it('opens the dialog under the reply title, handing it the review and the callback', async () => {
     const { open, overlays: one } = overlays();
     const review = staffReview();
-    const saved = jest.fn();
+    const saved = vi.fn();
 
     await expect(openReply(one, review, saved)).resolves.toBe('cancelled');
 
@@ -34,7 +34,7 @@ describe('opening the reply dialog', () => {
   it('opens it under the edit title for a review already answered', async () => {
     const { open, overlays: one } = overlays();
 
-    await openReply(one, repliedReview(), jest.fn());
+    await openReply(one, repliedReview(), vi.fn());
 
     expect(open.mock.calls[0][1].title).toBe('garage.reviews.reply.titleEdit');
   });

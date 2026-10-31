@@ -5,20 +5,21 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { ConsentBar } from './consent-bar';
 import { Consent } from '../consent';
 
 let consent: {
-  accept: jest.Mock;
-  refuse: jest.Mock;
+  accept: Mock;
+  refuse: Mock;
   showBar: ReturnType<typeof signal<boolean>>;
 };
 
 async function render(language: 'ro' | 'en' = 'ro', shown = true) {
   consent = {
-    accept: jest.fn(async () => undefined),
-    refuse: jest.fn(async () => undefined),
+    accept: vi.fn(async () => undefined),
+    refuse: vi.fn(async () => undefined),
     showBar: signal(shown),
   };
   TestBed.configureTestingModule({

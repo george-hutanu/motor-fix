@@ -1,6 +1,3 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 // @traces 430-FR-002 430-FR-003 430-FR-005
 import {
   PAGE_CACHE_CONTROL,

@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
+import type { Mock } from 'vitest';
 
 import { DashboardTabBar } from './tab-bar';
 import { DASHBOARDS, type DashboardView } from '../views';
@@ -22,7 +23,7 @@ class Host {
 }
 
 async function open(url: string) {
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -109,7 +110,7 @@ describe('DashboardTabBar under hostile input', () => {
   it('reveals the active tab without scrolling the page into it', async () => {
     views.set(DASHBOARDS.garage.views);
     await open('/app/garage/profile');
-    const spy = Element.prototype.scrollIntoView as jest.Mock;
+    const spy = Element.prototype.scrollIntoView as Mock;
     expect(spy).not.toHaveBeenCalled();
   });
 

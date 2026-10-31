@@ -6,6 +6,7 @@ import { ANALYTICS_CONSENT_VERSION } from '@motor-fix/contracts/consent';
 import { ConsentsService, type MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { ANALYTICS, CONSENT_KEY, Consent, type StoredChoice } from './consent';
 import { Session } from '../dashboard/session';
@@ -27,11 +28,11 @@ const choice = (overrides: Partial<StoredChoice> = {}): StoredChoice => ({
 });
 
 let api: {
-  consentsControllerMine: jest.Mock;
-  consentsControllerRecord: jest.Mock;
-  consentsControllerRecordMine: jest.Mock;
+  consentsControllerMine: Mock;
+  consentsControllerRecord: Mock;
+  consentsControllerRecordMine: Mock;
 };
-let analytics: { event: jest.Mock; load: jest.Mock; pageview: jest.Mock };
+let analytics: { event: Mock; load: Mock; pageview: Mock };
 let events: Subject<unknown>;
 let current: ReturnType<typeof signal<MeDto | null>>;
 
@@ -67,15 +68,15 @@ async function start({
 } = {}) {
   withMeta(domain);
   api = {
-    consentsControllerMine: jest.fn(async () => ({
+    consentsControllerMine: vi.fn(async () => ({
       accepted: [],
       analytics: null,
     })),
-    consentsControllerRecord: jest.fn(async () => ({ id: 'r1' })),
-    consentsControllerRecordMine: jest.fn(async () => ({ id: 'r2' })),
+    consentsControllerRecord: vi.fn(async () => ({ id: 'r1' })),
+    consentsControllerRecordMine: vi.fn(async () => ({ id: 'r2' })),
     ...calls,
   };
-  analytics = { event: jest.fn(), load: jest.fn(), pageview: jest.fn() };
+  analytics = { event: vi.fn(), load: vi.fn(), pageview: vi.fn() };
   events = new Subject();
   current = signal<MeDto | null>(null);
   TestBed.configureTestingModule({
@@ -115,12 +116,12 @@ const signIn = (id = ACCOUNT) => current.set({ id } as MeDto);
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   withMeta(null);
 });
 
 const refused = (error: unknown, status = 403) =>
-  jest.fn(async () => {
+  vi.fn(async () => {
     throw new HttpErrorResponse({ error, status });
   });
 

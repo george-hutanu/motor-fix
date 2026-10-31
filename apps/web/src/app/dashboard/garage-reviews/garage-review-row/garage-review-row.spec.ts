@@ -453,7 +453,7 @@ describe('the report button on a review row', () => {
   });
 
   it('asks to report on a press, and asks nothing for a kept review', async () => {
-    const pressed = jest.fn();
+    const pressed = vi.fn();
 
     @Component({
       imports: [GarageReviewRow],

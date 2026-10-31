@@ -6,6 +6,7 @@ import { Component, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { Observable } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { type AddressChoice, AddressField } from './address-field';
 import { placesAnswered } from './address-field.testing';
@@ -52,7 +53,7 @@ type Located = {
   options?: PositionOptions;
 };
 let located: Located[];
-let search: jest.Mock;
+let search: Mock;
 let fixture: ComponentFixture<Host>;
 
 function geolocation(available = true) {
@@ -60,7 +61,7 @@ function geolocation(available = true) {
     configurable: true,
     value: available
       ? {
-          getCurrentPosition: jest.fn(
+          getCurrentPosition: vi.fn(
             (
               ok: PositionCallback,
               fail: PositionErrorCallback,
@@ -147,7 +148,7 @@ const refusal = (code: number) =>
 
 beforeEach(() => {
   located = [];
-  search = jest.fn(async () => ({ items: [CLUJ] }));
+  search = vi.fn(async () => ({ items: [CLUJ] }));
   geolocation();
 });
 
@@ -221,16 +222,16 @@ describe('the address field', () => {
       field().value = value;
       field().dispatchEvent(new Event('input', { bubbles: true }));
     };
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       key('Clu');
-      jest.advanceTimersByTime(299);
+      vi.advanceTimersByTime(299);
       key('Cluj');
-      jest.advanceTimersByTime(299);
+      vi.advanceTimersByTime(299);
       expect(search).not.toHaveBeenCalled();
-      jest.advanceTimersByTime(1);
+      vi.advanceTimersByTime(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
     await settle();
 
@@ -562,7 +563,7 @@ describe('the address field, kept quick', () => {
     lng: 25.6,
   };
   const held = () => {
-    const teardown = jest.fn();
+    const teardown = vi.fn();
     return { asked: new Observable<never>(() => teardown), teardown };
   };
 

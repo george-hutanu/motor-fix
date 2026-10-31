@@ -5,16 +5,17 @@ import { GaragesService, type PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { RequestSavedQuote } from './request-saved-quote';
 import { Consent } from '../../../consent/consent';
 import { Voice } from '../../../voice/voice';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   toast: Object.assign(
-    jest.fn(() => 'bar'),
-    { dismiss: jest.fn() },
+    vi.fn(() => 'bar'),
+    { dismiss: vi.fn() },
   ),
 }));
 
@@ -29,9 +30,9 @@ const GARAGE = {
 const failure = (status: number) =>
   new HttpErrorResponse({ error: { status }, status });
 
-let read: jest.Mock;
-let open: jest.Mock;
-let track: jest.Mock;
+let read: Mock;
+let open: Mock;
+let track: Mock;
 
 async function render(
   options: {
@@ -42,9 +43,9 @@ async function render(
     name?: string;
   } = {},
 ) {
-  read = jest.fn(options.read ?? (async () => GARAGE));
-  open = jest.fn(async () => options.answer ?? 'cancelled');
-  track = jest.fn();
+  read = vi.fn(options.read ?? (async () => GARAGE));
+  open = vi.fn(async () => options.answer ?? 'cancelled');
+  track = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -81,7 +82,7 @@ async function settle() {
 
 afterEach(() => {
   TestBed.resetTestingModule();
-  jest.mocked(toast).mockClear();
+  vi.mocked(toast).mockClear();
 });
 
 // @traces 292-FR-001
@@ -154,7 +155,7 @@ describe('Cere ofertă under attack: the read and the dialog', () => {
 
   it('does not navigate when the dialog closes after sending', async () => {
     const { host } = await render({ answer: { id: 'req-1' } });
-    const navigate = jest
+    const navigate = vi
       .spyOn(TestBed.inject(Router), 'navigateByUrl')
       .mockResolvedValue(true);
 

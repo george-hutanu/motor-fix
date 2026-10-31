@@ -10,8 +10,8 @@ describe('measure', () => {
   });
 
   it('hands each measurement to the sink set last', () => {
-    const first = jest.fn();
-    const second = jest.fn();
+    const first = vi.fn();
+    const second = vi.fn();
     sendMeasurementsTo(first);
     sendMeasurementsTo(second);
 
@@ -44,7 +44,7 @@ describe('measure', () => {
   });
 
   it('stops sending once the sink is removed', () => {
-    const sink = jest.fn();
+    const sink = vi.fn();
     sendMeasurementsTo(sink);
     sendMeasurementsTo(undefined);
 

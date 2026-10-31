@@ -11,6 +11,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { AdminReviews } from './admin-reviews';
 import { Live } from '../live';
@@ -65,7 +66,7 @@ const queue =
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let asked: number[];
-let announce: jest.Mock;
+let announce: Mock;
 let answer: (page?: number) => Promise<ReportQueueDto>;
 
 async function settle() {
@@ -88,7 +89,7 @@ async function open(
   events = new Subject();
   resync = new Subject();
   asked = [];
-  announce = jest.fn(async () => undefined);
+  announce = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),

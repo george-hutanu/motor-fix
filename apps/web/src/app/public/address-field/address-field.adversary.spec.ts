@@ -3,6 +3,7 @@ import { Component } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { Observable } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { type AddressChoice, AddressField } from './address-field';
 import { placesAnswered } from './address-field.testing';
@@ -26,7 +27,7 @@ const row = (n: number): Suggestion => ({
   lng: 23.62,
 });
 
-let search: jest.Mock;
+let search: Mock;
 let fixture: ComponentFixture<Host>;
 let located: { ok: PositionCallback; fail: PositionErrorCallback }[];
 
@@ -80,11 +81,11 @@ async function key(name: string) {
 
 beforeEach(() => {
   located = [];
-  search = jest.fn(async () => ({ items: [row(1)] }));
+  search = vi.fn(async () => ({ items: [row(1)] }));
   Object.defineProperty(navigator, 'geolocation', {
     configurable: true,
     value: {
-      getCurrentPosition: jest.fn(
+      getCurrentPosition: vi.fn(
         (ok: PositionCallback, fail: PositionErrorCallback) =>
           located.push({ fail, ok }),
       ),
@@ -363,7 +364,7 @@ describe('the address field under hostile requests', () => {
   });
 
   it('tears down the look-up when the text is cut back under three characters', async () => {
-    const teardown = jest.fn();
+    const teardown = vi.fn();
     search.mockImplementationOnce(() => new Observable<never>(() => teardown));
     await mount();
 
@@ -391,7 +392,7 @@ describe('the address field under hostile requests', () => {
 
     // The page's clock, not the runner's: on a slow runner the real gaps
     // between keystrokes outlasted the pause and sent an early request.
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       for (const t of [
         'Str',
@@ -406,13 +407,13 @@ describe('the address field under hostile requests', () => {
       ]) {
         field().value = t;
         field().dispatchEvent(new Event('input', { bubbles: true }));
-        jest.advanceTimersByTime(20);
+        vi.advanceTimersByTime(20);
         fixture.detectChanges();
       }
       expect(search).not.toHaveBeenCalled();
-      jest.advanceTimersByTime(350);
+      vi.advanceTimersByTime(350);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
     await settle();
 

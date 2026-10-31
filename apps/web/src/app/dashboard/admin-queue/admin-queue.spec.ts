@@ -17,6 +17,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { BehaviorSubject, filter, of, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { AdminQueue } from './admin-queue';
 import { Live } from '../live';
@@ -56,7 +57,7 @@ const queueOf = (count: number, total = count): VerificationQueueDto => ({
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let asked: { offset?: number; limit?: number }[];
-let fileRead: jest.Mock;
+let fileRead: Mock;
 let answer: (read: {
   offset?: number;
   limit?: number;
@@ -86,7 +87,7 @@ async function open(
   events = new Subject();
   resync = new Subject();
   asked = [];
-  fileRead = jest.fn(async () => ({ file: { status: 'in_review' } }));
+  fileRead = vi.fn(async () => ({ file: { status: 'in_review' } }));
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -165,10 +166,10 @@ describe('a queue row', () => {
   });
 
   it('says "ieri" once Bucharest midnight passes on a page left open, with no new read', async () => {
-    jest.useFakeTimers({
-      advanceTimers: true,
-      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    vi.useFakeTimers({
       now: new Date('2026-10-16T20:50:00Z'),
+      shouldAdvanceTime: true,
+      toNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
     });
     try {
       const sent = '2026-10-16T20:45:00Z';
@@ -179,14 +180,14 @@ describe('a queue row', () => {
       const el = await open();
       expect(text(rows(el)[0].querySelector('.applied'))).toBe('azi, 23:45');
 
-      jest.setSystemTime(new Date('2026-10-16T21:01:00Z'));
-      jest.advanceTimersByTime(60_000);
+      vi.setSystemTime(new Date('2026-10-16T21:01:00Z'));
+      vi.advanceTimersByTime(60_000);
       await settle();
 
       expect(text(rows(el)[0].querySelector('.applied'))).toBe('ieri, 23:45');
       expect(asked).toHaveLength(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -432,7 +433,7 @@ describe('live', () => {
 
 describe('the file named in the address', () => {
   let close: (result: unknown) => void;
-  let overlays: { open: jest.Mock };
+  let overlays: { open: Mock };
   let url: BehaviorSubject<UrlSegment[]>;
 
   const at = (...paths: string[]) => paths.map((p) => new UrlSegment(p, {}));
@@ -440,7 +441,7 @@ describe('the file named in the address', () => {
   function providers(...paths: string[]) {
     url = new BehaviorSubject(at(...paths));
     overlays = {
-      open: jest.fn(
+      open: vi.fn(
         () =>
           new Promise((resolve) => {
             close = resolve;
@@ -455,7 +456,7 @@ describe('the file named in the address', () => {
 
   it('opens the file as a wide drawer once, and returns to the list when it closes', async () => {
     await open({ providers: providers('file-9') });
-    const navigate = jest
+    const navigate = vi
       .spyOn(TestBed.inject(Router), 'navigate')
       .mockResolvedValue(true);
 
@@ -484,7 +485,7 @@ describe('the file named in the address', () => {
 
   it('closes the open drawer before it opens the next file the address names', async () => {
     await open({ providers: providers('file-9') });
-    const navigate = jest
+    const navigate = vi
       .spyOn(TestBed.inject(Router), 'navigate')
       .mockResolvedValue(true);
     const first = overlays.open.mock.calls[0]?.[1] as { signal: AbortSignal };
@@ -512,7 +513,7 @@ describe('the file named in the address', () => {
 
   it('leaves the address alone when it already names another place', async () => {
     await open({ providers: providers('file-9') });
-    const navigate = jest
+    const navigate = vi
       .spyOn(TestBed.inject(Router), 'navigate')
       .mockResolvedValue(true);
 

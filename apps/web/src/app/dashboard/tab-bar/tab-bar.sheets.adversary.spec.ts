@@ -19,7 +19,7 @@ class Host {
 }
 
 async function open() {
-  Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.scrollIntoView = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([

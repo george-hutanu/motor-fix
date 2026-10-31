@@ -7,6 +7,7 @@ import {
   RouterOutlet,
   withInMemoryScrolling,
 } from '@angular/router';
+import type { Mock } from 'vitest';
 
 import { provideViewScrolling } from './scrolling';
 
@@ -26,16 +27,16 @@ const scrolled = () => new Promise((resolve) => setTimeout(resolve, 50));
 
 // @traces 028-FR-003
 describe('the router scrolling', () => {
-  let scroller: { [key: string]: jest.Mock };
+  let scroller: { [key: string]: Mock };
   let router: Router;
 
   beforeEach(async () => {
     scroller = {
-      getScrollPosition: jest.fn(() => [0, 640]),
-      scrollToAnchor: jest.fn(),
-      scrollToPosition: jest.fn(),
-      setHistoryScrollRestoration: jest.fn(),
-      setOffset: jest.fn(),
+      getScrollPosition: vi.fn(() => [0, 640]),
+      scrollToAnchor: vi.fn(),
+      scrollToPosition: vi.fn(),
+      setHistoryScrollRestoration: vi.fn(),
+      setOffset: vi.fn(),
     };
     TestBed.configureTestingModule({
       providers: [

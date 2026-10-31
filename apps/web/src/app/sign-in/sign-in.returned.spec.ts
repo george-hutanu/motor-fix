@@ -23,7 +23,7 @@ async function open(
   language: 'ro' | 'en' = 'ro',
 ) {
   TestBed.configureTestingModule({
-    providers: [{ provide: Session, useValue: { signIn: jest.fn() } }],
+    providers: [{ provide: Session, useValue: { signIn: vi.fn() } }],
   });
   if (language === 'en') await TestBed.inject(I18n).use('en');
   const host = TestBed.createComponent(Host);

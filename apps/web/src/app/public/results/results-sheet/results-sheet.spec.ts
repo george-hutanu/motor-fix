@@ -5,6 +5,7 @@ import { Component, PLATFORM_ID, signal, viewChild } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { I18n } from '@motor-fix/i18n';
 import { Layout, type LayoutName } from '@motor-fix/ui-cockpit';
+import type { MockInstance } from 'vitest';
 
 import { ResultsSheet } from './results-sheet';
 
@@ -32,8 +33,8 @@ const SHEET = 600;
 const TOP = 120;
 const layout = signal<LayoutName>('phone');
 let fixture: ComponentFixture<Host>;
-let push: jest.SpyInstance;
-let back: jest.SpyInstance;
+let push: MockInstance;
+let back: MockInstance;
 
 async function render(platform = 'browser') {
   TestBed.configureTestingModule({
@@ -102,17 +103,17 @@ beforeEach(() => {
     value: 800,
   });
   Element.prototype.setPointerCapture = () => {};
-  Element.prototype.scrollTo = jest.fn();
-  jest
-    .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
-    .mockImplementation(function (this: HTMLElement) {
+  Element.prototype.scrollTo = vi.fn();
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(
+    function (this: HTMLElement) {
       return this.classList.contains('top') ? TOP : SHEET;
-    });
-  push = jest.spyOn(history, 'pushState');
-  back = jest.spyOn(history, 'back').mockImplementation(() => undefined);
+    },
+  );
+  push = vi.spyOn(history, 'pushState');
+  back = vi.spyOn(history, 'back').mockImplementation(() => undefined);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 1358-FR-003 1358-FR-005 1358-FR-015
 describe('ResultsSheet on a phone', () => {
@@ -121,11 +122,11 @@ describe('ResultsSheet on a phone', () => {
   // A short stage (a small phone with the consent bar open) keeps the map's
   // zoom buttons, 104 px from the stage's top, clear of the half sheet.
   it('rests half no higher than under the zoom buttons on a short stage', async () => {
-    jest
-      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
-      .mockImplementation(function (this: HTMLElement) {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(
+      function (this: HTMLElement) {
         return this.classList.contains('top') ? 40 : 160;
-      });
+      },
+    );
     pointer(handle(), 'pointerdown', 300);
     pointer(handle(), 'pointermove', 301);
     await settle();
@@ -143,11 +144,11 @@ describe('ResultsSheet on a phone', () => {
   // first 96 px, rising as far as just under the zoom buttons, so it never
   // rests where low does (ST-328 full CI, results.spec.ts:598).
   it('rests half above low by the first 96 px of the list when the header is taller than half the stage', async () => {
-    jest
-      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
-      .mockImplementation(function (this: HTMLElement) {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(
+      function (this: HTMLElement) {
         return this.classList.contains('top') ? 237 : 396;
-      });
+      },
+    );
     pointer(handle(), 'pointerdown', 300);
     pointer(handle(), 'pointermove', 301);
     await settle();
@@ -181,11 +182,11 @@ describe('ResultsSheet on a phone', () => {
   });
 
   it('hides them at every rest of a stage too short to clear them', async () => {
-    jest
-      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
-      .mockImplementation(function (this: HTMLElement) {
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(
+      function (this: HTMLElement) {
         return this.classList.contains('top') ? 120 : 200;
-      });
+      },
+    );
     await drag(300, 301);
     expect(position()).toBe('half');
     expect(overZoom()).toBe(true);

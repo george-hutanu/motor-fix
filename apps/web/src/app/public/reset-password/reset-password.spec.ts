@@ -15,7 +15,7 @@ import { SignInDialog } from '../../sign-in/sign-in-dialog';
 const TOKEN = 'A'.repeat(43);
 
 function setup(saved: boolean, platform = 'browser') {
-  const newPassword = jest.fn(async () => saved);
+  const newPassword = vi.fn(async () => saved);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -29,11 +29,11 @@ function setup(saved: boolean, platform = 'browser') {
       { provide: SignInDialog, useValue: { newPassword } },
       {
         provide: HealthService,
-        useValue: { healthControllerReady: jest.fn(async () => null) },
+        useValue: { healthControllerReady: vi.fn(async () => null) },
       },
     ],
   });
-  const navigate = jest
+  const navigate = vi
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
   const fixture = TestBed.createComponent(ResetPassword);

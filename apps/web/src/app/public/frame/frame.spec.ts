@@ -6,6 +6,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { PublicFrame } from './frame';
 import { provideLanguageAddresses, SITE_ORIGIN } from '../../addresses';
@@ -16,11 +17,11 @@ import { SignInDialog } from '../../sign-in/sign-in-dialog';
 @Component({ selector: 'mf-page', template: '<h1>page</h1>' })
 class Page {}
 
-let signIn: { start: jest.Mock };
+let signIn: { start: Mock };
 let harness: RouterTestingHarness;
 const session = {
   current: signal<{ id: string } | null>(null),
-  load: jest.fn(),
+  load: vi.fn(),
 };
 
 async function open(
@@ -28,7 +29,7 @@ async function open(
   language: 'ro' | 'en' = 'ro',
   before: () => void = () => undefined,
 ) {
-  signIn = { start: jest.fn(async () => undefined) };
+  signIn = { start: vi.fn(async () => undefined) };
   session.current.set(null);
   session.load.mockReset();
   TestBed.configureTestingModule({
@@ -274,7 +275,7 @@ describe('the "Cum funcționează" link', () => {
   it('jumps to the section again on Home, even when already there', async () => {
     await open('/ro');
     const router = TestBed.inject(Router);
-    const navigate = jest.spyOn(router, 'navigate');
+    const navigate = vi.spyOn(router, 'navigate');
 
     link('Cum funcționează')?.click();
     await harness.fixture.whenStable();

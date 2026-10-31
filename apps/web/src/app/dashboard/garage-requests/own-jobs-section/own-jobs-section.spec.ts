@@ -7,6 +7,7 @@ import { GarageJobsService, type JobSummaryDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { OwnJobsSection } from './own-jobs-section';
 import { JobSteps } from '../../job-steps/job-steps';
@@ -86,8 +87,8 @@ const day = () => [
 
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
-let list: jest.Mock;
-let open: jest.Mock;
+let list: Mock;
+let open: Mock;
 // Every other call on the jobs API the section makes: a write, or a read
 // beside the list.
 let others: string[];
@@ -100,12 +101,12 @@ async function render(
 ) {
   events = new Subject();
   resync = new Subject();
-  list = jest.fn(async () => ({
+  list = vi.fn(async () => ({
     nextCursor: null,
     total: 0,
     ...(await answer()),
   }));
-  open = jest.fn(async () => 'cancelled');
+  open = vi.fn(async () => 'cancelled');
   others = [];
   const api = new Proxy(
     { garageJobsControllerList: list } as Record<string | symbol, unknown>,
@@ -161,8 +162,9 @@ const rows = (element: HTMLElement) => [
 afterEach(() => TestBed.resetTestingModule());
 
 const frozen = () =>
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    now: NOW,
+    toNotFake: [
       'nextTick',
       'setImmediate',
       'clearImmediate',
@@ -178,13 +180,12 @@ const frozen = () =>
       'hrtime',
       'performance',
     ],
-    now: NOW,
   });
 
 // @traces 423-FR-001
 describe("a mechanic's own jobs on Panou", () => {
   beforeEach(frozen);
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it("lists today's jobs and the open work of earlier days, by start, and nothing of later days", async () => {
     const { element, settle } = await render();
@@ -324,7 +325,7 @@ describe("a mechanic's own jobs on Panou", () => {
 // @traces 423-FR-002
 describe("the own jobs' states", () => {
   beforeEach(frozen);
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it('says there is no job today, and still names a later booking', async () => {
     const { element, settle } = await render(async () => ({
@@ -433,7 +434,7 @@ describe("the own jobs' states", () => {
     'booking.cancelled',
   ] as const)('reads her jobs again on %s', async (kind) => {
     // debounceTime reads Date.now(), which the frozen clock would stall.
-    jest.useRealTimers();
+    vi.useRealTimers();
     const { settle } = await render();
     await settle();
 
@@ -445,7 +446,7 @@ describe("the own jobs' states", () => {
   });
 
   it('reads her jobs again when the live connection comes back', async () => {
-    jest.useRealTimers();
+    vi.useRealTimers();
     const { settle } = await render();
     await settle();
 

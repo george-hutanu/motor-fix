@@ -15,6 +15,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { MockInstance } from 'vitest';
 
 import { AdminUsers } from './admin-users';
 import { AdminAccount } from '../admin-account/admin-account';
@@ -100,7 +101,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   TestBed.resetTestingModule();
   document.body.innerHTML = '';
 });
@@ -396,15 +397,15 @@ const named = (...list: string[]) => ({
   total: list.length,
 });
 const fakeClock = () =>
-  jest.useFakeTimers({
-    doNotFake: ['queueMicrotask', 'nextTick', 'setImmediate'],
+  vi.useFakeTimers({
+    toNotFake: ['queueMicrotask', 'nextTick', 'setImmediate'],
   });
 // The search box commits its text 300 ms after the last key.
 async function search(el: HTMLElement, value: string) {
   fakeClock();
   type(el, value);
-  jest.advanceTimersByTime(300);
-  jest.useRealTimers();
+  vi.advanceTimersByTime(300);
+  vi.useRealTimers();
   await settle();
 }
 
@@ -415,13 +416,13 @@ describe('searching the accounts', () => {
     fakeClock();
 
     type(el, 'an');
-    jest.advanceTimersByTime(200);
+    vi.advanceTimersByTime(200);
     type(el, 'andrei');
-    jest.advanceTimersByTime(299);
+    vi.advanceTimersByTime(299);
     expect(reads).toHaveLength(1);
 
-    jest.advanceTimersByTime(1);
-    jest.useRealTimers();
+    vi.advanceTimersByTime(1);
+    vi.useRealTimers();
     await settle();
     expect(reads).toHaveLength(2);
     expect(reads[1]).toMatchObject({ q: 'andrei' });
@@ -736,13 +737,13 @@ describe('the view on the page', () => {
 
 // @traces 003-FR-017
 describe("opening an account's drawer", () => {
-  let drawer: jest.SpyInstance;
+  let drawer: MockInstance;
   let close: (result: string) => void;
   let opened: { data: { changed?: () => void; id: string }; shape: string }[];
 
   beforeEach(() => {
     opened = [];
-    drawer = jest
+    drawer = vi
       .spyOn(Overlays.prototype, 'open')
       .mockImplementation((_component, options) => {
         opened.push(options as (typeof opened)[number]);

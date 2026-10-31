@@ -7,7 +7,7 @@ import { FiltersPanel } from './filters-panel';
 import type { FilterKey, Filters } from '../filters';
 
 const filters = signal<Filters>({ open_now: false, open_saturday: false });
-const toggle = jest.fn<void, [FilterKey]>();
+const toggle = vi.fn<(...args: [FilterKey]) => void>();
 
 async function render(language: 'ro' | 'en' = 'ro') {
   TestBed.configureTestingModule({
@@ -15,10 +15,10 @@ async function render(language: 'ro' | 'en' = 'ro') {
       {
         provide: OVERLAY_TASK,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           data: { filters, toggle },
-          focusStart: jest.fn(),
-          markUnchanged: jest.fn(),
+          focusStart: vi.fn(),
+          markUnchanged: vi.fn(),
         },
       },
     ],

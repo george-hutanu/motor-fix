@@ -33,14 +33,14 @@ export function account(overrides: Partial<MeDto> = {}): MeDto {
 export const settle = () => new Promise((resolve) => setTimeout(resolve));
 
 const meStubs = () => ({
-  meControllerMe: jest.fn(() => Promise.resolve(account())),
+  meControllerMe: vi.fn(() => Promise.resolve(account())),
 });
 
 const authStubs = () => ({
-  authControllerRefresh: jest.fn(() =>
+  authControllerRefresh: vi.fn(() =>
     Promise.resolve({ accessToken: 'renewed' }),
   ),
-  authControllerSignOut: jest.fn(() => Promise.resolve()),
+  authControllerSignOut: vi.fn(() => Promise.resolve()),
 });
 
 type NoOverrides = Record<never, never>;

@@ -58,7 +58,7 @@ let body: Body;
 
 async function panel(load: () => Promise<number>) {
   body = new Body();
-  globalThis.fetch = jest.fn(async () => ({
+  globalThis.fetch = vi.fn(async () => ({
     body: { getReader: () => body.reader },
     ok: true,
     status: 200,

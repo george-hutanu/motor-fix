@@ -7,6 +7,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { MeDto } from '@motor-fix/data-access';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { FeatureSwitches } from './feature-switches';
 import { Session } from '../session';
@@ -33,18 +34,18 @@ const me = (features: unknown) =>
     role: 'garage',
   }) as unknown as MeDto;
 
-let open: jest.Mock;
+let open: Mock;
 let http: HttpTestingController;
 let current: ReturnType<typeof signal<MeDto | null>>;
 
 async function render(features: unknown, confirm: unknown = true) {
-  open = jest.fn(async () => confirm);
+  open = vi.fn(async () => confirm);
   current = signal<MeDto | null>(me(features));
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: Session, useValue: { current, reload: jest.fn() } },
+      { provide: Session, useValue: { current, reload: vi.fn() } },
       { provide: Overlays, useValue: { open } },
     ],
   });

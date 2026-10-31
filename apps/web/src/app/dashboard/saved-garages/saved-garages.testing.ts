@@ -69,7 +69,7 @@ export function fakeSavedGarages() {
   const ids = signal<ReadonlySet<string>>(new Set());
   return {
     ids,
-    remove: jest.fn(async (garageId: string) => {
+    remove: vi.fn(async (garageId: string) => {
       ids.update((set) => {
         const next = new Set(set);
         next.delete(garageId);

@@ -5,17 +5,18 @@ import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { NotificationsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { Unsubscribe } from './unsubscribe';
 
 const TOKEN = '0b9d6a52-6f3e-4d55-9a57-2f1a3c1b7e10.c2lnbmF0dXJl';
 
-let stop: jest.Mock;
+let stop: Mock;
 
 async function open(
   options: { language?: 'ro' | 'en'; platform?: 'browser' | 'server' } = {},
 ) {
-  stop ??= jest.fn(async () => undefined);
+  stop ??= vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -55,7 +56,7 @@ const button = (harness: RouterTestingHarness, name: string) =>
   );
 
 beforeEach(() => {
-  stop = undefined as unknown as jest.Mock;
+  stop = undefined as unknown as Mock;
 });
 
 describe('Unsubscribe', () => {
@@ -77,7 +78,7 @@ describe('Unsubscribe', () => {
   });
 
   it('shows the busy state until the answer arrives', async () => {
-    stop = jest.fn(() => new Promise(() => undefined));
+    stop = vi.fn(() => new Promise(() => undefined));
     const harness = await open();
 
     expect(text(harness)).toContain('Oprim noutățile…');
@@ -94,7 +95,7 @@ describe('Unsubscribe', () => {
   });
 
   it('says the link is not valid when its signature is refused', async () => {
-    stop = jest.fn(async () => {
+    stop = vi.fn(async () => {
       throw new HttpErrorResponse({
         error: { code: 'invalid_unsubscribe_link', status: 400 },
         status: 400,
@@ -107,7 +108,7 @@ describe('Unsubscribe', () => {
   });
 
   it('offers to try again when the stop could not be done', async () => {
-    stop = jest
+    stop = vi
       .fn()
       .mockRejectedValueOnce(new HttpErrorResponse({ status: 0 }))
       .mockResolvedValueOnce(undefined);

@@ -16,6 +16,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { ProfileView } from './profile-view';
 import { Live } from '../live';
@@ -93,9 +94,9 @@ const http = (status: number) =>
   new HttpErrorResponse({ status, statusText: String(status) });
 
 let events: Subject<LiveMessage>;
-let readProfile: jest.Mock;
-let readLegal: jest.Mock;
-let navigate: jest.Mock;
+let readProfile: Mock;
+let readLegal: Mock;
+let navigate: Mock;
 
 async function render(
   options: {
@@ -105,9 +106,9 @@ async function render(
   } = {},
 ) {
   events = new Subject();
-  readProfile = jest.fn(options.profile ?? (async () => profile()));
-  readLegal = jest.fn(options.legal ?? (async () => legal()));
-  navigate = jest.fn(async () => true);
+  readProfile = vi.fn(options.profile ?? (async () => profile()));
+  readLegal = vi.fn(options.legal ?? (async () => legal()));
+  navigate = vi.fn(async () => true);
   TestBed.configureTestingModule({
     deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [

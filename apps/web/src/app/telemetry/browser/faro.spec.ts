@@ -19,32 +19,33 @@ import { startFaro } from './faro';
 import { measure, sendMeasurementsTo } from './measure/measure';
 import { Consent, isValid } from '../../consent/consent';
 
-jest.mock('@grafana/faro-web-sdk', () => {
+vi.mock('@grafana/faro-web-sdk', async (importOriginal) => {
   const api = {
-    pushEvent: jest.fn(),
-    pushMeasurement: jest.fn(),
-    setSession: jest.fn(),
-    setView: jest.fn(),
+    pushEvent: vi.fn(),
+    pushMeasurement: vi.fn(),
+    setSession: vi.fn(),
+    setView: vi.fn(),
   };
   let ids = 0;
   return {
-    ErrorsInstrumentation: jest.fn(),
+    ErrorsInstrumentation: vi.fn(),
     EVENT_SESSION_EXTEND: 'session_extend',
     EVENT_SESSION_RESUME: 'session_resume',
     EVENT_SESSION_START: 'session_start',
     EVENT_VIEW_CHANGED: 'view_changed',
     faro: { api },
-    genShortID: jest.fn(() => `Gen${String(++ids).padStart(7, '0')}`),
+    genShortID: vi.fn(() => `Gen${String(++ids).padStart(7, '0')}`),
     InternalLoggerLevel: { OFF: 0 },
-    initializeFaro: jest.fn(),
+    initializeFaro: vi.fn(),
     STORAGE_KEY: 'com.grafana.faro.session',
-    TransportItemType: jest.requireActual('@grafana/faro-web-sdk')
-      .TransportItemType,
-    WebVitalsInstrumentation: jest.fn(),
+    TransportItemType: (
+      await importOriginal<typeof import('@grafana/faro-web-sdk')>()
+    ).TransportItemType,
+    WebVitalsInstrumentation: vi.fn(),
   };
 });
-jest.mock('@grafana/faro-web-tracing', () => ({
-  TracingInstrumentation: jest.fn(),
+vi.mock('@grafana/faro-web-tracing', () => ({
+  TracingInstrumentation: vi.fn(),
 }));
 
 @Component({ template: '' })
@@ -57,7 +58,7 @@ const grant = (textVersion = ANALYTICS_CONSENT_VERSION) =>
   stored.set({ at: new Date().toISOString(), textVersion });
 
 beforeEach(async () => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   sessionStorage.clear();
   stored.set(null);
   TestBed.configureTestingModule({
@@ -88,17 +89,17 @@ const start = () =>
   });
 
 const sessionIds = () =>
-  jest
+  vi
     .mocked(faro.api.setSession)
     .mock.calls.map(([session]) => session?.id)
     .filter(Boolean);
 const journeys = () =>
-  jest
+  vi
     .mocked(faro.api.pushEvent)
     .mock.calls.filter(([name]) => name === EVENT_VIEW_CHANGED)
     .map(([, attributes]) => attributes);
 
-const config = () => jest.mocked(initializeFaro).mock.calls[0]?.[0];
+const config = () => vi.mocked(initializeFaro).mock.calls[0]?.[0];
 
 describe('startFaro', () => {
   // @traces 879-FR-002
@@ -148,7 +149,7 @@ describe('startFaro', () => {
     await router.navigateByUrl('/en/garages/7');
     await router.navigateByUrl('/nowhere/at/all');
 
-    expect(jest.mocked(faro.api.setView).mock.calls).toEqual([
+    expect(vi.mocked(faro.api.setView).mock.calls).toEqual([
       [{ name: '/:lang/garages/:garage' }],
       [{ name: '/:lang/garages/:garage' }],
       [{ name: 'unmatched' }],
@@ -219,7 +220,7 @@ describe('startFaro', () => {
       { fromView: 'unmatched', toView: '/:lang/garages/:garage' },
     ]);
     expect(JSON.stringify(journeys())).not.toMatch(/42|\/7|nowhere/);
-    for (const call of jest.mocked(faro.api.pushEvent).mock.calls)
+    for (const call of vi.mocked(faro.api.pushEvent).mock.calls)
       expect(call[3]).toEqual({ skipDedupe: true });
   });
 
@@ -255,7 +256,7 @@ describe('startFaro', () => {
       attributes: { isSampled: 'true' },
     });
     expect(journeys()).toHaveLength(1);
-    const beforeSend = jest.mocked(initializeFaro).mock.calls[0]?.[0]
+    const beforeSend = vi.mocked(initializeFaro).mock.calls[0]?.[0]
       .beforeSend as (item: unknown) => unknown;
     expect(
       beforeSend({
@@ -309,7 +310,7 @@ describe('startFaro', () => {
   });
 
   it('swallows a failure to start', () => {
-    jest.mocked(initializeFaro).mockImplementation(() => {
+    vi.mocked(initializeFaro).mockImplementation(() => {
       throw new Error('no storage');
     });
 

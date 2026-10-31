@@ -66,7 +66,7 @@ async function open(
       {
         provide: AdminService,
         useValue: {
-          verificationFileControllerChanges: jest.fn(async () => answer),
+          verificationFileControllerChanges: vi.fn(async () => answer),
         },
       },
       {

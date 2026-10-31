@@ -25,7 +25,7 @@ type Page = {
 };
 let pages: Page[];
 const api = {
-  brandsControllerSearch: jest.fn(
+  brandsControllerSearch: vi.fn(
     () =>
       new Promise<BrandPageDto>((resolve, reject) => {
         pages.push({

@@ -25,10 +25,10 @@ const problem = (status: number, code?: string) =>
 
 function setup(opts: { token?: string; signedIn?: boolean } = {}) {
   const current = signal<MeDto | null>(opts.signedIn ? DRIVER : null);
-  const check = jest.fn(async (): Promise<unknown> => VIEW);
-  const acceptInvite = jest.fn(async (_: unknown): Promise<void> => undefined);
-  const switchRole = jest.fn(async (_: string): Promise<MeDto | null> => null);
-  const join = jest.fn(async (): Promise<string | null> => 'signed-up');
+  const check = vi.fn(async (): Promise<unknown> => VIEW);
+  const acceptInvite = vi.fn(async (_: unknown): Promise<void> => undefined);
+  const switchRole = vi.fn(async (_: string): Promise<MeDto | null> => null);
+  const join = vi.fn(async (): Promise<string | null> => 'signed-up');
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -57,7 +57,7 @@ function setup(opts: { token?: string; signedIn?: boolean } = {}) {
       { provide: SignInDialog, useValue: { join } },
     ],
   });
-  const navigate = jest
+  const navigate = vi
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
   const fixture = TestBed.createComponent(InvitePage);
@@ -78,7 +78,7 @@ const button = (f: { nativeElement: unknown }, name: string) =>
     (b) => b.textContent?.trim() === name,
   ) as HTMLButtonElement | undefined;
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('the invite page under failure and repetition', () => {
   it('sends one accept for a double press', async () => {

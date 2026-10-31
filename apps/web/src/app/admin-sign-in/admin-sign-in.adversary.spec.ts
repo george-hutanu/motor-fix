@@ -27,7 +27,7 @@ afterEach(() => TestBed.resetTestingModule());
 
 describe('AdminSignIn under odd conditions', () => {
   it('keeps the home page when the dialog fails to open', async () => {
-    const unhandled = jest.fn();
+    const unhandled = vi.fn();
     process.on('unhandledRejection', unhandled);
 
     const element = render(() => Promise.reject(new Error('no dialog')));
@@ -39,7 +39,7 @@ describe('AdminSignIn under odd conditions', () => {
   });
 
   it('opens the dialog once per visit, not on every change detection', () => {
-    const start = jest.fn(async () => undefined);
+    const start = vi.fn(async () => undefined);
     TestBed.configureTestingModule({
       providers: [
         { provide: SignInDialog, useValue: { start } },

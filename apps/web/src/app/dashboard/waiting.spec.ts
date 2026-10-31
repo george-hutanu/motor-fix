@@ -1,5 +1,7 @@
 import { deserialize, serialize } from 'node:v8';
 
+import type { Mock } from 'vitest';
+
 // jsdom has no structuredClone, which IndexedDB needs to store a value.
 globalThis.structuredClone ??= ((value: unknown) =>
   deserialize(serialize(value))) as typeof structuredClone;
@@ -23,15 +25,15 @@ import { Live, type LiveState } from './live';
 import { Session } from './session';
 import { Waiting } from './waiting';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 let account: WritableSignal<{ id: string } | null>;
 let signedOut: Subject<string>;
 let live: {
-  catchUp: jest.Mock;
+  catchUp: Mock;
   offline: WritableSignal<boolean>;
   state: WritableSignal<LiveState>;
 };
@@ -99,16 +101,16 @@ beforeEach(() => {
   account = signal({ id: 'account-1' });
   signedOut = new Subject<string>();
   live = {
-    catchUp: jest.fn(),
+    catchUp: vi.fn(),
     offline: signal(false),
     state: signal<LiveState>('open'),
   };
   online = true;
-  (toast as unknown as jest.Mock).mockClear();
+  (toast as unknown as Mock).mockClear();
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
 });
 
@@ -213,19 +215,19 @@ describe('Waiting: sending', () => {
     const { http, waiting } = await start();
     await waiting.add('job.step', step(1));
     const req = await nextRequest(http);
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     try {
       noAnswer(req);
-      await jest.advanceTimersByTimeAsync(10);
+      await vi.advanceTimersByTimeAsync(10);
       expect(waiting.actions()[0]?.state).toBe('waiting');
 
-      await jest.advanceTimersByTimeAsync(59_000);
+      await vi.advanceTimersByTimeAsync(59_000);
       expect(http.match(() => true)).toEqual([]);
-      await jest.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
 
       expect(http.match(() => true)).toHaveLength(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 });
@@ -292,11 +294,11 @@ describe('Waiting: kept across a reload', () => {
     noAnswer(await nextRequest(first.http));
     await until(() => first.waiting.actions()[0]?.state === 'waiting');
 
-    jest.spyOn(Date, 'now').mockReturnValue(made + 24 * 3_600_000 + 1_000);
+    vi.spyOn(Date, 'now').mockReturnValue(made + 24 * 3_600_000 + 1_000);
     const { http, waiting } = await reload();
 
     expect(
-      await until(() => (toast as unknown as jest.Mock).mock.calls.length > 0),
+      await until(() => (toast as unknown as Mock).mock.calls.length > 0),
     ).toBe(true);
     expect(toast).toHaveBeenCalledWith(
       'An action made without signal expired and was not sent.',
@@ -313,7 +315,7 @@ describe('Waiting: kept across a reload', () => {
     noAnswer(await nextRequest(first.http));
     await until(() => first.waiting.actions()[0]?.state === 'waiting');
 
-    jest.spyOn(Date, 'now').mockReturnValue(made + 24 * 3_600_000 + 1_000);
+    vi.spyOn(Date, 'now').mockReturnValue(made + 24 * 3_600_000 + 1_000);
     const { waiting } = await reload();
     await until(() => false);
 
@@ -388,9 +390,7 @@ describe('Waiting: refused', () => {
       (await nextRequest(http)).flush(body, { status, statusText: 'no' });
 
       expect(
-        await until(
-          () => (toast as unknown as jest.Mock).mock.calls.length > 0,
-        ),
+        await until(() => (toast as unknown as Mock).mock.calls.length > 0),
       ).toBe(true);
       expect(toast).toHaveBeenCalledWith(notice);
       expect(live.catchUp).toHaveBeenCalledTimes(1);
@@ -406,8 +406,7 @@ describe('Waiting: a send that fails in the app', () => {
     const request = TestBed.inject(HttpClient).request.bind(
       TestBed.inject(HttpClient),
     );
-    jest
-      .spyOn(TestBed.inject(HttpClient), 'request')
+    vi.spyOn(TestBed.inject(HttpClient), 'request')
       .mockImplementationOnce(() => throwError(() => new TypeError('broken')))
       .mockImplementation(request);
     await waiting.add('job.step', step(1));
@@ -524,24 +523,24 @@ describe('Waiting: a refused renewal is not a sign-out', () => {
 describe('Waiting: a send that never answers', () => {
   // Fake timers from the start, so the send's time limit is a fake one too.
   async function hanging() {
-    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    vi.useFakeTimers({ toNotFake: ['setImmediate'] });
     const parts = await start();
     await parts.waiting.add('job.step', step(1));
     await parts.waiting.add('job.step', step(2));
-    await jest.advanceTimersByTimeAsync(10);
+    await vi.advanceTimersByTimeAsync(10);
     const [first] = parts.http.match(() => true);
     if (!first) throw new Error('nothing was sent');
     return { ...parts, first };
   }
 
   const sentAfter = async (http: HttpTestingController, ms: number) => {
-    await jest.advanceTimersByTimeAsync(ms);
+    await vi.advanceTimersByTimeAsync(ms);
     TestBed.tick();
-    await jest.advanceTimersByTimeAsync(10);
+    await vi.advanceTimersByTimeAsync(10);
     return http.match(() => true);
   };
 
-  afterEach(() => jest.useRealTimers());
+  afterEach(() => vi.useRealTimers());
 
   it('gives up at 30 seconds, keeps the action first in line as waiting and sends nothing after it', async () => {
     const { first, http, waiting } = await hanging();

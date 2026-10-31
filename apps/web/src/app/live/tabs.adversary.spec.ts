@@ -56,7 +56,7 @@ describe('openLiveTabs: where it must give up', () => {
 
   it('reads the name once, at open', () => {
     withTabs();
-    const name = jest.fn(() => 'a1:driver');
+    const name = vi.fn(() => 'a1:driver');
 
     openLiveTabs(name)?.close();
 
@@ -210,7 +210,7 @@ describe('openLiveTabs: the channel', () => {
   it('completes its messages on close', () => {
     withTabs();
     const tabs = openLiveTabs(() => 'a1:driver');
-    const done = jest.fn();
+    const done = vi.fn();
     tabs?.messages.subscribe({ complete: done });
 
     tabs?.close();

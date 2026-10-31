@@ -4,13 +4,14 @@ import { TestBed } from '@angular/core/testing';
 import { type MeDto, MeService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock } from 'vitest';
 
 import { EmailBanner } from './email-banner';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 const account = (overrides: Partial<MeDto> = {}) =>
@@ -32,12 +33,12 @@ const account = (overrides: Partial<MeDto> = {}) =>
 const problem = (status: number, code: string) =>
   new HttpErrorResponse({ error: { code, status }, status });
 
-let askAgain: jest.Mock;
-let reload: jest.Mock;
+let askAgain: Mock;
+let reload: Mock;
 
 async function render(me: MeDto | null, language: 'ro' | 'en' = 'ro') {
-  askAgain = jest.fn(async () => undefined);
-  reload = jest.fn(async () => undefined);
+  askAgain = vi.fn(async () => undefined);
+  reload = vi.fn(async () => undefined);
   const current = signal<MeDto | null>(me);
   TestBed.configureTestingModule({
     providers: [
@@ -72,7 +73,7 @@ async function press(
   }
 }
 
-beforeEach(() => jest.mocked(toast).mockClear());
+beforeEach(() => vi.mocked(toast).mockClear());
 
 describe('EmailBanner', () => {
   it('asks an account with an unconfirmed e-mail to confirm it', async () => {

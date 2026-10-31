@@ -33,7 +33,7 @@ beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('the browser queue of photos waiting to reach the draft', () => {
   // @traces 1191-FR-001
@@ -119,7 +119,7 @@ describe('the browser queue of photos waiting to reach the draft', () => {
   // @traces 1191-FR-001
   it('gives up on a pick rather than trying positions without end', async () => {
     const queue = reopen();
-    jest.spyOn(IDBObjectStore.prototype, 'add').mockImplementation(function (
+    vi.spyOn(IDBObjectStore.prototype, 'add').mockImplementation(function (
       this: IDBObjectStore,
     ) {
       const request = {} as IDBRequest;
@@ -142,7 +142,7 @@ describe('the browser queue of photos waiting to reach the draft', () => {
       photo('unu.jpg'),
       photo('doi.jpg'),
     ]);
-    const all = jest.spyOn(IDBIndex.prototype, 'getAll');
+    const all = vi.spyOn(IDBIndex.prototype, 'getAll');
 
     await queue.update(first!.id, { key: 'incoming/k' });
 
@@ -155,7 +155,7 @@ describe('the browser queue of photos waiting to reach the draft', () => {
   it('reads a photo once when the store refuses a change and memory keeps it', async () => {
     const queue = reopen();
     const [first] = await queue.add(DRAFT, [photo('unu.jpg')]);
-    jest.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(() => {
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError');
     });
 
@@ -169,7 +169,7 @@ describe('the browser queue of photos waiting to reach the draft', () => {
   it('keeps the key a refused change left in memory when the photo is then removed', async () => {
     const queue = reopen();
     const [first] = await queue.add(DRAFT, [photo('unu.jpg')]);
-    const put = jest
+    const put = vi
       .spyOn(IDBObjectStore.prototype, 'put')
       .mockImplementationOnce(() => {
         throw new DOMException('full', 'QuotaExceededError');
@@ -188,14 +188,15 @@ describe('the browser queue of photos waiting to reach the draft', () => {
     const queue = reopen();
     const [first] = await queue.add(DRAFT, [photo('unu.jpg')]);
     const put = IDBObjectStore.prototype.put;
-    jest
-      .spyOn(IDBObjectStore.prototype, 'put')
-      .mockImplementationOnce(function (this: IDBObjectStore, ...args) {
-        const request = put.apply(this, args);
-        // A quota failure surfaces at commit, after the request's success.
-        request.addEventListener('success', () => this.transaction.abort());
-        return request;
-      });
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementationOnce(function (
+      this: IDBObjectStore,
+      ...args
+    ) {
+      const request = put.apply(this, args);
+      // A quota failure surfaces at commit, after the request's success.
+      request.addEventListener('success', () => this.transaction.abort());
+      return request;
+    });
 
     await queue.update(first!.id, { key: 'incoming/k' });
 
@@ -227,7 +228,7 @@ describe('the browser queue of photos waiting to reach the draft', () => {
 
   // @traces 1191-FR-001
   it('falls back to memory when IndexedDB refuses to open', async () => {
-    jest.spyOn(globalThis.indexedDB, 'open').mockImplementation(() => {
+    vi.spyOn(globalThis.indexedDB, 'open').mockImplementation(() => {
       throw new DOMException('blocked', 'SecurityError');
     });
 

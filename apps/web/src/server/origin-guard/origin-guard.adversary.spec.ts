@@ -1,12 +1,11 @@
-/**
- * @jest-environment @stryker-mutator/jest-runner/jest-env/node
- */
 // @traces 430-FR-007 430-FR-010
+
 import { createServer, request as rawRequest, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import { metrics } from '@opentelemetry/api';
 import express from 'express';
+import { vi } from 'vitest';
 
 import { mountOriginGuard } from './origin-guard';
 
@@ -59,7 +58,7 @@ function raw(
 }
 
 afterEach(async () => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   await new Promise((done) => server?.close(done));
   server = undefined;
 });
@@ -147,11 +146,11 @@ describe('the origin guard under hostile input', () => {
   });
 
   it('counts each refusal once and an accepted request never', async () => {
-    const add = jest.fn();
-    jest.spyOn(metrics, 'getMeter').mockReturnValue({
+    const add = vi.fn();
+    vi.spyOn(metrics, 'getMeter').mockReturnValue({
       createCounter: () => ({ add }),
     } as unknown as ReturnType<typeof metrics.getMeter>);
-    jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     await serve(['s3cret']);
 
     await raw('/a');
@@ -164,9 +163,7 @@ describe('the origin guard under hostile input', () => {
   });
 
   it('logs one line per refusal and never a secret from the list', async () => {
-    const warn = jest
-      .spyOn(console, 'warn')
-      .mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     await serve(['old-secret', 'new-secret']);
 
     await raw('/ro', { 'X-Origin-Secret': 'old-secrex' });

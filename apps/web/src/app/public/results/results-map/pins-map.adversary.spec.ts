@@ -1,5 +1,6 @@
 import type { GaragePinDto, GaragePinsDto } from '@motor-fix/data-access';
 import type { Map as MapLibre } from 'maplibre-gl';
+import type { Mock } from 'vitest';
 
 import { drawPins, type PlaceMarker } from './pins-map';
 
@@ -24,38 +25,38 @@ type Hit = {
 function mapFake() {
   const sources = new Map<
     string,
-    { setData: jest.Mock; getClusterExpansionZoom: jest.Mock }
+    { setData: Mock; getClusterExpansionZoom: Mock }
   >();
   return {
-    addLayer: jest.fn(),
-    addSource: jest.fn((id: string) => {
+    addLayer: vi.fn(),
+    addSource: vi.fn((id: string) => {
       sources.set(id, {
-        getClusterExpansionZoom: jest.fn(async () => 13),
-        setData: jest.fn(),
+        getClusterExpansionZoom: vi.fn(async () => 13),
+        setData: vi.fn(),
       });
     }),
-    easeTo: jest.fn(),
-    fitBounds: jest.fn(),
-    getBounds: jest.fn(),
+    easeTo: vi.fn(),
+    fitBounds: vi.fn(),
+    getBounds: vi.fn(),
     getCanvas: () => document.createElement('canvas'),
-    getLayer: jest.fn(() => ({})),
-    getSource: jest.fn((id: string) => sources.get(id)),
-    jumpTo: jest.fn(),
-    on: jest.fn(),
-    project: jest.fn(() => ({ x: 0, y: 0 })),
-    queryRenderedFeatures: jest.fn((): Hit[] => []),
-    removeLayer: jest.fn(),
-    removeSource: jest.fn((id: string) => sources.delete(id)),
-    setFilter: jest.fn(),
+    getLayer: vi.fn(() => ({})),
+    getSource: vi.fn((id: string) => sources.get(id)),
+    jumpTo: vi.fn(),
+    on: vi.fn(),
+    project: vi.fn(() => ({ x: 0, y: 0 })),
+    queryRenderedFeatures: vi.fn((): Hit[] => []),
+    removeLayer: vi.fn(),
+    removeSource: vi.fn((id: string) => sources.delete(id)),
+    setFilter: vi.fn(),
     sources,
   };
 }
 
 let map: ReturnType<typeof mapFake>;
 let host: HTMLElement;
-const moved = jest.fn();
-const picked = jest.fn();
-const shifted = jest.fn();
+const moved = vi.fn();
+const picked = vi.fn();
+const shifted = vi.fn();
 
 beforeEach(() => {
   map = mapFake();
@@ -71,9 +72,9 @@ afterEach(() => host.remove());
 
 // The "you are here" marker: not under attack here.
 const here: PlaceMarker = {
-  addTo: jest.fn().mockReturnThis(),
-  remove: jest.fn().mockReturnThis(),
-  setLngLat: jest.fn().mockReturnThis(),
+  addTo: vi.fn().mockReturnThis(),
+  remove: vi.fn().mockReturnThis(),
+  setLngLat: vi.fn().mockReturnThis(),
 };
 const draw = () =>
   drawPins(map as unknown as MapLibre, host, { moved, picked, shifted }, here);

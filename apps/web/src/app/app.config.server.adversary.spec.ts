@@ -1,5 +1,3 @@
-import type { ApplicationConfig } from '@angular/core';
-
 // @traces 1200-FR-002
 
 type Provider = { provide?: unknown; useValue?: unknown };
@@ -16,16 +14,11 @@ async function serverConfig(env: Record<string, string | undefined>) {
   }
   try {
     // The module registry is fresh, so the token is the one it provides.
-    let config: ApplicationConfig | undefined;
-    let token: unknown;
-    await jest.isolateModulesAsync(async () => {
-      ({ config } = await import('./app.config.server'));
-      token = (await import('@angular/common/http'))
-        .HTTP_TRANSFER_CACHE_ORIGIN_MAP;
-    });
-    return flatten((config as ApplicationConfig).providers).filter(
-      (p) => p.provide === token,
-    );
+    vi.resetModules();
+    const { config } = await import('./app.config.server');
+    const token = (await import('@angular/common/http'))
+      .HTTP_TRANSFER_CACHE_ORIGIN_MAP;
+    return flatten(config.providers).filter((p) => p.provide === token);
   } finally {
     process.env = saved;
   }

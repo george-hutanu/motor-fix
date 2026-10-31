@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { CarsView } from './cars-view';
 import { heldForDriver } from '../resources/resources.testing';
@@ -28,12 +29,12 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
   ...over,
 });
 
-let list: jest.Mock;
-let open: jest.Mock;
+let list: Mock;
+let open: Mock;
 
 async function mount(answer: () => Promise<unknown>) {
-  list = jest.fn(answer);
-  open = jest.fn(async () => 'cancelled');
+  list = vi.fn(answer);
+  open = vi.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       { provide: CarsService, useValue: { carsControllerList: list } },

@@ -29,7 +29,7 @@ function setup(
   const session = {
     deletingAccount: () => deleting,
     epoch: () => epoch,
-    renew: jest.fn(async () => {
+    renew: vi.fn(async () => {
       current = renewsTo;
       return renewsTo !== null;
     }),
@@ -42,13 +42,13 @@ function setup(
       resolve(signedIn);
     };
   });
-  const gate = jest.fn(() => outcome);
+  const gate = vi.fn(() => outcome);
   let decide: (accepted: boolean) => void = () => undefined;
   const reaccepted = new Promise<boolean>((resolve) => {
     decide = resolve;
   });
-  const reaccept = jest.fn(() => reaccepted);
-  const platformStatus = { on: jest.fn() };
+  const reaccept = vi.fn(() => reaccepted);
+  const platformStatus = { on: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),

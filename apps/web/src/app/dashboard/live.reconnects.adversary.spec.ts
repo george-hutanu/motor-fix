@@ -6,6 +6,7 @@ import {
 import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { LiveMessage } from '@motor-fix/contracts';
+import type { Mock } from 'vitest';
 
 import { Live } from './live';
 import { Session } from './session';
@@ -47,7 +48,7 @@ class Body {
 }
 
 let bodies: Body[];
-let fetchMock: jest.Mock;
+let fetchMock: Mock;
 let account: { id: string; role: string } | null;
 
 const flush = async () => {
@@ -57,7 +58,7 @@ const flush = async () => {
 function setUp(count = 1) {
   bodies = [];
   account = { id: 'a1', role: 'driver' };
-  fetchMock = jest.fn(async () => {
+  fetchMock = vi.fn(async () => {
     const body = new Body();
     bodies.push(body);
     return { body: { getReader: () => body.reader }, ok: true, status: 200 };
@@ -103,7 +104,7 @@ afterEach(() => {
 // @traces 1190-FR-008
 describe('Live: the position it keeps, hostile input', () => {
   it('sends the highest position seen, comparing numbers and not text', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const [{ live }] = setUp();
       live.open();
@@ -112,17 +113,17 @@ describe('Live: the position it keeps, hostile input', () => {
       await flush();
       bodies[0]?.end();
       await flush();
-      jest.advanceTimersByTime(5_000);
+      vi.advanceTimersByTime(5_000);
       await flush();
 
       expect(lastEventId(1)).toBe('10');
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it('tells two positions beyond 2^53 apart', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const [{ live }] = setUp();
       live.open();
@@ -133,17 +134,17 @@ describe('Live: the position it keeps, hostile input', () => {
       await flush();
       bodies[0]?.end();
       await flush();
-      jest.advanceTimersByTime(5_000);
+      vi.advanceTimersByTime(5_000);
       await flush();
 
       expect(lastEventId(1)).toBe('900719925474099302');
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it('forgets the position and the server wait on close, so another account starts clean', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const [{ live }] = setUp();
       live.open();
@@ -158,16 +159,16 @@ describe('Live: the position it keeps, hostile input', () => {
       expect(lastEventId(1)).toBeUndefined();
       bodies[1]?.end();
       await flush();
-      jest.advanceTimersByTime(1_200);
+      vi.advanceTimersByTime(1_200);
       await flush();
       expect(fetchMock).toHaveBeenCalledTimes(3);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it('does not reopen before the retry the server asked for, and does at it', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
       const [{ live }] = setUp();
       live.open();
@@ -177,22 +178,22 @@ describe('Live: the position it keeps, hostile input', () => {
       bodies[0]?.end();
       await flush();
 
-      jest.advanceTimersByTime(2_899);
+      vi.advanceTimersByTime(2_899);
       await flush();
       expect(fetchMock).toHaveBeenCalledTimes(1);
 
-      jest.advanceTimersByTime(101);
+      vi.advanceTimersByTime(101);
       await flush();
       expect(fetchMock).toHaveBeenCalledTimes(2);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it('reopens at once after each of several planned reconnects, keeping the position', async () => {
     // Planned closes come 14 minutes apart.
     let now = Date.parse('2026-10-19T12:00:00.000Z');
-    const clock = jest.spyOn(Date, 'now').mockImplementation(() => now);
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
     const [{ live }] = setUp();
     live.open();
     await flush();

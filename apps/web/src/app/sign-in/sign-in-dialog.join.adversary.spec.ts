@@ -17,7 +17,7 @@ type Answer =
 
 function setup(sessionAfterSignIn: MeDto | null, ...answers: Answer[]) {
   const current = signal<MeDto | null>(null);
-  const open = jest.fn(async (..._: unknown[]) => {
+  const open = vi.fn(async (..._: unknown[]) => {
     const answer = answers.shift() ?? 'cancelled';
     if (answer === 'signed-in') current.set(sessionAfterSignIn);
     return answer;
@@ -29,7 +29,7 @@ function setup(sessionAfterSignIn: MeDto | null, ...answers: Answer[]) {
       { provide: Overlays, useValue: { open } },
     ],
   });
-  jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+  vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
   return { dialog: TestBed.inject(SignInDialog), open };
 }
 

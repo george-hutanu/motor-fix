@@ -211,7 +211,7 @@ describe('the upload queue against hostile use', () => {
   it('keeps the photo in memory when the browser store refuses the write', async () => {
     const queue = open();
     await queue.forDraft(DRAFT);
-    const put = jest
+    const put = vi
       .spyOn(IDBObjectStore.prototype, 'put')
       .mockImplementation(() => {
         throw new DOMException('quota', 'QuotaExceededError');
@@ -226,7 +226,7 @@ describe('the upload queue against hostile use', () => {
   });
 
   it('uses memory only on the server and never touches indexedDB', async () => {
-    const opened = jest.fn();
+    const opened = vi.fn();
     globalThis.indexedDB = { open: opened } as unknown as IDBFactory;
     const queue = open('server');
 

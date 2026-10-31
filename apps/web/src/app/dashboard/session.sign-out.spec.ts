@@ -46,15 +46,15 @@ const answered = (status: number) =>
 function tabsSetup({ tabs = 1 } = {}) {
   const { auth, session } = setup({
     auth: {
-      authControllerSignIn: jest.fn(() =>
+      authControllerSignIn: vi.fn(() =>
         Promise.resolve({ accessToken: 'signed-in' }),
       ),
-      authControllerSignOutEverywhere: jest.fn(() => Promise.resolve()),
-      authControllerSignUp: jest.fn(() =>
+      authControllerSignOutEverywhere: vi.fn(() => Promise.resolve()),
+      authControllerSignUp: vi.fn(() =>
         Promise.resolve({ accessToken: 'signed-up' }),
       ),
     },
-    me: { meControllerMe: jest.fn(() => Promise.resolve(ME)) },
+    me: { meControllerMe: vi.fn(() => Promise.resolve(ME)) },
   });
   // A second tab of the same browser: its own Session, the same cookie.
   const other =
@@ -110,7 +110,7 @@ describe('the other tabs of this browser', () => {
     const { other, session } = tabsSetup({ tabs: 2 });
     await session.load();
     await other.load();
-    const ended = jest.fn();
+    const ended = vi.fn();
     other.ended.subscribe(ended);
 
     await session[how]();
@@ -124,7 +124,7 @@ describe('the other tabs of this browser', () => {
     const { api, other, session } = tabsSetup({ tabs: 2 });
     await session.load();
     await other.load();
-    const ended = jest.fn();
+    const ended = vi.fn();
     other.ended.subscribe(ended);
 
     session.revoked();
@@ -152,7 +152,7 @@ describe('the other tabs of this browser', () => {
   it('does not tell the tab that signed out that it ended', async () => {
     const { session } = tabsSetup();
     await session.load();
-    const ended = jest.fn();
+    const ended = vi.fn();
     session.ended.subscribe(ended);
 
     await session.signOut();

@@ -3,6 +3,7 @@ import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { GARAGE_MAP } from './garage-map/garage-map';
 import { WhereSection } from './where-section';
@@ -52,8 +53,8 @@ class Host {
   readonly garage = signal(GARAGE);
 }
 
-const track = jest.fn();
-let open: jest.Mock;
+const track = vi.fn();
+let open: Mock;
 let fixture: ComponentFixture<Host>;
 const section = () =>
   fixture.nativeElement.querySelector('section') as HTMLElement;
@@ -68,11 +69,11 @@ async function settle() {
   }
 }
 
-async function start(agent: string, opener?: jest.Mock) {
-  jest.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(agent);
-  jest.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(390);
-  jest.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(200);
-  open = opener ?? jest.fn(() => new Promise(() => undefined));
+async function start(agent: string, opener?: Mock) {
+  vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(agent);
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(390);
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(200);
+  open = opener ?? vi.fn(() => new Promise(() => undefined));
   TestBed.configureTestingModule({
     providers: [
       { provide: Consent, useValue: { track } },
@@ -88,7 +89,7 @@ async function start(agent: string, opener?: jest.Mock) {
 beforeEach(() => track.mockClear());
 afterEach(() => {
   fixture.destroy();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const IPHONE =
@@ -239,7 +240,7 @@ describe('the section when the map fails', () => {
   it('drops the map and keeps the link when the opener rejects', async () => {
     await start(
       DESKTOP,
-      jest.fn(() => Promise.reject(new Error('tiles'))),
+      vi.fn(() => Promise.reject(new Error('tiles'))),
     );
     section().querySelector<HTMLElement>('mf-static-map button')?.click();
     await settle();

@@ -41,14 +41,14 @@ async function open(
   const session = {
     deletingAccount: () => false,
     epoch: () => 0,
-    renew: jest.fn(async () => false),
+    renew: vi.fn(async () => false),
     token: () => token,
   };
-  const gate = jest.fn(async () => {
+  const gate = vi.fn(async () => {
     if (options.signsIn ?? true) token = 'signed-in';
     return options.signsIn ?? true;
   });
-  const leave = jest.fn();
+  const leave = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([{ component: Connect, path: 'app/assistant/connect' }]),

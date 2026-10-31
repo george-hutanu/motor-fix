@@ -273,7 +273,7 @@ describe('cockpit route guard', () => {
   it('leaves the router able to navigate when the texts fail to load', async () => {
     const harness = await RouterTestingHarness.create();
     const i18n = TestBed.inject(I18n);
-    jest.spyOn(i18n, 'enter').mockRejectedValueOnce(new Error('offline'));
+    vi.spyOn(i18n, 'enter').mockRejectedValueOnce(new Error('offline'));
 
     await TestBed.inject(Router)
       .navigateByUrl('/cockpit')
@@ -290,7 +290,7 @@ describe('cockpit route guard', () => {
     await RouterTestingHarness.create();
     const i18n = TestBed.inject(I18n);
     const enter = i18n.enter.bind(i18n);
-    const spy = jest
+    const spy = vi
       .spyOn(i18n, 'enter')
       .mockImplementation((area) => sleep(30).then(() => enter(area)));
 

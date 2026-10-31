@@ -9,6 +9,7 @@ import {
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { AdminRechecks } from './admin-rechecks';
 import { AdminRecheckForm } from '../admin-recheck-form/admin-recheck-form';
@@ -45,7 +46,7 @@ let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let asked: number;
 let answer: () => Promise<RecheckDueListDto>;
-let open: jest.Mock;
+let open: Mock;
 
 async function settle() {
   for (let i = 0; i < 5; i++) {
@@ -58,7 +59,7 @@ async function show(language: 'ro' | 'en' = 'ro') {
   events = new Subject();
   resync = new Subject();
   asked = 0;
-  open = jest.fn(async () => 'cancelled');
+  open = vi.fn(async () => 'cancelled');
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),

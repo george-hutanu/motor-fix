@@ -53,7 +53,7 @@ type Read = {
 };
 let reads: Read[];
 const api = {
-  reviewsControllerForGarage: jest.fn(
+  reviewsControllerForGarage: vi.fn(
     (params: { garageId: string; page?: number }, _c?: HttpContext) =>
       new Promise<GarageReviewsPageDto>((resolve, reject) => {
         reads.push({
@@ -75,7 +75,7 @@ const messages = new Subject<LiveMessage>();
 const live = {
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
-  register: jest.fn(() => () => undefined),
+  register: vi.fn(() => () => undefined),
   resync: new Subject<void>(),
 };
 
@@ -123,7 +123,7 @@ const button = (label: string) =>
 afterEach(() => {
   fixture?.destroy();
   api.reviewsControllerForGarage.mockClear();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 describe('the reviews section under hostile answers', () => {
@@ -276,7 +276,7 @@ describe('the reviews section under hostile answers', () => {
   });
 
   it('ignores a live message for a kind it does not list after the view is destroyed', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await shown();
     fixture.destroy();
 
@@ -285,7 +285,7 @@ describe('the reviews section under hostile answers', () => {
       id: 'x',
       kind: 'review.posted',
     });
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
 
     expect(reads).toHaveLength(1);
   });

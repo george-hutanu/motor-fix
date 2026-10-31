@@ -62,10 +62,10 @@ type Read = {
 };
 let reads: Read[];
 const api = {
-  profileViewsControllerRecord: jest.fn(
+  profileViewsControllerRecord: vi.fn(
     (_: { id: string; body: { source?: string } }) => Promise.resolve(),
   ),
-  publicGaragesControllerBySlug: jest.fn(
+  publicGaragesControllerBySlug: vi.fn(
     (query: { slug: string; brand?: string }) =>
       new Promise<PublicGarageDto>((resolve, reject) => {
         reads.push({
@@ -85,11 +85,11 @@ const api = {
 
 const messages = new Subject<LiveMessage>();
 const resync = new Subject<void>();
-const leave = jest.fn();
+const leave = vi.fn();
 const live = {
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
-  register: jest.fn((_view: { garage?: string; brand?: string }) => leave),
+  register: vi.fn((_view: { garage?: string; brand?: string }) => leave),
   resync,
 };
 
@@ -129,7 +129,7 @@ beforeEach(async () => {
   harness = await RouterTestingHarness.create();
 });
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 async function open(url: string) {
   await harness.navigateByUrl(url);
@@ -144,7 +144,7 @@ const send = (kind: string) =>
 
 async function burst(kind = 'garage.updated') {
   send(kind);
-  jest.advanceTimersByTime(300);
+  vi.advanceTimersByTime(300);
   await settle();
 }
 
@@ -305,7 +305,7 @@ describe('the profile and its live stream', () => {
   });
 
   it('leaves the stream when the page is left, and reads nothing after', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
 
@@ -317,34 +317,34 @@ describe('the profile and its live stream', () => {
   });
 
   it('reads once more when the stream reopens, and once for two reopens in a row', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
 
     resync.next();
     resync.next();
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(reads).toHaveLength(2);
   });
 
   it('reads again when a change arrives while an earlier re-read is still open', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer({ ...FIXED, name: 'Prima' });
 
     await burst();
     await burst('review.posted');
     await reads[1]?.answer({ ...FIXED, name: 'A doua' });
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(reads).toHaveLength(3);
   });
 
   it('keeps the gone view once a suspension has been read, whatever the next event says', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
 
@@ -358,7 +358,7 @@ describe('the profile and its live stream', () => {
   });
 
   it('shows the garage again when it is restored after a suspension was read', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
     await burst('garage.suspended');

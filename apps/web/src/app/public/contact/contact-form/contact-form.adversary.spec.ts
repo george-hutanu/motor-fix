@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
 import { SupportService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { ContactForm } from './contact-form';
 
@@ -11,7 +12,7 @@ const NAME = 'Ana Pop';
 const EMAIL = 'ana@example.test';
 const MESSAGE = 'Nu văd cererea pe care am trimis‑o ieri.';
 
-let send: jest.Mock;
+let send: Mock;
 let fixture: ComponentFixture<ContactForm>;
 
 async function settle() {
@@ -28,7 +29,7 @@ async function open(
     inTask?: boolean;
   } = {},
 ) {
-  send = jest.fn(async () => ({ reference: 'MF-2026-000042' }));
+  send = vi.fn(async () => ({ reference: 'MF-2026-000042' }));
   TestBed.configureTestingModule({
     providers: [
       {
@@ -48,7 +49,7 @@ async function open(
 
 afterEach(() => {
   fixture?.nativeElement.remove();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const root = () => fixture.nativeElement as HTMLElement;
@@ -212,7 +213,7 @@ describe('the contact form under hostile use', () => {
 
   it('says offline in English', async () => {
     await open({ language: 'en' });
-    jest.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     send.mockRejectedValueOnce(new HttpErrorResponse({ status: 0 }));
     fill();
     button('Send message')?.click();
@@ -222,7 +223,7 @@ describe('the contact form under hostile use', () => {
 
   it('does not say offline when the browser is online and nothing answered', async () => {
     await open();
-    jest.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
     await sendWith(new HttpErrorResponse({ status: 0 }));
     expect(text()).not.toContain('Nu ești conectat.');
     expect(button('Încearcă din nou')).toBeDefined();

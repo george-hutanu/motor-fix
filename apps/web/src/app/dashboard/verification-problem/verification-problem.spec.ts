@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { VerificationProblem } from './verification-problem';
 
@@ -28,7 +29,7 @@ const RECORDED = {
   summary: { en: '', ro: '' },
 };
 
-let record: jest.Mock;
+let record: Mock;
 let result: Promise<OverlayResult<unknown>>;
 
 async function settle() {
@@ -39,7 +40,7 @@ async function settle() {
 }
 
 async function open(language: 'ro' | 'en' = 'ro') {
-  record = jest.fn(async () => RECORDED);
+  record = vi.fn(async () => RECORDED);
   TestBed.configureTestingModule({
     providers: [
       {

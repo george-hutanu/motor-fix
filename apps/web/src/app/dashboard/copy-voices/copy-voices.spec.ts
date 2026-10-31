@@ -8,6 +8,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { CopyVoices } from './copy-voices';
 import { Live } from '../live';
@@ -44,8 +45,8 @@ const NAMES = [
   '5 · Fără surprize',
 ];
 
-let list: jest.Mock;
-let change: jest.Mock;
+let list: Mock;
+let change: Mock;
 let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 
@@ -53,10 +54,10 @@ async function render(
   answer: CopyVoicesDto | Promise<never> = voices(),
   language: 'ro' | 'en' = 'ro',
 ) {
-  list = jest.fn(() =>
+  list = vi.fn(() =>
     answer instanceof Promise ? answer : Promise.resolve(answer),
   );
-  change = jest.fn(() => new Promise(() => undefined));
+  change = vi.fn(() => new Promise(() => undefined));
   events = new Subject();
   resync = new Subject();
   TestBed.configureTestingModule({
@@ -110,7 +111,7 @@ const changed = (id: string): LiveMessage =>
     kind: 'platform_rule.changed',
   }) as LiveMessage;
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 // @traces 010-FR-012
 describe('the copy voices section', () => {
@@ -346,24 +347,24 @@ describe('pinning a voice', () => {
 // @traces 010-FR-015
 describe('a change made elsewhere', () => {
   it('reads the voices again on a copy voices change, once for a burst', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { settle } = await render();
     list.mockResolvedValue(voices({ 1: OFF }));
 
     events.next(changed('copy_voices'));
     events.next(changed('copy_voices'));
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(list).toHaveBeenCalledTimes(2);
   });
 
   it('ignores a change of another rule', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const { settle } = await render();
 
     events.next(changed('maintenance_mode'));
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(list).toHaveBeenCalledTimes(1);

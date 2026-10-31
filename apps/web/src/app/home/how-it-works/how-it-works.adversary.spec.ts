@@ -13,7 +13,7 @@ let observers: {
   target?: Element;
   disconnected: number;
 }[];
-const scroll = jest.fn();
+const scroll = vi.fn();
 
 class FakeObserver {
   constructor(callback: IntersectionObserverCallback) {
@@ -37,7 +37,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 async function render(address?: string) {
@@ -176,7 +176,7 @@ describe('the jump to how MotorFix works while Home is still growing', () => {
   );
 
   it('stops following three seconds after the jump', async () => {
-    const timers = jest.spyOn(window, 'setTimeout');
+    const timers = vi.spyOn(window, 'setTimeout');
     await render('/ro#how-it-works');
     const [settle] = timers.mock.calls.find(([, ms]) => ms === 3000) ?? [];
     timers.mockRestore();
@@ -208,18 +208,18 @@ describe('the jump to how MotorFix works while Home is still growing', () => {
 // @traces 228-FR-006
 describe('the hourly rate counter under odd timing', () => {
   it('does not start rolling for an entry that is not in view', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const root = await render();
 
     see(false);
-    jest.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2000);
     fixture.detectChanges();
 
     expect(figure(root)).toBe('0');
   });
 
   it('stops watching the section as soon as it has been seen', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await render();
 
     see(true);
@@ -229,13 +229,13 @@ describe('the hourly rate counter under odd timing', () => {
   });
 
   it('never goes down or past 180 while rolling', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const root = await render();
 
     see(true);
     let last = 0;
     for (let i = 0; i < 100; i += 1) {
-      jest.advanceTimersByTime(20);
+      vi.advanceTimersByTime(20);
       fixture.detectChanges();
       const now = Number(figure(root));
       expect(now).toBeGreaterThanOrEqual(last);
@@ -246,39 +246,39 @@ describe('the hourly rate counter under odd timing', () => {
   });
 
   it('stops changing the figure once the page is left mid-roll', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const root = await render();
 
     see(true);
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     fixture.detectChanges();
     const frozen = figure(root);
     fixture.destroy();
-    jest.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(2000);
 
     expect(figure(root)).toBe(frozen);
     expect(observers[0].disconnected).toBeGreaterThan(0);
   });
 
   it('settles on 180 when reduced motion turns on while it rolls', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const root = await render();
 
     see(true);
-    jest.advanceTimersByTime(200);
+    vi.advanceTimersByTime(200);
     reduced.set(true);
-    jest.advanceTimersByTime(100);
+    vi.advanceTimersByTime(100);
     fixture.detectChanges();
 
     expect(figure(root)).toBe('180');
   });
 
   it('keeps 180 in the accessible name whatever the figure shows mid-roll', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const root = await render();
 
     see(true);
-    jest.advanceTimersByTime(100);
+    vi.advanceTimersByTime(100);
     fixture.detectChanges();
 
     expect(root.querySelector('.counter')?.getAttribute('aria-label')).toBe(

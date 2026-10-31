@@ -12,6 +12,7 @@ import {
 import type { PublicGarageDto, RequestDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { RequestQuoteButton } from './request-quote-button';
 import { Consent } from '../../../consent/consent';
@@ -51,10 +52,10 @@ const request = (names: string[]) =>
     })),
   }) as unknown as RequestDto;
 
-let open: jest.Mock;
-let track: jest.Mock;
-let load: jest.Mock;
-let renew: jest.Mock;
+let open: Mock;
+let track: Mock;
+let load: Mock;
+let renew: Mock;
 
 async function render(
   options: {
@@ -72,20 +73,18 @@ async function render(
     said?: (line: string) => void;
   } = {},
 ) {
-  open = jest.fn(
-    async (_task: unknown, { data }: { data: RequestQuoteData }) => {
-      const answer = options.answer ?? 'cancelled';
-      if (answer !== 'cancelled' && !('go' in answer)) data.sent?.(answer);
-      return answer;
-    },
-  );
+  open = vi.fn(async (_task: unknown, { data }: { data: RequestQuoteData }) => {
+    const answer = options.answer ?? 'cancelled';
+    if (answer !== 'cancelled' && !('go' in answer)) data.sent?.(answer);
+    return answer;
+  });
   const role = options.role === undefined ? null : options.role;
   const current = signal<{ role: string } | null>(role ? { role } : null);
   const roleHint = signal(options.hint ?? null);
-  track = jest.fn();
-  load = jest.fn(async () => null);
+  track = vi.fn();
+  load = vi.fn(async () => null);
   // The cookie's session is gone: the session forgets the role it last saw.
-  renew = jest.fn(async () => {
+  renew = vi.fn(async () => {
     if (options.expired) roleHint.set(null);
     return !options.expired;
   });
@@ -265,7 +264,7 @@ describe('RequestQuoteButton', () => {
   // close, so the close's step back over the dialog's entry cannot undo it.
   it('goes where the dialog’s link pointed once the dialog has closed', async () => {
     const host = await render({ answer: { go: '/app/driver/requests' } });
-    const navigate = jest
+    const navigate = vi
       .spyOn(TestBed.inject(Router), 'navigateByUrl')
       .mockResolvedValue(true);
 
@@ -276,7 +275,7 @@ describe('RequestQuoteButton', () => {
 
   it('stays on the profile when the dialog closes without a link', async () => {
     const host = await render({ answer: request(['Service Auto Militari']) });
-    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
 
     await press(host);
 
@@ -400,7 +399,7 @@ describe('RequestQuoteButton inside the estimate box', () => {
   });
 
   it('leaves the sent line to the box’s live region, handing it the line', async () => {
-    const said = jest.fn();
+    const said = vi.fn();
     const host = await render({
       announce: false,
       answer: request(['Service Auto Militari']),

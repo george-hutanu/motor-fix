@@ -108,7 +108,7 @@ type Read = {
 };
 let reads: Read[];
 const api = {
-  reviewsControllerForGarage: jest.fn(
+  reviewsControllerForGarage: vi.fn(
     (params: { garageId: string; page?: number }, context?: HttpContext) =>
       new Promise<GarageReviewsPageDto>((resolve, reject) => {
         reads.push({
@@ -132,7 +132,7 @@ const resync = new Subject<void>();
 const live = {
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
-  register: jest.fn(() => () => undefined),
+  register: vi.fn(() => () => undefined),
   resync,
 };
 const send = (kind: string) =>
@@ -188,7 +188,7 @@ async function english() {
 
 async function liveMessage(kind: string) {
   send(kind);
-  jest.advanceTimersByTime(300);
+  vi.advanceTimersByTime(300);
   await settle();
 }
 
@@ -213,7 +213,7 @@ const button = (label: string) =>
 
 afterEach(() => {
   fixture?.destroy();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 describe('the reviews section on a garage profile', () => {
@@ -532,7 +532,7 @@ describe('the reviews section moved to another garage', () => {
 describe('the reviews section kept live', () => {
   beforeEach(() => {
     configure();
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   it.each([
@@ -565,7 +565,7 @@ describe('the reviews section kept live', () => {
     send('review.posted');
     send('rating.updated');
     send('review.edited');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(reads).toHaveLength(2);
@@ -666,7 +666,7 @@ describe('the reviews section kept live', () => {
   });
 
   it('swaps a re-read in silently: the header’s dial is what announces the rating', async () => {
-    const announce = jest
+    const announce = vi
       .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
       .mockResolvedValue();
     await shown();
@@ -944,7 +944,7 @@ describe('the garage’s reply under a review', () => {
   });
 
   describe('kept live', () => {
-    beforeEach(() => jest.useFakeTimers());
+    beforeEach(() => vi.useFakeTimers());
 
     it.each([['review.replied'], ['review.reply_edited']])(
       'reads the first page again on %s and shows the reply it brings',

@@ -11,6 +11,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { AdminAccount, type AdminAccountResult } from './admin-account';
 
@@ -66,11 +67,11 @@ const entry = (
   ...extra,
 });
 
-let read: jest.Mock;
-let repairs: jest.Mock;
-let history: jest.Mock;
-let pageAddress: jest.Mock;
-let changed: jest.Mock;
+let read: Mock;
+let repairs: Mock;
+let history: Mock;
+let pageAddress: Mock;
+let changed: Mock;
 let result: Promise<OverlayResult<AdminAccountResult>>;
 
 async function settle() {
@@ -84,14 +85,14 @@ async function open(
   account: AdminAccountPageDto | HttpErrorResponse = page(),
   language: 'ro' | 'en' = 'ro',
 ) {
-  read = jest.fn(async () => {
+  read = vi.fn(async () => {
     if (account instanceof HttpErrorResponse) throw account;
     return account;
   });
-  history ??= jest.fn(async () => ({ items: [], nextCursor: null, total: 0 }));
-  pageAddress = jest.fn(async () => ({ url: 'https://files.test/p1' }));
-  changed = jest.fn();
-  repairs = jest.fn(async () => ({
+  history ??= vi.fn(async () => ({ items: [], nextCursor: null, total: 0 }));
+  pageAddress = vi.fn(async () => ({ url: 'https://files.test/p1' }));
+  changed = vi.fn();
+  repairs = vi.fn(async () => ({
     items: [
       {
         car: { brandName: 'Dacia', model: 'Logan', year: 2018 },
@@ -155,7 +156,7 @@ const value = (label: string) => {
 };
 
 beforeEach(() => {
-  history = undefined as unknown as jest.Mock;
+  history = undefined as unknown as Mock;
 });
 
 afterEach(() => {
@@ -270,8 +271,8 @@ describe('the account drawer', () => {
   });
 
   it("opens a garage owner's document page in a new tab", async () => {
-    const tab = { close: jest.fn(), location: { href: '' }, opener: {} };
-    const opened = jest
+    const tab = { close: vi.fn(), location: { href: '' }, opener: {} };
+    const opened = vi
       .spyOn(window, 'open')
       .mockReturnValue(tab as unknown as Window);
     await open(
@@ -357,7 +358,7 @@ describe("the account's added repairs", () => {
 
 describe("the account's history", () => {
   it('reads 50 from the joined time and shows who, what, when and the change', async () => {
-    history = jest.fn(async () => ({
+    history = vi.fn(async () => ({
       items: [entry(1)],
       nextCursor: null,
       total: 1,
@@ -384,7 +385,7 @@ describe("the account's history", () => {
   });
 
   it('reads the next page on Mai multe', async () => {
-    history = jest
+    history = vi
       .fn()
       .mockResolvedValueOnce({ items: [entry(1)], nextCursor: 'c-2', total: 2 })
       .mockResolvedValueOnce({ items: [entry(2)], nextCursor: null, total: 2 });
@@ -408,7 +409,7 @@ describe("the account's history", () => {
 
 describe('after an action', () => {
   async function act(name: string, answer: string) {
-    const spy = jest
+    const spy = vi
       .spyOn(TestBed.inject(Overlays), 'open')
       .mockImplementationOnce(async () => answer as never);
     button(name).click();

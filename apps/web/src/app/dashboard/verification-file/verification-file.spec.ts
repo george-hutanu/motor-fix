@@ -15,6 +15,7 @@ import { appliedAt, I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { VerificationFile } from './verification-file';
 import { AdminRestoreGarage } from '../admin-restore-garage/admin-restore-garage';
@@ -28,9 +29,9 @@ import { Session } from '../session';
 // @traces 302-FR-003 302-FR-004 302-FR-005 302-FR-006 302-FR-007 302-FR-008 302-FR-009 302-FR-010 302-FR-011
 // @traces 413-FR-011
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 const FILE = 'file-1';
@@ -203,19 +204,19 @@ let events: Subject<LiveMessage>;
 let resync: Subject<void>;
 let answer: () => Promise<VerificationFileDto>;
 let api: {
-  verificationFileControllerCorrect: jest.Mock;
-  verificationFileControllerDecision: jest.Mock;
-  verificationFileControllerOpen: jest.Mock;
-  verificationFileControllerPresence: jest.Mock;
-  verificationFileControllerReopen: jest.Mock;
-  verificationFileControllerRead: jest.Mock;
-  verificationChecksControllerRecord: jest.Mock;
-  reportDecisionControllerDecide: jest.Mock;
+  verificationFileControllerCorrect: Mock;
+  verificationFileControllerDecision: Mock;
+  verificationFileControllerOpen: Mock;
+  verificationFileControllerPresence: Mock;
+  verificationFileControllerReopen: Mock;
+  verificationFileControllerRead: Mock;
+  verificationChecksControllerRecord: Mock;
+  reportDecisionControllerDecide: Mock;
 };
-let documents: { legalDocumentsControllerPageAddress: jest.Mock };
-let overlays: { open: jest.Mock };
+let documents: { legalDocumentsControllerPageAddress: Mock };
+let overlays: { open: Mock };
 let drawer: VerificationFile;
-let tab: { close: jest.Mock; location: { href: string }; opener: unknown };
+let tab: { close: Mock; location: { href: string }; opener: unknown };
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -232,25 +233,25 @@ async function open(
   resync = new Subject();
   answer = typeof file === 'function' ? file : async () => file;
   api = {
-    reportDecisionControllerDecide: jest.fn(),
-    verificationChecksControllerRecord: jest.fn(),
-    verificationFileControllerCorrect: jest.fn(),
-    verificationFileControllerDecision: jest.fn(),
-    verificationFileControllerOpen: jest.fn(() => answer()),
-    verificationFileControllerPresence: jest.fn(async () => ({ others: [] })),
-    verificationFileControllerRead: jest.fn(() => answer()),
-    verificationFileControllerReopen: jest.fn(),
+    reportDecisionControllerDecide: vi.fn(),
+    verificationChecksControllerRecord: vi.fn(),
+    verificationFileControllerCorrect: vi.fn(),
+    verificationFileControllerDecision: vi.fn(),
+    verificationFileControllerOpen: vi.fn(() => answer()),
+    verificationFileControllerPresence: vi.fn(async () => ({ others: [] })),
+    verificationFileControllerRead: vi.fn(() => answer()),
+    verificationFileControllerReopen: vi.fn(),
   };
   documents = {
-    legalDocumentsControllerPageAddress: jest.fn(async () => ({
+    legalDocumentsControllerPageAddress: vi.fn(async () => ({
       expiresAt: new Date(NOW.getTime() + 300_000).toISOString(),
       url: 'https://store.test/signed',
     })),
   };
-  overlays = { open: jest.fn() };
-  tab = { close: jest.fn(), location: { href: '' }, opener: {} };
-  jest.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
-  jest.mocked(toast).mockClear();
+  overlays = { open: vi.fn() };
+  tab = { close: vi.fn(), location: { href: '' }, opener: {} };
+  vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+  vi.mocked(toast).mockClear();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -260,9 +261,9 @@ async function open(
       {
         provide: OVERLAY_TASK,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           data: { fileId: FILE },
-          markUnchanged: jest.fn(),
+          markUnchanged: vi.fn(),
         },
       },
       {
@@ -337,7 +338,7 @@ const entry = (extra: Partial<AuditEntryDto>): AuditEntryDto =>
 
 afterEach(() => {
   document.body.innerHTML = '';
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('opening the file', () => {
@@ -1481,7 +1482,7 @@ describe('the company and CAEN rows', () => {
     document.removeEventListener('click', stay);
     await settle();
   };
-  const clipboard = (writeText?: jest.Mock) =>
+  const clipboard = (writeText?: Mock) =>
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: writeText ? { writeText } : undefined,
@@ -1538,7 +1539,7 @@ describe('the company and CAEN rows', () => {
   });
 
   it('copies the CUI when a look-up opens, and says so', async () => {
-    const writeText = jest.fn(async () => undefined);
+    const writeText = vi.fn(async () => undefined);
     clipboard(writeText);
     const host = await open();
 
@@ -2188,7 +2189,7 @@ describe('the RAR and activities rows', () => {
     document.removeEventListener('click', stay);
     await settle();
   };
-  const clipboard = (writeText?: jest.Mock) =>
+  const clipboard = (writeText?: Mock) =>
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: writeText ? { writeText } : undefined,
@@ -2252,7 +2253,7 @@ describe('the RAR and activities rows', () => {
   });
 
   it('copies the number when the register opens, and says so', async () => {
-    const writeText = jest.fn(async () => undefined);
+    const writeText = vi.fn(async () => undefined);
     clipboard(writeText);
     const host = await open();
 
@@ -2263,7 +2264,7 @@ describe('the RAR and activities rows', () => {
   });
 
   it('opens the register quietly when there is no number or no clipboard', async () => {
-    const writeText = jest.fn(async () => undefined);
+    const writeText = vi.fn(async () => undefined);
     clipboard(writeText);
     const host = await open(fileOf({ file: { rarNumber: null } }));
     await follow(anchor(host, 'Registrul RAR') as HTMLAnchorElement);

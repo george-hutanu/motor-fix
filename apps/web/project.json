@@ -34,6 +34,9 @@
             "styles": false,
             "vendor": false
           }
+        },
+        "test-node": {
+          "externalDependencies": ["@motor-fix/observability"]
         }
       },
       "defaultConfiguration": "production",
@@ -79,12 +82,29 @@
       "executor": "@angular/build:dev-server"
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "dependsOn": ["test-node"],
+      "executor": "@angular/build:unit-test",
       "options": {
-        "jestConfig": "apps/web/jest.config.cts",
+        "buildTarget": "web:build:development",
+        "exclude": ["server/**/*.spec.ts", "app/app.config.spec.ts"],
+        "isolate": true,
+        "runner": "vitest",
+        "runnerConfig": "apps/web/vitest.config.ts",
+        "setupFiles": ["apps/web/src/test-setup.ts"],
         "tsConfig": "apps/web/tsconfig.spec.json"
-      },
-      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"]
+      }
+    },
+    "test-node": {
+      "executor": "@angular/build:unit-test",
+      "options": {
+        "buildTarget": "web:build:test-node",
+        "include": ["server/**/*.spec.ts", "app/app.config.spec.ts"],
+        "isolate": true,
+        "runner": "vitest",
+        "runnerConfig": "apps/web/vitest-node.config.ts",
+        "setupFiles": ["apps/web/src/test-setup.ts"],
+        "tsConfig": "apps/web/tsconfig.spec.json"
+      }
     },
     "test:mutation": {},
     "typecheck": {

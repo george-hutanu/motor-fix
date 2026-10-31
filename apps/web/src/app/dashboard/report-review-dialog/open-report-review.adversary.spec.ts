@@ -6,7 +6,7 @@ import { staffReview } from '../garage-reviews/garage-reviews.testing';
 // @traces 1382-FR-008 1382-FR-003
 describe('opening the report task', () => {
   it('asks for a dialog titled by the report key and carries the review as data', async () => {
-    const open = jest.fn(async () => 'cancelled');
+    const open = vi.fn(async () => 'cancelled');
     const review = staffReview({ id: 'r-77' });
 
     await openReportReview({ open } as unknown as Overlays, review);
@@ -25,7 +25,7 @@ describe('opening the report task', () => {
   });
 
   it('hands back exactly what the overlay resolves', async () => {
-    const open = jest.fn(async () => 'refused');
+    const open = vi.fn(async () => 'refused');
 
     await expect(
       openReportReview({ open } as unknown as Overlays, staffReview()),
@@ -33,7 +33,7 @@ describe('opening the report task', () => {
   });
 
   it('rejects when the overlay itself fails, rather than resolving a result', async () => {
-    const open = jest.fn(async () => {
+    const open = vi.fn(async () => {
       throw new Error('boom');
     });
 

@@ -101,10 +101,10 @@ type Read = {
 };
 let reads: Read[];
 const api = {
-  profileViewsControllerRecord: jest.fn(
+  profileViewsControllerRecord: vi.fn(
     (_: { id: string; body: { source?: string } }) => Promise.resolve(),
   ),
-  publicGaragesControllerBySlug: jest.fn(
+  publicGaragesControllerBySlug: vi.fn(
     (
       query: { slug: string; brand?: string; near?: string },
       _context?: HttpContext,
@@ -151,14 +151,14 @@ const NEARBY: SimilarGaragesDto = {
 };
 let similarAnswer: () => Promise<SimilarGaragesDto>;
 const search = {
-  similarGaragesControllerForGarage: jest.fn(
+  similarGaragesControllerForGarage: vi.fn(
     (_query: { slug: string; brand?: string }, _context?: HttpContext) =>
       similarAnswer(),
   ),
 };
 
 const prefetch = {
-  take: jest.fn(
+  take: vi.fn(
     (_slug: string, _brand: string | undefined): PublicGarageDto | undefined =>
       undefined,
   ),
@@ -166,11 +166,11 @@ const prefetch = {
 
 const messages = new Subject<LiveMessage>();
 const resync = new Subject<void>();
-const consent = { track: jest.fn() };
+const consent = { track: vi.fn() };
 const live = {
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
-  register: jest.fn(() => () => undefined),
+  register: vi.fn(() => () => undefined),
   resync,
 };
 
@@ -215,7 +215,7 @@ beforeEach(async () => {
   harness = await RouterTestingHarness.create();
 });
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 async function open(url: string) {
   await harness.navigateByUrl(url);
@@ -538,12 +538,12 @@ describe('the price list on the profile', () => {
   });
 
   it('shows the new range in place when the price list changes', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari?brand=dacia');
     await reads[0]?.answer({ ...FIXED, prices: [BRAKES] });
 
     send('price_list.updated');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[1]?.answer({
       ...FIXED,
@@ -560,7 +560,7 @@ describe('the price list on the profile', () => {
 
   // @traces 1357-FR-004
   it('drops a job in place when a price list change no longer lists it', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const REGAS = {
       ...BRAKES,
       jobTypeId: 'j-regas',
@@ -572,7 +572,7 @@ describe('the price list on the profile', () => {
     expect(prices()?.textContent).toContain('Încărcare freon climă');
 
     send('price_list.updated');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[1]?.answer({ ...FIXED, prices: [BRAKES] });
 
@@ -649,14 +649,14 @@ describe('the brands, facilities and where sections kept live', () => {
   it.each(['garage.updated', 'facility.removed', 'facility.re_add_decided'])(
     'shows the new values in the same sections on %s, the brand kept',
     async (kind) => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       await open('/ro/garages/service-auto-militari?brand=bmw');
       await reads[0]?.answer(SHOWN);
       const before = { brands: brands(), where: where() };
       const registered = live.register.mock.calls.length;
 
       send(kind);
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
       await settle();
       await reads[1]?.answer({
         ...SHOWN,
@@ -932,7 +932,7 @@ describe('a profile pre-fetched from the results', () => {
   });
 
   it('joins the stream and reads again on its messages, as today', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     prefetch.take.mockReturnValue(FIXED);
     await open('/ro/garages/service-auto-militari');
 
@@ -941,7 +941,7 @@ describe('a profile pre-fetched from the results', () => {
       garage: 'g-2',
     });
     send('garage.updated');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(reads).toHaveLength(1);
@@ -953,12 +953,12 @@ describe('a profile pre-fetched from the results', () => {
 
   // @traces 1246-FR-015
   it("shows an owner's saved name, description and Saturday hours on garage.updated, with no reload", async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     prefetch.take.mockReturnValue(FIXED);
     await open('/ro/garages/service-auto-militari');
 
     send('garage.updated');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[0]?.answer({
       ...FIXED,
@@ -1135,7 +1135,7 @@ describe('the response line in the profile header', () => {
   });
 
   it('drops the line once the garage has had no request in the last 30 days', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/mecanic-mobil-ilfov');
     await reads[0]?.answer({ ...MOBILE, responseRate: rated(91) });
     expect(line()).not.toBeNull();
@@ -1145,7 +1145,7 @@ describe('the response line in the profile header', () => {
       id: 'x',
       kind: 'response_stats.updated',
     });
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[1]?.answer({ ...MOBILE, responseRate: { state: 'none' } });
 
@@ -1169,20 +1169,20 @@ describe('the response line kept live', () => {
     messages.next({ at: '2026-10-10T01:00:00.000Z', id: 'x', kind });
 
   it('reads the profile again when the night changes the response figures', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
 
     send('response_stats.updated');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(reads).toHaveLength(2);
   });
 
   it('announces a changed rate in place, politely and without moving focus', async () => {
-    jest.useFakeTimers();
-    const announce = jest
+    vi.useFakeTimers();
+    const announce = vi
       .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
       .mockResolvedValue();
     await open('/ro/garages/service-auto-militari');
@@ -1193,7 +1193,7 @@ describe('the response line kept live', () => {
     const focused = document.activeElement;
 
     send('response_stats.updated');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[1]?.answer({
       ...FIXED,
@@ -1238,8 +1238,8 @@ describe('the garage profile kept live', () => {
   });
 
   it('announces a lamp that changes in place, politely and without moving focus', async () => {
-    jest.useFakeTimers();
-    const announce = jest
+    vi.useFakeTimers();
+    const announce = vi
       .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
       .mockResolvedValue();
     await open('/ro/garages/service-auto-militari?brand=dacia');
@@ -1251,7 +1251,7 @@ describe('the garage profile kept live', () => {
     const focused = document.activeElement;
 
     send('garage.updated');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[1]?.answer({
       ...FIXED,
@@ -1263,15 +1263,15 @@ describe('the garage profile kept live', () => {
   });
 
   it('announces a dial that changes in place', async () => {
-    jest.useFakeTimers();
-    const announce = jest
+    vi.useFakeTimers();
+    const announce = vi
       .spyOn(TestBed.inject(LiveAnnouncer), 'announce')
       .mockResolvedValue();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer({ ...FIXED, rating: 4.5, reviewCount: 3 });
 
     send('review.posted');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[1]?.answer({ ...FIXED, rating: 4.7, reviewCount: 4 });
 
@@ -1279,16 +1279,16 @@ describe('the garage profile kept live', () => {
   });
 
   it('keeps the no-longer-available view when a later re-read fails otherwise', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
     send('garage.suspended');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[1]?.fail(410);
 
     send('garage.updated');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[2]?.fail(503);
 
@@ -1297,14 +1297,14 @@ describe('the garage profile kept live', () => {
   });
 
   it('reads again once, with the same brand, for a burst of changes', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari?brand=dacia');
     await reads[0]?.answer(FIXED);
 
     send('garage.updated');
     send('review.posted');
     send('verification.decided');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(reads.map((r) => r.query)).toEqual([
@@ -1314,12 +1314,12 @@ describe('the garage profile kept live', () => {
   });
 
   it('ignores the kinds that do not change the profile', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
 
     send('booking.created');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
 
     expect(reads).toHaveLength(1);
@@ -1329,12 +1329,12 @@ describe('the garage profile kept live', () => {
   it.each(['garage.suspended', 'recheck.recorded'])(
     'switches to the no-longer-available view when the re-read after %s answers 410',
     async (kind) => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       await open('/ro/garages/service-auto-militari');
       await reads[0]?.answer(FIXED);
 
       send(kind);
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
       await settle();
       await reads[1]?.fail(410);
 
@@ -1346,7 +1346,7 @@ describe('the garage profile kept live', () => {
 
   // @traces 1353-FR-003
   it('reads again with the brand kept when a re-check is recorded, and shows the new date', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari?brand=dacia');
     await reads[0]?.answer({
       ...FIXED,
@@ -1354,7 +1354,7 @@ describe('the garage profile kept live', () => {
     });
 
     send('recheck.recorded');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[1]?.answer({
       ...FIXED,
@@ -1370,12 +1370,12 @@ describe('the garage profile kept live', () => {
   });
 
   it('switches to the not-found view when a re-read answers 404', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
 
     send('garage.updated');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[1]?.fail(404);
 
@@ -1385,12 +1385,12 @@ describe('the garage profile kept live', () => {
   });
 
   it('keeps the last answer while a re-read fails', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
 
     send('garage.updated');
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[1]?.fail(503);
 
@@ -1721,7 +1721,7 @@ describe('the distance line in the profile header', () => {
   });
 
   it('keeps the distance through a live re-read without asking again', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     keep();
     await open('/ro/garages/service-auto-militari');
     await reads[0]?.answer(FIXED);
@@ -1732,7 +1732,7 @@ describe('the distance line in the profile header', () => {
       id: 'x',
       kind: 'garage.updated',
     });
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await reads[2]?.answer({ ...FIXED, name: 'Service Militari' });
 

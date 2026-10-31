@@ -9,6 +9,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { RequestDrawer } from './request-drawer';
 import { Live } from '../../live';
@@ -78,14 +79,14 @@ const owner = {
   garageId: 'garage-1',
 } as unknown as MeDto;
 
-let read: jest.Mock;
+let read: Mock;
 let live: ReturnType<typeof fakeLive>;
 
 async function render(
   answer: GarageRequestDto | HttpErrorResponse = detail(),
   language: 'ro' | 'en' = 'ro',
 ) {
-  read = jest.fn(async () => {
+  read = vi.fn(async () => {
     if (answer instanceof HttpErrorResponse) throw answer;
     return answer;
   });
@@ -97,7 +98,7 @@ async function render(
       { provide: Session, useValue: { current: me, shown: me } },
       {
         provide: Overlays,
-        useValue: { open: jest.fn(async () => 'cancelled') },
+        useValue: { open: vi.fn(async () => 'cancelled') },
       },
       {
         provide: GarageRequestsService,
@@ -106,9 +107,9 @@ async function render(
       {
         provide: OVERLAY_TASK,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           data: { id: 'req-1' },
-          markUnchanged: jest.fn(),
+          markUnchanged: vi.fn(),
         },
       },
     ],

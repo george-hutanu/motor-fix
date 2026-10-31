@@ -126,8 +126,9 @@ describe('the Documente row by the yearly cycle', () => {
 
   // The day the documents fall due is still `due`: amber, with that day.
   it('reads documents due today as due on today, amber, with the upload button', async () => {
-    jest.useFakeTimers({
-      doNotFake: [
+    vi.useFakeTimers({
+      now: new Date('2026-10-24T09:00:00.000Z'),
+      toNotFake: [
         'setTimeout',
         'clearTimeout',
         'setInterval',
@@ -136,7 +137,6 @@ describe('the Documente row by the yearly cycle', () => {
         'queueMicrotask',
         'nextTick',
       ],
-      now: new Date('2026-10-24T09:00:00.000Z'),
     });
     try {
       const element = (
@@ -149,7 +149,7 @@ describe('the Documente row by the yearly cycle', () => {
       expect(documentsRow(element).getAttribute('data-lamp')).toBe('amber');
       expect(uploadButton(element)).not.toBeNull();
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -187,7 +187,7 @@ describe('the button on the Documente row', () => {
     'offers "Încarcă documentele" on a %s cycle and asks for the dialog',
     async (row) => {
       const fixture = await render(answer(cycle(row)));
-      const asked = jest.fn();
+      const asked = vi.fn();
       fixture.componentInstance.upload.subscribe(asked);
       const button = uploadButton(fixture.nativeElement);
 

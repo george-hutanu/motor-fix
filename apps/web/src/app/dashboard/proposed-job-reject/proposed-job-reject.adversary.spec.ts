@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { AdminService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { ProposedJobReject } from './proposed-job-reject';
 
@@ -20,7 +21,7 @@ const JOB = {
 };
 const EMOJI = '\u{1F600}';
 
-let send: jest.Mock;
+let send: Mock;
 
 async function settle() {
   for (let i = 0; i < 6; i++) {
@@ -30,7 +31,7 @@ async function settle() {
 }
 
 async function open() {
-  send = jest.fn(async () => ({ id: 'job-2', status: 'rejected' }));
+  send = vi.fn(async () => ({ id: 'job-2', status: 'rejected' }));
   TestBed.configureTestingModule({
     providers: [
       {

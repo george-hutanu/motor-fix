@@ -8,6 +8,7 @@ import type { HoursSection } from '@motor-fix/contracts/garage-hours';
 import { checkListing } from '@motor-fix/contracts/listing-check';
 import { PublicHolidaysService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
+import type { Mock } from 'vitest';
 
 import { HoursStep } from './hours-step';
 import { forStep } from '../field-watch';
@@ -37,7 +38,7 @@ const CALENDAR: Record<
   ],
 };
 
-let list: jest.Mock;
+let list: Mock;
 
 async function open(language: 'ro' | 'en' = 'ro') {
   TestBed.configureTestingModule({
@@ -156,8 +157,9 @@ const chip = (step: HTMLElement, name: string) => {
 };
 
 beforeEach(() => {
-  jest.useFakeTimers({
-    doNotFake: [
+  vi.useFakeTimers({
+    now: new Date('2026-10-07T09:00:00Z'),
+    toNotFake: [
       'nextTick',
       'setImmediate',
       'clearImmediate',
@@ -173,12 +175,11 @@ beforeEach(() => {
       'hrtime',
       'performance',
     ],
-    now: new Date('2026-10-07T09:00:00Z'),
   });
-  list = jest.fn(async ({ year }: { year: number }) => CALENDAR[year] ?? []);
+  list = vi.fn(async ({ year }: { year: number }) => CALENDAR[year] ?? []);
 });
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 describe('step 5, the opening hours', () => {
   it('starts on Monday to Friday 08:00-17:00 and a closed Saturday, keeping nothing yet', async () => {

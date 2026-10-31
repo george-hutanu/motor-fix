@@ -6,6 +6,7 @@ import { AuthService, type MeDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import { toast } from '@motor-fix/ui-cockpit';
+import type { Mock, MockInstance } from 'vitest';
 
 import { DeleteAccountDialog } from './delete-account-dialog';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
@@ -13,9 +14,9 @@ import { Live } from '../live';
 import { PushDevice } from '../push-device';
 import { Session } from '../session';
 
-jest.mock('@motor-fix/ui-cockpit', () => ({
-  ...jest.requireActual('@motor-fix/ui-cockpit'),
-  toast: jest.fn(),
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toast: vi.fn(),
 }));
 
 @Component({ template: '' })
@@ -33,13 +34,13 @@ const problem = (
     status,
   });
 
-let remove: jest.Mock;
-let gate: jest.Mock;
-let revoked: jest.Mock;
-let deleteAccount: jest.Mock;
-let close: jest.Mock;
-let dropped: jest.Mock;
-let navigate: jest.SpyInstance;
+let remove: Mock;
+let gate: Mock;
+let revoked: Mock;
+let deleteAccount: Mock;
+let close: Mock;
+let dropped: Mock;
+let navigate: MockInstance;
 let result: Promise<OverlayResult<true>>;
 
 async function settle() {
@@ -55,12 +56,12 @@ async function open(
   language: 'ro' | 'en' = 'ro',
 ) {
   const queue = [...answers];
-  remove = jest.fn(() => (queue.shift() ?? (async () => undefined))());
-  gate = jest.fn(async () => true);
-  revoked = jest.fn();
-  deleteAccount = jest.fn((send: () => Promise<unknown>) => send());
-  close = jest.fn();
-  dropped = jest.fn(async () => undefined);
+  remove = vi.fn(() => (queue.shift() ?? (async () => undefined))());
+  gate = vi.fn(async () => true);
+  revoked = vi.fn();
+  deleteAccount = vi.fn((send: () => Promise<unknown>) => send());
+  close = vi.fn();
+  dropped = vi.fn(async () => undefined);
   TestBed.configureTestingModule({
     providers: [
       {
@@ -85,7 +86,7 @@ async function open(
       provideRouter([]),
     ],
   });
-  navigate = jest
+  navigate = vi
     .spyOn(TestBed.inject(Router), 'navigateByUrl')
     .mockResolvedValue(true);
   if (language === 'en') await TestBed.inject(I18n).use('en');
@@ -128,7 +129,7 @@ async function confirm(value = 'andrei@example.ro') {
   await settle();
 }
 
-beforeEach(() => jest.mocked(toast).mockClear());
+beforeEach(() => vi.mocked(toast).mockClear());
 
 afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {

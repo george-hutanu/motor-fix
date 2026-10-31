@@ -11,6 +11,7 @@ import { GaragesService } from '@motor-fix/data-access/services/garages.service'
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { filter, Subject } from 'rxjs';
+import type { Mock } from 'vitest';
 
 import { VerificationProgress } from './verification-progress';
 import { Live } from '../live';
@@ -41,15 +42,15 @@ const TEXT = {
 let events: Subject<LiveMessage>;
 let resyncs: Subject<void>;
 let live: {
-  close: jest.Mock;
+  close: Mock;
   on: (kinds: readonly EventKind[]) => ReturnType<Subject<LiveMessage>['pipe']>;
-  open: jest.Mock;
+  open: Mock;
   resync: ReturnType<Subject<void>['asObservable']>;
 };
-const api = { verificationStatusControllerRead: jest.fn() };
-const overlays = { open: jest.fn() };
+const api = { verificationStatusControllerRead: vi.fn() };
+const overlays = { open: vi.fn() };
 let me: ReturnType<typeof signal<MeDto | null>>;
-let reload: jest.Mock;
+let reload: Mock;
 
 const account = (
   role: 'owner' | 'receptionist' | 'mechanic' = 'owner',
@@ -141,13 +142,13 @@ beforeEach(() => {
   events = new Subject<LiveMessage>();
   resyncs = new Subject<void>();
   live = {
-    close: jest.fn(),
+    close: vi.fn(),
     on: (kinds) =>
       events.pipe(filter((m) => (kinds as readonly string[]).includes(m.kind))),
-    open: jest.fn(),
+    open: vi.fn(),
     resync: resyncs.asObservable(),
   };
-  reload = jest.fn(async () => undefined);
+  reload = vi.fn(async () => undefined);
   overlays.open.mockReset().mockResolvedValue('cancelled');
   api.verificationStatusControllerRead
     .mockReset()

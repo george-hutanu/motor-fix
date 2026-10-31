@@ -65,8 +65,8 @@ const TUESDAY = (time: string) => new Date(`2026-10-27T${time}+02:00`);
 let answers: PublicGarageDto[];
 let reads: number;
 const api = {
-  profileViewsControllerRecord: jest.fn(() => Promise.resolve()),
-  publicGaragesControllerBySlug: jest.fn(() => {
+  profileViewsControllerRecord: vi.fn(() => Promise.resolve()),
+  publicGaragesControllerBySlug: vi.fn(() => {
     reads++;
     const answer = answers.shift();
     return answer
@@ -78,7 +78,7 @@ const messages = new Subject<LiveMessage>();
 const live = {
   on: (kinds: readonly EventKind[]) =>
     messages.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
-  register: jest.fn(() => () => undefined),
+  register: vi.fn(() => () => undefined),
   resync: new Subject<void>(),
 };
 
@@ -98,7 +98,7 @@ async function setUp(platform: 'browser' | 'server') {
       ]),
       { provide: GaragesService, useValue: api },
       { provide: PublicLive, useValue: live },
-      { provide: Consent, useValue: { track: jest.fn() } },
+      { provide: Consent, useValue: { track: vi.fn() } },
       { provide: ProfilePrefetch, useValue: { take: () => undefined } },
       { provide: PLATFORM_ID, useValue: platform },
       { provide: RESPONSE_INIT, useValue: { headers: new Headers() } },
@@ -113,7 +113,7 @@ async function open(
   at: Date,
   platform: 'browser' | 'server' = 'browser',
 ) {
-  jest.useFakeTimers({ now: at });
+  vi.useFakeTimers({ now: at });
   answers = [garage];
   await setUp(platform);
   await harness.navigateByUrl(`/ro/garages/${garage.slug}`);
@@ -131,7 +131,7 @@ beforeEach(() => {
   live.register.mockClear();
 });
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 // @traces 309-FR-009 309-FR-010 309-FR-012
 describe('the opening status in the profile header', () => {
@@ -226,7 +226,7 @@ describe('the opening status while the page stays open', () => {
     await open(WORKSHOP, TUESDAY('18:59:30'));
     expect(said(status())).toBe('Deschis azi până la 19:00');
 
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
     await settle();
 
     expect(said(status())).toBe('Închis acum · deschide mâine la 08:00');
@@ -236,7 +236,7 @@ describe('the opening status while the page stays open', () => {
   it('keeps the line of its own instant on the server render', async () => {
     await open(WORKSHOP, TUESDAY('18:59:30'), 'server');
 
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
     await settle();
 
     expect(said(status())).toBe('Deschis azi până la 19:00');
@@ -244,11 +244,11 @@ describe('the opening status while the page stays open', () => {
 
   it('stops the minute timer when the page goes away', async () => {
     await open(WORKSHOP, TUESDAY('10:15:00'));
-    const running = jest.getTimerCount();
+    const running = vi.getTimerCount();
 
     harness.fixture.destroy();
 
-    expect(jest.getTimerCount()).toBe(running - 1);
+    expect(vi.getTimerCount()).toBe(running - 1);
   });
 
   it('changes the line in place when a live re-read brings new hours', async () => {
@@ -263,7 +263,7 @@ describe('the opening status while the page stays open', () => {
       id: 'x',
       kind: 'garage.updated',
     });
-    jest.advanceTimersByTime(300);
+    vi.advanceTimersByTime(300);
     await settle();
     await settle();
 

@@ -8,6 +8,7 @@ import {
 } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { OVERLAY_TASK, Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { RequestDrawer } from './request-drawer';
 import { Live } from '../../live';
@@ -77,16 +78,16 @@ const owner = {
 const httpError = (status: number) =>
   new HttpErrorResponse({ error: { code: 'x' }, status });
 
-let read: jest.Mock;
-let open: jest.Mock;
+let read: Mock;
+let open: Mock;
 let live: ReturnType<typeof fakeLive>;
 
 async function render(first: GarageRequestDto | HttpErrorResponse = detail()) {
-  read = jest.fn(async () => {
+  read = vi.fn(async () => {
     if (first instanceof HttpErrorResponse) throw first;
     return first;
   });
-  open = jest.fn(async () => 'cancelled');
+  open = vi.fn(async () => 'cancelled');
   live = fakeLive();
   const me = signal(owner);
   TestBed.configureTestingModule({
@@ -101,9 +102,9 @@ async function render(first: GarageRequestDto | HttpErrorResponse = detail()) {
       {
         provide: OVERLAY_TASK,
         useValue: {
-          close: jest.fn(),
+          close: vi.fn(),
           data: { id: 'req-1' },
-          markUnchanged: jest.fn(),
+          markUnchanged: vi.fn(),
         },
       },
     ],

@@ -77,9 +77,9 @@ async function render(
     weekly?: () => Promise<unknown>;
   } = {},
 ) {
-  const weeklyRead = jest.fn(weekly);
+  const weeklyRead = vi.fn(weekly);
   const me = signal(account(role, status, features, permissions));
-  const list = jest.fn(({ status: which }: { status: keyof Lists }) =>
+  const list = vi.fn(({ status: which }: { status: keyof Lists }) =>
     (lists[which] ?? (() => Promise.resolve(listOf([]))))(),
   );
   TestBed.configureTestingModule({
@@ -103,7 +103,7 @@ async function render(
           }),
         },
       },
-      { provide: Overlays, useValue: { open: jest.fn() } },
+      { provide: Overlays, useValue: { open: vi.fn() } },
       {
         provide: ReviewsService,
         useValue: { garageReviewsControllerRead: reviews },
@@ -411,7 +411,7 @@ describe('the first-steps card', () => {
 // @traces 099-FR-012
 describe('what the sections read', () => {
   it('decides every section and the card from the lists Panou already reads', async () => {
-    const reviews = jest.fn(() =>
+    const reviews = vi.fn(() =>
       Promise.resolve(staffPage({ items: [], total: 0 })),
     );
     const { element, list } = await render('garage', { reviews });

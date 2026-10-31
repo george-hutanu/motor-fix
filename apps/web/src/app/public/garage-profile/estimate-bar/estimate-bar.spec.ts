@@ -11,6 +11,7 @@ import {
 import type { MeDto, PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
+import type { Mock } from 'vitest';
 
 import { EstimateBar } from './estimate-bar';
 import { Consent } from '../../../consent/consent';
@@ -62,8 +63,8 @@ class Host {
 }
 
 let fixture: ComponentFixture<Host>;
-let open: jest.Mock;
-let track: jest.Mock;
+let open: Mock;
+let track: Mock;
 
 async function render({
   garage = GARAGE,
@@ -71,8 +72,8 @@ async function render({
   platform = 'browser',
   sync = true,
 } = {}) {
-  open = jest.fn(async () => undefined);
-  track = jest.fn();
+  open = vi.fn(async () => undefined);
+  track = vi.fn();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -83,8 +84,8 @@ async function render({
         provide: Session,
         useValue: {
           current: signal(role === null ? null : { role }),
-          load: jest.fn(async () => null),
-          renew: jest.fn(async () => true),
+          load: vi.fn(async () => null),
+          renew: vi.fn(async () => true),
           roleHint: signal(role),
         },
       },

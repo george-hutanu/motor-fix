@@ -19,7 +19,7 @@ function store(platform = 'browser') {
 }
 
 beforeEach(() => localStorage.clear());
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('parsePlace', () => {
   it('reads a place chosen from an address and one from the location', () => {
@@ -98,10 +98,10 @@ describe('PlaceStore', () => {
   });
 
   it('works with no place when storage refuses to be read or written', () => {
-    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('denied');
     });
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('denied');
     });
 

@@ -107,12 +107,7 @@
           "env": "JEST_SUITE"
         },
         {
-          "externalDependencies": [
-            "jest",
-            "@nx/jest",
-            "ts-jest",
-            "jest-preset-angular"
-          ]
+          "externalDependencies": ["jest", "@nx/jest", "ts-jest"]
         },
         {
           "dependentTasksOutputFiles": "**/*.d.ts",

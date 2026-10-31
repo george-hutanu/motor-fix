@@ -19,13 +19,13 @@ const GARAGE = 'a3c1e5f7-0000-4000-8000-000000000001';
 const events = new Subject<LiveMessage>();
 const resyncs = new Subject<void>();
 const live = {
-  close: jest.fn(),
+  close: vi.fn(),
   on: (kinds: readonly EventKind[]) =>
     events.pipe(filter((m) => kinds.includes(m.kind as EventKind))),
-  open: jest.fn(),
+  open: vi.fn(),
   resync: resyncs.asObservable(),
 };
-const api = { verificationStatusControllerRead: jest.fn() };
+const api = { verificationStatusControllerRead: vi.fn() };
 const session = {
   current: signal({
     garageAccess: [{ garageId: GARAGE, role: 'owner' }],
