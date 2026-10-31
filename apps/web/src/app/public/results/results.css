@@ -241,6 +241,12 @@ mf-brand-chips {
   :host {
     height: calc(100dvh - var(--public-site-bar) - var(--tab-bar));
   }
+
+  /* The bar lies over the map, not over the sheet: the sheet's rests are
+     drawn above the bar, its header whole. */
+  mf-results-sheet {
+    margin-block-end: var(--consent-bar, 0px);
+  }
 }
 
 /* On a tablet the map sits above the list at full width, under the chips.

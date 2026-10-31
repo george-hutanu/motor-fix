@@ -33,8 +33,12 @@
   --rest: max(0px, calc(100% - var(--sheet-top, 160px)));
 }
 
+/* A header taller than the sheet (320 px, the consent bar asking) scrolls
+   inside it, so the filters under the brand search stay reachable. */
 .top {
   flex: none;
+  max-height: 100%;
+  overflow-y: auto;
   padding-inline: var(--mf-space-4);
 }
 

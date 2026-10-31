@@ -3404,6 +3404,20 @@ describe('the phone results screen in the stylesheet', () => {
     );
   });
 
+  // The bar lies over the stage, the sheet does not: its rests are drawn
+  // above the bar, so a half sheet at 390 px shows "Filtre" and the filter
+  // chips whole rather than cut by the bar (PR #672 QA lap 4).
+  it('ends the sheet above the consent bar while the bar lies over the stage', () => {
+    const short =
+      css.match(
+        /@media \(max-width: 767px\) and \(max-height: 880px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+      )?.[1] ?? '';
+
+    expect(short).toMatch(
+      /mf-results-sheet \{ margin-block-end: var\(--consent-bar, 0px\); \}/,
+    );
+  });
+
   it('keeps the one column as wide as the screen, whatever the title holds', () => {
     expect(rule(':host')).toMatch(/grid-template-columns: minmax\(0, 1fr\);/);
   });

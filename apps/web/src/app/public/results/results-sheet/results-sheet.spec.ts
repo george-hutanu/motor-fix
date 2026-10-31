@@ -160,6 +160,36 @@ describe('ResultsSheet on a phone', () => {
     );
   });
 
+  // A header taller than the whole stage (320 px, the consent bar asking):
+  // the header scrolls inside the sheet, so "Filtre" and the filter chips
+  // under the brand search stay reachable, and the rests read the header's
+  // whole height, not the part the sheet shows (PR #672 QA lap 4).
+  it('scrolls a header taller than the stage and reads its whole height for the rests', async () => {
+    jest
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('top') ? 150 : 160;
+      });
+    jest
+      .spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('top') ? 240 : 0;
+      });
+    pointer(handle(), 'pointerdown', 300);
+    pointer(handle(), 'pointermove', 301);
+    await settle();
+
+    // 160 - 240 is under the cell's top: every rest is the top.
+    expect(offset()).toBe('0px');
+    pointer(handle(), 'pointerup', 301);
+    const css = readFileSync(join(__dirname, 'results-sheet.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    const top = css.match(/\.top \{([^}]*)\}/)?.[1] ?? '';
+    expect(top).toMatch(/max-height: 100%;/);
+    expect(top).toMatch(/overflow-y: auto;/);
+  });
+
   // A header taller than half the stage (the brand search and the sorts
   // under the chips, the consent bar asking): half still shows the list's
   // first 96 px, rising as far as just under the zoom buttons, so it never

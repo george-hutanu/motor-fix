@@ -257,7 +257,10 @@ export class ResultsSheet {
   }
 
   private measure() {
-    this.top.set(this.topBox()?.nativeElement.offsetHeight ?? null);
+    // A header taller than the sheet scrolls inside it: the rests read its
+    // whole height, not the part shown.
+    const top = this.topBox()?.nativeElement;
+    this.top.set(top ? Math.max(top.offsetHeight, top.scrollHeight) : null);
     this.height.set(this.host.offsetHeight);
   }
 }
