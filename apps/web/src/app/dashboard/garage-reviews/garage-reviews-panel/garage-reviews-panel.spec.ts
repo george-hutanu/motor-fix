@@ -15,6 +15,7 @@ import { filter, Subject } from 'rxjs';
 import { GarageReviewsPanel } from './garage-reviews-panel';
 import { Live } from '../../live';
 import type { ReplyData } from '../../reply-dialog/open-reply';
+import { openReportReview } from '../../report-review-dialog/open-report-review';
 import { Session } from '../../session';
 import {
   repliedReview,
@@ -22,6 +23,11 @@ import {
   staffReply,
   staffReview,
 } from '../garage-reviews.testing';
+
+jest.mock('../../report-review-dialog/open-report-review', () => ({
+  openReportReview: jest.fn(),
+}));
+const reportOpened = openReportReview as jest.Mock;
 
 const GARAGE = 'garage-1';
 const SLUG = 'service-auto-militari';
@@ -443,6 +449,133 @@ describe('live', () => {
     await wait(350);
     await settle();
     expect(read).toHaveBeenCalledTimes(2);
+  });
+});
+
+// @traces 074-FR-007 1382-FR-001
+describe('what a row offers by role', () => {
+  it('offers the owner Răspunde and Raportează', async () => {
+    const { element, settle } = await render({ role: 'owner' });
+    await settle();
+
+    const labels = [...element.querySelectorAll('button')].map(text);
+    expect(labels.filter((label) => label !== 'Vezi mai multe')).toEqual([
+      'Răspunde',
+      'Raportează',
+    ]);
+  });
+
+  it('offers the receptionist no reply or report button', async () => {
+    const { element, settle } = await render({
+      answer: async () =>
+        staffPage({
+          items: [staffReview({ canReply: false, canReport: false })],
+          slug: SLUG,
+        }),
+      role: 'receptionist',
+    });
+    await settle();
+
+    expect(text(element)).not.toMatch(/Răspunde|Raportează/);
+    const labels = [...element.querySelectorAll('button')].map(text);
+    expect(labels.every((label) => label === 'Vezi mai multe')).toBe(true);
+  });
+});
+
+// @traces 1382-FR-005
+describe('reporting a review from the panel', () => {
+  const reportButton = (element: HTMLElement) =>
+    element.querySelector<HTMLButtonElement>('button[data-report-button]');
+  const ANSWER = {
+    dueAt: '2026-10-27T12:00:00.000Z',
+    id: 'rep-1',
+    reason: 'insults',
+    review: { id: 'r-1', status: 'reported' },
+    status: 'pending',
+  };
+
+  afterEach(() => reportOpened.mockReset());
+
+  it('opens the task for the row and shows it reported at once, without a re-read', async () => {
+    reportOpened.mockResolvedValue(ANSWER);
+    const { element, settle } = await render();
+    await settle();
+
+    reportButton(element)?.click();
+    await settle();
+
+    expect(reportOpened).toHaveBeenCalledTimes(1);
+    expect(reportOpened.mock.calls[0][1]).toMatchObject({ id: 'r-1' });
+    expect(read).toHaveBeenCalledTimes(1);
+    const [row] = shown(element);
+    expect(row.querySelector('[data-reported]')).not.toBeNull();
+    expect(reportButton(element)).toBeNull();
+  });
+
+  it('holds the reported row only until the next first-page read', async () => {
+    reportOpened.mockResolvedValue(ANSWER);
+    const { element, settle } = await render();
+    await settle();
+    reportButton(element)?.click();
+    await settle();
+
+    events.next(message('review.reported'));
+    await wait(350);
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(shown(element)[0].querySelector('[data-reported]')).toBeNull();
+    expect(reportButton(element)).not.toBeNull();
+  });
+
+  it('reads the first page again when the task closes on a refusal', async () => {
+    reportOpened.mockResolvedValue('refused');
+    const { element, settle } = await render();
+    await settle();
+
+    reportButton(element)?.click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it('changes nothing when the task is cancelled', async () => {
+    reportOpened.mockResolvedValue('cancelled');
+    const { element, settle } = await render();
+    await settle();
+
+    reportButton(element)?.click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(reportButton(element)).not.toBeNull();
+  });
+
+  it('opens one task at a time, and again after a chunk that failed to load', async () => {
+    let close: (value: unknown) => void = () => undefined;
+    reportOpened.mockReturnValueOnce(
+      new Promise((resolve) => {
+        close = resolve;
+      }),
+    );
+    const { element, settle } = await render();
+    await settle();
+
+    reportButton(element)?.click();
+    reportButton(element)?.click();
+    await settle();
+    expect(reportOpened).toHaveBeenCalledTimes(1);
+    close('cancelled');
+    await settle();
+
+    reportOpened.mockRejectedValueOnce(new Error('ChunkLoadError'));
+    reportButton(element)?.click();
+    await settle();
+    reportOpened.mockResolvedValueOnce('cancelled');
+    reportButton(element)?.click();
+    await settle();
+
+    expect(reportOpened).toHaveBeenCalledTimes(3);
   });
 });
 
