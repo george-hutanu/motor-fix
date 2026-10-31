@@ -9,11 +9,17 @@ import { RequestBuilder } from '../../request-builder';
 
 
 export interface BellControllerReadAll$Params {
+
+/**
+ * One per press; optional and unread: the write is idempotent by value
+ */
+  'Idempotency-Key'?: string;
 }
 
 export function bellControllerReadAll(http: HttpClient, rootUrl: string, params?: BellControllerReadAll$Params, context?: HttpContext): Observable<StrictHttpResponse<void>> {
   const rb = new RequestBuilder(rootUrl, bellControllerReadAll.PATH, 'post');
   if (params) {
+    rb.header('Idempotency-Key', params['Idempotency-Key'], {});
   }
 
   return http.request(
