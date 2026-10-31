@@ -8257,6 +8257,55 @@
       }
     },
     "/api/v1/garages/{garageId}/brands": {
+      "get": {
+        "operationId": "GarageBrandsController_read",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageBrandOwnerReadDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage's brand answer for its owner, with the price list's jobs",
+        "tags": [
+          "garages"
+        ]
+      },
       "put": {
         "operationId": "GarageBrandsController_replace",
         "parameters": [
@@ -8291,7 +8340,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: a bad or unknown brand, a text too long, a job not on the price list (job_not_priced), jobs on a refused brand (jobs_on_refused)"
+            "description": "validation_failed: a bad or unknown brand, more than 200 brands, a text too long, a taken brand with no fuel (fuels_empty), a job not on the price list (job_not_priced), jobs on a refused brand (jobs_on_refused)"
           },
           "401": {
             "description": "sign_in_required"
@@ -22629,6 +22678,110 @@
           "note"
         ]
       },
+      "OwnerBrandDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "BMW"
+          },
+          "slug": {
+            "type": "string",
+            "example": "bmw"
+          },
+          "fuels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "petrol",
+                "diesel",
+                "hybrid",
+                "electric"
+              ]
+            }
+          },
+          "jobs": {
+            "description": "Ticked job type ids, in price-list order",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "fuels",
+          "jobs"
+        ]
+      },
+      "PricedJobDto": {
+        "type": "object",
+        "properties": {
+          "jobTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "Schimb ulei"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "Oil change"
+          }
+        },
+        "required": [
+          "jobTypeId",
+          "nameRo",
+          "nameEn"
+        ]
+      },
+      "GarageBrandOwnerReadDto": {
+        "type": "object",
+        "properties": {
+          "worksOn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerBrandDto"
+            }
+          },
+          "doesNotTake": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandRefDto"
+            }
+          },
+          "brandNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "refusalPhrase": {
+            "type": "string",
+            "nullable": true
+          },
+          "priceList": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PricedJobDto"
+            }
+          }
+        },
+        "required": [
+          "worksOn",
+          "doesNotTake",
+          "brandNote",
+          "refusalPhrase",
+          "priceList"
+        ]
+      },
       "GarageBrandStanceDto": {
         "type": "object",
         "properties": {
@@ -22694,37 +22847,6 @@
         },
         "required": [
           "brands"
-        ]
-      },
-      "OwnerBrandDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "name": {
-            "type": "string",
-            "example": "BMW"
-          },
-          "slug": {
-            "type": "string",
-            "example": "bmw"
-          },
-          "jobs": {
-            "description": "Ticked job type ids, in price-list order",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "jobs"
         ]
       },
       "GarageBrandOwnerAnswerDto": {

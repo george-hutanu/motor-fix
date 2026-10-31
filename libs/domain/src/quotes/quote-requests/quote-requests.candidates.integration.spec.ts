@@ -135,8 +135,7 @@ describe('GET /quote-requests/garages', () => {
       row: { petrol: false },
     });
     await placed('Nu Ia Marca', car.brandId, [44.41, 26.12], {
-      jobTypeIds: [oil.id],
-      // A brand the garage does not take has no fuel ticked.
+      // A brand the garage does not take has no fuel and no job ticked.
       row: {
         diesel: false,
         electric: false,

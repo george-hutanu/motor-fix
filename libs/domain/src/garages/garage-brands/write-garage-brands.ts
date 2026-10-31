@@ -27,6 +27,14 @@ export type GarageJobRef = { jobTypeId: string; name?: string };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const unknownJob = (at: number) =>
+  refusal(
+    HttpStatus.BAD_REQUEST,
+    'validation_failed',
+    'An unticked job is not on the price list',
+    [{ code: 'unknown_job', field: `brands[${at}].unticked` }],
+  );
+
 // The job type ids a taken brand's unticked refs name: a uuid by its id, any
 // other ref by a proposed job's name.
 function untickedIds(refs: string[], jobs: GarageJobRef[], at: number) {
@@ -35,13 +43,33 @@ function untickedIds(refs: string[], jobs: GarageJobRef[], at: number) {
       ? jobs.find((j) => j.jobTypeId.toLowerCase() === ref.toLowerCase())
       : jobs.find((j) => j.name === ref);
     if (job) return job.jobTypeId.toLowerCase();
-    throw refusal(
-      HttpStatus.BAD_REQUEST,
-      'validation_failed',
-      'An unticked job is not on the price list',
-      [{ code: 'unknown_job', field: `brands[${at}].unticked` }],
-    );
+    throw unknownJob(at);
   });
+}
+
+// With no price list yet the refs wait for the second call, but a uuid that
+// names no catalogue job can never match one: it is refused now.
+async function assertUntickedKnown(
+  tx: Prisma.TransactionClient,
+  brands: { unticked?: string[] }[],
+) {
+  const refs = brands.map(({ unticked }) =>
+    (unticked ?? [])
+      .filter((ref) => UUID.test(ref))
+      .map((ref) => ref.toLowerCase()),
+  );
+  const ids = [...new Set(refs.flat())];
+  if (ids.length === 0) return;
+  const known = new Set(
+    (
+      await tx.jobType.findMany({
+        select: { id: true },
+        where: { id: { in: ids } },
+      })
+    ).map((job) => job.id),
+  );
+  const at = refs.findIndex((list) => list.some((id) => !known.has(id)));
+  if (at !== -1) throw unknownJob(at);
 }
 
 // Writes a garage's brands, their fuels, the jobs each taken brand does and
@@ -68,6 +96,7 @@ export async function writeGarageBrands(
     );
   }
   const listed = [...new Set(jobs.map((j) => j.jobTypeId.toLowerCase()))];
+  if (listed.length === 0) await assertUntickedKnown(tx, section.brands);
   const rows = section.brands.flatMap(({ brandId, stance, unticked }, at) => {
     // No price list yet: the sending flow writes the brands before the prices
     // and again with the jobs they returned, so the refs wait for that call.
