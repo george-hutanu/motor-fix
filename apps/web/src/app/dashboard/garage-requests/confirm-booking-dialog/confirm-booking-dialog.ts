@@ -1,8 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
+  Injector,
   inject,
   signal,
 } from '@angular/core';
@@ -56,6 +58,7 @@ export class ConfirmBookingDialog {
   private readonly bookings = inject(BookingsService);
   private readonly i18n = inject(I18n);
   private readonly session = inject(Session);
+  private readonly injector = inject(Injector);
   protected readonly task = injectOverlayTask<
     ConfirmBookingData,
     OverlayResult<ConfirmBookingResult>
@@ -204,7 +207,13 @@ export class ConfirmBookingDialog {
     const field = FIELD_OF[code];
     if (field && (field === 'lift' ? Number(this.lift()) : this.mechanic())) {
       this.fieldProblem.set({ field, text: this.fieldText(code) });
-      document.getElementById(`mf-confirm-${field}`)?.focus();
+      // The selects are disabled while the confirm is in flight, and a
+      // disabled select takes no focus: enabled first, focused once drawn.
+      this.sending.set(false);
+      afterNextRender(
+        () => document.getElementById(`mf-confirm-${field}`)?.focus(),
+        { injector: this.injector },
+      );
       return;
     }
     // Confirmed, lapsed or cancelled meanwhile: the message is the toast and
