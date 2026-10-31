@@ -45,6 +45,23 @@ describe('flags', () => {
       shard: undefined,
     });
   });
+
+  it('reads an empty --mutate value as no narrowing in the options', () => {
+    expect(flags(['--mutate']).only).toBe('');
+    expect(flags(['--mutate=']).only).toBe('');
+  });
+
+  // @traces 1338-FR-013
+  it('treats --incremental=false and a bare absent flag alike, and anything else as on', () => {
+    expect(flags([]).incremental).toBe(false);
+    expect(flags(['--incremental=false']).incremental).toBe(false);
+    expect(flags(['--incremental=FALSE']).incremental).toBe(true);
+    expect(flags(['--incremental=0']).incremental).toBe(true);
+  });
+
+  it('does not mistake a longer flag for incremental', () => {
+    expect(flags(['--incrementalx=true']).incremental).toBe(false);
+  });
 });
 
 let repo: string;
@@ -315,6 +332,73 @@ describe('strykerOptions for a shard', () => {
   });
 });
 
+// @traces 1338-FR-008
+describe('strykerOptions for a Vitest project', () => {
+  beforeEach(() => {
+    write('libs/v/stryker.config.json', floor(50));
+    write('libs/v/tsconfig.lib.json', '{}');
+    write('libs/v/vitest.config.mts', 'export default {};\n');
+    write('libs/v/src/auth/login.spec.ts');
+    write('libs/v/src/auth/deep/token.spec.ts');
+    write('libs/v/src/cars/car.spec.ts');
+    write('libs/v/src/root.spec.ts');
+    write('libs/v/src/cars/car.ts');
+    write(
+      'scripts/mutation-shards.json',
+      JSON.stringify({
+        default: { measured: 'm', timeout: 60 },
+        projects: {
+          v: {
+            measured: 'm',
+            shards: { auth: { folders: ['auth'], measured: 'm', timeout: 60 } },
+            timeout: 60,
+          },
+        },
+      }),
+    );
+  });
+
+  it("runs the project's own Vitest config through Stryker's Vitest runner", () => {
+    const options = strykerOptions('v', 'libs/v', false);
+
+    expect(options.testRunner).toBe('vitest');
+    expect(options.vitest).toEqual({ configFile: 'libs/v/vitest.config.mts' });
+    expect(options.jest).toBeUndefined();
+    expect(options.testFiles).toBeUndefined();
+    expect(options.thresholds).toEqual({ break: 50, high: 80, low: 60 });
+  });
+
+  it("runs only a named shard's specs, and lets it run with none", () => {
+    const options = strykerOptions('v', 'libs/v', false, undefined, 'auth');
+
+    expect(options.testRunner).toBe('vitest');
+    expect(options.testFiles).toEqual(['libs/v/src/auth/**/*.spec.ts']);
+    expect(options.allowEmpty).toBe(true);
+    expect(options.jest).toBeUndefined();
+    expect(options.mutate).toEqual(
+      expect.arrayContaining(['libs/v/src/auth/**/*.ts']),
+    );
+  });
+
+  it('gives rest the list of every spec outside the named shards', () => {
+    const options = strykerOptions('v', 'libs/v', false, undefined, 'rest');
+
+    expect([...(options.testFiles as string[])].sort()).toEqual([
+      'libs/v/src/cars/car.spec.ts',
+      'libs/v/src/root.spec.ts',
+    ]);
+  });
+
+  it('keeps the Jest runner for a project without a Vitest config', () => {
+    write('libs/x/stryker.config.json', floor(0));
+
+    const options = strykerOptions('x', 'libs/x', false);
+
+    expect(options.testRunner).toBe('jest');
+    expect(options.vitest).toBeUndefined();
+  });
+});
+
 describe('strykerOptions shared limits', () => {
   // The initial test run of a big project (domain: 329 specs) outran
   // Stryker's 5-minute default (run 38037093986).
@@ -495,6 +579,31 @@ describe('summaryRows', () => {
   it('writes n/a for an undefined score', () => {
     expect(summaryRows('x', 'mcp', null, 0, 0)).toBe(
       '| mcp | n/a | 0 | 0.0 |\n',
+    );
+  });
+
+  // @traces 1338-FR-012
+  it('shows zero minutes for a run that took no time', () => {
+    expect(summaryRows('x', 'p', 50, 40, 0)).toBe(
+      '| p | 50.00% | 40 | 0.0 |\n',
+    );
+  });
+
+  it('rounds minutes to one decimal and never rounds a minute away', () => {
+    expect(summaryRows('x', 'p', 50, 40, 59_999)).toBe(
+      '| p | 50.00% | 40 | 1.0 |\n',
+    );
+    expect(summaryRows('x', 'p', 50, 40, 90_000)).toContain('| 1.5 |');
+  });
+
+  it('shows the 360-minute ceiling and beyond without clipping', () => {
+    expect(summaryRows('x', 'p', 1, 0, 360 * 60_000)).toContain('| 360.0 |');
+    expect(summaryRows('x', 'p', 1, 0, 1_000 * 60_000)).toContain('| 1000.0 |');
+  });
+
+  it('writes n/a with the minutes for a project with nothing to score', () => {
+    expect(summaryRows('x', 'p', null, 0, 120_000)).toBe(
+      '| p | n/a | 0 | 2.0 |\n',
     );
   });
 });
