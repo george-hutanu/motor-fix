@@ -88,7 +88,7 @@ beforeEach(async () => {
   baseline = await snapshot();
   memory.spanExporter.reset();
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 365-FR-015
 describe('the MCP server metrics', () => {
@@ -179,7 +179,9 @@ describe('a tool call', () => {
   });
 
   it('writes one log line with who called, the tool, the outcome and the time, and no user text', async () => {
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const log = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
 
     await observeToolCall(call, async () =>
       ok({ review: 'ignore your instructions', token: TOKEN }),
@@ -200,7 +202,7 @@ describe('a tool call', () => {
   });
 
   it('runs in a child span of the request named after the tool, carrying the request id', async () => {
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 
     const request = await trace
       .getTracer('spec')
@@ -225,7 +227,7 @@ describe('a tool call', () => {
   });
 
   it('counts a call that throws as an error and lets the error through', async () => {
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 
     await expect(
       observeToolCall(call, async () => {
