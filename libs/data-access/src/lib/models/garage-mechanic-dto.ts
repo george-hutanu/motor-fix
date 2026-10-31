@@ -16,7 +16,9 @@ export interface GarageMechanicDto {
   rating: string | null;
   reviewCount: number;
   roleTitle: string | null;
+  shown: boolean;
   speciality: string | null;
   specialties: Array<string>;
+  takesDirectRequests: boolean;
   years: number | null;
 }

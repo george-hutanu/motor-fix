@@ -1081,6 +1081,16 @@
     "label": "Main navigation",
     "search": "Search"
   },
+  "transfer": {
+    "accepted": "The car has already been taken over",
+    "cancelled": "The link is no longer valid",
+    "expired": "The link has expired",
+    "failed": "We couldn't check the link. Try again.",
+    "loading": "Checking the link…",
+    "retry": "Try again",
+    "unknown": "This link does not exist",
+    "valid": "This link is valid. Taking the car over is coming soon."
+  },
   "unsubscribe": {
     "error": "We could not stop the news right now.",
     "home": "Go to MotorFix",

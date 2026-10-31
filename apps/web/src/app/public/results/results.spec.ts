@@ -12,6 +12,7 @@ import {
   provideRouter,
   type Route,
   Router,
+  type Routes,
 } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
@@ -2228,7 +2229,8 @@ describe('Results', () => {
   // @traces 267-FR-015
   it('is served at /:lang/garages inside the public frame, in place of the placeholder', async () => {
     const lang = routes.find((route) => route.path === ':lang') as Route;
-    const garages = lang.children?.find((route) => route.path === 'garages');
+    const children = (await lang.loadChildren?.()) as Routes;
+    const garages = children.find((route) => route.path === 'garages');
 
     expect(garages?.component).toBeUndefined();
     expect(await garages?.loadComponent?.()).toBe(Results);

@@ -31,9 +31,11 @@ import {
   HealthModule,
   InsightsModule,
   JOB_STAGE_CONSUMER,
+  LIVE_INPUTS_CONSUMER,
   LIVE_RECORDINGS_CONSUMER,
   ListingPhotosWorkerModule,
   LiveIdleModule,
+  LiveInputsModule,
   LiveRecordingsModule,
   liveVideoConfig,
   MediaProcessingModule,
@@ -41,6 +43,7 @@ import {
   MODERATION_TIMERS_CONSUMER,
   ModerationTimersModule,
   NEWS_CONSUMER,
+  NO_SHOW_CONSUMER,
   NotificationsModule,
   OutboxRelayModule,
   phoneConfig,
@@ -143,9 +146,11 @@ export function workerModule(
           GARAGE_REPORT_DECIDED_CONSUMER,
           GARAGE_RESTORED_CONSUMER,
           GARAGE_SUSPENDED_CONSUMER,
+          LIVE_INPUTS_CONSUMER,
           LIVE_RECORDINGS_CONSUMER,
           MODERATION_TIMERS_CONSUMER,
           NEWS_CONSUMER,
+          NO_SHOW_CONSUMER,
           QUOTE_RECEIVED_CONSUMER,
           QUOTE_ACCEPTED_CONSUMER,
           QUOTE_DECLINED_CONSUMER,
@@ -272,6 +277,12 @@ export function workerModule(
       // Every minute: stops the live sessions with no publisher for ten
       // minutes.
       LiveIdleModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
+        liveVideo,
+        redisUrl: env.REDIS_URL,
+      }),
+      // After each live stop: closes the session's input at the provider.
+      LiveInputsModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
         liveVideo,
         redisUrl: env.REDIS_URL,
