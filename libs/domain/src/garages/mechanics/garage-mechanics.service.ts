@@ -31,7 +31,12 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { removeMechanicBlocks } from '../../workshop/time-blocks/time-blocks';
 import { featureOn } from '../features/feature-on';
 import { assertGarageOwner } from '../garage-brands/garage-brands.service';
+import { writeTeamOnProfile } from '../garage-settings/write-team-on-profile';
 import { plainText } from '../plain-text';
+import {
+  isShownOnProfile,
+  shownOnProfile,
+} from '../public-garages/public-garages';
 
 const byName = new Intl.Collator('ro', { sensitivity: 'base' });
 
@@ -56,17 +61,23 @@ const CARD_SELECT = {
   name: true,
   onProfile: true,
   rating: true,
+  removedAt: true,
   reviewCount: true,
   roleTitle: true,
   speciality: true,
   specialties: true,
+  takesDirectRequests: true,
   years: true,
 } satisfies Prisma.MechanicSelect;
 
 type CardRow = Prisma.MechanicGetPayload<{ select: typeof CARD_SELECT }>;
 
 // A card as the team list answers it.
-function itemOf(row: CardRow, futureBookings: number): GarageMechanicDto {
+function itemOf(
+  row: CardRow,
+  futureBookings: number,
+  shown: boolean,
+): GarageMechanicDto {
   const [invite] = row.invites;
   return {
     brandIds: row.brandIds,
@@ -89,8 +100,10 @@ function itemOf(row: CardRow, futureBookings: number): GarageMechanicDto {
     rating: row.rating === null ? null : row.rating.toFixed(1),
     reviewCount: row.reviewCount,
     roleTitle: row.roleTitle,
+    shown,
     speciality: row.speciality,
     specialties: row.specialties,
+    takesDirectRequests: row.takesDirectRequests,
     years: row.years,
   };
 }
@@ -115,8 +128,9 @@ async function futureBookingsOf(
   );
 }
 
-// The fields the mechanic fills in on their own card: never the owner's.
-const MECHANIC_OWNED = ['photo', 'bio', 'languages'] as const;
+// The fields the mechanic fills in on their own card, and their consent to
+// appear on the profile: never the owner's.
+const MECHANIC_OWNED = ['photo', 'bio', 'languages', 'onProfile'] as const;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -130,8 +144,17 @@ type CardFields = {
   name?: string;
   roleTitle?: string | null;
   specialties?: string[];
+  takesDirectRequests?: boolean;
   years?: number | null;
 };
+
+// The name a changed field goes by in the history and in `mechanic.updated`:
+// the direct-requests switch by its column, as the team switch is.
+const auditField = (key: keyof CardFields) =>
+  key === 'takesDirectRequests' ? 'takes_direct_requests' : key;
+
+const differs = (a: unknown, b: unknown) =>
+  JSON.stringify(a) !== JSON.stringify(b);
 
 function tagsOf(
   value: unknown,
@@ -192,6 +215,12 @@ function yearsOf(value: unknown, errors: FieldProblem[]) {
   return undefined;
 }
 
+function directOf(value: unknown, errors: FieldProblem[]) {
+  if (value === undefined || typeof value === 'boolean') return value;
+  errors.push({ code: 'invalid', field: 'takesDirectRequests' });
+  return undefined;
+}
+
 // The ids as the table stores them; whether the garage takes each is judged
 // against its brands afterwards.
 function brandIdsOf(value: unknown, errors: FieldProblem[]) {
@@ -232,6 +261,10 @@ function fieldsOf(body: Record<string, unknown>, adding: boolean) {
       TAG_MAX,
       errors,
     ),
+    // A new card takes direct requests; only a saved one is switched.
+    takesDirectRequests: adding
+      ? undefined
+      : directOf(body['takesDirectRequests'], errors),
     years: yearsOf(body['years'], errors),
   };
   const fields = Object.fromEntries(
@@ -257,16 +290,41 @@ const shown = (value: unknown) =>
 
 const joined = (specialties: string[]) => specialties.join(', ') || null;
 
-// The live audience of a card: its public pages only while it is on the profile.
-export const cardAudience = (
+// The live audience of a card: its public pages only while the profile
+// shows it.
+const cardAudience = (
   garageId: string,
-  card: { id: string; onProfile: boolean },
+  card: { id: string; shown: boolean },
 ) => ({
   garageId,
   mechanicId: card.id,
-  public: card.onProfile,
+  public: card.shown,
   type: 'mechanic' as const,
 });
+
+// Whether the profile shows the card now, read in the caller's transaction.
+async function isShownNow(
+  db: Pick<Prisma.TransactionClient, 'mechanic'>,
+  mechanicId: string,
+) {
+  return (
+    (await db.mechanic.count({
+      where: { id: mechanicId, ...shownOnProfile() },
+    })) > 0
+  );
+}
+
+// The card's live audience as the profile shows it now.
+export async function cardAudienceNow(
+  db: Pick<Prisma.TransactionClient, 'mechanic'>,
+  garageId: string,
+  mechanicId: string,
+) {
+  return cardAudience(garageId, {
+    id: mechanicId,
+    shown: await isShownNow(db, mechanicId),
+  });
+}
 
 // The body of an add or an edit: an object, with none of the fields the
 // mechanic fills in, which are refused before any other is judged.
@@ -277,7 +335,7 @@ function ownerFields(body: unknown): Record<string, unknown> {
     throw refusal(
       HttpStatus.FORBIDDEN,
       'mechanic_owned_field',
-      'The mechanic fills in the photo, the bio and the languages',
+      'The mechanic fills in the photo, the bio and the languages, and chooses whether to appear on the profile',
     );
   }
   return body;
@@ -334,12 +392,19 @@ function cardsOf(section: MechanicsSection) {
       errors,
     );
   }
+  // The section's switch is the garage's: a card stays off the profile until
+  // its own mechanic agrees.
   return (section.mechanics ?? []).map((card) => ({
     name: card.name.trim(),
-    onProfile: section.onProfile ?? false,
     speciality: card.speciality?.trim() || null,
   }));
 }
+
+// Step 4's switch, when the section carries one.
+const switchOf = (section: MechanicsSection) =>
+  isRecord(section as unknown) && typeof section.onProfile === 'boolean'
+    ? section.onProfile
+    : undefined;
 
 // The garage's mechanic cards: saved from step 4 when the listing is sent,
 // inside the caller's transaction (a refusal writes nothing), and read back
@@ -361,12 +426,18 @@ export class GarageMechanicsService {
   async list(
     db: Pick<
       Prisma.TransactionClient,
-      'booking' | 'garageBrand' | 'garageFeature' | 'mechanic'
+      'booking' | 'garage' | 'garageBrand' | 'garageFeature' | 'mechanic'
     >,
     actor: Actor,
     garageId: string,
   ): Promise<GarageMechanicsDto> {
     await this.access(db, actor, garageId);
+    // The team feature is on past `access`.
+    const garage = await db.garage.findUniqueOrThrow({
+      select: { status: true, teamOnProfile: true },
+      where: { id: garageId },
+    });
+    const team = { ...garage, teamMechanics: true };
     const rows = await db.mechanic.findMany({
       select: CARD_SELECT,
       where: { garageId, removedAt: null },
@@ -391,7 +462,10 @@ export class GarageMechanicsService {
       brands: brands
         .map(({ brand }) => ({ id: brand.id, name: brand.name }))
         .sort((a, b) => byName.compare(a.name, b.name)),
-      items: rows.map((row) => itemOf(row, future.get(row.id) ?? 0)),
+      items: rows.map((row) =>
+        itemOf(row, future.get(row.id) ?? 0, isShownOnProfile(row, team)),
+      ),
+      teamOnProfile: garage.teamOnProfile,
     };
   }
 
@@ -433,14 +507,15 @@ export class GarageMechanicsService {
         subjectType: 'mechanic',
       });
       await this.events.record(tx, {
-        audience: cardAudience(garageId, created),
+        audience: await cardAudienceNow(tx, garageId, created.id),
         kind: 'mechanic.added',
         payload: { garageId, mechanicId: created.id },
         subjectId: created.id,
       });
       return created;
     });
-    return itemOf(row, 0);
+    // A new card has no account yet, so the profile never shows it.
+    return itemOf(row, 0, false);
   }
 
   // Only the fields the patch names change, the owner's own row included; a
@@ -459,23 +534,38 @@ export class GarageMechanicsService {
     await this.judgeBrands(db, garageId, fields, errors);
     if (errors.length > 0) throw refused(errors);
     const changed = (Object.keys(fields) as (keyof CardFields)[]).filter(
-      (key) => JSON.stringify(fields[key]) !== JSON.stringify(card[key]),
+      (key) => differs(fields[key], card[key]),
     );
     if (changed.length === 0) {
-      return itemOf(card, await this.futureOf(db, card.id));
+      return itemOf(
+        card,
+        await this.futureOf(db, card.id),
+        await isShownNow(db, card.id),
+      );
     }
     const data: Prisma.MechanicUpdateManyMutationInput = {};
     for (const key of changed) Object.assign(data, { [key]: fields[key] });
     if (changed.includes('specialties')) {
       data.speciality = joined(fields.specialties ?? []);
     }
-    const row = await db.$transaction(async (tx) => {
-      // A remove that committed since the read leaves nothing to edit.
-      const { count } = await tx.mechanic.updateMany({
-        data,
-        where: { id: card.id, removedAt: null },
+    const { row, shown: shownNow } = await db.$transaction(async (tx) => {
+      // Edits of one card wait for each other here, so each judges what it
+      // changes against the value the one before it left. A remove that
+      // committed since the read leaves nothing to edit.
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM mechanic
+        WHERE id = ${card.id}::uuid AND removed_at IS NULL
+        FOR UPDATE`;
+      if (locked.length === 0) throw notFound();
+      const before = await tx.mechanic.findUniqueOrThrow({
+        select: CARD_SELECT,
+        where: { id: card.id },
       });
-      if (count === 0) throw notFound();
+      const moved = changed.filter((key) => differs(fields[key], before[key]));
+      if (moved.length === 0) {
+        return { row: before, shown: await isShownNow(tx, card.id) };
+      }
+      await tx.mechanic.update({ data, where: { id: card.id } });
       const updated = await tx.mechanic.findUniqueOrThrow({
         select: CARD_SELECT,
         where: { id: card.id },
@@ -489,18 +579,27 @@ export class GarageMechanicsService {
           subjectId: card.id,
           subjectType: 'mechanic',
         },
-        Object.fromEntries(changed.map((key) => [key, shown(card[key])])),
-        Object.fromEntries(changed.map((key) => [key, shown(fields[key])])),
+        Object.fromEntries(
+          moved.map((key) => [auditField(key), shown(before[key])]),
+        ),
+        Object.fromEntries(
+          moved.map((key) => [auditField(key), shown(fields[key])]),
+        ),
       );
+      const audience = await cardAudienceNow(tx, garageId, card.id);
       await this.events.record(tx, {
-        audience: cardAudience(garageId, updated),
+        audience,
         kind: 'mechanic.updated',
-        payload: { fields: changed, garageId, mechanicId: card.id },
+        payload: {
+          fields: moved.map(auditField),
+          garageId,
+          mechanicId: card.id,
+        },
         subjectId: card.id,
       });
-      return updated;
+      return { row: updated, shown: audience.public };
     });
-    return itemOf(row, await this.futureOf(db, card.id));
+    return itemOf(row, await this.futureOf(db, card.id), shownNow);
   }
 
   // The card leaves the team: detached from its account and off the profile,
@@ -522,6 +621,8 @@ export class GarageMechanicsService {
       );
     }
     const garage = await db.$transaction(async (tx) => {
+      // Whether its public pages showed it, read before it leaves.
+      const audience = await cardAudienceNow(tx, garageId, card.id);
       // Two removes race to here; only the first finds the card on the team.
       const { count } = await tx.mechanic.updateMany({
         data: { accountId: null, onProfile: false, removedAt: new Date() },
@@ -564,9 +665,9 @@ export class GarageMechanicsService {
         { audit: this.audit, events: this.events },
         { actorId: actor.accountId, garageId, mechanicId: card.id },
       );
-      // The card was on the profile until now: its public pages hear of it.
+      // A card the profile showed until now: its public pages hear of it.
       await this.events.record(tx, {
-        audience: cardAudience(garageId, card),
+        audience,
         kind: 'mechanic.removed',
         payload: { garageId, mechanicId: card.id },
         subjectId: card.id,
@@ -653,6 +754,16 @@ export class GarageMechanicsService {
     for (const values of cardsOf(section)) {
       ids.push(await this.create(tx, garageId, actorId, values));
     }
+    // The garage is being created: no public page hears of it yet.
+    const on = switchOf(section);
+    if (on !== undefined) {
+      await writeTeamOnProfile(
+        tx,
+        { actorId, actorRole: 'garage', garageId },
+        on,
+        { audit: this.audit },
+      );
+    }
     return { ids };
   }
 
@@ -680,6 +791,13 @@ export class GarageMechanicsService {
       if (rows.some((row) => row.name === values.name)) continue;
       await this.create(tx, garageId, actorId, values);
     }
+    const on = switchOf(section);
+    if (on !== undefined) {
+      await writeTeamOnProfile(tx, change, on, {
+        audit: this.audit,
+        events: this.events,
+      });
+    }
   }
 
   // One stored card against the section's card of the same name, if any.
@@ -690,9 +808,9 @@ export class GarageMechanicsService {
     card: ReturnType<typeof cardsOf>[number] | undefined,
   ) {
     if (card) {
-      const before = { onProfile: row.onProfile, speciality: row.speciality };
-      const after = { onProfile: card.onProfile, speciality: card.speciality };
-      if (JSON.stringify(before) === JSON.stringify(after)) return;
+      const before = { speciality: row.speciality };
+      const after = { speciality: card.speciality };
+      if (before.speciality === after.speciality) return;
       await tx.mechanic.update({ data: after, where: { id: row.id } });
       await this.audit.recordChanges(
         tx,

@@ -42,6 +42,7 @@ features:
   - 1316-swr-resource-store
   - 1389-reported-reviews-admin
   - 154-free-slots
+  - 059-profile-direct-requests
 ---
 
 # Capability: Live updates
@@ -322,9 +323,9 @@ _From 419-live-garage-updates._
 
 _From 267-brand-results._
 
-### 419-FR-003 — A public stream MUST join `system`, plus `public:garage:{garageId}` when the id names an approved garage, `public:mechanic:{mechanicId}` when the id names a mechanic of an approved garage (no hidden state exists yet; the mechanic-page story adds that check), and `public:search:{brandId}` together with the all-brands results channel `public:search` when the id names a brand of the catalogue (retired brands included); an id that names nothing, or a garage that is not approved, MUST be ignored silently: the stream opens, joins nothing for it and answers exactly as for an unknown id.
+### 059-FR-010 — (#622) The public live channel's join of `public:mechanic:{mechanicId}` (419-FR-003) MUST use FR-001: the stream joins it only when the id names a mechanic shown on the profile; an id that names a hidden one, a card without an account, a removed card or a mechanic of a garage with the switch or the feature off is left out silently, as an unknown id is today.
 
-_From 419-live-garage-updates._
+_From 059-profile-direct-requests._
 
 ### 419-FR-005 — Every message of a public stream MUST be `{ kind, id, at }` and nothing else, the `id` being the garage, mechanic, review, verification file or garage the kind is about; no personal data, no account id and no payload travels on it (253-FR-005 holds for the public stream).
 
@@ -577,3 +578,4 @@ _From 154-free-slots._
 - `177-FR-010` — superseded by `1389-FR-006` (2026-10-30)
 - `067-FR-007` — superseded by `154-FR-014` (2026-10-31)
 - `419-FR-004` — superseded by `154-FR-014` (2026-10-31)
+- `419-FR-003` — superseded by `059-FR-010` (2026-10-31)

@@ -2,6 +2,7 @@ import type { AuditPort } from '../../audit/audit.port';
 import type { EventPort } from '../../events/event.port';
 import type { Prisma } from '../../generated/prisma/client';
 import { removeMechanicBlocks } from '../../workshop/time-blocks/time-blocks';
+import { cardAudienceNow } from '../mechanics/garage-mechanics.service';
 
 // A deleted account leaves every team it works on. Its mechanic card stays,
 // detached, off the profile and marked removed (out of the team list), so its
@@ -16,10 +17,13 @@ export async function leaveTeams(
 ) {
   const { events } = ports;
   const mechanic = await tx.mechanic.findUnique({
-    select: { garageId: true, id: true, onProfile: true },
+    select: { garageId: true, id: true },
     where: { accountId },
   });
   if (mechanic) {
+    // As the owner's removal: the public streams hear it while the profile
+    // still showed the card.
+    const audience = await cardAudienceNow(tx, mechanic.garageId, mechanic.id);
     await tx.mechanic.update({
       data: { accountId: null, onProfile: false, removedAt: new Date() },
       where: { id: mechanic.id },
@@ -30,14 +34,7 @@ export async function leaveTeams(
       mechanicId: mechanic.id,
     });
     await events.record(tx, {
-      // As the owner's removal: the public streams hear it while the card
-      // was still on the profile.
-      audience: {
-        garageId: mechanic.garageId,
-        mechanicId: mechanic.id,
-        public: mechanic.onProfile,
-        type: 'mechanic',
-      },
+      audience,
       kind: 'mechanic.removed',
       payload: {
         from: 'account_deleted',
