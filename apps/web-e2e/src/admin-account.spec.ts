@@ -80,7 +80,7 @@ test.describe('the account drawer @seeded', () => {
         .getByLabel('Motivul')
         .fill('Cereri false, repetate în ultima săptămână.');
       await suspend.getByRole('button', { name: 'Suspendă' }).click();
-      await expect(drawer(page).locator('[aria-live="polite"]')).toHaveText(
+      await expect(drawer(page).locator('[data-part="said"]')).toHaveText(
         'Contul a fost suspendat',
         { timeout: 5000 },
       );
@@ -102,7 +102,7 @@ test.describe('the account drawer @seeded', () => {
       await drawer(page).getByRole('button', { name: 'Reactivează' }).click();
       const restore = page.getByRole('dialog', { name: 'Reactivează contul' });
       await restore.getByRole('button', { name: 'Reactivează' }).click();
-      await expect(drawer(page).locator('[aria-live="polite"]')).toHaveText(
+      await expect(drawer(page).locator('[data-part="said"]')).toHaveText(
         'Contul a fost reactivat',
         { timeout: 5000 },
       );
