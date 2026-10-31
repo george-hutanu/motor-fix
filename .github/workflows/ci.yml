@@ -184,7 +184,7 @@ jobs:
           STORAGE_SECRET_ACCESS_KEY: motorfix-secret
         run: |
           docker compose up -d --wait postgres redis storage
-          npx jest -c libs/domain/jest.config.cts libs/domain/src/storage/object-store.integration.spec.ts
+          npx vitest run --config libs/domain/vitest.config.mts libs/domain/src/storage/object-store.integration.spec.ts
           docker compose --profile observability up -d otel-lgtm
           for i in $(seq 60); do curl -fsS localhost:3300/api/health && break; sleep 2; done
           curl -fsS localhost:3300/api/health
@@ -212,12 +212,12 @@ jobs:
       # The media worker's clip specs spawn ffmpeg; they fail without it.
       - name: ffmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
-      # JEST_SUITE is an input of the test target (nx.json), so the two
+      # TEST_SUITE is an input of the test target (nx.json), so the two
       # suites never answer each other from the Nx cache.
       - name: Unit tests
         if: ${{ !cancelled() }}
         env:
-          JEST_SUITE: unit
+          TEST_SUITE: unit
         run: npx nx $NX_SCOPE -t test --passWithNoTests
 
   # The integration suite (real PostgreSQL+PostGIS and Redis), on demand only,
@@ -269,7 +269,7 @@ jobs:
       - name: Migrate the test database
         run: npx prisma migrate deploy --config libs/domain/prisma.config.ts
       # activity_log refuses DELETE and TRUNCATE; the cleaning role empties it
-      # before every Jest run so no run reads another's entries.
+      # before every test run so no run reads another's entries.
       - name: Clear the audit history
         run: node scripts/clear-activity-log.ts
       # Every spec that empties the account tables waits on one advisory lock
@@ -281,10 +281,10 @@ jobs:
           while sleep 20; do
             psql "$DATABASE_URL" -XAtq -c "SELECT now()::time(0), a.pid, a.application_name, CASE WHEN l.granted THEN 'HOLDS' WHEN l.pid IS NOT NULL THEN 'turn' ELSE 'busy' END, pg_blocking_pids(a.pid), a.state, a.wait_event_type || ':' || a.wait_event, a.backend_start::time(0), a.state_change::time(0), left(regexp_replace(a.query, '\s+', ' ', 'g'), 140) FROM pg_stat_activity a LEFT JOIN pg_locks l ON l.pid = a.pid AND l.locktype = 'advisory' AND l.objid = 79079 WHERE a.datname = current_database() AND a.pid <> pg_backend_pid() AND (a.state <> 'idle' OR l.granted) ORDER BY l.granted DESC NULLS LAST, a.xact_start" >> "$RUNNER_TEMP/db-waits.txt" 2>&1
           done &
-      # Named spec files run alone, one Jest run after another.
+      # Named spec files run one at a time, one run per project and repeat.
       - name: Integration tests
         env:
-          JEST_SUITE: integration
+          TEST_SUITE: integration
           SPECS: ${{ inputs.specs }}
           REPEAT: ${{ inputs.repeat }}
         run: |
@@ -298,7 +298,16 @@ jobs:
           for run in $(seq "$REPEAT"); do
             echo "Run $run of $REPEAT"
             node scripts/clear-activity-log.ts
-            npx jest --ci --runInBand $files
+            # A project with a vitest.config.mts runs its files through Vitest,
+            # the rest through Jest; each project's files in one run.
+            for project in $(for f in $files; do d=$(dirname "$f"); while [ ! -f "$d/project.json" ]; do d=$(dirname "$d"); done; echo "$d"; done | sort -u); do
+              mine=$(printf '%s\n' $files | grep "^$project/")
+              if [ -f "$project/vitest.config.mts" ]; then
+                npx vitest run --config "$project/vitest.config.mts" --no-file-parallelism $mine
+              else
+                npx jest --ci --runInBand $mine
+              fi
+            done
           done
       - name: Database waits
         if: ${{ always() }}

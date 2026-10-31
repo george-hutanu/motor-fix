@@ -226,8 +226,10 @@ there for one that will.
 
 - Lint and format: Biome only, root `biome.jsonc` (no eslint, no prettier).
   Tests: Jest from the root config, Playwright for end-to-end. NestJS 12 is
-  ESM-only, so the Nest projects' `test` targets run Jest with
-  `--experimental-vm-modules`.
+  ESM-only, so the Nest projects and libs (api, worker, mcp, contracts,
+  domain, observability, mcp-tools, scripts) run Vitest, each through its
+  `vitest.config.mts` on the root `vitest.preset.mts`; the Angular projects
+  keep Jest.
 - Root scripts: `typecheck`, `lint`, `test`, `build`, `e2e` run across every
   project; the harness specs keep `npm run test:harness`. Stryker runs only
   in the Mutation workflow, never on a laptop: one job per project or per
@@ -246,15 +248,16 @@ there for one that will.
   picked from the Project like any task. A spec that
   needs PostgreSQL or Redis is named `*.integration.spec.ts`;
   `npm run test:unit` leaves those out and `npm run test:integration` runs
-  only them (`JEST_SUITE` in `jest.preset.cjs`; unset runs all). Integration
+  only them (`TEST_SUITE` in `jest.preset.cjs` and `vitest.preset.mts`; unset
+  runs all). Integration
   tests need `docker compose up -d` (or local servers), with `DATABASE_URL`
   and `REDIS_URL` from `.env.example`. Like the end-to-end suite they run on
   demand, never per PR or per commit: `lifecycle.mjs check` sets
-  `JEST_SUITE=unit` and needs no Docker, and the pre-commit hook runs no tests. To run them by hand, `eval
+  `TEST_SUITE=unit` and needs no Docker, and the pre-commit hook runs no tests. To run them by hand, `eval
   "$(node scripts/test-services.ts origin/main)"` starts and migrates the
   worktree's own PostgreSQL and Redis (compose project
   `mf-test-<worktree>-<hash>`, left running), then
-  `JEST_SUITE=integration npx nx affected -t test`. Removing a
+  `TEST_SUITE=integration npx nx affected -t test`. Removing a
   worktree takes its stack down with its volumes, and each `/speckit-watch`
   pass runs `test-services.ts sweep`, which stops those of merged, closed or
   deleted worktrees; neither fails on Docker. By hand,

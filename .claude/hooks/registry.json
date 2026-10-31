@@ -158,7 +158,7 @@
         "strict"
       ],
       "description": "Syntax-check the edited file and run the tests affected by it",
-      "fingerprint": "84029254d149"
+      "fingerprint": "aecbf998ba04"
     },
     {
       "id": "stop:test-gate",
@@ -171,7 +171,7 @@
       ],
       "description": "Refuse to end a session whose uncommitted code changes leave npm test + lint red",
       "fail_closed": true,
-      "fingerprint": "e8aef49220f9"
+      "fingerprint": "8fcf31f013b4"
     },
     {
       "id": "stop:pr-lifecycle",

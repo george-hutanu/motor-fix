@@ -371,7 +371,7 @@ const LOCAL = [
   'node scripts/structure-check.ts --base origin/main',
   'npm run lint',
   'git merge-base HEAD origin/main',
-  'sh scripts/heavy.sh sh -c JEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=b45e0000',
+  'sh scripts/heavy.sh sh -c TEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=b45e0000',
 ];
 const MERGE_BASE = ['git merge-base HEAD origin/main', { stdout: 'b45e0000\n' }];
 const ofLocal = (calls) => calls.filter((c) => /^(node scripts\/|npm run lint|sh scripts\/heavy\.sh|git merge-base)/.test(c));

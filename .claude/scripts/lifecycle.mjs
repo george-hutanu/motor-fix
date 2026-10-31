@@ -396,7 +396,7 @@ function runChecks(ctx, known) {
   runCheck(ctx, "lint", "npm", ["run", "lint"]);
   const base = known || ctx.git("merge-base", "HEAD", "origin/main").stdout.trim();
   if (!base) throw new Stop("affected typecheck and unit tests", `no merge base with origin/main: git fetch origin, then rerun ${SELF} check`);
-  runCheck(ctx, "affected typecheck and unit tests", "sh", ["scripts/heavy.sh", "sh", "-c", `JEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=${base}`], jestCaps(ctx.env));
+  runCheck(ctx, "affected typecheck and unit tests", "sh", ["scripts/heavy.sh", "sh", "-c", `TEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=${base}`], jestCaps(ctx.env));
 }
 
 /**

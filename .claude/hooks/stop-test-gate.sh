@@ -7,7 +7,8 @@
 # Ported from speckit-demo (`npm test && npm run lint` on every stop). Running
 # the whole Jest suite plus a workspace typecheck at every stop is too slow in
 # this monorepo, so the gate is scoped to what actually changed:
-#   - `jest --onlyChanged` — the tests related to uncommitted changes
+#   - `jest --onlyChanged` — the tests related to uncommitted changes, and
+#     `vitest run --changed` per changed project that has a vitest.config.mts
 #   - `biome check` on the changed TS files
 # Each half is skipped while its tool is not installed yet (before the Nx
 # scaffold lands).
@@ -39,12 +40,29 @@ if [ -x node_modules/.bin/biome ] && ! printf '%s\n' "$changed" | xargs npx --no
   exit 2
 fi
 
+# Each changed project with a vitest.config.mts runs its related specs on
+# Vitest, one heavy slot per project, beside Jest's run below.
+heavy=""
+[ -f scripts/heavy.sh ] && heavy="sh scripts/heavy.sh"
+vitest_projects="$(printf '%s\n' "$changed" | cut -d/ -f1-2 | sort -u \
+  | while read -r project; do [ -f "$project/vitest.config.mts" ] && echo "$project"; done)"
+if [ -n "$vitest_projects" ] && [ -x node_modules/.bin/vitest ]; then
+  for project in $vitest_projects; do
+    HEAVY_WAIT="${HEAVY_WAIT:-300}" $heavy npx --no-install vitest run --changed --config "$project/vitest.config.mts" --passWithNoTests --maxWorkers=2 >&2 2>&1
+    code=$?
+    if [ "$code" -eq 124 ] && [ -n "$heavy" ]; then
+      echo "{\"systemMessage\":\"Stop gate: vitest run --changed for $project was skipped, every shared heavy-command slot stayed busy for 300 s. Run it before claiming the work is green.\"}"
+    elif [ "$code" -ne 0 ]; then
+      echo "❌ Stop gate: \`vitest run --changed --config $project/vitest.config.mts\` is red with uncommitted changes. Fix the failures (or revert the breaking edit) before finishing." >&2
+      exit 2
+    fi
+  done
+fi
+
 [ -x node_modules/.bin/jest ] || exit 0
 # Jest shares the machine with other sessions: it takes a heavy-command slot
 # (scripts/heavy.sh) with two workers and waits at most 300 s for one. No slot
 # in time skips the check with a message rather than trapping the session.
-heavy=""
-[ -f scripts/heavy.sh ] && heavy="sh scripts/heavy.sh"
 HEAVY_WAIT="${HEAVY_WAIT:-300}" $heavy npx --no-install jest --onlyChanged --passWithNoTests --maxWorkers=2 >&2 2>&1
 code=$?
 if [ "$code" -eq 124 ] && [ -n "$heavy" ]; then
