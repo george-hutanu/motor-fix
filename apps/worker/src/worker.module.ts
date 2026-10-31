@@ -20,6 +20,7 @@ import {
   DataStoreMetricsModule,
   DECLINE_WINDOW_CONSUMER,
   DeclineWindowModule,
+  DirectSendModule,
   DOCUMENT_REFUSED_CONSUMER,
   dailyTasks,
   emailConfig,
@@ -95,10 +96,11 @@ export function workerModule(
   const email = emailConfig(env.APP_ENV, process.env);
   const support = supportConfig(process.env);
   const liveVideo = liveVideoConfig(env.APP_ENV, process.env);
+  const phone = phoneConfig(env.APP_ENV, process.env);
   const notifications = NotificationsModule.registerWorker({
     databaseUrl: env.DATABASE_URL,
     email,
-    phone: phoneConfig(env.APP_ENV, process.env),
+    phone,
     push: pushConfig(process.env),
     redisUrl: env.REDIS_URL,
     // Signs the news e-mails' unsubscribe links, as the API checks them.
@@ -112,6 +114,12 @@ export function workerModule(
         version: env.RELEASE_SHA,
       }),
       StorageModule.register(env),
+      // The messages a person waits for, which the API hands over.
+      DirectSendModule.registerWorker({
+        email,
+        phone,
+        redisUrl: env.REDIS_URL,
+      }),
       OutboxRelayModule.register({
         cdn: bunnyConfig(process.env),
         consumers: [

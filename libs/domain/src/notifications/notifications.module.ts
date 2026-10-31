@@ -50,6 +50,7 @@ import {
   CatalogueJobPendingFanOut,
 } from './catalogue-job-pending/catalogue-job-pending.fan-out';
 import { NotificationsConsumer } from './consumer/consumer';
+import { DirectSendModule } from './direct-send/direct-send.module';
 import {
   DOCUMENT_REFUSED_QUEUE,
   type DocumentRefusedEvent,
@@ -101,7 +102,7 @@ import {
 } from './notifications.service';
 import { OutageController } from './outage/outage.controller';
 import { OUTAGE_WEBHOOK_TOKEN, OutageService } from './outage/outage.service';
-import { PHONE_CONFIG, type PhoneConfig, phoneConfig } from './phone-config';
+import { PHONE_CONFIG, type PhoneConfig } from './phone-config';
 import { NotificationPreferencesController } from './preferences/preferences.controller';
 import { NotificationPreferencesService } from './preferences/preferences.service';
 import { PUSH_SENDER, PushSender } from './push/push';
@@ -175,7 +176,8 @@ interface NotificationsOptions {
   push?: PushConfig | null;
   // Grafana's outage webhook bearer; unset refuses every call (API only).
   outageWebhookToken?: string;
-  // WhatsApp for the API's direct sends (a staff invite); unset sends none.
+  // WhatsApp: the worker's (registerWorker); the API's direct sends go
+  // through the worker, so the API takes none.
   phone?: PhoneConfig;
 }
 
@@ -313,6 +315,8 @@ export class NotificationsModule implements OnApplicationShutdown {
     options: NotificationsOptions,
     auth: DynamicModule,
   ): DynamicModule {
+    // The direct sends a person waits for, handed to the worker.
+    const directSend = DirectSendModule.register(options.redisUrl);
     return {
       controllers: [
         BellController,
@@ -323,8 +327,8 @@ export class NotificationsModule implements OnApplicationShutdown {
         OutageController,
         PushSubscriptionsController,
       ],
-      exports: [NotificationsService, PHONE_CONFIG],
-      imports: [auth],
+      exports: [NotificationsService, directSend],
+      imports: [auth, directSend],
       module: NotificationsModule,
       // One PostgreSQL pool per API process: the one AuthModule opened.
       providers: [
@@ -341,10 +345,6 @@ export class NotificationsModule implements OnApplicationShutdown {
           useValue: options.outageWebhookToken ?? '',
         },
         PushSubscriptionsService,
-        {
-          provide: PHONE_CONFIG,
-          useValue: options.phone ?? phoneConfig('test', {}),
-        },
       ],
     };
   }

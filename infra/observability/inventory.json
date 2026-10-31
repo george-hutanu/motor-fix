@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 251,
+    "count": 252,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -156,6 +156,19 @@
       ],
       "reason": "staging only; health at /health/live; mcp_issuer_up is its liveness series",
       "story": "ST-1016"
+    },
+    {
+      "kind": "queue",
+      "name": "direct-send",
+      "source": "libs/domain/src/notifications/direct-send/direct-send.module.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "the messages a person waits for (sign-in and phone-change codes, the staff invite, the car transfer link): the API adds one job with one attempt and waits at most 8 s; the worker's sends are motorfix_jobs_total{queue=\"direct-send\",job_name,outcome} and motorfix_job_duration_seconds, its depth shows in the by-queue panels, a provider refusal fails the job and logs one 'direct-send job <channel> failed: <kind>' line and a job_failed entry, never the payload; the send span is a child of the request's trace",
+      "story": "ST-1379"
     },
     {
       "kind": "queue",
@@ -555,7 +568,7 @@
         "worker-jobs-failed",
         "worker-saturation"
       ],
-      "reason": "carries e-mail and the WhatsApp sign-in and phone-change codes (ST-139: sent straight from the API, a failure logs 'phone code not sent: whatsapp_failed (<kind>)' and counts on the request-duration metric as the sign-in's 502 or the phone change's 503 send_failed, which api-error-rate covers); worker-jobs-failed and worker-saturation cover the worker's e-mail sends",
+      "reason": "carries e-mail and WhatsApp, only from the worker (ST-1379): the sign-in and phone-change codes, the staff invite and the car transfer link go through the direct-send queue, and a failure logs 'phone code not sent: whatsapp_failed (<kind>)' and counts on the request-duration metric as the sign-in's 502 or the phone change's 503 send_failed, which api-error-rate covers; worker-jobs-failed and worker-saturation cover the worker's sends",
       "story": "ST-881"
     },
     {
@@ -1025,6 +1038,19 @@
       "alerts": "none",
       "reason": "counts each garage reply announced to the review's author by outcome (built, muted, skipped), with the fan-out's log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-75"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-brands",
+      "source": "libs/domain/src/garages/garage-brands/garage-brands.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/brands (GET and PUT)",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner's read answers the stored brands, fuels, ticked jobs and the price list's jobs, writing nothing; the write audits each brand, fuel and job change and records one garage.updated event in the same transaction under the garage row's key-share-safe lock; a 400 (fuels_empty, job_not_priced, unknown_brand), 403 or 410 is the rule working",
+      "story": "ST-1247"
     },
     {
       "kind": "endpoint",
@@ -1655,7 +1681,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "each refusal logs one 'phone change refused: <code>' or 'e-mail change link not sent' line, never the address or number; the WhatsApp code goes out through the brevo entry and a failed send logs 'phone code not sent: whatsapp_failed (<kind>)' and answers 503 send_failed; saved changes are motorfix_account_changes_total; spans come from the HTTP and Prisma auto-instrumentation",
+      "reason": "each refusal logs one 'phone change refused: <code>' or 'e-mail change link not sent' line, never the address or number; the WhatsApp code goes out through the direct-send queue and a failed send logs 'phone code not sent: whatsapp_failed (<kind>)' and answers 503 send_failed; saved changes are motorfix_account_changes_total; spans come from the HTTP and Prisma auto-instrumentation",
       "story": "ST-139"
     },
     {
@@ -3061,7 +3087,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "a send and a cancel show on the request-duration metric by route and status code; each step is an audit row and a car_transfer.sent or car_transfer.cancelled event; the send's outcomes are motorfix_car_transfer_sends_total and its WhatsApp message motorfix_car_transfer_whatsapp_total",
+      "reason": "a send and a cancel show on the request-duration metric by route and status code; each step is an audit row and a car_transfer.sent or car_transfer.cancelled event; the send's outcomes are motorfix_car_transfer_sends_total and its WhatsApp message, sent by the worker through the direct-send queue, motorfix_car_transfer_whatsapp_total",
       "story": "ST-415"
     },
     {
@@ -3092,7 +3118,7 @@
       "source": "libs/domain/src/cars/transfers/transfers.metrics.ts",
       "dashboard": "motorfix-product",
       "alerts": "none",
-      "reason": "counts the link's WhatsApp message by outcome (sent, failed) and kind (none or the provider's reason); a failed one logs one CarTransfers warn line with the transfer id and the kind only, and the seller still has the link to copy",
+      "reason": "counts the link's WhatsApp message by outcome (sent, failed) and kind (none, the provider's reason, or the direct-send queue's timeout, queue_unavailable or stale); a failed one logs one CarTransfers warn line with the transfer id and the kind only, and the seller still has the link to copy",
       "story": "ST-415"
     },
     {

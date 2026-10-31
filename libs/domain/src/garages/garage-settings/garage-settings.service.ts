@@ -9,7 +9,7 @@ import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import {
   assertGarageOwner,
-  notFound,
+  noGarage,
 } from '../garage-brands/garage-brands.service';
 
 // The columns as the history names them.
@@ -39,7 +39,7 @@ async function lockGarage(tx: Prisma.TransactionClient, garageId: string) {
       EXISTS (SELECT 1 FROM garage_facility f
         WHERE f.garage_id = g.id AND f.facility = 'courtesy_car') AS listed
     FROM garage g WHERE id = ${garageId}::uuid FOR UPDATE`;
-  if (!row) throw notFound();
+  if (!row) throw noGarage();
   return row;
 }
 
