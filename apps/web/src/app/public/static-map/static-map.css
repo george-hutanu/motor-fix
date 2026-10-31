@@ -124,6 +124,11 @@ img {
   border: 2.5px solid var(--mf-amber);
 }
 
+/* One area on its own, as a garage's profile shows it: neutral, no lamp. */
+:host(.plain) .area {
+  --lamp: var(--mf-text);
+}
+
 /* A garage outside the filters: on the map, faint, whole again when lit. */
 .pin.dim,
 .area.dim {

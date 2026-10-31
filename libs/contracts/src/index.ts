@@ -23,6 +23,7 @@ export * from './env';
 export * from './events';
 export * from './files';
 export * from './fold';
+export * from './free-slots.dto';
 export * from './garage-brands.dto';
 export * from './garage-features.dto';
 export * from './garage-figures.dto';

@@ -6268,6 +6268,141 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/free-slots": {
+      "get": {
+        "operationId": "garageFreeSlots",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "duration",
+            "required": true,
+            "in": "query",
+            "description": "Minutes the job takes",
+            "schema": {
+              "minimum": 15,
+              "maximum": 2400,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "jobTypeIds",
+            "required": false,
+            "in": "query",
+            "description": "The jobs of the work; any of them needing a lift makes the job need one",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          {
+            "name": "needsLift",
+            "required": false,
+            "in": "query",
+            "description": "The job needs a lift, whatever its job types say",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "earliest",
+            "required": false,
+            "in": "query",
+            "description": "The first start to offer; an hour from now when left out, now when past, rounded up to the next half hour of the Bucharest clock",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "horizonDays",
+            "required": false,
+            "in": "query",
+            "description": "Bucharest days to look through, the earliest start's day the first",
+            "schema": {
+              "minimum": 1,
+              "maximum": 30,
+              "default": 30,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "count",
+            "required": false,
+            "in": "query",
+            "description": "Starts to answer at most",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10,
+              "default": 3,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "mechanicId",
+            "required": false,
+            "in": "query",
+            "description": "Only the starts at which this current card of the garage is free; refused while the team is off",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "excludeBookingId",
+            "required": false,
+            "in": "query",
+            "description": "A booking of the garage whose own time does not block, as when it is moved; a driver's must be hers",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeSlotsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bound, an unparsable earliest, a mechanicId or excludeBookingId the garage does not have"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: a mechanic of the garage with neither right"
+          },
+          "404": {
+            "description": "not_found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The first starts at which a job of the asked length fits",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/garage/jobs": {
       "get": {
         "operationId": "GarageJobsController_list",
@@ -8043,6 +8178,62 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/demand/supply": {
+      "get": {
+        "operationId": "DemandController_supply",
+        "parameters": [
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "Only this brand's rows: the exact brand name",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 80,
+              "example": "BMW",
+              "type": "string"
+            }
+          },
+          {
+            "name": "area",
+            "required": false,
+            "in": "query",
+            "description": "Only this area's rows: an area code from the answer's areas, or unknown; a code in no area answers validation_failed",
+            "schema": {
+              "pattern": "^(unknown|[a-z0-9]+(-[a-z0-9]+)*)$",
+              "example": "sector-3",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminDemandSupplyDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a brand of 0 or over 80 characters, an area that is not one, or an unknown query key"
           },
           "404": {
             "description": "not_found: not an admin"
@@ -20932,6 +21123,46 @@
           "openCount"
         ]
       },
+      "FreeSlotDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "Where the job ends, over every working day it takes",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "FreeSlotsDto": {
+        "type": "object",
+        "properties": {
+          "slots": {
+            "description": "Ascending by start, at most the count asked for",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FreeSlotDto"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "description": "Present only when no start fits inside the horizon",
+            "enum": [
+              "none_in_horizon"
+            ]
+          }
+        },
+        "required": [
+          "slots"
+        ]
+      },
       "JobCarDto": {
         "type": "object",
         "properties": {
@@ -22254,6 +22485,132 @@
           "jobs"
         ]
       },
+      "AdminAreaDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The area's code; unknown for a point in no area",
+            "example": "sector-3"
+          },
+          "name": {
+            "type": "string",
+            "example": "Sector 3"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "city",
+              "sector",
+              "unknown"
+            ],
+            "example": "sector"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "kind"
+        ]
+      },
+      "AdminDemandSupplyRowDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "description": "The request snapshot's or the catalogue brand's exact name",
+            "example": "BMW"
+          },
+          "area": {
+            "$ref": "#/components/schemas/AdminAreaDto"
+          },
+          "searches": {
+            "type": "integer",
+            "description": "Searches in the window whose cell's centre lies in the area",
+            "example": 420,
+            "minimum": 0
+          },
+          "requests": {
+            "type": "integer",
+            "description": "Requests created in the window with a recipient in the area, once per request",
+            "example": 96,
+            "minimum": 0
+          },
+          "unmet": {
+            "type": "integer",
+            "description": "Requests to the area closed expired in the window with no quote from any garage, on the day they expired; may exceed requests",
+            "example": 12,
+            "minimum": 0
+          },
+          "supply": {
+            "type": "integer",
+            "description": "Approved garages in the area today that work on the brand; a mobile mechanic by its seat",
+            "example": 4,
+            "minimum": 0
+          },
+          "requestsPerGarage": {
+            "type": "integer",
+            "description": "Requests divided by supply, rounded to the nearest whole number; null when supply is 0",
+            "example": 24,
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "brand",
+          "area",
+          "searches",
+          "requests",
+          "unmet",
+          "supply",
+          "requestsPerGarage"
+        ]
+      },
+      "AdminDemandSupplyDto": {
+        "type": "object",
+        "properties": {
+          "firstDay": {
+            "type": "string",
+            "description": "The window's first Europe/Bucharest day",
+            "example": "2026-10-02",
+            "format": "date"
+          },
+          "lastDay": {
+            "type": "string",
+            "description": "The window's last day: today in Europe/Bucharest",
+            "example": "2026-10-31",
+            "format": "date"
+          },
+          "writtenAt": {
+            "type": "string",
+            "description": "The latest nightly write of the window's brand-area rows; null before the first",
+            "example": "2026-10-31T01:00:12.345Z",
+            "format": "date-time",
+            "nullable": true
+          },
+          "areas": {
+            "description": "Every area by code, then unknown; unfiltered, for the area filter",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAreaDto"
+            }
+          },
+          "rows": {
+            "description": "One row per brand and area with a search, a request or an unmet request in the window, after the filters; most unmet first, then most searched, then most requested, then by brand and area name in code-point order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminDemandSupplyRowDto"
+            }
+          }
+        },
+        "required": [
+          "firstDay",
+          "lastDay",
+          "writtenAt",
+          "areas",
+          "rows"
+        ]
+      },
       "AdminCityDto": {
         "type": "object",
         "properties": {
@@ -23559,6 +23916,16 @@
           "longitude": {
             "type": "number",
             "description": "A workshop only.",
+            "format": "double"
+          },
+          "areaLat": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
+            "format": "double"
+          },
+          "areaLng": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
             "format": "double"
           },
           "serviceRadiusKm": {
@@ -25332,6 +25699,16 @@
           "longitude": {
             "type": "number",
             "description": "A workshop only.",
+            "format": "double"
+          },
+          "areaLat": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
+            "format": "double"
+          },
+          "areaLng": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
             "format": "double"
           },
           "serviceRadiusKm": {
