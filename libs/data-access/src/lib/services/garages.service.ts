@@ -18,6 +18,7 @@ import { deleteTimeBlock } from '../fn/garages/delete-time-block';
 import { DeleteTimeBlock$Params } from '../fn/garages/delete-time-block';
 import { DocumentCycleDto } from '../models/document-cycle-dto';
 import { DocumentUploadAddressDto } from '../models/document-upload-address-dto';
+import { FreeSlotsDto } from '../models/free-slots-dto';
 import { GarageBrandOwnerAnswerDto } from '../models/garage-brand-owner-answer-dto';
 import { GarageBrandOwnerReadDto } from '../models/garage-brand-owner-read-dto';
 import { garageBrandsControllerRead } from '../fn/garages/garage-brands-controller-read';
@@ -27,6 +28,8 @@ import { GarageBrandsControllerReplace$Params } from '../fn/garages/garage-brand
 import { garageFeaturesControllerSet } from '../fn/garages/garage-features-controller-set';
 import { GarageFeaturesControllerSet$Params } from '../fn/garages/garage-features-controller-set';
 import { GarageFeaturesDto } from '../models/garage-features-dto';
+import { garageFreeSlots } from '../fn/garages/garage-free-slots';
+import { GarageFreeSlots$Params } from '../fn/garages/garage-free-slots';
 import { garageInvitesControllerResend } from '../fn/garages/garage-invites-controller-resend';
 import { GarageInvitesControllerResend$Params } from '../fn/garages/garage-invites-controller-resend';
 import { garageInvitesControllerRevoke } from '../fn/garages/garage-invites-controller-revoke';
@@ -154,6 +157,39 @@ export class GaragesService extends BaseService {
   garageSchedule(params: GarageSchedule$Params, context?: HttpContext): Promise<GarageScheduleDto> {
     const resp = this.garageSchedule$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageScheduleDto>): GarageScheduleDto => r.body);
+  }
+
+  /** Path part for operation `garageFreeSlots()` */
+  static readonly GarageFreeSlotsPath = '/api/v1/garages/{garageId}/free-slots';
+
+  /**
+   * The first starts at which a job of the asked length fits.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageFreeSlots()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageFreeSlots$Response(params: GarageFreeSlots$Params, context?: HttpContext): Promise<StrictHttpResponse<FreeSlotsDto>> {
+    const obs = garageFreeSlots(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The first starts at which a job of the asked length fits.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageFreeSlots$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageFreeSlots(params: GarageFreeSlots$Params, context?: HttpContext): Promise<FreeSlotsDto> {
+    const resp = this.garageFreeSlots$Response(params, context);
+    return resp.then((r: StrictHttpResponse<FreeSlotsDto>): FreeSlotsDto => r.body);
   }
 
   /** Path part for operation `garageTimeBlocks()` */

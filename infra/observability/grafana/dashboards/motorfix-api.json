@@ -1258,6 +1258,45 @@
       }
     },
     {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Free slots per hour, by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 76
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_free_slots_answers_total{service_name=\"api\", outcome=\"slots\", deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "slots"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_free_slots_answers_total{service_name=\"api\", outcome=\"none_in_horizon\", deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "none_in_horizon"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
       "id": 35,
       "type": "timeseries",
       "title": "Live replays by outcome",
