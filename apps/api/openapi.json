@@ -1148,7 +1148,19 @@
     "/api/v1/notifications/read-all": {
       "post": {
         "operationId": "BellController_readAll",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per press; optional and unread: the write is idempotent by value",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": ""
@@ -1174,6 +1186,17 @@
             "in": "path",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per press; optional and unread: the write is idempotent by value",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
             }
           }
         ],
@@ -1265,7 +1288,19 @@
       },
       "put": {
         "operationId": "NotificationPreferencesController_save",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per press; optional and unread: the write is idempotent by value",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -3038,6 +3073,148 @@
           }
         ],
         "summary": "Always refused: a garage never deletes a repair",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/repairs": {
+      "get": {
+        "operationId": "RepairsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The nextCursor of the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Repairs per page",
+            "schema": {
+              "minimum": 1,
+              "maximum": 20,
+              "default": 20,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "carId",
+            "required": false,
+            "in": "query",
+            "description": "One of the caller’s cars",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepairListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed, invalid_cursor"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: carId is not a car the caller owns"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's repairs across every car he owns, newest first",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/repairs/{id}": {
+      "patch": {
+        "operationId": "RepairsController_edit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a repair of a car the caller owns"
+          },
+          "409": {
+            "description": "motorfix_repair: a MotorFix repair is the job’s, never edited"
+          },
+          "501": {
+            "description": "not_implemented: editing a logged repair comes later"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit a repair: refused until editing ships",
+        "tags": [
+          "cars"
+        ]
+      },
+      "delete": {
+        "operationId": "RepairsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a repair of a car the caller owns"
+          },
+          "409": {
+            "description": "motorfix_repair: a MotorFix repair is the job’s, never edited"
+          },
+          "501": {
+            "description": "not_implemented: editing a logged repair comes later"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a repair: refused until editing ships",
         "tags": [
           "cars"
         ]
@@ -5320,6 +5497,106 @@
           }
         ],
         "summary": "Cancel a booking that has not started, with a reason; late inside the free-cancel cutoff, never a penalty",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/no-show": {
+      "post": {
+        "operationId": "NoShowController_record",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageBookingDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: another mechanic’s booking"
+          },
+          "404": {
+            "description": "not_found: not the garage’s booking"
+          },
+          "409": {
+            "description": "invalid_transition: the booking is not confirmed, its time has not come or its job has started (its currentStatus named)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record that the driver did not come to a confirmed booking whose time has come; no fee, no penalty",
+        "tags": [
+          "bookings"
+        ]
+      },
+      "delete": {
+        "operationId": "NoShowController_withdraw",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageBookingDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: another mechanic’s booking"
+          },
+          "404": {
+            "description": "not_found: not the garage’s booking"
+          },
+          "409": {
+            "description": "invalid_transition: no no-show, or recorded before today; mechanic_busy or lift_busy: its place was taken since"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Withdraw a no-show recorded today (Bucharest time): the booking stands again in its place",
         "tags": [
           "bookings"
         ]
@@ -8542,7 +8819,7 @@
             }
           },
           "400": {
-            "description": "validation_failed: a limit broken (errors[].field names it), an unknown field, an empty save, a radius for a workshop (radius_not_applicable)"
+            "description": "validation_failed: a limit broken (errors[].field names it), an unknown field, an empty save, a radius for a workshop (radius_not_applicable), courtesy-car terms without the car or the car without its terms (no_courtesy_car)"
           },
           "401": {
             "description": "sign_in_required"
@@ -8568,7 +8845,7 @@
             "bearer": []
           }
         ],
-        "summary": "Change the garage's name, description, phone, hours with closed days or service radius in place",
+        "summary": "Change the garage's name, description, phone, hours with closed days, service radius or facilities with payment methods in place",
         "tags": [
           "garages"
         ]
@@ -9851,6 +10128,17 @@
             "schema": {
               "format": "uuid",
               "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One per press; optional and unread: the write is idempotent by value",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "minLength": 1
             }
           }
         ],
@@ -15319,6 +15607,53 @@
           "items"
         ]
       },
+      "CarRepairCarDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brandName": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "brandName",
+          "model",
+          "year"
+        ]
+      },
+      "RepairReviewDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "description": "write: the driver may still review; rated: a review stands; none: neither",
+            "enum": [
+              "write",
+              "rated",
+              "none"
+            ]
+          },
+          "rating": {
+            "type": "integer",
+            "description": "Only with rated",
+            "maximum": 5,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
       "CarRepairDto": {
         "type": "object",
         "properties": {
@@ -15336,6 +15671,30 @@
           },
           "garageName": {
             "type": "string"
+          },
+          "garageId": {
+            "type": "string",
+            "description": "The garage on MotorFix",
+            "format": "uuid",
+            "nullable": true
+          },
+          "car": {
+            "$ref": "#/components/schemas/CarRepairCarDto"
+          },
+          "mechanicName": {
+            "type": "string",
+            "description": "A MotorFix repair's mechanic, as the job names them",
+            "nullable": true
+          },
+          "review": {
+            "description": "Null on every row until the review drawer ships and fills it for a MotorFix repair",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RepairReviewDto"
+              }
+            ]
           },
           "source": {
             "type": "string",
@@ -15372,6 +15731,10 @@
           "doneOn",
           "what",
           "garageName",
+          "garageId",
+          "car",
+          "mechanicName",
+          "review",
           "source",
           "fromPreviousOwner",
           "odometerKm",
@@ -15633,6 +15996,27 @@
         "required": [
           "items",
           "truncated"
+        ]
+      },
+      "RepairListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest first, across the caller’s cars",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarRepairDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Pass as cursor for the next page; null on the last",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
         ]
       },
       "CreateCarDto": {
@@ -17256,6 +17640,12 @@
             "type": "boolean",
             "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
           },
+          "noShowAt": {
+            "type": "string",
+            "description": "When the garage recorded that the driver did not come",
+            "format": "date-time",
+            "nullable": true
+          },
           "jobStarted": {
             "type": "boolean",
             "description": "The booking’s job exists and has left to do"
@@ -17280,6 +17670,7 @@
           "garage",
           "cancelledBySide",
           "lateCancellation",
+          "noShowAt",
           "jobStarted",
           "finalPriceBani",
           "handedOverAt"
@@ -18062,6 +18453,20 @@
           "toReassign": {
             "type": "boolean",
             "description": "A confirmed booking still ahead whose mechanic's card was taken off the team, or that falls on one of her days off or outside her working hours: the garage gives it to someone else"
+          },
+          "noShowAt": {
+            "type": "string",
+            "description": "When the garage recorded that the driver did not come",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canRecordNoShow": {
+            "type": "boolean",
+            "description": "The reader may record a no-show: a confirmed booking whose time has come and whose job has not started, read by the owner, the desk or the booking's own mechanic"
+          },
+          "canWithdrawNoShow": {
+            "type": "boolean",
+            "description": "The reader may withdraw the no-show: recorded today, Bucharest time, by the same readers"
           }
         },
         "required": [
@@ -18072,7 +18477,10 @@
           "durationMinutes",
           "mechanic",
           "lift",
-          "toReassign"
+          "toReassign",
+          "noShowAt",
+          "canRecordNoShow",
+          "canWithdrawNoShow"
         ]
       },
       "GarageRequestSummaryDto": {
@@ -18394,6 +18802,12 @@
             "format": "uuid",
             "nullable": true
           },
+          "noShowRecordedBy": {
+            "type": "string",
+            "description": "The account that recorded the no-show",
+            "format": "uuid",
+            "nullable": true
+          },
           "mechanicId": {
             "type": "string",
             "format": "uuid",
@@ -18441,6 +18855,7 @@
           "completedAt",
           "createdAt",
           "confirmedBy",
+          "noShowRecordedBy",
           "mechanicId",
           "mechanic",
           "lift",
@@ -18537,16 +18952,6 @@
               }
             ]
           },
-          "booking": {
-            "description": "The booking the garage’s quote became",
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/GarageBookingDto"
-              }
-            ]
-          },
           "driver": {
             "$ref": "#/components/schemas/GarageDriverDto"
           },
@@ -18556,6 +18961,16 @@
           "description": {
             "type": "string",
             "nullable": true
+          },
+          "booking": {
+            "description": "The booking the garage’s quote became",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageBookingDto"
+              }
+            ]
           }
         },
         "required": [
@@ -18570,10 +18985,10 @@
           "outcome",
           "recipient",
           "quote",
-          "booking",
           "driver",
           "car",
-          "description"
+          "description",
+          "booking"
         ]
       },
       "DeclineRequestDto": {
@@ -19706,6 +20121,15 @@
           },
           "canReport": {
             "type": "boolean"
+          },
+          "reportRefusal": {
+            "type": "string",
+            "description": "Why the owner may not report the review now, as the report operation would refuse it; null when it may",
+            "enum": [
+              "already_reported",
+              "already_kept"
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -19725,7 +20149,8 @@
           "status",
           "mechanic",
           "canReply",
-          "canReport"
+          "canReport",
+          "reportRefusal"
         ]
       },
       "GarageStaffReviewsPageDto": {
@@ -20985,6 +21410,20 @@
           "stepsTotal": {
             "type": "number",
             "description": "Steps written, 0 to 20"
+          },
+          "noShowAt": {
+            "type": "string",
+            "description": "When the garage recorded that the driver did not come",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canRecordNoShow": {
+            "type": "boolean",
+            "description": "The reader may record a no-show: the booking's time has come and the job has not started"
+          },
+          "canWithdrawNoShow": {
+            "type": "boolean",
+            "description": "The reader may withdraw the no-show: recorded today, Bucharest time"
           }
         },
         "required": [
@@ -21007,7 +21446,10 @@
           "jobs",
           "mechanicName",
           "stepsDone",
-          "stepsTotal"
+          "stepsTotal",
+          "noShowAt",
+          "canRecordNoShow",
+          "canWithdrawNoShow"
         ]
       },
       "JobListDto": {
@@ -21240,6 +21682,20 @@
             "type": "number",
             "description": "Steps written, 0 to 20"
           },
+          "noShowAt": {
+            "type": "string",
+            "description": "When the garage recorded that the driver did not come",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canRecordNoShow": {
+            "type": "boolean",
+            "description": "The reader may record a no-show: the booking's time has come and the job has not started"
+          },
+          "canWithdrawNoShow": {
+            "type": "boolean",
+            "description": "The reader may withdraw the no-show: recorded today, Bucharest time"
+          },
           "finalPriceBani": {
             "type": "number",
             "nullable": true
@@ -21286,6 +21742,9 @@
           "mechanicName",
           "stepsDone",
           "stepsTotal",
+          "noShowAt",
+          "canRecordNoShow",
+          "canWithdrawNoShow",
           "finalPriceBani",
           "quoteFromBani",
           "quoteToBani",
@@ -23445,6 +23904,16 @@
             "description": "A workshop only.",
             "format": "double"
           },
+          "areaLat": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
+            "format": "double"
+          },
+          "areaLng": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
+            "format": "double"
+          },
           "serviceRadiusKm": {
             "type": "number",
             "description": "A mobile mechanic only: how far from its base it travels.",
@@ -23618,6 +24087,49 @@
           "storedClosedDays"
         ]
       },
+      "FacilitiesGroupDto": {
+        "type": "object",
+        "properties": {
+          "facilities": {
+            "type": "array",
+            "description": "Every facility the garage lists, once each",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "courtesy_car",
+                "pickup_dropoff",
+                "waiting_area"
+              ]
+            }
+          },
+          "facilitiesNote": {
+            "type": "string",
+            "description": "Trimmed; empty or absent clears it; one line",
+            "maxLength": 200
+          },
+          "courtesyCar": {
+            "description": "Exactly when facilities lists courtesy_car",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CourtesyCarDto"
+              }
+            ]
+          },
+          "paymentMethods": {
+            "description": "All three; at least one true",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PaymentMethodsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "facilities",
+          "paymentMethods"
+        ]
+      },
       "UpdateGarageProfileDto": {
         "type": "object",
         "properties": {
@@ -23682,6 +24194,14 @@
             "description": "A mobile mechanic only",
             "maximum": 100,
             "minimum": 5
+          },
+          "facilities": {
+            "description": "The facilities, their note, the courtesy car terms and the payment methods, sent whole",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FacilitiesGroupDto"
+              }
+            ]
           }
         },
         "required": [
@@ -23853,6 +24373,12 @@
           "hasAccount": {
             "type": "boolean"
           },
+          "shown": {
+            "type": "boolean"
+          },
+          "takesDirectRequests": {
+            "type": "boolean"
+          },
           "rating": {
             "type": "string",
             "example": "4.9",
@@ -23884,6 +24410,8 @@
           "futureBookings",
           "onProfile",
           "hasAccount",
+          "shown",
+          "takesDirectRequests",
           "rating",
           "reviewCount",
           "invite"
@@ -23919,11 +24447,15 @@
             "items": {
               "$ref": "#/components/schemas/GarageBrandOptionDto"
             }
+          },
+          "teamOnProfile": {
+            "type": "boolean"
           }
         },
         "required": [
           "items",
-          "brands"
+          "brands",
+          "teamOnProfile"
         ]
       },
       "CreateMechanicDto": {
@@ -24016,6 +24548,10 @@
             "type": "string",
             "maxLength": 80,
             "minLength": 2
+          },
+          "takesDirectRequests": {
+            "type": "boolean",
+            "description": "Whether a driver may ask for this mechanic by name"
           }
         }
       },
@@ -24317,6 +24853,10 @@
                 "$ref": "#/components/schemas/CourtesyCarDto"
               }
             ]
+          },
+          "teamOnProfile": {
+            "type": "boolean",
+            "description": "Whether the team appears on the public profile"
           }
         }
       },
@@ -24333,10 +24873,15 @@
                 "$ref": "#/components/schemas/CourtesyCarDto"
               }
             ]
+          },
+          "teamOnProfile": {
+            "type": "boolean",
+            "description": "Whether the team appears on the public profile"
           }
         },
         "required": [
-          "paymentMethods"
+          "paymentMethods",
+          "teamOnProfile"
         ]
       },
       "InviteTokenDto": {
@@ -25140,6 +25685,16 @@
           "longitude": {
             "type": "number",
             "description": "A workshop only.",
+            "format": "double"
+          },
+          "areaLat": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
+            "format": "double"
+          },
+          "areaLng": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
             "format": "double"
           },
           "serviceRadiusKm": {

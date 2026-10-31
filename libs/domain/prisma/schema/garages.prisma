@@ -119,6 +119,8 @@ model Garage {
   // 2,000. Meaningful only while the garage lists the courtesy car.
   courtesyCarPaid            Boolean                                @default(false) @map("courtesy_car_paid")
   courtesyCarPricePerDayBani Int?                                   @map("courtesy_car_price_per_day_bani")
+  // The owner's switch: the whole team on the public profile or not.
+  teamOnProfile              Boolean                                @default(true) @map("team_on_profile")
   requestRecipients          RequestRecipient[]
   quotes                     Quote[]
   bookings                   Booking[]
@@ -242,6 +244,8 @@ model Mechanic {
   // Whether the Saturday stretch counts.
   worksSaturdays      Boolean          @default(false) @map("works_saturdays")
   onProfile           Boolean          @default(false) @map("on_profile")
+  // The garage's choice: whether a driver may ask for this mechanic by name.
+  takesDirectRequests Boolean          @default(true) @map("takes_direct_requests")
   canMoveBookings     Boolean          @default(false) @map("can_move_bookings")
   canAnswerQuotes     Boolean          @default(false) @map("can_answer_quotes")
   canRecordFinalPrice Boolean          @default(false) @map("can_record_final_price")

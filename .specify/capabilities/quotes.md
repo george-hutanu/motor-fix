@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -34,6 +34,7 @@ features:
   - 1395-block-time-dashboard
   - 1316-swr-resource-store
   - 346-quote-outcomes
+  - 1259-no-show
 ---
 
 # Capability: Quotes
@@ -66,9 +67,9 @@ _From 220-requests-quotes-bookings._
 
 _From 220-requests-quotes-bookings._
 
-### 220-FR-008 — The system MUST hold, in one place per entity, the transition tables of the feature's state diagrams and refuse every other move with a domain error that carries the entity, the current status and the asked status, which the API answers as 409 problem details with code `invalid_transition` and the current status in the body. The allowed moves are, QUOTE_REQUEST: `sent`→`quoted`, `sent`→`closed`, `quoted`→`booked`, `quoted`→`closed`, `booked`→`quoted`, `booked`→`in_work`, `booked`→`closed`, `in_work`→`done`; REQUEST_RECIPIENT: `waiting`→`quoted`, `waiting`→`declined`, `declined`→`waiting` (undo), `waiting`→`expired`, `waiting`→`closed`; QUOTE: `waiting`→`accepted`, `waiting`→`withdrawn`, `waiting`→`expired`, `waiting`→`lost`, `waiting`→`declined_by_driver`, `accepted`→`expired` (its booking lapsed), `accepted`→`lost` (the request was cancelled or closed); BOOKING: `awaiting_confirmation`→`confirmed`, `awaiting_confirmation`→`lapsed`, `awaiting_confirmation`→`cancelled`, `confirmed`→`cancelled`, `confirmed`→`no_show`, `confirmed`→`completed`; JOB: `to_do`→`in_work`, `to_do`→`cancelled`, `in_work`→`paused`, `paused`→`in_work`, `in_work`→`done`. A transition MUST read its row with a lock inside the caller's transaction, judge the move against that state, set the status and the matching time column (`closed_at`, `answered_at`, `accepted_at`, `withdrawn_at`, `confirmed_at`, `cancelled_at`, `no_show_at`, `completed_at`, `started_at`, `paused_at`, `finished_at`), and write the audit entry and the event of FR-011 (a JOB move also appends one JOB_STAGE_ENTRY with the actor, the role and the optional text). The moves of QUOTE_REQUEST, REQUEST_RECIPIENT, QUOTE and BOOKING live in the `quotes` module and the moves of JOB in the `workshop` module, each module the only writer of its own tables. The service applies one entity's move; the cascades between entities (a quote accepted moves its request to `booked`) are composed by the writing stories in one transaction. No transition in this story runs on a clock or on a consumed event; the timers and the `garage.suspended` consumer are later stories'.
+### 1259-FR-006 — A withdrawal MUST, in one transaction: move the booking `no_show`→`confirmed` with `no_show_at` and `no_show_recorded_by` cleared (`confirmed_at` and `confirmed_by` unchanged); move the job `cancelled`→`to_do` when the booking has one; move the request `closed`→`booked` with `closed_reason` and `closed_at` cleared; write the booking's schedule segments back exactly as the confirmation placed them (slot, duration, mechanic and lift, on the original `mechanic_id` even when that card has since been removed); write the transitions' audit entries so the withdrawal appears in the garage's history with who did it, plus one key-change entry `booking.no_show` (`withdrawn`) labelled with the garage's name for the driver's history; and record one event `booking.no_show_withdrawn` with the same audience and payload shape as FR-003 (`withdrawnBy` for the actor). The three new moves (`no_show`→`confirmed`, JOB `cancelled`→`to_do`, QUOTE_REQUEST `closed`→`booked`) join the transition tables of 220-FR-008 and are allowed only within this withdrawal: the booking transition checks the window and the request move is accepted only when `closed_reason` is `no_show`, as the decline undo is limited to its window today.
 
-_From 220-requests-quotes-bookings._
+_From 1259-no-show._
 
 ### 220-FR-009 — The database MUST enforce: at most one `accepted` quote per request (a partial unique index); at most one booking per quote; at most one quote per (request, garage); one recipient row per (request, garage); one job per booking; a request's recipients at most REQUEST_MAX_GARAGES (checked in the sending story, not here). A violation MUST be answered, through one error mapper the transition service and the later stories' inserts share, as the 409 `invalid_transition` of FR-008 carrying `entity`, the moved row's current state as `currentStatus` (absent for an insert) and `rule`, the name of the refused uniqueness; never a 500.
 
@@ -882,6 +883,38 @@ _From 1393-final-price-predare._
 
 _From 1393-final-price-predare._
 
+### 1259-FR-001 — The API MUST offer `POST /api/v1/bookings/:id/no-show`, with no body, to the owner and a receptionist of the booking's garage and to the mechanic whose card is the booking's `mechanic_id`. A mechanic of the same garage who is not the booking's mechanic MUST get 403 `forbidden` ("Nu poți înregistra neprezentarea pentru programarea altui mecanic" / "You cannot record a no-show on another mechanic's booking"); every other caller, another garage's staff, a driver, an admin, a mechanic whose card is removed and a visitor included, MUST get 404 `not_found`. It MUST answer 200 with the booking as the garage reads it (status `no_show`, `noShowAt`, `noShowRecordedBy`); a malformed id is 400 `validation_failed` and a missing session 401 `sign_in_required`.
+
+_From 1259-no-show._
+
+### 1259-FR-002 — The no-show MUST be refused with 409 `invalid_transition` carrying the booking's current status, and write nothing, when `starts_at` is later than now, when the booking is not `confirmed`, or when its job exists and is not `to_do`. The refusal is counted and logged as the driver's cancel refusal is.
+
+_From 1259-no-show._
+
+### 1259-FR-003 — A no-show MUST, in one transaction: move the booking `confirmed`→`no_show` through the existing booking transition (which stamps `no_show_at` and `no_show_recorded_by` with the caller's account and releases the booking's schedule segments); move its job `to_do`→`cancelled` when one exists; move the request `booked`→`closed` with `closed_reason` `no_show` and `closed_at`; leave the quote `accepted` (the garage's row reads the outcome `no_show` from the booking, 346-FR-001); write the audit entries the transitions write, plus one key-change entry `booking.no_show` (`recorded`) whose actor label is the garage's name, so the driver's short history names the garage and never the staff member; and record one event `booking.no_show_recorded` with the booking audience (the driver's account, the garage, the booking's mechanic) and payload `bookingId`, `requestId`, `garageId`, `recordedBy`. No deposit, fee or penalty is written anywhere.
+
+_From 1259-no-show._
+
+### 1259-FR-004 — The API MUST offer `DELETE /api/v1/bookings/:id/no-show` (the withdrawal), with no body, to the same callers as FR-001 with the same 403 and 404 rules, answering 200 with the booking as the garage reads it (status `confirmed`).
+
+_From 1259-no-show._
+
+### 1259-FR-005 — The withdrawal MUST be refused with 409 `invalid_transition` carrying the current status, writing nothing, when the booking is not `no_show`, or when now is past 23:59:59 Europe/Bucharest of the civil day of `no_show_at` (the window runs from the recording, not from the booking's slot). When the booking's place in the schedule is no longer free (another booking's or a time block's segments overlap its slot for its mechanic or its lift), the withdrawal MUST be refused with the confirmation's own 409 (`mechanic_busy` or `lift_busy`, its message naming what holds the place) and write nothing.
+
+_From 1259-no-show._
+
+### 1259-FR-011 — The booking as the garage reads it (the sent-quotes row's booking and the mechanic's job summary) MUST carry `noShowAt`, `canRecordNoShow` (the caller may act by FR-001's role rule and FR-002 holds: `confirmed`, start time passed, no job or a `to_do` job) and `canWithdrawNoShow` (the caller may act, status `no_show`, and the Bucharest day of `noShowAt` is today), computed by the server for the caller; the driver's request row's booking MUST carry `noShowAt`; the mechanic's jobs read keeps a `cancelled` job whose booking is `no_show` while `canWithdrawNoShow` is true; the generated client is regenerated from `openapi.json` and never edited by hand.
+
+_From 1259-no-show._
+
+### 1259-FR-012 — The two endpoints MUST be listed in `infra/observability/inventory.json` with the quotes module's panel and alerts; the module MUST emit one counter of no-shows with attributes `action` (`recorded`, `withdrawn`) and `outcome` (`done`, `refused`), and log one line per recording and withdrawal naming the booking, request, garage and actor role, never the driver's name or phone; the refusals of FR-002 and FR-005 are logged at warn with the booking id and the code.
+
+_From 1259-no-show._
+
+### 1259-FR-013 — Tests MUST exist before the code (Principle II), each file carrying its `// @traces 1259-FR-<n>` line. In Jest on real PostgreSQL and Valkey, API: the no-show by the owner, a receptionist and the booking's mechanic (booking, job, request, segments released, audit entries and the event in one transaction, 200 body); 409 before `starts_at`, with a started job and for each non-`confirmed` status; 403 for another mechanic of the garage; 404 for another garage's owner, a driver, an admin and a removed mechanic; the withdrawal by each role before midnight Bucharest (booking, job, request, segments back, audit, event) and 409 at 00:00 Bucharest and later (a fake clock, including a daylight-saving day and a recording at 23:58); 409 `mechanic_busy` when a time block covers the slot; a second recording after a withdrawal; NO_SHOW_RECORDED and NO_SHOW_WITHDRAWN reaching the driver once each with the texts, never held for quiet hours, and the bell entry alone when every channel is muted; `openapi.json` carrying the two routes and the flags. In Jest, domain (pure): the three new moves and that every other pair stays refused; the window end for a Bucharest day. The web tests and the end-to-end test belong to ST-1412.
+
+_From 1259-no-show._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -927,3 +960,4 @@ _From 1393-final-price-predare._
 - `150-FR-009` — superseded by `427-FR-011` (2026-10-29)
 - `427-FR-015` — superseded by `1395-FR-006` (2026-10-30)
 - `343-FR-011` — superseded by `1316-FR-001` (2026-10-30)
+- `220-FR-008` — superseded by `1259-FR-006` (2026-10-31)

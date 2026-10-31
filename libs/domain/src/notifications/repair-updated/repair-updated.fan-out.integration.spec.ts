@@ -21,6 +21,7 @@ import { bellText } from '../templates';
 
 // @traces 409-FR-013
 // @traces 409-FR-017
+// @traces 061-FR-004
 // @traces 1267-FR-012
 
 const redisUrl = redisUrlFor(7);
@@ -309,6 +310,17 @@ describe('telling the driver a garage corrected a repair', () => {
     const before = await counted('skipped');
 
     await fanOut.handle(job('84', { by: 'driver' }));
+
+    expect(await messages(owner)).toEqual([]);
+    expect(await counted('skipped')).toBe(before + 1);
+  });
+
+  it('writes nothing for a row the system brought in step with its job, and counts skipped', async () => {
+    const { job, owner } = await corrected();
+    const fanOut = await start();
+    const before = await counted('skipped');
+
+    await fanOut.handle(job('85', { by: 'system', changed: ['created'] }));
 
     expect(await messages(owner)).toEqual([]);
     expect(await counted('skipped')).toBe(before + 1);

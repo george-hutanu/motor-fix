@@ -91,3 +91,23 @@ p {
 .menu [role="menuitem"]:hover {
   background: var(--mf-line);
 }
+/* A sent transfer: a muted sentence and its cancel, in place of the menu. */
+.transfer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--mf-space-2);
+  color: var(--mf-text-secondary);
+}
+.transfer button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mf-amber-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

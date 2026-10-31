@@ -82,6 +82,9 @@ export {
   RemindersModule,
 } from './cars/reminders/reminders.module';
 export { reminderDayMs } from './cars/reminders/reminders-config';
+export { REPAIR_FROM_JOB_CONSUMER } from './cars/repair-from-job/repair-from-job';
+export { RepairFromJobModule } from './cars/repair-from-job/repair-from-job.module';
+export { RepairsModule } from './cars/repairs/repairs.module';
 export { SavedGaragesModule } from './cars/saved-garages/saved-garages.module';
 export { CarTransfersModule } from './cars/transfers/transfers.module';
 export { BrandLoader } from './catalogue/brand-loader';
@@ -129,6 +132,8 @@ export { GarageFiguresService } from './insights/garage-figures/garage-figures.s
 export { InsightsModule } from './insights/insights.module';
 export { ProfileViewsModule } from './insights/profile-views/profile-views.module';
 export { LiveIdleModule } from './live-video/idle/idle.module';
+export { LIVE_INPUTS_CONSUMER } from './live-video/inputs/inputs';
+export { LiveInputsModule } from './live-video/inputs/inputs.module';
 export {
   LiveVideoModule,
   liveVideoConfig,
@@ -171,6 +176,7 @@ export {
 } from './notifications/inbox-test/inbox-test';
 export { JOB_STAGE_CONSUMER } from './notifications/job-stage/job-stage.fan-out';
 export { NEWS_CONSUMER } from './notifications/news/news.fan-out';
+export { NO_SHOW_CONSUMER } from './notifications/no-show/no-show.fan-out';
 export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';
 export { phoneConfig } from './notifications/phone-config';

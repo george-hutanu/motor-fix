@@ -1,0 +1,30 @@
+@if (save.state() !== 'done') {
+  <form [formGroup]="form" (ngSubmit)="publish()" novalidate data-reply-form>
+    <p class="sub" data-sub>{{ sub() }}</p>
+    <label for="mf-reply-text">{{ 'garage.reviews.reply.label' | t }}</label>
+    <textarea
+      hlmInput
+      rows="5"
+      formControlName="text"
+      id="mf-reply-text"
+      aria-describedby="mf-reply-hint mf-reply-count mf-reply-error"
+    ></textarea>
+    <p class="hint" id="mf-reply-hint">{{ 'garage.reviews.reply.hint' | t }}</p>
+    <p class="count" data-count id="mf-reply-count" [class.over]="over()">{{ count() }}</p>
+    <mf-field-error id="mf-reply-error" [save]="save" [control]="form.controls.text" />
+    <mf-task-error [save]="save" />
+    <div class="actions">
+      <button
+        hlmBtn
+        type="submit"
+        data-publish
+        [mfTaskSubmit]="save"
+        [mfTaskSubmitOff]="blocked()"
+      >
+        {{ 'garage.reviews.reply.submit' | t }}
+      </button>
+    </div>
+  </form>
+} @else {
+  <mf-task-done [save]="save" message="garage.reviews.reply.done" />
+}
