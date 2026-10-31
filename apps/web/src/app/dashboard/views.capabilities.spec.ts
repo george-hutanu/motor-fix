@@ -142,3 +142,46 @@ describe("a mechanic's garage menu for each permission on and off", () => {
     },
   );
 });
+
+// @traces 1400-FR-001 1400-FR-003
+describe('the repairs added by clients view', () => {
+  const view = () =>
+    DASHBOARDS.garage.views.find((v) => v.path === 'client-repairs');
+  const menu = (role: 'garage' | 'receptionist' | 'mechanic') =>
+    allowedViews(
+      'garage',
+      capabilitiesOf(role, {
+        canAnswerQuotes: true,
+        canMoveBookings: true,
+        canRecordFinalPrice: true,
+      }),
+      {},
+    ).map((v) => v.path);
+
+  it('sits after the garage profile and is checked by garage.client_repairs', () => {
+    const paths = DASHBOARDS.garage.views.map((v) => v.path);
+
+    expect(view()?.capability).toBe('garage.client_repairs');
+    expect(paths.indexOf('client-repairs')).toBe(paths.indexOf('profile') + 1);
+  });
+
+  it('is listed for the garage owner alone', () => {
+    expect(menu('garage')).toContain('client-repairs');
+    expect(menu('receptionist')).not.toContain('client-repairs');
+    expect(menu('mechanic')).not.toContain('client-repairs');
+  });
+
+  it('downloads its body only when the view opens', async () => {
+    const { ClientRepairsView } = await import(
+      './client-repairs-view/client-repairs-view'
+    );
+    const route = dashboardRoutes('garage').find(
+      (r) => r.path === 'client-repairs',
+    );
+
+    await expect(view()?.load?.()).resolves.toBe(ClientRepairsView);
+    await expect(route?.children?.[0].loadComponent?.()).resolves.toBe(
+      ClientRepairsView,
+    );
+  });
+});
