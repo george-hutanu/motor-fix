@@ -148,7 +148,6 @@ type CardFields = {
   years?: number | null;
 };
 
-// The history names the switch by its column, as it names the garage's.
 // The name a changed field goes by in the history and in `mechanic.updated`:
 // the direct-requests switch by its column, as the team switch is.
 const auditField = (key: keyof CardFields) =>
