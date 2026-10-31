@@ -28,6 +28,7 @@ const line = (element: HTMLElement) =>
   text(element.querySelector('[data-final-price]'));
 
 // @traces 1393-FR-001
+// @traces 1410-FR-001
 // @traces 1393-FR-005
 // @traces 1393-FR-008
 // @traces 1393-FR-017
@@ -70,7 +71,12 @@ describe('Predare in the job drawer', () => {
     expect(overlays.open).toHaveBeenCalledWith(
       FinalPriceDialog,
       expect.objectContaining({
-        data: expect.objectContaining({ jobId: 'job-1', recorded: null }),
+        data: expect.objectContaining({
+          jobId: 'job-1',
+          quoteFromBani: 89000,
+          quoteToBani: 140000,
+          recorded: null,
+        }),
         shape: 'dialog',
         title: 'garage.jobs.finalPrice.handover',
       }),
@@ -125,7 +131,12 @@ describe('the final price line', () => {
       expect(overlays.open).toHaveBeenCalledWith(
         FinalPriceDialog,
         expect.objectContaining({
-          data: expect.objectContaining({ jobId: 'job-1', recorded: 125050 }),
+          data: expect.objectContaining({
+            jobId: 'job-1',
+            quoteFromBani: 89000,
+            quoteToBani: 140000,
+            recorded: 125050,
+          }),
           title: 'garage.jobs.finalPrice.correctTitle',
         }),
       );
