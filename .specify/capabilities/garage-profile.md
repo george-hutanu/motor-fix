@@ -30,6 +30,7 @@ features:
   - 1367-review-price-marks
   - 1366-garage-map-directions
   - 1246-garage-profile-edit
+  - 1369-receptionist-profile
   - 1247-brand-fuel-edit
 ---
 
@@ -605,13 +606,13 @@ _From 309-open-now-directions._
 
 _From 1246-garage-profile-edit._
 
-### 133-FR-002 — The read MUST answer: 200 for the garage's owner (role `garage`); 403 `forbidden` for the garage's staff who do not hold `garage.profile` (the mechanic, and the receptionist until ST-1369); 404 `not_found` for every other actor (another garage's staff, a driver, an admin) and for a `garageId` that is no garage; 410 `gone` for the staff of a suspended garage, as the public read does; a garage not yet approved answers 404 like the public read. The checks run in this order: no session 401; not staff of this garage (or no such garage) 404; staff without `garage.profile` (the mechanic) 403; then the garage's status (not approved 404, suspended 410). The trust check runs on the server; the menu entry and the view only mirror it.
+### 1369-FR-003 — `GET /api/v1/garages/{garageId}/profile` MUST answer: 200 for the garage's owner (role `garage`) and for its receptionist, with the same answer (phone included, 102-FR-006); 403 `forbidden` for the garage's staff who do not hold `garage.profile` (the mechanic); 404 `not_found` for every other actor (another garage's staff, a driver, an admin) and for a `garageId` that is no garage; 410 `gone` for the staff of a suspended garage, as the public read does; a garage not yet approved answers 404 like the public read. The checks run in this order: no session 401; not staff of this garage (or no such garage) 404; staff without `garage.profile` (the mechanic) 403; then the garage's status (not approved 404, suspended 410). The trust check runs on the server; the menu entry and the view only mirror it. `garage.updated` on the garage's live channel MUST reach the receptionist's open dashboard as it reaches the owner's, so her view re-reads (1246-FR-014).
 
-_From 133-garage-public-profile._
+_From 1369-receptionist-profile._
 
-### 133-FR-003 — The capability table MUST stay unchanged in this story: `garage.profile` stays the owner's only, so the receptionist is refused the read like the mechanic (granting it is ST-1369's, see `## Split`). Every write keeps checking the owner (`assertGarageOwner`).
+### 1369-FR-002 — The capability table MUST grant `garage.profile` to the owner and the receptionist and not to the mechanic (102-FR-002), proven by the role × capability test; the "until ST-1369" clause of 133-FR-003 is thereby retired and no table change is made. Every profile write keeps checking the owner (`assertGarageOwner`), so the grant opens no write to the receptionist (FR-004).
 
-_From 133-garage-public-profile._
+_From 1369-receptionist-profile._
 
 ### 133-FR-004 — The read MUST write no database row, emit no event, record no audit entry and count no profile view; it is read-only and idempotent (filling the public read's cache on a miss, as the public read does, is not a write in this sense).
 
@@ -669,9 +670,9 @@ _From 136-legal-check-panel._
 
 _From 136-legal-check-panel._
 
-### 136-FR-006 — The panel on the view MUST be rendered only for the garage's owner (role `garage`), with no gate of its own: the view's route and redirect (133-FR-010) and the legal check read's refusals (210-FR-001) already keep everyone else out; this story MUST change no capability, role, menu entry or API answer: the receptionist and the mechanic do not reach the view (133-FR-002, 133-FR-003) and the legal check read keeps its 403 for them (210-FR-001). The brief's receptionist tag-only form is deferred to ST-1369 (see Assumptions).
+### 1369-FR-004 — The view MUST stay read only for the receptionist: no "Modifică profilul" control (1246-FR-011) and no "Verificare legală" panel (136-FR-006's owner-only rule, now reached by her), and every profile write MUST keep answering her 403 `forbidden` (1246-FR-004). This story adds no tag-only legal form: the overview's "Profil verificat" strip already shows her the tag (1354-FR-005).
 
-_From 136-legal-check-panel._
+_From 1369-receptionist-profile._
 
 ### 136-FR-007 — Every text this story introduces MUST come from the garage area's translation files in Romanian and English with comma-below diacritics (016-FR-002); the view with the panel MUST render at 320 px and 390 px (the panel's rows stacking and wrapping), tablet and desktop, light and dark, Romanian and English, with no sideways scroll at 320 px, every button at least 44 × 44 px and the smallest text at least 12 px; the panel keeps its own named region (its `h2` under the view's `h1`, beside the "Profilul public" region in the approved state, 133-FR-013; on the suspended state the suspended line stays a paragraph, 133-FR-010), its lamps `aria-hidden` and every state carried by text, not colour alone; the QA sweep's axe checks pass on the view in both states.
 
@@ -845,6 +846,10 @@ _From 1246-garage-profile-edit._
 
 _From 1246-garage-profile-edit._
 
+### 1369-FR-005 — Tests MUST exist before any code (Principle II) and name this feature's ids: the frame spec of FR-001 (menu from the table, entry present, Mecanici and Prețuri absent, the mechanic's menu unchanged); the table's receptionist granted and mechanic refused (FR-002); the read's role matrix with the receptionist at 200 and the mechanic at 403, and a write at 403 for her (FR-003, FR-004); the live audience with the receptionist in `garage.updated`'s audience; and the end-to-end case "a receptionist sees the view" (`garage-profile-legal.spec.ts:210`). Where such a test already passes on `main` it is kept and tagged, not duplicated.
+
+_From 1369-receptionist-profile._
+
 ### 1247-FR-012 — The dialog MUST open on FR-001's read (a skeleton while it loads, the retry text on failure) and never on the profile answer's lists alone; a brand that becomes taken in the dialog starts with all four fuels and every job ticked; a brand turned refused or unstated loses its ticks in the dialog; the last ticked fuel of a taken brand is disabled with "Cel puțin un carburant rămâne bifat" / "At least one fuel type stays ticked" beside it; a taken brand stored with no fuel (possible under 397-FR-010) opens with no fuel ticked and the same text as an error, and Save stays blocked until one is ticked; a re-taken brand within one dialog session starts fresh (all four fuels, every job) and the dialog always sends `fuels` and `jobs` for each taken brand; a taken brand with every job unticked shows the brands step's existing warning "Nu vei primi cereri pentru {brand}" (`public.listing.brands.noRequests`), which does not block the save; the last-fuel rule lives in the shared brands step, so the listing form gains it too (research.md R8); a note over 140 or a phrase over 60 characters shows the limit error under the field and blocks the send.
 
 _From 1247-brand-fuel-edit._
@@ -890,5 +895,8 @@ _From 1247-brand-fuel-edit._
 - `133-FR-001` — superseded by `1246-FR-008` (2026-10-30)
 - `133-FR-006` — superseded by `1246-FR-011` (2026-10-30)
 - `133-FR-011` — superseded by `1246-FR-014` (2026-10-30)
+- `133-FR-002` — superseded by `1369-FR-003` (2026-10-30)
+- `133-FR-003` — superseded by `1369-FR-002` (2026-10-30)
+- `136-FR-006` — superseded by `1369-FR-004` (2026-10-30)
 - `1246-FR-011` — superseded by `1247-FR-010` (2026-10-30)
 - `1246-FR-012` — superseded by `1247-FR-011` (2026-10-30)
