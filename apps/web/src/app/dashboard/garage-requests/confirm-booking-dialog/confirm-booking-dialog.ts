@@ -112,11 +112,7 @@ export class ConfirmBookingDialog {
   });
 
   constructor() {
-    this.readOptions().then((offered) => {
-      if (!offered) return;
-      this.lift.set(offered.needsLift ? '' : '0');
-      this.task.focusStart();
-    });
+    this.reread().then((offered) => offered && this.task.focusStart());
   }
 
   private readOptions() {
@@ -134,11 +130,11 @@ export class ConfirmBookingDialog {
       .finally(() => this.reading.set(false));
   }
 
-  // The place was taken meanwhile: the choices are read again, and a pick
-  // still offered stays picked.
+  // Reads the choices (at opening, and again when the place was taken
+  // meanwhile): a pick still offered stays picked.
   private async reread() {
     const offered = await this.readOptions();
-    if (!offered) return;
+    if (!offered) return null;
     if (!offered.mechanics.some((one) => one.id === this.mechanic())) {
       this.mechanic.set('');
     }
@@ -146,6 +142,7 @@ export class ConfirmBookingDialog {
     if (this.lift() === '' || lift > offered.liftCount) {
       this.lift.set(offered.needsLift ? '' : '0');
     }
+    return offered;
   }
 
   protected readonly mechanicMessage = computed(() =>

@@ -773,8 +773,7 @@ describe('the confirm panel: a slot taken meanwhile', () => {
     options.mockRejectedValueOnce(refusal(500, { code: 'error', status: 500 }));
     await refusedOnce();
 
-    expect(top()).toBeTruthy();
-    expect(top()).not.toBe('Locul tocmai a fost ocupat');
+    expect(top()).toBe('Ceva nu a mers. Încearcă din nou.');
     expect(picked('Mecanic')).toBe('Maria Ionescu');
     expect(picked('Elevator')).toBe('Elevator 2');
     expect(button('Confirmă')?.disabled).toBe(false);
