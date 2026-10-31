@@ -16,7 +16,7 @@ type Sheet = Awaited<
 const costel = { id: 'mechanic-1', name: 'Costel Ionescu' };
 
 const sheetOf = (answer: Partial<Sheet> = {}) =>
-  jest.fn(async () => ({
+  vi.fn(async () => ({
     day: '2026-10-10',
     entries: [] as Sheet['entries'],
     jobCount: 0,
@@ -151,7 +151,7 @@ describe('get_day_sheet', () => {
 
   it('lists the garage’s mechanics when the name matches none or two', async () => {
     const mechanics = [costel, { id: 'mechanic-2', name: 'Costel Pop' }];
-    const get = jest.fn(async () => {
+    const get = vi.fn(async () => {
       throw new NotFoundException({
         code: 'mechanic_not_found',
         mechanics,

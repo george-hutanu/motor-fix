@@ -43,7 +43,7 @@ const entry = (id: string, more: Partial<Entry> = {}): Entry => ({
 const vlad = { id: 'mechanic-1', name: 'Vlad Stan' };
 
 const scheduleOf = (answer: Partial<Schedule> = {}) =>
-  jest.fn(async () => ({
+  vi.fn(async () => ({
     blocks: [] as Schedule['blocks'],
     entries: [] as Entry[],
     from: '2026-10-09',
@@ -124,7 +124,7 @@ describe('get_schedule', () => {
   });
 
   it('answers the read’s refusal of a range or a lift as the API does', async () => {
-    const list = jest.fn(async () => {
+    const list = vi.fn(async () => {
       throw new BadRequestException({
         code: 'validation_failed',
         message: 'At most 7 days',

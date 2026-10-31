@@ -59,7 +59,7 @@ describe('catalogue', () => {
     const who = caller({ garageId: 'garage-7', roles: ['driver', 'garage'] }, [
       'motorfix.read',
     ]);
-    const list = jest.fn(async () => ({
+    const list = vi.fn(async () => ({
       blocks: [],
       entries: [],
       from: '2026-10-09',
@@ -207,7 +207,7 @@ const declaring = [...catalogue, bookFixture].filter((t) => t.approval);
 
 // @traces 1254-FR-001
 describe('every tool declaring in-app approval', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('includes the fixture', () => {
     expect(declaring).toContain(bookFixture);
@@ -227,7 +227,7 @@ describe('every tool declaring in-app approval', () => {
     '%s never runs its use case at the yes: it saves one approval',
     async (name, tool) => {
       expect(VALID[name]).toBeDefined();
-      const handler = jest.spyOn(tool, 'handler');
+      const handler = vi.spyOn(tool, 'handler');
       const confirmations = memoryConfirmations();
       const approvals = memoryApprovals();
       const ctx = context({ approvals, confirmations });
