@@ -66,8 +66,6 @@ async function open(
 const panel = () =>
   document.querySelector<HTMLElement>('mf-overlay-panel') as HTMLElement;
 const body = () => panel().querySelector('mf-cancel-transfer') as HTMLElement;
-const _buttons = () =>
-  [...body().querySelectorAll('button')].map((b) => b.textContent?.trim());
 const button = (name: string) =>
   [...body().querySelectorAll('button')].find(
     (b) => b.textContent?.trim() === name,
