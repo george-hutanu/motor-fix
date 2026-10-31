@@ -53,6 +53,7 @@ model Garage {
   reports                    GarageReport[]
   repairs                    Repair[]
   savedBy                    SavedGarage[]
+  suggestionDismissals       SaveSuggestionDismissal[]
   members                    GarageMember[]
   mechanics                  Mechanic[]
   notificationPreferences    NotificationPreference[]

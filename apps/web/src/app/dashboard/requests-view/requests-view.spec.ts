@@ -859,6 +859,7 @@ describe('Cererea activă at the top of Cererile mele', () => {
       jobs: [],
       mechanicName: null,
       range: null,
+      saveSuggestion: null,
       stage: 'sent',
     },
   };

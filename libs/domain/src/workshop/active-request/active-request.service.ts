@@ -1,6 +1,7 @@
 import type {
   ActiveRequestAnswerDto,
   ActiveRequestDto,
+  SaveSuggestionDto,
 } from '@motor-fix/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 
@@ -89,9 +90,32 @@ export class ActiveRequestService {
       jobs: jobsOf(row.jobs),
       mechanicName: mechanicOf(booking, teamOn),
       range: rangeOf(row),
+      saveSuggestion:
+        booking &&
+        job?.status === 'done' &&
+        booking.garage.status === 'approved'
+          ? await this.suggestionFor(actor.accountId, booking.garageId)
+          : null,
       stage: stageOf(row),
     };
     return { openCount: open.length, request };
+  }
+
+  // The garage of a finished job, offered for saving unless the driver
+  // already saved it or said no to it.
+  private async suggestionFor(
+    accountId: string,
+    garageId: string,
+  ): Promise<SaveSuggestionDto | null> {
+    const garage = await this.prisma.garage.findFirst({
+      select: { id: true, name: true },
+      where: {
+        id: garageId,
+        savedBy: { none: { accountId } },
+        suggestionDismissals: { none: { accountId } },
+      },
+    });
+    return garage ? { garageId: garage.id, name: garage.name } : null;
   }
 
   // Mechanics are named unless the garage turned its team off.

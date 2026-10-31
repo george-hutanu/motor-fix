@@ -356,6 +356,7 @@ export type { SavedGaragesPageDto } from './models/saved-garages-page-dto';
 export type { SaveGarageDto } from './models/save-garage-dto';
 export type { SaveListingDraftDto } from './models/save-listing-draft-dto';
 export type { SavePushSubscriptionDto } from './models/save-push-subscription-dto';
+export type { SaveSuggestionDto } from './models/save-suggestion-dto';
 export type { ScheduleCarDto } from './models/schedule-car-dto';
 export type { SendNewsDto } from './models/send-news-dto';
 export type { SendQuoteDto } from './models/send-quote-dto';
@@ -727,6 +728,8 @@ export type { SavedGaragesControllerList$Params as SavedGaragesControllerList$Pa
 export { savedGaragesControllerList as savedGaragesControllerList } from './fn/saved-garages/saved-garages-controller-list';
 export type { SavedGaragesControllerIds$Params as SavedGaragesControllerIds$Params } from './fn/saved-garages/saved-garages-controller-ids';
 export { savedGaragesControllerIds as savedGaragesControllerIds } from './fn/saved-garages/saved-garages-controller-ids';
+export type { SaveSuggestionsControllerDismiss$Params as SaveSuggestionsControllerDismiss$Params } from './fn/saved-garages/save-suggestions-controller-dismiss';
+export { saveSuggestionsControllerDismiss as saveSuggestionsControllerDismiss } from './fn/saved-garages/save-suggestions-controller-dismiss';
 export type { DashboardLayoutsControllerRead$Params as DashboardLayoutsControllerRead$Params } from './fn/dashboard-layouts/dashboard-layouts-controller-read';
 export { dashboardLayoutsControllerRead as dashboardLayoutsControllerRead } from './fn/dashboard-layouts/dashboard-layouts-controller-read';
 export type { DashboardLayoutsControllerSave$Params as DashboardLayoutsControllerSave$Params } from './fn/dashboard-layouts/dashboard-layouts-controller-save';

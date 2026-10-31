@@ -350,6 +350,7 @@ export type { SavedGaragesPageDto } from './models/saved-garages-page-dto';
 export type { SaveGarageDto } from './models/save-garage-dto';
 export type { SaveListingDraftDto } from './models/save-listing-draft-dto';
 export type { SavePushSubscriptionDto } from './models/save-push-subscription-dto';
+export type { SaveSuggestionDto } from './models/save-suggestion-dto';
 export type { ScheduleCarDto } from './models/schedule-car-dto';
 export type { SendNewsDto } from './models/send-news-dto';
 export type { SendQuoteDto } from './models/send-quote-dto';

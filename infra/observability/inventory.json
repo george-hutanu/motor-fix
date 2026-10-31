@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 252,
+    "count": 253,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1833,6 +1833,19 @@
       ],
       "reason": "PUT, DELETE, GET ids and the GET list (ST-291) show on the request-duration metric by route and status code; each save and removal is an audit row and a saved_garage.added or saved_garage.removed event, and reading the list changes nothing, so no product counter is added; the list's spans come from the HTTP and Prisma auto-instrumentation",
       "story": "ST-290, ST-291"
+    },
+    {
+      "kind": "endpoint",
+      "name": "save-suggestions",
+      "source": "libs/domain/src/cars/save-suggestions/save-suggestions.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/save-suggestions/:garageId/dismiss",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "POST dismiss shows on the request-duration metric by route and status code; a dismissal is a display preference with no audit row and no event, so no product counter is added; its spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-293"
     },
     {
       "kind": "endpoint",
