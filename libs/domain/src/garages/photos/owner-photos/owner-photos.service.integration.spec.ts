@@ -34,7 +34,7 @@ beforeEach(async () => {
 
 afterAll(() => prisma.$disconnect());
 
-const world = (status?: 'approved' | 'pending' | 'suspended') =>
+const world = (status?: 'approved' | 'draft' | 'suspended') =>
   galleryWorld(prisma, account, processed, status);
 
 const FILE = { checksum: 'AAAAAA==', contentType: 'image/jpeg', size: 1000 };
@@ -90,7 +90,7 @@ describe('who reaches the gallery', () => {
   });
 
   it('answers 404 for a garage not yet approved and 410 for a suspended one', async () => {
-    const pending = await world('pending');
+    const pending = await world('draft');
     expect(
       (await refusalOf(parts.service.list(pending.owner, pending.nord.id)))
         .status,

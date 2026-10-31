@@ -183,7 +183,7 @@ describe("the gallery save's refusals, in order", () => {
   });
 
   it('answers 404 for a garage not yet approved', async () => {
-    const h = harness({ status: 'pending' });
+    const h = harness({ status: 'draft' });
 
     const r = await refused(h.save({ photos: same, version: '4' }));
 

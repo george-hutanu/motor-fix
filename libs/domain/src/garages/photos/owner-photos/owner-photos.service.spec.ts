@@ -130,7 +130,7 @@ describe("the owner's upload address", () => {
     ).toMatchObject({ code: 'gone', status: 410 });
     expect(
       await refused(
-        harness({ status: 'pending' }).service.uploadAddress(
+        harness({ status: 'draft' }).service.uploadAddress(
           actor(),
           GARAGE,
           FILE,
@@ -202,7 +202,7 @@ describe("the owner's unsaved upload", () => {
 
   // @traces 1249-FR-008
   it('answers 404 for a garage not yet approved, holding nothing back', async () => {
-    const h = harness({ status: 'pending' });
+    const h = harness({ status: 'draft' });
     h.storage.metadataOf.mockResolvedValue({});
 
     const r = await refused(h.service.upload(actor(), GARAGE, ID));

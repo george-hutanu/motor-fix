@@ -134,7 +134,11 @@ export function ownerPhotosWorld(prisma: PrismaClient) {
 const actorOf = (accountId: string, role: Role, garageId: string): Actor => ({
   accountId,
   garageId,
-  permissions: {},
+  permissions: {
+    canAnswerQuotes: false,
+    canMoveBookings: false,
+    canRecordFinalPrice: false,
+  },
   role,
   roles: [role],
 });
@@ -145,7 +149,7 @@ export async function galleryWorld(
   prisma: PrismaClient,
   account: (name: string, roles: Role[]) => Promise<string>,
   processed: (key: string) => Promise<void>,
-  status: 'approved' | 'pending' | 'suspended' = 'approved',
+  status: 'approved' | 'draft' | 'suspended' = 'approved',
 ) {
   const nord = await prisma.garage.create({
     data: { name: 'Service Auto Nord', slug: `nord-${randomUUID()}`, status },
