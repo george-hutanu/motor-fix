@@ -125,6 +125,7 @@ features:
   - 1349-cockpit-chart-settle
   - 1257-quote-reminders
   - 1315-optimistic-toggles
+  - 1411-1315-qa-fixes
   - 1379-provider-calls-worker
 ---
 
@@ -2980,17 +2981,17 @@ _From 1349-cockpit-chart-settle._
 
 _From 1257-quote-reminders._
 
-### 1315-FR-008 — Each press on the three toggle surfaces (settings switch, bell read and read-all, price-list hide/show) MUST make exactly one write call, and the web MUST NOT resend a refused or failed one (the rollback ends it). The `Idempotency-Key` on these writes is the Split's second story; the brand ticks ride the draft keeper's whole-form save (idempotent by construction) and the listing's send already carries its key (`draft-keeper.ts` `submit`).
+### 1411-FR-007 — Each press on the three toggle surfaces (settings switch, bell read and read-all, price-list hide/show) MUST make at most one write call, and a mark-all press while a mark-all is on its way MUST make none (every row already shows read, nothing is left to send); the web MUST NOT resend a refused or failed call (modifies 1315-FR-008; `bell.spec.ts` asserts the guard).
 
-_From 1315-optimistic-toggles._
+_From 1411-1315-qa-fixes._
 
 ### 1315-FR-009 — Bookings and payments MUST stay non-optimistic: `accept-quote-dialog.ts`, `cancel-booking-dialog.ts`, `send-quote-dialog.ts`, `request-quote.ts`, `job-steps.ts` and `waiting.ts` keep waiting for the server's answer before the screen shows the outcome; a test asserts for the accept and cancel dialogs that the screen changes only after the answer (there is no payment write in the product today).
 
 _From 1315-optimistic-toggles._
 
-### 1315-FR-011 — An end-to-end spec in `apps/web-e2e` MUST, with Chromium's network emulated as Slow 3G (`Network.emulateNetworkConditions`: 400 ms latency, 500 kbit/s down, 500 kbit/s up), prove on each of the four surfaces that the screen changes within 100 ms of the tap (a `pointerdown` listener installed by `page.evaluate` stamps `performance.now()`, a `MutationObserver` stamps the change of the named node: the settings switch's `aria-checked`, the bell row's unread mark, the price row's state text, the brand tick's checked state; one measurement per surface, no retry; every Playwright project runs Chromium, so no project is skipped), and that a refused write (the route answered 500 by the test) rolls the screen back with the surface's message: the settings toast, the bell toast, the price-list row line; the brands step is proven for the 100 ms only (FR-010).
+### 1411-FR-003 — Every optimistic-state assertion, in the flows and in `apps/web-e2e/src/optimistic-toggles.spec.ts`, MUST observe the named attribute of the named node only (`attributeFilter`: `aria-checked` on the settings switch, `class` on the bell row, `aria-pressed` on the fuel tick; `characterData`/`childList` on the price row's state text node), never any subtree mutation; MUST assert the bell badge going from 3 to 2 before the read answers; MUST assert the price row reading "ascuns de tine" with its "Modifică", "Arată" and "Șterge" buttons disabled before the answer; and MUST assert each failure toast exactly once (the count of matching toasts is 1; the price row's refused write shows its alert line instead of a toast, and that line is counted once) (modifies 1315-FR-011).
 
-_From 1315-optimistic-toggles._
+_From 1411-1315-qa-fixes._
 
 ### 1315-FR-012 — Every change MUST live in code the initial download does not hold: the dashboard views and the listing form are lazy routes today (`app.routes.ts` `loadChildren` / `loadComponent`), and no new file joins the eager app shell; the production build's `initial` budget (1 MB error) MUST keep passing with the initial bundle no larger than before this story (the plan records the merge base's production `initial` total; the PR body states the figure after).
 
@@ -3007,6 +3008,14 @@ _From 1315-optimistic-toggles._
 ### 1315-FR-015 — Tests MUST come before the code (Principle II): `notification-settings.spec.ts` (two toggles, both saves failing, the switch ending on the server's row; the toast twice; the first scenario of 198-FR-014 kept), `bell.spec.ts` (the optimistic read and read-all, their rollbacks, the out-of-order first-page reloads keeping a row read), `prices-view.spec.ts` (the optimistic hide and show, the rollback with the row line, one write per press), a spec per FR-009 dialog, and the end-to-end spec of FR-011; each test file carries one whole-line `// @traces` comment naming its `1315-FR-<n>` ids.
 
 _From 1315-optimistic-toggles._
+
+### 1411-FR-002 — The PR tester's QA flows for this PR (`.specify/.cache/qa-flows-<pr>.mjs`, run on GitHub Actions by the PR QA workflow) MUST drive every acceptance scenario of 1315 US1-US4 in a browser, the three the #643 run skipped included: 1315 US1 s2 (one switch flipped twice, both saves fail, the switch ends on the server's row, two toasts), 1315 US2 s3 ("Marchează tot ca citit" refused: rows unread again, badge restored, one toast) and 1315 US4 s2 (the draft keeper's refused save keeps the ticks and shows "Ciorna nu a putut fi salvată pe server. Încearcă din nou."), plus this story's own scenarios; each flow pushes its findings into `findings` and waits on a visible element, `waitForText` or the stream's open state, never `networkidle`.
+
+_From 1411-1315-qa-fixes._
+
+### 1411-FR-008 — Tests MUST come before the code (Principle II): every changed or added test carries a whole-line `// @traces 1411-FR-<n>` comment; no new user-facing text (the existing `shell.notifications.saveFailed`, `shell.bell.readFailed`, `garage.prices.notSaved` and the draft keeper's note are reused); the change stays in `apps/web`, `libs/domain/src/seed*`, `apps/web-e2e` and the specs, with no API or contract change; `specs/1315-optimistic-toggles/tasks.md` T016 is corrected to name the fuel tick on a taken brand as the surface actually measured.
+
+_From 1411-1315-qa-fixes._
 
 ### 1379-FR-001 — The four direct sends — the WhatsApp sign-in code (SIGN_IN_CODE), the phone change code (PHONE_CHANGE_CODE), the staff invite by e-mail and by WhatsApp (STAFF_INVITE), and the car transfer link by WhatsApp (CAR_TRANSFER_LINK) — MUST be handed to the provider by the worker process only. The API MUST add one job to a new BullMQ queue `direct-send` on the existing broker (one attempt, no retry) carrying the template, language, recipient and template values, and MUST await that job's result for at most a fixed cap of 8000 ms (one named constant) before answering the request.
 
@@ -3154,3 +3163,5 @@ _From 1379-provider-calls-worker._
 - `1360-FR-011` — superseded by `493-FR-002` (2026-10-24)
 - `432-FR-005` — superseded by `493-FR-003` (2026-10-24)
 - `703-FR-009` — superseded by `493-FR-004` (2026-10-24)
+- `1315-FR-011` — superseded by `1411-FR-003` (2026-10-30)
+- `1315-FR-008` — superseded by `1411-FR-007` (2026-10-30)

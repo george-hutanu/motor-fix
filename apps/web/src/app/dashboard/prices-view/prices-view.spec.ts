@@ -339,6 +339,19 @@ describe('Prețuri: a job an admin rejected', () => {
     expect(css).toMatch(/\.said\s*\{[^}]*overflow-wrap:\s*anywhere/);
     expect(css).toMatch(/\.said\s*\{[^}]*min-width:\s*0/);
   });
+
+  // @traces 1411-FR-006
+  it('keeps the edit switch at 16 px on a phone, in the narrower body face', () => {
+    const css = readFileSync(join(__dirname, 'prices-view.css'), 'utf8');
+    const phone = css.match(
+      /@media not all and \(min-width: 400px\) \{\s*\.toggle \{([^}]*)\}/,
+    )?.[1];
+
+    expect(phone).toBeDefined();
+    expect(phone).toMatch(/font-size:\s*var\(--mf-size-body\)/);
+    expect(phone).toMatch(/font-family:\s*var\(--mf-font-body\)/);
+    expect(phone).not.toMatch(/--mf-size-small/);
+  });
 });
 
 // @traces 172-FR-002 172-FR-003
