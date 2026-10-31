@@ -72,7 +72,7 @@ export class UpdateNotificationPreferenceDto {
 }
 
 // Why a message went by another channel than the one it was meant for.
-export const FALLBACK_REASONS = [
+const FALLBACK_REASONS = [
   'no_device',
   'phone_not_verified',
   'sms_cap_reached',

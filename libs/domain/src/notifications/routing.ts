@@ -1,4 +1,4 @@
-import type { OutsideChannel } from '@motor-fix/contracts';
+import type { FallbackReason, OutsideChannel } from '@motor-fix/contracts';
 
 import {
   type NotificationType,
@@ -68,11 +68,8 @@ export function outsideChannels(
   return [...new Set(sent)].sort();
 }
 
-export type FallbackReason =
-  | 'no_device'
-  | 'phone_not_verified'
-  | 'send_failed'
-  | 'sms_cap_reached';
+// The fallbacks counter's reasons, the same set the preferences read names.
+export type { FallbackReason };
 
 export interface Substitution {
   from: OutsideChannel;
