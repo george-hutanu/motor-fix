@@ -173,7 +173,8 @@ if (isEntryPoint(import.meta.url)) {
   }
   // Every read is bounded like realGh's: a hung gh never holds the wait the session sleeps on.
   const bounded = spawnRun({ timeout: 60_000 });
-  const gh = async (args) => (args[0] === "pr" ? ghRun(args, { run: bounded }) : realGh(args));
+  // The PR and run reads share gh's disk cache for just under a poll, so every waiter on a PR spends one call.
+  const gh = async (args) => (args[0] === "pr" || args[0] === "run" ? ghRun(args, { run: bounded, cache: "50s" }) : realGh(args));
   const limit = (name, fallback) => (Number(process.env[name]) || fallback) * 60_000;
   const out = await waitForCi({
     pr,

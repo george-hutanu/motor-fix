@@ -41,6 +41,7 @@ features:
   - 1185-accent-search
   - 1246-garage-profile-edit
   - 1315-optimistic-toggles
+  - 1411-1315-qa-fixes
   - 059-profile-direct-requests
 ---
 
@@ -1257,6 +1258,10 @@ _From 1246-garage-profile-edit._
 ### 1315-FR-010 — The brand ticks of the listing's brands step MUST keep changing on screen at once (draft state) with no rollback and no per-tick key; the end-to-end spec proves the 100 ms under Slow 3G (FR-011).
 
 _From 1315-optimistic-toggles._
+
+### 1411-FR-004 — The brand surface of the 100 ms proof (1315 US4 s1 / 1315-FR-010) MUST be a fuel tick's `aria-pressed` on a taken brand (BMW tapped once first, then the "BMW, Benzină" fuel button), in `optimistic-toggles.spec.ts` and in the flows, never the BMW chip.
+
+_From 1411-1315-qa-fixes._
 
 ## Retired
 

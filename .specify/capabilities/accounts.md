@@ -63,6 +63,7 @@ features:
   - 400-receptionist
   - 1391-admin-dashboard-customise
   - 1379-provider-calls-worker
+  - 165-admin-roles
 ---
 
 # Capability: Accounts
@@ -1571,6 +1572,10 @@ _From 011-dashboard-sections._
 ### 011-FR-013 — Tests MUST exist before the code (Principle II), each test file carrying one whole-line `// @traces` comment naming this feature's ids. In Jest, unit: the shared panel's rows, positions, switch names and states, the dimmed row, the failed save flipping back with its alert, "Gata"; Panou's hidden step after the four of 099-FR-002, the count for the owner, the receptionist, a mechanic with and without `can_answer_quotes`, a feature off and a hidden section, the empty message, the default on a failed read, the re-read on the event, and nothing drawn before the read answers. Against a real database: the three garage roles' layouts read, saved and read back by the same account, each with the eight keys; `driver` still 404; a mechanic's save with `sched: false` kept; another account's layout never returned; a key outside the eight refused with 400. In Playwright, end to end: the owner hides two sections, reloads, they stay hidden, the menu still opens their views, and the count reads "5 din 7 secțiuni afișate"; a mechanic without permissions sees only her two rows.
 
 _From 011-dashboard-sections._
+
+### 165-FR-001 — The system MUST have one admin role at launch (A39): the `admin` row of the capabilities table holds every capability whose name starts with `admin.` and no other role's row holds any of them; there is no second admin role, no per-admin scope list, no role grant and no screen for them until a decision page names the roles and their `admin/*` capabilities (none exists on 2026-10-31). A test MUST fail when an `admin.*` capability is missing from the admin row or present in another row.
+
+_From 165-admin-roles._
 
 ## Retired
 
