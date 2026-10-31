@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
-import { readdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 
 import { MEDIA_LIMITS } from '@motor-fix/contracts';
@@ -8,6 +9,12 @@ import { MEDIA_LIMITS } from '@motor-fix/contracts';
 import { convertClip } from './clip';
 
 const calls: { tool: string; timeout: number }[] = [];
+let mockTmp: string | undefined;
+
+jest.mock('node:os', () => {
+  const os = jest.requireActual<typeof import('node:os')>('node:os');
+  return { ...os, tmpdir: () => mockTmp ?? os.tmpdir() };
+});
 let took: number[] = [];
 let now = 0;
 let jump: (() => void) | undefined;
@@ -31,8 +38,19 @@ jest.mock('node:child_process', () => ({
 }));
 
 const LIMIT = MEDIA_LIMITS.conversionTimeoutMs;
+// A folder of this spec's own: other Jest workers make media-* folders in the
+// shared temp dir at the same time, so the leftover check reads only ours.
+const ownTmp = mkdtempSync(join(tmpdir(), 'clip-deadline-'));
 const mediaDirs = () =>
   readdirSync(tmpdir()).filter((name) => name.startsWith('media-'));
+
+beforeAll(() => {
+  mockTmp = ownTmp;
+});
+afterAll(() => {
+  mockTmp = undefined;
+  rmSync(ownTmp, { force: true, recursive: true });
+});
 
 beforeEach(() => {
   calls.length = 0;
@@ -113,6 +131,7 @@ describe('the conversion deadline under hostile timing', () => {
   });
 
   it('removes its working folder when the budget runs out', async () => {
+    expect(tmpdir()).toBe(ownTmp);
     const before = mediaDirs();
     took = [LIMIT];
 
