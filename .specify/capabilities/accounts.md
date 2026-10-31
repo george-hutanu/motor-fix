@@ -1399,7 +1399,7 @@ _From 102-garage-members._
 
 _From 102-garage-members._
 
-### 1369-FR-001 — The garage menu, tab bar and routes of a receptionist MUST come from the capability table's receptionist row (102-FR-004), so that they hold "Profilul service-ului" / "Garage profile" and lack Mecanici and Prețuri; the frame's receptionist test MUST render her from that row (`capabilitiesOf('receptionist', …)`), never from a hand-written list, and assert the entry present.
+### 1369-FR-001 — The garage menu, tab bar and routes MUST keep coming from `allowedViews` over the capability table (160-FR-007), so that with the rows of 102-FR-002 a mechanic without permissions sees Panou, Lucrări, Programări, Setări and Istoric modificări; a receptionist sees Panou, Cereri de ofertă, Programări, Lucrări, Recenzii, Profilul service-ului, Setări and Istoric modificări ("Profilul service-ului" / "Garage profile" present, Mecanici and Prețuri absent); the owner sees everything released. Setări stays for every role because it holds the person's own device and notification choices (198-FR-001, ST-142); its owner-only panels are gated inside it (102-FR-013). The frame's receptionist test MUST render her from the table's receptionist row (`capabilitiesOf('receptionist', …)`), never from a hand-written list, and assert the entry present.
 
 _From 1369-receptionist-profile._
 

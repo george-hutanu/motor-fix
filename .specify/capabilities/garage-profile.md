@@ -605,11 +605,11 @@ _From 309-open-now-directions._
 
 _From 1246-garage-profile-edit._
 
-### 1369-FR-003 — `GET /api/v1/garages/{garageId}/profile` MUST answer the receptionist 200 with the owner's answer (phone included, 102-FR-006) and the mechanic 403 `forbidden`; the other answers of 133-FR-002 (401, 404, 410) are unchanged. `garage.updated` on the garage's live channel MUST reach the receptionist's open dashboard as it reaches the owner's, so her view re-reads (133-FR-011).
+### 1369-FR-003 — `GET /api/v1/garages/{garageId}/profile` MUST answer: 200 for the garage's owner (role `garage`) and for its receptionist, with the same answer (phone included, 102-FR-006); 403 `forbidden` for the garage's staff who do not hold `garage.profile` (the mechanic); 404 `not_found` for every other actor (another garage's staff, a driver, an admin) and for a `garageId` that is no garage; 410 `gone` for the staff of a suspended garage, as the public read does; a garage not yet approved answers 404 like the public read. The checks run in this order: no session 401; not staff of this garage (or no such garage) 404; staff without `garage.profile` (the mechanic) 403; then the garage's status (not approved 404, suspended 410). The trust check runs on the server; the menu entry and the view only mirror it. `garage.updated` on the garage's live channel MUST reach the receptionist's open dashboard as it reaches the owner's, so her view re-reads (1246-FR-014).
 
 _From 1369-receptionist-profile._
 
-### 1369-FR-002 — The capability table MUST grant `garage.profile` to the receptionist and not to the mechanic (102-FR-002), proven by the role × capability test; the "until ST-1369" clause of 133-FR-003 is thereby retired and no table change is made.
+### 1369-FR-002 — The capability table MUST grant `garage.profile` to the owner and the receptionist and not to the mechanic (102-FR-002), proven by the role × capability test; the "until ST-1369" clause of 133-FR-003 is thereby retired and no table change is made. Every profile write keeps checking the owner (`assertGarageOwner`), so the grant opens no write to the receptionist (FR-004).
 
 _From 1369-receptionist-profile._
 
