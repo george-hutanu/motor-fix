@@ -575,3 +575,57 @@ describe('ciOkOn', () => {
     assert.equal(ciOkOn(on([check('CI OK later', 'success')]), 'sha1'), false);
   });
 });
+
+describe('the read cache', () => {
+  const routes = {
+    'GET pulls/160': pull(),
+    'GET commits/head1/check-runs?per_page=100&filter=all': { check_runs: [{ name: 'CI OK', status: 'completed', conclusion: 'success' }] },
+    'GET commits/head1/status': { statuses: [] },
+    'GET actions/runs/77': { id: 77, status: 'completed', conclusion: 'success', display_title: 'PR QA #160' },
+  };
+  const cacheOf = (f) => f.calls.filter((c) => c.file === 'gh').map((c) => (c.args.includes('--cache') ? c.args[c.args.indexOf('--cache') + 1] : null));
+
+  it('asks gh to cache every GET a polling caller reads, so duplicate pollers share one call', () => {
+    const f = fake(routes);
+    assert.equal(gh(['pr', 'checks', '160', '--json', 'name,bucket'], f, {}, { cache: '50s' }).code, 0);
+    assert.ok(cacheOf(f).length > 0);
+    assert.deepEqual([...new Set(cacheOf(f))], ['50s']);
+  });
+
+  it('caches nothing unless the caller asks, so a read after a write is never stale', () => {
+    const f = fake(routes);
+    gh(['pr', 'view', '160', '--json', 'state'], f, {});
+    assert.deepEqual([...new Set(cacheOf(f))], [null]);
+  });
+
+  it('never caches a write', () => {
+    const f = fake({ ...routes, 'POST issues/160/comments': {} });
+    gh(['pr', 'comment', '160', '--body', 'b'], f, CLOUD, { cache: '50s' });
+    const post = f.calls.find((c) => c.args.includes('POST'));
+    assert.ok(post && !post.args.includes('--cache'));
+  });
+
+  it('takes GH_REST_CACHE over the caller, 0 turning the cache off', () => {
+    const off = fake(routes);
+    gh(['pr', 'view', '160', '--json', 'state'], off, { GH_REST_CACHE: '0' }, { cache: '50s' });
+    assert.deepEqual([...new Set(cacheOf(off))], [null]);
+    const longer = fake(routes);
+    gh(['pr', 'view', '160', '--json', 'state'], longer, { GH_REST_CACHE: '2m' }, { cache: '50s' });
+    assert.deepEqual([...new Set(cacheOf(longer))], ['2m']);
+  });
+
+  it('reads run view status and conclusion over REST, cached like the PR reads', () => {
+    const f = fake(routes);
+    const r = gh(['run', 'view', '77', '--json', 'status,conclusion'], f, {}, { cache: '50s' });
+    assert.equal(r.code, 0, r.stderr);
+    assert.deepEqual(JSON.parse(r.stdout), { status: 'completed', conclusion: 'success' });
+    assert.deepEqual(f.api(), ['GET actions/runs/77']);
+    assert.deepEqual(cacheOf(f), ['50s']);
+  });
+
+  it('passes any other run view through to gh', () => {
+    const f = fake(routes);
+    gh(['run', 'view', '77', '--log-failed'], f, {});
+    assert.deepEqual(f.calls.map((c) => c.args), [['run', 'view', '77', '--log-failed']]);
+  });
+});
