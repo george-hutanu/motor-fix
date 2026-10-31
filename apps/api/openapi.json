@@ -23561,6 +23561,16 @@
             "description": "A workshop only.",
             "format": "double"
           },
+          "areaLat": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
+            "format": "double"
+          },
+          "areaLng": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
+            "format": "double"
+          },
           "serviceRadiusKm": {
             "type": "number",
             "description": "A mobile mechanic only: how far from its base it travels.",
@@ -25332,6 +25342,16 @@
           "longitude": {
             "type": "number",
             "description": "A workshop only.",
+            "format": "double"
+          },
+          "areaLat": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
+            "format": "double"
+          },
+          "areaLng": {
+            "type": "number",
+            "description": "A mobile mechanic only: the service area's centre rounded to two decimals, about a kilometre",
             "format": "double"
           },
           "serviceRadiusKm": {
