@@ -4,10 +4,10 @@
   variant="secondary"
   type="button"
   [attr.aria-expanded]="open()"
-  [attr.aria-label]="(open() ? 'driver.cars.sold.hideFor' : 'driver.cars.sold.showFor') | t: { car: name() }"
+  [attr.aria-label]="open() ? ('driver.cars.sold.hideFor' | t: { car: name() }) : ('driver.cars.sold.showFor' | t: { car: name() })"
   (click)="toggle()"
 >
-  {{ (open() ? 'driver.cars.sold.hide' : 'driver.cars.sold.show') | t }}
+  {{ open() ? ('driver.cars.sold.hide' | t) : ('driver.cars.sold.show' | t) }}
 </button>
 @if (open()) {
   <div class="history" aria-live="polite" [attr.aria-busy]="history() === 'loading' || null">
