@@ -981,3 +981,30 @@ describe('the fallback a hard bounce keeps', () => {
     ).toBe(0);
   });
 });
+
+// @traces 1374-FR-003
+describe('the fallback a listing draft keeps', () => {
+  it('records nothing for a failed e-mail to a draft, which has no account', async () => {
+    const draft = await prisma.listingDraft.create({
+      data: {
+        email: 'owner@example.test',
+        language: 'en',
+        step: 2,
+        updatedAt: new Date(DAY),
+      },
+    });
+    await service.sendToDraft(
+      'LISTING_CONTINUE_LINK',
+      draft.id,
+      'https://motorfix.test/en/list-your-garage?draft=secret',
+    );
+    const rows = await prisma.notification.findMany({
+      where: { listingDraftId: draft.id },
+    });
+    await service.fail(rows, 'sending_off', true);
+    expect(await prisma.notificationFallback.count()).toBe(0);
+    expect(
+      await prisma.notification.count({ where: { listingDraftId: draft.id } }),
+    ).toBe(1);
+  });
+});
