@@ -36,7 +36,10 @@ const KEY = 'Idempotency-Key';
 type Write = {
   reset(): Promise<void>;
   call(key: string | undefined): request.Test;
-  seen(body: Record<string, unknown>): unknown;
+  seen(
+    body: Record<string, unknown>,
+    previous: Record<string, unknown> | undefined,
+  ): unknown;
   stored(): Promise<unknown>;
 };
 
@@ -165,10 +168,14 @@ beforeAll(async () => {
           priceId,
         ]);
       },
-      // The stamp is the moment of the write; the rest of the answer is not.
-      seen: ({ updatedAt, ...rest }) => ({
+      // The stamp is the moment of the write, so only whether a repeat kept
+      // the one before it is compared; the rest of the answer is compared whole.
+      seen: ({ updatedAt, ...rest }, previous) => ({
         ...rest,
-        stamped: typeof updatedAt === 'string',
+        stamp:
+          previous === undefined
+            ? typeof updatedAt
+            : updatedAt === previous['updatedAt'],
       }),
       stored: async () =>
         (
@@ -190,9 +197,14 @@ afterAll(async () => {
 async function run(write: Write, keys: (string | undefined)[]) {
   await write.reset();
   const answers: { body: unknown; status: number }[] = [];
+  let previous: Record<string, unknown> | undefined;
   for (const key of keys) {
     const res = await write.call(key);
-    answers.push({ body: write.seen(res.body ?? {}), status: res.status });
+    answers.push({
+      body: write.seen(res.body ?? {}, previous),
+      status: res.status,
+    });
+    previous = res.body ?? {};
   }
   return { answers, stored: await write.stored() };
 }
