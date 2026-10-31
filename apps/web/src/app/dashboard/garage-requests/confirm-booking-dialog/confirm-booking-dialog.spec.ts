@@ -435,6 +435,26 @@ describe('the confirm panel: confirming', () => {
     },
   );
 
+  // The selects are disabled while the confirm is in flight, so the focus
+  // waits for them to be enabled again (found by the on-demand e2e run).
+  it.each([
+    ['mechanic_busy', 'Mecanic'],
+    ['lift_busy', 'Elevator'],
+  ])(
+    'moves the focus to %s’s select, %s, once the refusal lands',
+    async (code, label) => {
+      await open();
+      await choose('Mecanic', 'Maria Ionescu');
+      await choose('Elevator', 'Elevator 2');
+      confirm.mockRejectedValueOnce(refusal(409, { code, status: 409 }));
+
+      await press();
+
+      expect(select(label)?.disabled).toBe(false);
+      expect(document.activeElement).toBe(select(label));
+    },
+  );
+
   it('words the busy lift and the mechanic in English', async () => {
     await open({ language: 'en' });
     await choose('Mechanic', 'Ion Popescu');
