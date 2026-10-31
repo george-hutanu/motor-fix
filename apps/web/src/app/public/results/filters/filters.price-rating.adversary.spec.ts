@@ -232,7 +232,7 @@ describe('counting and stripping with the new filters', () => {
   });
 
   it('returns a new object even when nothing is stripped', () => {
-    const input = { brand: 'dacia' };
+    const input: { brand: string; card?: '1' } = { brand: 'dacia' };
     const out = unfiltered(input);
     expect(out).toEqual(input);
     expect(out).not.toBe(input);
