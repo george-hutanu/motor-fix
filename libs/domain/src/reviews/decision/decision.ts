@@ -4,7 +4,7 @@ interface ReportState {
   status: 'pending' | 'decided' | 'closed';
 }
 
-export type DecisionRefused<R> =
+type DecisionRefused<R> =
   | { code: 'not_found' }
   | { code: 'no_pending_report' }
   | { code: 'already_decided'; report: R };

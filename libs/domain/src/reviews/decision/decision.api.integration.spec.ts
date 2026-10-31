@@ -98,7 +98,7 @@ const counted = (outcome: string, target: string, reason: string) =>
     target,
   });
 
-// @traces 179-FR-001 179-FR-003
+// @traces 179-FR-001 179-FR-003 179-FR-020
 describe('an admin removes a reported review', () => {
   it('removes the review, its published reply and decides the report, answering 200', async () => {
     const s = await setting();

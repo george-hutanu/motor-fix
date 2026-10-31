@@ -444,16 +444,13 @@ export class ReportReviewDto {
 
 // The rules an admin may remove a review or a reply for: every report reason
 // but other, which names no rule.
-export const REVIEW_REMOVAL_REASONS = REVIEW_REPORT_REASONS.filter(
+const REVIEW_REMOVAL_REASONS = REVIEW_REPORT_REASONS.filter(
   (reason) => reason !== 'other',
 ) as readonly Exclude<ReviewReportReason, 'other'>[];
 export type ReviewRemovalReason = (typeof REVIEW_REMOVAL_REASONS)[number];
 
 // Why a decision was refused once nothing was written.
-export const DECISION_REFUSALS = [
-  'already_decided',
-  'no_pending_report',
-] as const;
+const DECISION_REFUSALS = ['already_decided', 'no_pending_report'] as const;
 export type DecisionRefusal = (typeof DECISION_REFUSALS)[number];
 
 export class ReviewDecisionDto {

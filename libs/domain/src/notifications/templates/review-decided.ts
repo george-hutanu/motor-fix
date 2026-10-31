@@ -12,7 +12,7 @@ export const REVIEW_DECIDED_VARIANTS = [
   'reply_owner',
   'reply_author',
 ] as const;
-export type ReviewDecidedVariant = (typeof REVIEW_DECIDED_VARIANTS)[number];
+type ReviewDecidedVariant = (typeof REVIEW_DECIDED_VARIANTS)[number];
 
 const VALUES = {
   author: 'text',
