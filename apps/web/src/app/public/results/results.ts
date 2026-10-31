@@ -52,12 +52,13 @@ import { filter } from 'rxjs';
 import { BrandChips, type BrandPick } from './brand-chips/brand-chips';
 import { FilterWarm } from './filter-warm/filter-warm';
 import {
+  chipsOf,
   countOf,
-  FILTERS,
   type FilterKey,
   type Filters,
   filterParams,
   filtersIn,
+  NONE,
   unfiltered,
 } from './filters/filters';
 import type { FiltersPanelData } from './filters/filters-panel/filters-panel';
@@ -189,12 +190,12 @@ export class Results {
     this.near() && this.bar().get('radius') === String(WIDE) ? WIDE : undefined,
   );
   protected readonly sort = computed(() => sortIn(this.bar().get('sort')));
-  // The filters the bar names; a value but 1 reads as off.
+  // The filters the bar names; a value the API does not take reads as off.
   protected readonly filters = computed(() => filtersIn(this.bar()), {
     equal: (a, b) => JSON.stringify(a) === JSON.stringify(b),
   });
-  protected readonly activeFilters = computed(() =>
-    FILTERS.filter(({ key }) => this.filters()[key]),
+  protected readonly chips = computed(() =>
+    chipsOf(this.filters(), this.i18n.language()),
   );
   protected readonly filterCount = computed(() => countOf(this.filters()));
   // The sort the control marks: distance waits for a place, the rating order
@@ -1019,7 +1020,7 @@ export class Results {
     void this.write({ sort: sort === 'rating' ? null : sort }, { push: true });
   }
 
-  // The panel, loaded on the first tap; each switch writes the bar at once.
+  // The panel, loaded on the first tap; each control writes the bar at once.
   protected async openFilters() {
     await this.overlays.open<never, FiltersPanelData>(
       () =>
@@ -1029,8 +1030,8 @@ export class Results {
       {
         confirmDiscard: false,
         data: {
+          change: (patch: Partial<Filters>) => this.change(patch),
           filters: this.filters,
-          toggle: (key: FilterKey) => this.toggle(key),
         },
         shape: 'dialog',
         title: 'public.results.filters.title',
@@ -1043,28 +1044,33 @@ export class Results {
       this.filtersOpen()?.nativeElement.focus();
   }
 
-  // A filter on or off: a new entry in the history, never logged, the box,
-  // brand, place and sort kept; an off filter leaves the bar.
-  protected toggle(key: FilterKey) {
-    const now = untracked(this.filters);
-    const next = { ...now, [key]: !now[key] };
+  // A filter changed: a new entry in the history, never logged, the box,
+  // brand, place and sort kept; a filter off leaves the bar.
+  protected change(patch: Partial<Filters>) {
+    const next = { ...untracked(this.filters), ...patch };
     const query = untracked(this.query);
-    if (query && next.open_now && !next.open_saturday)
+    if (query && next.open_now && countOf(next) === 1)
       this.filterWarm.judge(unfiltered(query));
     // Rewritten whole, so the bar names them in the page's order.
-    const {
-      open_now: _now,
-      open_saturday: _saturday,
-      ...rest
-    } = this.route.snapshot.queryParams;
-    void this.router.navigate([], {
-      queryParams: { ...rest, ...filterParams(next) },
+    return this.router.navigate([], {
+      queryParams: {
+        ...unfiltered(this.route.snapshot.queryParams),
+        ...filterParams(next),
+      },
       relativeTo: this.route,
     });
   }
 
+  // A chip takes its filter off; the focus goes to the Filtre button, the
+  // chip itself being gone.
+  protected async remove(key: FilterKey) {
+    const off = key === 'max_price' || key === 'min_rating' ? undefined : false;
+    await this.change({ [key]: off });
+    this.filtersOpen()?.nativeElement.focus();
+  }
+
   protected clearFilters() {
-    void this.write({ open_now: null, open_saturday: null }, { push: true });
+    void this.write({ ...NONE }, { push: true });
   }
 
   protected chooseBrand(brand: BrandDto) {
@@ -1220,16 +1226,7 @@ export class Results {
         this.counted(page, this.withCards(page, now)),
       );
     } else if (this.wanted.size > 0) {
-      const ids = [...this.wanted].join(',');
-      this.wanted.clear();
-      // Read without the filters, its counts are not the filtered search's:
-      // a filtered list takes its cards only, its counts from a counts read.
-      const filtered = countOf(untracked(this.filters)) > 0;
-      await this.read(ids, (page, now) =>
-        filtered
-          ? this.withCards(page, now)
-          : this.counted(page, this.withCards(page, now)),
-      );
+      await this.readCards();
     } else if (this.countsWanted) {
       this.countsWanted = false;
       const suspended = this.suspended;
@@ -1239,6 +1236,22 @@ export class Results {
       );
     } else return false;
     return true;
+  }
+
+  // The cards wanted, read with the filters: a listed garage the answer
+  // leaves out no longer matches them and fades out; the counts are the
+  // filtered search's.
+  private async readCards() {
+    const asked = [...this.wanted];
+    this.wanted.clear();
+    const filtered = countOf(untracked(this.filters)) > 0;
+    let left: string[] = [];
+    const shown = await this.read(asked.join(','), (page, now) => {
+      if (filtered)
+        left = asked.filter((id) => !page.items.some((g) => g.id === id));
+      return this.counted(page, this.withCards(page, now));
+    });
+    if (shown) for (const id of left) this.leave(id);
   }
 
   // A read that fails keeps the page as it is; one answered after the search
@@ -1252,7 +1265,7 @@ export class Results {
     let page: Page;
     try {
       page = await this.search.garageSearchControllerForBrand(
-        ids ? { ...unfiltered(query), ids } : query,
+        ids ? { ...query, ids } : query,
       );
     } catch {
       return false;
