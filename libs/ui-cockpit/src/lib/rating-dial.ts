@@ -1,4 +1,10 @@
-import { Component, computed, inject, input } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+} from '@angular/core';
 import { formatRating, I18n } from '@motor-fix/i18n';
 
 // The gauge opens at the bottom: its track covers 240 of the circle's 360.
@@ -16,6 +22,7 @@ function toRating(value: unknown): number | undefined {
   host: {
     '[attr.aria-label]': 'name()',
     '[attr.data-size]': 'size()',
+    '[class.mf-dial-swing-in]': 'swingIn()',
     '[style.--mf-dial-fill]': 'fill()',
     role: 'img',
   },
@@ -54,7 +61,14 @@ function toRating(value: unknown): number | undefined {
       transition: stroke-dasharray var(--mf-motion-dial) var(--mf-motion-ease);
     }
     .mf-dial-needle {
+      transform: rotate(var(--mf-dial-needle));
+      transform-origin: 34px 34px;
       transition: transform var(--mf-motion-dial) var(--mf-motion-ease);
+    }
+    @starting-style {
+      :host(.mf-dial-swing-in) .mf-dial-needle {
+        transform: rotate(-120deg);
+      }
     }
     .mf-dial-hub {
       fill: var(--mf-bg);
@@ -88,8 +102,9 @@ function toRating(value: unknown): number | undefined {
           [attr.stroke-dasharray]="dash()" [attr.stroke-linecap]="fill() > 0 ? 'round' : 'butt'" />
       </g>
       @if (size() === 'large') {
-        <line class="mf-dial-needle" x1="34" y1="34" x2="34" y2="12" stroke-width="2" stroke-linecap="round"
-          [attr.transform]="'rotate(' + needle() + ' 34 34)'" />
+        @if (needle(); as angle) {
+          <line class="mf-dial-needle" x1="34" y1="34" x2="34" y2="12" stroke-width="2" stroke-linecap="round" [style.--mf-dial-needle]="angle" />
+        }
         <circle class="mf-dial-hub" cx="34" cy="34" r="3" stroke-width="1.5" />
       }
     </svg>
@@ -107,7 +122,22 @@ export class RatingDial {
   protected readonly dash = computed(
     () => `${Number((this.fill() * SWEEP).toFixed(1))} 360`,
   );
-  protected readonly needle = computed(() => (this.fill() - 0.5) * SWEEP);
+  // No rating, no needle: one resting at 0 would read as a poor rating.
+  protected readonly needle = computed(() => {
+    const rating = this.rating();
+    return rating === undefined
+      ? undefined
+      : `${Number(((rating / 5 - 0.5) * SWEEP).toFixed(1))}deg`;
+  });
+  // A rating arriving after none swings the needle in from the 0 mark; a host
+  // binding, so it sees every change and not only those the needle renders.
+  protected readonly swingIn = linkedSignal({
+    computation: (rating, previous) =>
+      rating !== undefined &&
+      previous !== undefined &&
+      previous.source === undefined,
+    source: this.rating,
+  });
   protected readonly text = computed(() =>
     formatRating(this.rating(), this.i18n.language()),
   );
