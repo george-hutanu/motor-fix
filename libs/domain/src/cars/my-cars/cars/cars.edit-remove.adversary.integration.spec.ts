@@ -122,6 +122,13 @@ const remove = (auth: string | null, id: string) => {
   return auth ? call.set('Authorization', auth) : call;
 };
 
+// A random UUID can hold a plate or model by chance ("…-1320d05…"), so the
+// leak checks below read the text with every id masked.
+const withoutIds = (text: string) =>
+  text.replace(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+    '<id>',
+  );
 const row = (id: string) => prisma.car.findUniqueOrThrow({ where: { id } });
 const audit = (subjectId: string) =>
   prisma.activityLog.findMany({
@@ -166,6 +173,17 @@ function quoteRequest(
 }
 
 // @traces 092-FR-001
+describe('withoutIds', () => {
+  it('masks an id that holds a model name by chance, and keeps the model', () => {
+    const text = JSON.stringify({
+      model: '320d',
+      ownerId: '92f8687a-0929-4fb9-a318-1320d05112d0',
+    });
+
+    expect(withoutIds(text)).toBe('{"model":"320d","ownerId":"<id>"}');
+  });
+});
+
 describe('PATCH /cars/:id with fields it cannot take', () => {
   it.each(['brandId', 'model', 'year', 'odometerKm', 'fuel'])(
     'refuses an explicit null for the required %s and changes nothing',
@@ -477,7 +495,7 @@ describe('what an edit may not leak', () => {
       [await audit(car.id), await events('car.updated')],
       (_, v) => (typeof v === 'bigint' ? v.toString() : v),
     );
-    expect(everything).not.toMatch(/B123ABC|CJ99XYZ|cj 99 xyz/i);
+    expect(withoutIds(everything)).not.toMatch(/B123ABC|CJ99XYZ|cj 99 xyz/i);
     const plate = (await audit(car.id)).filter((e) => e.field === 'plate');
     expect(plate).toHaveLength(1);
     expect(
@@ -494,7 +512,9 @@ describe('what an edit may not leak', () => {
     await edit(auth, car.id, { model: 'Zebra-Unique', version: car.updatedAt });
 
     const [event] = await events('car.updated');
-    expect(JSON.stringify(event.payload)).not.toMatch(/Zebra-Unique|320d/);
+    expect(withoutIds(JSON.stringify(event.payload))).not.toMatch(
+      /Zebra-Unique|320d/,
+    );
     expect((event.payload as { changed: string[] }).changed).toEqual(['model']);
   });
 
@@ -510,7 +530,7 @@ describe('what an edit may not leak', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('not_found');
-    expect(JSON.stringify(res.body)).not.toMatch(/B123ABC|320d/);
+    expect(withoutIds(JSON.stringify(res.body))).not.toMatch(/B123ABC|320d/);
   });
 
   it('answers another driver with 404 for an unknown brand, not 400', async () => {
