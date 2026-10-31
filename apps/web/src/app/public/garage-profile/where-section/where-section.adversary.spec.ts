@@ -1,9 +1,10 @@
 import { Component, signal } from '@angular/core';
 import { type ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import type { PublicGarageDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 
-import { GARAGE_MAP } from './garage-map/garage-map';
+import { GARAGE_MAP, GarageMap } from './garage-map/garage-map';
 import { WhereSection } from './where-section';
 import { Consent } from '../../../consent/consent';
 
@@ -190,5 +191,125 @@ describe('where a garage is, on a map, under odd answers', () => {
     await settle();
 
     expect(link()?.getAttribute('href')).toContain('44.43,26.1');
+  });
+});
+
+// @traces 1383-FR-004
+// @traces 1383-FR-008
+describe('where a mobile mechanic works, under odd answers', () => {
+  const MOBILE: Partial<PublicGarageDto> = {
+    address: undefined,
+    areaLat: 44.94,
+    areaLng: 26.01,
+    businessKind: 'mobile',
+    serviceRadiusKm: 35,
+  };
+  const maps = () => section().querySelectorAll('mf-garage-map');
+  const km = () =>
+    fixture.debugElement.query(By.directive(GarageMap))?.componentInstance as
+      | GarageMap
+      | undefined;
+
+  it('draws one circle of its radius with no address text and no directions link', async () => {
+    await show(MOBILE);
+
+    expect(maps()).toHaveLength(1);
+    expect(km()?.km()).toBe(35);
+    expect(km()?.point()).toEqual({ lat: 44.94, lng: 26.01 });
+    expect(section().querySelector('a.directions')).toBeNull();
+    expect(section().querySelector('.address')).toBeNull();
+  });
+
+  it('draws a circle of 20 km for a radius that came as null or absent', async () => {
+    await show({ ...MOBILE, serviceRadiusKm: null as unknown as undefined });
+
+    expect(km()?.km()).toBe(20);
+
+    await show({ ...MOBILE, serviceRadiusKm: undefined });
+
+    expect(km()?.km()).toBe(20);
+  });
+
+  it('keeps a centre at zero degrees, a real place', async () => {
+    await show({ ...MOBILE, areaLat: 0, areaLng: 0 });
+
+    expect(maps()).toHaveLength(1);
+    expect(km()?.point()).toEqual({ lat: 0, lng: 0 });
+  });
+
+  it.each([
+    ['no longitude', { areaLng: undefined }],
+    ['no latitude', { areaLat: undefined }],
+    ['a null latitude', { areaLat: null as unknown as undefined }],
+    ['a null longitude', { areaLng: null as unknown as undefined }],
+  ])(
+    'shows no map for a centre with %s, the area line staying',
+    async (_, over) => {
+      await show({ ...MOBILE, ...over });
+
+      expect(maps()).toHaveLength(0);
+      expect(text(section().querySelector('.area'))).toContain('35 km');
+      expect(section().querySelector('a.directions')).toBeNull();
+    },
+  );
+
+  it('draws a workshop that carries a centre as its point, never as a circle', async () => {
+    await show({
+      areaLat: 44.94,
+      areaLng: 26.01,
+      businessKind: 'company',
+      latitude: 44.43,
+      longitude: 26.1,
+    });
+
+    expect(maps()).toHaveLength(1);
+    expect(km()?.km()).toBeUndefined();
+    expect(km()?.point()).toEqual({ lat: 44.43, lng: 26.1 });
+  });
+
+  it('draws a workshop with only a centre no map at all', async () => {
+    await show({ areaLat: 44.94, areaLng: 26.01, businessKind: 'company' });
+
+    expect(maps()).toHaveLength(0);
+  });
+
+  it('draws a mobile mechanic that also carries a point as one circle and no link', async () => {
+    await show({ ...MOBILE, latitude: 44.43, longitude: 26.1 });
+
+    expect(maps()).toHaveLength(1);
+    expect(km()?.km()).toBe(35);
+    expect(km()?.point()).toEqual({ lat: 44.94, lng: 26.01 });
+    expect(section().querySelector('a.directions')).toBeNull();
+  });
+
+  it('moves the circle when the answer is read again with a new centre and radius', async () => {
+    await show(MOBILE);
+    await show({
+      ...MOBILE,
+      areaLat: 45.75,
+      areaLng: 24.5,
+      serviceRadiusKm: 60,
+    });
+
+    expect(maps()).toHaveLength(1);
+    expect(km()?.km()).toBe(60);
+    expect(km()?.point()).toEqual({ lat: 45.75, lng: 24.5 });
+  });
+
+  it('drops the map when a read again carries no centre', async () => {
+    await show(MOBILE);
+    await show({ ...MOBILE, areaLat: undefined, areaLng: undefined });
+
+    expect(maps()).toHaveLength(0);
+    expect(text(section().querySelector('.area'))).toContain('35 km');
+  });
+
+  it('removes the map and keeps the area line and hours when the map is gone', async () => {
+    await show({ ...MOBILE, hours: GARAGE.hours });
+    km()?.gone.emit();
+    await settle();
+
+    expect(maps()).toHaveLength(0);
+    expect(text(section().querySelector('.area'))).toContain('35 km');
   });
 });

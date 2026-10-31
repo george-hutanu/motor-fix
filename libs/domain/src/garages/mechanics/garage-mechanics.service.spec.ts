@@ -68,17 +68,22 @@ const card = (over: Record<string, unknown>) => ({
   name: 'Ion',
   onProfile: true,
   rating: null,
+  removedAt: null,
   reviewCount: 0,
   roleTitle: null,
   speciality: null,
   specialties: [],
+  takesDirectRequests: true,
   years: null,
   ...over,
 });
 
 // A client whose every model answers as an empty table, unless given: the
 // service may read through it or through the transaction it opens.
-function fakeDb(models: Record<string, Record<string, unknown>> = {}) {
+function fakeDb(
+  models: Record<string, Record<string, unknown>> = {},
+  raw: unknown[] = [],
+) {
   const empty = (method: string) =>
     jest.fn(async () => {
       if (method === 'findMany' || method === 'groupBy') return [];
@@ -95,7 +100,7 @@ function fakeDb(models: Record<string, Record<string, unknown>> = {}) {
         if (key === '$transaction')
           return (work: (tx: unknown) => unknown) => work(db);
         if (key === '$queryRaw' || key === '$executeRaw')
-          return jest.fn(async () => []);
+          return jest.fn(async () => raw);
         const name = String(key);
         if (!tables.has(name)) {
           const given = models[name] ?? {};
@@ -124,6 +129,12 @@ const listed = (
   brands: { id: string; name: string }[] = [],
 ) => {
   const prisma = fakeDb({
+    garage: {
+      findUniqueOrThrow: jest.fn(async () => ({
+        status: 'approved',
+        teamOnProfile: true,
+      })),
+    },
     garageBrand: {
       findMany: jest.fn(async () =>
         brands.map((brand) => ({
@@ -233,6 +244,7 @@ describe("GarageMechanicsService listing a garage's cards", () => {
       isOwner: false,
       roleTitle: null,
       specialties: [],
+      takesDirectRequests: true,
       years: null,
     };
     expect(await list(actorOf('garage'))).toEqual({
@@ -246,6 +258,7 @@ describe("GarageMechanicsService listing a garage's cards", () => {
           onProfile: true,
           rating: '5.0',
           reviewCount: 58,
+          shown: true,
           speciality: 'Frâne',
         },
         {
@@ -256,9 +269,11 @@ describe("GarageMechanicsService listing a garage's cards", () => {
           onProfile: false,
           rating: null,
           reviewCount: 0,
+          shown: false,
           speciality: null,
         },
       ],
+      teamOnProfile: true,
     });
   });
 });
@@ -389,17 +404,22 @@ function writer(stored: Record<string, unknown> = card({ id: ELENA })) {
     },
   );
   const found = jest.fn(async () => current);
-  const db = fakeDb({
-    garageFeature: { findUnique: jest.fn(async () => null) },
-    mechanic: {
-      create,
-      findFirst: found,
-      findFirstOrThrow: found,
-      findUnique: found,
-      findUniqueOrThrow: found,
-      updateMany: update,
+  const db = fakeDb(
+    {
+      garageFeature: { findUnique: jest.fn(async () => null) },
+      mechanic: {
+        create,
+        findFirst: found,
+        findFirstOrThrow: found,
+        findUnique: found,
+        findUniqueOrThrow: found,
+        update,
+        updateMany: update,
+      },
     },
-  });
+    // The card's row, locked by an edit.
+    [{ id: ELENA }],
+  );
   const Service = GarageMechanicsService as unknown as new (
     ...deps: unknown[]
   ) => Writes;

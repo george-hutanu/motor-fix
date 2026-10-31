@@ -38,11 +38,14 @@ const row = (): GarageRequestSummaryDto => {
   const base = quotedRow(
     {
       booking: {
+        canRecordNoShow: false,
+        canWithdrawNoShow: false,
         confirmBy: new Date(Date.now() + 5 * HOUR + 30 * 60_000).toISOString(),
         durationMinutes: 90,
         id: 'booking-1',
         lift: null,
         mechanic: null,
+        noShowAt: null,
         startsAt: STARTS,
         status: 'awaiting_confirmation',
         toReassign: false,
