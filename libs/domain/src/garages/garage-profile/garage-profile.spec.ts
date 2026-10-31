@@ -100,12 +100,17 @@ describe("the staff read of a garage's own public profile, in order", () => {
     expect(findUnique).not.toHaveBeenCalled();
   });
 
+  // @traces 1247-FR-009
   it('answers 404 when the row is gone between the check and the read', async () => {
     const { bySlug, profile } = service(null);
 
     const failure = await profile.read(actor('garage'), GARAGE).catch((e) => e);
 
     expect(status(failure)).toBe(404);
+    expect(failure.getResponse()).toEqual({
+      code: 'not_found',
+      message: 'No such garage',
+    });
     expect(bySlug).not.toHaveBeenCalled();
   });
 

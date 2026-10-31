@@ -109,3 +109,7 @@ ul button:focus-visible {
     font-size: var(--mf-size-small);
   }
 }
+/* The last fuel stays ticked: it reads as held, not as pressable. */
+ul button[aria-disabled="true"] {
+  cursor: not-allowed;
+}
