@@ -1,6 +1,6 @@
 ---
 capability: garage-search
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 043-brand-first-garage-list
   - 042-brand-verdict
@@ -30,6 +30,7 @@ features:
   - 1260-open-now-filters
   - 1261-result-filters
   - 1398-open-now-results-filters
+  - 1399-results-filters
 ---
 
 # Capability: Garage search
@@ -804,21 +805,21 @@ _From 1261-result-filters._
 
 _From 1398-open-now-results-filters._
 
-### 1398-FR-002 — The filters panel MUST be a task of the overlays service in the `dialog` shape (a centred small panel from 768 px, the bottom sheet below, 158-FR-001 and 158-FR-010), titled "Filtre" / "Filters", holding two switches labelled "Deschis acum" / "Open now" and "Deschis sâmbăta" / "Open on Saturday", each reflecting the bar, and nothing else; a switch toggles its filter at once (no apply button, no discard question), the panel stays open until closed by X, Escape, outside or the sheet's drag, and closing returns the focus to the "Filtre" button (157-FR-008). The panel's code loads on the first open, not with the page.
+### 1399-FR-001 — The filters panel of 1398-FR-002 MUST hold, below the two switches and in this order, a choice group titled "Manoperă până la … lei/oră" / "Labour rate up to … lei/h" with the choices "150", "200", "250", "300", a choice group titled "Notă minimă" / "Minimum rating" with the choices "3,5+", "4,0+", "4,5+" (English "3.5+", "4.0+", "4.5+"), and a switch labelled "Plată cu cardul" / "Card payment"; each reflects the bar. A group holds at most one choice; activating a choice sets it and clears the group's other one, activating the chosen one again clears the group; each choice is a button at least 44 px tall exposed as pressed or not (`aria-pressed`) inside a group labelled by its title. A choice or switch applies its filter at once, the panel staying open, as the switches of ST-1398. The new controls MUST live in the panel's lazily loaded code, not in the page's first bundle, and the web bundle budget (1 MB) is not raised.
 
-_From 1398-open-now-results-filters._
+_From 1399-results-filters._
 
-### 1398-FR-003 — Each filter on MUST show as a chip beside the "Filtre" button in the order Deschis acum, Deschis sâmbăta, drawn in the amber selected style of the brand chips (`--mf-amber-tint`, `--mf-amber-ink`) with a × glyph, the chip being one button at least 44 px tall whose accessible name says it removes that filter ("Scoate filtrul Deschis acum" / "Remove filter Open now"); activating it turns that filter off.
+### 1399-FR-002 — Each filter on MUST show as a chip of 1398-FR-003 (amber, ×, at least 44 px, accessible name "Scoate filtrul {label}" / "Remove filter {label}") in the order Deschis acum, Deschis sâmbăta, price, rating, card, the chips reading "Până la {n} lei/oră" / "Up to {n} lei/h", "Notă {r}+" / "Rating {r}+" (`r` with the language's decimal mark) and "Plată cu cardul" / "Card payment"; activating a chip turns that one filter off and moves the focus to the "Filtre" button (the chip is gone, so the focus must not be lost). The "Filtre · {n}" count of 1398-FR-001 counts each filter on once (a chosen ceiling is one, whatever its value).
 
-_From 1398-open-now-results-filters._
+_From 1399-results-filters._
 
-### 1398-FR-004 — The filters MUST live in the address bar as `open_now=1` and `open_saturday=1`, each present exactly when on and absent when off; a filter change MUST write the bar as a sort change does today (a step in the history, `push`); a filter reads as on only when the key's first value is exactly `1`, so the page never sends the API a value it would refuse.
+### 1399-FR-003 — The filters MUST live in the address bar as `max_price` with exactly one of `150`, `200`, `250`, `300`, `min_rating` with exactly one of `3.5`, `4.0`, `4.5` (the API's text, written as such), and `card=1`, each present exactly when on and absent when off, written beside `open_now` and `open_saturday` as 1398-FR-004 writes them (a history step, `push`); a filter reads as on only when the key's first value is exactly one of its allowed texts, any other value (the six of User Story 2 scenario 5: `max_price=175`, `max_price=200.0`, `min_rating=4`, `min_rating=`, `card=yes`, `card=0`) reading as off, shown as off and never sent, so the API never answers 400 for the bar.
 
-_From 1398-open-now-results-filters._
+_From 1399-results-filters._
 
-### 1398-FR-005 — The first page, every later page and the pins MUST be requested with the filters on in the bar as `open_now` and `open_saturday` of the generated client (`GarageSearchControllerForBrand$Params`, `GarageSearchControllerPins$Params`), and with nothing else new; the `ids=` reads (a pin's small card, a live re-read) stay by-id lookups without the filters; the web MUST NOT import `libs/contracts/src/search-filters.ts` or the Bucharest clock helpers (the bundle budget), the API's answer being the only judge of a match.
+### 1399-FR-004 — The first page, every later page and the pins MUST be requested with the three filters on in the bar as `max_price`, `min_rating` and `card` of the generated client, beside the two of 1398-FR-005; the `ids=` read of a pin's small card stays a by-id lookup without any filter; the `ids=` re-read on `garage.updated` carries every filter on in the bar (the five) when at least one is on, and none otherwise; the web MUST NOT import `libs/contracts/src/search-filters.ts` (the match rules); it may take only the allowed value lists `SEARCH_PRICE_CEILINGS` and `SEARCH_MIN_RATINGS` from `libs/contracts/src/search-place.ts` (already the page's source for `SEARCH_RADII` and `SEARCH_SORTS`), typed against the generated client's parameters, the API's answer being the only judge of a match.
 
-_From 1398-open-now-results-filters._
+_From 1399-results-filters._
 
 ### 1398-FR-007 — A filter change MUST send no `log=1` on any request (1260-FR-010: the API writes a search-log row for `log=1` only) and MUST NOT mark a sort change; a new search that starts with filters on (a brand or place change, the opening of a link) is logged as today, with the filters on the request and not in the log.
 
@@ -828,9 +829,9 @@ _From 1398-open-now-results-filters._
 
 _From 1398-open-now-results-filters._
 
-### 1398-FR-011 — When at least one filter is on, the answer's `total` is 0 and the pins did not answer with 0 pins (the search found something, or the pins have not answered), the list area MUST show the state "Niciun service nu are tot ce ai ales" / "No garage has everything you chose" with one button "Scoate filtrele" / "Remove filters", which turns every filter off in one bar write (no `log=1`); with no filter on, or when the pins answered with 0 pins, the empty state of today ("Niciun service în {km} km", widen and place actions) is unchanged. The map keeps every found pin, dimmed.
+### 1399-FR-007 — The filtered empty state of 1398-FR-011 MUST show for the new filters too, and its "Scoate filtrele" MUST turn every filter off, the five parameters removed in one bar write without `log=1`.
 
-_From 1398-open-now-results-filters._
+_From 1399-results-filters._
 
 ### 1398-FR-014 — Every new text MUST exist in Romanian and English in the shared public i18n file; the controls MUST hold at 320 px, 390 px, tablet and desktop, in light and dark, Romanian and English, with no sideways page scroll at 320 px (1358-FR-011) and the kit's 44 px targets and 12 px minimum text; the panel, the switches and the chips MUST pass the QA sweep's axe checks.
 
@@ -840,9 +841,29 @@ _From 1398-open-now-results-filters._
 
 _From 1398-open-now-results-filters._
 
-### 1398-FR-016 — The story changes nothing on the API, in the contracts library or in the generated client (ST-1260 merged them); it adds no control for price, rating or card (ST-1261's web half plugs into the same panel and chip row later, with no placeholder or code for them here, Principle I) and touches nothing of ST-1395 or ST-409.
+### 1399-FR-011 — The story changes nothing on the API, in the contracts library or in the generated client (ST-1261 merged them), does not change `.github/workflows/ci.yml`, the review-reply dialog, the provider or worker code, the admin dashboard or the repair-correction code, and adds no control the issue does not name (no facility chips of ST-329, no sort change, no saved filters).
 
-_From 1398-open-now-results-filters._
+_From 1399-results-filters._
+
+### 1399-FR-005 — With at least one filter on, every `ids=` card re-read of the page (started by `garage.updated`, another card event or a review event; FR-004) that leaves a listed garage out, whatever the cause, MUST fade that card out (opacity to 0 within 300 ms, none under reduced motion) and remove it from the list; the summary's matching total and counts MUST be the answer's filtered ones (taken as today's counts path takes them, no local arithmetic), the found count kept; the pin dims through the pins re-read's `matches: false` (1398-FR-010), the page changing no pin itself; a garage not listed that starts matching is not inserted (its pin lights up and the counts read's higher total shows today's reload banner); a garage still answered is redrawn as today; with no filter on, the re-read and the card behave as today.
+
+_From 1399-results-filters._
+
+### 1399-FR-006 — The rules of ST-1398 MUST hold for the three new filters as for the two switches: kept across a brand change, a place change, a widening and a reload, restored from a link before the first read, a change keeping the brand, the place, the radius, the sort, the map's box and the sheet's position (1398-FR-006); no `log=1` on a change (1398-FR-007); the dimmed-cards loading state under the progress bar (1398-FR-008); the summary's "· {n} cu filtrele alese" with the API's filtered total and counts (1398-FR-009); the dimmed `matches: false` pins (1398-FR-010); the open-now warm of 1398-FR-012 unchanged, never run while any of the five filters is on and never warming a price, rating or card filter.
+
+_From 1399-results-filters._
+
+### 1399-FR-008 — Every new text MUST exist in Romanian and English in the shared public i18n file; the panel with the three groups, the five chips and the summary MUST hold at 320 px, 390 px, tablet and desktop, in light and dark, Romanian and English, with no sideways page scroll at 320 px (1358-FR-011), the kit's 44 px targets and 12 px minimum text, and pass the QA sweep's axe checks.
+
+_From 1399-results-filters._
+
+### 1399-FR-009 — Observability: no new endpoint, service, queue, outside call, metric or alert; the existing search and pins counters and the latency histogram cover the filtered calls (1261-FR-013), and the browser's `prefetch` measurement is unchanged; the two route entries of `infra/observability/inventory.json` that name `open_now` and `open_saturday` MUST name `max_price`, `min_rating` and `card` too (a wording change, no new entry); the PR's Observability section states this.
+
+_From 1399-results-filters._
+
+### 1399-FR-010 — Tests before code (Principle II). Web unit tests (Jest, colocated, in the `filters/` module's and the panel's own specs first, with the fewest lines in `results.spec.ts`) MUST cover: the bar read for each allowed value, each refused value and a repeated key of the three filters; the bar write for a choice, a re-choice, a cleared choice, the card switch and "Scoate filtrele" with the five on; the count with mixed filters; the chips' order, labels in both languages and removal; the three parameters on the list, page and pins requests, none on the pin's `ids=` read, the five on every card re-read with a filter on and none without; the fade-out and the answer's lower total on a re-read that leaves a garage out; no `log=1` on a change; the warm not run with a new filter on. Playwright end to end (`apps/web-e2e`, `@seeded @database`, extending `results-filters.spec.ts`) MUST, with garages seeded so the API's verdict does not depend on the run's instant (one at 180 lei/h, rated 4.6 with card payment marked; one at 260 lei/h, unrated, without card payment, near a place of its own), choose "200" and check the list, the summary's matching total, the chip, "Filtre · 1" and the dimmed pin; add "4,5+" and the card switch and check "Filtre · 3" and the three chips; change the brand and check the three parameters kept in the bar and the chips; open the bar's link in a fresh page and check the panel's choices; at the second place choose "150" and use "Scoate filtrele" on the empty state; and assert no request carried `log=1` after a change.
+
+_From 1399-results-filters._
 
 ## Retired
 
@@ -891,3 +912,9 @@ _From 1398-open-now-results-filters._
 - `1355-FR-011` — superseded by `1398-FR-008` (2026-10-30)
 - `1358-FR-002` — superseded by `1398-FR-009` (2026-10-30)
 - `267-FR-022` — superseded by `1398-FR-012` (2026-10-30)
+- `1398-FR-002` — superseded by `1399-FR-001` (2026-10-31)
+- `1398-FR-003` — superseded by `1399-FR-002` (2026-10-31)
+- `1398-FR-004` — superseded by `1399-FR-003` (2026-10-31)
+- `1398-FR-005` — superseded by `1399-FR-004` (2026-10-31)
+- `1398-FR-011` — superseded by `1399-FR-007` (2026-10-31)
+- `1398-FR-016` — superseded by `1399-FR-011` (2026-10-31)
