@@ -32,6 +32,7 @@ h1 {
 }
 button {
   align-self: flex-start;
+  min-height: var(--mf-tap);
   white-space: normal;
 }
 h1:focus {
@@ -44,6 +45,7 @@ h1:focus-visible {
 p {
   margin: 0;
 }
-button {
-  min-height: 44px;
+.note {
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-small);
 }
