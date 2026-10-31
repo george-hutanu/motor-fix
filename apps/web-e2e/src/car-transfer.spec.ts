@@ -1,18 +1,21 @@
 // @traces 1392-FR-001 1392-FR-002 1392-FR-003 1392-FR-004 1392-FR-005 1392-FR-009 1394-FR-008
-// Also covers 1392-SC-001 and 1392-SC-003.
 
-import { expect, type Page } from '@playwright/test';
-import { Client } from 'pg';
+import { expect, type Locator, type Page } from '@playwright/test';
 
-import { signedIn, signIn, signUpDriver } from './accounts.js';
+import { signedIn } from './accounts.js';
 import { MAILBOX, test } from './fixtures.js';
 import { freshPhone } from './fresh-phone.js';
-import { type SoldCar, soldCar } from './sold-car.js';
+import { removeDriver, type SoldCar, soldCar } from './sold-car.js';
+import { lastCode } from './whatsapp-code.js';
 
 const WAITING = 'O mașină te așteaptă.';
 
-// The seller's sale dialog, sending the link with the logged repair ticked.
-async function sendLink(page: Page, buyer: string): Promise<string> {
+// The seller's sale dialog, sending the link with the logged repair ticked;
+// the dialog stays open on the sent link.
+async function sendLink(
+  page: Page,
+  buyer: string,
+): Promise<{ dialog: Locator; link: string }> {
   await page
     .getByRole('button', { name: 'Acțiuni pentru Dacia Logan' })
     .click();
@@ -27,23 +30,22 @@ async function sendLink(page: Page, buyer: string): Promise<string> {
   await expect(dialog.getByText('Linkul a plecat pe WhatsApp')).toBeVisible();
   const link =
     (await dialog.locator('[data-part="link"]').textContent())?.trim() ?? '';
-  await dialog.getByRole('button', { name: 'Gata' }).click();
-  return new URL(link).pathname;
+  return { dialog, link };
 }
 
-// The buyer's account and the car it took over.
-async function removeBuyer(email: string) {
-  const db = new Client({ connectionString: process.env['DATABASE_URL'] });
-  await db.connect();
-  try {
-    await db.query(
-      `DELETE FROM car WHERE owner_id IN (SELECT id FROM account WHERE email = $1)`,
-      [email],
-    );
-    await db.query('DELETE FROM account WHERE email = $1', [email]);
-  } finally {
-    await db.end();
-  }
+// A new number signs up in the dialog the page opened: the code, a name, the tick.
+async function phoneSignUp(page: Page, phone: string) {
+  const dialog = page.getByRole('dialog', { name: 'Autentificare' });
+  await expect(dialog.locator('mf-overlay-panel')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Continuă cu telefonul' }).click();
+  await dialog.getByLabel('Număr de telefon').fill(phone);
+  await dialog.getByRole('button', { name: 'Trimite codul' }).click();
+  await dialog.getByLabel('Cod').fill(await lastCode(page, phone));
+  await dialog.getByRole('button', { name: 'Intră în cont' }).click();
+  await dialog.getByLabel('Nume').fill('Andrei Ionescu');
+  await dialog.getByRole('checkbox').check();
+  await dialog.getByRole('button', { name: 'Creează contul' }).click();
+  await expect(dialog).toHaveCount(0);
 }
 
 test.describe('selling a car and its transfer link @seeded @database', () => {
@@ -64,21 +66,7 @@ test.describe('selling a car and its transfer link @seeded @database', () => {
     await signedIn(page, sold.email, /\/app\/driver/);
     await page.goto('/app/driver/cars');
 
-    await page
-      .getByRole('button', { name: 'Acțiuni pentru Dacia Logan' })
-      .click();
-    await page.getByRole('menuitem', { name: 'Am vândut mașina' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Ai vândut Dacia Logan?' });
-    await dialog
-      .getByRole('button', { name: 'Transmit istoricul noului proprietar' })
-      .click();
-    await dialog.getByRole('checkbox', { name: /Plăcuțe de frână/ }).check();
-    await dialog.getByLabel('Telefonul cumpărătorului').fill(buyer);
-    await dialog.getByRole('button', { name: 'Trimite' }).click();
-
-    await expect(dialog.getByText('Linkul a plecat pe WhatsApp')).toBeVisible();
-    const link =
-      (await dialog.locator('[data-part="link"]').textContent())?.trim() ?? '';
+    const { dialog, link } = await sendLink(page, buyer);
     expect(link).toMatch(/\/ro\/transfer\/[\w-]+$/);
     await expect
       .poll(async () => {
@@ -129,11 +117,13 @@ test.describe('selling a car and its transfer link @seeded @database', () => {
     request,
   }) => {
     sold = await soldCar(request);
-    const buyerEmail = await signUpDriver(request, 'preluare');
+    const phone = freshPhone();
     try {
       await signedIn(page, sold.email, /\/app\/driver/);
       await page.goto('/app/driver/cars');
-      const path = await sendLink(page, freshPhone());
+      const sent = await sendLink(page, phone);
+      await sent.dialog.getByRole('button', { name: 'Gata' }).click();
+      const path = new URL(sent.link).pathname;
 
       const visitor = await browser.newContext();
       const buyer = await visitor.newPage();
@@ -143,7 +133,7 @@ test.describe('selling a car and its transfer link @seeded @database', () => {
       await expect(buyer.locator('mf-transfer')).not.toContainText('Dacia');
 
       await buyer.getByRole('button', { name: 'Intră în cont' }).click();
-      await signIn(buyer, buyerEmail);
+      await phoneSignUp(buyer, phone);
       await expect(
         buyer.getByRole('heading', {
           name: /^Dacia Logan 2018 · 1 reparație transmisă · de la /,
@@ -158,6 +148,7 @@ test.describe('selling a car and its transfer link @seeded @database', () => {
       });
       await expect(card).toBeVisible();
       await expect(card).toContainText('2018');
+      await expect(card).not.toContainText(/[A-Z]{1,2} ?\d{2,3} ?[A-Z]{3}/);
       await visitor.close();
 
       await page.reload();
@@ -177,7 +168,7 @@ test.describe('selling a car and its transfer link @seeded @database', () => {
         page.getByRole('button', { name: 'Acțiuni pentru Dacia Logan' }),
       ).toHaveCount(0);
     } finally {
-      await removeBuyer(buyerEmail);
+      await removeDriver('phone', phone);
     }
   });
 

@@ -16,22 +16,33 @@ export interface SoldCar {
   remove(): Promise<void>;
 }
 
+// A driver the flow made, by e-mail or phone, and their cars: the cars'
+// repairs, ownership and transfer rows go with them (ON DELETE CASCADE).
+export async function removeDriver(
+  by: 'email' | 'phone',
+  value: string,
+): Promise<void> {
+  const db = new Client({ connectionString: process.env['DATABASE_URL'] });
+  await db.connect();
+  try {
+    await db.query(
+      `DELETE FROM car WHERE owner_id IN (SELECT id FROM account WHERE ${by} = $1)`,
+      [value],
+    );
+    await db.query(`DELETE FROM account WHERE ${by} = $1`, [value]);
+  } finally {
+    await db.end();
+  }
+}
+
 export async function soldCar(request: APIRequestContext): Promise<SoldCar> {
   const email = await signUpDriver(request, 'vanzare');
   const db = new Client({ connectionString: process.env['DATABASE_URL'] });
   await db.connect();
 
   const remove = async () => {
-    try {
-      // The car's repairs, ownership and transfer rows go with it (ON DELETE CASCADE).
-      await db.query(
-        `DELETE FROM car WHERE owner_id IN (SELECT id FROM account WHERE email = $1)`,
-        [email],
-      );
-      await db.query('DELETE FROM account WHERE email = $1', [email]);
-    } finally {
-      await db.end();
-    }
+    await db.end();
+    await removeDriver('email', email);
   };
 
   try {
