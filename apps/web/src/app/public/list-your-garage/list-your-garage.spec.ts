@@ -3167,6 +3167,77 @@ describe('a signed-in account that owns a garage', () => {
     expect(page.querySelector('.ended')).toBeNull();
   });
 
+  // @traces 1401-FR-002 1401-FR-003
+  describe('whose file was rejected', () => {
+    // The correction copy of a rejected file names the rejection's reason.
+    const rejectedCopy = (reason: string, step: number) => ({
+      data: { steps: { '1': { name: 'Service Popescu' } } },
+      edited: false,
+      email: 'ana@service.ro',
+      held: [{ issuedOn: null, kind: 'rar_authorisation', pages: 2 }],
+      id: 'c2',
+      language: 'ro',
+      requestedItems: [reason],
+      status: 'open',
+      step,
+      token: 'ct',
+      updatedAt: '2026-10-30T10:00:00.000Z',
+    });
+    const marked = (page: HTMLElement) =>
+      [...page.querySelectorAll('section > h2')].flatMap((h2, i) =>
+        h2.querySelector('.asked') ? [i + 1] : [],
+      );
+
+    it.each([
+      ['address', 5],
+      ['documents', 6],
+      ['rar', 6],
+      ['photos', 5],
+      ['other', 1],
+    ])(
+      'opens the form over the copy of a %s rejection at step %i, marked as asked by MotorFix',
+      async (reason, step) => {
+        session.current.set(OWNER);
+
+        const { harness, page } = await open('/ro/list-your-garage');
+        await settle(harness);
+        await answered(harness, await copyAsked(), rejectedCopy(reason, step));
+
+        expect(statusView(page)).toBeNull();
+        expect(formShown(page)).toBe(true);
+        expect(marked(page)).toEqual([step]);
+        expect(text(page.querySelector(`#pasul-${step} > h2 .asked`))).toBe(
+          '· Cerut de MotorFix',
+        );
+        expect(current(page)[0]).toMatch(new RegExp(`^${step} `));
+        expect(
+          page.querySelector<HTMLInputElement>('#pasul-1 mf-details-step input')
+            ?.value,
+        ).toBe('Service Popescu');
+        expect(
+          text(
+            page.querySelector('.area[data-kind="rar_authorisation"] .on-file'),
+          ),
+        ).toBe('Pe dosar: 2 pagini');
+      },
+    );
+
+    it('says it in English', async () => {
+      session.current.set(OWNER);
+
+      const { harness, page } = await open('/en/list-your-garage');
+      await settle(harness);
+      await answered(harness, await copyAsked(), {
+        ...rejectedCopy('documents', 6),
+        language: 'en',
+      });
+
+      expect(text(page.querySelector('#step-6 > h2 .asked'))).toBe(
+        '· Asked by MotorFix',
+      );
+    });
+  });
+
   // @traces 208-FR-005
   describe('whose file asks for more', () => {
     const COPY = {
