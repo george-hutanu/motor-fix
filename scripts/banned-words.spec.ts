@@ -238,5 +238,5 @@ describe('this repository', () => {
     const root = join(__dirname, '..');
     const { files, list: real } = scanRepo(root);
     expect(listErrors(files, real)).toEqual([]);
-  }, 60_000);
+  });
 });

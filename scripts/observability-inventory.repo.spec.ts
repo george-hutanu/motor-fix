@@ -32,13 +32,9 @@ describe('the repository inventory', () => {
   );
 
   // @traces 346-FR-007
-  repoIt(
-    'counts every OpenAPI operation and misses nothing',
-    () => {
-      expect(checkInventory(root)).toEqual([]);
-    },
-    60_000,
-  );
+  repoIt('counts every OpenAPI operation and misses nothing', () => {
+    expect(checkInventory(root)).toEqual([]);
+  });
 
   // The opening hours ride the profile read the inventory already counts.
   // @traces 308-FR-017

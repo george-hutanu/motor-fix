@@ -36,7 +36,8 @@ export function nestPreset(
   {
     include = ['src/**/*.spec.ts'],
     setupFiles = [],
-  }: { include?: string[]; setupFiles?: string[] } = {},
+    testTimeout,
+  }: { include?: string[]; setupFiles?: string[]; testTimeout?: number } = {},
 ) {
   const suite = chosenSuite();
   const files = suiteFiles(include, suite);
@@ -57,6 +58,7 @@ export function nestPreset(
       sequence: { hooks: 'stack' },
       setupFiles,
       ...(maxWorkers && { maxWorkers }),
+      ...(testTimeout && { testTimeout }),
     },
   });
 }

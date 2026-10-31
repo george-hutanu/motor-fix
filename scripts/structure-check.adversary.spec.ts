@@ -153,7 +153,7 @@ describe('flat submodules, hostile listings', () => {
   it('handles ten thousand distinct files in a module', () => {
     const many = Array.from({ length: 10000 }, (_, i) => `${MOD}/f${i}.ts`);
     expect(submoduleViolations(many)).toEqual([]);
-  }, 60_000);
+  });
 
   it('handles non-ascii file names', () => {
     expect(
