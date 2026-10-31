@@ -19793,6 +19793,42 @@
           "segments"
         ]
       },
+      "ScheduleIntervalDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "example": "08:30"
+          },
+          "to": {
+            "type": "string",
+            "example": "17:00"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ]
+      },
+      "ScheduleDayDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "example": "2026-10-09"
+          },
+          "open": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleIntervalDto"
+            }
+          }
+        },
+        "required": [
+          "day",
+          "open"
+        ]
+      },
       "GarageScheduleDto": {
         "type": "object",
         "properties": {
@@ -19816,6 +19852,20 @@
           },
           "lifts": {
             "type": "boolean"
+          },
+          "liftCount": {
+            "type": "number",
+            "description": "The garage's lifts; 0 while lifts is false"
+          },
+          "hoursSet": {
+            "type": "boolean",
+            "description": "Whether the garage has set opening hours"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleDayDto"
+            }
           }
         },
         "required": [
@@ -19823,7 +19873,10 @@
           "blocks",
           "from",
           "to",
-          "lifts"
+          "lifts",
+          "liftCount",
+          "hoursSet",
+          "days"
         ]
       },
       "RatingBreakdownDto": {
