@@ -42,6 +42,7 @@ type Wanted = { caption: string | null; position: number };
 type Kept = Wanted & { row: Row };
 type Added = Wanted & { key: string };
 type Problem = { code: string; field: string };
+type Probe = Map<string, PhotoSize | null>;
 
 const invalid = (errors: Problem[], message: string) =>
   refusal(HttpStatus.BAD_REQUEST, 'validation_failed', message, errors);
@@ -97,6 +98,27 @@ function validBody(body: unknown, garageId: string): SaveGaragePhotosDto {
   return dto;
 }
 
+// Every added file stored, then every one processed.
+function sizesOf(stored: Probe, keys: string[]): Map<string, PhotoSize> {
+  const sizes = keys.map((key) => stored.get(key) ?? null);
+  if (sizes.some((size) => size === null)) {
+    throw refusal(
+      HttpStatus.CONFLICT,
+      'file_missing',
+      'An added photo was never uploaded or was removed',
+    );
+  }
+  const found = sizes as PhotoSize[];
+  if (found.some((size) => size.width === undefined)) {
+    throw refusal(
+      HttpStatus.CONFLICT,
+      'photo_processing',
+      'An added photo is still being processed',
+    );
+  }
+  return new Map(found.map((size) => [size.key, size]));
+}
+
 // The owner's whole gallery in its new order, in place and with no review.
 // Refused in order: who asks, the garage's state, the rules, an unknown
 // photo, a missing file, one still processing, then a stale stamp.
@@ -119,6 +141,7 @@ export class OwnerPhotosSave {
     body: unknown,
   ): Promise<GaragePhotosDto> {
     assertGarageOwner(actor, garageId);
+    const stored = await this.probe(body, garageId);
     const removed = await this.prisma.$transaction(async (tx) => {
       const locked = await lockGarage(tx, garageId);
       assertListed(locked.status);
@@ -129,7 +152,10 @@ export class OwnerPhotosSave {
         where: { garageId },
       });
       const { added, kept } = this.planned(dto, rows);
-      const sizes = await this.sizesOf(added.map((a) => a.key));
+      const sizes = sizesOf(
+        stored,
+        added.map((a) => a.key),
+      );
       if (dto.version !== String(locked.profile_version)) throw changed();
       const keptIds = new Set(kept.map((k) => k.row.id));
       const gone = rows.filter((row) => !keptIds.has(row.id));
@@ -190,27 +216,34 @@ export class OwnerPhotosSave {
     return { added, kept };
   }
 
-  // Every added file stored, then every one processed.
-  private async sizesOf(keys: string[]): Promise<Map<string, PhotoSize>> {
-    const stored = await Promise.all(
+  // The files the body adds, read before the garage is locked so slow
+  // storage never holds the lock: each one this garage's own and stored, with
+  // its size once processed, or null when it was never stored.
+  private async probe(body: unknown, garageId: string): Promise<Probe> {
+    const own = `garage_photo/${garageId}/`;
+    const photos: unknown[] =
+      isRecord(body) && Array.isArray(body['photos'])
+        ? body['photos'].slice(0, PHOTOS_MAX)
+        : [];
+    const keys = [
+      ...new Set(
+        photos.flatMap((entry) =>
+          isRecord(entry) &&
+          typeof entry['key'] === 'string' &&
+          entry['key'].startsWith(own)
+            ? [entry['key']]
+            : [],
+        ),
+      ),
+    ];
+    const meta = await Promise.all(
       keys.map((key) => this.storage.metadataOf(key)),
     );
-    if (stored.some((meta) => meta === null)) {
-      throw refusal(
-        HttpStatus.CONFLICT,
-        'file_missing',
-        'An added photo was never uploaded or was removed',
-      );
-    }
-    const sizes = await this.photos.describe(keys);
-    if (sizes.some((size) => size.width === undefined)) {
-      throw refusal(
-        HttpStatus.CONFLICT,
-        'photo_processing',
-        'An added photo is still being processed',
-      );
-    }
-    return new Map(sizes.map((size) => [size.key, size]));
+    const present = keys.filter((_, n) => meta[n] !== null);
+    const sizes = new Map(
+      (await this.photos.describe(present)).map((size) => [size.key, size]),
+    );
+    return new Map(keys.map((key) => [key, sizes.get(key) ?? null]));
   }
 
   // The rows parked past the cap first, as no two may share a place; then

@@ -117,7 +117,9 @@ export class OwnerPhotosService {
   }
 
   // An upload the owner dropped before saving; a gallery photo goes only
-  // through the save, which records it.
+  // through the save, which records it. A save naming this same upload while
+  // it is removed may keep a row whose file is gone: only the owner's own two
+  // requests race here, and the next save that drops the photo clears it.
   async removeUpload(actor: Actor, garageId: string, id: string) {
     await this.assertWritable(actor, garageId);
     const key = this.keyOf(garageId, id);
@@ -173,7 +175,7 @@ export class OwnerPhotosService {
     return { photos, version: String(garage.profileVersion) };
   }
 
-  keyOf(garageId: string, id: string) {
+  private keyOf(garageId: string, id: string) {
     return `${PURPOSE}/${garageId}/${id}`;
   }
 

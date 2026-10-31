@@ -1,6 +1,6 @@
 ---
 capability: garage-profile
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 307-public-garage-profile
   - 310-photo-gallery
@@ -31,6 +31,7 @@ features:
   - 1366-garage-map-directions
   - 1246-garage-profile-edit
   - 1247-brand-fuel-edit
+  - 1249-photos-edit
 ---
 
 # Capability: Garage profile
@@ -103,9 +104,9 @@ _From 1353-verified-badge-last-check._
 
 _From 307-public-garage-profile._
 
-### 310-FR-001 — The public profile read MUST answer the garage's photos as a list in the owner's order (ascending position), each entry carrying a thumbnail address and a full-screen address, both signed download addresses valid for 60 minutes, plus the width and height of the photo as seen upright when they are known. The answer MUST never carry a storage key, bucket name or path; a test fails on any of them in the response.
+### 1249-FR-011 — After `garage.updated` the public profile cache for the garage MUST be dropped (1183-FR-005), and an open public profile MUST show the new gallery (order, set, captions) within 5 s of the save's 200 with no reload, through its existing live re-read (310-FR-010); the public read carries each photo's `caption` (absent when none), and a tile with a caption reads it out as "{caption} · Fotografie {n} din {total} · {garage}" / "{caption} · Photo {n} of {total} · {garage}" (310-FR-006's text otherwise), the viewer naming the photo the same way.
 
-_From 310-photo-gallery._
+_From 1249-photos-edit._
 
 ### 310-FR-002 — A photo whose copies are not yet in storage MUST be left out of the list (a row with a known width is trusted to have its copies; only a row whose width is still null is checked against the thumbnail copy's metadata at read time, which also supplies its width and height), and a garage whose list is empty MUST answer an empty list (never an absent field), so the page hides the section.
 
@@ -120,10 +121,6 @@ _From 310-photo-gallery._
 _From 1192-photo-variants._
 
 ### 310-FR-005 — While the profile is being read the section MUST show grey tiles in the final layout, and a tile whose image fails to load MUST show a neutral placeholder tile while the others still show.
-
-_From 310-photo-gallery._
-
-### 310-FR-006 — Every tile MUST be reachable with Tab, carry the alt text "Fotografie {n} din {total} · {garage}" / "Photo {n} of {total} · {garage}" in the page's language, and open the full-screen view on that photo with Enter, Space or a click.
 
 _From 310-photo-gallery._
 
@@ -865,6 +862,54 @@ _From 1247-brand-fuel-edit._
 
 _From 1247-brand-fuel-edit._
 
+### 1249-FR-001 — A new owner write `POST /api/v1/garages/{garageId}/photos/upload-url` (body: the file's declared `contentType`, `size` and `checksum`, as the draft's upload address takes them, 110-FR-004) MUST answer 201 with a signed upload address for a key under `incoming/garage_photo/{garageId}/` (the storage module's `createUpload` with the garage id as owner, `libs/domain/src/storage/storage.service.ts:163`), under the `garage_photo` file rules (JPEG, PNG, WebP, HEIC/HEIF, 10 MB: 422 `file_type_not_allowed`, `file_too_large`), refusing a 21st photo with 422 `photos_full` (the gallery's rows; FR-006 refuses a save of more than 20), under the upload-address rate limit keyed by the garage (429 `rate_limited`); the API never carries the file's bytes.
+
+_From 1249-photos-edit._
+
+### 1249-FR-002 — A new owner write `POST /api/v1/garages/{garageId}/photos/uploads` (body: `key`, the incoming key) MUST confirm the upload through storage (the signature check, 422 `file_type_mismatch` with the object deleted; 409 `file_missing` when nothing was uploaded; 404 `not_found` for a key not under this garage's incoming prefix), keep it as `garage_photo/{garageId}/{id}`, queue its copies on the existing photo queue (110-FR-010, 1192-FR-001: thumbnail, display copy, variants, ThumbHash) and answer 201 `{ key, processed: false }`. Confirming the same key again answers the same photo and queues nothing. A confirm adds nothing to the gallery and writes no audit entry and no event.
+
+_From 1249-photos-edit._
+
+### 1249-FR-003 — A new owner write `DELETE /api/v1/garages/{garageId}/photos/uploads/{id}` MUST delete a confirmed unsaved upload of this garage (`garage_photo/{garageId}/{id}`) with its copies (1192-FR-004) and answer 204; a key the gallery holds MUST answer 409 `photo_in_gallery` with nothing deleted (only a save removes a gallery photo); an unknown id answers 404.
+
+_From 1249-photos-edit._
+
+### 1249-FR-004 — A new owner read `GET /api/v1/garages/{garageId}/photos` MUST answer `{ version, photos }`: the gallery in order, each `{ id, position, caption, thumbnailUrl, width, height, processed }` with a signed thumbnail address (60 minutes, 422-FR-006), never a storage key, bucket or path; `version` is the profile's change stamp (1246-FR-008). A read of an unsaved upload's state (`GET …/photos/uploads/{id}`: `processed`, `thumbnailUrl`, `width`, `height`) MUST let the dialog poll a photo's copies as the step polls the draft's (110-FR-007).
+
+_From 1249-photos-edit._
+
+### 1249-FR-005 — A new owner write `PUT /api/v1/garages/{garageId}/photos` MUST take `{ version, photos }`, the whole gallery in its new order (first = cover), each entry `{ id, caption? }` (a photo the garage holds) or `{ key, caption? }` (an upload of FR-002), `caption` a string of at most 80 code points after trimming with no control character (empty stored as none), and answer FR-004's read with the new stamp.
+
+_From 1249-photos-edit._
+
+### 1249-FR-006 — The save MUST refuse with 400 `validation_failed` naming the entry, writing nothing: an empty list; more than 20 entries; an entry with both or neither of `id` and `key`; an `id` or `key` named twice; a `key` not shaped `garage_photo/{garageId}/{uuid}`; a caption over 80 code points or holding a control character; and with 400 `unknown_photo` an `id` the garage does not hold. A `key` with no stored file MUST answer 409 `file_missing`, and a `key` whose copies are not made yet MUST answer 409 `photo_processing`, both writing nothing.
+
+_From 1249-photos-edit._
+
+### 1249-FR-007 — A save whose `version` is not the current stamp MUST answer 409 `profile_changed` with no write; the check and the write are one conditional update in the save's transaction (1246-FR-008), so of two saves with the same stamp exactly one succeeds and the other answers 409. Refusals come in one order, the first that applies answering and nothing written: 401, then 403/404/410 (FR-008), then 400 `validation_failed`, then 400 `unknown_photo`, then 409 `file_missing`, then 409 `photo_processing`, then 409 `profile_changed`.
+
+_From 1249-photos-edit._
+
+### 1249-FR-008 — The reads and writes of FR-001 to FR-005 MUST answer 401 `sign_in_required` with no session, 403 `forbidden` for the garage's receptionist or mechanic, 404 `not_found` for another garage's owner and for a garage not yet approved, and 410 `gone` for a suspended garage (the writes); trust is checked on the server (`assertGarageOwner`, `libs/domain/src/garages/garage-brands/garage-brands.service.ts:29`).
+
+_From 1249-photos-edit._
+
+### 1249-FR-009 — A successful save MUST write, in one transaction under the garage's row lock: the gallery rows (a kept photo keeps its row and id and takes its new position and caption; a removed one's row is deleted; an added one gets a row with its key, sizes, variant path and ThumbHash); one audit entry per change through the audit writer (390-FR-001, 390-FR-003; the actor is the signed-in owner), subject `garage_photo` and the row's id — `create` with `{ position, caption }` for an added photo, `delete` with `{ position, caption }` for a removed one, `update` on field `position` with the old and new `{ position, caption }` for a kept photo whose place changed, `update` on field `caption` with the old and new `{ position, caption }` for one whose caption changed — where `position` is the photo's 1-based place as the gallery shows it and `caption` the photo's caption or `null`, and no entry carries a file key, a variant path or a storage address; exactly one `garage.updated` outbox event for the garage with `fields: ['photos']` and the public-garage audience (no `results`: the search cards carry no photo); and the new change stamp. A kept photo whose stored position differs gets its own `position` entry even when only a neighbour was moved or removed (moving C first in A, B, C writes three; removing B writes two: B's `delete` and C's `position`); a photo whose place and caption both changed gets two entries, one per field. A save that changes nothing (same order, same set, same captions) writes no entry, no event and keeps the stamp. If any write fails, none stays (Principle VI).
+
+_From 1249-photos-edit._
+
+### 1249-FR-010 — After the save commits, the file of each removed photo MUST be deleted from storage with its copies (1192-FR-004); a delete that fails is logged with the garage id and never fails the save. The sending story's starting-gallery audit (`garage-photos.service.ts:19`, `saveRows`) is not changed.
+
+_From 1249-photos-edit._
+
+### 1249-FR-020 — The new endpoints MUST be recorded in `infra/observability/inventory.json` with their panel and alerts (the listing-photos entry grows: the same queue, the same upload measurement), the OpenAPI document and the generated client (`npx nx run data-access:generate`) MUST be regenerated; no new service, queue or outside call is added. Nothing of ST-1248's facilities group or ST-1418's dialog is touched.
+
+_From 1249-photos-edit._
+
+### 1249-FR-021 — Tests MUST exist before the code (Principle II) and name this feature's ids in `// @traces` lines: Jest on real PostgreSQL and Redis for FR-001 to FR-011 (each refusal and its code, the access matrix of FR-008, the audit entries with position and caption and without file keys, the one event in the save's transaction, the no-op save, the stamp race of FR-007, the 20-photo cap on the gallery's rows, the storage delete after the save and its failure); contract and adversary tests for FR-006 and FR-018 (36 dashes, 21 keys, a repeated key, each with 400); component tests for FR-012 to FR-017 (the control per role, the reused tile block, the failed tile with "Reîncearcă", Save unavailable while uploading, processing or failed, the 400, 409 and network handling, the no-second-read close, the cancel delete); and one PR QA flow that adds a photo, moves it first, writes a caption, saves and sees the public profile's gallery update within 5 s with no reload.
+
+_From 1249-photos-edit._
+
 ## Retired
 
 - `307-FR-004` — not built: the distance with `near` (and FR-013's "la {d} km" for a fixed garage) moved whole to the ST-307 tech-debt task, waiting on ST-229's `near` rule (PR #282); that task adds it back (2026-10-08)
@@ -892,3 +937,5 @@ _From 1247-brand-fuel-edit._
 - `133-FR-011` — superseded by `1246-FR-014` (2026-10-30)
 - `1246-FR-011` — superseded by `1247-FR-010` (2026-10-30)
 - `1246-FR-012` — superseded by `1247-FR-011` (2026-10-30)
+- `310-FR-001` — superseded by `1249-FR-011` (2026-10-31)
+- `310-FR-006` — superseded by `1249-FR-011` (2026-10-31)

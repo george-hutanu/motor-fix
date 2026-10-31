@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -41,6 +41,7 @@ features:
   - 1185-accent-search
   - 1246-garage-profile-edit
   - 1315-optimistic-toggles
+  - 1249-photos-edit
 ---
 
 # Capability: Garage listing
@@ -449,9 +450,9 @@ _From 110-workshop-photos._
 
 _From 110-workshop-photos._
 
-### 110-FR-006 — The draft MUST hold its photos as an ordered list of file keys, in the draft's data (`data.files`, the place 114 reserved for file keys, first key = cover). The order is saved by the form with the rest of the draft (114-FR-005; the whole data, the last save wins) and MUST be restored by the browser copy, by the server copy and by the continue link in the same order (114-FR-002, 114-FR-011, 114-FR-013). The server MUST accept in a save only keys the draft already holds (a key added by a confirm), in any order, never a new or foreign key, so a save cannot claim another draft's file; a held key the save leaves out (an older browser copy saved after a confirm) is kept and added back at the end, so only the photo delete (FR-009) removes a key. The draft's key pattern (`libs/contracts/src/listing-drafts.dto.ts`) MUST accept the storage key shape `<purpose>/<owner id>/<id>` with `_` in the purpose, which it refuses today.
+### 1249-FR-018 — (from #650) The listing draft's file-key pattern (`FILE_KEY`, `libs/contracts/src/listing-sections.ts:265`, used by the draft's `files` and by the documents' pages) MUST require a UUID-shaped owner segment (8-4-4-4-12 lowercase hex: 36 dashes no longer pass), and the draft envelope's `files` (`libs/contracts/src/listing-sections.ts:304`) MUST refuse more than 20 keys (`PHOTOS_MAX`) or a key named twice; a draft create or save holding any of them answers 400 `validation_failed` as the envelope is refused today. The same pattern guards the final keys (`garage_photo/{garageId}/{id}`) of FR-003, FR-005 and FR-006; FR-002's incoming key is checked only as being under this garage's incoming prefix (its own 404), as the draft's confirm does today.
 
-_From 110-workshop-photos._
+_From 1249-photos-edit._
 
 ### 110-FR-007 — Each uploaded photo MUST show as a thumbnail in the step with its progress bar while uploading, a spinner while its processed copies are not ready, and the thumbnail once they are; the thumbnail of a photo chosen on this device MAY be the local file while the copies are not ready. On another device or after a reload the thumbnails MUST come from storage through signed, short-lived download addresses issued only to the draft's token (`GET /api/v1/listing-drafts/{id}/photos`: key, position, whether processed, width and height, thumbnail address). A photo is processed when its thumbnail exists in storage; the width and height are kept as metadata on the thumbnail object, with no new table and no new field in the draft's data, never a public address.
 
@@ -1287,3 +1288,4 @@ _From 1315-optimistic-toggles._
 - `109-FR-014` — superseded by `1246-FR-010` (2026-10-30)
 - `112-FR-005` — superseded by `1246-FR-017` (2026-10-30)
 - `111-FR-005` — superseded by `1246-FR-023` (2026-10-30)
+- `110-FR-006` — superseded by `1249-FR-018` (2026-10-31)
