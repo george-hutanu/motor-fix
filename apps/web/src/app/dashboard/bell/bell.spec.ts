@@ -951,7 +951,7 @@ describe('BellStore: a read shows before the server answers', () => {
     await reading;
   });
 
-  // @traces 1315-FR-004 1315-FR-008
+  // @traces 1315-FR-004 1315-FR-008 1411-FR-007
   it('shows every row read and the count at zero at once on mark all, with one write', async () => {
     const { store } = await render(2, [row('a'), row('b')]);
     await store.load();
@@ -1002,7 +1002,7 @@ describe('BellStore: a read shows before the server answers', () => {
     expect(store.count()).toBe(3);
   });
 
-  // @traces 1315-FR-004 1315-FR-008
+  // @traces 1315-FR-004 1315-FR-008 1411-FR-007
   it('sends one mark all for two presses and puts the whole count back when it fails', async () => {
     const { store } = await render(2, [row('a'), row('b')]);
     await store.load();

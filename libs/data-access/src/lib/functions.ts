@@ -193,6 +193,8 @@ export type { ReportQueueControllerList$Params as ReportQueueControllerList$Para
 export { reportQueueControllerList as reportQueueControllerList } from './fn/admin/report-queue-controller-list';
 export type { DemandControllerDemand$Params as DemandControllerDemand$Params } from './fn/admin/demand-controller-demand';
 export { demandControllerDemand as demandControllerDemand } from './fn/admin/demand-controller-demand';
+export type { DemandControllerSupply$Params as DemandControllerSupply$Params } from './fn/admin/demand-controller-supply';
+export { demandControllerSupply as demandControllerSupply } from './fn/admin/demand-controller-supply';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
 export { adminOverviewControllerOverview as adminOverviewControllerOverview } from './fn/admin/admin-overview-controller-overview';
 export type { AdminOverviewControllerQueue$Params as AdminOverviewControllerQueue$Params } from './fn/admin/admin-overview-controller-queue';
@@ -325,6 +327,8 @@ export type { NoShowControllerWithdraw$Params as NoShowControllerWithdraw$Params
 export { noShowControllerWithdraw as noShowControllerWithdraw } from './fn/bookings/no-show-controller-withdraw';
 export type { GarageSchedule$Params as GarageSchedule$Params } from './fn/garages/garage-schedule';
 export { garageSchedule as garageSchedule } from './fn/garages/garage-schedule';
+export type { GarageFreeSlots$Params as GarageFreeSlots$Params } from './fn/garages/garage-free-slots';
+export { garageFreeSlots as garageFreeSlots } from './fn/garages/garage-free-slots';
 export type { GarageTimeBlocks$Params as GarageTimeBlocks$Params } from './fn/garages/garage-time-blocks';
 export { garageTimeBlocks as garageTimeBlocks } from './fn/garages/garage-time-blocks';
 export type { CreateTimeBlock$Params as CreateTimeBlock$Params } from './fn/garages/create-time-block';
