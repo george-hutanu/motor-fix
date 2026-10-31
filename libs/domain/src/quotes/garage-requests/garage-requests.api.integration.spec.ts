@@ -1274,11 +1274,14 @@ describe('GET /garage/requests?status=quoted once the driver accepts', () => {
     const row = res.body.items[1];
     expect(row.quote.status).toBe('accepted');
     expect(row.booking).toEqual({
+      canRecordNoShow: false,
+      canWithdrawNoShow: false,
       confirmBy: accepted.booking.confirmBy.toISOString(),
       durationMinutes: 90,
       id: accepted.booking.id,
       lift: null,
       mechanic: null,
+      noShowAt: null,
       startsAt: accepted.booking.startsAt.toISOString(),
       status: 'awaiting_confirmation',
       toReassign: false,
@@ -1342,11 +1345,14 @@ describe('GET /garage/requests?status=quoted once the driver accepts', () => {
     expect(res.body.total).toBe(1);
     const [row] = res.body.items;
     expect(row.booking).toEqual({
+      canRecordNoShow: false,
+      canWithdrawNoShow: false,
       confirmBy: booking.confirmBy.toISOString(),
       durationMinutes: 90,
       id: booking.id,
       lift: 2,
       mechanic: { id: dinamo.plainMechanic.id, name: 'Hand' },
+      noShowAt: null,
       startsAt: booking.startsAt.toISOString(),
       status: 'confirmed',
       toReassign: false,

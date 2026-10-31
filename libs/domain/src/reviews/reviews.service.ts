@@ -27,6 +27,7 @@ import {
   type Verdict,
 } from './eligibility/eligibility';
 import { publicReplyOf, replyRefusalOf, staffReplyOf } from './reply/reply';
+import { reportRefusalOf } from './report/report';
 import { recordReviewPosted } from './reviews.metrics';
 import { AUDIT_PORT, type AuditPort } from '../audit/audit.port';
 import { refusal } from '../auth/http-refusal';
@@ -241,6 +242,20 @@ export class ReviewsService {
     };
   }
 
+  // Each listed review's newest decided report, as the report operation reads
+  // it, so the row's button and the operation refuse alike.
+  private async newestDecided(reviewIds: string[]) {
+    const reports = reviewIds.length
+      ? await this.prisma.reviewReport.findMany({
+          distinct: ['reviewId'],
+          orderBy: [{ reviewId: 'asc' }, { decidedAt: 'desc' }],
+          select: { decidedAt: true, reviewId: true },
+          where: { reviewId: { in: reviewIds }, status: 'decided' },
+        })
+      : [];
+    return new Map(reports.map((report) => [report.reviewId, report]));
+  }
+
   // The garage's own reviews as its staff read them: the published and the
   // reported ones, newest first, each with where it stands and the mechanic;
   // the figures are the profile's. Only the owner may reply or report.
@@ -264,6 +279,7 @@ export class ReviewsService {
       ['published', 'reported'],
     );
     const owner = actor.role === 'garage';
+    const decided = await this.newestDecided(reviews.map(({ id }) => id));
     return {
       breakdown,
       items: reviews.map((review) => ({
@@ -277,6 +293,7 @@ export class ReviewsService {
             ? { shortName: shortName(review.mechanic.name) }
             : null,
         reply: staffReplyOf(review.reply),
+        reportRefusal: reportRefusalOf(review, decided.get(review.id) ?? null),
         status: review.status,
       })),
       page,

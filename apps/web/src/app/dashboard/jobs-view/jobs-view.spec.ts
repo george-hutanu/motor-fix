@@ -16,6 +16,8 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const job = (over: Partial<JobSummaryDto> = {}): JobSummaryDto => ({
   bookingId: 'booking-1',
+  canRecordNoShow: false,
+  canWithdrawNoShow: false,
   car: {
     brand: 'Dacia',
     engine: '1.5 dCi',
@@ -42,6 +44,7 @@ const job = (over: Partial<JobSummaryDto> = {}): JobSummaryDto => ({
   ],
   mechanicId: 'mechanic-1',
   mechanicName: 'Mihai Dumitru',
+  noShowAt: null,
   odometerKm: null,
   pausedAt: null,
   receivedAt: null,
