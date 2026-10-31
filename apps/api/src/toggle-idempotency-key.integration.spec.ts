@@ -30,6 +30,9 @@ const bearer = (accountId: string, role: Role) =>
 
 const KEY = 'Idempotency-Key';
 
+// The stamp the price row carries when the owner reads it, before a range write.
+const READ_AT = '2026-10-30T08:00:00.000Z';
+
 // One toggle write: a fresh state before each call, the call itself, what of
 // its answer stays the same from one fresh state to the next, and the row it
 // leaves behind.
@@ -41,6 +44,8 @@ type Write = {
     previous: Record<string, unknown> | undefined,
   ): unknown;
   stored(): Promise<unknown>;
+  // The status a write refused by design answers, with or without the key.
+  refused?: number;
 };
 
 const send = (call: request.Test, auth: string, key: string | undefined) => {
@@ -110,6 +115,33 @@ beforeAll(async () => {
       ).rows,
     );
 
+  const price = async () =>
+    (
+      await db.query(
+        'SELECT visible, from_bani, to_bani, duration_minutes FROM garage_price WHERE id = $1',
+        [priceId],
+      )
+    ).rows;
+  // The stamp is the moment of the write, so only whether a repeat kept
+  // the one before it is compared; the rest of the answer is compared whole.
+  const stampless = (
+    { updatedAt, ...rest }: Record<string, unknown>,
+    previous: Record<string, unknown> | undefined,
+  ) => ({
+    ...rest,
+    stamp:
+      previous === undefined
+        ? typeof updatedAt
+        : updatedAt === previous['updatedAt'],
+  });
+  // The row as the owner read it: its first range, at a known stamp.
+  const rangeAsRead = async () => {
+    await db.query(
+      'UPDATE garage_price SET visible = true, from_bani = 89000, to_bani = 140000, duration_minutes = 120, updated_at = $2 WHERE id = $1',
+      [priceId, READ_AT],
+    );
+  };
+
   writes = [
     {
       call: (key) =>
@@ -168,22 +200,42 @@ beforeAll(async () => {
           priceId,
         ]);
       },
-      // The stamp is the moment of the write, so only whether a repeat kept
-      // the one before it is compared; the rest of the answer is compared whole.
-      seen: ({ updatedAt, ...rest }, previous) => ({
-        ...rest,
-        stamp:
-          previous === undefined
-            ? typeof updatedAt
-            : updatedAt === previous['updatedAt'],
-      }),
-      stored: async () =>
-        (
-          await db.query(
-            'SELECT visible, from_bani, to_bani, duration_minutes FROM garage_price WHERE id = $1',
-            [priceId],
-          )
-        ).rows,
+      seen: stampless,
+      stored: price,
+    },
+    {
+      // The range against the stamp it was read with: the first call saves,
+      // and a repeat of it carries a stamp the save replaced, so it is stale.
+      call: (key) =>
+        send(
+          http().patch(`/api/v1/garages/${garageId}/prices/${priceId}`).send({
+            durationMinutes: 90,
+            expectedUpdatedAt: READ_AT,
+            fromBani: 90000,
+            toBani: 150000,
+          }),
+          ownerAuth,
+          key,
+        ),
+      reset: rangeAsRead,
+      seen: stampless,
+      stored: price,
+    },
+    {
+      // A stamp older than the row's: refused as stale, the row untouched.
+      call: (key) =>
+        send(
+          http().patch(`/api/v1/garages/${garageId}/prices/${priceId}`).send({
+            expectedUpdatedAt: '2026-10-30T07:00:00.000Z',
+            fromBani: 90000,
+          }),
+          ownerAuth,
+          key,
+        ),
+      refused: 409,
+      reset: rangeAsRead,
+      seen: (body) => body,
+      stored: price,
     },
   ];
 }, TURN_WAIT_MS);
@@ -222,17 +274,20 @@ const NAMES = [
   'PUT /notification-preferences',
   'POST /notifications/:id/read',
   'POST /notifications/read-all',
-  'PATCH /garages/:garageId/prices/:priceId',
+  'PATCH /garages/:garageId/prices/:priceId (visible)',
+  'PATCH /garages/:garageId/prices/:priceId (range)',
+  'PATCH /garages/:garageId/prices/:priceId (stale)',
 ].map((name, index) => [name, index] as [string, number]);
 
 // @traces 1407-FR-001 1407-FR-002 1407-FR-003 1407-FR-004 1407-FR-007
 describe.each(NAMES)('%s', (_, index) => {
   const write = () => writes[index];
 
-  it('succeeds without the key, as before', async () => {
+  it('answers without the key as before', async () => {
     const { answers } = await run(write(), [undefined]);
+    const { status } = answers[0];
 
-    expect(answers[0].status).toBeLessThan(300);
+    expect(status < 300 ? 'saved' : status).toBe(write().refused ?? 'saved');
   });
 
   it.each(KEYS)(
