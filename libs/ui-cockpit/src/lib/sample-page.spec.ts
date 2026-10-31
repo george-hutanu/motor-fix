@@ -122,7 +122,7 @@ describe('CockpitSamplePage', () => {
 
   afterEach(() => {
     document.querySelector('.cdk-overlay-container')?.remove();
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it.each([
@@ -133,7 +133,7 @@ describe('CockpitSamplePage', () => {
     'opens the sample task from %s in its shape on a computer',
     async (key, shape) => {
       const matchMedia = window.matchMedia;
-      jest.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
         ...matchMedia(query),
         matches: true,
       }));

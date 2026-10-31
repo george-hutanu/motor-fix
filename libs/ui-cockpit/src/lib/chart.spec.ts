@@ -144,7 +144,7 @@ describe('the bar and line charts', () => {
   it('redraw new points in place, without a new chart or the entry animation', async () => {
     const [fixture, el] = await render();
     const chart = chartOf(el);
-    const update = jest.spyOn(chart as Chart, 'update');
+    const update = vi.spyOn(chart as Chart, 'update');
 
     fixture.componentInstance.points.set([
       ...POINTS,
@@ -248,7 +248,7 @@ describe('the bar and line charts', () => {
     };
     const tap = (target: Element) =>
       target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
-    const update = jest.spyOn(chart, 'update');
+    const update = vi.spyOn(chart, 'update');
 
     tap(el.querySelector('.outside') as Element);
     expect(update).not.toHaveBeenCalled();

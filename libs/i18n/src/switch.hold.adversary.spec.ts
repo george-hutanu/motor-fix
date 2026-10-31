@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import type { MockInstance } from 'vitest';
 
 import { I18n } from './i18n';
 import {
@@ -16,7 +17,7 @@ async function start() {
   const fixture = TestBed.createComponent(Host);
   fixture.detectChanges();
   await fixture.whenStable();
-  await new Promise((resolve) => setTimeout(resolve));
+  await settle();
   await fixture.whenStable();
   return {
     choice: TestBed.inject(LanguageChoice),
@@ -26,11 +27,22 @@ async function start() {
 
 async function otherTab(newValue: string | null, key = 'mf.lang') {
   window.dispatchEvent(new StorageEvent('storage', { key, newValue }));
+  await settle();
+}
+
+// A switch waits for its texts, loaded by a real import() that can take longer
+// than a tick; waiting ends once every switch so far has finished.
+let use: MockInstance<I18n['use']>;
+beforeEach(() => {
+  use = vi.spyOn(I18n.prototype, 'use');
+});
+async function settle() {
+  await Promise.all(use.mock.results.map((result) => result.value));
   await new Promise((resolve) => setTimeout(resolve));
 }
 
 beforeEach(() => localStorage.clear());
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('LanguageChoice.hold under hostile use', () => {
   // @traces 468-FR-001
@@ -54,7 +66,7 @@ describe('LanguageChoice.hold under hostile use', () => {
     await otherTab('en');
 
     release();
-    await new Promise((resolve) => setTimeout(resolve));
+    await settle();
 
     expect(i18n.language()).toBe('ro');
   });
@@ -110,7 +122,7 @@ describe('LanguageChoice.hold under hostile use', () => {
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
     await fixture.whenStable();
-    await new Promise((resolve) => setTimeout(resolve));
+    await settle();
 
     await otherTab('en');
 

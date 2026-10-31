@@ -30,13 +30,11 @@ function device(initial: boolean) {
     media: QUERY,
     removeEventListener: (_: string, l: never) => listeners.delete(l),
   };
-  jest
-    .spyOn(window, 'matchMedia')
-    .mockImplementation((q) =>
-      q === QUERY
-        ? (media as unknown as MediaQueryList)
-        : ({ matches: false, media: q } as MediaQueryList),
-    );
+  vi.spyOn(window, 'matchMedia').mockImplementation((q) =>
+    q === QUERY
+      ? (media as unknown as MediaQueryList)
+      : ({ matches: false, media: q } as MediaQueryList),
+  );
   return {
     listeners,
     set(next: boolean) {
@@ -48,7 +46,7 @@ function device(initial: boolean) {
 }
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   TestBed.resetTestingModule();
 });
 
@@ -73,7 +71,7 @@ describe('the shared reduced-motion signal from the outside', () => {
   });
 
   it('is false when the query reports no match value', () => {
-    jest.spyOn(window, 'matchMedia').mockReturnValue({
+    vi.spyOn(window, 'matchMedia').mockReturnValue({
       addEventListener() {},
       matches: undefined,
       removeEventListener() {},

@@ -6,24 +6,42 @@
   "tags": [],
   "targets": {
     "test": {
+      "executor": "@angular/build:unit-test",
       "inputs": [
         "default",
         "^production",
-        "{workspaceRoot}/jest.preset.cjs",
-        "{projectRoot}/src/test-setup.ts",
+        "{workspaceRoot}/vitest.shared.ts",
         "{workspaceRoot}/apps/web/src/**/*",
         {
-          "env": "JEST_SUITE"
+          "externalDependencies": [
+            "vitest",
+            "@angular/build",
+            "@analogjs/vite-plugin-angular",
+            "jsdom"
+          ]
         },
         {
-          "externalDependencies": [
-            "jest",
-            "@nx/jest",
-            "ts-jest",
-            "jest-preset-angular"
-          ]
+          "dependentTasksOutputFiles": "**/*.d.ts",
+          "transitive": true
         }
-      ]
+      ],
+      "options": {
+        "buildTarget": "i18n:test-build:development",
+        "isolate": true,
+        "runner": "vitest",
+        "runnerConfig": "libs/i18n/vitest.config.ts",
+        "setupFiles": ["libs/i18n/src/test-setup.ts"],
+        "tsConfig": "libs/i18n/tsconfig.spec.json"
+      }
+    },
+    "test-build": {
+      "configurations": {
+        "development": {}
+      },
+      "executor": "@angular/build:application",
+      "options": {
+        "tsConfig": "libs/i18n/tsconfig.lib.json"
+      }
     },
     "test:mutation": {},
     "typecheck": {

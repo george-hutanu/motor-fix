@@ -1,5 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
+import type { MockInstance } from 'vitest';
 
 import { FILES } from './files';
 import { I18n, provideI18n } from './i18n';
@@ -15,17 +16,17 @@ const shellEn = {
 };
 
 function spyOnEveryLoader() {
-  const spies = new Map<string, jest.SpyInstance>();
+  const spies = new Map<string, MockInstance>();
   for (const area of AREAS)
     for (const language of LANGUAGES) {
       const files = FILES[area] as Record<string, () => Promise<unknown>>;
       if (files[language])
-        spies.set(`${area}/${language}`, jest.spyOn(files, language));
+        spies.set(`${area}/${language}`, vi.spyOn(files, language));
     }
   return spies;
 }
 
-const calledLoaders = (spies: Map<string, jest.SpyInstance>) =>
+const calledLoaders = (spies: Map<string, MockInstance>) =>
   [...spies].filter(([, spy]) => spy.mock.calls.length > 0).map(([n]) => n);
 
 describe('I18n', () => {
@@ -35,7 +36,7 @@ describe('I18n', () => {
     i18n = TestBed.inject(I18n);
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('starts in Romanian with the shell texts ready', () => {
     expect(i18n.language()).toBe('ro');
@@ -84,9 +85,10 @@ describe('I18n', () => {
 
   describe('when English is missing', () => {
     it('shows Romanian for a key missing in English', async () => {
-      jest
-        .spyOn(FILES.shell, 'en')
-        .mockResolvedValue({ ...shellEn, version: {} });
+      vi.spyOn(FILES.shell, 'en').mockResolvedValue({
+        ...shellEn,
+        version: {},
+      });
 
       await i18n.use('en');
 
@@ -95,9 +97,10 @@ describe('I18n', () => {
     });
 
     it('shows Romanian for an empty English text', async () => {
-      jest
-        .spyOn(FILES.shell, 'en')
-        .mockResolvedValue({ ...shellEn, version: { unknown: '' } });
+      vi.spyOn(FILES.shell, 'en').mockResolvedValue({
+        ...shellEn,
+        version: { unknown: '' },
+      });
 
       await i18n.use('en');
 
@@ -105,7 +108,7 @@ describe('I18n', () => {
     });
 
     it('keeps Romanian when the English file fails, and tries it again on the next switch', async () => {
-      const loader = jest
+      const loader = vi
         .spyOn(FILES.shell, 'en')
         .mockRejectedValueOnce(new Error('offline'));
 
@@ -166,9 +169,9 @@ describe('I18n', () => {
     });
 
     it('prefixes an area file’s keys with the area', async () => {
-      jest
-        .spyOn(FILES.public, 'ro')
-        .mockResolvedValue({ home: { title: 'Acasă' } });
+      vi.spyOn(FILES.public, 'ro').mockResolvedValue({
+        home: { title: 'Acasă' },
+      });
 
       await i18n.enter('public');
 
@@ -178,7 +181,7 @@ describe('I18n', () => {
 
   describe('counts', () => {
     beforeEach(async () => {
-      jest.spyOn(FILES.public, 'ro').mockResolvedValue({
+      vi.spyOn(FILES.public, 'ro').mockResolvedValue({
         results: {
           count: {
             few: '{count} service-uri',
@@ -187,7 +190,7 @@ describe('I18n', () => {
           },
         },
       });
-      jest.spyOn(FILES.public, 'en').mockResolvedValue({
+      vi.spyOn(FILES.public, 'en').mockResolvedValue({
         results: { count: { one: '{count} garage', other: '{count} garages' } },
       });
       await i18n.enter('public');

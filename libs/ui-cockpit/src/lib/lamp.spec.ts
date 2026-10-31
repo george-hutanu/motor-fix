@@ -16,7 +16,7 @@ class Host {
   readonly pulse = signal(false);
 }
 
-@Component({ imports: [Lamp], template: '<mf-lamp state="red" />' })
+@Component({ imports: [Lamp], template: '' })
 class Unlabelled {}
 
 function render() {
@@ -33,7 +33,7 @@ function render() {
   return { lamp, set };
 }
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('Lamp', () => {
   it('shows a dot hidden from screen readers and the label beside it', () => {
@@ -56,7 +56,7 @@ describe('Lamp', () => {
   });
 
   it('shows an unknown state as grey and warns once in development', () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const { lamp, set } = render();
 
     set('purple');
@@ -75,7 +75,10 @@ describe('Lamp', () => {
     expect(lamp.hasAttribute('data-pulse')).toBe(true);
   });
 
+  // The ahead-of-time compiler refuses the missing input before any test
+  // runs, so the template is compiled at run time to reach the check.
   it('refuses to render without a label', () => {
+    TestBed.overrideTemplate(Unlabelled, '<mf-lamp state="red" />');
     const fixture = TestBed.createComponent(Unlabelled);
 
     expect(() => fixture.detectChanges()).toThrow(/NG0950/);

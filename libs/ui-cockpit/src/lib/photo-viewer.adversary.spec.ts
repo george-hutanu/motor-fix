@@ -32,7 +32,7 @@ const THREE: ViewerPhoto[] = [
     <mf-photo-viewer
       title="Atelier Dinamo"
       [photos]="photos()"
-      [labels]="labels"
+      [labels]="$any(labels)"
       (failed)="failures.push($event.id)"
     />
   `,
@@ -73,7 +73,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   globalThis.Image = RealImage;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   fixture.destroy();
 });
 

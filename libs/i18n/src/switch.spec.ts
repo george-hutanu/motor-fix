@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import type { MockInstance } from 'vitest';
 
 import { I18n } from './i18n';
 import {
@@ -30,7 +31,7 @@ async function tap(
   b: HTMLElement,
 ) {
   b.click();
-  await new Promise((resolve) => setTimeout(resolve));
+  await settle();
   await fixture.whenStable();
 }
 
@@ -38,12 +39,23 @@ function blockStorage() {
   const blocked = () => {
     throw new DOMException('The operation is insecure.', 'SecurityError');
   };
-  jest.spyOn(Storage.prototype, 'getItem').mockImplementation(blocked);
-  jest.spyOn(Storage.prototype, 'setItem').mockImplementation(blocked);
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(blocked);
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(blocked);
+}
+
+// A switch waits for its texts, loaded by a real import() that can take longer
+// than a tick; waiting ends once every switch so far has finished.
+let use: MockInstance<I18n['use']>;
+beforeEach(() => {
+  use = vi.spyOn(I18n.prototype, 'use');
+});
+async function settle() {
+  await Promise.all(use.mock.results.map((result) => result.value));
+  await new Promise((resolve) => setTimeout(resolve));
 }
 
 beforeEach(() => localStorage.clear());
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('LanguageSwitch', () => {
   it('is a group named "Limba" with RO pressed and EN not pressed', () => {
@@ -108,7 +120,7 @@ describe('provideRememberedLanguage', () => {
     });
     const { fixture } = render();
     await fixture.whenStable();
-    await new Promise((resolve) => setTimeout(resolve));
+    await settle();
     await fixture.whenStable();
     return TestBed.inject(I18n);
   }
@@ -141,7 +153,7 @@ describe('provideRememberedLanguage', () => {
     window.dispatchEvent(
       new StorageEvent('storage', { key: 'mf.lang', newValue: 'en' }),
     );
-    await new Promise((resolve) => setTimeout(resolve));
+    await settle();
 
     expect(i18n.language()).toBe('en');
   });
@@ -154,7 +166,7 @@ describe('provideRememberedLanguage', () => {
       window.dispatchEvent(
         new StorageEvent('storage', { key: 'mf.lang', newValue }),
       );
-      await new Promise((resolve) => setTimeout(resolve));
+      await settle();
     };
     const first = choice.hold();
     const second = choice.hold();
@@ -193,7 +205,7 @@ describe('provideRememberedLanguage', () => {
     window.dispatchEvent(
       new StorageEvent('storage', { key: 'mf.lang', newValue: null }),
     );
-    await new Promise((resolve) => setTimeout(resolve));
+    await settle();
 
     expect(i18n.language()).toBe('ro');
   });
@@ -261,7 +273,7 @@ describe('LanguageChoice.taps', () => {
     window.dispatchEvent(
       new StorageEvent('storage', { key: 'mf.lang', newValue: 'ro' }),
     );
-    await new Promise((resolve) => setTimeout(resolve));
+    await settle();
     await fixture.whenStable();
 
     expect(taps).toEqual([]);

@@ -9,12 +9,12 @@ const QUERY = '(prefers-reduced-motion: reduce)';
 function fakeDevice(matches: boolean) {
   const listeners = new Set<(event: MediaQueryListEvent) => void>();
   const media = {
-    addEventListener: jest.fn((_: string, l: never) => listeners.add(l)),
+    addEventListener: vi.fn((_: string, l: never) => listeners.add(l)),
     matches,
     media: QUERY,
-    removeEventListener: jest.fn((_: string, l: never) => listeners.delete(l)),
+    removeEventListener: vi.fn((_: string, l: never) => listeners.delete(l)),
   };
-  const matchMedia = jest
+  const matchMedia = vi
     .spyOn(window, 'matchMedia')
     .mockImplementation((query) =>
       query === QUERY
@@ -34,7 +34,7 @@ function fakeDevice(matches: boolean) {
 
 const read = () => TestBed.runInInjectionContext(() => inject(REDUCED_MOTION));
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('REDUCED_MOTION', () => {
   it.each([true, false])(

@@ -1,12 +1,9 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "moduleResolution": "bundler",
     "outDir": "../../dist/out-tsc",
-    "target": "es2016",
-    "types": ["jest", "node"]
+    "types": ["vitest/globals", "node"]
   },
   "extends": "./tsconfig.json",
   "files": ["src/test-setup.ts"],
-  "include": ["jest.config.cts", "src/**/*.spec.ts", "src/**/*.d.ts"]
+  "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
 }

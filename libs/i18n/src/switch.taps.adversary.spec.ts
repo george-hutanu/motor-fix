@@ -15,7 +15,7 @@ beforeEach(() => {
   localStorage.clear();
   TestBed.configureTestingModule({ providers: [provideRememberedLanguage()] });
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('LanguageChoice.pick under hostile input', () => {
   it.each([
@@ -84,7 +84,7 @@ describe('LanguageChoice.pick under hostile input', () => {
   });
 
   it('reports the tap and switches for the visit when storage cannot be written', async () => {
-    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError');
     });
     const { taps } = listen();
