@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 257,
+    "count": 258,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -377,6 +377,19 @@
       ],
       "reason": "counted by motorfix_review_reply_announced_total (built, muted, skipped) on motorfix-product, with one ReviewReplied log line per event naming the review id; BullMQ's queue metrics cover depth and failures",
       "story": "ST-75"
+    },
+    {
+      "kind": "queue",
+      "name": "review-decided",
+      "source": "libs/domain/src/notifications/review-decided/review-decided.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_review_decision_announced_total (built, muted, skipped) on motorfix-product, with one ReviewDecided log line per event naming the review id; BullMQ queue metrics cover depth and failures",
+      "story": "ST-179"
     },
     {
       "kind": "queue",
@@ -1041,6 +1054,15 @@
       "story": "ST-75"
     },
     {
+      "kind": "product-counter",
+      "name": "motorfix_review_decision_announced_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each removal told to the review author and the garage owners by outcome (built, muted, skipped), with the fan-out log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
+      "story": "ST-179"
+    },
+    {
       "kind": "endpoint",
       "name": "garage-brands",
       "source": "libs/domain/src/garages/garage-brands/garage-brands.controller.ts",
@@ -1084,7 +1106,9 @@
       "name": "motorfix_live_input_closes_total",
       "source": "libs/domain/src/live-video/sessions/sessions.metrics.ts",
       "dashboard": "motorfix-api",
-      "alerts": ["worker-jobs-failed"],
+      "alerts": [
+        "worker-jobs-failed"
+      ],
       "reason": "counts every live input the worker closed at the provider after a stop, by outcome (closed, or close_failed on the last of three tries), on the live panel beside the starts, recordings and idle stops; the last failed try is a failed live-inputs job, which worker-jobs-failed sees",
       "story": "ST-1390"
     },
@@ -2920,6 +2944,28 @@
       ],
       "reason": "the admins' queue of pending review reports with the facts, read from PostgreSQL in a fixed number of queries per page and written nowhere; reading it is not logged or audited; a 400 on a bad page or a 404 for a non-admin is the rule working; the API error-rate and latency rules cover the route; no outside call",
       "story": "ST-177"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-review-decision",
+      "source": "libs/domain/src/reviews/report-queue/report-queue.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/review-reports/{reviewId}/decision",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each decision counts motorfix_review_decisions_total, moves the one pending report under a guard so two admins cannot both decide it, removes the review or the reply and writes their audit entries and one review.decided event in one transaction; a 409 or a 404 for a non-admin is the rule working; no outside call",
+      "story": "ST-179"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_decisions_total",
+      "source": "libs/domain/src/reviews/reviews.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each decision an admin tries by outcome (removed, already_decided, no_pending_report) with the target and rule, no identifiers; a refusal is the queue state, not an outage; the api-error-rate rule covers the endpoint that reports it",
+      "story": "ST-179"
     },
     {
       "kind": "queue",

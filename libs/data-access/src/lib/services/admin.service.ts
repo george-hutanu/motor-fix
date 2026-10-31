@@ -108,9 +108,12 @@ import { RecheckDueListDto } from '../models/recheck-due-list-dto';
 import { RecheckRecordedDto } from '../models/recheck-recorded-dto';
 import { reportDecisionControllerDecide } from '../fn/admin/report-decision-controller-decide';
 import { ReportDecisionControllerDecide$Params } from '../fn/admin/report-decision-controller-decide';
+import { reportQueueControllerDecide } from '../fn/admin/report-queue-controller-decide';
+import { ReportQueueControllerDecide$Params } from '../fn/admin/report-queue-controller-decide';
 import { reportQueueControllerList } from '../fn/admin/report-queue-controller-list';
 import { ReportQueueControllerList$Params } from '../fn/admin/report-queue-controller-list';
 import { ReportQueueDto } from '../models/report-queue-dto';
+import { ReviewDecisionResultDto } from '../models/review-decision-result-dto';
 import { suspensionControllerRestore } from '../fn/admin/suspension-controller-restore';
 import { SuspensionControllerRestore$Params } from '../fn/admin/suspension-controller-restore';
 import { suspensionControllerSuspend } from '../fn/admin/suspension-controller-suspend';
@@ -636,6 +639,39 @@ export class AdminService extends BaseService {
   reportQueueControllerList(params?: ReportQueueControllerList$Params, context?: HttpContext): Promise<ReportQueueDto> {
     const resp = this.reportQueueControllerList$Response(params, context);
     return resp.then((r: StrictHttpResponse<ReportQueueDto>): ReportQueueDto => r.body);
+  }
+
+  /** Path part for operation `reportQueueControllerDecide()` */
+  static readonly ReportQueueControllerDecidePath = '/api/v1/admin/review-reports/{reviewId}/decision';
+
+  /**
+   * Decide a review's pending report; this story removes.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `reportQueueControllerDecide()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reportQueueControllerDecide$Response(params: ReportQueueControllerDecide$Params, context?: HttpContext): Promise<StrictHttpResponse<ReviewDecisionResultDto>> {
+    const obs = reportQueueControllerDecide(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Decide a review's pending report; this story removes.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `reportQueueControllerDecide$Response()` instead.
+   *
+   * This method sends `application/json` and handles request body of type `application/json`.
+   */
+  reportQueueControllerDecide(params: ReportQueueControllerDecide$Params, context?: HttpContext): Promise<ReviewDecisionResultDto> {
+    const resp = this.reportQueueControllerDecide$Response(params, context);
+    return resp.then((r: StrictHttpResponse<ReviewDecisionResultDto>): ReviewDecisionResultDto => r.body);
   }
 
   /** Path part for operation `demandControllerDemand()` */

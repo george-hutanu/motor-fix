@@ -191,6 +191,8 @@ export type { JobDecisionsControllerReject$Params as JobDecisionsControllerRejec
 export { jobDecisionsControllerReject as jobDecisionsControllerReject } from './fn/admin/job-decisions-controller-reject';
 export type { ReportQueueControllerList$Params as ReportQueueControllerList$Params } from './fn/admin/report-queue-controller-list';
 export { reportQueueControllerList as reportQueueControllerList } from './fn/admin/report-queue-controller-list';
+export type { ReportQueueControllerDecide$Params as ReportQueueControllerDecide$Params } from './fn/admin/report-queue-controller-decide';
+export { reportQueueControllerDecide as reportQueueControllerDecide } from './fn/admin/report-queue-controller-decide';
 export type { DemandControllerDemand$Params as DemandControllerDemand$Params } from './fn/admin/demand-controller-demand';
 export { demandControllerDemand as demandControllerDemand } from './fn/admin/demand-controller-demand';
 export type { AdminOverviewControllerOverview$Params as AdminOverviewControllerOverview$Params } from './fn/admin/admin-overview-controller-overview';
