@@ -1090,6 +1090,16 @@
     "label": "Navigare principală",
     "search": "Caută"
   },
+  "transfer": {
+    "accepted": "Mașina a fost deja preluată",
+    "cancelled": "Linkul nu mai e valabil",
+    "expired": "Linkul a expirat",
+    "failed": "Nu am putut verifica linkul. Încearcă din nou.",
+    "loading": "Verificăm linkul…",
+    "retry": "Încearcă din nou",
+    "unknown": "Linkul nu există",
+    "valid": "Linkul e valabil. Preluarea mașinii vine în curând."
+  },
   "unsubscribe": {
     "error": "Nu am putut opri noutățile acum.",
     "home": "Mergi la MotorFix",

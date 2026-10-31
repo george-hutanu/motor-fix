@@ -25,6 +25,7 @@ import {
 } from './addresses';
 import { routes } from './app.routes';
 import { Home } from './home/home';
+import { publicChildren } from './public/routes';
 
 const ORIGIN = 'https://motorfix.ro';
 
@@ -208,8 +209,8 @@ describe('language addresses', () => {
         route === prefix
           ? {
               ...route,
-              children: [
-                ...(route.children ?? []),
+              loadChildren: async () => [
+                ...publicChildren,
                 { canActivate: [() => opened], component: Home, path: 'slow' },
               ],
             }
