@@ -1,0 +1,51 @@
+<section class="panel">
+  @if (list(); as list) {
+    @if (list.items.length) {
+      <ul class="rows">
+        @for (repair of list.items; track repair.id) {
+          <li class="row" [attr.data-repair]="repair.id">
+            <p class="what">{{ repair.what }}</p>
+            <p class="day">{{ repair.doneOn | day }}</p>
+            <button
+              hlmBtn
+              variant="secondary"
+              type="button"
+              class="correct"
+              data-correct
+              [attr.aria-label]="'garage.clientRepairs.correctLabel' | t: { day: (repair.doneOn | day) }"
+              (click)="correct(repair)"
+            >
+              {{ 'garage.clientRepairs.correctAction' | t }}
+            </button>
+            <p class="who">{{ repair.driver.shortName }} · {{ repair.car.brandName }} {{ repair.car.model }} {{ repair.car.year }}</p>
+            <p class="km">{{ repair.odometerKm | km }}</p>
+            <p class="cost">
+              @if (repair.costBani === null) {
+                {{ 'garage.clientRepairs.noAmount' | t }}
+              } @else {
+                {{ repair.costBani | lei }}
+              }
+            </p>
+            @if (repair.correctedAt) {
+              <p class="corrected">{{ 'garage.clientRepairs.corrected' | t: { day: (repair.correctedAt | day) } }}</p>
+            }
+          </li>
+        }
+      </ul>
+      @if (list.truncated) {
+        <p class="truncated" data-truncated>{{ 'garage.clientRepairs.truncated' | t }}</p>
+      }
+    } @else {
+      <mf-empty-state icon="wrench" text="garage.clientRepairs.empty" />
+    }
+  } @else if (view.failed()) {
+    <p role="alert" class="failed">{{ 'garage.clientRepairs.failed' | t }}</p>
+    <button hlmBtn variant="secondary" type="button" class="retry" (click)="view.reload()">{{ 'garage.clientRepairs.retry' | t }}</button>
+  } @else {
+    <ul class="rows" aria-busy="true">
+      @for (n of skeletons; track n) {
+        <li data-skeleton class="skeleton" aria-hidden="true"></li>
+      }
+    </ul>
+  }
+</section>
