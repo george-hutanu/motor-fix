@@ -77,7 +77,7 @@ async function countBrandArea(
     SELECT brand, area, COUNT(DISTINCT id)::int AS n FROM (
       SELECT qr.id, qr.car_brand AS brand, ${areaOf(Prisma.sql`g.position`)} AS area
       FROM quote_request qr
-      -- A request sent to no garage still counts once, under unknown (SC-002).
+      -- A request sent to no garage still counts once, under unknown.
       LEFT JOIN request_recipient rr ON rr.request_id = qr.id
       LEFT JOIN garage g ON g.id = rr.garage_id
       WHERE (${within(at, days)}) ${unmet}
