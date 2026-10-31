@@ -176,6 +176,7 @@
   },
   "jobs": {
     "finalPrice": {
+      "aboveQuote": "Above the quote",
       "cancel": "Cancel",
       "correct": "Correct",
       "correctTitle": "Correct the final price",
@@ -195,6 +196,7 @@
         "job_not_done": "Mark the job as done first",
         "not_handed_over": "The job has not been handed over yet"
       },
+      "quote": "Quote {range}",
       "save": "Save"
     },
     "noMechanic": "No mechanic",

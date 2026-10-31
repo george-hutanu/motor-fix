@@ -178,6 +178,7 @@
   },
   "jobs": {
     "finalPrice": {
+      "aboveQuote": "Peste ofertă",
       "cancel": "Renunță",
       "correct": "Corectează",
       "correctTitle": "Corectează prețul final",
@@ -197,6 +198,7 @@
         "job_not_done": "Marchează întâi lucrarea ca gata",
         "not_handed_over": "Lucrarea nu a fost încă predată"
       },
+      "quote": "Ofertă {range}",
       "save": "Salvează"
     },
     "noMechanic": "Fără mecanic",
