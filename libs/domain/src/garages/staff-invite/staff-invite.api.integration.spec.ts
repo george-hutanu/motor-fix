@@ -1,3 +1,4 @@
+// @traces 1379-FR-003
 import { randomUUID } from 'node:crypto';
 
 import type { Role } from '@motor-fix/contracts/capabilities';
@@ -13,6 +14,7 @@ import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase, waitingOnLocks } from '../../auth/serial-db.testing';
 import { outboxMark } from '../../events/outbox.testing';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
+import { DirectSendModule } from '../../notifications/direct-send/direct-send.module';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -58,6 +60,11 @@ beforeAll(async () => {
     imports: [
       auth,
       notifications,
+      DirectSendModule.registerWorker({
+        email,
+        phone: options.phone,
+        redisUrl,
+      }),
       StorageModule.register(UNUSED_STORAGE),
       GaragesModule.register(email, notifications, {
         skipManualApproval: false,
@@ -292,6 +299,28 @@ describe('sending an invite', () => {
       where: { id: res.body.id },
     });
     expect(row.status).toBe('sent');
+  });
+
+  // @traces 1379-FR-003
+  it('keeps the invite and answers the link when e-mail sending is off', async () => {
+    const { dinamo, mihai } = await world();
+    email.sending = false;
+    try {
+      const res = await send(dinamo.id, bearer(mihai, 'garage'));
+
+      expect(res.status).toBe(201);
+      expect(res.body.emailSent).toBe(false);
+      expect(res.body.link).toMatch(
+        /^https:\/\/motorfix\.test\/ro\/invite\/[A-Za-z0-9_-]{43}$/,
+      );
+      expect(brevo.emails()).toHaveLength(0);
+      const row = await prisma.staffInvite.findUniqueOrThrow({
+        where: { id: res.body.id },
+      });
+      expect(row.status).toBe('sent');
+    } finally {
+      email.sending = true;
+    }
   });
 
   it('stores nothing and sends nothing while the web address is not set', async () => {

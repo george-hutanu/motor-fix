@@ -62,6 +62,7 @@ features:
   - 1316-swr-resource-store
   - 400-receptionist
   - 1391-admin-dashboard-customise
+  - 1379-provider-calls-worker
 ---
 
 # Capability: Accounts
@@ -522,9 +523,9 @@ _From 393-whatsapp-phone-sign-in._
 
 _From 393-whatsapp-phone-sign-in._
 
-### 393-FR-005 — When Brevo refuses the message, does not answer within 5 seconds, WhatsApp sending is off, the number is outside the non-production allow-list, or the SIGN_IN_CODE template is not approved, the request MUST answer 502 `whatsapp_failed`, store no code, and log the kind of failure without the number.
+### 1379-FR-003 — Each caller MUST keep its response contract exactly, treating a job result that is a failure kind, a job that failed, a wait that hit the cap, and a queue that could not be reached or written as the same failure: the sign-in code answers 502 `whatsapp_failed`, stores no code and leaves the number's hourly share uncounted (393-FR-004, 393-FR-005); the phone change answers 503 `send_failed` with nothing kept (139-FR-011); the staff invite answers `emailSent: false` with the link, the invite staying `sent` (131-FR-004, 1255-FR-005); the car transfer answers `whatsapp: 'failed'` with the link, the transfer staying `sent` (415-FR-006). The success answers are unchanged.
 
-_From 393-whatsapp-phone-sign-in._
+_From 1379-provider-calls-worker._
 
 ### 393-FR-006 — `POST /api/v1/auth/phone-sign-in` MUST take the phone number, the code, "keep me signed in" (true by default) and, optionally, a name, the consent (ST-132's `termsVersion` and `privacyVersion`) and the interface language (`ro` or `en`, default `ro`, used only for a new account), be reachable without a session, and check the code against the number's current code (the one not used and not voided), in this order: a code with 5 wrong attempts MUST answer 429 `too_many_attempts` without checking the code (it stays until a new code voids it); a code past its expiry MUST answer 410 `code_expired` whatever was typed; then no current code or a hash mismatch MUST answer 401 `code_invalid` (a mismatch counts one wrong attempt). Whatever the answer, the body MUST NOT reveal whether an account holds the number before the right code is given.
 
@@ -1627,3 +1628,4 @@ _From 011-dashboard-sections._
 - `029-FR-009` — superseded by `1316-FR-005` (2026-10-30)
 - `102-FR-016` — superseded by `400-FR-003` (2026-10-31)
 - `011-FR-010` — superseded by `1391-FR-015` (2026-10-30)
+- `393-FR-005` — superseded by `1379-FR-003` (2026-10-30)

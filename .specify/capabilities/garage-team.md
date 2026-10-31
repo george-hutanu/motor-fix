@@ -14,6 +14,7 @@ features:
   - 150-add-booking
   - 427-time-blocks
   - 400-receptionist
+  - 1379-provider-calls-worker
 ---
 
 # Capability: Garage team
@@ -34,9 +35,9 @@ _From 131-invite-garage-staff._
 
 _From 1255-invite-mechanic._
 
-### 131-FR-004 — Sending and resending MUST send a STAFF_INVITE e-mail to the invited address, whether or not an account holds it, with the link `/{lang}/invite/:token` in the language of the owner's interface; the send happens within the request, and the answer says whether the e-mail went out; when it could not be sent the invite MUST stay `sent` and the answer MUST carry the link so the owner can copy it (the link is returned only then).
+### 1379-FR-003 — Each caller MUST keep its response contract exactly, treating a job result that is a failure kind, a job that failed, a wait that hit the cap, and a queue that could not be reached or written as the same failure: the sign-in code answers 502 `whatsapp_failed`, stores no code and leaves the number's hourly share uncounted (393-FR-004, 393-FR-005); the phone change answers 503 `send_failed` with nothing kept (139-FR-011); the staff invite answers `emailSent: false` with the link, the invite staying `sent` (131-FR-004, 1255-FR-005); the car transfer answers `whatsapp: 'failed'` with the link, the transfer staying `sent` (415-FR-006). The success answers are unchanged.
 
-_From 131-invite-garage-staff._
+_From 1379-provider-calls-worker._
 
 ### 131-FR-005 — Resending MUST issue a new token, void the old one, and restart the expiry, for a `sent` invite whether or not it is past its expiry; revoking MUST set `revoked`. Both MUST answer 409 `invite_invalid` for an `accepted` or `revoked` invite.
 
@@ -416,3 +417,4 @@ _From 400-receptionist._
 - `056-FR-008` — superseded by `058-FR-007` (2026-10-25)
 - `058-FR-011` — superseded by `150-FR-003` (2026-10-26)
 - `056-FR-009` — superseded by `400-FR-004` (2026-10-31)
+- `131-FR-004` — superseded by `1379-FR-003` (2026-10-30)

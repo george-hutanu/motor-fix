@@ -11,12 +11,14 @@ import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { outboxMark } from '../../events/outbox.testing';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
+import { DirectSendModule } from '../../notifications/direct-send/direct-send.module';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
   testConfig,
+  testPhoneConfig,
 } from '../../notifications/notifications.testing';
 import { quotesWorld } from '../../quotes/quotes.testing';
 import { refuseInserts } from '../../refuse-inserts.testing';
@@ -57,6 +59,11 @@ beforeAll(async () => {
     imports: [
       auth,
       notifications,
+      DirectSendModule.registerWorker({
+        email,
+        phone: testPhoneConfig(),
+        redisUrl,
+      }),
       StorageModule.register(UNUSED_STORAGE),
       GaragesModule.register(email, notifications, {
         skipManualApproval: false,
