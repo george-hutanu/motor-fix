@@ -29,6 +29,7 @@ export * from './garage-figures.dto';
 export * from './garage-hours';
 export * from './garage-mechanics.dto';
 export * from './garage-members.dto';
+export * from './garage-photos.dto';
 export * from './garage-profile-update.dto';
 export * from './garage-reports';
 export * from './garage-search.dto';
