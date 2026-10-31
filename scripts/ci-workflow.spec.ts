@@ -228,7 +228,7 @@ describe('ci workflow', () => {
       'Compose stack',
       'docker compose up -d --wait postgres redis storage',
     ],
-    ['unit', 'Unit tests', 'npx nx $NX_SCOPE -t test --passWithNoTests'],
+    ['unit', 'Unit tests', 'npx nx $NX_SCOPE -t test'],
   ])(
     '%s runs the %s step even after an earlier one failed',
     (id, name, command) => {
@@ -238,6 +238,13 @@ describe('ci workflow', () => {
       expect(block).toContain(command);
     },
   );
+
+  // The Angular unit-test builder refuses a flag its schema lacks; the Jest
+  // preset already passes an empty suite.
+  // @traces 1332-angular-vitest-FR-013
+  it('runs the unit tests without a flag only Jest knows', () => {
+    expect(step(job('unit'), 'Unit tests')).not.toContain('--passWithNoTests');
+  });
 
   // On a pull request the baseline may not list a file the base branch's
   // baseline lacks; a push to main has no base to compare against.
@@ -475,7 +482,7 @@ describe('ci workflow', () => {
 
     it('runs every suite as before when no file is named', () => {
       expect(run('integration', 'Integration tests', {})).toEqual([
-        'nx run-many -t test --passWithNoTests',
+        'nx run-many -t test --exclude web,ui-cockpit,overlays,i18n,media',
       ]);
       expect(run('e2e', 'E2E tests', {})).toEqual(['nx run-many -t e2e']);
     });

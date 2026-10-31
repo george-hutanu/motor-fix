@@ -62,6 +62,7 @@
     "web-push": "3.6.7"
   },
   "devDependencies": {
+    "@analogjs/vite-plugin-angular": "2.9.2",
     "@angular-devkit/core": "22.2.4",
     "@angular-devkit/schematics": "22.2.3",
     "@angular/build": "22.2.3",
@@ -83,6 +84,7 @@
     "@stryker-mutator/core": "10.0.0",
     "@stryker-mutator/jest-runner": "10.0.0",
     "@stryker-mutator/typescript-checker": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
     "@types/compression": "1.8.1",
     "@types/express": "5.0.6",
     "@types/jest": "30.0.0",
@@ -133,11 +135,11 @@
     "prepare": "husky && sh .husky/identity.sh apply && node .claude/scripts/specs-repo.mjs ensure --soft",
     "test": "TZ=UTC nx run-many -t test",
     "test:harness": "vitest run --config .claude/vitest.config.ts",
-    "test:integration": "JEST_SUITE=integration TZ=UTC nx run-many -t test --passWithNoTests",
+    "test:integration": "JEST_SUITE=integration TZ=UTC nx run-many -t test --exclude web,ui-cockpit,overlays,i18n,media",
     "test:mods": "npx -y @anthropic-ai/claude-code@2.1.295 plugin validate --strict .claude/plugins/motorfix-chief && npx -y @anthropic-ai/claude-code@2.1.295 plugin test .claude/plugins/motorfix-chief",
     "test:mutation": "nx run-many -t test:mutation --parallel=1",
     "test:mutation:affected": "nx affected -t test:mutation --parallel=1",
-    "test:unit": "JEST_SUITE=unit TZ=UTC nx run-many -t test --passWithNoTests",
+    "test:unit": "JEST_SUITE=unit TZ=UTC nx run-many -t test",
     "typecheck": "nx run-many -t typecheck"
   },
   "type": "module",
