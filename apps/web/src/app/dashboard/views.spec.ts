@@ -52,6 +52,7 @@ const OWNER = [
   'garage.team',
   'garage.prices',
   'garage.profile',
+  'garage.client_repairs',
   'garage.feature_switches',
   'garage.audit_history',
 ];
@@ -218,6 +219,7 @@ describe('the dashboard view lists', () => {
       'prices',
       'reviews',
       'profile',
+      'client-repairs',
       'assistant',
       'settings',
       'history',
@@ -362,6 +364,7 @@ describe('the dashboard view lists', () => {
       'prices',
       'reviews',
       'profile',
+      'client-repairs',
       'settings',
       'history',
     ]);

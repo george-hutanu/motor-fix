@@ -1,0 +1,44 @@
+form {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.subject,
+.hint {
+  color: var(--mf-text-secondary);
+}
+.hint {
+  font-size: var(--mf-size-small);
+}
+.error {
+  color: var(--mf-red-ink);
+}
+.note {
+  color: var(--mf-amber-ink);
+}
+.field {
+  display: grid;
+  gap: var(--mf-space-2);
+  min-width: 0;
+}
+label {
+  margin: 0;
+  font-weight: 700;
+}
+input {
+  width: 100%;
+  min-height: var(--mf-tap);
+}
+.actions {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+button {
+  width: 100%;
+  min-height: var(--mf-tap);
+  white-space: normal;
+}
