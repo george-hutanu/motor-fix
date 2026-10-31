@@ -1,0 +1,36 @@
+:host {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 60dvh;
+  padding: var(--mf-space-4);
+}
+section {
+  align-self: center;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--mf-space-4);
+  width: 100%;
+  max-width: 32rem;
+  margin-block: auto;
+  padding: var(--mf-space-4);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-panel);
+  background: var(--mf-panel);
+}
+@media (min-width: 390px) {
+  section {
+    padding: var(--mf-space-6);
+  }
+}
+h1 {
+  margin: 0;
+  font-size: var(--mf-size-subheading);
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+button {
+  align-self: flex-start;
+  white-space: normal;
+}

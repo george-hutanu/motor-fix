@@ -26,6 +26,7 @@ import {
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiHeader,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -101,6 +102,13 @@ export class PriceListController {
   })
   @ApiParam({ format: 'uuid', name: 'garageId', type: String })
   @ApiParam({ format: 'uuid', name: 'priceId', type: String })
+  @ApiHeader({
+    description:
+      'One per press; optional and unread: the write is idempotent by value',
+    name: 'Idempotency-Key',
+    required: false,
+    schema: { maxLength: 64, minLength: 1, type: 'string' },
+  })
   @ApiOkResponse({ type: PriceRangeSavedDto })
   @ApiBadRequestResponse({
     description:
