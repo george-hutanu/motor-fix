@@ -170,6 +170,36 @@ test.describe('the weekly figures on the garage overview @seeded', () => {
     await expect.poll(() => canvas.screenshot()).not.toEqual(before);
   });
 
+  // QA lap 5: on a tablet one chart's name wrapped and pushed its column down.
+  test('keeps the two columns level on a tablet whichever chart name wraps', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 1112, width: 834 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await signedIn(page, OWNER);
+
+    const panel = page.locator('mf-weekly-figures-panel');
+    const charts = panel.locator('mf-bar-chart');
+    await expect(charts.first().locator('[data-figure]')).toBeVisible();
+    await expect(charts.first().locator('canvas')).toHaveAttribute(
+      'width',
+      /\d/,
+    );
+    await expect(charts.nth(1).locator('canvas')).toHaveAttribute(
+      'width',
+      /\d/,
+    );
+    await panel.scrollIntoViewIfNeeded();
+    const top = async (index: number, selector: string) =>
+      (await charts.nth(index).locator(selector).boundingBox())?.y ?? -1;
+
+    for (const selector of ['[data-figure]', 'canvas']) {
+      const [left, right] = [await top(0, selector), await top(1, selector)];
+      expect(left).toBeGreaterThan(0);
+      expect(Math.abs(left - right), selector).toBeLessThanOrEqual(1);
+    }
+  });
+
   test("shows the garage's mechanic no panel and sends no weekly read", async ({
     page,
   }) => {

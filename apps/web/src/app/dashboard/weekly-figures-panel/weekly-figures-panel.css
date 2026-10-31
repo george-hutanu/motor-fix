@@ -3,6 +3,7 @@
   min-width: 0;
 }
 .panel {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--mf-space-4);
@@ -42,5 +43,15 @@
   }
   .charts {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Side by side in a panel this narrow, a chart's name can take two lines
+   ("Vizualizări profil", "Requests received"): both charts reserve two, so
+   their figures, plots and week labels stay level. */
+@media (min-width: 768px) {
+  @container (max-width: 960px) {
+    .charts {
+      --mf-panel-heading-block: 2lh;
+    }
   }
 }
