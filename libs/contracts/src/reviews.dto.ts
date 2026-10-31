@@ -442,6 +442,58 @@ export class ReportReviewDto {
   text?: string;
 }
 
+// The rules an admin may remove a review or a reply for: every report reason
+// but other, which names no rule.
+export const REVIEW_REMOVAL_REASONS = REVIEW_REPORT_REASONS.filter(
+  (reason) => reason !== 'other',
+) as readonly Exclude<ReviewReportReason, 'other'>[];
+export type ReviewRemovalReason = (typeof REVIEW_REMOVAL_REASONS)[number];
+
+// Why a decision was refused once nothing was written.
+export const DECISION_REFUSALS = [
+  'already_decided',
+  'no_pending_report',
+] as const;
+export type DecisionRefusal = (typeof DECISION_REFUSALS)[number];
+
+export class ReviewDecisionDto {
+  @ApiProperty({ enum: ['remove'] })
+  @IsIn(['remove'])
+  decision!: 'remove';
+
+  @ApiProperty({
+    description: 'The rule broken; the report reasons without other',
+    enum: REVIEW_REMOVAL_REASONS,
+  })
+  @IsIn(REVIEW_REMOVAL_REASONS)
+  reason!: ReviewRemovalReason;
+}
+
+export class ReviewDecisionResultDto {
+  @ApiProperty({ format: 'uuid' })
+  reviewId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  reportId!: string;
+
+  @ApiProperty({ enum: ['review', 'reply'] })
+  target!: 'review' | 'reply';
+
+  @ApiProperty({ enum: ['removed'] })
+  decision!: 'removed';
+
+  @ApiProperty({ format: 'date-time' })
+  decidedAt!: string;
+
+  @ApiProperty({
+    description: 'The reply the decision removed; null when none was touched',
+    format: 'uuid',
+    nullable: true,
+    type: String,
+  })
+  replyId!: string | null;
+}
+
 export class ReviewReportReviewDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;

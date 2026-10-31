@@ -729,3 +729,34 @@ describe("reading a mechanic's reviews", () => {
     expect((await listOf('not-a-mechanic')).status).toBe(400);
   });
 });
+
+// @traces 179-FR-009
+describe('a review an admin removed', () => {
+  it('refuses its author a new review of the job as review_removed', async () => {
+    const s = await setting();
+    const first = await reviewIn(s, 'reported');
+    const admin = await world.account('Ana Popescu', ['admin']);
+    await prisma.reviewReport.create({
+      data: {
+        dueAt: new Date(Date.now() + 3_600_000),
+        reason: 'insults',
+        reporterId: s.dinamo.owner,
+        reviewId: first.id,
+        source: 'garage',
+      },
+    });
+    const decided = await send(
+      'post',
+      `/admin/review-reports/${first.id}/decision`,
+      bearer(admin, 'admin'),
+      { decision: 'remove', reason: 'insults' },
+    );
+    expect(decided.status).toBe(200);
+
+    const refused = await publish(s.as, { jobId: s.job.id, rating: 5 });
+
+    expect(refused.status).toBe(409);
+    expect(refused.body.code).toBe('review_removed');
+    expect(await reviews(s.job.id)).toHaveLength(1);
+  });
+});

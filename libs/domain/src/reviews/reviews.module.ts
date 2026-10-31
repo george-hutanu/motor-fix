@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { ReviewDecisionsService } from './decision/decision.service';
 import { ReviewEligibility } from './eligibility/eligibility';
 import { GarageReviewsController } from './garage-reviews/garage-reviews.controller';
 import { ReviewRepliesController } from './reply/reply.controller';
@@ -29,6 +30,7 @@ import { AuditService } from '../audit/audit.service';
     ReviewRepliesService,
     ReviewReportsService,
     ReportQueueService,
+    ReviewDecisionsService,
     { provide: AUDIT_PORT, useClass: AuditService },
   ],
 })
