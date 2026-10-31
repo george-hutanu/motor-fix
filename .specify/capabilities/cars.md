@@ -20,6 +20,7 @@ features:
   - 061-repair-list
   - 1267-admin-corrects-repair
   - 1400-garage-corrects-repair-web
+  - 1379-provider-calls-worker
 ---
 
 # Capability: Cars
@@ -283,9 +284,9 @@ _From 1265-car-transfer-accept._
 
 _From 415-car-transfer-link._
 
-### 415-FR-006 — After the transaction commits, the system MUST send CAR_TRANSFER_LINK by WhatsApp to the buyer's phone straight through the provider (as the sign-in code is sent, not through the notifications outbox and with no NOTIFICATION row: the seller is waiting to know), in the seller's interface language, carrying the link, the car's brand and model and the days it is valid, through an approved WhatsApp template registered like the sign-in code's; a template the configuration does not name, a blocked number or a provider refusal MUST NOT fail the request: the answer carries `whatsapp: 'sent' | 'failed'` and the transfer stays `sent`. The log of a failure names the transfer id and the failure kind, never the phone or the link.
+### 1379-FR-003 — Each caller MUST keep its response contract exactly, treating a job result that is a failure kind, a job that failed, a wait that hit the cap, and a queue that could not be reached or written as the same failure: the sign-in code answers 502 `whatsapp_failed`, stores no code and leaves the number's hourly share uncounted (393-FR-004, 393-FR-005); the phone change answers 503 `send_failed` with nothing kept (139-FR-011); the staff invite answers `emailSent: false` with the link, the invite staying `sent` (131-FR-004, 1255-FR-005); the car transfer answers `whatsapp: 'failed'` with the link, the transfer staying `sent` (415-FR-006). The success answers are unchanged.
 
-_From 415-car-transfer-link._
+_From 1379-provider-calls-worker._
 
 ### 415-FR-007 — `POST /api/v1/cars/:id/transfers/:transferId/cancel` (capability `driver.cars`; 404 for another account's car, a transfer of another car or an unknown transfer) MUST set a `sent` transfer `cancelled` in one transaction with its audit entry and the outbox event `car_transfer.cancelled`, answering 204; a transfer not `sent` answers 409 `not_sent`.
 
@@ -614,3 +615,4 @@ _From 1267-admin-corrects-repair._
 - `409-FR-015` — superseded by `061-FR-007` (2026-10-30)
 - `409-FR-011` — superseded by `1267-FR-006` (2026-10-30)
 - `409-FR-016` — superseded by `1267-FR-010` (2026-10-30)
+- `415-FR-006` — superseded by `1379-FR-003` (2026-10-30)

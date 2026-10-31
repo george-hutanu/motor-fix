@@ -3,7 +3,6 @@ import { Logger } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 
-import type { TransferSending } from './transfers';
 import {
   sendTransfer,
   tokenOf,
@@ -14,6 +13,7 @@ import { AuditService } from '../../audit/audit.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
 import { databaseUrl } from '../../notifications/notifications.testing';
+import type { PhoneConfig } from '../../notifications/phone-config';
 
 const BUYER = '+40722123456';
 const world = transfersWorld();
@@ -23,7 +23,7 @@ serialDatabase(databaseUrl);
 const brevo = new BrevoMock();
 let app: NestExpressApplication;
 let restore: () => void;
-let sending: TransferSending;
+let sending: { config: PhoneConfig };
 let since: Date;
 let mark: bigint;
 

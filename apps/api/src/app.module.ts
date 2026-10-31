@@ -40,7 +40,6 @@ import {
   PlacesModule,
   PlatformRulesModule,
   ProfileViewsModule,
-  phoneConfig,
   placesConfig,
   pushConfig,
   QuotesModule,
@@ -79,13 +78,11 @@ export class AppModule {
       tokenSecret: env.AUTH_TOKEN_SECRET,
     });
     const email = emailConfig(env.APP_ENV, process.env);
-    const phone = phoneConfig(env.APP_ENV, process.env);
     const notifications = NotificationsModule.register(
       {
         databaseUrl: env.DATABASE_URL,
         email,
         outageWebhookToken: outageWebhookToken(process.env),
-        phone,
         push: pushConfig(process.env),
         redisUrl: env.REDIS_URL,
       },
@@ -120,15 +117,10 @@ export class AppModule {
         ),
         PasswordResetModule.register({ webUrl: email.webUrl }, notifications),
         DataExportModule.register(),
-        PhoneSignInModule.register({
-          brevo: { apiKey: email.apiKey ?? '', apiUrl: email.apiUrl },
-          phone,
-        }),
-        CarTransfersModule.register({
-          brevo: { apiKey: email.apiKey ?? '', apiUrl: email.apiUrl },
-          phone,
-          webUrl: email.webUrl,
-        }),
+        // Both send through the worker (direct-send), with the one DirectSend
+        // the notifications module holds.
+        PhoneSignInModule.register(notifications),
+        CarTransfersModule.register(email.webUrl, notifications),
         AdminAccountsModule,
         AdminAccountModule.register(
           { support: email.replyTo?.email, webUrl: email.webUrl },
