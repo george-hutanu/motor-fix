@@ -130,7 +130,10 @@ export class DeclineRequestDialog {
     const { code, detail } = toProblem(failure);
     const key = `${MESSAGES}.problem.${code}`;
     const said = this.i18n.t(key);
-    toast(said !== key ? said : (detail ?? said));
+    // A refusal with no text of its own and no detail says the shared line.
+    toast(
+      said !== key ? said : (detail ?? this.i18n.t('shell.form.problem.error')),
+    );
     this.task.close('refused');
   }
 }

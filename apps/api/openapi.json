@@ -5502,6 +5502,106 @@
         ]
       }
     },
+    "/api/v1/bookings/{id}/no-show": {
+      "post": {
+        "operationId": "NoShowController_record",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageBookingDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: another mechanic’s booking"
+          },
+          "404": {
+            "description": "not_found: not the garage’s booking"
+          },
+          "409": {
+            "description": "invalid_transition: the booking is not confirmed, its time has not come or its job has started (its currentStatus named)"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record that the driver did not come to a confirmed booking whose time has come; no fee, no penalty",
+        "tags": [
+          "bookings"
+        ]
+      },
+      "delete": {
+        "operationId": "NoShowController_withdraw",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GarageBookingDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: another mechanic’s booking"
+          },
+          "404": {
+            "description": "not_found: not the garage’s booking"
+          },
+          "409": {
+            "description": "invalid_transition: no no-show, or recorded before today; mechanic_busy or lift_busy: its place was taken since"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Withdraw a no-show recorded today (Bucharest time): the booking stands again in its place",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
     "/api/v1/garages/{garageId}/schedule": {
       "get": {
         "operationId": "garageSchedule",
@@ -17256,6 +17356,12 @@
             "type": "boolean",
             "description": "Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty"
           },
+          "noShowAt": {
+            "type": "string",
+            "description": "When the garage recorded that the driver did not come",
+            "format": "date-time",
+            "nullable": true
+          },
           "jobStarted": {
             "type": "boolean",
             "description": "The booking’s job exists and has left to do"
@@ -17280,6 +17386,7 @@
           "garage",
           "cancelledBySide",
           "lateCancellation",
+          "noShowAt",
           "jobStarted",
           "finalPriceBani",
           "handedOverAt"
@@ -18062,6 +18169,20 @@
           "toReassign": {
             "type": "boolean",
             "description": "A confirmed booking still ahead whose mechanic's card was taken off the team, or that falls on one of her days off or outside her working hours: the garage gives it to someone else"
+          },
+          "noShowAt": {
+            "type": "string",
+            "description": "When the garage recorded that the driver did not come",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canRecordNoShow": {
+            "type": "boolean",
+            "description": "The reader may record a no-show: a confirmed booking whose time has come and whose job has not started, read by the owner, the desk or the booking's own mechanic"
+          },
+          "canWithdrawNoShow": {
+            "type": "boolean",
+            "description": "The reader may withdraw the no-show: recorded today, Bucharest time, by the same readers"
           }
         },
         "required": [
@@ -18072,7 +18193,10 @@
           "durationMinutes",
           "mechanic",
           "lift",
-          "toReassign"
+          "toReassign",
+          "noShowAt",
+          "canRecordNoShow",
+          "canWithdrawNoShow"
         ]
       },
       "GarageRequestSummaryDto": {
@@ -18394,6 +18518,12 @@
             "format": "uuid",
             "nullable": true
           },
+          "noShowRecordedBy": {
+            "type": "string",
+            "description": "The account that recorded the no-show",
+            "format": "uuid",
+            "nullable": true
+          },
           "mechanicId": {
             "type": "string",
             "format": "uuid",
@@ -18441,6 +18571,7 @@
           "completedAt",
           "createdAt",
           "confirmedBy",
+          "noShowRecordedBy",
           "mechanicId",
           "mechanic",
           "lift",
@@ -18537,16 +18668,6 @@
               }
             ]
           },
-          "booking": {
-            "description": "The booking the garage’s quote became",
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/GarageBookingDto"
-              }
-            ]
-          },
           "driver": {
             "$ref": "#/components/schemas/GarageDriverDto"
           },
@@ -18556,6 +18677,16 @@
           "description": {
             "type": "string",
             "nullable": true
+          },
+          "booking": {
+            "description": "The booking the garage’s quote became",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GarageBookingDto"
+              }
+            ]
           }
         },
         "required": [
@@ -18570,10 +18701,10 @@
           "outcome",
           "recipient",
           "quote",
-          "booking",
           "driver",
           "car",
-          "description"
+          "description",
+          "booking"
         ]
       },
       "DeclineRequestDto": {
@@ -19706,6 +19837,15 @@
           },
           "canReport": {
             "type": "boolean"
+          },
+          "reportRefusal": {
+            "type": "string",
+            "description": "Why the owner may not report the review now, as the report operation would refuse it; null when it may",
+            "enum": [
+              "already_reported",
+              "already_kept"
+            ],
+            "nullable": true
           }
         },
         "required": [
@@ -19725,7 +19865,8 @@
           "status",
           "mechanic",
           "canReply",
-          "canReport"
+          "canReport",
+          "reportRefusal"
         ]
       },
       "GarageStaffReviewsPageDto": {
@@ -20985,6 +21126,20 @@
           "stepsTotal": {
             "type": "number",
             "description": "Steps written, 0 to 20"
+          },
+          "noShowAt": {
+            "type": "string",
+            "description": "When the garage recorded that the driver did not come",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canRecordNoShow": {
+            "type": "boolean",
+            "description": "The reader may record a no-show: the booking's time has come and the job has not started"
+          },
+          "canWithdrawNoShow": {
+            "type": "boolean",
+            "description": "The reader may withdraw the no-show: recorded today, Bucharest time"
           }
         },
         "required": [
@@ -21007,7 +21162,10 @@
           "jobs",
           "mechanicName",
           "stepsDone",
-          "stepsTotal"
+          "stepsTotal",
+          "noShowAt",
+          "canRecordNoShow",
+          "canWithdrawNoShow"
         ]
       },
       "JobListDto": {
@@ -21240,6 +21398,20 @@
             "type": "number",
             "description": "Steps written, 0 to 20"
           },
+          "noShowAt": {
+            "type": "string",
+            "description": "When the garage recorded that the driver did not come",
+            "format": "date-time",
+            "nullable": true
+          },
+          "canRecordNoShow": {
+            "type": "boolean",
+            "description": "The reader may record a no-show: the booking's time has come and the job has not started"
+          },
+          "canWithdrawNoShow": {
+            "type": "boolean",
+            "description": "The reader may withdraw the no-show: recorded today, Bucharest time"
+          },
           "finalPriceBani": {
             "type": "number",
             "nullable": true
@@ -21286,6 +21458,9 @@
           "mechanicName",
           "stepsDone",
           "stepsTotal",
+          "noShowAt",
+          "canRecordNoShow",
+          "canWithdrawNoShow",
           "finalPriceBani",
           "quoteFromBani",
           "quoteToBani",
@@ -23899,6 +24074,12 @@
           "hasAccount": {
             "type": "boolean"
           },
+          "shown": {
+            "type": "boolean"
+          },
+          "takesDirectRequests": {
+            "type": "boolean"
+          },
           "rating": {
             "type": "string",
             "example": "4.9",
@@ -23930,6 +24111,8 @@
           "futureBookings",
           "onProfile",
           "hasAccount",
+          "shown",
+          "takesDirectRequests",
           "rating",
           "reviewCount",
           "invite"
@@ -23965,11 +24148,15 @@
             "items": {
               "$ref": "#/components/schemas/GarageBrandOptionDto"
             }
+          },
+          "teamOnProfile": {
+            "type": "boolean"
           }
         },
         "required": [
           "items",
-          "brands"
+          "brands",
+          "teamOnProfile"
         ]
       },
       "CreateMechanicDto": {
@@ -24062,6 +24249,10 @@
             "type": "string",
             "maxLength": 80,
             "minLength": 2
+          },
+          "takesDirectRequests": {
+            "type": "boolean",
+            "description": "Whether a driver may ask for this mechanic by name"
           }
         }
       },
@@ -24363,6 +24554,10 @@
                 "$ref": "#/components/schemas/CourtesyCarDto"
               }
             ]
+          },
+          "teamOnProfile": {
+            "type": "boolean",
+            "description": "Whether the team appears on the public profile"
           }
         }
       },
@@ -24379,10 +24574,15 @@
                 "$ref": "#/components/schemas/CourtesyCarDto"
               }
             ]
+          },
+          "teamOnProfile": {
+            "type": "boolean",
+            "description": "Whether the team appears on the public profile"
           }
         },
         "required": [
-          "paymentMethods"
+          "paymentMethods",
+          "teamOnProfile"
         ]
       },
       "InviteTokenDto": {

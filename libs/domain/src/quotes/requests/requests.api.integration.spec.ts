@@ -216,6 +216,7 @@ describe('GET /requests once a quote is accepted', () => {
       id: newest.id,
       jobStarted: false,
       lateCancellation: false,
+      noShowAt: null,
       startsAt: newest.startsAt.toISOString(),
       status: 'confirmed',
     });

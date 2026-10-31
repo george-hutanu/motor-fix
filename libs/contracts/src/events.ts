@@ -30,6 +30,7 @@ export const EVENT_KINDS = [
   'booking.move_refused',
   'booking.moved',
   'booking.no_show_recorded',
+  'booking.no_show_withdrawn',
   'car.added',
   'car.removed',
   'car.updated',

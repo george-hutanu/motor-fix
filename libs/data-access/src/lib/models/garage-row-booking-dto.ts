@@ -3,12 +3,27 @@
 
 import { BookingMechanicDto } from '../models/booking-mechanic-dto';
 export interface GarageRowBookingDto {
+
+  /**
+   * The reader may record a no-show: a confirmed booking whose time has come and whose job has not started, read by the owner, the desk or the booking's own mechanic
+   */
+  canRecordNoShow: boolean;
+
+  /**
+   * The reader may withdraw the no-show: recorded today, Bucharest time, by the same readers
+   */
+  canWithdrawNoShow: boolean;
   confirmBy: string;
   durationMinutes: number;
   id: string;
   lift: number | null;
   mechanic: (BookingMechanicDto & {
 }) | null;
+
+  /**
+   * When the garage recorded that the driver did not come
+   */
+  noShowAt: string | null;
   startsAt: string;
   status: 'awaiting_confirmation' | 'confirmed' | 'lapsed' | 'cancelled' | 'no_show' | 'completed';
 
