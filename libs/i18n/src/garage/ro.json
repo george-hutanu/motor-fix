@@ -1,4 +1,39 @@
 {
+  "clientRepairs": {
+    "correct": {
+      "cancel": "Renunță",
+      "costBani": "Suma (lei)",
+      "costHint": "Opțional. Golește câmpul ca să ștergi suma.",
+      "doneOn": "Data",
+      "field": {
+        "costDecimals": "Cel mult două zecimale",
+        "costFormat": "O sumă în lei, de exemplu 450 sau 450,50",
+        "costWithin": "Cel mult 920.000 lei",
+        "dayRequired": "Alege data reparației",
+        "futureDay": "Data nu poate fi în viitor",
+        "odometerWithin": "Un număr întreg între 0 și 2.000.000 km",
+        "whatWithin": "Între 1 și 200 de caractere"
+      },
+      "lower": "Kilometrajul e mai mic decât cel înregistrat ({km}). Verifică și apasă din nou Salvează.",
+      "odometerKm": "Kilometraj",
+      "problem": {
+        "stale_version": "Reparația a fost modificată între timp. Am reîncărcat valorile."
+      },
+      "save": "Salvează",
+      "subject": "{car} · client {name}",
+      "title": "Corectează reparația",
+      "what": "Ce s‑a făcut"
+    },
+    "correctAction": "Corectează",
+    "corrected": "Corectată pe {day}",
+    "correctLabel": "Corectează reparația din {day}",
+    "empty": "Niciun client nu a partajat încă o reparație cu tine",
+    "failed": "Nu am putut încărca reparațiile",
+    "noAmount": "fără sumă",
+    "retry": "Reîncearcă",
+    "truncated": "Se afișează cele mai noi 200 de reparații",
+    "unshared": "Clientul nu mai partajează această reparație"
+  },
   "features": {
     "confirm": {
       "cancel": "Renunță",
