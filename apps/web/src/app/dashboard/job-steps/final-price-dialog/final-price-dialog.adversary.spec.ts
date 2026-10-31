@@ -53,7 +53,13 @@ async function open({
   result = host.componentInstance.overlays.open<JobDto, FinalPriceData>(
     FinalPriceDialog,
     {
-      data: { jobId: 'job-1', recorded, reread },
+      data: {
+        jobId: 'job-1',
+        quoteFromBani: 89000,
+        quoteToBani: 140000,
+        recorded,
+        reread,
+      },
       shape: 'dialog',
       title:
         recorded === null
@@ -155,7 +161,9 @@ describe('the Predare dialog and hostile amounts', () => {
 
     expect(
       text(
-        panel().querySelector(`#${field().getAttribute('aria-describedby')}`),
+        panel().querySelector(
+          `#${field().getAttribute('aria-describedby')?.split(' ')[0]}`,
+        ),
       ),
     ).toBe('Cel mult 1.000.000 lei.');
   });
@@ -169,7 +177,9 @@ describe('the Predare dialog and hostile amounts', () => {
     expect(handover).not.toHaveBeenCalled();
     expect(
       text(
-        panel().querySelector(`#${field().getAttribute('aria-describedby')}`),
+        panel().querySelector(
+          `#${field().getAttribute('aria-describedby')?.split(' ')[0]}`,
+        ),
       ),
     ).toBe('Two decimals at most.');
   });
