@@ -260,6 +260,19 @@ describe('StaticMap, the overlay', () => {
     expect(element().querySelectorAll('.area.lit')).toHaveLength(1);
   });
 
+  // @traces 1383-FR-004
+  it('draws a circle with no rate as a ring with no label', async () => {
+    await render();
+    fixture.componentRef.setInput('pins', {
+      pins: [pinOf(5, { rateLei: null, serviceRadiusKm: 20 })],
+      total: 1,
+    });
+    fixture.detectChanges();
+
+    const area = element().querySelector('.overlay .area');
+    expect(area?.textContent?.trim()).toBe('');
+  });
+
   it('counts a crowded answer into clusters', async () => {
     await render();
     fixture.componentRef.setInput('pins', {
@@ -379,6 +392,13 @@ describe('StaticMap, the attribution and the control', () => {
       (rest, block) => rest.replace(block, ''),
       css,
     );
+
+    // @traces 1383-FR-004
+    it("draws a plain host's circles in the text colour, never a lamp", () => {
+      expect(css).toMatch(
+        /:host\(\.plain\) \.area\s*\{\s*--lamp:\s*var\(--mf-text\);\s*\}/,
+      );
+    });
 
     it('crops the image centred at its own pixel size, never scaling it', () => {
       expect(css).toMatch(/img\s*\{[^}]*object-fit:\s*none/);
