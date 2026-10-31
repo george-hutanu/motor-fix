@@ -563,6 +563,18 @@
     "description": "Descriere",
     "edit": {
       "addressNote": "Schimbarea adresei trece pe la un admin.",
+      "brands": {
+        "loading": "Se încarcă mărcile",
+        "problem": {
+          "fuels_empty": "Bifează cel puțin un carburant pentru {brand}",
+          "job_not_priced": "O lucrare bifată la {brand} nu mai este în lista de prețuri. Reîncarcă și verifică.",
+          "jobs_on_refused": "{brand} este refuzată și nu poate avea lucrări bifate.",
+          "other": "Verifică {brand}.",
+          "unknown_brand": "{brand} nu mai este în catalog."
+        },
+        "readFailed": "Nu am putut încărca mărcile. Încearcă din nou.",
+        "retry": "Reîncearcă"
+      },
       "cancel": "Renunță",
       "control": "Modifică profilul",
       "controlFor": "Modifică profilul: {group}",
@@ -585,6 +597,7 @@
       "save": "Salvează",
       "title": {
         "area": "Zona de lucru",
+        "brands": "Mărci și carburanți",
         "contact": "Telefon",
         "hours": "Program și zile închise",
         "texts": "Nume și descriere"

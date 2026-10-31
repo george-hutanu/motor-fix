@@ -4,17 +4,18 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
-import { TRANSFER_SENDING, type TransferSending } from './transfers';
 import { CarTransfersModule } from './transfers.module';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import { localDay } from '../../bucharest';
 import { outboxMark } from '../../events/outbox.testing';
 import type { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
+import { DirectSendModule } from '../../notifications/direct-send/direct-send.module';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
+  testConfig,
   testPhoneConfig,
 } from '../../notifications/notifications.testing';
 import { quotesWorld } from '../../quotes/quotes.testing';
@@ -24,26 +25,33 @@ import { CarsModule } from '../my-cars/cars/cars.module';
 export const WEB_URL = 'https://motorfix.example';
 const tokenSecret = 'test-secret';
 
-// The app with the cars, their transfers and their history, WhatsApp through `brevo` with
-// both languages' transfer templates named and every +407 number allowed.
+// The app with the cars, their transfers and their history, WhatsApp through
+// the direct-send worker and `brevo` with both languages' transfer templates
+// named and every +407 number allowed.
 export async function transfersApp(brevo: BrevoMock) {
+  const redisUrl = redisUrlFor(15);
+  // The worker's WhatsApp configuration, which a test may change.
+  const sending = {
+    config: testPhoneConfig({
+      PHONE_ALLOWLIST: '+407*',
+      WHATSAPP_TEMPLATES:
+        'motorfix_car_transfer_link_ro=41,motorfix_car_transfer_link_en=42',
+    }),
+  };
   const moduleRef = await Test.createTestingModule({
     imports: [
       AuthModule.register({
         databaseUrl,
-        redisUrl: redisUrlFor(15),
+        redisUrl,
         tokenSecret,
       }),
       CarHistoryModule,
       CarsModule,
-      CarTransfersModule.register({
-        brevo: { apiKey: 'test-key', apiUrl: brevo.url },
-        phone: testPhoneConfig({
-          PHONE_ALLOWLIST: '+407*',
-          WHATSAPP_TEMPLATES:
-            'motorfix_car_transfer_link_ro=41,motorfix_car_transfer_link_en=42',
-        }),
-        webUrl: WEB_URL,
+      CarTransfersModule.register(WEB_URL, DirectSendModule.register(redisUrl)),
+      DirectSendModule.registerWorker({
+        email: testConfig(brevo.url),
+        phone: sending.config,
+        redisUrl,
       }),
     ],
   }).compile();
@@ -56,7 +64,6 @@ export async function transfersApp(brevo: BrevoMock) {
     }),
   );
   await app.init();
-  const sending = app.get<TransferSending>(TRANSFER_SENDING, { strict: false });
   const asBuilt = { ...sending.config };
   return {
     app,

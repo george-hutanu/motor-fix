@@ -559,6 +559,18 @@
     "description": "Description",
     "edit": {
       "addressNote": "An address change goes through an admin.",
+      "brands": {
+        "loading": "Loading the brands",
+        "problem": {
+          "fuels_empty": "Tick at least one fuel type for {brand}",
+          "job_not_priced": "A job ticked for {brand} is no longer on the price list. Reload and check.",
+          "jobs_on_refused": "{brand} is refused and cannot have jobs ticked.",
+          "other": "Check {brand}.",
+          "unknown_brand": "{brand} is no longer in the catalogue."
+        },
+        "readFailed": "We could not load the brands. Try again.",
+        "retry": "Try again"
+      },
       "cancel": "Cancel",
       "control": "Edit profile",
       "controlFor": "Edit profile: {group}",
@@ -581,6 +593,7 @@
       "save": "Save",
       "title": {
         "area": "Service area",
+        "brands": "Brands and fuel types",
         "contact": "Phone",
         "hours": "Hours and closed days",
         "texts": "Name and description"

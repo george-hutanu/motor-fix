@@ -387,6 +387,7 @@ describe('Profilul service-ului: the owner edits in place', () => {
     expect(text(line(element, 'hours'))).toContain('Sâmbătă 09:00 – 14:00');
   });
 
+  // @traces 1247-FR-016
   it('shows the saved answer at once, reading nothing more, and the next one after garage.updated', async () => {
     let current = answer();
     const { element, settle } = await render(async () => current);
@@ -495,7 +496,7 @@ describe('Profilul service-ului: the owner edits the phone and the service area'
     const { element, settle } = await render();
     await settle();
 
-    expect(edits(element)).toEqual(['texts', 'hours', 'contact']);
+    expect(edits(element)).toEqual(['texts', 'hours', 'contact', 'brands']);
     expect(editOf(element, 'contact').getAttribute('aria-label')).toBe(
       'Modifică profilul: Telefon',
     );
@@ -511,7 +512,13 @@ describe('Profilul service-ului: the owner edits the phone and the service area'
     );
     await settle();
 
-    expect(edits(element)).toEqual(['area', 'texts', 'hours', 'contact']);
+    expect(edits(element)).toEqual([
+      'area',
+      'texts',
+      'hours',
+      'contact',
+      'brands',
+    ]);
     expect(editOf(element, 'area').getAttribute('aria-label')).toBe(
       'Modifică profilul: Zona de lucru',
     );
@@ -621,6 +628,136 @@ describe('Profilul service-ului: the brands', () => {
     expect(text(element.querySelector('[data-brand-note]'))).toBe(
       'Doar modele după 2010',
     );
+  });
+});
+
+// @traces 1247-FR-010 1247-FR-013 1247-FR-014
+describe('Profilul service-ului: the owner edits the brands', () => {
+  it('gives the owner a brands control after the brand lists, named for the group', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    const brands = editOf(element, 'brands');
+    expect(text(brands)).toBe('Modifică profilul');
+    expect(brands.getAttribute('aria-label')).toBe(
+      'Modifică profilul: Mărci și carburanți',
+    );
+    expect(brands.classList).toContain('spartan-button-variant-ghost');
+    const note = element.querySelector('[data-unmarked]');
+    expect(
+      note &&
+        brands.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+  });
+
+  it('names the brands control in English', async () => {
+    const { element, settle } = await render(undefined, 'en');
+    await settle();
+
+    expect(editOf(element, 'brands').getAttribute('aria-label')).toBe(
+      'Edit profile: Brands and fuel types',
+    );
+  });
+
+  it('shows no brands control while the garage is suspended', async () => {
+    const { element, settle } = await render(async () => {
+      throw status(410);
+    });
+    await settle();
+
+    expect(editOf(element, 'brands')).toBeNull();
+  });
+
+  it('opens the brands dialog through a lazy import, the garage named, and reads nothing on a cancel', async () => {
+    const { element, settle } = await render();
+    await settle();
+    const open = TestBed.inject(Overlays).open as jest.Mock;
+    open.mockResolvedValueOnce('cancelled');
+
+    editOf(element, 'brands').click();
+    await settle();
+
+    expect(open).toHaveBeenCalledTimes(1);
+    const [source, options] = open.mock.calls[0];
+    expect(source.name).not.toBe('BrandsEditDialog');
+    const loaded = await source();
+    expect(loaded.name).toBe('BrandsEditDialog');
+    expect(options).toEqual({
+      confirmDiscard: false,
+      data: { garageId: GARAGE },
+      shape: 'dialog',
+      title: 'garage.profile.edit.title.brands',
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(all(element, '[data-works] li').map(text)[0]).toContain('BMW');
+  });
+
+  it('keeps the control after a dialog closed with no answer, and a second press opens it again', async () => {
+    const { element, settle } = await render();
+    await settle();
+    const open = TestBed.inject(Overlays).open as jest.Mock;
+    open.mockResolvedValueOnce('cancelled').mockResolvedValueOnce('cancelled');
+
+    editOf(element, 'brands').click();
+    await settle();
+    editOf(element, 'brands').click();
+    await settle();
+
+    expect(open).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows the saved brands at once, fuel lines and note included, until the next garage.updated read', async () => {
+    const { element, settle } = await render();
+    await settle();
+    (TestBed.inject(Overlays).open as jest.Mock).mockResolvedValueOnce({
+      brandNote: 'Doar germane',
+      doesNotTake: [{ id: 'lada', name: 'Lada', slug: 'lada' }],
+      refusalPhrase: null,
+      worksOn: [
+        {
+          fuels: ['electric'],
+          id: 'audi',
+          jobs: [],
+          name: 'Audi',
+          slug: 'audi',
+        },
+        {
+          fuels: ['petrol'],
+          id: 'dacia',
+          jobs: ['oil'],
+          name: 'Dacia',
+          slug: 'dacia',
+        },
+      ],
+    });
+
+    editOf(element, 'brands').click();
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(1);
+    const works = all(element, '[data-works] li');
+    expect(works.map((li) => text(li.querySelector('mf-lamp')))).toEqual([
+      'Audi',
+      'Dacia',
+    ]);
+    expect(works.map((li) => text(li.querySelector('[data-fuels]')))).toEqual([
+      'electric',
+      'benzină',
+    ]);
+    expect(all(element, '[data-refuses] li').map(text)).toEqual(['Lada']);
+    expect(text(element.querySelector('[data-brand-note]'))).toBe(
+      'Doar germane',
+    );
+
+    events.next(message('garage.updated', GARAGE));
+    await wait(350);
+    await settle();
+
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(all(element, '[data-refuses] li').map(text)).toEqual([
+      'Dacia',
+      'Lada',
+    ]);
   });
 });
 

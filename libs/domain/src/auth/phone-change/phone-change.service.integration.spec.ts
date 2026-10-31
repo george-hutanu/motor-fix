@@ -2,6 +2,7 @@
 // @traces 139-FR-012
 // @traces 139-FR-013
 // @traces 139-FR-017
+// @traces 1379-FR-003
 import { CURRENT_CONSENT } from '@motor-fix/contracts';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger, NotFoundException, ValidationPipe } from '@nestjs/common';
@@ -14,10 +15,12 @@ import { PhoneChangeService } from './phone-change.service';
 import { AuditService } from '../../audit/audit.service';
 import { noEvents } from '../../events/event.port';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
+import { DirectSendModule } from '../../notifications/direct-send/direct-send.module';
 import {
   databaseUrl,
   fixtures,
   redisUrlFor,
+  testConfig,
   testPhone,
   testPhoneConfig,
 } from '../../notifications/notifications.testing';
@@ -52,8 +55,9 @@ beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({
     imports: [
       AuthModule.register({ databaseUrl, redisUrl, tokenSecret }),
-      PhoneSignInModule.register({
-        brevo: { apiKey: 'test-key', apiUrl: brevo.url },
+      PhoneSignInModule.register(DirectSendModule.register(redisUrl)),
+      DirectSendModule.registerWorker({
+        email: testConfig(brevo.url),
         phone: testPhoneConfig({
           WHATSAPP_TEMPLATES: [
             'motorfix_sign_in_code_ro=21',
@@ -62,6 +66,7 @@ beforeAll(async () => {
             `motorfix_phone_change_code_en=${TEMPLATE.en}`,
           ].join(),
         }),
+        redisUrl,
       }),
     ],
   }).compile();

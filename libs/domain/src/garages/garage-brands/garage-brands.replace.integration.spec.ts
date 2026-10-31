@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { FUELS } from '@motor-fix/contracts';
 import { HttpException } from '@nestjs/common';
 
 import { GarageBrandsService } from './garage-brands.service';
@@ -239,8 +240,8 @@ describe("replacing a garage's brand answer", () => {
       doesNotTake: [{ id: w.tesla, name: 'Tesla', slug: 'tesla' }],
       refusalPhrase: 'orice nu e BMW',
       worksOn: [
-        { id: w.mini, jobs: [], name: 'Mini', slug: 'mini' },
-        { id: w.bmw, jobs: [], name: 'BMW', slug: 'bmw' },
+        { fuels: FUELS, id: w.mini, jobs: [], name: 'Mini', slug: 'mini' },
+        { fuels: FUELS, id: w.bmw, jobs: [], name: 'BMW', slug: 'bmw' },
       ],
     });
   });
@@ -333,6 +334,7 @@ describe("replacing a garage's brand answer", () => {
     ]);
   });
 
+  // @traces 1247-FR-016
   it('saves one garage.updated event naming brands, for the garage, its page and each changed search', async () => {
     const w = await world();
     await set(w, [[w.bmw, 'works_on']]);
@@ -524,18 +526,30 @@ describe("a taken brand's fuels in the brand answer", () => {
     expect(await events()).toEqual([]);
   });
 
-  it('unticks all four fuels with an empty list', async () => {
+  // @traces 1247-FR-002
+  it('refuses an empty fuel list on a taken brand with fuels_empty, keeping its fuels', async () => {
     const w = await world();
     await set(w, [[w.bmw, 'works_on']]);
+    await checkpoint();
 
-    await setFuels(w, [{ brandId: w.bmw, fuels: [], stance: 'works_on' }]);
+    const error = await setFuels(w, [
+      { brandId: w.bmw, fuels: [], stance: 'works_on' },
+    ]).then(
+      () => undefined,
+      (e: unknown) => e,
+    );
 
+    expect((error as HttpException).getStatus()).toBe(400);
+    expect(JSON.stringify((error as HttpException).getResponse())).toContain(
+      'fuels_empty',
+    );
     expect(await fuelsOf(w, w.bmw)).toEqual({
-      diesel: false,
-      electric: false,
-      hybrid: false,
-      petrol: false,
+      diesel: true,
+      electric: true,
+      hybrid: true,
+      petrol: true,
     });
+    expect(await history(w)).toEqual([]);
   });
 
   it('refuses fuels on a refused brand with 400 validation_failed, changing nothing', async () => {
@@ -924,8 +938,15 @@ describe("a taken brand's jobs in the brand answer", () => {
 
     expect(answer.worksOn).toEqual(
       expect.arrayContaining([
-        { id: w.bmw, jobs: [oil, gearbox], name: 'BMW', slug: 'bmw' },
         {
+          fuels: FUELS,
+          id: w.bmw,
+          jobs: [oil, gearbox],
+          name: 'BMW',
+          slug: 'bmw',
+        },
+        {
+          fuels: FUELS,
           id: w.mini,
           jobs: [oil, brakes, gearbox],
           name: 'Mini',

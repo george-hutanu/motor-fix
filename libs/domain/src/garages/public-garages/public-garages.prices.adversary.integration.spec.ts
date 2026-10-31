@@ -216,7 +216,8 @@ describe('the price list on the wire', () => {
 
 // @traces 355-FR-003
 describe('the brand ticks on the price list', () => {
-  it('lists the ticked jobs for a brand the garage does not take', async () => {
+  // @traces 1247-FR-007
+  it('lists every public job for a brand the garage does not take, which holds no ticks', async () => {
     const dacia = await brand('Dacia');
     const { garage, price } = await setup();
     const a = await jobType('A');
@@ -224,9 +225,14 @@ describe('the brand ticks on the price list', () => {
     await price(a.id, 0);
     await price(b.id, 1);
     await stance(garage.id, dacia.id, 'does_not_take');
-    await tick(garage.id, dacia.id, b.id);
+    await expect(tick(garage.id, dacia.id, b.id)).rejects.toThrow(
+      /garage_brand_job_taken/,
+    );
 
-    expect(ids((await get(garage.slug, dacia.slug)).body)).toEqual([b.id]);
+    expect(ids((await get(garage.slug, dacia.slug)).body)).toEqual([
+      a.id,
+      b.id,
+    ]);
   });
 
   it('keeps the default ranges for a brand the garage does not take', async () => {
