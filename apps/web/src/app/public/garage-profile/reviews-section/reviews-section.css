@@ -183,3 +183,35 @@ p {
     --mf-size-small: var(--mf-size-body);
   }
 }
+
+.reply {
+  display: grid;
+  gap: var(--mf-space-1);
+  margin-block-start: var(--mf-space-2);
+  margin-inline-start: var(--mf-space-3);
+  padding-inline-start: var(--mf-space-3);
+  border-inline-start: 2px solid var(--mf-line);
+  min-width: 0;
+}
+
+.reply-label {
+  font-family: var(--mf-font-label);
+  font-size: var(--mf-size-label);
+  letter-spacing: var(--mf-label-tracking);
+  text-transform: uppercase;
+  color: var(--mf-text-secondary);
+}
+
+.reply-text {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.reply-by {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-1);
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+  overflow-wrap: anywhere;
+}
