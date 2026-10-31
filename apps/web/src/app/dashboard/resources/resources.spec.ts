@@ -125,7 +125,7 @@ describe('a return', () => {
     async (_, age) => {
       const kept = car('car-1');
       const load = vi
-        .fn<Promise<CarDto[]>, []>()
+        .fn<() => Promise<CarDto[]>>()
         .mockResolvedValueOnce([kept])
         .mockResolvedValueOnce([car('car-1'), car('car-2', 'Duster')]);
       await visit('cars', load);
@@ -160,7 +160,7 @@ describe('a return', () => {
   // @traces 1316-FR-003
   it('keeps the held value with no error when its read fails, and reads again after 60 s', async () => {
     const load = vi
-      .fn<Promise<RequestListDto>, []>()
+      .fn<() => Promise<RequestListDto>>()
       .mockResolvedValueOnce(requests('req-1'))
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce(requests('req-1', 'req-2'));

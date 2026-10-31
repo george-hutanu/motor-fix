@@ -130,7 +130,7 @@ describe('the stale time at its edges', () => {
 
   it('keeps the age of the last full read when a stale read fails, so the next open reads again', async () => {
     const load = vi
-      .fn<Promise<RequestListDto>, []>()
+      .fn<() => Promise<RequestListDto>>()
       .mockResolvedValueOnce(requests('req-1'))
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValue(requests('req-2'));
@@ -149,7 +149,7 @@ describe('the stale time at its edges', () => {
 
   it('reads at the next open after a failed first read, with no wait for any stale time', async () => {
     const load = vi
-      .fn<Promise<CarDto[]>, []>()
+      .fn<() => Promise<CarDto[]>>()
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce([car('car-1')]);
     await visit('cars', load);

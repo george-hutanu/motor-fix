@@ -56,9 +56,9 @@ function setUp(platform: 'browser' | 'server' = 'browser') {
   seen = [];
   preload = vi.fn(() => Promise.resolve());
   vi.spyOn(
-    ProfilePrefetch.prototype as never,
-    'preload' as never,
-  ).mockImplementation(preload as never);
+    ProfilePrefetch.prototype as unknown as { preload: () => Promise<void> },
+    'preload',
+  ).mockImplementation(preload);
   prefetch = TestBed.inject(ProfilePrefetch);
 }
 

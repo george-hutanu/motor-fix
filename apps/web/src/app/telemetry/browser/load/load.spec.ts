@@ -125,7 +125,9 @@ describe('loadTelemetry', () => {
     vi.mocked(initializeFaro).mockImplementation(() => {
       throw new Error('blocked by an extension');
     });
-    const errors = vi.spyOn(console, 'error').mockImplementation();
+    const errors = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
 
     await expect(
       loadTelemetry(

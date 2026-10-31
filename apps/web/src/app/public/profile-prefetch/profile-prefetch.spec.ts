@@ -52,8 +52,11 @@ function setUp(platform: 'browser' | 'server' = 'browser') {
   http = TestBed.inject(HttpTestingController);
   seen = [];
   chunk = vi
-    .spyOn(ProfilePrefetch.prototype as never, 'preload' as never)
-    .mockImplementation((() => Promise.resolve()) as never);
+    .spyOn(
+      ProfilePrefetch.prototype as unknown as { preload: () => Promise<void> },
+      'preload',
+    )
+    .mockImplementation(() => Promise.resolve());
   prefetch = TestBed.inject(ProfilePrefetch);
 }
 
