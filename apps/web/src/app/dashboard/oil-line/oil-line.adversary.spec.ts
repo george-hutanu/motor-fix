@@ -65,7 +65,7 @@ describe('the oil-service line at its edges', () => {
 
   it('says due now at zero in English', async () => {
     expect(await render(5000, 5000, 'en')).toEqual({
-      sentence: 'Oil service due now',
+      sentence: 'Oil service is due now',
       state: 'red',
     });
   });
