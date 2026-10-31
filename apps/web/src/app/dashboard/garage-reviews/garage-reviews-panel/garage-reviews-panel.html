@@ -32,7 +32,7 @@
     @if (reviews().length) {
       <div class="rows">
         @for (review of reviews(); track review.id) {
-          <article mf-garage-review-row [review]="review" [now]="now()" [attr.data-live-id]="review.id"></article>
+          <article mf-garage-review-row [review]="review" [now]="now()" [owner]="owner()" (reply)="reply(review)" [attr.data-live-id]="review.id"></article>
         }
       </div>
       @if (home()) {
