@@ -536,7 +536,7 @@ describe('seed', () => {
     const prices = await prisma.garagePrice.findMany({
       where: { garageId: garage.id },
     });
-    expect(prices).toHaveLength(3);
+    expect(prices).toHaveLength(4);
     expect(prices.find((p) => p.jobTypeId === diagnosis.id)).toMatchObject({
       fromBani: 16_000,
       visible: false,
