@@ -14,8 +14,10 @@ export interface Spot {
   y: number;
 }
 
-export interface OverlayPin extends Spot {
+interface OverlayPin extends Spot {
   id: string;
+  // False for a garage outside the driver's filters, drawn dimmed.
+  matches: boolean;
   rate: string;
   takes: boolean;
 }
@@ -52,6 +54,7 @@ export function overlayOf(
   const pinOf = (pin: GaragePinDto): OverlayPin => ({
     ...spot(pin),
     id: pin.id,
+    matches: pin.matches,
     rate: pin.rateLei === null ? '' : String(pin.rateLei),
     takes: pin.stance === 'works_on',
   });

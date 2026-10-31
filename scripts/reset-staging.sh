@@ -1,5 +1,5 @@
 #!/bin/sh
-# Empties, migrates and seeds the database of the service it runs in, with that
+# Empties, migrates, seeds and fills with demo data the database of the service it runs in, with that
 # service's own private DATABASE_URL. Two callers, both inside the staging api:
 #
 # - .github/workflows/reset-staging.yml pipes it to `sh -s` there by hand, with
@@ -10,6 +10,11 @@
 #   SEED_PASSWORD set on the service, so each deploy is seeded before the
 #   end-to-end run signs in. A failed seed exits non-zero and fails that
 #   deployment.
+#
+# A full reset then loads the demo data (libs/domain/src/demo-data.ts):
+# garages in Timișoara and six other cities, drivers with history, and one
+# account with every role. A deploy's seed leaves it be, so it lasts until the
+# next reset.
 #
 # With SEED_ONLY=1 it only seeds, which adds the seed accounts that are
 # missing, restores what each owns (password, one password identity, status,
@@ -42,6 +47,12 @@ main() {
     echo 'staging seed failed: npx prisma db seed exited non-zero' >&2
     exit 1
   }
+  if [ "${SEED_ONLY:-}" != 1 ]; then
+    node src/demo-data.ts || {
+      echo 'staging demo data failed: node src/demo-data.ts exited non-zero' >&2
+      exit 1
+    }
+  fi
 }
 
 main </dev/null

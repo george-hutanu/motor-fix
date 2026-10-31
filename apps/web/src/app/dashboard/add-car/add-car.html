@@ -56,6 +56,21 @@
     <input hlmInput id="mf-car-km" type="text" inputmode="numeric" autocomplete="off" formControlName="odometerKm" aria-describedby="mf-car-km-error" />
     <mf-field-error id="mf-car-km-error" [save]="save" [control]="form.controls.odometerKm" />
   </div>
+  <div class="field">
+    <label for="mf-car-nextServiceKm">{{ 'driver.cars.add.nextService' | t }}</label>
+    <input
+      hlmInput
+      id="mf-car-nextServiceKm"
+      type="text"
+      inputmode="numeric"
+      autocomplete="off"
+      formControlName="nextServiceKm"
+      aria-describedby="mf-car-nextServiceKm-error"
+      [aria-invalid]="nextServiceLeft() && form.controls.nextServiceKm.invalid"
+      (blur)="nextServiceLeft.set(true)"
+    />
+    <p class="error" id="mf-car-nextServiceKm-error" aria-live="polite">{{ nextServiceError() }}</p>
+  </div>
   <fieldset aria-describedby="mf-car-fuel-error">
     <legend>{{ 'driver.cars.add.fuel.label' | t }}</legend>
     <div class="fuels">

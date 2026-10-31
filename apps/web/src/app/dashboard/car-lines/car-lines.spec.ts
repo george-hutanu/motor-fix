@@ -41,13 +41,91 @@ describe('the oil-service estimate', () => {
   ])(
     'reads %i km left as %s, %i days ahead at 1,000 km a month',
     (kmLeft, state, days) => {
-      expect(oilStatus(148200 + kmLeft, 148200)).toEqual({
+      expect(oilStatus(148200 + kmLeft, 148200, null, NOW)).toEqual({
         days,
         kmLeft,
         state,
       });
     },
   );
+});
+
+// @traces 1386-FR-003 1386-FR-007
+describe('the oil-service lamp, judged by the estimated date', () => {
+  it.each([
+    ['2026-12-08', 'green', 61],
+    ['2026-12-07', 'amber', 60],
+    ['2026-10-16', 'amber', 8],
+    ['2026-10-15', 'red', 7],
+  ])(
+    'reads a service due on %s as %s, %i days ahead',
+    (serviceDueOn, state, days) => {
+      expect(oilStatus(152000, 148200, serviceDueOn, NOW)).toEqual({
+        days,
+        kmLeft: 3800,
+        state,
+      });
+    },
+  );
+
+  it('keeps 3,800 km left green when the date is 85 days ahead', () => {
+    expect(oilStatus(152000, 148200, '2027-01-01', NOW)).toMatchObject({
+      state: 'green',
+    });
+  });
+
+  it('turns red at no kilometres left, whatever the date says', () => {
+    expect(oilStatus(148200, 148200, null, NOW)).toMatchObject({
+      kmLeft: 0,
+      state: 'red',
+    });
+    expect(oilStatus(148200, 148200, '2027-06-01', NOW)).toMatchObject({
+      state: 'red',
+    });
+    expect(oilStatus(148000, 148200, null, NOW)).toMatchObject({
+      kmLeft: -200,
+      state: 'red',
+    });
+  });
+
+  it('falls back to 1,000 km a month without a date', () => {
+    expect(oilStatus(152000, 148200, null, NOW)).toEqual({
+      days: 116,
+      kmLeft: 3800,
+      state: 'green',
+    });
+    expect(oilStatus(152000, 148200, undefined, NOW)).toEqual({
+      days: 116,
+      kmLeft: 3800,
+      state: 'green',
+    });
+  });
+
+  it('ranks the oil line by the date’s days in the car’s lines', () => {
+    expect(
+      carLines(
+        car({
+          itpUntil: '2026-11-13',
+          nextServiceKm: 152000,
+          serviceDueOn: '2026-10-20',
+        }),
+        NOW,
+      ).slice(0, 2),
+    ).toMatchObject([
+      { days: 12, kind: 'oil', state: 'amber' },
+      { days: 36, kind: 'itp', state: 'amber' },
+    ]);
+  });
+
+  it('ranks the car by the date-judged oil line', () => {
+    const sooner = car({
+      id: 'oil',
+      nextServiceKm: 152000,
+      serviceDueOn: '2026-10-14',
+    });
+    const later = car({ id: 'itp', itpUntil: '2026-11-13' });
+    expect(compareCars(sooner, later, NOW)).toBeLessThan(0);
+  });
 });
 
 describe('the date lines’ status', () => {
