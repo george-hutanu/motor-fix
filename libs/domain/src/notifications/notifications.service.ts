@@ -591,17 +591,25 @@ export class NotificationsService {
     channel: SentChannel,
     reason: FallbackReason,
   ) {
-    const next = await this.fallbackRow(this.prisma, row, channel);
+    // The row and the driver's record of it are written together.
+    const next = await this.prisma.$transaction((tx) =>
+      this.fallbackRow(tx, row, channel, reason),
+    );
     if (!next) return;
     countChannelFallback(row.channel as SentChannel, channel, reason);
     await this.queue(next);
   }
 
-  // Answers the fallback's send job, or null when it wrote no row.
+  // Answers the fallback's send job, or null when it wrote no row. A row that
+  // is itself a fallback was not the driver's choice, so it is not recorded.
   private async fallbackRow(
-    db: Pick<PrismaClient, 'account' | 'notification' | 'pushSubscription'>,
+    db: Pick<
+      PrismaClient,
+      'account' | 'notification' | 'notificationFallback' | 'pushSubscription'
+    >,
     row: Notification,
     channel: SentChannel,
+    reason: FallbackReason,
   ): Promise<NextJob | null> {
     const type = notificationType(row.kind);
     if (!row.accountId || !type.channels.includes(channel)) return null;
@@ -624,8 +632,33 @@ export class NotificationsService {
       skipDuplicates: true,
     });
     if (!written) return null;
+    const from = row.channel as SentChannel;
+    await this.recordFallbacks(db, row.accountId, row.kind, null, {
+      at,
+      fallbacks: row.fallbackOf === null ? [{ from, reason, to: channel }] : [],
+    });
     const delay = sendAfter ? sendAfter.getTime() - at.getTime() : 0;
     return { ...send(written.id), delay };
+  }
+
+  // The last fallback of a driver's own choice, what their panel explains; a
+  // staff type's is only counted.
+  private async recordFallbacks(
+    db: Pick<PrismaClient, 'notificationFallback'>,
+    accountId: string,
+    type: string,
+    garageId: string | null,
+    { at, fallbacks }: { at: Date; fallbacks: readonly Substitution[] },
+  ) {
+    if (!isDriverChoice(type, garageId)) return;
+    for (const { from, reason, to } of fallbacks) {
+      const record = { at, from, reason, to };
+      await db.notificationFallback.upsert({
+        create: { accountId, type, ...record },
+        update: record,
+        where: { accountId_type: { accountId, type } },
+      });
+    }
   }
 
   private async canReach(
@@ -705,7 +738,7 @@ export class NotificationsService {
       for (const r of rows) {
         // A row that is itself a fallback ends the chain.
         if (r.fallbackOf !== null) continue;
-        const job = await this.fallbackRow(tx, r, 'push');
+        const job = await this.fallbackRow(tx, r, 'push', 'send_failed');
         if (job) jobs.push(job);
       }
       return jobs;
@@ -900,6 +933,10 @@ export class NotificationsService {
       reach,
       choice.garageId,
     );
+    await this.recordFallbacks(tx, accountId, input.kind, choice.garageId, {
+      at,
+      fallbacks,
+    });
     return { bell, countedAt, fallbacks, next, unreadCount };
   }
 

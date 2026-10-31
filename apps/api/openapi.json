@@ -13452,6 +13452,50 @@
           "types"
         ]
       },
+      "NotificationFallbackDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The channel it was meant for",
+            "enum": [
+              "email",
+              "push",
+              "sms",
+              "whatsapp"
+            ]
+          },
+          "to": {
+            "type": "string",
+            "description": "The channel it went by",
+            "enum": [
+              "email",
+              "push",
+              "sms",
+              "whatsapp"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "no_device",
+              "phone_not_verified",
+              "sms_cap_reached",
+              "send_failed"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "reason",
+          "at"
+        ]
+      },
       "NotificationPreferenceDto": {
         "type": "object",
         "properties": {
@@ -13493,6 +13537,16 @@
                 "whatsapp"
               ]
             }
+          },
+          "fallback": {
+            "description": "A driver entry: the last message of the type that went by another channel than the chosen one since it was chosen, else null; a staff entry has none",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationFallbackDto"
+              }
+            ]
           }
         },
         "required": [

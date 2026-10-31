@@ -1,8 +1,10 @@
 import {
   type NotificationGroupKey as DriverGroup,
+  type FallbackReason,
   NEWS_CONSENT_TEXT_VERSION,
   type NewsConsentDto,
   NOTIFICATION_GROUPS,
+  type NotificationFallbackDto,
   type OutsideChannel,
 } from '@motor-fix/contracts';
 
@@ -13,6 +15,16 @@ export interface PreferenceRow {
   channel: OutsideChannel;
   enabled: boolean;
   garageId: string | null;
+  updatedAt?: Date;
+}
+
+// The last message of a type that went by another channel than the one it
+// was meant for.
+export interface FallbackRecord {
+  from: OutsideChannel;
+  to: OutsideChannel;
+  reason: FallbackReason;
+  at: Date;
 }
 
 const NAMES = Object.keys(NOTIFICATION_TYPES);
@@ -57,6 +69,22 @@ function driverChoice(
         enabled: enabledByDefault(name),
       };
 }
+
+// A record explains the choice only while it was meant for the channel
+// chosen now and came after that choice was last saved.
+export const fallbackFor = (
+  record: FallbackRecord | undefined,
+  chosen: OutsideChannel,
+  savedAt: Date | null,
+): NotificationFallbackDto | null =>
+  record && record.from === chosen && (savedAt === null || record.at > savedAt)
+    ? {
+        at: record.at.toISOString(),
+        from: record.from,
+        reason: record.reason,
+        to: record.to,
+      }
+    : null;
 
 const driverTypes = NAMES.filter(isDriverType);
 

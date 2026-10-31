@@ -947,3 +947,37 @@ describe('e-mails to a listing draft', () => {
     expect(await draftRows(id)).toEqual([]);
   });
 });
+
+// @traces 1374-FR-002
+// @traces 1374-FR-007
+describe('the fallback a hard bounce keeps', () => {
+  it('records the e-mail going by push, with the push row', async () => {
+    const andrei = await account('andrei');
+    await withDevice(andrei);
+    await sentEmail(andrei, 'evt-b', '<b@relay>');
+    await service.recordBounce('<b@relay>');
+    expect(
+      await prisma.notificationFallback.findMany({
+        select: { at: true, from: true, reason: true, to: true, type: true },
+        where: { accountId: andrei },
+      }),
+    ).toEqual([
+      {
+        at: new Date(DAY),
+        from: 'email',
+        reason: 'send_failed',
+        to: 'push',
+        type: 'QUOTE_RECEIVED',
+      },
+    ]);
+  });
+
+  it('records nothing when the push fallback is not written', async () => {
+    const andrei = await account('andrei');
+    await sentEmail(andrei, 'evt-b', '<b@relay>');
+    await service.recordBounce('<b@relay>');
+    expect(
+      await prisma.notificationFallback.count({ where: { accountId: andrei } }),
+    ).toBe(0);
+  });
+});
