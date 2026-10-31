@@ -10,7 +10,7 @@ import {
 } from '@motor-fix/contracts';
 import { HttpStatus } from '@nestjs/common';
 
-import { cardAudience } from './mechanics/garage-mechanics.service';
+import { cardAudienceNow } from './mechanics/garage-mechanics.service';
 import type { AuditChange, AuditEntry, AuditPort } from '../audit/audit.port';
 import { canonical } from '../audit/audit.service';
 import { refusal } from '../auth/http-refusal';
@@ -228,7 +228,7 @@ async function clipMechanics(
       after,
     );
     await events.record(tx, {
-      audience: cardAudience(garageId, card),
+      audience: await cardAudienceNow(tx, garageId, card.id),
       kind: 'mechanic.updated',
       payload: { fields, garageId, mechanicId: card.id },
       subjectId: card.id,
