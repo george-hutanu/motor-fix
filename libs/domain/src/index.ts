@@ -187,6 +187,7 @@ export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-re
 export { REPAIR_UPDATED_CONSUMER } from './notifications/repair-updated/repair-updated.fan-out';
 export { REQUEST_CANCELLED_CONSUMER } from './notifications/request-cancelled/request-cancelled.fan-out';
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
+export { REVIEW_DECIDED_CONSUMER } from './notifications/review-decided/review-decided.fan-out';
 export { REVIEW_POSTED_CONSUMER } from './notifications/review-posted/review-posted.fan-out';
 export { REVIEW_REPLIED_CONSUMER } from './notifications/review-replied/review-replied.fan-out';
 export { VERIFICATION_RESULT_CONSUMER } from './notifications/verification-result/verification-result.fan-out';
