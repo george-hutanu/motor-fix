@@ -6,10 +6,12 @@ import {
 } from '@angular/core';
 import { groupPlate } from '@motor-fix/contracts/plate';
 import { type CarDto, CarsService } from '@motor-fix/data-access';
-import { I18n, KmPipe, TranslatePipe } from '@motor-fix/i18n';
+import { formatDayMonth, I18n, KmPipe, TranslatePipe } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 import { HlmButton, HlmPopoverImports } from '@motor-fix/ui-cockpit';
 
+import { openCancelTransfer } from './cancel-transfer/open-cancel-transfer';
+import { openSellCar } from './sell-car/open-sell-car';
 import type { CarFocus } from '../add-car/add-car';
 import { openAddCar } from '../add-car/open-add-car';
 import { DueDateLine } from '../due-date-line/due-date-line';
@@ -42,7 +44,13 @@ export class CarsView {
   private readonly read = this.resources.live(
     'cars',
     () => this.api.carsControllerList().then(({ items }) => items),
-    [],
+    // A transfer's change shows on its car's card.
+    [
+      'car_transfer.sent',
+      'car_transfer.cancelled',
+      'car_transfer.expired',
+      'car_transfer.accepted',
+    ],
   );
   protected readonly cars = this.read.value;
   // A retry shows the placeholder until it answers.
@@ -88,6 +96,25 @@ export class CarsView {
   // Once the removal is confirmed and done, the card leaves at once.
   protected async remove(car: CarDto) {
     if ((await openRemoveCar(this.overlays, car)) === true) this.drop(car);
+  }
+
+  // "Am vândut mașina": a "no" to passing the history goes on to the removal;
+  // any other close may have sent a link, so the cars are read again.
+  protected async sell(car: CarDto) {
+    const answer = await openSellCar(this.overlays, car);
+    if (answer === 'remove') await this.remove(car);
+    else this.load();
+  }
+
+  // The cancel may have been refused because the transfer ended meanwhile,
+  // so the cars are read again whatever the answer.
+  protected async cancelTransfer(car: CarDto) {
+    await openCancelTransfer(this.overlays, car);
+    this.load();
+  }
+
+  protected transferDay(expiresAt: string) {
+    return formatDayMonth(expiresAt, this.language());
   }
 
   private drop(car: CarDto) {
