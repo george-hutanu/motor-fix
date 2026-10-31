@@ -94,15 +94,19 @@ afterEach(() => {
 });
 
 describe('the account repairs section under hostile input', () => {
-  it('renders ten thousand rows in the order answered', async () => {
-    const items = Array.from({ length: 10000 }, (_, i) =>
-      row(`r-${i}`, '2025-03-12'),
+  // Two thousand rows: ten thousand took half a minute in jsdom alone and
+  // ran past the timeout on a loaded machine; the order is what is tested.
+  it('renders two thousand rows in the order answered', async () => {
+    const items = Array.from({ length: 2000 }, (_, i) =>
+      row(`r-${i}`, '2025-03-12', { ...car, model: `M${i}x` }),
     );
     await mount({ list: jest.fn(async () => ({ items, truncated: true })) });
 
-    expect(element.querySelectorAll('li')).toHaveLength(10000);
+    const shown = rows();
+    expect(shown).toHaveLength(2000);
+    expect(shown.every((line, i) => line.includes(`M${i}x`))).toBe(true);
     expect(text()).toContain('și altele');
-  }, 60000);
+  });
 
   it('shows the empty state, not the more line, for an empty cut list', async () => {
     await mount({
