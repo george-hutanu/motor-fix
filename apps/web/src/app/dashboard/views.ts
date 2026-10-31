@@ -30,7 +30,7 @@ export interface DashboardView {
   title?: string;
   subtitle?: string;
   // The line under the title stays at body size from a tablet up, where
-  // other views read it at the small size.
+  // other views read it at the small size (346-FR-005).
   lead?: true;
   // Absent: every role of the area sees it.
   capability?: Capability;

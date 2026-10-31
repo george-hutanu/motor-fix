@@ -96,8 +96,9 @@ p {
   align-items: center;
   padding-inline-end: var(--mf-space-2);
   background: var(--mf-panel);
-  color: var(--mf-text-secondary);
-  font-size: var(--mf-size-small);
+  color: var(--mf-text);
+  font-size: 14px;
+  font-weight: 600;
 }
 .track {
   position: relative;

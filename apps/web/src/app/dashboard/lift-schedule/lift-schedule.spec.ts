@@ -228,6 +228,17 @@ describe('the first drawing', () => {
 });
 
 describe('blocked time and bookings without a lift', () => {
+  it('shows only the empty note, no bare hours axis, for a garage with no lift and no booking', async () => {
+    const { element } = await renderPanel({
+      read: async () => schedule({ liftCount: 0 }),
+    });
+
+    expect(panel(element)?.getAttribute('data-state')).toBe('empty');
+    expect(element.querySelector('[data-empty]')).not.toBeNull();
+    expect(element.querySelector('[data-axis-label]')).toBeNull();
+    expect(element.querySelector('[role="region"]')).toBeNull();
+  });
+
   it('adds the "Fără elevator" row last, and a row for a lift above the count', async () => {
     const { element } = await renderPanel({
       read: async () =>
