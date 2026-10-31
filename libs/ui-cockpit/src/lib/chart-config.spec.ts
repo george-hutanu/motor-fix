@@ -714,8 +714,53 @@ describe('the chart with weeks that have no value', () => {
 
   // @traces 1397-FR-003
   // QA lap 2: with skipping off, eight labels ran together at 320 px.
-  it('keeps the shared skip rule for week labels too narrow to fit', () => {
-    expect(weeks(true).options.scales.x.ticks.autoSkip).toBe(true);
+  it('keeps the shared skip rule for charts that write no newest value', () => {
     expect(weeks().options.scales.x.ticks.autoSkip).toBe(true);
+    expect(weeks().options.scales.x.ticks.callback).toBeUndefined();
+  });
+
+  // @traces 1397-FR-003
+  // QA lap 6: each chart skipped its own labels, and the newest week, the
+  // one carrying the value, could lose its own.
+  describe('the week labels of a chart that writes its newest value', () => {
+    const EIGHT = ['S36', 'S37', 'S38', 'S39', 'S40', 'S41', 'S42', 'S43'];
+    // Each label measures 24 px; the value axis may be wide or narrow.
+    const shown = (width: number) => {
+      const { ticks } = weeks(true).options.scales.x;
+      const scale = {
+        chart: { width },
+        ctx: {
+          font: '',
+          measureText: (t: string) => ({ width: t.length * 8 }),
+        },
+        getLabelForValue: (value: number) => EIGHT[value],
+      };
+      const all = EIGHT.map((_, value) => ({ value }));
+      return EIGHT.map((_, index) =>
+        ticks.callback.call(scale, index, index, all),
+      ).filter((label: string) => label !== '');
+    };
+
+    it('replaces the skip rule with its own', () => {
+      expect(weeks(true).options.scales.x.ticks.autoSkip).toBe(false);
+    });
+
+    it('keeps all eight where they fit', () => {
+      expect(shown(600)).toEqual(EIGHT);
+    });
+
+    it('counts back from the newest week, which always keeps its label', () => {
+      const narrow = shown(250);
+
+      expect(narrow.at(-1)).toBe('S43');
+      expect(narrow).toEqual(['S37', 'S39', 'S41', 'S43']);
+      expect(shown(150)).toEqual(['S39', 'S43']);
+    });
+
+    it('chooses from the canvas width alone, so charts side by side agree', () => {
+      for (const width of [150, 250, 330, 600])
+        expect(shown(width)).toEqual(shown(width));
+      expect(shown(320)).toEqual(['S37', 'S39', 'S41', 'S43']);
+    });
   });
 });

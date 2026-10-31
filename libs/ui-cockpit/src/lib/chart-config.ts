@@ -189,6 +189,47 @@ const LAST_LABEL: Plugin<ChartType, LastLabel> = {
   id: 'mf-last-label',
 };
 
+// Room kept for the value axis when choosing which week labels to write: the
+// same on every chart, so two charts side by side write the same weeks.
+const VALUE_AXIS_EMS = 6;
+const LABEL_GAP = 10;
+
+interface WeekScale {
+  chart: { width: number };
+  ctx: { font: string; measureText(text: string): { width: number } };
+  getLabelForValue(value: number): string;
+}
+
+// Every stride-th label, counted back from the newest week, whose bar carries
+// the value: the fewest skipped that still fit the canvas.
+function weekTicks(theme: ChartTheme) {
+  const size = theme.labelSize ?? 12;
+  return {
+    autoSkip: false,
+    callback(
+      this: WeekScale,
+      value: number | string,
+      index: number,
+      all: { value: number }[],
+    ) {
+      const label = this.getLabelForValue(Number(value));
+      const font = this.ctx.font;
+      this.ctx.font = `${size}px ${theme.font}`;
+      const widest = Math.max(
+        ...all.map(
+          (t) => this.ctx.measureText(this.getLabelForValue(t.value)).width,
+        ),
+      );
+      this.ctx.font = font;
+      const room = this.chart.width - VALUE_AXIS_EMS * size;
+      const fit = Math.max(1, Math.floor(room / (widest + LABEL_GAP)));
+      let stride = 1;
+      while (Math.ceil(all.length / stride) > fit) stride++;
+      return (all.length - 1 - index) % stride === 0 ? label : '';
+    },
+  };
+}
+
 // An update replaces the options, never the plugins: the plugin is registered
 // whenever the chart may label, and what it writes travels in its options so
 // new points or a new language reach it.
@@ -202,13 +243,15 @@ function newestLabel(
   config?: { plugins: Plugin<ChartType, LastLabel>[] };
   layout?: { padding: { top: number } };
   options?: Record<string, LastLabel>;
+  ticks?: ReturnType<typeof weekTicks>;
 } {
   if (!on) return {};
   const config = { plugins: [LAST_LABEL] };
+  const ticks = weekTicks(theme);
   // Room over the tallest bar for its label: its size and the 4 px gap.
   const layout = { padding: { top: (theme.labelSize ?? 12) + 6 } };
   const index = points.findLastIndex((p) => p.value !== null);
-  if (index < 0) return { config, layout };
+  if (index < 0) return { config, layout, ticks };
   const label: LastLabel = {
     color: theme.text,
     dataset,
@@ -220,6 +263,7 @@ function newestLabel(
     config,
     layout,
     options: { [LAST_LABEL.id]: label },
+    ticks,
   };
 }
 
@@ -324,7 +368,13 @@ export function chartConfig(
         [categoryAxis]: {
           border: { display: false },
           grid: { display: false },
-          ticks: { ...ticks, autoSkip: true, maxRotation: 0, minRotation: 0 },
+          ticks: {
+            ...ticks,
+            autoSkip: true,
+            maxRotation: 0,
+            minRotation: 0,
+            ...newest.ticks,
+          },
         },
         [valueAxis]: {
           beginAtZero: true,
