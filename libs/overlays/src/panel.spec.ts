@@ -798,6 +798,14 @@ describe('a task that only its own buttons may close', () => {
     expect(header?.classList).toContain('mf-overlay-header-fixed');
   });
 
+  // @traces 1405-FR-005
+  it('adds no second banner landmark beside the page header', async () => {
+    await openTask();
+
+    expect(panel()?.querySelector('.mf-overlay-header')).not.toBeNull();
+    expect(panel()?.querySelector('header, [role="banner"]')).toBeNull();
+  });
+
   it('stays dismissible when the option is left out', async () => {
     const host = await openTask();
 
