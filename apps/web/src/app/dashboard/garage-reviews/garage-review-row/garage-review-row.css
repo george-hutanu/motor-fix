@@ -108,3 +108,7 @@ p {
   opacity: 0.6;
   cursor: not-allowed;
 }
+.hint {
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}
