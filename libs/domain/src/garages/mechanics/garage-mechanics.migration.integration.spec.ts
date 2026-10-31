@@ -252,7 +252,7 @@ describe("the migration's backfill of the owner's row", () => {
   });
 });
 
-// @traces 059-FR-019
+// @traces 059-FR-002 059-FR-019
 describe('the team-on-profile migration', () => {
   const SWITCHES = join(
     __dirname,
