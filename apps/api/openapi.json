@@ -7781,6 +7781,62 @@
         ]
       }
     },
+    "/api/v1/admin/demand/supply": {
+      "get": {
+        "operationId": "DemandController_supply",
+        "parameters": [
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "Only this brand's rows: the exact brand name",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 80,
+              "example": "BMW",
+              "type": "string"
+            }
+          },
+          {
+            "name": "area",
+            "required": false,
+            "in": "query",
+            "description": "Only this area's rows: an area code from the answer's areas, or unknown; a code in no area answers validation_failed",
+            "schema": {
+              "pattern": "^(unknown|[a-z0-9]+(-[a-z0-9]+)*)$",
+              "example": "sector-3",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminDemandSupplyDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a brand of 0 or over 80 characters, an area that is not one, or an unknown query key"
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/overview": {
       "get": {
         "operationId": "AdminOverviewController_overview",
@@ -21734,6 +21790,132 @@
           "searches",
           "brands",
           "jobs"
+        ]
+      },
+      "AdminAreaDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The area's code; unknown for a point in no area",
+            "example": "sector-3"
+          },
+          "name": {
+            "type": "string",
+            "example": "Sector 3"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "city",
+              "sector",
+              "unknown"
+            ],
+            "example": "sector"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "kind"
+        ]
+      },
+      "AdminDemandSupplyRowDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "description": "The request snapshot's or the catalogue brand's exact name",
+            "example": "BMW"
+          },
+          "area": {
+            "$ref": "#/components/schemas/AdminAreaDto"
+          },
+          "searches": {
+            "type": "integer",
+            "description": "Searches in the window whose cell's centre lies in the area",
+            "example": 420,
+            "minimum": 0
+          },
+          "requests": {
+            "type": "integer",
+            "description": "Requests created in the window with a recipient in the area, once per request",
+            "example": 96,
+            "minimum": 0
+          },
+          "unmet": {
+            "type": "integer",
+            "description": "Requests to the area closed expired in the window with no quote from any garage, on the day they expired; may exceed requests",
+            "example": 12,
+            "minimum": 0
+          },
+          "supply": {
+            "type": "integer",
+            "description": "Approved garages in the area today that work on the brand; a mobile mechanic by its seat",
+            "example": 4,
+            "minimum": 0
+          },
+          "requestsPerGarage": {
+            "type": "integer",
+            "description": "Requests divided by supply, rounded to the nearest whole number; null when supply is 0",
+            "example": 24,
+            "minimum": 0,
+            "nullable": true
+          }
+        },
+        "required": [
+          "brand",
+          "area",
+          "searches",
+          "requests",
+          "unmet",
+          "supply",
+          "requestsPerGarage"
+        ]
+      },
+      "AdminDemandSupplyDto": {
+        "type": "object",
+        "properties": {
+          "firstDay": {
+            "type": "string",
+            "description": "The window's first Europe/Bucharest day",
+            "example": "2026-10-02",
+            "format": "date"
+          },
+          "lastDay": {
+            "type": "string",
+            "description": "The window's last day: today in Europe/Bucharest",
+            "example": "2026-10-31",
+            "format": "date"
+          },
+          "writtenAt": {
+            "type": "string",
+            "description": "The latest nightly write of the window's brand-area rows; null before the first",
+            "example": "2026-10-31T01:00:12.345Z",
+            "format": "date-time",
+            "nullable": true
+          },
+          "areas": {
+            "description": "Every area by code, then unknown; unfiltered, for the area filter",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAreaDto"
+            }
+          },
+          "rows": {
+            "description": "One row per brand and area with a search, a request or an unmet request in the window, after the filters; most unmet first, then most searched, then most requested, then by brand and area name in code-point order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminDemandSupplyRowDto"
+            }
+          }
+        },
+        "required": [
+          "firstDay",
+          "lastDay",
+          "writtenAt",
+          "areas",
+          "rows"
         ]
       },
       "AdminCityDto": {

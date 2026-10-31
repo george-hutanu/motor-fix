@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 251,
+    "count": 252,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -168,7 +168,7 @@
         "worker-jobs-failed",
         "profile-views-job-failed"
       ],
-      "reason": "four nightly jobs, platform-daily, response-stats, profile-views and demand-daily, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; demand-daily logs the days it wrote, and a missed night is caught up by the next, the read counting an unwritten day live meanwhile, then ranks every active brand by its searches over the 30 closed days and logs the ranked and changed counts, a failed ranking failing the attempt and leaving the previous ranks; profile-views has its own final-failure alert, since its counters expire two days after their day",
+      "reason": "four nightly jobs, platform-daily, response-stats, profile-views and demand-daily, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; demand-daily logs the days it wrote, and a missed night is caught up by the next, the read counting an unwritten day live meanwhile, then writes the brand_area rows (per brand and area, with their own marker, so the days written before them are back-filled once) and logs 'brand_area written n for days', then ranks every active brand by its searches over the 30 closed days and logs the ranked and changed counts, a failed ranking failing the attempt and leaving the previous ranks; profile-views has its own final-failure alert, since its counters expire two days after their day",
       "story": "ST-881"
     },
     {
@@ -2105,6 +2105,19 @@
       ],
       "reason": "the admin's demand read, counts only; a failed read answers the standard error body and is the api-error-rate rule's",
       "story": "ST-103"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-demand-supply",
+      "source": "libs/domain/src/insights/demand/demand.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/demand/supply",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's demand against supply per brand and area, counts only; a failed read answers the standard error body and is the api-error-rate rule's, a slow one (the live days and the supply are counted at the read) the api-latency rule's; the areas it places points in are loaded at the API's start, which logs 'areas loaded: n changed' and stops the start on a bad file",
+      "story": "ST-106"
     },
     {
       "kind": "endpoint",
