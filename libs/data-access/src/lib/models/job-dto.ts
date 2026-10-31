@@ -42,6 +42,16 @@ export interface JobDto {
   pausedAt: string | null;
 
   /**
+   * The accepted quote's lower bound, in bani
+   */
+  quoteFromBani: number;
+
+  /**
+   * The accepted quote's upper bound, in bani
+   */
+  quoteToBani: number;
+
+  /**
    * When the car was first received
    */
   receivedAt: string | null;

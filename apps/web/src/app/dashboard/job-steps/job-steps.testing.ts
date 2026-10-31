@@ -66,6 +66,8 @@ export const job = (over: Partial<JobDto> = {}): JobDto => ({
   noShowAt: null,
   odometerKm: null,
   pausedAt: null,
+  quoteFromBani: 89000,
+  quoteToBani: 140000,
   receivedAt: null,
   stages: [],
   startedAt: '2026-10-09T06:30:00.000Z',

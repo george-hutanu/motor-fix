@@ -165,6 +165,12 @@ export class GarageJobsService {
     const row = await this.prisma.job.findFirst({
       include: {
         ...SUMMARY,
+        booking: {
+          include: {
+            ...SUMMARY.booking.include,
+            quote: { select: { fromBani: true, toBani: true } },
+          },
+        },
         mechanic: { select: { accountId: true, name: true } },
         stages: { orderBy: [{ at: 'asc' }, { id: 'asc' }] },
         steps: { orderBy: { position: 'asc' } },
@@ -181,6 +187,8 @@ export class GarageJobsService {
     return {
       ...summaryOf(actor, row),
       finalPriceBani: row.finalPriceBani,
+      quoteFromBani: row.booking.quote.fromBani,
+      quoteToBani: row.booking.quote.toBani,
       stages: row.stages.map((stage) => ({
         actorRole: stage.actorRole,
         at: stage.at.toISOString(),
