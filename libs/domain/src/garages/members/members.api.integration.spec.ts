@@ -1,7 +1,8 @@
+// @traces 400-FR-008
 import { randomUUID } from 'node:crypto';
 
 import type { Role } from '@motor-fix/contracts/capabilities';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -9,6 +10,7 @@ import request from 'supertest';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { outboxMark } from '../../events/outbox.testing';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
@@ -17,6 +19,7 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import { refuseInserts } from '../../refuse-inserts.testing';
 import { UNUSED_STORAGE } from '../../storage/s3-test-store';
 import { StorageModule } from '../../storage/storage.module';
 import { GaragesModule } from '../garages.module';
@@ -64,7 +67,16 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-beforeEach(() => reset());
+// The outbox is never emptied: each test reads the rows above its mark.
+let mark: bigint;
+
+beforeEach(async () => {
+  await reset();
+  brevo.reset();
+  mark = await outboxMark(prisma);
+});
+
+afterEach(() => jest.restoreAllMocks());
 
 const DAY = 86_400_000;
 const NONE = {
@@ -438,5 +450,343 @@ describe('who may read who has access', () => {
     const res = await members(w.dinamo.id, bearer(w.mihai, 'garage'));
 
     expect(res.status).toBe(200);
+  });
+});
+
+const remove = (garageId: string, accountId: string, auth?: string) => {
+  const call = request(app.getHttpServer()).delete(
+    `/garages/${garageId}/members/${accountId}`,
+  );
+  return auth ? call.set('Authorization', auth) : call;
+};
+const outbox = (kind: string) =>
+  prisma.outboxEvent.findMany({ where: { id: { gt: mark }, kind } });
+const inviteStatus = async (id: string) =>
+  (await prisma.staffInvite.findUniqueOrThrow({ where: { id } })).status;
+const membership = (garageId: string, accountId: string) =>
+  prisma.garageMember.findUnique({
+    where: { garageId_accountId: { accountId, garageId } },
+  });
+const quiet = () => {
+  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+};
+
+// @traces 400-FR-001
+describe('the owner removing a receptionist', () => {
+  it('answers 204 with no body and drops her from the members list', async () => {
+    const w = await world();
+
+    const res = await remove(w.dinamo.id, w.ioana, bearer(w.mihai, 'garage'));
+
+    expect(res.status).toBe(204);
+    expect(res.text).toBe('');
+    const list = await members(w.dinamo.id, bearer(w.mihai, 'garage'));
+    expect(
+      list.body.members.map((m: { accountId: string }) => m.accountId),
+    ).not.toContain(w.ioana);
+    expect(await membership(w.dinamo.id, w.ana)).not.toBeNull();
+  });
+
+  it('accepts upper-case ids as the list does', async () => {
+    const w = await world();
+
+    const res = await remove(
+      w.dinamo.id.toUpperCase(),
+      w.ioana.toUpperCase(),
+      bearer(w.mihai, 'garage'),
+    );
+
+    expect(res.status).toBe(204);
+    expect(await membership(w.dinamo.id, w.ioana)).toBeNull();
+  });
+
+  it('removes her whatever the team switch says', async () => {
+    const w = await world();
+    await prisma.garageFeature.create({
+      data: { enabled: false, garageId: w.dinamo.id, key: 'team_mechanics' },
+    });
+
+    const res = await remove(w.dinamo.id, w.ioana, bearer(w.mihai, 'garage'));
+
+    expect(res.status).toBe(204);
+  });
+
+  it("answers 409 owner_row for the owner's own account and keeps it", async () => {
+    const w = await world();
+
+    const res = await remove(w.dinamo.id, w.mihai, bearer(w.mihai, 'garage'));
+
+    expect([res.status, res.body.code]).toEqual([409, 'owner_row']);
+    expect(await membership(w.dinamo.id, w.mihai)).not.toBeNull();
+  });
+
+  it('answers 404 for a mechanic, an unknown account and an already removed receptionist', async () => {
+    const w = await world();
+    const owner = bearer(w.mihai, 'garage');
+    await remove(w.dinamo.id, w.ioana, owner);
+
+    const answers = {
+      again: await remove(w.dinamo.id, w.ioana, owner),
+      mechanic: await remove(w.dinamo.id, w.vlad, owner),
+      nord: await remove(w.dinamo.id, w.radu, owner),
+      unknown: await remove(w.dinamo.id, randomUUID(), owner),
+    };
+
+    for (const [name, res] of Object.entries(answers)) {
+      expect([name, res.status, res.body.code]).toEqual([
+        name,
+        404,
+        'not_found',
+      ]);
+    }
+    expect(await outbox('member.removed')).toHaveLength(1);
+  });
+
+  it('removes her once when two removals arrive together', async () => {
+    const w = await world();
+    const owner = bearer(w.mihai, 'garage');
+
+    const answers = await Promise.all([
+      remove(w.dinamo.id, w.ioana, owner),
+      remove(w.dinamo.id, w.ioana, owner),
+    ]);
+
+    expect(answers.map((res) => res.status).sort()).toEqual([204, 404]);
+    expect(await outbox('member.removed')).toHaveLength(1);
+    expect(
+      await prisma.activityLog.count({
+        where: { subjectId: w.ioana, subjectType: 'member' },
+      }),
+    ).toBe(1);
+  });
+});
+
+// @traces 400-FR-002
+describe('what a removal writes', () => {
+  it("revokes the garage's sent receptionist invites to her e-mail or phone, and no other", async () => {
+    const w = await world();
+    await prisma.account.update({
+      data: { email: 'Ioana@Example.test', phone: '+40722000111' },
+      where: { id: w.ioana },
+    });
+    const byEmail = await invite(w.dinamo.id, 'ioana@example.test', {
+      kind: 'receptionist',
+    });
+    const byPhone = await prisma.staffInvite.create({
+      data: {
+        expiresAt: new Date(Date.now() + 7 * DAY),
+        garageId: w.dinamo.id,
+        kind: 'receptionist',
+        name: 'Ioana Marin',
+        phone: '+40722000111',
+        tokenHash: randomUUID(),
+      },
+    });
+    const asMechanic = await invite(w.dinamo.id, 'ioana@example.test');
+    const elsewhere = await invite(w.nord.id, 'ioana@example.test', {
+      kind: 'receptionist',
+    });
+    const someoneElse = await invite(w.dinamo.id, 'elena@example.test', {
+      kind: 'receptionist',
+    });
+
+    await remove(w.dinamo.id, w.ioana, bearer(w.mihai, 'garage'));
+
+    expect({
+      asMechanic: await inviteStatus(asMechanic.id),
+      byEmail: await inviteStatus(byEmail.id),
+      byPhone: await inviteStatus(byPhone.id),
+      elsewhere: await inviteStatus(elsewhere.id),
+      someoneElse: await inviteStatus(someoneElse.id),
+    }).toEqual({
+      asMechanic: 'sent',
+      byEmail: 'revoked',
+      byPhone: 'revoked',
+      elsewhere: 'sent',
+      someoneElse: 'sent',
+    });
+    expect(await outbox('invite.revoked')).toEqual([]);
+  });
+
+  it('records one delete entry on the member, the owner as actor', async () => {
+    const w = await world();
+
+    await remove(w.dinamo.id, w.ioana, bearer(w.mihai, 'garage'));
+
+    const entries = await prisma.activityLog.findMany({
+      where: { garageId: w.dinamo.id, subjectType: 'member' },
+    });
+    expect(entries).toEqual([
+      expect.objectContaining({
+        action: 'delete',
+        actorId: w.mihai,
+        actorRole: 'owner',
+        garageId: w.dinamo.id,
+        oldValue: { name: 'Ioana Marin', role: 'receptionist' },
+        subjectId: w.ioana,
+        subjectType: 'member',
+      }),
+    ]);
+  });
+
+  // The live hub drops the connections of the account the event names.
+  it('records member.removed for the garage, naming her account', async () => {
+    const w = await world();
+
+    await remove(w.dinamo.id, w.ioana, bearer(w.mihai, 'garage'));
+
+    const events = await outbox('member.removed');
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      payload: { accountId: w.ioana, garageId: w.dinamo.id },
+      subjectId: w.ioana,
+    });
+    expect(events[0].audience).toEqual([`garage:${w.dinamo.id}`]);
+  });
+
+  it('leaves her row, her invites and the outbox as they were when the audit write fails', async () => {
+    const w = await world();
+    await prisma.account.update({
+      data: { email: 'ioana@example.test' },
+      where: { id: w.ioana },
+    });
+    const open = await invite(w.dinamo.id, 'ioana@example.test', {
+      kind: 'receptionist',
+    });
+    quiet();
+    const undo = await refuseInserts(
+      prisma,
+      'activity_log',
+      "NEW.subject_type = 'member'",
+    );
+    let status = 0;
+    try {
+      status = (await remove(w.dinamo.id, w.ioana, bearer(w.mihai, 'garage')))
+        .status;
+    } finally {
+      await undo();
+    }
+
+    expect(status).toBe(500);
+    expect(await membership(w.dinamo.id, w.ioana)).not.toBeNull();
+    expect(await inviteStatus(open.id)).toBe('sent');
+    expect(await outbox('member.removed')).toEqual([]);
+    expect(
+      await prisma.notification.count({ where: { kind: 'STAFF_REMOVED' } }),
+    ).toBe(0);
+  });
+});
+
+// @traces 400-FR-003
+describe('the removed receptionist afterwards', () => {
+  it('answers her 404 on the garage, drops it from /me and keeps her role', async () => {
+    const w = await world();
+    const ioana = bearer(w.ioana, 'receptionist');
+    const before = await members(w.dinamo.id, ioana);
+
+    await remove(w.dinamo.id, w.ioana, bearer(w.mihai, 'garage'));
+
+    const after = await members(w.dinamo.id, ioana);
+    expect([before.status, before.body.code]).toEqual([403, 'forbidden']);
+    expect([after.status, after.body.code]).toEqual([404, 'not_found']);
+    const me = await request(app.getHttpServer())
+      .get('/me')
+      .set('Authorization', ioana);
+    expect(me.body.garageAccess).toEqual([]);
+    expect(
+      await prisma.accountRole.findMany({
+        select: { role: true },
+        where: { accountId: w.ioana },
+      }),
+    ).toEqual([{ role: 'receptionist' }]);
+  });
+
+  it('joins again through a later accepted invite, as a new membership', async () => {
+    const w = await world();
+    await prisma.account.update({
+      data: { email: 'ioana@example.test' },
+      where: { id: w.ioana },
+    });
+    await remove(w.dinamo.id, w.ioana, bearer(w.mihai, 'garage'));
+    const sent = await request(app.getHttpServer())
+      .post(`/garages/${w.dinamo.id}/invites`)
+      .set('Authorization', bearer(w.mihai, 'garage'))
+      .send({
+        email: 'ioana@example.test',
+        kind: 'receptionist',
+        name: 'Ioana Marin',
+      });
+    expect(sent.status).toBe(201);
+    const mail = brevo.emails().at(-1)?.body as { textContent: string };
+    const token = /\/(?:ro|en)\/invite\/([A-Za-z0-9_-]+)/.exec(
+      mail.textContent,
+    )?.[1];
+
+    const accepted = await request(app.getHttpServer())
+      .post('/invites/accept')
+      .set('Authorization', bearer(w.ioana, 'receptionist'))
+      .send({ token });
+
+    expect(accepted.status).toBe(204);
+    const row = await membership(w.dinamo.id, w.ioana);
+    expect(row?.role).toBe('receptionist');
+    expect(row?.joinedAt.getTime()).toBeGreaterThan(
+      w.ioanaJoined.joinedAt.getTime(),
+    );
+  });
+});
+
+// @traces 400-FR-004
+describe('telling the removed receptionist', () => {
+  const notices = (accountId: string) =>
+    prisma.notification.findMany({
+      where: { accountId, kind: 'STAFF_REMOVED' },
+    });
+
+  it('sends STAFF_REMOVED keyed by her membership', async () => {
+    const w = await world();
+
+    const res = await remove(w.dinamo.id, w.ioana, bearer(w.mihai, 'garage'));
+
+    expect(res.status).toBe(204);
+    const sent = await notices(w.ioana);
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent.map((n) => n.channel)).toContain('email');
+    for (const notice of sent) {
+      expect(notice).toMatchObject({
+        eventId: `member.removed:${w.dinamo.id}:${w.ioana}:${w.ioanaJoined.joinedAt.getTime()}`,
+        params: { garage: 'Atelier Dinamo' },
+        subjectId: w.ioana,
+      });
+    }
+    expect(await notices(w.ana)).toEqual([]);
+  });
+
+  it('keeps the removal and logs an error naming her and the garage when the notice cannot be written', async () => {
+    const w = await world();
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const errors = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const undo = await refuseInserts(
+      prisma,
+      'notification',
+      "NEW.kind = 'STAFF_REMOVED'",
+    );
+    let status = 0;
+    try {
+      status = (await remove(w.dinamo.id, w.ioana, bearer(w.mihai, 'garage')))
+        .status;
+    } finally {
+      await undo();
+    }
+
+    expect(status).toBe(204);
+    expect(await membership(w.dinamo.id, w.ioana)).toBeNull();
+    expect(await notices(w.ioana)).toEqual([]);
+    const logged = errors.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(logged).toContain(w.ioana);
+    expect(logged).toContain(w.dinamo.id);
   });
 });

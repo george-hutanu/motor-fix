@@ -47,6 +47,8 @@ import { GarageMechanicsControllerRemove$Params } from '../fn/garages/garage-mec
 import { GarageMechanicsDto } from '../models/garage-mechanics-dto';
 import { garageMembersControllerList } from '../fn/garages/garage-members-controller-list';
 import { GarageMembersControllerList$Params } from '../fn/garages/garage-members-controller-list';
+import { garageMembersControllerRemove } from '../fn/garages/garage-members-controller-remove';
+import { GarageMembersControllerRemove$Params } from '../fn/garages/garage-members-controller-remove';
 import { GarageMembersDto } from '../models/garage-members-dto';
 import { garageProfileControllerRead } from '../fn/garages/garage-profile-controller-read';
 import { GarageProfileControllerRead$Params } from '../fn/garages/garage-profile-controller-read';
@@ -980,6 +982,39 @@ export class GaragesService extends BaseService {
   garageMembersControllerList(params: GarageMembersControllerList$Params, context?: HttpContext): Promise<GarageMembersDto> {
     const resp = this.garageMembersControllerList$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageMembersDto>): GarageMembersDto => r.body);
+  }
+
+  /** Path part for operation `garageMembersControllerRemove()` */
+  static readonly GarageMembersControllerRemovePath = '/api/v1/garages/{garageId}/members/{accountId}';
+
+  /**
+   * Remove a receptionist from the garage, for the owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageMembersControllerRemove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageMembersControllerRemove$Response(params: GarageMembersControllerRemove$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = garageMembersControllerRemove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Remove a receptionist from the garage, for the owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageMembersControllerRemove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageMembersControllerRemove(params: GarageMembersControllerRemove$Params, context?: HttpContext): Promise<void> {
+    const resp = this.garageMembersControllerRemove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `getImageVariant()` */
