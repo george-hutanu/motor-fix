@@ -64,6 +64,7 @@ function client(
       };
     }),
     close: jest.fn(async () => undefined),
+    getBackend: () => ({ publishEvent: async () => '1-0' }),
   };
   const events = { close: jest.fn(), waitUntilReady: jest.fn(ready) };
   return { queue, send: new DirectSend(queue as never, () => events as never) };
@@ -291,6 +292,7 @@ describe('DirectSend failure paths', () => {
         };
       }),
       close: jest.fn(),
+      getBackend: () => ({ publishEvent: async () => '1-0' }),
     };
     const events = { close: jest.fn(), waitUntilReady: async () => undefined };
     const s = new DirectSend(queue as never, () => events as never);

@@ -67,13 +67,13 @@ export class DirectSendModule
             }),
         },
         {
-          // Built on the first send: a listener that never reached the
-          // broker never closes, and the API boots without one to write its
-          // OpenAPI document.
+          // The API boots without a broker to write its OpenAPI document, so
+          // the listener is built on the first send (DirectSend).
           provide: DIRECT_SEND_EVENTS,
-          useValue: () =>
+          useValue: (lastEventId: string) =>
             new QueueEvents(DIRECT_SEND_QUEUE, {
               connection: connection(redisUrl),
+              lastEventId,
             }),
         },
         DirectSend,

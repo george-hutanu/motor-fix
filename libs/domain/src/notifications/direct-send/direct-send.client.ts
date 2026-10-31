@@ -6,6 +6,9 @@ import { DIRECT_SEND_WAIT_MS, type DirectSendJob } from './direct-send';
 export const DIRECT_SEND_JOBS = Symbol('DIRECT_SEND_JOBS');
 export const DIRECT_SEND_EVENTS = Symbol('DIRECT_SEND_EVENTS');
 
+// BullMQ's own default length of a queue's events stream.
+const EVENTS_KEPT = 10_000;
+
 // One attempt, and gone from Valkey once answered: the job carries a code, a
 // number or a link. The age options cover a job whose answer nobody read,
 // removed when a later job ends.
@@ -30,10 +33,14 @@ function failureKind(error: unknown): string {
 export class DirectSend implements OnApplicationShutdown {
   constructor(
     @Inject(DIRECT_SEND_JOBS) private readonly queue: Queue<DirectSendJob>,
-    @Inject(DIRECT_SEND_EVENTS) private readonly listen: () => QueueEvents,
+    @Inject(DIRECT_SEND_EVENTS)
+    private readonly listen: (lastEventId: string) => QueueEvents,
   ) {}
 
+  // Built on the first send, never at boot: a listener that never reached the
+  // broker never closes.
   private events?: QueueEvents;
+  private listening?: Promise<QueueEvents>;
 
   whatsapp(
     template: string,
@@ -79,18 +86,35 @@ export class DirectSend implements OnApplicationShutdown {
     }
   }
 
+  // The listener reads the events stream from a mark written before the
+  // first job is added, so no finish is lost while it starts.
+  private listener(): Promise<QueueEvents> {
+    this.listening ??= Promise.resolve()
+      .then(() =>
+        this.queue
+          .getBackend()
+          .publishEvent({ event: 'listening' }, EVENTS_KEPT),
+      )
+      .then((mark) => {
+        this.events = this.listen(mark);
+        return this.events;
+      });
+    this.listening.catch(() => {
+      this.listening = undefined;
+    });
+    return this.listening;
+  }
+
   private async run(
     name: 'whatsapp' | 'email',
     data: DirectSendJob,
   ): Promise<string | null> {
+    const events = await this.listener().catch(() => null);
+    if (!events) return 'queue_unavailable';
     const job = await Promise.resolve()
       .then(() => this.queue.add(name, data, JOB_OPTIONS))
       .catch(() => null);
     if (!job) return 'queue_unavailable';
-    // The listener reads finish events from when it is ready; BullMQ checks
-    // the job's own state too, so one that finished first is not missed.
-    this.events ??= this.listen();
-    const { events } = this;
     const ready = await events.waitUntilReady().then(
       () => true,
       () => false,

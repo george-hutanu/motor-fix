@@ -31,13 +31,15 @@ function client(
       return { remove, waitUntilFinished };
     }),
     close: jest.fn(async () => undefined),
+    getBackend: () => ({ publishEvent: async () => '7-0' }),
   };
   const events = {
     close: jest.fn(async () => undefined),
     waitUntilReady: jest.fn(async () => undefined),
   };
-  const send = new DirectSend(queue as never, () => events as never);
-  return { events, queue, remove, send, waitUntilFinished };
+  const listen = jest.fn(() => events);
+  const send = new DirectSend(queue as never, listen as never);
+  return { events, listen, queue, remove, send, waitUntilFinished };
 }
 
 const code = (s: DirectSend) =>
@@ -221,6 +223,40 @@ describe('DirectSend', () => {
 
     expect(listen).not.toHaveBeenCalled();
     expect(queue.close).toHaveBeenCalled();
+
+    const c = client(async () => undefined);
+    await code(c.send);
+    await code(c.send);
+    expect(c.listen).toHaveBeenCalledTimes(1);
+  });
+
+  it('listens from a mark written before the first job, so no answer is missed', async () => {
+    const order: string[] = [];
+    const c = client(async () => {
+      order.push('add');
+    });
+    c.listen.mockImplementation(((mark: string) => {
+      order.push(`listen ${mark}`);
+      return c.events;
+    }) as never);
+
+    await code(c.send);
+
+    expect(order).toEqual(['listen 7-0', 'add']);
+  });
+
+  it('answers queue_unavailable when the mark cannot be written, and tries again next time', async () => {
+    const c = client(async () => undefined);
+    const publishEvent = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('down'))
+      .mockResolvedValue('8-0');
+    (c.queue as { getBackend: unknown }).getBackend = () => ({ publishEvent });
+
+    expect(await code(c.send)).toBe('queue_unavailable');
+    expect(c.queue.add).not.toHaveBeenCalled();
+    await code(c.send);
+    expect(c.listen).toHaveBeenCalledWith('8-0');
   });
 });
 
@@ -235,7 +271,7 @@ describe('DirectSendModule.register', () => {
         useValue?: unknown;
       };
       useFactory?.();
-      if (typeof useValue === 'function') useValue();
+      if (typeof useValue === 'function') useValue('0-0');
     }
 
     const connection = {
@@ -248,7 +284,7 @@ describe('DirectSendModule.register', () => {
     );
     expect(QueueEvents).toHaveBeenCalledWith(
       DIRECT_SEND_QUEUE,
-      expect.objectContaining({ connection }),
+      expect.objectContaining({ connection, lastEventId: '0-0' }),
     );
     expect(module.exports).toContain(DirectSend);
   });

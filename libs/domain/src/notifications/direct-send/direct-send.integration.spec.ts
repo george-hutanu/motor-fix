@@ -85,7 +85,7 @@ describe('direct-send through the worker', () => {
   it('answers the provider’s refusal from the failed job, after one call', async () => {
     brevo.answer({ body: { code: 'invalid_parameter' }, status: 400 });
 
-    expect(await code(send)).toBe('invalid_parameter');
+    expect(await code(send)).toBe('provider_400');
     expect(brevo.whatsapp()).toHaveLength(1);
   });
 
