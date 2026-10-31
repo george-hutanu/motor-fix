@@ -1,5 +1,18 @@
 <!--
-Sync Impact Report (v5.1.1)
+Sync Impact Report (v5.2.0)
+- Version change: 5.1.1 → 5.2.0 (MINOR: Principles II and IV name Vitest,
+  through the Angular unit-test builder, for the Angular projects (web,
+  ui-cockpit, overlays, i18n, media) and Jest from the root config for every
+  other project; the Enforcement rows of `post-edit-check.sh` and
+  `stop-test-gate.sh` say which runner each project gets)
+- Source: ST-1332, the owner's split of #1302 (2026-10-16), 2026-10-31.
+- Templates:
+  - ✅ .specify/memory/constitution-card.md — lines II and IV, the version line
+  - ✅ CLAUDE.local.md, AGENTS.md — the runner wording and the version line
+  - ✅ .claude/hooks/post-edit-check.sh, stop-test-gate.sh — per-project runner
+  - ✅ .specify/templates/* — no change needed (no runner named)
+
+Previous report (v5.1.1)
 - Version change: 5.1.0 → 5.1.1 (PATCH, wording only: Principle VII steps 1,
   3 and 5 say each event sets the PR's one stage label (`planning` at the
   draft, `in development` when `/speckit-implement` starts, `QA` at ready)
@@ -519,8 +532,9 @@ might be useful later" is not a defense.
 
 - Failing tests come before implementation: `/speckit-tests` turns a feature's
   requirements into red tests, then `/speckit-implement` makes them green.
-- Unit and API tests run on Jest from the root config, colocated with the
-  source they cover (`foo.ts` / `foo.spec.ts`). API tests run against real
+- Unit and API tests run colocated with the source they cover: Vitest through
+  the Angular unit-test builder for the Angular projects (web, ui-cockpit,
+  overlays, i18n, media), Jest from the root config for the rest (`foo.ts` / `foo.spec.ts`). API tests run against real
   PostgreSQL and Valkey (the store, Redis protocol) in containers, never
   mocks of either.
 - Unit tests run in CI on every PR. The integration suite (the API tests on
@@ -583,7 +597,9 @@ documentation assumes it; a quiet substitute invalidates the documentation the b
 - Biome is the only linter and formatter, from the root `biome.jsonc`. No
   eslint, no prettier, no per-project Biome config; a genuinely
   project-specific need is a scoped `overrides` entry in the root file.
-- Jest runs from the root config across every project.
+- Vitest runs the Angular projects (web, ui-cockpit, overlays, i18n, media),
+  each on its own `vitest.config.ts`; Jest runs from the root config across
+  every other project.
 - Folder rules: a module's submodules each get their own subfolder, never
   files left flat at the module's root (`notifications/bell/`, not
   `notifications/bell.service.ts` beside `bell.controller.ts`); a web
@@ -750,8 +766,8 @@ the hooks live in `.claude/hooks/`, the checks in `.claude/scripts/`.
 | Principle / rule | Gate | Fires |
 | --- | --- | --- |
 | II red-first tests | `red-first-gate.mjs` (PreToolUse) | blocks `apps/*/src` and `libs/*/src` edits while the active feature has FRs and open tasks but the branch adds or modifies no `*.spec.*` / `*.test.*` file |
-| II, IV broken-edit feedback | `post-edit-check.sh` (PostToolUse) | `biome check` on the edited file, then its colocated `*.spec.ts` through the root Jest config |
-| II, IV done means green | `stop-test-gate.sh` (Stop hook) | the agent may not finish with `biome check` red on changed TypeScript or `jest --onlyChanged` red |
+| II, IV broken-edit feedback | `post-edit-check.sh` (PostToolUse) | `biome check` on the edited file, then its colocated `*.spec.ts` on its project's runner: Vitest with the project's config for the Angular projects, the root Jest config for the rest |
+| II, IV done means green | `stop-test-gate.sh` (Stop hook) | the agent may not finish with `biome check` red on changed TypeScript or `vitest run --changed` (each Angular project with a change) or `jest --onlyChanged` (the rest) red |
 | Spec-drift rule | `.claude/scripts/spec-drift.mjs --staged` | pre-commit, keyed on the conventional-commit type |
 | Commit hygiene | `commit-msg-policy.js` | one-line Conventional Commit, no metadata trailers or tool mentions |
 | Identity | `.husky/pre-commit` → `.husky/identity.sh check`; `github-identity.sh` (SessionStart) | refuses a commit not authored by `george-hutanu <hutanugeorge40@gmail.com>`; pins `gh` to the `george-hutanu` account for agent sessions |
@@ -838,4 +854,4 @@ prompt-level, and `spec-reviewer` is where deviations surface.
 - Compliance is checked at plan time (Constitution Check), at task generation,
   and at PR review. Violations block merge until fixed or justified.
 
-**Version**: 5.1.1 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-24
+**Version**: 5.2.0 | **Ratified**: 2026-10-03 | **Last Amended**: 2026-10-31

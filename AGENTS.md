@@ -247,9 +247,9 @@ source for anything the constitution does not fix.
   interceptor answers a `sign_in_required` 401 with the sign-in dialog, then
   resends the call once.
 - Lint and format: Biome only, root `biome.jsonc` (no eslint, no prettier).
-  Tests: Jest from the root config, Playwright for end-to-end; a spec that
-  needs PostgreSQL or Redis is named `*.integration.spec.ts`. Mutation is never
-  part of a task's lifecycle.
+  Tests: Vitest for Angular projects, else root Jest; Playwright end to end;
+  a spec that needs PostgreSQL or Redis is `*.integration.spec.ts`.
+  Mutation is never part of a task's lifecycle.
 - CI, the test suites, mutation and release: `.claude/skills/speckit-auto/lifecycle.md`
   ("CI, tests and release") and the headers of `.github/workflows/ci.yml`,
   `release.yml` and `mutation.yml`.
