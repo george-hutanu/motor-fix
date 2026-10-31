@@ -8,12 +8,12 @@ const ENV = {
 
 function deps() {
   const printed: string[] = [];
-  const send = jest.fn(() => Promise.resolve('<id@brevo>'));
+  const send = vi.fn(() => Promise.resolve('<id@brevo>'));
   const resolver = {
-    resolveCname: jest.fn(() =>
+    resolveCname: vi.fn(() =>
       Promise.reject(Object.assign(new Error('none'), { code: 'ENOTFOUND' })),
     ),
-    resolveTxt: jest.fn(() =>
+    resolveTxt: vi.fn(() =>
       Promise.reject(Object.assign(new Error('none'), { code: 'ENOTFOUND' })),
     ),
   };
