@@ -31,6 +31,7 @@ features:
   - 177-reported-reviews
   - 011-dashboard-sections
   - 1389-reported-reviews-admin
+  - 1405-admin-repair-correct
   - 1391-admin-dashboard-customise
   - 106-demand-supply
 ---
@@ -902,6 +903,38 @@ _From 1389-reported-reviews-admin._
 ### 1389-FR-010 — Nothing in the API, the worker, the contracts, the OpenAPI document, the generated client or `libs/domain` changes in this story; the server's admin section list gaining `reported` (1263-FR-002) is ST-1402's (see Split); the view, the panel, the counter and the tile read only the queue read and the overview read ST-177 shipped, and the action slots call nothing. No new endpoint, queue or outside call is added, so the observability inventory is unchanged.
 
 _From 1389-reported-reviews-admin._
+
+### 1405-FR-001 — (was 1267-FR-015) The admin's account page (`apps/web/src/app/dashboard/admin-account/`, the drawer over "Utilizatori") MUST gain, between its actions and its history, a section "Reparații adăugate" / "Added repairs" listing the account's logged repairs from 1267-FR-001, each row "<date, d mmm. yyyy> · <brand> <model> <year>" with a "Deschide" / "Open" action, an empty state "Nicio reparație adăugată de acest cont" / "No repair added by this account", a "și altele" / "and more" line when `truncated`, a loading skeleton and an error line with "Reîncearcă" / "Try again", as the page's history section has; nothing of the repair but the date and the car shows in the row.
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-002 — (was 1267-FR-016) "Deschide" MUST read the repair (1267-FR-003) and open a `dialog` task of the overlays service (158-FR-010) titled "Reparație adăugată de șofer" / "Repair added by the driver", showing the car, the garage name, what was done, the date, the odometer, the amount, "Corectată de <garage>" / "Corrected by <garage>" or "Corectată de MotorFix" / "Corrected by MotorFix" when `correctedBy` is set, and the line "Deschiderea este înregistrată în istoric" / "This opening is recorded in the history", with one action "Corectează" / "Correct"; the dialog opens once the read answers (clarify 3): a 404 opens no dialog and the row leaves the list with the message "Reparația nu mai există" / "The repair no longer exists".
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-003 — (was 1267-FR-017) "Corectează" MUST turn the dialog into the correction form through the shared form-saving helper (159-FR-001..004), the fields what was done, date, odometer and amount prefilled and the limits of 409-FR-006 shown inline, the car and the garage read-only; "Salvează" / "Save" sends only the changed fields with the loaded version (1267-FR-005); on success the dialog shows the corrected values and the row's date updates in place; there is no delete action anywhere on the page.
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-004 — (was 1267-FR-018) On 409 the dialog MUST say "Reparația a fost modificată între timp. Am reîncărcat valorile." / "The repair changed meanwhile. We reloaded the values.", re-read the repair (a new `open` entry, 1267-FR-004) and stay open in correction mode with the current values, the unsaved edits discarded (clarify 4); on 404 it MUST close and the row leave the list with FR-002's message; a 400 shows the field's message inline.
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-005 — (was 1267-FR-019) The texts MUST live in the admin language files in Romanian and English; one Playwright flow MUST sign in as the seeded admin, open a seeded driver's account, see the section with date and car only, open a repair, correct the amount to 480 lei, see the dialog's new value, then sign in as the driver and see the bell row naming MotorFix and the driver's history read answering `correctedBy` `admin` ("Corectată de MotorFix", clarify 1), on a logged repair the seed adds; the section and the dialog pass the QA sweep at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll and no axe violation.
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-006 — (constraint, Principle I and the bundle budget) The section and its dialog MUST be loaded only within the admin area's lazily loaded code (the `admin-users` view's chunk, which the account drawer belongs to), the dialog's component loaded when the dialog is first opened; nothing of this story joins the first-page bundle and its 1 MB error budget is not raised.
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-007 — (constraint, the given stack) The section and the dialog MUST call the API through the generated client (`AdminService` in `libs/data-access`, the four `admin-repairs-controller-*` functions) as it stands on `main`: this story adds and changes no API route, DTO or generated file; its one change outside `apps/web` and `apps/web-e2e` is the seed's logged repair and ownership row in `libs/domain/src/seed.ts` (clarify 1).
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-008 — Tests MUST cover, in Jest colocated with the components, each file naming its ids in one whole-line `// @traces` comment: the section's rows (date and car only, newest first as answered), the empty state, the "și altele" line, the skeleton and the error line with its retry; the dialog's content with `correctedBy` null, `garage` and `admin`, the recording line, the 404 on open (message, row removed); the form's prefill, the read-only car and garage, each inline limit of 409-FR-006, a save carrying only the changed fields and the loaded version, progress and the disabled button while saving, the corrected values and the row's date updated in place, the unchanged save; 409 (message, re-read, open with the new values), 404 on save (closed, message, row removed), 400 inline; the absence of any delete action; and both languages' texts.
+
+_From 1405-admin-repair-correct._
 
 ### 1391-FR-001 — The admin header on "Panou" shows the button "Personalizează panoul" / "Customise the dashboard", placed as on the garage dashboard (the boards do not design it); it opens the panel "Alege ce vezi pe panou" / "Choose what the dashboard shows": a drawer on the right on desktop, a bottom sheet on a phone (MF-5), closed by "Gata" / "Done" or Escape. On opening, focus moves into the panel (its first control); on closing it returns to the button.
 
