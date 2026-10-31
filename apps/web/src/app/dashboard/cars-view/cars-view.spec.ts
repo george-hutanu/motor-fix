@@ -1136,6 +1136,35 @@ describe('selling a car from its card', () => {
     );
   });
 
+  it('moves the focus to the card once the sent link takes its menu away', async () => {
+    const { element, settle } = await render();
+    await settle();
+    list.mockResolvedValueOnce({ items: [sold] });
+    open.mockResolvedValueOnce('sent');
+
+    await sell(element, settle);
+    await settle();
+
+    expect(trigger(cards(element)[0])).toBeNull();
+    expect(document.activeElement).toBe(cards(element)[0]);
+  });
+
+  it('moves the focus to the card once the cancel takes its button away', async () => {
+    const { element, settle } = await render([sold]);
+    await settle();
+    list.mockResolvedValueOnce({ items: [car()] });
+    open.mockResolvedValueOnce(true);
+
+    const cancel = button(cards(element)[0], 'Anulează transferul');
+    cancel?.focus();
+    cancel?.click();
+    await settle();
+    await settle();
+    await settle();
+
+    expect(document.activeElement).toBe(cards(element)[0]);
+  });
+
   it('shows the transfer line and its cancel instead of the menu while a transfer is out', async () => {
     const { element, settle } = await render([sold]);
     await settle();

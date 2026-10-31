@@ -1,7 +1,10 @@
+import { DOCUMENT } from '@angular/common';
 import {
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
   inject,
 } from '@angular/core';
 import { groupPlate } from '@motor-fix/contracts/plate';
@@ -62,9 +65,25 @@ export class CarsView {
   private readonly i18n = inject(I18n);
   protected readonly language = this.i18n.language;
 
+  // After a sale or a cancel the card swaps its "⋯" and its transfer line, so
+  // the button that opened the dialog may be gone: once the re-read draws the
+  // card, a focus left on nothing goes to the card.
+  private refocus?: string;
+
   constructor() {
     void this.i18n.enter('driver');
     focusCard('data-car', this.cars);
+    const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    const document = inject(DOCUMENT);
+    afterRenderEffect(() => {
+      this.cars();
+      const id = this.refocus;
+      if (!id) return;
+      this.refocus = undefined;
+      const active = document.activeElement;
+      if (active && active !== document.body && active.isConnected) return;
+      host.querySelector<HTMLElement>(`[data-car="${id}"]`)?.focus();
+    });
   }
 
   protected load() {
@@ -102,14 +121,16 @@ export class CarsView {
   // any other close may have sent a link, so the cars are read again.
   protected async sell(car: CarDto) {
     const answer = await openSellCar(this.overlays, car);
-    if (answer === 'remove') await this.remove(car);
-    else this.load();
+    if (answer === 'remove') return this.remove(car);
+    this.refocus = car.id;
+    this.load();
   }
 
   // The cancel may have been refused because the transfer ended meanwhile,
   // so the cars are read again whatever the answer.
   protected async cancelTransfer(car: CarDto) {
     await openCancelTransfer(this.overlays, car);
+    this.refocus = car.id;
     this.load();
   }
 

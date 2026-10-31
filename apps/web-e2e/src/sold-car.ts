@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
 import { Client } from 'pg';
 
 import { signUpDriver } from './accounts.js';
@@ -42,20 +42,20 @@ export async function soldCar(request: APIRequestContext): Promise<SoldCar> {
       [email],
     );
     const own = made.rows[0];
-    expect(own).toBeDefined();
+    if (!own) throw new Error('soldCar: the driver has no car to sell');
     await db.query(
       `INSERT INTO car_ownership (id, car_id, account_id, access, from_date, opened_at)
        VALUES (gen_random_uuid(), $1, $2, 'owner', current_date - 60, now() - interval '60 days')`,
-      [own?.car_id, own?.driver_id],
+      [own.car_id, own.driver_id],
     );
     const repair = await db.query<{ id: string }>(
       `INSERT INTO repair (id, car_id, source, what, garage_name, done_on)
        VALUES (gen_random_uuid(), $1, 'logged', 'Plăcuțe de frână', 'Atelier Doi', current_date - 10)
        RETURNING id`,
-      [own?.car_id],
+      [own.car_id],
     );
     return {
-      car: own?.car_id ?? '',
+      car: own.car_id,
       email,
       remove,
       repair: repair.rows[0]?.id ?? '',

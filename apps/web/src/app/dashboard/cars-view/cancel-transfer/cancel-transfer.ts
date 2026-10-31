@@ -17,6 +17,7 @@ export interface CancelTransferData {
 
 // "Anulezi transferul?": cancels the card's sent transfer on the main button
 // and closes with true; a refusal stays in the dialog with its reason.
+// Nothing closes it while the cancel is on its way.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TaskError, TaskSubmit, TranslatePipe],
@@ -35,12 +36,17 @@ export class CancelTransfer {
     done: () => this.task.close(true),
     form: new FormGroup({}),
     messages: 'driver.cars.transfer.confirm',
-    send: () => {
+    send: async () => {
       const { id, transfer } = this.task.data.car;
-      return this.cars.carSaleControllerCancel({
-        id,
-        transferId: transfer?.id ?? '',
-      });
+      this.task.hold(true);
+      try {
+        return await this.cars.carSaleControllerCancel({
+          id,
+          transferId: transfer?.id ?? '',
+        });
+      } finally {
+        this.task.hold(false);
+      }
     },
   });
 }

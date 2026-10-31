@@ -51,6 +51,13 @@ test.describe('selling a car and its transfer link @seeded @database', () => {
         return JSON.stringify(await res.json());
       })
       .toContain(new URL(link).pathname.split('/').at(-1));
+    await page
+      .context()
+      .grantPermissions(['clipboard-read', 'clipboard-write']);
+    await dialog.getByRole('button', { name: 'Copiază linkul' }).click();
+    await expect
+      .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+      .toBe(link);
     await dialog.getByRole('button', { name: 'Gata' }).click();
     await expect(page.getByText(/Transfer trimis · expiră pe/)).toBeVisible();
 

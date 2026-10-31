@@ -4,7 +4,6 @@ import {
   Component,
   computed,
   DestroyRef,
-  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -105,8 +104,6 @@ export class SellCar {
   private copyTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
-    // Nothing but the dialog's own buttons closes it while the link is sent.
-    effect(() => this.task.hold(this.save.state() === 'sending'));
     inject(DestroyRef).onDestroy(() => clearTimeout(this.copyTimer));
     void this.load();
   }
@@ -151,6 +148,8 @@ export class SellCar {
     const read = this.read();
     const repairs = read.state === 'read' ? read.sale.repairs : [];
     const ticked = this.ticked();
+    // Nothing but the dialog's own buttons closes it while the link is sent.
+    this.task.hold(true);
     try {
       return await this.cars.carSaleControllerSend({
         body: {
@@ -170,6 +169,8 @@ export class SellCar {
         },
         status,
       });
+    } finally {
+      this.task.hold(false);
     }
   }
 }
