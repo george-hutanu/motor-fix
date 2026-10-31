@@ -17,8 +17,11 @@ import { test } from './fixtures.js';
 
 // @traces 1315-FR-010 1315-FR-011 1315-FR-015
 
-// What a press must show within, measured in the page from the pointer going
-// down to the first change of the control, while the network is Slow 3G.
+// What a press must show within, measured in the page from the press landing
+// (the click event the control acts on) to the first change of the control,
+// while the network is Slow 3G. Not from pointerdown: Playwright sends the
+// pointer's down and up as two separate calls, so a busy CI runner's gap
+// between them is the harness's time, not the app's, and failed this check.
 const WITHIN_MS = 100;
 const FAILED_AFTER_MS = 1_000;
 
@@ -36,13 +39,13 @@ async function slow3g(page: Page) {
   });
 }
 
-// Stamps the next pointer press and the first change under the node after it.
+// Stamps the next press (its click) and the first change under the node after it.
 async function watch(node: Locator) {
   await node.evaluate((target) => {
     const stamps: Stamps = {};
     (window as unknown as { mfStamps: Stamps }).mfStamps = stamps;
     addEventListener(
-      'pointerdown',
+      'click',
       () => {
         stamps.pressedAt ??= performance.now();
       },
