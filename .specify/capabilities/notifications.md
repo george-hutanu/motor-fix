@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 194-email-sending
   - 195-message-templates
@@ -61,6 +61,7 @@ features:
   - 1254-assistant-approvals
   - 277-car-status-alerts
   - 409-garage-corrects-repair
+  - 1259-no-show
 ---
 
 # Capability: Notifications
@@ -1080,6 +1081,14 @@ _From 409-garage-corrects-repair._
 ### 409-FR-014 — The REPAIR_UPDATED message (bell body, e-mail, push, WhatsApp) MUST name the garage ("Garaj Nordic a corectat o reparație din istoricul VW Golf 2015" / "Garaj Nordic corrected a repair in VW Golf 2015's history") in the recipient's language, the texts in the notifications module's own files as the other kinds keep theirs; the existing bell title stays.
 
 _From 409-garage-corrects-repair._
+
+### 1259-FR-007 — The notifications module MUST react to `booking.no_show_recorded` by sending NO_SHOW_RECORDED (already catalogued: event, e-mail, push and WhatsApp, group `bookings` "Programare", mutable, never held for quiet hours) to the booking's driver once per event, with Romanian and English texts from a template with example values: bell and push "Nu te-ai prezentat la <garage> · <day> <time>" / "You did not show up at <garage> · <day> <time>", e-mail and WhatsApp the same with a line that nothing is owed ("Nu se percepe nicio taxă" / "No fee is charged") and a link to the driver's requests; the bell entry links to Cererile mele as today. The driver's closed account or muted channels follow the existing rules.
+
+_From 1259-no-show._
+
+### 1259-FR-008 — The notifications module MUST add the kind NO_SHOW_WITHDRAWN (event, e-mail, push and WhatsApp, group `bookings`, mutable, never held for quiet hours), sent to the booking's driver once per `booking.no_show_withdrawn`, with texts: bell and push "<garage> a retras neprezentarea · programarea din <day> <time> rămâne valabilă" / "<garage> withdrew the no-show · your booking on <day> <time> stands", e-mail and WhatsApp the same with the link to the driver's requests; the bell entry links to Cererile mele. The kind joins the catalogue, the templates registry, the bell link map, the driver's channel preferences under Programare and the kinds the preferences screen lists.
+
+_From 1259-no-show._
 
 ## Retired
 

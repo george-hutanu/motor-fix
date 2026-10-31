@@ -1,8 +1,12 @@
-import type { EventKind, OutsideChannel } from '@motor-fix/contracts';
+import type { OutsideChannel } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 
-import { NO_SHOW_CONSUMER, NoShowFanOut } from './no-show.fan-out';
+import {
+  NO_SHOW_CONSUMER,
+  type NoShowEvent,
+  NoShowFanOut,
+} from './no-show.fan-out';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { quotesWorld } from '../../quotes/quotes.testing';
 import { NotificationsModule } from '../notifications.module';
@@ -90,7 +94,7 @@ async function recorded() {
   const job = {
     data: {
       id: String(event.id),
-      kind: event.kind as EventKind,
+      kind: event.kind as NoShowEvent['kind'],
       payload,
       subjectId: booking.id,
     },
@@ -170,6 +174,33 @@ describe('telling the driver a no-show was recorded', () => {
     ]);
   });
 
+  it('builds nothing for a driver whose account is closed', async () => {
+    const { driverId, job } = await recorded();
+    await prisma.account.update({
+      data: { status: 'deleted' },
+      where: { id: driverId },
+    });
+    const { fanOut } = await start();
+
+    await fanOut.handle(job);
+
+    expect(await builtRecorded(driverId)).toEqual([]);
+  });
+
+  it('tells nothing once the no-show was withdrawn before the event came', async () => {
+    const { booking, job } = await recorded();
+    await prisma.booking.update({
+      data: { noShowAt: null, status: 'confirmed' },
+      where: { id: booking.id },
+    });
+    const { fanOut, notify } = await start();
+
+    await fanOut.handle(job);
+
+    expect(notify).not.toHaveBeenCalled();
+    expect(await builtRecorded()).toEqual([]);
+  });
+
   it('builds each message once when the same event is handled twice', async () => {
     const { job } = await recorded();
     const { fanOut } = await start();
@@ -212,7 +243,7 @@ async function withdrawn() {
   const job = {
     data: {
       id: String(event.id),
-      kind: event.kind as EventKind,
+      kind: event.kind as NoShowEvent['kind'],
       payload,
       subjectId: booking.id,
     },
@@ -282,6 +313,20 @@ describe('telling the driver a no-show was withdrawn', () => {
     expect((await builtWithdrawn(driverId)).map((m) => m.channel)).toEqual([
       'in_app',
     ]);
+  });
+
+  it('tells nothing once the booking was recorded a no-show again before the event came', async () => {
+    const { booking, job } = await withdrawn();
+    await prisma.booking.update({
+      data: { noShowAt: new Date(), status: 'no_show' },
+      where: { id: booking.id },
+    });
+    const { fanOut, notify } = await start();
+
+    await fanOut.handle(job);
+
+    expect(notify).not.toHaveBeenCalled();
+    expect(await builtWithdrawn()).toEqual([]);
   });
 
   it('builds each message once when the same event is handled twice', async () => {

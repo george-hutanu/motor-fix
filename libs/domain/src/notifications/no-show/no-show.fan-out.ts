@@ -34,7 +34,7 @@ export const NO_SHOW_CONSUMER = {
 // A job as the relay queues it: `id` is the outbox event's.
 export interface NoShowEvent {
   id: string;
-  kind: EventKind;
+  kind: keyof typeof TOLD;
   payload: { bookingId: string };
 }
 
@@ -68,11 +68,7 @@ export class NoShowFanOut {
 
   async handle(job: Pick<Job<NoShowEvent>, 'data'>): Promise<void> {
     const { id: eventId, kind, payload } = job.data;
-    const told = TOLD[kind as keyof typeof TOLD];
-    if (!told) {
-      this.logger.log(`booking ${payload.bookingId} ${kind} not listened to`);
-      return;
-    }
+    const told = TOLD[kind];
     const booking = await this.prisma.booking.findUnique({
       select: {
         driverId: true,
