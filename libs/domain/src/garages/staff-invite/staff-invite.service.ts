@@ -26,19 +26,9 @@ import {
   type PrismaClient,
   type StaffInvite,
 } from '../../generated/prisma/client';
-import { Brevo } from '../../notifications/brevo/brevo';
-import {
-  blockedReason,
-  type EmailConfig,
-  emailEnvelope,
-} from '../../notifications/email-config';
+import { DirectSend } from '../../notifications/direct-send/direct-send.client';
+import type { EmailConfig } from '../../notifications/email-config';
 import { NotificationsService } from '../../notifications/notifications.service';
-import {
-  PHONE_CONFIG,
-  type PhoneConfig,
-  phoneBlockedReason,
-} from '../../notifications/phone-config';
-import { render } from '../../notifications/templates';
 import { featureOn } from '../features/feature-on';
 import { cardAudience } from '../mechanics/garage-mechanics.service';
 
@@ -85,8 +75,7 @@ export class StaffInviteService {
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
     @Inject(INVITE_EMAIL) private readonly config: EmailConfig,
-    @Inject(PHONE_CONFIG) private readonly phone: PhoneConfig,
-    private readonly brevo: Brevo,
+    private readonly directSend: DirectSend,
     private readonly accounts: AccountsService,
     private readonly notifications: NotificationsService,
   ) {}
@@ -571,8 +560,10 @@ export class StaffInviteService {
     return this.config.webUrl;
   }
 
-  // In the owner's language, by e-mail or by WhatsApp. A message that did not
-  // go leaves the invite in place and hands the link to the owner instead.
+  // In the owner's language, by e-mail or by WhatsApp, sent by the worker
+  // while the owner waits (direct-send). A message that did not go leaves the
+  // invite in place and hands the link to the owner instead; neither the
+  // address nor the number reaches the log.
   private async deliver(
     actor: Actor,
     invite: StaffInvite,
@@ -586,69 +577,22 @@ export class StaffInviteService {
     const webUrl = this.webUrl();
     const link = `${webUrl}/${language}/invite/${token}`;
     const values = { app: webUrl, garage: garage.name, link };
-    try {
-      if (invite.phone) {
-        await this.whatsapp(invite, invite.phone, language, values);
-      } else {
-        await this.mail(invite, invite.email ?? '', language, values);
-      }
-      return { emailSent: true, id: invite.id };
-    } catch (error) {
-      this.logger.warn(
-        `invite ${invite.id} not sent: ${(error as Error).message}`,
-      );
-      return { emailSent: false, id: invite.id, link };
-    }
-  }
-
-  private async mail(
-    invite: StaffInvite,
-    email: string,
-    language: 'ro' | 'en',
-    values: Record<string, string>,
-  ) {
-    const reason = blockedReason(this.config, email);
-    if (reason) throw new Error(reason);
-    const mail = render(
-      `STAFF_INVITE.${invite.kind}`,
-      'email',
-      language,
-      values,
-    );
-    await this.brevo.send({
-      ...emailEnvelope(this.config, { email, name: invite.name }),
-      html: mail.html,
-      subject: mail.subject,
-      text: mail.text,
-    });
-  }
-
-  // Straight through Brevo, as the e-mail is: the owner waits for the answer.
-  // The number never reaches the log.
-  private async whatsapp(
-    invite: StaffInvite,
-    to: string,
-    language: 'ro' | 'en',
-    values: Record<string, string>,
-  ) {
-    const reason = phoneBlockedReason(this.phone, to);
-    if (reason) throw new Error(reason);
-    const message = render(
-      `STAFF_INVITE.${invite.kind}`,
-      'whatsapp',
-      language,
-      values,
-    );
-    const templateId = Object.hasOwn(this.phone.whatsappTemplates, message.name)
-      ? this.phone.whatsappTemplates[message.name]
-      : undefined;
-    if (templateId === undefined) throw new Error('template_missing');
-    await this.brevo.sendWhatsApp({
-      params: message.params,
-      sender: this.phone.whatsappSender,
-      templateId,
-      to,
-    });
+    const kind = invite.phone
+      ? await this.directSend.whatsapp(
+          `STAFF_INVITE.${invite.kind}`,
+          language,
+          values,
+          invite.phone,
+        )
+      : await this.directSend.email(
+          `STAFF_INVITE.${invite.kind}`,
+          language,
+          values,
+          { email: invite.email ?? '', name: invite.name },
+        );
+    if (kind === null) return { emailSent: true, id: invite.id };
+    this.logger.warn(`invite ${invite.id} not sent: ${kind}`);
+    return { emailSent: false, id: invite.id, link };
   }
 
   // The garage's owners hear who joined; a failure here undoes nothing.
