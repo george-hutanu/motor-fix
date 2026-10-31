@@ -17,7 +17,7 @@
 //   node .claude/scripts/harness-eval.mjs --check   fail below .claude/evals/baseline.json
 //   node .claude/scripts/harness-eval.mjs --json    machine form
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { isEntryPoint } from "./lib/entry.mjs";
@@ -77,7 +77,9 @@ function buildPayload(testCase, scratch) {
  * and history are only what the case lists. A case about a ratchet or a diff
  * size then holds in any repository, instead of only in the one whose files
  * and commits it happened to name. Each commit maps a path to its content, or
- * to null to delete it.
+ * to null to delete it; `uncommitted` maps paths written after the last commit
+ * (a stop-gate case needs a change), and `executable` lists the paths made
+ * runnable (a stub test runner under node_modules/.bin).
  */
 /** A scratch folder name for the case at `index`: unique, and one path segment whatever its id holds. */
 function scratchName(kind, testCase, index) {
@@ -108,6 +110,12 @@ function buildFixture(repo, testCase, scratch, index) {
     git("add", "-A");
     git("commit", "-q", "--allow-empty", "-m", commit.message ?? `fixture ${i + 1}`);
   }
+  for (const [rel, content] of Object.entries(testCase.fixture.uncommitted ?? {})) {
+    const file = join(dir, rel);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, content);
+  }
+  for (const rel of testCase.fixture.executable ?? []) chmodSync(join(dir, rel), 0o755);
   return dir;
 }
 
