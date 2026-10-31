@@ -205,6 +205,16 @@
       "text": "I want to receive MotorFix news by e‑mail, at most once a month. I can stop at any time, with one click.",
       "title": "Get MotorFix news?"
     },
+    "fallback": {
+      "no_device": "The last message came by {to}: you have no device with push notifications. Allow notifications in this browser.",
+      "phone_not_verified": "The last message came by {to}: your phone number is not confirmed. Confirm it in Your details.",
+      "send_failed": {
+        "email": "The last message came by {to}: sending by {from} failed. Check your e-mail address in Your details.",
+        "phone": "The last message came by {to}: sending by {from} failed. Check your phone number in Your details.",
+        "push": "The last message came by {to}: sending by {from} failed. Allow notifications in this browser."
+      },
+      "sms_cap_reached": "The last message came by {to}: you have used this month's SMS."
+    },
     "group": {
       "bookings": {
         "hint": "A day before, and while the car is at the garage",

@@ -209,6 +209,16 @@
       "text": "Vreau să primesc pe e‑mail noutăți MotorFix, cel mult o dată pe lună. Pot renunța oricând, cu un clic.",
       "title": "Primești noutăți MotorFix?"
     },
+    "fallback": {
+      "no_device": "Ultimul mesaj a venit pe {to}: nu ai niciun dispozitiv cu notificări push. Permite notificările în acest browser.",
+      "phone_not_verified": "Ultimul mesaj a venit pe {to}: numărul de telefon nu este confirmat. Confirmă‑l în Datele tale.",
+      "send_failed": {
+        "email": "Ultimul mesaj a venit pe {to}: trimiterea pe {from} a eșuat. Verifică adresa de e‑mail în Datele tale.",
+        "phone": "Ultimul mesaj a venit pe {to}: trimiterea pe {from} a eșuat. Verifică numărul de telefon în Datele tale.",
+        "push": "Ultimul mesaj a venit pe {to}: trimiterea pe {from} a eșuat. Permite notificările în acest browser."
+      },
+      "sms_cap_reached": "Ultimul mesaj a venit pe {to}: ai folosit toate SMS‑urile lunii."
+    },
     "group": {
       "bookings": {
         "hint": "Cu o zi înainte și cât e mașina în service",
