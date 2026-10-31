@@ -19,6 +19,7 @@ import {
 } from './active-request.rules';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
+import { publicGarages } from '../../garages/public-garages/public-garages';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { garageRef, iso, jobsOf } from '../../quotes/reads';
 
@@ -93,7 +94,7 @@ export class ActiveRequestService {
       saveSuggestion:
         booking &&
         job?.status === 'done' &&
-        booking.garage.status === 'approved'
+        booking.garage.status === publicGarages().status
           ? await this.suggestionFor(actor.accountId, booking.garageId)
           : null,
       stage: stageOf(row),
@@ -110,6 +111,7 @@ export class ActiveRequestService {
     const garage = await this.prisma.garage.findFirst({
       select: { id: true, name: true },
       where: {
+        ...publicGarages(),
         id: garageId,
         savedBy: { none: { accountId } },
         suggestionDismissals: { none: { accountId } },
