@@ -550,7 +550,7 @@ describe('the integration suite in shards', () => {
       '--projects=domain --passWithNoTests --output-style=static --shard=',
     );
     expect(script).toContain(
-      '--exclude=domain --passWithNoTests --output-style=static',
+      '--exclude=domain,web,ui-cockpit,overlays,i18n,media --passWithNoTests --output-style=static',
     );
     expect(script).toMatch(/\*\) echo "::error::unknown shard/);
   });

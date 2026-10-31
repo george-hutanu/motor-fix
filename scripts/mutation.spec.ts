@@ -392,7 +392,9 @@ describe('strykerOptions for a project tested on Vitest', () => {
       'libs/overlays',
       'libs/i18n',
       'libs/media',
-    ].filter((root) => !existsSync(join(cwd, root, 'vitest.config.ts')));
+    ].filter(
+      (root) => !existsSync(join(__dirname, '..', root, 'vitest.config.ts')),
+    );
 
     expect(missing).toEqual([]);
   });

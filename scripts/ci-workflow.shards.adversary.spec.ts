@@ -70,7 +70,7 @@ describe('the integration shards run as a workflow would run them', () => {
 
     expect(r.status).toBe(0);
     expect(r.calls).toEqual([
-      'npx nx run-many -t test --exclude=domain --passWithNoTests --output-style=static',
+      'npx nx run-many -t test --exclude=domain,web,ui-cockpit,overlays,i18n,media --passWithNoTests --output-style=static',
     ]);
   });
 
