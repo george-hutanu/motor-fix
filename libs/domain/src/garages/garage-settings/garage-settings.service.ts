@@ -1,9 +1,9 @@
 import type { GarageSettingsDto, UpdateGarageDto } from '@motor-fix/contracts';
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
+import { requireListedCourtesyCar } from './courtesy-car-guard';
 import { teamCardIds } from './write-team-on-profile';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
-import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
@@ -98,14 +98,7 @@ export class GarageSettingsService {
     assertGarageOwner(actor, garageId);
     return this.prisma.$transaction(async (tx) => {
       const { listed, ...before } = await lockGarage(tx, garageId);
-      if (dto.courtesyCar && !listed) {
-        throw refusal(
-          HttpStatus.BAD_REQUEST,
-          'validation_failed',
-          'The garage does not list a courtesy car',
-          [{ code: 'no_courtesy_car', field: 'courtesyCar' }],
-        );
-      }
+      requireListedCourtesyCar(dto.courtesyCar, listed);
       const after = applied(before, dto);
       await this.persist(tx, actor, garageId, before, after);
       return answer(after, listed);
