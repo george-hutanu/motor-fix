@@ -191,6 +191,37 @@ describe('the night job', () => {
     ).toBe(29);
   });
 
+  // @traces 106-FR-010
+  it('writes the brand-area rows of every closed day with the demand rows, and logs their count', async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE demand_daily');
+    const info = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    const app = await boot();
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    try {
+      const job = await queue.add('demand-daily', {});
+      await job.waitUntilFinished(events, 10_000);
+
+      expect(
+        await prisma.demandDaily.count({
+          where: { dimension: 'brand_area', key: 'all' },
+        }),
+      ).toBe(29);
+      expect(info).toHaveBeenCalledWith(
+        expect.stringMatching(/^demand-daily brand_area written \d+ for /),
+      );
+    } finally {
+      info.mockRestore();
+      await events.close();
+      await app.close();
+    }
+  });
+
   // @traces 228-FR-012 228-FR-013
   it('ranks the brands by the searches once the demand rows are written, and drops the cached brand list', async () => {
     await prisma.$executeRawUnsafe('TRUNCATE brand, demand_daily CASCADE');

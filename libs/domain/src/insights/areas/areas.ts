@@ -1,4 +1,5 @@
 import { CITY_KEY } from '@motor-fix/contracts';
+import { isRecord } from '@motor-fix/contracts/is-record';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import file from './areas.json';
@@ -16,9 +17,6 @@ export interface AreaRecord {
 
 const SECTOR = /^sector-[1-6]$/;
 const NAME_MAX = 80;
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const filled = (value: unknown): value is string =>
   typeof value === 'string' && value.trim() !== '';
@@ -86,6 +84,10 @@ export const AREAS: readonly AreaRecord[] = readAreas(file);
 // `point`, else `unknown`: a point in no area, or none at all.
 export const areaOf = (point: Prisma.Sql) =>
   Prisma.sql`COALESCE((SELECT a.code FROM area a WHERE ST_Intersects(a.outline, ${point}) ORDER BY a.code LIMIT 1), 'unknown')`;
+
+// The centre of a search's five-character cell, null without one.
+export const cellCentre = (cell: Prisma.Sql) =>
+  Prisma.sql`CASE WHEN ${cell} IS NULL THEN NULL::geography ELSE ST_PointFromGeoHash(${cell})::geography END`;
 
 // Makes the stored areas match the file by code: inserts and updates, never
 // deletes; one transaction, so two API replicas booting together take turns.

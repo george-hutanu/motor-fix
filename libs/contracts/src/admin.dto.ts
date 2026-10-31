@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, Matches, MaxLength } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 import { CITY_ALL, CITY_KEY, PERIODS, type Period } from './figure-choices';
 import { LOCALITY_MAX } from './place-section';
@@ -294,4 +301,143 @@ export class AdminDemandDto {
     type: [AdminDemandJobDto],
   })
   jobs!: AdminDemandJobDto[];
+}
+
+const AREA_KINDS = ['city', 'sector', 'unknown'] as const;
+type AreaKind = (typeof AREA_KINDS)[number];
+
+// The demand against supply read's filters; both may be given.
+export class AdminDemandSupplyQueryDto {
+  @ApiPropertyOptional({
+    description: "Only this brand's rows: the exact brand name",
+    example: 'BMW',
+    maxLength: 80,
+    minLength: 1,
+  })
+  @IsOptional()
+  @IsString()
+  @Length(1, 80)
+  brand?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "Only this area's rows: an area code from the answer's areas, or unknown; a code in no area answers validation_failed",
+    example: 'sector-3',
+    pattern: '^(unknown|[a-z0-9]+(-[a-z0-9]+)*)$',
+  })
+  @IsOptional()
+  @Matches(/^(unknown|[a-z0-9]+(-[a-z0-9]+)*)$/)
+  area?: string;
+}
+
+export class AdminAreaDto {
+  @ApiProperty({
+    description: "The area's code; unknown for a point in no area",
+    example: 'sector-3',
+  })
+  code!: string;
+
+  @ApiProperty({ example: 'Sector 3' })
+  name!: string;
+
+  @ApiProperty({ enum: AREA_KINDS, example: 'sector' })
+  kind!: AreaKind;
+}
+
+export class AdminDemandSupplyRowDto {
+  @ApiProperty({
+    description: "The request snapshot's or the catalogue brand's exact name",
+    example: 'BMW',
+  })
+  brand!: string;
+
+  @ApiProperty({ type: AdminAreaDto })
+  area!: AdminAreaDto;
+
+  @ApiProperty({
+    description: "Searches in the window whose cell's centre lies in the area",
+    example: 420,
+    minimum: 0,
+    type: 'integer',
+  })
+  searches!: number;
+
+  @ApiProperty({
+    description:
+      'Requests created in the window with a recipient in the area, once per request',
+    example: 96,
+    minimum: 0,
+    type: 'integer',
+  })
+  requests!: number;
+
+  @ApiProperty({
+    description:
+      'Requests to the area closed expired in the window with no quote from any garage, on the day they expired; may exceed requests',
+    example: 12,
+    minimum: 0,
+    type: 'integer',
+  })
+  unmet!: number;
+
+  @ApiProperty({
+    description:
+      'Approved garages in the area today that work on the brand; a mobile mechanic by its seat',
+    example: 4,
+    minimum: 0,
+    type: 'integer',
+  })
+  supply!: number;
+
+  @ApiProperty({
+    description:
+      'Requests divided by supply, rounded to the nearest whole number; null when supply is 0',
+    example: 24,
+    minimum: 0,
+    nullable: true,
+    type: 'integer',
+  })
+  requestsPerGarage!: number | null;
+}
+
+// What drivers asked for in each area against the garages there, per brand,
+// over the last 30 Europe/Bucharest days; counts and catalogue names only.
+export class AdminDemandSupplyDto {
+  @ApiProperty({
+    description: "The window's first Europe/Bucharest day",
+    example: '2026-10-02',
+    format: 'date',
+  })
+  firstDay!: string;
+
+  @ApiProperty({
+    description: "The window's last day: today in Europe/Bucharest",
+    example: '2026-10-31',
+    format: 'date',
+  })
+  lastDay!: string;
+
+  @ApiProperty({
+    description:
+      "The latest nightly write of the window's brand-area rows; null before the first",
+    example: '2026-10-31T01:00:12.345Z',
+    format: 'date-time',
+    nullable: true,
+    type: String,
+  })
+  writtenAt!: string | null;
+
+  @ApiProperty({
+    description:
+      'Every area by code, then unknown; unfiltered, for the area filter',
+    type: [AdminAreaDto],
+  })
+  areas!: AdminAreaDto[];
+
+  @ApiProperty({
+    description:
+      'One row per brand and area with a search, a request or an unmet request in the window, after the filters; most unmet first, then most searched, then most requested, then by brand and area name in code-point order',
+    type: [AdminDemandSupplyRowDto],
+  })
+  rows!: AdminDemandSupplyRowDto[];
 }

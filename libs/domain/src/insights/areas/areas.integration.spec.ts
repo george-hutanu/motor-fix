@@ -1,5 +1,11 @@
 // @traces 106-FR-001 106-FR-002
-import { AREAS, AreaLoader, type AreaRecord, areaOf } from './areas';
+import {
+  AREAS,
+  AreaLoader,
+  type AreaRecord,
+  areaOf,
+  cellCentre,
+} from './areas';
 import { serialDatabase } from '../../auth/serial-db.testing';
 import { Prisma } from '../../generated/prisma/client';
 import { databaseUrl, quotesWorld } from '../../quotes/quotes.testing';
@@ -138,15 +144,15 @@ describe('placing a point', () => {
   });
 
   it('places a search by the centre of its five-character cell', async () => {
-    expect(
-      await placed(Prisma.sql`ST_PointFromGeoHash(${'sxfse'})::geography`),
-    ).toBe('sector-3');
-    expect(
-      await placed(Prisma.sql`ST_PointFromGeoHash(${'sxft1'})::geography`),
-    ).toBe('sector-1');
-    expect(
-      await placed(Prisma.sql`ST_PointFromGeoHash(${'u82f0'})::geography`),
-    ).toBe('cluj-napoca');
+    expect(await placed(cellCentre(Prisma.sql`${'sxfse'}::text`))).toBe(
+      'sector-3',
+    );
+    expect(await placed(cellCentre(Prisma.sql`${'sxft1'}::text`))).toBe(
+      'sector-1',
+    );
+    expect(await placed(cellCentre(Prisma.sql`${'u82f0'}::text`))).toBe(
+      'cluj-napoca',
+    );
   });
 
   it('places open country, a garage without a position and a search without a cell in unknown', async () => {
@@ -154,9 +160,7 @@ describe('placing a point', () => {
 
     expect(await placed(at(45.5, 25))).toBe('unknown');
     expect(await placedGarage(nowhere.id)).toBe('unknown');
-    expect(
-      await placed(Prisma.sql`ST_PointFromGeoHash(${null}::text)::geography`),
-    ).toBe('unknown');
+    expect(await placed(cellCentre(Prisma.sql`${null}::text`))).toBe('unknown');
   });
 });
 
