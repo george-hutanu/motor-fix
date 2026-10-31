@@ -83,13 +83,31 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     return { inputId, publishUrl };
   }
 
+  // Disabled, never deleted: a kept recording is reached by its input. The
+  // recording settings are sent again so the update cannot reset them.
   async closeInput(inputId: string): Promise<void> {
     const call = await this.call(
       'close_input',
-      'DELETE',
+      'PUT',
       `/live_inputs/${encodeURIComponent(inputId)}`,
+      {
+        enabled: false,
+        recording: { mode: 'automatic', requireSignedURLs: true },
+      },
     );
-    if (call.failed) throw new Error(`live input close failed: ${call.failed}`);
+    if (call.failed === '404') return;
+    const body = call.body as {
+      success?: unknown;
+      result?: { enabled?: unknown } | null;
+    } | null;
+    const failed =
+      call.failed ??
+      (body?.success === false
+        ? 'rejected'
+        : body?.result?.enabled !== false
+          ? 'still_enabled'
+          : undefined);
+    if (failed) throw new Error(`live input close failed: ${failed}`);
   }
 
   // The reference is the live input: its recordings are listed and each is
@@ -162,7 +180,7 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
 
   private call(
     operation: Operation,
-    method: 'GET' | 'POST' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,
     body?: object,
   ): Promise<Call> {

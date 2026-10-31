@@ -655,7 +655,7 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "opens and closes a live input per live session and deletes the recordings of a live input on removal, purge or a discard at the stop (GET /stream/live_inputs/{id}/videos, then DELETE /stream/{uid} per video, a 404 counting as deleted), 5 s timeout, in a live-video.create_input, live-video.close_input or live-video.delete_recording span; the worker reads each live input's publisher state once a minute (GET /stream/live_inputs/{id}, a 404 counting as no publisher) in a live-video.input_status span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees",
+      "reason": "opens a live input per live session, closes it after a stop by disabling it (PUT /stream/live_inputs/{id} enabled false, the input and its recordings kept, a 404 counting as closed), and deletes the recordings of a live input on removal, purge or a discard at the stop (GET /stream/live_inputs/{id}/videos, then DELETE /stream/{uid} per video, a 404 counting as deleted), 5 s timeout, in a live-video.create_input, live-video.close_input or live-video.delete_recording span; the worker reads each live input's publisher state once a minute (GET /stream/live_inputs/{id}, a 404 counting as no publisher) in a live-video.input_status span; times every call in motorfix_live_provider_duration_seconds{provider,operation} and counts a failed open as motorfix_live_sessions_total{outcome=\"provider_failed\"}, one LiveVideo warning line naming the reason and the job id, never the token; the start answers 503 live_unavailable, which the API error-rate rule sees",
       "story": "ST-1250"
     },
     {
@@ -2954,6 +2954,19 @@
       ],
       "reason": "one scheduler, live-idle-check, every minute reads each live session's publisher state from the provider and stops, as the system with stop_reason idle, a session with no publisher for ten minutes straight, through the one stop routine (keep or discard as the sender last chose); counted in motorfix_live_idle_stops_total, the check timed in motorfix_live_idle_check_seconds, one LiveIdle line per stop and one warning per session the provider could not tell, ids only; a check that throws is a failed job, which worker-jobs-failed sees",
       "story": "ST-1251"
+    },
+    {
+      "kind": "queue",
+      "name": "live-inputs",
+      "source": "libs/domain/src/live-video/inputs/inputs.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "consumes live.stopped (job id = event id, 3 tries a minute apart) for every stop reason: closes the session's input at the provider (a closed or missing input counting as closed), counted in motorfix_live_input_closes_total{outcome} (closed, or close_failed on the last try) on the live panel, one LiveInputs warning per failed try with the session and input ids and the reason token, never a URL; the provider call keeps its live-video.close_input span; the last failure is a failed job, which worker-jobs-failed sees",
+      "story": "ST-1390"
     },
     {
       "kind": "queue",

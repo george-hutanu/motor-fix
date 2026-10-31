@@ -15,7 +15,10 @@ export interface InputStatus {
 export interface LiveVideoProvider {
   readonly name: 'cloudflare' | 'fake' | 'none';
   createInput(session: { id: string }): Promise<LiveInput>;
-  // Throws when the input could not be closed; the caller logs it.
+  // Stops the input accepting a publisher. The input and its recordings stay
+  // at the provider, so viewUrl and deleteRecording still reach them by the
+  // input id; one already closed or gone counts as closed. Throws when the
+  // provider could not close it; the caller logs it.
   closeInput(inputId: string): Promise<void>;
   // The signed low-latency HLS manifest of the input, valid until expiresAt.
   viewUrl(inputId: string, expiresAt: Date): string;

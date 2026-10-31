@@ -128,6 +128,8 @@ export { GarageFiguresService } from './insights/garage-figures/garage-figures.s
 export { InsightsModule } from './insights/insights.module';
 export { ProfileViewsModule } from './insights/profile-views/profile-views.module';
 export { LiveIdleModule } from './live-video/idle/idle.module';
+export { LIVE_INPUTS_CONSUMER } from './live-video/inputs/inputs';
+export { LiveInputsModule } from './live-video/inputs/inputs.module';
 export {
   LiveVideoModule,
   liveVideoConfig,
