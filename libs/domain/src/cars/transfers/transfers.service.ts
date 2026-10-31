@@ -20,8 +20,7 @@ import {
   cancelTransfer,
   isLive,
   recordStep,
-  TRANSFER_SENDING,
-  type TransferSending,
+  TRANSFER_WEB_URL,
   transferEvent,
   transferLink,
 } from './transfers';
@@ -44,7 +43,7 @@ import { PRISMA } from '../../auth/prisma';
 import { localDay } from '../../bucharest';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
-import { sendWhatsAppDirect } from '../../notifications/whatsapp-direct';
+import { DirectSend } from '../../notifications/direct-send/direct-send.client';
 import { shortName } from '../../quotes/reads';
 import { openRow, REPAIR_ORDER, repairWhere } from '../history/history';
 import {
@@ -227,7 +226,8 @@ export class CarTransfersService {
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUDIT_PORT) private readonly audit: AuditPort,
     @Inject(EVENT_PORT) private readonly events: EventPort,
-    @Inject(TRANSFER_SENDING) private readonly sending: TransferSending,
+    @Inject(TRANSFER_WEB_URL) private readonly webUrl: string | undefined,
+    private readonly directSend: DirectSend,
     private readonly accounts: AccountsService,
   ) {}
 
@@ -287,7 +287,7 @@ export class CarTransfersService {
     dto: CreateCarTransferDto,
   ): Promise<CarTransferSentDto> {
     requireCapability(actor, 'driver.cars');
-    const { webUrl } = this.sending;
+    const { webUrl } = this;
     if (!webUrl) throw new Error('PUBLIC_WEB_URL is not set');
     const buyerPhone = normalisePhone(dto.buyerPhone);
     if (!buyerPhone) {
@@ -379,8 +379,7 @@ export class CarTransfersService {
       });
     recordSend('sent');
     const link = transferLink(webUrl, seller.language, token);
-    const failed = await sendWhatsAppDirect(
-      this.sending,
+    const failed = await this.directSend.whatsapp(
       'CAR_TRANSFER_LINK',
       seller.language,
       { car: made.car, days: CAR_TRANSFER_LINK_VALID_DAYS, link },

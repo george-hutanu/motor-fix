@@ -134,6 +134,8 @@ const put = (w: World, body: object, as: string | null = w.owner) => {
 const rows = (w: World) =>
   prisma.garageBrand.count({ where: { garageId: w.nord.id } });
 
+const fuels = ['petrol', 'diesel', 'hybrid', 'electric'];
+
 describe('PUT /garages/:garageId/brands', () => {
   it("replaces the owner's answer and returns it in catalogue order", async () => {
     const w = await world();
@@ -154,8 +156,8 @@ describe('PUT /garages/:garageId/brands', () => {
       doesNotTake: [{ id: w.tesla.id, name: 'Tesla', slug: w.tesla.slug }],
       refusalPhrase: 'orice nu e BMW',
       worksOn: [
-        { id: w.mini.id, jobs: [], name: 'Mini', slug: w.mini.slug },
-        { id: w.bmw.id, jobs: [], name: 'BMW', slug: w.bmw.slug },
+        { fuels, id: w.mini.id, jobs: [], name: 'Mini', slug: w.mini.slug },
+        { fuels, id: w.bmw.id, jobs: [], name: 'BMW', slug: w.bmw.slug },
       ],
     });
   });
@@ -361,6 +363,21 @@ describe("PUT /garages/:garageId/brands with a taken brand's jobs", () => {
     expect(await rows(w)).toBe(0);
   });
 
+  // @traces 1247-FR-003
+  it('answers 400 job_not_priced to a job with no price list at all', async () => {
+    const w = await world();
+
+    const res = await put(w, {
+      brands: [{ brandId: w.bmw.id, jobs: [randomUUID()], stance: 'works_on' }],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      errors: [{ code: 'job_not_priced', field: 'brands[0].jobs' }],
+    });
+    expect(await rows(w)).toBe(0);
+  });
+
   // @traces 412-FR-007
   it('answers 403 to the receptionist sending jobs, changing nothing', async () => {
     const w = await world();
@@ -390,15 +407,154 @@ describe("PUT /garages/:garageId/brands with a taken brand's jobs", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.worksOn).toEqual([
-      { id: w.mini.id, jobs: [brakes], name: 'Mini', slug: w.mini.slug },
-      { id: w.bmw.id, jobs: [oil, brakes], name: 'BMW', slug: w.bmw.slug },
+      {
+        fuels,
+        id: w.mini.id,
+        jobs: [brakes],
+        name: 'Mini',
+        slug: w.mini.slug,
+      },
+      {
+        fuels,
+        id: w.bmw.id,
+        jobs: [oil, brakes],
+        name: 'BMW',
+        slug: w.bmw.slug,
+      },
     ]);
     const read = await http().get(`/garages/${w.nord.slug}`);
     expect(read.status).toBe(200);
-    const fuels = ['petrol', 'diesel', 'hybrid', 'electric'];
     expect(read.body.worksOn).toEqual([
       { fuels, id: w.mini.id, name: 'Mini', slug: w.mini.slug },
       { fuels, id: w.bmw.id, name: 'BMW', slug: w.bmw.slug },
     ]);
+  });
+});
+
+describe("PUT /garages/:garageId/brands with a taken brand's fuels", () => {
+  const stored = (w: World, brandId: string) =>
+    prisma.garageBrand.findUnique({
+      select: { diesel: true, electric: true, hybrid: true, petrol: true },
+      where: { garageId_brandId: { brandId, garageId: w.nord.id } },
+    });
+
+  // @traces 1247-FR-002
+  it('answers 400 fuels_empty to a taken brand with no fuel, storing nothing', async () => {
+    const w = await world();
+
+    const res = await put(w, {
+      brands: [
+        { brandId: w.mini.id, stance: 'works_on' },
+        { brandId: w.bmw.id, fuels: [], stance: 'works_on' },
+      ],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'validation_failed',
+      errors: [{ code: 'fuels_empty', field: 'brands[1].fuels' }],
+    });
+    expect(await rows(w)).toBe(0);
+  });
+
+  // @traces 1247-FR-002
+  it('keeps fuels_on_refused for an empty fuel list on a refused brand', async () => {
+    const w = await world();
+
+    const res = await put(w, {
+      brands: [{ brandId: w.tesla.id, fuels: [], stance: 'does_not_take' }],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      errors: [{ code: 'fuels_on_refused', field: 'brands[0].fuels' }],
+    });
+    expect(await rows(w)).toBe(0);
+  });
+
+  // @traces 1247-FR-002
+  it('gives a newly taken brand with no fuels key all four, and keeps a taken one unchanged', async () => {
+    const w = await world();
+    await put(w, {
+      brands: [{ brandId: w.bmw.id, fuels: ['diesel'], stance: 'works_on' }],
+    }).expect(200);
+
+    const res = await put(w, {
+      brands: [
+        { brandId: w.bmw.id, stance: 'works_on' },
+        { brandId: w.mini.id, stance: 'works_on' },
+      ],
+    });
+
+    expect(res.status).toBe(200);
+    expect(await stored(w, w.bmw.id)).toEqual({
+      diesel: true,
+      electric: false,
+      hybrid: false,
+      petrol: false,
+    });
+    expect(await stored(w, w.mini.id)).toEqual({
+      diesel: true,
+      electric: true,
+      hybrid: true,
+      petrol: true,
+    });
+  });
+
+  // @traces 1247-FR-006
+  it('answers each taken brand with its stored fuels', async () => {
+    const w = await world();
+
+    const res = await put(w, {
+      brands: [
+        {
+          brandId: w.bmw.id,
+          fuels: ['electric', 'petrol'],
+          stance: 'works_on',
+        },
+      ],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.worksOn).toEqual([
+      {
+        fuels: ['petrol', 'electric'],
+        id: w.bmw.id,
+        jobs: [],
+        name: 'BMW',
+        slug: w.bmw.slug,
+      },
+    ]);
+  });
+
+  // @traces 1247-FR-004
+  it('answers 400 to 201 brands before reading the catalogue', async () => {
+    const w = await world();
+    const brands = Array.from({ length: 201 }, () => ({
+      brandId: randomUUID(),
+      stance: 'works_on',
+    }));
+
+    const res = await put(w, { brands });
+
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.body)).not.toContain('unknown_brand');
+    expect(await rows(w)).toBe(0);
+  });
+
+  // @traces 1247-FR-004
+  it('takes 200 brands past validation, to the catalogue check', async () => {
+    const w = await world();
+    const brands = Array.from({ length: 200 }, () => ({
+      brandId: randomUUID(),
+      stance: 'works_on',
+    }));
+
+    const res = await put(w, { brands });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      errors: [{ code: 'unknown_brand', field: 'brands' }],
+    });
   });
 });

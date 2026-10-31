@@ -93,6 +93,11 @@
       @if (garage.brandNote && (garage.worksOn.length || garage.doesNotTake.length)) {
         <p class="note" data-brand-note>{{ garage.brandNote }}</p>
       }
+      @if (legalCheck()) {
+        <p class="edit brands-edit">
+          <button hlmBtn variant="ghost" type="button" data-edit="brands" [attr.aria-label]="editLabel('brands')" (click)="editBrands()">{{ 'garage.profile.edit.control' | t }}</button>
+        </p>
+      }
 
       <div class="group" data-facilities>
         <h3>{{ 'public.garageProfile.details.facilities' | t }}</h3>
