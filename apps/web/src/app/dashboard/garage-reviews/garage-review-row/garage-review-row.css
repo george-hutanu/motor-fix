@@ -90,6 +90,11 @@ p {
   color: var(--mf-text-secondary);
   overflow-wrap: anywhere;
 }
+/* A "·" travels with the mark after it: a wrapped mark never leaves a dot ending the line above. */
+.marks .mark {
+  display: inline-flex;
+  gap: var(--mf-space-1);
+}
 .actions {
   display: flex;
   flex-wrap: wrap;

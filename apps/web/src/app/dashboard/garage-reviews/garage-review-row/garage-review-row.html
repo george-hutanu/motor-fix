@@ -38,16 +38,19 @@
     <p class="marks">
       <span data-reply-day>{{ replyDay() }}</span>
       @if (replyEdited(); as mark) {
-        <span class="dot" aria-hidden="true">·</span>
-        <span data-reply-edited>{{ mark }}</span>
+        <span class="mark"><span class="dot" aria-hidden="true">·</span><span data-reply-edited>{{ mark }}</span></span>
       }
       @if (reply.status === 'reported') {
-        <span class="dot" aria-hidden="true">·</span>
-        <span class="reported" data-reply-reported [id]="id + '-rep'">{{ 'garage.reviews.reply.reported' | t }}</span>
+        <span class="mark"
+          ><span class="dot" aria-hidden="true">·</span
+          ><span class="reported" data-reply-reported [id]="id + '-rep'">{{ 'garage.reviews.reply.reported' | t }}</span></span
+        >
       }
       @if (reviewEditedAfter()) {
-        <span class="dot" aria-hidden="true">·</span>
-        <span data-review-edited-after>{{ 'garage.reviews.reply.reviewEdited' | t }}</span>
+        <span class="mark"
+          ><span class="dot" aria-hidden="true">·</span
+          ><span data-review-edited-after>{{ 'garage.reviews.reply.reviewEdited' | t }}</span></span
+        >
       }
     </p>
   </div>

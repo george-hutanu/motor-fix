@@ -282,6 +282,33 @@ describe('the reply under a review on the dashboard', () => {
     );
   });
 
+  it('keeps each "·" with the mark after it, so a wrapped mark never leaves a dot ending the line above', async () => {
+    const row = await render(
+      repliedReview(
+        { editedAt: '2026-10-23T09:00:00.000Z' },
+        {
+          editedAt: '2026-10-22T09:00:00.000Z',
+          postedAt: '2026-10-20T09:00:00.000Z',
+          status: 'reported',
+        },
+      ),
+    );
+    const marks = row.querySelector('[data-reply] .marks') as HTMLElement;
+    const dots = [...marks.querySelectorAll('.dot')];
+    expect(dots).toHaveLength(3);
+    for (const dot of dots) {
+      const item = dot.parentElement as HTMLElement;
+      expect(item.parentElement).toBe(marks);
+      expect(item.children).toHaveLength(2);
+      expect(item.firstElementChild).toBe(dot);
+    }
+    expect(
+      ['reply-edited', 'reply-reported', 'review-edited-after'].map(
+        (name) => cell(row, name)?.parentElement?.firstElementChild?.className,
+      ),
+    ).toEqual(['dot', 'dot', 'dot']);
+  });
+
   it("tells the owner the review was edited after the reply, against the reply's last change", async () => {
     const reply = { postedAt: '2026-10-20T09:00:00.000Z' };
     const after = await render(
