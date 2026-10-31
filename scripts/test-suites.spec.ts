@@ -181,6 +181,8 @@ describe('the unit and integration suites', () => {
     },
   );
 
+  // @traces 1338-FR-001
+  // @traces 1338-FR-002
   it('runs the Nest projects on Vitest and the Angular projects on Jest', () => {
     const nest = [
       'apps/api',
@@ -192,16 +194,17 @@ describe('the unit and integration suites', () => {
       'libs/mcp-tools',
       'scripts',
     ];
+    // libs/data-access is generated and holds no spec, so it has no runner.
     const angular = [
       'apps/web',
       'libs/ui-cockpit',
-      'libs/data-access',
       'libs/media',
       'libs/i18n',
       'libs/overlays',
     ];
     expect(nest.map(runnerOf)).toEqual(nest.map(() => 'vitest'));
     expect(angular.map(runnerOf)).toEqual(angular.map(() => 'jest'));
+    expect(runnerOf('libs/data-access')).toBeUndefined();
   });
 
   // @traces 438-FR-004
@@ -321,6 +324,84 @@ describe('a chosen suite', () => {
     it('keeps the whole run strict when no suite is chosen', () => {
       expect(preset(runner, undefined).passWithNoTests).toBeFalsy();
     });
+
+    // @traces 1338-FR-004
+    it('refuses a suite it does not know before any test starts', () => {
+      expect(() => preset(runner, 'e2e')).toThrow(
+        'TEST_SUITE must be "unit" or "integration", or unset; got "e2e"',
+      );
+    });
+  });
+});
+
+// The projects on Vitest call none of Jest's API: Vitest has no global `jest`,
+// so a spec merged in from a branch still on Jest fails only when it runs.
+const NEST_SOURCES = [
+  'apps/api/src',
+  'apps/worker/src',
+  'apps/mcp/src',
+  'libs/contracts/src',
+  'libs/domain/src',
+  'libs/observability/src',
+  'libs/mcp-tools/src',
+];
+const JEST_API =
+  /\bjest\.(fn|mock|spyOn|requireActual|setTimeout|isolateModules|useFakeTimers|Mock|SpyInstance|Mocked|restoreAllMocks|clearAllMocks|resetAllMocks|mocked)\b/;
+
+function tsFiles(dir: string): string[] {
+  return readdirSync(join(root, dir), { withFileTypes: true }).flatMap((e) => {
+    const path = join(dir, e.name);
+    if (e.isDirectory()) return tsFiles(path);
+    return /\.(ts|mts|cts)$/.test(e.name) ? [path] : [];
+  });
+}
+
+describe('the Nest projects on Vitest', () => {
+  // @traces 1338-FR-003
+  it("call none of Jest's API in a spec or a test helper", () => {
+    const offenders = [
+      ...NEST_SOURCES.flatMap(tsFiles),
+      ...readdirSync(join(root, 'scripts'))
+        .filter((name) => /\.(ts|mts)$/.test(name))
+        .map((name) => join('scripts', name))
+        .filter((path) => path !== 'scripts/test-suites.spec.ts'),
+    ].filter((path) => JEST_API.test(readFileSync(join(root, path), 'utf8')));
+
+    expect(offenders).toEqual([]);
+  });
+
+  // @traces 1338-FR-015
+  it('rename the suite variable in the texts that name it, and leave the Jest rules to ST-1304', () => {
+    const read = (path: string) => readFileSync(join(root, path), 'utf8');
+    for (const path of [
+      '.claude/skills/speckit-auto/lifecycle.md',
+      '.github/workflows/ci.yml',
+      '.github/workflows/mutation.yml',
+    ])
+      expect(read(path)).not.toContain('JEST_SUITE');
+
+    expect(read('AGENTS.md')).toContain('Tests: Jest from the root config');
+    expect(read('.specify/memory/constitution.md')).toContain(
+      'run on Jest from the root config',
+    );
+  });
+
+  // @traces 1338-FR-006
+  it('give every libs/domain integration test and hook 30 s, and unit specs the default', () => {
+    const config = readFileSync(
+      join(root, 'libs/domain/vitest.config.mts'),
+      'utf8',
+    );
+    const setup = readFileSync(
+      join(root, 'libs/domain/src/integration-timeout.testing.ts'),
+      'utf8',
+    );
+
+    expect(config).toContain("'src/integration-timeout.testing.ts'");
+    expect(setup).toContain('/\\.integration\\.spec\\.ts$/.test(');
+    expect(setup).toContain(
+      'vi.setConfig({ hookTimeout: 30_000, testTimeout: 30_000 })',
+    );
   });
 });
 
