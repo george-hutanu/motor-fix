@@ -42,7 +42,7 @@ export interface ReportReviewData {
 // lost or the review gone meanwhile: the opener re-reads its list.
 export type ReportReviewResult = ReviewReportDto | 'refused';
 
-type Reason = ReportReviewDto['reason'];
+type Reason = ReviewReportDto['reason'];
 
 const MESSAGES = 'garage.reviews.report';
 // The answers that end the task with their message as the toast.
