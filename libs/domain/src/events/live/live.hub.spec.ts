@@ -922,3 +922,58 @@ describe('the time block events', () => {
     expect(kinds(page)).toEqual([kind]);
   });
 });
+
+// @traces 154-FR-014
+describe("a brand's search results", () => {
+  const send = (audience: string[], kind: string) =>
+    hub.deliver(
+      JSON.stringify({
+        audience,
+        event: { at: new Date(NOW).toISOString(), id: kind, kind },
+      }),
+    );
+  const visitor = () => {
+    const sink = new Sink();
+    hub.open(sink, {
+      address: '10.0.0.9',
+      channels: ['public:search:b1'],
+      public: true,
+    });
+    return sink;
+  };
+  const kinds = (sink: Sink) =>
+    sink
+      .messages()
+      .map((m) => m.event)
+      .filter((kind) => kind !== 'hello');
+
+  it.each(['garage.suspended', 'garage.restored'])(
+    'hear %s through the brand search key',
+    async (kind) => {
+      const results = visitor();
+
+      await send(['admin', 'garage:g1', 'public:search:b1'], kind);
+
+      expect(kinds(results)).toEqual([kind]);
+    },
+  );
+
+  it.each(['verification.decided', 'rating.updated', 'review.posted'])(
+    'still do not hear %s through the brand search key',
+    async (kind) => {
+      const results = visitor();
+
+      await send(['garage:g1', 'public:search:b1'], kind);
+
+      expect(kinds(results)).toEqual([]);
+    },
+  );
+
+  it('still hear a garage update through the brand search key', async () => {
+    const results = visitor();
+
+    await send(['garage:g1', 'public:search:b1'], 'garage.updated');
+
+    expect(kinds(results)).toEqual(['garage.updated']);
+  });
+});

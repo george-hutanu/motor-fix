@@ -112,6 +112,16 @@ class Refused extends Error {
 // Takes an approved garage off the map: the suspension, the status, its
 // history entry and the event the public reads and the worker follow, in
 // one transaction behind the garage's row lock.
+// The brands the garage takes, read in the change's transaction: their
+// searches hear it leave or come back.
+async function brandsTaken(tx: Prisma.TransactionClient, garageId: string) {
+  const rows = await tx.garageBrand.findMany({
+    select: { brandId: true },
+    where: { garageId, stance: 'works_on' },
+  });
+  return rows.map((row) => row.brandId);
+}
+
 @Injectable()
 export class SuspensionService {
   private readonly logger = new Logger('GarageSuspension');
@@ -252,7 +262,12 @@ export class SuspensionService {
       oldValue: 'approved',
     });
     await this.events.record(tx, {
-      audience: { garageId, published: true, type: 'verification' },
+      audience: {
+        brandIds: await brandsTaken(tx, garageId),
+        garageId,
+        published: true,
+        type: 'verification',
+      },
       kind: 'garage.suspended',
       payload: { cause, garageId },
       subjectId: garageId,
@@ -388,7 +403,12 @@ export class SuspensionService {
       ...(note !== null && { text: note }),
     });
     await this.events.record(tx, {
-      audience: { garageId, published: true, type: 'verification' },
+      audience: {
+        brandIds: await brandsTaken(tx, garageId),
+        garageId,
+        published: true,
+        type: 'verification',
+      },
       kind: 'garage.restored',
       payload: { cause: latest.cause, garageId },
       subjectId: garageId,

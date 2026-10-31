@@ -131,7 +131,10 @@ const PUBLIC_KINDS: [RegExp, Set<string>][] = [
       'rating.updated',
     ]),
   ],
-  [/^public:search:/, new Set(['garage.updated'])],
+  [
+    /^public:search:/,
+    new Set(['garage.updated', 'garage.suspended', 'garage.restored']),
+  ],
   [
     /^system$/,
     new Set([
@@ -141,6 +144,10 @@ const PUBLIC_KINDS: [RegExp, Set<string>][] = [
     ]),
   ],
 ];
+
+// The kinds each public key allows, by the key's pattern.
+export const publicKinds = (): ReadonlyMap<string, ReadonlySet<string>> =>
+  new Map(PUBLIC_KINDS.map(([keys, kinds]) => [keys.source, kinds]));
 
 const publicAllows = (key: string, kind: string) =>
   PUBLIC_KINDS.find(([keys]) => keys.test(key))?.[1].has(kind) ?? false;

@@ -157,6 +157,7 @@ export class ReviewRepliesService {
           subjectId: row.id,
           subjectType: 'review_reply',
         });
+        // publishes review.reply_edited
         await this.announce(tx, 'review.reply_edited', review, row.id);
         return row;
       });
