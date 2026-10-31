@@ -26,6 +26,12 @@ ul {
   background: var(--mf-panel);
   overflow-wrap: anywhere;
 }
+/* The weekly panel's place while its chunk loads: about its loaded height. */
+.chart-skeleton {
+  block-size: 280px;
+  background: var(--mf-panel-raised);
+  border-radius: var(--mf-radius-control);
+}
 h2,
 h3,
 .label {

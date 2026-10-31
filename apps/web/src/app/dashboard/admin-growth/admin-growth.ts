@@ -10,7 +10,7 @@ import {
 import { CITY_ALL } from '@motor-fix/contracts/figure-choices';
 import { type AdminGrowthDto, AdminService } from '@motor-fix/data-access';
 import { calendarNames, formatNum, I18n } from '@motor-fix/i18n';
-import { LineChart } from '@motor-fix/ui-cockpit';
+import { LineChart } from '@motor-fix/ui-cockpit/chart';
 
 import { AdminOverview } from '../admin-overview';
 

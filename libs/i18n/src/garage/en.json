@@ -69,7 +69,6 @@
   "home": {
     "empty": {
       "brands": "The most requested brands this month appear here.",
-      "funnel": "The path from profile views to requests appears here, by week.",
       "kpi": "Today's numbers appear here: requests, bookings, jobs and takings.",
       "load": "Each mechanic's load for today appears here.",
       "now": "Jobs in progress appear here, with photos, video and live from the workshop.",
@@ -913,5 +912,14 @@
     "contact": "Contact MotorFix",
     "loadFailed": "We could not load the verification status.",
     "title": "Your profile is being checked"
+  },
+  "weekly": {
+    "empty": "No data yet. The first figures appear after the first full week.",
+    "error": "We could not load the figures.",
+    "noViews": "Last week had no views.",
+    "requests": "Requests received",
+    "sentence": "Last week, {pct} of views turned into requests.",
+    "views": "Profile views",
+    "week": "W"
   }
 }
