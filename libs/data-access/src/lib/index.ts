@@ -251,6 +251,7 @@ export type { NewsSentDto } from './models/news-sent-dto';
 export type { NewsTextDto } from './models/news-text-dto';
 export type { NewsTitleDto } from './models/news-title-dto';
 export type { NotificationDto } from './models/notification-dto';
+export type { NotificationFallbackDto } from './models/notification-fallback-dto';
 export type { NotificationGroupDto } from './models/notification-group-dto';
 export type { NotificationPageDto } from './models/notification-page-dto';
 export type { NotificationPreferenceDto } from './models/notification-preference-dto';

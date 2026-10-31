@@ -63,7 +63,7 @@ features:
   - 409-garage-corrects-repair
   - 1267-admin-corrects-repair
   - 1315-optimistic-toggles
-  - 1407-toggle-idempotency
+  - 1374-channel-fallback-hint
 ---
 
 # Capability: Notifications
@@ -552,9 +552,9 @@ _From 806-requeue-sweep-batched._
 
 _From 806-requeue-sweep-batched._
 
-### 142-FR-001 — Each group row of the driver's Notificări panel (the five of 138-FR-001) MUST gain a disclosure that opens the group's notification types under the switch (closed by default; `aria-expanded` and `aria-controls` on the control). Each type shows its name in the driver's language and one channel picker, a radio group offering only the channels the catalogue gives the type, in the order E-mail, Push, SMS, WhatsApp; a type whose catalogue entry has one channel (NEWS) shows that channel as fixed text and no picker; an always-sent type is marked "Se trimite mereu" and its picker works like any other. The types' order within a group is the catalogue's order.
+### 1374-FR-004 — The existing driver preferences read MUST carry on each driver type entry a nullable `fallback` of `{ from, to, reason, at }`; a type with no record has null. The caller's staff entries carry no such field. No new endpoint, counter or queue is added; the read stays under the existing guard and acts on the caller's own account only.
 
-_From 142-notification-channels._
+_From 1374-channel-fallback-hint._
 
 ### 138-FR-002 — Each switch MUST show the group's state as the preferences report it; with nothing saved, every group is on except Noutăți MotorFix.
 
@@ -1100,6 +1100,30 @@ _From 1315-optimistic-toggles._
 
 _From 1315-optimistic-toggles._
 
+### 1374-FR-001 — The system MUST keep, per account and notification type, the last send-time fallback: the channel the message was meant for (`from`), the channel it went by (`to`), the reason (one of `no_device`, `phone_not_verified`, `sms_cap_reached`, `send_failed`, exactly as 142-FR-008 labels the counter) and when it happened (`at`, the time the row on the other channel is written: the message's build time for a write-time substitution, the fallback row's creation for a send-time or bounce fallback). A new fallback for the same account and type replaces the previous one (last one wins); the records are removed with the account.
+
+_From 1374-channel-fallback-hint._
+
+### 1374-FR-002 — A record MUST be written at every point where a fallback is counted today, with the same `from`, `to` and `reason` the counter gets, and in the same transaction as the row it describes: the write-time substitutions of a built message (`build()`'s transaction), the send-time fallback of a failed row onto the next channel (`fallBack()`, whose row and record are written in one transaction), and the bounce handler's e-mail-to-push fallbacks (its transaction). A fallback that is not counted (no row written on another channel) writes no record, and neither does the fallback of a row that is itself a fallback (its `from` is not the driver's choice).
+
+_From 1374-channel-fallback-hint._
+
+### 1374-FR-003 — A record MUST be written only for a message with an account (never a listing draft) and only for a driver's own choice (a type the driver's panel lists, with no garage); a staff type's fallback is counted as today and not recorded.
+
+_From 1374-channel-fallback-hint._
+
+### 1374-FR-005 — The read MUST return a record only while it explains the current choice: its `from` equals the type's chosen channel as the read gives it now (the saved row or the push-aware default of 142-FR-005) and its `at` is after the type's choice was last saved; with no saved row there is no save time and the `from` test alone decides. Otherwise the entry's `fallback` is null. The staleness rule MUST be a pure function with its own unit tests.
+
+_From 1374-channel-fallback-hint._
+
+### 1374-FR-006 — The account's data export MUST list the account's records in `notifications-and-preferences.json` under `fallbacks` (type, from, to, reason, at), beside the notifications, preferences and devices it lists today; account deletion MUST remove the records with the account.
+
+_From 1374-channel-fallback-hint._
+
+### 1374-FR-007 — Each reason being recorded and read back, last one wins, the drop after a new choice, the null for a type with no record, the staff entries without the field, the export and the deletion MUST each be an API integration test on real PostgreSQL (`*.integration.spec.ts`, CI's on-demand run); the staleness rule has unit tests. Every test file carries a `// @traces` line naming its `1374-FR-<n>` ids.
+
+_From 1374-channel-fallback-hint._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -1130,6 +1154,4 @@ _From 1315-optimistic-toggles._
 - `428-FR-010` — superseded by `1258-FR-005` (2026-10-25)
 - `409-FR-014` — superseded by `1267-FR-012` (2026-10-30)
 - `198-FR-014` — superseded by `1315-FR-001` (2026-10-30)
-- `198-FR-007` — superseded by `1407-FR-001` (2026-10-31)
-- `199-FR-004` — superseded by `1407-FR-002` (2026-10-31)
-- `199-FR-005` — superseded by `1407-FR-003` (2026-10-31)
+- `142-FR-001` — superseded by `1374-FR-004` (2026-10-31)
