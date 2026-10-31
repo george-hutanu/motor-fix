@@ -46,8 +46,10 @@ const card = (over: Partial<GarageMechanicDto> = {}): GarageMechanicDto => ({
   rating: null,
   reviewCount: 0,
   roleTitle: 'Mecanic șef',
+  shown: false,
   speciality: 'Frâne, Suspensie',
   specialties: ['Frâne', 'Suspensie'],
+  takesDirectRequests: true,
   years: 21,
   ...over,
 });

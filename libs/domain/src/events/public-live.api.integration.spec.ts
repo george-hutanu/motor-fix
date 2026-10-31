@@ -177,18 +177,49 @@ async function garage(status: 'approved' | 'draft' | 'suspended' = 'approved') {
   ).id;
 }
 
-async function mechanicOf(garageId: string) {
-  const { id: accountId } = await accounts.createAccount({
-    consent: CURRENT_CONSENT,
-    identity: { method: 'google', subject: `mechanic-${randomUUID()}` },
-    name: 'Mihai',
-    roles: ['mechanic'],
-  });
+// A joined card on the profile unless told otherwise.
+async function mechanicOf(
+  garageId: string,
+  { account = true, onProfile = true, removed = false } = {},
+) {
+  const accountId = account
+    ? (
+        await accounts.createAccount({
+          consent: CURRENT_CONSENT,
+          identity: { method: 'google', subject: `mechanic-${randomUUID()}` },
+          name: 'Mihai',
+          roles: ['mechanic'],
+        })
+      ).id
+    : null;
   return (
     await prisma.mechanic.create({
-      data: { accountId, garageId, name: 'Mecanic' },
+      data: {
+        accountId,
+        garageId,
+        name: 'Mecanic',
+        onProfile,
+        removedAt: removed ? new Date() : null,
+      },
     })
   ).id;
+}
+
+async function teamHidden() {
+  const id = await garage();
+  await prisma.garage.update({
+    data: { teamOnProfile: false },
+    where: { id },
+  });
+  return id;
+}
+
+async function featureOff() {
+  const id = await garage();
+  await prisma.garageFeature.create({
+    data: { enabled: false, garageId: id, key: 'team_mechanics' },
+  });
+  return id;
 }
 
 async function brand(active = true) {
@@ -236,6 +267,7 @@ describe('the public live stream', () => {
     });
   });
 
+  // @traces 059-FR-010
   it("carries a review kind to the profile of the review's mechanic", async () => {
     const garageId = await garage();
     const mechanicId = await mechanicOf(garageId);
@@ -436,6 +468,32 @@ describe('the public live stream', () => {
         'mechanics',
       ],
       ['an unknown mechanic', async () => randomUUID(), 'mechanics'],
+      // @traces 059-FR-010
+      [
+        'a mechanic who chose not to appear',
+        async () => mechanicOf(await garage(), { onProfile: false }),
+        'mechanics',
+      ],
+      [
+        'a card without an account',
+        async () => mechanicOf(await garage(), { account: false }),
+        'mechanics',
+      ],
+      [
+        'a removed card',
+        async () => mechanicOf(await garage(), { removed: true }),
+        'mechanics',
+      ],
+      [
+        'a mechanic of a garage that hides its team',
+        async () => mechanicOf(await teamHidden()),
+        'mechanics',
+      ],
+      [
+        'a mechanic of a garage with the team switched off',
+        async () => mechanicOf(await featureOff()),
+        'mechanics',
+      ],
       ['an unknown brand', async () => randomUUID(), 'brand'],
     ])('opens for %s and joins nothing for it', async (_, make, field) => {
       const id = await make();
