@@ -41,10 +41,9 @@ const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 export function localIso(at: Date): string {
   const offset = local(at).offsetMinutes;
   const wall = new Date(at.getTime() + offset * 60_000).toISOString();
-  const abs = Math.abs(offset);
-  const hh = String(Math.floor(abs / 60)).padStart(2, '0');
-  const mm = String(abs % 60).padStart(2, '0');
-  return `${wall.slice(0, 19)}${offset < 0 ? '-' : '+'}${hh}:${mm}`;
+  const hh = String(Math.floor(offset / 60)).padStart(2, '0');
+  const mm = String(offset % 60).padStart(2, '0');
+  return `${wall.slice(0, 19)}+${hh}:${mm}`;
 }
 
 export function localDay(at: Date): string {

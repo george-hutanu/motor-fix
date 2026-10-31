@@ -145,9 +145,9 @@ const PUBLIC_KINDS: [RegExp, Set<string>][] = [
   ],
 ];
 
-// The kinds each public key allows, by the key's pattern.
-export const publicKinds = (): ReadonlyMap<string, ReadonlySet<string>> =>
-  new Map(PUBLIC_KINDS.map(([keys, kinds]) => [keys.source, kinds]));
+// Every kind some public key allows.
+export const publicKinds = (): ReadonlySet<string> =>
+  new Set(PUBLIC_KINDS.flatMap(([, kinds]) => [...kinds]));
 
 const publicAllows = (key: string, kind: string) =>
   PUBLIC_KINDS.find(([keys]) => keys.test(key))?.[1].has(kind) ?? false;

@@ -100,6 +100,7 @@ export class ReviewRepliesService {
           subjectId: row.id,
           subjectType: 'review_reply',
         });
+        // publishes review.replied
         await this.announce(tx, 'review.replied', review, row.id);
         return row;
       });

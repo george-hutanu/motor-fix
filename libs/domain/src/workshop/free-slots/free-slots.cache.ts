@@ -33,6 +33,7 @@ const SCHEDULE_KINDS: ReadonlySet<EventKind> = new Set<EventKind>([
   'booking.moved',
   'booking.cancelled',
   'booking.lapsed',
+  'booking.no_show_recorded',
   'quote.accepted',
   'mechanic.added',
   'mechanic.updated',

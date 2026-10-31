@@ -109,9 +109,6 @@ class Refused extends Error {
   }
 }
 
-// Takes an approved garage off the map: the suspension, the status, its
-// history entry and the event the public reads and the worker follow, in
-// one transaction behind the garage's row lock.
 // The brands the garage takes, read in the change's transaction: their
 // searches hear it leave or come back.
 async function brandsTaken(tx: Prisma.TransactionClient, garageId: string) {
@@ -122,6 +119,9 @@ async function brandsTaken(tx: Prisma.TransactionClient, garageId: string) {
   return rows.map((row) => row.brandId);
 }
 
+// Takes an approved garage off the map: the suspension, the status, its
+// history entry and the event the public reads and the worker follow, in
+// one transaction behind the garage's row lock.
 @Injectable()
 export class SuspensionService {
   private readonly logger = new Logger('GarageSuspension');

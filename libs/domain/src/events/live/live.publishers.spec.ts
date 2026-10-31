@@ -5,15 +5,15 @@ import { publicKinds } from './live.hub';
 
 // @traces 154-FR-016
 
-// Public kinds no write records yet, each with the open tracker issue whose
-// story will. An entry leaves once its kind has a publisher; none is added.
+// Public kinds no write records yet, each with the open story that will.
+// An entry leaves once its kind has a publisher; none is added.
 const UNBUILT: Record<string, string> = {
-  'facility.re_add_decided': 'motor-fix-specs#360',
-  'facility.removed': 'motor-fix-specs#360',
-  'review.appeal_decided': 'motor-fix-specs#289 motor-fix-specs#290',
-  'review.decided': 'motor-fix-specs#24 motor-fix-specs#141',
-  'review.deleted': 'motor-fix-specs#283',
-  'review.edited': 'motor-fix-specs#283',
+  'facility.re_add_decided': 'admins decide on facility removals',
+  'facility.removed': 'admins decide on facility removals',
+  'review.appeal_decided': 'garages appeal a review, admins decide',
+  'review.decided': 'admins moderate reported reviews',
+  'review.deleted': 'drivers edit or delete their review',
+  'review.edited': 'drivers edit or delete their review',
 };
 
 const SRC = join(__dirname, '..', '..');
@@ -38,9 +38,7 @@ const published = (kind: string) => {
   return sources.some((text) => text.includes(literal) || comment.test(text));
 };
 
-const allowed = [
-  ...new Set([...publicKinds().values()].flatMap((kinds) => [...kinds])),
-];
+const allowed = [...publicKinds()];
 
 describe('the public kinds the live hub allows', () => {
   it('lists the kinds the public keys allow', () => {

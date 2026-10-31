@@ -74,6 +74,7 @@ function scheduleEvents(): [string, LiveSubject, string][] {
     row('booking.moved', booking),
     row('booking.cancelled', booking),
     row('booking.lapsed', booking),
+    row('booking.no_show_recorded', booking),
     row('quote.accepted', (garageId) => ({
       driverAccountId: randomUUID(),
       garageId,
