@@ -3,13 +3,15 @@ import {
   type Fuel,
   fuelColumns,
   type GarageBrandOwnerAnswerDto,
+  type GarageBrandOwnerReadDto,
+  type PricedJobDto,
   type ReplaceGarageBrandsDto,
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { assertCatalogued } from './write-garage-brands';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
-import { refusal } from '../../auth/http-refusal';
+import { notFound, refusal } from '../../auth/http-refusal';
 import { type Actor, assertGarage } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import { EVENT_PORT, type EventPort } from '../../events/event.port';
@@ -20,13 +22,12 @@ import type {
 } from '../../generated/prisma/client';
 import { brandAnswerWithJobs } from '../brand-answer';
 
-export const notFound = () =>
-  refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such garage');
+export const noGarage = () => notFound('No such garage');
 
 // Only the owner answers; the garage's staff are told no, anyone else that
 // there is no such garage.
 export function assertGarageOwner(actor: Actor, garageId: string) {
-  if (actor.garageId !== garageId) throw notFound();
+  if (actor.garageId !== garageId) throw noGarage();
   if (actor.role !== 'garage') {
     throw refusal(
       HttpStatus.FORBIDDEN,
@@ -38,13 +39,24 @@ export function assertGarageOwner(actor: Actor, garageId: string) {
 
 type Texts = { brandNote: string | null; refusalPhrase: string | null };
 
+// A garage drivers cannot see is not edited, as its profile is not.
+function assertListed(status: string) {
+  if (status === 'suspended') {
+    throw refusal(HttpStatus.GONE, 'gone', 'This garage is no longer listed');
+  }
+}
+
 // Two writes to one garage's brands run one after the other.
-async function lockGarage(tx: Prisma.TransactionClient, garageId: string) {
-  const [garage] = await tx.$queryRaw<Texts[]>`
-    SELECT brand_note AS "brandNote", refusal_phrase AS "refusalPhrase"
-    FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
-  if (!garage) throw notFound();
-  return garage;
+async function lockGarage(
+  tx: Prisma.TransactionClient,
+  garageId: string,
+): Promise<Texts> {
+  const [garage] = await tx.$queryRaw<(Texts & { status: string })[]>`
+    SELECT brand_note AS "brandNote", refusal_phrase AS "refusalPhrase", status
+    FROM garage WHERE id = ${garageId}::uuid FOR NO KEY UPDATE`;
+  if (!garage) throw noGarage();
+  assertListed(garage.status);
+  return { brandNote: garage.brandNote, refusalPhrase: garage.refusalPhrase };
 }
 
 // The DTO judges each brand alone; fuels on a refused one span two fields.
@@ -58,6 +70,20 @@ function assertFuelsTaken(dto: ReplaceGarageBrandsDto) {
     'validation_failed',
     'Only a taken brand has fuels',
     [{ code: 'fuels_on_refused', field: `brands[${at}].fuels` }],
+  );
+}
+
+// A taken brand works on at least one fuel; leaving fuels out keeps them.
+function assertFuelsGiven(dto: ReplaceGarageBrandsDto) {
+  const at = dto.brands.findIndex(
+    (b) => b.stance === 'works_on' && b.fuels?.length === 0,
+  );
+  if (at === -1) return;
+  throw refusal(
+    HttpStatus.BAD_REQUEST,
+    'validation_failed',
+    'A taken brand works on at least one fuel',
+    [{ code: 'fuels_empty', field: `brands[${at}].fuels` }],
   );
 }
 
@@ -90,13 +116,50 @@ function assertJobsPriced(dto: ReplaceGarageBrandsDto, priceList: string[]) {
 }
 
 // The garage's jobs once each, in the order its price list shows them.
-async function priceListOf(tx: Prisma.TransactionClient, garageId: string) {
+async function pricedJobsOf(
+  tx: Prisma.TransactionClient,
+  garageId: string,
+): Promise<PricedJobDto[]> {
   const prices = await tx.garagePrice.findMany({
     orderBy: { position: 'asc' },
-    select: { jobTypeId: true },
+    select: { jobType: { select: { id: true, nameEn: true, nameRo: true } } },
     where: { garageId },
   });
-  return [...new Set(prices.map((p) => p.jobTypeId))];
+  const jobs = new Map<string, PricedJobDto>();
+  for (const { jobType } of prices) {
+    if (jobs.has(jobType.id)) continue;
+    const { id, nameEn, nameRo } = jobType;
+    jobs.set(id, { jobTypeId: id, nameEn, nameRo });
+  }
+  return [...jobs.values()];
+}
+
+// The stored answer as the owner reads it: each taken brand with its fuels
+// and its ticked jobs.
+async function answerOf(
+  tx: Prisma.TransactionClient,
+  garageId: string,
+  texts: Texts,
+  priceList: string[],
+) {
+  const rows = await tx.garageBrand.findMany({
+    select: {
+      brand: {
+        select: { id: true, name: true, popularity: true, slug: true },
+      },
+      diesel: true,
+      electric: true,
+      hybrid: true,
+      petrol: true,
+      stance: true,
+    },
+    where: { garageId },
+  });
+  const ticks = await tx.garageBrandJob.findMany({
+    select: { brandId: true, jobTypeId: true },
+    where: { garageId },
+  });
+  return brandAnswerWithJobs(rows, texts, ticks, priceList);
 }
 
 type Wanted = { stance: GarageBrandStance; fuels?: Fuel[]; jobs?: string[] };
@@ -120,6 +183,7 @@ export class GarageBrandsService {
   ): Promise<GarageBrandOwnerAnswerDto> {
     assertGarageOwner(actor, garageId);
     assertFuelsTaken(dto);
+    assertFuelsGiven(dto);
     assertJobsTaken(dto);
     return this.prisma.$transaction(async (tx) => {
       const garage = await lockGarage(tx, garageId);
@@ -131,7 +195,9 @@ export class GarageBrandsService {
         ]),
       );
       await assertCatalogued(tx, [...wanted.keys()]);
-      const priceList = await priceListOf(tx, garageId);
+      const priceList = (await pricedJobsOf(tx, garageId)).map(
+        (job) => job.jobTypeId,
+      );
       assertJobsPriced(dto, priceList);
       const { changed, fields } = await this.applyStances(
         tx,
@@ -160,21 +226,27 @@ export class GarageBrandsService {
           subjectId: garageId,
         });
       }
-      const rows = await tx.garageBrand.findMany({
-        select: {
-          brand: {
-            select: { id: true, name: true, popularity: true, slug: true },
-          },
-          stance: true,
-        },
-        where: { garageId },
-      });
-      const ticks = await tx.garageBrandJob.findMany({
-        select: { brandId: true, jobTypeId: true },
-        where: { garageId },
-      });
-      return brandAnswerWithJobs(rows, texts, ticks, priceList);
+      return answerOf(tx, garageId, texts, priceList);
     });
+  }
+
+  // The owner's answer and the price list's jobs, for the brands dialog.
+  async read(actor: Actor, garageId: string): Promise<GarageBrandOwnerReadDto> {
+    assertGarageOwner(actor, garageId);
+    const garage = await this.prisma.garage.findUnique({
+      select: { brandNote: true, refusalPhrase: true, status: true },
+      where: { id: garageId },
+    });
+    if (!garage) throw noGarage();
+    assertListed(garage.status);
+    const priceList = await pricedJobsOf(this.prisma, garageId);
+    const answer = await answerOf(
+      this.prisma,
+      garageId,
+      garage,
+      priceList.map((job) => job.jobTypeId),
+    );
+    return { ...answer, priceList };
   }
 
   // Switches off the brands left out, then sets the others and the jobs of
@@ -381,7 +453,7 @@ export class GarageBrandsService {
     assertGarage(actor, garageId);
     // One stance write per garage at a time: two first writes would both miss
     // the row, and the second create would fail on the primary key.
-    await tx.$executeRaw`SELECT 1 FROM garage WHERE id = ${garageId}::uuid FOR UPDATE`;
+    await tx.$executeRaw`SELECT 1 FROM garage WHERE id = ${garageId}::uuid FOR NO KEY UPDATE`;
     const where = { garageId_brandId: { brandId, garageId } };
     const row = await tx.garageBrand.findUnique({ where });
     const taken = stance === 'works_on';

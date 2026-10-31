@@ -1,0 +1,38 @@
+form,
+.loading,
+.failed {
+  display: grid;
+  gap: var(--mf-space-4);
+  min-width: 0;
+}
+.error {
+  margin: 0;
+  color: var(--mf-red-ink);
+  overflow-wrap: anywhere;
+}
+.error p {
+  margin: 0;
+}
+.actions {
+  display: grid;
+  gap: var(--mf-space-3);
+}
+.actions button,
+.failed button {
+  width: 100%;
+  min-height: 54px;
+  white-space: normal;
+}
+[data-skeleton] {
+  height: 44px;
+  border-radius: var(--mf-radius-chip);
+  background: var(--mf-line);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
