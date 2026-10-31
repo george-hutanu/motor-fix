@@ -89,7 +89,7 @@ export class NotificationPreferencesService {
                 fallbacks.get(entry.type),
                 entry.channel,
                 rows.find((r) => r.type === entry.type && r.garageId === null)
-                  ?.updatedAt ?? null,
+                  ?.updatedAt,
               ),
             }
           : entry,
@@ -329,7 +329,6 @@ export class NotificationPreferencesService {
     return rows.map((r) => ({ ...r, channel: r.channel as OutsideChannel }));
   }
 
-  // The last fallback of each type, by type.
   private async fallbacks(
     accountId: string,
   ): Promise<Map<string, FallbackRecord>> {

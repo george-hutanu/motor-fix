@@ -68,9 +68,6 @@ export function outsideChannels(
   return [...new Set(sent)].sort();
 }
 
-// The fallbacks counter's reasons, the same set the preferences read names.
-export type { FallbackReason };
-
 export interface Substitution {
   from: OutsideChannel;
   reason: FallbackReason;

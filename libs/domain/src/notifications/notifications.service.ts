@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { OutsideChannel } from '@motor-fix/contracts';
+import type { FallbackReason, OutsideChannel } from '@motor-fix/contracts';
 import {
   HttpException,
   HttpStatus,
@@ -20,7 +20,6 @@ import {
 import { PUSH_CONFIG, type PushConfig } from './push/push-config';
 import { isQuiet, nextMorning } from './quiet-hours';
 import {
-  type FallbackReason,
   outsideChannels,
   type SentChannel,
   type Substitution,
@@ -632,11 +631,13 @@ export class NotificationsService {
       skipDuplicates: true,
     });
     if (!written) return null;
-    const from = row.channel as SentChannel;
-    await this.recordFallbacks(db, row.accountId, row.kind, null, {
-      at,
-      fallbacks: row.fallbackOf === null ? [{ from, reason, to: channel }] : [],
-    });
+    if (row.fallbackOf === null) {
+      const from = row.channel as SentChannel;
+      await this.recordFallbacks(db, row.accountId, row.kind, null, {
+        at,
+        fallbacks: [{ from, reason, to: channel }],
+      });
+    }
     const delay = sendAfter ? sendAfter.getTime() - at.getTime() : 0;
     return { ...send(written.id), delay };
   }

@@ -75,9 +75,9 @@ function driverChoice(
 export const fallbackFor = (
   record: FallbackRecord | undefined,
   chosen: OutsideChannel,
-  savedAt: Date | null,
+  savedAt?: Date | null,
 ): NotificationFallbackDto | null =>
-  record && record.from === chosen && (savedAt === null || record.at > savedAt)
+  record && record.from === chosen && (!savedAt || record.at > savedAt)
     ? {
         at: record.at.toISOString(),
         from: record.from,
