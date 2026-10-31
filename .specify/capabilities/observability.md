@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -58,6 +58,7 @@ features:
   - 144-profile-stats-weekly
   - 1395-block-time-dashboard
   - 1398-open-now-results-filters
+  - 154-free-slots
   - 1379-provider-calls-worker
 ---
 
@@ -938,6 +939,10 @@ _From 277-car-status-alerts._
 ### 144-FR-008 — The route MUST be listed in `infra/observability/inventory.json` with its panel and alert; it is a read served by the route metrics, with no counter of its own.
 
 _From 144-profile-stats-weekly._
+
+### 154-FR-017 — The route MUST be in the generated OpenAPI document (`apps/api/openapi.json`) and the regenerated `data-access` client, and listed in `infra/observability/inventory.json` with the API's request duration by route and a counter of answers by outcome (`slots`, `none_in_horizon`), on the existing API dashboard; no new alert (a slow or failing route is covered by the API latency and error alerts).
+
+_From 154-free-slots._
 
 ### 1379-FR-009 — Observability ships with the change: the `direct-send` queue is listed in `infra/observability/inventory.json` (kind `queue`, dashboard `motorfix-queues`, the worker queue rule uids as the other queues), reports the worker's job and queue metrics under its name (876-FR-009, 878-FR-009), is shown by the existing `motorfix-queues` panels, which aggregate every series `by (queue)` (no new panel is added: Principle I), is covered by `worker-queue-backlog`, `worker-queue-growing` and `worker-jobs-failed`, writes `job_failed` and `service_error` system-log entries from the worker as the other queues do (297-FR-007, 297-FR-008), the inventory reasons of the entries that describe the moved sends (`brevo`, `my-details`, `car-transfers`, `motorfix_car_transfer_whatsapp_total`) say the send runs in the worker through `direct-send`, and the PR Notes list these reports.
 

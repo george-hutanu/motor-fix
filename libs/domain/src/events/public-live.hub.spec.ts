@@ -94,7 +94,11 @@ const ALLOWED: Record<string, string[]> = {
     // @traces 025-FR-009
     'rating.updated',
   ],
-  [`public:search:${BRAND}`]: ['garage.updated'],
+  [`public:search:${BRAND}`]: [
+    'garage.suspended',
+    'garage.restored',
+    'garage.updated',
+  ],
   system: [
     'platform_rule.changed',
     'platform_rule.change_requested',

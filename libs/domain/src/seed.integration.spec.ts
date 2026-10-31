@@ -463,6 +463,86 @@ describe('seed', () => {
     ]);
   });
 
+  // @traces 1411-FR-005
+  it('gives Atelier Test a priced job on the profile, one hidden by the owner, one with no top price and its ticked oil service, so its price list has rows', async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const garage = await prisma.garage.findUniqueOrThrow({
+      include: {
+        prices: {
+          include: { jobType: { select: { key: true } } },
+          orderBy: { position: 'asc' },
+        },
+      },
+      where: { slug: 'atelier-test' },
+    });
+    expect(
+      garage.prices.map(({ brandId, fromBani, jobType, toBani, visible }) => ({
+        brandId,
+        fromBani,
+        key: jobType.key,
+        toBani,
+        visible,
+      })),
+    ).toEqual([
+      {
+        brandId: null,
+        fromBani: 15_000,
+        key: 'diagnosis',
+        toBani: 22_000,
+        visible: true,
+      },
+      {
+        brandId: null,
+        fromBani: 420_000,
+        key: 'timing-chain',
+        toBani: 680_000,
+        visible: false,
+      },
+      {
+        brandId: null,
+        fromBani: 35_000,
+        key: 'suspension-alignment',
+        toBani: null,
+        visible: true,
+      },
+      {
+        brandId: null,
+        fromBani: 25_000,
+        key: 'oil-service',
+        toBani: 40_000,
+        visible: true,
+      },
+    ]);
+  });
+
+  // @traces 1411-FR-005
+  it("leaves Atelier Test's price list as the owner changed it when run again", async () => {
+    expect(seed('test').status).toBe(0);
+    const garage = await prisma.garage.findUniqueOrThrow({
+      where: { slug: 'atelier-test' },
+    });
+    const diagnosis = await prisma.jobType.findUniqueOrThrow({
+      where: { key: 'diagnosis' },
+    });
+    await prisma.garagePrice.updateMany({
+      data: { fromBani: 16_000, visible: false },
+      where: { garageId: garage.id, jobTypeId: diagnosis.id },
+    });
+
+    expect(seed('test').status).toBe(0);
+
+    const prices = await prisma.garagePrice.findMany({
+      where: { garageId: garage.id },
+    });
+    expect(prices).toHaveLength(4);
+    expect(prices.find((p) => p.jobTypeId === diagnosis.id)).toMatchObject({
+      fromBani: 16_000,
+      visible: false,
+    });
+  });
+
   // @traces 414-FR-014
   it("gives Atelier Dinamo one pending proposal, 180–420 lei and 90 min, once, so the admins' queue has a row", async () => {
     expect(seed('test').status).toBe(0);

@@ -3,6 +3,7 @@
 // @traces 1381-FR-005
 // @traces 409-FR-002
 // @traces 409-FR-017
+// @traces 165-FR-001
 import { CAPABILITIES, capabilitiesOf, ROLES } from './capabilities';
 
 const none = {
@@ -137,5 +138,21 @@ describe('capabilities by role', () => {
 
   it("gives a role outside the five, the system's own actor, nothing", () => {
     expect(capabilitiesOf('system' as never, none)).toEqual([]);
+  });
+
+  it('gives every admin capability to the admin role, and to no other', () => {
+    const all = {
+      canAnswerQuotes: true,
+      canMoveBookings: true,
+      canRecordFinalPrice: true,
+    };
+    const admin = CAPABILITIES.filter((c) => c.startsWith('admin.'));
+    const holders = admin.map((capability) => [
+      capability,
+      ROLES.filter((role) => capabilitiesOf(role, all).includes(capability)),
+    ]);
+
+    expect(admin.length).toBeGreaterThan(0);
+    expect(holders).toEqual(admin.map((capability) => [capability, ['admin']]));
   });
 });

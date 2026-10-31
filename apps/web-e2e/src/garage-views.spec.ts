@@ -151,15 +151,19 @@ test.describe('garage views @seeded', () => {
 
     await page.goto('/app/garage/prices');
     await expect(title(page)).toHaveText('Prețuri');
-    // The seed prices every job the test garage ticks for a brand: its list,
-    // with the owner's switch into editing above it.
+    // The test garage's seeded jobs, one in each state and its ticked oil
+    // service, with the owner's switch into editing above them.
+    // @traces 1411-FR-005
     await expect(page.locator('main')).toContainText('Lista de prețuri');
     await expect(
       page.locator('main').getByRole('button', { name: 'Modifică prețurile' }),
     ).toBeVisible();
-    await expect(page.locator('main')).toContainText(
-      'Schimb de ulei și filtre',
-    );
+    await expect(page.locator('[data-row] [data-state]')).toHaveText([
+      'pe profil',
+      'ascuns de tine',
+      'ascuns · fără preț maxim',
+      'pe profil',
+    ]);
 
     await page.goto('/app/garage/assistant');
     await expect(page).toHaveURL('/app/garage');

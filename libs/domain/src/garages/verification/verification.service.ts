@@ -487,6 +487,7 @@ export class VerificationService {
       throw error;
     });
     if (missing) await this.publish(tx, actor, before, decidedAt, missing);
+    // publishes verification.decided
     await this.announce(tx, file, 'verification.decided', {
       decision: decision.outcome,
       note,

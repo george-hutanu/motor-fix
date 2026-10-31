@@ -539,6 +539,51 @@ test.describe('the rating dial far from every garage @seeded', () => {
   });
 });
 
+// @traces 455-FR-001 455-FR-002
+test.describe('the rating dial needle @seeded', () => {
+  test('leaves no needle at "—", then swings one in when a rating follows', async ({
+    page,
+  }) => {
+    await ready(page, '/ro');
+    await tile(page, 'Dacia').click();
+    await expect(dialValue(page)).toHaveText('5,0');
+
+    await chooseTesla(page);
+    await expect(previewRows(page).first().locator('mf-lamp')).toHaveAttribute(
+      'data-state',
+      'red',
+    );
+    await expect(dialValue(page)).toHaveText('—');
+    const needle = dialArea(page).locator('.mf-dial-needle');
+    await expect(needle).toHaveCount(0);
+
+    // Heard as it starts, so a slow runner cannot miss a finished swing.
+    await dialArea(page).evaluate((area) => {
+      const runs: string[][] = [];
+      Object.assign(window, { needleRuns: runs });
+      area.addEventListener('transitionrun', (event) => {
+        const target = event.target as Element;
+        if (target.classList.contains('mf-dial-needle')) {
+          runs.push([
+            (event as TransitionEvent).propertyName,
+            getComputedStyle(target).transitionDuration,
+          ]);
+        }
+      });
+    });
+    await tile(page, 'Dacia').click();
+    await expect(dialValue(page)).toHaveText('5,0');
+    // The swing lasts 1100 ms (--mf-motion-dial), from the 0 mark.
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as unknown as { needleRuns: string[][] }).needleRuns,
+        ),
+      )
+      .toEqual([['transform', '1.1s']]);
+  });
+});
+
 test.describe('the rating dial with reduced motion @seeded', () => {
   test.use({ reducedMotion: 'reduce' });
 
@@ -549,6 +594,11 @@ test.describe('the rating dial with reduced motion @seeded', () => {
     await tile(page, 'Dacia').click();
     // Atelier Test leads Dacia with no place set: 5.0 from its seeded review.
     await expect(dialValue(page)).toHaveText('5,0');
+    expect(
+      await dialArea(page)
+        .locator('.mf-dial-needle')
+        .evaluate((n) => getComputedStyle(n).transitionDuration),
+    ).toBe('0s');
 
     await chooseTesla(page);
     // "—" is also the dial while the answer loads: wait for Tesla's rows.
@@ -569,11 +619,8 @@ test.describe('the rating dial with reduced motion @seeded', () => {
           ?.getAttribute('data-state'),
       ]),
     ).toEqual(['—', 'red']);
-    expect(
-      await dialArea(page)
-        .locator('.mf-dial-needle')
-        .evaluate((n) => getComputedStyle(n).transitionDuration),
-    ).toBe('0s');
+    // @traces 455-FR-001
+    await expect(dialArea(page).locator('.mf-dial-needle')).toHaveCount(0);
   });
 });
 

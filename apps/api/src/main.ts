@@ -4,6 +4,8 @@ import { writeFileSync } from 'node:fs';
 
 import { readEnv, STORAGE_ENV } from '@motor-fix/contracts';
 import {
+  AREAS,
+  AreaLoader,
   BRANDS,
   BrandLoader,
   CAR_MODELS,
@@ -43,6 +45,7 @@ async function bootstrap() {
   await app.get(BrandLoader).load(BRANDS);
   await app.get(JobTypeLoader).load(JOB_TYPES);
   await app.get(Models3dLoader).load(CAR_MODELS);
+  await app.get(AreaLoader).load(AREAS);
   app.enableShutdownHooks();
   // API_PORT first: a worktree's port set (scripts/test-services.ts ports) gives
   // PORT to the web dev server, which reads nothing else.
@@ -53,7 +56,7 @@ async function bootstrap() {
   void warmCache(app, env.RELEASE_SHA);
 }
 
-// A brand, job or 3D catalogue file that cannot load stops the process before it serves.
+// A brand, job, 3D catalogue or area file that cannot load stops the process before it serves.
 bootstrap().catch((error: unknown) => {
   console.error(error);
   process.exit(1);

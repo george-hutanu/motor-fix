@@ -21,6 +21,7 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import { dropSearches } from '../../search/garage-search/garage-search.cache';
 import { SearchModule } from '../../search/search.module';
 import { UNUSED_STORAGE } from '../../storage/s3-test-store';
 import { StorageModule } from '../../storage/storage.module';
@@ -1009,7 +1010,7 @@ describe('PATCH /garages/:garageId/profile: the facilities on the public read', 
     const w = await listing({ latitude: 46.771, longitude: 23.624 });
     const slug = `dacia-${randomUUID()}`;
     const { id: brandId } = await prisma.brand.create({
-      data: { key: slug, name: 'Dacia', slug },
+      data: { key: slug, name: `Dacia ${slug}`, slug },
     });
     await prisma.garageBrand.create({
       data: { brandId, garageId: w.nord.id, stance: 'works_on' },
@@ -1023,7 +1024,10 @@ describe('PATCH /garages/:garageId/profile: the facilities on the public read', 
     await saveGroup(w, {
       paymentMethods: { card: true, cash: true, transfer: false },
     }).expect(200);
-    await purgeAudience(redis, (await fieldsOf(w.nord.id)).audience);
+    // The relay drops the cached public reads and the cached searches.
+    const { audience } = await fieldsOf(w.nord.id);
+    await purgeAudience(redis, audience);
+    await dropSearches(redis, audience);
 
     expect((await search().expect(200)).body.total).toBe(1);
   });

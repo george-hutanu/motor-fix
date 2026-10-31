@@ -1,12 +1,13 @@
 ---
 capability: cockpit-gauges
-updated: 2026-10-24
+updated: 2026-10-31
 features:
   - 051-cockpit-gauges
   - 053-motion
   - 466-odometer-digit-wrap
   - 453-odometer-captions
   - 451-gauges-axe
+  - 455-dial-no-rating
 ---
 
 # Capability: cockpit-gauges
@@ -43,9 +44,9 @@ _From 051-cockpit-gauges._
 
 _From 051-cockpit-gauges._
 
-### 051-FR-008 — The dial MUST exist in a large and a small size. The large one fills its container's width up to 240 px and carries a needle pointing at the value; the small one is 60 px square (at least 44 px) with its number at least 12 px and no needle.
+### 455-FR-003 — The dial MUST exist in a large and a small size. The large one fills its container's width up to 240 px and carries a needle pointing at the value only when there is a rating (FR-001); the small one is 60 px square (at least 44 px) with its number at least 12 px and no needle, unchanged by this story.
 
-_From 051-cockpit-gauges._
+_From 455-dial-no-rating._
 
 ### 051-FR-009 — The dial MUST have one accessible name in the current language: "Rating {value} out of 5" with the formatted value, or "No reviews yet" (Romanian and English texts in the shared i18n files).
 
@@ -114,7 +115,20 @@ _From 451-gauges-axe._
 
 _From 451-gauges-axe._
 
+### 455-FR-001 — A large rating dial with no rating (no value, a value that is not a finite number, or a value that rounds to 0 or less) MUST render no needle and MUST show "—" as its value; it MUST NOT place a needle at 0 or anywhere else.
+
+_From 455-dial-no-rating._
+
+### 455-FR-002 — A large rating dial with a rating MUST render its needle pointing at the rating on the 240° track and its number as today; a change from no rating to a rating MUST bring the needle in with the dial's existing swing, still with reduced motion (053-FR-012).
+
+_From 455-dial-no-rating._
+
+### 455-FR-004 — The dial's unit test MUST assert, for the large size, no needle element and the "—" text with no rating, and a needle at the right angle with a rating (traced to this feature's ids).
+
+_From 455-dial-no-rating._
+
 ## Retired
 
 - `051-FR-012` — superseded by `053-FR-012` (2026-10-04)
 - `051-FR-013` — superseded by `466-FR-002` (2026-10-23)
+- `051-FR-008` — superseded by `455-FR-003` (2026-10-31)

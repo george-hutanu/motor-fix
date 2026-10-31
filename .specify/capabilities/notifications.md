@@ -64,6 +64,7 @@ features:
   - 1259-no-show
   - 1267-admin-corrects-repair
   - 1315-optimistic-toggles
+  - 1411-1315-qa-fixes
   - 1407-toggle-idempotency
 ---
 
@@ -413,9 +414,9 @@ _From 198-staff-notification-preferences._
 
 _From 198-staff-notification-preferences._
 
-### 1315-FR-001 — In `NotificationSettings.toggle`, a refused or failed save MUST re-read the lists (`load()`) instead of setting the switch to `!enabled`, so that after any number of failed saves of one switch the switch shows the server's row (modifies 198-FR-014's "revert the switch").
+### 1411-FR-001 — In `NotificationSettings.toggle`, when the save fails AND the re-read of the lists (`load()`) fails too, the switch MUST show the value the server last confirmed for that switch (the value before the first press still unanswered; a save that succeeded since updates it), applied only when this press is still the latest on that switch; the `shell.notifications.saveFailed` toast still shows once per failed save. When the re-read succeeds, 1315-FR-001's rule stands unchanged. `notification-settings.toggle.adversary.spec.ts` ("keeps the lists on screen and toasts once when the re-read fails too") MUST assert the last confirmed value, not the unsaved one (modifies 1315-FR-001).
 
-_From 1315-optimistic-toggles._
+_From 1411-1315-qa-fixes._
 
 ### 198-FR-015 — The panel MUST read the lists again, without a reload, on `notification_preferences.updated` for the caller's account and on `garage.features_changed` for any garage it shows.
 
@@ -1139,6 +1140,7 @@ _From 1259-no-show._
 - `428-FR-010` — superseded by `1258-FR-005` (2026-10-25)
 - `409-FR-014` — superseded by `1267-FR-012` (2026-10-30)
 - `198-FR-014` — superseded by `1315-FR-001` (2026-10-30)
+- `1315-FR-001` — superseded by `1411-FR-001` (2026-10-30)
 - `198-FR-007` — superseded by `1407-FR-001` (2026-10-31)
 - `199-FR-004` — superseded by `1407-FR-002` (2026-10-31)
 - `199-FR-005` — superseded by `1407-FR-003` (2026-10-31)

@@ -37,6 +37,7 @@ import { adminBrandsControllerUpdate } from '../fn/admin/admin-brands-controller
 import { AdminBrandsControllerUpdate$Params } from '../fn/admin/admin-brands-controller-update';
 import { AdminCatalogueJobsDto } from '../models/admin-catalogue-jobs-dto';
 import { AdminDemandDto } from '../models/admin-demand-dto';
+import { AdminDemandSupplyDto } from '../models/admin-demand-supply-dto';
 import { AdminGaragesDto } from '../models/admin-garages-dto';
 import { AdminGaragesSummaryDto } from '../models/admin-garages-summary-dto';
 import { AdminGrowthDto } from '../models/admin-growth-dto';
@@ -69,6 +70,8 @@ import { CopyVoicesControllerList$Params } from '../fn/admin/copy-voices-control
 import { CopyVoicesDto } from '../models/copy-voices-dto';
 import { demandControllerDemand } from '../fn/admin/demand-controller-demand';
 import { DemandControllerDemand$Params } from '../fn/admin/demand-controller-demand';
+import { demandControllerSupply } from '../fn/admin/demand-controller-supply';
+import { DemandControllerSupply$Params } from '../fn/admin/demand-controller-supply';
 import { DocumentDecisionDto } from '../models/document-decision-dto';
 import { documentReviewControllerAccept } from '../fn/admin/document-review-controller-accept';
 import { DocumentReviewControllerAccept$Params } from '../fn/admin/document-review-controller-accept';
@@ -661,6 +664,31 @@ export class AdminService extends BaseService {
   demandControllerDemand(params?: DemandControllerDemand$Params, context?: HttpContext): Promise<AdminDemandDto> {
     const resp = this.demandControllerDemand$Response(params, context);
     return resp.then((r: StrictHttpResponse<AdminDemandDto>): AdminDemandDto => r.body);
+  }
+
+  /** Path part for operation `demandControllerSupply()` */
+  static readonly DemandControllerSupplyPath = '/api/v1/admin/demand/supply';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `demandControllerSupply()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  demandControllerSupply$Response(params?: DemandControllerSupply$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminDemandSupplyDto>> {
+    const obs = demandControllerSupply(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `demandControllerSupply$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  demandControllerSupply(params?: DemandControllerSupply$Params, context?: HttpContext): Promise<AdminDemandSupplyDto> {
+    const resp = this.demandControllerSupply$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminDemandSupplyDto>): AdminDemandSupplyDto => r.body);
   }
 
   /** Path part for operation `adminOverviewControllerOverview()` */

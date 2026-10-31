@@ -105,7 +105,7 @@ const brandRows = ({ brands, searches }: Counts) =>
 const dayOf = (date: Date) => date.toISOString().slice(0, 10);
 
 // The closed days of the window, oldest first.
-function closedDays(now: Date) {
+export function closedDays(now: Date) {
   const today = localDay(now);
   return Array.from({ length: WINDOW_DAYS - 1 }, (_, i) =>
     addDays(today, i - (WINDOW_DAYS - 1)),
@@ -237,7 +237,10 @@ export async function writeDemandDaily(
     const wrote = await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('demand_daily'), hashtext(${day}))`;
       if ((await writtenDays(tx, [day])).has(day)) return false;
-      await tx.demandDaily.deleteMany({ where: { day: date } });
+      // The brand-area rows have their own marker and write (supply.ts).
+      await tx.demandDaily.deleteMany({
+        where: { day: date, dimension: { not: 'brand_area' } },
+      });
       await tx.demandDaily.createMany({ data });
       return true;
     });

@@ -32,6 +32,7 @@ features:
   - 136-legal-check-panel
   - 1156-retention-job
   - 1273-reapply-after-rejection
+  - 1401-rejected-correct
 ---
 
 # Capability: Garage verification
@@ -710,9 +711,9 @@ _From 116-listing-verification-status._
 
 _From 101-verification-progress._
 
-### 101-FR-004 — For `rejected` the page MUST show "Respins" with the reason's label from the same item labels and the admin's note as written (116-FR-015), and a button "Contactează MotorFix" / "Contact MotorFix" that opens the dashboard's contact overlay (the shell's `CONTACT` action, #166). The admin's internal approval note MUST never be in the status response or on the page (116-FR-014 unchanged).
+### 1401-FR-001 — For a `rejected` file the owner's verification page (`/app/garage`, the owner only) MUST show "Respins" with the reason's label and the admin's note as written (as today) and, beside the existing "Contactează MotorFix" button, a button "Corectează listarea" / "Correct the listing" (at least 44 px tall, keyboard reachable) that opens the listing form over the correction copy of ST-1273's FR-003; no such button for any other status; the staff of the garage see the title and the two lines only (101-FR-008 unchanged); the live re-read (101-FR-005) removes the rejection and the button within 5 seconds of the send. Modifies 101-FR-004.
 
-_From 101-verification-progress._
+_From 1401-rejected-correct._
 
 ### 101-FR-005 — `verification.opened`, `verification.decided` and `verification.reopened` for the garage, and every reconnect of the live stream, MUST make the page read the status again within 5 seconds, without a reload; events arriving in a burst coalesce into one read and the newest answer is the one shown (116-FR-016; no event, audience or channel is added, the verification events already reach `garage:{garageId}`).
 
@@ -897,6 +898,10 @@ _From 1273-reapply-after-rejection._
 
 _From 1273-reapply-after-rejection._
 
+### 1401-FR-003 — Tests MUST exist before the code (Principle II), with whole-line `// @traces` comments naming this feature's FR ids (`1401-FR-001`, `1401-FR-002`). Web unit tests (colocated Jest): the verification page renders the correct button for the owner of a `rejected` file beside the contact button and for no other status, not for a receptionist or mechanic, the button navigates to the listing page under the current language, and a status change from `rejected` on the live re-read removes it; the listing page opens the form over a `rejected` copy scrolled to the mapped step for each reason (`address`, `documents`, `rar`, `photos`, `other`) with that heading marked, and shows no blank first-send form to a signed-in owner. The PR's QA sweep MUST carry a flow — reject, correct, send, the admin opens the new file and reads "Respins anterior" — at 320 px, 390 px, a tablet and a desktop, light and dark, Romanian and English, proven with the precheck before dispatch, its screenshots the evidence that nothing scrolls sideways at 320 px. The web's initial bundle MUST stay under its budget: any new screen code loads lazily with the screen it belongs to.
+
+_From 1401-rejected-correct._
+
 ## Retired
 
 - `207-FR-005` — superseded by `307-FR-001` (2026-10-08)
@@ -961,3 +966,4 @@ _From 1273-reapply-after-rejection._
 - `208-FR-007` — superseded by `1273-FR-004` (2026-10-30)
 - `208-FR-008` — superseded by `1273-FR-005` (2026-10-30)
 - `304-FR-012` — superseded by `1273-FR-008` (2026-10-30)
+- `101-FR-004` — superseded by `1401-FR-001` (2026-10-30)

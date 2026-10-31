@@ -37,6 +37,15 @@ export function local(at: Date) {
 
 const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
+// `at` as Bucharest's clock reads it, with its offset: "2026-11-10T08:00:00+02:00".
+export function localIso(at: Date): string {
+  const offset = local(at).offsetMinutes;
+  const wall = new Date(at.getTime() + offset * 60_000).toISOString();
+  const hh = String(Math.floor(offset / 60)).padStart(2, '0');
+  const mm = String(offset % 60).padStart(2, '0');
+  return `${wall.slice(0, 19)}+${hh}:${mm}`;
+}
+
 export function localDay(at: Date): string {
   const { year, month, day } = local(at);
   return iso(Date.UTC(year, month - 1, day));

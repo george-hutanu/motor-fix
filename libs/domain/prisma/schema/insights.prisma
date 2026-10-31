@@ -59,18 +59,39 @@ model GarageDailyFigures {
 // What drivers searched for and asked for on one closed Europe/Bucharest
 // day, written by the night job: dimension "brand" (key: the brand's name,
 // from the car snapshot or the searched brand), "job" (key: the job type's
-// key) or "total" (key "all", 0 included). Counts and catalogue names only.
+// key), "total" (key "all", 0 included) or "brand_area" (key: the area's code,
+// ":" and the brand's name; key "all" marks the day's brand_area rows as
+// written). Counts and catalogue names only.
 model DemandDaily {
-  day       DateTime @db.Date
-  dimension String   @db.VarChar(8)
-  key       String
+  day           DateTime @db.Date
+  dimension     String   @db.VarChar(10)
+  key           String
   // CHECK in the migration: never below 0.
-  requests  Int
+  requests      Int
   // Logged searches of the brand that day; 0 on job rows. CHECK in the
   // migration: never below 0.
-  searches  Int      @default(0)
-  writtenAt DateTime @map("written_at") @db.Timestamptz(3)
+  searches      Int      @default(0)
+  // brand_area only: the requests that expired that day with no quote from
+  // any garage. CHECK in the migration: never below 0.
+  unmetRequests Int      @default(0) @map("unmet_requests")
+  writtenAt     DateTime @map("written_at") @db.Timestamptz(3)
 
   @@id([day, dimension, key])
   @@map("demand_daily")
+}
+
+// An area of the demand and supply report: a sector of București or a county
+// seat, with its outline. Reference data loaded by code from
+// src/insights/areas/areas.json; no personal data.
+model Area {
+  code      String                                       @id @db.VarChar(80)
+  name      String                                       @db.VarChar(80)
+  // CHECK in the migration: city or sector.
+  kind      String                                       @db.VarChar(6)
+  // Read and written only in raw SQL.
+  outline   Unsupported("geography(MultiPolygon, 4326)")
+  updatedAt DateTime                                     @map("updated_at") @db.Timestamptz(3)
+
+  @@index([outline], map: "area_outline_idx", type: Gist)
+  @@map("area")
 }

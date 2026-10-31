@@ -39,6 +39,7 @@ import { homedir } from "node:os";
 import { basename, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isEntryPoint } from "./lib/entry.mjs";
+import { ghSync } from "./lib/gh-rest.mjs";
 import { postCarry } from "./pr-test/carry.mjs";
 import { parseQaRun } from "./pr-test/qa-run.mjs";
 import { readState } from "./run-state.mjs";
@@ -430,8 +431,8 @@ export function carryLookup(pr, { run = execFileSync } = {}) {
 
 const defaultCarry = (pr) => carryLookup(pr);
 
-const defaultRunOf = (id) =>
-  JSON.parse(execFileSync("gh", ["run", "view", String(id), "--json", "status,conclusion"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 30_000 }));
+// Over REST and cached for a minute, shared with ci-wait.mjs's reads of the same run.
+const defaultRunOf = (id) => JSON.parse(ghSync(["run", "view", String(id), "--json", "status,conclusion"], { timeout: 30_000, cache: "60s" }));
 
 // QA laps run on GitHub Actions; every one not completed holds its PR and an
 // Actions job. The run name is "PR QA #<n> at <sha> lap <k> …" for both the

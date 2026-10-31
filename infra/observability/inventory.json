@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 257,
+    "count": 259,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -181,7 +181,7 @@
         "worker-jobs-failed",
         "profile-views-job-failed"
       ],
-      "reason": "four nightly jobs, platform-daily, response-stats, profile-views and demand-daily, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; demand-daily logs the days it wrote, and a missed night is caught up by the next, the read counting an unwritten day live meanwhile, then ranks every active brand by its searches over the 30 closed days and logs the ranked and changed counts, a failed ranking failing the attempt and leaving the previous ranks; profile-views has its own final-failure alert, since its counters expire two days after their day",
+      "reason": "four nightly jobs, platform-daily, response-stats, profile-views and demand-daily, counted by motorfix_jobs_total{job_name,outcome} and logged once on their final failure; a missed night of the first two leaves the last figures in place and the next night recounts; demand-daily logs the days it wrote, and a missed night is caught up by the next, the read counting an unwritten day live meanwhile, then writes the brand_area rows (per brand and area, with their own marker, so the days written before them are back-filled once) and logs 'brand_area written n for days', then ranks every active brand by its searches over the 30 closed days and logs the ranked and changed counts, a failed ranking failing the attempt and leaving the previous ranks; profile-views has its own final-failure alert, since its counters expire two days after their day",
       "story": "ST-881"
     },
     {
@@ -245,6 +245,15 @@
       ],
       "reason": "counts every static map answer by outcome ok, invalid or tiles_failed, never a centre or an address, and times each render in motorfix_static_map_render_duration_seconds (0.25 to 5 s); tiles_failed above 5% of 20 renders in 10 minutes is folded into api-error-rate, keeping the alert count at 50",
       "story": "ST-1196"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_free_slots_answers_total",
+      "source": "libs/domain/src/workshop/free-slots/free-slots.metrics.ts",
+      "dashboard": "motorfix-api",
+      "alerts": "none",
+      "reason": "counts every free-slot answer, cached ones included, by outcome slots or none_in_horizon, never a garage or a caller; the refusals are the route's 4xx and its FreeSlots warnings; no alert of its own, as a garage with no free time is a real answer",
+      "story": "ST-154"
     },
     {
       "kind": "product-counter",
@@ -1084,7 +1093,9 @@
       "name": "motorfix_live_input_closes_total",
       "source": "libs/domain/src/live-video/sessions/sessions.metrics.ts",
       "dashboard": "motorfix-api",
-      "alerts": ["worker-jobs-failed"],
+      "alerts": [
+        "worker-jobs-failed"
+      ],
       "reason": "counts every live input the worker closed at the provider after a stop, by outcome (closed, or close_failed on the last of three tries), on the live panel beside the starts, recordings and idle stops; the last failed try is a failed live-inputs job, which worker-jobs-failed sees",
       "story": "ST-1390"
     },
@@ -1189,6 +1200,19 @@
       ],
       "reason": "each changed day or the Saturday switch is audited (update, old and new value) and recorded as mechanic.updated with the fields in the same transaction; an unchanged save writes nothing; a 422 validation_failed (order, outside_opening, garage_closed_saturday) is the owner's input refused, not a failure",
       "story": "ST-58"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-free-slots-read",
+      "source": "libs/domain/src/workshop/free-slots/free-slots.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/free-slots",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "a read of a garage's first free starts for a job, from Valkey for 60 seconds under a generation each schedule event advances (the relay also records garage.slots_changed), counted by motorfix_free_slots_answers_total{outcome} (slots or none_in_horizon); each 4xx logs one FreeSlots warning with the garage, code and role; a Valkey failure falls back to PostgreSQL and logs one FreeSlotsCache warning per outage",
+      "story": "ST-154"
     },
     {
       "kind": "endpoint",
@@ -2141,6 +2165,19 @@
       ],
       "reason": "the admin's demand read, counts only; a failed read answers the standard error body and is the api-error-rate rule's",
       "story": "ST-103"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-demand-supply",
+      "source": "libs/domain/src/insights/demand/demand.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/demand/supply",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's demand against supply per brand and area, counts only; a failed read answers the standard error body and is the api-error-rate rule's, a slow one (the live days and the supply are counted at the read) the api-latency rule's; the areas it places points in are loaded at the API's start, which logs 'areas loaded: n changed' and stops the start on a bad file",
+      "story": "ST-106"
     },
     {
       "kind": "endpoint",
