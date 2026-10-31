@@ -31,6 +31,7 @@ features:
   - 177-reported-reviews
   - 011-dashboard-sections
   - 1389-reported-reviews-admin
+  - 1391-admin-dashboard-customise
 ---
 
 # Capability: Admin dashboard
@@ -191,9 +192,9 @@ _From 162-growth-12-months._
 
 _From 162-growth-12-months._
 
-### 162-FR-009 — The panel MUST read the growth once when "Panou" opens and again on retry; it adds no event, no polling and no cache. One read feeds both charts, so a failure shows the retry button on both and pressing either one re-reads once and redraws both.
+### 1391-FR-017 — (modifies 162-FR-009) A section's data MUST be requested only while the layout shows it: the growth panel reads the growth once when Panou first shows it and again on retry, with no event, no polling and no cache, one read feeding both charts so that a failure shows the retry button on both and pressing either one re-reads once and redraws both; a section hidden in the layout is not read, and one switched back on reads then. The same rule holds for the platform numbers (their tiles and the observability link, which travels with `numbers`; the overview read the header and menu share is not dropped), the verification queue, the demand panel, the reviews overview and the log: hidden, they are not in the page and make no request.
 
-_From 162-growth-12-months._
+_From 1391-admin-dashboard-customise._
 
 ### 162-FR-010 — Every text of the panel MUST exist in Romanian and English in the shared i18n files, with U+2011 in Romanian hyphenated words ("Service‑uri"); the latest value and the month labels MUST be 12 px or larger on a phone.
 
@@ -901,6 +902,70 @@ _From 1389-reported-reviews-admin._
 
 _From 1389-reported-reviews-admin._
 
+### 1391-FR-001 — The admin header on "Panou" shows the button "Personalizează panoul" / "Customise the dashboard", placed as on the garage dashboard (the boards do not design it); it opens the panel "Alege ce vezi pe panou" / "Choose what the dashboard shows": a drawer on the right on desktop, a bottom sheet on a phone (MF-5), closed by "Gata" / "Done" or Escape. On opening, focus moves into the panel (its first control); on closing it returns to the button.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-002 — The panel's line reads "Oprește secțiunile de care nu ai nevoie și mută-le în ordinea în care lucrezi. Se salvează în contul tău." (English in the same sense, ending "It is saved in your account.").
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-003 — The panel lists the admin sections of 1263-FR-002 in the layout's order, each with its position number, name and one-line description in RO and EN: 1 "Cifrele platformei" / "Platform numbers": "Service‑uri, cereri, programări, șoferi, recenzii"; 2 "Service‑uri de verificat" / "Garages to verify": "Dosarele care așteaptă o decizie"; 3 "Creștere, ultimele 12 luni" / "Growth, last 12 months": "Service‑uri și șoferi, lună de lună"; 4 "Cereri pe marcă, 30 de zile" / "Requests by brand, 30 days": "Ce mașini caută service"; 5 "Jurnal" / "Log": "Ce s‑a întâmplat azi pe platformă" *(proposed wording)*. A section is listed only when its key is in the current list, so an unshipped section is neither listed nor counted.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-004 — Each row has a real switch labelled "Ascunde: {name}" / "Hide: {name}", keyboard-operable; switching one off dims the row and removes the section from Panou at once; the data of a hidden section is not requested.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-005 — Each row has "Mută mai sus" / "Move up" and "Mută mai jos" / "Move down" arrows (the first row's up and the last row's down disabled); a move reorders Panou at once. Each arrow is named with its row ("Mută mai sus: {name}" / "Move up: {name}"), the position numbers follow the new order, and focus follows the moved row: it stays on the pressed arrow, or goes to the row's other arrow when the pressed one is now disabled.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-006 — "Revino la varianta implicită" / "Back to the default" resets the layout (1263-FR-005) and puts every section back on in the default order.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-007 — Next to the header's line the count reads "{x} din {y} secțiuni afișate" / "{x} of {y} sections shown", `y` being the number of listed rows (the current list restricted to the keys the web maps, FR-014) and `x` the shown ones among them; while the layout read is out the strip shows no count.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-008 — With every section off, Panou shows "Ai ascuns toate secțiunile. Pornește cel puțin una din „Personalizează panoul”." / "You hid every section. Switch at least one on in “Customise the dashboard”." and nothing else.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-009 — Every change is saved as the whole layout (1263-FR-004) with no browser copy; a failed save flips the change back with "Nu am putut salva. Încearcă din nou." / "Could not save. Try again." A failed move puts the row and the section back in the server's last order with the same message, focus staying on the pressed arrow of that row. A failed reset puts the layout back as it was, with the same message. The message appears once in the panel and is announced to a screen reader by the shared panel's alert (011-FR-010, kept so the garage's panel does not change, FR-015); the new count after a change is announced as a polite status. The arrows stay pressable while a save is out: each press applies at once and sends the whole layout as shown, the later answer wins and an older one arriving late is dropped; a switch stays disabled while its own save is out, as today.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-010 — Panou waits for the layout before drawing its sections, so hidden sections never flash: while the read is out the sections' region is `aria-busy` and holds no section; when the layout cannot be read (an HTTP error or a network failure, no timeout of its own) it draws the default for this visit and says nothing, and the next save writes the person's choice: the whole layout as Panou shows it, the default with her change.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-011 — On `dashboard_layout.updated` for the signed-in account, every other open tab and device of that account re-reads the layout and redraws Panou within 5 seconds, with no reload; the menu and the other views never change. If the panel is open in that tab, its rows (order, switches, positions) and the count follow the new layout in the same redraw.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-012 — The panel reads at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll, and passes the axe checks. Every control in the panel and the strip is at least 44 px tall; a switched-off row is dimmed but its text keeps a 4.5:1 contrast; under a reduced-motion setting the panel opens and closes without its slide.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-013 — Tests: Jest on the panel (the list, the count, the empty message, the undo on a failed save, the wait before drawing) and a Playwright end to end: an admin hides a section and moves another and sees them kept after a reload; a second browser context signed in as the same admin shows the same order; with two tabs open a change in one shows in the other without a reload. The Jest tests also cover the arrows (order, disabled ends, focus after a move, the undo of a failed move), the reset, and the reviews overview following `log` (FR-014); every test file names its requirement ids in one whole-line `// @traces` comment, and the tests exist before the code (Principle II).
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-014 — Until the server's admin list holds `reported` (ST-1402, 1263-FR-002), the "Recenzii raportate" overview (1389-FR-002) MUST be drawn and hidden together with `log`, right before the log where the layout places `log`; it is not a row of its own and is not counted. The web's mapping of keys to sections MUST be written so that mapping `reported` to the reviews overview needs only the key's row texts, nothing structural, and a key in the server's list the web does not know MUST be neither listed, counted nor drawn.
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-016 — The panel's code MUST load on the first press of "Personalizează panoul", never with the first page or with Panou's own chunk; if that chunk cannot be fetched, the panel does not open, nothing else on Panou changes and the next press tries again; the web app's initial bundle budget (1 MB error, 500 kB warning) MUST NOT be raised, and this story changes nothing in the API, the worker, the contracts, the OpenAPI document, the generated client or `libs/domain` (no new table, endpoint, event, audit entry or metric; the layout routes are already in the observability inventory, 1263-FR-008).
+
+_From 1391-admin-dashboard-customise._
+
+### 1391-FR-018 — Every text this story adds (the line, the names and descriptions, the arrow labels, "Revino la varianta implicită", the count, the empty line, the error) MUST exist in Romanian and English in the shared i18n files with key parity and follow the reader's language; a Romanian hyphenated word uses U+2011 ("Service‑uri"); no text in the panel or the strip is under 12 px on a phone.
+
+_From 1391-admin-dashboard-customise._
+
 ## Retired
 
 - `160-FR-001` — superseded by `161-FR-001` (2026-10-07)
@@ -935,3 +1000,4 @@ _From 1389-reported-reviews-admin._
 - `161-FR-012` — superseded by `1263-FR-012` (2026-10-26)
 - `1263-FR-006` — superseded by `011-FR-001` (2026-10-29)
 - `161-FR-004` — superseded by `1389-FR-002` (2026-10-30)
+- `162-FR-009` — superseded by `1391-FR-017` (2026-10-30)
