@@ -60,7 +60,7 @@ export class CourtesyCarDto {
   pricePerDayBani?: number;
 }
 
-const atLeastOnePayment = () =>
+export const atLeastOnePayment = () =>
   ValidateBy({
     name: 'atLeastOnePayment',
     validator: {
