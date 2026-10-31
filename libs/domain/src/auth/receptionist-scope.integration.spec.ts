@@ -1,7 +1,7 @@
 // @traces 400-FR-007
 import { randomUUID } from 'node:crypto';
 
-import { todayInBucharest } from '@motor-fix/contracts';
+import { codeForStatus, todayInBucharest } from '@motor-fix/contracts';
 import type { Role } from '@motor-fix/contracts/capabilities';
 import { type INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -290,16 +290,21 @@ const foreignReads = (g: Garage): Row[] => [
   { method: 'get', name: 'jobs list', path: `/garage/jobs/${g.job.id}` },
 ];
 
+const problemCode = (res: { status: number; body: { code?: unknown } }) =>
+  typeof res.body.code === 'string' ? res.body.code : codeForStatus(res.status);
+
 // Each row's answer as one line, so a failure names every row that moved.
-// A 403 carries its code; a 404's body is the API problem filter's to word
-// (a bare NotFoundException becomes `not_found` there).
+// A refusal carries the code the API sends: the exception's own, or, for a
+// bare NotFoundException, the one the api's ProblemFilter gives its status
+// (`codeForStatus`, outside this app), so a 404 worded as anything but
+// `not_found` fails the row.
 const answers = async (rows: Row[], auth: string) => {
   const lines: string[] = [];
   for (const row of rows) {
     const res = await call(row.method, row.path, auth, row.body);
     const ok = res.status >= 200 && res.status < 300;
     lines.push(
-      `${row.name}: ${ok ? '2xx' : res.status}${res.status === 403 ? ` ${res.body.code}` : ''}`,
+      `${row.name}: ${ok ? '2xx' : res.status}${res.status === 403 || res.status === 404 ? ` ${problemCode(res)}` : ''}`,
     );
   }
   return lines;
@@ -346,7 +351,7 @@ describe("a receptionist's scope on another garage", () => {
       ...forbidden(b),
     ];
 
-    expect(await answers(rows, desk)).toEqual(each(rows, '404'));
+    expect(await answers(rows, desk)).toEqual(each(rows, '404 not_found'));
   });
 });
 
@@ -362,7 +367,9 @@ describe('a receptionist after the owner removed her', () => {
     );
     expect(removed.status).toBe(204);
 
-    expect(await answers(allowed(a), desk)).toEqual(each(allowed(a), '404'));
+    expect(await answers(allowed(a), desk)).toEqual(
+      each(allowed(a), '404 not_found'),
+    );
   });
 
   it('leaves the other receptionist of a garage her scope', async () => {
