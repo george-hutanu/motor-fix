@@ -257,6 +257,20 @@ describe('telling both sides a review was removed', () => {
     expect(await counted('skipped')).toBe(before + 1);
   });
 
+  it('writes nothing for a payload with an unknown rule, and counts skipped', async () => {
+    const { driverId, job } = await decided();
+    const fanOut = await start();
+    const before = await counted('skipped');
+    const { data } = job('73');
+
+    await fanOut.handle({
+      data: { ...data, payload: { ...data.payload, reason: 'whim' } as never },
+    });
+
+    expect(await messages(driverId)).toEqual([]);
+    expect(await counted('skipped')).toBe(before + 1);
+  });
+
   it('logs one line with the review id and no name', async () => {
     const log = jest
       .spyOn(Logger.prototype, 'log')

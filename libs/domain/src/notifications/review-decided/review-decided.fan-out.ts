@@ -1,4 +1,8 @@
-import { DELETED_AUTHOR, type EventKind } from '@motor-fix/contracts';
+import {
+  DELETED_AUTHOR,
+  type EventKind,
+  REVIEW_REPORT_REASONS,
+} from '@motor-fix/contracts';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Job, JobsOptions } from 'bullmq';
 import { isUUID } from 'class-validator';
@@ -30,6 +34,17 @@ export const REVIEW_DECIDED_CONSUMER = {
   jobs: REVIEW_DECIDED_RUN,
   kinds: ['review.decided'] as readonly EventKind[],
   queue: REVIEW_DECIDED_QUEUE,
+};
+
+// What makes a payload unusable, or null when it names a review and a rule.
+const unusablePayload = (
+  payload: ReviewDecidedEvent['payload'] | undefined,
+) => {
+  const reviewId = payload?.reviewId;
+  if (typeof reviewId !== 'string' || !isUUID(reviewId)) return 'no review';
+  if (!(REVIEW_REPORT_REASONS as readonly unknown[]).includes(payload?.reason))
+    return 'no known rule';
+  return null;
 };
 
 // A job as the relay queues it: `id` is the outbox event's.
@@ -65,11 +80,12 @@ export class ReviewDecidedFanOut {
   async handle(job: Pick<Job<ReviewDecidedEvent>, 'data'>): Promise<void> {
     const { id: eventId, payload } = job.data;
     const reviewId = payload?.reviewId;
-    // A payload with no review id can never succeed: retrying it changes
-    // nothing, so it ends here as a review that is gone.
-    if (typeof reviewId !== 'string' || !isUUID(reviewId)) {
+    // A payload with no review id, or a rule the templates cannot name, can
+    // never succeed: retrying changes nothing, so it ends here as skipped.
+    const unusable = unusablePayload(payload);
+    if (unusable || typeof reviewId !== 'string') {
       countReviewDecisionAnnounced('skipped');
-      this.logger.warn(`event ${eventId} names no review, nobody told`);
+      this.logger.warn(`event ${eventId} names ${unusable}, nobody told`);
       return;
     }
     const review = await this.prisma.review.findUnique({
