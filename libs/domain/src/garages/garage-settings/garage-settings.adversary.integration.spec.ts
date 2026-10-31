@@ -351,7 +351,7 @@ describe('PATCH /garages/:garageId under hostile input', () => {
 
     expect(second.status).toBe(200);
     expect(second.body).toEqual(first.body);
-    expect(first.body).toEqual(body);
+    expect(first.body).toEqual({ ...body, teamOnProfile: true });
     expect((await history(w, 'garage')).length).toBe(entries);
     expect((await events(w)).length).toBe(saved);
   });
