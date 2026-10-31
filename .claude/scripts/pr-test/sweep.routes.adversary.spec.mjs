@@ -181,6 +181,26 @@ describe('expected status', () => {
     const odd = http({ url: 'not a url' });
     assert.deepEqual(dropExpected([odd]), [odd]);
   });
+
+  it("drops the API read of the thing the page names, which is why it answers its expected status", () => {
+    const page = { path: '/:lang/transfer/nu-exista', href: '/ro/transfer/nu-exista' };
+    const lookup = http({ ...page, url: 'http://127.0.0.1:3000/api/v1/car-transfers/nu-exista' });
+    const keep = [
+      http({ ...page, url: 'http://127.0.0.1:3000/api/v1/car-transfers/nu-exista', status: 500 }),
+      http({ ...page, url: 'http://127.0.0.1:3000/api/v1/garages/altceva' }),
+      http({ ...page, url: 'http://127.0.0.1:4200/assets/nu-exista' }),
+      http({ ...page, url: 'http://127.0.0.1:3000/api/v1/car-transfers/nu-exista', expect: null }),
+    ];
+    assert.deepEqual(dropExpected([lookup, ...keep]), keep);
+  });
+
+  it('drops that lookup on each language page and with a query, and keeps another status of it', () => {
+    const at = (lang, url, over = {}) => http({ path: '/:lang/transfer/nu-exista', href: `/${lang}/transfer/nu-exista`, url, ...over });
+    const api = 'http://127.0.0.1:34109/api/v1/car-transfers/nu-exista';
+    const dropped = [at('ro', api), at('en', api), at('en', `${api}?fields=status`)];
+    const kept = [at('en', api, { status: 410 }), at('ro', 'http://127.0.0.1:34109/api/v1/car-transfers/alt')];
+    assert.deepEqual(dropExpected([...dropped, ...kept]), kept);
+  });
 });
 
 describe('the signed-in cookie', () => {
@@ -226,6 +246,7 @@ describe('route rule: the router decides what is known, read afresh from the che
     const root = mkdtempSync(join(tmpdir(), 'router-fixture-'));
     cpSync(join(real, 'app.routes.ts'), join(root, 'apps', 'web', 'src', 'app', 'app.routes.ts'), { recursive: true });
     cpSync(join(real, 'dashboard', 'views.ts'), join(root, 'apps', 'web', 'src', 'app', 'dashboard', 'views.ts'), { recursive: true });
+    cpSync(join(real, 'public', 'routes.ts'), join(root, 'apps', 'web', 'src', 'app', 'public', 'routes.ts'), { recursive: true });
     return root;
   };
 
@@ -240,8 +261,8 @@ describe('route rule: the router decides what is known, read afresh from the che
 
   it('knows a public page added under the language node', () => {
     const root = checkout();
-    const routes = join(root, 'apps', 'web', 'src', 'app', 'app.routes.ts');
-    writeFileSync(routes, readFileSync(routes, 'utf8').replace("path: 'list-your-garage',", "path: 'list-your-garage',\n      },\n      {\n        component: Home,\n        path: 'how-it-works',"));
+    const routes = join(root, 'apps', 'web', 'src', 'app', 'public', 'routes.ts');
+    writeFileSync(routes, readFileSync(routes, 'utf8').replace("path: 'list-your-garage',", "path: 'list-your-garage',\n  },\n  {\n    component: Home,\n    path: 'how-it-works',"));
     assert.equal(routeProblem('/:lang/how-it-works', routerTable(root)), null);
     assert.match(routeProblem('/how-it-works', routerTable(root)) ?? '', /\/:lang\/how-it-works/);
   });

@@ -1,6 +1,8 @@
 import {
   BOOKING_TIMERS_CONSUMER,
   JOB_STAGE_CONSUMER,
+  LIVE_INPUTS_CONSUMER,
+  LIVE_RECORDINGS_CONSUMER,
   MODERATION_TIMERS_CONSUMER,
   OutboxRelayModule,
   QUOTE_ACCEPTED_CONSUMER,
@@ -68,4 +70,16 @@ describe('the moderation timers in the worker', () => {
       );
     },
   );
+});
+
+// @traces 1390-FR-001 1390-FR-005
+describe('the live stop consumers in the worker', () => {
+  it('hands live.stopped to the input close beside the recordings', () => {
+    const taking = consumers().filter((c) => c.kinds.includes('live.stopped'));
+    expect(taking.map((c) => c.queue).sort()).toEqual(
+      [LIVE_INPUTS_CONSUMER, LIVE_RECORDINGS_CONSUMER]
+        .map((c: Consumer) => c.queue)
+        .sort(),
+    );
+  });
 });

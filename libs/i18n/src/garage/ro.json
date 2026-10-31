@@ -69,7 +69,6 @@
   "home": {
     "empty": {
       "brands": "Aici apar mărcile cele mai cerute luna asta.",
-      "funnel": "Aici apare drumul de la vizitele pe profil la cereri, pe săptămâni.",
       "kpi": "Aici apar cifrele zilei: cereri, programări, lucrări și încasări.",
       "load": "Aici apare încărcarea fiecărui mecanic pe ziua de azi.",
       "now": "Aici apar lucrările în curs, cu poze, video și live din atelier.",
@@ -179,6 +178,7 @@
   },
   "jobs": {
     "finalPrice": {
+      "aboveQuote": "Peste ofertă",
       "cancel": "Renunță",
       "correct": "Corectează",
       "correctTitle": "Corectează prețul final",
@@ -198,6 +198,7 @@
         "job_not_done": "Marchează întâi lucrarea ca gata",
         "not_handed_over": "Lucrarea nu a fost încă predată"
       },
+      "quote": "Ofertă {range}",
       "save": "Salvează"
     },
     "noMechanic": "Fără mecanic",
@@ -797,6 +798,31 @@
     "moreFailed": "Nu am putut încărca mai multe recenzii.",
     "new": "Nou",
     "notViaMotorfix": "Nu prin MotorFix",
+    "reply": {
+      "button": "Răspunde",
+      "count": "{n} / {max}",
+      "done": "Răspunsul e public, sub recenzie.",
+      "editButton": "Editează răspunsul",
+      "edited": "Editat · {day}",
+      "field": {
+        "length": "Răspunsul are între 1 și 1.000 de caractere."
+      },
+      "hint": "Răspunsul e public și apare sub recenzie.",
+      "label": "Răspunsul tău",
+      "problem": {
+        "already_replied": "Recenzia are deja un răspuns.",
+        "forbidden": "Doar proprietarul poate răspunde.",
+        "not_found": "Recenzia nu mai există.",
+        "reply_not_public": "Răspunsul e raportat și nu poate fi editat acum.",
+        "reply_removed": "Răspunsul a fost eliminat de un admin.",
+        "review_not_public": "Recenzia nu mai e publică."
+      },
+      "reported": "Raportat · ascuns până decide un admin",
+      "reviewEdited": "Recenzia a fost editată după răspunsul tău",
+      "submit": "Publică răspunsul",
+      "title": "Răspunde la recenzie",
+      "titleEdit": "Editează răspunsul"
+    },
     "reported": "Raportată · ascunsă de pe profil până decide un admin",
     "retry": "Încearcă din nou",
     "score": "{rating} / 5",
@@ -896,5 +922,14 @@
     "contact": "Contactează MotorFix",
     "loadFailed": "Nu am putut încărca starea verificării.",
     "title": "Profilul tău e în verificare"
+  },
+  "weekly": {
+    "empty": "Încă nu sunt date. Primele cifre apar după prima săptămână întreagă.",
+    "error": "Nu am putut încărca cifrele.",
+    "noViews": "Săptămâna trecută nu a avut vizualizări.",
+    "requests": "Cereri primite",
+    "sentence": "Săptămâna trecută, {pct} din vizualizări au devenit cereri.",
+    "views": "Vizualizări profil",
+    "week": "S"
   }
 }

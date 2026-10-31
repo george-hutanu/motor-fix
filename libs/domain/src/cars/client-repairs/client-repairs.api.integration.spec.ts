@@ -170,7 +170,7 @@ describe('the repair columns', () => {
     ['odometer_km', -1],
     ['odometer_km', 2_000_001],
     ['cost_bani', -1],
-    ['cost_bani', 92_000_001],
+    ['cost_bani', 100_000_001],
   ])('refuses %s = %p in the database', async (column, value) => {
     const { repair } = await scene();
     const { id } = await repair();

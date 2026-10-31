@@ -66,13 +66,13 @@ export class GarageProfileController {
   @UseGuards(JsonOnly)
   @ApiOperation({
     summary:
-      "Change the garage's name, description, phone, hours with closed days or service radius in place",
+      "Change the garage's name, description, phone, hours with closed days, service radius or facilities with payment methods in place",
   })
   @ApiBody({ type: UpdateGarageProfileDto })
   @ApiOkResponse({ type: GarageProfileDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: a limit broken (errors[].field names it), an unknown field, an empty save, a radius for a workshop (radius_not_applicable)',
+      'validation_failed: a limit broken (errors[].field names it), an unknown field, an empty save, a radius for a workshop (radius_not_applicable), courtesy-car terms without the car or the car without its terms (no_courtesy_car)',
   })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiForbiddenResponse({

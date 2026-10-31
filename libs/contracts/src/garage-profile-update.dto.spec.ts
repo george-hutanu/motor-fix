@@ -1,5 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-import { validateSync } from 'class-validator';
+import { type ValidationError, validateSync } from 'class-validator';
 
 import {
   PROFILE_DESCRIPTION_MAX,
@@ -140,5 +140,145 @@ describe('UpdateGarageProfileDto', () => {
 
   it('refuses a field it does not know', () => {
     expect(save({ slug: 'other' })).toEqual(['slug']);
+  });
+});
+
+// Each refused field as its dotted path, the way the pipe names it.
+const paths = (errors: ValidationError[], parent = ''): string[] =>
+  errors.flatMap((e) => {
+    const path = parent ? `${parent}.${e.property}` : e.property;
+    return e.children?.length ? paths(e.children, path) : [path];
+  });
+
+const group = (fields: Record<string, unknown>) =>
+  paths(
+    validateSync(
+      plainToInstance(UpdateGarageProfileDto, {
+        facilities: {
+          facilities: ['waiting_area'],
+          paymentMethods: { card: false, cash: true, transfer: false },
+          ...fields,
+        },
+        version: '0',
+      }),
+      { forbidNonWhitelisted: true, whitelist: true },
+    ),
+  );
+
+// @traces 1248-FR-001
+// @traces 1248-FR-002
+describe('UpdateGarageProfileDto facilities group', () => {
+  it('takes the whole group', () => {
+    expect(
+      group({
+        courtesyCar: { paid: true, pricePerDayBani: 15_000 },
+        facilities: ['courtesy_car', 'pickup_dropoff', 'waiting_area'],
+        facilitiesNote: 'Mașina la schimb se cere la programare.',
+        paymentMethods: { card: true, cash: true, transfer: true },
+      }),
+    ).toEqual([]);
+  });
+
+  it('takes no facility ticked and no note', () => {
+    expect(group({ facilities: [] })).toEqual([]);
+  });
+
+  it('takes a free car without a price', () => {
+    expect(
+      group({
+        courtesyCar: { paid: false },
+        facilities: ['courtesy_car'],
+      }),
+    ).toEqual([]);
+  });
+
+  it.each([100, 200_000])('takes a price of %p bani', (pricePerDayBani) => {
+    expect(
+      group({
+        courtesyCar: { paid: true, pricePerDayBani },
+        facilities: ['courtesy_car'],
+      }),
+    ).toEqual([]);
+  });
+
+  it.each([99, 200_100, 150, 15_000.5, '15000'])(
+    'refuses a price of %p',
+    (pricePerDayBani) => {
+      expect(
+        group({
+          courtesyCar: { paid: true, pricePerDayBani },
+          facilities: ['courtesy_car'],
+        }),
+      ).toEqual(['facilities.courtesyCar.pricePerDayBani']);
+    },
+  );
+
+  it('refuses a paid car without a price', () => {
+    expect(
+      group({ courtesyCar: { paid: true }, facilities: ['courtesy_car'] }),
+    ).toEqual(['facilities.courtesyCar.pricePerDayBani']);
+  });
+
+  it('refuses a free car with a price', () => {
+    expect(
+      group({
+        courtesyCar: { paid: false, pricePerDayBani: 5000 },
+        facilities: ['courtesy_car'],
+      }),
+    ).toEqual(['facilities.courtesyCar.pricePerDayBani']);
+  });
+
+  it.each([
+    [['valet']],
+    [['waiting_area', 'waiting_area']],
+    ['waiting_area'],
+    [undefined],
+  ])('refuses the facilities %p', (facilities) => {
+    expect(group({ facilities })).toEqual(['facilities.facilities']);
+  });
+
+  it.each([
+    [undefined],
+    [{ card: false, cash: false, transfer: false }],
+    [{ card: true, cash: true }],
+    [{ card: 'yes', cash: true, transfer: false }],
+  ])('refuses the payment methods %p', (paymentMethods) => {
+    const refused = group({ paymentMethods });
+    expect(refused.length).toBeGreaterThan(0);
+    for (const path of refused)
+      expect(path).toMatch(/^facilities\.paymentMethods/);
+  });
+
+  it('takes a note of 200 characters, spaces around it aside', () => {
+    expect(group({ facilitiesNote: ` ${'ș'.repeat(200)} ` })).toEqual([]);
+  });
+
+  it('takes an empty note', () => {
+    expect(group({ facilitiesNote: '' })).toEqual([]);
+  });
+
+  it.each(['ș'.repeat(201), 'Rând unu\nrând doi', 'tab\there', 7])(
+    'refuses the note %#',
+    (facilitiesNote) => {
+      expect(group({ facilitiesNote })).toEqual(['facilities.facilitiesNote']);
+    },
+  );
+
+  it('refuses a key the group does not know', () => {
+    expect(group({ hours: {} })).toEqual(['facilities.hours']);
+  });
+
+  it('refuses a group that is not an object', () => {
+    expect(
+      paths(
+        validateSync(
+          plainToInstance(UpdateGarageProfileDto, {
+            facilities: ['waiting_area'],
+            version: '0',
+          }),
+          { forbidNonWhitelisted: true, whitelist: true },
+        ),
+      )[0],
+    ).toMatch(/^facilities/);
   });
 });
