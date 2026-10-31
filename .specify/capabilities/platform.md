@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -125,6 +125,7 @@ features:
   - 1349-cockpit-chart-settle
   - 1257-quote-reminders
   - 1315-optimistic-toggles
+  - 1407-toggle-idempotency
 ---
 
 # Capability: Platform
@@ -3006,6 +3007,18 @@ _From 1315-optimistic-toggles._
 ### 1315-FR-015 — Tests MUST come before the code (Principle II): `notification-settings.spec.ts` (two toggles, both saves failing, the switch ending on the server's row; the toast twice; the first scenario of 198-FR-014 kept), `bell.spec.ts` (the optimistic read and read-all, their rollbacks, the out-of-order first-page reloads keeping a row read), `prices-view.spec.ts` (the optimistic hide and show, the rollback with the row line, one write per press), a spec per FR-009 dialog, and the end-to-end spec of FR-011; each test file carries one whole-line `// @traces` comment naming its `1315-FR-<n>` ids.
 
 _From 1315-optimistic-toggles._
+
+### 1407-FR-005 — `apps/api/openapi.json` MUST be regenerated from the API and committed with the four declarations, and the regenerated document MUST differ from a regeneration of the branch's merge base only by the four header parameters: no other operation, schema or response changes (drift `main`'s own code brings is kept, never hand-pruned, and listed in the PR).
+
+_From 1407-toggle-idempotency._
+
+### 1407-FR-006 — `libs/data-access` MUST be regenerated from that document (`npx nx run data-access:generate`, never edited by hand) and committed; the four generated methods MUST accept an optional `'Idempotency-Key'` parameter, and a fresh generation on the branch head MUST leave no diff.
+
+_From 1407-toggle-idempotency._
+
+### 1407-FR-007 — API integration tests (real PostgreSQL and Valkey) MUST prove, for each of the four writes, that the header is accepted and changes nothing: without the header, with a 1-character key, a 64-character key, a 65-character key, an empty value, and twice with the same key, each call MUST answer with the status and body the route gives today and leave the row the value-idempotent write leaves; a key outside 1 to 64 characters MUST NOT be refused by the server. The test file MUST carry a whole-line `// @traces` comment naming this feature's FR ids (Principle II).
+
+_From 1407-toggle-idempotency._
 
 ## Retired
 
