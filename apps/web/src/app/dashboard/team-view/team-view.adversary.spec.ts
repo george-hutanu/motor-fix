@@ -81,6 +81,7 @@ async function render(
   answer: () => Promise<GarageMechanicsDto> = async () => ({
     brands: [],
     items: SEEDED,
+    teamOnProfile: true,
   }),
   language: 'ro' | 'en' = 'ro',
 ) {
@@ -144,6 +145,7 @@ describe('Mecanici, plural boundaries', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items: [mechanic({ rating: '4.0', reviewCount: count })],
+      teamOnProfile: true,
     }));
     await settle();
     const cell = text(rows(element)[0].querySelector('[data-rating]'));
@@ -154,6 +156,7 @@ describe('Mecanici, plural boundaries', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items: Array.from({ length: n }, (_, i) => mechanic({ id: `m-${i}` })),
+      teamOnProfile: true,
     }));
     await settle();
     const line = text(countLine(element));
@@ -192,6 +195,7 @@ describe('Mecanici, awkward rows', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items: [mechanic({ rating: '4.9', reviewCount: 0 })],
+      teamOnProfile: true,
     }));
     await settle();
 
@@ -204,6 +208,7 @@ describe('Mecanici, awkward rows', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items: [mechanic({ rating: null, reviewCount: 5 })],
+      teamOnProfile: true,
     }));
     await settle();
 
@@ -216,6 +221,7 @@ describe('Mecanici, awkward rows', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items: [mechanic({ speciality: '' })],
+      teamOnProfile: true,
     }));
     await settle();
 
@@ -226,6 +232,7 @@ describe('Mecanici, awkward rows', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items: [mechanic({ speciality: '   ' })],
+      teamOnProfile: true,
     }));
     await settle();
 
@@ -236,6 +243,7 @@ describe('Mecanici, awkward rows', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items: [mechanic({ id: 'a' }), mechanic({ id: 'b' })],
+      teamOnProfile: true,
     }));
     await settle();
 
@@ -249,6 +257,7 @@ describe('Mecanici, awkward rows', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items,
+      teamOnProfile: true,
     }));
     await settle();
 
@@ -263,6 +272,7 @@ describe('Mecanici, awkward rows', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items: [mechanic({ name: long })],
+      teamOnProfile: true,
     }));
     await settle();
 
@@ -274,6 +284,7 @@ describe('Mecanici, awkward rows', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items: [mechanic({ hasAccount: false, onProfile: true })],
+      teamOnProfile: true,
     }));
     await settle();
 
@@ -321,7 +332,7 @@ describe('Mecanici, states under failure', () => {
 
   it('shows the empty state in English with its button', async () => {
     const { element, settle } = await render(
-      async () => ({ brands: [], items: [] }),
+      async () => ({ brands: [], items: [], teamOnProfile: true }),
       'en',
     );
     await settle();
@@ -339,6 +350,7 @@ describe('Mecanici, states under failure', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items,
+      teamOnProfile: true,
     }));
     await settle();
     items = [];
@@ -358,7 +370,7 @@ describe('Mecanici, states under failure', () => {
     let gone = false;
     const { settle } = await render(async () => {
       if (gone) throw new HttpErrorResponse({ status: 404 });
-      return { brands: [], items: SEEDED };
+      return { brands: [], items: SEEDED, teamOnProfile: true };
     });
     await settle();
     gone = true;
@@ -418,6 +430,7 @@ describe('Mecanici, live events that must not refresh', () => {
     const { element, settle } = await render(async () => ({
       brands: [],
       items: [mechanic({ rating })],
+      teamOnProfile: true,
     }));
     await settle();
     rating = '3.1';
