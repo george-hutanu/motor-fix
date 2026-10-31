@@ -2,7 +2,7 @@ import { Component, inject, type Signal } from '@angular/core';
 import {
   SEARCH_MIN_RATINGS,
   SEARCH_PRICE_CEILINGS,
-} from '@motor-fix/contracts/search-place';
+} from '@motor-fix/contracts/search-choices';
 import { formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
 import { injectOverlayTask } from '@motor-fix/overlays';
 import { HlmSwitch } from '@motor-fix/ui-cockpit';

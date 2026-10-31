@@ -4,7 +4,7 @@ import {
   SEARCH_PRICE_CEILINGS,
   type SearchMinRating,
   type SearchPriceCeiling,
-} from '@motor-fix/contracts/search-place';
+} from '@motor-fix/contracts/search-choices';
 import { formatRating, type Language } from '@motor-fix/i18n';
 
 // The filters of the results page, as the address bar names them. The API
