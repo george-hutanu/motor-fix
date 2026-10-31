@@ -50,6 +50,7 @@ import {
   QUOTE_DECLINED_CONSUMER,
   QUOTE_LOST_CONSUMER,
   QUOTE_RECEIVED_CONSUMER,
+  REPAIR_FROM_JOB_CONSUMER,
   REPAIR_UPDATED_CONSUMER,
   REQUEST_CANCELLED_CONSUMER,
   REQUEST_RECEIVED_CONSUMER,
@@ -58,6 +59,7 @@ import {
   REVIEW_RATINGS_CONSUMER,
   REVIEW_REPLIED_CONSUMER,
   RemindersModule,
+  RepairFromJobModule,
   RequestTimersModule,
   RetentionModule,
   ReviewRatingsModule,
@@ -155,6 +157,7 @@ export function workerModule(
           REVIEW_REPLIED_CONSUMER,
           REVIEW_RATINGS_CONSUMER,
           CAR_TRANSFER_ACCEPTED_CONSUMER,
+          REPAIR_FROM_JOB_CONSUMER,
           REPAIR_UPDATED_CONSUMER,
           supportMessagesConsumer(support),
           VERIFICATION_RESULT_CONSUMER,
@@ -184,6 +187,11 @@ export function workerModule(
       }),
       // Clears a deleted account's plates.
       CarAccountDeletedModule.registerWorker({
+        notifications,
+        redisUrl: env.REDIS_URL,
+      }),
+      // Writes a handed-over job's repair into the car's history.
+      RepairFromJobModule.registerWorker({
         notifications,
         redisUrl: env.REDIS_URL,
       }),

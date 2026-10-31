@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 252,
+    "count": 255,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -3334,6 +3334,63 @@
       "alerts": "none",
       "reason": "counts each correction told to the driver by outcome (built, muted, skipped), with the fan-out log line naming the repair id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-409"
+    },
+    {
+      "kind": "queue",
+      "name": "repair-from-job",
+      "source": "libs/domain/src/cars/repair-from-job/repair-from-job.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "carries the relay's job.handed_over and job.final_price_corrected events; one RepairFromJob log line per event naming the job, the repair and the outcome, counted by motorfix_repairs_from_jobs_total; a failed job is retried (6 tries) and worker-jobs-failed fires on the last; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-61"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_repairs_from_jobs_total",
+      "source": "libs/domain/src/cars/repair-from-job/repair-from-job.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each handover or price correction the worker applied by outcome (created, cost_updated, unchanged, job_missing), with no job, repair or account label; a count has no failure to alert on; worker-jobs-failed covers the queue",
+      "story": "ST-61"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_repair_edit_refusals_total",
+      "source": "libs/domain/src/cars/repairs/repairs.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each refused edit or delete of a repair by code (motorfix_repair, not_implemented), with no repair or account label; a count has no failure to alert on",
+      "story": "ST-61"
+    },
+    {
+      "kind": "endpoint",
+      "name": "repairs",
+      "source": "libs/domain/src/cars/repairs/repairs.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/repairs",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the driver reads his repairs across his cars, 20 a page; a read changes nothing, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-61"
+    },
+    {
+      "kind": "endpoint",
+      "name": "repair-edit",
+      "source": "libs/domain/src/cars/repairs/repairs.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/repairs/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "PATCH and DELETE change nothing yet: a MotorFix repair answers 409, a logged one 501, each counted by motorfix_repair_edit_refusals_total; no alert of its own",
+      "story": "ST-61"
     }
   ]
 }

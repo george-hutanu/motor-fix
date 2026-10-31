@@ -3043,6 +3043,148 @@
         ]
       }
     },
+    "/api/v1/repairs": {
+      "get": {
+        "operationId": "RepairsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The nextCursor of the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Repairs per page",
+            "schema": {
+              "minimum": 1,
+              "maximum": 20,
+              "default": 20,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "carId",
+            "required": false,
+            "in": "query",
+            "description": "One of the caller’s cars",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepairListDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed, invalid_cursor"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: carId is not a car the caller owns"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The caller's repairs across every car he owns, newest first",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
+    "/api/v1/repairs/{id}": {
+      "patch": {
+        "operationId": "RepairsController_edit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a repair of a car the caller owns"
+          },
+          "409": {
+            "description": "motorfix_repair: a MotorFix repair is the job’s, never edited"
+          },
+          "501": {
+            "description": "not_implemented: editing a logged repair comes later"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Edit a repair: refused until editing ships",
+        "tags": [
+          "cars"
+        ]
+      },
+      "delete": {
+        "operationId": "RepairsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "sign_in_required"
+          },
+          "404": {
+            "description": "not_found: not a repair of a car the caller owns"
+          },
+          "409": {
+            "description": "motorfix_repair: a MotorFix repair is the job’s, never edited"
+          },
+          "501": {
+            "description": "not_implemented: editing a logged repair comes later"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a repair: refused until editing ships",
+        "tags": [
+          "cars"
+        ]
+      }
+    },
     "/api/v1/cars": {
       "post": {
         "operationId": "CarsController_create",
@@ -14981,6 +15123,53 @@
           "items"
         ]
       },
+      "CarRepairCarDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brandName": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "brandName",
+          "model",
+          "year"
+        ]
+      },
+      "RepairReviewDto": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "description": "write: the driver may still review; rated: a review stands; none: neither",
+            "enum": [
+              "write",
+              "rated",
+              "none"
+            ]
+          },
+          "rating": {
+            "type": "integer",
+            "description": "Only with rated",
+            "maximum": 5,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
       "CarRepairDto": {
         "type": "object",
         "properties": {
@@ -14998,6 +15187,30 @@
           },
           "garageName": {
             "type": "string"
+          },
+          "garageId": {
+            "type": "string",
+            "description": "The garage on MotorFix",
+            "format": "uuid",
+            "nullable": true
+          },
+          "car": {
+            "$ref": "#/components/schemas/CarRepairCarDto"
+          },
+          "mechanicName": {
+            "type": "string",
+            "description": "A MotorFix repair's mechanic, as the job names them",
+            "nullable": true
+          },
+          "review": {
+            "description": "Null on every row until the review drawer ships and fills it for a MotorFix repair",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RepairReviewDto"
+              }
+            ]
           },
           "source": {
             "type": "string",
@@ -15034,6 +15247,10 @@
           "doneOn",
           "what",
           "garageName",
+          "garageId",
+          "car",
+          "mechanicName",
+          "review",
           "source",
           "fromPreviousOwner",
           "odometerKm",
@@ -15295,6 +15512,27 @@
         "required": [
           "items",
           "truncated"
+        ]
+      },
+      "RepairListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "Newest first, across the caller’s cars",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarRepairDto"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "description": "Pass as cursor for the next page; null on the last",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
         ]
       },
       "CreateCarDto": {

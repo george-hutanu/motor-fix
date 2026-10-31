@@ -6,11 +6,11 @@ import type {
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import {
-  CORRECTED_BY,
-  fromPreviousOwner,
   type OwnershipRow,
   REPAIR_ORDER,
+  REPAIR_ROW_SELECT,
   repairWhere,
+  toRow,
 } from './history';
 import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
@@ -37,7 +37,7 @@ export class CarHistoryService {
       },
     });
     if (!row) throw notFound();
-    return this.read(row);
+    return this.read(actor, row);
   }
 
   // Every car the caller sold, newest sale first, removed or not.
@@ -77,32 +77,21 @@ export class CarHistoryService {
       },
     });
     if (!row) throw notFound();
-    return this.read(row);
+    return this.read(actor, row);
   }
 
-  private async read(row: OwnershipRow): Promise<CarRepairListDto> {
+  private async read(
+    actor: Actor,
+    row: OwnershipRow,
+  ): Promise<CarRepairListDto> {
     const repairs = await this.prisma.repair.findMany({
       orderBy: REPAIR_ORDER,
-      select: {
-        costBani: true,
-        createdAt: true,
-        doneOn: true,
-        garageName: true,
-        id: true,
-        odometerKm: true,
-        source: true,
-        updatedByRole: true,
-        what: true,
-      },
+      select: REPAIR_ROW_SELECT,
       where: repairWhere(row),
     });
+    const language = actor.language ?? 'ro';
     return {
-      items: repairs.map(({ createdAt, doneOn, updatedByRole, ...repair }) => ({
-        ...repair,
-        correctedBy: CORRECTED_BY[updatedByRole ?? 'driver'],
-        doneOn: day(doneOn),
-        fromPreviousOwner: fromPreviousOwner({ createdAt }, row),
-      })),
+      items: repairs.map((repair) => toRow(repair, row, language)),
     };
   }
 }

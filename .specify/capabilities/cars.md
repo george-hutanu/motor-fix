@@ -17,8 +17,9 @@ features:
   - 1265-car-transfer-accept
   - 1386-oil-service-lamp
   - 409-garage-corrects-repair
-  - 1400-garage-corrects-repair-web
+  - 061-repair-list
   - 1267-admin-corrects-repair
+  - 1400-garage-corrects-repair-web
   - 1379-provider-calls-worker
 ---
 
@@ -359,9 +360,9 @@ _From 1265-car-transfer-accept._
 
 _From 1265-car-transfer-accept._
 
-### 409-FR-015 — The driver's history reads (`GET /api/v1/cars/:id/repairs` and `/cars/sold/:id/repairs`, 1265-FR-011 and FR-012) MUST add to each repair `odometerKm` (or null), `costBani` (or null) and `correctedBy`: `garage` when `updated_by_role` is `owner`, `admin` when it is `admin`, else null; `garageName` already on the item names the garage for the row label (title 2, FR-022); the generated client is regenerated from `apps/api/openapi.json`.
+### 061-FR-007 — Every row of the three history reads (`GET /api/v1/repairs`, `/cars/:id/repairs`, `/cars/sold/:id/repairs`) MUST carry, beside `id`, `doneOn`, `what`, `garageName`, `source`, `fromPreviousOwner`, `odometerKm`, `costBani` and `correctedBy` (1265-FR-011, 409-FR-015): `car` (`id`, `brandName`, `model`, `year`), `mechanicName` (for a MotorFix repair the job's mechanic's `MECHANIC.name`, hidden from the profile or not; null for a logged repair, a job with no mechanic or a deleted mechanic row) and `review`: null for every row, MotorFix or logged, until ST-26 (#91) adds the state, per the owner's resolution of 2026-10-15 on #102; the field stays nullable in the contract so ST-26 can fill it.
 
-_From 409-garage-corrects-repair._
+_From 061-repair-list._
 
 ### 1265-FR-014 — After the acceptance, the seller MUST get 404 from every car route taking the car's id (`GET /api/v1/cars/:id`, the edit, the removal, the sale, the transfer cancel), and the car MUST be absent from the seller's `GET /api/v1/cars` and present in the buyer's with `plate`, `rcaUntil` and `rovinietaUntil` `null` (the existing owner check does this: the owner changed); both accounts' warm car lists (`driver-home`, 1169-FR-003) MUST be dropped in the acceptance's request.
 
@@ -450,6 +451,54 @@ _From 1267-admin-corrects-repair._
 ### 409-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the list's membership (the six seeds of User Story 2), order and shape; each field corrected alone and together, the amount cleared, the unchanged save; every 400 limit; 403 for a receptionist and a mechanic, 404 for a driver and an admin; every 404 of FR-007; 409 and the concurrent-save race; the delete's 403; the audit entries' values and role; the event's payload and audience and the rollback on failure; REPAIR_UPDATED with the switch on and off, to the current owner after a sale, none when the car has no owner, and once on a redelivered event; the driver's reads with `correctedBy`; the capability table (the owner alone); the migration's backfill (`updated_at` = `created_at`, sharing off); the list's cap and `truncated`. Each test file carries a `// @traces` line naming its `409-FR-<n>` ids.
 
 _From 409-garage-corrects-repair._
+
+### 061-FR-001 — The `cars` module MUST consume `job.handed_over` and `job.final_price_corrected` as the worker's other event consumers do (one queue, `repair-from-job`, fed by the outbox relay, each run retried on failure with the same backoff as `final-price-corrected`, no requeue), and nothing on `job.done`, a cancellation, a lapse or a no-show. The handler is in the `cars` module, not in `workshop`.
+
+_From 061-repair-list._
+
+### 061-FR-002 — Each run MUST bring the job's repair row in step with the job in one use case: when no row holds the job's id, it creates a REPAIR with `source` `motorfix`, `car_id` the booking's car, `job_id` the job, `garage_id` the job's garage and `garage_name` a copy of its name, `what` the names of the included jobs of the booking's accepted quote (`QUOTE_JOB.included`) joined with ", " in Romanian, `done_on` the day of `JOB.finished_at` in Europe/Bucharest, `odometer_km` `JOB.odometer_km` (none when none), `cost_bani` `JOB.final_price_bani`. The row's insertion is idempotent on the unique `job_id` (a second run, a second relay or a concurrent run leaves one row and one audit entry).
+
+_From 061-repair-list._
+
+### 061-FR-003 — When a row holds the job's id and its `cost_bani` differs from `JOB.final_price_bani`, the same use case MUST set `cost_bani` to the job's; when they are equal it MUST change nothing and write nothing. A missing job ends the run with a log line and no retry.
+
+_From 061-repair-list._
+
+### 061-FR-004 — The creation and each cost change MUST run in their own transaction with their audit entries through the audit writer (390-FR-001): a `create` on subject type `repair` (the repair id; scope the car id and the garage id) whose new value holds the stored fields, and an `update` on field `cost_bani` with the old and new amounts; actor `system`, the job named on the entry. A failing audit write rolls the row back. The same transaction MUST record `repair.updated` (payload `by` `system`, `carId`, `changed`, `garageId`, `ownerId`, `repairId`; audience the car's owner) so the driver's screen re-reads once the row is written; the repair-updated fan-out MUST tell nobody for `by` `system`, as for `driver`.
+
+_From 061-repair-list._
+
+### 061-FR-005 — `GET /api/v1/repairs` (capability `driver.cars`) MUST answer the repairs of every car the caller owns through an open ownership row whose car is not removed, each row's repairs as the visibility rule decides (1265-FR-010; a soft-deleted repair never), mixed across cars, ordered by `done_on` newest first, ties by `created_at` newest first, ties by id descending; paged by a cursor (`cursor` in, `nextCursor` out, null on the last page; a cursor that is not a row of this list for the caller, malformed or unknown, answers 400 `invalid_cursor`; no cars or no repairs answer `items` empty and `nextCursor` null) with `limit` 1 to 20, default 20 (else 400 `validation_failed`).
+
+_From 061-repair-list._
+
+### 061-FR-006 — `GET /api/v1/repairs` MUST take an optional `carId`: a car the caller owns through an open row narrows the list to it; any other id (another driver's car, a removed car, a sold car, an unknown id) answers 404 `not_found` with one body for every case. `GET /api/v1/cars/:id/repairs` and `/cars/sold/:id/repairs` keep their 404s (1265-FR-011, FR-012).
+
+_From 061-repair-list._
+
+### 061-FR-008 — A MotorFix row's `what` MUST be answered in the reader's language (the interface language the request carries, as the quotes reads do) from the job's included quoted jobs' names, falling back to the stored `what` when the job or its quoted jobs are gone; a logged row's `what` is as stored.
+
+_From 061-repair-list._
+
+### 061-FR-009 — The reads MUST never carry the plate, the driver's or the mechanic's account, phone or e-mail, the garage's internal ids beyond `garageId`, nor any `removed` or `deleted_by_author` review's text or rating; the sold car's read keeps its cut at the sale date (1265-FR-012) and answers `review` null, as every row (FR-007).
+
+_From 061-repair-list._
+
+### 061-FR-010 — `PATCH /api/v1/repairs/:id` and `DELETE /api/v1/repairs/:id` (capability `driver.cars`) MUST answer 404 `not_found` when the repair is not among the repairs the caller may read through an open ownership row (another driver's, deleted, of a removed or sold car, unknown), and 409 `motorfix_repair` with the message "Reparația vine dintr-o lucrare MotorFix" (Romanian only, as every refusal in the repo; the English "This repair comes from a MotorFix job" is the client's text) for a `motorfix` row, in that order after 401; a path id that is not a uuid answers 400 `validation_failed`, as on every route, and a well-formed id the caller cannot use answers 404; each changes nothing and writes no audit entry.
+
+_From 061-repair-list._
+
+### 061-FR-011 — For a `logged` row the two routes MUST answer 501 `not_implemented` (message "Editarea reparațiilor adăugate vine cu o versiune următoare", Romanian only; the client's English is "Editing added repairs comes with a later release") and change nothing; ST-64 replaces this answer with the edit and the soft delete. The `PATCH` reads no body field. A body that is not valid JSON answers 400 from the body parser before the route runs, as on every route.
+
+_From 061-repair-list._
+
+### 061-FR-012 — Observability: the three routes MUST be listed in `infra/observability/inventory.json` with the cars module's existing metrics, logs and traces; the queue `repair-from-job` with its counter `motorfix_repairs_from_jobs_total` by `outcome` (`created`, `cost_updated`, `unchanged`, `job_missing`), one log line per run naming the job, the repair and the outcome (no amounts), the worker queue alerts, a panel on the cars dashboard, and a counter `motorfix_repair_edit_refusals_total` by `code` (`motorfix_repair`, `not_implemented`); no alert of its own (a lost run is retried by the queue, whose alerts cover a stuck queue; the API error-rate alert covers the reads).
+
+_From 061-repair-list._
+
+### 061-FR-013 — Tests MUST be written first and cover, in Jest on real PostgreSQL and Valkey (`*.integration.spec.ts` where the repository is used), each file naming its ids in one whole-line `// @traces` comment: the row created from `job.handed_over` with every field, once only over two runs and two concurrent runs, none from `job.done`, a cancelled, a lapsed or a no-show booking; `done_on` across the Bucharest midnight; no reading at reception; the cost from the handover and its correction, an equal correction writing nothing, a correction before the row; the missing job; the audit entries and the rollback on a failing audit write; the list's order across two cars, the tie, the cursor pages and `limit`, the removed car, the previous owner's repairs, `carId` of own, other, removed and sold cars; the row's car, mechanic (named, the owner's row, hidden, deleted), `what` in both languages and the fallback, `correctedBy`; every `review` state at days 10, 60 and 61 and for `published`, `reported`, `removed` and `deleted_by_author`; the same shape on `/cars/:id/repairs` and the sold read; 401, 404, 409 and 501 on `PATCH` and `DELETE` with nothing changed; no personal data in any answer or log; the generated client regenerated from `apps/api/openapi.json`; one `repair.updated` with `by` `system` per creation and per cost change, none for an unchanged run, and the repair-updated fan-out telling nobody for it.
+
+_From 061-repair-list._
 
 ### 1400-FR-001 — (409-FR-018) The garage dashboard MUST gain the view "Reparații adăugate de clienți" / "Repairs added by clients", a garage view behind the capability `garage.client_repairs` (the owner alone; hidden for a draft garage as the view registry already decides, no new status rule), reached from the garage navigation, with a title, a subtitle and the texts of a garage view in both languages; it MUST read the owner's shared logged repairs through the generated client and show them in the order the API answers.
 
@@ -563,6 +612,7 @@ _From 1267-admin-corrects-repair._
 - `029-FR-007` — superseded by `1386-FR-004` (2026-10-30)
 - `092-FR-009` — superseded by `1386-FR-004` (2026-10-30)
 - `1265-FR-011` — superseded by `409-FR-015` (2026-10-30)
+- `409-FR-015` — superseded by `061-FR-007` (2026-10-30)
 - `409-FR-011` — superseded by `1267-FR-006` (2026-10-30)
 - `409-FR-016` — superseded by `1267-FR-010` (2026-10-30)
 - `415-FR-006` — superseded by `1379-FR-003` (2026-10-30)
