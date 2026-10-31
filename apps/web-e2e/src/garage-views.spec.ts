@@ -57,6 +57,13 @@ const VIEWS = [
     'Așa te văd șoferii pe hartă',
   ],
   [
+    'Reparații clienți',
+    'Reparații clienți',
+    '/app/garage/client-repairs',
+    'Reparații adăugate de clienți',
+    'Reparațiile pe care clienții le‑au înregistrat la tine și le partajează',
+  ],
+  [
     'Setări',
     'Setări',
     '/app/garage/settings',
@@ -144,14 +151,14 @@ test.describe('garage views @seeded', () => {
 
     await page.goto('/app/garage/prices');
     await expect(title(page)).toHaveText('Prețuri');
-    // The test garage lists no jobs: the price list's empty panel, with the
-    // owner's switch into editing above it.
+    // The seed prices every job the test garage ticks for a brand: its list,
+    // with the owner's switch into editing above it.
     await expect(page.locator('main')).toContainText('Lista de prețuri');
     await expect(
       page.locator('main').getByRole('button', { name: 'Modifică prețurile' }),
     ).toBeVisible();
     await expect(page.locator('main')).toContainText(
-      'Nu ai încă lucrări în listă.',
+      'Schimb de ulei și filtre',
     );
 
     await page.goto('/app/garage/assistant');
@@ -216,6 +223,7 @@ test.describe('garage views @seeded', () => {
       'Prices',
       'Reviews',
       'Profile',
+      'Client repairs',
       'Settings',
       'History',
     ]);

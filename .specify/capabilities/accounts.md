@@ -60,6 +60,8 @@ features:
   - 099-overview-sections
   - 011-dashboard-sections
   - 1316-swr-resource-store
+  - 1391-admin-dashboard-customise
+  - 1379-provider-calls-worker
 ---
 
 # Capability: Accounts
@@ -520,9 +522,9 @@ _From 393-whatsapp-phone-sign-in._
 
 _From 393-whatsapp-phone-sign-in._
 
-### 393-FR-005 — When Brevo refuses the message, does not answer within 5 seconds, WhatsApp sending is off, the number is outside the non-production allow-list, or the SIGN_IN_CODE template is not approved, the request MUST answer 502 `whatsapp_failed`, store no code, and log the kind of failure without the number.
+### 1379-FR-003 — Each caller MUST keep its response contract exactly, treating a job result that is a failure kind, a job that failed, a wait that hit the cap, and a queue that could not be reached or written as the same failure: the sign-in code answers 502 `whatsapp_failed`, stores no code and leaves the number's hourly share uncounted (393-FR-004, 393-FR-005); the phone change answers 503 `send_failed` with nothing kept (139-FR-011); the staff invite answers `emailSent: false` with the link, the invite staying `sent` (131-FR-004, 1255-FR-005); the car transfer answers `whatsapp: 'failed'` with the link, the transfer staying `sent` (415-FR-006). The success answers are unchanged.
 
-_From 393-whatsapp-phone-sign-in._
+_From 1379-provider-calls-worker._
 
 ### 393-FR-006 — `POST /api/v1/auth/phone-sign-in` MUST take the phone number, the code, "keep me signed in" (true by default) and, optionally, a name, the consent (ST-132's `termsVersion` and `privacyVersion`) and the interface language (`ro` or `en`, default `ro`, used only for a new account), be reachable without a session, and check the code against the number's current code (the one not used and not voided), in this order: a code with 5 wrong attempts MUST answer 429 `too_many_attempts` without checking the code (it stays until a new code voids it); a code past its expiry MUST answer 410 `code_expired` whatever was typed; then no current code or a hash mismatch MUST answer 401 `code_invalid` (a mismatch counts one wrong attempt). Whatever the answer, the body MUST NOT reveal whether an account holds the number before the right code is given.
 
@@ -1553,9 +1555,9 @@ _From 011-dashboard-sections._
 
 _From 011-dashboard-sections._
 
-### 011-FR-010 — The panel MUST be one shared component that knows nothing of the garage: it takes the rows (key, position, name, description, shown) and the panel line, and reports a switch as (key, shown) with a way to flip it back on failure; the garage's Panou wires it to the garage's list and the layout read and save. The admin's (ST-1391) and driver's (ST-1262) dashboards reuse it unchanged; this story builds no admin or driver wiring.
+### 1391-FR-015 — (modifies 011-FR-010) The panel MUST stay one shared component that knows nothing of the dashboard it serves: it takes the rows (key, position, name, description, shown) and the panel line, reports a switch as (key, shown) with a way to flip it back on failure, and, only when the dashboard provides them, a move as (key, up or down) with the same undo and a reset; a dashboard that provides no move and no reset gets today's panel, switches only, with no arrow and no reset button. The garage's Panou keeps its wiring, texts and behaviour unchanged (the garage dashboard is ST-1398's and ST-1403's lane), and its existing tests pass unchanged; the admin's Panou wires the admin list, the layout read, save and reset.
 
-_From 011-dashboard-sections._
+_From 1391-admin-dashboard-customise._
 
 ### 011-FR-011 — The panel and the strip row MUST lay out phones first: at 320 px and 390 px the row's pill, count and button wrap without sideways scroll, every panel row is readable with no text under 12 px, long names and descriptions wrap and are never truncated, in light and dark, Romanian and English; the count is a polite live region (`aria-live="polite"`) so a switch's effect on it is announced, and the dimmed row and the error line never rely on colour alone (the switch state and the alert text carry the meaning); axe MUST report no violation on Panou with the panel closed and open, for the owner, the receptionist and the mechanic.
 
@@ -1623,3 +1625,5 @@ _From 011-dashboard-sections._
 - `082-FR-020` — superseded by `1316-FR-006` (2026-10-30)
 - `394-FR-006` — superseded by `1316-FR-007` (2026-10-30)
 - `029-FR-009` — superseded by `1316-FR-005` (2026-10-30)
+- `011-FR-010` — superseded by `1391-FR-015` (2026-10-30)
+- `393-FR-005` — superseded by `1379-FR-003` (2026-10-30)

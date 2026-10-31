@@ -17,6 +17,7 @@ import { RemindersService } from '../../cars/reminders/reminders.service';
 import { noEvents } from '../../events/event.port';
 import type { JobStatus } from '../../generated/prisma/enums';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
+import { DirectSendModule } from '../../notifications/direct-send/direct-send.module';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import { NotificationsService } from '../../notifications/notifications.service';
 import {
@@ -73,13 +74,15 @@ beforeAll(async () => {
       auth,
       notifications,
       PasswordResetModule.register({ webUrl }, notifications),
-      PhoneSignInModule.register({
-        brevo: { apiKey: 'test-key', apiUrl: brevo.url },
+      PhoneSignInModule.register(notifications),
+      DirectSendModule.registerWorker({
+        email: testConfig(brevo.url),
         phone: testPhoneConfig({
           PHONE_ALLOWLIST: '+407*',
           WHATSAPP_TEMPLATES:
             'motorfix_sign_in_code_ro=21,motorfix_sign_in_code_en=22',
         }),
+        redisUrl,
       }),
     ],
   }).compile();
