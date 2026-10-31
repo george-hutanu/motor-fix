@@ -39,13 +39,15 @@ export const STATUS_CONTEXT = "agent-review";
 const SECTION = "Agent review";
 
 /** `gh` as a function: { code, stdout, stderr }, never throws. */
-export function realGh(args, { input, cwd, timeout = 60000 } = {}) {
+export function realGh(args, { input, cwd, timeout = 60000, file = "gh" } = {}) {
   try {
-    // A compare across a busy main runs past execFileSync's 1 MB default (ENOBUFS).
-    const stdout = execFileSync("gh", args, { cwd, encoding: "utf8", input, stdio: ["pipe", "pipe", "pipe"], timeout, maxBuffer: 64 * 1024 * 1024 });
+    // A compare reply passes execFileSync's default 1 MB on a large PR (1.2 MB on #651).
+    const stdout = execFileSync(file, args, { cwd, encoding: "utf8", input, stdio: ["pipe", "pipe", "pipe"], timeout, maxBuffer: 256 * 1024 * 1024 });
     return { code: 0, stdout, stderr: "" };
   } catch (error) {
-    return { code: error.status || 1, stdout: `${error.stdout ?? ""}`, stderr: `${error.stderr || error.message}` };
+    // ENOBUFS or a timeout leaves stderr empty: name the error rather than drop it.
+    const stderr = `${error.stderr ?? ""}`;
+    return { code: error.status ?? 1, stdout: `${error.stdout ?? ""}`, stderr: error.status == null || !stderr ? [stderr, error.message].filter(Boolean).join("\n") : stderr };
   }
 }
 

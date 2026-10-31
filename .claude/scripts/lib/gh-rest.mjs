@@ -18,16 +18,18 @@ export const isCloud = (env = process.env) => env.CLAUDE_CODE_REMOTE === "true";
 
 const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
-// A compare across a busy main runs past spawnSync's 1 MB default (ENOBUFS).
-const MAX_BUFFER = 64 * 1024 * 1024;
+const MAX_BUFFER = 256 * 1024 * 1024;
 
 /** A run that spawns the command with the given cwd, env and timeout. */
 export const spawnRun =
   ({ cwd, env = process.env, timeout } = {}) =>
   (file, args, opts = {}) => {
+    // A compare reply passes spawnSync's default 1 MB on a large PR (1.2 MB on #651).
     const r = spawnSync(file, args, { cwd, env, encoding: "utf8", input: opts.input, timeout, maxBuffer: MAX_BUFFER });
-    const stderr = [r.stderr, r.error && String(r.error)].filter(Boolean).join("\n");
-    return { code: r.error ? (r.status || 1) : (r.status ?? 1), stdout: r.stdout ?? "", stderr };
+    // A spawn error (ENOBUFS, a timeout, ENOENT) often leaves stderr empty: report it, never drop it.
+    const error = r.error ? `${file}: ${r.error.message}` : "";
+    const stderr = [r.stderr ?? "", error].filter(Boolean).join(r.stderr?.endsWith("\n") ? "" : "\n");
+    return { code: r.status ?? 1, stdout: r.stdout ?? "", stderr };
   };
 
 class GhError extends Error {
