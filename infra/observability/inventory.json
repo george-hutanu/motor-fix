@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 254,
+    "count": 257,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1940,8 +1940,8 @@
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "the GET is a read with no writes, no event and no audit row, re-read by the owner's profile view on each garage change and on reconnect; the PATCH is the owner's in-place save of name, description, phone, hours with closed days and radius, one transaction with an audit row per changed field and one garage.updated outbox event (already listed) whose relay purge drops the public profile cache, the phone never in the event, logs, labels or spans; a 409 is a stale version, a 422 a field that needs verification; it answers through the public profile's cache, so its cache fallbacks count in the API's cache-fallback rule; a 403 is a mechanic or receptionist without the view, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; its spans come from the HTTP, Prisma and Redis auto-instrumentation; no counter or alert of its own; no outside call",
-      "story": "ST-133, ST-1246"
+      "reason": "the GET is a read with no writes, no event and no audit row, re-read by the owner's profile view on each garage change and on reconnect; the PATCH is the owner's in-place save of name, description, phone, hours with closed days, radius and the facilities group (facilities, their note, courtesy-car terms, payment methods; 400 no_courtesy_car when the terms and the ticked car disagree), one transaction with an audit row per changed field and one garage.updated outbox event (already listed) whose relay purge drops the public profile cache, the phone never in the event, logs, labels or spans; a 409 is a stale version, a 422 a field that needs verification; it answers through the public profile's cache, so its cache fallbacks count in the API's cache-fallback rule; a 403 is a mechanic or receptionist without the view, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; its spans come from the HTTP, Prisma and Redis auto-instrumentation; no counter or alert of its own; no outside call",
+      "story": "ST-133, ST-1246, ST-1248"
     },
     {
       "kind": "endpoint",
@@ -3382,6 +3382,63 @@
       ],
       "reason": "one queue for a no-show recorded and withdrawn; one log line per job naming the booking id and whether the driver was told; BullMQ's queue metrics cover depth and failures",
       "story": "ST-1259"
+    },
+    {
+      "kind": "queue",
+      "name": "repair-from-job",
+      "source": "libs/domain/src/cars/repair-from-job/repair-from-job.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "carries the relay's job.handed_over and job.final_price_corrected events; one RepairFromJob log line per event naming the job, the repair and the outcome, counted by motorfix_repairs_from_jobs_total; a failed job is retried (6 tries) and worker-jobs-failed fires on the last; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-61"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_repairs_from_jobs_total",
+      "source": "libs/domain/src/cars/repair-from-job/repair-from-job.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each handover or price correction the worker applied by outcome (created, cost_updated, unchanged, job_missing), with no job, repair or account label; a count has no failure to alert on; worker-jobs-failed covers the queue",
+      "story": "ST-61"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_repair_edit_refusals_total",
+      "source": "libs/domain/src/cars/repairs/repairs.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each refused edit or delete of a repair by code (motorfix_repair, not_implemented), with no repair or account label; a count has no failure to alert on",
+      "story": "ST-61"
+    },
+    {
+      "kind": "endpoint",
+      "name": "repairs",
+      "source": "libs/domain/src/cars/repairs/repairs.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/repairs",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the driver reads his repairs across his cars, 20 a page; a read changes nothing, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-61"
+    },
+    {
+      "kind": "endpoint",
+      "name": "repair-edit",
+      "source": "libs/domain/src/cars/repairs/repairs.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/repairs/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "PATCH and DELETE change nothing yet: a MotorFix repair answers 409, a logged one 501, each counted by motorfix_repair_edit_refusals_total; no alert of its own",
+      "story": "ST-61"
     }
   ]
 }
