@@ -2,8 +2,9 @@ import type { EventKind } from '@motor-fix/contracts';
 import { Logger } from '@nestjs/common';
 
 import { type Purger, purgeAudience } from '../../cache/purge';
-import type { PrismaClient } from '../../generated/prisma/client';
+import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { dropSearches } from '../../search/garage-search/garage-search.cache';
+import { relaySchedule } from '../../workshop/free-slots/free-slots.cache';
 import { type LivePublisher, publishLive } from '../live/live.hub';
 
 const BATCH = 100;
@@ -73,7 +74,7 @@ export class OutboxRelay {
           FOR UPDATE SKIP LOCKED`;
         const oldest = rows[0];
         if (oldest) this.reportLag(oldest.created_at);
-        for (const row of rows) await this.hand(row);
+        for (const row of rows) await this.hand(tx, row);
         if (rows.length > 0) {
           await tx.$executeRaw`
             UPDATE outbox_event SET relayed_at = now()
@@ -150,12 +151,13 @@ export class OutboxRelay {
     }
   }
 
-  private async hand(row: Row) {
+  private async hand(tx: Prisma.TransactionClient, row: Row) {
     const id = String(row.id);
     // The cached public reads and searches go first, so a page re-reading on
     // the event never gets the answer from before it.
     await purgeAudience(this.redis, row.audience, this.hook);
     await dropSearches(this.redis, row.audience);
+    await relaySchedule(tx, this.redis, row);
     await publishLive(
       this.redis,
       {
