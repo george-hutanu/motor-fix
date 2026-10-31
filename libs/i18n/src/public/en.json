@@ -103,6 +103,10 @@
         "paid": "Paid, says the driver: {amount}",
         "quote": "Quote {amount}"
       },
+      "reply": {
+        "edited": "Edited · {day}",
+        "label": "The garage’s reply"
+      },
       "retry": "Try again",
       "score": "{rating} / 5",
       "stars": {

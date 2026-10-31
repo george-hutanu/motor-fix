@@ -6,7 +6,7 @@ import {
 } from '@motor-fix/contracts';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import { validateSync } from 'class-validator';
+import { type ValidationError, validateSync } from 'class-validator';
 
 import { GarageProfileService } from './garage-profile.service';
 import { AUDIT_PORT, type AuditPort } from '../../audit/audit.port';
@@ -22,6 +22,7 @@ import {
   noGarage,
 } from '../garage-brands/garage-brands.service';
 import { writeGarageHours } from '../garage-hours';
+import { requireListedCourtesyCar } from '../garage-settings/courtesy-car-guard';
 
 // Changed only through the warned flow of a new verification.
 const VERIFIED = [
@@ -40,6 +41,7 @@ const GROUPS = [
   'hours',
   'closedDays',
   'serviceRadiusKm',
+  'facilities',
 ] as const;
 
 type ClosedDays = { day: string; note: string | null }[];
@@ -53,29 +55,54 @@ type Texts = {
   service_radius_km: number | null;
 };
 
-type Locked = Texts &
+type Terms = {
+  payment_cash: boolean;
+  payment_card: boolean;
+  payment_transfer: boolean;
+  courtesy_car_paid: boolean;
+  courtesy_car_price_per_day_bani: number | null;
+};
+type Columns = Texts & Terms;
+
+type Locked = Columns &
   HoursState & {
     status: string;
     business_kind: string | null;
     profile_version: number;
     facilities: string[];
     facilities_note: string | null;
-    payment_cash: boolean;
-    payment_card: boolean;
-    payment_transfer: boolean;
-    courtesy_car_paid: boolean;
-    courtesy_car_price_per_day_bani: number | null;
   };
 
-const COLUMNS: Record<keyof Texts, keyof Prisma.GarageUpdateManyMutationInput> =
-  {
-    known_for: 'knownFor',
-    name: 'name',
-    phone: 'phone',
-    service_radius_km: 'serviceRadiusKm',
-  };
+const COLUMNS: Record<
+  keyof Columns,
+  keyof Prisma.GarageUpdateManyMutationInput
+> = {
+  courtesy_car_paid: 'courtesyCarPaid',
+  courtesy_car_price_per_day_bani: 'courtesyCarPricePerDayBani',
+  known_for: 'knownFor',
+  name: 'name',
+  payment_card: 'paymentCard',
+  payment_cash: 'paymentCash',
+  payment_transfer: 'paymentTransfer',
+  phone: 'phone',
+  service_radius_km: 'serviceRadiusKm',
+};
+// The event names a column's group, the payments and the courtesy car as one.
+const fieldOf = (column: keyof Columns) =>
+  column.startsWith('payment_')
+    ? 'payment_methods'
+    : column.startsWith('courtesy_car_')
+      ? 'courtesy_car'
+      : column;
 // A change of these moves the garage in search results.
-const SEARCHED = new Set(['name', 'hours', 'closed_days', 'service_radius_km']);
+const SEARCHED = new Set([
+  'name',
+  'hours',
+  'closed_days',
+  'service_radius_km',
+  'facilities',
+  'payment_methods',
+]);
 
 const invalid = (errors: { code: string; field: string }[], message: string) =>
   refusal(HttpStatus.BAD_REQUEST, 'validation_failed', message, errors);
@@ -148,16 +175,18 @@ function assertNotVerified(body: unknown) {
 function validBody(body: unknown, row: Locked): UpdateGarageProfileDto {
   if (!isRecord(body)) throw invalid([], 'Send the profile as an object');
   const dto = plainToInstance(UpdateGarageProfileDto, body);
-  const errors = validateSync(dto, {
-    forbidNonWhitelisted: true,
-    whitelist: true,
-  }).map((e) => ({
-    code: Object.keys(e.constraints ?? {})[0] ?? 'invalid',
-    field: e.property,
-  }));
+  const errors = broken(
+    validateSync(dto, { forbidNonWhitelisted: true, whitelist: true }),
+  );
   if (errors.length > 0) throw invalid(errors, 'The profile breaks a rule');
   if (!GROUPS.some((field) => body[field] !== undefined)) {
     throw invalid([], 'Nothing to save');
+  }
+  if (dto.facilities) {
+    const { courtesyCar, facilities } = dto.facilities;
+    requireListedCourtesyCar(courtesyCar, facilities.includes('courtesy_car'), {
+      required: true,
+    });
   }
   if (dto.serviceRadiusKm !== undefined && row.business_kind !== 'mobile') {
     throw invalid(
@@ -168,15 +197,59 @@ function validBody(body: unknown, row: Locked): UpdateGarageProfileDto {
   return dto;
 }
 
-// The four columns as the save leaves them.
-function applied(row: Locked, dto: UpdateGarageProfileDto): Texts {
+// Each broken field by its path, a field inside the facilities group too.
+function broken(
+  errors: ValidationError[],
+  parent = '',
+): { code: string; field: string }[] {
+  return errors.flatMap((e) => {
+    const field = parent ? `${parent}.${e.property}` : e.property;
+    return e.children?.length && !e.constraints
+      ? broken(e.children, field)
+      : [{ code: Object.keys(e.constraints ?? {})[0] ?? 'invalid', field }];
+  });
+}
+
+// The payment and courtesy-car columns as the save leaves them. Terms for an
+// unticked courtesy car are not sent, so the stored ones stay.
+function appliedTerms(row: Locked, dto: UpdateGarageProfileDto): Terms {
+  const group = dto.facilities;
+  const car = group?.courtesyCar;
+  const payments = group?.paymentMethods;
+  return {
+    courtesy_car_paid: car ? car.paid : row.courtesy_car_paid,
+    courtesy_car_price_per_day_bani: car
+      ? (car.pricePerDayBani ?? null)
+      : row.courtesy_car_price_per_day_bani,
+    payment_card: payments ? payments.card : row.payment_card,
+    payment_cash: payments ? payments.cash : row.payment_cash,
+    payment_transfer: payments ? payments.transfer : row.payment_transfer,
+  };
+}
+
+// The columns as the save leaves them.
+function applied(row: Locked, dto: UpdateGarageProfileDto): Columns {
   const description = dto.description?.trim();
   return {
+    ...appliedTerms(row, dto),
     known_for: description === undefined ? row.known_for : description || null,
     name: dto.name?.trim() ?? row.name,
     phone: dto.phone === undefined ? row.phone : normalisePhone(dto.phone),
     service_radius_km: dto.serviceRadiusKm ?? row.service_radius_km,
   };
+}
+
+// Which of the facility set and the trimmed note differ from the stored ones.
+function movedFacilities(row: Locked, dto: UpdateGarageProfileDto): string[] {
+  const group = dto.facilities;
+  if (!group) return [];
+  const set = (list: string[]) => canonical([...list].sort());
+  return [
+    ...(set(group.facilities) === set(row.facilities) ? [] : ['facilities']),
+    ...((group.facilitiesNote?.trim() || null) === row.facilities_note
+      ? []
+      : ['facilities_note']),
+  ];
 }
 
 const sortedDays = (days: { day: string; note?: string | null }[]) =>
@@ -193,9 +266,10 @@ export class GarageProfileUpdate {
     private readonly profile: GarageProfileService,
   ) {}
 
-  // The owner's name, description, phone, hours with closed days and radius,
-  // in place and with no review. Refused in order: who asks, the garage's
-  // state, the verified fields, the limits, then a stale stamp.
+  // The owner's name, description, phone, hours with closed days, radius and
+  // facilities with their terms, in place and with no review. Refused in
+  // order: who asks, the garage's state, the verified fields, the limits,
+  // then a stale stamp.
   async save(
     actor: Actor,
     garageId: string,
@@ -222,10 +296,10 @@ export class GarageProfileUpdate {
   ) {
     const hours = await this.writeHours(tx, actor, garageId, row, dto);
     const after = applied(row, dto);
-    const moved = (Object.keys(COLUMNS) as (keyof Texts)[]).filter(
+    const moved = (Object.keys(COLUMNS) as (keyof Columns)[]).filter(
       (field) => canonical(row[field]) !== canonical(after[field]),
     );
-    const fields = [...moved, ...hours].sort(
+    const fields = [...new Set([...moved.map(fieldOf), ...hours])].sort(
       (a, b) => FIELD_ORDER.indexOf(a) - FIELD_ORDER.indexOf(b),
     );
     if (fields.length === 0) return;
@@ -264,9 +338,10 @@ export class GarageProfileUpdate {
     });
   }
 
-  // The listing's one hours write, handed the garage's facilities, their
-  // note, payments and courtesy car as they are so it leaves them; it records
-  // its own history. Answers which of the week and the closed days changed.
+  // The listing's one hours write, handed the garage's week, closed days,
+  // facilities and note as sent or as stored, and its payments and courtesy
+  // car as they are so it leaves them; it records its own history. Answers
+  // which of the week, the closed days, the facilities and the note changed.
   private async writeHours(
     tx: Prisma.TransactionClient,
     actor: Actor,
@@ -274,7 +349,9 @@ export class GarageProfileUpdate {
     row: Locked,
     dto: UpdateGarageProfileDto,
   ): Promise<string[]> {
-    if (dto.hours === undefined && dto.closedDays === undefined) return [];
+    const facilities = movedFacilities(row, dto);
+    const hoursSent = dto.hours !== undefined || dto.closedDays !== undefined;
+    if (!hoursSent && facilities.length === 0) return [];
     const before = { closed_days: row.closed_days, hours: row.hours };
     const sent = {
       closed_days:
@@ -285,19 +362,26 @@ export class GarageProfileUpdate {
         })),
       hours: dto.hours ?? row.hours,
     };
-    if (movedHours(before, sent).length === 0) return [];
+    if (movedHours(before, sent).length === 0 && facilities.length === 0) {
+      return [];
+    }
+    const group = dto.facilities;
     await writeGarageHours(
       tx,
       garageId,
       {
         ...keptSection(row),
+        ...(group && {
+          facilities: group.facilities,
+          facilitiesNote: group.facilitiesNote?.trim() || undefined,
+        }),
         closedDays: sent.closed_days,
         hours: sent.hours,
       },
       localDay(new Date()),
       { actorId: actor.accountId, audit: this.audit, events: this.events },
     );
-    return movedHours(before, await hoursOf(tx, garageId));
+    return [...movedHours(before, await hoursOf(tx, garageId)), ...facilities];
   }
 }
 
@@ -347,4 +431,8 @@ const FIELD_ORDER: string[] = [
   'hours',
   'closed_days',
   'service_radius_km',
+  'facilities',
+  'facilities_note',
+  'courtesy_car',
+  'payment_methods',
 ];
