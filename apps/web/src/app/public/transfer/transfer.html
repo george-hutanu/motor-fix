@@ -1,8 +1,26 @@
-<section [attr.aria-busy]="state() === 'loading' || null">
-  @if (state() === 'failed') {
-    <h1>{{ 'public.transfer.failed' | t }}</h1>
-    <button hlmBtn variant="secondary" type="button" (click)="read()">{{ 'public.transfer.retry' | t }}</button>
-  } @else {
-    <h1>{{ line() | t }}</h1>
+<section aria-live="polite" [attr.aria-busy]="state() === 'loading' || null">
+  <h1 #heading tabindex="-1">{{ line() }}</h1>
+  @switch (state()) {
+    @case ('failed') {
+      <button hlmBtn variant="secondary" type="button" (click)="read()">{{ 'public.transfer.retry' | t }}</button>
+    }
+    @case ('waiting') {
+      <p>{{ 'public.transfer.waitingHint' | t }}</p>
+      <button hlmBtn type="button" (click)="signIn()">{{ 'public.transfer.signIn' | t }}</button>
+    }
+    @case ('offer') {
+      <button hlmBtn type="button" [disabled]="accepting()" [attr.aria-busy]="accepting() || null" (click)="accept()">
+        {{ 'public.transfer.accept' | t }}
+      </button>
+      @if (acceptFailed()) {
+        <p role="alert">{{ 'shell.form.problem.error' | t }}</p>
+      }
+    }
+    @case ('car_limit') {
+      <p>{{ 'public.transfer.carLimit' | t }}</p>
+    }
+    @case ('open_request') {
+      <p>{{ 'public.transfer.openRequest' | t }}</p>
+    }
   }
 </section>

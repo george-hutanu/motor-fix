@@ -34,3 +34,16 @@ button {
   align-self: flex-start;
   white-space: normal;
 }
+h1:focus {
+  outline: none;
+}
+h1:focus-visible {
+  outline: var(--mf-focus-width) solid var(--mf-focus);
+  outline-offset: 2px;
+}
+p {
+  margin: 0;
+}
+button {
+  min-height: 44px;
+}
