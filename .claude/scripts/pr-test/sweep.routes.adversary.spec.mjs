@@ -226,6 +226,7 @@ describe('route rule: the router decides what is known, read afresh from the che
     const root = mkdtempSync(join(tmpdir(), 'router-fixture-'));
     cpSync(join(real, 'app.routes.ts'), join(root, 'apps', 'web', 'src', 'app', 'app.routes.ts'), { recursive: true });
     cpSync(join(real, 'dashboard', 'views.ts'), join(root, 'apps', 'web', 'src', 'app', 'dashboard', 'views.ts'), { recursive: true });
+    cpSync(join(real, 'public', 'routes.ts'), join(root, 'apps', 'web', 'src', 'app', 'public', 'routes.ts'), { recursive: true });
     return root;
   };
 
@@ -240,8 +241,8 @@ describe('route rule: the router decides what is known, read afresh from the che
 
   it('knows a public page added under the language node', () => {
     const root = checkout();
-    const routes = join(root, 'apps', 'web', 'src', 'app', 'app.routes.ts');
-    writeFileSync(routes, readFileSync(routes, 'utf8').replace("path: 'list-your-garage',", "path: 'list-your-garage',\n      },\n      {\n        component: Home,\n        path: 'how-it-works',"));
+    const routes = join(root, 'apps', 'web', 'src', 'app', 'public', 'routes.ts');
+    writeFileSync(routes, readFileSync(routes, 'utf8').replace("path: 'list-your-garage',", "path: 'list-your-garage',\n  },\n  {\n    component: Home,\n    path: 'how-it-works',"));
     assert.equal(routeProblem('/:lang/how-it-works', routerTable(root)), null);
     assert.match(routeProblem('/how-it-works', routerTable(root)) ?? '', /\/:lang\/how-it-works/);
   });
