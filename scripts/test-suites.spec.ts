@@ -293,8 +293,20 @@ function resolvedLimit(project: string): unknown {
 }
 
 describe('the Jest worker memory limit', () => {
-  it('finds the web app among the Jest projects', () => {
-    expect(jestProjects()).toContain('apps/web');
+  // @traces 1332-angular-vitest-FR-001
+  it('finds the API among the Jest projects, and none of the Angular projects', () => {
+    expect(jestProjects()).toContain('apps/api');
+    expect(
+      jestProjects().filter((p) =>
+        [
+          'apps/web',
+          'libs/ui-cockpit',
+          'libs/overlays',
+          'libs/i18n',
+          'libs/media',
+        ].includes(p),
+      ),
+    ).toEqual([]);
   });
 
   it.each(jestProjects())(
