@@ -85,10 +85,12 @@ if [ "$should" -eq 1 ]; then
   echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"$test_file was not run after this edit: its runner took 5 s or more on it in the last 7 days. The Stop gate runs it before the turn ends.\"}}"
   exit 0
 fi
-# A project on Vitest names it in its own vitest.config.mts; the rest are Jest's.
-project="$(printf '%s' "$test_file" | cut -d/ -f1-2)"
+# A project on Vitest names it in the nearest vitest.config.mts above the
+# spec; the rest are Jest's.
+project="$(dirname "$test_file")"
+while [ "$project" != "." ] && [ "$project" != "/" ] && [ ! -f "$project/vitest.config.mts" ]; do project="$(dirname "$project")"; done
 vitest_config=""
-[ -f "$project/vitest.config.mts" ] && vitest_config="$project/vitest.config.mts"
+[ "$project" != "." ] && [ "$project" != "/" ] && vitest_config="$project/vitest.config.mts"
 if [ -n "$vitest_config" ]; then
   [ -x node_modules/.bin/vitest ] || exit 0
 else

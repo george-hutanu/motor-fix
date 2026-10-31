@@ -36,6 +36,8 @@ beforeEach(() => {
   write('libs/nest/src/a.ts', 'export const a = 1;\n');
   write('libs/ng/jest.config.cts', 'module.exports = {};\n');
   write('libs/ng/src/b.ts', 'export const b = 1;\n');
+  write('scripts/vitest.config.mts', 'export default {};\n');
+  write('scripts/c.ts', 'export const c = 1;\n');
   git('add', '-A');
   git('commit', '-q', '-m', 'base');
   write('calls.log');
@@ -67,6 +69,17 @@ describe('the stop gate with Vitest and Jest projects', { timeout: 30_000 }, () 
 
     assert.equal(run.status, 2);
     assert.match(run.stderr, /vitest run --changed/);
+  });
+
+  it('runs the Vitest specs of a root-level project such as scripts/', () => {
+    stub('jest', 0);
+    stub('vitest', 0);
+    write('scripts/c.ts', 'export const c = 2;\n');
+
+    const run = stop();
+
+    assert.equal(run.status, 0, run.stderr);
+    assert.match(calls(), /^vitest run --changed --config scripts\/vitest\.config\.mts/m);
   });
 
   it('leaves Vitest out when only a Jest project changed', () => {

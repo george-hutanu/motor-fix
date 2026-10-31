@@ -31,7 +31,7 @@ cd "$repo" || exit 0
 # Changed TypeScript under the workspaces (staged or not). Nothing → nothing to
 # gate. Kept to a newline-delimited string and piped through xargs rather than
 # a bash array: macOS ships bash 3.2, which has no `mapfile`.
-changed="$(git status --porcelain --untracked-files=all -- apps libs e2e 2>/dev/null \
+changed="$(git status --porcelain --untracked-files=all -- apps libs e2e scripts 2>/dev/null \
   | awk '{print $NF}' | grep -E '\.(ts|tsx|mts|cts)$' || true)"
 [ -n "$changed" ] || exit 0
 
@@ -44,8 +44,13 @@ fi
 # Vitest, one heavy slot per project, beside Jest's run below.
 heavy=""
 [ -f scripts/heavy.sh ] && heavy="sh scripts/heavy.sh"
-vitest_projects="$(printf '%s\n' "$changed" | cut -d/ -f1-2 | sort -u \
-  | while read -r project; do [ -f "$project/vitest.config.mts" ] && echo "$project"; done)"
+# A file's project is the nearest folder above it holding a vitest.config.mts
+# (libs/domain, or a root-level project such as scripts).
+vitest_projects="$(printf '%s\n' "$changed" | while read -r file; do
+    d="$(dirname "$file")"
+    while [ "$d" != "." ] && [ "$d" != "/" ] && [ ! -f "$d/vitest.config.mts" ]; do d="$(dirname "$d")"; done
+    [ "$d" != "." ] && [ "$d" != "/" ] && echo "$d"
+  done | sort -u)"
 if [ -n "$vitest_projects" ] && [ -x node_modules/.bin/vitest ]; then
   for project in $vitest_projects; do
     HEAVY_WAIT="${HEAVY_WAIT:-300}" $heavy npx --no-install vitest run --changed --config "$project/vitest.config.mts" --passWithNoTests --maxWorkers=2 >&2 2>&1
