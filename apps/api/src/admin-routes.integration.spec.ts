@@ -191,7 +191,7 @@ describe('the admin overview', () => {
 
   it('stays open to an admin while the platform is in maintenance', async () => {
     const maintenance = app.get<Maintenance>(MAINTENANCE, { strict: false });
-    const on = jest.spyOn(maintenance, 'on').mockResolvedValue(true);
+    const on = vi.spyOn(maintenance, 'on').mockResolvedValue(true);
     try {
       const res = await call(
         'get',

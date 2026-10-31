@@ -13,7 +13,7 @@ const databaseUrl =
   process.env['DATABASE_URL'] ?? 'postgresql://localhost:5432/postgres';
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('stopping the API boot handle', () => {
@@ -21,8 +21,8 @@ describe('stopping the API boot handle', () => {
     'gives the turn back when the store fails to start',
     async () => {
       const failure = new Error('store down');
-      jest.spyOn(S3TestStore.prototype, 'start').mockRejectedValueOnce(failure);
-      const stopStore = jest.spyOn(S3TestStore.prototype, 'stop');
+      vi.spyOn(S3TestStore.prototype, 'start').mockRejectedValueOnce(failure);
+      const stopStore = vi.spyOn(S3TestStore.prototype, 'stop');
       const api = apiBoot();
 
       await expect(api.start()).rejects.toBe(failure);
@@ -38,10 +38,10 @@ describe('stopping the API boot handle', () => {
     'stops the store and gives the turn back when the module fails to compile',
     async () => {
       const failure = new Error('bad module');
-      jest.spyOn(Test, 'createTestingModule').mockImplementationOnce(() => {
+      vi.spyOn(Test, 'createTestingModule').mockImplementationOnce(() => {
         throw failure;
       });
-      const stopStore = jest.spyOn(S3TestStore.prototype, 'stop');
+      const stopStore = vi.spyOn(S3TestStore.prototype, 'stop');
       const api = apiBoot();
 
       await expect(api.start()).rejects.toBe(failure);
@@ -57,11 +57,11 @@ describe('stopping the API boot handle', () => {
     'closes the app that failed to start, then the store, then the turn',
     async () => {
       const failure = new Error('init failed');
-      jest
-        .spyOn(NestApplication.prototype, 'init')
-        .mockRejectedValueOnce(failure);
-      const closeApp = jest.spyOn(NestApplication.prototype, 'close');
-      const stopStore = jest.spyOn(S3TestStore.prototype, 'stop');
+      vi.spyOn(NestApplication.prototype, 'init').mockRejectedValueOnce(
+        failure,
+      );
+      const closeApp = vi.spyOn(NestApplication.prototype, 'close');
+      const stopStore = vi.spyOn(S3TestStore.prototype, 'stop');
       const api = apiBoot();
 
       await expect(api.start()).rejects.toBe(failure);
@@ -79,13 +79,13 @@ describe('stopping the API boot handle', () => {
     async () => {
       const failure = new Error('close failed');
       const close = NestApplication.prototype.close;
-      jest
-        .spyOn(NestApplication.prototype, 'close')
-        .mockImplementationOnce(async function (this: NestApplication) {
+      vi.spyOn(NestApplication.prototype, 'close').mockImplementationOnce(
+        async function (this: NestApplication) {
           await close.call(this);
           throw failure;
-        });
-      const stopStore = jest.spyOn(S3TestStore.prototype, 'stop');
+        },
+      );
+      const stopStore = vi.spyOn(S3TestStore.prototype, 'stop');
       const api = apiBoot();
       await api.start();
 
@@ -102,7 +102,7 @@ describe('stopping the API boot handle', () => {
     async () => {
       const holder = databaseTurn(databaseUrl);
       await holder.take();
-      const startStore = jest.spyOn(S3TestStore.prototype, 'start');
+      const startStore = vi.spyOn(S3TestStore.prototype, 'start');
       const api = apiBoot();
       const starting = api.start().then(
         () => 'started',
@@ -123,8 +123,8 @@ describe('stopping the API boot handle', () => {
   it(
     'closes a started app before its store, and a second stop does nothing',
     async () => {
-      const closeApp = jest.spyOn(NestApplication.prototype, 'close');
-      const stopStore = jest.spyOn(S3TestStore.prototype, 'stop');
+      const closeApp = vi.spyOn(NestApplication.prototype, 'close');
+      const stopStore = vi.spyOn(S3TestStore.prototype, 'stop');
       const api = apiBoot();
       const app = await api.start();
       expect(app.getHttpServer()).toBeDefined();
@@ -141,6 +141,20 @@ describe('stopping the API boot handle', () => {
     },
     TURN_WAIT_MS,
   );
+
+  // @traces 1338-FR-007
+  it('names the setup file it needs when the file has no database turn', () => {
+    const global = globalThis as { releaseDatabaseTurnLast?: unknown };
+    const real = global.releaseDatabaseTurnLast;
+    delete global.releaseDatabaseTurnLast;
+    try {
+      expect(() => apiBoot()).toThrow(
+        'apiBoot needs setup file database-turn.setup.ts',
+      );
+    } finally {
+      global.releaseDatabaseTurnLast = real;
+    }
+  });
 
   // A spec's afterAll that throws before api.stop() (a db.end() on a client
   // its timed-out beforeAll never made) skipped the stop, and the turn,
