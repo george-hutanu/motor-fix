@@ -20960,6 +20960,14 @@
             "type": "number",
             "nullable": true
           },
+          "quoteFromBani": {
+            "type": "integer",
+            "description": "The accepted quote's lower bound, in bani"
+          },
+          "quoteToBani": {
+            "type": "integer",
+            "description": "The accepted quote's upper bound, in bani"
+          },
           "steps": {
             "type": "array",
             "items": {
@@ -20995,6 +21003,8 @@
           "stepsDone",
           "stepsTotal",
           "finalPriceBani",
+          "quoteFromBani",
+          "quoteToBani",
           "steps",
           "stages"
         ]
