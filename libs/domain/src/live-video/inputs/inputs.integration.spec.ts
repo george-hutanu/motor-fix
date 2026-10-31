@@ -67,7 +67,7 @@ async function relayed(
   };
 }
 
-// @traces 1390-FR-001 1390-FR-005
+// @traces 1390-FR-001 1390-FR-004 1390-FR-005
 describe('closing the input of a session the system stopped', () => {
   it('closes the stopped session’s input once its stop committed, and the recording job still deletes by that input', async () => {
     const { job, session } = await live();
