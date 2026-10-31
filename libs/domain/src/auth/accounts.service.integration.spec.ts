@@ -15,22 +15,26 @@ serialDatabase(databaseUrl);
 function ports() {
   const audit = {
     record: vi.fn<
-      ReturnType<AuditPort['record']>,
-      Parameters<AuditPort['record']>
+      (
+        ...args: Parameters<AuditPort['record']>
+      ) => ReturnType<AuditPort['record']>
     >(async () => undefined),
     recordChanges: vi.fn<
-      ReturnType<AuditPort['recordChanges']>,
-      Parameters<AuditPort['recordChanges']>
+      (
+        ...args: Parameters<AuditPort['recordChanges']>
+      ) => ReturnType<AuditPort['recordChanges']>
     >(async () => undefined),
     recordMany: vi.fn<
-      ReturnType<AuditPort['recordMany']>,
-      Parameters<AuditPort['recordMany']>
+      (
+        ...args: Parameters<AuditPort['recordMany']>
+      ) => ReturnType<AuditPort['recordMany']>
     >(async () => undefined),
   };
   const events = {
     record: vi.fn<
-      ReturnType<EventPort['record']>,
-      Parameters<EventPort['record']>
+      (
+        ...args: Parameters<EventPort['record']>
+      ) => ReturnType<EventPort['record']>
     >(async () => undefined),
   };
   return { audit, events, service: new AccountsService(prisma, audit, events) };

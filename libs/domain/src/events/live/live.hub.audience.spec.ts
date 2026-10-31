@@ -53,7 +53,7 @@ const access = (over: Partial<GarageAccess> = {}): GarageAccess => ({
   ...over,
 });
 
-let load: Mock<Promise<GarageAccess>, [string]>;
+let load: Mock<(...args: [string]) => Promise<GarageAccess>>;
 let hub: LiveHub;
 
 beforeEach(() => {

@@ -6,7 +6,7 @@ import { GeoapifyPlaces } from './geoapify-places.provider';
 const KEY = 'secret-key-123';
 
 const answer = (body: unknown, status = 200) =>
-  vi.fn<Promise<Response>, [string, RequestInit?]>(
+  vi.fn<(...args: [string, RequestInit?]) => Promise<Response>>(
     async () =>
       ({
         json: async () => body,

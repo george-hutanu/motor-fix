@@ -155,7 +155,7 @@ it(
 it(
   'makes the client that calls a waiting take off before the take waits',
   async () => {
-    const pg = createRequire(import.meta.url)('pg') as typeof import('pg');
+    const pg = createRequire(__filename)('pg') as typeof import('pg');
     const Real = pg.Client;
     const holder = databaseTurn(databaseUrl);
     await holder.take();

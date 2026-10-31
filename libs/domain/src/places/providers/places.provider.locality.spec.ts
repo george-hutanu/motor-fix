@@ -4,7 +4,7 @@ import { FakePlaces } from './fake-places.provider';
 import { GeoapifyPlaces } from './geoapify-places.provider';
 
 const answer = (results: unknown[]) =>
-  vi.fn<Promise<Response>, [string, RequestInit?]>(
+  vi.fn<(...args: [string, RequestInit?]) => Promise<Response>>(
     async () =>
       ({ json: async () => ({ results }), ok: true, status: 200 }) as Response,
   );

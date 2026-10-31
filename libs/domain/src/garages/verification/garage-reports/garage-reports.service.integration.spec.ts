@@ -34,8 +34,7 @@ const NONE = {
 };
 
 type Notify = Mock<
-  Promise<number>,
-  [Parameters<NotificationsService['notify']>[0]]
+  (...args: [Parameters<NotificationsService['notify']>[0]]) => Promise<number>
 >;
 let notify: Notify;
 

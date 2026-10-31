@@ -43,11 +43,11 @@ function response() {
 
 const webp = Buffer.from('RIFF....WEBP');
 const setup = () => {
-  const render = vi.fn<
-    Promise<Buffer>,
-    Parameters<StaticMapRenderer['render']>
-  >();
-  const take = vi.fn<Promise<void>, [string, string]>();
+  const render =
+    vi.fn<
+      (...args: Parameters<StaticMapRenderer['render']>) => Promise<Buffer>
+    >();
+  const take = vi.fn<(...args: [string, string]) => Promise<void>>();
   const controller = new StaticMapController(
     { render } as unknown as StaticMapRenderer,
     { take } as unknown as RateLimits,
