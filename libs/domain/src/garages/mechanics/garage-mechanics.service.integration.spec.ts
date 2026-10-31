@@ -351,15 +351,25 @@ describe("step 4's switch on the garage", () => {
     recorded = [];
   });
 
-  it('writes the switch off at creation, with one history entry and no event', async () => {
+  it('writes the switch off at creation, recorded as a field of the creation, and no event', async () => {
     await first({ mechanics: [{ name: 'Ion Marin' }], onProfile: false });
 
     expect(await teamOnProfile()).toBe(false);
     expect(
-      (await switchEntries()).map((e) => [e.subjectId, e.oldValue, e.newValue]),
-    ).toEqual([[garage, true, false]]);
+      (await switchEntries()).map((e) => [e.subjectId, e.action, e.newValue]),
+    ).toEqual([[garage, 'create', false]]);
     expect(recorded).toEqual([]);
     expect((await cards()).map((card) => card.onProfile)).toEqual([false]);
+  });
+
+  it('records the switch left on at creation as a field of the creation', async () => {
+    await first({ mechanics: [{ name: 'Ion Marin' }], onProfile: true });
+
+    expect(await teamOnProfile()).toBe(true);
+    expect((await switchEntries()).map((e) => [e.action, e.newValue])).toEqual([
+      ['create', true],
+    ]);
+    expect(recorded).toEqual([]);
   });
 
   it('keeps the default when the section leaves the switch out', async () => {
@@ -382,8 +392,11 @@ describe("step 4's switch on the garage", () => {
 
     expect(await teamOnProfile()).toBe(false);
     expect(
-      (await switchEntries()).map((e) => [e.oldValue, e.newValue]),
-    ).toEqual([[true, false]]);
+      (await switchEntries()).map((e) => [e.action, e.oldValue, e.newValue]),
+    ).toEqual([
+      ['create', null, true],
+      ['update', true, false],
+    ]);
     expect(recorded).toEqual([
       expect.objectContaining({
         kind: 'garage.updated',
@@ -398,7 +411,7 @@ describe("step 4's switch on the garage", () => {
 
     await later({ mechanics: [{ name: 'Ion Marin' }], onProfile: true });
 
-    expect(await switchEntries()).toEqual([]);
+    expect((await switchEntries()).map((e) => e.action)).toEqual(['create']);
     expect(recorded).toEqual([]);
   });
 });

@@ -4,7 +4,6 @@ import {
   IsBoolean,
   IsDefined,
   IsObject,
-  IsOptional,
   ValidateBy,
   ValidateIf,
   ValidateNested,
@@ -104,7 +103,7 @@ export class UpdateGarageDto {
   @ApiPropertyOptional({
     description: 'Whether the team appears on the public profile',
   })
-  @IsOptional()
+  @ValidateIf((o: UpdateGarageDto) => o.teamOnProfile !== undefined)
   @IsBoolean()
   teamOnProfile?: boolean;
 }

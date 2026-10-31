@@ -80,7 +80,10 @@ const card = (over: Record<string, unknown>) => ({
 
 // A client whose every model answers as an empty table, unless given: the
 // service may read through it or through the transaction it opens.
-function fakeDb(models: Record<string, Record<string, unknown>> = {}) {
+function fakeDb(
+  models: Record<string, Record<string, unknown>> = {},
+  raw: unknown[] = [],
+) {
   const empty = (method: string) =>
     jest.fn(async () => {
       if (method === 'findMany' || method === 'groupBy') return [];
@@ -97,7 +100,7 @@ function fakeDb(models: Record<string, Record<string, unknown>> = {}) {
         if (key === '$transaction')
           return (work: (tx: unknown) => unknown) => work(db);
         if (key === '$queryRaw' || key === '$executeRaw')
-          return jest.fn(async () => []);
+          return jest.fn(async () => raw);
         const name = String(key);
         if (!tables.has(name)) {
           const given = models[name] ?? {};
@@ -401,17 +404,22 @@ function writer(stored: Record<string, unknown> = card({ id: ELENA })) {
     },
   );
   const found = jest.fn(async () => current);
-  const db = fakeDb({
-    garageFeature: { findUnique: jest.fn(async () => null) },
-    mechanic: {
-      create,
-      findFirst: found,
-      findFirstOrThrow: found,
-      findUnique: found,
-      findUniqueOrThrow: found,
-      updateMany: update,
+  const db = fakeDb(
+    {
+      garageFeature: { findUnique: jest.fn(async () => null) },
+      mechanic: {
+        create,
+        findFirst: found,
+        findFirstOrThrow: found,
+        findUnique: found,
+        findUniqueOrThrow: found,
+        update,
+        updateMany: update,
+      },
     },
-  });
+    // The card's row, locked by an edit.
+    [{ id: ELENA }],
+  );
   const Service = GarageMechanicsService as unknown as new (
     ...deps: unknown[]
   ) => Writes;

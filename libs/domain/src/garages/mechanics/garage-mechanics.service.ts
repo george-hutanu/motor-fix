@@ -149,8 +149,13 @@ type CardFields = {
 };
 
 // The history names the switch by its column, as it names the garage's.
+// The name a changed field goes by in the history and in `mechanic.updated`:
+// the direct-requests switch by its column, as the team switch is.
 const auditField = (key: keyof CardFields) =>
   key === 'takesDirectRequests' ? 'takes_direct_requests' : key;
+
+const differs = (a: unknown, b: unknown) =>
+  JSON.stringify(a) !== JSON.stringify(b);
 
 function tagsOf(
   value: unknown,
@@ -530,7 +535,7 @@ export class GarageMechanicsService {
     await this.judgeBrands(db, garageId, fields, errors);
     if (errors.length > 0) throw refused(errors);
     const changed = (Object.keys(fields) as (keyof CardFields)[]).filter(
-      (key) => JSON.stringify(fields[key]) !== JSON.stringify(card[key]),
+      (key) => differs(fields[key], card[key]),
     );
     if (changed.length === 0) {
       return itemOf(
@@ -545,12 +550,23 @@ export class GarageMechanicsService {
       data.speciality = joined(fields.specialties ?? []);
     }
     const { row, shown: shownNow } = await db.$transaction(async (tx) => {
-      // A remove that committed since the read leaves nothing to edit.
-      const { count } = await tx.mechanic.updateMany({
-        data,
-        where: { id: card.id, removedAt: null },
+      // Edits of one card wait for each other here, so each judges what it
+      // changes against the value the one before it left. A remove that
+      // committed since the read leaves nothing to edit.
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM mechanic
+        WHERE id = ${card.id}::uuid AND removed_at IS NULL
+        FOR UPDATE`;
+      if (locked.length === 0) throw notFound();
+      const before = await tx.mechanic.findUniqueOrThrow({
+        select: CARD_SELECT,
+        where: { id: card.id },
       });
-      if (count === 0) throw notFound();
+      const moved = changed.filter((key) => differs(fields[key], before[key]));
+      if (moved.length === 0) {
+        return { row: before, shown: await isShownNow(tx, card.id) };
+      }
+      await tx.mechanic.update({ data, where: { id: card.id } });
       const updated = await tx.mechanic.findUniqueOrThrow({
         select: CARD_SELECT,
         where: { id: card.id },
@@ -565,17 +581,21 @@ export class GarageMechanicsService {
           subjectType: 'mechanic',
         },
         Object.fromEntries(
-          changed.map((key) => [auditField(key), shown(card[key])]),
+          moved.map((key) => [auditField(key), shown(before[key])]),
         ),
         Object.fromEntries(
-          changed.map((key) => [auditField(key), shown(fields[key])]),
+          moved.map((key) => [auditField(key), shown(fields[key])]),
         ),
       );
       const audience = await cardAudienceNow(tx, garageId, card.id);
       await this.events.record(tx, {
         audience,
         kind: 'mechanic.updated',
-        payload: { fields: changed, garageId, mechanicId: card.id },
+        payload: {
+          fields: moved.map(auditField),
+          garageId,
+          mechanicId: card.id,
+        },
         subjectId: card.id,
       });
       return { row: updated, shown: audience.public };

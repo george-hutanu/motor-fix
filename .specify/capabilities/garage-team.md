@@ -1,6 +1,6 @@
 ---
 capability: garage-team
-updated: 2026-10-29
+updated: 2026-10-31
 features:
   - 131-invite-garage-staff
   - 389-confirm-booking-lift-mechanic
@@ -13,6 +13,7 @@ features:
   - 058-mechanic-hours
   - 150-add-booking
   - 427-time-blocks
+  - 059-profile-direct-requests
 ---
 
 # Capability: Garage team
@@ -85,9 +86,9 @@ _From 056-mechanic-dialog._
 
 _From 056-mechanic-dialog._
 
-### 056-FR-011 — (055-FR-001 modified) The list MUST include the owner's row first (`isOwner` true), then the other current rows by name as before, still leaving out every row with `removed_at` set; each item gains `roleTitle` (nullable), `specialties` (array), `certifications` (array), `years` (nullable), `brandIds` (array), `isOwner` and `futureBookings` (the count of that card's `confirmed` bookings starting after now); the answer gains `brands`: the garage's `works_on` brands as `{ id, name }`, by name A–Z, for the dialog's choice. `id`, `name`, `speciality`, `onProfile`, `hasAccount`, `rating` and `reviewCount` are unchanged.
+### 059-FR-012 — The team list (`GET /api/v1/garages/:garageId/mechanics`, 056-FR-011) MUST carry, per item, `shown` (FR-001's answer) and `takesDirectRequests`, keep `onProfile` (the mechanic's own consent) and `hasAccount`, and carry at the top `teamOnProfile` (the garage's switch) beside `items` and `brands`.
 
-_From 056-mechanic-dialog._
+_From 059-profile-direct-requests._
 
 ### 055-FR-002 — The read MUST be open to the owner of that garage only: a receptionist or a mechanic of the garage gets 403 `forbidden`; any other actor (another garage's owner, a driver, an admin, a signed-out call's 401 aside) gets 404 `not_found`, as the garage's other owner-only routes do (398-FR-004). The check runs on the server before any row is read.
 
@@ -149,21 +150,21 @@ _From 055-team-list._
 
 _From 056-mechanic-dialog._
 
-### 056-FR-002 — The API MUST offer `POST /api/v1/garages/:garageId/mechanics` (201, the card) and `PATCH /api/v1/garages/:garageId/mechanics/:mechanicId` (200, the card; every field optional, only the given ones change: an omitted field is left as it is, `null` clears `roleTitle` or `years`, `[]` clears an array; `name` cannot be cleared), taking `name` (required on add, 2 to 80 characters trimmed), `roleTitle`, `specialties`, `certifications`, `years` and `brandIds` within FR-001's limits and refusing anything outside them, a non-integer `years`, a `brandIds` entry the garage does not take or a duplicate, as the API's validation refusal (`validation_failed`, each field named). The card in the answer carries the list item's shape (FR-011). The DTOs live in the contracts library, the routes in the OpenAPI document, and the web app calls them through the regenerated client.
+### 059-FR-007 — `PATCH /api/v1/garages/:garageId/mechanics/:mechanicId` (056-FR-002) MUST accept `takesDirectRequests` (boolean, optional, only the owner's dialog sends it), written with the card's other fields under 056-FR-005's audit (`update` entry, field `takes_direct_requests`, old and new) and `mechanic.updated` naming the field; a body whose value equals the stored one writes nothing. `POST` of a card never takes it: a `POST` body carrying it is refused `validation_failed` as any unknown field (a new card is on).
 
-_From 056-mechanic-dialog._
+_From 059-profile-direct-requests._
 
-### 056-FR-003 — The three routes MUST be open to the owner of that garage only, checked on the server before anything else, in the order of 055-FR-002 and 055-FR-003: a receptionist or a mechanic of the garage gets 403 `forbidden`; any other actor 404 `not_found` (a signed-out call 401); then, with `team_mechanics` off, the owner gets 404 `feature_off`; then an unknown card, a card with `removed_at` set or a card of another garage answers 404 `not_found`.
+### 059-FR-008 — Both routes MUST keep their access rules unchanged (397-FR-011, 056-FR-003): the owner of that garage only; a receptionist or a mechanic of the garage 403 `forbidden`; another garage's owner, a driver, an admin 404 `not_found`; signed out 401; the card route with `team_mechanics` off 404 `feature_off`. The AI assistant gets no tool for either.
 
-_From 056-mechanic-dialog._
+_From 059-profile-direct-requests._
 
 ### 056-FR-004 — A body of an add or an edit that carries `photo`, `bio` or `languages` (any of them, with any value) MUST be refused 403 with a named code (`mechanic_owned_field`), before any write and before the other fields are judged (A34: the mechanic's own fields, #342).
 
 _From 056-mechanic-dialog._
 
-### 056-FR-005 — Every add MUST write an audit `create` entry and every edit one `update` entry per field of the request whose value changed (field, old value, new value, an array as its entries joined with ", "; none for an unchanged field; the derived `speciality` gets no entry of its own), each with the actor and the role; `mechanic.added` and `mechanic.updated` (payload naming the changed fields) MUST be recorded in the same transaction as the change, to the garage audience and, for a card on the profile, to `public:garage:{garageId}` and `public:mechanic:{mechanicId}`.
+### 059-FR-011 — The live audience of a mechanic card (`cardAudience`, 056-FR-005: `mechanic.added`, `mechanic.updated`, `mechanic.removed` reaching the public pages "while the card is on the profile") MUST decide "public" by FR-001 instead of the card's own `on_profile` alone.
 
-_From 056-mechanic-dialog._
+_From 059-profile-direct-requests._
 
 ### 1255-FR-014 — Removing a card (056-FR-006) MUST also set every `sent` invite naming that card to `revoked` in the same transaction.
 
@@ -377,6 +378,34 @@ _From 058-mechanic-hours._
 
 _From 427-time-blocks._
 
+### 059-FR-001 — The system MUST decide whether a mechanic is shown on the public profile in one place on the server, `isShownOnProfile`, and every surface that tells a mechanic's public state (this story's lamps and public live channel; later the profile's Mecanici section #107, the mechanic's page and sitemap entry #284) MUST read it. A mechanic is shown only when all five of these hold: (1) the garage's `team_mechanics` feature is on; (2) `GARAGE.team_on_profile` is on; (3) the card has joined: it has an account (`account_id` set) and is not removed (`removed_at` null); (4) `MECHANIC.on_profile` is true; (5) the garage is in the public scope (`publicGarages()`, approved). The rule MUST be usable both as a predicate on a loaded row and as a database condition, so a list and a single read answer the same.
+
+_From 059-profile-direct-requests._
+
+### 059-FR-002 — The garage MUST gain `team_on_profile` (boolean, default true), "Afișează-i pe pagina ta" / "Show them on your page": on shows the team under FR-001, off hides every mechanic of the garage.
+
+_From 059-profile-direct-requests._
+
+### 059-FR-005 — The `garage.updated` of FR-004 MUST reach the garage's staff, the garage's public page (`public:garage:{garageId}`, no results) and the public channel of every current card of the garage (`public:mechanic:{mechanicId}` for each card not removed), so an open mechanic page can close or reopen on it.
+
+_From 059-profile-direct-requests._
+
+### 059-FR-006 — Each mechanic card MUST gain `takes_direct_requests` (boolean, default true), "Poate fi cerut de clienți" / "Can be asked for by customers": whether a driver may pick the mechanic when asking for a quote; it decides nothing else and never whether the mechanic is shown.
+
+_From 059-profile-direct-requests._
+
+### 059-FR-009 — The owner MUST never set a mechanic's own consent: a body of the card route carrying `onProfile` MUST be refused 403 `mechanic_owned_field` before any other field is judged (056-FR-004's list gains it); acceptance of an invite (1255-FR-006) stays the only write that turns it on, and #342 the only one that turns it off.
+
+_From 059-profile-direct-requests._
+
+### 059-FR-019 — The two new columns MUST ship with their migration in the garages module's schema; existing garages MUST read `team_on_profile` true and existing cards `takes_direct_requests` true after it, so nothing that is shown today disappears from a lamp by the migration alone (a card shown today has `on_profile` true and an account, so it stays shown).
+
+_From 059-profile-direct-requests._
+
+### 059-FR-020 — Tests MUST be written first (Principle II) and cover: in Jest on real PostgreSQL and Valkey — FR-001 for every combination of its five conditions (32 rows, plus a removed card that still has an account) as a predicate and as a list condition, including a form-typed card before acceptance; FR-003 (step 4's switch lands on the garage at creation and on a later save, absent keeps the default, cards stay unconsented, re-read); FR-004 and FR-007 (the write, the audit entry, the event and its fields, nothing on an unchanged body, `teamOnProfile` alone and with the other fields, `takesDirectRequests` refused on `POST`); FR-005's audience including each card's public channel; FR-008 (401, 403 for a receptionist and a mechanic, 404 for another owner, a driver and an admin, `feature_off`); FR-009 (`onProfile` in a body refused before the other fields); FR-010 (hidden, accountless, removed, switch-off and feature-off mechanics not joined; a shown one joined); FR-011; FR-012's shape; in Jest for the web — FR-013's lamp texts for each state, FR-014's switch and hint, FR-015's three dialog states, FR-016's optimistic save and revert with the toast, FR-017's re-read. In Playwright, end to end: with two cards, one accepted and one without an account, the team list shows "pe profil" on the accepted one only; turning the garage's switch off in one browser makes the lamps of a second browser read "nu apare pe profil" within 5 seconds. The public profile's Mecanici section is #107's and is not asserted here.
+
+_From 059-profile-direct-requests._
+
 ## Retired
 
 - `129-FR-009` — superseded by `055-FR-004` (2026-10-24)
@@ -394,3 +423,7 @@ _From 427-time-blocks._
 - `056-FR-006` — superseded by `1255-FR-014` (2026-10-25)
 - `056-FR-008` — superseded by `058-FR-007` (2026-10-25)
 - `058-FR-011` — superseded by `150-FR-003` (2026-10-26)
+- `056-FR-002` — superseded by `059-FR-007` (2026-10-31)
+- `056-FR-003` — superseded by `059-FR-008` (2026-10-31)
+- `056-FR-005` — superseded by `059-FR-011` (2026-10-31)
+- `056-FR-011` — superseded by `059-FR-012` (2026-10-31)

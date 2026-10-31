@@ -267,7 +267,7 @@ describe("the card's direct requests switch", () => {
     expect(events).toHaveLength(1);
     expect(
       [...(events[0].payload as { fields: string[] }).fields].sort(),
-    ).toEqual(['takesDirectRequests', 'years']);
+    ).toEqual(['takes_direct_requests', 'years']);
   });
 
   it('writes it on a card without an account and one whose mechanic chose not to appear', async () => {

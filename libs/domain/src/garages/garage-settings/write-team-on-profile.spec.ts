@@ -17,7 +17,10 @@ const setup = (stored: boolean) => {
       findMany: jest.fn(async () => [{ id: 'm-1' }, { id: 'm-2' }]),
     },
   };
-  const audit = { recordChanges: jest.fn(async () => undefined) };
+  const audit = {
+    record: jest.fn(async () => undefined),
+    recordChanges: jest.fn(async () => undefined),
+  };
   const events = { record: jest.fn(async () => undefined) };
   return {
     audit,
@@ -72,9 +75,34 @@ describe('writeTeamOnProfile', () => {
     });
   });
 
-  it('records the change but sends no event for a garage still being created', async () => {
-    const { audit, ports, txc } = setup(false);
+  it('records the value a garage is created with, even the default, and tells no one', async () => {
+    const { audit, events, ports, tx, txc } = setup(true);
     await writeTeamOnProfile(txc, change, true, { audit: ports.audit });
-    expect(audit.recordChanges).toHaveBeenCalledTimes(1);
+    expect(tx.garage.update).not.toHaveBeenCalled();
+    expect(audit.record).toHaveBeenCalledWith(
+      txc,
+      expect.objectContaining({
+        action: 'create',
+        field: 'team_on_profile',
+        newValue: true,
+        subjectId: GARAGE,
+        subjectType: 'garage',
+      }),
+    );
+    expect(audit.recordChanges).not.toHaveBeenCalled();
+    expect(events.record).not.toHaveBeenCalled();
+  });
+
+  it('writes a creation with the switch off onto the garage', async () => {
+    const { audit, ports, tx, txc } = setup(true);
+    await writeTeamOnProfile(txc, change, false, { audit: ports.audit });
+    expect(tx.garage.update).toHaveBeenCalledWith({
+      data: { teamOnProfile: false },
+      where: { id: GARAGE },
+    });
+    expect(audit.record).toHaveBeenCalledWith(
+      txc,
+      expect.objectContaining({ action: 'create', newValue: false }),
+    );
   });
 });

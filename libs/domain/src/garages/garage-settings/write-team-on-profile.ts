@@ -15,10 +15,11 @@ export async function teamCardIds(
   return rows.map((row) => row.id);
 }
 
-// Step 4's switch written onto the garage, inside the caller's transaction,
-// with one history entry when it moves. A garage already live also hears it
-// through `garage.updated`; one being created has no public page yet, so
-// `events` is left out.
+// Step 4's switch written onto the garage, inside the caller's transaction.
+// A garage being created records the value it starts with as a field of its
+// creation, and has no public page to tell, so `events` is left out. A garage
+// already live gets one history entry when the switch moves, and hears it
+// through `garage.updated`.
 export async function writeTeamOnProfile(
   tx: Prisma.TransactionClient,
   change: Omit<AuditChange, 'subjectId' | 'subjectType'> & {
@@ -32,6 +33,23 @@ export async function writeTeamOnProfile(
     select: { teamOnProfile: true },
     where: { id: garageId },
   });
+  if (!ports.events) {
+    if (teamOnProfile !== on) {
+      await tx.garage.update({
+        data: { teamOnProfile: on },
+        where: { id: garageId },
+      });
+    }
+    await ports.audit.record(tx, {
+      ...change,
+      action: 'create',
+      field: 'team_on_profile',
+      newValue: on,
+      subjectId: garageId,
+      subjectType: 'garage',
+    });
+    return;
+  }
   if (teamOnProfile === on) return;
   await tx.garage.update({
     data: { teamOnProfile: on },
@@ -43,7 +61,6 @@ export async function writeTeamOnProfile(
     { team_on_profile: teamOnProfile },
     { team_on_profile: on },
   );
-  if (!ports.events) return;
   await ports.events.record(tx, {
     audience: {
       garageId,
