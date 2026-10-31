@@ -15,6 +15,8 @@ export class FakeLiveVideo implements LiveVideoProvider {
   readonly deleted: string[] = [];
   // The inputs closed, in order, for the tests to read.
   readonly closed: string[] = [];
+  // The inputs deleted after a start that did not commit, in order.
+  readonly deletedInputs: string[] = [];
   // The publisher state of each input, set by the tests; an input not set
   // never had a publisher.
   readonly statuses = new Map<string, InputStatus>();
@@ -26,6 +28,10 @@ export class FakeLiveVideo implements LiveVideoProvider {
 
   async closeInput(inputId: string): Promise<void> {
     this.closed.push(inputId);
+  }
+
+  async deleteInput(inputId: string): Promise<void> {
+    this.deletedInputs.push(inputId);
   }
 
   async deleteRecording(providerRef: string): Promise<void> {

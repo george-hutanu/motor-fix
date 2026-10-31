@@ -38,8 +38,12 @@ type Call = { body?: unknown; failed?: string };
 type Operation =
   | 'create_input'
   | 'close_input'
+  | 'delete_input'
   | 'delete_recording'
   | 'input_status';
+
+// Sent on create and again on close, so the update cannot reset them.
+const RECORDING = { mode: 'automatic', requireSignedURLs: true } as const;
 
 // The states Cloudflare gives an input with a publisher on it.
 const CONNECTED = new Set(['connected', 'reconnected']);
@@ -63,7 +67,7 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     const call = await this.call('create_input', 'POST', '/live_inputs', {
       meta: { name: `motorfix live session ${session.id}` },
       preferLowLatency: true,
-      recording: { mode: 'automatic', requireSignedURLs: true },
+      recording: RECORDING,
     });
     if (call.failed) return this.unavailable(call.failed);
     const body = call.body as {
@@ -83,17 +87,13 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
     return { inputId, publishUrl };
   }
 
-  // Disabled, never deleted: a kept recording is reached by its input. The
-  // recording settings are sent again so the update cannot reset them.
+  // Disabled, never deleted: a kept recording is reached by its input.
   async closeInput(inputId: string): Promise<void> {
     const call = await this.call(
       'close_input',
       'PUT',
       `/live_inputs/${encodeURIComponent(inputId)}`,
-      {
-        enabled: false,
-        recording: { mode: 'automatic', requireSignedURLs: true },
-      },
+      { enabled: false, recording: RECORDING },
     );
     if (call.failed === '404') return;
     const body = call.body as {
@@ -108,6 +108,17 @@ export class CloudflareLiveVideo implements LiveVideoProvider {
           ? 'still_enabled'
           : undefined);
     if (failed) throw new Error(`live input close failed: ${failed}`);
+  }
+
+  async deleteInput(inputId: string): Promise<void> {
+    const call = await this.call(
+      'delete_input',
+      'DELETE',
+      `/live_inputs/${encodeURIComponent(inputId)}`,
+    );
+    if (call.failed && call.failed !== '404' && call.failed !== 'malformed') {
+      throw new Error(`live input delete failed: ${call.failed}`);
+    }
   }
 
   // The reference is the live input: its recordings are listed and each is

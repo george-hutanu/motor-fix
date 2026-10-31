@@ -248,7 +248,7 @@ describe('a start that is refused', () => {
   it('keeps one session when two starts race, and closes the loser’s input', async () => {
     const s = await setting();
     const create = jest.spyOn(fake(), 'createInput');
-    const close = jest.spyOn(fake(), 'closeInput');
+    const close = jest.spyOn(fake(), 'deleteInput');
 
     const answers = await Promise.all([
       start(s.live, s.costel),
@@ -286,7 +286,7 @@ describe('a start that is refused', () => {
       .mockRejectedValueOnce(new Error('audit down'));
     const create = jest.spyOn(fake(), 'createInput');
     jest
-      .spyOn(fake(), 'closeInput')
+      .spyOn(fake(), 'deleteInput')
       .mockRejectedValueOnce(new Error('close failed'));
 
     const res = await start(s.live, s.costel);
@@ -295,7 +295,7 @@ describe('a start that is refused', () => {
     await nothingWritten(s.job.id);
     const input = (await create.mock.results[0]?.value) as { inputId: string };
     expect(warn).toHaveBeenCalledWith(
-      `live input not closed: ${input.inputId} Error`,
+      `live input not deleted: ${input.inputId} Error`,
     );
   });
 

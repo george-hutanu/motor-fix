@@ -43,6 +43,19 @@ describe('closing an input at the stand-in', () => {
 
     expect(fake.closed).toEqual(['input-1', 'input-2']);
   });
+
+  it('records an input deleted apart from one closed', async () => {
+    const fake = new FakeLiveVideo();
+
+    await fake.deleteInput('input-1');
+
+    expect(fake.deletedInputs).toEqual(['input-1']);
+    expect(fake.closed).toEqual([]);
+  });
+
+  it('deletes nothing, without a word, when no provider is configured', async () => {
+    await expect(NONE.deleteInput('input-1')).resolves.toBeUndefined();
+  });
 });
 
 // @traces 333-FR-018

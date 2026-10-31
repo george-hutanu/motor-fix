@@ -47,15 +47,17 @@ export class LiveInputs {
 
   async onEvent(job: LiveStoppedJob): Promise<void> {
     const { kind, payload } = job.data;
-    const sessionId = payload['liveSessionId'];
+    const sessionId = payload?.['liveSessionId'];
     if (!KINDS.includes(kind as EventKind) || typeof sessionId !== 'string')
       return;
     const session = await this.prisma.liveSession.findUnique({
       select: { provider: true, providerInputId: true },
       where: { id: sessionId },
     });
-    // Only this worker's provider holds the input.
-    if (!session || session.provider !== this.provider.name) return;
+    // Only this worker's provider holds the input, and a session with no
+    // input id has nothing there to close.
+    if (!session?.providerInputId || session.provider !== this.provider.name)
+      return;
     const input = session.providerInputId;
     try {
       await this.provider.closeInput(input);

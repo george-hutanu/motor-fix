@@ -20,6 +20,10 @@ export interface LiveVideoProvider {
   // input id; one already closed or gone counts as closed. Throws when the
   // provider could not close it; the caller logs it.
   closeInput(inputId: string): Promise<void>;
+  // Removes an input whose session never committed: nobody was given its
+  // publish link, so it holds no recording. One already gone counts as
+  // deleted. Throws when the provider could not delete it; the caller logs it.
+  deleteInput(inputId: string): Promise<void>;
   // The signed low-latency HLS manifest of the input, valid until expiresAt.
   viewUrl(inputId: string, expiresAt: Date): string;
   // Deletes every recording of a live input, the reference a recording is
@@ -36,6 +40,7 @@ export const LIVE_VIDEO_PROVIDER = Symbol('LIVE_VIDEO_PROVIDER');
 export const NONE: LiveVideoProvider = {
   closeInput: async () => undefined,
   createInput: async () => ({ unavailable: 'not_configured' }),
+  deleteInput: async () => undefined,
   deleteRecording: async () => undefined,
   // With no provider nothing can tell, so nothing is stopped as idle.
   inputStatus: async () => ({ connected: true, since: null }),

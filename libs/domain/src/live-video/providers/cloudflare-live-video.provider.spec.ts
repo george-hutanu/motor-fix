@@ -508,3 +508,32 @@ describe('closing a live input at Cloudflare', () => {
     ]);
   });
 });
+
+// @traces 1390-FR-002
+describe('deleting the input of a start that did not commit', () => {
+  it('deletes the input, which never served a session', async () => {
+    answer = json(200, { result: null, success: true });
+
+    await cloudflare().deleteInput('input-uid-1');
+
+    expect(seen.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'DELETE /accounts/acct-1/stream/live_inputs/input-uid-1',
+    ]);
+  });
+
+  it('counts an input the provider no longer has as deleted', async () => {
+    answer = json(404, { success: false });
+
+    await expect(cloudflare().deleteInput('input-uid-1')).resolves.toBe(
+      undefined,
+    );
+  });
+
+  it('throws on a server error, naming only the reason', async () => {
+    answer = json(500, { success: false });
+
+    await expect(cloudflare().deleteInput('input-uid-1')).rejects.toThrow(
+      new Error('live input delete failed: 500'),
+    );
+  });
+});

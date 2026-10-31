@@ -1444,7 +1444,7 @@
       "id": 40,
       "type": "timeseries",
       "title": "Live sessions and view tokens",
-      "description": "Live stream starts by outcome (started, refused, provider_failed, unavailable, stopped), viewing links by outcome (issued, refused, ended) recordings discarded at the stop by outcome (discarded, discard_failed) and inputs closed at the provider after a stop by outcome (closed, close_failed), per second over 5 minutes. A discard_failed rise leaves recordings at the provider to be deleted later; a close_failed rise leaves inputs open to a publisher after their session stopped. A provider_failed or unavailable rise is the video provider down or not configured: the workshop is told to send photos and clips.",
+      "description": "Live stream starts by outcome (started, refused, provider_failed, unavailable, stopped), viewing links by outcome (issued, refused, ended), recordings discarded at the stop by outcome (discarded, discard_failed) and inputs closed at the provider after a stop by outcome (closed, close_failed), per second over 5 minutes. A discard_failed rise leaves recordings at the provider to be deleted later; a close_failed rise leaves inputs open to a publisher after their session stopped. A provider_failed or unavailable rise is the video provider down or not configured: the workshop is told to send photos and clips.",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"

@@ -12,6 +12,7 @@ type ViewOutcome = 'issued' | 'refused' | 'ended' | 'unavailable';
 type Operation =
   | 'create_input'
   | 'close_input'
+  | 'delete_input'
   | 'delete_recording'
   | 'input_status';
 
