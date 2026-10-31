@@ -53,7 +53,8 @@ async function taker(
       ...refused,
     },
   });
-  if (jobTypeIds.length > 0) {
+  // A brand the garage does not take has no job ticked: the database refuses one.
+  if (jobTypeIds.length > 0 && !refused) {
     await prisma.garageBrandJob.createMany({
       data: jobTypeIds.map((jobTypeId) => ({
         brandId,
