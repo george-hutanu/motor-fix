@@ -488,7 +488,7 @@ _From 154-free-slots._
 
 _From 154-free-slots._
 
-### 154-FR-012 — The answer MUST be served from a per-garage cache in Valkey keyed by the garage and every normalized parameter (after FR-003's defaults and the rounding of `earliest`, so one key per distinct question), kept at most 60 seconds, and dropped for the whole garage when any schedule event of that garage is relayed: `booking.confirmed`, `booking.moved`, `booking.cancelled`, `booking.lapsed`, `quote.accepted`, `mechanic.added`, `mechanic.updated`, `mechanic.removed`, `garage.updated`, `garage.features_changed`, `time_block.created`, `time_block.updated`, `time_block.deleted`. PostgreSQL stays the truth: a cold cache or a Valkey outage is a read from PostgreSQL, never an error and never a changed answer, and the schedule tables are never written by the engine.
+### 154-FR-012 — The answer MUST be served from a per-garage cache in Valkey keyed by the garage and every normalized parameter (after FR-003's defaults and the rounding of `earliest`, so one key per distinct question), kept at most 60 seconds, and dropped for the whole garage when any schedule event of that garage is relayed: `booking.confirmed`, `booking.moved`, `booking.cancelled`, `booking.lapsed`, `booking.no_show_recorded`, `quote.accepted`, `mechanic.added`, `mechanic.updated`, `mechanic.removed`, `garage.updated`, `garage.features_changed`, `time_block.created`, `time_block.updated`, `time_block.deleted`. PostgreSQL stays the truth: a cold cache or a Valkey outage is a read from PostgreSQL, never an error and never a changed answer, and the schedule tables are never written by the engine.
 
 _From 154-free-slots._
 
