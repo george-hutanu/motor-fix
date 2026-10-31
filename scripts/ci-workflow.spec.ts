@@ -502,16 +502,33 @@ describe('ci workflow', () => {
     });
 
     // @traces 456-FR-003
-    it('runs the named integration specs alone, one Jest run after another, each on an empty audit history', () => {
+    it('runs the named integration specs alone, one run after another, each on an empty audit history', () => {
       expect(
         run('integration', 'Integration tests', { REPEAT: '3', SPECS }),
       ).toEqual(
         Array(3)
           .fill([
             'node scripts/clear-activity-log.ts',
-            'jest --ci --runInBand libs/domain/src/store/store.ttl.integration.spec.ts',
+            'vitest run --config libs/domain/vitest.config.mts --no-file-parallelism libs/domain/src/store/store.ttl.integration.spec.ts',
           ])
           .flat(),
+      );
+    });
+
+    // A mistyped name would otherwise walk up from `.` looking for its project.
+    it('refuses a named integration spec that is not a file, before running anything', () => {
+      let out = '';
+      try {
+        run('integration', 'Integration tests', {
+          REPEAT: '1',
+          SPECS: 'libs/domain/src/nope.integration.spec.ts',
+        });
+      } catch (error) {
+        out = String((error as { stdout?: unknown }).stdout);
+      }
+
+      expect(out).toContain(
+        "::error::no spec file at 'libs/domain/src/nope.integration.spec.ts'",
       );
     });
 
@@ -642,8 +659,8 @@ describe('the object store the stack boots', () => {
     const block = step(job('checks'), 'Compose stack');
 
     expect(block).not.toContain('setup');
-    expect(block).toMatch(
-      /npx jest -c libs\/domain\/jest\.config\.cts libs\/domain\/src\/storage\/object-store\.integration\.spec\.ts/,
+    expect(block).toContain(
+      'npx vitest run --config libs/domain/vitest.config.mts libs/domain/src/storage/object-store.integration.spec.ts',
     );
     for (const [name, value] of Object.entries(storageEnv)) {
       expect(block).toContain(`${name}: ${value}`);
