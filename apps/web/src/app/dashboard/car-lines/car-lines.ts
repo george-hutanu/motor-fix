@@ -46,10 +46,20 @@ export function dueDateStatus(expiry: string | null, now: Date): DueDateStatus {
   return { days, passed: days < 0, state: lampFor(days) };
 }
 
-export function oilStatus(nextServiceKm: number, odometerKm: number) {
+// The lamp is judged by the days to the service's estimated date
+// (`serviceDueOn`), and is red once no kilometres are left. Without a date,
+// the car is taken to run 1,000 km a month.
+export function oilStatus(
+  nextServiceKm: number,
+  odometerKm: number,
+  serviceDueOn: string | null | undefined,
+  now: Date,
+): { days: number; kmLeft: number; state: LampState } {
   const kmLeft = nextServiceKm - odometerKm;
   // `|| 0` turns the -0 a few km overdue rounds to into 0.
-  const days = Math.round(kmLeft / KM_PER_DAY) || 0;
+  const kmDays = Math.round(kmLeft / KM_PER_DAY) || 0;
+  if (kmLeft <= 0) return { days: kmDays, kmLeft, state: 'red' };
+  const days = daysUntil(serviceDueOn, now) ?? kmDays;
   return { days, kmLeft, state: lampFor(days) };
 }
 
@@ -63,7 +73,12 @@ function compareLines(a: CarLine, b: CarLine): number {
 
 type Dated = Pick<
   CarDto,
-  'itpUntil' | 'rcaUntil' | 'rovinietaUntil' | 'nextServiceKm' | 'odometerKm'
+  | 'itpUntil'
+  | 'rcaUntil'
+  | 'rovinietaUntil'
+  | 'nextServiceKm'
+  | 'odometerKm'
+  | 'serviceDueOn'
 >;
 
 // The car's lines, most urgent first.
@@ -79,7 +94,12 @@ export function carLines(car: Dated, now: Date): CarLine[] {
   });
   // An answer cached before the field existed has no nextServiceKm at all.
   if (car.nextServiceKm != null) {
-    const { days, state } = oilStatus(car.nextServiceKm, car.odometerKm);
+    const { days, state } = oilStatus(
+      car.nextServiceKm,
+      car.odometerKm,
+      car.serviceDueOn,
+      now,
+    );
     lines.push({ days, expiry: null, kind: 'oil', state });
   }
   return lines.sort(compareLines);
