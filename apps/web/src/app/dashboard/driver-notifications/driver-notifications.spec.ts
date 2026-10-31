@@ -865,7 +865,7 @@ const hintOf = (element: HTMLElement, type: string) =>
 const hintText = (element: HTMLElement, type: string) =>
   hintOf(element, type)?.textContent?.trim();
 
-// @traces 1415-FR-002 1415-FR-006
+// @traces 1415-FR-002 1415-FR-004 1415-FR-006
 describe('the fallback hint text', () => {
   it.each([
     [
@@ -987,12 +987,18 @@ describe('the fallback hint text', () => {
 describe('where the fallback hint shows', () => {
   const smsFailed = { from: 'sms', reason: 'send_failed', to: 'email' };
 
-  it('shows nothing for a null fallback and for a read without one', async () => {
-    const { element } = await opened('due_dates', fallen({ DUE_ITP: null }));
+  it.each([
+    ['a null fallback', fallen({ DUE_ITP: null })],
+    ['a read without one', full()],
+  ])('shows nothing for %s', async (_, first) => {
+    const { element } = await opened('due_dates', first);
 
     expect(
       region(element, 'due_dates')?.querySelector('[id$="-fallback-hint"]'),
     ).toBeNull();
+    expect(groupOf(element, 'ITP').hasAttribute('aria-describedby')).toBe(
+      false,
+    );
   });
 
   it('shows the hint only under the type that carries a fallback, after its picker', async () => {
@@ -1054,7 +1060,7 @@ describe('where the fallback hint shows', () => {
   });
 });
 
-// @traces 1415-FR-001 1415-FR-006
+// @traces 1415-FR-001 1415-FR-003 1415-FR-006
 describe('the picker described by the fallback hint', () => {
   it('names the fallback hint alone', async () => {
     const { element } = await opened(
