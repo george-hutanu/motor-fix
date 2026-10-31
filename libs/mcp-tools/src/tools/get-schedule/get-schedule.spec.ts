@@ -5,6 +5,7 @@
 // @traces 374-FR-011
 // @traces 150-FR-009
 // @traces 427-FR-011
+// @traces 151-FR-003
 import { BadRequestException } from '@nestjs/common';
 
 import { getSchedule } from './get-schedule';
@@ -45,8 +46,11 @@ const vlad = { id: 'mechanic-1', name: 'Vlad Stan' };
 const scheduleOf = (answer: Partial<Schedule> = {}) =>
   jest.fn(async () => ({
     blocks: [] as Schedule['blocks'],
+    days: [{ day: '2026-10-09', open: [] }] as Schedule['days'],
     entries: [] as Entry[],
     from: '2026-10-09',
+    hoursSet: false,
+    liftCount: 2,
     lifts: true,
     to: '2026-10-09',
     ...answer,
@@ -283,6 +287,51 @@ describe('get_schedule output schema', () => {
       name: 'get_schedule',
     });
     expect(answer.isError).toBeFalsy();
+  });
+});
+
+describe('get_schedule lifts and opening hours', () => {
+  it('passes the lift count and each day’s opening hours through, as its schema declares them', async () => {
+    const days = [
+      {
+        day: '2026-10-09',
+        open: [
+          { from: '08:30', to: '12:00' },
+          { from: '13:00', to: '17:15' },
+        ],
+      },
+      { day: '2026-10-10', open: [] },
+    ];
+    const client = await connect(
+      [getSchedule],
+      caller({ roles: ['garage'] }, ['motorfix.read']),
+      context({
+        garage: {
+          schedule: {
+            list: scheduleOf({ days, hoursSet: true, liftCount: 3 }),
+          },
+        },
+      }),
+    );
+    const { tools } = await client.listTools();
+    expect(tools[0].outputSchema?.properties).toEqual(
+      expect.objectContaining({
+        days: expect.anything(),
+        hoursSet: expect.anything(),
+        liftCount: expect.anything(),
+      }),
+    );
+    expect(tools[0].description).toMatch(/lift count and opening hours/);
+    const answer = await client.callTool({
+      arguments: { from: '2026-10-09', to: '2026-10-10' },
+      name: 'get_schedule',
+    });
+    expect(answer.isError).toBeFalsy();
+    expect(answer.structuredContent).toMatchObject({
+      days,
+      hoursSet: true,
+      liftCount: 3,
+    });
   });
 });
 

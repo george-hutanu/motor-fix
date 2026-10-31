@@ -228,6 +228,20 @@
       }
     },
     {
+      // The lift schedule's sideways scroller (a labelled region) and its blocks (labelled groups) take focus, so a keyboard scrolls the timeline and reads each block's tooltip (axe scrollable-region-focusable); no native element is a focusable labelled group.
+      "includes": [
+        "apps/web/src/app/dashboard/lift-schedule/lift-schedule.html"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noNoninteractiveTabindex": "off",
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    },
+    {
       // A form with role="search" for the accounts' and the log's search landmarks: Biome asks for the <search> element, which Angular's DOM schema does not know (NG0304).
       "includes": [
         "apps/web/src/app/dashboard/admin-log-filters/admin-log-filters.html",
