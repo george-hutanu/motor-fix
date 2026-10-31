@@ -26,7 +26,12 @@ describe('the save suggestion in the OpenAPI document', () => {
     ]);
     expect(post.requestBody).toBeUndefined();
     expect(post.parameters).toEqual([
-      expect.objectContaining({ in: 'path', name: 'garageId', required: true }),
+      expect.objectContaining({
+        in: 'path',
+        name: 'garageId',
+        required: true,
+        schema: expect.objectContaining({ format: 'uuid', type: 'string' }),
+      }),
     ]);
   });
 

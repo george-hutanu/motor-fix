@@ -14,6 +14,7 @@ import {
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -37,6 +38,7 @@ export class SaveSuggestionsController {
     summary:
       "Remember the caller's no to saving a garage after a finished job there",
   })
+  @ApiParam({ format: 'uuid', name: 'garageId', type: String })
   @ApiNoContentResponse({
     description: 'Recorded, or recorded already with its first time kept',
   })

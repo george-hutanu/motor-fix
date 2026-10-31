@@ -1,6 +1,6 @@
 ---
 capability: cars
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 089-add-a-car
   - 090-itp-status-lamp
@@ -20,6 +20,7 @@ features:
   - 1400-garage-corrects-repair-web
   - 1267-admin-corrects-repair
   - 1379-provider-calls-worker
+  - 293-save-garage-suggest
 ---
 
 # Capability: Cars
@@ -538,6 +539,26 @@ _From 1267-admin-corrects-repair._
 ### 1267-FR-014 — Tests MUST cover, in Jest on real PostgreSQL and Redis (`*.integration.spec.ts` where the repository is used), each file naming its ids in one whole-line `// @traces` comment: the list's membership (shared, not shared, deleted, MotorFix-sourced, a garage not on MotorFix, a car sold away and one bought), order, the item's three fields and nothing more, the cap and `truncated`, 404 for an unknown, malformed and deleted account; the open read's content and its `open` entry once per read, none on a 404, none from the list, and no content answered when the entry's write fails (rollback); each field corrected alone and together, the amount cleared, the unchanged save; every 400 limit; 404 for each non-admin role on each of the four routes, a non-admin's invalid body included (404 before 400), 401 for a visitor; the 404s of FR-009; 409 and the concurrent-save race; the delete's 403 and message; the audit entries' values, role `admin` and scopes; the event's payload, `by`, audience with and without sharing, and the rollback on failure; REPAIR_UPDATED naming MotorFix in both languages with the switch on and off, to the current owner after a sale, none when the car has no owner, once on a redelivered event; the garage's own list, correction and message unchanged (the scope generalisation changes nothing for the owner); the public-routes list unchanged (every route needs a session).
 
 _From 1267-admin-corrects-repair._
+
+### 293-FR-001 — The system MUST store a dismissed save suggestion as SAVE_SUGGESTION_DISMISSAL in the `cars` module beside SAVED_GARAGE: `account_id` (the driver's account), `garage_id`, `dismissed_at` (UTC, the first dismissal's time). The pair (account, garage) is the primary key; a row is deleted with its account or its garage (cascade); rows are never updated or removed otherwise. The table ships with its migration in the module's schema.
+
+_From 293-save-garage-suggest._
+
+### 293-FR-002 — `POST /api/v1/me/save-suggestions/:garageId/dismiss` MUST record the dismissal for the actor's own account and answer 204 with no body, whether a row was created or one already existed (the first `dismissed_at` is kept). It MUST answer 404 `not_found` and store nothing when the actor has no job at that garage whose status is `done` — a job of a booking of one of the actor's quote requests at that garage, handed over or not — or when the garage id names no garage. Access is ST-290's (290-FR-006): an account whose role in use is not `driver` 403 `driver_role_required`, then the capability `driver.saved_garages` (a missing capability is the policy's own 403 refusal, as on the save route); a visitor 401 `sign_in_required`; a `:garageId` that is not a valid id 400 `validation_failed`; when two faults coincide the order is 401, then 403, then 400. The route is under `/me` and takes no account id, so another person's dismissal cannot be asked for.
+
+_From 293-save-garage-suggest._
+
+### 293-FR-004 — A dismissal MUST write no audit entry, emit no event and send no notification, push or e-mail: it is a display preference (the brief). The suggestion itself writes nothing. The save, when the driver takes it, is ST-290's with its audit entry and `saved_garage.added` event, unchanged.
+
+_From 293-save-garage-suggest._
+
+### 293-FR-006 — The dismiss route MUST be listed with its logs, metrics, dashboard panel and alert (or why not) in `infra/observability/inventory.json` in the same PR, as 290-FR-016 lists the saved-garage routes; the active request read gains a field, not a new endpoint.
+
+_From 293-save-garage-suggest._
+
+### 293-FR-007 — Tests MUST be written first (Principle II) and cover, in Jest on real PostgreSQL and Valkey, each file naming its ids in one whole-line `// @traces` comment: the read's `saveSuggestion` with a `done` job at an approved garage neither saved nor dismissed (set, with the garage's id and name); null for a job `to_do`, `in_work` and `paused`, for a saved garage, for a dismissed garage, for a garage `suspended` before or after the job became `done`, and for a request with no live booking; the dismissal of garage A not hiding the suggestion of garage B (per garage); the dismiss route's 204 and row on the first call, 204 and the kept time on the second, 404 for a garage with no `done` job of the actor (a job `in_work` there, another driver's `done` job there, an unknown id), 403 without the driver role, 401 for a visitor, 400 for a malformed id; no audit entry and no event after a dismissal; the cascade when the account row or the garage row is deleted. In Jest without a database: the OpenAPI document lists the route and the field. The web tests and the Playwright flow are title 2's (FR-014).
+
+_From 293-save-garage-suggest._
 
 ## Retired
 
