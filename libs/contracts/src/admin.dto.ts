@@ -2,10 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsIn,
   IsOptional,
-  IsString,
   Length,
   Matches,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 
 import { CITY_ALL, CITY_KEY, PERIODS, type Period } from './figure-choices';
@@ -314,9 +314,11 @@ export class AdminDemandSupplyQueryDto {
     maxLength: 80,
     minLength: 1,
   })
-  @IsOptional()
-  @IsString()
+  // Absent only: a null brand is refused, as @IsOptional would let it by.
+  @ValidateIf((_, value) => value !== undefined)
   @Length(1, 80)
+  // PostgreSQL cannot hold a NUL in text; no brand name has a control character.
+  @Matches(/^\P{Cc}*$/u)
   brand?: string;
 
   @ApiPropertyOptional({

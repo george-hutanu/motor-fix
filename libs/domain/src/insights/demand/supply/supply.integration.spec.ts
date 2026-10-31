@@ -233,6 +233,20 @@ describe('the nightly brand-area rows', () => {
     ).toEqual({ writtenAt: NOW });
   });
 
+  it('writes no day while the areas are not loaded, so no day is marked with every row unknown', async () => {
+    await searched('BMW', noon(DAY), CELL.sector3);
+    await prisma.$executeRawUnsafe('TRUNCATE area');
+    try {
+      expect(await writeBrandAreaDaily(prisma, NOW)).toEqual({
+        days: [],
+        written: 0,
+      });
+      expect(await areaRows(DAY)).toEqual([]);
+    } finally {
+      await new AreaLoader(prisma).load(AREAS);
+    }
+  });
+
   it('back-fills a day written before the brand-area rows and leaves its brand, job and total rows as they are', async () => {
     await searched('BMW', noon(DAY), CELL.sector3);
     await writeDemandDaily(prisma, NOW);

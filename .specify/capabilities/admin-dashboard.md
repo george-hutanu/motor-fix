@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -32,6 +32,7 @@ features:
   - 011-dashboard-sections
   - 1389-reported-reviews-admin
   - 1391-admin-dashboard-customise
+  - 106-demand-supply
 ---
 
 # Capability: Admin dashboard
@@ -965,6 +966,62 @@ _From 1391-admin-dashboard-customise._
 ### 1391-FR-018 — Every text this story adds (the line, the names and descriptions, the arrow labels, "Revino la varianta implicită", the count, the empty line, the error) MUST exist in Romanian and English in the shared i18n files with key parity and follow the reader's language; a Romanian hyphenated word uses U+2011 ("Service‑uri"); no text in the panel or the strip is under 12 px on a phone.
 
 _From 1391-admin-dashboard-customise._
+
+### 106-FR-001 — The system MUST hold the areas as reference data (AREA: `code`, `name`, `kind` `city` or `sector`, `outline`): the six București sectors (`sector-1` to `sector-6`, names "Sector 1" to "Sector 6", kind `sector`) and the municipalities that are county seats (kind `city`, code the city's slug as `cityOf` gives it, name the city's name), each with its outline from a data file in the repository that the build team updates; the file MUST be loaded into AREA at the API's start by code (insert or update, never delete), so a second start changes nothing; the file carries its source and licence. The loader is a domain function the API calls at start and the tests call directly; while AREA is empty the read answers every point under `unknown`. This story delivers ST-1292 (#1292).
+
+_From 106-demand-supply._
+
+### 106-FR-002 — A point MUST be placed in the one area whose outline contains it, else in no area. A garage's point is its `position` (for a mobile mechanic the position of its registered seat); a search's point is the centre of its 5-character SEARCH_LOG `area_cell`; a search without a cell, a garage without a position, and any point in no area, count under the pseudo-area `unknown` ("Zonă necunoscută" / "Unknown area"), which is answered like an area but is not in AREA.
+
+_From 106-demand-supply._
+
+### 106-FR-003 — A request MUST count once per distinct area of the garages it was sent to (REQUEST_RECIPIENT), on the Europe/Bucharest day of its creation, for the brand of its car snapshot, whatever its status today; a recipient in no area places it under `unknown`. A search MUST count once, on the day it was logged, for its brand's current name and its area.
+
+_From 106-demand-supply._
+
+### 106-FR-004 — Supply for a brand and an area MUST be the garages with status `approved` and not suspended, whose area is that area, holding a GARAGE_BRAND row with stance `works_on` for the brand, counted at the time of the read; a garage with `does_not_take`, no row, a draft or any other status, or suspended, is not supply. A mobile mechanic counts by its seat (FR-002).
+
+_From 106-demand-supply._
+
+### 106-FR-005 — An unmet request MUST be a QUOTE_REQUEST with `closed_reason` `expired` and no QUOTE from any garage, counted once per area of its recipients on the Europe/Bucharest day of its `closed_at`.
+
+_From 106-demand-supply._
+
+### 106-FR-006 — An admin MUST be able to read `GET /api/v1/admin/demand/supply`, with optional query `brand` (an exact brand name, 1 to 80 characters) and `area` (an area code of FR-001 or `unknown`): the window's `firstDay` and `lastDay`, `writtenAt` (the last nightly write of a `brand_area` marker row, null before the first), `areas` (every AREA row's code, name and kind plus `unknown`, for the screen's filter), and `rows`: one per brand and area with at least one search, one request or one unmet request in the window, each with `brand`, `area` (code, name, kind), `searches`, `requests`, `unmet`, `supply` and `requestsPerGarage` (requests divided by supply rounded to the nearest whole number; null when supply is 0); `unmet` is answered as counted and may exceed `requests`, since an unmet request is counted on the day it expired (FR-005). A filter keeps only the rows whose brand or area equals it; both filters may be given. Nothing in the answer is personal data.
+
+_From 106-demand-supply._
+
+### 106-FR-007 — The rows MUST be ordered by `unmet` descending, then `searches` descending, then `requests` descending, then brand name, then area name, in plain code-point order.
+
+_From 106-demand-supply._
+
+### 106-FR-008 — The route MUST follow the `admin/*` access policy (103-FR-002, capability `admin.catalogue`): an admin reads it, any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`; a bad `brand` or `area` answers 400 `validation_failed`; a failure inside the read answers the API's standard error body. The route joins the admin-route guard test's list of known routes.
+
+_From 106-demand-supply._
+
+### 106-FR-009 — The window MUST be the 30 Europe/Bucharest calendar days ending today (103-FR-004): today and any closed day without a `brand_area` marker row counted live from SEARCH_LOG and QUOTE_REQUEST; the other closed days read from DEMAND_DAILY. A day's `brand_area` rows and its marker commit together (FR-010), so a day is read from rows only when its marker exists and never half-written. Supply is never stored or read from a past day.
+
+_From 106-demand-supply._
+
+### 106-FR-010 — The `insights` nightly job's `demand-daily` step (404-FR-004) MUST also write to DEMAND_DAILY, for every closed day of the last 30 that has no `brand_area` marker row, one row per brand and area with at least one search, one request or one unmet request that day (dimension `brand_area`, key naming the area code and the brand name, its `searches`, `requests` and `unmet_requests`, each 0 or more) and one marker row (dimension `brand_area`, key `all`, the sums of the day's rows and the write time), in one transaction per day under the step's per-day lock, apart from the `brand`, `job` and `total` rows: a day whose `total` row exists but has no `brand_area` marker (every day written before this story) gets its `brand_area` rows on the next night; running it again for a written day changes nothing. The step's log line counts the `brand_area` rows written; a failure fails the attempt, which is retried as today.
+
+_From 106-demand-supply._
+
+### 106-FR-011 — DEMAND_DAILY MUST gain `unmet_requests` (0 by default, never below 0) and a `dimension` wide enough for `brand_area`; existing rows are unchanged, and the closed days written before this story are counted live for `brand_area` until the next night writes their rows (FR-009, FR-010).
+
+_From 106-demand-supply._
+
+### 106-FR-012 — The OpenAPI document MUST describe the route and its DTOs (from the contracts library, validated at the edge), and the `data-access` client MUST be regenerated; no other route changes. No screen changes in this story (ST-1416 renders the answer).
+
+_From 106-demand-supply._
+
+### 106-FR-013 — The observability inventory MUST list the route (`admin-demand-supply`, the `motorfix-api` dashboard, the `api-error-rate` and `api-latency` rules) and the `demand-daily` entry MUST name the brand-area rows; the AREA load at start logs its count and is covered by the API's existing start-up metrics and alerts; no new service, queue or outside call.
+
+_From 106-demand-supply._
+
+### 106-FR-014 — Jest on real PostgreSQL and Redis MUST cover: area placement of a workshop, a mobile mechanic by its seat, a search cell's centre, a point outside every area and a garage without a position (`unknown`); a `does_not_take`, an unmarked, a suspended and a non-approved garage left out of supply; a request to garages in two areas counted once in each; an unmet request against an expired one with a quote and a cancelled one; requests per garage rounding and null; the brand and area filters and the order of FR-007; 404 for a non-admin and 401 without a token; the nightly `brand_area` rows written once with their marker, and back-filled for a day that has only its `total` row; an unmet-only row; a window day unwritten counted live; and the AREA load run twice. A `// @traces` line names the FR ids in each test file.
+
+_From 106-demand-supply._
 
 ## Retired
 

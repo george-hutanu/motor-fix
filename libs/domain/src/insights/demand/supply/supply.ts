@@ -128,9 +128,12 @@ async function markedDays(
 // step's per-day lock; a written day is left as it is, so a day written
 // before these rows existed is caught up once.
 export async function writeBrandAreaDaily(
-  db: Pick<PrismaClient, '$queryRaw' | '$transaction' | 'demandDaily'>,
+  db: Pick<PrismaClient, '$queryRaw' | '$transaction' | 'area' | 'demandDaily'>,
   now: Date,
 ): Promise<{ days: string[]; written: number }> {
+  // Before the API's start has loaded the areas every row would be unknown
+  // and its marker would keep the day from being written again.
+  if ((await db.area.count()) === 0) return { days: [], written: 0 };
   const closed = closedDays(now);
   const marked = await markedDays(db, closed);
   const days: string[] = [];

@@ -6,7 +6,7 @@ import file from './areas.json';
 import { PRISMA } from '../../auth/prisma';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client';
 
-export type AreaKind = 'city' | 'sector';
+type AreaKind = 'city' | 'sector';
 
 export interface AreaRecord {
   code: string;
@@ -85,9 +85,10 @@ export const AREAS: readonly AreaRecord[] = readAreas(file);
 export const areaOf = (point: Prisma.Sql) =>
   Prisma.sql`COALESCE((SELECT a.code FROM area a WHERE ST_Intersects(a.outline, ${point}) ORDER BY a.code LIMIT 1), 'unknown')`;
 
-// The centre of a search's five-character cell, null without one.
+// The centre of a search's five-character cell, null without one or for a
+// value that is not a geohash, which ST_PointFromGeoHash would fail on.
 export const cellCentre = (cell: Prisma.Sql) =>
-  Prisma.sql`CASE WHEN ${cell} IS NULL THEN NULL::geography ELSE ST_PointFromGeoHash(${cell})::geography END`;
+  Prisma.sql`CASE WHEN ${cell} ~ '^[0-9b-hjkmnp-z]{1,12}$' THEN ST_PointFromGeoHash(${cell})::geography ELSE NULL::geography END`;
 
 // Makes the stored areas match the file by code: inserts and updates, never
 // deletes; one transaction, so two API replicas booting together take turns.
