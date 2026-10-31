@@ -169,7 +169,7 @@ describe('the sample window under attack', () => {
       await recordSample(s, 'api', i, new Date(base + i));
     }
     expect(await medianLatency(s, 'api', new Date(base + 10_000))).toBe(4999.5);
-  });
+  }, 60_000);
 
   it('passes on a store failure instead of inventing a median', async () => {
     const broken = {

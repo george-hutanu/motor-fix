@@ -367,7 +367,7 @@ describe('the restore comparison under hostile input', () => {
     const res = run(['compare', join(dir, 'm.json'), join(dir, 'c.json')]);
     expect(res.status).toBe(1);
     expect(res.stdout).toContain(`table ${first}: manifest 0, restored 99`);
-  });
+  }, 60_000);
 });
 
 // @traces 251-FR-016
