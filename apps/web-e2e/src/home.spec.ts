@@ -549,6 +549,11 @@ test.describe('the rating dial with reduced motion @seeded', () => {
     await tile(page, 'Dacia').click();
     // Atelier Test leads Dacia with no place set: 5.0 from its seeded review.
     await expect(dialValue(page)).toHaveText('5,0');
+    expect(
+      await dialArea(page)
+        .locator('.mf-dial-needle')
+        .evaluate((n) => getComputedStyle(n).transitionDuration),
+    ).toBe('0s');
 
     await chooseTesla(page);
     // "—" is also the dial while the answer loads: wait for Tesla's rows.
@@ -569,11 +574,8 @@ test.describe('the rating dial with reduced motion @seeded', () => {
           ?.getAttribute('data-state'),
       ]),
     ).toEqual(['—', 'red']);
-    expect(
-      await dialArea(page)
-        .locator('.mf-dial-needle')
-        .evaluate((n) => getComputedStyle(n).transitionDuration),
-    ).toBe('0s');
+    // @traces 455-FR-001
+    await expect(dialArea(page).locator('.mf-dial-needle')).toHaveCount(0);
   });
 });
 

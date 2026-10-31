@@ -69,6 +69,8 @@ describe('RatingDial', () => {
       const { arc, centre, dial, fill, fixture } = render(value);
 
       expect(centre()).toBe('—');
+      // @traces 455-FR-001 455-FR-004
+      expect(dial.querySelector('.mf-dial-needle')).toBeNull();
       expect(Number(fill())).toBe(0);
       expect(arc.getAttribute('stroke-dasharray')).toBe('0 360');
       expect(dial.getAttribute('aria-label')).toBe('Nicio recenzie încă');
@@ -88,21 +90,50 @@ describe('RatingDial', () => {
     ).toBe('true');
   });
 
-  it('draws a needle at the value on the large dial only', () => {
-    const large = render(5, 'large').dial;
-    const small = render(4.8, 'small').dial;
+  // @traces 455-FR-002 455-FR-004
+  it('points the needle at the rating on the large dial', () => {
+    const needle = (value: unknown) =>
+      render(value).dial.querySelector('.mf-dial-needle') as SVGElement;
 
-    expect(large.getAttribute('data-size')).toBe('large');
+    expect(needle(5).style.getPropertyValue('--mf-dial-needle')).toBe('120deg');
+    expect(needle(4.9).style.getPropertyValue('--mf-dial-needle')).toBe(
+      '115.2deg',
+    );
+    expect(needle(0.1).style.getPropertyValue('--mf-dial-needle')).toBe(
+      '-115.2deg',
+    );
+  });
+
+  // @traces 455-FR-002
+  it('swings the needle in only when a rating arrives after none', () => {
+    expect(render(4.9).dial.classList.contains('mf-dial-swing-in')).toBe(false);
+
+    const { dial, fixture } = render(null);
+    expect(dial.querySelector('.mf-dial-needle')).toBeNull();
+    expect(dial.classList.contains('mf-dial-swing-in')).toBe(false);
+
+    fixture.componentInstance.value.set(4.9);
+    fixture.detectChanges();
+    expect(dial.classList.contains('mf-dial-swing-in')).toBe(true);
     expect(
-      large.querySelector('.mf-dial-needle')?.getAttribute('transform'),
-    ).toBe('rotate(120 34 34)');
-    expect(
-      render(0, 'large')
-        .dial.querySelector('.mf-dial-needle')
-        ?.getAttribute('transform'),
-    ).toBe('rotate(-120 34 34)');
-    expect(small.getAttribute('data-size')).toBe('small');
-    expect(small.querySelector('.mf-dial-needle')).toBeNull();
+      (
+        dial.querySelector('.mf-dial-needle') as SVGElement
+      ).style.getPropertyValue('--mf-dial-needle'),
+    ).toBe('115.2deg');
+
+    fixture.componentInstance.value.set(undefined);
+    fixture.detectChanges();
+    expect(dial.querySelector('.mf-dial-needle')).toBeNull();
+    expect(dial.querySelector('.mf-dial-value')?.textContent?.trim()).toBe('—');
+  });
+
+  // @traces 455-FR-003
+  it('never draws a needle on the small dial', () => {
+    for (const value of [4.8, null]) {
+      const { dial } = render(value, 'small');
+      expect(dial.getAttribute('data-size')).toBe('small');
+      expect(dial.querySelector('.mf-dial-needle')).toBeNull();
+    }
   });
 });
 
