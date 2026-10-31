@@ -1,6 +1,6 @@
 ---
 capability: observability
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 875-observability-stack
   - 876-otel-instrumentation
@@ -58,6 +58,7 @@ features:
   - 144-profile-stats-weekly
   - 1395-block-time-dashboard
   - 1398-open-now-results-filters
+  - 154-free-slots
 ---
 
 # Capability: Observability
@@ -937,6 +938,10 @@ _From 277-car-status-alerts._
 ### 144-FR-008 — The route MUST be listed in `infra/observability/inventory.json` with its panel and alert; it is a read served by the route metrics, with no counter of its own.
 
 _From 144-profile-stats-weekly._
+
+### 154-FR-017 — The route MUST be in the generated OpenAPI document (`apps/api/openapi.json`) and the regenerated `data-access` client, and listed in `infra/observability/inventory.json` with the API's request duration by route and a counter of answers by outcome (`slots`, `none_in_horizon`), on the existing API dashboard; no new alert (a slow or failing route is covered by the API latency and error alerts).
+
+_From 154-free-slots._
 
 ## Retired
 
