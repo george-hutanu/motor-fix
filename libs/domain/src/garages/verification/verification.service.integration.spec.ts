@@ -2106,18 +2106,7 @@ describe('the last check date', () => {
   const at = (iso: string) =>
     vi
       .useFakeTimers({
-        doNotFake: [
-          'nextTick',
-          'setImmediate',
-          'clearImmediate',
-          'setTimeout',
-          'clearTimeout',
-          'setInterval',
-          'clearInterval',
-          'queueMicrotask',
-          'hrtime',
-          'performance',
-        ],
+        toFake: ['Date'],
       })
       .setSystemTime(new Date(iso));
 

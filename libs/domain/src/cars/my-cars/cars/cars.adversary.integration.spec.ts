@@ -182,19 +182,8 @@ describe('POST /cars under hostile input', () => {
   it('on 29 February 2028 takes 28 February 2033 and refuses 1 March 2033', async () => {
     // Only the clock moves; timers stay real for the database and HTTP.
     vi.useFakeTimers({
-      doNotFake: [
-        'hrtime',
-        'nextTick',
-        'performance',
-        'queueMicrotask',
-        'setImmediate',
-        'clearImmediate',
-        'setInterval',
-        'clearInterval',
-        'setTimeout',
-        'clearTimeout',
-      ],
       now: new Date('2028-02-29T10:00:00Z'),
+      toFake: ['Date'],
     });
     try {
       const { auth, id } = await driver();
