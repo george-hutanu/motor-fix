@@ -222,12 +222,15 @@ beforeAll(async () => {
       stored: price,
     },
     {
-      // A stamp older than the row's: refused as stale, the row untouched.
+      // The same whole range with a stamp older than the row's: refused as
+      // stale, the row untouched.
       call: (key) =>
         send(
           http().patch(`/api/v1/garages/${garageId}/prices/${priceId}`).send({
+            durationMinutes: 90,
             expectedUpdatedAt: '2026-10-30T07:00:00.000Z',
             fromBani: 90000,
+            toBani: 150000,
           }),
           ownerAuth,
           key,
