@@ -435,6 +435,26 @@ describe('the confirm panel: confirming', () => {
     },
   );
 
+  // The selects are disabled while the confirm is in flight, so the focus
+  // waits for them to be enabled again (found by the on-demand e2e run).
+  it.each([
+    ['mechanic_busy', 'Mecanic'],
+    ['lift_busy', 'Elevator'],
+  ])(
+    'moves the focus to %s’s select, %s, once the refusal lands',
+    async (code, label) => {
+      await open();
+      await choose('Mecanic', 'Maria Ionescu');
+      await choose('Elevator', 'Elevator 2');
+      confirm.mockRejectedValueOnce(refusal(409, { code, status: 409 }));
+
+      await press();
+
+      expect(select(label)?.disabled).toBe(false);
+      expect(document.activeElement).toBe(select(label));
+    },
+  );
+
   it('words the busy lift and the mechanic in English', async () => {
     await open({ language: 'en' });
     await choose('Mechanic', 'Ion Popescu');
@@ -563,5 +583,267 @@ describe('the confirm panel: closing', () => {
 
     await expect(result).resolves.toBe('cancelled');
     expect(confirm).not.toHaveBeenCalled();
+  });
+});
+
+// @traces 1384-FR-001 1384-FR-002 1384-FR-003 1384-FR-006
+describe('the confirm panel: the job’s lift need', () => {
+  const LIFT_JOB: ConfirmOptionsDto = { ...TEAM, needsLift: true };
+  const picked = (label: string) =>
+    select(label)?.selectedOptions[0]?.textContent?.trim();
+
+  it('picks Fără elevator when no job needs a lift, and sends no lift', async () => {
+    await open();
+
+    expect(picked('Elevator')).toBe('Fără elevator');
+    expect(choices(select('Elevator'))).toEqual([
+      'Fără elevator',
+      'Elevator 1',
+      'Elevator 2',
+    ]);
+    await choose('Mecanic', 'Ion Popescu');
+    await press();
+    expect(confirm.mock.calls[0][0].body).toEqual({ mechanicId: 'mech-1' });
+  });
+
+  it('asks for a lift, none picked, when a job needs one, Fără elevator still offered', async () => {
+    await open({ offered: LIFT_JOB });
+
+    const lift = select('Elevator');
+    expect(picked('Elevator')).toBe('Alege elevatorul');
+    expect(lift?.value).toBe('');
+    expect(choices(lift)).toEqual([
+      'Alege elevatorul',
+      'Fără elevator',
+      'Elevator 1',
+      'Elevator 2',
+    ]);
+    expect(lift?.required).toBe(true);
+  });
+
+  it('holds the confirm until a lift choice is made, saying so under the select', async () => {
+    await open({ offered: LIFT_JOB });
+    await choose('Mecanic', 'Maria Ionescu');
+
+    await press();
+
+    expect(confirm).not.toHaveBeenCalled();
+    const lift = select('Elevator');
+    expect(lift?.getAttribute('aria-invalid')).toBe('true');
+    expect(messageOf(lift)?.textContent?.trim()).toBe(
+      'Alege un elevator sau Fără elevator.',
+    );
+    expect(document.activeElement).toBe(lift);
+    expect(picked('Mecanic')).toBe('Maria Ionescu');
+  });
+
+  it('confirms with no lift once Fără elevator is picked, the message gone', async () => {
+    await open({ offered: LIFT_JOB });
+    await choose('Mecanic', 'Ion Popescu');
+    await press();
+
+    await choose('Elevator', 'Fără elevator');
+
+    expect(messageOf(select('Elevator'))).toBeNull();
+    await press();
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(confirm.mock.calls[0][0].body).toEqual({ mechanicId: 'mech-1' });
+    await expect(result).resolves.toBe('confirmed');
+  });
+
+  it('sends the lift picked and closes', async () => {
+    await open({ offered: LIFT_JOB });
+    await choose('Mecanic', 'Ion Popescu');
+    await choose('Elevator', 'Elevator 1');
+
+    await press();
+
+    expect(confirm.mock.calls[0][0].body).toEqual({
+      lift: 1,
+      mechanicId: 'mech-1',
+    });
+    await expect(result).resolves.toBe('confirmed');
+  });
+
+  it('asks nothing about a lift when the garage schedules none', async () => {
+    await open({ offered: { ...LIFT_JOB, liftCount: 0 } });
+    expect(select('Elevator')).toBeNull();
+    await choose('Mecanic', 'Ion Popescu');
+
+    await press();
+
+    expect(confirm.mock.calls[0][0].body).toEqual({ mechanicId: 'mech-1' });
+  });
+
+  it('asks for the mechanic first, then the lift', async () => {
+    await open({ offered: LIFT_JOB });
+
+    await press();
+    expect(messageOf(select('Mecanic'))?.textContent?.trim()).toBe(
+      'Alege un mecanic.',
+    );
+    expect(messageOf(select('Elevator'))).toBeNull();
+    expect(document.activeElement).toBe(select('Mecanic'));
+
+    await choose('Mecanic', 'Ion Popescu');
+    await press();
+    expect(messageOf(select('Elevator'))?.textContent?.trim()).toBe(
+      'Alege un elevator sau Fără elevator.',
+    );
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it('asks in English', async () => {
+    await open({ language: 'en', offered: LIFT_JOB });
+    expect(choices(select('Lift'))).toEqual([
+      'Choose a lift',
+      'No lift',
+      'Lift 1',
+      'Lift 2',
+    ]);
+    await choose('Mechanic', 'Ion Popescu');
+
+    await press('Confirm');
+
+    expect(messageOf(select('Lift'))?.textContent?.trim()).toBe(
+      'Choose a lift or No lift.',
+    );
+  });
+});
+
+// @traces 1384-FR-004 1384-FR-005 1384-FR-006
+describe('the confirm panel: a slot taken meanwhile', () => {
+  const taken = () =>
+    refusal(409, {
+      code: 'slot_taken',
+      detail: 'Locul tocmai a fost ocupat',
+      status: 409,
+    });
+  const picked = (label: string) =>
+    select(label)?.selectedOptions[0]?.textContent?.trim();
+  const top = () =>
+    panel().querySelector('p.problem[role="alert"]')?.textContent?.trim();
+
+  async function refusedOnce() {
+    await choose('Mecanic', 'Maria Ionescu');
+    await choose('Elevator', 'Elevator 2');
+    confirm.mockRejectedValueOnce(taken());
+    await press();
+  }
+
+  it('says so at the top, reads the choices again and keeps both picks', async () => {
+    await open();
+    await refusedOnce();
+
+    expect(top()).toBe('Locul tocmai a fost ocupat');
+    expect(options).toHaveBeenCalledTimes(2);
+    expect(panel()).not.toBeNull();
+    expect(picked('Mecanic')).toBe('Maria Ionescu');
+    expect(picked('Elevator')).toBe('Elevator 2');
+
+    await press();
+    expect(confirm).toHaveBeenCalledTimes(2);
+    expect(confirm.mock.calls[1][0].body).toEqual({
+      lift: 2,
+      mechanicId: 'mech-2',
+    });
+  });
+
+  it('clears a lift no longer offered to the opening choice, the mechanic kept', async () => {
+    await open({ offered: { ...TEAM, needsLift: true } });
+    options.mockResolvedValueOnce({ ...TEAM, liftCount: 1, needsLift: true });
+    await refusedOnce();
+
+    expect(picked('Elevator')).toBe('Alege elevatorul');
+    expect(choices(select('Elevator'))).toEqual([
+      'Alege elevatorul',
+      'Fără elevator',
+      'Elevator 1',
+    ]);
+    expect(picked('Mecanic')).toBe('Maria Ionescu');
+  });
+
+  it('clears a mechanic no longer offered, the lift kept', async () => {
+    await open();
+    options.mockResolvedValueOnce({
+      ...TEAM,
+      mechanics: [{ id: 'mech-1', name: 'Ion Popescu' }],
+    });
+    await refusedOnce();
+
+    expect(picked('Mecanic')).toBe('Alege mecanicul');
+    expect(picked('Elevator')).toBe('Elevator 2');
+  });
+
+  it('clears both when neither is offered any more', async () => {
+    await open();
+    options.mockResolvedValueOnce({
+      ...TEAM,
+      liftCount: 1,
+      mechanics: [{ id: 'mech-1', name: 'Ion Popescu' }],
+    });
+    await refusedOnce();
+
+    expect(picked('Mecanic')).toBe('Alege mecanicul');
+    expect(picked('Elevator')).toBe('Fără elevator');
+  });
+
+  it('keeps the choices and lets the person press again when the re-read fails', async () => {
+    await open();
+    options.mockRejectedValueOnce(refusal(500, { code: 'error', status: 500 }));
+    await refusedOnce();
+
+    expect(top()).toBe('Ceva nu a mers. Încearcă din nou.');
+    expect(picked('Mecanic')).toBe('Maria Ionescu');
+    expect(picked('Elevator')).toBe('Elevator 2');
+    expect(button('Confirmă')?.disabled).toBe(false);
+  });
+
+  it('sends nothing while the choices are being read again', async () => {
+    await open();
+    let land: (o: ConfirmOptionsDto) => void = () => undefined;
+    options.mockImplementationOnce(
+      () => new Promise<ConfirmOptionsDto>((resolve) => (land = resolve)),
+    );
+    await refusedOnce();
+
+    expect(button('Confirmă')?.disabled).toBe(true);
+    expect(select('Mecanic')?.disabled).toBe(true);
+    expect(select('Elevator')?.disabled).toBe(true);
+    await press();
+    expect(confirm).toHaveBeenCalledTimes(1);
+
+    land(TEAM);
+    await settle();
+    expect(button('Confirmă')?.disabled).toBe(false);
+  });
+
+  it('clears the message on the next press, not on a choice change', async () => {
+    await open();
+    await refusedOnce();
+
+    await choose('Elevator', 'Elevator 1');
+    expect(top()).toBe('Locul tocmai a fost ocupat');
+
+    confirm.mockImplementationOnce(() => new Promise(() => undefined));
+    await press();
+    expect(top()).toBeUndefined();
+    expect(confirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('says it in English', async () => {
+    await open({ language: 'en' });
+    await choose('Mechanic', 'Ion Popescu');
+    confirm.mockRejectedValueOnce(
+      refusal(409, {
+        code: 'slot_taken',
+        detail: 'The slot was just taken',
+        status: 409,
+      }),
+    );
+
+    await press('Confirm');
+
+    expect(top()).toBe('The slot was just taken');
   });
 });

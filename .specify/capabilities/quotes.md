@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -34,6 +34,7 @@ features:
   - 1395-block-time-dashboard
   - 1316-swr-resource-store
   - 346-quote-outcomes
+  - 1384-confirm-dialog-lift
 ---
 
 # Capability: Quotes
@@ -578,9 +579,9 @@ _From 389-confirm-booking-lift-mechanic._
 
 _From 389-confirm-booking-lift-mechanic._
 
-### 389-FR-014 — The garage's Oferte trimise row of an accepted quote MUST show, to the owner and a receptionist only, the button "Confirmă programarea" / "Confirm the booking", opening the shared overlay panel (a drawer from 768 px, a sheet under it) titled "Confirmă programarea" with: the time left at the top in 222-FR-007's wording; the driver's short name, the car, the jobs, the slot (day and time, Romania's time zone) and the duration; the select "Mecanic" / "Mechanic" (only with `team_mechanics` on; required; the garage's mechanics by name); the select "Elevator" / "Lift" (only with `lift_schedule` on; "Fără elevator" / "No lift" first, then "Elevator 1" … "Elevator N"); the buttons "Confirmă" / "Confirm" and "Renunță" / "Cancel". A missing mechanic is shown before sending; the API's message is shown under the matching select (`mechanic_busy`, `mechanic_unavailable` → Mecanic; `lift_busy` → Elevator) or at the top (`outside_hours`, `invalid_transition`), the other choices kept; on 200 the panel closes and the row re-renders. The dialog MUST show nothing of the car's history.
+### 1384-FR-001 — (389-FR-014 modified) With `liftCount` above 0, the lift select MUST open with "Fără elevator" / "No lift" picked when the options' `needsLift` is false, and with no value picked when it is true: its first option is then the placeholder "Alege elevatorul" / "Choose a lift" (empty value, as the mechanic select's "Alege mecanicul"), followed by "Fără elevator" / "No lift" as a selectable option, then "Elevator 1" … "Elevator N" / "Lift 1" … "Lift N". With `liftCount` 0 there is no lift select whatever `needsLift` says.
 
-_From 389-confirm-booking-lift-mechanic._
+_From 1384-confirm-dialog-lift._
 
 ### 389-FR-015 — The garage's confirmed row MUST read "Acceptată · programată <day>, <time>" / "Accepted · booked <day>, <time>" (the mock's text; `azi`/`mâine`/the weekday or date as the platform writes relative days) with the lamp's accepted colour, no button, the mechanic's name and "Elevator n" when set, the phone link and the plate; the garage feed MUST re-read on `booking.confirmed` and `booking.lapsed`, and a lapsed or cancelled row leaves the list (222 edge case kept).
 
@@ -882,6 +883,34 @@ _From 1393-final-price-predare._
 
 _From 1393-final-price-predare._
 
+### 1384-FR-002 — With `needsLift` true and a lift select drawn, a press of "Confirmă" with no lift choice (neither "Fără elevator" nor a lift) MUST send nothing and show "Alege un elevator sau Fără elevator." / "Choose a lift or No lift." under the lift select (`garage.quotes.confirm.liftRequired`), marking it invalid and moving focus to it; the mechanic check of today comes first, so with both missing only the mechanic message shows. Picking any option clears the message, as the other field messages clear today.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-003 — A confirm with "Fără elevator" picked MUST send no lift, with `needsLift` true as with false; the server decides nothing about the lift need (150-FR-004) and the dialog never refuses that choice.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-004 — On a 409 `slot_taken` the dialog MUST stay open, show the server's message ("Locul tocmai a fost ocupat" / "The slot was just taken") at the top as a top message does today, and read the confirm options again at once (the same read as on opening); while that read is in flight the selects and "Confirmă" are disabled as while sending. A second press during the read sends nothing.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-005 — When the re-read lands, the dialog MUST keep the picked mechanic if its id is in the new `mechanics` and the picked lift if it is at most the new `liftCount` (or is "Fără elevator"); a choice no longer offered MUST be cleared to the opening state of FR-001 (the lift) or to "Alege mecanicul" (the mechanic). A kept pick wins over FR-001's opening state while it is still offered; a cleared lift returns to FR-001's opening state under the new `needsLift`; a select the re-read no longer draws (`liftCount` 0, `mechanicRequired` false) sends nothing for its field. An unpicked lift (the placeholder) is not a pick: if the new `needsLift` differs, it follows FR-001's opening state for the new value. A failed re-read shows its failure text at the top, keeps every choice and re-enables the form, so the person can press again.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-006 — The lift message of FR-002, the placeholder of FR-001 and every other new text MUST exist in Romanian and English under `garage.quotes.confirm` (hyphenated Romanian words with U+2011); the dialog MUST pass the QA sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll and the message visible under its select, as 389-FR-017 asks of the dialog today.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-007 — The change MUST add nothing to the first-page bundle: the dialog stays in its lazy chunk and the initial bundle measures the same as on the base commit (±0 bytes); the 1 MB error budget of `apps/web/project.json` is never raised. No new dependency.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-008 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids. Jest, in the dialog's colocated spec: US1-1 to US1-8 (the default per `needsLift`, the placeholder, the message, the focus, the field order, nothing sent, English), US2-1 to US2-7 (the re-read, what is kept and what is cleared, the failed re-read, the in-flight press, the message clearing, English). Playwright, in `apps/web-e2e` and `@seeded`: US3-1 and US3-2 (the owner confirms with a mechanic and "Elevator 1" and the row shows them; a second accepted quote at the same slot is refused on "Elevator 1" with "Elevatorul 1 e ocupat la ora asta" under the lift select, then confirmed with "Fără elevator"); the e2e helper takes the slot so both quotes share it; the suite runs on demand, not in PR CI.
+
+_From 1384-confirm-dialog-lift._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -927,3 +956,4 @@ _From 1393-final-price-predare._
 - `150-FR-009` — superseded by `427-FR-011` (2026-10-29)
 - `427-FR-015` — superseded by `1395-FR-006` (2026-10-30)
 - `343-FR-011` — superseded by `1316-FR-001` (2026-10-30)
+- `389-FR-014` — superseded by `1384-FR-001` (2026-10-31)

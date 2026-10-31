@@ -198,6 +198,11 @@ test.describe('accepting a quote @seeded', () => {
       await expect(mechanic).toBeVisible();
       const [, first] = await mechanic.locator('option').allTextContents();
       await mechanic.selectOption({ label: first });
+      // An oil service asks for a lift (ST-1384); no lift keeps this test off
+      // the lifts the specs beside it book at random times.
+      await confirm
+        .getByLabel('Elevator')
+        .selectOption({ label: 'Fără elevator' });
       await confirm
         .getByRole('button', { exact: true, name: 'Confirmă' })
         .click();
