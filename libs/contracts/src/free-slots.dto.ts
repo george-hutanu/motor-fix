@@ -12,10 +12,10 @@ import {
   Min,
 } from 'class-validator';
 
-export const FREE_SLOTS_DURATION_MIN = 15;
+const FREE_SLOTS_DURATION_MIN = 15;
 export const FREE_SLOTS_DURATION_MAX = 2400;
-export const FREE_SLOTS_COUNT_MAX = 10;
-export const FREE_SLOTS_HORIZON_MAX = 30;
+const FREE_SLOTS_COUNT_MAX = 10;
+const FREE_SLOTS_HORIZON_MAX = 30;
 
 // An instant: a date, a time and its zone, so no server clock reads it.
 const INSTANT =

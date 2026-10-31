@@ -12,7 +12,7 @@ const MINUTE = 60_000;
 const STEP = 30 * MINUTE;
 
 // A span a booking or a time block holds a mechanic, a lift or both for.
-export interface HeldSegment {
+interface HeldSegment {
   bookingId: string | null;
   mechanicId: string | null;
   lift: number | null;
@@ -22,7 +22,7 @@ export interface HeldSegment {
 
 // A booking the garage has not confirmed yet: it holds no mechanic or lift,
 // but takes one of each it will need from what is free over its time.
-export interface AwaitingBooking {
+interface AwaitingBooking {
   bookingId: string;
   startsAt: Date;
   endsAt: Date;
@@ -46,7 +46,7 @@ export interface FreeSlotsInput {
   count: number;
 }
 
-export interface FreeSlot {
+interface FreeSlot {
   startsAt: Date;
   endsAt: Date;
 }
