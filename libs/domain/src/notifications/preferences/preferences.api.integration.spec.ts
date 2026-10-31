@@ -147,6 +147,7 @@ describe('a driver who has saved nothing', () => {
       channel: 'email',
       channels: ['email', 'push', 'sms', 'whatsapp'],
       enabled: true,
+      fallback: null,
       garageId: null,
       type: 'DUE_ITP',
     });
