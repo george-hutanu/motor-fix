@@ -1,1 +1,6 @@
-<mf-lamp [state]="status().state" [label]="sentence()" />
+@let now = status();
+@if (addable() && now.kmLeft === null) {
+  <button type="button" (click)="add.emit()"><mf-lamp [state]="now.state" [label]="sentence(now)" /></button>
+} @else {
+  <mf-lamp [state]="now.state" [label]="sentence(now)" />
+}

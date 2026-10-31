@@ -57,6 +57,13 @@ const VIEWS = [
     'Așa te văd șoferii pe hartă',
   ],
   [
+    'Reparații clienți',
+    'Reparații clienți',
+    '/app/garage/client-repairs',
+    'Reparații adăugate de clienți',
+    'Reparațiile pe care clienții le‑au înregistrat la tine și le partajează',
+  ],
+  [
     'Setări',
     'Setări',
     '/app/garage/settings',
@@ -216,6 +223,7 @@ test.describe('garage views @seeded', () => {
       'Prices',
       'Reviews',
       'Profile',
+      'Client repairs',
       'Settings',
       'History',
     ]);
