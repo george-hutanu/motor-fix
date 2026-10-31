@@ -1,0 +1,8 @@
+<section [attr.aria-busy]="state() === 'loading' || null">
+  @if (state() === 'failed') {
+    <h1>{{ 'public.transfer.failed' | t }}</h1>
+    <button hlmBtn variant="secondary" type="button" (click)="read()">{{ 'public.transfer.retry' | t }}</button>
+  } @else {
+    <h1>{{ line() | t }}</h1>
+  }
+</section>

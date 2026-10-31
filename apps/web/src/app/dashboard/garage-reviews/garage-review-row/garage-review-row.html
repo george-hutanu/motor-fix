@@ -55,18 +55,36 @@
     </p>
   </div>
 }
-@if (action(); as label) {
+@if (action() || reportable()) {
   <div class="actions">
-    <button
-      hlmBtn
-      variant="secondary"
-      type="button"
-      data-reply-button
-      [attr.aria-disabled]="editOff() || null"
-      [attr.aria-describedby]="id + '-by' + (editOff() ? ' ' + id + '-rep' : '')"
-      (click)="press()"
-    >
-      {{ label | t }}
-    </button>
+    @if (action(); as label) {
+      <button
+        hlmBtn
+        variant="secondary"
+        type="button"
+        data-reply-button
+        [attr.aria-disabled]="editOff() || null"
+        [attr.aria-describedby]="id + '-by' + (editOff() ? ' ' + id + '-rep' : '')"
+        (click)="press()"
+      >
+        {{ label | t }}
+      </button>
+    }
+    @if (reportable()) {
+      <button
+        hlmBtn
+        variant="secondary"
+        type="button"
+        data-report-button
+        [attr.aria-disabled]="kept() || null"
+        [attr.aria-describedby]="kept() ? id + '-kept' : null"
+        (click)="pressReport()"
+      >
+        {{ 'garage.reviews.report.button' | t }}
+      </button>
+    }
   </div>
+  @if (reportable() && kept()) {
+    <p class="hint" data-report-hint [id]="id + '-kept'">{{ 'garage.reviews.report.kept' | t }}</p>
+  }
 }

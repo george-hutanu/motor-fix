@@ -187,7 +187,8 @@ export async function copyOf(
         mechanics: garage.mechanics.map((row) =>
           present({ name: row.name, speciality: row.speciality }),
         ) as MechanicCard[],
-        onProfile: garage.mechanics[0]?.onProfile ?? false,
+        // The switch is the garage's, not any card's consent.
+        onProfile: garage.teamOnProfile,
       },
       '5': hoursOf(garage),
       '6': present({ cui: garage.cui, rarNumber: file?.rarNumber }),

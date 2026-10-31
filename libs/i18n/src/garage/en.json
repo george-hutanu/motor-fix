@@ -69,7 +69,6 @@
   "home": {
     "empty": {
       "brands": "The most requested brands this month appear here.",
-      "funnel": "The path from profile views to requests appears here, by week.",
       "kpi": "Today's numbers appear here: requests, bookings, jobs and takings.",
       "load": "Each mechanic's load for today appears here.",
       "now": "Jobs in progress appear here, with photos, video and live from the workshop.",
@@ -817,6 +816,35 @@
       "title": "Reply to the review",
       "titleEdit": "Edit the reply"
     },
+    "report": {
+      "button": "Report",
+      "cancel": "Cancel",
+      "count": "{n} / {max}",
+      "done": "Reported. An admin decides within 48 hours.",
+      "kept": "Kept by an admin; it can be reported again only after the author edits it.",
+      "note": "The review is hidden from the profile until an admin decides, within 48 hours.",
+      "problem": {
+        "already_kept": "Kept by an admin; it can be reported again only after the author edits it.",
+        "already_reported": "This review is already reported.",
+        "forbidden": "Only the owner can report a review.",
+        "not_found": "This review is no longer available."
+      },
+      "reason": {
+        "ads": "Ads",
+        "fake_or_conflicted": "Fake or conflicted review",
+        "hate": "Hate or discrimination",
+        "insults": "Insults",
+        "off_topic": "Off topic",
+        "other": "Something else",
+        "personal_data": "Personal data",
+        "promotion": "Promotion of other services",
+        "threats_or_legal_accusations": "Threats or legal accusations"
+      },
+      "reasons": "Reason",
+      "submit": "Send the report",
+      "text": "Tell us what is wrong",
+      "title": "Report the review"
+    },
     "reported": "Reported · hidden from the profile until an admin decides",
     "retry": "Try again",
     "score": "{rating} / 5",
@@ -913,5 +941,14 @@
     "contact": "Contact MotorFix",
     "loadFailed": "We could not load the verification status.",
     "title": "Your profile is being checked"
+  },
+  "weekly": {
+    "empty": "No data yet. The first figures appear after the first full week.",
+    "error": "We could not load the figures.",
+    "noViews": "Last week had no views.",
+    "requests": "Requests received",
+    "sentence": "Last week, {pct} of views turned into requests.",
+    "views": "Profile views",
+    "week": "W"
   }
 }

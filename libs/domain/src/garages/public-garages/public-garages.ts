@@ -19,11 +19,12 @@ import { CacheService, cacheKey, type Filled } from '../../cache/cache.service';
 import {
   type BusinessKind,
   type GarageBrandStance,
+  type GarageStatus,
   Prisma,
   type PrismaClient,
 } from '../../generated/prisma/client';
 import { responseRateOf } from '../../insights/response-stats/response-stats';
-import { areaSql, kmOf } from '../../search/area/area-sql';
+import { areaSql, kmOf, roughly } from '../../search/area/area-sql';
 import { StorageService } from '../../storage/storage.service';
 import { brandAnswerWithFuels } from '../brand-answer';
 import {
@@ -39,6 +40,46 @@ import {
 export const publicGarages = () => ({ status: 'approved' as const });
 export const publicGaragesSql = (alias = 'garage') =>
   Prisma.sql`${Prisma.raw(alias)}.status = 'approved'`;
+
+// The one rule of who the public profile shows: a mechanic who joined, is
+// still on the team and agreed to appear, at a published garage whose owner
+// shows the team and whose team feature is on. Every reader of "shown" goes
+// through these two forms of it.
+export function isShownOnProfile(
+  card: {
+    accountId: string | null;
+    onProfile: boolean;
+    removedAt: Date | null;
+  },
+  garage: {
+    status: GarageStatus;
+    teamMechanics: boolean;
+    teamOnProfile: boolean;
+  },
+): boolean {
+  return (
+    card.accountId !== null &&
+    card.removedAt === null &&
+    card.onProfile &&
+    garage.status === publicGarages().status &&
+    garage.teamOnProfile &&
+    garage.teamMechanics
+  );
+}
+
+// The same rule as the `where` of a mechanic read; a garage with no feature
+// row counts as having the team on.
+export const shownOnProfile = () =>
+  ({
+    accountId: { not: null },
+    garage: {
+      ...publicGarages(),
+      features: { none: { enabled: false, key: 'team_mechanics' } },
+      teamOnProfile: true,
+    },
+    onProfile: true,
+    removedAt: null,
+  }) satisfies Prisma.MechanicWhereInput;
 
 type BrandRow = {
   brand: { id: string; name: string; popularity: number | null; slug: string };
@@ -193,10 +234,15 @@ const facilitiesOf = (row: ProfileRow) => ({
 });
 
 // A mobile mechanic is shown by the area it serves: its position is the
-// owner's seat, so it never leaves with the garage.
+// owner's seat, so only its centre rounded to about a kilometre leaves.
 const placeOf = (row: ProfileRow) =>
   row.business_kind === 'mobile'
     ? {
+        ...(row.latitude !== null &&
+          row.longitude !== null && {
+            areaLat: roughly(row.latitude),
+            areaLng: roughly(row.longitude),
+          }),
         serviceRadiusKm:
           row.service_radius_km ?? MOBILE_SERVICE_RADIUS_DEFAULT_KM,
       }

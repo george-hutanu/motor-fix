@@ -22,6 +22,7 @@ features:
   - 1400-garage-corrects-repair-web
   - 1379-provider-calls-worker
   - 293-save-garage-suggest
+  - 1392-car-transfer-link-web
 ---
 
 # Capability: Cars
@@ -82,9 +83,9 @@ _From 090-itp-status-lamp._
 
 _From 090-itp-status-lamp._
 
-### 1386-FR-004 — A car with no next-service value MUST show the grey oil line "Schimb de ulei: adaugă kilometrajul" / "Oil service: add the reading" after the rovinietă line on Mașinile mele's card, as a button operable by keyboard with at least a 44 px touch target, opening the edit dialog with the focus in the next-service field (FR-001), as the grey date lines of 092-FR-009 do; Panou's car panel keeps showing no oil line for such a car (its three date lines always rank before a grey oil line). (Modifies 029-FR-007: the card shows a grey line, not no line, without a value; modifies 092-FR-009: the card's fourth grey line and its button.)
+### 1392-FR-001 — (415-FR-015, 415-FR-022) Mașinile mele's car card "⋯" menu MUST offer "Am vândut mașina" / "I sold the car" as a third item after "Modifică" and "Șterge mașina"; it opens the sale dialog "Ai vândut <brand model>?" / "Sold your <brand model>?" with the question "Transmiți istoricul reparațiilor noului proprietar?" / "Do you pass the repair history to the new owner?" and the two choices of scenario 1.2; "Nu transmit istoricul" closes it and opens ST-92's removal confirmation for the car (the sale dialog answers `'remove'` and the cars view runs its existing removal path, so the card is dropped in one place). The dialog reads the car's sale (`GET /api/v1/cars/{id}/sale`) on opening, showing the existing task loading state until it answers; while it answers `canStart: false` with `reason: 'open_request'`, the dialog shows the refusal text of scenario 4.1 instead of the choices, with only "Închide" / "Close". The card of a car whose list answer carries a `transfer` (the `sent` transfer within its time, 415-FR-022) MUST show the transfer line "Transfer trimis · expiră pe <day month>" / "Transfer sent · expires on <day month>" and the "Anulează transferul" / "Cancel the transfer" button, and its "⋯" button MUST NOT be shown. The card's list MUST re-read on `car_transfer.sent`, `car_transfer.cancelled`, `car_transfer.expired` and `car_transfer.accepted` reaching the account (415-FR-011, 1265-FR-008) and after the dialog's own send and cancel, so the line follows without a reload.
 
-_From 1386-oil-service-lamp._
+_From 1392-car-transfer-link-web._
 
 ### 090-FR-007 — Tests MUST cover: the state and sentence for 61, 60, 8, 7, 1, 0 and −1 days and for no date, with a fixed clock in Europe/Bucharest, including just before and after midnight and the change to and from summer time; the Romanian plural and both languages' month names; the link only on a passed date, with its address (Jest); end to end (Playwright): a new driver adds a car with an ITP 36 days ahead and sees the amber line, then adds a car with an ITP 400 days ahead and sees the green line (dates relative to today in Europe/Bucharest, never literal).
 
@@ -117,10 +118,6 @@ _From 092-edit-remove-car._
 ### 094-FR-003 — A new ITP date MUST reset the flags, and the old date's remaining stages MUST never be sent; a stage whose day is already past when the date is entered or changed MUST be skipped (marked sent), while a stage whose day is today is still sent by today's run. (Modifies 092-FR-008 for the ITP, with scenario 2.2 and the edge cases of this spec as its tests.)
 
 _From 094-itp-reminders._
-
-### 092-FR-011 — The removal MUST be confirmed in a dialog with scenario 1's text (User Story 2) naming the car as "<brand> <model>", with "Șterge mașina" / "Remove the car" as the main button and "Renunță" / "Cancel"; a refusal (FR-003's `open_request`, or any other error) MUST show its reason inside that dialog, which stays open; on success the dialog closes and the card leaves the list at once.
-
-_From 092-edit-remove-car._
 
 ### 1265-FR-012 — `GET /api/v1/cars/sold` (capability `driver.cars`) MUST answer the caller's `former_owner_read_only` rows, newest sale first (ties by closing instant, newest first), each with the car's `id`, `brandName`, `model`, `year` and `saleDate` (`to_date`), the car's removal notwithstanding; `GET /api/v1/cars/sold/:id/repairs` MUST answer, for a car the caller has such a row for (else 404), the repairs that row may read (FR-010; done on or before the sale date), in FR-011's shape and order. A car the caller owns again (a second transfer back) is listed by both its open row (in `GET /api/v1/cars`) and its closed row (here). These reads are read-only: no write of this story or of 092 accepts a car through a closed row. (Modifies 092-FR-012: selling a car and passing its history on is this story's, and the former owner's read is the one exception to "repairs read only cars not removed".)
 
@@ -609,6 +606,38 @@ _From 293-save-garage-suggest._
 
 _From 293-save-garage-suggest._
 
+### 1392-FR-002 — (415-FR-016) Choosing to pass the history MUST show, in the same dialog, the repairs list as the sale read answers it (newest first; each row: the date, what was done, the garage; a MotorFix repair with the tag "Se transmite" / "Passes on" and no tick; a logged repair with a tick, unticked, label "Adăugată de tine" / "Added by you"), the empty-state text of scenario 1.5 when there is none, a note "Reparațiile făcute prin MotorFix se transmit întotdeauna. Bifează ce ai adăugat tu și vrei să transmiți. Facturile nu se transmit." / "Repairs done through MotorFix always pass on. Tick what you added yourself and want to pass. Invoices don't pass on.", the phone field "Telefonul cumpărătorului" / "The buyer's phone" (tel input, autocomplete `tel`; a number `normalisePhone` of `@motor-fix/contracts` answers `null` for (the API's own rule, 415-FR-004) refused in the field with "Scrie un număr de telefon valid." / "Enter a valid phone number." before any request; the API's 400 `invalid_phone` shown as the same message and 400 `own_phone` as "Nu poți trimite linkul pe numărul tău." / "You can't send the link to your own number.", both in the field), a note "Îi trimitem un link pe WhatsApp, valabil 7 zile." / "We send them a link on WhatsApp, valid 7 days.", "Înapoi" / "Back" and the main button "Trimite" / "Send", disabled while the request is in flight. The send is `POST /api/v1/cars/{id}/transfers` with the phone as typed and the ticked repair ids. Any other refusal (409 `open_request`, 400 `repair_not_tickable`, a failure) stays in the dialog with its reason (the existing task error).
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-003 — (415-FR-017) After the send the dialog MUST show the done state: "Linkul a plecat pe WhatsApp" / "The link went by WhatsApp" when the answer's `whatsapp` is `sent`, or the copy-the-link text of scenario 2.1 when `failed`; under it the link in full as the answer carries it, "Copiază linkul" / "Copy the link" (clipboard write; "Copiat" / "Copied" for 2 seconds; when the clipboard is not available, the link stays selectable), and "Gata" / "Done" which closes the dialog. The card re-reads and shows the transfer line.
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-004 — (415-FR-018) The transfer line's cancel MUST confirm in a small dialog "Anulezi transferul?" / "Cancel the transfer?" with "Linkul trimis nu va mai funcționa." / "The link you sent will stop working.", "Înapoi" and "Anulează transferul"; confirming calls `POST /api/v1/cars/{id}/transfers/{transferId}/cancel` with the line's transfer id; on 204 the dialog closes and the card re-reads; a refusal (409 `not_sent`, 404, a failure) shows its reason inside the dialog, which stays open, and the card re-reads too (the transfer may already be gone).
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-005 — (415-FR-013, adapted to 1265-FR-003) The web app MUST serve `/:lang/transfer/:token` as a public page in the public frame that reads `GET /api/v1/car-transfers/{token}` and shows, centred, with no sign-in prompt and no action in its body: for 404 "Linkul nu există" / "This link does not exist"; for 410 `transfer_cancelled` "Linkul nu mai e valabil" / "The link is no longer valid"; for 410 `transfer_expired` "Linkul a expirat" / "The link has expired"; for 410 `transfer_accepted` "Mașina a fost deja preluată" / "The car has already been taken over"; and for any 200 answer (signed out, or signed in with the car, repair count and seller name in it) and for 403 `own_transfer` the one line "Linkul e valabil. Preluarea mașinii vine în curând." / "This link is valid. Taking the car over is coming soon." (ST-1394 replaces this view). On a client-side navigation the page shows the existing task loading state until the read answers; the page asks search engines not to index it (`noindex`, the token is a bearer link). Each state sets the document title to its text; the server render answers with the API's HTTP status for 404 and 410 and 200 otherwise; the page never shows the seller's name, the car or the repair count even when the answer carries them. The route is public: no session is asked for and no sign-in dialog opens for a 401-free read.
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-006 — (415-FR-019) The screens MUST hold at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll, the dialog's list scrolling inside it on a phone, every control a 44 px touch target, focus moving into each dialog when it opens, Escape closing it (not while a request is in flight) and focus returning to the control that opened it (or to the card when that control is gone), the ticks labelled by their repair row, the public page readable without sign-in and without the dashboard chrome, no axe violation, each dialog named by its title (`role="dialog"` labelled by it), and the copied state, the field and task errors and the done state announced to assistive technology (a polite live region).
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-007 — (constraint, Principle I and the bundle budget) The public transfer page, the sale dialog and the cancel confirmation MUST be loaded only when they are opened (the page by its route, the dialogs on the first tap, as the removal confirmation is); nothing of this story joins the first-page bundle and its 1 MB error budget is not raised. The card's new line, button and menu item are the only code added to the driver area's existing chunk.
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-008 — (415-FR-020, the web part) Observability: no new service, queue, outside call or API endpoint is added; the PR's Observability section says so and names the ST-415 inventory entries the screens call. A web route or page that the inventory lists MUST gain the public page's entry in the same PR; if the inventory lists none, the section says so.
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-009 — (415-FR-021, the web and Playwright parts) Tests MUST cover, in Jest for the web app, each file naming its ids in one whole-line `// @traces` comment: the menu item and its absence with a `transfer`; the three dialog steps; the refusal with "Închide" only; the empty state; the field's own refusal and the API's `invalid_phone` and `own_phone` in the field; the ticked ids and the phone sent; Trimite disabled in flight; the two done states; the copy button's "Copiat" and the clipboard-less fallback; "Gata" closing; the transfer line with the day and month in both languages; the cancel confirmation, its 204 and its refusal; the re-read on each of the four event kinds; the public page's five states, the `own_transfer` line, the document title and the server render's status for 404, 410 and 200, in both languages. End to end (Playwright, `apps/web-e2e`): a driver sells a car, ticks one repair, sends, copies the link, opens it and sees the valid line; cancels and sees "Linkul nu mai e valabil"; with dates relative to today in Europe/Bucharest, never literal. The QA routes name Mașinile mele as the driver and the public page for a valid, a cancelled and an unknown token.
+
+_From 1392-car-transfer-link-web._
+
 ## Retired
 
 - `089-FR-008` — superseded by `090-FR-006` (2026-10-08)
@@ -636,4 +665,6 @@ _From 293-save-garage-suggest._
 - `409-FR-015` — superseded by `061-FR-007` (2026-10-30)
 - `409-FR-011` — superseded by `1267-FR-006` (2026-10-30)
 - `409-FR-016` — superseded by `1267-FR-010` (2026-10-30)
+- `1386-FR-004` — superseded by `1392-FR-001` (2026-10-31)
+- `092-FR-011` — superseded by `1392-FR-001` (2026-10-31)
 - `415-FR-006` — superseded by `1379-FR-003` (2026-10-30)

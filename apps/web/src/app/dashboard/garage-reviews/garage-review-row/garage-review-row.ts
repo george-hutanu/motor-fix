@@ -27,6 +27,8 @@ let rows = 0;
 // Under it the garage's reply, with its own marks. The owner may reply to a
 // published review, or edit the reply: `canReply` is false once a reply
 // exists, so the edit keys on the owner's role, as the API's edit does.
+// The owner may report a published review: a review an admin kept since its
+// last edit keeps the button, refused, with the hint saying why.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [HlmButton, TranslatePipe],
@@ -40,6 +42,8 @@ export class GarageReviewRow {
   readonly owner = input.required<boolean>();
   // The owner pressed Răspunde or Editează răspunsul.
   readonly reply = output<void>();
+  // The owner pressed Raportează.
+  readonly report = output<void>();
   private readonly i18n = inject(I18n);
   protected readonly id = `mf-review-row-${++rows}`;
 
@@ -80,6 +84,23 @@ export class GarageReviewRow {
         })
       : null;
   });
+
+  // The API's canReport keys on the owner's role; the row keys on it too, as
+  // the reply button does.
+  protected readonly reportable = computed(
+    () =>
+      this.owner() &&
+      this.review().canReport &&
+      this.review().status === 'published' &&
+      this.review().reportRefusal !== 'already_reported',
+  );
+  protected readonly kept = computed(
+    () => this.review().reportRefusal === 'already_kept',
+  );
+
+  protected pressReport(): void {
+    if (!this.kept()) this.report.emit();
+  }
 
   // A removed reply never reaches the staff read; it is left out all the same.
   protected readonly answer = computed(() => {
