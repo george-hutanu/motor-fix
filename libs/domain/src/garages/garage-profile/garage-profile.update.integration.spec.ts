@@ -21,6 +21,7 @@ import {
   redisUrlFor,
   testConfig,
 } from '../../notifications/notifications.testing';
+import { dropSearches } from '../../search/garage-search/garage-search.cache';
 import { SearchModule } from '../../search/search.module';
 import { UNUSED_STORAGE } from '../../storage/s3-test-store';
 import { StorageModule } from '../../storage/storage.module';
@@ -1023,7 +1024,11 @@ describe('PATCH /garages/:garageId/profile: the facilities on the public read', 
     await saveGroup(w, {
       paymentMethods: { card: true, cash: true, transfer: false },
     }).expect(200);
-    await purgeAudience(redis, (await fieldsOf(w.nord.id)).audience);
+    // As the relay hands the event: the tags, then the search generation, so
+    // the next read never depends on another suite's relay getting there first.
+    const { audience } = await fieldsOf(w.nord.id);
+    await purgeAudience(redis, audience);
+    await dropSearches(redis, audience);
 
     expect((await search().expect(200)).body.total).toBe(1);
   });
