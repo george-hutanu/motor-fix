@@ -33,13 +33,16 @@
         }
       </button>
       @if (fuelsTicked(brand.id); as ticked) {
-        <ul class="fuels">
+        <ul class="fuels" [attr.aria-describedby]="ticked.length ? null : lastId(brand.id)">
           @for (fuel of fuelList; track fuel) {
             @let on = ticked.includes(fuel);
+            @let last = isLast(ticked, fuel);
             <li>
               <button
                 type="button"
                 [attr.aria-pressed]="on"
+                [attr.aria-disabled]="last || null"
+                [attr.aria-describedby]="last ? lastId(brand.id) : null"
                 (click)="tickFuel(brand.id, fuel)"
               >
                 <span class="sr-only">{{ brand.name }}, </span>{{ fuelKey(fuel) | t }}
@@ -50,6 +53,11 @@
             </li>
           }
         </ul>
+        @if (ticked.length === 0) {
+          <p class="fuel-last error mf-message" role="status" [id]="lastId(brand.id)">{{ 'public.listing.brands.fuel.last' | t }}</p>
+        } @else if (ticked.length === 1) {
+          <p class="fuel-last quiet" [id]="lastId(brand.id)">{{ 'public.listing.brands.fuel.last' | t }}</p>
+        }
         @if (jobList().length) {
           @let off = untickedFor(brand.id);
           <details class="jobs">

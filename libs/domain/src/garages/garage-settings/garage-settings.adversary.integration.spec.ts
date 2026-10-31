@@ -507,7 +507,7 @@ describe('the public garage read carrying the new values', () => {
           fuels: ['electric', 'petrol'],
           stance: 'works_on',
         },
-        { brandId: w.bmw.id, fuels: [], stance: 'works_on' },
+        { brandId: w.bmw.id, fuels: ['diesel'], stance: 'works_on' },
         { brandId: w.tesla.id, stance: 'does_not_take' },
       ],
     });
@@ -520,7 +520,10 @@ describe('the public garage read carrying the new values', () => {
         b.fuels,
       ]),
     );
-    expect(byName).toEqual({ BMW: [], Dacia: ['petrol', 'electric'] });
+    expect(byName).toEqual({
+      BMW: ['diesel'],
+      Dacia: ['petrol', 'electric'],
+    });
     expect(res.body.doesNotTake).toHaveLength(1);
     expect(res.body.doesNotTake[0]).not.toHaveProperty('fuels');
   });
@@ -686,7 +689,7 @@ describe('PUT /garages/:garageId/brands with fuels under hostile input', () => {
   it('survives two concurrent writes leaving rows that satisfy the fuel check', async () => {
     const w = await world();
     const a = put(w, {
-      brands: [{ brandId: w.dacia.id, fuels: [], stance: 'works_on' }],
+      brands: [{ brandId: w.dacia.id, fuels: ['hybrid'], stance: 'works_on' }],
     });
     const b = put(w, {
       brands: [{ brandId: w.dacia.id, stance: 'does_not_take' }],
