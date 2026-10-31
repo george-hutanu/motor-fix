@@ -44,9 +44,7 @@ export class OwnerPhotosService {
   ) {}
 
   async list(actor: Actor, garageId: string): Promise<GaragePhotosDto> {
-    assertGarageOwner(actor, garageId);
-    const status = await this.statusOf(garageId);
-    if (status !== 'suspended') assertListed(status);
+    await this.assertReadable(actor, garageId);
     return this.answer(garageId);
   }
 
@@ -100,7 +98,7 @@ export class OwnerPhotosService {
     garageId: string,
     id: string,
   ): Promise<GaragePhotoUploadDto> {
-    assertGarageOwner(actor, garageId);
+    await this.assertReadable(actor, garageId);
     const key = this.keyOf(garageId, id);
     if (!(await this.storage.metadataOf(key))) {
       throw notFound('No such upload');
@@ -186,6 +184,13 @@ export class OwnerPhotosService {
       'inline',
       PUBLIC_IMAGE_URL_MINUTES,
     );
+  }
+
+  // A suspended garage's owner still reads; only the writes answer 410.
+  private async assertReadable(actor: Actor, garageId: string) {
+    assertGarageOwner(actor, garageId);
+    const status = await this.statusOf(garageId);
+    if (status !== 'suspended') assertListed(status);
   }
 
   private async assertWritable(actor: Actor, garageId: string) {

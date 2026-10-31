@@ -200,6 +200,17 @@ describe("the owner's unsaved upload", () => {
     });
   });
 
+  // @traces 1249-FR-008
+  it('answers 404 for a garage not yet approved, holding nothing back', async () => {
+    const h = harness({ status: 'pending' });
+    h.storage.metadataOf.mockResolvedValue({});
+
+    const r = await refused(h.service.upload(actor(), GARAGE, ID));
+
+    expect(r).toMatchObject({ code: 'not_found', status: 404 });
+    expect(h.storage.metadataOf).not.toHaveBeenCalled();
+  });
+
   it('answers 404 for an upload storage does not hold', async () => {
     const h = harness();
 
