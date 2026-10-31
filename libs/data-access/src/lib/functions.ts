@@ -313,6 +313,8 @@ export type { CancelBookingControllerCancel$Params as CancelBookingControllerCan
 export { cancelBookingControllerCancel as cancelBookingControllerCancel } from './fn/bookings/cancel-booking-controller-cancel';
 export type { GarageSchedule$Params as GarageSchedule$Params } from './fn/garages/garage-schedule';
 export { garageSchedule as garageSchedule } from './fn/garages/garage-schedule';
+export type { GarageFreeSlots$Params as GarageFreeSlots$Params } from './fn/garages/garage-free-slots';
+export { garageFreeSlots as garageFreeSlots } from './fn/garages/garage-free-slots';
 export type { GarageTimeBlocks$Params as GarageTimeBlocks$Params } from './fn/garages/garage-time-blocks';
 export { garageTimeBlocks as garageTimeBlocks } from './fn/garages/garage-time-blocks';
 export type { CreateTimeBlock$Params as CreateTimeBlock$Params } from './fn/garages/create-time-block';

@@ -143,6 +143,8 @@ export type { DriverRowBookingDto } from './models/driver-row-booking-dto';
 export type { EmailChangeDto } from './models/email-change-dto';
 export type { FieldProblemDto } from './models/field-problem-dto';
 export type { FinalPriceDto } from './models/final-price-dto';
+export type { FreeSlotDto } from './models/free-slot-dto';
+export type { FreeSlotsDto } from './models/free-slots-dto';
 export type { GarageAccessDto } from './models/garage-access-dto';
 export type { GarageBookingDto } from './models/garage-booking-dto';
 export type { GarageBrandOptionDto } from './models/garage-brand-option-dto';

@@ -149,6 +149,8 @@ export type { DriverRowBookingDto } from './models/driver-row-booking-dto';
 export type { EmailChangeDto } from './models/email-change-dto';
 export type { FieldProblemDto } from './models/field-problem-dto';
 export type { FinalPriceDto } from './models/final-price-dto';
+export type { FreeSlotDto } from './models/free-slot-dto';
+export type { FreeSlotsDto } from './models/free-slots-dto';
 export type { GarageAccessDto } from './models/garage-access-dto';
 export type { GarageBookingDto } from './models/garage-booking-dto';
 export type { GarageBrandOptionDto } from './models/garage-brand-option-dto';
@@ -781,6 +783,8 @@ export type { CancelBookingControllerCancel$Params as CancelBookingControllerCan
 export { cancelBookingControllerCancel as cancelBookingControllerCancel } from './fn/bookings/cancel-booking-controller-cancel';
 export type { GarageSchedule$Params as GarageSchedule$Params } from './fn/garages/garage-schedule';
 export { garageSchedule as garageSchedule } from './fn/garages/garage-schedule';
+export type { GarageFreeSlots$Params as GarageFreeSlots$Params } from './fn/garages/garage-free-slots';
+export { garageFreeSlots as garageFreeSlots } from './fn/garages/garage-free-slots';
 export type { GarageTimeBlocks$Params as GarageTimeBlocks$Params } from './fn/garages/garage-time-blocks';
 export { garageTimeBlocks as garageTimeBlocks } from './fn/garages/garage-time-blocks';
 export type { CreateTimeBlock$Params as CreateTimeBlock$Params } from './fn/garages/create-time-block';
