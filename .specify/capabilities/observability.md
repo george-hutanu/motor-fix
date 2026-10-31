@@ -57,6 +57,8 @@ features:
   - 277-car-status-alerts
   - 144-profile-stats-weekly
   - 1395-block-time-dashboard
+  - 1398-open-now-results-filters
+  - 1379-provider-calls-worker
 ---
 
 # Capability: Observability
@@ -589,9 +591,9 @@ _From 880-grafana-alerts._
 
 _From 1182-cache-service._
 
-### 1169-FR-011 — The cache counter `motorfix_cache_total{kind, outcome}` MUST gain the kinds `driver-home` and `garage-home` with the outcomes `warm` (an entry stored), `hit` (an entry taken) and `miss` (a matching read found no entry), and one histogram, `motorfix_cache_warm_read_seconds{kind}`, MUST record each warm read's duration (the latency a hit saves). Metric labels and the collector's measurement carry only the kind or path and the outcome, never an account id, garage id or slug, and the skipped-warm warning names no account data. The browser MUST report each profile pre-fetch to the collector with the path `profile`, its outcome (`fetched`, `cancelled`, `hit`, `expired`, `skipped`) and, for a fetch, its duration.
+### 1398-FR-013 — The warm MUST be counted through the browser collector's existing `prefetch` measurement (1169-FR-011) with the path `filter`: `fetched` with the warm's duration when both answers landed, `hit` when the next filter state is "Deschis acum" alone on the warmed request within 60 s of the warm's answers landing, `expired` when later (any other filter change counts nothing), `skipped` when a guard stopped it; the web-vitals dashboard's pre-fetch panel MUST show the `filter` path beside `profile`, and `infra/observability/inventory.json`'s collector entry MUST name the new path; no new service, endpoint, queue, outside call or alert (the browser's hit rate stays unalerted as 1169-FR-012 recorded).
 
-_From 1169-prefetch-intent._
+_From 1398-open-now-results-filters._
 
 ### 1169-FR-012 — The API dashboard (`infra/observability/grafana/dashboards/motorfix-api.json`) MUST gain one panel "Pre-fetch: warms, hits, misses, hit rate and latency saved" over the server paths, and the web-vitals dashboard one panel for the `profile` path from the collector's data. `infra/observability/alerts/api.json` MUST gain `api-prefetch-hit-rate`, firing per kind when a server path's hit rate (hits / warms) stays under 30% for 60 minutes with at least 50 warms, and `web.json` `web-prefetch-hit-rate` for the browser path by the same rule, its hit rate being `hit / fetched` (recorded as deferred, the panel standing, if the collector's data cannot be alerted on: see Assumptions); `infra/observability/inventory.json` MUST list the histogram, the two alerts and the collector's new measurement, and `scripts/observability-inventory.ts` and `scripts/alert-rules.spec.ts` MUST pass.
 
@@ -937,6 +939,10 @@ _From 277-car-status-alerts._
 
 _From 144-profile-stats-weekly._
 
+### 1379-FR-009 — Observability ships with the change: the `direct-send` queue is listed in `infra/observability/inventory.json` (kind `queue`, dashboard `motorfix-queues`, the worker queue rule uids as the other queues), reports the worker's job and queue metrics under its name (876-FR-009, 878-FR-009), is shown by the existing `motorfix-queues` panels, which aggregate every series `by (queue)` (no new panel is added: Principle I), is covered by `worker-queue-backlog`, `worker-queue-growing` and `worker-jobs-failed`, writes `job_failed` and `service_error` system-log entries from the worker as the other queues do (297-FR-007, 297-FR-008), the inventory reasons of the entries that describe the moved sends (`brevo`, `my-details`, `car-transfers`, `motorfix_car_transfer_whatsapp_total`) say the send runs in the worker through `direct-send`, and the PR Notes list these reports.
+
+_From 1379-provider-calls-worker._
+
 ## Retired
 
 - `881-FR-003` — superseded by `924-FR-001` (2026-10-08)
@@ -964,3 +970,4 @@ _From 144-profile-stats-weekly._
 - `280-FR-023` — superseded by `056-FR-024` (2026-10-24)
 - `389-FR-018` — superseded by `150-FR-012` (2026-10-26)
 - `427-FR-016` — superseded by `1395-FR-007` (2026-10-30)
+- `1169-FR-011` — superseded by `1398-FR-013` (2026-10-30)

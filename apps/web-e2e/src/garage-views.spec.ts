@@ -57,6 +57,13 @@ const VIEWS = [
     'Așa te văd șoferii pe hartă',
   ],
   [
+    'Reparații clienți',
+    'Reparații clienți',
+    '/app/garage/client-repairs',
+    'Reparații adăugate de clienți',
+    'Reparațiile pe care clienții le‑au înregistrat la tine și le partajează',
+  ],
+  [
     'Setări',
     'Setări',
     '/app/garage/settings',
@@ -144,8 +151,8 @@ test.describe('garage views @seeded', () => {
 
     await page.goto('/app/garage/prices');
     await expect(title(page)).toHaveText('Prețuri');
-    // The test garage's three seeded jobs, one in each state, with the
-    // owner's switch into editing above them.
+    // The test garage's seeded jobs, one in each state and its ticked oil
+    // service, with the owner's switch into editing above them.
     // @traces 1411-FR-005
     await expect(page.locator('main')).toContainText('Lista de prețuri');
     await expect(
@@ -155,6 +162,7 @@ test.describe('garage views @seeded', () => {
       'pe profil',
       'ascuns de tine',
       'ascuns · fără preț maxim',
+      'pe profil',
     ]);
 
     await page.goto('/app/garage/assistant');
@@ -219,6 +227,7 @@ test.describe('garage views @seeded', () => {
       'Prices',
       'Reviews',
       'Profile',
+      'Client repairs',
       'Settings',
       'History',
     ]);

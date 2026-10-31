@@ -15,8 +15,11 @@ features:
   - 415-car-transfer-link
   - 276-job-start-done
   - 1265-car-transfer-accept
+  - 1386-oil-service-lamp
   - 409-garage-corrects-repair
+  - 1400-garage-corrects-repair-web
   - 1267-admin-corrects-repair
+  - 1379-provider-calls-worker
 ---
 
 # Capability: Cars
@@ -45,9 +48,9 @@ _From 089-add-a-car._
 
 _From 1265-car-transfer-accept._
 
-### 089-FR-009 — The dialog MUST be a `dialog` task of the overlays service (158-FR-010) using the shared form-saving helper (159-FR-001..004), titled "Adaugă o mașină" / "Add a car", with the lead line of scenario 1, the fields Marcă (a search field over the brand catalogue, `GET /api/v1/brands`, case- and accent-insensitive, popular first; one brand chosen from the offered list), Model, An, Kilometri, Combustibil (Benzină, Motorină, Hibrid, Electric / Petrol, Diesel, Hybrid, Electric), a section "Opțional" / "Optional" with Număr de înmatriculare, Motor, ITP valabil până la, RCA valabilă până la, Rovinietă valabilă până la (date fields), and one main button "Adaugă mașina" / "Add the car". The year field's message, the plate warnings (pattern; same plate already held, from the loaded car list) and the brand-load failure with "Reîncearcă" / "Try again" are shown as the scenarios say. On success the task closes with the car and the view shows it at once without re-reading the list; the first field gets the focus on a computer (157-FR-007). The brand list is operable by keyboard (arrow keys move, Enter picks, Escape closes it) and each field has a visible label and its message tied to it for screen readers (157-FR-007, the overlays' dialog rules).
+### 1386-FR-001 — The add dialog and the edit dialog MUST carry, after Kilometri, the optional field "Următorul schimb de ulei la (km)" / "Next oil service at (km)", with the kilometres' input rules (a whole number written with or without thousands separators, at most the odometer ceiling), pre-filled in the edit dialog with the car's value in the person's number format and empty without one; the add dialog MUST send it only when filled, and the edit dialog MUST send it only when it differs from the car's stored value, a blank as a cleared value (`null`) when the car had one (092-FR-010's "only the fields that differ" rule). The dialog opened from the grey oil line (FR-004) MUST place the focus in this field, as it does for the three date fields. (Modifies 089-FR-009: the add dialog's fields gain it; modifies 092-FR-010: the edit dialog's fields and focus targets gain it.)
 
-_From 089-add-a-car._
+_From 1386-oil-service-lamp._
 
 ### 089-FR-011 — The plate MUST appear only in the owner's own answers (FR-002); the public-routes test list MUST be unchanged (both routes need a session); another account's car by id answers 404 (079-FR-013).
 
@@ -77,9 +80,9 @@ _From 090-itp-status-lamp._
 
 _From 090-itp-status-lamp._
 
-### 029-FR-007 — The view Mașinile mele's card MUST show the oil-service line (FR-003) after the rovinietă line when the car has a next-service km, and no line otherwise.
+### 1386-FR-004 — A car with no next-service value MUST show the grey oil line "Schimb de ulei: adaugă kilometrajul" / "Oil service: add the reading" after the rovinietă line on Mașinile mele's card, as a button operable by keyboard with at least a 44 px touch target, opening the edit dialog with the focus in the next-service field (FR-001), as the grey date lines of 092-FR-009 do; Panou's car panel keeps showing no oil line for such a car (its three date lines always rank before a grey oil line). (Modifies 029-FR-007: the card shows a grey line, not no line, without a value; modifies 092-FR-009: the card's fourth grey line and its button.)
 
-_From 029-overview-panels-own-data._
+_From 1386-oil-service-lamp._
 
 ### 090-FR-007 — Tests MUST cover: the state and sentence for 61, 60, 8, 7, 1, 0 and −1 days and for no date, with a fixed clock in Europe/Bucharest, including just before and after midnight and the change to and from summer time; the Romanian plural and both languages' month names; the link only on a passed date, with its address (Jest); end to end (Playwright): a new driver adds a car with an ITP 36 days ahead and sees the amber line, then adds a car with an ITP 400 days ahead and sees the green line (dates relative to today in Europe/Bucharest, never literal).
 
@@ -112,14 +115,6 @@ _From 092-edit-remove-car._
 ### 094-FR-003 — A new ITP date MUST reset the flags, and the old date's remaining stages MUST never be sent; a stage whose day is already past when the date is entered or changed MUST be skipped (marked sent), while a stage whose day is today is still sent by today's run. (Modifies 092-FR-008 for the ITP, with scenario 2.2 and the edge cases of this spec as its tests.)
 
 _From 094-itp-reminders._
-
-### 092-FR-009 — Mașinile mele's car card MUST show the brand and model, "<year> · <km> km", the plate grouped as today when the car has one, then the ITP due-date line (090-FR-001..005), then the RCA and rovinietă lines below; a car added or edited from its dialog shows its lines at once (supersedes 090-FR-006). The card MUST carry a "⋯" menu (accessible name "Acțiuni pentru <brand model>" / "Actions for <brand model>", operable by keyboard, a 44 px touch target) with "Modifică" / "Edit" and "Șterge mașina" / "Remove the car". The card MUST show, after the ITP line, an RCA due-date line and a rovinietă due-date line (the shared line of 090-FR-001 with their own texts, the lamp states of 090-FR-003): "RCA valabilă până în <month> <year>" / "RCA valid until <Month> <year>", "RCA-ul expiră în <n> <zile>" / "RCA expires in <n> days" (mâine/azi as the ITP), "RCA-ul a expirat pe <day>" / "RCA expired on <day>", and the same for "Rovinieta" ("Rovinieta e valabilă până în …", "Rovinieta expiră în …", "Rovinieta a expirat pe …" / "Rovinietă valid until …", "Rovinietă expires in …", "Rovinietă expired on …"); no garage link on these two. With no date the grey line reads "RCA: adaugă data" / "RCA: add the date" and "Rovinietă: adaugă data" / "Rovinietă: add the date"; the ITP's grey sentence stays 090-FR-004's. Each of the three grey lines is a button that opens the edit dialog with the focus on that date's field.
-
-_From 092-edit-remove-car._
-
-### 092-FR-010 — The edit dialog MUST be a `dialog` task of the overlays service using the shared form-saving helper (158-FR-010, 159-FR-001..004), titled "Modifică mașina" / "Edit the car", with the add dialog's fields, sections, limits, messages and brand search (089-FR-009), pre-filled with the car's values, and one main button "Salvează" / "Save". A kilometre reading below the saved one MUST ask scenario 4's question (the saved reading in the person's number format) with "Salvează" / "Save" and "Renunță" / "Cancel" before the request is sent. The button shows progress while saving; a server error keeps the values and shows the reason (159-FR-002). On success the task closes with the car and the view updates its card without re-reading the list.
-
-_From 092-edit-remove-car._
 
 ### 092-FR-011 — The removal MUST be confirmed in a dialog with scenario 1's text (User Story 2) naming the car as "<brand> <model>", with "Șterge mașina" / "Remove the car" as the main button and "Renunță" / "Cancel"; a refusal (FR-003's `open_request`, or any other error) MUST show its reason inside that dialog, which stays open; on success the dialog closes and the card leaves the list at once.
 
@@ -176,9 +171,9 @@ _From 290-save-garage._
 ### 290-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis: save (201, the row, the audit entry and the event in one transaction, rolled back together on a failed write), save twice (200, one row, no second entry or event), remove (200 with the time), remove when not saved (204), undo with `savedAt` (the first time kept) and a future `savedAt` (422), 404 for a `draft`, `suspended` and unknown garage, 403 without the `driver` role, 401 for a visitor, the ids read with none and several rows, and the audience of both event kinds. In Playwright: as a visitor, tap save on a profile, sign in, see "Salvat"; remove it and undo.
 
 _From 290-save-garage._
-### 029-FR-003 — The oil-service line MUST use the shared lamp and sentence line. Distance left = next-service km − odometer km; estimated days = distance left ÷ (1,000 ÷ 30.44) km a day (the default 1,000 km a month of MF-23 rule 5, until ST-91 brings the readings), rounded to whole days; the lamp applies the ITP thresholds to those days (green over 60, amber 8 to 60, red 7 or fewer, red when 0 or passed). Sentences, with the kilometres in the person's number format: above 0 km "Schimb de ulei peste <n> km" / "Oil service due in <n> km"; at 0 km "Schimb de ulei acum" / "Oil service due now"; below 0 "Schimbul de ulei a trecut de <n> km" / "Oil service overdue by <n> km" (n positive). The colour is never the only signal (090-FR-004's rule). No grey oil line: ST-91 adds it with the field that writes the value.
+### 1386-FR-003 — The oil line MUST judge its lamp by the car answer's `serviceDueOn`: the calendar days from today (Europe/Bucharest) to that day, read on every check as the date lines do; green over 60 days, amber from 8 to 60, red at 7 or fewer (the line's ranking days are those calendar days; with `serviceDueOn` null they are the km-derived days of today's rule, 0 or negative); red whenever the distance left (`nextServiceKm` − `odometerKm`) is 0 or below, whatever the date. Sentences, kilometres in the person's number format: above 0 km "Schimb de ulei peste <n> km" / "Oil service due in <n> km"; at 0 km "Schimbul de ulei este scadent acum" / "Oil service is due now"; below 0 "Schimbul de ulei a trecut de <n> km" / "Oil service overdue by <n> km" (n positive). An answer without the `serviceDueOn` field, or with it null while the distance left is positive, MUST fall back to the default estimate of 1,000 km a month exactly as today. Panou's car ranking and each car's two most urgent lines MUST use this same judgement for the oil line (one rule in the web for the card and the panel). (Modifies 029-FR-003: the days come from `serviceDueOn`, the default is the fallback only, and the 0 km sentence changes.)
 
-_From 029-overview-panels-own-data._
+_From 1386-oil-service-lamp._
 
 ### 291-FR-001 — `GET /api/v1/me/saved-garages?near={lat},{lng}&cursor=` in the `cars` module MUST answer the actor's own saved garages, 20 a page, ordered by `saved_at` newest first then garage id, with `nextCursor` (opaque; the last row's saved time and id) when more follow; a cursor this list never gave out answers 400 `invalid_cursor`. The read covers every row whatever the garage's status; a driver with no saved garage answers an empty page. The answer is private: `Cache-Control: no-store`. The account whose list is read is always the actor's own: the route takes no account id, so another person's list cannot be asked for (the brief's 404 is moot). An account whose role in use is not `driver` answers 403 `driver_role_required` as 290-FR-006; a visitor 401 `sign_in_required`.
 
@@ -288,9 +283,9 @@ _From 1265-car-transfer-accept._
 
 _From 415-car-transfer-link._
 
-### 415-FR-006 — After the transaction commits, the system MUST send CAR_TRANSFER_LINK by WhatsApp to the buyer's phone straight through the provider (as the sign-in code is sent, not through the notifications outbox and with no NOTIFICATION row: the seller is waiting to know), in the seller's interface language, carrying the link, the car's brand and model and the days it is valid, through an approved WhatsApp template registered like the sign-in code's; a template the configuration does not name, a blocked number or a provider refusal MUST NOT fail the request: the answer carries `whatsapp: 'sent' | 'failed'` and the transfer stays `sent`. The log of a failure names the transfer id and the failure kind, never the phone or the link.
+### 1379-FR-003 — Each caller MUST keep its response contract exactly, treating a job result that is a failure kind, a job that failed, a wait that hit the cap, and a queue that could not be reached or written as the same failure: the sign-in code answers 502 `whatsapp_failed`, stores no code and leaves the number's hourly share uncounted (393-FR-004, 393-FR-005); the phone change answers 503 `send_failed` with nothing kept (139-FR-011); the staff invite answers `emailSent: false` with the link, the invite staying `sent` (131-FR-004, 1255-FR-005); the car transfer answers `whatsapp: 'failed'` with the link, the transfer staying `sent` (415-FR-006). The success answers are unchanged.
 
-_From 415-car-transfer-link._
+_From 1379-provider-calls-worker._
 
 ### 415-FR-007 — `POST /api/v1/cars/:id/transfers/:transferId/cancel` (capability `driver.cars`; 404 for another account's car, a transfer of another car or an unknown transfer) MUST set a `sent` transfer `cancelled` in one transaction with its audit entry and the outbox event `car_transfer.cancelled`, answering 204; a transfer not `sent` answers 409 `not_sent`.
 
@@ -380,6 +375,26 @@ _From 1265-car-transfer-accept._
 
 _From 1265-car-transfer-accept._
 
+### 1386-FR-002 — The dialog MUST refuse, on leaving the field or on save and before anything is sent, a next-service value not greater than the kilometres in the same form with "Valoarea trebuie să fie mai mare decât kilometrajul actual (<km> km)." / "The value must be greater than the current odometer (<km> km)." (the form's kilometres in the person's number format), and one more than 100,000 km above them with "Valoarea poate fi cu cel mult 100.000 km peste kilometrajul actual." / "The value can be at most 100,000 km above the current odometer."; the check runs only when the driver changed the field, that is when its parsed number differs from the car's stored value (null on add) — so on edit a value equal to the stored one, in any writing, is not rechecked, and a raised odometer past a kept value saves. The refusal comes before the existing "kilometres lower" confirmation, which is asked only of a valid form. The API's 400 codes `next_service_not_above_odometer` and `next_service_too_far` MUST show the same two sentences on the field, the dialog staying open with its values (159-FR-002's rule).
+
+_From 1386-oil-service-lamp._
+
+### 1386-FR-005 — After a save from the add or the edit dialog, Mașinile mele's card and Panou's panel MUST show the new "<year> · <km>" line, the distance left and the lamp from the saved car answer at once, without a reload and without reading the list again (092-FR-010's rule, extended to the next-service value and the estimate); a car added from Panou shows its oil line there at once.
+
+_From 1386-oil-service-lamp._
+
+### 1386-FR-006 — Every text this story shows (the field's label, the two refusal sentences, the four line sentences) MUST exist in the driver area's Romanian and English files, never inline in a template; kilometres MUST use the person's number format (locale-formats 019-FR-004); no new metric, panel or alert: the change rides the existing cars endpoints, and the PR's Observability section says so.
+
+_From 1386-oil-service-lamp._
+
+### 1386-FR-007 — Tests MUST cover, with a `// @traces` line per spec file: the grey, green, amber and red lines in both languages; the 60/61 and 7/8 day boundaries of `serviceDueOn` with a fixed clock in Europe/Bucharest; 0 and −200 km with a null date; the fallback for an answer without the field; the field refused at, below and more than 100,000 km above the form's kilometres, with the sentence quoting the form's kilometres; an unchanged stored value not rechecked and not sent; a blank cleared on edit and absent on add; the API's two codes shown as the sentences; the grey line opening the dialog focused on the field; Panou showing no oil line for a car without a value; the card updated at once after a save (Jest). Playwright, end to end: sign in, add a car, set the next service, see the green line with the distance left, raise the odometer and see it amber.
+
+_From 1386-oil-service-lamp._
+
+### 1386-FR-008 — The next-service field MUST be reachable and operable by keyboard in the dialog's tab order after Kilometri, with a visible label and a visible focus ring in light and dark; its refusal sentence MUST sit in the field's own error element, tied to the input (`aria-describedby`, `aria-invalid` while refused) and announced when it appears, and a save that fails the check MUST move the focus to the first refused field; the oil line's sentence is its accessible name, so the lamp's colour is never the only signal; the field, the dialog and the card lines MUST show no sideways scroll at 320 px (the dialog scrolls vertically), with text contrast kept at the existing lamp and helm tokens in light and dark (design.md, States).
+
+_From 1386-oil-service-lamp._
+
 ### 409-FR-001 — The repair (`REPAIR` in the `cars` module) MUST gain, in one migration: `odometer_km` (whole kilometres, optional: a MotorFix repair without a reception reading has none), `cost_bani` (optional), `shared_with_garage` (default off), `shared_at` (optional, the time sharing was last turned on), `updated_at` (set on creation and on every change; the version, as 092-FR-002), `updated_by` (the account that last changed it, optional) and `updated_by_role` (`driver`, `owner` or `admin`, optional, set with `updated_by`). Existing rows get `updated_at` = `created_at`. The driver's log, share, unshare and edit operations (ST-62, ST-63, ST-64) are not this story's.
 
 _From 409-garage-corrects-repair._
@@ -435,6 +450,50 @@ _From 1267-admin-corrects-repair._
 ### 409-FR-017 — Tests MUST cover, in Jest on real PostgreSQL and Redis: the list's membership (the six seeds of User Story 2), order and shape; each field corrected alone and together, the amount cleared, the unchanged save; every 400 limit; 403 for a receptionist and a mechanic, 404 for a driver and an admin; every 404 of FR-007; 409 and the concurrent-save race; the delete's 403; the audit entries' values and role; the event's payload and audience and the rollback on failure; REPAIR_UPDATED with the switch on and off, to the current owner after a sale, none when the car has no owner, and once on a redelivered event; the driver's reads with `correctedBy`; the capability table (the owner alone); the migration's backfill (`updated_at` = `created_at`, sharing off); the list's cap and `truncated`. Each test file carries a `// @traces` line naming its `409-FR-<n>` ids.
 
 _From 409-garage-corrects-repair._
+
+### 1400-FR-001 — (409-FR-018) The garage dashboard MUST gain the view "Reparații adăugate de clienți" / "Repairs added by clients", a garage view behind the capability `garage.client_repairs` (the owner alone; hidden for a draft garage as the view registry already decides, no new status rule), reached from the garage navigation, with a title, a subtitle and the texts of a garage view in both languages; it MUST read the owner's shared logged repairs through the generated client and show them in the order the API answers.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-002 — (409-FR-018) Each row MUST read "<driver short name> · <brand> <model> <year> · <what> · <date in the locale's day format> · <odometer, grouped> km · <amount> lei" with a Corectează / Correct action, "fără sumă" / "no amount" when there is no amount, a line "Corectată pe <date>" / "Corrected on <date>" when `correctedAt` is set, and the empty state "Niciun client nu a partajat încă o reparație cu tine" / "No client has shared a repair with you yet" when the list is empty; when the answer is truncated the view MUST say the newest 200 are shown; on a phone the what, the date and the action come first with the client, the car and the figures beneath.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-003 — (constraint, Principle I and the bundle budget) The view and its dialog MUST be loaded only when the view is opened, inside the garage area's lazily loaded code; nothing of this story joins the first-page bundle and its 1 MB budget is not raised.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-004 — (409-FR-019) Corectează MUST open a `dialog` task of the overlays service using the shared form-saving helper, titled "Corectează reparația" / "Correct the repair", with the car and the client shown read-only ("<brand> <model> <year> · client <short name>") and the fields what was done, date, odometer and amount prefilled from the row; the dialog and the view MUST offer no delete action.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-005 — (409-FR-019) Before sending, the dialog MUST refuse inline a date after today in Romania and the limits of the API (what 1 to 200 characters, odometer a whole number 0 to 2 000 000, amount 0 to 920 000 lei with at most two decimals, the amount optional and clearable), the limit named at the field; an odometer below the reading the dialog loaded MUST ask the owner to check once, the next Salvează sending it; the confirmation holds for the value confirmed only, and editing the odometer or a 409 reload clears it.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-006 — (409-FR-019) Salvează / Save MUST send only the fields whose value changed, compared after normalising to the request shape (trimmed what, ISO date, integer km, amount in bani), with the version the dialog loaded; a save with nothing changed MUST close the dialog and send nothing.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-007 — (409-FR-020) On 409 the dialog MUST say "Reparația a fost modificată între timp. Am reîncărcat valorile." / "The repair changed meanwhile. We reloaded the values.", re-read the owner's list, replace all four fields (the owner's unsent edits included) with the item's current values and version and stay open; when the re-read no longer holds the item, FR-008 applies.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-008 — (409-FR-020) On 404 the dialog MUST close, the row MUST leave the list and the view MUST show "Clientul nu mai partajează această reparație" / "The client no longer shares this repair" in the dashboard's transient notice; on a 400 naming a field of the form the dialog MUST show the problem at that field and stay open (a 400 naming no known field reads as the shared "could not save" problem); on any other failure it MUST show the shared "could not save" problem and stay open.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-009 — (409-FR-020) On success the dialog MUST close and the row MUST update in place from the answer, its "Corectată pe" line now set.
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-010 — (409-FR-021, the garage half) The view MUST re-read on `repair.updated`, `repair.shared` and `repair.unshared` on the garage's live channel, and on the channel's reconnection as the other live views do; an open dialog is not closed by a re-read (its save answers 404 or 409 as the API decides).
+
+_From 1400-garage-corrects-repair-web._
+
+### 1400-FR-011 — (409-FR-023) Every text of the view, the navigation entry and the dialog MUST live in the garage and shell language files in Romanian and English; one Playwright flow MUST sign in as a garage owner with a seeded shared logged repair, open the view, correct the odometer, see the row update and "Corectată pe", then sign in as the driver and see the REPAIR_UPDATED bell row; the view and the dialog MUST pass the QA sweep at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll and no axe violation; the unit specs (Jest, colocated) MUST cover FR-002, FR-005 to FR-010 with the generated client stubbed.
+
+_From 1400-garage-corrects-repair-web._
 
 ### 1267-FR-001 — `GET /api/v1/admin/accounts/:id/repairs` (capability `admin.users`, the account page's) MUST answer the logged repairs (`source` `logged`, `deleted_at` empty) of the cars the account currently owns (an ownership row with no end, the rule 1265-FR-010 reads ownership by), newest `done_on` first, ties newest `created_at` first, at most the 200 newest with `truncated` true when more exist (as 409-FR-003); it MUST answer 404 `not_found` for an account id that is unknown, malformed or of a deleted account, as the account page does, and 404 to every actor without the capability (401 to a visitor, `ActorGuard` app-wide). Sharing and the named garage's status are not read: the admin sees every logged repair.
 
@@ -498,6 +557,12 @@ _From 1267-admin-corrects-repair._
 - `092-FR-012` — superseded by `1265-FR-012` (2026-10-29)
 - `415-FR-003` — superseded by `1265-FR-013` (2026-10-29)
 - `415-FR-004` — superseded by `1265-FR-013` (2026-10-29)
+- `089-FR-009` — superseded by `1386-FR-001` (2026-10-30)
+- `092-FR-010` — superseded by `1386-FR-001` (2026-10-30)
+- `029-FR-003` — superseded by `1386-FR-003` (2026-10-30)
+- `029-FR-007` — superseded by `1386-FR-004` (2026-10-30)
+- `092-FR-009` — superseded by `1386-FR-004` (2026-10-30)
 - `1265-FR-011` — superseded by `409-FR-015` (2026-10-30)
 - `409-FR-011` — superseded by `1267-FR-006` (2026-10-30)
 - `409-FR-016` — superseded by `1267-FR-010` (2026-10-30)
+- `415-FR-006` — superseded by `1379-FR-003` (2026-10-30)

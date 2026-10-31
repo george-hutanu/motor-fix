@@ -464,7 +464,7 @@ describe('seed', () => {
   });
 
   // @traces 1411-FR-005
-  it('gives Atelier Test three priced jobs, one on the profile, one hidden by the owner and one with no top price, so its price list has rows', async () => {
+  it('gives Atelier Test a priced job on the profile, one hidden by the owner, one with no top price and its ticked oil service, so its price list has rows', async () => {
     expect(seed('test').status).toBe(0);
     expect(seed('test').status).toBe(0);
 
@@ -505,6 +505,13 @@ describe('seed', () => {
         fromBani: 35_000,
         key: 'suspension-alignment',
         toBani: null,
+        visible: true,
+      },
+      {
+        brandId: null,
+        fromBani: 25_000,
+        key: 'oil-service',
+        toBani: 40_000,
         visible: true,
       },
     ]);
@@ -884,6 +891,23 @@ describe('seed of the listed garages', () => {
       'suspension-alignment',
     ]);
     expect(ticked('dacia')).toEqual(['oil-service']);
+  });
+
+  it("ticks a brand only for a job on its garage's price list, so an owner's brands save back as they are", async () => {
+    expect(seed('test').status).toBe(0);
+    expect(seed('test').status).toBe(0);
+
+    const unpriced = await prisma.$queryRaw<{ slug: string; key: string }[]>`
+      SELECT DISTINCT g.slug, j.key
+      FROM garage_brand_job t
+      JOIN garage g ON g.id = t.garage_id
+      JOIN job_type j ON j.id = t.job_type_id
+      WHERE NOT EXISTS (
+        SELECT 1 FROM garage_price p
+        WHERE p.garage_id = t.garage_id AND p.job_type_id = t.job_type_id
+      )
+      ORDER BY g.slug, j.key`;
+    expect(unpriced).toEqual([]);
   });
 
   // @traces 389-FR-020

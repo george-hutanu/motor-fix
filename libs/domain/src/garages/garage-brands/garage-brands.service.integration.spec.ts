@@ -221,7 +221,64 @@ describe('GarageBrandsService', () => {
 
   // Two tabs of the brand screen: the second first write starts while the
   // first one's transaction is still open, so both miss the row.
+  // @traces 1247-FR-008
   it('takes a second first write that lands with the first as a change, not a 500', async () => {
+    const w = await world();
+    let written!: () => void;
+    let commit!: () => void;
+    let started!: (pid: number) => void;
+    const firstWritten = new Promise<void>((resolve) => {
+      written = resolve;
+    });
+    const held = new Promise<void>((resolve) => {
+      commit = resolve;
+    });
+    const secondPid = new Promise<number>((resolve) => {
+      started = resolve;
+    });
+    const first = prisma.$transaction(async (tx) => {
+      await brands.setStance(tx, w.actor, w.garage, w.dacia, 'works_on');
+      written();
+      await held;
+    });
+    await firstWritten;
+    const second = prisma.$transaction(async (tx) => {
+      const [{ pid }] = await tx.$queryRaw<
+        { pid: number }[]
+      >`SELECT pg_backend_pid() AS pid`;
+      started(pid);
+      await brands.setStance(tx, w.actor, w.garage, w.dacia, 'does_not_take');
+    });
+    // Commit the first only once the second's own backend is blocked: no
+    // other spec file's lock wait can count, only this transaction's.
+    try {
+      const pid = await secondPid;
+      await until('the second write to wait on the first', async () => {
+        const [{ blocked }] = await prisma.$queryRaw<{ blocked: boolean }[]>`
+          SELECT cardinality(pg_blocking_pids(${pid}::int)) > 0 AS blocked`;
+        return blocked;
+      });
+    } finally {
+      commit();
+    }
+
+    await expect(Promise.all([first, second])).resolves.toBeDefined();
+    expect(await row(w, w.dacia)).toMatchObject({ stance: 'does_not_take' });
+    expect(
+      await prisma.garageBrand.count({
+        where: { brandId: w.dacia, garageId: w.garage },
+      }),
+    ).toBe(1);
+    expect((await history(w)).map((entry) => entry.action)).toEqual([
+      'create',
+      ...Array(5).fill('update'),
+    ]);
+  });
+
+  // The garage lock serialises brand writes only: a row that merely points
+  // at the garage (its foreign key takes a key-share lock) never waits on it.
+  // @traces 1247-FR-005
+  it('lets a row referencing the garage be written while a stance write holds the garage', async () => {
     const w = await world();
     let written!: () => void;
     let commit!: () => void;
@@ -237,26 +294,21 @@ describe('GarageBrandsService', () => {
       await held;
     });
     await firstWritten;
-    const second = setStance(w, w.dacia, 'does_not_take');
-    // Commit the first only once the second waits on its transaction (a row
-    // lock or key wait; the spec files' turn is an advisory lock, never this).
     try {
-      await until('the second write to wait on the first', async () => {
-        const [{ waiting }] = await prisma.$queryRaw<{ waiting: number }[]>`
-          SELECT count(*)::int AS waiting FROM pg_locks
-          WHERE NOT granted AND locktype = 'transactionid'`;
-        return waiting > 0;
-      });
+      await expect(
+        prisma.$transaction(async (tx) => {
+          await tx.$executeRawUnsafe("SET LOCAL lock_timeout = '2s'");
+          await tx.garageBrand.create({
+            data: { brandId: w.tesla, garageId: w.garage, stance: 'works_on' },
+          });
+        }),
+      ).resolves.toBeUndefined();
     } finally {
       commit();
     }
+    await first;
 
-    await expect(Promise.all([first, second])).resolves.toBeDefined();
-    expect(await row(w, w.dacia)).toMatchObject({ stance: 'does_not_take' });
-    expect((await history(w)).map((entry) => entry.action)).toEqual([
-      'create',
-      ...Array(5).fill('update'),
-    ]);
+    expect(await row(w, w.tesla)).toMatchObject({ stance: 'works_on' });
   });
 
   it('records the stances and jobs in the garage history as their author', async () => {

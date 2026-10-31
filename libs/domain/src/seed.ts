@@ -989,6 +989,21 @@ async function quoteable(db: Client) {
   );
   await priceList(db);
   await testPrices(db);
+  // A brand is ticked only for a job on the garage's price list,
+  // so a garage ticked for a job its list lacks gets that job priced, at the
+  // range Service Auto Militari asks, saved by its owner (a garage with no
+  // owner account by the seed's own, as the price list above).
+  await db.query(
+    `INSERT INTO garage_price (id, garage_id, job_type_id, from_bani, to_bani, duration_minutes, position, updated_at, updated_by)
+     SELECT gen_random_uuid(), t.garage_id, t.job_type_id, 25000, 40000, 60, 0, now(), COALESCE(m.account_id, a.id)
+     FROM (SELECT DISTINCT garage_id, job_type_id FROM garage_brand_job) t
+     JOIN account a ON a.email = 'militari@example.test'
+     LEFT JOIN garage_member m ON m.garage_id = t.garage_id AND m.role = 'owner'
+     WHERE NOT EXISTS (
+       SELECT 1 FROM garage_price p
+       WHERE p.garage_id = t.garage_id AND p.job_type_id = t.job_type_id
+     )`,
+  );
   await dinamoForms(db);
 }
 
@@ -1252,6 +1267,7 @@ async function priceList(db: Client) {
      JOIN garage g ON g.id = gb.garage_id AND g.slug = 'service-auto-militari'
      JOIN brand b ON b.id = gb.brand_id AND b.key = 'bmw'
      JOIN job_type j ON j.key = ANY($1)
+     WHERE gb.stance = 'works_on'
      ON CONFLICT DO NOTHING`,
     [
       MILITARI_PRICES.map(([job]) => job).filter(
@@ -1269,6 +1285,8 @@ const TEST_PRICES = [
   ['diagnosis', 15000, 22000, true],
   ['timing-chain', 420000, 680000, false],
   ['suspension-alignment', 35000, null, true],
+  // Ticked for Dacia above, so priced, at Service Auto Militari's range.
+  ['oil-service', 25000, 40000, true],
 ] as const;
 
 async function testPrices(db: Client) {

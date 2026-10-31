@@ -292,6 +292,14 @@ export const DASHBOARDS: Record<
           import('./profile-view/profile-view').then((m) => m.ProfileView),
       },
       {
+        ...garageView('clientRepairs', 'garage.client_repairs'),
+        load: () =>
+          import('./client-repairs-view/client-repairs-view').then(
+            (m) => m.ClientRepairsView,
+          ),
+        path: 'client-repairs',
+      },
+      {
         label: 'shell.frame.nav.garage.assistant',
         path: 'assistant',
         tab: 'shell.frame.tab.ai',

@@ -843,6 +843,8 @@ describe('the profile edit texts in Romanian and English', () => {
   const edit = (language: 'ro' | 'en') => flat(area(language), 'garage.');
   const used = () =>
     [
+      'brands-edit-dialog/brands-edit-dialog.html',
+      'brands-edit-dialog/brands-edit-dialog.ts',
       'profile-edit-dialog/profile-edit-dialog.html',
       'profile-edit-dialog/profile-edit-dialog.ts',
       'profile-view/profile-view.html',
@@ -871,12 +873,13 @@ describe('the profile edit texts in Romanian and English', () => {
   });
 
   it.each(['ro', 'en'] as const)(
+    // @traces 1247-FR-015
     'holds every key the dialogs and the view use in %s',
     (language) => {
       const texts = edit(language);
       const keys = [
         ...used(),
-        ...['hours', 'texts', 'contact', 'area'].map(
+        ...['hours', 'texts', 'contact', 'area', 'brands'].map(
           (group) => `garage.profile.edit.title.${group}`,
         ),
       ];
