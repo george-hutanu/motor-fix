@@ -12,7 +12,10 @@ import { test } from './fixtures.js';
 // the second place only a garage without hours stands. "Open now" is the
 // API's verdict on its own clock, so the seed holds at any instant but a legal
 // holiday, when the calendar closes every garage: then the file asserts that
-// verdict, the filtered empty state, instead of the open garage.
+// verdict, the filtered empty state, instead of the open garage. The open
+// garage alone also asks at most 180 lei/h, is rated 4.6 and takes cards; the
+// other two ask 260 lei/h, carry no rating and take no card.
+// @traces 1399-FR-001 1399-FR-002 1399-FR-003 1399-FR-004 1399-FR-007 1399-FR-008
 // @traces 1398-FR-001 1398-FR-002 1398-FR-003 1398-FR-004 1398-FR-006 1398-FR-007 1398-FR-009 1398-FR-010 1398-FR-011 1398-FR-014 1398-FR-015
 test.describe('filtering the Results page @seeded @database', () => {
   test.describe.configure({ mode: 'serial' });
@@ -30,11 +33,11 @@ test.describe('filtering the Results page @seeded @database', () => {
   const always = Object.fromEntries(
     ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((d) => [d, ROUND]),
   );
-  // name, latitude, longitude, hours
+  // name, latitude, longitude, hours, labour from (bani), rating, reviews, card
   const garages = [
-    [`Deschis ${stamp}`, 47.75, 26.665, always],
-    [`Fără program ${stamp}`, 47.76, 26.665, {}],
-    [`Departe ${stamp}`, 46.65, 27.73, {}],
+    [`Deschis ${stamp}`, 47.75, 26.665, always, 18000, 4.6, 5, true],
+    [`Fără program ${stamp}`, 47.76, 26.665, {}, 26000, null, 0, false],
+    [`Departe ${stamp}`, 46.65, 27.73, {}, 26000, null, 0, false],
   ] as const;
   let db: Client;
   let brandId = '';
@@ -63,16 +66,29 @@ test.describe('filtering the Results page @seeded @database', () => {
       [brand.slug, brand.name],
     );
     brandId = made.rows[0]?.id ?? '';
-    for (const [name, lat, lng, hours] of garages) {
+    for (const [
+      name,
+      lat,
+      lng,
+      hours,
+      labour,
+      rating,
+      reviews,
+      card,
+    ] of garages) {
       const row = await db.query<{ id: string }>(
-        `INSERT INTO garage (id, name, slug, status, approved_at, rating, review_count, latitude, longitude, hours)
-         VALUES (gen_random_uuid(), $1, $2, 'approved', now(), 4.5, 5, $3, $4, $5) RETURNING id`,
+        `INSERT INTO garage (id, name, slug, status, approved_at, rating, review_count, latitude, longitude, hours, labour_from_bani, payment_card)
+         VALUES (gen_random_uuid(), $1, $2, 'approved', now(), $6, $7, $3, $4, $5, $8, $9) RETURNING id`,
         [
           name,
           `e2e-filtre-${name.toLowerCase().replace(/\W+/g, '-')}`,
           lat,
           lng,
           JSON.stringify(hours),
+          rating,
+          reviews,
+          labour,
+          card,
         ],
       );
       const id = row.rows[0]?.id ?? '';
@@ -172,6 +188,86 @@ test.describe('filtering the Results page @seeded @database', () => {
     await expect(cards(page).first()).toHaveText(`Departe ${stamp}`);
   });
 
+  test('a price ceiling, a minimum rating and card payment narrow the list from the panel, without logging', async ({
+    page,
+  }) => {
+    const searched: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/api/v1/search/garages'))
+        searched.push(request.url());
+    });
+    await ready(page, opened(first));
+    await expect(cards(page)).toHaveCount(2);
+    const before = searched.length;
+
+    await opener(page).click();
+    const price = page.getByRole('group', {
+      name: 'Manoperă până la … lei/oră',
+    });
+    await price.getByRole('button', { name: '200' }).click();
+    await expect(page).toHaveURL(/max_price=200/);
+    await expect(price.getByRole('button', { name: '200' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await page
+      .getByRole('group', { name: 'Notă minimă' })
+      .getByRole('button', { name: '4,5+' })
+      .click();
+    await page.getByRole('switch', { name: 'Plată cu cardul' }).click();
+    await expect(page).toHaveURL(/max_price=200&min_rating=4\.5&card=1/);
+    await page.keyboard.press('Escape');
+
+    await expect(opener(page)).toHaveText('Filtre · 3');
+    await expect(chip(page, 'Până la 200 lei/oră')).toBeVisible();
+    await expect(chip(page, 'Notă 4,5+')).toBeVisible();
+    await expect(chip(page, 'Plată cu cardul')).toBeVisible();
+    await expect(cards(page)).toHaveCount(1);
+    await expect(cards(page).first()).toHaveText(`Deschis ${stamp}`);
+    await expect(page.locator('mf-static-map .pin.dim')).toHaveCount(1);
+    const after = searched.slice(before);
+    expect(after.length).toBeGreaterThan(0);
+    expect(after.filter((url) => /[?&]log=1/.test(url))).toEqual([]);
+
+    await chip(page, 'Notă 4,5+').click();
+    await expect(page).not.toHaveURL(/min_rating/);
+    await expect(opener(page)).toBeFocused();
+  });
+
+  test('restores the price filter from a link, keeps it through a brand change, and "Scoate filtrele" clears it', async ({
+    page,
+  }) => {
+    await ready(page, opened(second, '&max_price=150&card=1'));
+
+    await expect(page.getByRole('heading', { name: nothing })).toBeVisible();
+    await expect(chip(page, 'Până la 150 lei/oră')).toBeVisible();
+    await expect(opener(page)).toHaveText('Filtre · 2');
+
+    await page.getByRole('button', { name: 'Scoate filtrele' }).click();
+
+    await expect(page).not.toHaveURL(/max_price|card=/);
+    await expect(cards(page)).toHaveCount(1);
+    await expect(cards(page).first()).toHaveText(`Departe ${stamp}`);
+
+    await ready(page, opened(first, '&max_price=200'));
+    await expect(cards(page)).toHaveCount(1);
+    await opener(page).click();
+    await expect(
+      page
+        .getByRole('group', { name: 'Manoperă până la … lei/oră' })
+        .getByRole('button', { name: '200' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Escape');
+    await page
+      .getByRole('group', { name: 'Marca' })
+      .getByRole('button', { pressed: false })
+      .first()
+      .click();
+    await expect(page).not.toHaveURL(new RegExp(`brand=${brand.slug}`));
+    await expect(page).toHaveURL(/max_price=200/);
+    await expect(chip(page, 'Până la 200 lei/oră')).toBeVisible();
+  });
+
   // The controls the QA sweep cannot reach without a place: the button, the
   // chips, the filtered summary and the open panel pass axe at 320 px.
   for (const colorScheme of ['light', 'dark'] as const) {
@@ -206,13 +302,22 @@ test.describe('filtering the Results page @seeded @database', () => {
     });
   }
 
-  // The chip row holds at 320 px without a sideways scroll.
-  test('holds both chips at 320 px with no sideways scroll', async ({
+  // The chip row holds at 320 px without a sideways scroll, all five on.
+  test('holds all five chips at 320 px with no sideways scroll', async ({
     page,
   }) => {
     await page.setViewportSize({ height: 800, width: 320 });
-    await ready(page, opened(first, '&open_now=1&open_saturday=1'));
-    await expect(chip(page, 'Deschis sâmbăta')).toBeAttached();
+    await ready(
+      page,
+      opened(
+        first,
+        '&open_now=1&open_saturday=1&max_price=300&min_rating=3.5&card=1',
+      ),
+    );
+    await expect(chip(page, 'Plată cu cardul')).toBeAttached();
+    await expect(
+      page.locator('.brands .filters button.chip.filter'),
+    ).toHaveCount(5);
 
     expect(
       await page.evaluate(
