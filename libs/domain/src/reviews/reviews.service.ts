@@ -242,9 +242,6 @@ export class ReviewsService {
     };
   }
 
-  // The garage's own reviews as its staff read them: the published and the
-  // reported ones, newest first, each with where it stands and the mechanic;
-  // the figures are the profile's. Only the owner may reply or report.
   // Each listed review's newest decided report, as the report operation reads
   // it, so the row's button and the operation refuse alike.
   private async newestDecided(reviewIds: string[]) {
@@ -259,6 +256,9 @@ export class ReviewsService {
     return new Map(reports.map((report) => [report.reviewId, report]));
   }
 
+  // The garage's own reviews as its staff read them: the published and the
+  // reported ones, newest first, each with where it stands and the mechanic;
+  // the figures are the profile's. Only the owner may reply or report.
   async staffReviews(
     actor: Actor,
     garageId: string,

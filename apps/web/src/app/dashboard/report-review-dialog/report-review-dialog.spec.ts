@@ -177,7 +177,7 @@ describe('the report task: what it asks', () => {
     await pick('Altceva');
 
     expect(field()).not.toBeNull();
-    expect(text()).toContain('Spune-ne ce nu e în regulă');
+    expect(text()).toContain('Spune‑ne ce nu e în regulă');
     expect(field()?.required).toBe(true);
     expect(counter()).toBe('0 / 500');
     expect(button('Trimite raportul')?.disabled).toBe(true);

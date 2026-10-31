@@ -42,7 +42,7 @@ export interface ReportReviewData {
 // lost or the review gone meanwhile: the opener re-reads its list.
 export type ReportReviewResult = ReviewReportDto | 'refused';
 
-type Reason = (typeof REVIEW_REPORT_REASONS)[number];
+type Reason = ReportReviewDto['reason'];
 
 const MESSAGES = 'garage.reviews.report';
 // The answers that end the task with their message as the toast.
@@ -82,7 +82,10 @@ export class ReportReviewDialog {
   >();
 
   protected readonly max = REVIEW_REPORT_TEXT_MAX;
-  protected readonly reasons = REVIEW_REPORT_REASONS;
+  protected readonly reasons = REVIEW_REPORT_REASONS.map((code) => ({
+    code,
+    label: `${MESSAGES}.reason.${code}`,
+  }));
   protected readonly form = new FormGroup({
     reason: new FormControl<Reason | null>(null, {
       validators: Validators.required,
@@ -163,7 +166,10 @@ export class ReportReviewDialog {
     const { code, detail } = toProblem(failure);
     const key = `${MESSAGES}.problem.${code}`;
     const said = this.i18n.t(key);
-    toast(said !== key ? said : (detail ?? said));
+    // A refusal with no text of its own and no detail says the shared line.
+    toast(
+      said !== key ? said : (detail ?? this.i18n.t('shell.form.problem.error')),
+    );
     this.task.close('refused');
   }
 }

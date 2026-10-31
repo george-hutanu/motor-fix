@@ -79,7 +79,10 @@ export class GarageReviewRow {
   });
 
   protected readonly reportable = computed(
-    () => this.review().canReport && this.review().status === 'published',
+    () =>
+      this.review().canReport &&
+      this.review().status === 'published' &&
+      this.review().reportRefusal !== 'already_reported',
   );
   protected readonly kept = computed(
     () => this.review().reportRefusal === 'already_kept',

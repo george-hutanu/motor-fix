@@ -2,10 +2,10 @@
 <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
   <fieldset class="reasons" [disabled]="sending()">
     <legend>{{ 'garage.reviews.report.reasons' | t }}</legend>
-    @for (reason of reasons; track reason) {
+    @for (reason of reasons; track reason.code) {
       <label class="reason">
-        <input type="radio" name="reason" formControlName="reason" [value]="reason" />
-        <span>{{ 'garage.reviews.report.reason.' + reason | t }}</span>
+        <input type="radio" name="reason" formControlName="reason" [value]="reason.code" />
+        <span>{{ reason.label | t }}</span>
       </label>
     }
   </fieldset>
@@ -19,7 +19,7 @@
         required
         formControlName="text"
         aria-describedby="mf-report-count"
-        [attr.aria-invalid]="count() > max || null"
+        [aria-invalid]="count() > max"
         [readOnly]="sending()"
       ></textarea>
       <span id="mf-report-count" class="count" [class.over]="count() > max" data-counter>{{

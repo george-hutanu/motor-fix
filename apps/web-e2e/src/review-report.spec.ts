@@ -93,6 +93,12 @@ test.describe('the owner reports a review @seeded', () => {
         [jobId],
       );
       expect(stored.rows[0]?.status).toBe('reported');
+
+      // The public profile no longer lists it.
+      const shown = await request.get(`/api/v1/reviews/garage/${garageId}`);
+      expect(shown.status()).toBe(200);
+      const { items } = (await shown.json()) as { items: { text: string }[] };
+      expect(items.map((item) => item.text)).not.toContain(text);
     } finally {
       await removeJob(db, jobId);
       const [kept] = before.rows;

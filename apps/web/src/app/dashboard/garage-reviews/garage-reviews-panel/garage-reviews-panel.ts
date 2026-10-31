@@ -175,7 +175,7 @@ export class GarageReviewsPanel {
         this.reported.set({ ids, reads });
       }
     } catch {
-      return;
+      // A task that failed to load leaves the row as it was; a press retries.
     } finally {
       this.reporting = false;
     }
