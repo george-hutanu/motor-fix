@@ -30,6 +30,7 @@ features:
   - 1367-review-price-marks
   - 1366-garage-map-directions
   - 1246-garage-profile-edit
+  - 1247-brand-fuel-edit
 ---
 
 # Capability: Garage profile
@@ -620,9 +621,9 @@ _From 133-garage-public-profile._
 
 _From 133-garage-public-profile._
 
-### 1246-FR-011 — Profilul service-ului (133-FR-005, 133-FR-006) MUST show, for the owner only (136-FR-006's rule), one "Modifică profilul" / "Edit profile" control per group next to its lines: texts (name, description, the read-only address), hours (weekly hours and closed days), contact (phone) and, for a mobile mechanic only, service area (radius). A receptionist sees no control; a mechanic has no view (133-FR-002).
+### 1247-FR-010 — The brands group of Profilul service-ului (133-FR-007) MUST show, for the owner only (1246-FR-011's rule), one "Modifică profilul" / "Edit profile" control next to the brand lists, labelled for assistive technology with the group ("Modifică profilul: Mărci și carburanți" / "Edit profile: Brands and fuel types"); a receptionist sees no control.
 
-_From 1246-garage-profile-edit._
+_From 1247-brand-fuel-edit._
 
 ### 133-FR-007 — The view MUST show "Lucrează pe" / "Works on" and "Nu lucrează pe" / "Does not work on" with chips built in the garage area the way the public profile builds them (308-FR-004, 308-FR-005 minus the brand in context) — the shared lamp, the same fuel labels and order; the public profile's own section component is not reused, as it carries the brand in context and the driver's copy: one chip per brand of `worksOn` with a green lamp, one per brand of `doesNotTake` with a red lamp, in the answer's order; each `worksOn` chip carries its fuel line ("benzină · motorină · hibrid · electric" / "petrol · diesel · hybrid · electric", the ticked ones in that fixed order) exactly as the public profile shows it; the lamp is `aria-hidden`, the stance carried by the heading. An unstated brand is in neither list. An empty list shows its heading and "nimic ales încă" / "nothing chosen yet". Under both lists one line reads "Mărcile nemarcate contează ca refuz: apari ultimul la ele și nu primești cereri." / "Unmarked brands count as a refusal: you show last for them and get no requests." The garage's brand note, when the answer carries one, follows as on the public profile (308-FR-007).
 
@@ -816,9 +817,9 @@ _From 1246-garage-profile-edit._
 
 _From 1246-garage-profile-edit._
 
-### 1246-FR-012 — Each control MUST open a Cockpit dialog on the Spartan dialog (the shared task shape, centred from 768 px (the shared overlay's TABLET breakpoint, libs/overlays/src/panel.ts), a sheet below) holding the group's fields with their current values, the limits shown under the fields, "Salvează" / "Save" and "Renunță" / "Cancel"; the hours dialog MUST reuse the listing form's hours and closed-days controls (the hours step's block, 112-FR-002 to 112-FR-005), not a copy of them. Keyboard and focus follow the Spartan dialog: focus moves into the dialog on open and stays inside it, Escape closes it, focus returns to the control that opened it, the first field in error takes focus on a refused save, and each error is tied to its field with `aria-describedby`.
+### 1247-FR-011 — The control MUST open a dialog of the shared task shape (1246-FR-012: Spartan dialog, centred from 768 px, a sheet below, focus and Escape rules) titled "Mărci și carburanți" / "Brands and fuel types", listing every active catalogue brand in catalogue order plus any retired brand the garage has marked, each with the listing step's three-state control (tap: unstated → "Lucrează pe" green → "Nu lucrează pe" red → unstated; `aria-pressed`), and under each taken brand the four fuel ticks (benzină, motorină, hibrid, electric / petrol, diesel, hybrid, electric) and the jobs disclosure ("{ticked} din {total} lucrări" / "{ticked} of {total} jobs", one tick per price-list job, "Bifează toate" / "Tick all"), reusing the brands step's controls (`apps/web/src/app/public/brands-step`), not a copy; then the brand note (140) and the refusal phrase (60) with their limits and counts; "Salvează" / "Save" and "Renunță" / "Cancel". With no priced job the disclosure shows the brands step's "no jobs yet" text linking to the price list view.
 
-_From 1246-garage-profile-edit._
+_From 1247-brand-fuel-edit._
 
 ### 1246-FR-013 — The dialog MUST check each field as the owner leaves it with the shared rules (name 2–80, description at most 1,000, phone through the shared normaliser, radius 5–100 whole, its error the listing form's own "Alege raza de deplasare" / "Choose how far you travel", one text under one key) and show the error under the field in the page's language; a dialog with an error MUST NOT send the save. The server's 400 MUST be shown under its field; a 409 MUST be shown as "Profilul a fost modificat între timp. Reîncarcă." / "The profile was changed meanwhile. Reload." with a reload control that re-reads the profile into the dialog and nothing else. While a save is in flight the Save control MUST be disabled and show a busy state (no second send from a double click); a network failure or a 5xx MUST keep the dialog open with the typed values and show a retry text in the page's language, with Save enabled again; "Renunță" / "Cancel", Escape and a click on the backdrop MUST close the dialog without sending anything and without a confirmation, and reopening it shows the saved values.
 
@@ -843,6 +844,26 @@ _From 1246-garage-profile-edit._
 ### 1246-FR-027 — Tests MUST exist before the code (Principle II) and name this feature's ids in `// @traces` lines: Jest on real PostgreSQL and Redis for FR-001 to FR-010 (each limit's boundary, 422 for every verification field, 403/404/410, the per-field audit entries and the one event in one transaction, 409 on a stale stamp, the cache drop); component tests for the view's controls per role and business kind, each dialog's field checks, the 400 and 409 handling, the no-second-read close, and the reused hours block; the PR QA flows of FR-020 and a flow that saves Saturday's hours and sees the public profile update.
 
 _From 1246-garage-profile-edit._
+
+### 1247-FR-012 — The dialog MUST open on FR-001's read (a skeleton while it loads, the retry text on failure) and never on the profile answer's lists alone; a brand that becomes taken in the dialog starts with all four fuels and every job ticked; a brand turned refused or unstated loses its ticks in the dialog; the last ticked fuel of a taken brand is disabled with "Cel puțin un carburant rămâne bifat" / "At least one fuel type stays ticked" beside it; a taken brand stored with no fuel (possible under 397-FR-010) opens with no fuel ticked and the same text as an error, and Save stays blocked until one is ticked; a re-taken brand within one dialog session starts fresh (all four fuels, every job) and the dialog always sends `fuels` and `jobs` for each taken brand; a taken brand with every job unticked shows the brands step's existing warning "Nu vei primi cereri pentru {brand}" (`public.listing.brands.noRequests`), which does not block the save; the last-fuel rule lives in the shared brands step, so the listing form gains it too (research.md R8); a note over 140 or a phrase over 60 characters shows the limit error under the field and blocks the send.
+
+_From 1247-brand-fuel-edit._
+
+### 1247-FR-013 — Save MUST send one `PUT` with every marked brand, each taken one with its `fuels` and `jobs`, and the note and phrase; while in flight Save is disabled with a busy state; a 400 is shown under its field (or at the top for a brand-level code, naming the brand); a network failure or 5xx keeps the dialog open with the ticks as made and shows the retry text; on 200 the dialog closes and the view shows the answer's lists at once (fuel lines included) while it keeps re-reading on `garage.updated` (1246-FR-014); "Renunță", Escape and the backdrop close without sending.
+
+_From 1247-brand-fuel-edit._
+
+### 1247-FR-014 — The dialog's code MUST be loaded lazily (a dynamic import or `@defer` from the profile view, out of the eager chunks) and the web app's production build MUST stay under its `initial` warning budget (`apps/web/project.json`, 500 kB), which the build asserts; the PR body records the initial size before and after as evidence.
+
+_From 1247-brand-fuel-edit._
+
+### 1247-FR-015 — Every new text MUST live in the garage area's translation files in Romanian and English with comma-below diacritics, the brand, fuel and job labels being the ones the brands step and the profile already show; the dialog MUST render at 320 and 390 px (a sheet, brands stacked, no sideways scroll, 44 px targets, 16 px text fields), tablet and desktop, light and dark, both languages; the lamps are `aria-hidden`, the stance carried by text; the QA sweep's axe checks pass.
+
+_From 1247-brand-fuel-edit._
+
+### 1247-FR-016 — An open public profile MUST show the saved brands, fuel lines and brand note within 5 s of the save's 200 with no reload through its existing `garage.updated` re-read (307-FR-017), the public profile cache dropped on the event (1183-FR-005); the search for a brand whose stance changed ranks the garage by its new stance on the next read; a brand turned refused stops being offered new requests for that brand at once while requests already received stay (the existing rule, MF-09).
+
+_From 1247-brand-fuel-edit._
 
 ## Retired
 
@@ -869,3 +890,5 @@ _From 1246-garage-profile-edit._
 - `133-FR-001` — superseded by `1246-FR-008` (2026-10-30)
 - `133-FR-006` — superseded by `1246-FR-011` (2026-10-30)
 - `133-FR-011` — superseded by `1246-FR-014` (2026-10-30)
+- `1246-FR-011` — superseded by `1247-FR-010` (2026-10-30)
+- `1246-FR-012` — superseded by `1247-FR-011` (2026-10-30)

@@ -272,6 +272,7 @@
         "diesel": "Diesel",
         "electric": "Electric",
         "hybrid": "Hibrid",
+        "last": "Cel puțin un carburant rămâne bifat",
         "petrol": "Benzină",
         "ticked": "o lucrezi"
       },
