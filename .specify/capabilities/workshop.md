@@ -1,6 +1,6 @@
 ---
 capability: workshop
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 220-requests-quotes-bookings
   - 424-job-steps
@@ -18,6 +18,7 @@ features:
   - 1403-block-time-dialog
   - 1404-predare-quote-range
   - 1410-predare-quote-dialog
+  - 154-free-slots
 ---
 
 # Capability: Workshop
@@ -505,6 +506,58 @@ _From 1403-block-time-dialog._
 ### 1403-FR-011 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids: Jest for `garage-home` (the button per role and switch state, US1-1, US2-3) and for the dialog (the fields per switch state and per options answer, US1-2, US2-1, US2-2, US2-4, US2-5; the client-side refusals, US1-4; the body sent, US1-3; each server refusal and where its message shows, US1-5 to US1-7; offline and a failed save, US1-8; the edit and remove mode, US3-1 to US3-4); Playwright, `@seeded`, as the seeded receptionist of the garage with lifts and mechanic cards (`receptie-militari@example.test`, `service-auto-militari`; `atelier-test` has no lift): press the button, block the first listed mechanic and the last lift the seed offers 30 days ahead (the quote and booking specs take tomorrow at that garage) 10:00–11:30, see the toast, read the block back through the API and delete it through the API as clean-up. The driver half of the brief's flow (the garage's profile no longer offers 10:00; the slot returns after the removal) waits for #21 (D4), and the removal through the dialog for the first story that draws a block (D2).
 
 _From 1403-block-time-dialog._
+
+### 154-FR-001 — The API MUST offer, under the `workshop` module, `GET /api/v1/garages/:garageId/free-slots` taking `duration` (minutes), `jobTypeIds` (optional, repeatable), `needsLift` (optional), `earliest` (optional ISO instant), `horizonDays` (optional), `count` (optional), `mechanicId` (optional) and `excludeBookingId` (optional) through a query DTO in the contracts library validated at the edge (400 `validation_failed`), and answer `{ slots: [{ startsAt, endsAt }], reason? }` with the first `count` free starts in ascending time order, each as an ISO string with the Europe/Bucharest offset, `endsAt` being the end of the job (the end of its last chained stretch for a multi-day job); `reason` is `none_in_horizon` when and only when `slots` is empty. The read writes nothing: no row, no audit entry, no event of its own.
+
+_From 154-free-slots._
+
+### 154-FR-002 — Access MUST be checked on the server before anything else: the garage's owner and receptionist and a mechanic of the garage with `can_answer_quotes` or `can_move_bookings` get the answer; a mechanic of the garage with neither gets 403; a driver gets the answer only when she owns a booking at that garage that may still be moved (`awaiting_confirmation` or `confirmed`, starting after now) or holds a quote from that garage that can still be accepted (status `waiting` and not expired); everyone else, a driver with neither included, gets 404.
+
+_From 154-free-slots._
+
+### 154-FR-003 — Parameters MUST default and be bounded as follows, each breach answered 400 `validation_failed` before any schedule read: `duration` 15 to 2,400 minutes (5 working days of 8 h); `count` 1 to 10, default 3; `horizonDays` 1 to 30, default 30; `earliest` default now + 60 minutes, an instant before now clamped to now (never a 400; only an unparsable instant is), rounded up to the next 30-minute step on the Bucharest wall clock when it is not on one; `mechanicId` a card of that garage not removed, only while `team_mechanics` is on; `excludeBookingId` a booking of that garage (and the caller's own, for a driver). The driver's move story passes now + 2 h and 14 days; the engine imposes no other values.
+
+_From 154-free-slots._
+
+### 154-FR-004 — A start MUST be free when, for the whole duration: with `team_mechanics` on, at least one counted mechanic is at work (FR-005) and holds no segment overlapping it; with a lift needed and lifts in use (`lift_schedule` on and `lift_count` ≥ 1), at least one lift numbered 1 to `lift_count` holds no segment overlapping it; and after each booking of the garage in `awaiting_confirmation` whose `[starts_at, starts_at + duration_minutes)` overlaps it takes one mechanic unit (and one lift unit when any of its request's jobs has `needs_lift`), at least one mechanic and, when needed, one lift are still left. Segments are the BOOKING_SEGMENT rows of confirmed bookings and of time blocks alike (427-FR-005): a blocked mechanic or lift is never free in its blocked range.
+
+_From 154-free-slots._
+
+### 154-FR-005 — A mechanic MUST count at a start only when she is at work for the whole stretch the job occupies that day: inside her effective hours for that weekday (her own `working_hours`, else the garage's weekdays, 058-FR-001), not on a day off, not on a garage closed day and not on a legal holiday (PUBLIC_HOLIDAY); on Saturday only with `works_saturdays` on, within her Saturday hours. A removed card never counts. A garage with no opening hours stored and a mechanic with none of her own yields no counted mechanic: no start is offered round the clock (`none_in_horizon`), unlike the confirm's placement, which accepts any time there.
+
+_From 154-free-slots._
+
+### 154-FR-006 — A job no longer than the mechanic's working stretch on the start day MUST fit inside that single stretch (scenario 4). Only a job longer than that stretch starts on one day and continues in the same mechanic's next working stretches on the same lift, as the confirm's placement already chains it (150, 389); the start is free only when every stretch of the chain is free of segments and awaiting capacity and the chain ends within the horizon.
+
+_From 154-free-slots._
+
+### 154-FR-007 — Given `mechanicId`, only starts at which that mechanic is free MUST be returned (the lift condition unchanged). Given `excludeBookingId`, the segments and the awaiting capacity of that booking MUST not block the result, so a move can offer the booking its own time back.
+
+_From 154-free-slots._
+
+### 154-FR-008 — A lift MUST be needed when `needsLift` is true, or, with `needsLift` absent, when any job in `jobTypeIds` has `needs_lift`; `needsLift=false` wins over the jobs. With `lift_schedule` off or `lift_count` 0 lifts MUST be ignored entirely: no lift condition and no 400.
+
+_From 154-free-slots._
+
+### 154-FR-009 — With `team_mechanics` off there MUST be no mechanic condition and no awaiting-mechanic capacity: a start is free when the whole job lies within the garage's opening hours of that day (chained over the next opening days when longer, as FR-006), not on a closed day or a legal holiday, and, when a lift is needed and lifts are in use, a lift is free for the whole job; the owner's overlapping bookings are allowed. An awaiting booking whose jobs need a lift still takes one lift unit (FR-004); only the mechanic unit goes. A garage with no opening hours stored offers no start.
+
+_From 154-free-slots._
+
+### 154-FR-010 — Candidate starts MUST fall on 30-minute steps of the Bucharest wall clock from `earliest` (FR-003) to the end of the horizon's last day (day 1 is `earliest`'s Bucharest calendar day, day N ends at 24:00 Bucharest time), scanned in order and stopped at `count` results; on a clock-change day the grid follows the wall clock and a duration stays a length in minutes.
+
+_From 154-free-slots._
+
+### 154-FR-011 — Every returned start MUST be one the booking confirm's placement check (150-FR-002, 427-FR-006) accepts at that moment for some counted mechanic and lift: the engine reads the same calendar, hours, day-off, segment and block rules through the shared schedule code, never a copy of them. Which mechanic and lift made a start free is not returned and not promised; they are set at confirmation.
+
+_From 154-free-slots._
+
+### 154-FR-012 — The answer MUST be served from a per-garage cache in Valkey keyed by the garage and every normalized parameter (after FR-003's defaults and the rounding of `earliest`, so one key per distinct question), kept at most 60 seconds, and dropped for the whole garage when any schedule event of that garage is relayed: `booking.confirmed`, `booking.moved`, `booking.cancelled`, `booking.lapsed`, `booking.no_show_recorded`, `quote.accepted`, `mechanic.added`, `mechanic.updated`, `mechanic.removed`, `garage.updated`, `garage.features_changed`, `time_block.created`, `time_block.updated`, `time_block.deleted`. PostgreSQL stays the truth: a cold cache or a Valkey outage is a read from PostgreSQL, never an error and never a changed answer, and the schedule tables are never written by the engine.
+
+_From 154-free-slots._
+
+### 154-FR-018 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids. Unit (Jest, no database): a table of cases for mechanic and lift overlaps with lifts on and off; working hours, days off, Saturdays, closed days and holidays; awaiting capacity and `excludeBookingId`; time blocks on a mechanic, on a lift and on both; team off; multi-day chains; a clock-change day; the earliest-start rounding and an empty horizon. API (Jest on real PostgreSQL and Valkey): every caller of FR-002 (200, 403, 404), the driver's two entitlements, the 400s of FR-003, scenario 9 through the cache drop, a p95 check under 300 ms over 20 calls on a seeded garage with 10 mechanics, 5 lifts and 30 days of bookings, FR-013, FR-014 and `review.posted` (FR-015) on the outbox rows, the two review decision kinds on `audienceOf` (FR-015), and FR-016. End to end (Playwright): none of its own; covered through #135.
+
+_From 154-free-slots._
 
 ### 1410-FR-001 — (origin 1404-FR-007) The Predare and Corectează dialog (1393-FR-002, FR-006) MUST show under "Preț final (lei)" the hint "Ofertă <range>" / "Quote <range>", the range written by `formatLeiRange(quoteFromBani, quoteToBani, language)` ("890–1.400 lei"; one amount when the ends are equal), from the job read the drawer already holds, handed to the dialog with the data it opens with: no second read, no new route.
 

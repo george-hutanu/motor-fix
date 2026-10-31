@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 
 import { ActiveRequestController } from './active-request/active-request.controller';
 import { ActiveRequestService } from './active-request/active-request.service';
+import { FreeSlotsCache } from './free-slots/free-slots.cache';
+import { FreeSlotsController } from './free-slots/free-slots.controller';
+import { FreeSlotsService } from './free-slots/free-slots.service';
 import { GarageJobsController } from './garage-jobs/garage-jobs.controller';
 import { GarageJobsService } from './garage-jobs/garage-jobs.service';
 import { JobLockController } from './job-lock/job-lock.controller';
@@ -22,6 +25,7 @@ import { AuditService } from '../audit/audit.service';
 @Module({
   controllers: [
     ActiveRequestController,
+    FreeSlotsController,
     GarageJobsController,
     JobLockController,
     JobStagesController,
@@ -31,6 +35,8 @@ import { AuditService } from '../audit/audit.service';
   exports: [ScheduleService],
   providers: [
     ActiveRequestService,
+    FreeSlotsCache,
+    FreeSlotsService,
     GarageJobsService,
     JobLockService,
     JobStagesService,
