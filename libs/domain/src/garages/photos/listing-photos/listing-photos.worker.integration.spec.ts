@@ -16,11 +16,11 @@ const photoJob = (attemptsMade: number) => ({
 
 // @traces 297-FR-007
 describe('a listing photo that failed for good', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('writes one job_failed entry, on its last attempt only', async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
-    const write = jest.spyOn(systemLog, 'write').mockResolvedValue('written');
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    const write = vi.spyOn(systemLog, 'write').mockResolvedValue('written');
     const { providers = [] } = ListingPhotosWorkerModule.register({
       redisUrl: redisUrlFor(13),
     });

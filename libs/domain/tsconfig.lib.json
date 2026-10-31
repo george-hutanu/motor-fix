@@ -5,8 +5,7 @@
     "types": ["node"]
   },
   "exclude": [
-    "jest.config.ts",
-    "jest.config.cts",
+    "vitest.config.mts",
     "src/**/*.spec.ts",
     "src/**/*.test.ts",
     "src/**/*.testing.ts"

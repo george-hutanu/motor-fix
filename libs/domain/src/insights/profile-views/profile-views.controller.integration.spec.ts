@@ -56,17 +56,17 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  jest.useRealTimers();
+  vi.useRealTimers();
   await world.reset();
   await redis.flushdb();
 });
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 // Only Date is faked: Redis, HTTP and the timers keep real time. The instants
 // sit in the future so an expiry set from them is never already past.
 const at = (iso: string) =>
-  jest
+  vi
     .useFakeTimers({
       doNotFake: [
         'nextTick',
@@ -557,7 +557,7 @@ describe('a view while Redis is down', () => {
   });
 
   it('is answered as usual and logged once, naming no visitor', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const g = await garage();

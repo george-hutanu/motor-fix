@@ -4,7 +4,7 @@ import { FakePlaces } from './fake-places.provider';
 import { GeoapifyPlaces } from './geoapify-places.provider';
 
 const answer = (results: unknown[]) =>
-  jest.fn<Promise<Response>, [string, RequestInit?]>(
+  vi.fn<Promise<Response>, [string, RequestInit?]>(
     async () =>
       ({ json: async () => ({ results }), ok: true, status: 200 }) as Response,
   );
@@ -19,9 +19,9 @@ const row = (city: unknown) => ({
 // @traces 163-FR-005
 describe('the locality of a suggestion', () => {
   beforeEach(() => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it("carries the Geoapify row's city, trimmed", async () => {
     const places = new GeoapifyPlaces('key', answer([row('  Cluj-Napoca ')]));

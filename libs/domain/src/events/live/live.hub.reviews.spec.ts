@@ -38,13 +38,13 @@ const access = (): GarageAccess => ({
 let hub: LiveHub;
 
 beforeEach(() => {
-  jest.useFakeTimers({ now: NOW });
-  hub = new LiveHub(jest.fn(async () => access()));
+  vi.useFakeTimers({ now: NOW });
+  hub = new LiveHub(vi.fn(async () => access()));
 });
 
 afterEach(() => {
   hub.shutdown();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 const staff = (accountId: string, role: Role, mechanicId?: string) => {

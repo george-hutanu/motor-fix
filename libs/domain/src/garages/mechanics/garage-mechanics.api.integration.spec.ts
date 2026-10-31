@@ -92,7 +92,7 @@ beforeEach(async () => {
   mark = await outboxMark(prisma);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const bearer = (accountId: string, role: Role) =>
   `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
@@ -304,8 +304,8 @@ async function refuseInserts(
 }
 
 const quiet = () => {
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 };
 
 // A list item as a card holding nothing but its name has it.

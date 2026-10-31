@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import type { MockInstance } from 'vitest';
 
 import {
   DATA_EXPORT_CONSUMER,
@@ -56,7 +57,7 @@ const exportsCounted = (outcome: string) =>
   counterTotal(reader, 'motorfix_data_exports_total', { outcome });
 
 let app: TestingModule | undefined;
-let log: jest.SpyInstance;
+let log: MockInstance;
 
 beforeAll(() => store.start());
 
@@ -66,9 +67,9 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  log = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
   store.objects.clear();
@@ -78,7 +79,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // Compiled, never started: no worker takes the queue, so each case hands the
@@ -486,9 +487,9 @@ describe('building the file', () => {
     const builder = await start();
     const { a } = await twoDrivers();
     const row = await queued(a.id);
-    jest
-      .spyOn(StorageService.prototype, 'putObject')
-      .mockRejectedValue(new Error('store down'));
+    vi.spyOn(StorageService.prototype, 'putObject').mockRejectedValue(
+      new Error('store down'),
+    );
 
     await expect(builder.onEvent(requested(a.id, row.id, 0))).rejects.toThrow(
       'store down',
@@ -506,10 +507,10 @@ describe('building the file', () => {
     const builder = await start();
     const { a } = await twoDrivers();
     const row = await queued(a.id);
-    const error = jest.spyOn(Logger.prototype, 'error');
-    jest
-      .spyOn(StorageService.prototype, 'putObject')
-      .mockRejectedValue(new TypeError(`no store for ${a.email}`));
+    const error = vi.spyOn(Logger.prototype, 'error');
+    vi.spyOn(StorageService.prototype, 'putObject').mockRejectedValue(
+      new TypeError(`no store for ${a.email}`),
+    );
     const before = await exportsCounted('failed');
 
     await expect(builder.onEvent(requested(a.id, row.id, 2))).rejects.toThrow();

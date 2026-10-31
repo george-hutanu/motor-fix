@@ -12,7 +12,7 @@ let took: number[] = [];
 let now = 0;
 let jump: (() => void) | undefined;
 
-jest.mock('node:child_process', () => ({
+vi.mock('node:child_process', () => ({
   spawn: (tool: string, args: string[], options: { timeout: number }) => {
     calls.push({ timeout: options.timeout, tool });
     const child = Object.assign(new EventEmitter(), {
@@ -39,9 +39,9 @@ beforeEach(() => {
   took = [];
   jump = undefined;
   now = 1_000_000;
-  jest.spyOn(performance, 'now').mockImplementation(() => now);
+  vi.spyOn(performance, 'now').mockImplementation(() => now);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 333-FR-007
 describe('the conversion deadline under hostile timing', () => {
@@ -74,7 +74,7 @@ describe('the conversion deadline under hostile timing', () => {
 
   it('never hands a run more than the whole budget when the wall clock steps back', async () => {
     let wall = 5_000_000;
-    jest.spyOn(Date, 'now').mockImplementation(() => wall);
+    vi.spyOn(Date, 'now').mockImplementation(() => wall);
     jump = () => {
       wall -= 10 * 60_000;
     };

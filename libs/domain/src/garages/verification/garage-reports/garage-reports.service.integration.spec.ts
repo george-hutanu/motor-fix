@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { HttpException } from '@nestjs/common';
+import type { Mock } from 'vitest';
 
 import { GarageReportsService } from './garage-reports.service';
 import { AuditService } from '../../../audit/audit.service';
@@ -32,7 +33,7 @@ const NONE = {
   canRecordFinalPrice: false,
 };
 
-type Notify = jest.Mock<
+type Notify = Mock<
   Promise<number>,
   [Parameters<NotificationsService['notify']>[0]]
 >;
@@ -130,7 +131,7 @@ let dinamo: Awaited<ReturnType<typeof garageWith>>;
 beforeEach(async () => {
   await reset();
   await prisma.outboxEvent.deleteMany();
-  notify = jest.fn().mockResolvedValue(2);
+  notify = vi.fn().mockResolvedValue(2);
   ioana = await account('Ioana Popa', ['admin']);
   dan = await account('Dan Ene', ['admin']);
   await account('Sorin Lazăr', ['admin'], { status: 'suspended' });

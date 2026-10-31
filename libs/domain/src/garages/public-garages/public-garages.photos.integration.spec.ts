@@ -68,7 +68,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await reset();
   store.objects.clear();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const read = (slug: string) =>
@@ -200,7 +200,7 @@ describe('the photos of a public garage profile', () => {
   it('asks storage nothing about a photo whose size is known', async () => {
     const garage = await approved();
     await photo(garage.id, 0);
-    const head = jest.spyOn(storage, 'metadataOf');
+    const head = vi.spyOn(storage, 'metadataOf');
 
     await read(garage.slug);
 

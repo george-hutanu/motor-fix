@@ -95,7 +95,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 async function checkpoint() {
@@ -529,9 +529,7 @@ describe('PATCH /garages/:garageId/profile: what a save writes', () => {
   it('leaves no field, entry or event when a write of the save fails', async () => {
     const w = await world();
     const before = await stored(w.nord.id);
-    jest
-      .spyOn(outbox, 'record')
-      .mockRejectedValueOnce(new Error('outbox down'));
+    vi.spyOn(outbox, 'record').mockRejectedValueOnce(new Error('outbox down'));
 
     const res = await patch(w, { name: 'Service Auto Sud', version: '0' });
 

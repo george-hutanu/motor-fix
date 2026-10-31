@@ -23,12 +23,16 @@ import {
   fixtures,
 } from '../../notifications/notifications.testing';
 
-jest.mock('../../auth/email-confirmation/email-confirmation', () => {
-  const actual = jest.requireActual(
-    '../../auth/email-confirmation/email-confirmation',
-  );
-  return { ...actual, newToken: jest.fn(actual.newToken) };
-});
+vi.mock(
+  '../../auth/email-confirmation/email-confirmation',
+  async (actualModule) => {
+    const actual =
+      await actualModule<
+        typeof import('../../auth/email-confirmation/email-confirmation')
+      >();
+    return { ...actual, newToken: vi.fn(actual.newToken) };
+  },
+);
 
 const reader = countedMetrics();
 const signUps = () => counterTotal(reader, 'motorfix_garage_sign_ups_total');
@@ -113,7 +117,9 @@ describe('creating a draft', () => {
   });
 
   it('keeps the draft and says no link went when the e-mail cannot be queued', async () => {
-    const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const error = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     queueDown = true;
 
     const created = await service.create(body());
@@ -191,7 +197,7 @@ describe('what a draft leaves behind', () => {
     const logged: string[] = [];
     const spies = (['log', 'warn', 'error', 'debug', 'verbose'] as const).map(
       (level) =>
-        jest
+        vi
           .spyOn(Logger.prototype, level)
           .mockImplementation((...args: unknown[]) => {
             logged.push(args.map(String).join(' '));
@@ -342,7 +348,7 @@ describe('saving a draft', () => {
   // @traces 116-FR-033
   it('makes no new key when the address is the same', async () => {
     const created = await service.create(body());
-    const made = jest.mocked(newToken);
+    const made = vi.mocked(newToken);
     made.mockClear();
 
     await service.save(created.id, created.token, body({ step: 2 }));

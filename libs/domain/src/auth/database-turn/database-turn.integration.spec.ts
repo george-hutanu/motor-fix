@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+
 import { Pool } from 'pg';
 
 import { databaseTurn, TURN_WAIT_MS } from './database-turn.testing';
@@ -153,12 +155,12 @@ it(
 it(
   'makes the client that calls a waiting take off before the take waits',
   async () => {
-    const pg = jest.requireActual<typeof import('pg')>('pg');
+    const pg = createRequire(import.meta.url)('pg') as typeof import('pg');
     const Real = pg.Client;
     const holder = databaseTurn(databaseUrl);
     await holder.take();
     const late = databaseTurn(databaseUrl);
-    const made = jest
+    const made = vi
       .spyOn(pg, 'Client')
       .mockImplementation((config) => new Real(config));
     try {

@@ -105,7 +105,7 @@ const ALLOWED: Record<string, string[]> = {
 let hub: LiveHub;
 
 beforeEach(() => {
-  jest.useFakeTimers({ now: NOW });
+  vi.useFakeTimers({ now: NOW });
   hub = new LiveHub(async () => ({
     mechanics: new Map(),
     off: new Set(),
@@ -116,8 +116,8 @@ beforeEach(() => {
 
 afterEach(() => {
   hub.shutdown();
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 const openPublic = (channels: string[], address: string | null = '1.2.3.4') => {
@@ -217,18 +217,18 @@ describe('LiveHub public streams', () => {
   it('writes a comment line to a quiet public stream every 25 seconds', () => {
     const { sink } = openPublic(['system']);
 
-    jest.advanceTimersByTime(24_999);
+    vi.advanceTimersByTime(24_999);
     expect(sink.pings()).toBe(0);
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
     expect(sink.pings()).toBe(1);
-    jest.advanceTimersByTime(25_000);
+    vi.advanceTimersByTime(25_000);
     expect(sink.pings()).toBe(2);
   });
 
   it('never expires a public stream', () => {
     const { sink } = openPublic(['system']);
 
-    jest.advanceTimersByTime(24 * 60 * 60_000);
+    vi.advanceTimersByTime(24 * 60 * 60_000);
 
     expect(sink.ended).toBe(false);
   });
@@ -304,7 +304,7 @@ describe('LiveHub public streams', () => {
     });
 
     it('skips the limit for an address it cannot read, and logs it', () => {
-      const warn = jest
+      const warn = vi
         .spyOn(Logger.prototype, 'warn')
         .mockImplementation(() => undefined);
 

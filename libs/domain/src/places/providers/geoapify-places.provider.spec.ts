@@ -1,11 +1,12 @@
 import { Logger } from '@nestjs/common';
+import type { MockInstance } from 'vitest';
 
 import { GeoapifyPlaces } from './geoapify-places.provider';
 
 const KEY = 'secret-key-123';
 
 const answer = (body: unknown, status = 200) =>
-  jest.fn<Promise<Response>, [string, RequestInit?]>(
+  vi.fn<Promise<Response>, [string, RequestInit?]>(
     async () =>
       ({
         json: async () => body,
@@ -21,14 +22,14 @@ const result = (formatted: string, lat: number, lon: number) => ({
 });
 
 describe('the Geoapify address search', () => {
-  let warn: jest.SpyInstance;
+  let warn: MockInstance;
 
   beforeEach(() => {
-    warn = jest
+    warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('asks for at most five addresses in Romania, in the language asked', async () => {
     const fetch = answer({ results: [] });
@@ -126,9 +127,9 @@ describe('the Geoapify address search', () => {
   });
 
   it('gives up after three seconds', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     try {
-      const fetch = jest.fn(
+      const fetch = vi.fn(
         (_url: string, init?: RequestInit) =>
           new Promise<Response>((_, reject) =>
             init?.signal?.addEventListener('abort', () =>
@@ -138,16 +139,16 @@ describe('the Geoapify address search', () => {
       );
       const search = new GeoapifyPlaces(KEY, fetch).search('Strada', 'ro');
 
-      await jest.advanceTimersByTimeAsync(3_000);
+      await vi.advanceTimersByTimeAsync(3_000);
 
       expect(await search).toEqual({ unavailable: 'timeout' });
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
   it('is unavailable when the network fails, without the key in the log', async () => {
-    const fetch = jest.fn(async () => {
+    const fetch = vi.fn(async () => {
       throw new TypeError(`fetch failed for apiKey=${KEY}`);
     });
 

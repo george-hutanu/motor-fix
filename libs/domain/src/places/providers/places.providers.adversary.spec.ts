@@ -7,7 +7,7 @@ import { GeoapifyPlaces } from './geoapify-places.provider';
 const KEY = 'secret-key-123';
 
 const answering = (body: () => unknown, status = 200) =>
-  jest.fn<Promise<Response>, [string, RequestInit?]>(
+  vi.fn<Promise<Response>, [string, RequestInit?]>(
     async () =>
       ({
         json: async () => body(),
@@ -24,9 +24,9 @@ const row = (formatted: unknown, lat: unknown, lon: unknown) => ({
 
 describe('the Geoapify address search against odd answers', () => {
   beforeEach(() => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   const search = (body: unknown) =>
     new GeoapifyPlaces(
@@ -45,7 +45,7 @@ describe('the Geoapify address search against odd answers', () => {
   });
 
   it('is unavailable when the body is not JSON', async () => {
-    const fetch = jest.fn(
+    const fetch = vi.fn(
       async () =>
         ({
           json: async () => {
@@ -109,7 +109,7 @@ describe('the Geoapify address search against odd answers', () => {
   });
 
   it('reports a failure that is not a timeout as a network failure, not a timeout', async () => {
-    const fetch = jest.fn(async () => {
+    const fetch = vi.fn(async () => {
       throw new TypeError('getaddrinfo ENOTFOUND api.geoapify.com');
     });
 
@@ -119,7 +119,7 @@ describe('the Geoapify address search against odd answers', () => {
   });
 
   it('does not log the typed text or the key when the answer is malformed', async () => {
-    const warn = jest.spyOn(Logger.prototype, 'warn');
+    const warn = vi.spyOn(Logger.prototype, 'warn');
 
     await new GeoapifyPlaces(
       KEY,

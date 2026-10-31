@@ -98,7 +98,7 @@ beforeEach(async () => {
   published.length = 0;
   maintenance = false;
   resets.now = () => new Date();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -202,12 +202,12 @@ function holdResetEmails(): () => void {
     release = resolve;
   });
   holds.push(release);
-  jest
-    .spyOn(notifications, 'sendAccountEmail')
-    .mockImplementation(async (input) => {
+  vi.spyOn(notifications, 'sendAccountEmail').mockImplementation(
+    async (input) => {
       await held;
       return send(input);
-    });
+    },
+  );
   return release;
 }
 
@@ -370,7 +370,7 @@ describe('asking for a reset link', () => {
     const options = (resets as unknown as { options: { webUrl?: string } })
       .options;
     options.webUrl = undefined;
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     try {
@@ -388,10 +388,11 @@ describe('asking for a reset link', () => {
   // @traces 568-FR-002
   it('answers 202 and logs, without the address, when the e-mail cannot be queued', async () => {
     await person();
-    jest
-      .spyOn(app.get(NotificationsService), 'sendAccountEmail')
-      .mockRejectedValue(new Error('Redis did not answer'));
-    const logged = jest
+    vi.spyOn(
+      app.get(NotificationsService),
+      'sendAccountEmail',
+    ).mockRejectedValue(new Error('Redis did not answer'));
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     await ask('andrei@example.test').expect(202);
@@ -443,7 +444,7 @@ describe('asking for a reset link', () => {
     const second = await person('ion@example.test');
     const releaseFirst = holdResetEmails();
     await ask('ana@example.test').timeout(ANSWER_MS).expect(202);
-    const sending = jest.mocked(app.get(NotificationsService).sendAccountEmail);
+    const sending = vi.mocked(app.get(NotificationsService).sendAccountEmail);
     await until(
       'the first reset e-mail to start sending',
       () => sending.mock.calls.length > 0,
@@ -684,12 +685,12 @@ describe('completing a reset', () => {
     const id = await person();
     const before = await signIn('andrei@example.test', OLD).expect(200);
     const token = await linkFor(id);
-    jest
-      .spyOn(app.get<EventPort>(EVENT_PORT), 'record')
-      .mockRejectedValue(new Error('outbox down'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(app.get<EventPort>(EVENT_PORT), 'record').mockRejectedValue(
+      new Error('outbox down'),
+    );
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await complete(token).expect(500);
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     await signIn('andrei@example.test', OLD).expect(200);
     await check(token).expect(204);
     await refreshWith(before).expect(200);
@@ -705,7 +706,7 @@ describe('completing a reset', () => {
 
   it('tells the account open dashboards to sign out', async () => {
     const id = await person();
-    const revoke = jest.spyOn(app.get(SignInService), 'revokeSessionsLive');
+    const revoke = vi.spyOn(app.get(SignInService), 'revokeSessionsLive');
     await complete(await linkFor(id)).expect(200);
     expect(revoke).toHaveBeenCalledTimes(1);
     expect(revoke).toHaveBeenCalledWith(id, expect.any(Date));
@@ -723,10 +724,11 @@ describe('completing a reset', () => {
   it('still answers 200 when the changed-password e-mail cannot be queued', async () => {
     const id = await person();
     const token = await linkFor(id);
-    jest
-      .spyOn(app.get(NotificationsService), 'sendAccountEmail')
-      .mockRejectedValue(new Error('Redis did not answer'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(
+      app.get(NotificationsService),
+      'sendAccountEmail',
+    ).mockRejectedValue(new Error('Redis did not answer'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await complete(token).expect(200);
     await signIn('andrei@example.test', NEW).expect(200);
   });
@@ -734,10 +736,10 @@ describe('completing a reset', () => {
   it('still answers 200 when the other tabs cannot be told', async () => {
     const id = await person();
     const token = await linkFor(id);
-    jest
-      .spyOn(app.get(SESSION_EVENTS), 'publish')
-      .mockRejectedValue(new Error('Redis did not answer'));
-    const warn = jest
+    vi.spyOn(app.get(SESSION_EVENTS), 'publish').mockRejectedValue(
+      new Error('Redis did not answer'),
+    );
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     await complete(token).expect(200);
@@ -751,10 +753,10 @@ describe('completing a reset', () => {
   it('e-mails and signs out the other tabs even when no session opens', async () => {
     const id = await person();
     const token = await linkFor(id);
-    jest
-      .spyOn(app.get(SignInService), 'openSession')
-      .mockRejectedValue(new Error('Redis did not answer'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(app.get(SignInService), 'openSession').mockRejectedValue(
+      new Error('Redis did not answer'),
+    );
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await complete(token).expect(500);
     expect(await resetEmails(id, 'password_changed')).toHaveLength(1);
     await until('the background work', () => published.length > 0);

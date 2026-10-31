@@ -64,7 +64,7 @@ beforeEach(async () => {
   await reset();
   await redis.flushdb();
   confirmations.now = () => new Date();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;

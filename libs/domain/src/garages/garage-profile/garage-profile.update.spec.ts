@@ -2,9 +2,9 @@ import { GarageProfileUpdate } from './garage-profile.update';
 import type { Actor } from '../../auth/policy';
 import { writeGarageHours } from '../garage-hours';
 
-jest.mock('../garage-hours', () => ({
-  ...jest.requireActual('../garage-hours'),
-  writeGarageHours: jest.fn(),
+vi.mock('../garage-hours', async (actualModule) => ({
+  ...(await actualModule<typeof import('../garage-hours')>()),
+  writeGarageHours: vi.fn(),
 }));
 
 // @traces 1246-FR-001 1246-FR-002 1246-FR-003 1246-FR-004 1246-FR-005
@@ -55,7 +55,7 @@ const ROW = {
 };
 type Row = typeof ROW;
 
-const write = jest.mocked(writeGarageHours);
+const write = vi.mocked(writeGarageHours);
 
 function harness(row: Partial<Row> = {}, { updated = 1 } = {}) {
   const locked = { ...ROW, ...row };
@@ -73,15 +73,15 @@ function harness(row: Partial<Row> = {}, { updated = 1 } = {}) {
   });
   let reads = 0;
   const tx = {
-    $queryRaw: jest.fn(async () => (reads++ === 0 ? [locked] : [{ ...state }])),
-    garage: { updateMany: jest.fn(async () => ({ count: updated })) },
+    $queryRaw: vi.fn(async () => (reads++ === 0 ? [locked] : [{ ...state }])),
+    garage: { updateMany: vi.fn(async () => ({ count: updated })) },
   };
   const prisma = {
-    $transaction: jest.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
+    $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
   };
-  const audit = { recordChanges: jest.fn(async () => undefined) };
-  const events = { record: jest.fn(async () => undefined) };
-  const answer = jest.fn(async () => ({ name: 'answer', version: '8' }));
+  const audit = { recordChanges: vi.fn(async () => undefined) };
+  const events = { record: vi.fn(async () => undefined) };
+  const answer = vi.fn(async () => ({ name: 'answer', version: '8' }));
   const update = new GarageProfileUpdate(
     prisma as never,
     audit as never,

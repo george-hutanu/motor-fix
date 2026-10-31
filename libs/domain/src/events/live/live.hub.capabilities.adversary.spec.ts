@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 
 import { EVENT_KINDS } from '@motor-fix/contracts';
 import { capabilitiesOf, type Role } from '@motor-fix/contracts/capabilities';
+import type { Mock } from 'vitest';
 
 import { KIND_CAPABILITY, LiveHub } from './live.hub';
 import type { GarageAccess } from '../garage-access';
@@ -41,19 +42,19 @@ const access = (over: Partial<GarageAccess> = {}): GarageAccess => ({
   ...over,
 });
 
-let load: jest.Mock<Promise<GarageAccess>, [string]>;
+let load: Mock<Promise<GarageAccess>, [string]>;
 let hub: LiveHub;
 
 beforeEach(() => {
-  jest.useFakeTimers({ now: NOW });
-  load = jest.fn(async (_garageId: string) => access());
+  vi.useFakeTimers({ now: NOW });
+  load = vi.fn(async (_garageId: string) => access());
   hub = new LiveHub(load);
 });
 
 afterEach(() => {
   hub.shutdown();
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 const open = (accountId: string, role: Role, channels: string[]) => {

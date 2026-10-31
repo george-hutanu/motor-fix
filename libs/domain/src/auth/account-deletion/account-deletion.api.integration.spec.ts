@@ -110,7 +110,7 @@ beforeEach(async () => {
   await redis.flushdb();
   brevo.reset();
   published.length = 0;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -577,7 +577,7 @@ describe('deleting my account', () => {
   });
 
   it('logs the deletion with the account id and no personal value', async () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const id = await person();

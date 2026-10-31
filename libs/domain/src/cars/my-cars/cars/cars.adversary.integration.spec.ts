@@ -181,7 +181,7 @@ describe('POST /cars under hostile input', () => {
   // @traces 094-FR-008
   it('on 29 February 2028 takes 28 February 2033 and refuses 1 March 2033', async () => {
     // Only the clock moves; timers stay real for the database and HTTP.
-    jest.useFakeTimers({
+    vi.useFakeTimers({
       doNotFake: [
         'hrtime',
         'nextTick',
@@ -220,7 +220,7 @@ describe('POST /cars under hostile input', () => {
       ]);
       expect(await cars(id)).toBe(1);
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 

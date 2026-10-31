@@ -217,10 +217,8 @@ describe('the owner reports a review', () => {
 
   it('leaves no report, status change, audit entry or event when the event cannot be written', async () => {
     const s = await setting();
-    jest
-      .spyOn(outbox, 'record')
-      .mockRejectedValueOnce(new Error('outbox down'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(outbox, 'record').mockRejectedValueOnce(new Error('outbox down'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const refused = await report(s.owner, s.review.id, { reason: 'insults' });
 

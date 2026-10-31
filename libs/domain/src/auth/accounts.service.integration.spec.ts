@@ -14,21 +14,21 @@ serialDatabase(databaseUrl);
 
 function ports() {
   const audit = {
-    record: jest.fn<
+    record: vi.fn<
       ReturnType<AuditPort['record']>,
       Parameters<AuditPort['record']>
     >(async () => undefined),
-    recordChanges: jest.fn<
+    recordChanges: vi.fn<
       ReturnType<AuditPort['recordChanges']>,
       Parameters<AuditPort['recordChanges']>
     >(async () => undefined),
-    recordMany: jest.fn<
+    recordMany: vi.fn<
       ReturnType<AuditPort['recordMany']>,
       Parameters<AuditPort['recordMany']>
     >(async () => undefined),
   };
   const events = {
-    record: jest.fn<
+    record: vi.fn<
       ReturnType<EventPort['record']>,
       Parameters<EventPort['record']>
     >(async () => undefined),

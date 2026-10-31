@@ -435,7 +435,7 @@ describe('an approval', () => {
 
   it('logs the job, the decision and the admin after it commits', async () => {
     const { job } = await proposal();
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
 
     await service().approve(ana, job.id, APPROVAL);
 
@@ -490,7 +490,7 @@ describe('a rejection', () => {
 
   it('logs a line that never carries the reason', async () => {
     const { job } = await proposal();
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
 
     await service().reject(ana, job.id, { reason: REASON });
 

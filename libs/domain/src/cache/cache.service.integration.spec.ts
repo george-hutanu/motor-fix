@@ -26,7 +26,7 @@ afterAll(() => {
   for (const redis of clients) redis.disconnect();
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 async function counts() {
   const { resourceMetrics } = await metricReader.collect();
@@ -119,7 +119,7 @@ describe('the cache service', () => {
     await cache.read({ key: k, read, soft: 60 });
     version = 2;
     const later = Date.now() + 120_000;
-    jest.spyOn(Date, 'now').mockImplementation(() => later);
+    vi.spyOn(Date, 'now').mockImplementation(() => later);
 
     const outcomes = await counting(async () => {
       const started = performance.now();
@@ -149,7 +149,7 @@ describe('the cache service', () => {
     };
     await a.read({ key: k, read, soft: 60 });
     const later = Date.now() + 120_000;
-    jest.spyOn(Date, 'now').mockImplementation(() => later);
+    vi.spyOn(Date, 'now').mockImplementation(() => later);
 
     await Promise.all([
       a.read({ key: k, read, soft: 60 }),
@@ -294,16 +294,14 @@ describe('the cache service', () => {
   it('counts the miss exactly once when the store fails', async () => {
     const redis = client();
     const cache = new CacheService(redis);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     const evaluate = redis.eval.bind(redis);
-    jest
-      .spyOn(redis, 'eval')
-      .mockImplementation((...args) =>
-        String(args[0]).includes('ZADD')
-          ? Promise.reject(new Error('READONLY'))
-          : evaluate(...args),
-      );
+    vi.spyOn(redis, 'eval').mockImplementation((...args) =>
+      String(args[0]).includes('ZADD')
+        ? Promise.reject(new Error('READONLY'))
+        : evaluate(...args),
+    );
 
     const outcomes = await counting(() =>
       expect(
@@ -345,8 +343,8 @@ describe('the cache service', () => {
   it('names the answer’s tags on the request while Redis is down', async () => {
     const redis = client();
     const cache = new CacheService(redis);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    jest.spyOn(redis, 'sendCommand').mockImplementation((command: Command) => {
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(redis, 'sendCommand').mockImplementation((command: Command) => {
       command.reject(new Error('connect ECONNREFUSED 127.0.0.1:6379'));
       return command.promise;
     });
@@ -366,23 +364,23 @@ describe('the cache service', () => {
   it('answers from the read while Redis is down, warning once and logging the recovery', async () => {
     const redis = client();
     const cache = new CacheService(redis);
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const send = redis.sendCommand.bind(redis);
     let down = true;
     const commands: string[] = [];
-    jest
-      .spyOn(redis, 'sendCommand')
-      .mockImplementation((command: Command, ...rest) => {
+    vi.spyOn(redis, 'sendCommand').mockImplementation(
+      (command: Command, ...rest) => {
         commands.push(command.name);
         if (!down) return send(command, ...rest);
         command.reject(new Error('connect ECONNREFUSED 127.0.0.1:6379'));
         return command.promise;
-      });
+      },
+    );
     const { calls, read } = source(7, 0);
     const k = key();
 
@@ -409,7 +407,7 @@ describe('the cache service', () => {
 const warmKey = () => cacheKey('driver-home', randomUUID(), 'cars');
 
 const failing = (redis: Redis) =>
-  jest.spyOn(redis, 'sendCommand').mockImplementation((command: Command) => {
+  vi.spyOn(redis, 'sendCommand').mockImplementation((command: Command) => {
     command.reject(new Error('connect ECONNREFUSED 127.0.0.1:6379'));
     return command.promise;
   });
@@ -503,7 +501,7 @@ describe('the cache service’s warm entries', () => {
     const k = warmKey();
     await warmed(cache, k);
     const later = Date.now() + 100_000;
-    jest.spyOn(Date, 'now').mockImplementation(() => later);
+    vi.spyOn(Date, 'now').mockImplementation(() => later);
 
     const outcomes = await counting(async () => {
       await expect(cache.take(k)).resolves.toBeUndefined();
@@ -515,7 +513,7 @@ describe('the cache service’s warm entries', () => {
   it('answers nothing and counts a fallback while Redis is down, and says it is unavailable', async () => {
     const redis = client();
     const cache = new CacheService(redis);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     expect(cache.available).toBe(true);
     failing(redis);
 

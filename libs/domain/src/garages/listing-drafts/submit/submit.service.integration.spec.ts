@@ -415,7 +415,7 @@ describe('a draft whose reminder the queue refused', () => {
         subjectId: id,
       },
     });
-    const attach = jest
+    const attach = vi
       .spyOn(legal, 'attach')
       .mockRejectedValueOnce(new Error('connection lost'));
 
@@ -435,7 +435,7 @@ describe('a send that fails part-way', () => {
   it('leaves nothing: no garage, file, role, history, event or key', async () => {
     const actor = await driver();
     const { id, token } = await draft();
-    const attach = jest
+    const attach = vi
       .spyOn(legal, 'attach')
       .mockRejectedValueOnce(new Error('connection lost'));
 
@@ -451,7 +451,7 @@ describe('a send that fails part-way', () => {
   it('keeps no key, so the same key sends it again', async () => {
     const actor = await driver();
     const { id, token } = await draft();
-    const attach = jest
+    const attach = vi
       .spyOn(legal, 'attach')
       .mockRejectedValueOnce(new Error('connection lost'));
     await service.submit(actor, id, token, 'key-1').catch(() => undefined);
@@ -541,7 +541,7 @@ describe("the owner's mechanic row", () => {
   it('is rolled back with the garage when the send fails part-way', async () => {
     const actor = await driver();
     const { id, token } = await draft();
-    const attach = jest
+    const attach = vi
       .spyOn(legal, 'attach')
       .mockRejectedValueOnce(new Error('connection lost'));
 
@@ -628,7 +628,7 @@ describe('a draft with facilities and a note', () => {
   it('saves no facility row and no note when the send fails part-way', async () => {
     const actor = await driver();
     const { id, token } = await draft(withFacilities());
-    const attach = jest
+    const attach = vi
       .spyOn(legal, 'attach')
       .mockRejectedValueOnce(new Error('connection lost'));
 
@@ -879,7 +879,7 @@ describe('a CUI another listing holds', () => {
 // @traces 208-FR-007
 describe('a draft bound to a file asked for more', () => {
   it('leaves an unbound draft to the first sending', async () => {
-    const resend = jest.spyOn(CompletionService.prototype, 'resend');
+    const resend = vi.spyOn(CompletionService.prototype, 'resend');
     try {
       const actor = await driver();
       const { id, token } = await draft();
@@ -915,7 +915,7 @@ describe('a draft bound to a file asked for more', () => {
       },
     });
     const answer = { ...sent, warnings: [] };
-    const resend = jest
+    const resend = vi
       .spyOn(CompletionService.prototype, 'resend')
       .mockResolvedValue({ dropped: [], sent: answer });
     const owner: Actor = {

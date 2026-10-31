@@ -312,7 +312,7 @@ describe('telling the other admins', () => {
   });
 
   it('carries the asker, the rule, the reason and the Setări link', async () => {
-    const notify = jest.fn().mockResolvedValue(2);
+    const notify = vi.fn().mockResolvedValue(2);
 
     await changes(false, { notify }).request(ioana, {
       key: REVIEWS,
@@ -335,7 +335,7 @@ describe('telling the other admins', () => {
   });
 
   it('keeps the push text short whatever the reason', async () => {
-    const notify = jest.fn().mockResolvedValue(2);
+    const notify = vi.fn().mockResolvedValue(2);
 
     await changes(false, { notify }).request(ioana, {
       key: REVIEWS,
@@ -349,7 +349,7 @@ describe('telling the other admins', () => {
   });
 
   it('cuts the push text between characters, never inside an emoji', async () => {
-    const notify = jest.fn().mockResolvedValue(2);
+    const notify = vi.fn().mockResolvedValue(2);
 
     await changes(false, { notify }).request(ioana, {
       key: REVIEWS,
@@ -377,7 +377,7 @@ describe('telling the other admins', () => {
 
   it('tells no one on a decision or a withdrawal', async () => {
     const first = await ask(ioana);
-    const notify = jest.fn().mockResolvedValue(0);
+    const notify = vi.fn().mockResolvedValue(0);
     await changes(false, { notify }).refuse(mihai, first.id);
     const second = await ask(ioana);
     await changes(false, { notify }).cancel(ioana, second.id);
@@ -388,7 +388,7 @@ describe('telling the other admins', () => {
   });
 
   it('keeps the request when the alert cannot be queued', async () => {
-    const notify = jest.fn().mockRejectedValue(new Error('queue down'));
+    const notify = vi.fn().mockRejectedValue(new Error('queue down'));
 
     const asked = await changes(false, { notify }).request(ioana, {
       key: REVIEWS,

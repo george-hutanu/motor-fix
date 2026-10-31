@@ -43,11 +43,11 @@ function response() {
 
 const webp = Buffer.from('RIFF....WEBP');
 const setup = () => {
-  const render = jest.fn<
+  const render = vi.fn<
     Promise<Buffer>,
     Parameters<StaticMapRenderer['render']>
   >();
-  const take = jest.fn<Promise<void>, [string, string]>();
+  const take = vi.fn<Promise<void>, [string, string]>();
   const controller = new StaticMapController(
     { render } as unknown as StaticMapRenderer,
     { take } as unknown as RateLimits,
@@ -184,7 +184,7 @@ describe('StaticMapAnswers, failures', () => {
 // @traces 1196-FR-005
 describe('StaticMapController, a blank view', () => {
   it('keeps an image drawn from no tile data out of every cache', async () => {
-    const fetch = jest.fn(async (input: string | URL | Request) =>
+    const fetch = vi.fn(async (input: string | URL | Request) =>
       String(input).endsWith('/planet')
         ? Response.json({ tiles: ['https://tiles.test/{z}/{x}/{y}.pbf'] })
         : new Response('', { status: 404 }),
