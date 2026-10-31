@@ -640,6 +640,33 @@
     "overdue": "{n} peste 48 de ore",
     "reportedReviews": "Recenzii raportate",
     "requestsSent": "Cereri de ofertă",
+    "sections": {
+      "button": "Personalizează panoul",
+      "count": "{x} din {y} secțiuni afișate",
+      "description": {
+        "demand": "Ce mașini caută service",
+        "growth": "Service‑uri și șoferi, lună de lună",
+        "log": "Ce s‑a întâmplat azi pe platformă",
+        "numbers": "Service‑uri, cereri, programări, șoferi, recenzii",
+        "verification": "Dosarele care așteaptă o decizie"
+      },
+      "done": "Gata",
+      "empty": "Ai ascuns toate secțiunile. Pornește cel puțin una din „Personalizează panoul”.",
+      "hide": "Ascunde: {name}",
+      "line": "Oprește secțiunile de care nu ai nevoie și mută‑le în ordinea în care lucrezi. Se salvează în contul tău.",
+      "moveDown": "Mută mai jos: {name}",
+      "moveUp": "Mută mai sus: {name}",
+      "name": {
+        "demand": "Cereri pe marcă, 30 de zile",
+        "growth": "Creștere, ultimele 12 luni",
+        "log": "Jurnal",
+        "numbers": "Cifrele platformei",
+        "verification": "Service‑uri de verificat"
+      },
+      "reset": "Revino la varianta implicită",
+      "saveFailed": "Nu am putut salva. Încearcă din nou.",
+      "title": "Alege ce vezi pe panou"
+    },
     "thisMonth": "{sign}{n} luna asta",
     "unavailable": "Cifrele nu au putut fi citite",
     "why": "De ce?"

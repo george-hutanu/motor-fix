@@ -14,12 +14,15 @@
   :host {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
-  /* Growth and the brand demand side by side, growth's charts stacked. */
-  mf-admin-growth {
+  /* Growth and the brand demand side by side, growth's charts stacked, while
+     the layout keeps them next to each other; apart, each takes the row. */
+  mf-admin-growth:has(+ mf-admin-demand),
+  mf-admin-demand + mf-admin-growth {
     grid-column: span 3;
     --growth-columns: 1;
   }
-  mf-admin-demand {
+  mf-admin-demand:has(+ mf-admin-growth),
+  mf-admin-growth + mf-admin-demand {
     grid-column: span 3;
   }
 }
@@ -82,7 +85,7 @@
   border-radius: var(--mf-radius-chip);
   background: var(--mf-line);
 }
-button {
+[role="group"] button {
   display: inline-grid;
   place-items: center;
   min-width: var(--mf-tap);
@@ -120,6 +123,27 @@ button {
   background: var(--mf-red);
 }
 mf-admin-queue,
-mf-admin-reviews {
+mf-admin-reviews,
+.strip,
+.empty {
   grid-column: 1 / -1;
+}
+/* The count, then the button that opens "Alege ce vezi pe panou". */
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--mf-space-2) var(--mf-space-3);
+  min-width: 0;
+}
+.count,
+.empty {
+  margin: 0;
+  color: var(--mf-text-secondary);
+  font-size: var(--mf-size-body);
+  overflow-wrap: anywhere;
+}
+.count {
+  margin-inline-end: auto;
 }

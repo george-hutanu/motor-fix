@@ -1,60 +1,88 @@
-@for (tile of tiles(); track tile.label; let i = $index) {
-  <div
-    role="group"
-    [attr.aria-label]="nameOf(tile)"
-    [attr.aria-busy]="tile.state === 'loading' ? 'true' : null"
-  >
-    <span class="label">{{ tile.label }}</span>
-    @switch (tile.state) {
-      @case ('loading') {
-        <span class="number"><span class="skeleton"></span></span>
-        <span class="line"><span class="skeleton"></span></span>
-      }
-      @case ('failed') {
-        <span class="number">
-          {{ tile.number }}
-          <button
-            type="button"
-            [attr.aria-label]="why()"
-            [attr.aria-expanded]="tip() === tile.label"
-            [attr.aria-describedby]="tip() === tile.label ? 'mf-admin-tip-' + i : null"
-            (click)="toggle(tile.label)"
-            (blur)="tip.set(null)"
-            (keydown.escape)="tip.set(null)"
-          >
-            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18">
-              <circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" />
-              <path d="M9 8v5M9 5v1" stroke="currentColor" stroke-width="1.6" />
-            </svg>
-          </button>
-        </span>
-        <span class="tip" role="tooltip" [id]="'mf-admin-tip-' + i" [hidden]="tip() !== tile.label">{{ tile.line }}</span>
-      }
-      @default {
-        <span class="number">
-          {{ tile.number }}
-          @if (tile.alert) {
-            <span class="alert" aria-hidden="true"></span>
+<div class="strip">
+  @if (count(); as line) {
+    <span class="count" data-count aria-live="polite">{{ line }}</span>
+  }
+  <button hlmBtn variant="ghost" type="button" data-customise (click)="open()">{{ button() }}</button>
+</div>
+@if (allHidden()) {
+  <p class="empty" data-all-hidden>{{ empty() }}</p>
+}
+@for (key of sections(); track key) {
+  @switch (key) {
+    @case ('numbers') {
+      @for (tile of tiles(); track tile.label; let i = $index) {
+        <div
+          role="group"
+          [attr.aria-label]="nameOf(tile)"
+          [attr.aria-busy]="tile.state === 'loading' ? 'true' : null"
+        >
+          <span class="label">{{ tile.label }}</span>
+          @switch (tile.state) {
+            @case ('loading') {
+              <span class="number"><span class="skeleton"></span></span>
+              <span class="line"><span class="skeleton"></span></span>
+            }
+            @case ('failed') {
+              <span class="number">
+                {{ tile.number }}
+                <button
+                  type="button"
+                  [attr.aria-label]="why()"
+                  [attr.aria-expanded]="tip() === tile.label"
+                  [attr.aria-describedby]="tip() === tile.label ? 'mf-admin-tip-' + i : null"
+                  (click)="toggle(tile.label)"
+                  (blur)="tip.set(null)"
+                  (keydown.escape)="tip.set(null)"
+                >
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18">
+                    <circle cx="9" cy="9" r="8" fill="none" stroke="currentColor" />
+                    <path d="M9 8v5M9 5v1" stroke="currentColor" stroke-width="1.6" />
+                  </svg>
+                </button>
+              </span>
+              <span class="tip" role="tooltip" [id]="'mf-admin-tip-' + i" [hidden]="tip() !== tile.label">{{ tile.line }}</span>
+            }
+            @default {
+              <span class="number">
+                {{ tile.number }}
+                @if (tile.alert) {
+                  <span class="alert" aria-hidden="true"></span>
+                }
+              </span>
+              @if (tile.line) {
+                <span class="line">{{ tile.line }}</span>
+              }
+            }
           }
-        </span>
-        @if (tile.line) {
-          <span class="line">{{ tile.line }}</span>
-        }
+        </div>
+      }
+      @if (observability(); as link) {
+        <a
+          class="observability"
+          [href]="link.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          [attr.aria-label]="link.label"
+        >{{ link.name }}</a>
       }
     }
-  </div>
+    @case ('verification') {
+      <mf-admin-queue overview />
+    }
+    @case ('growth') {
+      <mf-admin-growth />
+    }
+    @case ('demand') {
+      <mf-admin-demand overview />
+    }
+    @case ('reported') {
+      <mf-admin-reviews overview />
+    }
+    @case ('log') {
+      @if (reviewsWithLog()) {
+        <mf-admin-reviews overview />
+      }
+      <mf-admin-log />
+    }
+  }
 }
-<mf-admin-queue overview />
-@if (observability(); as link) {
-  <a
-    class="observability"
-    [href]="link.url"
-    target="_blank"
-    rel="noopener noreferrer"
-    [attr.aria-label]="link.label"
-  >{{ link.name }}</a>
-}
-<mf-admin-growth />
-<mf-admin-demand overview />
-<mf-admin-reviews overview />
-<mf-admin-log />

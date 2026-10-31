@@ -1,10 +1,12 @@
 import {
   GarageBrandOwnerAnswerDto,
+  GarageBrandOwnerReadDto,
   ReplaceGarageBrandsDto,
 } from '@motor-fix/contracts';
 import {
   Body,
   Controller,
+  Get,
   Param,
   ParseUUIDPipe,
   Put,
@@ -14,6 +16,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiForbiddenResponse,
+  ApiGoneResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -32,6 +35,24 @@ import type { Actor } from '../../auth/policy';
 export class GarageBrandsController {
   constructor(private readonly brands: GarageBrandsService) {}
 
+  @Get()
+  @ApiOperation({
+    summary:
+      "The garage's brand answer for its owner, with the price list's jobs",
+  })
+  @ApiOkResponse({ type: GarageBrandOwnerReadDto })
+  @ApiBadRequestResponse({ description: 'validation_failed: not a uuid' })
+  @ApiUnauthorizedResponse({ description: 'sign_in_required' })
+  @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })
+  @ApiNotFoundResponse({ description: 'not_found' })
+  @ApiGoneResponse({ description: 'gone: the garage is suspended' })
+  read(
+    @CurrentActor() actor: Actor,
+    @Param('garageId', new ParseUUIDPipe()) garageId: string,
+  ): Promise<GarageBrandOwnerReadDto> {
+    return this.brands.read(actor, garageId);
+  }
+
   @Put()
   @UseGuards(JsonOnly)
   @ApiOperation({
@@ -40,7 +61,7 @@ export class GarageBrandsController {
   @ApiOkResponse({ type: GarageBrandOwnerAnswerDto })
   @ApiBadRequestResponse({
     description:
-      'validation_failed: a bad or unknown brand, a text too long, a job not on the price list (job_not_priced), jobs on a refused brand (jobs_on_refused)',
+      'validation_failed: a bad or unknown brand, more than 200 brands, a text too long, a taken brand with no fuel (fuels_empty), a job not on the price list (job_not_priced), jobs on a refused brand (jobs_on_refused)',
   })
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiForbiddenResponse({ description: 'forbidden: staff of this garage' })

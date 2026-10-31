@@ -152,6 +152,7 @@ export { Brevo } from './notifications/brevo/brevo';
 export { CAR_TRANSFER_ACCEPTED_CONSUMER } from './notifications/car-transfer-accepted/car-transfer-accepted.fan-out';
 export { CATALOGUE_JOB_DECIDED_CONSUMER } from './notifications/catalogue-job-decided/catalogue-job-decided.fan-out';
 export { CATALOGUE_JOB_PENDING_CONSUMER } from './notifications/catalogue-job-pending/catalogue-job-pending.fan-out';
+export { DirectSendModule } from './notifications/direct-send/direct-send.module';
 export { DOCUMENT_REFUSED_CONSUMER } from './notifications/document-refused/document-refused.fan-out';
 export { emailConfig, sendingDomain } from './notifications/email-config';
 export {

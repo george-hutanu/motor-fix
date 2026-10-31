@@ -1,0 +1,48 @@
+@switch (loading()) {
+  @case ('reading') {
+    <div class="loading" aria-busy="true">
+      <p class="sr-only" role="status">{{ 'garage.profile.edit.brands.loading' | t }}</p>
+      <div data-skeleton></div>
+      <div data-skeleton></div>
+      <div data-skeleton></div>
+    </div>
+  }
+  @case ('failed') {
+    <div class="failed" data-load-failed role="alert">
+      <p class="error mf-message">{{ 'garage.profile.edit.brands.readFailed' | t }}</p>
+      <button hlmBtn variant="secondary" type="button" (click)="read()">{{ 'garage.profile.edit.brands.retry' | t }}</button>
+    </div>
+  }
+  @default {
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <mf-brands-step
+        catalogue="all"
+        [value]="section()"
+        (valueChange)="keep($event)"
+        [jobs]="jobs()"
+        [jobNames]="jobNames()"
+        [problems]="problems()"
+        (goTo)="toPrices()"
+      />
+      @if (brandProblems(); as lines) {
+        @if (lines.length) {
+          <div class="error mf-message" data-brand-problems role="alert">
+            @for (line of lines; track $index) {
+              <p>{{ line }}</p>
+            }
+          </div>
+        } @else if (save.problem()) {
+          <div class="error mf-message" data-problem role="alert"><mf-task-error [save]="save" /></div>
+        }
+      }
+      <div class="actions">
+        <button hlmBtn type="submit" [mfTaskSubmit]="save">
+          {{ 'garage.profile.edit.save' | t }}
+        </button>
+        <button hlmBtn variant="ghost" type="button" (click)="task.close('cancelled')">
+          {{ 'garage.profile.edit.cancel' | t }}
+        </button>
+      </div>
+    </form>
+  }
+}
