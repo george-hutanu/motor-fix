@@ -33,6 +33,7 @@ features:
   - 1389-reported-reviews-admin
   - 1405-admin-repair-correct
   - 1391-admin-dashboard-customise
+  - 165-admin-roles
   - 106-demand-supply
 ---
 
@@ -999,6 +1000,18 @@ _From 1391-admin-dashboard-customise._
 ### 1391-FR-018 — Every text this story adds (the line, the names and descriptions, the arrow labels, "Revino la varianta implicită", the count, the empty line, the error) MUST exist in Romanian and English in the shared i18n files with key parity and follow the reader's language; a Romanian hyphenated word uses U+2011 ("Service‑uri"); no text in the panel or the strip is under 12 px on a phone.
 
 _From 1391-admin-dashboard-customise._
+
+### 165-FR-002 — Every `/api/v1/admin/*` route MUST admit any active account acting as `admin` (the session's role in use) by role alone: the access check (session, status, role, and the route's required capability when it names one) never refuses such an account with 401 `sign_in_required`, 403 `account_suspended`, 403 `forbidden` or 404 `not_found`; a required capability named by an admin route MUST be one the admin row holds. Tests MUST walk every admin operation (path × method) of the OpenAPI document (as the existing admin-route guard test does for non-admins) and prove the access check admits an active admin on each by observing the check's own decision, and the status is neither 401 nor 403; a 400, 404 or 422 from the route's own validation or lookup counts as admitted, and so does a 5xx, which is not an access refusal and belongs to the route's own tests; a route whose own rule refuses after the access check admits (`DELETE /api/v1/admin/repairs/{id}`, 403 `forbidden`: only the driver deletes a logged repair) is admitted too, and the walk names that answer explicitly. An admin found refused is a bug fixed in this story's change.
+
+_From 165-admin-roles._
+
+### 165-FR-003 — (from #324 / ST-910) The suspended-admin case of the admin-route guard test MUST assert 403 `account_suspended` for `GET /api/v1/admin/overview` and for `GET /api/v1/admin/growth` (162-FR-003's rule, now proven for both reads).
+
+_From 165-admin-roles._
+
+### 165-FR-004 — The story MUST leave unchanged: the refusals of the other actors on admin routes (161-FR-003: visitor 401 `sign_in_required`, non-admin role in use 404 `not_found`, suspended 403 `account_suspended`; an account whose consent is not current answers `consent_required`), 102-FR-007's 403/404 rule for garage staff, the per-person rules (the appeal decided by a different admin; the second admin for the reviews-only-after-a-confirmed-job change) and "any admin can decide a verification file"; the existing non-admin and visitor walks of the admin-route guard test keep passing unchanged.
+
+_From 165-admin-roles._
 
 ### 106-FR-001 — The system MUST hold the areas as reference data (AREA: `code`, `name`, `kind` `city` or `sector`, `outline`): the six București sectors (`sector-1` to `sector-6`, names "Sector 1" to "Sector 6", kind `sector`) and the municipalities that are county seats (kind `city`, code the city's slug as `cityOf` gives it, name the city's name), each with its outline from a data file in the repository that the build team updates; the file MUST be loaded into AREA at the API's start by code (insert or update, never delete), so a second start changes nothing; the file carries its source and licence. The loader is a domain function the API calls at start and the tests call directly; while AREA is empty the read answers every point under `unknown`. This story delivers ST-1292 (#1292).
 
