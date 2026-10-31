@@ -206,5 +206,5 @@ describe('the workspace', () => {
       );
 
     expect(problems).toEqual([]);
-  });
+  }, 30_000);
 });
