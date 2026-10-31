@@ -1,6 +1,6 @@
 ---
 capability: garage-brands
-updated: 2026-10-23
+updated: 2026-10-30
 features:
   - 039-brand-catalogue
   - 040-garage-brand-stance
@@ -8,6 +8,7 @@ features:
   - 412-brand-job-ticks
   - 1352-catalogue-job-visibility
   - 414-approve-catalogue-job
+  - 1247-brand-fuel-edit
 ---
 
 # Capability: Garage brands
@@ -36,9 +37,9 @@ _From 039-brand-catalogue._
 
 _From 039-brand-catalogue._
 
-### 040-FR-008 — The system MUST let the garage's owner (whatever the garage's status) replace the garage's whole brand answer in one write: a set of (brand, stance ∈ taken, refused) plus the optional note and phrase. Brands in the set get that stance (a new row or a changed one; a brand turned taken gets its ticks as ST-39 defines, a brand turned refused loses them), brands absent from the set lose their row, and the note and the phrase are set or cleared; the garage's status and verification are untouched. The write answers with the garage's brand answer as stored after it (the same lists, note and phrase as FR-012).
+### 1247-FR-006 — Everything else of the write stays as the capability holds it: whole-answer replace, brands absent lose their row (040-FR-008), the refusals of 040-FR-009, the per-row audit entries (040-FR-010, 397-FR-010, 412-FR-007), the one `garage.updated` in the same transaction with `brands` / `brand_fuels` / `brand_jobs` in `fields` and the changed brand ids in its audience (040-FR-011), the note's 140 and the phrase's 60 (039-FR-016), owner only.
 
-_From 040-garage-brand-stance._
+_From 1247-brand-fuel-edit._
 
 ### 040-FR-009 — The write MUST be refused whole, changing nothing, when a brand id has no catalogue row (a retired brand passes), a stance is not one of the two, a garage id that is not a uuid, a brand appears twice, the note exceeds 140 characters or the phrase 60 (bad request); the garage's own receptionist or mechanic MUST get 403; an actor with no owner membership of that garage, a MotorFix admin included, MUST get 404; a call without a session MUST get the sign-in demand like every route.
 
@@ -56,13 +57,13 @@ _From 040-garage-brand-stance._
 
 _From 040-garage-brand-stance._
 
-### 397-FR-010 — `PUT /api/v1/garages/:garageId/brands` MUST accept, on each brand, an optional `fuels` list of the ticked kinds (each at most once): for a `works_on` brand it sets the four columns (a missing key means unchanged for a brand already taken, all four for one that becomes taken; `[]` unticks all four); on a `does_not_take` brand it is refused with 400 `validation_failed`. A brand that becomes taken stays one `create` history entry whose new value carries its fuels; for a brand already taken, each changed column is one history entry (subject `garage_brand`, field `petrol` / `diesel` / `hybrid` / `electric`, old and new value), and the one `garage.updated` event of the write names `brand_fuels` in `fields` when a fuel changed, beside `brands` when a stance or text changed; a write that changes nothing records nothing. The owner-only rule, the lock and the transaction stay as they are.
+### 1247-FR-002 — A `works_on` brand sent with `fuels: []` MUST be refused whole with 400 `validation_failed`, code `fuels_empty`, field `brands[i].fuels`: at least one fuel type stays ticked on a taken brand. A missing `fuels` key keeps its meaning (unchanged for a brand already taken, all four for one that becomes taken). Modifies 397-FR-010's "`[]` unticks all four".
 
-_From 397-listing-ticks._
+_From 1247-brand-fuel-edit._
 
-### 412-FR-006 — The system MUST own one function, inside the caller's transaction, that writes a garage's job ticks from the step-2 section and the garage's jobs as the prices write returns them, `{ jobTypeId, name? }` per step-3 entry (`name` for a proposed job, matched to an unticked name by exact string): for every `works_on` brand, one `GARAGE_BRAND_JOB` row per job except the ones the section unticked for that brand, each recorded once in the audit history as `create`, subject `garage_brand_job`, with the writing account, its role and the brand. The listing's brands write (`writeGarageBrands`) MUST perform it, so the sending story's one transaction gets the rows by calling what exists. An unticked ref that matches no job of the garage MUST refuse the write whole with 400 and a stable validation code.
+### 1247-FR-003 — (from #1128) A job reference that names no job MUST be refused with 400 also while the garage's price list is empty. On the owner `PUT`, a `jobs` id not on the price list is refused with `job_not_priced` whether the list is empty or not (today's rule, now covered by a test of the empty case). On the listing's brands write (412-FR-006, `write-garage-brands.ts`), which today skips every unticked ref while the garage has no priced job, an unticked ref that is a uuid naming no job type of the catalogue MUST be refused with `unknown_job` also while the list is empty; a ref that is a catalogue job type's uuid or a proposed job's name still waits for the second call, so ST-116's two-step send (brands before prices, then again with the jobs) keeps succeeding and its test stays green. A test covers the empty-list refusal and fails on today's code.
 
-_From 412-brand-job-ticks._
+_From 1247-brand-fuel-edit._
 
 ### 412-FR-007 — `PUT /api/v1/garages/:garageId/brands` MUST accept, on each brand, an optional `jobs` list of job type ids (each at most once): for a `works_on` brand it sets exactly those rows (a missing key means unchanged for a brand already taken, every job of the garage's price list for one that becomes taken; `[]` deletes them all); on a `does_not_take` brand, or naming a job type that has no `GARAGE_PRICE` row for this garage, it is refused whole with 400 `validation_failed`. Each row created or deleted is one audit entry (`create` / `delete`, subject `garage_brand_job`, subject id the job type, the brand in the value) with the actor and role; the write's one `garage.updated` event names `brand_jobs` in `fields` when a tick changed, beside `brands` and `brand_fuels` as today; a write that changes nothing records nothing. The owner-only rule (403 for the garage's own staff, 404 for anyone else, the sign-in demand without a session), the garage row lock, the transaction, and the untouched status and verification stay as they are.
 
@@ -84,7 +85,42 @@ _From 1352-catalogue-job-visibility._
 
 _From 414-approve-catalogue-job._
 
+### 1247-FR-001 — A new owner read `GET /api/v1/garages/{garageId}/brands` MUST answer the garage's brand answer as the owner's write answers it (412-FR-008: taken brands each with `fuels` and `jobs` in price-list order, refused brands, `note`, `phrase`), plus `priceList`: the garage's priced jobs `{ jobTypeId, nameRo, nameEn }` in the price list's order, every job a tick can name (412-FR-007), so the dialog opens on one read. It answers 200 for the owner, 403 `forbidden` for the garage's receptionist or mechanic, 404 `not_found` for every other actor and for a garage that is no garage, 410 `gone` for a suspended garage, and the sign-in demand without a session; it writes nothing and emits nothing. It is listed in `infra/observability/inventory.json` as an endpoint with its route metric, no panel or alert of its own.
+
+_From 1247-brand-fuel-edit._
+
+### 1247-FR-004 — (from #596) `brands` of the write's body MUST carry `@ArrayMaxSize(200)`: a payload of 201 brands answers 400; 200 pass validation.
+
+_From 1247-brand-fuel-edit._
+
+### 1247-FR-005 — (from #602) The garage row lock of the write (`lockGarage` and `setStance`) MUST be `FOR NO KEY UPDATE`: the stance writes stay serialised (the race spec passes), and a transaction that inserts a row referencing the garage is not blocked while the lock is held (test).
+
+_From 1247-brand-fuel-edit._
+
+### 1247-FR-007 — (from #567) A migration MUST add a trigger on `garage_brand_job` that refuses an inserted row whose `(garage_id, brand_id)` row in `garage_brand` is not `works_on` (the missing-row case is the existing composite foreign key's); the service's flip from taken to refused, which deletes the ticks in the same transaction, is unchanged and keeps passing. An integration test proves the refusal outside the service and the flip inside it.
+
+_From 1247-brand-fuel-edit._
+
+### 1247-FR-008 — (from #603) The race spec MUST wait for the second transaction's backend to be blocked, read from `pg_blocking_pids(<its pid>)`, instead of a database-wide count of `transactionid` lock waits.
+
+_From 1247-brand-fuel-edit._
+
+### 1247-FR-009 — (from #597) One `notFound` refusal MUST serve `garage-brands.service.ts` and `public-garages.ts` (and `garage-profile.service.ts`, which already imports the former's); the 404 bodies answered today stay as they are.
+
+_From 1247-brand-fuel-edit._
+
+### 1247-FR-017 — (from #604) A PR QA flow MUST open two tabs signed in as the same owner, make the first stance write for the same unstated brand in both at once, and assert one stored `garage_brand` row for it and no 500 on either response; a second flow drives the dialog end to end (mark taken, untick a fuel and a job, save, see the owner's view and the public profile updated). Each flow pushes its findings as found, waits on visible elements or `waitForText`, never `networkidle`, and is proven with `precheck.mjs --check` before dispatch.
+
+_From 1247-brand-fuel-edit._
+
+### 1247-FR-018 — Tests MUST exist before the code (Principle II) and name this feature's ids in `// @traces` lines: Jest on real PostgreSQL and Redis for FR-001 (the answer's shape and the role matrix), FR-002, FR-003 (the empty-list refusal, failing on today's code, and ST-116's composition), FR-004, FR-005 (the unblocked referencing insert), FR-007 (the trigger), FR-008, FR-009; component tests for FR-010 to FR-013 (the control per role, the three-state control, the fuel and job ticks, the last-fuel rule, the limit errors, 400 and network handling, the no-second-read close); the bundle budget of FR-014 asserted by the production build in CI; the flows of FR-017.
+
+_From 1247-brand-fuel-edit._
+
 ## Retired
 
 - `412-FR-010` — superseded by `1352-FR-003` (2026-10-20)
 - `039-FR-015` — superseded by `1352-FR-016` (2026-10-20)
+- `397-FR-010` — superseded by `1247-FR-002` (2026-10-30)
+- `412-FR-006` — superseded by `1247-FR-003` (2026-10-30)
+- `040-FR-008` — superseded by `1247-FR-006` (2026-10-30)

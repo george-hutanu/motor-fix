@@ -43,7 +43,7 @@ export function brandAnswer(
 export function brandAnswerWithFuels(
   rows: (Row & Record<Fuel, boolean>)[],
   texts: { brandNote: string | null; refusalPhrase: string | null },
-): GarageBrandAnswerDto & { worksOn: PublicBrandDto[] } {
+): Omit<GarageBrandAnswerDto, 'worksOn'> & { worksOn: PublicBrandDto[] } {
   const answer = brandAnswer(rows, texts);
   const fuels = new Map(
     rows.map((row) => [row.brand.id, FUELS.filter((fuel) => row[fuel])]),
@@ -57,15 +57,15 @@ export function brandAnswerWithFuels(
   };
 }
 
-// The answer the owner's write returns: each taken brand with the jobs ticked
+// The owner's answer: each taken brand with its fuels and the jobs ticked
 // for it, in price-list order; a tick whose job left the list comes last.
 export function brandAnswerWithJobs(
-  rows: Row[],
+  rows: (Row & Record<Fuel, boolean>)[],
   texts: { brandNote: string | null; refusalPhrase: string | null },
   ticks: { brandId: string; jobTypeId: string }[],
   priceList: string[],
 ): GarageBrandOwnerAnswerDto {
-  const answer = brandAnswer(rows, texts);
+  const answer = brandAnswerWithFuels(rows, texts);
   const place = (id: string) => {
     const at = priceList.indexOf(id);
     return at === -1 ? priceList.length : at;
