@@ -3396,6 +3396,54 @@
       "story": "ST-409"
     },
     {
+      "kind": "endpoint",
+      "name": "booking-no-show",
+      "source": "libs/domain/src/quotes/no-show/no-show.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/bookings/:id/no-show",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "POST records a no-show; one NoShow log line per action naming the booking, request, garage and actor role, never the driver; refusals warn with the code; the count by action and outcome is the motorfix_no_shows_total entry",
+      "story": "ST-1259"
+    },
+    {
+      "kind": "endpoint",
+      "name": "booking-no-show-withdraw",
+      "source": "libs/domain/src/quotes/no-show/no-show.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/bookings/:id/no-show (DELETE)",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "DELETE withdraws a no-show the same Bucharest day; the same NoShow log line and motorfix_no_shows_total count as the record",
+      "story": "ST-1259"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_no_shows_total",
+      "source": "libs/domain/src/quotes/quotes/quotes.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts no-shows recorded and withdrawn by outcome (done, refused); a count of rule outcomes has nothing to alert on; api-error-rate covers failures",
+      "story": "ST-1259"
+    },
+    {
+      "kind": "queue",
+      "name": "no-show",
+      "source": "libs/domain/src/notifications/no-show/no-show.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "one queue for a no-show recorded and withdrawn; one log line per job naming the booking id and whether the driver was told; BullMQ's queue metrics cover depth and failures",
+      "story": "ST-1259"
+    },
+    {
       "kind": "queue",
       "name": "repair-from-job",
       "source": "libs/domain/src/cars/repair-from-job/repair-from-job.ts",
