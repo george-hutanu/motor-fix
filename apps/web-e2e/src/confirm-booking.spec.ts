@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 
 import { ready, signIn } from './accounts.js';
-import { accepted, DRIVER, MILITARI } from './booking.js';
+import { accepted, DRIVER, freeSlot, MILITARI } from './booking.js';
 import { test } from './fixtures.js';
 import { keepSeededLanguage } from './seeded-language.js';
 
@@ -76,5 +76,56 @@ test.describe('confirming a booking @seeded', () => {
       timeout: 5_000,
     });
     await expect(row.locator('.waiting')).toHaveCount(0);
+  });
+
+  // @traces 1384-FR-001 1384-FR-002 1384-FR-003 1384-FR-008
+  test('an oil service asks for a lift, and a second booking at the same time is refused Elevator 1, then confirmed with Fără elevator', async ({
+    page,
+    request,
+  }) => {
+    const slot = await freeSlot(request);
+    const first = await accepted(request, slot);
+    const second = await accepted(request, slot);
+    await page.setViewportSize({ height: 900, width: 1440 });
+    await signedIn(page, MILITARI, '/app/garage');
+    await page.goto('/app/garage/requests');
+    const dialog = page.getByRole('dialog', { name: 'Confirmă programarea' });
+
+    async function openFor(requestId: string) {
+      const row = page
+        .locator('mf-quotes-sent-panel')
+        .locator(`[data-live-id="${requestId}"]`);
+      await row.getByRole('button', { name: 'Confirmă programarea' }).click();
+      const mechanic = dialog.getByLabel('Mecanic');
+      await expect(mechanic).toBeVisible();
+      return { mechanic, row };
+    }
+
+    const one = await openFor(first);
+    const lift = dialog.getByLabel('Elevator');
+    // The oil service is done on a lift: nothing is picked for it.
+    await expect(lift.locator('option:checked')).toHaveText('Alege elevatorul');
+    const names = await one.mechanic.locator('option').allTextContents();
+    await one.mechanic.selectOption({ label: names[1] });
+    await lift.selectOption({ label: 'Elevator 1' });
+    await dialog.getByRole('button', { exact: true, name: 'Confirmă' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(one.row.locator('.mechanic')).toHaveText(names[1]);
+    await expect(one.row.locator('.lift')).toHaveText('Elevator 1');
+
+    const two = await openFor(second);
+    await two.mechanic.selectOption({ label: names[2] });
+    await lift.selectOption({ label: 'Elevator 1' });
+    await dialog.getByRole('button', { exact: true, name: 'Confirmă' }).click();
+    await expect(
+      dialog.getByText('Elevatorul 1 e ocupat la ora asta'),
+    ).toBeVisible();
+    await expect(lift).toBeFocused();
+
+    await lift.selectOption({ label: 'Fără elevator' });
+    await dialog.getByRole('button', { exact: true, name: 'Confirmă' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(two.row).toContainText('Acceptată · programată');
+    await expect(two.row.locator('.mechanic')).toHaveText(names[2]);
   });
 });
