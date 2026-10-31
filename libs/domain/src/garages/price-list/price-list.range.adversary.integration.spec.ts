@@ -498,7 +498,8 @@ describe('the stamp the write compares', () => {
   it('answers 409 for a stamp rounded to the second', async () => {
     const w = await world();
     const rounded = `${stamp(w).slice(0, 19)}Z`;
-    if (rounded === stamp(w)) return;
+    // A stamp already on the whole second (.000Z) rounds to the same instant.
+    if (Date.parse(rounded) === w.row.updatedAt.getTime()) return;
 
     const res = await patch(
       rangePath(w),

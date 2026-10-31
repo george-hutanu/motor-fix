@@ -139,7 +139,9 @@ describe('ci workflow', () => {
   it('runs the integration job on demand and when the caller asks, never on a PR', () => {
     const block = job('integration');
 
-    expect(setting(block, 'name')).toBe('Integration tests');
+    expect(setting(block, 'name')).toBe(
+      `Integration tests (${gh('matrix.shard')})`,
+    );
     expect(setting(block, 'needs')).toBe('changes');
     expect(setting(block, 'if')).toBe(
       "github.event_name == 'workflow_dispatch' || inputs.integration",
@@ -150,9 +152,32 @@ describe('ci workflow', () => {
     );
   });
 
-  // The suite runs 50 to 60 minutes; 60 cancelled finished runs at the edge.
-  it('gives the integration suite an hour and a half before cancelling it', () => {
-    expect(Number(setting(job('integration'), 'timeout-minutes'))).toBe(90);
+  // As one job the suite ran 40 to 60 minutes against 90. Split, domain runs
+  // in four slices and every other project in a fifth, each on its own
+  // runner and database; a dispatch naming spec files runs them in one job.
+  // @traces 1406-FR-001 1406-FR-006
+  it('runs the suite in five shards, or the named files in one job', () => {
+    const block = job('integration');
+
+    expect(setting(block, 'fail-fast')).toBe('false');
+    expect(setting(block, 'shard')).toBe(
+      gh(
+        `fromJSON(inputs.specs && '["named specs"]' || '["domain 1/4", "domain 2/4", "domain 3/4", "domain 4/4", "other projects"]')`,
+      ),
+    );
+    expect(setting(step(block, 'Integration tests'), 'SHARD')).toBe(
+      gh('matrix.shard'),
+    );
+  });
+
+  // One timeout for every shard: the slowest shard's job time on a measuring
+  // dispatch, over 0.7, rounded up to 5 minutes; never the old 90.
+  // @traces 1406-FR-004 1406-FR-007
+  it('cancels a shard well before the single job was', () => {
+    const minutes = Number(setting(job('integration'), 'timeout-minutes'));
+
+    expect(minutes).toBeLessThan(90);
+    expect(minutes % 5).toBe(0);
   });
 
   // The end-to-end suite runs 23 to 30 minutes; 30 cancelled a run at the edge.
@@ -337,6 +362,7 @@ describe('ci workflow', () => {
   // A suite that stalls under the turn lock names its holder and its waiters:
   // the database's busy sessions are sampled each minute while the suite runs
   // and printed after it, timed out or not.
+  // @traces 1406-FR-003
   it('prints what the database waited on, even when the suite times out', () => {
     const block = job('integration');
     const watch = step(block, 'Watch the database');
@@ -354,6 +380,7 @@ describe('ci workflow', () => {
     );
   });
 
+  // @traces 1406-FR-002
   it('migrates the database before the integration tests', () => {
     const block = job('integration');
 
@@ -452,6 +479,12 @@ describe('ci workflow', () => {
       }
     }
 
+    // A dispatch with specs set has one matrix entry, `named specs`.
+    const NAMED = (env: Record<string, string>) => ({
+      SHARD: 'named specs',
+      ...env,
+    });
+
     const SPECS = [
       'apps/web-e2e/src/voice-languages.spec.ts',
       'libs/domain/src/store/store.ttl.integration.spec.ts',
@@ -473,17 +506,50 @@ describe('ci workflow', () => {
       expect(setting(block, 'REPEAT')).toBe(gh('inputs.repeat'));
     });
 
-    it('runs every suite as before when no file is named', () => {
-      expect(run('integration', 'Integration tests', {})).toEqual([
-        'nx run-many -t test --passWithNoTests',
+    // @traces 1406-FR-001
+    it.each([
+      [
+        'domain 1/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --output-style=static --shard=1/4',
+      ],
+      [
+        'domain 2/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --output-style=static --shard=2/4',
+      ],
+      [
+        'domain 3/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --output-style=static --shard=3/4',
+      ],
+      [
+        'domain 4/4',
+        'nx run-many -t test --projects=domain --passWithNoTests --output-style=static --shard=4/4',
+      ],
+      [
+        'other projects',
+        'nx run-many -t test --exclude=domain --passWithNoTests --output-style=static',
+      ],
+    ])('runs its slice of the suite in the %s shard', (SHARD, call) => {
+      expect(run('integration', 'Integration tests', { SHARD })).toEqual([
+        call,
       ]);
+    });
+
+    it('runs every end-to-end spec when no file is named', () => {
       expect(run('e2e', 'E2E tests', {})).toEqual(['nx run-many -t e2e']);
     });
 
+    // @traces 1406-FR-001
+    it('refuses a shard it does not know rather than pass having run nothing', () => {
+      expect(() =>
+        run('integration', 'Integration tests', { SHARD: 'domain' }),
+      ).toThrow();
+    });
+
     // @traces 456-FR-003
+    // @traces 1406-FR-006
     it('runs the named integration specs alone, one Jest run after another, each on an empty audit history', () => {
       expect(
-        run('integration', 'Integration tests', { REPEAT: '3', SPECS }),
+        run('integration', 'Integration tests', NAMED({ REPEAT: '3', SPECS })),
       ).toEqual(
         Array(3)
           .fill([
@@ -503,7 +569,7 @@ describe('ci workflow', () => {
     it('refuses a repeat below one rather than pass having run nothing', () => {
       for (const REPEAT of ['0', '-1', 'x']) {
         expect(() =>
-          run('integration', 'Integration tests', { REPEAT, SPECS }),
+          run('integration', 'Integration tests', NAMED({ REPEAT, SPECS })),
         ).toThrow();
         expect(() => run('e2e', 'E2E tests', { REPEAT, SPECS })).toThrow();
       }
@@ -513,7 +579,11 @@ describe('ci workflow', () => {
       const one = 'apps/web-e2e/src/garage-views.spec.ts';
 
       expect(
-        run('integration', 'Integration tests', { REPEAT: '2', SPECS: one }),
+        run(
+          'integration',
+          'Integration tests',
+          NAMED({ REPEAT: '2', SPECS: one }),
+        ),
       ).toEqual([]);
       expect(
         run('e2e', 'E2E tests', {
@@ -524,6 +594,7 @@ describe('ci workflow', () => {
     });
   });
 
+  // @traces 1406-FR-005
   it('CI OK needs every job and fails on anything but success or skipped', () => {
     const block = job('ci-ok');
 

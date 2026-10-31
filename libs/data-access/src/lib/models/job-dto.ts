@@ -8,6 +8,16 @@ import { JobStepDto } from '../models/job-step-dto';
 import { RequestJobDto } from '../models/request-job-dto';
 export interface JobDto {
   bookingId: string;
+
+  /**
+   * The reader may record a no-show: the booking's time has come and the job has not started
+   */
+  canRecordNoShow: boolean;
+
+  /**
+   * The reader may withdraw the no-show: recorded today, Bucharest time
+   */
+  canWithdrawNoShow: boolean;
   car: JobCarDto;
   createdAt: string;
   driver: DriverNameDto;
@@ -19,6 +29,11 @@ export interface JobDto {
   jobs: Array<RequestJobDto>;
   mechanicId: string | null;
   mechanicName: string | null;
+
+  /**
+   * When the garage recorded that the driver did not come
+   */
+  noShowAt: string | null;
 
   /**
    * The reading taken at reception, in km

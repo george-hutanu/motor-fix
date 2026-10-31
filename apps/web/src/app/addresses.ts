@@ -181,11 +181,14 @@ export function provideLanguageAddresses(): EnvironmentProviders {
 }
 
 // A page is public when it was matched under the language prefix, or is `/`,
-// which shows Romanian Home.
+// which shows Romanian Home; a route marked `noindex` (a private link) is not.
 function publicAddress(router: Router) {
   const top = router.routerState.snapshot.root.firstChild;
   const prefix: string | undefined = top?.params['lang'];
   if (!prefix && top?.routeConfig?.path !== '') return null;
+  let leaf = top;
+  while (leaf?.firstChild) leaf = leaf.firstChild;
+  if (leaf?.data['noindex']) return null;
   const segments =
     router.parseUrl(router.url).root.children[PRIMARY_OUTLET]?.segments ?? [];
   return {
