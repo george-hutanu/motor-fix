@@ -875,7 +875,7 @@ describe('the garage menu of each role, read from the table', () => {
 });
 
 describe('the dashboard view routes', () => {
-  // @traces 097-FR-004 151-FR-016
+  // @traces 097-FR-004 151-FR-001
   it('opens an allowed view at its own address, with the empty state of that view', async () => {
     // Programări keeps its sentence while the garage schedules no lifts.
     const { element } = await open(

@@ -141,7 +141,7 @@ describe('the lift schedule states', () => {
 
     expect(panel(element)?.getAttribute('data-state')).toBe('failed');
     expect(text(element.querySelector('[role="alert"]'))).toBe(
-      'Programul nu s-a încărcat',
+      'Programul nu s‑a încărcat',
     );
     element.querySelector<HTMLButtonElement>('[data-retry]')?.click();
     await settle();

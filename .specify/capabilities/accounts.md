@@ -1,6 +1,6 @@
 ---
 capability: accounts
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 079-account-model
   - 082-sign-in
@@ -62,6 +62,7 @@ features:
   - 1316-swr-resource-store
   - 1391-admin-dashboard-customise
   - 1379-provider-calls-worker
+  - 151-lift-timeline
 ---
 
 # Capability: Accounts
@@ -1495,9 +1496,9 @@ _From 011-dashboard-sections._
 
 _From 099-overview-sections._
 
-### 099-FR-004 — A section whose story has not shipped MUST show, under its title, one empty-state sentence saying what will appear there and nothing else — `kpi` "Aici apar cifrele zilei: cereri, programări, lucrări și încasări." / "Today's numbers appear here: requests, bookings, jobs and takings."; `now` "Aici apar lucrările în curs, cu poze, video și live din atelier." / "Jobs in progress appear here, with photos, video and live from the workshop."; `load` "Aici apare încărcarea fiecărui mecanic pe ziua de azi." / "Each mechanic's load for today appears here."; `sched` "Aici apare programul de azi, elevator cu elevator." / "Today's schedule appears here, lift by lift."; `funnel` "Aici apare drumul de la vizitele pe profil la cereri, pe săptămâni." / "The path from profile views to requests appears here, by week."; `brands` "Aici apar mărcile cele mai cerute luna asta." / "The most requested brands this month appear here." — and MUST NOT show sample numbers, rows, charts, names or dates. The sections already built keep their own empty states (343-FR-006, 074-FR-001).
+### 151-FR-001 — The garage dashboard MUST draw the panel "Programul de azi pe elevatoare" / "Today's schedule on the lifts" in Panou's `sched` section (replacing 099-FR-004's empty-state sentence for `sched`) and as the body of the view Programări (`/app/garage/schedule`), one component used in both places, as a custom Cockpit component (A22), never a calendar library. The panel is present only while the garage's `lift_schedule` switch is on and the person's capabilities hold `garage.schedule`; it goes away without a reload on `garage.features_changed`. Programări stays gated as it is (`day_sheets`, 531-FR-001); the panel inside it follows `lift_schedule`.
 
-_From 099-overview-sections._
+_From 151-lift-timeline._
 
 ### 011-FR-003 — The strip of 099-FR-005 MUST become a row holding, in order: the verified pill with its check line when the person sees it today (1354-FR-005, unchanged), the count "{x} din {y} secțiuni afișate" / "{x} of {y} sections shown" where y is the number of sections the person may see (FR-002's list before the hidden step) and x those not hidden, and the button "Personalizează panoul" / "Customise dashboard". The row is shown to everyone with sections (a verified garage's owner, a receptionist, a mechanic, a suspended garage's people) and is absent for a `draft` garage; the legal-check panel keeps its place under it (modifies 099-FR-005).
 
@@ -1571,6 +1572,70 @@ _From 011-dashboard-sections._
 
 _From 011-dashboard-sections._
 
+### 151-FR-004 — The axis MUST run from the garage's first opening to its last closing time today, rounded out to whole hours (9:30–17:15 gives 9:00–18:00), with a label every two hours from the axis start; from 8:00 to 18:00 while the garage's hours are not set. On a day the garage is closed the panel MUST read "Închis azi" / "Closed today" and draw no axis, rows or blocks.
+
+_From 151-lift-timeline._
+
+### 151-FR-005 — The panel MUST draw one row per lift, 1 to `liftCount`, titled "Elevator N" / "Lift N", in that order, plus, after them, one row per lift number above the count that a block of the day carries, and a last row "Fără elevator" / "No lift" while any booking of the day has no lift. The lift names MUST stay fixed on the left while the timeline scrolls.
+
+_From 151-lift-timeline._
+
+### 151-FR-006 — Each confirmed or completed booking of the day MUST draw as one block per segment of today on that segment's lift row (or the "Fără elevator" row), the segment's `lift` and `mechanicId` deciding the row and the mechanic's name and the entry giving the car, jobs, customer and job status, its left edge at the segment's start and its width proportional to the segment's length on the axis, cut at the axis edges; a block wholly outside the axis is not drawn. Bookings `awaiting_confirmation` and `no_show` are not drawn. A block MUST show the car as "Brand Model" and, on a second line, the jobs' names joined by ", " and " · " plus the mechanic's first name (no " · " without a mechanic). A block shorter than 30 minutes MUST keep the width of 30 minutes and show only the car.
+
+_From 151-lift-timeline._
+
+### 151-FR-007 — A block's style MUST follow its job's status: grey while `to_do` (or no job yet), amber while `in_work` or `paused`, a green outline when `done`. Every style MUST read in light and dark Cockpit and never rely on colour alone (the tooltip and the accessible name carry the state word: "programată" / "scheduled", "în lucru" / "in work", "în pauză" / "paused", "gata" / "done").
+
+_From 151-lift-timeline._
+
+### 151-FR-008 — Each lift time block of the day (ST-427) MUST draw on its lift's row with FR-006's position rules, hatched grey, labelled "Blocat · " / "Blocked · " and the note cut with "…" to the block's width; a block on a mechanic only, without a lift, is not drawn here. For the owner and a receptionist, click or Enter on it MUST open ST-427's block dialog on that block; a mechanic cannot open it and sees only the lift blocks that touch her own time, as the read already filters.
+
+_From 151-lift-timeline._
+
+### 151-FR-009 — Blocks that overlap on the same row MUST stack in sub-rows so that none hides another, the row growing in height; a row with no overlap keeps one sub-row.
+
+_From 151-lift-timeline._
+
+### 151-FR-010 — An amber vertical line MUST mark now, in Europe/Bucharest, across every row, and the panel's corner MUST read "acum, HH:mm" / "now, HH:mm"; both tick on each Bucharest wall-clock minute boundary (the first tick at the next whole minute, then every 60 s) while the panel is shown. The line is hidden while now is outside the axis; the corner text stays. Positions, the now line included, are computed from Bucharest wall-clock minutes since the axis start, so a daylight-saving day places them right.
+
+_From 151-lift-timeline._
+
+### 151-FR-011 — The panel MUST update live from the dashboard's existing stream (`garage:{garageId}`, and `mechanic:{mechanicId}` for a mechanic) without a reload: `job.started`, `job.paused`, `job.resumed`, `job.done` and `job.mechanic_changed` change the block within 5 seconds; `booking.confirmed`, `booking.moved`, `booking.cancelled`, `booking.lift_changed`, `time_block.created`, `time_block.updated`, `time_block.deleted` and `garage.features_changed` re-read today's schedule. While the stream is down the panel MUST show a small "offline" lamp in its corner and re-read on reconnect.
+
+_From 151-lift-timeline._
+
+### 151-FR-012 — On a phone (320 px and 375 px) and wherever the panel is narrower than the axis at 48 px per hour, the timeline MUST scroll sideways inside the panel only; the page never scrolls sideways. On first draw the timeline starts scrolled so the now line is visible when it is on the axis, at the axis start otherwise.
+
+_From 151-lift-timeline._
+
+### 151-FR-013 — Every block MUST be focusable in the tab order, and hover or focus MUST show a tooltip with the car, the jobs, the customer's short name, the mechanic's name, the start time and the duration (a lift block: "Blocat", the note, the time); the block's accessible name MUST hold the same text with the state word of FR-007. The panel MUST pass the axe checks of the QA sweep at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, and MUST follow the Cockpit motion rules, with no animation under reduced motion.
+
+_From 151-lift-timeline._
+
+### 151-FR-014 — The panel's states MUST be: loading, an empty axis with skeleton rows and no text; open with nothing to draw, the axis and rows plus "Nicio programare azi" / "No bookings today"; closed, "Închis azi" / "Closed today"; failed, FR-016.
+
+_From 151-lift-timeline._
+
+### 151-FR-015 — A mechanic MUST see only what the schedule read returns her (her own bookings, or every booking with `can_move_bookings`; the blocks as 427-FR-011): the panel adds no client-side widening and no second read, and the empty rows of the other lifts keep their names. The panel MUST never show a driver's phone or plate.
+
+_From 151-lift-timeline._
+
+### 151-FR-016 — When the schedule read fails (an error answer or none), the panel MUST read "Programul nu s-a încărcat" / "The schedule did not load" with a "Reîncearcă" / "Retry" button that reads again; on success the timeline replaces the message, on failure the message stays. The hidden-section rule of ST-88 holds: the owner may hide the Panou section, the Programări panel stays.
+
+_From 151-lift-timeline._
+
+### 151-FR-017 — Every string of the panel MUST be in both languages through the app's translations (Romanian and English), with times in the 24-hour "HH:mm" form in both.
+
+_From 151-lift-timeline._
+
+### 151-FR-018 — Tests MUST exist before the code (Principle II), each file carrying one whole-line `// @traces` comment naming this feature's FR ids. In Jest: block position and width from start and duration, the 30-minute minimum and the cut at the axis edges (FR-006); the axis from the hours, the rounding, the unset default and the closed day (FR-004); the style by job status (FR-007); the now-line position each minute and its hiding outside the axis, including a daylight-saving day (FR-010); rows from `liftCount`, the extra-number row and the "Fără elevator" row (FR-005); overlapping blocks stacking (FR-009); lift blocks drawn and mechanic-only blocks not (FR-008); the live events changing or re-reading (FR-011); the panel absent with `lift_schedule` off and gone on `garage.features_changed` (FR-001); the failed state and retry (FR-016); and, on real PostgreSQL and Valkey, the schedule read's `liftCount`, `days` and `hoursSet` for a garage with hours, without, and on a closed day, unchanged for its existing fields (FR-003). End to end (Playwright, on the seeded Militari garage with its two lifts): one row per lift; a lift block made in another session arrives on its lift within 5 seconds; on a 375 px viewport the timeline scrolls sideways and the page does not move. Block positions, colours and a job turning amber on `job.started` are proven in Jest (the seed holds no bookings on the run's day, and the Playwright suite books only days ahead).
+
+_From 151-lift-timeline._
+
+### 151-FR-019 — The change MUST ship with its observability: the schedule read's entry in `infra/observability/inventory.json` stays as it is (no new endpoint, queue, service or outside call); a failed read already lands in the web app's `web-error-rate` signal, so nothing is added (no web metric pipeline exists, and Principle I forbids inventing one for this panel).
+
+_From 151-lift-timeline._
+
 ## Retired
 
 - `079-FR-017` — superseded by `082-FR-021` (2026-10-04)
@@ -1627,3 +1692,4 @@ _From 011-dashboard-sections._
 - `029-FR-009` — superseded by `1316-FR-005` (2026-10-30)
 - `011-FR-010` — superseded by `1391-FR-015` (2026-10-30)
 - `393-FR-005` — superseded by `1379-FR-003` (2026-10-30)
+- `099-FR-004` — superseded by `151-FR-001` (2026-10-31)

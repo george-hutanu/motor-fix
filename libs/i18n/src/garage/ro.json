@@ -335,7 +335,7 @@
     "blocked": "Blocat",
     "closed": "Închis azi",
     "empty": "Nicio programare azi",
-    "failed": "Programul nu s-a încărcat",
+    "failed": "Programul nu s‑a încărcat",
     "lift": "Elevator {n}",
     "minutes": "{time}, {minutes} min",
     "noLift": "Fără elevator",

@@ -26,7 +26,7 @@
       @case ('failed') {
         <div class="failed">
           <p role="alert">{{ 'garage.liftSchedule.failed' | t }}</p>
-          <button hlmBtn type="button" variant="outline" data-retry (click)="data.reload()">{{ 'garage.liftSchedule.retry' | t }}</button>
+          <button hlmBtn type="button" variant="secondary" data-retry (click)="data.reload()">{{ 'garage.liftSchedule.retry' | t }}</button>
         </div>
       }
       @case ('closed') {
