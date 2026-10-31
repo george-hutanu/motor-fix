@@ -210,12 +210,15 @@ test.describe('filtering the Results page @seeded @database', () => {
       'aria-pressed',
       'true',
     );
+    await page.keyboard.press('Escape');
     await expect(opener(page)).toHaveText('Filtre · 1');
     await expect(cards(page)).toHaveCount(1);
     await expect(page.locator('.summary .tally')).toContainText(
       '2 service‑uri găsite · 1 cu filtrele alese',
     );
     await expect(page.locator('mf-static-map .pin.dim')).toHaveCount(1);
+
+    await opener(page).click();
     await page
       .getByRole('group', { name: 'Notă minimă' })
       .getByRole('button', { name: '4,5+' })
