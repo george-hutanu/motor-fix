@@ -12,6 +12,7 @@ import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
 import { serialDatabase, waitingOnLocks } from '../../auth/serial-db.testing';
 import { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
+import { DirectSendModule } from '../../notifications/direct-send/direct-send.module';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import {
   databaseUrl,
@@ -54,6 +55,11 @@ beforeAll(async () => {
     imports: [
       auth,
       notifications,
+      DirectSendModule.registerWorker({
+        email,
+        phone: options.phone,
+        redisUrl,
+      }),
       StorageModule.register(UNUSED_STORAGE),
       GaragesModule.register(email, notifications, {
         skipManualApproval: false,
