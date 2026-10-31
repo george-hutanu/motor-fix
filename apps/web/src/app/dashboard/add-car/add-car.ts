@@ -10,7 +10,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import {
   type AbstractControl,
   FormControl,
@@ -53,12 +53,15 @@ const DATES = [
   { control: 'rovinietaUntil', label: 'driver.cars.add.rovinieta' },
 ] as const;
 
-export type DateField = (typeof DATES)[number]['control'];
+type DateField = (typeof DATES)[number]['control'];
+
+// The fields a card's grey line can open the dialog at.
+export type CarFocus = DateField | 'nextServiceKm';
 
 export interface CarTaskData {
   plates: string[];
   car?: CarDto;
-  focus?: DateField;
+  focus?: CarFocus;
   // Called once when the car turns out removed meanwhile, so the list drops it.
   gone?: () => void;
 }
@@ -76,6 +79,13 @@ function latestDay() {
 // "148.200", "148 200" and "148,200" all mean 148200.
 const kilometres = (text: string) => text.replace(/[\s.,]/g, '');
 
+// The furthest the next oil service may be set above the odometer, as the
+// API refuses it.
+const SERVICE_REACH_KM = 100_000;
+
+const wholeKm = (digits: string) =>
+  /^\d{1,7}$/.test(digits) && Number(digits) <= MAX_KM;
+
 const year = (c: AbstractControl): ValidationErrors | null => {
   const value = Number(c.value);
   return /^\d{4}$/.test(c.value) && value >= 1950 && value <= nextYear()
@@ -83,12 +93,8 @@ const year = (c: AbstractControl): ValidationErrors | null => {
     : { year: true };
 };
 
-const km = (c: AbstractControl): ValidationErrors | null => {
-  const digits = kilometres(c.value);
-  return /^\d{1,7}$/.test(digits) && Number(digits) <= MAX_KM
-    ? null
-    : { server: 'km' };
-};
+const km = (c: AbstractControl): ValidationErrors | null =>
+  wholeKm(kilometres(c.value)) ? null : { server: 'km' };
 
 const plate = (c: AbstractControl): ValidationErrors | null => {
   const stored = normalisePlate(c.value);
@@ -142,6 +148,29 @@ export class AddCar {
   ): ValidationErrors | null =>
     c.value && c.value > this.latest ? { server: 'too_far_ahead' } : null;
 
+  // The next oil service, checked against the kilometres in the same form
+  // only when it differs from the car's stored value (null on add): the
+  // API's own two codes, so a local and a server refusal read alike.
+  private readonly nextService = (
+    c: AbstractControl,
+  ): ValidationErrors | null => {
+    const digits = kilometres(c.value);
+    if (digits === '') return null;
+    if (!wholeKm(digits)) return { server: 'km' };
+    const next = Number(digits);
+    if (next === (this.car()?.nextServiceKm ?? null)) return null;
+    const odometer = c.parent?.get('odometerKm');
+    if (!odometer || km(odometer)) return null;
+    const reading = Number(kilometres(odometer.value));
+    if (next <= reading) return { server: 'next_service_not_above_odometer' };
+    if (next > reading + SERVICE_REACH_KM)
+      return { server: 'next_service_too_far' };
+    return null;
+  };
+  // Set once the person leaves the next-service field: its refusal shows
+  // from then on, before any save.
+  protected readonly nextServiceLeft = signal(false);
+
   protected readonly form = new FormGroup({
     brandId: new FormControl('', { nonNullable: true, validators: chosen }),
     engine: new FormControl('', {
@@ -158,6 +187,10 @@ export class AddCar {
     model: new FormControl('', {
       nonNullable: true,
       validators: characters(1, 40, true),
+    }),
+    nextServiceKm: new FormControl('', {
+      nonNullable: true,
+      validators: this.nextService,
     }),
     odometerKm: new FormControl('', { nonNullable: true, validators: km }),
     plate: new FormControl('', { nonNullable: true, validators: plate }),
@@ -215,6 +248,13 @@ export class AddCar {
   constructor() {
     void this.i18n.enter('driver');
     inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
+    // The next service is judged against the kilometres, so it is checked
+    // again whenever they change.
+    this.form.controls.odometerKm.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() =>
+        this.form.controls.nextServiceKm.updateValueAndValidity(),
+      );
     const car = this.car();
     if (car) this.fill(car);
     const focus = this.task.data.focus;
@@ -265,6 +305,10 @@ export class AddCar {
       fuel: car.fuel,
       itpUntil: car.itpUntil ?? '',
       model: car.model,
+      nextServiceKm:
+        car.nextServiceKm == null
+          ? ''
+          : formatNum(car.nextServiceKm, this.i18n.language()),
       odometerKm: formatNum(car.odometerKm, this.i18n.language()),
       plate: car.plate ?? '',
       rcaUntil: car.rcaUntil ?? '',
@@ -304,6 +348,25 @@ export class AddCar {
     return this.save.fieldError(this.form.controls.year) === null
       ? ''
       : this.i18n.t('driver.cars.add.yearRange', { max: nextYear() });
+  }
+
+  // The next service's refusal, once a save or leaving the field shows it;
+  // the first sentence quotes the form's kilometres.
+  protected nextServiceError() {
+    const control = this.form.controls.nextServiceKm;
+    const saved = this.save.fieldError(control);
+    if (saved === null && !(this.nextServiceLeft() && control.invalid))
+      return '';
+    const code = control.errors?.['server'];
+    if (code === 'next_service_not_above_odometer') {
+      const reading = Number(kilometres(this.form.controls.odometerKm.value));
+      return this.i18n.t(`driver.cars.add.field.${code}`, {
+        km: formatNum(reading, this.i18n.language()),
+      });
+    }
+    if (code === 'next_service_too_far')
+      return this.i18n.t(`driver.cars.add.field.${code}`);
+    return saved ?? this.i18n.t('driver.cars.add.field.km');
   }
 
   protected find(typed: string) {
@@ -361,7 +424,8 @@ export class AddCar {
     this.noMatch.set(false);
   }
 
-  // The fields that differ from the car, a cleared one as null.
+  // The fields that differ from the car, a cleared one as null; a field a
+  // cached answer lacks counts as null, so a blank never clears it.
   private patch(car: CarDto): UpdateCarDto {
     const value = this.form.getRawValue();
     const next: Omit<UpdateCarDto, 'version'> = {
@@ -370,6 +434,7 @@ export class AddCar {
       fuel: value.fuel as CarDto['fuel'],
       itpUntil: value.itpUntil || null,
       model: value.model.trim(),
+      nextServiceKm: this.nextServiceKm(),
       odometerKm: Number(kilometres(value.odometerKm)),
       plate: normalisePlate(value.plate) || null,
       rcaUntil: value.rcaUntil || null,
@@ -377,7 +442,7 @@ export class AddCar {
       year: Number(value.year),
     };
     const changed = Object.entries(next).filter(
-      ([field, given]) => car[field as keyof CarDto] !== given,
+      ([field, given]) => (car[field as keyof CarDto] ?? null) !== given,
     );
     return { ...Object.fromEntries(changed), version: car.updatedAt };
   }
@@ -391,6 +456,7 @@ export class AddCar {
       rcaUntil: value.rcaUntil,
       rovinietaUntil: value.rovinietaUntil,
     };
+    const nextServiceKm = this.nextServiceKm();
     return {
       brandId: value.brandId,
       fuel: value.fuel as CreateCarDto['fuel'],
@@ -400,6 +466,13 @@ export class AddCar {
       ...Object.fromEntries(
         Object.entries(optional).filter(([, given]) => given !== ''),
       ),
+      ...(nextServiceKm !== null && { nextServiceKm }),
     };
+  }
+
+  // The typed next service as a number, a blank as none.
+  private nextServiceKm(): number | null {
+    const digits = kilometres(this.form.controls.nextServiceKm.value);
+    return digits === '' ? null : Number(digits);
   }
 }
