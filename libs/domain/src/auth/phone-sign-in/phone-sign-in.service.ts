@@ -18,11 +18,7 @@ import {
 import { sendWhatsAppCode } from './whatsapp-code';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { countSignIn } from '../../metrics/product-counters';
-import type { Brevo } from '../../notifications/brevo/brevo';
-import {
-  PHONE_CONFIG,
-  type PhoneConfig,
-} from '../../notifications/phone-config';
+import { DirectSend } from '../../notifications/direct-send/direct-send.client';
 import { AccountsService } from '../accounts.service';
 import { AUTH_OPTIONS, type AuthOptions } from '../actor.guard';
 import { Attempts } from '../attempts';
@@ -33,8 +29,6 @@ import { roleInUse } from '../policy';
 import { PRISMA } from '../prisma';
 import { type Issued, SignInService } from '../sign-in.service';
 import { taken } from '../sign-up.service';
-
-export const PHONE_BREVO = Symbol('PHONE_BREVO');
 
 const REFUSALS: Record<
   Exclude<CodeCheck, 'right'>,
@@ -66,8 +60,7 @@ export class PhoneSignInService {
   constructor(
     @Inject(PRISMA) private readonly prisma: PrismaClient,
     @Inject(AUTH_OPTIONS) private readonly options: AuthOptions,
-    @Inject(PHONE_BREVO) private readonly brevo: Brevo,
-    @Inject(PHONE_CONFIG) private readonly phone: PhoneConfig,
+    private readonly directSend: DirectSend,
     @Inject(MAINTENANCE) private readonly maintenance: Maintenance,
     private readonly accounts: AccountsService,
     private readonly attempts: Attempts,
@@ -90,7 +83,7 @@ export class PhoneSignInService {
     const code = newCode();
     try {
       await sendWhatsAppCode(
-        { brevo: this.brevo, config: this.phone, logger: this.logger },
+        { directSend: this.directSend, logger: this.logger },
         'SIGN_IN_CODE',
         phone,
         language,
