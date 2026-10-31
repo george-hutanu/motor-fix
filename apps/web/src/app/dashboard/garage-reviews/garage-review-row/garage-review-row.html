@@ -31,3 +31,21 @@
     <span data-mechanic>{{ mechanic.shortName }}</span>
   }
 </p>
+@if (reportable()) {
+  <div class="actions">
+    <button
+      hlmBtn
+      variant="ghost"
+      type="button"
+      data-report-button
+      [attr.aria-disabled]="kept() || null"
+      [attr.aria-describedby]="kept() ? id + '-kept' : null"
+      (click)="pressReport()"
+    >
+      {{ 'garage.reviews.report.button' | t }}
+    </button>
+  </div>
+  @if (kept()) {
+    <p class="hint" data-report-hint [id]="id + '-kept'">{{ 'garage.reviews.report.kept' | t }}</p>
+  }
+}

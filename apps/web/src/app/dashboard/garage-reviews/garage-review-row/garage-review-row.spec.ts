@@ -134,10 +134,106 @@ describe('a review row on the garage dashboard', () => {
     expect(cell(row, 'text')).toBeNull();
   });
 
-  it('offers no action on the row, even to the owner', async () => {
-    const row = await render(staffReview({ canReply: true, canReport: true }));
+  it('offers the receptionist no action on the row', async () => {
+    const row = await render(
+      staffReview({ canReply: false, canReport: false }),
+    );
 
     expect(row.querySelectorAll('button, a, [role="button"]')).toHaveLength(0);
     expect(text(row)).not.toMatch(/Răspunde|Raportează/);
+  });
+});
+
+// @traces 1382-FR-001 1382-FR-002 1382-FR-007
+describe('the report button on a review row', () => {
+  const reportButton = (row: HTMLElement) =>
+    row.querySelector<HTMLButtonElement>('button[data-report-button]');
+
+  it('shows Raportează on a published row the owner may report, in the actions line after the author line', async () => {
+    const row = await render(staffReview());
+
+    const button = reportButton(row);
+    expect(text(button)).toBe('Raportează');
+    expect(button?.type).toBe('button');
+    expect(button?.disabled).toBe(false);
+    expect(button?.hasAttribute('aria-disabled')).toBe(false);
+    expect(button?.closest('.actions')).not.toBeNull();
+    const by = row.querySelector('p.by') as HTMLElement;
+    expect(
+      by.compareDocumentPosition(button as HTMLElement) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(cell(row, 'report-hint')).toBeNull();
+  });
+
+  it('shows no button to a row the garage may not report', async () => {
+    const row = await render(staffReview({ canReport: false }));
+
+    expect(reportButton(row)).toBeNull();
+  });
+
+  it('shows no button on a reported row, its tag in its place', async () => {
+    const row = await render(
+      staffReview({ reportRefusal: 'already_reported', status: 'reported' }),
+    );
+
+    expect(reportButton(row)).toBeNull();
+    expect(cell(row, 'reported')).not.toBeNull();
+  });
+
+  it('keeps a review an admin kept reachable but aria-disabled, with the hint joined to it', async () => {
+    const row = await render(staffReview({ reportRefusal: 'already_kept' }));
+
+    const button = reportButton(row) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    const hint = cell(row, 'report-hint') as HTMLElement;
+    expect(text(hint)).toBe(
+      'Păstrată de un admin; poate fi raportată din nou doar după ce autorul o editează.',
+    );
+    expect(hint.id).toBeTruthy();
+    expect(button.getAttribute('aria-describedby')?.split(' ')).toContain(
+      hint.id,
+    );
+  });
+
+  it('asks to report on a press, and asks nothing for a kept review', async () => {
+    const pressed = jest.fn();
+
+    @Component({
+      imports: [GarageReviewRow],
+      template: `<article mf-garage-review-row [review]="review()" [now]="now" (report)="pressed()"></article>`,
+    })
+    class Listening {
+      readonly review = signal<GarageStaffReviewDto>(staffReview());
+      readonly now = NOW;
+      readonly pressed = pressed;
+    }
+    TestBed.configureTestingModule({});
+    await TestBed.inject(I18n).enter('garage');
+    const listening = TestBed.createComponent(Listening);
+    listening.detectChanges();
+    const element = listening.nativeElement as HTMLElement;
+    reportButton(element)?.click();
+    expect(pressed).toHaveBeenCalledTimes(1);
+
+    listening.componentInstance.review.set(
+      staffReview({ reportRefusal: 'already_kept' }),
+    );
+    listening.detectChanges();
+    reportButton(element)?.click();
+    expect(pressed).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads Report and the kept hint in English', async () => {
+    const row = await render(
+      staffReview({ reportRefusal: 'already_kept' }),
+      'en',
+    );
+
+    expect(text(reportButton(row))).toBe('Report');
+    expect(text(cell(row, 'report-hint'))).toBe(
+      'Kept by an admin; it can be reported again only after the author edits it.',
+    );
   });
 });

@@ -4,6 +4,7 @@ import {
   computed,
   inject,
   input,
+  output,
 } from '@angular/core';
 import { DELETED_AUTHOR } from '@motor-fix/contracts/lei-text';
 import type { GarageStaffReviewDto } from '@motor-fix/data-access';
@@ -14,16 +15,19 @@ import {
   relativeTime,
   TranslatePipe,
 } from '@motor-fix/i18n';
+import { HlmButton } from '@motor-fix/ui-cockpit';
 
 const NEW_FOR_MS = 7 * 24 * 3_600_000;
+let rows = 0;
 
 // One review as the garage reads it: the car and its jobs (or that it did not
 // come through MotorFix), the score, the text, and who wrote it, when, and
 // which mechanic did the job; marked new for a week, edited, or reported.
-// It offers nothing to press: replying and reporting come with their stories.
+// The owner may report a published review: a review an admin kept since its
+// last edit keeps the button, refused, with the hint saying why.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe],
+  imports: [HlmButton, TranslatePipe],
   selector: 'article[mf-garage-review-row]',
   styleUrl: './garage-review-row.css',
   templateUrl: './garage-review-row.html',
@@ -31,7 +35,10 @@ const NEW_FOR_MS = 7 * 24 * 3_600_000;
 export class GarageReviewRow {
   readonly review = input.required<GarageStaffReviewDto>();
   readonly now = input.required<Date>();
+  // The owner pressed Raportează.
+  readonly report = output<void>();
   private readonly i18n = inject(I18n);
+  protected readonly id = `mf-review-row-${++rows}`;
 
   protected readonly about = computed(() => {
     const review = this.review();
@@ -70,4 +77,15 @@ export class GarageReviewRow {
         })
       : null;
   });
+
+  protected readonly reportable = computed(
+    () => this.review().canReport && this.review().status === 'published',
+  );
+  protected readonly kept = computed(
+    () => this.review().reportRefusal === 'already_kept',
+  );
+
+  protected pressReport(): void {
+    if (!this.kept()) this.report.emit();
+  }
 }

@@ -63,3 +63,20 @@ p {
   color: var(--mf-text-secondary);
   overflow-wrap: anywhere;
 }
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+.actions button {
+  min-height: 44px;
+  white-space: normal;
+}
+.actions button[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.hint {
+  font-size: var(--mf-size-small);
+  color: var(--mf-text-secondary);
+}

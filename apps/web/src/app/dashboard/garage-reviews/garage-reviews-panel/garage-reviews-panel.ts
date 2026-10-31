@@ -17,10 +17,12 @@ import {
   ReviewsService,
 } from '@motor-fix/data-access';
 import { formatNum, formatRating, I18n, TranslatePipe } from '@motor-fix/i18n';
+import { Overlays } from '@motor-fix/overlays';
 import { HlmButton } from '@motor-fix/ui-cockpit';
 
 import { liveView } from '../../../live/view';
 import { Live } from '../../live';
+import { openReportReview } from '../../report-review-dialog/open-report-review';
 import { SectionTitle } from '../../section-title/section-title';
 import { garageOf, Session } from '../../session';
 import { GarageReviewRow } from '../garage-review-row/garage-review-row';
@@ -40,7 +42,9 @@ const SCORES = [
 // noi": that many rows, the links to the public profile and to the view. Without
 // one it is the Recenzii view: the rating, how many reviews gave each score,
 // and every row, 20 a page. A review or rating message reads the first page
-// again, dropping the pages loaded since.
+// again, dropping the pages loaded since. The owner reports from a row: the
+// row shows reported at once, until the next first-page read; a refused report
+// reads the first page again.
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -60,12 +64,20 @@ export class GarageReviewsPanel {
   private readonly api = inject(ReviewsService);
   private readonly session = inject(Session);
   private readonly live = inject(Live);
+  private readonly overlays = inject(Overlays);
   protected readonly i18n = inject(I18n);
   protected readonly now = signal(new Date());
 
   private readonly garageId = computed(
     () => garageOf(this.session.shown())?.garageId ?? '',
   );
+  // The reviews reported here, as of the first-page read they were reported
+  // after; a later read carries them itself.
+  private readonly reported = signal<{
+    ids: ReadonlySet<string>;
+    reads: number;
+  }>({ ids: new Set(), reads: -1 });
+  private reporting = false;
   // Moves on every read of the first page, so an older page's answer is dropped.
   private generation = 0;
   private readonly pages = signal(1);
@@ -86,9 +98,21 @@ export class GarageReviewsPanel {
     const page = this.view.value();
     if (!page) return [];
     const limit = this.limit();
-    return limit === undefined
-      ? [...page.items, ...this.extra()]
-      : page.items.slice(0, limit);
+    const rows =
+      limit === undefined
+        ? [...page.items, ...this.extra()]
+        : page.items.slice(0, limit);
+    const { ids, reads } = this.reported();
+    if (reads !== this.view.reads() || ids.size === 0) return rows;
+    return rows.map((review) =>
+      ids.has(review.id)
+        ? {
+            ...review,
+            reportRefusal: 'already_reported' as const,
+            status: 'reported' as const,
+          }
+        : review,
+    );
   });
   protected readonly profileHref = computed(() => {
     const slug = this.view.value()?.slug;
@@ -132,6 +156,29 @@ export class GarageReviewsPanel {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     const tick = setInterval(() => this.now.set(new Date()), AGE_TICK_MS);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
+  }
+
+  // One task at a time: a second press while it loads or shows opens none.
+  // A task whose chunk failed to load leaves the row as it was, to press again.
+  protected async report(review: GarageStaffReviewDto): Promise<void> {
+    if (this.reporting) return;
+    this.reporting = true;
+    try {
+      const result = await openReportReview(this.overlays, review);
+      if (result === 'refused') {
+        void this.view.reload();
+      } else if (result !== 'cancelled') {
+        const reads = this.view.reads();
+        const held = this.reported();
+        const ids = new Set(held.reads === reads ? held.ids : []);
+        ids.add(result.review.id);
+        this.reported.set({ ids, reads });
+      }
+    } catch {
+      return;
+    } finally {
+      this.reporting = false;
+    }
   }
 
   protected more(): void {
