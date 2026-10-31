@@ -34,9 +34,6 @@
             "styles": false,
             "vendor": false
           }
-        },
-        "test-node": {
-          "externalDependencies": ["@motor-fix/observability"]
         }
       },
       "defaultConfiguration": "production",
@@ -97,7 +94,7 @@
     "test-node": {
       "executor": "@angular/build:unit-test",
       "options": {
-        "buildTarget": "web:build:test-node",
+        "buildTarget": "web:build:development",
         "include": ["server/**/*.spec.ts", "app/app.config.spec.ts"],
         "isolate": true,
         "runner": "vitest",

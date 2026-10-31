@@ -1,20 +1,35 @@
-import { startTelemetry } from '@motor-fix/observability';
-import { type Mock, vi } from 'vitest';
+import { vi } from 'vitest';
 
-vi.mock('@motor-fix/observability', () => ({
-  logEntry: vi.fn(),
-  startTelemetry: vi.fn(),
-  telemetryStarted: vi.fn(),
-}));
+import { startWebTelemetry } from './telemetry';
 
-type Observability = {
-  logEntry: Mock;
-  telemetryStarted: Mock;
-};
+type Lib = NonNullable<Parameters<typeof startWebTelemetry>[0]>;
+
+function double(started: boolean) {
+  return {
+    logEntry: vi.fn(),
+    startTelemetry: vi.fn(),
+    telemetryStarted: vi.fn(() => started),
+  };
+}
+
+// Runs the entry against a double of the library with FARO_URL as given.
+function run(started: boolean, faro: string | undefined) {
+  const lib = double(started);
+  const saved = process.env;
+  process.env = { ...saved };
+  if (faro === undefined) delete process.env['FARO_URL'];
+  else process.env['FARO_URL'] = faro;
+  try {
+    startWebTelemetry(lib as unknown as Lib);
+  } finally {
+    process.env = saved;
+  }
+  return lib;
+}
 
 describe('the web server telemetry entry', () => {
-  it('starts telemetry as the web service when loaded', async () => {
-    await import('./telemetry');
+  it('starts telemetry as the web service', () => {
+    const { startTelemetry } = run(false, undefined);
 
     expect(startTelemetry).toHaveBeenCalledTimes(1);
     expect(startTelemetry).toHaveBeenCalledWith('web');
@@ -23,45 +38,22 @@ describe('the web server telemetry entry', () => {
 
 // @traces 1345-FR-005
 describe('the web server telemetry entry and the browser collector', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  // Each case loads the entry in a fresh registry, so the mocks it calls are
-  // the ones that registry made.
-  async function load(started: boolean, faro: string | undefined) {
-    const saved = process.env;
-    process.env = { ...saved };
-    if (faro === undefined) delete process.env['FARO_URL'];
-    else process.env['FARO_URL'] = faro;
-    let observability: Observability | undefined;
-    try {
-      vi.resetModules();
-      observability = (await import(
-        '@motor-fix/observability'
-      )) as unknown as Observability;
-      observability.telemetryStarted.mockReturnValue(started);
-      await import('./telemetry');
-    } finally {
-      process.env = saved;
-    }
-    return observability as Observability;
-  }
-
-  it('warns once that browser telemetry is off when FARO_URL is unset', async () => {
-    const { logEntry } = await load(true, undefined);
+  it('warns once that browser telemetry is off when FARO_URL is unset', () => {
+    const { logEntry } = run(true, undefined);
 
     expect(logEntry.mock.calls).toEqual([
       ['warn', 'browser telemetry off: FARO_URL unset'],
     ]);
   });
 
-  it('says nothing when FARO_URL is set', async () => {
-    const { logEntry } = await load(true, 'https://faro.example.com/collect/k');
+  it('says nothing when FARO_URL is set', () => {
+    const { logEntry } = run(true, 'https://faro.example.com/collect/k');
 
     expect(logEntry).not.toHaveBeenCalled();
   });
 
-  it('says nothing when telemetry itself is off', async () => {
-    const { logEntry } = await load(false, undefined);
+  it('says nothing when telemetry itself is off', () => {
+    const { logEntry } = run(false, undefined);
 
     expect(logEntry).not.toHaveBeenCalled();
   });
