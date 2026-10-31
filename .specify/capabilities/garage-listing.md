@@ -40,6 +40,7 @@ features:
   - 1193-fast-nav
   - 1185-accent-search
   - 1246-garage-profile-edit
+  - 1401-rejected-correct
   - 1315-optimistic-toggles
 ---
 
@@ -1142,9 +1143,9 @@ _From 116-listing-verification-status._
 
 _From 116-listing-verification-status._
 
-### 208-FR-005 — `/list-your-garage` MUST show the form over the completion copy when the signed-in owner's file is `more_requested` (from the button or opened directly), scrolled to the first step that holds a requested item (`address` → step 5, which holds the place part, `documents` and `rar` → step 6, `photos` → the photos part, `other` or none → step 1) with that step's heading marked "Cerut de MotorFix" / "Asked by MotorFix"; every step stays editable; the form's save-as-you-type, browser copy, retries, field check, document and photo uploads apply to the copy as to a first draft (ST-806, 116-FR-007). For any other status the status view shows as today (116-FR-017). Modifies 116-FR-017.
+### 1401-FR-002 — "List your garage" MUST show the form over the correction copy when the signed-in owner's newest file is `rejected` (from the button or opened directly), scrolled to the step the rejection reason maps to (`address` → step 5, `documents` and `rar` → step 6, `photos` → step 5, `other` → step 1, through the existing `askedSteps` mapping unchanged) with that step's heading marked "Cerut de MotorFix" / "Asked by MotorFix", every step editable, the form's save-as-you-type, browser copy, retries, field check, document and photo uploads applying as to a completion copy; a signed-in owner never sees a blank first-send form (116-FR-017 unchanged). Modifies 208-FR-005.
 
-_From 208-resubmit-after-more._
+_From 1401-rejected-correct._
 
 ### 208-FR-013 — (from #566) `follow()` in `list-your-garage.ts` MUST read the layout through `matchMedia('(min-width: 768px)')` and do at most one layout read per animation frame; no `getComputedStyle` call runs on a scroll event (unit test).
 
@@ -1287,3 +1288,4 @@ _From 1315-optimistic-toggles._
 - `109-FR-014` — superseded by `1246-FR-010` (2026-10-30)
 - `112-FR-005` — superseded by `1246-FR-017` (2026-10-30)
 - `111-FR-005` — superseded by `1246-FR-023` (2026-10-30)
+- `208-FR-005` — superseded by `1401-FR-002` (2026-10-30)

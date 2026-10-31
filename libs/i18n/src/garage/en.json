@@ -911,6 +911,7 @@
   "verification": {
     "checkIn": "We check it within 1–2 working days.",
     "contact": "Contact MotorFix",
+    "correct": "Correct the listing",
     "loadFailed": "We could not load the verification status.",
     "title": "Your profile is being checked"
   }
