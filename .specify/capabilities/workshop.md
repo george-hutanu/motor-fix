@@ -473,7 +473,7 @@ _From 1403-block-time-dialog._
 
 _From 1410-predare-quote-dialog._
 
-### 1410-FR-002 — (origin 1404-FR-008) While the typed text parses (`parseLeiText`) to strictly more bani than `quoteToBani` (equal is not above), the dialog MUST show "Peste ofertă" / "Above the quote" beside the range hint, re-judged as the text changes and on open (a pre-filled correction included), and Salvează MUST still save the amount: the hint is advisory, no confirmation, no second step. While the text does not parse, the field's own message shows and "Peste ofertă" does not.
+### 1410-FR-002 — (origin 1404-FR-008) While the typed text parses (`parseLeiText`) to strictly more bani than `quoteToBani` (equal is not above), the dialog MUST show "Peste ofertă" / "Above the quote" beside the range hint, re-judged on every change of the field's value (each keystroke) and on open (a pre-filled correction included), and Salvează MUST still save the amount: the hint is advisory, no confirmation, no second step. While the text is empty or does not parse (`parseLeiText` returns an error, `max` included), "Peste ofertă" does not show; when the field's own message appears is unchanged (1393-FR-003).
 
 _From 1410-predare-quote-dialog._
 
@@ -481,7 +481,7 @@ _From 1410-predare-quote-dialog._
 
 _From 1410-predare-quote-dialog._
 
-### 1410-FR-004 — (origin 1404-FR-010) The "above the quote" state MUST be in the PR's QA sweep (`specs/1410-predare-quote-dialog/qa-flows.mjs`, the pattern of `specs/1393-final-price-predare/qa-flows.mjs`) at 320 px and 390 px, light and dark, Romanian and English, with no sideways scroll at 320 px; the job read it drives the dialog with is a stub carrying the two fields, so nothing in the QA database changes.
+### 1410-FR-004 — (origin 1404-FR-010) The "above the quote" state MUST be in the PR's QA sweep (`specs/1410-predare-quote-dialog/qa-flows.mjs`, the pattern of `specs/1393-final-price-predare/qa-flows.mjs`) at 320 px and 390 px, light and dark, Romanian and English, with no sideways scroll at 320 px; the job read it drives the dialog with is a stub, a Playwright `page.route` intercept of the garage's job reads answering with the two fields, so nothing in the QA database changes.
 
 _From 1410-predare-quote-dialog._
 
