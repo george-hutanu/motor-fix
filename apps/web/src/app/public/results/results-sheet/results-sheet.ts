@@ -263,12 +263,12 @@ export class ResultsSheet {
 }
 
 // Where each rest puts the sheet's top edge, from the top of its cell; the
-// stylesheet's --rest draws the same.
+// stylesheet's --rest draws the same, never above the cell's top.
 function restOffsets(
   height: number,
   top: number,
 ): Record<SheetPosition, number> {
-  const low = height - top;
+  const low = Math.max(0, height - top);
   return {
     full: 0,
     half: Math.min(

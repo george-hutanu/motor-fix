@@ -70,14 +70,14 @@
             {{ 'public.results.filters.button' | t }}
           }
         </button>
-        @for (filter of activeFilters(); track filter.key) {
+        @for (chip of chips(); track chip.key) {
           <button
             type="button"
             class="chip filter"
-            [attr.data-filter]="filter.key"
-            [attr.aria-label]="'public.results.filters.remove' | t: { name: (filter.label | t) }"
-            (click)="toggle(filter.key)"
-          >{{ filter.label | t }} <span aria-hidden="true">×</span></button>
+            [attr.data-filter]="chip.key"
+            [attr.aria-label]="'public.results.filters.remove' | t: { name: (chip.label | t: chip.params) }"
+            (click)="remove(chip.key)"
+          >{{ chip.label | t: chip.params }} <span aria-hidden="true">×</span></button>
         }
       </div>
       <mf-sort-control [sort]="sortShown()" [placeKnown]="!!near()" (pick)="changeSort($event)" />

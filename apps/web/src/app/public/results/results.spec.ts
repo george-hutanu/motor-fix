@@ -33,7 +33,7 @@ import { Layout, type LayoutName, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
 import { filter, Subject } from 'rxjs';
 
 import { FilterWarm } from './filter-warm/filter-warm';
-import type { FilterKey, Filters } from './filters/filters';
+import type { Filters, SwitchKey } from './filters/filters';
 import { FiltersPanel } from './filters/filters-panel/filters-panel';
 import { Results } from './results';
 import type { MapEvents, MapMove } from './results-map/pins-map';
@@ -893,6 +893,76 @@ describe('Results', () => {
         ids: 'two',
         near: NEAR,
       });
+    });
+
+    // @traces 1399-FR-004
+    // @traces 1399-FR-005
+    it('carries the filters on every card re-read with a filter on', async () => {
+      await open('/ro/garages?brand=bmw&max_price=200&card=1');
+      await reads[0]?.answer();
+
+      send('garage.updated', 'one');
+      await coalesce();
+
+      expect(reads[1]?.params).toEqual({
+        brand: 'bmw',
+        card: '1',
+        ids: 'one',
+        max_price: 200,
+        near: NEAR,
+      });
+    });
+
+    // @traces 1399-FR-005
+    it('fades out a card the filtered re-read leaves out, and takes its filtered total', async () => {
+      quietly();
+      pinsAnswer = pinsOf(5);
+      await open('/ro/garages?brand=bmw&min_rating=4.5');
+      await reads[0]?.answer(pageOf({ total: 2 }));
+      expect(tally()).toContain('· 2 cu filtrele alese');
+
+      send('garage.updated', 'one');
+      await coalesce();
+      await reads[1]?.answer(
+        pageOf({
+          counts: { doesNotTake: 0, worksOn: 1 },
+          items: [],
+          total: 1,
+        }),
+      );
+
+      expect(cards()[0]?.classList).toContain('leaving');
+      expect(tally()).toContain('· 1 cu filtrele alese');
+      await jest.advanceTimersByTimeAsync(300);
+      await settle();
+      expect(names()).toEqual(['Service Doi']);
+    });
+
+    // @traces 1399-FR-005
+    it('removes a card the filtered re-read leaves out at once under reduced motion', async () => {
+      reduced.set(true);
+      quietly();
+      await open('/ro/garages?brand=bmw&card=1');
+      await reads[0]?.answer(pageOf({ total: 2 }));
+
+      send('garage.updated', 'two');
+      await coalesce();
+      await reads[1]?.answer(pageOf({ items: [], total: 1 }));
+
+      expect(names()).toEqual(['Atelier Unu']);
+    });
+
+    // @traces 1399-FR-005
+    it('keeps a card the re-read leaves out with no filter on', async () => {
+      await loaded();
+
+      send('garage.updated', 'one');
+      await coalesce();
+      await reads[1]?.answer(pageOf({ items: [] }));
+      await jest.advanceTimersByTimeAsync(300);
+      await settle();
+
+      expect(names()).toEqual(['Atelier Unu', 'Service Doi']);
     });
 
     // @traces 267-FR-021
@@ -4532,7 +4602,7 @@ describe('Results filters', () => {
 
   type PanelData = {
     filters: () => Filters;
-    toggle: (key: FilterKey) => void;
+    change: (patch: Partial<Filters>) => void;
   };
   const opener = () =>
     page().querySelector<HTMLButtonElement>(
@@ -4562,9 +4632,9 @@ describe('Results filters', () => {
     };
     return options.data;
   }
-  async function toggled(key: FilterKey) {
+  async function toggled(key: SwitchKey) {
     const data = await panel();
-    data.toggle(key);
+    data.change({ [key]: !data.filters()[key] });
     await settle();
     await settle();
     return data;
@@ -4636,6 +4706,7 @@ describe('Results filters', () => {
       const data = await panel();
 
       expect(data.filters()).toEqual({
+        card: false,
         open_now: false,
         open_saturday: true,
       });
@@ -4723,6 +4794,79 @@ describe('Results filters', () => {
         expect(pinsAsked()[0]).not.toHaveProperty('open_now');
         expect(chips()).toHaveLength(0);
         expect(said(opener())).toBe('Filtre');
+        expect(url()).toContain(value);
+      },
+    );
+
+    // @traces 1399-FR-002
+    // @traces 1399-FR-003
+    // @traces 1399-FR-004
+    it('restores the price, rating and card filters from a link: chips, count and the requests', async () => {
+      await open(
+        `/ro/garages?brand=bmw&near=${NEAR}&max_price=200&min_rating=4.5&card=1`,
+      );
+
+      expect(searches()[0]).toEqual({
+        brand: 'bmw',
+        card: '1',
+        log: '1',
+        max_price: 200,
+        min_rating: '4.5',
+        near: NEAR,
+      });
+      expect(pinsAsked()[0]).toEqual({
+        brand: 'bmw',
+        card: '1',
+        max_price: 200,
+        min_rating: '4.5',
+        near: NEAR,
+      });
+      await reads[0]?.answer();
+      expect(said(opener())).toBe('Filtre · 3');
+      expect(chips().map((c) => c.dataset['filter'])).toEqual([
+        'max_price',
+        'min_rating',
+        'card',
+      ]);
+      expect(chips().map(said)).toEqual([
+        'Până la 200 lei/oră ×',
+        'Notă 4,5+ ×',
+        'Plată cu cardul ×',
+      ]);
+      expect(chips()[1]?.getAttribute('aria-label')).toBe(
+        'Scoate filtrul Notă 4,5+',
+      );
+    });
+
+    // @traces 1399-FR-003
+    it('writes a choice in the page order, as a history step without logging', async () => {
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&card=1&open_now=1`);
+
+      const data = await panel();
+      data.change({ max_price: 250 });
+      await settle();
+      await settle();
+
+      expect(url()).toBe(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&max_price=250&card=1`,
+      );
+      expect(searches().at(-1)).not.toHaveProperty('log');
+
+      data.change({ max_price: undefined });
+      await settle();
+      await settle();
+      expect(url()).toBe(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&card=1`,
+      );
+    });
+
+    it.each(['max_price=175', 'min_rating=4', 'card=yes'])(
+      'reads %s as off and sends nothing for it',
+      async (value) => {
+        await shown(`/ro/garages?brand=bmw&near=${NEAR}&${value}`);
+
+        expect(searches()[0]).toEqual({ brand: 'bmw', log: '1', near: NEAR });
+        expect(chips()).toHaveLength(0);
         expect(url()).toContain(value);
       },
     );
@@ -4817,6 +4961,20 @@ describe('Results filters', () => {
       ]);
     });
 
+    // @traces 1399-FR-002
+    it('gives the focus to the Filtre button once a chip removes its filter', async () => {
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&max_price=150`);
+
+      chips()[0]?.focus();
+      chips()[0]?.click();
+      await settle();
+      await settle();
+
+      expect(url()).toBe(`/ro/garages?brand=bmw&near=${NEAR}`);
+      expect(chips()).toHaveLength(0);
+      expect(document.activeElement).toBe(opener());
+    });
+
     it('shows no chip with no filter on', async () => {
       await shown();
       expect(chips()).toHaveLength(0);
@@ -4840,9 +4998,10 @@ describe('Results filters', () => {
       });
     });
 
-    it('asks the next page with the cursor and the filter', async () => {
+    // @traces 1399-FR-004
+    it('asks the next page with the cursor and the filters', async () => {
       await shown(
-        `/ro/garages?brand=bmw&near=${NEAR}&open_saturday=1`,
+        `/ro/garages?brand=bmw&near=${NEAR}&open_saturday=1&max_price=250&min_rating=3.5&card=1`,
         pageOf({ nextCursor: 'c1' }),
       );
 
@@ -4851,14 +5010,20 @@ describe('Results filters', () => {
 
       expect(searches().at(-1)).toEqual({
         brand: 'bmw',
+        card: '1',
         cursor: 'c1',
+        max_price: 250,
+        min_rating: '3.5',
         near: NEAR,
         open_saturday: '1',
       });
     });
 
+    // @traces 1399-FR-004
     it('reads a pin outside the list by ids= with no filter', async () => {
-      await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_now=1`);
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&max_price=150&min_rating=4.5&card=1`,
+      );
 
       mapPicked('pin-3');
       await settle();
@@ -4969,6 +5134,22 @@ describe('Results filters', () => {
       expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR });
     });
 
+    // @traces 1399-FR-007
+    it('clears all five filters in one write, without logging', async () => {
+      pinsAnswer = pinsOf(3);
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&open_now=1&open_saturday=1&max_price=150&min_rating=3.5&card=1`,
+        none(),
+      );
+
+      state()?.querySelector<HTMLButtonElement>('button.primary')?.click();
+      await settle();
+      await settle();
+
+      expect(url()).toBe(`/ro/garages?brand=bmw&near=${NEAR}`);
+      expect(searches().at(-1)).toEqual({ brand: 'bmw', near: NEAR });
+    });
+
     it('shows the state while the pins have not answered', async () => {
       pinsApi.mockImplementation(() => new Promise(() => undefined));
       await shown(`/ro/garages?brand=bmw&near=${NEAR}&open_now=1`, none());
@@ -5072,6 +5253,17 @@ describe('Results filters', () => {
       expect(warmer.judge).toHaveBeenCalledWith({ brand: 'bmw', near: NEAR });
     });
 
+    // @traces 1399-FR-006
+    it('judges nothing when "Deschis acum" joins another filter, and warms nothing with one on', async () => {
+      await shown(`/ro/garages?brand=bmw&near=${NEAR}&card=1`);
+      await settle();
+      expect(warmer.warm).not.toHaveBeenCalled();
+
+      await toggled('open_now');
+
+      expect(warmer.judge).not.toHaveBeenCalled();
+    });
+
     it('judges nothing for "Deschis sâmbăta"', async () => {
       await shown();
 
@@ -5080,4 +5272,25 @@ describe('Results filters', () => {
       expect(warmer.judge).not.toHaveBeenCalled();
     });
   });
+});
+
+describe('the pill buttons on the 4 px grid', () => {
+  // The Jest transform drops component styles, so they are read from the source.
+  const css = readFileSync(join(__dirname, 'results.css'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ');
+  const rule = (selector: string) =>
+    [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].find(
+      ([, sel]) => sel.trim() === selector,
+    )?.[2] ?? '';
+
+  // A button keeps the browser's 1px block padding unless the rule sets it:
+  // QA measured "Filtre · 3", the filter chips and "Scoate filtrele" at 1px 16px.
+  it.each(['.filters-open', '.chip', '.actions > *, .more'])(
+    'sets the block padding of %s to zero beside its 16px sides',
+    (selector) => {
+      expect(rule(selector)).toMatch(/padding: 0 var\(--mf-space-4\);/);
+      expect(rule(selector)).not.toMatch(/padding-inline:/);
+    },
+  );
 });

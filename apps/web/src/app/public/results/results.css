@@ -113,7 +113,7 @@ mf-brand-chips {
   font: inherit;
   font-weight: 600;
   min-height: var(--mf-tap);
-  padding-inline: var(--mf-space-4);
+  padding: 0 var(--mf-space-4);
 }
 
 .filters .chip.filter {
@@ -350,7 +350,7 @@ li.leaving {
   font-weight: 600;
   margin-block-start: var(--mf-space-2);
   min-height: var(--mf-tap);
-  padding-inline: var(--mf-space-4);
+  padding: 0 var(--mf-space-4);
 }
 
 .skeleton {
@@ -400,7 +400,7 @@ li.leaving {
   font: inherit;
   font-weight: 600;
   min-height: var(--mf-tap);
-  padding-inline: var(--mf-space-4);
+  padding: 0 var(--mf-space-4);
   text-decoration: none;
 }
 

@@ -134,7 +134,29 @@ describe('ResultsSheet on a phone', () => {
     pointer(handle(), 'pointerup', 301);
     const css = readFileSync(join(__dirname, 'results-sheet.css'), 'utf8');
     expect(css).toMatch(
-      /:host \{\s*--rest: min\(\s*max\(50%, 6\.5rem\),\s*max\(6\.5rem, calc\(100% - var\(--sheet-top, 160px\) - 6rem\)\),\s*calc\(100% - var\(--sheet-top, 160px\)\)\s*\);/,
+      /:host \{\s*--rest: max\(\s*0px,\s*min\(\s*max\(50%, 6\.5rem\),\s*max\(6\.5rem, calc\(100% - var\(--sheet-top, 160px\) - 6rem\)\),\s*calc\(100% - var\(--sheet-top, 160px\)\)\s*\)\s*\);/,
+    );
+  });
+
+  // A header taller than the whole stage (320 px, the consent bar open):
+  // the sheet never rises out of its cell over "Schimbă locul" (PR #672 QA,
+  // the change button and the handle overlapped by 4.6 px).
+  it('never rests above its cell when the header is taller than the stage', async () => {
+    jest
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('top') ? 200 : 160;
+      });
+    pointer(handle(), 'pointerdown', 300);
+    pointer(handle(), 'pointermove', 301);
+    await settle();
+
+    // Full and low are both the cell's top, so the drag holds there too.
+    expect(offset()).toBe('0px');
+    pointer(handle(), 'pointerup', 301);
+    const css = readFileSync(join(__dirname, 'results-sheet.css'), 'utf8');
+    expect(css).toMatch(
+      /:host\(\[data-position="low"\]\) \{\s*--rest: max\(0px, calc\(100% - var\(--sheet-top, 160px\)\)\);/,
     );
   });
 
