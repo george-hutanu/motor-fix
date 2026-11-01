@@ -349,6 +349,16 @@ const reviewRepliesAnnounced = () =>
     'motorfix_review_reply_announced_total',
     'Garage replies announced to the review’s author, by outcome',
   );
+// A removal notice is sent a few times a month, and the 150-series budget
+// has no room for its four forms at 0: each starts with its first e-mail.
+const startsAtFirstCount = (template: string) =>
+  template.startsWith('REVIEW_DECIDED.');
+
+const reviewDecisionsAnnounced = () =>
+  counter(
+    'motorfix_review_decision_announced_total',
+    'Review and reply removals announced to the author and the owners, by outcome',
+  );
 const verificationResults = () =>
   counter(
     'motorfix_verification_result_total',
@@ -616,6 +626,14 @@ export function countReviewReportReminder(outcome: 'sent' | 'skipped') {
   reviewReportReminders().add(1, { outcome });
 }
 
+// A removal told to the review's author and the garage's owners, one they
+// all muted, or one with nobody to tell.
+export function countReviewDecisionAnnounced(
+  outcome: (typeof REVIEW_ANNOUNCED_OUTCOMES)[number],
+) {
+  reviewDecisionsAnnounced().add(1, { outcome });
+}
+
 // A garage's reply told to the review's author, one they muted, or one
 // with nobody to tell.
 export function countReviewReplyAnnounced(
@@ -808,7 +826,9 @@ const STARTS: Record<
       emails,
       each(
         'template',
-        Object.keys(TEMPLATES).filter((name) => TEMPLATES[name]?.email),
+        Object.keys(TEMPLATES).filter(
+          (name) => TEMPLATES[name]?.email && !startsAtFirstCount(name),
+        ),
       ),
     ],
     [notifications, [{ channel: 'push' }, { channel: 'in-app' }]],

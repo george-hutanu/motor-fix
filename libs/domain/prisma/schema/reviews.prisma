@@ -20,26 +20,33 @@ enum ReviewStatus {
 // One live review (published, reported or removed) per job: the migration's
 // partial unique index review_one_live, which Prisma cannot declare.
 model Review {
-  id         String         @id @default(uuid()) @db.Uuid
-  source     ReviewSource   @default(job)
-  jobId      String         @map("job_id") @db.Uuid
-  driverId   String         @map("driver_id") @db.Uuid
-  garageId   String         @map("garage_id") @db.Uuid
-  mechanicId String?        @map("mechanic_id") @db.Uuid
-  rating     Int
-  text       String?
-  paidBani   Int?           @map("paid_bani")
-  status     ReviewStatus   @default(published)
-  postedAt   DateTime       @default(now()) @map("posted_at") @db.Timestamptz(3)
+  id            String              @id @default(uuid()) @db.Uuid
+  source        ReviewSource        @default(job)
+  jobId         String              @map("job_id") @db.Uuid
+  driverId      String              @map("driver_id") @db.Uuid
+  garageId      String              @map("garage_id") @db.Uuid
+  mechanicId    String?             @map("mechanic_id") @db.Uuid
+  rating        Int
+  text          String?
+  paidBani      Int?                @map("paid_bani")
+  status        ReviewStatus        @default(published)
+  postedAt      DateTime            @default(now()) @map("posted_at") @db.Timestamptz(3)
   // Set by an edit of the review; empty until the first one.
-  editedAt   DateTime?      @map("edited_at") @db.Timestamptz(3)
-  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  job        Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  driver     Account        @relation("ReviewDriver", fields: [driverId], references: [id], onDelete: Cascade)
-  garage     Garage         @relation(fields: [garageId], references: [id], onDelete: Cascade)
-  mechanic   Mechanic?      @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
-  reports    ReviewReport[]
-  reply      ReviewReply?
+  editedAt      DateTime?           @map("edited_at") @db.Timestamptz(3)
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  // Set when an admin removes the review on a report; nullable so the record
+  // outlives the admin's account.
+  removedById   String?             @map("removed_by") @db.Uuid
+  removedAt     DateTime?           @map("removed_at") @db.Timestamptz(3)
+  // The rule broken, never other.
+  removalReason ReviewReportReason? @map("removal_reason")
+  removedBy     Account?            @relation("ReviewRemover", fields: [removedById], references: [id], onDelete: SetNull)
+  job           Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  driver        Account             @relation("ReviewDriver", fields: [driverId], references: [id], onDelete: Cascade)
+  garage        Garage              @relation(fields: [garageId], references: [id], onDelete: Cascade)
+  mechanic      Mechanic?           @relation(fields: [mechanicId], references: [id], onDelete: SetNull)
+  reports       ReviewReport[]
+  reply         ReviewReply?
 
   @@index([mechanicId])
   @@map("review")
@@ -126,6 +133,7 @@ enum ReviewReplyStatus {
 
 enum ReviewReplyRemovedCause {
   report_upheld
+  review_removed
 
   @@map("review_reply_removed_cause")
 }

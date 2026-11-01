@@ -2,7 +2,9 @@ import { DELETED_AUTHOR } from '@motor-fix/contracts';
 
 import { countReportQueue } from './report-queue';
 import { ReportQueueService } from './report-queue.service';
+import { AuditService } from '../../audit/audit.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
+import { outbox } from '../../events/event.port';
 import type {
   ReviewReportDecision,
   ReviewReportReason,
@@ -10,6 +12,7 @@ import type {
   ReviewReportStatus,
 } from '../../generated/prisma/enums';
 import { databaseUrl, quotesWorld } from '../../quotes/quotes.testing';
+import { ReviewDecisionsService } from '../decision/decision.service';
 import { garageReviews, reviewReply } from '../reviews.testing';
 
 const world = quotesWorld();
@@ -388,5 +391,45 @@ describe('the counts the overview reads', () => {
       overdue: 1,
       pending: 2,
     });
+  });
+});
+
+// @traces 179-FR-010
+describe('the counts once an admin decides', () => {
+  it('drops the decided report from the queue, the total and the overdue count', async () => {
+    const dinamo = await world.garage('Atelier Dinamo');
+    const andrei = await world.account('Andrei Ion Marin');
+    const admin = await world.account('Ana Popescu', ['admin']);
+    const late = await review(dinamo.id, andrei, {
+      rating: 1,
+      status: 'reported',
+    });
+    const fresh = await review(dinamo.id, andrei, {
+      rating: 2,
+      status: 'reported',
+    });
+    const overdue = await report(late.id, { createdAt: ago(50) });
+    await report(fresh.id, { createdAt: ago(2) });
+    const before = await countReportQueue(prisma, new Date());
+
+    await new ReviewDecisionsService(prisma, new AuditService(), outbox).decide(
+      {
+        accountId: admin,
+        garageId: null,
+        language: 'ro',
+        permissions: {} as never,
+        role: 'admin',
+        roles: ['admin'],
+      },
+      late.id,
+      { decision: 'remove', reason: 'insults' },
+    );
+
+    const after = await countReportQueue(prisma, new Date());
+    expect(after.pending).toBe(before.pending - 1);
+    expect(after.overdue).toBe(before.overdue - 1);
+    const queue = await service.read({ language: 'ro', page: 1 }, new Date());
+    expect(queue.total).toBe(1);
+    expect(queue.items.map((item) => item.report.id)).not.toContain(overdue.id);
   });
 });

@@ -5838,6 +5838,67 @@
         ]
       }
     },
+    "/api/v1/admin/review-reports/{reviewId}/decision": {
+      "post": {
+        "operationId": "ReportQueueController_decide",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDecisionResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id, decision not remove, reason not one of the eight rules (other included), or an extra member"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "account_suspended"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no review with that id"
+          },
+          "409": {
+            "description": "already_decided (with decidedBy, the first decider's short name); no_pending_report"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Decide a review's pending report: remove the review or its reply",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/reviews/{reviewId}/reply": {
       "post": {
         "operationId": "ReviewRepliesController_post",
@@ -21140,6 +21201,79 @@
           "oldestCreatedAt",
           "page",
           "pageSize"
+        ]
+      },
+      "ReviewDecisionDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "remove"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "The rule broken; the report reasons without other",
+            "enum": [
+              "insults",
+              "personal_data",
+              "ads",
+              "promotion",
+              "off_topic",
+              "hate",
+              "fake_or_conflicted",
+              "threats_or_legal_accusations"
+            ]
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ]
+      },
+      "ReviewDecisionResultDto": {
+        "type": "object",
+        "properties": {
+          "reviewId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reportId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "target": {
+            "type": "string",
+            "enum": [
+              "review",
+              "reply"
+            ]
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "removed"
+            ]
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "replyId": {
+            "type": "string",
+            "description": "The reply the decision removed; null when none was touched",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "reviewId",
+          "reportId",
+          "target",
+          "decision",
+          "decidedAt",
+          "replyId"
         ]
       },
       "ReplyToReviewDto": {
