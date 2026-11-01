@@ -9,6 +9,11 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
+import { CarModel3DDto } from '../models/car-model-3-d-dto';
+import { carModels3DControllerRead } from '../fn/catalogue/car-models-3-d-controller-read';
+import { CarModels3DControllerRead$Params } from '../fn/catalogue/car-models-3-d-controller-read';
+import { getCarModel3DFile } from '../fn/catalogue/get-car-model-3-d-file';
+import { GetCarModel3DFile$Params } from '../fn/catalogue/get-car-model-3-d-file';
 import { JobTypeListDto } from '../models/job-type-list-dto';
 import { jobTypesControllerSearch } from '../fn/catalogue/job-types-controller-search';
 import { JobTypesControllerSearch$Params } from '../fn/catalogue/job-types-controller-search';
@@ -42,6 +47,56 @@ export class CatalogueService extends BaseService {
   jobTypesControllerSearch(params?: JobTypesControllerSearch$Params, context?: HttpContext): Promise<JobTypeListDto> {
     const resp = this.jobTypesControllerSearch$Response(params, context);
     return resp.then((r: StrictHttpResponse<JobTypeListDto>): JobTypeListDto => r.body);
+  }
+
+  /** Path part for operation `carModels3DControllerRead()` */
+  static readonly CarModels3DControllerReadPath = '/api/v1/car-models-3d';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `carModels3DControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carModels3DControllerRead$Response(params: CarModels3DControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<CarModel3DDto>> {
+    const obs = carModels3DControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `carModels3DControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  carModels3DControllerRead(params: CarModels3DControllerRead$Params, context?: HttpContext): Promise<CarModel3DDto> {
+    const resp = this.carModels3DControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<CarModel3DDto>): CarModel3DDto => r.body);
+  }
+
+  /** Path part for operation `getCarModel3DFile()` */
+  static readonly GetCarModel3DFilePath = '/api/v1/car-models-3d/files/{key}';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `getCarModel3DFile()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getCarModel3DFile$Response(params: GetCarModel3DFile$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = getCarModel3DFile(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `getCarModel3DFile$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getCarModel3DFile(params: GetCarModel3DFile$Params, context?: HttpContext): Promise<void> {
+    const resp = this.getCarModel3DFile$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
 }

@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 258,
+    "count": 261,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1828,6 +1828,19 @@
       ],
       "reason": "refusals show on the request-duration metric by route and status code",
       "story": "ST-312"
+    },
+    {
+      "kind": "endpoint",
+      "name": "car-models-3d",
+      "source": "libs/domain/src/catalogue/car-models-3d/car-models-3d.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/car-models-3d and /api/v1/car-models-3d/files/:key, and status (200, 400, 404, 503 storage_unavailable)",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the brand's 3D car and its GLB files, public; the api's start logs '3D files uploaded: <n> written' once per boot and logs an error with the count so far when the store fails, the boot going on; a store failure on a file answers 503, counted by api-error-rate; spans come from the HTTP, S3 and Prisma auto-instrumentation; no product counter, as the read is a catalogue lookup with no product action",
+      "story": "ST-35"
     },
     {
       "kind": "endpoint",
