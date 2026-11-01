@@ -823,13 +823,14 @@ test.describe('the map beside the results @seeded', () => {
   }
 
   // Both buttons whole above the sheet and tap-sized, or both hidden: only a
-  // stage too short to clear them (320 x 568 with the consent bar) hides them.
+  // stage too short to clear them hides them — under 600 px (320 x 568 with the
+  // consent bar), or wherever the sheet's header leaves too little (cramped).
   async function zoomWhole(page: Page, where: string, short: boolean) {
     await expect(async () => {
       const { buttons, edge, zoomHidden } = await boxes(page);
       expect(buttons, where).toHaveLength(2);
       if (zoomHidden) {
-        expect(short, where).toBe(true);
+        expect(short || (await cramped(page)), where).toBe(true);
         await expect(sheet(page)).toHaveClass(/over-zoom/, { timeout: 0 });
         return;
       }
