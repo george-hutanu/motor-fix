@@ -525,7 +525,7 @@ describe('what the proposal records', () => {
   it('keeps no job, row, entry or event when an entry cannot be written', async () => {
     const w = await world();
     const audit = app.get<AuditPort>(AUDIT_PORT);
-    const failing = jest
+    const failing = vi
       .spyOn(audit, 'record')
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('the entry write failed'));

@@ -24,7 +24,7 @@ describe('the month an SMS counts in', () => {
 // @traces 142-FR-004
 describe('the SMS a driver has used this month', () => {
   const counted = (rows: Record<string, number>) => {
-    const findUnique = jest.fn(
+    const findUnique = vi.fn(
       async ({
         where,
       }: {

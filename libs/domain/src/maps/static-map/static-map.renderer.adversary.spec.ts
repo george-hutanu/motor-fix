@@ -31,7 +31,7 @@ function fetcher(
   tilejson = () => json({ tiles: [TILE_URL] }),
 ) {
   const calls: string[] = [];
-  const fn = jest.fn(async (input: RequestInfo | URL) => {
+  const fn = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
     calls.push(url);
     return url === TILEJSON ? tilejson() : tile();
@@ -52,7 +52,7 @@ const renderer = (fn: typeof fetch, url = TILEJSON) =>
 // @traces 1196-FR-006 1196-FR-007
 describe('StaticMapRenderer, dependencies failing', () => {
   it('draws the background colour at the asked size and calls nothing when the source is off', async () => {
-    const fn = jest.fn();
+    const fn = vi.fn();
     const image = await renderer(fn as unknown as typeof fetch, 'off').render({
       ...VIEW,
       h: 1024,
@@ -65,7 +65,7 @@ describe('StaticMapRenderer, dependencies failing', () => {
   });
 
   it('draws a different background for the dark theme than for the light one', async () => {
-    const r = renderer(jest.fn() as unknown as typeof fetch, 'off');
+    const r = renderer(vi.fn() as unknown as typeof fetch, 'off');
     const pixel = async (theme: 'light' | 'dark') =>
       Array.from(
         (
@@ -124,7 +124,7 @@ describe('StaticMapRenderer, dependencies failing', () => {
   });
 
   it('refuses when the fetch itself rejects', async () => {
-    const fn = jest.fn(async () => {
+    const fn = vi.fn(async () => {
       throw new TypeError('network down');
     }) as unknown as typeof fetch;
     await expect(renderer(fn).render(VIEW)).rejects.toBeInstanceOf(
@@ -171,7 +171,7 @@ describe('StaticMapRenderer, dependencies failing', () => {
           reject(new Error('aborted')),
         );
       });
-    const fn = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) =>
+    const fn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) =>
       String(input) === TILEJSON
         ? json({ tiles: [TILE_URL] })
         : hang(null, init),

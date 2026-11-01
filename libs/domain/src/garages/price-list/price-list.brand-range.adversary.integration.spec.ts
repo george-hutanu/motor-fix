@@ -420,7 +420,7 @@ describe('the profile range when the garage changes its stance', () => {
       garageId_brandId: { brandId: w.bmw.id, garageId: w.nord.id },
     };
     const profile = async () => {
-      await redis.flushall();
+      await redis.flushdb();
       return (
         await http().get(`/garages/${w.nord.slug}`).query({ brand: w.bmw.slug })
       ).body.prices;
@@ -449,7 +449,7 @@ describe('the profile range when the garage changes its stance', () => {
     await prisma.garageBrand.delete({
       where: { garageId_brandId: { brandId: w.bmw.id, garageId: w.nord.id } },
     });
-    await redis.flushall();
+    await redis.flushdb();
 
     const res = await http()
       .get(`/garages/${w.nord.slug}`)

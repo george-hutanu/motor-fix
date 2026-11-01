@@ -12,12 +12,12 @@ const WEB = 'https://motorfix.test';
 
 function world(waiting: { accountId: string; expiresAt: Date } | null) {
   const approvals = {
-    expireOverdue: jest.fn(async () => false),
-    overdue: jest.fn(async () => [ID]),
-    waiting: jest.fn(async () => waiting),
+    expireOverdue: vi.fn(async () => false),
+    overdue: vi.fn(async () => [ID]),
+    waiting: vi.fn(async () => waiting),
   };
-  const notifications = { notify: jest.fn(async () => 1) };
-  const queue = { add: jest.fn(), remove: jest.fn() };
+  const notifications = { notify: vi.fn(async () => 1) };
+  const queue = { add: vi.fn(), remove: vi.fn() };
   const timers = new ApprovalTimers(
     approvals as unknown as AssistantApprovals,
     notifications as unknown as NotificationsService,

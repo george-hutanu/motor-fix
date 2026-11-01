@@ -45,9 +45,9 @@ const MB = 1024 * 1024;
 
 beforeEach(() => {
   store.objects.clear();
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const jpeg = () =>
   sharp({ create: { background: '#c33', channels: 3, height: 40, width: 60 } })
@@ -373,9 +373,9 @@ describe('who may send, and when', () => {
 
   it('answers storage_unavailable and creates nothing when the address cannot be signed', async () => {
     const s = await setting();
-    jest
-      .spyOn(provider(StorageService), 'createUpload')
-      .mockRejectedValue(new Error('connect ECONNREFUSED'));
+    vi.spyOn(provider(StorageService), 'createUpload').mockRejectedValue(
+      new Error('connect ECONNREFUSED'),
+    );
 
     const res = await ask(s, s.costel);
 
@@ -444,7 +444,7 @@ describe('completing an upload', () => {
     const s = await setting();
     const { id, key } = await asked(s);
     store.put(key, await jpeg(), 'image/jpeg');
-    const spy = jest
+    const spy = vi
       .spyOn(provider<Queue>(MEDIA_JOBS), 'add')
       .mockRejectedValueOnce(new Error('connect ECONNREFUSED'));
 
@@ -581,7 +581,7 @@ describe('the address of a file', () => {
     async (key) => {
       const s = await setting();
       const item = await shown(s);
-      const head = jest.spyOn(provider(StorageService), 'contentTypeOf');
+      const head = vi.spyOn(provider(StorageService), 'contentTypeOf');
       const before = Date.now();
 
       const file = await get(`/media/${item.id}/file`, s[key]);

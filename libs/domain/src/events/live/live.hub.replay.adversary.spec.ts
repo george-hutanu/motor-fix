@@ -67,10 +67,9 @@ const live = (
     ...(position !== undefined && { position }),
   });
 
-const flush = () =>
-  new Promise((resolve) =>
-    jest.requireActual('node:timers').setImmediate(resolve),
-  );
+// Taken before any test fakes the timers.
+const realSetImmediate = globalThis.setImmediate;
+const flush = () => new Promise((resolve) => realSetImmediate(resolve));
 
 function build(
   replay?: (a: string, s: bigint) => Promise<Found>,
@@ -107,11 +106,11 @@ const make = (...args: Parameters<typeof build>) => {
   return built;
 };
 
-beforeEach(() => jest.useFakeTimers({ now: NOW }));
+beforeEach(() => vi.useFakeTimers({ now: NOW }));
 afterEach(() => {
   for (const hub of hubs) hub.shutdown();
   hubs = [];
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 // @traces 1190-FR-003
@@ -153,7 +152,7 @@ describe('replay: empty, one and many', () => {
 
   it('reads a position beyond 2^53 without losing digits', async () => {
     const big = 900719925474099301n;
-    const replay = jest.fn(async () => ({
+    const replay = vi.fn(async () => ({
       rows: [{ ...row(1), position: big + 1n }],
       unreadCount: 1,
     }));
@@ -177,7 +176,7 @@ describe('replay: empty, one and many', () => {
   });
 
   it('replays nothing for an absent position', async () => {
-    const replay = jest.fn(async () => ({ rows: [row(1)], unreadCount: 1 }));
+    const replay = vi.fn(async () => ({ rows: [row(1)], unreadCount: 1 }));
     const { start } = make(replay);
 
     start(undefined);
@@ -188,7 +187,7 @@ describe('replay: empty, one and many', () => {
   });
 
   it('asks the replay for the stream own account only', async () => {
-    const replay = jest.fn(async () => ({ rows: [], unreadCount: 0 }));
+    const replay = vi.fn(async () => ({ rows: [], unreadCount: 0 }));
     const { start } = make(replay);
 
     start(3n, 'a2');
@@ -350,7 +349,7 @@ describe('replay: the read failing', () => {
     );
     const { sink } = start(1n);
 
-    jest.advanceTimersByTime(MINUTE);
+    vi.advanceTimersByTime(MINUTE);
     answer({ rows: [row(2)], unreadCount: 1 });
     await flush();
 
@@ -450,9 +449,9 @@ describe('the planned close, edges', () => {
     const { hub, start } = make(undefined, 1000);
     const { sink } = start(null);
 
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     await hub.deliver(live('live.test', undefined));
-    jest.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
 
     expect(frames(sink).map((f) => f.event)).toEqual(['hello', 'reconnect']);
     expect(sink.chunks.filter((c) => c.startsWith(':'))).toEqual([]);
@@ -463,7 +462,7 @@ describe('the planned close, edges', () => {
     const { start } = make();
     const { sink } = start(null);
 
-    jest.advanceTimersByTime(14 * MINUTE + 1);
+    vi.advanceTimersByTime(14 * MINUTE + 1);
 
     expect(sink.ended).toBe(false);
   });
@@ -471,10 +470,10 @@ describe('the planned close, edges', () => {
   it('closes each stream on its own clock', () => {
     const { start } = make(undefined, 1000);
     const early = start(null);
-    jest.advanceTimersByTime(600);
+    vi.advanceTimersByTime(600);
     const late = start(null);
 
-    jest.advanceTimersByTime(400);
+    vi.advanceTimersByTime(400);
 
     expect(early.sink.ended).toBe(true);
     expect(late.sink.ended).toBe(false);

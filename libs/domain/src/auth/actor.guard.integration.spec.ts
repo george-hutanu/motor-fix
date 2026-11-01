@@ -130,10 +130,10 @@ class PendingController {
 
 let app: INestApplication;
 let maintenance = false;
-const refusals = jest.fn();
+const refusals = vi.fn();
 
 beforeAll(async () => {
-  jest.spyOn(metrics, 'getMeter').mockReturnValue({
+  vi.spyOn(metrics, 'getMeter').mockReturnValue({
     createCounter: () => ({ add: refusals }),
   } as unknown as ReturnType<typeof metrics.getMeter>);
   const moduleRef = await Test.createTestingModule({

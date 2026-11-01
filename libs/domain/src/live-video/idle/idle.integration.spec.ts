@@ -20,10 +20,10 @@ const logger = new Logger('LiveIdle');
 let provider: FakeLiveVideo;
 beforeEach(() => {
   provider = new FakeLiveVideo();
-  jest.spyOn(logger, 'log').mockImplementation(() => undefined);
-  jest.spyOn(logger, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(logger, 'log').mockImplementation(() => undefined);
+  vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const deps = () => ({ audit: new AuditService(), logger, prisma, provider });
 
@@ -172,7 +172,7 @@ describe('stopping a live session nobody publishes to', () => {
     const unknown = await live(new Date(now.getTime() - 30 * MINUTE));
     const idle = await live(new Date(now.getTime() - 30 * MINUTE));
     const read = provider.inputStatus.bind(provider);
-    jest.spyOn(provider, 'inputStatus').mockImplementation(async (id) => {
+    vi.spyOn(provider, 'inputStatus').mockImplementation(async (id) => {
       if (id === unknown.session.providerInputId) throw new Error('timeout');
       return read(id);
     });

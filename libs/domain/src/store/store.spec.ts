@@ -3,22 +3,27 @@ import { join, relative } from 'node:path';
 
 import { Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
+import type { Mock } from 'vitest';
 
 import { borrowStore, returnStore } from './store';
 
-jest.mock('ioredis', () => ({
-  Redis: jest.fn().mockImplementation(() => ({
-    disconnect: jest.fn(),
-    on: jest.fn(),
-    quit: jest.fn().mockResolvedValue('OK'),
-    status: 'ready',
-  })),
+vi.mock('ioredis', () => ({
+  Redis: vi.fn(
+    class {
+      disconnect = vi.fn();
+      on = vi.fn();
+      quit = vi.fn().mockResolvedValue('OK');
+      status = 'ready';
+    },
+  ),
 }));
 
-const constructed = Redis as unknown as jest.Mock;
+const constructed = Redis as unknown as Mock;
 
 describe('the store connection', () => {
-  beforeEach(() => constructed.mockClear());
+  beforeEach(() => {
+    constructed.mockClear();
+  });
 
   // @traces 1175-FR-007
   // @traces 1188-FR-007
@@ -66,10 +71,12 @@ describe('the store connection', () => {
 
   // @traces 1175-FR-007
   it('logs a down store once until it is back, and never lets the error escape', async () => {
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const warn = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
     const redis = borrowStore('redis://flaky:6379');
     const handler = (event: string) =>
-      (redis.on as jest.Mock).mock.calls.find(([name]) => name === event)?.[1];
+      (redis.on as Mock).mock.calls.find(([name]) => name === event)?.[1];
 
     handler('error')(new Error('ECONNREFUSED'));
     handler('error')(new Error('ECONNREFUSED'));

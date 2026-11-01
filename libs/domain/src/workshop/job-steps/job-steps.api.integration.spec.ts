@@ -304,7 +304,7 @@ describe('writing a job’s steps', () => {
 // @traces 424-FR-001 424-FR-006 424-FR-007
 // @traces 424-FR-008 424-FR-010
 describe('ticking a step', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('stores who ticked it and when, and clears both on an untick', async () => {
     const s = await setting('in_work');
@@ -448,10 +448,8 @@ describe('ticking a step', () => {
     const [, id] = await five(s);
     const audited = (await audits(s.job.id)).length;
     const sent = (await events(s.job.id)).length;
-    jest
-      .spyOn(outbox, 'record')
-      .mockRejectedValueOnce(new Error('outbox down'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(outbox, 'record').mockRejectedValueOnce(new Error('outbox down'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const refused = await send('put', `${s.steps}/${id}/done`, s.hand, {
       done: true,
