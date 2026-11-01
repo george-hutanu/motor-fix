@@ -94,11 +94,13 @@ export {
   BRANDS,
 } from './catalogue/brands/brands';
 export { type CarForBrand, carForBrand } from './catalogue/car-models';
+export { CarModels3dModule } from './catalogue/car-models-3d/car-models-3d.module';
 export { CatalogueModule } from './catalogue/catalogue.module';
 export { JobTypeLoader } from './catalogue/job-types/job-type-loader';
 export { JOB_TYPES } from './catalogue/job-types/job-types';
 export { CAR_MODELS } from './catalogue/models-3d/models-3d';
 export { Models3dLoader } from './catalogue/models-3d/models-3d.loader';
+export { Models3dStore } from './catalogue/models-3d/models-3d.store';
 export { EVENT_PORT, type EventPort, outbox } from './events/event.port';
 export { EventsModule } from './events/events.module';
 export { OutboxRelayModule } from './events/outbox-relay/outbox-relay.module';
@@ -116,6 +118,7 @@ export { GarageMechanicsService } from './garages/mechanics/garage-mechanics.ser
 export { GaragePhotosService } from './garages/photos/garage-photos.service';
 export { ListingPhotosModule } from './garages/photos/listing-photos/listing-photos.module';
 export { ListingPhotosWorkerModule } from './garages/photos/listing-photos/listing-photos.worker';
+export { OwnerPhotosModule } from './garages/photos/owner-photos/owner-photos.module';
 export { GaragePlaceService } from './garages/place/garage-place.service';
 export { GaragePricesService } from './garages/prices/garage-prices/garage-prices.service';
 export { applySurvey } from './garages/survey/survey';
@@ -189,6 +192,7 @@ export { QUOTE_RECEIVED_CONSUMER } from './notifications/quote-received/quote-re
 export { REPAIR_UPDATED_CONSUMER } from './notifications/repair-updated/repair-updated.fan-out';
 export { REQUEST_CANCELLED_CONSUMER } from './notifications/request-cancelled/request-cancelled.fan-out';
 export { REQUEST_RECEIVED_CONSUMER } from './notifications/request-received/request-received.fan-out';
+export { REVIEW_DECIDED_CONSUMER } from './notifications/review-decided/review-decided.fan-out';
 export { REVIEW_POSTED_CONSUMER } from './notifications/review-posted/review-posted.fan-out';
 export { REVIEW_REPLIED_CONSUMER } from './notifications/review-replied/review-replied.fan-out';
 export { VERIFICATION_RESULT_CONSUMER } from './notifications/verification-result/verification-result.fan-out';

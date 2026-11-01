@@ -58,7 +58,16 @@ beforeEach(async () => {
         garageId: garage.id,
         stance: 'works_on' as const,
       })),
-      { brandId: refused, garageId: garage.id, stance: 'does_not_take' },
+      // A brand the garage does not take carries no fuel.
+      {
+        brandId: refused,
+        diesel: false,
+        electric: false,
+        garageId: garage.id,
+        hybrid: false,
+        petrol: false,
+        stance: 'does_not_take',
+      },
     ],
   });
   const adminId = await account('Ioana Popa', ['admin']);

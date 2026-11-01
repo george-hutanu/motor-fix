@@ -138,10 +138,11 @@ mf-static-map.leaving {
   }
 }
 
-/* Under 360 px the legend wraps to four rows with a mobile mechanic's entry:
-   tighter rows, at the same 16 px, keep it above the half sheet of a phone
-   whose sheet clears the zoom buttons (styles.css hides it where it does not). */
-@media (max-width: 359.98px) {
+/* With a mobile mechanic's entry the legend wraps to four rows on a phone
+   (390 px in Romanian too), and a tall sheet header holds the half rest at the
+   zoom buttons' 104 px: tighter rows, at the same 16 px, end it at 96 px, above
+   that sheet (styles.css hides it where the sheet does not clear them). */
+@media (max-width: 767.98px) {
   .legend {
     line-height: 1.25;
     padding-block: var(--mf-space-1);

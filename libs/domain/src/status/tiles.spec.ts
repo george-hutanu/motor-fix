@@ -1,4 +1,6 @@
-import { limitCrossed, nextTile, stateOf, TILES, type TileRow } from './tiles';
+import { TILES } from '@motor-fix/contracts';
+
+import { limitCrossed, nextTile, stateOf, type TileRow } from './tiles';
 
 const at = (iso: string) => new Date(iso);
 const t0 = at('2026-10-17T10:00:00Z');

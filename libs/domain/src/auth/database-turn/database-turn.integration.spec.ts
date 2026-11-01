@@ -156,13 +156,11 @@ it(
   'makes the client that calls a waiting take off before the take waits',
   async () => {
     const pg = createRequire(__filename)('pg') as typeof import('pg');
-    const Real = pg.Client;
     const holder = databaseTurn(databaseUrl);
     await holder.take();
     const late = databaseTurn(databaseUrl);
-    const made = vi
-      .spyOn(pg, 'Client')
-      .mockImplementation((config) => new Real(config));
+    // Calls through to the real client: the spy only counts.
+    const made = vi.spyOn(pg, 'Client');
     try {
       const taking = late.take();
       expect(

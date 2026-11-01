@@ -36,6 +36,7 @@ features:
   - 165-admin-roles
   - 106-demand-supply
   - 1416-demand-supply-web
+  - 295-service-health-tiles
 ---
 
 # Capability: Admin dashboard
@@ -1117,6 +1118,38 @@ _From 1416-demand-supply-web._
 ### 1416-FR-012 — Jest MUST cover, in the component's colocated spec: the BMW and Tesla row texts in Romanian and English, the singular forms, "—" and its accessible name, the lamp shown and not shown (searches 0 and supply 0: none), "Zonă necunoscută", the brand and area option lists and the query each choice sends (`brand`, `area`, both, neither), the latest-answer rule, the "actualizat" line (today, another day, null), the skeleton, both empty texts and the failed state with retry, and that Panou's overview makes no supply read. A Playwright flow MUST open "Mărci și lucrări" as an admin with the supply read stubbed to the brief's two rows, as the demand suite stubs its read, and check the two rows, the lamp, the dash, a brand filter and the "actualizat" line; the deviation from the brief's seeded flow is recorded in the PR (searches need area cells the nightly job places; the stub keeps the test free of the server's clock). A whole-line `// @traces` comment names the FR ids in each test file.
 
 _From 1416-demand-supply-web._
+
+### 295-FR-001 — An admin MUST be able to read `GET /api/v1/admin/status`, with no parameters. The route MUST follow the `admin/*` access policy as `GET /api/v1/admin/system-log` does (capability `admin.settings`): an admin reads it, any other role (driver, garage owner, receptionist, mechanic) answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`. The route joins the admin-route guard test's list of known routes (`apps/api/src/admin-routes.integration.spec.ts`).
+
+_From 295-service-health-tiles._
+
+### 295-FR-002 — The answer MUST hold `tiles`: exactly six, always in the panel order `api`, `search`, `maps`, `email`, `notifications`, `backup`, each with `key`, `state` (`green`, `amber`, `red`), `since` (an instant, or null), `detail` (the checks' JSON as stored: `latency_ms`, `failed_share`, `oldest_waiting_s`, `last_backup_at`, `reason`, as apply, 294-FR-008), `checkedAt` (an instant, or null), `stale` (FR-003) and `short` (the tile's short state, `{ ro, en }`, FR-005); `problems`: the ordered keys of FR-004; and `sentences`: `{ ro, en }`, each a list with one effect sentence per key of `problems`, in that order, or the one all-clear sentence when `problems` is empty (FR-005). The stored `pending_state` and `pending_since` are not answered. The read MUST write nothing: no STATUS_TILE change, no event, no System status log entry, no notification. Nothing in the answer is personal data.
+
+_From 295-service-health-tiles._
+
+### 295-FR-003 — A tile whose `checked_at` is 3 minutes or more before the read time (`checked_at <= now - 3 min`), or that has no row, MUST be answered `state: red`, `stale: true`, with `since` set to its `checked_at` (null when there is no row) and its stored `detail` kept (empty when there is no row); every other tile is answered with its stored `state` and `since`, `stale: false`. The stored row is never changed by the read; the 3 minutes is the brief's figure and is kept in code, not configuration.
+
+_From 295-service-health-tiles._
+
+### 295-FR-004 — `problems` MUST list the keys of the tiles answered `amber` or `red` (after FR-003): every `red` tile before every `amber` one, within a state by `since` ascending (the oldest problem first, a null `since` last), and tiles equal on both by the panel order of FR-002. Six green tiles give an empty list.
+
+_From 295-service-health-tiles._
+
+### 295-FR-005 — `since` and `checkedAt` MUST be answered as UTC instants (ISO 8601), `detail` as stored, numbers unrounded. The short state and the effect sentences MUST come from one pure function in the contracts library (reused by ST-296's alert), in Romanian and English, times as HH:MM in Europe/Bucharest and numbers in the language's format (`1,9 s` / `1.9 s`), per the table under **Texts**. A latency is rounded to whole milliseconds first; under 1000 ms it reads `82 ms`, from 1000 ms seconds with one decimal.
+
+_From 295-service-health-tiles._
+
+### 295-FR-006 — The OpenAPI document MUST describe the route and its DTOs (from the contracts library), and the `data-access` client MUST be regenerated; no other route changes. No screen changes in this story (the second story renders the answer).
+
+_From 295-service-health-tiles._
+
+### 295-FR-007 — The observability inventory MUST list the route (`admin-status`, the `motorfix-api` dashboard, the `api-error-rate` and `api-latency` rules); the read adds no service, queue, outside call or product action, so no new metric, panel or alert is needed beyond the API's.
+
+_From 295-service-health-tiles._
+
+### 295-FR-008 — Tests MUST exist before the implementation. Jest on real PostgreSQL MUST cover: the six tiles in panel order with their stored state, `since`, `detail` and `checkedAt`; the stale rule at exactly 3 minutes (stale), at 2 minutes 59 seconds (not stale), on a future `checked_at` (not stale), on a missing row (red, stale, nulls) and on a stored red tile (since becomes `checked_at`); the short state and the sentence of every tile and state of **Texts**, in RO and EN, the backup's today / yesterday / older forms and the all-clear sentence; `detail`'s answered keys only those of 294-FR-008, `{}` on a missing row; `pending_state` absent from the answer; the order of `problems` for red before amber, oldest first, a null `since` last and the tie on panel order; an empty `problems` on six greens; the read leaving the rows unchanged; 404 for a driver, a garage owner, a receptionist and a mechanic, 401 without a token, 403 for a suspended admin. A `// @traces` line names the FR ids in each test file. No end-to-end test in this story (the second story runs the Playwright flow).
+
+_From 295-service-health-tiles._
 
 ## Retired
 

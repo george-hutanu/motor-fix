@@ -65,6 +65,11 @@ beforeEach(async () => {
     data: { updatedAt: null, updatedBy: null, value: false },
     where: { key: 'maintenance_mode' },
   });
+  // Another spec file may have left it off: the reviews rule ships on.
+  await prisma.platformRule.updateMany({
+    data: { updatedAt: null, updatedBy: null, value: true },
+    where: { key: 'reviews_only_after_confirmed_job' },
+  });
   await maintenanceOff();
 });
 

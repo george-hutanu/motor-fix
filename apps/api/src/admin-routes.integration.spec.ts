@@ -36,6 +36,8 @@ const KNOWN = [
   'GET /api/v1/admin/platform-rules',
   // @traces 177-FR-001 177-FR-018
   'GET /api/v1/admin/review-reports',
+  // @traces 295-FR-001 295-FR-008
+  'GET /api/v1/admin/status',
   // @traces 298-FR-002
   'GET /api/v1/admin/system-log',
   'GET /api/v1/admin/verification-files/{id}/documents/{documentId}/pages/{n}/download-url',
@@ -175,7 +177,7 @@ describe('the admin routes', () => {
     );
   });
 
-  // @traces 165-FR-003
+  // @traces 165-FR-003 295-FR-001
   it('answer account_suspended to a suspended admin', async () => {
     const id = await account('admin');
     const db = new Client({
@@ -192,7 +194,11 @@ describe('the admin routes', () => {
     }
 
     const answers: unknown[] = [];
-    for (const path of ['/api/v1/admin/overview', '/api/v1/admin/growth']) {
+    for (const path of [
+      '/api/v1/admin/overview',
+      '/api/v1/admin/growth',
+      '/api/v1/admin/status',
+    ]) {
       const res = await call('get', path, bearer(id, 'admin'));
       answers.push([path, res.status, res.body?.code]);
     }
@@ -200,6 +206,7 @@ describe('the admin routes', () => {
     expect(answers).toEqual([
       ['/api/v1/admin/overview', 403, 'account_suspended'],
       ['/api/v1/admin/growth', 403, 'account_suspended'],
+      ['/api/v1/admin/status', 403, 'account_suspended'],
     ]);
   });
 });

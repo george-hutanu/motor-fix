@@ -10,6 +10,7 @@ import {
   QUOTE_RECEIVED_CONSUMER,
   REQUEST_RECEIVED_CONSUMER,
   REQUEST_TIMERS_CONSUMER,
+  REVIEW_DECIDED_CONSUMER,
   REVIEW_RATINGS_CONSUMER,
 } from '@motor-fix/domain';
 
@@ -59,7 +60,7 @@ describe('the outbox consumers of the worker', () => {
 
 // @traces 177-FR-011 177-FR-012 177-FR-013
 describe('the moderation timers in the worker', () => {
-  it.each(['review.reported', 'review.decided', 'review.deleted'])(
+  it.each(['review.reported', 'review.deleted'])(
     'hand %s to the moderation timers beside the ratings',
     (kind) => {
       const taking = consumers().filter((c) => c.kinds.includes(kind));
@@ -70,6 +71,22 @@ describe('the moderation timers in the worker', () => {
       );
     },
   );
+
+  // @traces 179-FR-011
+  it('hands review.decided to the timers, the ratings and the removal notices', () => {
+    const taking = consumers().filter((c) =>
+      c.kinds.includes('review.decided'),
+    );
+    expect(taking.map((c) => c.queue).sort()).toEqual(
+      [
+        MODERATION_TIMERS_CONSUMER,
+        REVIEW_DECIDED_CONSUMER,
+        REVIEW_RATINGS_CONSUMER,
+      ]
+        .map((c: Consumer) => c.queue)
+        .sort(),
+    );
+  });
 });
 
 // @traces 1390-FR-001 1390-FR-005

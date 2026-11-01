@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import type { TileKey } from '@motor-fix/contracts';
 import type { Redis } from 'ioredis';
-
-import type { TileKey } from './tiles';
 
 export type SampleStore = Pick<
   Redis,
