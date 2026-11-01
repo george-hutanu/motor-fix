@@ -917,6 +917,25 @@ export class GarageScheduleEntryDto {
   segments!: BookingSegmentDto[];
 }
 
+// One opening interval of a day, on the Bucharest wall clock.
+export class ScheduleIntervalDto {
+  @ApiProperty({ example: '08:30' })
+  from!: string;
+
+  @ApiProperty({ example: '17:00' })
+  to!: string;
+}
+
+// A day of the read's range and when the garage is open on it: none on a
+// closed day, a public holiday or while the garage has set no hours.
+export class ScheduleDayDto {
+  @ApiProperty({ example: '2026-10-09' })
+  day!: string;
+
+  @ApiProperty({ type: [ScheduleIntervalDto] })
+  open!: ScheduleIntervalDto[];
+}
+
 export class GarageScheduleDto {
   @ApiProperty({ type: [GarageScheduleEntryDto] })
   entries!: GarageScheduleEntryDto[];
@@ -934,6 +953,15 @@ export class GarageScheduleDto {
 
   @ApiProperty()
   lifts!: boolean;
+
+  @ApiProperty({ description: "The garage's lifts; 0 while lifts is false" })
+  liftCount!: number;
+
+  @ApiProperty({ description: 'Whether the garage has set opening hours' })
+  hoursSet!: boolean;
+
+  @ApiProperty({ type: [ScheduleDayDto] })
+  days!: ScheduleDayDto[];
 }
 
 // The driver's acceptance of a quote: whether the garage may read the car's
