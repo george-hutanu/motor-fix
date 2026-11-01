@@ -4,6 +4,11 @@
 export interface FinalPriceDto {
 
   /**
+   * The job's updatedAt the change was made from; a change from an older read is refused
+   */
+  basedOnUpdatedAt?: string;
+
+  /**
    * The final price, in bani
    */
   finalPriceBani: number;

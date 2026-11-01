@@ -39,8 +39,9 @@ type Flip = { enabled: boolean };
 type Channel = NotificationPreferenceDto['channel'];
 type Entry = Pick<
   NotificationPreferenceDto,
-  'alwaysSent' | 'channel' | 'channels' | 'enabled' | 'type'
+  'alwaysSent' | 'channel' | 'channels' | 'enabled' | 'fallback' | 'type'
 >;
+type Fallback = NonNullable<Entry['fallback']>;
 // A pick shown but not yet saved.
 type Pick_ = { channel: Channel };
 
@@ -64,6 +65,33 @@ const PUSH_HINTS: Partial<Record<PushState, string>> = {
   off: 'driver.notifications.pushDismissed',
   unavailable: 'shell.push.unavailable',
   unsupported: 'shell.push.unsupported',
+};
+
+const CHANNELS: readonly string[] = ['email', 'push', 'sms', 'whatsapp'];
+
+// The advice of a send that failed follows the channel it was meant for.
+const SEND_FAILED: Record<string, string> = {
+  email: 'email',
+  push: 'push',
+  sms: 'phone',
+  whatsapp: 'phone',
+};
+
+// Why the last message went by another channel; null for what this panel
+// does not know, so a newer server never breaks it.
+const fallbackKey = ({ from, reason, to }: Fallback) => {
+  if (!CHANNELS.includes(from) || !CHANNELS.includes(to)) return null;
+  const base = 'driver.notifications.fallback';
+  switch (reason) {
+    case 'no_device':
+    case 'phone_not_verified':
+    case 'sms_cap_reached':
+      return `${base}.${reason}`;
+    case 'send_failed':
+      return `${base}.send_failed.${SEND_FAILED[from]}`;
+    default:
+      return null;
+  }
 };
 
 const needsPhone = (channel: Channel) =>
@@ -103,6 +131,9 @@ export class DriverNotifications implements OnInit {
   private readonly unsettled = new Map<NotificationGroupKey, Flip>();
   // The same for a type's channel.
   private readonly picking = new Map<string, Pick_>();
+  // Types whose fallback hint a saved pick removed, with the read count then:
+  // only a read started after it may bring a hint back.
+  private readonly cleared = new Map<string, number>();
   // The driver's own types as last read, a pick in flight shown over them.
   private readonly entries = signal<ReadonlyMap<string, Entry>>(new Map());
   private readonly groupTypes = signal<
@@ -172,7 +203,7 @@ export class DriverNotifications implements OnInit {
       for (const group of answer.groups) choices[group.key] = group.enabled;
       for (const [key, flip] of this.unsettled) choices[key] = flip.enabled;
       this.consentVersion = answer.newsConsent.currentTextVersion;
-      this.showTypes(answer);
+      this.showTypes(answer, read);
       this.choices.set(choices);
     } catch {
       if (read === this.reads && !this.loaded()) this.failed.set(true);
@@ -230,12 +261,19 @@ export class DriverNotifications implements OnInit {
     }
   }
 
-  private showTypes(answer: NotificationPreferencesDto) {
+  private showTypes(answer: NotificationPreferencesDto, read: number) {
+    for (const [type, at] of this.cleared) {
+      if (read > at) this.cleared.delete(type);
+    }
     const entries = new Map<string, Entry>();
     for (const entry of answer.preferences) {
       if (entry.garageId !== null) continue;
       const pick = this.picking.get(entry.type);
-      entries.set(entry.type, pick ? { ...entry, ...pick } : entry);
+      const shown = pick ? { ...entry, ...pick } : entry;
+      entries.set(
+        entry.type,
+        this.cleared.has(entry.type) ? { ...shown, fallback: null } : shown,
+      );
     }
     this.entries.set(entries);
     this.groupTypes.set(
@@ -275,12 +313,42 @@ export class DriverNotifications implements OnInit {
           ],
         },
       });
+      this.clearFallback(type);
     } catch {
       this.show(type, pick, was);
       toast(this.i18n.t('shell.notifications.saveFailed'));
     } finally {
       if (this.picking.get(type) === pick) this.picking.delete(type);
     }
+  }
+
+  // The driver chose again: the last message's channel no longer explains it.
+  private clearFallback(type: string) {
+    this.cleared.set(type, this.reads);
+    this.entries.update((entries) => {
+      const entry = entries.get(type);
+      if (!entry?.fallback) return entries;
+      return new Map(entries).set(type, { ...entry, fallback: null });
+    });
+  }
+
+  // The hint under a type's picker, or null when there is none to show.
+  protected fallbackOf(entry: Entry) {
+    if (!entry.fallback) return null;
+    const key = fallbackKey(entry.fallback);
+    if (!key) return null;
+    const { from, to } = entry.fallback;
+    return { from: this.channelKey(from), key, to: this.channelKey(to) };
+  }
+
+  // The push hint first, then the fallback hint, of those shown.
+  protected describedBy(entry: Entry) {
+    const name = this.pickerName(entry.type);
+    const ids = [
+      this.pushHint()?.type === entry.type && `${name}-push-hint`,
+      this.fallbackOf(entry) && `${name}-fallback-hint`,
+    ].filter(Boolean);
+    return ids.length ? ids.join(' ') : null;
   }
 
   // Offers this browser as a push device when it can be one. True when the

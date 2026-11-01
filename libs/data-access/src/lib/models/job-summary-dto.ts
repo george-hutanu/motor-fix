@@ -3,6 +3,8 @@
 
 import { DriverNameDto } from '../models/driver-name-dto';
 import { JobCarDto } from '../models/job-car-dto';
+import { JobLockDto } from '../models/job-lock-dto';
+import { LastForcedUnlockDto } from '../models/last-forced-unlock-dto';
 import { RequestJobDto } from '../models/request-job-dto';
 export interface JobSummaryDto {
   bookingId: string;
@@ -24,6 +26,10 @@ export interface JobSummaryDto {
   handedOverAt: string | null;
   id: string;
   jobs: Array<RequestJobDto>;
+  lastForcedUnlock: (LastForcedUnlockDto & {
+}) | null;
+  lock: (JobLockDto & {
+}) | null;
   mechanicId: string | null;
   mechanicName: string | null;
 
@@ -59,6 +65,11 @@ export interface JobSummaryDto {
    * Steps written, 0 to 20
    */
   stepsTotal: number;
+
+  /**
+   * The job's version, to send back as basedOnUpdatedAt
+   */
+  updatedAt: string;
 
   /**
    * Whole seconds spent in work

@@ -40,6 +40,20 @@ export interface Problem {
   // A save on a brand that changed since it was read (`stale_value`): the
   // brand as it is now.
   brand?: ProblemBrand;
+  // A change on a job another person holds (`job_locked`): who holds it and
+  // since when.
+  holder?: ProblemLockHolder;
+  // A change made on a job that moved since it was read (`job_changed`): the
+  // job as it is now and its current version.
+  job?: Record<string, unknown>;
+  updatedAt?: string;
+}
+
+// The holder of a job's lock, as a refused change names them.
+export interface ProblemLockHolder {
+  firstName: string;
+  role: 'owner' | 'receptionist' | 'mechanic';
+  since: string;
 }
 
 // A brand as the admin list shows it (AdminBrandDto), framework-free.
