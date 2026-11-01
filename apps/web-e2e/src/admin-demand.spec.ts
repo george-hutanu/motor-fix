@@ -301,8 +301,20 @@ test.describe('demand against supply per brand and area @seeded', () => {
         .poll(() =>
           table
             .locator('tbody tr')
+            // The compiled template keeps no whitespace between elements
+            // (cells, the name and figures spans), so the row's text nodes
+            // are joined with a space here.
             .evaluateAll((rows) =>
-              rows.map((r) => r.textContent?.replace(/\s+/g, ' ').trim()),
+              rows.map((r) => {
+                const walker = document.createTreeWalker(
+                  r,
+                  NodeFilter.SHOW_TEXT,
+                );
+                const parts: string[] = [];
+                while (walker.nextNode())
+                  parts.push(walker.currentNode.textContent ?? '');
+                return parts.join(' ').replace(/\s+/g, ' ').trim();
+              }),
             ),
         )
         .toEqual([
@@ -316,7 +328,7 @@ test.describe('demand against supply per brand and area @seeded', () => {
       expect(urls).toHaveLength(1);
       expect(await sideways(page)).toBeLessThanOrEqual(0);
 
-      await table.getByLabel('Marcă').selectOption('BMW');
+      await table.getByRole('combobox', { name: 'Marcă' }).selectOption('BMW');
       await expect(table.locator('tbody tr')).toHaveCount(1);
       expect(urls).toHaveLength(2);
       expect(urls[1].searchParams.get('brand')).toBe('BMW');
@@ -346,7 +358,9 @@ test.describe('demand against supply per brand and area @seeded', () => {
     ).toBeVisible();
 
     fail = true;
-    await table.getByLabel('Zonă').selectOption('sector-3');
+    await table
+      .getByRole('combobox', { name: 'Zonă' })
+      .selectOption('sector-3');
     await expect(table.getByRole('alert')).toContainText(
       'Tabelul nu a putut fi citit.',
     );
