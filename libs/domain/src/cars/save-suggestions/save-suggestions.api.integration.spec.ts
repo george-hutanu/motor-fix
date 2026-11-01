@@ -165,7 +165,7 @@ describe('POST /me/save-suggestions/:garageId/dismiss', () => {
     });
 
     // The code, validation_failed, is the API's global filter's, which this
-    // app does not boot.
+    // app does not boot: apps/api/src/save-suggestions.problem.integration.spec.ts checks it.
     it('answers 400 to a malformed id and records nothing', async () => {
       const andrei = await world.account('Andrei Marin');
 
