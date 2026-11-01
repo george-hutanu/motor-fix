@@ -80,8 +80,8 @@ describe('the api probe', () => {
   });
 
   describe('past ten seconds', () => {
-    beforeEach(() => jest.useFakeTimers());
-    afterEach(() => jest.useRealTimers());
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
 
     it('fails with a timeout and cancels the call', async () => {
       const d = deps({
@@ -91,14 +91,14 @@ describe('the api probe', () => {
         }) as typeof fetch,
       });
       const result = probe('api', d);
-      await jest.advanceTimersByTimeAsync(9_999);
+      await vi.advanceTimersByTimeAsync(9_999);
       let settled = false;
       void result.then(() => {
         settled = true;
       });
       await Promise.resolve();
       expect(settled).toBe(false);
-      await jest.advanceTimersByTimeAsync(1);
+      await vi.advanceTimersByTimeAsync(1);
       expect(await result).toEqual({ ok: false, reason: 'timeout' });
       expect(d.signals[0]?.aborted).toBe(true);
     });
@@ -363,8 +363,8 @@ describe('any probe', () => {
 });
 
 describe('a provider call past ten seconds', () => {
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
 
   const hang = () => new Promise<never>(() => undefined);
 
@@ -382,7 +382,7 @@ describe('a provider call past ten seconds', () => {
         },
       }),
     );
-    await jest.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(await result).toEqual({ ok: false, reason: 'timeout' });
     expect(signal?.aborted).toBe(true);
   });
@@ -400,7 +400,7 @@ describe('a provider call past ten seconds', () => {
         },
       }),
     );
-    await jest.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(await result).toEqual({ ok: false, reason: 'timeout' });
     expect(signal?.aborted).toBe(true);
   });

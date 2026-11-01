@@ -74,7 +74,7 @@ const reporting = () =>
     verification(),
     new AuditService(),
     outbox,
-    { notify: jest.fn() } as unknown as NotificationsService,
+    { notify: vi.fn() } as unknown as NotificationsService,
     {},
   );
 
@@ -302,7 +302,9 @@ describe('confirming the reports', () => {
       decided: await decisions('confirmed'),
       suspended: await suspensions(),
     };
-    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const log = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
 
     await service().decide(ioana, fileId, confirmed);
 

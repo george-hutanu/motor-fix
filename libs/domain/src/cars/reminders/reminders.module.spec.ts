@@ -8,12 +8,12 @@ import type { DailyTask } from '../../scheduler/daily';
 import { bucharestDaily } from '../../scheduler/daily';
 
 describe('the reminders failure handler', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   // @traces 297-FR-007
   it('writes job_failed when an unrecoverable error ends a job before its last attempt', () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation();
-    const write = jest.spyOn(systemLog, 'write').mockResolvedValue('written');
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const write = vi.spyOn(systemLog, 'write').mockResolvedValue('written');
     const s = new RemindersScheduler(
       {} as Queue,
       bucharestDaily(9),
@@ -45,9 +45,9 @@ describe('the daily run', () => {
   const day = { data: { day: '2026-10-20' } } as Job<{ day: string }>;
   const scheduler = (tasks: DailyTask[]) => {
     const s = new RemindersScheduler(
-      { add: jest.fn() } as unknown as Queue,
+      { add: vi.fn() } as unknown as Queue,
       bucharestDaily(9),
-      { run: jest.fn() } as unknown as RemindersService,
+      { run: vi.fn() } as unknown as RemindersService,
       tasks,
     );
     s.now = () => new Date('2026-10-20T06:00:00Z');
@@ -56,10 +56,10 @@ describe('the daily run', () => {
 
   it('runs every task after one that throws, then fails the job with its error', async () => {
     const broken = new Error('PUBLIC_WEB_URL is not set');
-    const after = { run: jest.fn() };
+    const after = { run: vi.fn() };
 
     await expect(
-      scheduler([{ run: jest.fn().mockRejectedValue(broken) }, after]).handle(
+      scheduler([{ run: vi.fn().mockRejectedValue(broken) }, after]).handle(
         day,
       ),
     ).rejects.toBe(broken);
@@ -71,8 +71,8 @@ describe('the daily run', () => {
     const second = new Error('second');
 
     const run = scheduler([
-      { run: jest.fn().mockRejectedValue(first) },
-      { run: jest.fn().mockRejectedValue(second) },
+      { run: vi.fn().mockRejectedValue(first) },
+      { run: vi.fn().mockRejectedValue(second) },
     ]).handle(day);
 
     await expect(run).rejects.toBeInstanceOf(AggregateError);
@@ -80,7 +80,7 @@ describe('the daily run', () => {
   });
 
   it('finishes the job when every task runs', async () => {
-    const tasks = [{ run: jest.fn() }, { run: jest.fn() }];
+    const tasks = [{ run: vi.fn() }, { run: vi.fn() }];
 
     await scheduler(tasks).handle(day);
 

@@ -7,8 +7,10 @@ import type { Actor } from '../../auth/policy';
 import type { EventPort } from '../../events/event.port';
 import type { PrismaClient } from '../../generated/prisma/client';
 
-jest.mock('./feature-on', () => ({
-  featureOn: jest.fn(jest.requireActual('./feature-on').featureOn),
+vi.mock('./feature-on', async (actualModule) => ({
+  featureOn: vi.fn(
+    (await actualModule<typeof import('./feature-on')>()).featureOn,
+  ),
 }));
 
 const garageId = '00000000-0000-4000-8000-000000000001';
@@ -22,26 +24,28 @@ const owner = {
 
 function service(stored: Record<string, boolean>) {
   const tx = {
-    $queryRaw: jest.fn().mockResolvedValue([{ id: garageId }]),
+    $queryRaw: vi.fn().mockResolvedValue([{ id: garageId }]),
     garageFeature: {
-      findUnique: jest.fn(({ where }) => {
+      findUnique: vi.fn(({ where }) => {
         const key = where.garageId_key.key as string;
         return Promise.resolve(key in stored ? { enabled: stored[key] } : null);
       }),
-      upsert: jest.fn().mockResolvedValue({}),
+      upsert: vi.fn().mockResolvedValue({}),
     },
   };
   const prisma = {
     $transaction: (fn: (t: typeof tx) => unknown) => fn(tx),
   } as unknown as PrismaClient;
-  const audit = { record: jest.fn() } as unknown as AuditPort;
-  const events = { record: jest.fn() } as unknown as EventPort;
+  const audit = { record: vi.fn() } as unknown as AuditPort;
+  const events = { record: vi.fn() } as unknown as EventPort;
   return { svc: new GarageFeaturesService(prisma, audit, events), tx };
 }
 
 // @traces 398-FR-007
 describe('GarageFeaturesService.set reads the switches through featureOn', () => {
-  beforeEach(() => jest.mocked(featureOn).mockClear());
+  beforeEach(() => {
+    vi.mocked(featureOn).mockClear();
+  });
 
   it('asks featureOn for every key inside the write transaction', async () => {
     const { svc, tx } = service({ lift_schedule: false });

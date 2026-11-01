@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { provideRouter, Router, RouterOutlet } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
@@ -371,6 +371,7 @@ describe('the dashboard view lists', () => {
   });
 
   // @traces 102-FR-004
+  // @traces 1369-FR-002
   it('keeps the team and the prices from a receptionist, and gives her the reviews and the garage profile', () => {
     expect(paths('garage', RECEPTIONIST)).toEqual([
       '',
@@ -405,6 +406,7 @@ describe('the dashboard view lists', () => {
 
   // @traces 133-FR-002 133-FR-005
   // @traces 102-FR-004
+  // @traces 1369-FR-002
   it('gives the owner and the receptionist the garage profile view, its body downloaded with the view', async () => {
     const profile = DASHBOARDS.garage.views.find(
       (view) => view.path === 'profile',
@@ -729,6 +731,7 @@ async function open(
     garageId: ATELIER,
   } as unknown as MeDto);
   TestBed.configureTestingModule({
+    deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [
       provideRouter([
         {
@@ -762,6 +765,7 @@ async function open(
       {
         provide: GaragesService,
         useValue: {
+          garageSchedule: () => new Promise(() => undefined),
           verificationStatusControllerRead: () => new Promise(() => undefined),
         },
       },
@@ -873,15 +877,22 @@ describe('the garage menu of each role, read from the table', () => {
 });
 
 describe('the dashboard view routes', () => {
-  // @traces 097-FR-004
+  // @traces 097-FR-004 151-FR-001
   it('opens an allowed view at its own address, with the empty state of that view', async () => {
-    const { element } = await open('/app/garage/schedule', OWNER);
+    // Programări keeps its sentence while the garage schedules no lifts.
+    const { element } = await open(
+      '/app/garage/schedule',
+      OWNER,
+      'garage',
+      access('approved', { lift_schedule: false }),
+    );
 
     expect(TestBed.inject(Router).url).toBe('/app/garage/schedule');
     expect(element.textContent).toContain(
       'Aici vei vedea programările pe zile, pe mecanici și pe elevatoare.',
     );
     expect(element.textContent).not.toContain('Nimic aici încă.');
+    expect(element.querySelector('[data-lift-schedule]')).toBeNull();
   });
 
   // @traces 030-FR-009

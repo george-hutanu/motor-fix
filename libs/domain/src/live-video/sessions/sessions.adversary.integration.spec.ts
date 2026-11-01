@@ -56,27 +56,24 @@ const written = async (jobId: string) => ({
 });
 
 beforeEach(() => {
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 1250-FR-005
 describe('a start while the provider misbehaves', () => {
-  it('answers 503 within the five-second limit when the provider is late, and closes the input it opens afterwards', async () => {
+  it('answers 503 within the five-second limit when the provider is late, and deletes the input it opens afterwards', async () => {
     const s = await setting();
-    const close = jest.spyOn(fake(), 'closeInput');
-    jest
-      .spyOn(fake(), 'createInput')
-      .mockImplementation(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(
-              () =>
-                resolve({ inputId: 'late', publishUrl: 'https://x.test/p' }),
-              6000,
-            ),
+    const close = vi.spyOn(fake(), 'deleteInput');
+    vi.spyOn(fake(), 'createInput').mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () => resolve({ inputId: 'late', publishUrl: 'https://x.test/p' }),
+            6000,
           ),
-      );
+        ),
+    );
     const started = Date.now();
 
     const res = await start(s.live, s.costel);
@@ -95,13 +92,9 @@ describe('a start while the provider misbehaves', () => {
 
   it('never repeats the provider’s error text, url or token in the answer', async () => {
     const s = await setting();
-    jest
-      .spyOn(fake(), 'createInput')
-      .mockRejectedValue(
-        new Error(
-          'https://api.cloudflare.com/x?token=SECRET-TOKEN-123 refused',
-        ),
-      );
+    vi.spyOn(fake(), 'createInput').mockRejectedValue(
+      new Error('https://api.cloudflare.com/x?token=SECRET-TOKEN-123 refused'),
+    );
 
     const res = await start(s.live, s.owner);
 
@@ -111,12 +104,12 @@ describe('a start while the provider misbehaves', () => {
 
   it('counts the warning for a failed provider without a secret or a person', async () => {
     const s = await setting();
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
-    jest
-      .spyOn(fake(), 'createInput')
-      .mockRejectedValue(new Error('boom https://x/?token=SECRET-TOKEN-123'));
+    vi.spyOn(fake(), 'createInput').mockRejectedValue(
+      new Error('boom https://x/?token=SECRET-TOKEN-123'),
+    );
 
     await start(s.live, s.costel);
 
@@ -128,9 +121,9 @@ describe('a start while the provider misbehaves', () => {
 
   it('can start again right after a failed start', async () => {
     const s = await setting();
-    jest
-      .spyOn(fake(), 'createInput')
-      .mockResolvedValueOnce({ unavailable: 'timeout' });
+    vi.spyOn(fake(), 'createInput').mockResolvedValueOnce({
+      unavailable: 'timeout',
+    });
 
     expect((await start(s.live, s.costel)).status).toBe(503);
     const again = await start(s.live, s.costel);
@@ -141,7 +134,7 @@ describe('a start while the provider misbehaves', () => {
 
   it('gives the provider the session id alone, and returns that same id', async () => {
     const s = await setting();
-    const create = jest.spyOn(fake(), 'createInput');
+    const create = vi.spyOn(fake(), 'createInput');
 
     const res = await start(s.live, s.costel);
 
@@ -150,12 +143,12 @@ describe('a start while the provider misbehaves', () => {
     expect(create.mock.calls[0]?.[0]).toEqual({ id: res.body.liveSessionId });
   });
 
-  it('answers 409 and closes the created input when a live session appears during the provider call', async () => {
+  it('answers 409 and deletes the created input when a live session appears during the provider call', async () => {
     const s = await setting();
-    const close = jest.spyOn(fake(), 'closeInput');
+    const close = vi.spyOn(fake(), 'deleteInput');
     const real = fake().createInput.bind(fake());
     let made = '';
-    jest.spyOn(fake(), 'createInput').mockImplementation(async (session) => {
+    vi.spyOn(fake(), 'createInput').mockImplementation(async (session) => {
       await prisma.liveSession.create({
         data: {
           garageId: s.dinamo.garage.id,
@@ -178,13 +171,13 @@ describe('a start while the provider misbehaves', () => {
     expect(await rows(s.job.id)).toHaveLength(1);
   });
 
-  it('still answers 409 when closing the loser’s input throws', async () => {
+  it('still answers 409 when deleting the loser’s input throws', async () => {
     const s = await setting();
-    jest
-      .spyOn(fake(), 'closeInput')
-      .mockRejectedValue(new Error('close failed'));
+    vi.spyOn(fake(), 'deleteInput').mockRejectedValue(
+      new Error('close failed'),
+    );
     const real = fake().createInput.bind(fake());
-    jest.spyOn(fake(), 'createInput').mockImplementation(async (session) => {
+    vi.spyOn(fake(), 'createInput').mockImplementation(async (session) => {
       await prisma.liveSession.create({
         data: {
           garageId: s.dinamo.garage.id,
@@ -209,7 +202,7 @@ describe('a start that must not reach the provider', () => {
     const closed = await setting('done');
     const busy = await setting();
     await start(busy.live, busy.costel);
-    const create = jest.spyOn(fake(), 'createInput');
+    const create = vi.spyOn(fake(), 'createInput');
 
     const answers = [
       await start(closed.live, closed.costel),

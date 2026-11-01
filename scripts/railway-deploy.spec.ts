@@ -229,7 +229,7 @@ describe('railway deploy', () => {
   // @traces 1370-FR-004
   it("names the api's pre-deploy step, seed included, when staging's api deployment fails, and restores it", async () => {
     statuses = ['FAILED'];
-    jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
     const staging = servicesFor('staging', ALL);
 
     await expect(
@@ -249,7 +249,7 @@ describe('railway deploy', () => {
       input: { source: { image: 'svc-api@sha256:old' } },
       serviceId: 'svc-api',
     });
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('puts the previous image back when the run is cancelled mid-deploy', async () => {
@@ -726,12 +726,12 @@ describe('the services each environment deploys', () => {
 
   beforeEach(() => {
     notices = [];
-    jest.spyOn(console, 'log').mockImplementation((line: string) => {
+    vi.spyOn(console, 'log').mockImplementation((line: string) => {
       notices.push(line);
     });
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   const names = (list: Service[]) => list.map((s) => s.name);
 
@@ -852,7 +852,7 @@ describe('a staging release whose identity server fails its health check', () =>
 
   beforeEach(async () => {
     calls = [];
-    jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
     server = createServer((req, res) => {
       let body = '';
       req.on('data', (chunk) => {
@@ -875,7 +875,7 @@ describe('a staging release whose identity server fails its health check', () =>
   });
 
   afterEach(async () => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
     await new Promise((resolve) => server.close(resolve));
   });
 

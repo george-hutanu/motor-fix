@@ -69,7 +69,6 @@
   "home": {
     "empty": {
       "brands": "Aici apar mărcile cele mai cerute luna asta.",
-      "funnel": "Aici apare drumul de la vizitele pe profil la cereri, pe săptămâni.",
       "kpi": "Aici apar cifrele zilei: cereri, programări, lucrări și încasări.",
       "load": "Aici apare încărcarea fiecărui mecanic pe ziua de azi.",
       "now": "Aici apar lucrările în curs, cu poze, video și live din atelier.",
@@ -179,6 +178,7 @@
   },
   "jobs": {
     "finalPrice": {
+      "aboveQuote": "Peste ofertă",
       "cancel": "Renunță",
       "correct": "Corectează",
       "correctTitle": "Corectează prețul final",
@@ -198,6 +198,7 @@
         "job_not_done": "Marchează întâi lucrarea ca gata",
         "not_handed_over": "Lucrarea nu a fost încă predată"
       },
+      "quote": "Ofertă {range}",
       "save": "Salvează"
     },
     "noMechanic": "Fără mecanic",
@@ -328,6 +329,25 @@
       "sendFailed": "Nu am putut trimite documentele. Încearcă din nou.",
       "title": "Încarcă documentele",
       "unavailable": "Încărcarea nu e disponibilă acum"
+    }
+  },
+  "liftSchedule": {
+    "blocked": "Blocat",
+    "closed": "Închis azi",
+    "empty": "Nicio programare azi",
+    "failed": "Programul nu s‑a încărcat",
+    "lift": "Elevator {n}",
+    "minutes": "{time}, {minutes} min",
+    "noLift": "Fără elevator",
+    "now": "acum, {time}",
+    "offline": "Fără legătură: programul se poate schimba",
+    "retry": "Reîncearcă",
+    "state": {
+      "blocked": "blocat",
+      "done": "gata",
+      "paused": "în pauză",
+      "todo": "programată",
+      "work": "în lucru"
     }
   },
   "mechanicCard": {
@@ -625,11 +645,13 @@
       "duration": "{minutes} min",
       "lift": "Elevator",
       "liftNumber": "Elevator {n}",
+      "liftRequired": "Alege un elevator sau Fără elevator.",
       "mechanic": "Mecanic",
       "mechanicRequired": "Alege un mecanic.",
       "noLift": "Fără elevator",
       "noMechanics": "Adaugă mai întâi un mecanic în echipă.",
       "openTeam": "Deschide echipa",
+      "pickLift": "Alege elevatorul",
       "pickMechanic": "Alege mecanicul",
       "problem": {
         "invalid_transition": {
@@ -640,7 +662,8 @@
         "lift_busy": "Elevatorul {lift} e ocupat la ora asta",
         "mechanic_busy": "{name} e ocupat la ora asta",
         "mechanic_unavailable": "Mecanicul nu e disponibil",
-        "outside_hours": "În afara programului"
+        "outside_hours": "În afara programului",
+        "slot_taken": "Locul tocmai a fost ocupat"
       },
       "submit": "Confirmă",
       "title": "Confirmă programarea"
@@ -797,6 +820,60 @@
     "moreFailed": "Nu am putut încărca mai multe recenzii.",
     "new": "Nou",
     "notViaMotorfix": "Nu prin MotorFix",
+    "reply": {
+      "button": "Răspunde",
+      "count": "{n} / {max}",
+      "done": "Răspunsul e public, sub recenzie.",
+      "editButton": "Editează răspunsul",
+      "edited": "Editat · {day}",
+      "field": {
+        "length": "Răspunsul are între 1 și 1.000 de caractere."
+      },
+      "hint": "Răspunsul e public și apare sub recenzie.",
+      "label": "Răspunsul tău",
+      "problem": {
+        "already_replied": "Recenzia are deja un răspuns.",
+        "forbidden": "Doar proprietarul poate răspunde.",
+        "not_found": "Recenzia nu mai există.",
+        "reply_not_public": "Răspunsul e raportat și nu poate fi editat acum.",
+        "reply_removed": "Răspunsul a fost eliminat de un admin.",
+        "review_not_public": "Recenzia nu mai e publică."
+      },
+      "reported": "Raportat · ascuns până decide un admin",
+      "reviewEdited": "Recenzia a fost editată după răspunsul tău",
+      "submit": "Publică răspunsul",
+      "title": "Răspunde la recenzie",
+      "titleEdit": "Editează răspunsul"
+    },
+    "report": {
+      "button": "Raportează",
+      "cancel": "Renunță",
+      "count": "{n} / {max}",
+      "done": "Raportată. Un admin decide în 48 de ore.",
+      "kept": "Păstrată de un admin; poate fi raportată din nou doar după ce autorul o editează.",
+      "note": "Recenzia e ascunsă de pe profil până decide un admin, în cel mult 48 de ore.",
+      "problem": {
+        "already_kept": "Păstrată de un admin; poate fi raportată din nou doar după ce autorul o editează.",
+        "already_reported": "Recenzia e deja raportată.",
+        "forbidden": "Doar proprietarul poate raporta o recenzie.",
+        "not_found": "Recenzia nu mai este disponibilă."
+      },
+      "reason": {
+        "ads": "Reclame",
+        "fake_or_conflicted": "Recenzie falsă sau cu conflict de interese",
+        "hate": "Ură sau discriminare",
+        "insults": "Insulte",
+        "off_topic": "În afara subiectului",
+        "other": "Altceva",
+        "personal_data": "Date personale",
+        "promotion": "Promovarea altor servicii",
+        "threats_or_legal_accusations": "Amenințări sau acuzații legale"
+      },
+      "reasons": "Motivul",
+      "submit": "Trimite raportul",
+      "text": "Spune‑ne ce nu e în regulă",
+      "title": "Raportează recenzia"
+    },
     "reported": "Raportată · ascunsă de pe profil până decide un admin",
     "retry": "Încearcă din nou",
     "score": "{rating} / 5",
@@ -894,7 +971,17 @@
   "verification": {
     "checkIn": "O verificăm în 1–2 zile lucrătoare.",
     "contact": "Contactează MotorFix",
+    "correct": "Corectează listarea",
     "loadFailed": "Nu am putut încărca starea verificării.",
     "title": "Profilul tău e în verificare"
+  },
+  "weekly": {
+    "empty": "Încă nu sunt date. Primele cifre apar după prima săptămână întreagă.",
+    "error": "Nu am putut încărca cifrele.",
+    "noViews": "Săptămâna trecută nu a avut vizualizări.",
+    "requests": "Cereri primite",
+    "sentence": "Săptămâna trecută, {pct} din vizualizări au devenit cereri.",
+    "views": "Vizualizări profil",
+    "week": "S"
   }
 }

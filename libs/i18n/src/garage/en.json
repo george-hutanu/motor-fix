@@ -69,7 +69,6 @@
   "home": {
     "empty": {
       "brands": "The most requested brands this month appear here.",
-      "funnel": "The path from profile views to requests appears here, by week.",
       "kpi": "Today's numbers appear here: requests, bookings, jobs and takings.",
       "load": "Each mechanic's load for today appears here.",
       "now": "Jobs in progress appear here, with photos, video and live from the workshop.",
@@ -177,6 +176,7 @@
   },
   "jobs": {
     "finalPrice": {
+      "aboveQuote": "Above the quote",
       "cancel": "Cancel",
       "correct": "Correct",
       "correctTitle": "Correct the final price",
@@ -196,6 +196,7 @@
         "job_not_done": "Mark the job as done first",
         "not_handed_over": "The job has not been handed over yet"
       },
+      "quote": "Quote {range}",
       "save": "Save"
     },
     "noMechanic": "No mechanic",
@@ -326,6 +327,25 @@
       "sendFailed": "We could not send the documents. Try again.",
       "title": "Upload the documents",
       "unavailable": "Upload is not available right now"
+    }
+  },
+  "liftSchedule": {
+    "blocked": "Blocked",
+    "closed": "Closed today",
+    "empty": "No bookings today",
+    "failed": "The schedule did not load",
+    "lift": "Lift {n}",
+    "minutes": "{time}, {minutes} min",
+    "noLift": "No lift",
+    "now": "now, {time}",
+    "offline": "Offline: the schedule may have changed",
+    "retry": "Retry",
+    "state": {
+      "blocked": "blocked",
+      "done": "done",
+      "paused": "paused",
+      "todo": "scheduled",
+      "work": "in work"
     }
   },
   "mechanicCard": {
@@ -621,11 +641,13 @@
       "duration": "{minutes} min",
       "lift": "Lift",
       "liftNumber": "Lift {n}",
+      "liftRequired": "Choose a lift or No lift.",
       "mechanic": "Mechanic",
       "mechanicRequired": "Choose a mechanic.",
       "noLift": "No lift",
       "noMechanics": "Add a mechanic to your team first.",
       "openTeam": "Open the team",
+      "pickLift": "Choose a lift",
       "pickMechanic": "Choose the mechanic",
       "problem": {
         "invalid_transition": {
@@ -636,7 +658,8 @@
         "lift_busy": "Lift {lift} is busy at this time",
         "mechanic_busy": "{name} is busy at this time",
         "mechanic_unavailable": "The mechanic is not available",
-        "outside_hours": "Outside opening hours"
+        "outside_hours": "Outside opening hours",
+        "slot_taken": "The slot was just taken"
       },
       "submit": "Confirm",
       "title": "Confirm the booking"
@@ -790,6 +813,60 @@
     "moreFailed": "We could not load more reviews.",
     "new": "New",
     "notViaMotorfix": "Not through MotorFix",
+    "reply": {
+      "button": "Reply",
+      "count": "{n} / {max}",
+      "done": "Your reply is public, under the review.",
+      "editButton": "Edit the reply",
+      "edited": "Edited · {day}",
+      "field": {
+        "length": "The reply is between 1 and 1,000 characters."
+      },
+      "hint": "Your reply is public and appears under the review.",
+      "label": "Your reply",
+      "problem": {
+        "already_replied": "The review already has a reply.",
+        "forbidden": "Only the owner can reply.",
+        "not_found": "The review no longer exists.",
+        "reply_not_public": "The reply is reported and cannot be edited now.",
+        "reply_removed": "The reply was removed by an admin.",
+        "review_not_public": "The review is no longer public."
+      },
+      "reported": "Reported · hidden until an admin decides",
+      "reviewEdited": "The review was edited after your reply",
+      "submit": "Publish the reply",
+      "title": "Reply to the review",
+      "titleEdit": "Edit the reply"
+    },
+    "report": {
+      "button": "Report",
+      "cancel": "Cancel",
+      "count": "{n} / {max}",
+      "done": "Reported. An admin decides within 48 hours.",
+      "kept": "Kept by an admin; it can be reported again only after the author edits it.",
+      "note": "The review is hidden from the profile until an admin decides, within 48 hours.",
+      "problem": {
+        "already_kept": "Kept by an admin; it can be reported again only after the author edits it.",
+        "already_reported": "This review is already reported.",
+        "forbidden": "Only the owner can report a review.",
+        "not_found": "This review is no longer available."
+      },
+      "reason": {
+        "ads": "Ads",
+        "fake_or_conflicted": "Fake or conflicted review",
+        "hate": "Hate or discrimination",
+        "insults": "Insults",
+        "off_topic": "Off topic",
+        "other": "Something else",
+        "personal_data": "Personal data",
+        "promotion": "Promotion of other services",
+        "threats_or_legal_accusations": "Threats or legal accusations"
+      },
+      "reasons": "Reason",
+      "submit": "Send the report",
+      "text": "Tell us what is wrong",
+      "title": "Report the review"
+    },
     "reported": "Reported · hidden from the profile until an admin decides",
     "retry": "Try again",
     "score": "{rating} / 5",
@@ -884,7 +961,17 @@
   "verification": {
     "checkIn": "We check it within 1–2 working days.",
     "contact": "Contact MotorFix",
+    "correct": "Correct the listing",
     "loadFailed": "We could not load the verification status.",
     "title": "Your profile is being checked"
+  },
+  "weekly": {
+    "empty": "No data yet. The first figures appear after the first full week.",
+    "error": "We could not load the figures.",
+    "noViews": "Last week had no views.",
+    "requests": "Requests received",
+    "sentence": "Last week, {pct} of views turned into requests.",
+    "views": "Profile views",
+    "week": "W"
   }
 }

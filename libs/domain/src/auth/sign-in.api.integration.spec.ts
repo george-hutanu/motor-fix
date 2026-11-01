@@ -82,7 +82,7 @@ beforeEach(async () => {
     ...(await redis.keys(`${ROUTE_LIMITS.signInAttempts.key}:*`)),
   ];
   if (keys.length) await redis.del(...keys);
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -331,7 +331,7 @@ describe('signing in with credentials that do not match', () => {
   });
 
   it('runs the password check in every one of those cases', async () => {
-    const check = jest.spyOn(password, 'verifyPassword');
+    const check = vi.spyOn(password, 'verifyPassword');
 
     await answers();
 
@@ -366,11 +366,11 @@ describe('signing in with credentials that do not match', () => {
   it('logs a failed attempt with its reason and the caller masked, never the e-mail, password or full address', async () => {
     const lines: string[] = [];
     for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-      jest
-        .spyOn(Logger.prototype, level)
-        .mockImplementation((...args: unknown[]) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation(
+        (...args: unknown[]) => {
           lines.push(JSON.stringify(args));
-        });
+        },
+      );
     }
     await person('andrei@example.test', ['driver']);
 
@@ -520,7 +520,7 @@ describe('attempt limits', () => {
   });
 
   it('still signs in when Redis cannot be reached', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     await person('andrei@example.test', ['driver']);
     const offline = await start('redis://127.0.0.1:1');
 
@@ -545,7 +545,7 @@ describe('attempt limits', () => {
 
   // @traces 976-FR-004
   it('still signs in when Redis takes the connection and never answers', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     await person('andrei@example.test', ['driver']);
     const sockets: import('node:net').Socket[] = [];
     const silent: Server = createServer((socket) => sockets.push(socket));
@@ -837,7 +837,7 @@ describe('renewing with the refresh token', () => {
 
 describe('renewing while the database is unreachable', () => {
   it('answers a server error and keeps the cookie', async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const down = await start(
       redisUrl,
       'postgresql://nobody@127.0.0.1:1/nothing?connect_timeout=2',

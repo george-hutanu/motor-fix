@@ -23,8 +23,8 @@ const located = (width: number, height: number) =>
     .toBuffer();
 
 // Each test encodes every responsive variant (AVIF, WebP, JPEG): seconds
-// apiece on a loaded CI runner, past Jest's 5 s default.
-jest.setTimeout(60_000);
+// apiece on a loaded CI runner, past the runner's 5 s default.
+vi.setConfig({ hookTimeout: 60_000, testTimeout: 60_000 });
 
 describe('processing a photo', () => {
   const store = new S3TestStore();
@@ -203,7 +203,7 @@ describe('processing a photo', () => {
   it('leaves no copy behind when the photo is removed while it is processed', async () => {
     store.put(KEY, await located(800, 600), 'image/jpeg');
     const put = storage.putObject.bind(storage);
-    const putting = jest
+    const putting = vi
       .spyOn(storage, 'putObject')
       .mockImplementationOnce(async (...args) => {
         store.objects.delete(KEY);
@@ -334,7 +334,7 @@ describe('processing a photo', () => {
       store.put(KEY, original, 'image/jpeg');
       const written: string[] = [];
       const put = storage.putObject.bind(storage);
-      const putting = jest
+      const putting = vi
         .spyOn(storage, 'putObject')
         .mockImplementation(async (...args) => {
           written.push(args[0]);
@@ -362,7 +362,7 @@ describe('processing a photo', () => {
       store.put(KEY, await located(1200, 900), 'image/jpeg');
       const put = storage.putObject.bind(storage);
       let writes = 0;
-      const putting = jest
+      const putting = vi
         .spyOn(storage, 'putObject')
         .mockImplementation(async (...args) => {
           writes += 1;

@@ -1,6 +1,6 @@
 ---
 capability: platform
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 421-monorepo-platform
   - 422-private-file-storage
@@ -125,7 +125,11 @@ features:
   - 1349-cockpit-chart-settle
   - 1257-quote-reminders
   - 1315-optimistic-toggles
+  - 1406-integration-shards
   - 1379-provider-calls-worker
+  - 1338-nest-vitest
+  - 1411-1315-qa-fixes
+  - 1407-toggle-idempotency
 ---
 
 # Capability: Platform
@@ -274,9 +278,9 @@ _From 516-production-release-queue._
 
 _From 431-mutation-testing._
 
-### 431-FR-002 — A project's mutation run MUST mutate only that project's non-test, non-generated TypeScript source and MUST run that project's own Jest configuration, with the same runtime options as its `test` target.
+### 1338-FR-008 — The mutation run of each in-scope project MUST use Stryker's Vitest runner with that project's own test configuration and the same runtime options as its `test` target; the Angular projects' runs keep the Jest runner (modifies 431-FR-002; 431-FR-001's project list and 1159-FR-016's Jest-options read still hold as written).
 
-_From 431-mutation-testing._
+_From 1338-nest-vitest._
 
 ### 431-FR-003 — A mutation run MUST report a mutation score and MUST exit non-zero when the score is below the project's `thresholds.break`.
 
@@ -1412,9 +1416,9 @@ _From 974-stop-test-stack-on-merge._
 
 _From 974-stop-test-stack-on-merge._
 
-### 976-FR-001 — Every `libs/domain` integration spec MUST run its tests and hooks under an explicit 30-second limit, set once for `*.integration.spec.ts` files, so database setup and bulk work no longer fail on Jest's default 5-second limit on a loaded machine; unit specs keep the default, and a test or hook that still exceeds the limit fails with Jest's message naming it.
+### 1338-FR-006 — Every `libs/domain` `*.integration.spec.ts` test and hook MUST keep an explicit 30-second limit under Vitest, set once for the integration files, failing with a message naming the test; unit specs keep the runner's default (modifies 976-FR-001).
 
-_From 976-integration-specs-under-load._
+_From 1338-nest-vitest._
 
 ### 976-FR-002 — No `libs/domain` integration spec MUST sleep a fixed wall-clock interval and then assert that asynchronous work (a queued job, a published live message, a queue worker, an outbox relay, an e-mail) has finished. Each such wait is replaced by waiting for the asserted condition up to a deadline, or by faked time advanced past the window where no real I/O is awaited inside it.
 
@@ -1752,9 +1756,9 @@ _From 1159-mutation-shards._
 
 _From 1159-mutation-shards._
 
-### 1159-FR-011 — Every matrix job MUST have its own PostgreSQL (the repository's image, `ghcr.io/george-hutanu/motor-fix-postgres:18`) and Redis service containers and migrate its database before mutating; integration specs MUST stay in the mutation run; Stryker's concurrency MUST be 1 for each project whose `src` holds an `*.integration.spec.ts`.
+### 1338-FR-009 — `libs/domain`'s mutation run MUST start more than one Stryker worker (`concurrency: 1` removed from `libs/domain/stryker.config.json`), each worker's specs reaching their own test database named by `STRYKER_MUTATOR_WORKER` and migrated before mutating; workers never share a database. Other projects with integration specs (`apps/api`, `apps/mcp`, `apps/worker`, `libs/mcp-tools`) keep today's rule (modifies 1159-FR-011).
 
-_From 1159-mutation-shards._
+_From 1338-nest-vitest._
 
 ### 1159-FR-012 — Stryker's initial test run timeout MUST be longer than its 5-minute default for every project, set in one place (30 minutes, in `scripts/mutation.ts`).
 
@@ -1784,13 +1788,13 @@ _From 1159-mutation-shards._
 
 _From 1170-integration-on-demand._
 
-### 1170-FR-002 — An "Integration tests" job runs the integration suite (`JEST_SUITE=integration`) on a GitHub runner with the repository's own PostgreSQL 18 + PostGIS 3.6 image (`ghcr.io/george-hutanu/motor-fix-postgres:18`, `pg_stat_statements` preloaded by the image, no `ALTER SYSTEM` step) and Redis service containers and the migrations applied. It runs when CI is run by hand (`gh workflow run ci.yml --ref <branch>`, which runs every job on every project) and when a caller of the workflow asks for it (`workflow_call` input `integration: true`); it never runs on `pull_request`.
+### 1406-FR-001 — The `integration` job of `.github/workflows/ci.yml` MUST run as a matrix of shards: `N` shards for `libs/domain`, each running `domain:test` with `JEST_SUITE=integration` and Jest `--shard=i/N` (`i` = 1..`N`), and one shard for every other Nx project (`run-many`, `domain` excluded, `--passWithNoTests`), so that together the shards run every `*.integration.spec.ts` of the repository exactly once per run. The matrix MUST keep the job's trigger: `workflow_dispatch` or the `workflow_call` input `integration`, never `pull_request`.
 
-_From 1170-integration-on-demand._
+_From 1406-integration-shards._
 
-### 1170-FR-003 — `CI OK` needs the integration job and counts it skipped as passed, as it does the E2E job; the merge gate is unchanged (a skipped check is green; a later skip never hides an on-demand run's failure, as for E2E).
+### 1406-FR-005 — `ci-ok` MUST need the sharded job so that a failed or cancelled shard fails `CI OK` and a skipped matrix (a `pull_request` run) counts as passed; `release.yml`'s `checks` call (`integration: true`) MUST be unchanged and MUST keep `images`, `staging` and `production` waiting for every shard.
 
-_From 1170-integration-on-demand._
+_From 1406-integration-shards._
 
 ### 1170-FR-004 — A release (merge to `main`) runs the integration suite before anything is built or deployed: `release.yml`'s `checks` job calls `ci.yml` with `integration: true`, so `images`, `staging` and `production` wait for it and a failure stops the release.
 
@@ -2980,17 +2984,17 @@ _From 1349-cockpit-chart-settle._
 
 _From 1257-quote-reminders._
 
-### 1315-FR-008 — Each press on the three toggle surfaces (settings switch, bell read and read-all, price-list hide/show) MUST make exactly one write call, and the web MUST NOT resend a refused or failed one (the rollback ends it). The `Idempotency-Key` on these writes is the Split's second story; the brand ticks ride the draft keeper's whole-form save (idempotent by construction) and the listing's send already carries its key (`draft-keeper.ts` `submit`).
+### 1411-FR-007 — Each press on the three toggle surfaces (settings switch, bell read and read-all, price-list hide/show) MUST make at most one write call, and a mark-all press while a mark-all is on its way MUST make none (every row already shows read, nothing is left to send); the web MUST NOT resend a refused or failed call (modifies 1315-FR-008; `bell.spec.ts` asserts the guard).
 
-_From 1315-optimistic-toggles._
+_From 1411-1315-qa-fixes._
 
 ### 1315-FR-009 — Bookings and payments MUST stay non-optimistic: `accept-quote-dialog.ts`, `cancel-booking-dialog.ts`, `send-quote-dialog.ts`, `request-quote.ts`, `job-steps.ts` and `waiting.ts` keep waiting for the server's answer before the screen shows the outcome; a test asserts for the accept and cancel dialogs that the screen changes only after the answer (there is no payment write in the product today).
 
 _From 1315-optimistic-toggles._
 
-### 1315-FR-011 — An end-to-end spec in `apps/web-e2e` MUST, with Chromium's network emulated as Slow 3G (`Network.emulateNetworkConditions`: 400 ms latency, 500 kbit/s down, 500 kbit/s up), prove on each of the four surfaces that the screen changes within 100 ms of the tap (a `pointerdown` listener installed by `page.evaluate` stamps `performance.now()`, a `MutationObserver` stamps the change of the named node: the settings switch's `aria-checked`, the bell row's unread mark, the price row's state text, the brand tick's checked state; one measurement per surface, no retry; every Playwright project runs Chromium, so no project is skipped), and that a refused write (the route answered 500 by the test) rolls the screen back with the surface's message: the settings toast, the bell toast, the price-list row line; the brands step is proven for the 100 ms only (FR-010).
+### 1411-FR-003 — Every optimistic-state assertion, in the flows and in `apps/web-e2e/src/optimistic-toggles.spec.ts`, MUST observe the named attribute of the named node only (`attributeFilter`: `aria-checked` on the settings switch, `class` on the bell row, `aria-pressed` on the fuel tick; `characterData`/`childList` on the price row's state text node), never any subtree mutation; MUST assert the bell badge going from 3 to 2 before the read answers; MUST assert the price row reading "ascuns de tine" with its "Modifică", "Arată" and "Șterge" buttons disabled before the answer; and MUST assert each failure toast exactly once (the count of matching toasts is 1; the price row's refused write shows its alert line instead of a toast, and that line is counted once) (modifies 1315-FR-011).
 
-_From 1315-optimistic-toggles._
+_From 1411-1315-qa-fixes._
 
 ### 1315-FR-012 — Every change MUST live in code the initial download does not hold: the dashboard views and the listing form are lazy routes today (`app.routes.ts` `loadChildren` / `loadComponent`), and no new file joins the eager app shell; the production build's `initial` budget (1 MB error) MUST keep passing with the initial bundle no larger than before this story (the plan records the merge base's production `initial` total; the PR body states the figure after).
 
@@ -3007,6 +3011,48 @@ _From 1315-optimistic-toggles._
 ### 1315-FR-015 — Tests MUST come before the code (Principle II): `notification-settings.spec.ts` (two toggles, both saves failing, the switch ending on the server's row; the toast twice; the first scenario of 198-FR-014 kept), `bell.spec.ts` (the optimistic read and read-all, their rollbacks, the out-of-order first-page reloads keeping a row read), `prices-view.spec.ts` (the optimistic hide and show, the rollback with the row line, one write per press), a spec per FR-009 dialog, and the end-to-end spec of FR-011; each test file carries one whole-line `// @traces` comment naming its `1315-FR-<n>` ids.
 
 _From 1315-optimistic-toggles._
+
+### 1411-FR-002 — The PR tester's QA flows for this PR (`.specify/.cache/qa-flows-<pr>.mjs`, run on GitHub Actions by the PR QA workflow) MUST drive every acceptance scenario of 1315 US1-US4 in a browser, the three the #643 run skipped included: 1315 US1 s2 (one switch flipped twice, both saves fail, the switch ends on the server's row, two toasts), 1315 US2 s3 ("Marchează tot ca citit" refused: rows unread again, badge restored, one toast) and 1315 US4 s2 (the draft keeper's refused save keeps the ticks and shows "Ciorna nu a putut fi salvată pe server. Încearcă din nou."), plus this story's own scenarios; each flow pushes its findings into `findings` and waits on a visible element, `waitForText` or the stream's open state, never `networkidle`.
+
+_From 1411-1315-qa-fixes._
+
+### 1411-FR-008 — Tests MUST come before the code (Principle II): every changed or added test carries a whole-line `// @traces 1411-FR-<n>` comment; no new user-facing text (the existing `shell.notifications.saveFailed`, `shell.bell.readFailed`, `garage.prices.notSaved` and the draft keeper's note are reused); the change stays in `apps/web`, `libs/domain/src/seed*`, `apps/web-e2e` and the specs, with no API or contract change; `specs/1315-optimistic-toggles/tasks.md` T016 is corrected to name the fuel tick on a taken brand as the surface actually measured.
+
+_From 1411-1315-qa-fixes._
+
+### 1407-FR-005 — `apps/api/openapi.json` MUST be regenerated from the API and committed with the four declarations, and the regenerated document MUST differ from a regeneration of the branch's merge base only by the four header parameters: no other operation, schema or response changes (drift `main`'s own code brings is kept, never hand-pruned, and listed in the PR).
+
+### 1406-FR-002 — Every shard MUST have its own PostgreSQL (`ghcr.io/george-hutanu/motor-fix-postgres:18`) and Valkey service containers, its own compose object store, its own `prisma migrate deploy` and its own `scripts/clear-activity-log.ts` run before its tests, plus ffmpeg and the setup action, exactly as the single job has today; the `services` anchor the E2E job shares stays shared.
+
+_From 1406-integration-shards._
+
+### 1406-FR-003 — Every shard MUST keep the "Watch the database" sampler and the "Database waits" step (`if: always()`), each printing that shard's own samples.
+
+_From 1406-integration-shards._
+
+### 1406-FR-004 — The matrix job MUST have one `timeout-minutes` strictly lower than 90, written beside the measured duration it derives from (the slowest shard's job wall time, setup included, on a first dispatch, ÷ 0.7 and rounded up to 5 minutes), and on the proving run (a second dispatch on the final head, FR-009) the job time of every shard, the slowest included, MUST be at most 70 % of it (measured time plus at least 30 %, the rule of `1159-FR-005`). `N` MUST be chosen so that this holds for the slowest domain shard.
+
+_From 1406-integration-shards._
+
+### 1406-FR-006 — A dispatch with the `specs` input set MUST run each named `*.integration.spec.ts` file `repeat` times (`--runInBand`, the audit history cleared before each run, `repeat` validated as 1 or more) in exactly one job: with `specs` set the matrix holds that one entry ("named specs") and no suite shard runs at all. A `specs` input naming no integration file MUST leave every shard green with nothing run.
+
+_From 1406-integration-shards._
+
+### 1406-FR-007 — No spec file, Jest config, worker setting or test assertion MAY be changed, skipped or weakened by this change, and no shard's timeout MAY be the whole suite's 90 raised or kept: the change splits the work.
+
+_From 1406-integration-shards._
+
+### 1406-FR-008 — `scripts/ci-workflow.spec.ts` and `scripts/ci-workflow.adversary.spec.ts` MUST describe the new shape first (the matrix, the per-shard services, migration, audit clearing and Database waits, the timeout rule, `ci-ok`'s need, the named-specs path in one shard, never on `pull_request`) and fail against `main`'s `ci.yml`; the `merge-gate.spec.mjs` fixture row that names "Integration tests" MUST name the check a skipped matrix shows on a real PR run of the branch, and nothing else in the repository MAY still assume one integration job.
+
+_From 1406-integration-shards._
+
+### 1406-FR-009 — The change MUST be proved by an on-demand `workflow_dispatch` run of `ci.yml` on the PR branch with every shard green, and the PR body's Notes MUST list the run id and each shard's name and duration beside the single job's 38 to 60 minutes.
+
+_From 1406-integration-shards._
+
+### 1406-FR-010 — The `ci.yml` header, `.claude/skills/speckit-auto/lifecycle.md` ("CI, tests and release"), `docs/speed-and-cost-plan.md` (row 17) and the `platform` capability (through the Spec Delta) MUST say the integration suite runs as shards with a database per shard, and how a named-specs dispatch runs; no other in-repo document MAY be left saying the suite runs as one job (the specs repo's `docs/` say "on demand and before every release", which stays true).
+
+_From 1406-integration-shards._
 
 ### 1379-FR-001 — The four direct sends — the WhatsApp sign-in code (SIGN_IN_CODE), the phone change code (PHONE_CHANGE_CODE), the staff invite by e-mail and by WhatsApp (STAFF_INVITE), and the car transfer link by WhatsApp (CAR_TRANSFER_LINK) — MUST be handed to the provider by the worker process only. The API MUST add one job to a new BullMQ queue `direct-send` on the existing broker (one attempt, no retry) carrying the template, language, recipient and template values, and MUST await that job's result for at most a fixed cap of 8000 ms (one named constant) before answering the request.
 
@@ -3043,6 +3089,54 @@ _From 1379-provider-calls-worker._
 ### 1379-FR-011 — Tests MUST be written first and cover, in Jest on real PostgreSQL and Valkey: each of the four sends succeeding and answering as today; each failure kind of FR-003 once at the direct-send client (provider refusal, provider timeout, template missing, blocked recipient, allow-list, worker absent within the cap, broker unreachable), since a caller maps every kind alike, and per caller at least one kind that completes the job and one provider refusal that fails it, each answering the caller's contract; the sign-in code's uncounted hourly share on failure; exactly one provider call per send on success and on failure; a stale job not sent; the job removed after it finishes; and the FR-007 graph and source tests. Each spec file carries one whole-line `// @traces` comment naming `1379-FR-<n>` ids.
 
 _From 1379-provider-calls-worker._
+
+### 1338-FR-001 — The `test` target of `apps/api`, `apps/worker`, `apps/mcp`, `libs/contracts`, `libs/domain`, `libs/observability`, `libs/mcp-tools` and `scripts` MUST run on Vitest, through Nx, and MUST pass with the `.npmrc` node options cleared (no `--experimental-vm-modules`); every spec file each project held on `main` runs and passes, none is skipped, deleted or weakened, and a Nest testing-module spec resolves its decorated providers.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-002 — The Angular projects (`apps/web`, `libs/ui-cockpit`, `libs/data-access`, `libs/media`, `libs/i18n`, `libs/overlays`) MUST keep running on Jest, unchanged, with `jest`, `@nx/jest`, `jest-preset-angular` and `jest.preset.cjs` still in place; their move is ST-1332 and dropping Jest is ST-1304.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-003 — No in-scope spec or test helper MUST use Jest's API: `jest.fn`, `jest.mock`, `jest.spyOn`, `jest.requireActual`, `jest.setTimeout`, `jest.isolateModules`, `jest.useFakeTimers` and the types `jest.Mock` and `jest.SpyInstance` are replaced by their Vitest equivalents asserting the same behaviour.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-004 — The unit/integration split MUST be selected by `TEST_SUITE` with the values `unit` (every `*.integration.spec.ts` left out), `integration` (only them) and unset (everything); any other value MUST fail the run before a test starts with a message naming the three; a project with no spec of the chosen suite passes with no tests. The remaining Jest projects MUST read the same name through `jest.preset.cjs`, and `JEST_SUITE` MUST be read nowhere.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-005 — `npm run test:unit`, `npm run test:integration`, CI's "Unit tests" (no database services, 1170-FR-001) and "Integration tests" (1170-FR-002) jobs, `.husky/pre-commit` (1170-FR-005), `lifecycle.mjs check` and `scripts/test-suites.spec.ts` MUST select their suites through `TEST_SUITE`, and the `test` target's Nx inputs MUST name `TEST_SUITE` and the Vitest dependencies, so the two suites never answer each other from the cache.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-007 — In `apps/api` and `libs/domain`, a database turn taken by a spec file MUST be given back after the whole file's teardown has run, never before, under Vitest as under Jest's `database-turn.environment.cjs`; a release attempted inside the file's own `afterAll` is still refused.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-010 — Every `libs/domain` shard in `scripts/mutation-shards.json` MUST finish inside its job timeout in a Mutation workflow run of this branch, dispatched by hand for the story's evidence; each shard's `measured` line MUST name that run and the time measured, with its timeout at the measured time plus at least 30 %, at most 360 (1159-FR-005). A shard that overruns, or measures over 277 minutes, gets one re-cut of its folders (1159-FR-002/003) and a second run; a second overrun is a needs-confirmation question and the task goes to Blocked.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-011 — No `thresholds.break`, `low` or `high` in any `stryker.config.json` MAY be lowered; no mutation score or floor is raised by this story (#1339–#1342 do that, each blocked by this one).
+
+_From 1338-nest-vitest._
+
+### 1338-FR-012 — `scripts/mutation-floors.spec.ts` MUST hold only the project-floor cases; its `summaryRows` and `flags` cases MUST live in `scripts/mutation.spec.ts`, each assertion once (an assertion `mutation.spec.ts` already makes is not repeated).
+
+_From 1338-nest-vitest._
+
+### 1338-FR-013 — The test "treats --incremental=false and a bare absent flag alike, and anything else as on" MUST assert `flags([]).incremental === false` beside the `--incremental=false` case, and MUST fail when `flags` defaults `incremental` to on.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-014 — `post-edit-check.sh`, `stop-test-gate.sh` and `.husky/pre-commit` MUST NOT fail a passing in-scope spec because it is a Vitest spec: an in-scope project's spec is run through Vitest by `post-edit-check.sh` under the same 5-second rule, and `stop-test-gate.sh` runs the Vitest specs related to uncommitted changes beside `jest --onlyChanged`; the Angular projects' specs keep their Jest path, and the gates' Jest removal stays ST-1304. A gate script edit is followed by `doctor.mjs --bless-hooks` after its diff is read.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-015 — The constitution (`421-FR-003`'s "root Jest", principles II and IV), AGENTS.md's "Tests: Jest from the root config" line and the Jest wording of the docs MUST NOT be amended by this story; only text naming `JEST_SUITE` or describing an in-scope project's runner is updated to `TEST_SUITE` and Vitest (lifecycle.md "CI, tests and release", `ci.yml` and `mutation.yml` headers, `scripts/test-services.ts`).
+
+_From 1338-nest-vitest._
 
 ## Retired
 
@@ -3154,3 +3248,10 @@ _From 1379-provider-calls-worker._
 - `1360-FR-011` — superseded by `493-FR-002` (2026-10-24)
 - `432-FR-005` — superseded by `493-FR-003` (2026-10-24)
 - `703-FR-009` — superseded by `493-FR-004` (2026-10-24)
+- `1315-FR-011` — superseded by `1411-FR-003` (2026-10-30)
+- `1315-FR-008` — superseded by `1411-FR-007` (2026-10-30)
+- `1170-FR-002` — superseded by `1406-FR-001` (2026-10-30)
+- `1170-FR-003` — superseded by `1406-FR-005` (2026-10-30)
+- `976-FR-001` — superseded by `1338-FR-006` (2026-10-31)
+- `431-FR-002` — superseded by `1338-FR-008` (2026-10-31)
+- `1159-FR-011` — superseded by `1338-FR-009` (2026-10-31)

@@ -62,8 +62,8 @@ describe('CI workflow still performs every check', () => {
     ['Audit', /npm audit --omit=dev --audit-level=high/],
     ['Dependency resolve', /npm install --dry-run/],
     ['Compose stack', /docker compose up -d --wait postgres redis storage/],
-    ['Unit tests', /JEST_SUITE: unit/],
-    ['Integration tests', /JEST_SUITE: integration/],
+    ['Unit tests', /TEST_SUITE: unit/],
+    ['Integration tests', /TEST_SUITE: integration/],
     ['E2E', /-t e2e/],
   ])('runs %s', (_name, pattern) => {
     expect(pr).toMatch(pattern);
@@ -106,26 +106,26 @@ describe('CI workflow still performs every check', () => {
     expect(checks).toContain('--ignore-scripts');
   });
 
-  it('runs the unit and integration suites in separate jobs with their own JEST_SUITE', () => {
+  it('runs the unit and integration suites in separate jobs with their own TEST_SUITE', () => {
     const unit = jobBlock(ci, 'unit');
     const integration = jobBlock(ci, 'integration');
     for (const block of [unit, integration]) {
-      expect(block.match(/JEST_SUITE: /g)).toHaveLength(1);
+      expect(block.match(/TEST_SUITE: /g)).toHaveLength(1);
       expect(block).not.toMatch(
-        /^ {4}env:[\s\S]*?JEST_SUITE[\s\S]*?^ {4}steps:/m,
+        /^ {4}env:[\s\S]*?TEST_SUITE[\s\S]*?^ {4}steps:/m,
       );
     }
-    expect(unit).toMatch(/JEST_SUITE: unit/);
+    expect(unit).toMatch(/TEST_SUITE: unit/);
     expect(unit).not.toMatch(/integration|services:|DATABASE_URL/);
-    expect(integration).toMatch(/JEST_SUITE: integration/);
-    expect(integration).not.toMatch(/JEST_SUITE: unit/);
+    expect(integration).toMatch(/TEST_SUITE: integration/);
+    expect(integration).not.toMatch(/TEST_SUITE: unit/);
   });
 
-  it('never sets JEST_SUITE at workflow level or in other jobs', () => {
+  it('never sets TEST_SUITE at workflow level or in other jobs', () => {
     const head = ci.slice(0, ci.indexOf('\njobs:'));
-    expect(head).not.toContain('JEST_SUITE');
+    expect(head).not.toContain('TEST_SUITE');
     for (const id of ['changes', 'checks', 'e2e', 'docker', 'ci-ok']) {
-      expect(jobBlock(ci, id)).not.toContain('JEST_SUITE');
+      expect(jobBlock(ci, id)).not.toContain('TEST_SUITE');
     }
   });
 
@@ -133,7 +133,7 @@ describe('CI workflow still performs every check', () => {
     const tests = jobBlock(ci, 'integration');
     expect(tests.indexOf('prisma migrate deploy')).toBeGreaterThan(-1);
     expect(tests.indexOf('prisma migrate deploy')).toBeLessThan(
-      tests.indexOf('JEST_SUITE: integration'),
+      tests.indexOf('TEST_SUITE: integration'),
     );
   });
 
@@ -508,5 +508,72 @@ describe('end-to-end configuration', () => {
     const src = readFileSync(join(dir, 'playwright.config.mts'), 'utf8');
     expect(src.match(/workers:/g)).toHaveLength(1);
     expect(src).not.toMatch(/retries: 0/);
+  });
+});
+
+// Split into shards, the suite must still run every integration spec, each
+// shard on its own database, and still gate CI OK and the release.
+describe('the integration suite in shards', () => {
+  const integration = jobBlock(ci, 'integration');
+  const matrix = integration.match(/^ {8}shard: (.+)$/m)?.[1] ?? '';
+  const lists = [...matrix.matchAll(/'(\[[^']*\])'/g)].map((m) =>
+    JSON.parse(m[1]),
+  );
+
+  // @traces 1406-FR-001 1406-FR-006
+  it('runs four domain slices and every other project, or the named files alone', () => {
+    expect(lists).toEqual([
+      ['named specs'],
+      [
+        'domain 1/4',
+        'domain 2/4',
+        'domain 3/4',
+        'domain 4/4',
+        'other projects',
+      ],
+    ]);
+    expect(matrix).toMatch(/^\$\{\{ fromJSON\(inputs\.specs && /);
+  });
+
+  // @traces 1406-FR-001
+  it('takes the shard only from the matrix, nowhere else', () => {
+    expect(integration.match(/^\s+SHARD: .*$/gm)).toEqual([
+      '          SHARD: ${{ matrix.shard }}',
+    ]);
+  });
+
+  // @traces 1406-FR-001
+  it('runs every project but domain in the other shard, and only domain in its slices', () => {
+    const script = allRuns(integration);
+
+    expect(script).toContain(
+      '--projects=domain --passWithNoTests --output-style=static --shard=',
+    );
+    expect(script).toContain(
+      '--exclude=domain --passWithNoTests --output-style=static',
+    );
+    expect(script).toMatch(/\*\) echo "::error::unknown shard/);
+  });
+
+  // @traces 1406-FR-002 1406-FR-003
+  it('gives every shard its own services, store, migration, audit clearing and database report', () => {
+    expect(integration).toMatch(/^ {4}services: &services$/m);
+    expect(jobBlock(ci, 'e2e')).toMatch(/^ {4}services: \*services$/m);
+    for (const step of [
+      'docker compose up -d --wait storage',
+      'prisma migrate deploy',
+      'node scripts/clear-activity-log.ts',
+      'pg_stat_activity',
+      'db-waits.txt',
+    ]) {
+      expect(integration).toContain(step);
+    }
+  });
+
+  // @traces 1406-FR-005
+  it('keeps the shards in CI OK and the release waiting on the whole CI call', () => {
+    expect(jobBlock(ci, 'ci-ok')).toMatch(/needs: \[[^\]]*\bintegration\b/);
+    expect(integration).toMatch(/^ {6}fail-fast: false$/m);
+    expect(jobBlock(release, 'images')).toMatch(/^ {4}needs: checks$/m);
   });
 });

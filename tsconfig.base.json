@@ -95,6 +95,9 @@
       "@motor-fix/contracts/request-status": [
         "./libs/contracts/src/request-status.ts"
       ],
+      "@motor-fix/contracts/search-choices": [
+        "./libs/contracts/src/search-choices.ts"
+      ],
       "@motor-fix/contracts/search-place": [
         "./libs/contracts/src/search-place.ts"
       ],
@@ -138,6 +141,7 @@
       ],
       "@motor-fix/overlays": ["./libs/overlays/src/index.ts"],
       "@motor-fix/ui-cockpit": ["./libs/ui-cockpit/src/index.ts"],
+      "@motor-fix/ui-cockpit/chart": ["./libs/ui-cockpit/src/chart.ts"],
       "@motor-fix/ui-cockpit/email": ["./libs/ui-cockpit/src/email.ts"],
       "@motor-fix/ui-cockpit/photo-viewer": [
         "./libs/ui-cockpit/src/photo-viewer.ts"

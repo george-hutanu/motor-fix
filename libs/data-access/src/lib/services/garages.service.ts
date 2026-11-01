@@ -18,6 +18,7 @@ import { deleteTimeBlock } from '../fn/garages/delete-time-block';
 import { DeleteTimeBlock$Params } from '../fn/garages/delete-time-block';
 import { DocumentCycleDto } from '../models/document-cycle-dto';
 import { DocumentUploadAddressDto } from '../models/document-upload-address-dto';
+import { FreeSlotsDto } from '../models/free-slots-dto';
 import { GarageBrandOwnerAnswerDto } from '../models/garage-brand-owner-answer-dto';
 import { GarageBrandOwnerReadDto } from '../models/garage-brand-owner-read-dto';
 import { garageBrandsControllerRead } from '../fn/garages/garage-brands-controller-read';
@@ -27,6 +28,8 @@ import { GarageBrandsControllerReplace$Params } from '../fn/garages/garage-brand
 import { garageFeaturesControllerSet } from '../fn/garages/garage-features-controller-set';
 import { GarageFeaturesControllerSet$Params } from '../fn/garages/garage-features-controller-set';
 import { GarageFeaturesDto } from '../models/garage-features-dto';
+import { garageFreeSlots } from '../fn/garages/garage-free-slots';
+import { GarageFreeSlots$Params } from '../fn/garages/garage-free-slots';
 import { garageInvitesControllerResend } from '../fn/garages/garage-invites-controller-resend';
 import { GarageInvitesControllerResend$Params } from '../fn/garages/garage-invites-controller-resend';
 import { garageInvitesControllerRevoke } from '../fn/garages/garage-invites-controller-revoke';
@@ -47,6 +50,8 @@ import { GarageMechanicsControllerRemove$Params } from '../fn/garages/garage-mec
 import { GarageMechanicsDto } from '../models/garage-mechanics-dto';
 import { garageMembersControllerList } from '../fn/garages/garage-members-controller-list';
 import { GarageMembersControllerList$Params } from '../fn/garages/garage-members-controller-list';
+import { garageMembersControllerRemove } from '../fn/garages/garage-members-controller-remove';
+import { GarageMembersControllerRemove$Params } from '../fn/garages/garage-members-controller-remove';
 import { GarageMembersDto } from '../models/garage-members-dto';
 import { garageProfileControllerRead } from '../fn/garages/garage-profile-controller-read';
 import { GarageProfileControllerRead$Params } from '../fn/garages/garage-profile-controller-read';
@@ -154,6 +159,39 @@ export class GaragesService extends BaseService {
   garageSchedule(params: GarageSchedule$Params, context?: HttpContext): Promise<GarageScheduleDto> {
     const resp = this.garageSchedule$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageScheduleDto>): GarageScheduleDto => r.body);
+  }
+
+  /** Path part for operation `garageFreeSlots()` */
+  static readonly GarageFreeSlotsPath = '/api/v1/garages/{garageId}/free-slots';
+
+  /**
+   * The first starts at which a job of the asked length fits.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageFreeSlots()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageFreeSlots$Response(params: GarageFreeSlots$Params, context?: HttpContext): Promise<StrictHttpResponse<FreeSlotsDto>> {
+    const obs = garageFreeSlots(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * The first starts at which a job of the asked length fits.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageFreeSlots$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageFreeSlots(params: GarageFreeSlots$Params, context?: HttpContext): Promise<FreeSlotsDto> {
+    const resp = this.garageFreeSlots$Response(params, context);
+    return resp.then((r: StrictHttpResponse<FreeSlotsDto>): FreeSlotsDto => r.body);
   }
 
   /** Path part for operation `garageTimeBlocks()` */
@@ -590,7 +628,7 @@ export class GaragesService extends BaseService {
   static readonly GarageProfileControllerUpdatePath = '/api/v1/garages/{garageId}/profile';
 
   /**
-   * Change the garage's name, description, phone, hours with closed days or service radius in place.
+   * Change the garage's name, description, phone, hours with closed days, service radius or facilities with payment methods in place.
    *
    *
    *
@@ -605,7 +643,7 @@ export class GaragesService extends BaseService {
   }
 
   /**
-   * Change the garage's name, description, phone, hours with closed days or service radius in place.
+   * Change the garage's name, description, phone, hours with closed days, service radius or facilities with payment methods in place.
    *
    *
    *
@@ -980,6 +1018,39 @@ export class GaragesService extends BaseService {
   garageMembersControllerList(params: GarageMembersControllerList$Params, context?: HttpContext): Promise<GarageMembersDto> {
     const resp = this.garageMembersControllerList$Response(params, context);
     return resp.then((r: StrictHttpResponse<GarageMembersDto>): GarageMembersDto => r.body);
+  }
+
+  /** Path part for operation `garageMembersControllerRemove()` */
+  static readonly GarageMembersControllerRemovePath = '/api/v1/garages/{garageId}/members/{accountId}';
+
+  /**
+   * Remove a receptionist from the garage, for the owner.
+   *
+   *
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `garageMembersControllerRemove()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageMembersControllerRemove$Response(params: GarageMembersControllerRemove$Params, context?: HttpContext): Promise<StrictHttpResponse<void>> {
+    const obs = garageMembersControllerRemove(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * Remove a receptionist from the garage, for the owner.
+   *
+   *
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `garageMembersControllerRemove$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  garageMembersControllerRemove(params: GarageMembersControllerRemove$Params, context?: HttpContext): Promise<void> {
+    const resp = this.garageMembersControllerRemove$Response(params, context);
+    return resp.then((r: StrictHttpResponse<void>): void => r.body);
   }
 
   /** Path part for operation `getImageVariant()` */

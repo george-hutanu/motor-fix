@@ -103,6 +103,10 @@
         "paid": "Paid, says the driver: {amount}",
         "quote": "Quote {amount}"
       },
+      "reply": {
+        "edited": "Edited · {day}",
+        "label": "The garage’s reply"
+      },
       "retry": "Try again",
       "score": "{rating} / 5",
       "stars": {
@@ -840,11 +844,17 @@
     "filters": {
       "button": "Filters",
       "buttonCount": "Filters · {n}",
+      "card": "Card payment",
       "clear": "Remove filters",
       "filtering": "Filtering…",
       "none": "No garage has everything you chose",
       "openNow": "Open now",
       "openSaturday": "Open on Saturday",
+      "priceChip": "Up to {n} lei/h",
+      "priceTitle": "Labour rate up to … lei/h",
+      "ratingChip": "Rating {r}+",
+      "ratingChoice": "{r}+",
+      "ratingTitle": "Minimum rating",
       "remove": "Remove filter {name}",
       "summary": "{n} with your filters",
       "title": "Filters"
@@ -1070,6 +1080,16 @@
     "garages": "Garages",
     "label": "Main navigation",
     "search": "Search"
+  },
+  "transfer": {
+    "accepted": "The car has already been taken over",
+    "cancelled": "The link is no longer valid",
+    "expired": "The link has expired",
+    "failed": "We couldn't check the link. Try again.",
+    "loading": "Checking the link…",
+    "retry": "Try again",
+    "unknown": "This link does not exist",
+    "valid": "This link is valid. Taking the car over is coming soon."
   },
   "unsubscribe": {
     "error": "We could not stop the news right now.",

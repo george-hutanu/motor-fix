@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import type { EventKind, LiveMessage } from '@motor-fix/contracts';
 import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
@@ -109,6 +109,7 @@ async function render(
   readLegal = jest.fn(options.legal ?? (async () => legal()));
   navigate = jest.fn(async () => true);
   TestBed.configureTestingModule({
+    deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [
       {
         provide: GaragesService,

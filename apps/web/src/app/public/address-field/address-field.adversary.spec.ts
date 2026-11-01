@@ -389,19 +389,31 @@ describe('the address field under hostile requests', () => {
   it('sends one request for a burst of ten keystrokes inside the pause', async () => {
     await mount();
 
-    for (const t of [
-      'Str',
-      'Stra',
-      'Strad',
-      'Strada',
-      'Strada ',
-      'Strada F',
-      'Strada Fa',
-      'Strada Fab',
-      'Strada Fabr',
-    ])
-      await type(t, 20);
-    await wait(350);
+    // The page's clock, not the runner's: on a slow runner the real gaps
+    // between keystrokes outlasted the pause and sent an early request.
+    jest.useFakeTimers();
+    try {
+      for (const t of [
+        'Str',
+        'Stra',
+        'Strad',
+        'Strada',
+        'Strada ',
+        'Strada F',
+        'Strada Fa',
+        'Strada Fab',
+        'Strada Fabr',
+      ]) {
+        field().value = t;
+        field().dispatchEvent(new Event('input', { bubbles: true }));
+        jest.advanceTimersByTime(20);
+        fixture.detectChanges();
+      }
+      expect(search).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(350);
+    } finally {
+      jest.useRealTimers();
+    }
     await settle();
 
     expect(search.mock.calls).toEqual([[{ lang: 'ro', q: 'Strada Fabr' }]]);

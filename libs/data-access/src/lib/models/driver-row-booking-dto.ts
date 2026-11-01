@@ -27,6 +27,11 @@ export interface DriverRowBookingDto {
    * Cancelled by the driver less than the free-cancel cutoff before the start; never a penalty
    */
   lateCancellation: boolean;
+
+  /**
+   * When the garage recorded that the driver did not come
+   */
+  noShowAt: string | null;
   startsAt: string;
   status: 'awaiting_confirmation' | 'confirmed' | 'lapsed' | 'cancelled' | 'no_show' | 'completed';
 }

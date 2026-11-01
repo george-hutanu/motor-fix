@@ -6,6 +6,9 @@
   "sourceRoot": "libs/mcp-tools/src",
   "tags": [],
   "targets": {
+    "test": {
+      "command": "vitest run --config libs/mcp-tools/vitest.config.mts"
+    },
     "test:mutation": {},
     "typecheck": {
       "cache": true,

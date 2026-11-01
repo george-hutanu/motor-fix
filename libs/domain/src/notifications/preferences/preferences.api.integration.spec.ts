@@ -147,6 +147,7 @@ describe('a driver who has saved nothing', () => {
       channel: 'email',
       channels: ['email', 'push', 'sms', 'whatsapp'],
       enabled: true,
+      fallback: null,
       garageId: null,
       type: 'DUE_ITP',
     });
@@ -1155,7 +1156,7 @@ describe('the Build brief’s save scenarios', () => {
 
   it('saves a pick at once, audits it once, announces it, and records nothing for the same pick again', async () => {
     const driver = await withPhone('picker');
-    const choices = jest.spyOn(counters, 'countChannelChoice');
+    const choices = vi.spyOn(counters, 'countChannelChoice');
     const res = await save(pick('DUE_ITP', 'whatsapp'), bearer(driver));
     expect(choices.mock.calls).toEqual([['whatsapp']]);
     expect(res.status).toBe(200);
@@ -1174,5 +1175,128 @@ describe('the Build brief’s save scenarios', () => {
     expect(await entries(driver)).toHaveLength(1);
     expect(choices).toHaveBeenCalledTimes(1);
     choices.mockRestore();
+  });
+});
+
+// @traces 1374-FR-004
+// @traces 1374-FR-005
+// @traces 1374-FR-006
+// @traces 1374-FR-007
+describe('the fallback a driver entry carries', () => {
+  const at = new Date('2026-10-20T08:00:00Z');
+
+  const keep = (
+    accountId: string,
+    type: string,
+    from: 'email' | 'push' | 'sms' | 'whatsapp',
+    to: 'email' | 'push' | 'sms' | 'whatsapp' = 'email',
+    when = at,
+  ) =>
+    prisma.notificationFallback.create({
+      data: { accountId, at: when, from, reason: 'no_device', to, type },
+    });
+
+  const choose = (accountId: string, type: string, channel: string) =>
+    prisma.notificationPreference.create({
+      data: {
+        accountId,
+        channel: channel as 'email',
+        enabled: true,
+        type,
+        updatedAt: new Date('2026-10-19T08:00:00Z'),
+      },
+    });
+
+  const entry = (
+    body: { preferences: Record<string, unknown>[] },
+    type: string,
+  ) =>
+    body.preferences.find((p) => p['type'] === type && p['garageId'] === null);
+
+  it('gives the record beside the type while it explains the chosen channel', async () => {
+    const driver = await account('andrei');
+    await choose(driver, 'DUE_ITP', 'push');
+    await keep(driver, 'DUE_ITP', 'push');
+    const res = await read(bearer(driver));
+    expect(res.status).toBe(200);
+    expect(entry(res.body, 'DUE_ITP')?.['fallback']).toEqual({
+      at: '2026-10-20T08:00:00.000Z',
+      from: 'push',
+      reason: 'no_device',
+      to: 'email',
+    });
+  });
+
+  it('gives null for a type with no record', async () => {
+    const driver = await account('andrei');
+    const res = await read(bearer(driver));
+    expect(entry(res.body, 'DUE_ITP')?.['fallback']).toBeNull();
+  });
+
+  it('gives it for a type with nothing saved whose default is the record’s channel', async () => {
+    const driver = await account('andrei');
+    await keep(driver, 'DUE_RCA', 'email', 'push');
+    const res = await read(bearer(driver));
+    expect(entry(res.body, 'DUE_RCA')?.['fallback']).toEqual(
+      expect.objectContaining({ from: 'email', to: 'push' }),
+    );
+  });
+
+  it('drops it once the driver saves another channel, and after saving the first one again', async () => {
+    const driver = await withPhone('andrei');
+    await choose(driver, 'DUE_ITP', 'push');
+    await keep(driver, 'DUE_ITP', 'push');
+    const moved = await save(
+      {
+        preferences: [
+          { channel: 'sms', enabled: true, garageId: null, type: 'DUE_ITP' },
+        ],
+      },
+      bearer(driver),
+    );
+    expect(moved.status).toBe(200);
+    expect(entry(moved.body, 'DUE_ITP')?.['fallback']).toBeNull();
+    await save(
+      {
+        preferences: [
+          { channel: 'push', enabled: true, garageId: null, type: 'DUE_ITP' },
+        ],
+      },
+      bearer(driver),
+    );
+    const back = await read(bearer(driver));
+    expect(entry(back.body, 'DUE_ITP')?.['channel']).toBe('push');
+    expect(entry(back.body, 'DUE_ITP')?.['fallback']).toBeNull();
+  });
+
+  it('leaves the staff entries without the field', async () => {
+    const { garageId, id } = await garageOwner('ion');
+    await prisma.notificationPreference.create({
+      data: {
+        accountId: id,
+        channel: 'push',
+        enabled: false,
+        garageId,
+        type: 'REQUEST_RECEIVED',
+      },
+    });
+    await keep(id, 'REQUEST_RECEIVED', 'push');
+    const res = await read(bearer(id, 'garage'));
+    const staff = res.body.preferences.filter(
+      (p: { garageId: string | null }) => p.garageId !== null,
+    );
+    expect(staff.length).toBeGreaterThan(0);
+    for (const p of staff) expect(p).not.toHaveProperty('fallback');
+  });
+
+  it('is removed with the account', async () => {
+    const driver = await account('andrei');
+    await keep(driver, 'DUE_ITP', 'push');
+    await prisma.account.delete({ where: { id: driver } });
+    expect(
+      await prisma.notificationFallback.count({
+        where: { accountId: driver },
+      }),
+    ).toBe(0);
   });
 });

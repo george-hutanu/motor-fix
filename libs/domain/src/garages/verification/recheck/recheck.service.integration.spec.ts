@@ -79,7 +79,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const http = () => request(app.getHttpServer());
 const bearer = (accountId: string, role: Role) =>
@@ -641,7 +641,7 @@ describe('recording a valid re-check', () => {
     const g = await garage({ checkedDaysAgo: 29 });
     const before = await stored(g.id);
     const audit = app.get<AuditPort>(AUDIT_PORT, { strict: false });
-    jest.spyOn(audit, 'record').mockRejectedValue(new Error('audit down'));
+    vi.spyOn(audit, 'record').mockRejectedValue(new Error('audit down'));
 
     const res = await record(g.id, valid(ago(29)));
 
@@ -916,12 +916,12 @@ describe('recording a failed re-check', () => {
     const suspending = app.get(SuspensionService, { strict: false });
     const real = suspending.suspendIn.bind(suspending);
     // A suspension by another cause lands between the lock and the write.
-    jest
-      .spyOn(suspending, 'suspendIn')
-      .mockImplementationOnce(async (...args) => {
+    vi.spyOn(suspending, 'suspendIn').mockImplementationOnce(
+      async (...args) => {
         await real(...args);
         return real(...args);
-      });
+      },
+    );
 
     const res = await record(g.id, failed(ago(29)));
 

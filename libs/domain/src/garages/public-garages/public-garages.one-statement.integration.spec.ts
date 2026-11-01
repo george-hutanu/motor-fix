@@ -408,6 +408,8 @@ describe('the profile read on a cache miss', () => {
     const { res, sent } = await counted(garage.slug);
 
     expect(res.body).toEqual({
+      areaLat: 44.4,
+      areaLng: 26.1,
       brandNote: null,
       businessKind: 'mobile',
       // The next 14 days on the Bucharest calendar: holidays are seeded, so the

@@ -139,6 +139,7 @@ const activeOf = (
           jobs: open[0].jobs,
           mechanicName: null,
           range: null,
+          saveSuggestion: null,
           stage: 'sent',
         }
       : null,
@@ -741,6 +742,7 @@ describe('Panou’s quotes panel', () => {
       id: 'booking-1',
       jobStarted: false,
       lateCancellation: false,
+      noShowAt: null,
       startsAt: '2026-10-20T06:00:00.000Z',
       status,
     }) as const;
@@ -1265,6 +1267,7 @@ describe('Cererea activă on Panou', () => {
       jobs: [],
       mechanicName: null,
       range: null,
+      saveSuggestion: null,
       stage: 'sent',
     },
   };

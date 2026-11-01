@@ -2,9 +2,9 @@ import { GarageProfileUpdate } from './garage-profile.update';
 import type { Actor } from '../../auth/policy';
 import { writeGarageHours } from '../garage-hours';
 
-jest.mock('../garage-hours', () => ({
-  ...jest.requireActual('../garage-hours'),
-  writeGarageHours: jest.fn(),
+vi.mock('../garage-hours', async (actualModule) => ({
+  ...(await actualModule<typeof import('../garage-hours')>()),
+  writeGarageHours: vi.fn(),
 }));
 
 // @traces 1246-FR-001 1246-FR-002 1246-FR-003 1246-FR-004 1246-FR-005
@@ -55,7 +55,7 @@ const ROW = {
 };
 type Row = typeof ROW;
 
-const write = jest.mocked(writeGarageHours);
+const write = vi.mocked(writeGarageHours);
 
 function harness(row: Partial<Row> = {}, { updated = 1 } = {}) {
   const locked = { ...ROW, ...row };
@@ -73,15 +73,15 @@ function harness(row: Partial<Row> = {}, { updated = 1 } = {}) {
   });
   let reads = 0;
   const tx = {
-    $queryRaw: jest.fn(async () => (reads++ === 0 ? [locked] : [{ ...state }])),
-    garage: { updateMany: jest.fn(async () => ({ count: updated })) },
+    $queryRaw: vi.fn(async () => (reads++ === 0 ? [locked] : [{ ...state }])),
+    garage: { updateMany: vi.fn(async () => ({ count: updated })) },
   };
   const prisma = {
-    $transaction: jest.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
+    $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
   };
-  const audit = { recordChanges: jest.fn(async () => undefined) };
-  const events = { record: jest.fn(async () => undefined) };
-  const answer = jest.fn(async () => ({ name: 'answer', version: '8' }));
+  const audit = { recordChanges: vi.fn(async () => undefined) };
+  const events = { record: vi.fn(async () => undefined) };
+  const answer = vi.fn(async () => ({ name: 'answer', version: '8' }));
   const update = new GarageProfileUpdate(
     prisma as never,
     audit as never,
@@ -128,6 +128,7 @@ describe("the owner's profile save: who may save", () => {
     expect(h.prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  // @traces 1369-FR-004
   it.each(['receptionist', 'mechanic'] as const)(
     'answers 403 forbidden to the %s, even with a body that breaks every rule',
     async (role) => {
@@ -504,5 +505,173 @@ describe("the owner's profile save: what it writes", () => {
 
     expect(h.tx.garage.updateMany).not.toHaveBeenCalled();
     expect(h.events.record).not.toHaveBeenCalled();
+  });
+});
+
+const GROUP = {
+  courtesyCar: { paid: true, pricePerDayBani: 15000 },
+  facilities: ['courtesy_car', 'waiting_area'],
+  facilitiesNote: 'Cafea',
+  paymentMethods: { card: false, cash: true, transfer: true },
+};
+
+// @traces 1248-FR-003
+// @traces 1248-FR-004
+describe("the owner's profile save: the facilities group", () => {
+  it('answers 400 no_courtesy_car to terms without the car before a stale stamp, writing nothing', async () => {
+    const h = harness();
+
+    const r = await refused(
+      h.save({
+        facilities: { ...GROUP, facilities: ['waiting_area'] },
+        version: '3',
+      }),
+    );
+
+    expect(r).toMatchObject({
+      errors: [{ code: 'no_courtesy_car', field: 'courtesyCar' }],
+      status: 400,
+    });
+    nothingWritten(h);
+  });
+
+  it('answers 400 no_courtesy_car to the car ticked without terms', async () => {
+    const h = harness();
+
+    const r = await refused(
+      h.save({
+        facilities: { ...GROUP, courtesyCar: undefined },
+        version: '7',
+      }),
+    );
+
+    expect(fieldsOf(r)).toEqual(['courtesyCar']);
+    nothingWritten(h);
+  });
+
+  it('names a broken field by its path inside the group', async () => {
+    const h = harness();
+
+    const r = await refused(
+      h.save({
+        facilities: {
+          ...GROUP,
+          courtesyCar: { paid: true, pricePerDayBani: 99 },
+        },
+        version: '7',
+      }),
+    );
+
+    expect(fieldsOf(r)).toEqual(['facilities.courtesyCar.pricePerDayBani']);
+  });
+
+  it('skips the hours write when the facilities and note are the same', async () => {
+    const h = harness();
+
+    await h.save({
+      facilities: {
+        ...GROUP,
+        facilities: ['waiting_area', 'courtesy_car'],
+        facilitiesNote: ' Cafea ',
+      },
+      version: '7',
+    });
+
+    nothingWritten(h);
+  });
+
+  it('hands the hours write the stored week and closed days with the new facilities', async () => {
+    const h = harness({
+      closed_days: [{ day: '2026-12-27', note: 'Inventar' }],
+    });
+
+    await h.save({
+      facilities: { ...GROUP, facilities: ['courtesy_car', 'pickup_dropoff'] },
+      version: '7',
+    });
+
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write.mock.calls[0][2]).toEqual({
+      closedDays: [{ day: '2026-12-27', note: 'Inventar' }],
+      courtesyCar: { paid: true, pricePerDayBani: 15000 },
+      facilities: ['courtesy_car', 'pickup_dropoff'],
+      facilitiesNote: 'Cafea',
+      hours: WEEK,
+      payments: ['cash', 'transfer'],
+    });
+    expect(h.events.record).toHaveBeenCalledWith(
+      h.tx,
+      expect.objectContaining({
+        audience: { garageId: GARAGE, results: true, type: 'public_garage' },
+        payload: { fields: ['facilities'], garageId: GARAGE },
+      }),
+    );
+  });
+
+  it('writes the payment and courtesy columns it changed, one entry each, without the hours write', async () => {
+    const h = harness();
+
+    await h.save({
+      facilities: {
+        ...GROUP,
+        courtesyCar: { paid: false },
+        paymentMethods: { card: true, cash: true, transfer: true },
+      },
+      version: '7',
+    });
+
+    expect(write).not.toHaveBeenCalled();
+    expect(h.tx.garage.updateMany).toHaveBeenCalledWith({
+      data: {
+        courtesyCarPaid: false,
+        courtesyCarPricePerDayBani: null,
+        paymentCard: true,
+        profileVersion: { increment: 1 },
+      },
+      where: { id: GARAGE, profileVersion: 7 },
+    });
+    expect(h.audit.recordChanges).toHaveBeenCalledWith(
+      h.tx,
+      expect.objectContaining({ subjectType: 'garage' }),
+      {
+        courtesy_car_paid: true,
+        courtesy_car_price_per_day_bani: 15000,
+        payment_card: false,
+      },
+      {
+        courtesy_car_paid: false,
+        courtesy_car_price_per_day_bani: null,
+        payment_card: true,
+      },
+    );
+    expect(h.events.record).toHaveBeenCalledWith(
+      h.tx,
+      expect.objectContaining({
+        audience: { garageId: GARAGE, results: true, type: 'public_garage' },
+        payload: {
+          fields: ['courtesy_car', 'payment_methods'],
+          garageId: GARAGE,
+        },
+      }),
+    );
+  });
+
+  it('keeps the stored terms when the car is unticked', async () => {
+    const h = harness();
+
+    await h.save({
+      facilities: {
+        ...GROUP,
+        courtesyCar: undefined,
+        facilities: ['waiting_area'],
+      },
+      version: '7',
+    });
+
+    expect(h.tx.garage.updateMany).toHaveBeenCalledWith({
+      data: { profileVersion: { increment: 1 } },
+      where: { id: GARAGE, profileVersion: 7 },
+    });
+    expect(h.audit.recordChanges).not.toHaveBeenCalled();
   });
 });

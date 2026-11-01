@@ -46,7 +46,7 @@ const item = (id: string, more: Record<string, unknown> = {}): Item =>
   }) as Item;
 
 const inboxOf = (items: Item[], nextCursor: string | null = null) =>
-  jest.fn(async () => ({ items, nextCursor, total: items.length }));
+  vi.fn(async () => ({ items, nextCursor, total: items.length }));
 
 const call = (
   args: unknown,
@@ -140,7 +140,7 @@ describe('list_quote_requests under hostile calls', () => {
   });
 
   it('answers the read’s refusal of a cursor as validation', async () => {
-    const inbox = jest.fn(async () => {
+    const inbox = vi.fn(async () => {
       throw new BadRequestException({ code: 'validation', message: 'cursor' });
     });
     const result = await call({ cursor: 'not-a-cursor' }, inbox);
@@ -186,7 +186,7 @@ describe('list_quote_requests under hostile calls', () => {
     );
     const result = await call(
       {},
-      jest.fn(async () => Promise.reject(down)),
+      vi.fn(async () => Promise.reject(down)),
     );
     expect(result.isError).toBe(true);
     expect(result.structuredContent).toMatchObject({
@@ -198,7 +198,7 @@ describe('list_quote_requests under hostile calls', () => {
   it('answers an unexpected failure with internal_error and no message', async () => {
     const result = await call(
       {},
-      jest.fn(async () => Promise.reject(new Error('secret SQL text'))),
+      vi.fn(async () => Promise.reject(new Error('secret SQL text'))),
     );
     expect(result.structuredContent).toMatchObject({ code: 'internal_error' });
     expect(JSON.stringify(result)).not.toContain('secret');

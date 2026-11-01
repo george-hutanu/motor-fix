@@ -34,6 +34,8 @@ export const step = (
 
 export const job = (over: Partial<JobDto> = {}): JobDto => ({
   bookingId: 'booking-1',
+  canRecordNoShow: false,
+  canWithdrawNoShow: false,
   car: {
     brand: 'Dacia',
     engine: '1.5 dCi',
@@ -59,8 +61,11 @@ export const job = (over: Partial<JobDto> = {}): JobDto => ({
       position: 0,
     },
   ],
+  lastForcedUnlock: null,
+  lock: null,
   mechanicId: 'mechanic-1',
   mechanicName: 'Mihai Dumitru',
+  noShowAt: null,
   odometerKm: null,
   pausedAt: null,
   quoteFromBani: 89000,
@@ -77,6 +82,7 @@ export const job = (over: Partial<JobDto> = {}): JobDto => ({
   ],
   stepsDone: 1,
   stepsTotal: 3,
+  updatedAt: '2026-10-08T09:00:00.000Z',
   workedSeconds: 0,
   ...over,
 });

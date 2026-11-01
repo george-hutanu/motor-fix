@@ -21,6 +21,7 @@ import { bellText } from '../templates';
 
 // @traces 409-FR-013
 // @traces 409-FR-017
+// @traces 061-FR-004
 // @traces 1267-FR-012
 
 const redisUrl = redisUrlFor(7);
@@ -37,7 +38,7 @@ let app: TestingModule | undefined;
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(() => prisma.$disconnect());
@@ -45,8 +46,8 @@ afterAll(() => prisma.$disconnect());
 beforeEach(async () => {
   // Brevo's address answers nothing, so the notifications worker never
   // starts and every message stays as the fan-out built it.
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
 });
@@ -309,6 +310,17 @@ describe('telling the driver a garage corrected a repair', () => {
     const before = await counted('skipped');
 
     await fanOut.handle(job('84', { by: 'driver' }));
+
+    expect(await messages(owner)).toEqual([]);
+    expect(await counted('skipped')).toBe(before + 1);
+  });
+
+  it('writes nothing for a row the system brought in step with its job, and counts skipped', async () => {
+    const { job, owner } = await corrected();
+    const fanOut = await start();
+    const before = await counted('skipped');
+
+    await fanOut.handle(job('85', { by: 'system', changed: ['created'] }));
 
     expect(await messages(owner)).toEqual([]);
     expect(await counted('skipped')).toBe(before + 1);

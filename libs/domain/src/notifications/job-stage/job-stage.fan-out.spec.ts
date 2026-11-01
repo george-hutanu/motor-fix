@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import type { Mock } from 'vitest';
 
 import { JOB_STAGE_CONSUMER, JobStageFanOut } from './job-stage.fan-out';
 import type { PrismaClient } from '../../generated/prisma/client';
@@ -31,17 +32,17 @@ const row = (over: Partial<Row> = {}): Row => ({
 });
 
 function setup(job: Row | null | Error, teamMechanics = true) {
-  const findUnique = jest.fn(async () => {
+  const findUnique = vi.fn(async () => {
     if (job instanceof Error) throw job;
     return job;
   });
   const prisma = {
     garageFeature: {
-      findUnique: jest.fn(async () => ({ enabled: teamMechanics })),
+      findUnique: vi.fn(async () => ({ enabled: teamMechanics })),
     },
     job: { findUnique },
   } as unknown as PrismaClient;
-  const notify = jest.fn(async () => 1);
+  const notify = vi.fn(async () => 1);
   const fanOut = new JobStageFanOut(
     prisma,
     { notify } as unknown as NotificationsService,
@@ -55,10 +56,10 @@ const event = (kind: 'job.started' | 'job.done') => ({
 });
 
 beforeEach(() => {
-  jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 277-FR-003
 // @traces 277-FR-004
@@ -112,7 +113,7 @@ describe('telling the driver work has started', () => {
     await fanOut.handle(event('job.started'));
     return notify;
   };
-  const params = (notify: jest.Mock) =>
+  const params = (notify: Mock) =>
     (notify.mock.calls[0] as unknown as [{ params: object }])[0].params;
 
   it('names the mechanic by first name and the car by brand and model', async () => {

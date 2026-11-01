@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { Queue, QueueEvents } from 'bullmq';
 import { Redis } from 'ioredis';
 
+import { AREAS, AreaLoader } from './areas/areas';
 import { INSIGHTS_QUEUE, InsightsModule } from './insights.module';
 import { writeSnapshot } from './platform-figures';
 import { serialDatabase } from '../auth/serial-db.testing';
@@ -191,6 +192,56 @@ describe('the night job', () => {
     ).toBe(29);
   });
 
+  // @traces 106-FR-010
+  it('writes the brand-area rows of every closed day with the demand rows, and logs their count', async () => {
+    await prisma.$executeRawUnsafe('TRUNCATE demand_daily, area');
+    await new AreaLoader(prisma).load(AREAS);
+    const brand = await prisma.brand.upsert({
+      create: { key: 'worker-bmw', name: 'Worker BMW', slug: 'worker-bmw' },
+      update: {},
+      where: { name: 'Worker BMW' },
+    });
+    // A search from a Sector 3 cell two days ago, a closed day of the window.
+    await prisma.searchLog.create({
+      data: {
+        areaCell: 'sxfse',
+        at: new Date(Date.now() - 2 * 86_400_000),
+        brandId: brand.id,
+      },
+    });
+    const info = vi
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    const app = await boot();
+    const events = new QueueEvents(INSIGHTS_QUEUE, {
+      connection: { url: redisUrl },
+    });
+    await events.waitUntilReady();
+
+    try {
+      const job = await queue.add('demand-daily', {});
+      await job.waitUntilFinished(events, 10_000);
+
+      expect(
+        await prisma.demandDaily.count({
+          where: { dimension: 'brand_area', key: 'all' },
+        }),
+      ).toBe(29);
+      expect(
+        await prisma.demandDaily.count({
+          where: { dimension: 'brand_area', key: 'sector-3:Worker BMW' },
+        }),
+      ).toBe(1);
+      expect(info).toHaveBeenCalledWith(
+        expect.stringMatching(/^demand-daily brand_area written \d+ for /),
+      );
+    } finally {
+      info.mockRestore();
+      await events.close();
+      await app.close();
+    }
+  });
+
   // @traces 228-FR-012 228-FR-013
   it('ranks the brands by the searches once the demand rows are written, and drops the cached brand list', async () => {
     await prisma.$executeRawUnsafe('TRUNCATE brand, demand_daily CASCADE');
@@ -207,7 +258,7 @@ describe('the night job', () => {
     });
     const cache = new Redis(redisUrl);
     const version = Number((await cache.get('brands:version')) ?? 0);
-    const info = jest
+    const info = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const app = await boot();
@@ -259,7 +310,7 @@ describe('the night job', () => {
     await prisma.$executeRawUnsafe(
       'CREATE TRIGGER refuse_brand_update BEFORE UPDATE ON brand FOR EACH ROW EXECUTE FUNCTION refuse_brand_update()',
     );
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const app = await boot();
@@ -333,7 +384,7 @@ describe('the night job', () => {
         writtenAt: new Date(),
       },
     });
-    const info = jest
+    const info = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const app = await boot();
@@ -395,7 +446,7 @@ describe('the night job', () => {
   });
 
   it('logs a failed run and does not try it again', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const app = await boot('postgresql://nobody@localhost:1/none');
@@ -424,7 +475,7 @@ describe('the night job', () => {
     error.mockRestore();
   });
   it('writes the response figures when that job runs, logging the counts and no garage', async () => {
-    const info = jest
+    const info = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const garage = await prisma.garage.create({
@@ -467,7 +518,7 @@ describe('the night job', () => {
   });
 
   it('logs the response figures only when their last attempt has failed', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const app = await boot('postgresql://nobody@localhost:1/none');

@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 
 import { countedMetrics, counterTotal } from '@motor-fix/observability/testing';
 import { Logger } from '@nestjs/common';
+import type { Mock } from 'vitest';
 
 import {
   LIVE_CHANNEL,
@@ -41,12 +42,12 @@ class Sink extends EventEmitter {
 const NOW = Date.UTC(2026, 9, 4, 12, 0, 0);
 const MINUTE = 60_000;
 
-let publish: jest.Mock;
+let publish: Mock;
 let hub: LiveHub;
 
 beforeEach(() => {
-  jest.useFakeTimers({ now: NOW });
-  publish = jest.fn(async () => 1);
+  vi.useFakeTimers({ now: NOW });
+  publish = vi.fn(async () => 1);
   hub = new LiveHub(async () => ({
     mechanics: new Map(),
     off: new Set(),
@@ -57,7 +58,7 @@ beforeEach(() => {
 
 afterEach(() => {
   hub.shutdown();
-  jest.useRealTimers();
+  vi.useRealTimers();
 });
 
 const open = (
@@ -171,10 +172,10 @@ describe('LiveHub', () => {
   it('sends a comment line after 25 seconds without an event', () => {
     const { sink } = open('a1', ['account:a1']);
 
-    jest.advanceTimersByTime(24_999);
+    vi.advanceTimersByTime(24_999);
     expect(sink.pings()).toBe(0);
 
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
     expect(sink.pings()).toBe(1);
     expect(sink.chunks.at(-1)).toMatch(/^:.*\n\n$/);
   });
@@ -182,22 +183,22 @@ describe('LiveHub', () => {
   it('counts the 25 seconds from the last message sent', () => {
     const { sink } = open('a1', ['account:a1']);
 
-    jest.advanceTimersByTime(20_000);
+    vi.advanceTimersByTime(20_000);
     fanOut(['account:a1']);
-    jest.advanceTimersByTime(20_000);
+    vi.advanceTimersByTime(20_000);
     expect(sink.pings()).toBe(0);
 
-    jest.advanceTimersByTime(5_000);
+    vi.advanceTimersByTime(5_000);
     expect(sink.pings()).toBe(1);
   });
 
   it('says bye with reason expired and ends the stream when its token expires', () => {
     const { id, sink } = open('a1', ['account:a1'], NOW + 15 * MINUTE);
 
-    jest.advanceTimersByTime(15 * MINUTE - 1);
+    vi.advanceTimersByTime(15 * MINUTE - 1);
     expect(sink.ended).toBe(false);
 
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
     expect(sink.messages().at(-1)).toEqual({
       data: {
         at: new Date(NOW + 15 * MINUTE).toISOString(),
@@ -212,7 +213,7 @@ describe('LiveHub', () => {
 
   it('closes the oldest stream of an account when an eleventh opens', () => {
     const streams = Array.from({ length: 10 }, (_, i) => {
-      jest.advanceTimersByTime(i);
+      vi.advanceTimersByTime(i);
       return open('a1', ['account:a1']);
     });
     const other = open('b2', ['account:b2']);
@@ -238,7 +239,7 @@ describe('LiveHub', () => {
 
     sink.emit('close');
     fanOut(['account:a1']);
-    jest.advanceTimersByTime(15 * MINUTE);
+    vi.advanceTimersByTime(15 * MINUTE);
 
     expect(sink.messages().map((m) => m.event)).toEqual(['hello']);
     expect(sink.pings()).toBe(0);
@@ -257,7 +258,7 @@ describe('LiveHub', () => {
     const streams = Array.from({ length: 10 }, () =>
       open('a1', ['account:a1']),
     );
-    jest.advanceTimersByTime(25_000);
+    vi.advanceTimersByTime(25_000);
 
     expect(gone.chunks).toEqual([]);
     for (const { sink } of streams) expect(sink.ended).toBe(false);
@@ -357,10 +358,9 @@ const created = (position: number | string | undefined, unreadCount = 4) =>
     ...(position !== undefined && { position: String(position) }),
   });
 
-const flush = () =>
-  new Promise((resolve) =>
-    jest.requireActual('node:timers').setImmediate(resolve),
-  );
+// Taken before any test fakes the timers.
+const realSetImmediate = globalThis.setImmediate;
+const flush = () => new Promise((resolve) => realSetImmediate(resolve));
 
 function replaying(
   replay: (
@@ -494,7 +494,7 @@ describe('the position a notification frame carries', () => {
 // @traces 1190-FR-004
 describe('replaying what a returning stream missed', () => {
   it('writes the missed rows oldest first, each with its position and the count read once', async () => {
-    const replay = jest.fn(async () => ({
+    const replay = vi.fn(async () => ({
       rows: [row(5), row(6), row(7)],
       unreadCount: 3,
     }));
@@ -520,7 +520,7 @@ describe('replaying what a returning stream missed', () => {
   });
 
   it('reads nothing back for a first stream', async () => {
-    const replay = jest.fn(async () => ({ rows: [row(1)], unreadCount: 1 }));
+    const replay = vi.fn(async () => ({ rows: [row(1)], unreadCount: 1 }));
     const { start } = replaying(replay);
 
     const { sink } = start(null);
@@ -582,7 +582,7 @@ describe('replaying what a returning stream missed', () => {
   });
 
   it('goes live with what it held when the replay read fails, warning once', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     let fail: (error: Error) => void = () => undefined;
@@ -654,10 +654,10 @@ describe('the limits a stream lives within', () => {
     );
     const { id, sink } = start(null, NOW + 30 * MINUTE);
 
-    jest.advanceTimersByTime(14 * MINUTE - 1);
+    vi.advanceTimersByTime(14 * MINUTE - 1);
     expect(sink.ended).toBe(false);
 
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
     expect(frames(sink).at(-1)).toEqual({
       data: {
         at: new Date(NOW + 14 * MINUTE).toISOString(),
@@ -681,7 +681,7 @@ describe('the limits a stream lives within', () => {
     );
     const { sink } = start(null, NOW + 5 * MINUTE);
 
-    jest.advanceTimersByTime(14 * MINUTE);
+    vi.advanceTimersByTime(14 * MINUTE);
 
     expect(frames(sink).filter((f) => f.event === 'reconnect')).toEqual([]);
     expect(frames(sink).at(-1)?.data).toMatchObject({
@@ -740,7 +740,7 @@ describe('the live stream counts', () => {
     start(null, NOW + 5 * MINUTE);
     start(null, NOW + 30 * MINUTE);
 
-    jest.advanceTimersByTime(5 * MINUTE);
+    vi.advanceTimersByTime(5 * MINUTE);
     replayHub.shutdown();
 
     expect(await closes('expired')).toBe(before.expired + 1);
@@ -751,11 +751,11 @@ describe('the live stream counts', () => {
 
 // @traces 056-FR-010
 describe('the mechanic card events', () => {
-  let load: jest.Mock;
+  let load: Mock;
   let team: LiveHub;
 
   beforeEach(() => {
-    load = jest.fn(async () => ({
+    load = vi.fn(async () => ({
       mechanics: new Map(),
       off: new Set(),
       owners: new Set(['ion']),
@@ -920,5 +920,60 @@ describe('the time block events', () => {
     await send(['garage:g1', 'public:garage:g1'], kind);
 
     expect(kinds(page)).toEqual([kind]);
+  });
+});
+
+// @traces 154-FR-014
+describe("a brand's search results", () => {
+  const send = (audience: string[], kind: string) =>
+    hub.deliver(
+      JSON.stringify({
+        audience,
+        event: { at: new Date(NOW).toISOString(), id: kind, kind },
+      }),
+    );
+  const visitor = () => {
+    const sink = new Sink();
+    hub.open(sink, {
+      address: '10.0.0.9',
+      channels: ['public:search:b1'],
+      public: true,
+    });
+    return sink;
+  };
+  const kinds = (sink: Sink) =>
+    sink
+      .messages()
+      .map((m) => m.event)
+      .filter((kind) => kind !== 'hello');
+
+  it.each(['garage.suspended', 'garage.restored'])(
+    'hear %s through the brand search key',
+    async (kind) => {
+      const results = visitor();
+
+      await send(['admin', 'garage:g1', 'public:search:b1'], kind);
+
+      expect(kinds(results)).toEqual([kind]);
+    },
+  );
+
+  it.each(['verification.decided', 'rating.updated', 'review.posted'])(
+    'still do not hear %s through the brand search key',
+    async (kind) => {
+      const results = visitor();
+
+      await send(['garage:g1', 'public:search:b1'], kind);
+
+      expect(kinds(results)).toEqual([]);
+    },
+  );
+
+  it('still hear a garage update through the brand search key', async () => {
+    const results = visitor();
+
+    await send(['garage:g1', 'public:search:b1'], 'garage.updated');
+
+    expect(kinds(results)).toEqual(['garage.updated']);
   });
 });

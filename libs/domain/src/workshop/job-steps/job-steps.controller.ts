@@ -1,4 +1,5 @@
 import {
+  BasedOnUpdatedAtDto,
   JobStepDoneDto,
   JobStepDto,
   JobStepTextDto,
@@ -16,6 +17,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -28,6 +30,8 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiResponse,
+  ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
 
@@ -41,6 +45,8 @@ const uuid = () => new ParseUUIDPipe();
 
 const FORBIDDEN = 'forbidden: the desk, or a mechanic not on this job';
 const MISSING = 'not_found: not this garage’s job, or not its step';
+const LOCKED = 'job_locked (with holder): another person holds the job';
+const UNAVAILABLE = 'try_again: the lock store is unreachable';
 
 // The owner and the job's own mechanic write a job's steps; the desk reads
 // them through GET /garage/jobs/:id.
@@ -61,7 +67,11 @@ export class JobStepsController {
   @ApiBadRequestResponse({ description: 'validation_failed' })
   @ApiForbiddenResponse({ description: FORBIDDEN })
   @ApiNotFoundResponse({ description: MISSING })
-  @ApiConflictResponse({ description: 'too_many_steps; job_closed' })
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
+  @ApiConflictResponse({
+    description: 'job_changed (with job); too_many_steps; job_closed',
+  })
   add(
     @CurrentActor() actor: Actor,
     @Param('id', uuid()) id: string,
@@ -76,7 +86,7 @@ export class JobStepsController {
         [{ code: 'required', field: 'idempotency-key' }],
       );
     }
-    return this.steps.add(actor, id, key, body.text);
+    return this.steps.add(actor, id, key, body.text, body.basedOnUpdatedAt);
   }
 
   // Declared before the `:stepId` routes, so `order` is never read as an id.
@@ -89,13 +99,15 @@ export class JobStepsController {
   })
   @ApiForbiddenResponse({ description: FORBIDDEN })
   @ApiNotFoundResponse({ description: MISSING })
-  @ApiConflictResponse({ description: 'job_closed' })
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
+  @ApiConflictResponse({ description: 'job_changed (with job); job_closed' })
   async reorder(
     @CurrentActor() actor: Actor,
     @Param('id', uuid()) id: string,
     @Body() body: ReorderJobStepsDto,
   ): Promise<void> {
-    await this.steps.reorder(actor, id, body.stepIds);
+    await this.steps.reorder(actor, id, body.stepIds, body.basedOnUpdatedAt);
   }
 
   @Patch(':stepId')
@@ -104,14 +116,22 @@ export class JobStepsController {
   @ApiBadRequestResponse({ description: 'validation_failed' })
   @ApiForbiddenResponse({ description: FORBIDDEN })
   @ApiNotFoundResponse({ description: MISSING })
-  @ApiConflictResponse({ description: 'job_closed' })
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
+  @ApiConflictResponse({ description: 'job_changed (with job); job_closed' })
   rename(
     @CurrentActor() actor: Actor,
     @Param('id', uuid()) id: string,
     @Param('stepId', uuid()) stepId: string,
     @Body() body: JobStepTextDto,
   ): Promise<JobStepDto> {
-    return this.steps.rename(actor, id, stepId, body.text);
+    return this.steps.rename(
+      actor,
+      id,
+      stepId,
+      body.text,
+      body.basedOnUpdatedAt,
+    );
   }
 
   @Delete(':stepId')
@@ -121,13 +141,16 @@ export class JobStepsController {
   @ApiBadRequestResponse({ description: 'validation_failed' })
   @ApiForbiddenResponse({ description: FORBIDDEN })
   @ApiNotFoundResponse({ description: MISSING })
-  @ApiConflictResponse({ description: 'job_closed' })
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
+  @ApiConflictResponse({ description: 'job_changed (with job); job_closed' })
   async remove(
     @CurrentActor() actor: Actor,
     @Param('id', uuid()) id: string,
     @Param('stepId', uuid()) stepId: string,
+    @Query() query: BasedOnUpdatedAtDto,
   ): Promise<void> {
-    await this.steps.remove(actor, id, stepId);
+    await this.steps.remove(actor, id, stepId, query.basedOnUpdatedAt);
   }
 
   @Put(':stepId/done')
@@ -136,13 +159,17 @@ export class JobStepsController {
   @ApiBadRequestResponse({ description: 'validation_failed' })
   @ApiForbiddenResponse({ description: FORBIDDEN })
   @ApiNotFoundResponse({ description: MISSING })
-  @ApiConflictResponse({ description: 'job_not_started; job_closed' })
+  @ApiResponse({ description: LOCKED, status: HttpStatus.LOCKED })
+  @ApiServiceUnavailableResponse({ description: UNAVAILABLE })
+  @ApiConflictResponse({
+    description: 'job_changed (with job); job_not_started; job_closed',
+  })
   tick(
     @CurrentActor() actor: Actor,
     @Param('id', uuid()) id: string,
     @Param('stepId', uuid()) stepId: string,
     @Body() body: JobStepDoneDto,
   ): Promise<JobStepDto> {
-    return this.steps.tick(actor, id, stepId, body.done);
+    return this.steps.tick(actor, id, stepId, body.done, body.basedOnUpdatedAt);
   }
 }

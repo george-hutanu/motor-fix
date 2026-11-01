@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { DeferBlockBehavior, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { capabilitiesOf } from '@motor-fix/contracts/capabilities';
 import {
@@ -106,6 +106,7 @@ async function render(
   live = fakeLive();
   const me = signal(account(role, status, checked));
   TestBed.configureTestingModule({
+    deferBlockBehavior: DeferBlockBehavior.Manual,
     providers: [
       provideRouter([]),
       GarageRequestsFeed,
@@ -117,7 +118,14 @@ async function render(
           garageRequestsControllerList: () => Promise.resolve(listOf([])),
         },
       },
-      { provide: GaragesService, useValue: { legalCheckControllerRead: read } },
+      {
+        provide: GaragesService,
+        // The lift schedule has its own spec; here it waits.
+        useValue: {
+          garageSchedule: () => new Promise(() => undefined),
+          legalCheckControllerRead: read,
+        },
+      },
       // The reviews panel has its own spec; here it waits.
       {
         provide: ReviewsService,

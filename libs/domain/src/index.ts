@@ -24,6 +24,7 @@ export {
 } from './auth/account-loader';
 export { AccountsService } from './auth/accounts.service';
 export {
+  ActorGuard,
   CurrentActor,
   OpenInMaintenance,
   Public,
@@ -82,6 +83,9 @@ export {
   RemindersModule,
 } from './cars/reminders/reminders.module';
 export { reminderDayMs } from './cars/reminders/reminders-config';
+export { REPAIR_FROM_JOB_CONSUMER } from './cars/repair-from-job/repair-from-job';
+export { RepairFromJobModule } from './cars/repair-from-job/repair-from-job.module';
+export { RepairsModule } from './cars/repairs/repairs.module';
 export { SavedGaragesModule } from './cars/saved-garages/saved-garages.module';
 export { CarTransfersModule } from './cars/transfers/transfers.module';
 export { BrandLoader } from './catalogue/brand-loader';
@@ -122,12 +126,15 @@ export {
 } from './garages/verification/verification.service';
 export { verificationConfig } from './garages/verification/verification-config';
 export * from './health/health.module';
+export { AREAS, AreaLoader } from './insights/areas/areas';
 export { DemandModule } from './insights/demand/demand.module';
 export { GarageFiguresModule } from './insights/garage-figures/garage-figures.module';
 export { GarageFiguresService } from './insights/garage-figures/garage-figures.service';
 export { InsightsModule } from './insights/insights.module';
 export { ProfileViewsModule } from './insights/profile-views/profile-views.module';
 export { LiveIdleModule } from './live-video/idle/idle.module';
+export { LIVE_INPUTS_CONSUMER } from './live-video/inputs/inputs';
+export { LiveInputsModule } from './live-video/inputs/inputs.module';
 export {
   LiveVideoModule,
   liveVideoConfig,
@@ -170,6 +177,7 @@ export {
 } from './notifications/inbox-test/inbox-test';
 export { JOB_STAGE_CONSUMER } from './notifications/job-stage/job-stage.fan-out';
 export { NEWS_CONSUMER } from './notifications/news/news.fan-out';
+export { NO_SHOW_CONSUMER } from './notifications/no-show/no-show.fan-out';
 export { NotificationsModule } from './notifications/notifications.module';
 export { NotificationsService } from './notifications/notifications.service';
 export { phoneConfig } from './notifications/phone-config';
@@ -219,4 +227,5 @@ export { supportMessagesConsumer } from './support/delivery/delivery.consumer';
 export { SupportModule } from './support/support.module';
 export { type SupportConfig, supportConfig } from './support/support-config';
 export { DaySheetService } from './workshop/day-sheet/day-sheet.service';
+export { JobLockSweepModule } from './workshop/job-lock-sweep/job-lock-sweep.module';
 export { WorkshopModule } from './workshop/workshop.module';

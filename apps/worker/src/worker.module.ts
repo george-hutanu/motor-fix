@@ -31,9 +31,12 @@ import {
   HealthModule,
   InsightsModule,
   JOB_STAGE_CONSUMER,
+  JobLockSweepModule,
+  LIVE_INPUTS_CONSUMER,
   LIVE_RECORDINGS_CONSUMER,
   ListingPhotosWorkerModule,
   LiveIdleModule,
+  LiveInputsModule,
   LiveRecordingsModule,
   liveVideoConfig,
   MediaProcessingModule,
@@ -41,6 +44,7 @@ import {
   MODERATION_TIMERS_CONSUMER,
   ModerationTimersModule,
   NEWS_CONSUMER,
+  NO_SHOW_CONSUMER,
   NotificationsModule,
   OutboxRelayModule,
   phoneConfig,
@@ -50,6 +54,7 @@ import {
   QUOTE_DECLINED_CONSUMER,
   QUOTE_LOST_CONSUMER,
   QUOTE_RECEIVED_CONSUMER,
+  REPAIR_FROM_JOB_CONSUMER,
   REPAIR_UPDATED_CONSUMER,
   REQUEST_CANCELLED_CONSUMER,
   REQUEST_RECEIVED_CONSUMER,
@@ -58,6 +63,7 @@ import {
   REVIEW_RATINGS_CONSUMER,
   REVIEW_REPLIED_CONSUMER,
   RemindersModule,
+  RepairFromJobModule,
   RequestTimersModule,
   RetentionModule,
   ReviewRatingsModule,
@@ -86,7 +92,7 @@ class WorkerModule {}
 // streams, consumes the notifications queue, sending e-mail, SMS and
 // WhatsApp, sends the contact form's e-mails, runs the monthly news, the daily reminders, the decline windows, the booking timers, the assistant approvals' expiry,
 // the listing draft sweep, the listing photos' copies, the live sessions'
-// idle stop and their recordings' deletes, and the nightly
+// idle stop and their recordings' deletes, the expired job locks, and the nightly
 // platform figures (placing the garages with no city first), checks the
 // services behind the admin dashboard's tiles and reads the data stores for
 // their figures.
@@ -141,9 +147,11 @@ export function workerModule(
           GARAGE_REPORT_DECIDED_CONSUMER,
           GARAGE_RESTORED_CONSUMER,
           GARAGE_SUSPENDED_CONSUMER,
+          LIVE_INPUTS_CONSUMER,
           LIVE_RECORDINGS_CONSUMER,
           MODERATION_TIMERS_CONSUMER,
           NEWS_CONSUMER,
+          NO_SHOW_CONSUMER,
           QUOTE_RECEIVED_CONSUMER,
           QUOTE_ACCEPTED_CONSUMER,
           QUOTE_DECLINED_CONSUMER,
@@ -155,6 +163,7 @@ export function workerModule(
           REVIEW_REPLIED_CONSUMER,
           REVIEW_RATINGS_CONSUMER,
           CAR_TRANSFER_ACCEPTED_CONSUMER,
+          REPAIR_FROM_JOB_CONSUMER,
           REPAIR_UPDATED_CONSUMER,
           supportMessagesConsumer(support),
           VERIFICATION_RESULT_CONSUMER,
@@ -184,6 +193,11 @@ export function workerModule(
       }),
       // Clears a deleted account's plates.
       CarAccountDeletedModule.registerWorker({
+        notifications,
+        redisUrl: env.REDIS_URL,
+      }),
+      // Writes a handed-over job's repair into the car's history.
+      RepairFromJobModule.registerWorker({
         notifications,
         redisUrl: env.REDIS_URL,
       }),
@@ -264,6 +278,17 @@ export function workerModule(
       // Every minute: stops the live sessions with no publisher for ten
       // minutes.
       LiveIdleModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
+        liveVideo,
+        redisUrl: env.REDIS_URL,
+      }),
+      // Every minute: clears the copy of a job lock whose key ran out.
+      JobLockSweepModule.registerWorker({
+        databaseUrl: env.DATABASE_URL,
+        redisUrl: env.REDIS_URL,
+      }),
+      // After each live stop: closes the session's input at the provider.
+      LiveInputsModule.registerWorker({
         databaseUrl: env.DATABASE_URL,
         liveVideo,
         redisUrl: env.REDIS_URL,

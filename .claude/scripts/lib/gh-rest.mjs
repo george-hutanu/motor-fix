@@ -6,6 +6,12 @@
 // cloud session the writes (pr create|edit|ready|comment, label create) go the
 // same way; outside it they stay plain gh, as does every other command.
 //
+// A polling caller (ci-wait.mjs, watch.mjs) passes `cache`, a gh duration: its
+// GETs then go out with `gh api --cache`, which gh keeps on disk for every
+// process on the machine, so several waiters on one PR spend one call between
+// them. GH_REST_CACHE overrides it, 0 turning it off. Nothing else caches, so a
+// read after a write is never stale.
+//
 // `run(file, args, { input })` returns { code, stdout, stderr }; callers inject
 // their own (lifecycle.mjs gates first), tests a fake GitHub.
 
@@ -18,12 +24,18 @@ export const isCloud = (env = process.env) => env.CLAUDE_CODE_REMOTE === "true";
 
 const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
+const MAX_BUFFER = 256 * 1024 * 1024;
+
 /** A run that spawns the command with the given cwd, env and timeout. */
 export const spawnRun =
   ({ cwd, env = process.env, timeout } = {}) =>
   (file, args, opts = {}) => {
-    const r = spawnSync(file, args, { cwd, env, encoding: "utf8", input: opts.input, timeout });
-    return { code: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr ?? String(r.error ?? "") };
+    // A compare reply passes spawnSync's default 1 MB on a large PR (1.2 MB on #651).
+    const r = spawnSync(file, args, { cwd, env, encoding: "utf8", input: opts.input, timeout, maxBuffer: MAX_BUFFER });
+    // A spawn error (ENOBUFS, a timeout, ENOENT) often leaves stderr empty: report it, never drop it.
+    const error = r.error ? `${file}: ${r.error.message}` : "";
+    const stderr = [r.stderr ?? "", error].filter(Boolean).join(r.stderr?.endsWith("\n") ? "" : "\n");
+    return { code: r.status ?? 1, stdout: r.stdout ?? "", stderr };
   };
 
 class GhError extends Error {
@@ -323,6 +335,23 @@ function labelCreate(run, flags) {
   return { stdout: "" };
 }
 
+const RUN_FIELDS = { status: (r) => r.status, conclusion: (r) => r.conclusion ?? "", databaseId: (r) => r.id, displayTitle: (r) => r.display_title, headSha: (r) => r.head_sha, url: (r) => r.html_url };
+
+/** run view <id> --json <fields>: the run's state, read over REST. */
+function runView(run, flags) {
+  const r = rest(run, "GET", `actions/runs/${flags._[0]}`);
+  const fields = String(flags.json).split(",");
+  return { stdout: print(run, Object.fromEntries(fields.map((f) => [f, RUN_FIELDS[f](r)])), flags) };
+}
+
+/** `run` with `--cache <ttl>` on each `gh api` GET. */
+function caching(run, ttl) {
+  return (file, args, opts) => {
+    const get = file === "gh" && args[0] === "api" && args[args.indexOf("-X") + 1] === "GET";
+    return run(file, get ? [...args, "--cache", ttl] : args, opts);
+  };
+}
+
 const BARE = new Set(["draft", "force", "watch", "fill"]);
 const READS = new Set(["list", "view", "checks"]);
 
@@ -330,6 +359,11 @@ const READS = new Set(["list", "view", "checks"]);
 function translate(args, cloud) {
   const [group, verb, ...rest_] = args;
   if (group === "pr" && Object.hasOwn(PR, verb) && (cloud || READS.has(verb))) return (run, sleep) => PR[verb](run, flagsOf(rest_, BARE), sleep);
+  if (group === "run" && verb === "view") {
+    const flags = flagsOf(rest_, BARE);
+    const answered = typeof flags.json === "string" && flags.json.split(",").every((f) => Object.hasOwn(RUN_FIELDS, f));
+    if (answered && flags._.length === 1 && Object.keys(flags).every((k) => ["_", "json", "jq", "q"].includes(k))) return (run) => runView(run, flags);
+  }
   if (cloud && group === "label" && verb === "create") return (run) => labelCreate(run, flagsOf(rest_, BARE));
   return null;
 }
@@ -338,11 +372,12 @@ function translate(args, cloud) {
  * One gh command: a PR read through REST always, a lifecycle write through REST
  * in a cloud session, else plain gh. Returns { code, stdout, stderr }.
  */
-export function ghRun(args, { run = spawnRun(), env = process.env, sleep = sleepSync } = {}) {
+export function ghRun(args, { run = spawnRun(), env = process.env, sleep = sleepSync, cache } = {}) {
   const translated = translate(args, isCloud(env));
   if (!translated) return run("gh", args);
+  const ttl = env.GH_REST_CACHE ?? cache;
   try {
-    const out = translated(run, sleep);
+    const out = translated(ttl && ttl !== "0" ? caching(run, ttl) : run, sleep);
     return { code: out.code ?? 0, stdout: out.stdout ?? "", stderr: "" };
   } catch (err) {
     // gh exits 1 on any failure; a garbled answer or an unreadable --body-file too.
@@ -352,8 +387,8 @@ export function ghRun(args, { run = spawnRun(), env = process.env, sleep = sleep
 }
 
 /** ghRun with execFileSync's contract: stdout, or an Error carrying status, stdout and stderr. */
-export function ghSync(args, { cwd, env = process.env, timeout, run = spawnRun({ cwd, env, timeout }), sleep } = {}) {
-  const r = ghRun(args, { run, env, sleep });
+export function ghSync(args, { cwd, env = process.env, timeout, run = spawnRun({ cwd, env, timeout }), sleep, cache } = {}) {
+  const r = ghRun(args, { run, env, sleep, cache });
   if (r.code !== 0) throw Object.assign(new Error(`gh ${args.join(" ")}: ${r.stderr.trim()}`), { status: r.code, stdout: r.stdout, stderr: r.stderr });
   return r.stdout;
 }

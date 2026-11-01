@@ -1,6 +1,6 @@
 ---
 capability: cars
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 089-add-a-car
   - 090-itp-status-lamp
@@ -17,9 +17,12 @@ features:
   - 1265-car-transfer-accept
   - 1386-oil-service-lamp
   - 409-garage-corrects-repair
-  - 1400-garage-corrects-repair-web
+  - 061-repair-list
   - 1267-admin-corrects-repair
+  - 1400-garage-corrects-repair-web
   - 1379-provider-calls-worker
+  - 293-save-garage-suggest
+  - 1392-car-transfer-link-web
 ---
 
 # Capability: Cars
@@ -80,9 +83,9 @@ _From 090-itp-status-lamp._
 
 _From 090-itp-status-lamp._
 
-### 1386-FR-004 — A car with no next-service value MUST show the grey oil line "Schimb de ulei: adaugă kilometrajul" / "Oil service: add the reading" after the rovinietă line on Mașinile mele's card, as a button operable by keyboard with at least a 44 px touch target, opening the edit dialog with the focus in the next-service field (FR-001), as the grey date lines of 092-FR-009 do; Panou's car panel keeps showing no oil line for such a car (its three date lines always rank before a grey oil line). (Modifies 029-FR-007: the card shows a grey line, not no line, without a value; modifies 092-FR-009: the card's fourth grey line and its button.)
+### 1392-FR-001 — (415-FR-015, 415-FR-022) Mașinile mele's car card "⋯" menu MUST offer "Am vândut mașina" / "I sold the car" as a third item after "Modifică" and "Șterge mașina"; it opens the sale dialog "Ai vândut <brand model>?" / "Sold your <brand model>?" with the question "Transmiți istoricul reparațiilor noului proprietar?" / "Do you pass the repair history to the new owner?" and the two choices of scenario 1.2; "Nu transmit istoricul" closes it and opens ST-92's removal confirmation for the car (the sale dialog answers `'remove'` and the cars view runs its existing removal path, so the card is dropped in one place). The dialog reads the car's sale (`GET /api/v1/cars/{id}/sale`) on opening, showing the existing task loading state until it answers; while it answers `canStart: false` with `reason: 'open_request'`, the dialog shows the refusal text of scenario 4.1 instead of the choices, with only "Închide" / "Close". The card of a car whose list answer carries a `transfer` (the `sent` transfer within its time, 415-FR-022) MUST show the transfer line "Transfer trimis · expiră pe <day month>" / "Transfer sent · expires on <day month>" and the "Anulează transferul" / "Cancel the transfer" button, and its "⋯" button MUST NOT be shown. The card's list MUST re-read on `car_transfer.sent`, `car_transfer.cancelled`, `car_transfer.expired` and `car_transfer.accepted` reaching the account (415-FR-011, 1265-FR-008) and after the dialog's own send and cancel, so the line follows without a reload.
 
-_From 1386-oil-service-lamp._
+_From 1392-car-transfer-link-web._
 
 ### 090-FR-007 — Tests MUST cover: the state and sentence for 61, 60, 8, 7, 1, 0 and −1 days and for no date, with a fixed clock in Europe/Bucharest, including just before and after midnight and the change to and from summer time; the Romanian plural and both languages' month names; the link only on a passed date, with its address (Jest); end to end (Playwright): a new driver adds a car with an ITP 36 days ahead and sees the amber line, then adds a car with an ITP 400 days ahead and sees the green line (dates relative to today in Europe/Bucharest, never literal).
 
@@ -115,10 +118,6 @@ _From 092-edit-remove-car._
 ### 094-FR-003 — A new ITP date MUST reset the flags, and the old date's remaining stages MUST never be sent; a stage whose day is already past when the date is entered or changed MUST be skipped (marked sent), while a stage whose day is today is still sent by today's run. (Modifies 092-FR-008 for the ITP, with scenario 2.2 and the edge cases of this spec as its tests.)
 
 _From 094-itp-reminders._
-
-### 092-FR-011 — The removal MUST be confirmed in a dialog with scenario 1's text (User Story 2) naming the car as "<brand> <model>", with "Șterge mașina" / "Remove the car" as the main button and "Renunță" / "Cancel"; a refusal (FR-003's `open_request`, or any other error) MUST show its reason inside that dialog, which stays open; on success the dialog closes and the card leaves the list at once.
-
-_From 092-edit-remove-car._
 
 ### 1265-FR-012 — `GET /api/v1/cars/sold` (capability `driver.cars`) MUST answer the caller's `former_owner_read_only` rows, newest sale first (ties by closing instant, newest first), each with the car's `id`, `brandName`, `model`, `year` and `saleDate` (`to_date`), the car's removal notwithstanding; `GET /api/v1/cars/sold/:id/repairs` MUST answer, for a car the caller has such a row for (else 404), the repairs that row may read (FR-010; done on or before the sale date), in FR-011's shape and order. A car the caller owns again (a second transfer back) is listed by both its open row (in `GET /api/v1/cars`) and its closed row (here). These reads are read-only: no write of this story or of 092 accepts a car through a closed row. (Modifies 092-FR-012: selling a car and passing its history on is this story's, and the former owner's read is the one exception to "repairs read only cars not removed".)
 
@@ -359,9 +358,9 @@ _From 1265-car-transfer-accept._
 
 _From 1265-car-transfer-accept._
 
-### 409-FR-015 — The driver's history reads (`GET /api/v1/cars/:id/repairs` and `/cars/sold/:id/repairs`, 1265-FR-011 and FR-012) MUST add to each repair `odometerKm` (or null), `costBani` (or null) and `correctedBy`: `garage` when `updated_by_role` is `owner`, `admin` when it is `admin`, else null; `garageName` already on the item names the garage for the row label (title 2, FR-022); the generated client is regenerated from `apps/api/openapi.json`.
+### 061-FR-007 — Every row of the three history reads (`GET /api/v1/repairs`, `/cars/:id/repairs`, `/cars/sold/:id/repairs`) MUST carry, beside `id`, `doneOn`, `what`, `garageName`, `source`, `fromPreviousOwner`, `odometerKm`, `costBani` and `correctedBy` (1265-FR-011, 409-FR-015): `car` (`id`, `brandName`, `model`, `year`), `mechanicName` (for a MotorFix repair the job's mechanic's `MECHANIC.name`, hidden from the profile or not; null for a logged repair, a job with no mechanic or a deleted mechanic row) and `review`: null for every row, MotorFix or logged, until ST-26 (#91) adds the state, per the owner's resolution of 2026-10-15 on #102; the field stays nullable in the contract so ST-26 can fill it.
 
-_From 409-garage-corrects-repair._
+_From 061-repair-list._
 
 ### 1265-FR-014 — After the acceptance, the seller MUST get 404 from every car route taking the car's id (`GET /api/v1/cars/:id`, the edit, the removal, the sale, the transfer cancel), and the car MUST be absent from the seller's `GET /api/v1/cars` and present in the buyer's with `plate`, `rcaUntil` and `rovinietaUntil` `null` (the existing owner check does this: the owner changed); both accounts' warm car lists (`driver-home`, 1169-FR-003) MUST be dropped in the acceptance's request.
 
@@ -451,6 +450,54 @@ _From 1267-admin-corrects-repair._
 
 _From 409-garage-corrects-repair._
 
+### 061-FR-001 — The `cars` module MUST consume `job.handed_over` and `job.final_price_corrected` as the worker's other event consumers do (one queue, `repair-from-job`, fed by the outbox relay, each run retried on failure with the same backoff as `final-price-corrected`, no requeue), and nothing on `job.done`, a cancellation, a lapse or a no-show. The handler is in the `cars` module, not in `workshop`.
+
+_From 061-repair-list._
+
+### 061-FR-002 — Each run MUST bring the job's repair row in step with the job in one use case: when no row holds the job's id, it creates a REPAIR with `source` `motorfix`, `car_id` the booking's car, `job_id` the job, `garage_id` the job's garage and `garage_name` a copy of its name, `what` the names of the included jobs of the booking's accepted quote (`QUOTE_JOB.included`) joined with ", " in Romanian, `done_on` the day of `JOB.finished_at` in Europe/Bucharest, `odometer_km` `JOB.odometer_km` (none when none), `cost_bani` `JOB.final_price_bani`. The row's insertion is idempotent on the unique `job_id` (a second run, a second relay or a concurrent run leaves one row and one audit entry).
+
+_From 061-repair-list._
+
+### 061-FR-003 — When a row holds the job's id and its `cost_bani` differs from `JOB.final_price_bani`, the same use case MUST set `cost_bani` to the job's; when they are equal it MUST change nothing and write nothing. A missing job ends the run with a log line and no retry.
+
+_From 061-repair-list._
+
+### 061-FR-004 — The creation and each cost change MUST run in their own transaction with their audit entries through the audit writer (390-FR-001): a `create` on subject type `repair` (the repair id; scope the car id and the garage id) whose new value holds the stored fields, and an `update` on field `cost_bani` with the old and new amounts; actor `system`, the job named on the entry. A failing audit write rolls the row back. The same transaction MUST record `repair.updated` (payload `by` `system`, `carId`, `changed`, `garageId`, `ownerId`, `repairId`; audience the car's owner) so the driver's screen re-reads once the row is written; the repair-updated fan-out MUST tell nobody for `by` `system`, as for `driver`.
+
+_From 061-repair-list._
+
+### 061-FR-005 — `GET /api/v1/repairs` (capability `driver.cars`) MUST answer the repairs of every car the caller owns through an open ownership row whose car is not removed, each row's repairs as the visibility rule decides (1265-FR-010; a soft-deleted repair never), mixed across cars, ordered by `done_on` newest first, ties by `created_at` newest first, ties by id descending; paged by a cursor (`cursor` in, `nextCursor` out, null on the last page; a cursor that is not a row of this list for the caller, malformed or unknown, answers 400 `invalid_cursor`; no cars or no repairs answer `items` empty and `nextCursor` null) with `limit` 1 to 20, default 20 (else 400 `validation_failed`).
+
+_From 061-repair-list._
+
+### 061-FR-006 — `GET /api/v1/repairs` MUST take an optional `carId`: a car the caller owns through an open row narrows the list to it; any other id (another driver's car, a removed car, a sold car, an unknown id) answers 404 `not_found` with one body for every case. `GET /api/v1/cars/:id/repairs` and `/cars/sold/:id/repairs` keep their 404s (1265-FR-011, FR-012).
+
+_From 061-repair-list._
+
+### 061-FR-008 — A MotorFix row's `what` MUST be answered in the reader's language (the interface language the request carries, as the quotes reads do) from the job's included quoted jobs' names, falling back to the stored `what` when the job or its quoted jobs are gone; a logged row's `what` is as stored.
+
+_From 061-repair-list._
+
+### 061-FR-009 — The reads MUST never carry the plate, the driver's or the mechanic's account, phone or e-mail, the garage's internal ids beyond `garageId`, nor any `removed` or `deleted_by_author` review's text or rating; the sold car's read keeps its cut at the sale date (1265-FR-012) and answers `review` null, as every row (FR-007).
+
+_From 061-repair-list._
+
+### 061-FR-010 — `PATCH /api/v1/repairs/:id` and `DELETE /api/v1/repairs/:id` (capability `driver.cars`) MUST answer 404 `not_found` when the repair is not among the repairs the caller may read through an open ownership row (another driver's, deleted, of a removed or sold car, unknown), and 409 `motorfix_repair` with the message "Reparația vine dintr-o lucrare MotorFix" (Romanian only, as every refusal in the repo; the English "This repair comes from a MotorFix job" is the client's text) for a `motorfix` row, in that order after 401; a path id that is not a uuid answers 400 `validation_failed`, as on every route, and a well-formed id the caller cannot use answers 404; each changes nothing and writes no audit entry.
+
+_From 061-repair-list._
+
+### 061-FR-011 — For a `logged` row the two routes MUST answer 501 `not_implemented` (message "Editarea reparațiilor adăugate vine cu o versiune următoare", Romanian only; the client's English is "Editing added repairs comes with a later release") and change nothing; ST-64 replaces this answer with the edit and the soft delete. The `PATCH` reads no body field. A body that is not valid JSON answers 400 from the body parser before the route runs, as on every route.
+
+_From 061-repair-list._
+
+### 061-FR-012 — Observability: the three routes MUST be listed in `infra/observability/inventory.json` with the cars module's existing metrics, logs and traces; the queue `repair-from-job` with its counter `motorfix_repairs_from_jobs_total` by `outcome` (`created`, `cost_updated`, `unchanged`, `job_missing`), one log line per run naming the job, the repair and the outcome (no amounts), the worker queue alerts, a panel on the cars dashboard, and a counter `motorfix_repair_edit_refusals_total` by `code` (`motorfix_repair`, `not_implemented`); no alert of its own (a lost run is retried by the queue, whose alerts cover a stuck queue; the API error-rate alert covers the reads).
+
+_From 061-repair-list._
+
+### 061-FR-013 — Tests MUST be written first and cover, in Jest on real PostgreSQL and Valkey (`*.integration.spec.ts` where the repository is used), each file naming its ids in one whole-line `// @traces` comment: the row created from `job.handed_over` with every field, once only over two runs and two concurrent runs, none from `job.done`, a cancelled, a lapsed or a no-show booking; `done_on` across the Bucharest midnight; no reading at reception; the cost from the handover and its correction, an equal correction writing nothing, a correction before the row; the missing job; the audit entries and the rollback on a failing audit write; the list's order across two cars, the tie, the cursor pages and `limit`, the removed car, the previous owner's repairs, `carId` of own, other, removed and sold cars; the row's car, mechanic (named, the owner's row, hidden, deleted), `what` in both languages and the fallback, `correctedBy`; every `review` state at days 10, 60 and 61 and for `published`, `reported`, `removed` and `deleted_by_author`; the same shape on `/cars/:id/repairs` and the sold read; 401, 404, 409 and 501 on `PATCH` and `DELETE` with nothing changed; no personal data in any answer or log; the generated client regenerated from `apps/api/openapi.json`; one `repair.updated` with `by` `system` per creation and per cost change, none for an unchanged run, and the repair-updated fan-out telling nobody for it.
+
+_From 061-repair-list._
+
 ### 1400-FR-001 — (409-FR-018) The garage dashboard MUST gain the view "Reparații adăugate de clienți" / "Repairs added by clients", a garage view behind the capability `garage.client_repairs` (the owner alone; hidden for a draft garage as the view registry already decides, no new status rule), reached from the garage navigation, with a title, a subtitle and the texts of a garage view in both languages; it MUST read the owner's shared logged repairs through the generated client and show them in the order the API answers.
 
 _From 1400-garage-corrects-repair-web._
@@ -539,6 +586,58 @@ _From 1267-admin-corrects-repair._
 
 _From 1267-admin-corrects-repair._
 
+### 293-FR-001 — The system MUST store a dismissed save suggestion as SAVE_SUGGESTION_DISMISSAL in the `cars` module beside SAVED_GARAGE: `account_id` (the driver's account), `garage_id`, `dismissed_at` (UTC, the first dismissal's time). The pair (account, garage) is the primary key; a row is deleted with its account or its garage (cascade); rows are never updated or removed otherwise. The table ships with its migration in the module's schema.
+
+_From 293-save-garage-suggest._
+
+### 293-FR-002 — `POST /api/v1/me/save-suggestions/:garageId/dismiss` MUST record the dismissal for the actor's own account and answer 204 with no body, whether a row was created or one already existed (the first `dismissed_at` is kept). It MUST answer 404 `not_found` and store nothing when the actor has no job at that garage whose status is `done` — a job of a booking of one of the actor's quote requests at that garage, handed over or not — or when the garage id names no garage. Access is ST-290's (290-FR-006): an account whose role in use is not `driver` 403 `driver_role_required`, then the capability `driver.saved_garages` (a missing capability is the policy's own 403 refusal, as on the save route); a visitor 401 `sign_in_required`; a `:garageId` that is not a valid id 400 `validation_failed`; when two faults coincide the order is 401, then 403, then 400. The route is under `/me` and takes no account id, so another person's dismissal cannot be asked for.
+
+_From 293-save-garage-suggest._
+
+### 293-FR-004 — A dismissal MUST write no audit entry, emit no event and send no notification, push or e-mail: it is a display preference (the brief). The suggestion itself writes nothing. The save, when the driver takes it, is ST-290's with its audit entry and `saved_garage.added` event, unchanged.
+
+_From 293-save-garage-suggest._
+
+### 293-FR-006 — The dismiss route MUST be listed with its logs, metrics, dashboard panel and alert (or why not) in `infra/observability/inventory.json` in the same PR, as 290-FR-016 lists the saved-garage routes; the active request read gains a field, not a new endpoint.
+
+_From 293-save-garage-suggest._
+
+### 293-FR-007 — Tests MUST be written first (Principle II) and cover, in Jest on real PostgreSQL and Valkey, each file naming its ids in one whole-line `// @traces` comment: the read's `saveSuggestion` with a `done` job at an approved garage neither saved nor dismissed (set, with the garage's id and name); null for a job `to_do`, `in_work` and `paused`, for a saved garage, for a dismissed garage, for a garage `suspended` before or after the job became `done`, and for a request with no live booking; the dismissal of garage A not hiding the suggestion of garage B (per garage); the dismiss route's 204 and row on the first call, 204 and the kept time on the second, 404 for a garage with no `done` job of the actor (a job `in_work` there, another driver's `done` job there, an unknown id), 403 without the driver role, 401 for a visitor, 400 for a malformed id; no audit entry and no event after a dismissal; the cascade when the account row or the garage row is deleted. In Jest without a database: the OpenAPI document lists the route and the field. The web tests and the Playwright flow are title 2's (FR-014).
+
+_From 293-save-garage-suggest._
+
+### 1392-FR-002 — (415-FR-016) Choosing to pass the history MUST show, in the same dialog, the repairs list as the sale read answers it (newest first; each row: the date, what was done, the garage; a MotorFix repair with the tag "Se transmite" / "Passes on" and no tick; a logged repair with a tick, unticked, label "Adăugată de tine" / "Added by you"), the empty-state text of scenario 1.5 when there is none, a note "Reparațiile făcute prin MotorFix se transmit întotdeauna. Bifează ce ai adăugat tu și vrei să transmiți. Facturile nu se transmit." / "Repairs done through MotorFix always pass on. Tick what you added yourself and want to pass. Invoices don't pass on.", the phone field "Telefonul cumpărătorului" / "The buyer's phone" (tel input, autocomplete `tel`; a number `normalisePhone` of `@motor-fix/contracts` answers `null` for (the API's own rule, 415-FR-004) refused in the field with "Scrie un număr de telefon valid." / "Enter a valid phone number." before any request; the API's 400 `invalid_phone` shown as the same message and 400 `own_phone` as "Nu poți trimite linkul pe numărul tău." / "You can't send the link to your own number.", both in the field), a note "Îi trimitem un link pe WhatsApp, valabil 7 zile." / "We send them a link on WhatsApp, valid 7 days.", "Înapoi" / "Back" and the main button "Trimite" / "Send", disabled while the request is in flight. The send is `POST /api/v1/cars/{id}/transfers` with the phone as typed and the ticked repair ids. Any other refusal (409 `open_request`, 400 `repair_not_tickable`, a failure) stays in the dialog with its reason (the existing task error).
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-003 — (415-FR-017) After the send the dialog MUST show the done state: "Linkul a plecat pe WhatsApp" / "The link went by WhatsApp" when the answer's `whatsapp` is `sent`, or the copy-the-link text of scenario 2.1 when `failed`; under it the link in full as the answer carries it, "Copiază linkul" / "Copy the link" (clipboard write; "Copiat" / "Copied" for 2 seconds; when the clipboard is not available, the link stays selectable), and "Gata" / "Done" which closes the dialog. The card re-reads and shows the transfer line.
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-004 — (415-FR-018) The transfer line's cancel MUST confirm in a small dialog "Anulezi transferul?" / "Cancel the transfer?" with "Linkul trimis nu va mai funcționa." / "The link you sent will stop working.", "Înapoi" and "Anulează transferul"; confirming calls `POST /api/v1/cars/{id}/transfers/{transferId}/cancel` with the line's transfer id; on 204 the dialog closes and the card re-reads; a refusal (409 `not_sent`, 404, a failure) shows its reason inside the dialog, which stays open, and the card re-reads too (the transfer may already be gone).
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-005 — (415-FR-013, adapted to 1265-FR-003) The web app MUST serve `/:lang/transfer/:token` as a public page in the public frame that reads `GET /api/v1/car-transfers/{token}` and shows, centred, with no sign-in prompt and no action in its body: for 404 "Linkul nu există" / "This link does not exist"; for 410 `transfer_cancelled` "Linkul nu mai e valabil" / "The link is no longer valid"; for 410 `transfer_expired` "Linkul a expirat" / "The link has expired"; for 410 `transfer_accepted` "Mașina a fost deja preluată" / "The car has already been taken over"; and for any 200 answer (signed out, or signed in with the car, repair count and seller name in it) and for 403 `own_transfer` the one line "Linkul e valabil. Preluarea mașinii vine în curând." / "This link is valid. Taking the car over is coming soon." (ST-1394 replaces this view). On a client-side navigation the page shows the existing task loading state until the read answers; the page asks search engines not to index it (`noindex`, the token is a bearer link). Each state sets the document title to its text; the server render answers with the API's HTTP status for 404 and 410 and 200 otherwise; the page never shows the seller's name, the car or the repair count even when the answer carries them. The route is public: no session is asked for and no sign-in dialog opens for a 401-free read.
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-006 — (415-FR-019) The screens MUST hold at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll, the dialog's list scrolling inside it on a phone, every control a 44 px touch target, focus moving into each dialog when it opens, Escape closing it (not while a request is in flight) and focus returning to the control that opened it (or to the card when that control is gone), the ticks labelled by their repair row, the public page readable without sign-in and without the dashboard chrome, no axe violation, each dialog named by its title (`role="dialog"` labelled by it), and the copied state, the field and task errors and the done state announced to assistive technology (a polite live region).
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-007 — (constraint, Principle I and the bundle budget) The public transfer page, the sale dialog and the cancel confirmation MUST be loaded only when they are opened (the page by its route, the dialogs on the first tap, as the removal confirmation is); nothing of this story joins the first-page bundle and its 1 MB error budget is not raised. The card's new line, button and menu item are the only code added to the driver area's existing chunk.
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-008 — (415-FR-020, the web part) Observability: no new service, queue, outside call or API endpoint is added; the PR's Observability section says so and names the ST-415 inventory entries the screens call. A web route or page that the inventory lists MUST gain the public page's entry in the same PR; if the inventory lists none, the section says so.
+
+_From 1392-car-transfer-link-web._
+
+### 1392-FR-009 — (415-FR-021, the web and Playwright parts) Tests MUST cover, in Jest for the web app, each file naming its ids in one whole-line `// @traces` comment: the menu item and its absence with a `transfer`; the three dialog steps; the refusal with "Închide" only; the empty state; the field's own refusal and the API's `invalid_phone` and `own_phone` in the field; the ticked ids and the phone sent; Trimite disabled in flight; the two done states; the copy button's "Copiat" and the clipboard-less fallback; "Gata" closing; the transfer line with the day and month in both languages; the cancel confirmation, its 204 and its refusal; the re-read on each of the four event kinds; the public page's five states, the `own_transfer` line, the document title and the server render's status for 404, 410 and 200, in both languages. End to end (Playwright, `apps/web-e2e`): a driver sells a car, ticks one repair, sends, copies the link, opens it and sees the valid line; cancels and sees "Linkul nu mai e valabil"; with dates relative to today in Europe/Bucharest, never literal. The QA routes name Mașinile mele as the driver and the public page for a valid, a cancelled and an unknown token.
+
+_From 1392-car-transfer-link-web._
+
 ## Retired
 
 - `089-FR-008` — superseded by `090-FR-006` (2026-10-08)
@@ -563,6 +662,9 @@ _From 1267-admin-corrects-repair._
 - `029-FR-007` — superseded by `1386-FR-004` (2026-10-30)
 - `092-FR-009` — superseded by `1386-FR-004` (2026-10-30)
 - `1265-FR-011` — superseded by `409-FR-015` (2026-10-30)
+- `409-FR-015` — superseded by `061-FR-007` (2026-10-30)
 - `409-FR-011` — superseded by `1267-FR-006` (2026-10-30)
 - `409-FR-016` — superseded by `1267-FR-010` (2026-10-30)
+- `1386-FR-004` — superseded by `1392-FR-001` (2026-10-31)
+- `092-FR-011` — superseded by `1392-FR-001` (2026-10-31)
 - `415-FR-006` — superseded by `1379-FR-003` (2026-10-30)

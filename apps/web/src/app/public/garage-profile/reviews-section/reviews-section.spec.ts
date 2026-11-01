@@ -881,6 +881,91 @@ describe('the prices and the marks under a review', () => {
   });
 });
 
+// @traces 1387-FR-004 1387-FR-005
+describe('the garage’s reply under a review', () => {
+  beforeEach(() => configure());
+
+  const REPLY = {
+    editedAt: null,
+    postedAt: '2026-10-12T09:00:00.000Z',
+    text: 'Mulțumim, Andrei!\n<b>Te mai așteptăm.</b>',
+  };
+  const block = () =>
+    reviews()[0]?.querySelector<HTMLElement>('[data-reply]') ?? null;
+  const part = (name: string) =>
+    block()
+      ?.querySelector(`[data-${name}]`)
+      ?.textContent?.replace(/\s+/g, ' ')
+      .trim();
+
+  it('shows a published reply after the review’s author line, labelled, whole and as plain text', async () => {
+    await shown({ ...PAGE, items: [review(1, { reply: REPLY })] });
+
+    expect(
+      [...(reviews()[0]?.children ?? [])].map((el) => el.className),
+    ).toEqual(['top', 'text', 'by', 'reply']);
+    expect(block()?.querySelector('.reply-label')?.textContent?.trim()).toBe(
+      'Răspunsul service‑ului',
+    );
+    expect(block()?.querySelector('[data-reply-text]')?.textContent).toBe(
+      'Mulțumim, Andrei!\n<b>Te mai așteptăm.</b>',
+    );
+    expect(block()?.querySelector('b')).toBeNull();
+    expect(part('reply-day')).toBe('12 oct. 2026');
+    expect(part('reply-edited')).toBeUndefined();
+  });
+
+  it('marks an edited reply with its day, in Romanian and English', async () => {
+    await shown({
+      ...PAGE,
+      items: [
+        review(1, {
+          reply: { ...REPLY, editedAt: '2026-10-13T22:30:00.000Z' },
+        }),
+      ],
+    });
+
+    expect(part('reply-edited')).toBe('Editat · 14 oct. 2026');
+
+    await english();
+
+    expect(block()?.querySelector('.reply-label')?.textContent?.trim()).toBe(
+      'The garage’s reply',
+    );
+    expect(part('reply-day')).toBe('12 Oct 2026');
+    expect(part('reply-edited')).toBe('Edited · 14 Oct 2026');
+  });
+
+  it('draws no reply block for a review with no reply', async () => {
+    await shown();
+
+    expect(block()).toBeNull();
+    expect(text()).not.toContain('Răspunsul service‑ului');
+  });
+
+  describe('kept live', () => {
+    beforeEach(() => jest.useFakeTimers());
+
+    it.each([['review.replied'], ['review.reply_edited']])(
+      'reads the first page again on %s and shows the reply it brings',
+      async (kind) => {
+        await shown();
+
+        await liveMessage(kind);
+        await reads[1]?.answer({
+          ...PAGE,
+          items: [review(1, { reply: { ...REPLY, text: 'Mulțumim!' } })],
+        });
+
+        expect(reads[1]?.params).toEqual({ garageId: 'g-1', page: 1 });
+        expect(block()?.querySelector('[data-reply-text]')?.textContent).toBe(
+          'Mulțumim!',
+        );
+      },
+    );
+  });
+});
+
 describe('the reviews section’s styles', () => {
   const css = readFileSync(join(__dirname, 'reviews-section.css'), 'utf8');
 
@@ -911,5 +996,13 @@ describe('the reviews section’s styles', () => {
 
   it('caps the breakdown rows at the board’s 420 px', () => {
     expect(css).toMatch(/\.breakdown\s*{[^}]*max-width:\s*420px;/);
+  });
+
+  // @traces 1387-FR-004
+  it('indents the reply behind a line and keeps its line breaks, wrapping at any width', () => {
+    expect(css).toMatch(/\.reply\s*{[^}]*margin-inline-start:/);
+    expect(css).toMatch(/\.reply\s*{[^}]*border-inline-start:\s*2px solid/);
+    expect(css).toMatch(/\.reply-text\s*{[^}]*white-space:\s*pre-line/);
+    expect(css).toMatch(/\.reply-text\s*{[^}]*overflow-wrap:\s*anywhere/);
   });
 });

@@ -18,3 +18,47 @@ label {
   flex: 1;
   cursor: pointer;
 }
+
+.choices {
+  display: grid;
+  gap: var(--mf-space-2);
+  margin: var(--mf-space-3) 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.choices legend {
+  padding: 0;
+  margin-block-end: var(--mf-space-2);
+}
+
+.choices div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mf-space-2);
+}
+
+.choices button {
+  min-width: var(--mf-tap);
+  min-height: var(--mf-tap);
+  padding: 0 var(--mf-space-3);
+  border: 1px solid var(--mf-line);
+  border-radius: var(--mf-radius-chip);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.choices button[aria-pressed="true"] {
+  border-color: var(--mf-amber-ink);
+  background: var(--mf-amber-tint);
+  color: var(--mf-amber-ink);
+}
+
+.choices button:focus-visible {
+  outline: 2px solid var(--mf-focus);
+  outline-offset: 2px;
+}

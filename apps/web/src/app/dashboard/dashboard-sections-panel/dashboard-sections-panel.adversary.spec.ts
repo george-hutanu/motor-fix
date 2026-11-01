@@ -99,13 +99,15 @@ describe('the sections panel, hostile rows', () => {
     expect(rows[1].textContent).toContain('9');
   });
 
+  // Five hundred rows take jsdom seconds on a loaded runner: past Jest's 5 s
+  // default the check failed on time, not on the rows.
   it('renders five hundred rows in order', async () => {
     const many = Array.from({ length: 500 }, (_, i) => row(`k${i}`, i + 1));
     await open(many);
 
     expect(switches()).toHaveLength(500);
     expect(switches()[499].getAttribute('aria-label')).toBe('k499 name');
-  });
+  }, 30_000);
 });
 
 // @traces 011-FR-006

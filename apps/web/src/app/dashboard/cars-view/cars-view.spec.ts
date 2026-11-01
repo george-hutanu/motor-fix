@@ -8,8 +8,12 @@ import { type CarDto, CarsService } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
+import { CancelTransfer } from './cancel-transfer/cancel-transfer';
 import { CarsView } from './cars-view';
+import { SellCar } from './sell-car/sell-car';
 import { AddCar } from '../add-car/add-car';
+import type { fakeLive } from '../garage-requests/garage-requests.testing';
+import { Live } from '../live';
 import { RemoveCar } from '../remove-car/remove-car';
 import { heldForDriver } from '../resources/resources.testing';
 
@@ -530,6 +534,7 @@ describe('a car card', () => {
     expect(items().map((i) => i.textContent?.trim())).toEqual([
       'Modifică',
       'Șterge mașina',
+      'Am vândut mașina',
     ]);
     expect(items().every((i) => i.type === 'button')).toBe(true);
     expect(document.activeElement).toBe(items()[0]);
@@ -546,6 +551,7 @@ describe('a car card', () => {
     expect(items().map((i) => i.textContent?.trim())).toEqual([
       'Edit',
       'Remove the car',
+      'I sold the car',
     ]);
   });
 
@@ -559,10 +565,12 @@ describe('a car card', () => {
     press(items()[0], 'ArrowDown');
     expect(document.activeElement).toBe(items()[1]);
     press(items()[1], 'ArrowDown');
+    expect(document.activeElement).toBe(items()[2]);
+    press(items()[2], 'ArrowDown');
     expect(document.activeElement).toBe(items()[0]);
     press(items()[0], 'ArrowUp');
-    expect(document.activeElement).toBe(items()[1]);
-    press(items()[1], 'Escape');
+    expect(document.activeElement).toBe(items()[2]);
+    press(items()[2], 'Escape');
     await settle();
 
     expect(trigger(cards(element)[0])?.getAttribute('aria-expanded')).toBe(
@@ -1028,5 +1036,204 @@ describe('the car menu’s arrows', () => {
     const { press } = await menu(0);
 
     expect(() => press('ArrowDown')).not.toThrow();
+  });
+});
+
+// @traces 1392-FR-001 1392-FR-004 1392-FR-007 1392-FR-009
+describe('selling a car from its card', () => {
+  beforeEach(() =>
+    jest.useFakeTimers({
+      doNotFake: [
+        'nextTick',
+        'setImmediate',
+        'clearImmediate',
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'queueMicrotask',
+        'requestAnimationFrame',
+        'cancelAnimationFrame',
+        'requestIdleCallback',
+        'cancelIdleCallback',
+        'hrtime',
+        'performance',
+      ],
+      now: new Date('2026-10-08T09:00:00Z'),
+    }),
+  );
+  afterEach(() => {
+    jest.useRealTimers();
+    document.querySelectorAll('.cdk-overlay-container').forEach((n) => {
+      n.innerHTML = '';
+    });
+  });
+
+  const sold = car({
+    transfer: { expiresAt: '2026-10-15T09:00:00.000Z', id: 't-1' },
+  });
+  const trigger = (card: HTMLElement) =>
+    card.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]');
+  const sellItem = () =>
+    [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '[role="menu"] [role="menuitem"]',
+      ),
+    ].at(2) as HTMLButtonElement;
+  async function sell(element: HTMLElement, settle: () => Promise<void>) {
+    trigger(cards(element)[0])?.click();
+    await settle();
+    sellItem().click();
+    await settle();
+    await settle();
+  }
+
+  it('opens the sale dialog from Am vândut mașina, titled with the car', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    await sell(element, settle);
+
+    expect(open).toHaveBeenCalledWith(
+      SellCar,
+      expect.objectContaining({
+        data: { car: car() },
+        shape: 'dialog',
+        title: 'driver.cars.sale.title',
+        titleParams: { car: 'BMW 320d' },
+      }),
+    );
+  });
+
+  it('runs the removal confirmation for the car when the history does not pass', async () => {
+    const { element, settle } = await render();
+    await settle();
+    open.mockResolvedValueOnce('remove').mockResolvedValueOnce(true);
+
+    await sell(element, settle);
+    await settle();
+
+    expect(open).toHaveBeenNthCalledWith(
+      2,
+      RemoveCar,
+      expect.objectContaining({ data: { car: car() } }),
+    );
+    expect(cards(element)).toHaveLength(0);
+  });
+
+  it('reads the list again once a link is sent and shows the transfer line', async () => {
+    const { element, settle } = await render();
+    await settle();
+    list.mockResolvedValueOnce({ items: [sold] });
+    open.mockResolvedValueOnce('sent');
+
+    await sell(element, settle);
+    await settle();
+
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(text(cards(element)[0])).toContain(
+      'Transfer trimis · expiră pe 15 oct.',
+    );
+  });
+
+  it('moves the focus to the card once the sent link takes its menu away', async () => {
+    const { element, settle } = await render();
+    await settle();
+    list.mockResolvedValueOnce({ items: [sold] });
+    open.mockResolvedValueOnce('sent');
+
+    await sell(element, settle);
+    await settle();
+
+    expect(trigger(cards(element)[0])).toBeNull();
+    expect(document.activeElement).toBe(cards(element)[0]);
+  });
+
+  it('moves the focus to the card once the cancel takes its button away', async () => {
+    const { element, settle } = await render([sold]);
+    await settle();
+    list.mockResolvedValueOnce({ items: [car()] });
+    open.mockResolvedValueOnce(true);
+
+    const cancel = button(cards(element)[0], 'Anulează transferul');
+    cancel?.focus();
+    cancel?.click();
+    await settle();
+    await settle();
+    await settle();
+
+    expect(document.activeElement).toBe(cards(element)[0]);
+  });
+
+  it('shows the transfer line and its cancel instead of the menu while a transfer is out', async () => {
+    const { element, settle } = await render([sold]);
+    await settle();
+
+    const card = cards(element)[0];
+    expect(text(card)).toContain('Transfer trimis · expiră pe 15 oct.');
+    expect(trigger(card)).toBeNull();
+    expect(button(card, 'Anulează transferul')?.type).toBe('button');
+  });
+
+  it('writes the transfer line in English', async () => {
+    const { element, settle } = await render([sold], 'en');
+    await settle();
+
+    const card = cards(element)[0];
+    expect(text(card)).toContain('Transfer sent · expires on 15 Oct');
+    expect(button(card, 'Cancel the transfer')).toBeDefined();
+  });
+
+  it.each([true, 'cancelled'] as const)(
+    'confirms the cancel and reads the list again on %s',
+    async (answer) => {
+      const { element, settle } = await render([sold]);
+      await settle();
+      list.mockResolvedValueOnce({ items: [car()] });
+      open.mockResolvedValueOnce(answer);
+
+      button(cards(element)[0], 'Anulează transferul')?.click();
+      await settle();
+      await settle();
+      await settle();
+
+      expect(open).toHaveBeenCalledWith(
+        CancelTransfer,
+        expect.objectContaining({
+          data: { car: sold },
+          shape: 'dialog',
+          title: 'driver.cars.transfer.confirm.title',
+        }),
+      );
+      expect(list).toHaveBeenCalledTimes(2);
+      expect(trigger(cards(element)[0])).not.toBeNull();
+    },
+  );
+
+  it.each([
+    'car_transfer.sent',
+    'car_transfer.cancelled',
+    'car_transfer.expired',
+    'car_transfer.accepted',
+  ] as const)('reads the list again on %s', async (kind) => {
+    // The re-read waits 300 ms on the clock, which a frozen Date never reaches.
+    jest.useRealTimers();
+    const { settle } = await render();
+    await settle();
+
+    (TestBed.inject(Live) as unknown as ReturnType<typeof fakeLive>).emit(
+      kind,
+      'car-1',
+    );
+    // A burst of events is one re-read, 300 ms after the last.
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    await settle();
+
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives the cancel button a 44 px target', () => {
+    const css = readFileSync(join(__dirname, 'cars-view.css'), 'utf8');
+    expect(css).toMatch(/\.transfer button[^{]*\{[^}]*min-height: 44px/);
   });
 });

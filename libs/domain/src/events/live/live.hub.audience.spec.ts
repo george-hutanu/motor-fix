@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import { EVENT_KINDS } from '@motor-fix/contracts';
 import type { Role } from '@motor-fix/contracts/capabilities';
 import { Logger } from '@nestjs/common';
+import type { Mock } from 'vitest';
 
 import { KIND_CAPABILITY, LiveHub } from './live.hub';
 import { audienceOf } from '../audience';
@@ -52,19 +53,19 @@ const access = (over: Partial<GarageAccess> = {}): GarageAccess => ({
   ...over,
 });
 
-let load: jest.Mock<Promise<GarageAccess>, [string]>;
+let load: Mock<(...args: [string]) => Promise<GarageAccess>>;
 let hub: LiveHub;
 
 beforeEach(() => {
-  jest.useFakeTimers({ now: NOW });
-  load = jest.fn(async (_garageId: string) => access());
+  vi.useFakeTimers({ now: NOW });
+  load = vi.fn(async (_garageId: string) => access());
   hub = new LiveHub(load);
 });
 
 afterEach(() => {
   hub.shutdown();
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 const open = (
@@ -150,7 +151,9 @@ describe('who a live event reaches', () => {
   });
 
   it('drops and logs an event with no audience', async () => {
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const warn = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
     const sinks = [open('andrei', 'driver', []), staff('ion', 'garage')];
 
     await fanOut([], 'live.test');
@@ -312,7 +315,7 @@ describe('the cached garage access', () => {
     await fanOut(['garage:g1'], 'request.updated');
     expect(load).toHaveBeenCalledTimes(1);
 
-    jest.advanceTimersByTime(60_001);
+    vi.advanceTimersByTime(60_001);
     await fanOut(['garage:g1'], 'request.updated');
     expect(load).toHaveBeenCalledTimes(2);
   });
@@ -322,7 +325,7 @@ describe('the cached garage access', () => {
     await fanOut(['garage:g1'], 'request.created');
 
     load.mockResolvedValue(access({ receptionists: new Set() }));
-    jest.advanceTimersByTime(60_001);
+    vi.advanceTimersByTime(60_001);
     await fanOut(['garage:g1'], 'request.updated');
 
     expect(receptionist.kinds()).toEqual(['request.created']);
@@ -353,7 +356,9 @@ describe('the cached garage access', () => {
   );
 
   it("drops the event for that garage's staff only and logs it when the garage cannot be read", async () => {
-    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const warn = vi
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
     load.mockRejectedValueOnce(new Error('database down'));
     const owner = staff('ion', 'garage');
     const driver = open('d1', 'driver', []);
@@ -412,6 +417,7 @@ describe('streams that follow the account', () => {
 });
 
 // @traces 398-FR-008
+// @traces 1369-FR-003
 describe('what each garage role hears through the garage channel', () => {
   // One kind per family of the capability table, and one no family claims.
   const FAMILIES = [

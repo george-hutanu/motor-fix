@@ -58,8 +58,14 @@ export class RepairUpdatedFanOut {
   async handle(job: Pick<Job<RepairUpdatedEvent>, 'data'>): Promise<void> {
     const { id: eventId, payload } = job.data;
     const { by, ownerId, repairId } = payload ?? {};
-    // The driver's own edit, or a car with no owner: nobody to tell.
-    if (by === 'driver' || !isId(ownerId) || !isId(repairId)) {
+    // The driver's own edit, the repair a handover wrote (the job already
+    // told the driver), or a car with no owner: nobody to tell.
+    if (
+      by === 'driver' ||
+      by === 'system' ||
+      !isId(ownerId) ||
+      !isId(repairId)
+    ) {
       countRepairUpdatedNotice('skipped');
       this.logger.log(`event ${eventId} has nobody to tell`);
       return;

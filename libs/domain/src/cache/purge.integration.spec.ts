@@ -89,7 +89,7 @@ describe('purging by tag', () => {
 
   it('hands each purged tag to the hook, and succeeds with the default one', async () => {
     const tags = [`garage:${randomUUID()}`, 'search'];
-    const hook = jest.fn();
+    const hook = vi.fn();
 
     await purgeTags(redis, tags, hook);
     await expect(purgeTags(redis, tags)).resolves.toEqual([]);

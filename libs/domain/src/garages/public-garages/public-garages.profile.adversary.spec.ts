@@ -43,24 +43,24 @@ const listedRow = (over: Row = {}): Row => ({
 
 function build(rows: Row[]) {
   const calls: { strings: string[]; values: unknown[] }[] = [];
-  const queryRaw = jest.fn((strings: TemplateStringsArray, ...values) => {
+  const queryRaw = vi.fn((strings: TemplateStringsArray, ...values) => {
     calls.push({ strings: [...strings], values });
     return Promise.resolve(rows);
   });
   const prisma = {
     $queryRaw: queryRaw,
-    brand: { findUnique: jest.fn().mockResolvedValue(null) },
+    brand: { findUnique: vi.fn().mockResolvedValue(null) },
   } as unknown as PrismaClient;
   const cache = {
-    read: jest.fn(async (spec: { read: () => Promise<{ value: unknown }> }) => {
+    read: vi.fn(async (spec: { read: () => Promise<{ value: unknown }> }) => {
       const filled = await spec.read();
       return filled.value;
     }),
   } as unknown as CacheService;
   const storage = {
-    createDownloadUrl: jest.fn().mockResolvedValue('https://signed'),
+    createDownloadUrl: vi.fn().mockResolvedValue('https://signed'),
     derivedKey: (key: string, kind: string) => `${key}.${kind}`,
-    metadataOf: jest.fn().mockResolvedValue(null),
+    metadataOf: vi.fn().mockResolvedValue(null),
   } as unknown as StorageService;
   return {
     calls,
@@ -204,5 +204,151 @@ describe('the SQL public scope', () => {
 
   it('carries no bound value', () => {
     expect(publicGaragesSql('g').values).toEqual([]);
+  });
+});
+
+// @traces 1383-FR-001 1383-FR-002
+describe("the centre of a mobile mechanic's area", () => {
+  it('rounds the position to two decimals beside the radius', async () => {
+    const { service } = build([
+      listedRow({
+        business_kind: 'mobile',
+        latitude: 44.9365,
+        longitude: 26.0129,
+      }),
+    ]);
+
+    const answer = await service.bySlug('garage');
+
+    expect(answer).toMatchObject({
+      areaLat: 44.94,
+      areaLng: 26.01,
+      serviceRadiusKm: 20,
+    });
+    expect(answer).not.toHaveProperty('latitude');
+    expect(answer).not.toHaveProperty('longitude');
+  });
+
+  it.each([
+    ['only a latitude', { latitude: 44.9365 }],
+    ['only a longitude', { longitude: 26.0129 }],
+    ['no position', {}],
+  ])('answers no centre for %s', async (_, position) => {
+    const { service } = build([
+      listedRow({ business_kind: 'mobile', ...position }),
+    ]);
+
+    const answer = await service.bySlug('garage');
+
+    expect(answer).not.toHaveProperty('areaLat');
+    expect(answer).not.toHaveProperty('areaLng');
+    expect(answer.serviceRadiusKm).toBe(20);
+  });
+
+  it('gives a workshop its exact position and no centre', async () => {
+    const { service } = build([
+      listedRow({
+        address: 'Strada Exemplu 1',
+        business_kind: 'company',
+        latitude: 44.9365,
+        longitude: 26.0129,
+      }),
+    ]);
+
+    const answer = await service.bySlug('garage');
+
+    expect(answer).toMatchObject({ latitude: 44.9365, longitude: 26.0129 });
+    expect(answer).not.toHaveProperty('areaLat');
+    expect(answer).not.toHaveProperty('areaLng');
+  });
+});
+
+// @traces 1383-FR-001 1383-FR-002
+describe("the centre of a mobile mechanic's area, at its edges", () => {
+  const mobile = (over: Row) =>
+    build([listedRow({ business_kind: 'mobile', ...over })]).service.bySlug(
+      'garage',
+    );
+
+  it.each([
+    [44.995, 26.004, 45, 26],
+    [44.994, 26.005, 44.99, 26.01],
+    [-0.004, 0.004, 0, 0],
+    [0, 0, 0, 0],
+    [-33.456, -70.649, -33.46, -70.65],
+    [89.999, 179.999, 90, 180],
+  ])(
+    'rounds %d, %d to %d, %d',
+    async (latitude, longitude, areaLat, areaLng) => {
+      const answer = await mobile({ latitude, longitude });
+
+      expect(answer.areaLat).toBeCloseTo(areaLat, 10);
+      expect(answer.areaLng).toBeCloseTo(areaLng, 10);
+    },
+  );
+
+  it('keeps a centre at zero degrees, since zero is a position', async () => {
+    const answer = await mobile({ latitude: 0, longitude: 0 });
+
+    expect(answer).toHaveProperty('areaLat');
+    expect(answer).toHaveProperty('areaLng');
+  });
+
+  it('leaves neither the seat text nor its exact coordinates in the serialised body', async () => {
+    const answer = await mobile({
+      address: 'Strada Secretă 7, Sector 3',
+      latitude: 44.936512,
+      longitude: 26.012934,
+    });
+    const body = JSON.stringify(answer);
+
+    expect(body).not.toContain('Secretă');
+    expect(body).not.toContain('44.936512');
+    expect(body).not.toContain('26.012934');
+    expect(Object.keys(answer)).not.toEqual(
+      expect.arrayContaining(['address']),
+    );
+    expect(answer).not.toHaveProperty('seatAddress');
+  });
+
+  it('answers the same centre twice', async () => {
+    const row = { latitude: 44.9365, longitude: 26.0129 };
+
+    expect(await mobile(row)).toEqual(await mobile(row));
+  });
+
+  it('keeps the radius a mobile mechanic chose beside its centre', async () => {
+    const answer = await mobile({
+      latitude: 44.9365,
+      longitude: 26.0129,
+      service_radius_km: 100,
+    });
+
+    expect(answer.serviceRadiusKm).toBe(100);
+  });
+
+  it('gives a garage of no kind no centre', async () => {
+    const answer = await build([
+      listedRow({ business_kind: null, latitude: 44.9365, longitude: 26.0129 }),
+    ]).service.bySlug('garage');
+
+    expect(answer).not.toHaveProperty('areaLat');
+    expect(answer).not.toHaveProperty('areaLng');
+  });
+
+  it('gives a former mobile mechanic now a workshop its seat and no centre', async () => {
+    const answer = await build([
+      listedRow({
+        address: 'Strada Veche 2',
+        business_kind: 'company',
+        latitude: 44.9365,
+        longitude: 26.0129,
+        service_radius_km: 40,
+      }),
+    ]).service.bySlug('garage');
+
+    expect(answer).toMatchObject({ address: 'Strada Veche 2' });
+    expect(answer).not.toHaveProperty('areaLat');
+    expect(answer).not.toHaveProperty('serviceRadiusKm');
   });
 });

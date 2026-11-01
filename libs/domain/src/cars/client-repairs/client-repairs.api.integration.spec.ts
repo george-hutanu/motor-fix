@@ -170,7 +170,7 @@ describe('the repair columns', () => {
     ['odometer_km', -1],
     ['odometer_km', 2_000_001],
     ['cost_bani', -1],
-    ['cost_bani', 92_000_001],
+    ['cost_bani', 100_000_001],
   ])('refuses %s = %p in the database', async (column, value) => {
     const { repair } = await scene();
     const { id } = await repair();
@@ -472,7 +472,7 @@ describe('PATCH /garage/client-repairs/:id', () => {
     const s = await scene();
     const row = await s.repair();
     const port = provider<EventPort>(EVENT_PORT);
-    const spy = jest
+    const spy = vi
       .spyOn(port, 'record')
       .mockRejectedValueOnce(new Error('outbox down'));
 

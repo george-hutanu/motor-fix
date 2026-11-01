@@ -1,6 +1,6 @@
 ---
 capability: garage-listing
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 108-step-list-in-view
   - 040-garage-brand-stance
@@ -40,7 +40,10 @@ features:
   - 1193-fast-nav
   - 1185-accent-search
   - 1246-garage-profile-edit
+  - 1401-rejected-correct
   - 1315-optimistic-toggles
+  - 1411-1315-qa-fixes
+  - 059-profile-direct-requests
 ---
 
 # Capability: Garage listing
@@ -397,9 +400,9 @@ _From 109-garage-details-prices._
 
 _From 1246-garage-profile-edit._
 
-### 109-FR-018 — The `garages` module MUST provide one write that saves the step-4 section inside the caller's transaction, taking the transaction, the garage, the actor and the section: it checks the lengths of FR-011 (code `length` on the field) and the cap of 30 (`too_many` on `mechanics`), creates one mechanic card per row with `garage_id`, `name`, `speciality` (null when blank), `account_id` empty and `on_profile` the switch's value, and records one `create` audit entry per card (subject type `mechanic`, actor the owner). The mechanic row gains a nullable `account_id` (still unique when set), `name`, `speciality` and `on_profile` (default false); mechanics with an account keep working as today (their name comes from the account until the invite story decides otherwise).
+### 059-FR-003 — The listing form's step-4 switch (`onProfile` of the mechanics section), when the section carries it, MUST save into the garage's `team_on_profile` — at creation and on any later step-4 save, the later one through FR-004's audited write and event — instead of being copied onto each card's `on_profile`; the cards created from step 4 MUST keep `on_profile` false (their consent comes with acceptance, 1255-FR-006). The saved listing's re-read of step 4 MUST show the garage's value. The step-4 write's audit entry per card no longer records `on_profile`; the garage's value is recorded as a field of the garage's creation.
 
-_From 109-garage-details-prices._
+_From 059-profile-direct-requests._
 
 ### 109-FR-019 — An accountless mechanic card MUST reach no driver: the public profile shows no mechanics today and this story adds none; a test MUST assert the public response of a garage with cards carries no mechanic. Showing them, once invited and accepted, is the invite story's.
 
@@ -719,9 +722,9 @@ _From 397-listing-ticks._
 
 _From 397-listing-ticks._
 
-### 397-FR-011 — The system MUST serve `PATCH /api/v1/garages/:garageId` to the garage's owner, with a body holding either or both of `paymentMethods` (`{ cash, card, transfer }`, all three booleans, at least one true) and `courtesyCar` (`{ paid, pricePerDayBani? }`: a price of 100–200,000 bani in whole lei required when paid, refused when free, and the whole key refused when the garage does not list the `courtesy_car` facility). It answers only `{ paymentMethods, courtesyCar }` as now stored; 400 `validation_failed` with the field named for a body that breaks a rule, 401 `sign_in_required` with no session, 403 `forbidden` for this garage's receptionist or mechanic, 404 `not_found` for anyone else (another garage's staff, a driver, an admin). The write runs in one transaction with the garage row locked, records one history entry per changed field (actor, role, field, old and new value) and one `garage.updated` event whose `fields` name `payment_methods` and/or `courtesy_car` for what changed; a body that changes nothing writes no entry and no event. Changing these needs no new approval and notifies nobody.
+### 059-FR-004 — `PATCH /api/v1/garages/:garageId` (397-FR-011) MUST accept `teamOnProfile` (boolean) beside `paymentMethods` and `courtesyCar`, each optional, at least one present; it answers the stored `teamOnProfile` with the other two; the change is written in the same locked transaction with one audit entry (field `team_on_profile`, old and new) and `garage.updated` with `fields: ['team_on_profile']`, nothing when unchanged.
 
-_From 397-listing-ticks._
+_From 059-profile-direct-requests._
 
 ### 397-FR-012 — The public read of a garage (`GET /api/v1/garages/:slug`) MUST carry the three payment flags, the courtesy car (`paid`, `pricePerDayBani` when paid; absent when the facility is not listed) and each taken brand's four fuel ticks, so an open profile refreshed by `garage.updated` reads the new values; showing them on the profile screens is the profile story's.
 
@@ -1142,9 +1145,9 @@ _From 116-listing-verification-status._
 
 _From 116-listing-verification-status._
 
-### 208-FR-005 — `/list-your-garage` MUST show the form over the completion copy when the signed-in owner's file is `more_requested` (from the button or opened directly), scrolled to the first step that holds a requested item (`address` → step 5, which holds the place part, `documents` and `rar` → step 6, `photos` → the photos part, `other` or none → step 1) with that step's heading marked "Cerut de MotorFix" / "Asked by MotorFix"; every step stays editable; the form's save-as-you-type, browser copy, retries, field check, document and photo uploads apply to the copy as to a first draft (ST-806, 116-FR-007). For any other status the status view shows as today (116-FR-017). Modifies 116-FR-017.
+### 1401-FR-002 — "List your garage" MUST show the form over the correction copy when the signed-in owner's newest file is `rejected` (from the button or opened directly), scrolled to the step the rejection reason maps to (`address` → step 5, `documents` and `rar` → step 6, `photos` → step 5, `other` → step 1, through the existing `askedSteps` mapping unchanged) with that step's heading marked "Cerut de MotorFix" / "Asked by MotorFix", every step editable, the form's save-as-you-type, browser copy, retries, field check, document and photo uploads applying as to a completion copy; a signed-in owner never sees a blank first-send form (116-FR-017 unchanged). Modifies 208-FR-005.
 
-_From 208-resubmit-after-more._
+_From 1401-rejected-correct._
 
 ### 208-FR-013 — (from #566) `follow()` in `list-your-garage.ts` MUST read the layout through `matchMedia('(min-width: 768px)')` and do at most one layout read per animation frame; no `getComputedStyle` call runs on a scroll event (unit test).
 
@@ -1257,6 +1260,10 @@ _From 1246-garage-profile-edit._
 
 _From 1315-optimistic-toggles._
 
+### 1411-FR-004 — The brand surface of the 100 ms proof (1315 US4 s1 / 1315-FR-010) MUST be a fuel tick's `aria-pressed` on a taken brand (BMW tapped once first, then the "BMW, Benzină" fuel button), in `optimistic-toggles.spec.ts` and in the flows, never the BMW chip.
+
+_From 1411-1315-qa-fixes._
+
 ## Retired
 
 - `108-FR-012` — superseded by `114-FR-018` (2026-10-07)
@@ -1287,3 +1294,6 @@ _From 1315-optimistic-toggles._
 - `109-FR-014` — superseded by `1246-FR-010` (2026-10-30)
 - `112-FR-005` — superseded by `1246-FR-017` (2026-10-30)
 - `111-FR-005` — superseded by `1246-FR-023` (2026-10-30)
+- `208-FR-005` — superseded by `1401-FR-002` (2026-10-30)
+- `109-FR-018` — superseded by `059-FR-003` (2026-10-31)
+- `397-FR-011` — superseded by `059-FR-004` (2026-10-31)

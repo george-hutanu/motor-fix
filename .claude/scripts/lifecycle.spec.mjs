@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, s
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-import { gateEnv, runGates, step } from './lifecycle.mjs';
+import { gateEnv, realIo, runGates, step } from './lifecycle.mjs';
 
 const root = join(import.meta.dirname, '..', '..');
 const FEATURE = '696-lifecycle-script';
@@ -371,7 +371,7 @@ const LOCAL = [
   'node scripts/structure-check.ts --base origin/main',
   'npm run lint',
   'git merge-base HEAD origin/main',
-  'sh scripts/heavy.sh sh -c JEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=b45e0000',
+  'sh scripts/heavy.sh sh -c TEST_SUITE=unit TZ=UTC NX_DAEMON=false npx nx affected -t typecheck test --base=b45e0000',
 ];
 const MERGE_BASE = ['git merge-base HEAD origin/main', { stdout: 'b45e0000\n' }];
 const ofLocal = (calls) => calls.filter((c) => /^(node scripts\/|npm run lint|sh scripts\/heavy\.sh|git merge-base)/.test(c));
@@ -1805,5 +1805,13 @@ describe('every feature runs tracker-sync.mjs', () => {
     assert.ok(h.calls.includes(`git -C specs diff -U0 -- ${FEATURE}/tracker-sync.md`));
     assert.ok(h.calls.includes(`node .claude/scripts/specs-repo.mjs commit chore(specs): ST-696 finish -- ${FEATURE}/tracker-sync.md`));
     assert.match(comment, /ready · EP-6/);
+  });
+});
+
+describe('realIo', () => {
+  it('reads a reply past spawnSync\'s default 1 MB, as a compare across main merges is (1.7 MB on #681)', () => {
+    const r = realIo().run('node', ['-e', "process.stdout.write('x'.repeat(2 * 1024 * 1024))"]);
+    assert.equal(r.code, 0, r.stderr);
+    assert.equal(r.stdout.length, 2 * 1024 * 1024);
   });
 });

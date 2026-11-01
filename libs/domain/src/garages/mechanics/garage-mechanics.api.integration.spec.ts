@@ -21,6 +21,7 @@ import {
   testPhoneConfig,
 } from '../../notifications/notifications.testing';
 import { quotesWorld } from '../../quotes/quotes.testing';
+import { refuseInserts } from '../../refuse-inserts.testing';
 import { UNUSED_STORAGE } from '../../storage/s3-test-store';
 import { StorageModule } from '../../storage/storage.module';
 import { GaragesModule } from '../garages.module';
@@ -92,7 +93,7 @@ beforeEach(async () => {
   mark = await outboxMark(prisma);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const bearer = (accountId: string, role: Role) =>
   `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
@@ -116,12 +117,17 @@ const edit = (
 const remove = (garageId: string, mechanicId: string, auth?: string) =>
   signed(http().delete(`/garages/${garageId}/mechanics/${mechanicId}`), auth);
 
-// Atelier Dinamo: its owner Mihai (who has a card of his own), a receptionist,
-// a mechanic with an account, and cards with none; Atelier Nord with its owner.
+// Atelier Dinamo (approved): its owner Mihai (who has a card of his own), a
+// receptionist, a mechanic with an account, and cards with none; Atelier Nord
+// with its owner.
 // `ownerRow` marks Mihai's card as the owner's row garage creation writes.
 async function world({ ownerRow = false } = {}) {
   const dinamo = await prisma.garage.create({
-    data: { name: 'Atelier Dinamo', slug: `dinamo-${randomUUID()}` },
+    data: {
+      name: 'Atelier Dinamo',
+      slug: `dinamo-${randomUUID()}`,
+      status: 'approved',
+    },
   });
   const nord = await prisma.garage.create({
     data: { name: 'Atelier Nord', slug: `nord-${randomUUID()}` },
@@ -277,35 +283,9 @@ const cardInvite = (
 const inviteStatus = async (id: string) =>
   (await prisma.staffInvite.findUniqueOrThrow({ where: { id } })).status;
 
-// Every insert into `table` for which `when` holds fails until the undo runs,
-// as a write lost inside the transaction would.
-async function refuseInserts(
-  table: 'notification' | 'outbox_event',
-  when: string,
-) {
-  await prisma.$executeRawUnsafe(
-    `CREATE FUNCTION refuse_mechanic_write() RETURNS trigger AS $$
-     BEGIN
-       IF ${when} THEN RAISE EXCEPTION 'refused'; END IF;
-       RETURN NEW;
-     END $$ LANGUAGE plpgsql`,
-  );
-  await prisma.$executeRawUnsafe(
-    `CREATE TRIGGER refuse_mechanic_write BEFORE INSERT ON ${table} FOR EACH ROW EXECUTE FUNCTION refuse_mechanic_write()`,
-  );
-  return async () => {
-    await prisma.$executeRawUnsafe(
-      `DROP TRIGGER IF EXISTS refuse_mechanic_write ON ${table}`,
-    );
-    await prisma.$executeRawUnsafe(
-      'DROP FUNCTION IF EXISTS refuse_mechanic_write()',
-    );
-  };
-}
-
 const quiet = () => {
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 };
 
 // A list item as a card holding nothing but its name has it.
@@ -320,8 +300,10 @@ const blank = {
   rating: null,
   reviewCount: 0,
   roleTitle: null,
+  shown: false,
   speciality: null,
   specialties: [],
+  takesDirectRequests: true,
   years: null,
 };
 
@@ -360,9 +342,11 @@ describe("reading the garage's team", () => {
           onProfile: true,
           rating: '4.9',
           reviewCount: 58,
+          shown: true,
           speciality: 'Frâne, suspensie',
         },
       ],
+      teamOnProfile: true,
     });
   });
 
@@ -372,7 +356,7 @@ describe("reading the garage's team", () => {
     const res = await team(nord.id, bearer(radu, 'garage'));
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ brands: [], items: [] });
+    expect(res.body).toEqual({ brands: [], items: [], teamOnProfile: true });
   });
 
   // @traces 055-FR-004
@@ -982,6 +966,7 @@ describe('adding a card', () => {
     quiet();
     const before = await writesOf(dinamo.id);
     const undo = await refuseInserts(
+      prisma,
       'outbox_event',
       "NEW.kind = 'mechanic.added'",
     );
@@ -1454,6 +1439,7 @@ describe('removing a card', () => {
     quiet();
     const before = await writesOf(dinamo.id);
     const undo = await refuseInserts(
+      prisma,
       'outbox_event',
       "NEW.kind = 'mechanic.removed'",
     );
@@ -1574,6 +1560,7 @@ describe('telling the removed account', () => {
     const { dinamo, mihai, vlad, vladCard } = await world({ ownerRow: true });
     quiet();
     const undo = await refuseInserts(
+      prisma,
       'outbox_event',
       "NEW.kind = 'mechanic.removed'",
     );
@@ -1590,6 +1577,7 @@ describe('telling the removed account', () => {
     const { dinamo, mihai, vlad, vladCard } = await world({ ownerRow: true });
     quiet();
     const undo = await refuseInserts(
+      prisma,
       'notification',
       "NEW.kind = 'STAFF_REMOVED'",
     );

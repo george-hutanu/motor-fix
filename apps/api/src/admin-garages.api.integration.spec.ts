@@ -197,7 +197,7 @@ describe('both reads in maintenance', () => {
   // @traces 066-FR-005
   it('stay open to an admin while the platform is in maintenance', async () => {
     const maintenance = app.get<Maintenance>(MAINTENANCE, { strict: false });
-    const on = jest.spyOn(maintenance, 'on').mockResolvedValue(true);
+    const on = vi.spyOn(maintenance, 'on').mockResolvedValue(true);
     try {
       expect((await get('garages/summary', admin)).status).toBe(200);
       expect((await get('garages?status=suspended', admin)).status).toBe(200);

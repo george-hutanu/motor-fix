@@ -198,7 +198,7 @@ describe('the night that keeps the daily figures', () => {
   });
 
   it('logs the rows it wrote for each day, naming no garage', async () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const a = await world.garage('Atelier Dinamo');
@@ -265,10 +265,10 @@ describe('a night that did not run', () => {
   });
 
   it('logs the days older than that as gaps and writes nothing for them', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const a = await world.garage('Atelier Dinamo');

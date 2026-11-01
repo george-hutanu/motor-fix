@@ -1,6 +1,6 @@
 ---
 capability: workshop
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 220-requests-quotes-bookings
   - 424-job-steps
@@ -14,8 +14,12 @@ features:
   - 406-final-price-handover
   - 1393-final-price-predare
   - 1395-block-time-dashboard
-  - 1404-predare-quote-range
+  - 395-job-lock
   - 1403-block-time-dialog
+  - 1404-predare-quote-range
+  - 1410-predare-quote-dialog
+  - 154-free-slots
+  - 293-save-garage-suggest
 ---
 
 # Capability: Workshop
@@ -53,10 +57,6 @@ _From 424-job-steps._
 _From 424-job-steps._
 
 ### 424-FR-007 — A tick MUST set `done_at` = now and `done_by` = the caller; an untick MUST clear both. Ticking a ticked step or unticking an unticked one MUST change nothing and answer success, so a resent action is harmless.
-
-_From 424-job-steps._
-
-### 424-FR-008 — Every step write MUST run in one transaction that locks the job's row (as the stage moves do), judges the state and the rules against the locked row, writes the change, its audit entries and its event, so no change is saved without them and two simultaneous changes are applied one after the other.
 
 _From 424-job-steps._
 
@@ -100,9 +100,9 @@ _From 424-job-steps._
 
 _From 424-job-steps._
 
-### 274-FR-001 — The API MUST offer `GET /api/v1/quote-requests/active`, for the signed-in driver only (capability `driver.requests`; any other role answered 404, a visitor asked to sign in), returning the driver's active request or `null`, and the number of the driver's open requests. A request is open when its status is `sent`, `quoted`, `booked` or `in_work`, or `done` with its job not yet handed over; a `booked` or `in_work` request with no live booking (awaiting the garage, confirmed or completed), as after a no-show, is not open. Another driver's requests are never read.
+### 293-FR-003 — The active request read (`GET /api/v1/quote-requests/active`, 274-FR-001) MUST carry `saveSuggestion`: the garage to offer, `{ garageId, name }`, or null. It is set only when all four hold: (1) the request's live booking has a job whose status is `done`; (2) that booking's garage is `approved` at the time of the read (a garage suspended after the job is `done` gives null; re-approval brings it back); (3) the actor has no SAVED_GARAGE row for it; (4) the actor has no SAVE_SUGGESTION_DISMISSAL row for it. In every other case, including a request without a live booking or job, it is null. The rule lives in one place on the server; the web decides nothing about when a card is due.
 
-_From 274-request-stages._
+_From 293-save-garage-suggest._
 
 ### 274-FR-002 — The active request MUST be the open request closest to the workshop by its stage (FR-003): in work, then booked, then waiting for quotes (`sent` or `quoted`), then done (car ready, last: nothing yet records the handover that ends it); a tie goes to the request changed most recently (the latest of its creation, its quotes' sending, its booking's creation or confirmation and its job's start, pause or finish), then to the newest id.
 
@@ -208,9 +208,9 @@ _From 276-job-start-done._
 
 _From 276-job-start-done._
 
-### 276-FR-003 — Every stage move MUST run in one transaction that locks the job row, writes the status and its times (`started_at` on the first start and kept on a resume, `paused_at` on a pause, `finished_at` on finish), the stage entry, the audit entry (`job.status`, a key change) and the event, as the existing job mover does; the start MUST also move the request `booked` → `in_work` and the finish `in_work` → `done` through the request mover in the same transaction, with the request's own audit entry and no event of its own (the request mover's event goes to a no-op port, as the accept's request move does): the job's event is the one the tracker and Lucrări re-read on. When any part fails nothing is written.
+### 395-FR-004 — Every job-changing use case MUST take the lock before its transaction and release it after the commit, inside the one request: start, pause, resume, finish, receive, handover, final-price correction, and the step add, rename, reorder, tick, untick and remove. The caller's own open lock is used and released by the change (the lock lifts after each single change, decided 2026-10-03); a lock held by another person answers 423 `job_locked` as FR-001 does, after the access check (403/404) and before any state rule (409); a refused or failed change MUST release a lock the request itself took and MUST keep a lock the caller held before the request. Reads, photos, clips and messages need no lock. An AI assistant's tool reaches the same use case as the person it acts for and so meets the same rule.
 
-_From 276-job-start-done._
+_From 395-job-lock._
 
 ### 276-FR-005 — A start or a resume MUST, when the garage's `team_mechanics` switch is on (on when the garage has no row) and the job has a mechanic, pause in the same transaction every other `in_work` job of the same garage with the same `mechanic_id`, whoever pressed: each with a stage entry `auto` = true, an audit entry recorded as a platform move (actor role `system`, no account) and `job.paused` `{ from, to, auto: true }`; the triggering `job.started` or `job.resumed` MUST carry `pausedJobIds`, the ids it paused (empty when none). With the switch off nothing is paused, whatever the mechanic ids.
 
@@ -281,10 +281,6 @@ _From 406-final-price-handover._
 _From 406-final-price-handover._
 
 ### 406-FR-003 — `finalPriceBani` MUST be a whole number of bani from 1 to 100,000,000 (1.000.000 lei, the limit `PAID_BANI_MAX` the reviews already share), validated at the edge by the DTO in the contracts library; anything else, a missing field or an unknown key answers 400 `validation_failed` with the field named. VAT is included, as in the quote.
-
-_From 406-final-price-handover._
-
-### 406-FR-004 — A handover MUST run in one transaction that locks the job row, writes `final_price_bani`, `final_price_recorded_by` (the caller's account) and `handed_over_at` = now, moves the booking `confirmed` → `completed` through the existing booking mover (its `completed_at`, audit entry and event `booking.completed`, a new kind of the events list, as 220-FR-008 writes them; a booking already `completed` is left as it is; a booking in any other state answers the mover's own 409 `invalid_transition` and nothing is written), writes the audit entries `job.final_price_bani` (null → the price, a key change) and `job.handed_over_at` with the actor and their role, filed under the job and the garage, and records the event `job.handed_over` `{ finalPriceBani, by }` with the `job` audience (the driver's account, the garage, the job's mechanic). The request's status stays `done`; it leaves the driver's open requests by `handed_over_at` (274-FR-001). No notification is sent for the first recording.
 
 _From 406-final-price-handover._
 
@@ -408,6 +404,50 @@ _From 1395-block-time-dashboard._
 
 _From 1395-block-time-dashboard._
 
+### 395-FR-001 — The API MUST offer `POST /api/v1/garage/jobs/:id/lock` with an optional body `{ purpose: "edit" | "reception" | "handover" }` (default `edit`). On a free job it MUST take the lock for the caller and answer 200 with the lock (`holder: { accountId, firstName, role }`, `since`, `lastChangeAt` (the time of the take or of the latest refresh), `expiresAt`) and the job's current `updatedAt`; when the caller already holds it, it MUST refresh (200, `since` kept, `lastChangeAt` now, `expiresAt` moved 5 minutes from now); when another person holds it, 423 `job_locked` with the holder's first name and role and `since`, "Blocat de {name}, {role}, de la {time}" / "Locked by {name}, {role}, since {time}".
+
+_From 395-job-lock._
+
+### 395-FR-002 — The lock route and the forced unlock MUST check access on the server before anything else, in this order: an actor outside the garage (another garage's staff, a driver, an admin, an unknown job) 404 `not_found`; a mechanic of the garage who is not the job's mechanic 403 `forbidden`; a receptionist 403 `forbidden` unless `purpose` is `reception` or `handover`; the owner (`garage` role) and the job's mechanic are allowed for every purpose. The holder's `role` is stored and returned as `owner`, `receptionist` or `mechanic` (390-FR-005).
+
+_From 395-job-lock._
+
+### 395-FR-003 — The API MUST offer `DELETE /api/v1/garage/jobs/:id/lock`: by the holder it MUST release the lock (204); on a free job or one the caller does not hold, without `?force=true`, 204 with nothing changed for every role (so a stale tab never unlocks another person); by the owner with `?force=true` on another person's lock it MUST be a forced unlock: the lock lifts at once, the former holder, their role and `since` are recorded on the job (FR-009) and in the audit history (FR-012), and the change is published (FR-010). A receptionist or a mechanic asking to force-unlock (`?force=true`) MUST be answered 403 `forbidden`.
+
+_From 395-job-lock._
+
+### 395-FR-005 — JOB MUST gain `updated_at` (timestamp, set to now explicitly by every job-changing write of FR-004 and by no other write — the lock mirror and forced-unlock columns of FR-008 and FR-009 never move it — backfilled from `created_at`), returned as `updatedAt` by the job read and the list's items. Every job-changing request MUST accept an optional `basedOnUpdatedAt`; when given and different from the job's current `updated_at` (compared to the millisecond), the use case MUST answer 409 `job_changed` with the current `updatedAt` and the current job, after the lock check and before any write. The web's edit dialogs (ST-1409) always send it; one-tap actions and existing API callers may omit it.
+
+_From 395-job-lock._
+
+### 395-FR-006 — The lock MUST be decided by one atomic set-if-absent of the key `job:lock:{jobId}` in Redis holding the holder's account id, first name, role, `since` and `last_change_at`, with a time to live of 5 minutes from the take and from each refresh; two simultaneous takes MUST leave exactly one holder. When Redis cannot be reached, the lock routes and every job-changing use case MUST answer 503 `try_again` "Încearcă din nou în câteva secunde" / "Try again in a few seconds" and apply nothing.
+
+_From 395-job-lock._
+
+### 395-FR-007 — A lock not refreshed for 5 minutes MUST lift by itself: the key expires, and the worker queue `job-locks` (one repeatable job every minute) MUST clear every JOB mirror whose key is gone and publish `job.lock_changed` for each, so every open screen shows the job free within one minute of the expiry. Idle means no change and no refresh; the web refreshes at most once every 60 seconds while the holder types or changes a field, never on a mere open dialog.
+
+_From 395-job-lock._
+
+### 395-FR-008 — The lock's state MUST also be mirrored on JOB in PostgreSQL: `lock_holder_id` (reference to ACCOUNT, null, set null on removal), `lock_since` and `lock_last_change_at` (timestamps, null), written on take and refresh and cleared on release, forced unlock, the change that releases, and the sweep; the mirror is a copy for reads and recovery, never the arbiter: a disagreement is settled by the key (Constitution VI, Valkey holds no only copy).
+
+_From 395-job-lock._
+
+### 395-FR-009 — The job read (`GET garage/jobs/:id`) and the list's items MUST return `lock: null | { holder: { accountId, firstName, role }, since, lastChangeAt }` from the mirror, and `lastForcedUnlock: null | { by: { firstName, role }, at, holderId }` from two further mirror columns `lock_forced_by_id` (reference to ACCOUNT, null) and `lock_forced_at` (timestamp, null), set by a forced unlock and cleared only when the former holder (`holderId`) takes the lock again, so another person's take right after the force does not hide it from the former holder. The driver's active request read (274-FR-001) MUST return neither field.
+
+_From 395-job-lock._
+
+### 395-FR-010 — Every take, release, forced unlock and expiry MUST publish (a refresh changes nothing a screen shows and publishes nothing) `job.lock_changed` (`id` = the job id) straight to Redis through `publishLive`, not the outbox, with the audience `garage:{garageId}` and, when the job has a mechanic, `mechanic:{mechanicId}`; never `account:{driverId}` or any driver channel. The web's re-read on this kind is ST-1409's (see Split).
+
+_From 395-job-lock._
+
+### 395-FR-016 — The two lock routes, the `job-locks` queue and the `job.lock_changed` kind MUST be listed in `infra/observability/inventory.json` with their metrics (a counter of lock outcomes by action: `take`, `refresh`, `release`, `force`, `locked`, `stale`, `expired`, `unavailable`), the queue's panel and the existing worker queue alerts, a warning log line on each 503 `try_again`, and in the PR's Observability section.
+
+_From 395-job-lock._
+
+### 395-FR-018 — Tests MUST exist before the code (Principle II), with a `// @traces` line per spec file: Jest on real PostgreSQL and Redis for take, refresh and release; the release after one change by a one-tap action and by a held lock; expiry after 5 idle minutes with a fake clock and the sweep clearing the mirror and publishing; the owner's forced unlock with its audit entry and its mirror; 403 for a receptionist's and a mechanic's force and for a receptionist's `edit` purpose; 200 for a receptionist's `reception` and `handover`; 403 for a mechanic not on the job and 404 for another garage, a driver and an admin; 423 with the holder's details on every job-changing route; 409 `job_changed` on a stale `basedOnUpdatedAt` and success without the field; the set-if-absent race (two concurrent takes, one winner); the audience of `job.lock_changed` holding the garage and mechanic channels and never a driver's; 503 `try_again` with Redis down and no change applied. The web's component tests and the end-to-end flow are ST-1409's (see Split).
+
+_From 395-job-lock._
+
 ### 1404-FR-001 — The garage's job read (`GET /api/v1/garage/jobs/:id`, `JobDto`) MUST also return `quoteFromBani` and `quoteToBani`, whole bani, both required (non-nullable) integers: the lower and upper bound of the booking's quote, the accepted one (220-FR-009), for every role the read already serves (owner, receptionist, the job's mechanic), with the read's role and garage rules unchanged.
 
 _From 1404-predare-quote-range._
@@ -468,6 +508,82 @@ _From 1403-block-time-dialog._
 
 _From 1403-block-time-dialog._
 
+### 293-FR-005 — The `saveSuggestion` field MUST be declared on the active request DTO in the contracts library, required and nullable as `booking` and `job` are (the garage's id and name, or null); the dismiss route MUST be in the OpenAPI document with its 204, 400, 401, 403 and 404 answers; the data-access client MUST be regenerated from it in the same change (Principle V).
+
+_From 293-save-garage-suggest._
+
+### 154-FR-001 — The API MUST offer, under the `workshop` module, `GET /api/v1/garages/:garageId/free-slots` taking `duration` (minutes), `jobTypeIds` (optional, repeatable), `needsLift` (optional), `earliest` (optional ISO instant), `horizonDays` (optional), `count` (optional), `mechanicId` (optional) and `excludeBookingId` (optional) through a query DTO in the contracts library validated at the edge (400 `validation_failed`), and answer `{ slots: [{ startsAt, endsAt }], reason? }` with the first `count` free starts in ascending time order, each as an ISO string with the Europe/Bucharest offset, `endsAt` being the end of the job (the end of its last chained stretch for a multi-day job); `reason` is `none_in_horizon` when and only when `slots` is empty. The read writes nothing: no row, no audit entry, no event of its own.
+
+_From 154-free-slots._
+
+### 154-FR-002 — Access MUST be checked on the server before anything else: the garage's owner and receptionist and a mechanic of the garage with `can_answer_quotes` or `can_move_bookings` get the answer; a mechanic of the garage with neither gets 403; a driver gets the answer only when she owns a booking at that garage that may still be moved (`awaiting_confirmation` or `confirmed`, starting after now) or holds a quote from that garage that can still be accepted (status `waiting` and not expired); everyone else, a driver with neither included, gets 404.
+
+_From 154-free-slots._
+
+### 154-FR-003 — Parameters MUST default and be bounded as follows, each breach answered 400 `validation_failed` before any schedule read: `duration` 15 to 2,400 minutes (5 working days of 8 h); `count` 1 to 10, default 3; `horizonDays` 1 to 30, default 30; `earliest` default now + 60 minutes, an instant before now clamped to now (never a 400; only an unparsable instant is), rounded up to the next 30-minute step on the Bucharest wall clock when it is not on one; `mechanicId` a card of that garage not removed, only while `team_mechanics` is on; `excludeBookingId` a booking of that garage (and the caller's own, for a driver). The driver's move story passes now + 2 h and 14 days; the engine imposes no other values.
+
+_From 154-free-slots._
+
+### 154-FR-004 — A start MUST be free when, for the whole duration: with `team_mechanics` on, at least one counted mechanic is at work (FR-005) and holds no segment overlapping it; with a lift needed and lifts in use (`lift_schedule` on and `lift_count` ≥ 1), at least one lift numbered 1 to `lift_count` holds no segment overlapping it; and after each booking of the garage in `awaiting_confirmation` whose `[starts_at, starts_at + duration_minutes)` overlaps it takes one mechanic unit (and one lift unit when any of its request's jobs has `needs_lift`), at least one mechanic and, when needed, one lift are still left. Segments are the BOOKING_SEGMENT rows of confirmed bookings and of time blocks alike (427-FR-005): a blocked mechanic or lift is never free in its blocked range.
+
+_From 154-free-slots._
+
+### 154-FR-005 — A mechanic MUST count at a start only when she is at work for the whole stretch the job occupies that day: inside her effective hours for that weekday (her own `working_hours`, else the garage's weekdays, 058-FR-001), not on a day off, not on a garage closed day and not on a legal holiday (PUBLIC_HOLIDAY); on Saturday only with `works_saturdays` on, within her Saturday hours. A removed card never counts. A garage with no opening hours stored and a mechanic with none of her own yields no counted mechanic: no start is offered round the clock (`none_in_horizon`), unlike the confirm's placement, which accepts any time there.
+
+_From 154-free-slots._
+
+### 154-FR-006 — A job no longer than the mechanic's working stretch on the start day MUST fit inside that single stretch (scenario 4). Only a job longer than that stretch starts on one day and continues in the same mechanic's next working stretches on the same lift, as the confirm's placement already chains it (150, 389); the start is free only when every stretch of the chain is free of segments and awaiting capacity and the chain ends within the horizon.
+
+_From 154-free-slots._
+
+### 154-FR-007 — Given `mechanicId`, only starts at which that mechanic is free MUST be returned (the lift condition unchanged). Given `excludeBookingId`, the segments and the awaiting capacity of that booking MUST not block the result, so a move can offer the booking its own time back.
+
+_From 154-free-slots._
+
+### 154-FR-008 — A lift MUST be needed when `needsLift` is true, or, with `needsLift` absent, when any job in `jobTypeIds` has `needs_lift`; `needsLift=false` wins over the jobs. With `lift_schedule` off or `lift_count` 0 lifts MUST be ignored entirely: no lift condition and no 400.
+
+_From 154-free-slots._
+
+### 154-FR-009 — With `team_mechanics` off there MUST be no mechanic condition and no awaiting-mechanic capacity: a start is free when the whole job lies within the garage's opening hours of that day (chained over the next opening days when longer, as FR-006), not on a closed day or a legal holiday, and, when a lift is needed and lifts are in use, a lift is free for the whole job; the owner's overlapping bookings are allowed. An awaiting booking whose jobs need a lift still takes one lift unit (FR-004); only the mechanic unit goes. A garage with no opening hours stored offers no start.
+
+_From 154-free-slots._
+
+### 154-FR-010 — Candidate starts MUST fall on 30-minute steps of the Bucharest wall clock from `earliest` (FR-003) to the end of the horizon's last day (day 1 is `earliest`'s Bucharest calendar day, day N ends at 24:00 Bucharest time), scanned in order and stopped at `count` results; on a clock-change day the grid follows the wall clock and a duration stays a length in minutes.
+
+_From 154-free-slots._
+
+### 154-FR-011 — Every returned start MUST be one the booking confirm's placement check (150-FR-002, 427-FR-006) accepts at that moment for some counted mechanic and lift: the engine reads the same calendar, hours, day-off, segment and block rules through the shared schedule code, never a copy of them. Which mechanic and lift made a start free is not returned and not promised; they are set at confirmation.
+
+_From 154-free-slots._
+
+### 154-FR-012 — The answer MUST be served from a per-garage cache in Valkey keyed by the garage and every normalized parameter (after FR-003's defaults and the rounding of `earliest`, so one key per distinct question), kept at most 60 seconds, and dropped for the whole garage when any schedule event of that garage is relayed: `booking.confirmed`, `booking.moved`, `booking.cancelled`, `booking.lapsed`, `booking.no_show_recorded`, `quote.accepted`, `mechanic.added`, `mechanic.updated`, `mechanic.removed`, `garage.updated`, `garage.features_changed`, `time_block.created`, `time_block.updated`, `time_block.deleted`. PostgreSQL stays the truth: a cold cache or a Valkey outage is a read from PostgreSQL, never an error and never a changed answer, and the schedule tables are never written by the engine.
+
+_From 154-free-slots._
+
+### 154-FR-018 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids. Unit (Jest, no database): a table of cases for mechanic and lift overlaps with lifts on and off; working hours, days off, Saturdays, closed days and holidays; awaiting capacity and `excludeBookingId`; time blocks on a mechanic, on a lift and on both; team off; multi-day chains; a clock-change day; the earliest-start rounding and an empty horizon. API (Jest on real PostgreSQL and Valkey): every caller of FR-002 (200, 403, 404), the driver's two entitlements, the 400s of FR-003, scenario 9 through the cache drop, a p95 check under 300 ms over 20 calls on a seeded garage with 10 mechanics, 5 lifts and 30 days of bookings, FR-013, FR-014 and `review.posted` (FR-015) on the outbox rows, the two review decision kinds on `audienceOf` (FR-015), and FR-016. End to end (Playwright): none of its own; covered through #135.
+
+_From 154-free-slots._
+
+### 1410-FR-001 — (origin 1404-FR-007) The Predare and Corectează dialog (1393-FR-002, FR-006) MUST show under "Preț final (lei)" the hint "Ofertă <range>" / "Quote <range>", the range written by `formatLeiRange(quoteFromBani, quoteToBani, language)` ("890–1.400 lei"; one amount when the ends are equal), from the job read the drawer already holds, handed to the dialog with the data it opens with: no second read, no new route.
+
+_From 1410-predare-quote-dialog._
+
+### 1410-FR-002 — (origin 1404-FR-008) While the typed text parses (`parseLeiText`) to strictly more bani than `quoteToBani` (equal is not above), the dialog MUST show "Peste ofertă" / "Above the quote" beside the range hint, re-judged on every change of the field's value (each keystroke) and on open (a pre-filled correction included), and Salvează MUST still save the amount: the hint is advisory, no confirmation, no second step. While the text is empty or does not parse (`parseLeiText` returns an error, `max` included), "Peste ofertă" does not show; when the field's own message appears is unchanged (1393-FR-003).
+
+_From 1410-predare-quote-dialog._
+
+### 1410-FR-003 — (origin 1404-FR-009) Both labels MUST exist in Romanian and English in the garage's texts, beside the dialog's existing `garage.jobs.finalPrice.*` keys (the garage bundle, as 1393-FR-003 places them); nothing is added to the first page's bundle.
+
+_From 1410-predare-quote-dialog._
+
+### 1410-FR-004 — (origin 1404-FR-010) The "above the quote" state MUST be in the PR's QA sweep (`specs/1410-predare-quote-dialog/qa-flows.mjs`, the pattern of `specs/1393-final-price-predare/qa-flows.mjs`) at 320 px and 390 px, light and dark, Romanian and English, with no sideways scroll at 320 px; the job read it drives the dialog with is a stub, a Playwright `page.route` intercept of the garage's job reads answering with the two fields, so nothing in the QA database changes.
+
+_From 1410-predare-quote-dialog._
+
+### 1410-FR-005 — (origin 1404-FR-011) Tests MUST exist before the code (Principle II), with a `// @traces` line per spec file: colocated Jest specs for the dialog proving the hint from the read's two fields, "Peste ofertă" above `quoteToBani` and not at it, not on an invalid text, at once on a pre-filled correction, the save still sent, and the texts in both languages.
+
+_From 1410-predare-quote-dialog._
+
 ## Retired
 
 - `220-FR-007` — superseded by `389-FR-002` (2026-10-21)
@@ -477,3 +593,7 @@ _From 1403-block-time-dialog._
 - `150-FR-008` — superseded by `427-FR-005` (2026-10-29)
 - `427-FR-013` — struck by 427-time-blocks at clarify (2026-10-29): no code lowers `lift_count`; the first story that writes it owns the guard
 - `424-FR-015` — superseded by `1393-FR-011` (2026-10-30)
+- `276-FR-003` — superseded by `395-FR-004` (2026-10-30)
+- `424-FR-008` — superseded by `395-FR-004` (2026-10-30)
+- `406-FR-004` — superseded by `395-FR-004` (2026-10-30)
+- `274-FR-001` — superseded by `293-FR-003` (2026-10-31)

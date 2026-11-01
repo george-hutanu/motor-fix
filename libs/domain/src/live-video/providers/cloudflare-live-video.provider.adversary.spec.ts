@@ -52,9 +52,9 @@ beforeEach(() => {
   urls = [];
   auths = [];
   bodies = [];
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const json =
   (status: number, body: unknown): Answer =>
@@ -169,7 +169,7 @@ describe('the Cloudflare adapter against hostile answers', () => {
   }, 10_000);
 
   it('keeps an input id with slashes and dots inside its own path segment', async () => {
-    answer = json(200, { success: true });
+    answer = json(200, { result: { enabled: false }, success: true });
 
     await cloudflare().closeInput('../../other/../x?y=1#z');
 

@@ -1258,6 +1258,45 @@
       }
     },
     {
+      "id": 42,
+      "type": "timeseries",
+      "title": "Free slots per hour, by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prom}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 76
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_free_slots_answers_total{service_name=\"api\", outcome=\"slots\", deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "slots"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum(increase(motorfix_free_slots_answers_total{service_name=\"api\", outcome=\"none_in_horizon\", deployment_environment=\"$env\"}[1h]))",
+          "legendFormat": "none_in_horizon"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
       "id": 35,
       "type": "timeseries",
       "title": "Live replays by outcome",
@@ -1444,7 +1483,7 @@
       "id": 40,
       "type": "timeseries",
       "title": "Live sessions and view tokens",
-      "description": "Live stream starts by outcome (started, refused, provider_failed, unavailable, stopped), viewing links by outcome (issued, refused, ended) and recordings discarded at the stop by outcome (discarded, discard_failed), per second over 5 minutes. A discard_failed rise leaves recordings at the provider to be deleted later. A provider_failed or unavailable rise is the video provider down or not configured: the workshop is told to send photos and clips.",
+      "description": "Live stream starts by outcome (started, refused, provider_failed, unavailable, stopped), viewing links by outcome (issued, refused, ended), recordings discarded at the stop by outcome (discarded, discard_failed) and inputs closed at the provider after a stop by outcome (closed, close_failed), per second over 5 minutes. A discard_failed rise leaves recordings at the provider to be deleted later; a close_failed rise leaves inputs open to a publisher after their session stopped. A provider_failed or unavailable rise is the video provider down or not configured: the workshop is told to send photos and clips.",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -1491,6 +1530,15 @@
           },
           "expr": "sum(rate(motorfix_live_idle_stops_total{service_name=\"worker\", deployment_environment=\"$env\"}[5m]))",
           "legendFormat": "idle stop"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${prom}"
+          },
+          "expr": "sum by (outcome) (rate(motorfix_live_input_closes_total{service_name=\"worker\", deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "input close {{outcome}}"
         }
       ],
       "fieldConfig": {
@@ -1509,7 +1557,7 @@
       "id": 41,
       "type": "timeseries",
       "title": "Live video provider p95",
-      "description": "How long the live video provider took to open or close an input, 95th percentile over 5 minutes; a call is cut off at 5 s.",
+      "description": "How long the live video provider took per operation, from the api (open an input) and the worker (close an input, read its publisher, delete recordings), 95th percentile over 5 minutes; a call is cut off at 5 s.",
       "datasource": {
         "type": "prometheus",
         "uid": "${prom}"
@@ -1527,7 +1575,7 @@
             "type": "prometheus",
             "uid": "${prom}"
           },
-          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(motorfix_live_provider_duration_seconds_bucket{service_name=\"api\", deployment_environment=\"$env\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, operation) (rate(motorfix_live_provider_duration_seconds_bucket{deployment_environment=\"$env\"}[5m])))",
           "legendFormat": "{{operation}}"
         }
       ],

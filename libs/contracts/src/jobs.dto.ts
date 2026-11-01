@@ -6,6 +6,7 @@ import {
   ArrayUnique,
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsISO8601,
   IsOptional,
@@ -37,6 +38,95 @@ const ACTOR_ROLES = [
   'admin',
   'system',
 ] as const;
+
+const LOCK_HOLDER_ROLES = ['owner', 'receptionist', 'mechanic'] as const;
+export type LockHolderRole = (typeof LOCK_HOLDER_ROLES)[number];
+
+export class LockHolderDto {
+  @ApiProperty({ format: 'uuid' })
+  accountId!: string;
+
+  @ApiProperty()
+  firstName!: string;
+
+  @ApiProperty({ enum: LOCK_HOLDER_ROLES })
+  role!: LockHolderRole;
+}
+
+export class JobLockDto {
+  @ApiProperty({ type: LockHolderDto })
+  holder!: LockHolderDto;
+
+  @ApiProperty({ format: 'date-time' })
+  since!: string;
+
+  @ApiProperty({
+    description:
+      "The holder's last take or change; the lock ends 5 minutes after it",
+    format: 'date-time',
+  })
+  lastChangeAt!: string;
+}
+
+export class JobLockTakenDto extends JobLockDto {
+  @ApiProperty({ format: 'date-time' })
+  expiresAt!: string;
+
+  @ApiProperty({
+    description: "The job's version, to send back as basedOnUpdatedAt",
+    format: 'date-time',
+  })
+  updatedAt!: string;
+}
+
+class ForcedByDto {
+  @ApiProperty()
+  firstName!: string;
+
+  @ApiProperty({ enum: LOCK_HOLDER_ROLES })
+  role!: LockHolderRole;
+}
+
+export class LastForcedUnlockDto {
+  @ApiProperty({ type: ForcedByDto })
+  by!: ForcedByDto;
+
+  @ApiProperty({ format: 'date-time' })
+  at!: string;
+
+  @ApiProperty({ description: 'Who held the lock', format: 'uuid' })
+  holderId!: string;
+}
+
+const LOCK_PURPOSES = ['edit', 'reception', 'handover'] as const;
+export type LockPurpose = (typeof LOCK_PURPOSES)[number];
+
+export class TakeJobLockDto {
+  @ApiPropertyOptional({
+    default: 'edit',
+    description:
+      'A receptionist takes a job for its reception or handover only',
+    enum: LOCK_PURPOSES,
+  })
+  @IsOptional()
+  @IsIn(LOCK_PURPOSES)
+  purpose?: LockPurpose;
+}
+
+const BASED_ON = {
+  description:
+    "The job's updatedAt the change was made from; a change from an older read is refused",
+  format: 'date-time',
+};
+
+// A change made from what the caller last read: the body of a change that
+// carries nothing else.
+export class BasedOnUpdatedAtDto {
+  @ApiPropertyOptional(BASED_ON)
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  basedOnUpdatedAt?: string;
+}
 
 // The job's car, with its current odometer so a lower reading can be told.
 export class JobCarDto extends GarageCarDto {
@@ -111,6 +201,36 @@ export class JobSummaryDto {
 
   @ApiProperty({ description: 'Steps written, 0 to 20' })
   stepsTotal!: number;
+
+  @ApiProperty({
+    description: "The job's version, to send back as basedOnUpdatedAt",
+    format: 'date-time',
+  })
+  updatedAt!: string;
+
+  @ApiProperty({ nullable: true, type: JobLockDto })
+  lock!: JobLockDto | null;
+
+  @ApiProperty({ nullable: true, type: LastForcedUnlockDto })
+  lastForcedUnlock!: LastForcedUnlockDto | null;
+
+  @ApiProperty({
+    description: 'When the garage recorded that the driver did not come',
+    ...NULLABLE_TIME,
+  })
+  noShowAt!: string | null;
+
+  @ApiProperty({
+    description:
+      "The reader may record a no-show: the booking's time has come and the job has not started",
+  })
+  canRecordNoShow!: boolean;
+
+  @ApiProperty({
+    description:
+      'The reader may withdraw the no-show: recorded today, Bucharest time',
+  })
+  canWithdrawNoShow!: boolean;
 }
 
 export class JobStepDto {
@@ -172,7 +292,7 @@ export class JobStageEntryDto {
   at!: string;
 }
 
-export class ReceiveJobDto {
+export class ReceiveJobDto extends BasedOnUpdatedAtDto {
   @ApiProperty({
     description: 'The odometer reading, in km',
     maximum: MAX_KM,
@@ -236,7 +356,7 @@ export class JobListQueryDto extends ListQueryDto {
 const trimmed = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
-export class JobStepTextDto {
+export class JobStepTextDto extends BasedOnUpdatedAtDto {
   @ApiProperty({
     description: 'Trimmed, 2 to 80 characters',
     maxLength: 80,
@@ -248,7 +368,7 @@ export class JobStepTextDto {
   text!: string;
 }
 
-export class ReorderJobStepsDto {
+export class ReorderJobStepsDto extends BasedOnUpdatedAtDto {
   @ApiProperty({
     description: 'Every step of the job, once each, in the new order',
     format: 'uuid',
@@ -264,14 +384,14 @@ export class ReorderJobStepsDto {
   stepIds!: string[];
 }
 
-export class JobStepDoneDto {
+export class JobStepDoneDto extends BasedOnUpdatedAtDto {
   @ApiProperty({ description: 'true ticks the step, false unticks it' })
   @IsBoolean()
   done!: boolean;
 }
 
 // The price the driver paid, recorded at the handover or corrected after it.
-export class FinalPriceDto {
+export class FinalPriceDto extends BasedOnUpdatedAtDto {
   @ApiProperty({
     description: 'The final price, in bani',
     maximum: PAID_BANI_MAX,

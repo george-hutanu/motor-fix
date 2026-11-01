@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
-import { readdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 
 import { MEDIA_LIMITS } from '@motor-fix/contracts';
@@ -8,11 +9,18 @@ import { MEDIA_LIMITS } from '@motor-fix/contracts';
 import { convertClip } from './clip';
 
 const calls: { tool: string; timeout: number }[] = [];
+let mockTmp: string | undefined;
+
+vi.mock('node:os', async (importOriginal) => {
+  const os = await importOriginal<typeof import('node:os')>();
+  const tmpdir = () => mockTmp ?? os.tmpdir();
+  return { ...os, default: { ...os, tmpdir }, tmpdir };
+});
 let took: number[] = [];
 let now = 0;
 let jump: (() => void) | undefined;
 
-jest.mock('node:child_process', () => ({
+vi.mock('node:child_process', () => ({
   spawn: (tool: string, args: string[], options: { timeout: number }) => {
     calls.push({ timeout: options.timeout, tool });
     const child = Object.assign(new EventEmitter(), {
@@ -31,17 +39,28 @@ jest.mock('node:child_process', () => ({
 }));
 
 const LIMIT = MEDIA_LIMITS.conversionTimeoutMs;
+// A folder of this spec's own: other Jest workers make media-* folders in the
+// shared temp dir at the same time, so the leftover check reads only ours.
+const ownTmp = mkdtempSync(join(tmpdir(), 'clip-deadline-'));
 const mediaDirs = () =>
   readdirSync(tmpdir()).filter((name) => name.startsWith('media-'));
+
+beforeAll(() => {
+  mockTmp = ownTmp;
+});
+afterAll(() => {
+  mockTmp = undefined;
+  rmSync(ownTmp, { force: true, recursive: true });
+});
 
 beforeEach(() => {
   calls.length = 0;
   took = [];
   jump = undefined;
   now = 1_000_000;
-  jest.spyOn(performance, 'now').mockImplementation(() => now);
+  vi.spyOn(performance, 'now').mockImplementation(() => now);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 333-FR-007
 describe('the conversion deadline under hostile timing', () => {
@@ -74,7 +93,7 @@ describe('the conversion deadline under hostile timing', () => {
 
   it('never hands a run more than the whole budget when the wall clock steps back', async () => {
     let wall = 5_000_000;
-    jest.spyOn(Date, 'now').mockImplementation(() => wall);
+    vi.spyOn(Date, 'now').mockImplementation(() => wall);
     jump = () => {
       wall -= 10 * 60_000;
     };
@@ -113,6 +132,7 @@ describe('the conversion deadline under hostile timing', () => {
   });
 
   it('removes its working folder when the budget runs out', async () => {
+    expect(tmpdir()).toBe(ownTmp);
     const before = mediaDirs();
     took = [LIMIT];
 

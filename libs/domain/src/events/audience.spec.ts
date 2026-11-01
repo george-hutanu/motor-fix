@@ -186,6 +186,24 @@ describe('audienceOf', () => {
     ).toEqual(['garage:g1', 'public:garage:g1', 'public:search']);
   });
 
+  // @traces 059-FR-005
+  it("also sends a public change that moves the team to each card's page, before the results", () => {
+    expect(
+      audienceOf({
+        garageId: garage,
+        mechanicIds: ['m1', 'm2'],
+        results: true,
+        type: 'public_garage',
+      }),
+    ).toEqual([
+      'garage:g1',
+      'public:garage:g1',
+      'public:mechanic:m1',
+      'public:mechanic:m2',
+      'public:search',
+    ]);
+  });
+
   // @traces 025-FR-009
   it("sends a mechanic's new figures to the garage, its public page, the results and the mechanic's page", () => {
     expect(
@@ -308,6 +326,61 @@ describe('the audience of a time block', () => {
     expect(
       audienceOf({ garageId: garage, mechanicId: null, type: 'time_block' }),
     ).toEqual(['garage:g1', 'public:garage:g1']);
+  });
+});
+
+// @traces 154-FR-014
+describe('audienceOf a suspension or a restore', () => {
+  it("adds each brand's search to a published status change that names the garage's brands", () => {
+    expect(
+      audienceOf({
+        brandIds: ['b1', 'b2'],
+        garageId: garage,
+        published: true,
+        type: 'verification',
+      }),
+    ).toEqual([
+      'admin',
+      'garage:g1',
+      'public:garage:g1',
+      'public:search',
+      'public:search:b1',
+      'public:search:b2',
+    ]);
+  });
+
+  it('keeps the results channel alone when no brands are named', () => {
+    expect(
+      audienceOf({ garageId: garage, published: true, type: 'verification' }),
+    ).toEqual(['admin', 'garage:g1', 'public:garage:g1', 'public:search']);
+  });
+
+  it('puts an unpublished change on no brand search, even with brands named', () => {
+    expect(
+      audienceOf({
+        brandIds: ['b1'],
+        garageId: garage,
+        type: 'verification',
+      }),
+    ).toEqual(['admin', 'garage:g1']);
+  });
+});
+
+// @traces 154-FR-015
+describe("the review events a garage's public page hears", () => {
+  // A posted, a hidden and a restored review share the review subject; the
+  // audience never sees the kind.
+  it("sends a posted, a hidden and a restored review to the garage's public page", () => {
+    for (const mechanicId of [mechanic, null]) {
+      expect(
+        audienceOf({
+          authorAccountId: driver,
+          garageId: garage,
+          mechanicId,
+          type: 'review',
+        }),
+      ).toContain('public:garage:g1');
+    }
   });
 });
 

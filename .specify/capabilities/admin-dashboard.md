@@ -1,6 +1,6 @@
 ---
 capability: admin-dashboard
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 160-admin-dashboard-menu
   - 161-headline-numbers
@@ -31,7 +31,10 @@ features:
   - 177-reported-reviews
   - 011-dashboard-sections
   - 1389-reported-reviews-admin
+  - 1405-admin-repair-correct
   - 1391-admin-dashboard-customise
+  - 165-admin-roles
+  - 106-demand-supply
 ---
 
 # Capability: Admin dashboard
@@ -902,6 +905,38 @@ _From 1389-reported-reviews-admin._
 
 _From 1389-reported-reviews-admin._
 
+### 1405-FR-001 — (was 1267-FR-015) The admin's account page (`apps/web/src/app/dashboard/admin-account/`, the drawer over "Utilizatori") MUST gain, between its actions and its history, a section "Reparații adăugate" / "Added repairs" listing the account's logged repairs from 1267-FR-001, each row "<date, d mmm. yyyy> · <brand> <model> <year>" with a "Deschide" / "Open" action, an empty state "Nicio reparație adăugată de acest cont" / "No repair added by this account", a "și altele" / "and more" line when `truncated`, a loading skeleton and an error line with "Reîncearcă" / "Try again", as the page's history section has; nothing of the repair but the date and the car shows in the row.
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-002 — (was 1267-FR-016) "Deschide" MUST read the repair (1267-FR-003) and open a `dialog` task of the overlays service (158-FR-010) titled "Reparație adăugată de șofer" / "Repair added by the driver", showing the car, the garage name, what was done, the date, the odometer, the amount, "Corectată de <garage>" / "Corrected by <garage>" or "Corectată de MotorFix" / "Corrected by MotorFix" when `correctedBy` is set, and the line "Deschiderea este înregistrată în istoric" / "This opening is recorded in the history", with one action "Corectează" / "Correct"; the dialog opens once the read answers (clarify 3): a 404 opens no dialog and the row leaves the list with the message "Reparația nu mai există" / "The repair no longer exists".
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-003 — (was 1267-FR-017) "Corectează" MUST turn the dialog into the correction form through the shared form-saving helper (159-FR-001..004), the fields what was done, date, odometer and amount prefilled and the limits of 409-FR-006 shown inline, the car and the garage read-only; "Salvează" / "Save" sends only the changed fields with the loaded version (1267-FR-005); on success the dialog shows the corrected values and the row's date updates in place; there is no delete action anywhere on the page.
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-004 — (was 1267-FR-018) On 409 the dialog MUST say "Reparația a fost modificată între timp. Am reîncărcat valorile." / "The repair changed meanwhile. We reloaded the values.", re-read the repair (a new `open` entry, 1267-FR-004) and stay open in correction mode with the current values, the unsaved edits discarded (clarify 4); on 404 it MUST close and the row leave the list with FR-002's message; a 400 shows the field's message inline.
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-005 — (was 1267-FR-019) The texts MUST live in the admin language files in Romanian and English; one Playwright flow MUST sign in as the seeded admin, open a seeded driver's account, see the section with date and car only, open a repair, correct the amount to 480 lei, see the dialog's new value, then sign in as the driver and see the bell row naming MotorFix and the driver's history read answering `correctedBy` `admin` ("Corectată de MotorFix", clarify 1), on a logged repair the seed adds; the section and the dialog pass the QA sweep at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll and no axe violation.
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-006 — (constraint, Principle I and the bundle budget) The section and its dialog MUST be loaded only within the admin area's lazily loaded code (the `admin-users` view's chunk, which the account drawer belongs to), the dialog's component loaded when the dialog is first opened; nothing of this story joins the first-page bundle and its 1 MB error budget is not raised.
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-007 — (constraint, the given stack) The section and the dialog MUST call the API through the generated client (`AdminService` in `libs/data-access`, the four `admin-repairs-controller-*` functions) as it stands on `main`: this story adds and changes no API route, DTO or generated file; its one change outside `apps/web` and `apps/web-e2e` is the seed's logged repair and ownership row in `libs/domain/src/seed.ts` (clarify 1).
+
+_From 1405-admin-repair-correct._
+
+### 1405-FR-008 — Tests MUST cover, in Jest colocated with the components, each file naming its ids in one whole-line `// @traces` comment: the section's rows (date and car only, newest first as answered), the empty state, the "și altele" line, the skeleton and the error line with its retry; the dialog's content with `correctedBy` null, `garage` and `admin`, the recording line, the 404 on open (message, row removed); the form's prefill, the read-only car and garage, each inline limit of 409-FR-006, a save carrying only the changed fields and the loaded version, progress and the disabled button while saving, the corrected values and the row's date updated in place, the unchanged save; 409 (message, re-read, open with the new values), 404 on save (closed, message, row removed), 400 inline; the absence of any delete action; and both languages' texts.
+
+_From 1405-admin-repair-correct._
+
 ### 1391-FR-001 — The admin header on "Panou" shows the button "Personalizează panoul" / "Customise the dashboard", placed as on the garage dashboard (the boards do not design it); it opens the panel "Alege ce vezi pe panou" / "Choose what the dashboard shows": a drawer on the right on desktop, a bottom sheet on a phone (MF-5), closed by "Gata" / "Done" or Escape. On opening, focus moves into the panel (its first control); on closing it returns to the button.
 
 _From 1391-admin-dashboard-customise._
@@ -965,6 +1000,74 @@ _From 1391-admin-dashboard-customise._
 ### 1391-FR-018 — Every text this story adds (the line, the names and descriptions, the arrow labels, "Revino la varianta implicită", the count, the empty line, the error) MUST exist in Romanian and English in the shared i18n files with key parity and follow the reader's language; a Romanian hyphenated word uses U+2011 ("Service‑uri"); no text in the panel or the strip is under 12 px on a phone.
 
 _From 1391-admin-dashboard-customise._
+
+### 165-FR-002 — Every `/api/v1/admin/*` route MUST admit any active account acting as `admin` (the session's role in use) by role alone: the access check (session, status, role, and the route's required capability when it names one) never refuses such an account with 401 `sign_in_required`, 403 `account_suspended`, 403 `forbidden` or 404 `not_found`; a required capability named by an admin route MUST be one the admin row holds. Tests MUST walk every admin operation (path × method) of the OpenAPI document (as the existing admin-route guard test does for non-admins) and prove the access check admits an active admin on each by observing the check's own decision, and the status is neither 401 nor 403; a 400, 404 or 422 from the route's own validation or lookup counts as admitted, and so does a 5xx, which is not an access refusal and belongs to the route's own tests; a route whose own rule refuses after the access check admits (`DELETE /api/v1/admin/repairs/{id}`, 403 `forbidden`: only the driver deletes a logged repair) is admitted too, and the walk names that answer explicitly. An admin found refused is a bug fixed in this story's change.
+
+_From 165-admin-roles._
+
+### 165-FR-003 — (from #324 / ST-910) The suspended-admin case of the admin-route guard test MUST assert 403 `account_suspended` for `GET /api/v1/admin/overview` and for `GET /api/v1/admin/growth` (162-FR-003's rule, now proven for both reads).
+
+_From 165-admin-roles._
+
+### 165-FR-004 — The story MUST leave unchanged: the refusals of the other actors on admin routes (161-FR-003: visitor 401 `sign_in_required`, non-admin role in use 404 `not_found`, suspended 403 `account_suspended`; an account whose consent is not current answers `consent_required`), 102-FR-007's 403/404 rule for garage staff, the per-person rules (the appeal decided by a different admin; the second admin for the reviews-only-after-a-confirmed-job change) and "any admin can decide a verification file"; the existing non-admin and visitor walks of the admin-route guard test keep passing unchanged.
+
+_From 165-admin-roles._
+
+### 106-FR-001 — The system MUST hold the areas as reference data (AREA: `code`, `name`, `kind` `city` or `sector`, `outline`): the six București sectors (`sector-1` to `sector-6`, names "Sector 1" to "Sector 6", kind `sector`) and the municipalities that are county seats (kind `city`, code the city's slug as `cityOf` gives it, name the city's name), each with its outline from a data file in the repository that the build team updates; the file MUST be loaded into AREA at the API's start by code (insert or update, never delete), so a second start changes nothing; the file carries its source and licence. The loader is a domain function the API calls at start and the tests call directly; while AREA is empty the read answers every point under `unknown`. This story delivers ST-1292 (#1292).
+
+_From 106-demand-supply._
+
+### 106-FR-002 — A point MUST be placed in the one area whose outline contains it, else in no area. A garage's point is its `position` (for a mobile mechanic the position of its registered seat); a search's point is the centre of its 5-character SEARCH_LOG `area_cell`; a search without a cell, a garage without a position, and any point in no area, count under the pseudo-area `unknown` ("Zonă necunoscută" / "Unknown area"), which is answered like an area but is not in AREA.
+
+_From 106-demand-supply._
+
+### 106-FR-003 — A request MUST count once per distinct area of the garages it was sent to (REQUEST_RECIPIENT), on the Europe/Bucharest day of its creation, for the brand of its car snapshot, whatever its status today; a recipient in no area places it under `unknown`. A search MUST count once, on the day it was logged, for its brand's current name and its area.
+
+_From 106-demand-supply._
+
+### 106-FR-004 — Supply for a brand and an area MUST be the garages with status `approved` and not suspended, whose area is that area, holding a GARAGE_BRAND row with stance `works_on` for the brand, counted at the time of the read; a garage with `does_not_take`, no row, a draft or any other status, or suspended, is not supply. A mobile mechanic counts by its seat (FR-002).
+
+_From 106-demand-supply._
+
+### 106-FR-005 — An unmet request MUST be a QUOTE_REQUEST with `closed_reason` `expired` and no QUOTE from any garage, counted once per area of its recipients on the Europe/Bucharest day of its `closed_at`.
+
+_From 106-demand-supply._
+
+### 106-FR-006 — An admin MUST be able to read `GET /api/v1/admin/demand/supply`, with optional query `brand` (an exact brand name, 1 to 80 characters) and `area` (an area code of FR-001 or `unknown`): the window's `firstDay` and `lastDay`, `writtenAt` (the last nightly write of a `brand_area` marker row, null before the first), `areas` (every AREA row's code, name and kind plus `unknown`, for the screen's filter), and `rows`: one per brand and area with at least one search, one request or one unmet request in the window, each with `brand`, `area` (code, name, kind), `searches`, `requests`, `unmet`, `supply` and `requestsPerGarage` (requests divided by supply rounded to the nearest whole number; null when supply is 0); `unmet` is answered as counted and may exceed `requests`, since an unmet request is counted on the day it expired (FR-005). A filter keeps only the rows whose brand or area equals it; both filters may be given. Nothing in the answer is personal data.
+
+_From 106-demand-supply._
+
+### 106-FR-007 — The rows MUST be ordered by `unmet` descending, then `searches` descending, then `requests` descending, then brand name, then area name, in plain code-point order.
+
+_From 106-demand-supply._
+
+### 106-FR-008 — The route MUST follow the `admin/*` access policy (103-FR-002, capability `admin.catalogue`): an admin reads it, any other role answers 404 `not_found`, a missing token 401 `sign_in_required`, a suspended account 403 `account_suspended`; a bad `brand` or `area` answers 400 `validation_failed`; a failure inside the read answers the API's standard error body. The route joins the admin-route guard test's list of known routes.
+
+_From 106-demand-supply._
+
+### 106-FR-009 — The window MUST be the 30 Europe/Bucharest calendar days ending today (103-FR-004): today and any closed day without a `brand_area` marker row counted live from SEARCH_LOG and QUOTE_REQUEST; the other closed days read from DEMAND_DAILY. A day's `brand_area` rows and its marker commit together (FR-010), so a day is read from rows only when its marker exists and never half-written. Supply is never stored or read from a past day.
+
+_From 106-demand-supply._
+
+### 106-FR-010 — The `insights` nightly job's `demand-daily` step (404-FR-004) MUST also write to DEMAND_DAILY, for every closed day of the last 30 that has no `brand_area` marker row, one row per brand and area with at least one search, one request or one unmet request that day (dimension `brand_area`, key naming the area code and the brand name, its `searches`, `requests` and `unmet_requests`, each 0 or more) and one marker row (dimension `brand_area`, key `all`, the sums of the day's rows and the write time), in one transaction per day under the step's per-day lock, apart from the `brand`, `job` and `total` rows: a day whose `total` row exists but has no `brand_area` marker (every day written before this story) gets its `brand_area` rows on the next night; running it again for a written day changes nothing. The step's log line counts the `brand_area` rows written; a failure fails the attempt, which is retried as today.
+
+_From 106-demand-supply._
+
+### 106-FR-011 — DEMAND_DAILY MUST gain `unmet_requests` (0 by default, never below 0) and a `dimension` wide enough for `brand_area`; existing rows are unchanged, and the closed days written before this story are counted live for `brand_area` until the next night writes their rows (FR-009, FR-010).
+
+_From 106-demand-supply._
+
+### 106-FR-012 — The OpenAPI document MUST describe the route and its DTOs (from the contracts library, validated at the edge), and the `data-access` client MUST be regenerated; no other route changes. No screen changes in this story (ST-1416 renders the answer).
+
+_From 106-demand-supply._
+
+### 106-FR-013 — The observability inventory MUST list the route (`admin-demand-supply`, the `motorfix-api` dashboard, the `api-error-rate` and `api-latency` rules) and the `demand-daily` entry MUST name the brand-area rows; the AREA load at start logs its count and is covered by the API's existing start-up metrics and alerts; no new service, queue or outside call.
+
+_From 106-demand-supply._
+
+### 106-FR-014 — Jest on real PostgreSQL and Redis MUST cover: area placement of a workshop, a mobile mechanic by its seat, a search cell's centre, a point outside every area and a garage without a position (`unknown`); a `does_not_take`, an unmarked, a suspended and a non-approved garage left out of supply; a request to garages in two areas counted once in each; an unmet request against an expired one with a quote and a cancelled one; requests per garage rounding and null; the brand and area filters and the order of FR-007; 404 for a non-admin and 401 without a token; the nightly `brand_area` rows written once with their marker, and back-filled for a day that has only its `total` row; an unmet-only row; a window day unwritten counted live; and the AREA load run twice. A `// @traces` line names the FR ids in each test file.
+
+_From 106-demand-supply._
 
 ## Retired
 

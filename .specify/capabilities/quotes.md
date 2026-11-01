@@ -1,6 +1,6 @@
 ---
 capability: quotes
-updated: 2026-10-30
+updated: 2026-10-31
 features:
   - 220-requests-quotes-bookings
   - 221-quote-request
@@ -34,6 +34,9 @@ features:
   - 1395-block-time-dashboard
   - 1316-swr-resource-store
   - 346-quote-outcomes
+  - 1384-confirm-dialog-lift
+  - 1259-no-show
+  - 151-lift-timeline
 ---
 
 # Capability: Quotes
@@ -66,9 +69,9 @@ _From 220-requests-quotes-bookings._
 
 _From 220-requests-quotes-bookings._
 
-### 220-FR-008 — The system MUST hold, in one place per entity, the transition tables of the feature's state diagrams and refuse every other move with a domain error that carries the entity, the current status and the asked status, which the API answers as 409 problem details with code `invalid_transition` and the current status in the body. The allowed moves are, QUOTE_REQUEST: `sent`→`quoted`, `sent`→`closed`, `quoted`→`booked`, `quoted`→`closed`, `booked`→`quoted`, `booked`→`in_work`, `booked`→`closed`, `in_work`→`done`; REQUEST_RECIPIENT: `waiting`→`quoted`, `waiting`→`declined`, `declined`→`waiting` (undo), `waiting`→`expired`, `waiting`→`closed`; QUOTE: `waiting`→`accepted`, `waiting`→`withdrawn`, `waiting`→`expired`, `waiting`→`lost`, `waiting`→`declined_by_driver`, `accepted`→`expired` (its booking lapsed), `accepted`→`lost` (the request was cancelled or closed); BOOKING: `awaiting_confirmation`→`confirmed`, `awaiting_confirmation`→`lapsed`, `awaiting_confirmation`→`cancelled`, `confirmed`→`cancelled`, `confirmed`→`no_show`, `confirmed`→`completed`; JOB: `to_do`→`in_work`, `to_do`→`cancelled`, `in_work`→`paused`, `paused`→`in_work`, `in_work`→`done`. A transition MUST read its row with a lock inside the caller's transaction, judge the move against that state, set the status and the matching time column (`closed_at`, `answered_at`, `accepted_at`, `withdrawn_at`, `confirmed_at`, `cancelled_at`, `no_show_at`, `completed_at`, `started_at`, `paused_at`, `finished_at`), and write the audit entry and the event of FR-011 (a JOB move also appends one JOB_STAGE_ENTRY with the actor, the role and the optional text). The moves of QUOTE_REQUEST, REQUEST_RECIPIENT, QUOTE and BOOKING live in the `quotes` module and the moves of JOB in the `workshop` module, each module the only writer of its own tables. The service applies one entity's move; the cascades between entities (a quote accepted moves its request to `booked`) are composed by the writing stories in one transaction. No transition in this story runs on a clock or on a consumed event; the timers and the `garage.suspended` consumer are later stories'.
+### 1259-FR-006 — A withdrawal MUST, in one transaction: move the booking `no_show`→`confirmed` with `no_show_at` and `no_show_recorded_by` cleared (`confirmed_at` and `confirmed_by` unchanged); move the job `cancelled`→`to_do` when the booking has one; move the request `closed`→`booked` with `closed_reason` and `closed_at` cleared; write the booking's schedule segments back exactly as the confirmation placed them (slot, duration, mechanic and lift, on the original `mechanic_id` even when that card has since been removed); write the transitions' audit entries so the withdrawal appears in the garage's history with who did it, plus one key-change entry `booking.no_show` (`withdrawn`) labelled with the garage's name for the driver's history; and record one event `booking.no_show_withdrawn` with the same audience and payload shape as FR-003 (`withdrawnBy` for the actor). The three new moves (`no_show`→`confirmed`, JOB `cancelled`→`to_do`, QUOTE_REQUEST `closed`→`booked`) join the transition tables of 220-FR-008 and are allowed only within this withdrawal: the booking transition checks the window and the request move is accepted only when `closed_reason` is `no_show`, as the decline undo is limited to its window today.
 
-_From 220-requests-quotes-bookings._
+_From 1259-no-show._
 
 ### 220-FR-009 — The database MUST enforce: at most one `accepted` quote per request (a partial unique index); at most one booking per quote; at most one quote per (request, garage); one recipient row per (request, garage); one job per booking; a request's recipients at most REQUEST_MAX_GARAGES (checked in the sending story, not here). A violation MUST be answered, through one error mapper the transition service and the later stories' inserts share, as the 409 `invalid_transition` of FR-008 carrying `entity`, the moved row's current state as `currentStatus` (absent for an insert) and `rule`, the name of the refused uniqueness; never a 500.
 
@@ -578,9 +581,9 @@ _From 389-confirm-booking-lift-mechanic._
 
 _From 389-confirm-booking-lift-mechanic._
 
-### 389-FR-014 — The garage's Oferte trimise row of an accepted quote MUST show, to the owner and a receptionist only, the button "Confirmă programarea" / "Confirm the booking", opening the shared overlay panel (a drawer from 768 px, a sheet under it) titled "Confirmă programarea" with: the time left at the top in 222-FR-007's wording; the driver's short name, the car, the jobs, the slot (day and time, Romania's time zone) and the duration; the select "Mecanic" / "Mechanic" (only with `team_mechanics` on; required; the garage's mechanics by name); the select "Elevator" / "Lift" (only with `lift_schedule` on; "Fără elevator" / "No lift" first, then "Elevator 1" … "Elevator N"); the buttons "Confirmă" / "Confirm" and "Renunță" / "Cancel". A missing mechanic is shown before sending; the API's message is shown under the matching select (`mechanic_busy`, `mechanic_unavailable` → Mecanic; `lift_busy` → Elevator) or at the top (`outside_hours`, `invalid_transition`), the other choices kept; on 200 the panel closes and the row re-renders. The dialog MUST show nothing of the car's history.
+### 1384-FR-001 — (389-FR-014 modified) With `liftCount` above 0, the lift select MUST open with "Fără elevator" / "No lift" picked when the options' `needsLift` is false, and with no value picked when it is true: its first option is then the placeholder "Alege elevatorul" / "Choose a lift" (empty value, as the mechanic select's "Alege mecanicul"), followed by "Fără elevator" / "No lift" as a selectable option, then "Elevator 1" … "Elevator N" / "Lift 1" … "Lift N". With `liftCount` 0 there is no lift select whatever `needsLift` says.
 
-_From 389-confirm-booking-lift-mechanic._
+_From 1384-confirm-dialog-lift._
 
 ### 389-FR-015 — The garage's confirmed row MUST read "Acceptată · programată <day>, <time>" / "Accepted · booked <day>, <time>" (the mock's text; `azi`/`mâine`/the weekday or date as the platform writes relative days) with the lamp's accepted colour, no button, the mechanic's name and "Elevator n" when set, the phone link and the plate; the garage feed MUST re-read on `booking.confirmed` and `booking.lapsed`, and a lapsed or cancelled row leaves the list (222 edge case kept).
 
@@ -742,9 +745,9 @@ _From 428-close-on-account-closed._
 
 _From 292-saved-garage-quote._
 
-### 427-FR-011 — (150-FR-009 modified) The schedule read `GET /api/v1/garages/:garageId/schedule` MUST gain `blocks`: the blocks whose segments touch a day of the range, each `id`, `mechanic` (id and name, or null), `lift` (only while `lift_schedule` is on, as for entries), `startsAt`, `endsAt`, `note`, `segments`; the owner and a receptionist read every block, a mechanic the blocks on her own card, or all of them while her card has `can_move_bookings` (the `lift` and `mechanicId` filters apply to blocks as to entries: `mechanicId=X` matches `mechanic_id = X` only, so a lift-only block never passes it, for every role); `GarageScheduleService.list` is extended so the MCP `get_schedule` tool returns `blocks` too. The `GET time-blocks` list of FR-003 returns the same block shape.
+### 151-FR-003 — The schedule read MUST gain, additively and for every caller (the MCP `get_schedule` tool included), `liftCount` (the garage's lift count, 0 while it schedules without lifts) and `days`: for each day of the range, the day (`YYYY-MM-DD`) and the garage's open intervals that day as "HH:MM" pairs, from its weekly hours and its closed days (an empty list on a closed day; an empty list for every day while the garage never sent its hours, flagged `hoursSet: false` on the whole answer). The existing fields, filters and role rules (427-FR-011, 102-FR-008) do not change.
 
-_From 427-time-blocks._
+_From 151-lift-timeline._
 
 ### 150-FR-010 — `booking.confirmed` and `booking.cancelled` of a booking with a mechanic MUST reach `garage:{garageId}` and `mechanic:{mechanicId}` (and the driver's account), as `audienceOf` already resolves the `booking` subject; this story verifies it by test and adds no event, channel or payload field; `booking.lapsed` keeps its driver-and-garage audience (a lapsed booking has no mechanic).
 
@@ -882,6 +885,70 @@ _From 1393-final-price-predare._
 
 _From 1393-final-price-predare._
 
+### 1384-FR-002 — With `needsLift` true and a lift select drawn, a press of "Confirmă" with no lift choice (neither "Fără elevator" nor a lift) MUST send nothing and show "Alege un elevator sau Fără elevator." / "Choose a lift or No lift." under the lift select (`garage.quotes.confirm.liftRequired`), marking it invalid and moving focus to it; the mechanic check of today comes first, so with both missing only the mechanic message shows. Picking any option clears the message, as the other field messages clear today.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-003 — A confirm with "Fără elevator" picked MUST send no lift, with `needsLift` true as with false; the server decides nothing about the lift need (150-FR-004) and the dialog never refuses that choice.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-004 — On a 409 `slot_taken` the dialog MUST stay open, show the server's message ("Locul tocmai a fost ocupat" / "The slot was just taken") at the top as a top message does today, and read the confirm options again at once (the same read as on opening); while that read is in flight the selects and "Confirmă" are disabled as while sending. A second press during the read sends nothing.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-005 — When the re-read lands, the dialog MUST keep the picked mechanic if its id is in the new `mechanics` and the picked lift if it is at most the new `liftCount` (or is "Fără elevator"); a choice no longer offered MUST be cleared to the opening state of FR-001 (the lift) or to "Alege mecanicul" (the mechanic). A kept pick wins over FR-001's opening state while it is still offered; a cleared lift returns to FR-001's opening state under the new `needsLift`; a select the re-read no longer draws (`liftCount` 0, `mechanicRequired` false) sends nothing for its field. An unpicked lift (the placeholder) is not a pick: if the new `needsLift` differs, it follows FR-001's opening state for the new value. A failed re-read shows its failure text at the top, keeps every choice and re-enables the form, so the person can press again.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-006 — The lift message of FR-002, the placeholder of FR-001 and every other new text MUST exist in Romanian and English under `garage.quotes.confirm` (hyphenated Romanian words with U+2011); the dialog MUST pass the QA sweep at 320 px, 390 px, tablet and desktop, light and dark, both languages, with no sideways scroll and the message visible under its select, as 389-FR-017 asks of the dialog today.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-007 — The change MUST add nothing to the first-page bundle: the dialog stays in its lazy chunk and the initial bundle measures the same as on the base commit (±0 bytes); the 1 MB error budget of `apps/web/project.json` is never raised. No new dependency.
+
+_From 1384-confirm-dialog-lift._
+
+### 1384-FR-008 — Tests MUST exist before the code (Principle II), each file with a whole-line `// @traces` comment naming this feature's FR ids. Jest, in the dialog's colocated spec: US1-1 to US1-8 (the default per `needsLift`, the placeholder, the message, the focus, the field order, nothing sent, English), US2-1 to US2-7 (the re-read, what is kept and what is cleared, the failed re-read, the in-flight press, the message clearing, English). Playwright, in `apps/web-e2e` and `@seeded`: US3-1 and US3-2 (the owner confirms with a mechanic and "Elevator 1" and the row shows them; a second accepted quote at the same slot is refused on "Elevator 1" with "Elevatorul 1 e ocupat la ora asta" under the lift select, then confirmed with "Fără elevator"); the e2e helper takes the slot so both quotes share it; the suite runs on demand, not in PR CI.
+
+_From 1384-confirm-dialog-lift._
+
+### 1259-FR-001 — The API MUST offer `POST /api/v1/bookings/:id/no-show`, with no body, to the owner and a receptionist of the booking's garage and to the mechanic whose card is the booking's `mechanic_id`. A mechanic of the same garage who is not the booking's mechanic MUST get 403 `forbidden` ("Nu poți înregistra neprezentarea pentru programarea altui mecanic" / "You cannot record a no-show on another mechanic's booking"); every other caller, another garage's staff, a driver, an admin, a mechanic whose card is removed and a visitor included, MUST get 404 `not_found`. It MUST answer 200 with the booking as the garage reads it (status `no_show`, `noShowAt`, `noShowRecordedBy`); a malformed id is 400 `validation_failed` and a missing session 401 `sign_in_required`.
+
+_From 1259-no-show._
+
+### 1259-FR-002 — The no-show MUST be refused with 409 `invalid_transition` carrying the booking's current status, and write nothing, when `starts_at` is later than now, when the booking is not `confirmed`, or when its job exists and is not `to_do`. The refusal is counted and logged as the driver's cancel refusal is.
+
+_From 1259-no-show._
+
+### 1259-FR-003 — A no-show MUST, in one transaction: move the booking `confirmed`→`no_show` through the existing booking transition (which stamps `no_show_at` and `no_show_recorded_by` with the caller's account and releases the booking's schedule segments); move its job `to_do`→`cancelled` when one exists; move the request `booked`→`closed` with `closed_reason` `no_show` and `closed_at`; leave the quote `accepted` (the garage's row reads the outcome `no_show` from the booking, 346-FR-001); write the audit entries the transitions write, plus one key-change entry `booking.no_show` (`recorded`) whose actor label is the garage's name, so the driver's short history names the garage and never the staff member; and record one event `booking.no_show_recorded` with the booking audience (the driver's account, the garage, the booking's mechanic) and payload `bookingId`, `requestId`, `garageId`, `recordedBy`. No deposit, fee or penalty is written anywhere.
+
+_From 1259-no-show._
+
+### 1259-FR-004 — The API MUST offer `DELETE /api/v1/bookings/:id/no-show` (the withdrawal), with no body, to the same callers as FR-001 with the same 403 and 404 rules, answering 200 with the booking as the garage reads it (status `confirmed`).
+
+_From 1259-no-show._
+
+### 1259-FR-005 — The withdrawal MUST be refused with 409 `invalid_transition` carrying the current status, writing nothing, when the booking is not `no_show`, or when now is past 23:59:59 Europe/Bucharest of the civil day of `no_show_at` (the window runs from the recording, not from the booking's slot). When the booking's place in the schedule is no longer free (another booking's or a time block's segments overlap its slot for its mechanic or its lift), the withdrawal MUST be refused with the confirmation's own 409 (`mechanic_busy` or `lift_busy`, its message naming what holds the place) and write nothing.
+
+_From 1259-no-show._
+
+### 1259-FR-011 — The booking as the garage reads it (the sent-quotes row's booking and the mechanic's job summary) MUST carry `noShowAt`, `canRecordNoShow` (the caller may act by FR-001's role rule and FR-002 holds: `confirmed`, start time passed, no job or a `to_do` job) and `canWithdrawNoShow` (the caller may act, status `no_show`, and the Bucharest day of `noShowAt` is today), computed by the server for the caller; the driver's request row's booking MUST carry `noShowAt`; the mechanic's jobs read keeps a `cancelled` job whose booking is `no_show` while `canWithdrawNoShow` is true; the generated client is regenerated from `openapi.json` and never edited by hand.
+
+_From 1259-no-show._
+
+### 1259-FR-012 — The two endpoints MUST be listed in `infra/observability/inventory.json` with the quotes module's panel and alerts; the module MUST emit one counter of no-shows with attributes `action` (`recorded`, `withdrawn`) and `outcome` (`done`, `refused`), and log one line per recording and withdrawal naming the booking, request, garage and actor role, never the driver's name or phone; the refusals of FR-002 and FR-005 are logged at warn with the booking id and the code.
+
+_From 1259-no-show._
+
+### 1259-FR-013 — Tests MUST exist before the code (Principle II), each file carrying its `// @traces 1259-FR-<n>` line. In Jest on real PostgreSQL and Valkey, API: the no-show by the owner, a receptionist and the booking's mechanic (booking, job, request, segments released, audit entries and the event in one transaction, 200 body); 409 before `starts_at`, with a started job and for each non-`confirmed` status; 403 for another mechanic of the garage; 404 for another garage's owner, a driver, an admin and a removed mechanic; the withdrawal by each role before midnight Bucharest (booking, job, request, segments back, audit, event) and 409 at 00:00 Bucharest and later (a fake clock, including a daylight-saving day and a recording at 23:58); 409 `mechanic_busy` when a time block covers the slot; a second recording after a withdrawal; NO_SHOW_RECORDED and NO_SHOW_WITHDRAWN reaching the driver once each with the texts, never held for quiet hours, and the bell entry alone when every channel is muted; `openapi.json` carrying the two routes and the flags. In Jest, domain (pure): the three new moves and that every other pair stays refused; the window end for a Bucharest day. The web tests and the end-to-end test belong to ST-1412.
+
+_From 1259-no-show._
+
+### 151-FR-002 — The panel MUST read today's schedule through the existing schedule read (`GET /api/v1/garages/:garageId/schedule`, today by default), with no new write, event or notification; it emits nothing and writes no audit history.
+
+_From 151-lift-timeline._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -927,3 +994,6 @@ _From 1393-final-price-predare._
 - `150-FR-009` — superseded by `427-FR-011` (2026-10-29)
 - `427-FR-015` — superseded by `1395-FR-006` (2026-10-30)
 - `343-FR-011` — superseded by `1316-FR-001` (2026-10-30)
+- `389-FR-014` — superseded by `1384-FR-001` (2026-10-31)
+- `220-FR-008` — superseded by `1259-FR-006` (2026-10-31)
+- `427-FR-011` — superseded by `151-FR-003` (2026-10-31)

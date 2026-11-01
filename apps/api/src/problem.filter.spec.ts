@@ -13,6 +13,7 @@ import {
   NodeTracerProvider,
   SimpleSpanProcessor,
 } from '@opentelemetry/sdk-trace-node';
+import type { MockInstance } from 'vitest';
 
 import { ProblemFilter } from './problem.filter';
 
@@ -56,7 +57,7 @@ function send(exception: unknown) {
 
 // @traces 876-FR-007
 describe('ProblemFilter', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('keeps the code an exception carries', () => {
     const res = send(
@@ -251,6 +252,83 @@ describe('ProblemFilter', () => {
     }
   });
 
+  // @traces 395-FR-001 395-FR-004
+  it('keeps the holder a locked job is refused with, and only its fields', () => {
+    const holder = {
+      firstName: 'Vlad',
+      role: 'mechanic',
+      since: '2026-10-30T22:18:00.000Z',
+    };
+    const res = send(
+      new HttpException(
+        {
+          code: 'job_locked',
+          holder: { ...holder, accountId: 'a-1', internal: 'secret' },
+          message: 'Blocat de Vlad, mecanic, de la 00:18',
+        },
+        423,
+      ),
+    );
+
+    expect(res.statusCode).toBe(423);
+    expect(res.body).toEqual({
+      code: 'job_locked',
+      detail: 'Blocat de Vlad, mecanic, de la 00:18',
+      holder,
+      status: 423,
+      title: 'Locked',
+      type: 'about:blank',
+    });
+  });
+
+  // @traces 395-FR-001
+  it('drops a holder member that is not a whole lock holder', () => {
+    for (const holder of [
+      'Vlad',
+      null,
+      [1],
+      { firstName: 'Vlad', role: 'mechanic' },
+      { firstName: 'Vlad', role: 'admin', since: '2026-10-30T22:18:00.000Z' },
+      { firstName: 1, role: 'owner', since: '2026-10-30T22:18:00.000Z' },
+    ]) {
+      const res = send(new HttpException({ code: 'job_locked', holder }, 423));
+
+      expect(res.body).not.toHaveProperty('holder');
+    }
+  });
+
+  // @traces 395-FR-005
+  it('keeps the current job and its updated time a stale change is refused with', () => {
+    const job = { id: 'j-1', status: 'in_progress', steps: [{ id: 's-1' }] };
+    const res = send(
+      new HttpException(
+        {
+          code: 'job_changed',
+          job,
+          message: 'Lucrarea s-a schimbat între timp',
+          updatedAt: '2026-10-30T22:18:00.123Z',
+        },
+        409,
+      ),
+    );
+
+    expect(res.body).toMatchObject({
+      code: 'job_changed',
+      detail: 'Lucrarea s-a schimbat între timp',
+      job,
+      updatedAt: '2026-10-30T22:18:00.123Z',
+    });
+  });
+
+  // @traces 395-FR-005
+  it('drops a job member that is not an object', () => {
+    for (const job of ['j-1', null, [1], 3]) {
+      const res = send(new HttpException({ code: 'job_changed', job }, 409));
+
+      expect(res.body).not.toHaveProperty('job');
+    }
+  });
+
   // @traces 220-FR-015
   it('keeps the entity, current status, asked status and rule of a refused move', () => {
     const res = send(
@@ -356,7 +434,7 @@ describe('ProblemFilter', () => {
   });
 
   it('keeps the cause of an unknown error in the log only', () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const cause = new Error('connection reset');
@@ -394,7 +472,7 @@ describe('ProblemFilter', () => {
   });
 
   it('records an unknown error on the request span, which ends in error status', () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     exporter.reset();
     const error = new Error('database unreachable');
 
@@ -480,16 +558,14 @@ describe('a refusal that names the one field at fault', () => {
 
 // @traces 297-FR-009
 describe('an unexpected error in the system log', () => {
-  let write: jest.SpyInstance;
+  let write: MockInstance;
 
   beforeEach(() => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
     // A write that never finishes: the answer must not wait for it.
-    write = jest
-      .spyOn(systemLog, 'write')
-      .mockReturnValue(new Promise(() => {}));
+    write = vi.spyOn(systemLog, 'write').mockReturnValue(new Promise(() => {}));
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   const sendFor = (
     exception: unknown,

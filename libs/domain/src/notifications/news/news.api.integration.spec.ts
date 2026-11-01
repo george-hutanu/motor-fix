@@ -581,10 +581,10 @@ describe('an admin sending news', () => {
     await consenting('andrei');
     await send(admin);
     const [job] = await queued();
-    const release = jest
+    const release = vi
       .spyOn(prisma, '$transaction')
       .mockRejectedValueOnce(new Error('postgres down'));
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     try {

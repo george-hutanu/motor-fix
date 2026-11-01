@@ -50,6 +50,8 @@ const EXCEPTIONS: Record<string, string> = {
   'garages/garage-hours.ts#writeGarageHours': OWN_NEW_GARAGE,
   'garages/garage-settings/write-garage-payments.ts#writeGaragePayments':
     OWN_NEW_GARAGE,
+  'garages/garage-settings/write-team-on-profile.ts#writeTeamOnProfile':
+    OWN_NEW_GARAGE,
   'garages/listing-drafts/completion/completion.copy.ts#copyOf': OWN_COPY,
   'garages/listing-drafts/completion/completion.service.ts#writeGarage':
     OWN_COPY,
@@ -79,6 +81,8 @@ const EXCEPTIONS: Record<string, string> = {
     'reads only the name of the last garage of a page, by the id in the cursor, to find where the next starts; it never returns it',
   'search/similar-garages/similar-garages.service.ts#forGarage':
     'reads a garage no longer listed only for its place and brands, to find listed garages like it; it answers only for a suspended one and never returns it',
+  'workshop/free-slots/free-slots.service.ts#read':
+    'reached only after the caller check: a driver sees free slots of an approved garage, staff those of the garage they work at; it reads the opening hours and the lift count, nothing a suspended garage hides',
 };
 
 // ─── sources ────────────────────────────────────────────────────────────────

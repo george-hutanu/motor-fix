@@ -28,9 +28,13 @@ async function settle() {
 
 async function open({
   language = 'ro',
+  quoteFromBani = 89000,
+  quoteToBani = 140000,
   recorded = null,
 }: {
   language?: 'ro' | 'en';
+  quoteFromBani?: number;
+  quoteToBani?: number;
   recorded?: number | null;
 } = {}) {
   handover = jest.fn(async () => answered);
@@ -53,7 +57,7 @@ async function open({
   result = host.componentInstance.overlays.open<JobDto, FinalPriceData>(
     FinalPriceDialog,
     {
-      data: { jobId: 'job-1', recorded, reread },
+      data: { jobId: 'job-1', quoteFromBani, quoteToBani, recorded, reread },
       shape: 'dialog',
       title:
         recorded === null
@@ -153,7 +157,7 @@ describe('the Predare dialog', () => {
       expect(handover).not.toHaveBeenCalled();
       expect(field().getAttribute('aria-invalid')).toBe('true');
       const hint = panel().querySelector(
-        `#${field().getAttribute('aria-describedby')}`,
+        `#${field().getAttribute('aria-describedby')?.split(' ')[0]}`,
       );
       expect(text(hint)).toBe(why);
     },
@@ -307,5 +311,121 @@ describe('the correction dialog', () => {
 
     expect(alert()).toBe('Prețul final nu mai poate fi corectat');
     expect(reread).toHaveBeenCalledTimes(1);
+  });
+});
+
+const quote = () => text(panel().querySelector('[data-quote-range]'));
+const above = () => panel().querySelector('[data-above-quote]');
+
+// @traces 1410-FR-001
+// @traces 1410-FR-002
+// @traces 1410-FR-003
+// @traces 1410-FR-005
+describe('the accepted quote under the field', () => {
+  it('shows the quote the driver accepted, in Romanian', async () => {
+    await open();
+
+    expect(quote()).toBe('Ofertă 890–1.400 lei');
+    expect(above()).toBeNull();
+  });
+
+  it('shows the quote in English', async () => {
+    await open({ language: 'en' });
+
+    expect(quote()).toBe('Quote 890–1,400 lei');
+  });
+
+  it('reads one amount when the two ends are equal', async () => {
+    await open({ quoteFromBani: 120000, quoteToBani: 120000 });
+
+    expect(quote()).toBe('Ofertă 1.200 lei');
+  });
+
+  it('is named by the field', async () => {
+    await open();
+
+    const named = field().getAttribute('aria-describedby')?.split(' ') ?? [];
+    expect(named).toContain(panel().querySelector('[data-quote]')?.id);
+  });
+
+  it.each(['1.600', '1.400,01', '1.400,50', '14000'])(
+    'warns "Peste ofertă" while "%s" is above the quote',
+    async (typed) => {
+      await open();
+      await type(typed);
+
+      expect(text(above())).toBe('Peste ofertă');
+    },
+  );
+
+  it.each(['1.400', '1.399,99', '890', '500'])(
+    'does not warn at or below the quote: "%s"',
+    async (typed) => {
+      await open();
+      await type(typed);
+
+      expect(above()).toBeNull();
+    },
+  );
+
+  it('judges an equal-ends quote against its one amount', async () => {
+    await open({ quoteFromBani: 120000, quoteToBani: 120000 });
+    await type('1.200');
+    expect(above()).toBeNull();
+    await type('1.200,01');
+    expect(text(above())).toBe('Peste ofertă');
+  });
+
+  it('drops the warning when the text goes back under the quote', async () => {
+    await open();
+    await type('1.600');
+    await type('1.300');
+
+    expect(above()).toBeNull();
+  });
+
+  it.each(['abc', '1.400,123', '1.000.000,01', ''])(
+    'shows only the field message for "%s"',
+    async (typed) => {
+      await open();
+      await type(typed);
+      await save();
+
+      expect(above()).toBeNull();
+      expect(field().getAttribute('aria-invalid')).toBe('true');
+      expect(handover).not.toHaveBeenCalled();
+    },
+  );
+
+  it('warns in English', async () => {
+    await open({ language: 'en' });
+    await type('1.600');
+
+    expect(text(above())).toBe('Above the quote');
+  });
+
+  it('still saves an amount above the quote, with no second step', async () => {
+    await open();
+    await type('1.600');
+    await save();
+
+    expect(handover).toHaveBeenCalledWith({
+      body: { finalPriceBani: 160000 },
+      id: 'job-1',
+    });
+    await expect(result).resolves.toBe(answered);
+  });
+
+  it('warns at once on a correction pre-filled above the quote', async () => {
+    await open({ recorded: 150000 });
+
+    expect(quote()).toBe('Ofertă 890–1.400 lei');
+    expect(text(above())).toBe('Peste ofertă');
+  });
+
+  it('does not warn on a correction pre-filled within the quote', async () => {
+    await open({ recorded: 125050 });
+
+    expect(above()).toBeNull();
   });
 });

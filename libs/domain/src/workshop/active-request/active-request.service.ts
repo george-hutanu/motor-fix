@@ -1,6 +1,7 @@
 import type {
   ActiveRequestAnswerDto,
   ActiveRequestDto,
+  SaveSuggestionDto,
 } from '@motor-fix/contracts';
 import { Inject, Injectable } from '@nestjs/common';
 
@@ -18,6 +19,7 @@ import {
 } from './active-request.rules';
 import { type Actor, requireCapability } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
+import { publicGarages } from '../../garages/public-garages/public-garages';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
 import { garageRef, iso, jobsOf } from '../../quotes/reads';
 
@@ -89,9 +91,33 @@ export class ActiveRequestService {
       jobs: jobsOf(row.jobs),
       mechanicName: mechanicOf(booking, teamOn),
       range: rangeOf(row),
+      saveSuggestion:
+        booking &&
+        job?.status === 'done' &&
+        booking.garage.status === publicGarages().status
+          ? await this.suggestionFor(actor.accountId, booking.garageId)
+          : null,
       stage: stageOf(row),
     };
     return { openCount: open.length, request };
+  }
+
+  // The garage of a finished job, offered for saving unless the driver
+  // already saved it or said no to it.
+  private async suggestionFor(
+    accountId: string,
+    garageId: string,
+  ): Promise<SaveSuggestionDto | null> {
+    const garage = await this.prisma.garage.findFirst({
+      select: { id: true, name: true },
+      where: {
+        ...publicGarages(),
+        id: garageId,
+        savedBy: { none: { accountId } },
+        suggestionDismissals: { none: { accountId } },
+      },
+    });
+    return garage ? { garageId: garage.id, name: garage.name } : null;
   }
 
   // Mechanics are named unless the garage turned its team off.

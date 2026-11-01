@@ -25,6 +25,11 @@ export interface UpdateMechanicDto {
   specialties?: Array<string>;
 
   /**
+   * Whether a driver may ask for this mechanic by name
+   */
+  takesDirectRequests?: boolean;
+
+  /**
    * null clears it
    */
   years?: number | null;

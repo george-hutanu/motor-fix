@@ -190,9 +190,12 @@ describe('reading a garage by its public slug', () => {
       longitude: 26.1207,
     });
     expect(res.body).not.toHaveProperty('serviceRadiusKm');
+    expect(res.body).not.toHaveProperty('areaLat');
+    expect(res.body).not.toHaveProperty('areaLng');
   });
 
-  it('shows a mobile mechanic only by the area served, never the seat', async () => {
+  // @traces 1383-FR-001 1383-FR-002 1383-FR-003
+  it('shows a mobile mechanic only by the area served and its centre to two decimals, never the seat', async () => {
     const seat = 'Strada Sediului 3, Ploiești';
     const approved = await prisma.garage.create({
       data: {
@@ -211,7 +214,11 @@ describe('reading a garage by its public slug', () => {
     const res = await read(approved.slug);
 
     expect(res.status).toBe(200);
-    expect(res.body.serviceRadiusKm).toBe(35);
+    expect(res.body).toMatchObject({
+      areaLat: 44.94,
+      areaLng: 26.01,
+      serviceRadiusKm: 35,
+    });
     for (const key of ['address', 'latitude', 'longitude', 'seatAddress']) {
       expect(res.body).not.toHaveProperty(key);
     }
@@ -729,6 +736,7 @@ describe('what the profile says about the garage', () => {
   });
 
   // @traces 307-FR-005 309-FR-006
+  // @traces 1383-FR-010
   it('shows only public fields, with or without a brand, for a workshop and a mobile mechanic', async () => {
     const dacia = await catalogueBrand('Dacia');
     const fixed = await prisma.garage.create({
@@ -896,6 +904,8 @@ describe('reading a profile with a brand in context', () => {
 
 const PUBLIC_FIELDS = new Set([
   'address',
+  'areaLat',
+  'areaLng',
   'brand',
   'brandNote',
   'businessKind',
@@ -925,7 +935,8 @@ const PUBLIC_FIELDS = new Set([
   'worksOn',
 ]);
 
-// A mobile mechanic's position is its owner's seat, so it never leaves.
+// A mobile mechanic's position is its owner's seat, so only its centre
+// rounded to about a kilometre leaves.
 function expectPublicOnly(body: Record<string, unknown>, mobile: boolean) {
   expect(Object.keys(body).filter((key) => !PUBLIC_FIELDS.has(key))).toEqual(
     [],
@@ -934,7 +945,9 @@ function expectPublicOnly(body: Record<string, unknown>, mobile: boolean) {
   const hidden = ['phone', 'cui', 'seatAddress'];
   if (mobile) hidden.push('address', 'latitude', 'longitude');
   for (const key of hidden) expect(body).not.toHaveProperty(key);
+  if (mobile) expect(body).toMatchObject({ areaLat: 44.5, areaLng: 26.1 });
   if (!mobile) {
+    expect(body).not.toHaveProperty('areaLat');
     expect(body).toMatchObject({
       address: 'Bulevardul Iuliu Maniu 100, București',
       latitude: 44.4339,
@@ -1777,8 +1790,8 @@ describe('where a profile says the garage is', () => {
         data: {
           ...stored,
           businessKind: 'mobile',
-          latitude: 44.55,
-          longitude: 26.07,
+          latitude: 44.5512,
+          longitude: 26.0734,
           mobileLegalForm: 'pfa',
           name: 'Mecanic Mobil Ilfov',
           slug: `mobil-${randomUUID()}`,
@@ -1792,9 +1805,13 @@ describe('where a profile says the garage is', () => {
         expect(res.body).not.toHaveProperty(key);
       }
       expect(JSON.stringify(res.body)).not.toMatch(
-        /Atelierului|Sediului|44\.55/,
+        /Atelierului|Sediului|44\.5512|26\.0734/,
       );
-      expect(res.body.serviceRadiusKm).toBe(20);
+      expect(res.body).toMatchObject({
+        areaLat: 44.55,
+        areaLng: 26.07,
+        serviceRadiusKm: 20,
+      });
     },
   );
 });

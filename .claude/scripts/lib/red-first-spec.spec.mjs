@@ -57,6 +57,12 @@ describe('relativeSpecifiers: the imports a red-first spec could be waiting on',
     assert.deepEqual(relativeSpecifiers(text), ['./a', '../side', './b', '../c', './d', './e']);
   });
 
+  // @traces 1338-FR-014
+  it('finds ./ and ../ literals in vi.mock() and vi.importActual()', () => {
+    const text = ["vi.mock('./d');", 'const e = await vi.importActual("../e");', "vi.mock('@nestjs/common');"].join('\n');
+    assert.deepEqual(relativeSpecifiers(text), ['./d', '../e']);
+  });
+
   it('skips commented-out imports, which are never loaded', () => {
     const text = "// import { a } from './old';\n/* jest.mock('./gone'); */\nimport { u } from './u'; // from './x'";
     assert.deepEqual(relativeSpecifiers(text), ['./u']);
