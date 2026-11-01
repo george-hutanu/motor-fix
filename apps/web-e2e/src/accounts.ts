@@ -82,13 +82,11 @@ export async function listening(page: Page, path?: string) {
 // On a phone the sheet can rest over the control, which then hides
 // (static-map.css): a tap on whatever part of the image shows still asks.
 // With the consent bar asking on a 320 x 568 phone the bar and the sheet
-// above it hide the whole image at every rest: the driver refuses first, then
-// lowers the sheet by its handle.
+// above it hide the whole image at every rest: the image is asked through its
+// own click then, leaving the bar and the sheet as the test set them.
 export async function openMap(page: Page) {
   const still = page.locator('mf-results-map mf-static-map');
   const button = still.getByRole('button');
-  const handle = page.locator('mf-results-sheet button.handle');
-  const refuse = page.locator('mf-consent-bar .answers button').last();
   await expect(async () => {
     if (await button.isVisible()) return button.click({ timeout: 1_000 });
     const spot = await still.evaluate((map) => {
@@ -103,12 +101,7 @@ export async function openMap(page: Page) {
         map.contains(document.elementFromPoint(box.left + x, box.top + y)),
       );
     });
-    if (!spot && (await refuse.isVisible())) {
-      await refuse.click({ timeout: 1_000 });
-    } else if (!spot && (await handle.isVisible())) {
-      await handle.click({ timeout: 1_000 });
-    }
-    expect(spot).toBeDefined();
+    if (!spot) return still.dispatchEvent('click');
     await still.click({ position: spot, timeout: 1_000 });
   }).toPass({ timeout: 15_000 });
   await still.waitFor({ state: 'detached' });

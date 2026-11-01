@@ -69,13 +69,14 @@ export function databaseTurn(databaseUrl: string) {
       if (released) return;
       const [session] = await lock.$queryRaw<{ pid: number }[]>`
         SELECT pg_backend_pid() AS pid`;
+      // Made before the wait: release() may run in the file's teardown, where
+      // a new client can no longer load the socket module it needs. And before
+      // the take is queued, so a client that cannot be made leaves none behind.
+      const caller = new pg.Client({ connectionString: databaseUrl });
       // Started once here: a Prisma query runs again on every then().
       const done = Promise.resolve(
         lock.$queryRaw`SELECT 1 AS taken FROM pg_advisory_lock(79079)`,
       );
-      // Made before the wait: release() may run in the file's teardown, where
-      // a new client can no longer load the socket module it needs.
-      const caller = new pg.Client({ connectionString: databaseUrl });
       waiting = { caller, done, pid: Number(session?.pid) };
       try {
         await done;
