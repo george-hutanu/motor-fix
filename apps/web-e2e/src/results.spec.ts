@@ -791,8 +791,19 @@ test.describe('the map beside the results @seeded', () => {
     await slid(page);
   }
 
+  // A stage whose sheet header leaves under the zoom buttons' 104 px and the
+  // list's 96 px peek: the half rest cannot clear them (results-sheet.ts). The
+  // filter chips grow the header past that at 320 x 800 with the consent bar.
+  const cramped = (page: Page) =>
+    sheet(page).evaluate((host: HTMLElement) => {
+      const top = host.querySelector<HTMLElement>('.top');
+      const header = top ? Math.max(top.offsetHeight, top.scrollHeight) : 0;
+      return host.offsetHeight - header - 96 < 104;
+    });
+
   // Whole above the sheet and left of the zoom buttons, or hidden with them
-  // while the sheet covers the map's top on a stage too short to clear it.
+  // while the sheet covers the map's top on a stage too short to clear it:
+  // under 600 px, or wherever its header leaves too little (cramped).
   // The sheet learns the stage's height from a ResizeObserver, a frame or
   // more after the consent bar shows: the screen is measured once it has
   // settled on one of its two allowed states, never half-way.
@@ -800,7 +811,7 @@ test.describe('the map beside the results @seeded', () => {
     await expect(async () => {
       const { edge, legend, legendHidden, map, zoom } = await boxes(page);
       if (legendHidden) {
-        expect(short, where).toBe(true);
+        expect(short || (await cramped(page)), where).toBe(true);
         await expect(sheet(page)).toHaveClass(/over-zoom/, { timeout: 0 });
         return;
       }
