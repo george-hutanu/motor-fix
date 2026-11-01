@@ -546,3 +546,184 @@ describe('a message that goes by another channel than the one picked', () => {
     expect(fallbacks).not.toHaveBeenCalled();
   });
 });
+
+// @traces 1374-FR-001
+// @traces 1374-FR-002
+// @traces 1374-FR-003
+// @traces 1374-FR-007
+describe('the last fallback kept per driver and type', () => {
+  let fallbacks: jest.SpyInstance;
+  beforeEach(() => {
+    fallbacks = jest.spyOn(counters, 'countChannelFallback');
+  });
+  afterEach(() => fallbacks.mockRestore());
+
+  const recorded = (accountId: string) =>
+    prisma.notificationFallback.findMany({
+      orderBy: { type: 'asc' },
+      select: { at: true, from: true, reason: true, to: true, type: true },
+      where: { accountId },
+    });
+
+  const rowOf = (
+    driver: string,
+    kind: string,
+    channel: 'email' | 'push' | 'sms' | 'whatsapp',
+  ) =>
+    prisma.notification.findFirstOrThrow({
+      where: { accountId: driver, channel, kind },
+    });
+
+  it('keeps a push with no device going by e-mail, at the build time', async () => {
+    const driver = await account('andrei');
+    await prefer(driver, 'DUE_ITP', 'push', true);
+    await hand('DUE_ITP', driver);
+    expect(await recorded(driver)).toEqual([
+      {
+        at: DAY,
+        from: 'push',
+        reason: 'no_device',
+        to: 'email',
+        type: 'DUE_ITP',
+      },
+    ]);
+    expect(fallbacks).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an SMS or WhatsApp with no confirmed phone going by e-mail', async () => {
+    const driver = await account('andrei');
+    await prefer(driver, 'DUE_ITP', 'sms', true);
+    await prefer(driver, 'QUOTE_RECEIVED', 'whatsapp', true);
+    await hand('DUE_ITP', driver);
+    await hand('QUOTE_RECEIVED', driver);
+    expect(await recorded(driver)).toEqual([
+      {
+        at: DAY,
+        from: 'sms',
+        reason: 'phone_not_verified',
+        to: 'email',
+        type: 'DUE_ITP',
+      },
+      {
+        at: DAY,
+        from: 'whatsapp',
+        reason: 'phone_not_verified',
+        to: 'email',
+        type: 'QUOTE_RECEIVED',
+      },
+    ]);
+  });
+
+  it('keeps the SMS over the month’s allowance going by WhatsApp', async () => {
+    const driver = await account('andrei');
+    await confirmPhone(driver);
+    await prefer(driver, 'DUE_ITP', 'sms', true);
+    await hand('DUE_ITP', driver);
+    await service.fail(
+      [await rowOf(driver, 'DUE_ITP', 'sms')],
+      'sms_cap_reached',
+      true,
+    );
+    expect(await recorded(driver)).toEqual([
+      {
+        at: DAY,
+        from: 'sms',
+        reason: 'sms_cap_reached',
+        to: 'whatsapp',
+        type: 'DUE_ITP',
+      },
+    ]);
+    expect(fallbacks).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a failed WhatsApp going by e-mail as send_failed', async () => {
+    const driver = await account('andrei');
+    await confirmPhone(driver);
+    await prefer(driver, 'QUOTE_RECEIVED', 'whatsapp', true);
+    await hand('QUOTE_RECEIVED', driver);
+    await service.fail(
+      [await rowOf(driver, 'QUOTE_RECEIVED', 'whatsapp')],
+      'sending_off',
+      'email',
+    );
+    expect(await recorded(driver)).toEqual([
+      expect.objectContaining({
+        from: 'whatsapp',
+        reason: 'send_failed',
+        to: 'email',
+      }),
+    ]);
+  });
+
+  it('keeps only the later fallback of a type', async () => {
+    const driver = await account('andrei');
+    await prefer(driver, 'DUE_ITP', 'push', true);
+    await hand('DUE_ITP', driver, undefined, 'itp-1');
+    await prisma.notificationPreference.updateMany({
+      data: { channel: 'sms' },
+      where: { accountId: driver, type: 'DUE_ITP' },
+    });
+    const later = new Date(DAY.getTime() + 60_000);
+    service.now = () => later;
+    await hand('DUE_ITP', driver, undefined, 'itp-2');
+    expect(await recorded(driver)).toEqual([
+      {
+        at: later,
+        from: 'sms',
+        reason: 'phone_not_verified',
+        to: 'email',
+        type: 'DUE_ITP',
+      },
+    ]);
+  });
+
+  it('keeps nothing when the chosen channel is used', async () => {
+    const driver = await account('andrei');
+    await confirmPhone(driver);
+    await prefer(driver, 'DUE_ITP', 'sms', true);
+    await hand('DUE_ITP', driver);
+    expect(await recorded(driver)).toEqual([]);
+  });
+
+  it('keeps nothing for a staff type that goes by e-mail without a device', async () => {
+    const owner = await account('ion', ['garage']);
+    await hand('ASSISTANT_APPROVAL_NEEDED', owner);
+    expect(fallbacks).toHaveBeenCalledWith('push', 'email', 'no_device');
+    expect(await recorded(owner)).toEqual([]);
+  });
+
+  it('keeps the first fallback when the fallback itself fails', async () => {
+    const driver = await account('andrei');
+    await confirmPhone(driver);
+    await prefer(driver, 'DUE_ITP', 'sms', true);
+    await hand('DUE_ITP', driver);
+    await service.fail(
+      [await rowOf(driver, 'DUE_ITP', 'sms')],
+      'sms_cap_reached',
+      true,
+    );
+    await service.fail(
+      [await rowOf(driver, 'DUE_ITP', 'whatsapp')],
+      'sending_off',
+      'email',
+    );
+    expect(fallbacks).toHaveBeenCalledTimes(2);
+    expect(await recorded(driver)).toEqual([
+      expect.objectContaining({ from: 'sms', reason: 'sms_cap_reached' }),
+    ]);
+  });
+
+  it('keeps nothing when no row is written on another channel', async () => {
+    const driver = await account('andrei', ['driver'], { email: null });
+    const device = await addDevice(driver);
+    await prefer(driver, 'DUE_ITP', 'push', true);
+    await hand('DUE_ITP', driver);
+    await prisma.pushSubscription.delete({ where: { id: device.id } });
+    await service.fail(
+      [await rowOf(driver, 'DUE_ITP', 'push')],
+      'no_device',
+      true,
+    );
+    expect(await recorded(driver)).toEqual([]);
+  });
+});

@@ -337,6 +337,38 @@ describe('building the file', () => {
     ]);
   });
 
+  // @traces 1374-FR-006
+  // @traces 1374-FR-007
+  it('lists the last fallback kept per notification type', async () => {
+    const builder = await start();
+    const { a } = await twoDrivers();
+    await prisma.notificationFallback.create({
+      data: {
+        accountId: a.id,
+        at: new Date('2026-10-20T08:00:00Z'),
+        from: 'push',
+        reason: 'no_device',
+        to: 'email',
+        type: 'DUE_ITP',
+      },
+    });
+
+    const { files } = await built(builder, a.id);
+
+    const notes = json(files, 'notifications-and-preferences.json') as {
+      fallbacks: unknown[];
+    };
+    expect(notes.fallbacks).toEqual([
+      {
+        at: '2026-10-20T08:00:00.000Z',
+        from: 'push',
+        reason: 'no_device',
+        to: 'email',
+        type: 'DUE_ITP',
+      },
+    ]);
+  });
+
   it('lists push subscriptions without their keys', async () => {
     const builder = await start();
     const { a } = await twoDrivers();
