@@ -219,7 +219,10 @@ describe('GET /cars/due-items', () => {
 
   it('answers the oil row red with the kilometres over and no day once they are reached', async () => {
     const { auth } = await driver();
-    await bmw(auth, { nextServiceKm: 150_000, odometerKm: 150_300 });
+    // An add refuses a service at or below the odometer; a later reading
+    // (a garage's, or the drive since) carries the car past it.
+    const { id } = await bmw(auth, { nextServiceKm: 150_000 });
+    await prisma.car.update({ data: { odometerKm: 150_300 }, where: { id } });
 
     const res = await read(auth);
 
@@ -329,14 +332,17 @@ describe('GET /cars/due-items', () => {
   });
 
   it.each(['garage', 'receptionist', 'mechanic', 'admin'] as const)(
-    'answers 404 to a %s',
+    'answers 404 to a %s, as the car list refuses it',
     async (role) => {
       const id = await account(`cont-${role}`, [role]);
+      const auth = bearer(id, role);
 
-      const res = await read(bearer(id, role));
+      const res = await read(auth);
+      const list = await http().get('/cars').set('Authorization', auth);
 
       expect(res.status).toBe(404);
-      expect(res.body.code).toBe('not_found');
+      expect(list.status).toBe(404);
+      expect(res.body).toEqual(list.body);
     },
   );
 });
