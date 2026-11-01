@@ -62,6 +62,7 @@ import { adminRepairsControllerOpen } from '../fn/admin/admin-repairs-controller
 import { AdminRepairsControllerOpen$Params } from '../fn/admin/admin-repairs-controller-open';
 import { adminRepairsControllerRemove } from '../fn/admin/admin-repairs-controller-remove';
 import { AdminRepairsControllerRemove$Params } from '../fn/admin/admin-repairs-controller-remove';
+import { AdminStatusDto } from '../models/admin-status-dto';
 import { CatalogueJobDecisionDto } from '../models/catalogue-job-decision-dto';
 import { copyVoicesControllerChange } from '../fn/admin/copy-voices-controller-change';
 import { CopyVoicesControllerChange$Params } from '../fn/admin/copy-voices-controller-change';
@@ -117,6 +118,8 @@ import { reportQueueControllerList } from '../fn/admin/report-queue-controller-l
 import { ReportQueueControllerList$Params } from '../fn/admin/report-queue-controller-list';
 import { ReportQueueDto } from '../models/report-queue-dto';
 import { ReviewDecisionResultDto } from '../models/review-decision-result-dto';
+import { statusControllerRead } from '../fn/admin/status-controller-read';
+import { StatusControllerRead$Params } from '../fn/admin/status-controller-read';
 import { suspensionControllerRestore } from '../fn/admin/suspension-controller-restore';
 import { SuspensionControllerRestore$Params } from '../fn/admin/suspension-controller-restore';
 import { suspensionControllerSuspend } from '../fn/admin/suspension-controller-suspend';
@@ -1282,6 +1285,31 @@ export class AdminService extends BaseService {
   verificationFileControllerCorrect(params: VerificationFileControllerCorrect$Params, context?: HttpContext): Promise<VerificationFileDto> {
     const resp = this.verificationFileControllerCorrect$Response(params, context);
     return resp.then((r: StrictHttpResponse<VerificationFileDto>): VerificationFileDto => r.body);
+  }
+
+  /** Path part for operation `statusControllerRead()` */
+  static readonly StatusControllerReadPath = '/api/v1/admin/status';
+
+  /**
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `statusControllerRead()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  statusControllerRead$Response(params?: StatusControllerRead$Params, context?: HttpContext): Promise<StrictHttpResponse<AdminStatusDto>> {
+    const obs = statusControllerRead(this.http, this.rootUrl, params, context);
+    return firstValueFrom(obs);
+  }
+
+  /**
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `statusControllerRead$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  statusControllerRead(params?: StatusControllerRead$Params, context?: HttpContext): Promise<AdminStatusDto> {
+    const resp = this.statusControllerRead$Response(params, context);
+    return resp.then((r: StrictHttpResponse<AdminStatusDto>): AdminStatusDto => r.body);
   }
 
   /** Path part for operation `systemLogControllerList()` */

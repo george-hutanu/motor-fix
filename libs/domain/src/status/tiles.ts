@@ -1,15 +1,6 @@
-import type { Limits } from './thresholds';
+import type { TileKey, TileState } from '@motor-fix/contracts';
 
-export const TILES = [
-  'api',
-  'search',
-  'maps',
-  'email',
-  'notifications',
-  'backup',
-] as const;
-export type TileKey = (typeof TILES)[number];
-export type TileState = 'green' | 'amber' | 'red';
+import type { Limits } from './thresholds';
 
 export interface Figures {
   latency_ms?: number;

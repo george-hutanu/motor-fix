@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 270,
+    "count": 271,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -2275,6 +2275,19 @@
       ],
       "reason": "the admin's read of the log, today's entries for the Jurnal panel or any range of the last 90 days for the full log, narrowed by type, severity, source and a text search, fifty a page at most behind an opaque cursor on the indexed time range; a failed read answers the standard error body and is the api-error-rate rule's",
       "story": "ST-298, ST-299"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-status",
+      "source": "libs/domain/src/status/status.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/status",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's read of the six service tiles, one query of the status_tile table that writes nothing; the checks behind the tiles are the status-checks job's, and a failed read answers the standard error body and is the api-error-rate rule's",
+      "story": "ST-295"
     },
     {
       "kind": "endpoint",

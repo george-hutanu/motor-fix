@@ -91,6 +91,8 @@ export * from './search-filters';
 export * from './search-place';
 export * from './staff-invite.dto';
 export * from './static-map.dto';
+export * from './status-tiles/status-tiles';
+export * from './status-tiles/status-tiles.dto';
 export * from './support/support';
 export * from './support/support.dto';
 export * from './suspended-garages';

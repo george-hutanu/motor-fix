@@ -12867,6 +12867,35 @@
         ]
       }
     },
+    "/api/v1/admin/status": {
+      "get": {
+        "operationId": "StatusController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStatusDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/system-log": {
       "get": {
         "operationId": "SystemLogController_list",
@@ -29204,6 +29233,143 @@
         },
         "required": [
           "accountId"
+        ]
+      },
+      "StatusTextsDto": {
+        "type": "object",
+        "properties": {
+          "ro": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ro",
+          "en"
+        ]
+      },
+      "StatusTileDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "api",
+              "search",
+              "maps",
+              "email",
+              "notifications",
+              "backup"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "green",
+              "amber",
+              "red"
+            ]
+          },
+          "since": {
+            "type": "string",
+            "description": "Since when the tile is in its state; for a stale tile, its last check",
+            "format": "date-time",
+            "nullable": true
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "The figures the last check stored"
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "No check for three minutes: answered red"
+          },
+          "short": {
+            "$ref": "#/components/schemas/StatusTextsDto"
+          }
+        },
+        "required": [
+          "key",
+          "state",
+          "since",
+          "detail",
+          "checkedAt",
+          "stale",
+          "short"
+        ]
+      },
+      "StatusSentencesDto": {
+        "type": "object",
+        "properties": {
+          "ro": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "en": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "ro",
+          "en"
+        ]
+      },
+      "AdminStatusDto": {
+        "type": "object",
+        "properties": {
+          "tiles": {
+            "maxItems": 6,
+            "minItems": 6,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusTileDto"
+            }
+          },
+          "problems": {
+            "type": "array",
+            "description": "The tiles not green: red first, the oldest first",
+            "items": {
+              "type": "string",
+              "enum": [
+                "api",
+                "search",
+                "maps",
+                "email",
+                "notifications",
+                "backup"
+              ]
+            }
+          },
+          "sentences": {
+            "$ref": "#/components/schemas/StatusSentencesDto"
+          }
+        },
+        "required": [
+          "tiles",
+          "problems",
+          "sentences"
         ]
       },
       "SystemLogEntryDto": {
