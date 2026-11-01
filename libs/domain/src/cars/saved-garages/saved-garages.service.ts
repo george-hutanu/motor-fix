@@ -186,7 +186,7 @@ const itemOf = (
 // The role in use first, so a garage-side account learns to switch roles
 // rather than meeting the capability policy's 404. Each method repeats the
 // controller's guard, so a caller that is not the controller is refused too.
-function driverOnly(actor: Actor) {
+export function driverOnly(actor: Actor) {
   if (actor.role !== 'driver') {
     throw refusal(
       HttpStatus.FORBIDDEN,
