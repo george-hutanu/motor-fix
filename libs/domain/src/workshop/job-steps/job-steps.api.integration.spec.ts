@@ -556,3 +556,63 @@ describe('who may write the steps', () => {
     expect((await add(s.steps, s.hand, 'Probă pe drum')).status).toBe(403);
   });
 });
+
+// @traces 395-FR-004 395-FR-005
+describe('a step change and the job’s lock', () => {
+  it('meets another person’s lock with nothing written', async () => {
+    const s = await setting();
+    await send('post', `/garage/jobs/${s.job.id}/lock`, s.hand);
+
+    const res = await add(s.steps, s.owner, FIVE[0]);
+
+    expect([res.status, res.body.code]).toEqual([423, 'job_locked']);
+    expect(await written(s.job.id)).toEqual([]);
+  });
+
+  it('moves the job’s updated time and releases the lock it took', async () => {
+    const s = await setting();
+    const { updatedAt } = await prisma.job.findUniqueOrThrow({
+      where: { id: s.job.id },
+    });
+
+    const res = await add(s.steps, s.hand, FIVE[0]);
+
+    expect(res.status).toBe(201);
+    const job = await prisma.job.findUniqueOrThrow({ where: { id: s.job.id } });
+    expect(job.updatedAt.getTime()).toBeGreaterThan(updatedAt.getTime());
+    expect(job.lockHolderId).toBeNull();
+  });
+
+  it('refuses a rename based on an older read of the job', async () => {
+    const s = await setting();
+    const { updatedAt } = await prisma.job.findUniqueOrThrow({
+      where: { id: s.job.id },
+    });
+    const step = await add(s.steps, s.hand, FIVE[0]);
+
+    const res = await send('patch', `${s.steps}/${step.body.id}`, s.owner, {
+      basedOnUpdatedAt: updatedAt.toISOString(),
+      text: FIVE[1],
+    });
+
+    expect([res.status, res.body.code]).toEqual([409, 'job_changed']);
+    expect((await written(s.job.id)).map((w) => w.label)).toEqual([FIVE[0]]);
+  });
+
+  it('takes the basis of a removal from the query', async () => {
+    const s = await setting();
+    const { updatedAt } = await prisma.job.findUniqueOrThrow({
+      where: { id: s.job.id },
+    });
+    const step = await add(s.steps, s.hand, FIVE[0]);
+
+    const res = await send(
+      'delete',
+      `${s.steps}/${step.body.id}?basedOnUpdatedAt=${updatedAt.toISOString()}`,
+      s.owner,
+    );
+
+    expect([res.status, res.body.code]).toEqual([409, 'job_changed']);
+    expect(await written(s.job.id)).toHaveLength(1);
+  });
+});
