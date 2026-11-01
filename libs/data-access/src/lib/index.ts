@@ -367,6 +367,7 @@ export type { SavedGaragesPageDto } from './models/saved-garages-page-dto';
 export type { SaveGarageDto } from './models/save-garage-dto';
 export type { SaveListingDraftDto } from './models/save-listing-draft-dto';
 export type { SavePushSubscriptionDto } from './models/save-push-subscription-dto';
+export type { SaveSuggestionDto } from './models/save-suggestion-dto';
 export type { ScheduleCarDto } from './models/schedule-car-dto';
 export type { ScheduleDayDto } from './models/schedule-day-dto';
 export type { ScheduleIntervalDto } from './models/schedule-interval-dto';
@@ -753,6 +754,8 @@ export type { SavedGaragesControllerList$Params as SavedGaragesControllerList$Pa
 export { savedGaragesControllerList as savedGaragesControllerList } from './fn/saved-garages/saved-garages-controller-list';
 export type { SavedGaragesControllerIds$Params as SavedGaragesControllerIds$Params } from './fn/saved-garages/saved-garages-controller-ids';
 export { savedGaragesControllerIds as savedGaragesControllerIds } from './fn/saved-garages/saved-garages-controller-ids';
+export type { SaveSuggestionsControllerDismiss$Params as SaveSuggestionsControllerDismiss$Params } from './fn/saved-garages/save-suggestions-controller-dismiss';
+export { saveSuggestionsControllerDismiss as saveSuggestionsControllerDismiss } from './fn/saved-garages/save-suggestions-controller-dismiss';
 export type { DashboardLayoutsControllerRead$Params as DashboardLayoutsControllerRead$Params } from './fn/dashboard-layouts/dashboard-layouts-controller-read';
 export { dashboardLayoutsControllerRead as dashboardLayoutsControllerRead } from './fn/dashboard-layouts/dashboard-layouts-controller-read';
 export type { DashboardLayoutsControllerSave$Params as DashboardLayoutsControllerSave$Params } from './fn/dashboard-layouts/dashboard-layouts-controller-save';
@@ -867,6 +870,8 @@ export type { MechanicScheduleControllerRemoveDayOff$Params as MechanicScheduleC
 export { mechanicScheduleControllerRemoveDayOff as mechanicScheduleControllerRemoveDayOff } from './fn/garages/mechanic-schedule-controller-remove-day-off';
 export type { GarageMembersControllerList$Params as GarageMembersControllerList$Params } from './fn/garages/garage-members-controller-list';
 export { garageMembersControllerList as garageMembersControllerList } from './fn/garages/garage-members-controller-list';
+export type { GarageMembersControllerRemove$Params as GarageMembersControllerRemove$Params } from './fn/garages/garage-members-controller-remove';
+export { garageMembersControllerRemove as garageMembersControllerRemove } from './fn/garages/garage-members-controller-remove';
 export type { GetImageVariant$Params as GetImageVariant$Params } from './fn/garages/get-image-variant';
 export { getImageVariant as getImageVariant } from './fn/garages/get-image-variant';
 export type { GarageSettingsControllerUpdate$Params as GarageSettingsControllerUpdate$Params } from './fn/garages/garage-settings-controller-update';

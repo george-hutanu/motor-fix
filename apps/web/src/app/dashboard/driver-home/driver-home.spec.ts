@@ -139,6 +139,7 @@ const activeOf = (
           jobs: open[0].jobs,
           mechanicName: null,
           range: null,
+          saveSuggestion: null,
           stage: 'sent',
         }
       : null,
@@ -1266,6 +1267,7 @@ describe('Cererea activă on Panou', () => {
       jobs: [],
       mechanicName: null,
       range: null,
+      saveSuggestion: null,
       stage: 'sent',
     },
   };
