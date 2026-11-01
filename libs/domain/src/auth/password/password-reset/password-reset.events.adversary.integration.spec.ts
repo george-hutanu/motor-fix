@@ -92,10 +92,10 @@ beforeEach(async () => {
   await redis.flushdb();
   published.length = 0;
   maintenance = false;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   const real = app.get<EventPort>(EVENT_PORT);
   const record = real.record.bind(real);
-  jest.spyOn(real, 'record').mockImplementation(async (tx, event) => {
+  vi.spyOn(real, 'record').mockImplementation(async (tx, event) => {
     if (failing) throw failing;
     return record(tx, event);
   });
@@ -342,7 +342,7 @@ describe('the event a completed reset records', () => {
     await complete(await linkFor(id), 'prima-parola-noua').expect(200);
     const second = await linkFor(id);
     failing = new Error('outbox down');
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await complete(second, 'a-doua-parola-noua').expect(500);
     failing = undefined;
     expect(await outbox()).toHaveLength(1);
@@ -361,7 +361,7 @@ describe('the event a completed reset records', () => {
     const id = await person();
     const token = await linkFor(id);
     failing = 'boom' as unknown as Error;
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await complete(token).expect(500);
     failing = undefined;
     await signIn('andrei@example.test', OLD).expect(200);
@@ -434,7 +434,7 @@ describe('signing out on all devices alongside the reset', () => {
     const cookie = await session();
     await session();
     failing = new Error('outbox down');
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     await everywhere(cookie).expect(500);
     failing = undefined;
     // Long enough for a wrong message to arrive.

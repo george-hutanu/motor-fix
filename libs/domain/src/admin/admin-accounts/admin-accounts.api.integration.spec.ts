@@ -143,17 +143,17 @@ describe.each(ROUTES)('who may read %s', (path) => {
 
 // @traces 001-FR-014
 describe('the failure log', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it.each(ROUTES)(
     'writes a line for a refusal the guard answers on %s',
     async (path) => {
       const lines: unknown[] = [];
-      jest
-        .spyOn(Logger.prototype, 'warn')
-        .mockImplementation((message: unknown) => {
+      vi.spyOn(Logger.prototype, 'warn').mockImplementation(
+        (message: unknown) => {
           lines.push(message);
-        });
+        },
+      );
 
       const res = await get(path, await as('driver'));
 
@@ -256,17 +256,17 @@ describe('GET /admin/accounts with a search and filters', () => {
   // @traces 002-FR-014
   it('logs a failed search without its query', async () => {
     const lines: unknown[] = [];
-    jest
-      .spyOn(Logger.prototype, 'warn')
-      .mockImplementation((message: unknown) => {
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(
+      (message: unknown) => {
         lines.push(message);
-      });
+      },
+    );
 
     const res = await get(
       '/admin/accounts?q=andrei.marin%40gmail.com&status=gone',
       await as('admin'),
     );
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
 
     expect(res.status).toBe(400);
     expect(lines).toContainEqual({

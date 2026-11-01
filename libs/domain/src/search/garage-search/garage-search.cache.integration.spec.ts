@@ -62,7 +62,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
   dacia = (
     await prisma.brand.create({
@@ -272,7 +272,7 @@ describe('dropping the cached searches', () => {
 // @traces 267-FR-011
 describe('the search with Redis unavailable', () => {
   it('answers from PostgreSQL the same answer, counts the fallback and warns once per outage', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const outageWarnings = () =>
@@ -281,13 +281,13 @@ describe('the search with Redis unavailable', () => {
       ).length;
     const send = appRedis.sendCommand.bind(appRedis);
     let down = true;
-    jest
-      .spyOn(appRedis, 'sendCommand')
-      .mockImplementation((command: Command, ...rest) => {
+    vi.spyOn(appRedis, 'sendCommand').mockImplementation(
+      (command: Command, ...rest) => {
         if (!down) return send(command, ...rest);
         command.reject(new Error('connect ECONNREFUSED 127.0.0.1:6379'));
         return command.promise;
-      });
+      },
+    );
     const before = await cacheCounts();
 
     const first = await search({ brand: 'dacia', near: NEAR });
@@ -409,13 +409,11 @@ describe('the search cache for the map pins', () => {
   });
 
   it('answers the pins from PostgreSQL while Redis is unavailable', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    jest
-      .spyOn(appRedis, 'sendCommand')
-      .mockImplementation((command: Command) => {
-        command.reject(new Error('connect ECONNREFUSED 127.0.0.1:6379'));
-        return command.promise;
-      });
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(appRedis, 'sendCommand').mockImplementation((command: Command) => {
+      command.reject(new Error('connect ECONNREFUSED 127.0.0.1:6379'));
+      return command.promise;
+    });
     const before = await cacheCounts();
 
     const res = await pins({ brand: 'dacia', near: NEAR });

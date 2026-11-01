@@ -117,5 +117,60 @@
       "exit": 2,
       "stderr": "Affected tests failed: libs/demo/src/demo\\.spec\\.ts"
     }
+  },
+  {
+    "id": "runs-a-vitest-project-spec-through-vitest",
+    "hook": "post:edit:affected-tests",
+    "why": "a spec in a project with a vitest.config.mts is a Vitest spec: Jest would fail it on vi.* or its config, so the hook runs it through Vitest with that config (a failing stub vitest beside a passing stub jest proves which one ran; the stub duration script makes both executable)",
+    "fixture": {
+      "commits": [
+        {
+          "files": {
+            "libs/demo/vitest.config.mts": "export default {};\n",
+            "libs/demo/src/demo.spec.ts": "it('holds', () => {});\n",
+            "node_modules/.bin/vitest": "#!/bin/sh\necho stub vitest ran \"$@\" >&2\nexit 1\n",
+            "node_modules/.bin/jest": "#!/bin/sh\nexit 0\n",
+            ".claude/scripts/lib/spec-durations.mjs": "import { chmodSync } from 'node:fs';\nfor (const bin of ['jest', 'vitest']) chmodSync(`node_modules/.bin/${bin}`, 0o755);\nprocess.exit(0);\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_name": "Edit",
+      "tool_input": {
+        "file_path": "libs/demo/src/demo.spec.ts"
+      }
+    },
+    "expect": {
+      "exit": 2,
+      "stderr": "stub vitest ran run --config libs/demo/vitest\\.config\\.mts libs/demo/src/demo\\.spec\\.ts[\\s\\S]*Affected tests failed: libs/demo/src/demo\\.spec\\.ts"
+    }
+  },
+  {
+    "id": "keeps-jest-for-a-project-without-a-vitest-config",
+    "hook": "post:edit:affected-tests",
+    "why": "the Angular projects still run on Jest: a spec whose project has no vitest.config.mts goes to Jest, so a failing stub vitest is never reached and the passing stub jest lets the edit through",
+    "fixture": {
+      "commits": [
+        {
+          "files": {
+            "libs/demo/jest.config.cts": "module.exports = {};\n",
+            "libs/demo/src/demo.spec.ts": "it('holds', () => {});\n",
+            "node_modules/.bin/vitest": "#!/bin/sh\necho stub vitest ran >&2\nexit 1\n",
+            "node_modules/.bin/jest": "#!/bin/sh\nexit 0\n",
+            ".claude/scripts/lib/spec-durations.mjs": "import { chmodSync } from 'node:fs';\nfor (const bin of ['jest', 'vitest']) chmodSync(`node_modules/.bin/${bin}`, 0o755);\nprocess.exit(0);\n"
+          }
+        }
+      ]
+    },
+    "payload": {
+      "tool_name": "Edit",
+      "tool_input": {
+        "file_path": "libs/demo/src/demo.spec.ts"
+      }
+    },
+    "expect": {
+      "exit": 0
+    }
   }
 ]

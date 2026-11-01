@@ -74,7 +74,7 @@ beforeEach(() => {
   store.objects.clear();
   fake().deleted.length = 0;
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // A handed-over job at a garage with live media switched off: a kept
 // recording joins it all the same.
@@ -263,9 +263,9 @@ describe('removing an item', () => {
 
   it('stays visible with no audit entry when the store cannot delete', async () => {
     const { id, owner } = await visible();
-    jest
-      .spyOn(provider(StorageService), 'deleteWithCopies')
-      .mockRejectedValue(new Error('store down'));
+    vi.spyOn(provider(StorageService), 'deleteWithCopies').mockRejectedValue(
+      new Error('store down'),
+    );
 
     await expect(media().removeItem(id, owner)).rejects.toThrow('store down');
 
@@ -278,9 +278,9 @@ describe('removing an item', () => {
   it('stays visible when the provider cannot delete', async () => {
     const { id, owner } = await visible('rec-10');
     const before = (await audit(id)).length;
-    jest
-      .spyOn(fake(), 'deleteRecording')
-      .mockRejectedValue(new Error('provider down'));
+    vi.spyOn(fake(), 'deleteRecording').mockRejectedValue(
+      new Error('provider down'),
+    );
 
     await expect(media().removeItem(id, owner)).rejects.toThrow(
       'provider down',

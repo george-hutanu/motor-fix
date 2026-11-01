@@ -20,7 +20,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe('TRUNCATE outbox_event');
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const generation = (garageId: string) =>
@@ -186,7 +186,7 @@ describe('relaying a schedule event', () => {
       randomUUID(),
     );
     const incr = redis.incr.bind(redis);
-    const refusing = jest
+    const refusing = vi
       .spyOn(redis, 'incr')
       .mockImplementation(((key: string) =>
         key.startsWith('free-slots-gen:')

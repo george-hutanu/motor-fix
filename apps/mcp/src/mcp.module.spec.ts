@@ -56,7 +56,7 @@ describe('mcp server', () => {
 
   // @traces 365-FR-015
   it('counts every answered MCP request by its status, and nothing else', async () => {
-    const counted = jest.spyOn(metrics, 'recordRequest');
+    const counted = vi.spyOn(metrics, 'recordRequest');
 
     await fetch(`${base}/mcp`, {
       body: '{}',

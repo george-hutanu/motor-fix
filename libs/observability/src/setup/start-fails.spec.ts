@@ -8,7 +8,7 @@ import {
 import { startTelemetry, telemetryStarted } from './start';
 import { queueTelemetry } from '../queues/telemetry-option';
 
-jest.mock('./instrumentations', () => ({
+vi.mock('./instrumentations', () => ({
   instrumentations: () => {
     throw new Error('an instrumentation failed to load');
   },
@@ -22,7 +22,7 @@ const ON = {
 // @traces 876-FR-014
 describe('startTelemetry when the SDK fails while it starts', () => {
   it('writes one error line, leaves telemetry off and does not throw', () => {
-    const errors = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const handlers = process.listenerCount('SIGTERM');
 
     expect(startTelemetry('api', ON)).toBeUndefined();

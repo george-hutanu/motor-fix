@@ -175,15 +175,15 @@ describe('a probe that throws', () => {
 
 // @traces 294-FR-002
 describe('probes that never answer', () => {
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
 
   const settle = async (promise: Promise<unknown>, ms: number) => {
     let state: 'pending' | 'done' = 'pending';
     void promise.then(() => {
       state = 'done';
     });
-    await jest.advanceTimersByTimeAsync(ms);
+    await vi.advanceTimersByTimeAsync(ms);
     return state;
   };
 
@@ -215,7 +215,7 @@ describe('probes that never answer', () => {
         },
       }),
     );
-    await jest.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(await result).toEqual({ ok: false, reason: 'timeout' });
     expect(signal?.aborted).toBe(true);
   });
@@ -230,7 +230,7 @@ describe('probes that never answer', () => {
             : never()) as unknown as typeof fetch,
       }),
     );
-    await jest.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(10_000);
     expect(await result).toEqual({ ok: false, reason: 'timeout' });
   });
 
@@ -247,7 +247,7 @@ describe('probes that never answer', () => {
         },
       }),
     );
-    await jest.advanceTimersByTimeAsync(9_000);
+    await vi.advanceTimersByTimeAsync(9_000);
     expect(await result).toMatchObject({ ok: true });
   });
 });

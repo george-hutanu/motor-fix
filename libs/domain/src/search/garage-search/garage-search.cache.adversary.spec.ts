@@ -1,6 +1,6 @@
 import { dropSearches } from './garage-search.cache';
 
-const redis = () => ({ incr: jest.fn().mockResolvedValue(1) });
+const redis = () => ({ incr: vi.fn().mockResolvedValue(1) });
 
 describe('dropSearches under odd audiences', () => {
   it('leaves the generation alone for an empty audience', async () => {
@@ -55,7 +55,7 @@ describe('dropSearches under odd audiences', () => {
   });
 
   it('rejects when Redis refuses the drop', async () => {
-    const r = { incr: jest.fn().mockRejectedValue(new Error('down')) };
+    const r = { incr: vi.fn().mockRejectedValue(new Error('down')) };
     await expect(dropSearches(r, ['public:search'])).rejects.toThrow('down');
   });
 });

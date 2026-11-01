@@ -40,6 +40,7 @@ const NEXT: Record<SheetPosition, SheetPosition> = {
     '(document:focusout)': 'typing.set(false)',
     '(window:popstate)': 'popped()',
     '[attr.data-position]': 'position()',
+    '[class.forced]': "forcedFull() && position() === 'full'",
     '[class.over-zoom]': 'overZoom()',
     '[class.typing]': 'typing()',
     '[style.--sheet-top.px]': 'top()',
@@ -51,7 +52,8 @@ const NEXT: Record<SheetPosition, SheetPosition> = {
   templateUrl: './results-sheet.html',
 })
 export class ResultsSheet {
-  // The map failed: the list takes the screen, with no history step.
+  // The map failed, or a state the half sheet would cut: the list takes the
+  // screen, with no history step.
   readonly forcedFull = input(false);
 
   private readonly layout = inject(Layout);
@@ -88,8 +90,16 @@ export class ResultsSheet {
   private staleAt: number | undefined;
 
   constructor() {
+    // Forcing ends: a sheet still full only by force goes back to half.
+    let wasForced = false;
     effect(() => {
-      if (this.forcedFull()) untracked(() => this.position.set('full'));
+      const forced = this.forcedFull();
+      untracked(() => {
+        if (forced) this.position.set('full');
+        else if (wasForced && !this.stepped && this.position() === 'full')
+          this.position.set('half');
+      });
+      wasForced = forced;
     });
     // Across 768 px the sheet starts again at half.
     let wasPhone: boolean | undefined;
@@ -257,18 +267,21 @@ export class ResultsSheet {
   }
 
   private measure() {
-    this.top.set(this.topBox()?.nativeElement.offsetHeight ?? null);
+    // A header taller than the sheet scrolls inside it: the rests read its
+    // whole height, not the part shown.
+    const top = this.topBox()?.nativeElement;
+    this.top.set(top ? Math.max(top.offsetHeight, top.scrollHeight) : null);
     this.height.set(this.host.offsetHeight);
   }
 }
 
 // Where each rest puts the sheet's top edge, from the top of its cell; the
-// stylesheet's --rest draws the same.
+// stylesheet's --rest draws the same, never above the cell's top.
 function restOffsets(
   height: number,
   top: number,
 ): Record<SheetPosition, number> {
-  const low = height - top;
+  const low = Math.max(0, height - top);
   return {
     full: 0,
     half: Math.min(

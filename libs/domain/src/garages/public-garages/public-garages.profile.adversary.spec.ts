@@ -43,24 +43,24 @@ const listedRow = (over: Row = {}): Row => ({
 
 function build(rows: Row[]) {
   const calls: { strings: string[]; values: unknown[] }[] = [];
-  const queryRaw = jest.fn((strings: TemplateStringsArray, ...values) => {
+  const queryRaw = vi.fn((strings: TemplateStringsArray, ...values) => {
     calls.push({ strings: [...strings], values });
     return Promise.resolve(rows);
   });
   const prisma = {
     $queryRaw: queryRaw,
-    brand: { findUnique: jest.fn().mockResolvedValue(null) },
+    brand: { findUnique: vi.fn().mockResolvedValue(null) },
   } as unknown as PrismaClient;
   const cache = {
-    read: jest.fn(async (spec: { read: () => Promise<{ value: unknown }> }) => {
+    read: vi.fn(async (spec: { read: () => Promise<{ value: unknown }> }) => {
       const filled = await spec.read();
       return filled.value;
     }),
   } as unknown as CacheService;
   const storage = {
-    createDownloadUrl: jest.fn().mockResolvedValue('https://signed'),
+    createDownloadUrl: vi.fn().mockResolvedValue('https://signed'),
     derivedKey: (key: string, kind: string) => `${key}.${kind}`,
-    metadataOf: jest.fn().mockResolvedValue(null),
+    metadataOf: vi.fn().mockResolvedValue(null),
   } as unknown as StorageService;
   return {
     calls,

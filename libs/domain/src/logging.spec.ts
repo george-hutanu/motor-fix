@@ -23,8 +23,8 @@ function written(log: () => void): Record<string, unknown> {
     lines.push(String(chunk));
     return true;
   };
-  const out = jest.spyOn(process.stdout, 'write').mockImplementation(capture);
-  const err = jest.spyOn(process.stderr, 'write').mockImplementation(capture);
+  const out = vi.spyOn(process.stdout, 'write').mockImplementation(capture);
+  const err = vi.spyOn(process.stderr, 'write').mockImplementation(capture);
   try {
     log();
   } finally {
