@@ -796,3 +796,55 @@ describe('the owner edits her reply', () => {
     expect(refused.body.code).toBe('already_replied');
   });
 });
+
+// @traces 179-FR-009
+describe('a reply after an admin’s decision', () => {
+  const pending = (
+    reviewId: string,
+    reporterId: string,
+    target: 'review' | 'reply',
+  ) =>
+    prisma.reviewReport.create({
+      data: {
+        dueAt: new Date(Date.now() + 3_600_000),
+        reason: 'insults',
+        reporterId,
+        reviewId,
+        source: target === 'review' ? 'garage' : 'author',
+        target,
+      },
+    });
+  const decide = async (reviewId: string) => {
+    const admin = await world.account('Ana Popescu', ['admin']);
+    const res = await send(
+      'post',
+      `/admin/review-reports/${reviewId}/decision`,
+      bearer(admin, 'admin'),
+      { decision: 'remove', reason: 'insults' },
+    );
+    expect(res.status).toBe(200);
+  };
+
+  it('refuses a new reply where an admin removed the reply as reply_removed', async () => {
+    const s = await setting();
+    await reply(s.review.id, { status: 'reported' });
+    await pending(s.review.id, s.andrei, 'reply');
+    await decide(s.review.id);
+
+    const refused = await post(s.owner, s.review.id, { text: TEXT });
+
+    expect(refused.status).toBe(409);
+    expect(refused.body.code).toBe('reply_removed');
+  });
+
+  it('refuses a reply to a review an admin removed as review_not_public', async () => {
+    const s = await setting('reported');
+    await pending(s.review.id, s.dinamo.owner, 'review');
+    await decide(s.review.id);
+
+    const refused = await post(s.owner, s.review.id, { text: TEXT });
+
+    expect(refused.status).toBe(409);
+    expect(refused.body.code).toBe('review_not_public');
+  });
+});

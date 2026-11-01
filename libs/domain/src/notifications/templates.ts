@@ -16,6 +16,7 @@ import {
 import { emailHtml } from './email-layout';
 import { REPORT_DECISION_SET } from './templates/garage-report-decided';
 import { TEMPLATES } from './templates/registry';
+import { REVIEW_DECIDED_VARIANTS } from './templates/review-decided';
 import { DECISIONS } from './templates/verification-result';
 
 type Language = 'ro' | 'en';
@@ -402,6 +403,7 @@ const BY_PARAM: Record<string, [param: string, values: ReadonlySet<unknown>]> =
     BOOKING_CANCELLED: ['variant', new Set(['driver', 'driver_late'])],
     GARAGE_REPORT_DECIDED: ['decision', REPORT_DECISION_SET],
     REQUEST_CANCELLED: ['reason', new Set(['account_closed'])],
+    REVIEW_DECIDED: ['variant', new Set(REVIEW_DECIDED_VARIANTS)],
     VERIFICATION_RESULT: ['decision', DECISIONS],
   };
 

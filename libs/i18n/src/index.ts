@@ -24,6 +24,7 @@ export {
   formatLei,
   formatLeiRange,
   formatLeiSpan,
+  formatLongDay,
   formatMonthYear,
   formatNum,
   formatPct,

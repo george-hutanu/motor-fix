@@ -191,6 +191,8 @@ export type { JobDecisionsControllerReject$Params as JobDecisionsControllerRejec
 export { jobDecisionsControllerReject as jobDecisionsControllerReject } from './fn/admin/job-decisions-controller-reject';
 export type { ReportQueueControllerList$Params as ReportQueueControllerList$Params } from './fn/admin/report-queue-controller-list';
 export { reportQueueControllerList as reportQueueControllerList } from './fn/admin/report-queue-controller-list';
+export type { ReportQueueControllerDecide$Params as ReportQueueControllerDecide$Params } from './fn/admin/report-queue-controller-decide';
+export { reportQueueControllerDecide as reportQueueControllerDecide } from './fn/admin/report-queue-controller-decide';
 export type { DemandControllerDemand$Params as DemandControllerDemand$Params } from './fn/admin/demand-controller-demand';
 export { demandControllerDemand as demandControllerDemand } from './fn/admin/demand-controller-demand';
 export type { DemandControllerSupply$Params as DemandControllerSupply$Params } from './fn/admin/demand-controller-supply';
@@ -237,6 +239,8 @@ export type { VerificationFileControllerReopen$Params as VerificationFileControl
 export { verificationFileControllerReopen as verificationFileControllerReopen } from './fn/admin/verification-file-controller-reopen';
 export type { VerificationFileControllerCorrect$Params as VerificationFileControllerCorrect$Params } from './fn/admin/verification-file-controller-correct';
 export { verificationFileControllerCorrect as verificationFileControllerCorrect } from './fn/admin/verification-file-controller-correct';
+export type { StatusControllerRead$Params as StatusControllerRead$Params } from './fn/admin/status-controller-read';
+export { statusControllerRead as statusControllerRead } from './fn/admin/status-controller-read';
 export type { SystemLogControllerList$Params as SystemLogControllerList$Params } from './fn/admin/system-log-controller-list';
 export { systemLogControllerList as systemLogControllerList } from './fn/admin/system-log-controller-list';
 export type { PlatformRulesControllerList$Params as PlatformRulesControllerList$Params } from './fn/admin/platform-rules-controller-list';
@@ -411,6 +415,18 @@ export type { PublicGaragesControllerBySlug$Params as PublicGaragesControllerByS
 export { publicGaragesControllerBySlug as publicGaragesControllerBySlug } from './fn/garages/public-garages-controller-by-slug';
 export type { VerificationStatusControllerRead$Params as VerificationStatusControllerRead$Params } from './fn/garages/verification-status-controller-read';
 export { verificationStatusControllerRead as verificationStatusControllerRead } from './fn/garages/verification-status-controller-read';
+export type { OwnerPhotosControllerList$Params as OwnerPhotosControllerList$Params } from './fn/garages/owner-photos-controller-list';
+export { ownerPhotosControllerList as ownerPhotosControllerList } from './fn/garages/owner-photos-controller-list';
+export type { OwnerPhotosControllerSave$Params as OwnerPhotosControllerSave$Params } from './fn/garages/owner-photos-controller-save';
+export { ownerPhotosControllerSave as ownerPhotosControllerSave } from './fn/garages/owner-photos-controller-save';
+export type { OwnerPhotosControllerUploadAddress$Params as OwnerPhotosControllerUploadAddress$Params } from './fn/garages/owner-photos-controller-upload-address';
+export { ownerPhotosControllerUploadAddress as ownerPhotosControllerUploadAddress } from './fn/garages/owner-photos-controller-upload-address';
+export type { OwnerPhotosControllerConfirm$Params as OwnerPhotosControllerConfirm$Params } from './fn/garages/owner-photos-controller-confirm';
+export { ownerPhotosControllerConfirm as ownerPhotosControllerConfirm } from './fn/garages/owner-photos-controller-confirm';
+export type { OwnerPhotosControllerUpload$Params as OwnerPhotosControllerUpload$Params } from './fn/garages/owner-photos-controller-upload';
+export { ownerPhotosControllerUpload as ownerPhotosControllerUpload } from './fn/garages/owner-photos-controller-upload';
+export type { OwnerPhotosControllerRemoveUpload$Params as OwnerPhotosControllerRemoveUpload$Params } from './fn/garages/owner-photos-controller-remove-upload';
+export { ownerPhotosControllerRemoveUpload as ownerPhotosControllerRemoveUpload } from './fn/garages/owner-photos-controller-remove-upload';
 export type { OwnerDocumentsControllerUploadUrl$Params as OwnerDocumentsControllerUploadUrl$Params } from './fn/garages/owner-documents-controller-upload-url';
 export { ownerDocumentsControllerUploadUrl as ownerDocumentsControllerUploadUrl } from './fn/garages/owner-documents-controller-upload-url';
 export type { OwnerDocumentsControllerSubmit$Params as OwnerDocumentsControllerSubmit$Params } from './fn/garages/owner-documents-controller-submit';
