@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 264,
+    "count": 270,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -335,7 +335,8 @@
         "worker-queue-growing",
         "worker-jobs-failed"
       ],
-      "story": "ST-881"
+      "story": "ST-881, ST-1249",
+      "reason": "the listing wizard queues one sizing job per confirmed garage photo, and the owner gallery (ST-1249) queues one per confirmed upload through the same service; the worker makes the copies, a last failure fires worker-jobs-failed"
     },
     {
       "kind": "queue",
@@ -2024,6 +2025,19 @@
       ],
       "reason": "the GET is a read with no writes, no event and no audit row, re-read by the owner's profile view on each garage change and on reconnect; the PATCH is the owner's in-place save of name, description, phone, hours with closed days, radius and the facilities group (facilities, their note, courtesy-car terms, payment methods; 400 no_courtesy_car when the terms and the ticked car disagree), one transaction with an audit row per changed field and one garage.updated outbox event (already listed) whose relay purge drops the public profile cache, the phone never in the event, logs, labels or spans; a 409 is a stale version, a 422 a field that needs verification; it answers through the public profile's cache, so its cache fallbacks count in the API's cache-fallback rule; a 403 is a mechanic or receptionist without the view, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; its spans come from the HTTP, Prisma and Redis auto-instrumentation; no counter or alert of its own; no outside call",
       "story": "ST-133, ST-1246, ST-1248"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-photos",
+      "source": "libs/domain/src/garages/photos/owner-photos/owner-photos.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/photos, /photos/upload-url, /photos/uploads and /photos/uploads/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner gallery of a listed garage: the GET is a read with no writes; the PUT saves the whole gallery in one transaction under a row lock on the garage, an audit row per photo added, removed, moved or re-captioned (position and caption only, never a file key or address) and one garage.updated outbox event (already listed) whose relay purge drops the public profile cache, the removed files deleted after the commit with a failure logged as one OwnerPhotosSave error line naming the garage, never the key; the upload address is rate limited per garage (uploadUrl) and the confirm queues the listing-photos job (already listed); a 409 is a stale stamp, a missing or unprocessed upload, a 400 a broken rule or unknown photo, a 403 a mechanic or receptionist, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; spans from the HTTP, Prisma and S3 auto-instrumentation; no counter or alert of its own; no outside call beyond the object store (already listed)",
+      "story": "ST-1249"
     },
     {
       "kind": "endpoint",
