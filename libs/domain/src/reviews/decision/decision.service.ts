@@ -36,7 +36,7 @@ const MESSAGES = {
   },
 };
 
-// An admin decides a review's one pending report. This story removes: the
+// An admin decides a review's one pending report by removing: the
 // review (with the garage's reply) or, for a report of the reply, the reply
 // alone. Everything is written in one transaction with its audit entries and
 // its review.decided event, or nothing is.
