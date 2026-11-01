@@ -6,6 +6,7 @@ describe('the event contract', () => {
     expect(Object.keys(ANALYTICS_EVENTS).sort()).toEqual(
       [
         'brand_picked',
+        'car_taken_over',
         'directions_opened',
         'filter_applied',
         'garage_opened',
@@ -208,5 +209,15 @@ describe('the directions event', () => {
   it('drops a platform outside the three', () => {
     expect(sanitise('directions_opened', { platform: 'windows' })).toEqual({});
     expect(sanitise('directions_opened', { platform: 'IOS' })).toEqual({});
+  });
+});
+
+// @traces 1394-FR-007
+describe('the car takeover event', () => {
+  it('is in the catalogue and keeps no property of its own', () => {
+    expect(ANALYTICS_EVENTS.car_taken_over).toEqual({});
+    expect(
+      sanitise('car_taken_over', { car: 'car-1', phone: '0722', token: 'x' }),
+    ).toEqual({});
   });
 });

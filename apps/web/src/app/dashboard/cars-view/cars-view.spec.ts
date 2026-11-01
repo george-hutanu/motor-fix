@@ -4,7 +4,11 @@ import { join } from 'node:path';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { type CarDto, CarsService } from '@motor-fix/data-access';
+import {
+  type CarDto,
+  CarsService,
+  type SoldCarListDto,
+} from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Overlays } from '@motor-fix/overlays';
 
@@ -40,6 +44,8 @@ const car = (over: Partial<CarDto> = {}): CarDto => ({
 
 let list: jest.Mock;
 let open: jest.Mock;
+let soldList: jest.Mock;
+let soldAnswer: () => Promise<SoldCarListDto> = async () => ({ items: [] });
 
 async function render(
   answer: CarDto[] | Promise<never> = [car()],
@@ -49,9 +55,17 @@ async function render(
     answer instanceof Promise ? answer : Promise.resolve({ items: answer }),
   );
   open = jest.fn(async () => 'cancelled');
+  soldList = jest.fn(() => soldAnswer());
   TestBed.configureTestingModule({
     providers: [
-      { provide: CarsService, useValue: { carsControllerList: list } },
+      {
+        provide: CarsService,
+        useValue: {
+          carHistoryControllerSold: soldList,
+          carHistoryControllerSoldRepairs: async () => ({ items: [] }),
+          carsControllerList: list,
+        },
+      },
       { provide: Overlays, useValue: { open } },
       provideRouter([]),
       ...heldForDriver(),
@@ -390,7 +404,10 @@ describe('Mașinile mele opened at a car', () => {
       providers: [
         {
           provide: CarsService,
-          useValue: { carsControllerList: async () => ({ items }) },
+          useValue: {
+            carHistoryControllerSold: async () => ({ items: [] }),
+            carsControllerList: async () => ({ items }),
+          },
         },
         { provide: Overlays, useValue: { open: jest.fn() } },
         ...heldForDriver(),
@@ -1235,5 +1252,96 @@ describe('selling a car from its card', () => {
   it('gives the cancel button a 44 px target', () => {
     const css = readFileSync(join(__dirname, 'cars-view.css'), 'utf8');
     expect(css).toMatch(/\.transfer button[^{]*\{[^}]*min-height: 44px/);
+  });
+});
+
+// @traces 1394-FR-003 1394-FR-006
+describe('Mașini vândute in Mașinile mele', () => {
+  const golf = {
+    brandName: 'VW',
+    id: 'sold-1',
+    model: 'Golf',
+    saleDate: new Date().toISOString(),
+    year: 2015,
+  };
+  afterEach(() => {
+    soldAnswer = async () => ({ items: [] });
+  });
+
+  const section = (element: HTMLElement) =>
+    element.querySelector('mf-sold-cars h2');
+
+  it('shows no section, title or empty state with no sold car', async () => {
+    const { element, settle } = await render();
+    await settle();
+
+    expect(soldList).toHaveBeenCalledTimes(1);
+    expect(section(element)).toBeNull();
+    expect(text(element)).not.toContain('Mașini vândute');
+  });
+
+  it('shows the sold car under the car list', async () => {
+    soldAnswer = async () => ({ items: [golf] });
+    const { element, settle } = await render();
+    await settle();
+
+    expect(section(element)?.textContent?.trim()).toBe('Mașini vândute');
+    const order = [...element.querySelectorAll('[data-car], mf-sold-cars')].map(
+      (e) => e.tagName.toLowerCase(),
+    );
+    expect(order).toEqual(['article', 'mf-sold-cars']);
+    expect(element.querySelectorAll('mf-sold-car')).toHaveLength(1);
+  });
+
+  it('shows the sold car under the empty state when no car is left', async () => {
+    soldAnswer = async () => ({ items: [golf] });
+    const { element, settle } = await render([]);
+    await settle();
+
+    expect(element.querySelector('mf-empty-state')).not.toBeNull();
+    expect(section(element)).not.toBeNull();
+  });
+
+  it('shows its own error with a retry and leaves the car list as it is', async () => {
+    let calls = 0;
+    soldAnswer = async () => {
+      calls += 1;
+      if (calls === 1) throw new Error('offline');
+      return { items: [golf] };
+    };
+    const { element, settle } = await render();
+    await settle();
+
+    expect(cards(element)).toHaveLength(1);
+    expect(text(element)).toContain('Ceva nu a mers. Încearcă din nou.');
+    button(element, 'Reîncearcă')?.click();
+    await settle();
+
+    expect(soldList).toHaveBeenCalledTimes(2);
+    expect(section(element)).not.toBeNull();
+    expect(text(element)).not.toContain('Ceva nu a mers.');
+    expect(cards(element)).toHaveLength(1);
+  });
+
+  it('reads the sold cars again when a car is taken over', async () => {
+    jest.useRealTimers();
+    const { element, settle } = await render();
+    await settle();
+    soldAnswer = async () => ({ items: [golf] });
+
+    (TestBed.inject(Live) as unknown as ReturnType<typeof fakeLive>).emit(
+      'car_transfer.accepted',
+      'car-1',
+    );
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    await settle();
+
+    expect(soldList).toHaveBeenCalledTimes(2);
+    expect(section(element)).not.toBeNull();
+  });
+
+  it('loads the section only once a sold car is listed', () => {
+    const html = readFileSync(join(__dirname, 'cars-view.html'), 'utf8');
+    expect(html).toMatch(/@defer \(when soldCars\(\)\.length\)/);
   });
 });
