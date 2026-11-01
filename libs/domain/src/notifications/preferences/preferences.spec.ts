@@ -1,4 +1,5 @@
 import {
+  fallbackFor,
   isDriverChoice,
   mutedChannels,
   type PreferenceRow,
@@ -451,5 +452,52 @@ describe('the channels each driver entry offers', () => {
     expect(
       view.preferences.find((p) => p.type === 'REVIEW_INVITE')?.channels,
     ).toEqual(['email', 'push', 'whatsapp']);
+  });
+});
+
+// @traces 1374-FR-005
+// @traces 1374-FR-007
+describe('the fallback a driver entry carries', () => {
+  const at = new Date('2026-10-20T08:00:00Z');
+  const record = {
+    at,
+    from: 'push',
+    reason: 'no_device',
+    to: 'email',
+  } as const;
+
+  it('is null when the type has no record', () => {
+    expect(fallbackFor(undefined, 'push', null)).toBeNull();
+  });
+
+  it('is null when the record was meant for another channel than the chosen one', () => {
+    expect(fallbackFor(record, 'email', null)).toBeNull();
+  });
+
+  it('is null when the choice was saved at or after the fallback', () => {
+    expect(fallbackFor(record, 'push', at)).toBeNull();
+    expect(
+      fallbackFor(record, 'push', new Date('2026-10-21T08:00:00Z')),
+    ).toBeNull();
+  });
+
+  it('is the record when it explains the chosen channel since the last save', () => {
+    expect(
+      fallbackFor(record, 'push', new Date('2026-10-19T08:00:00Z')),
+    ).toEqual({
+      at: '2026-10-20T08:00:00.000Z',
+      from: 'push',
+      reason: 'no_device',
+      to: 'email',
+    });
+  });
+
+  it('is decided by the channel alone when nothing was saved', () => {
+    expect(fallbackFor(record, 'push', null)).toEqual({
+      at: '2026-10-20T08:00:00.000Z',
+      from: 'push',
+      reason: 'no_device',
+      to: 'email',
+    });
   });
 });
