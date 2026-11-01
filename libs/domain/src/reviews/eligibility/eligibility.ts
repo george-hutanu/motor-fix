@@ -42,6 +42,8 @@ export const offerOf = (reason: ReviewRefusal | null) =>
 
 export type Verdict = ReviewEligibilityDto & {
   job: Job | null;
+  // The job's live review, whoever reads it.
+  review: { id: string; rating: number; status: string } | null;
   // The job's status for job_not_done, the review's for a review refusal.
   currentStatus?: string;
 };
@@ -59,7 +61,7 @@ export class ReviewEligibility {
         where: { driverId: actor.accountId, id: { in: jobIds } },
       }),
       this.prisma.review.findMany({
-        select: { jobId: true, status: true },
+        select: { id: true, jobId: true, rating: true, status: true },
         where: { jobId: { in: jobIds }, status: { in: [...LIVE] } },
       }),
       this.prisma.account.findUnique({
@@ -92,6 +94,7 @@ export class ReviewEligibility {
         jobId,
         offer: offerOf(reason),
         reason,
+        review,
       };
     });
   }

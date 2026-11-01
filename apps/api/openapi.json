@@ -15637,22 +15637,39 @@
         "properties": {
           "state": {
             "type": "string",
-            "description": "write: the driver may still review; rated: a review stands; none: neither",
+            "description": "can_write: the driver may review the job; written: his review stands; removed: MotorFix removed it; expired: the window closed; none: he may not review it",
             "enum": [
-              "write",
-              "rated",
+              "can_write",
+              "written",
+              "removed",
+              "expired",
               "none"
             ]
           },
+          "jobId": {
+            "type": "string",
+            "description": "The job to review",
+            "format": "uuid"
+          },
           "rating": {
             "type": "integer",
-            "description": "Only with rated",
+            "description": "Only with written",
             "maximum": 5,
-            "minimum": 1
+            "minimum": 1,
+            "nullable": true
+          },
+          "reviewId": {
+            "type": "string",
+            "description": "With written and removed",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
-          "state"
+          "state",
+          "jobId",
+          "rating",
+          "reviewId"
         ]
       },
       "CarRepairDto": {
@@ -15688,7 +15705,7 @@
             "nullable": true
           },
           "review": {
-            "description": "Null on every row until the review drawer ships and fills it for a MotorFix repair",
+            "description": "The review of a MotorFix repair; null for a repair the driver logged",
             "nullable": true,
             "type": "object",
             "allOf": [

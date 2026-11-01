@@ -6,10 +6,12 @@ import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client';
+import { ReviewEligibility } from '../../reviews/eligibility/eligibility';
 import {
   REPAIR_ORDER,
   REPAIR_ROW_SELECT,
   repairWhere,
+  reviewsOf,
   toRow,
 } from '../history/history';
 
@@ -20,7 +22,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // edits a later release brings.
 @Injectable()
 export class RepairsService {
-  constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+  constructor(
+    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    private readonly eligibility: ReviewEligibility,
+  ) {}
 
   async list(actor: Actor, query: RepairsQueryDto): Promise<RepairListDto> {
     const rows = await this.openRows(actor, query.carId);
@@ -41,11 +46,12 @@ export class RepairsService {
     const page = repairs.slice(0, size);
     const rowOf = new Map(rows.map((row) => [row.carId, row]));
     const language = actor.language ?? 'ro';
+    const reviews = await reviewsOf(this.eligibility, actor, page);
     return {
       // Every repair matched one of these rows, so none is dropped.
       items: page.flatMap((repair) => {
         const row = rowOf.get(repair.car.id);
-        return row ? [toRow(repair, row, language)] : [];
+        return row ? [toRow(repair, row, language, reviews)] : [];
       }),
       nextCursor: repairs.length > size ? (page.at(-1)?.id ?? null) : null,
     };

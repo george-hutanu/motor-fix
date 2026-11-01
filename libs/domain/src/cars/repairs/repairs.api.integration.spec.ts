@@ -20,6 +20,7 @@ import {
   testConfig,
   testPhoneConfig,
 } from '../../notifications/notifications.testing';
+import { ReviewEligibility } from '../../reviews/eligibility/eligibility';
 import { CarHistoryModule } from '../history/history.module';
 import { motorFixRepair } from '../history/history.testing';
 import { CarsModule } from '../my-cars/cars/cars.module';
@@ -245,7 +246,7 @@ describe('GET /repairs', () => {
     const logan = await world.car(andrei.id);
     const passed = await logged(logan.id, 300, 'Passed on');
     await logged(logan.id, 200, 'Kept back');
-    const { repair: motorfix } = await motorFixRepair(
+    const { job, repair: motorfix } = await motorFixRepair(
       prisma,
       andrei.id,
       logan.id,
@@ -261,7 +262,13 @@ describe('GET /repairs', () => {
         (r: { fromPreviousOwner: boolean }) => r.fromPreviousOwner,
       ),
     ).toBe(true);
-    expect(hers.body.items[0].review).toBeNull();
+    expect(hers.body.items[0].review).toEqual({
+      jobId: job.id,
+      rating: null,
+      reviewId: null,
+      state: 'none',
+    });
+    expect(hers.body.items[1].review).toBeNull();
     expect((await list(andrei.auth)).body.items).toEqual([]);
   });
 
@@ -339,7 +346,9 @@ describe('GET /repairs', () => {
     const res = await list(andrei.auth);
     const body = JSON.stringify(res.body);
 
-    expect(res.body.items[0].review).toBeNull();
+    expect(res.body.items[0].review).toEqual(
+      expect.objectContaining({ rating: null, state: 'removed' }),
+    );
     for (const text of [body, lines.join('\n')]) {
       expect(text).not.toContain('B123ABC');
       expect(text).not.toContain(andrei.phone);
@@ -347,6 +356,139 @@ describe('GET /repairs', () => {
       expect(text).not.toMatch(/@example/);
       expect(text).not.toContain('Foarte bine');
     }
+  });
+});
+
+// @traces 026-FR-001 026-FR-002 026-FR-003 026-FR-004 026-FR-006 026-FR-007 026-FR-008
+describe('the review state of each row of GET /repairs', () => {
+  const reviewOf = async (auth: string) => {
+    const res = await list(auth);
+    expect(res.status).toBe(200);
+    return res.body.items.map((r: { review: unknown }) => r.review);
+  };
+
+  it('offers the review of a handed-over job with none, and nothing for a logged repair', async () => {
+    const { andrei } = await people();
+    const golf = await world.car(andrei.id);
+    await logged(golf.id, 40, 'Schimb ulei');
+    const { job } = await motorFixRepair(prisma, andrei.id, golf.id);
+
+    const res = await list(andrei.auth);
+
+    expect(res.body.items[0].review).toEqual({
+      jobId: job.id,
+      rating: null,
+      reviewId: null,
+      state: 'can_write',
+    });
+    expect(res.body.items[1].source).toBe('logged');
+    expect(res.body.items[1].review).toBeNull();
+  });
+
+  it('still offers it to a driver whose e-mail is not confirmed', async () => {
+    const { andrei } = await people();
+    await prisma.account.update({
+      data: { emailVerifiedAt: null },
+      where: { id: andrei.id },
+    });
+    const golf = await world.car(andrei.id);
+    await motorFixRepair(prisma, andrei.id, golf.id);
+
+    expect((await reviewOf(andrei.auth))[0].state).toBe('can_write');
+  });
+
+  it('offers it again once the driver deleted his review, with no id', async () => {
+    const { andrei } = await people();
+    const golf = await world.car(andrei.id);
+    const { job } = await motorFixRepair(prisma, andrei.id, golf.id, {
+      review: { rating: 4, status: 'deleted_by_author' },
+    });
+
+    expect(await reviewOf(andrei.auth)).toEqual([
+      { jobId: job.id, rating: null, reviewId: null, state: 'can_write' },
+    ]);
+  });
+
+  it.each([
+    ['published', 5],
+    ['reported', 2],
+  ] as const)(
+    'answers a %s review as written with its rating and id',
+    async (status, rating) => {
+      const { andrei } = await people();
+      const golf = await world.car(andrei.id);
+      const { job } = await motorFixRepair(prisma, andrei.id, golf.id, {
+        review: { rating, status },
+      });
+      const review = await prisma.review.findFirstOrThrow({
+        where: { jobId: job.id },
+      });
+
+      expect(await reviewOf(andrei.auth)).toEqual([
+        { jobId: job.id, rating, reviewId: review.id, state: 'written' },
+      ]);
+    },
+  );
+
+  it('answers a removed review with its id and no rating', async () => {
+    const { andrei } = await people();
+    const golf = await world.car(andrei.id);
+    const { job } = await motorFixRepair(prisma, andrei.id, golf.id, {
+      review: { rating: 1, status: 'removed' },
+    });
+    const review = await prisma.review.findFirstOrThrow({
+      where: { jobId: job.id },
+    });
+
+    expect(await reviewOf(andrei.auth)).toEqual([
+      { jobId: job.id, rating: null, reviewId: review.id, state: 'removed' },
+    ]);
+  });
+
+  it('answers none for a job at a garage where the driver is staff, and for a job not done', async () => {
+    const { andrei } = await people();
+    const golf = await world.car(andrei.id);
+    const { garage } = await motorFixRepair(prisma, andrei.id, golf.id, {
+      daysAgo: 5,
+    });
+    await prisma.garageMember.create({
+      data: { accountId: andrei.id, garageId: garage.id, role: 'receptionist' },
+    });
+    const { job: open } = await motorFixRepair(prisma, andrei.id, golf.id, {
+      daysAgo: 20,
+      garageName: 'Atelier Dinamo',
+    });
+    await prisma.job.update({
+      data: { status: 'in_work' },
+      where: { id: open.id },
+    });
+
+    const states = (await reviewOf(andrei.auth)).map(
+      (r: { state: string }) => r.state,
+    );
+
+    expect(states).toEqual(['none', 'none']);
+  });
+
+  it('judges a page once, whatever its length, and not at all with no MotorFix row', async () => {
+    const { andrei, maria } = await people();
+    const golf = await world.car(andrei.id);
+    for (let n = 0; n < 3; n += 1) {
+      await motorFixRepair(prisma, andrei.id, golf.id, {
+        daysAgo: n + 1,
+        garageName: `Garaj ${n}`,
+      });
+    }
+    const logan = await world.car(maria.id);
+    await logged(logan.id, 3);
+    const judge = vi.spyOn(app.get(ReviewEligibility), 'judge');
+
+    expect(await reviewOf(andrei.auth)).toHaveLength(3);
+    expect(judge).toHaveBeenCalledTimes(1);
+
+    judge.mockClear();
+    expect(await reviewOf(maria.auth)).toEqual([null]);
+    expect(judge).not.toHaveBeenCalled();
   });
 });
 
