@@ -26,7 +26,7 @@
     "@opentelemetry/api-logs": "0.223.0",
     "@opentelemetry/core": "2.12.0",
     "@opentelemetry/exporter-logs-otlp-proto": "0.223.0",
-    "@opentelemetry/exporter-metrics-otlp-proto": "0.223.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "0.300.0",
     "@opentelemetry/exporter-trace-otlp-proto": "0.223.0",
     "@opentelemetry/instrumentation": "0.223.0",
     "@opentelemetry/instrumentation-http": "0.223.0",
