@@ -18,6 +18,8 @@ import {
 import {
   canMute,
   consentChange,
+  type FallbackRecord,
+  fallbackFor,
   isDriverChoice,
   type NewsConsent,
   newsConsentView,
@@ -65,17 +67,33 @@ export class NotificationPreferencesService {
 
   async read(actor: Actor): Promise<NotificationPreferencesDto> {
     const { accountId } = actor;
-    const [rows, consent, phoneVerified, pushDevice, used] = await Promise.all([
-      this.rows(this.prisma, accountId),
-      this.newsConsent(this.prisma, accountId),
-      this.phoneVerified(this.prisma, accountId),
-      this.pushDevice(this.prisma, accountId),
-      smsUsed(this.prisma, accountId, new Date()),
-    ]);
+    const [rows, consent, phoneVerified, pushDevice, used, fallbacks] =
+      await Promise.all([
+        this.rows(this.prisma, accountId),
+        this.newsConsent(this.prisma, accountId),
+        this.phoneVerified(this.prisma, accountId),
+        this.pushDevice(this.prisma, accountId),
+        smsUsed(this.prisma, accountId, new Date()),
+        this.fallbacks(accountId),
+      ]);
+    const { groups, preferences } = preferencesView(rows, pushDevice);
     return {
-      ...preferencesView(rows, pushDevice),
+      groups,
       newsConsent: newsConsentView(consent),
       phoneVerified,
+      preferences: preferences.map((entry) =>
+        entry.garageId === null
+          ? {
+              ...entry,
+              fallback: fallbackFor(
+                fallbacks.get(entry.type),
+                entry.channel,
+                rows.find((r) => r.type === entry.type && r.garageId === null)
+                  ?.updatedAt,
+              ),
+            }
+          : entry,
+      ),
       pushDevice,
       sms: { cap: SMS_PER_MONTH, used },
       staff: await this.staff(actor, rows),
@@ -299,10 +317,35 @@ export class NotificationPreferencesService {
   ): Promise<PreferenceRow[]> {
     const rows = await client.notificationPreference.findMany({
       orderBy: [{ type: 'asc' }, { channel: 'asc' }],
-      select: { channel: true, enabled: true, garageId: true, type: true },
+      select: {
+        channel: true,
+        enabled: true,
+        garageId: true,
+        type: true,
+        updatedAt: true,
+      },
       where: { accountId },
     });
     return rows.map((r) => ({ ...r, channel: r.channel as OutsideChannel }));
+  }
+
+  private async fallbacks(
+    accountId: string,
+  ): Promise<Map<string, FallbackRecord>> {
+    const records = await this.prisma.notificationFallback.findMany({
+      select: { at: true, from: true, reason: true, to: true, type: true },
+      where: { accountId },
+    });
+    return new Map(
+      records.map(({ type, ...r }) => [
+        type,
+        {
+          ...r,
+          from: r.from as OutsideChannel,
+          to: r.to as OutsideChannel,
+        },
+      ]),
+    );
   }
 
   // What a save that switches news records about consent, by type; turning
