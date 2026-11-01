@@ -63,7 +63,7 @@
                   </span>
                 </td>
                 <td class="count">{{ row.unmet }}</td>
-                <td class="state">
+                <td class="state" [class.none]="!row.lamp">
                   @if (row.lamp) {
                     <mf-lamp state="red" [label]="'admin.demand.supply.noSupply' | t" />
                   }

@@ -121,7 +121,7 @@ td:last-child {
     border-top: 0;
     min-width: 0;
   }
-  td.state:empty {
+  td.state.none {
     display: none;
   }
   .count {
