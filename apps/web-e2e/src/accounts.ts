@@ -81,9 +81,12 @@ export async function listening(page: Page, path?: string) {
 // interactive map cannot load).
 // On a phone the sheet can rest over the control, which then hides
 // (static-map.css): a tap on whatever part of the image shows still asks.
+// With the consent bar asking on a 320 x 568 phone the sheet, drawn above
+// the bar, can hide the whole image: the driver lowers it by its handle first.
 export async function openMap(page: Page) {
   const still = page.locator('mf-results-map mf-static-map');
   const button = still.getByRole('button');
+  const handle = page.locator('mf-results-sheet button.handle');
   await expect(async () => {
     if (await button.isVisible()) return button.click({ timeout: 1_000 });
     const spot = await still.evaluate((map) => {
@@ -98,6 +101,9 @@ export async function openMap(page: Page) {
         map.contains(document.elementFromPoint(box.left + x, box.top + y)),
       );
     });
+    if (!spot && (await handle.isVisible())) {
+      await handle.click({ timeout: 1_000 });
+    }
     expect(spot).toBeDefined();
     await still.click({ position: spot, timeout: 1_000 });
   }).toPass({ timeout: 15_000 });
