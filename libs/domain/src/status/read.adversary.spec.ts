@@ -32,13 +32,13 @@ const row = (
 });
 
 const fake = (rows: unknown[] | Error) => {
-  const findMany = jest.fn(async () => {
+  const findMany = vi.fn(async () => {
     if (rows instanceof Error) {
       throw rows;
     }
     return rows;
   });
-  const write = jest.fn();
+  const write = vi.fn();
   const prisma = {
     statusTile: {
       create: write,

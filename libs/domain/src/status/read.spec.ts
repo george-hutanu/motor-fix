@@ -1,4 +1,5 @@
 import type { TileKey, TileState } from '@motor-fix/contracts';
+import type { Mock } from 'vitest';
 
 import { readStatus } from './read';
 import type { TileRow } from './tiles';
@@ -37,14 +38,14 @@ const greens = () => [
 ];
 
 const fake = (rows: TileRow[]) => {
-  const findMany = jest.fn(async () => rows);
+  const findMany = vi.fn(async () => rows);
   const prisma = {
     statusTile: {
-      create: jest.fn(),
+      create: vi.fn(),
       findMany,
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      upsert: jest.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      upsert: vi.fn(),
     },
   } as unknown as PrismaClient;
   return { findMany, prisma };
@@ -132,9 +133,8 @@ describe('reading the six tiles', () => {
 
     await readStatus(prisma, NOW);
 
-    const store = (
-      prisma as unknown as { statusTile: Record<string, jest.Mock> }
-    ).statusTile;
+    const store = (prisma as unknown as { statusTile: Record<string, Mock> })
+      .statusTile;
     expect([
       findMany.mock.calls.length,
       store['create']?.mock.calls.length,
