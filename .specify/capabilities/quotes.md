@@ -36,6 +36,7 @@ features:
   - 346-quote-outcomes
   - 1384-confirm-dialog-lift
   - 1259-no-show
+  - 151-lift-timeline
 ---
 
 # Capability: Quotes
@@ -744,9 +745,9 @@ _From 428-close-on-account-closed._
 
 _From 292-saved-garage-quote._
 
-### 427-FR-011 — (150-FR-009 modified) The schedule read `GET /api/v1/garages/:garageId/schedule` MUST gain `blocks`: the blocks whose segments touch a day of the range, each `id`, `mechanic` (id and name, or null), `lift` (only while `lift_schedule` is on, as for entries), `startsAt`, `endsAt`, `note`, `segments`; the owner and a receptionist read every block, a mechanic the blocks on her own card, or all of them while her card has `can_move_bookings` (the `lift` and `mechanicId` filters apply to blocks as to entries: `mechanicId=X` matches `mechanic_id = X` only, so a lift-only block never passes it, for every role); `GarageScheduleService.list` is extended so the MCP `get_schedule` tool returns `blocks` too. The `GET time-blocks` list of FR-003 returns the same block shape.
+### 151-FR-003 — The schedule read MUST gain, additively and for every caller (the MCP `get_schedule` tool included), `liftCount` (the garage's lift count, 0 while it schedules without lifts) and `days`: for each day of the range, the day (`YYYY-MM-DD`) and the garage's open intervals that day as "HH:MM" pairs, from its weekly hours and its closed days (an empty list on a closed day; an empty list for every day while the garage never sent its hours, flagged `hoursSet: false` on the whole answer). The existing fields, filters and role rules (427-FR-011, 102-FR-008) do not change.
 
-_From 427-time-blocks._
+_From 151-lift-timeline._
 
 ### 150-FR-010 — `booking.confirmed` and `booking.cancelled` of a booking with a mechanic MUST reach `garage:{garageId}` and `mechanic:{mechanicId}` (and the driver's account), as `audienceOf` already resolves the `booking` subject; this story verifies it by test and adds no event, channel or payload field; `booking.lapsed` keeps its driver-and-garage audience (a lapsed booking has no mechanic).
 
@@ -944,6 +945,10 @@ _From 1259-no-show._
 
 _From 1259-no-show._
 
+### 151-FR-002 — The panel MUST read today's schedule through the existing schedule read (`GET /api/v1/garages/:garageId/schedule`, today by default), with no new write, event or notification; it emits nothing and writes no audit history.
+
+_From 151-lift-timeline._
+
 ## Retired
 
 - `220-FR-001` — superseded by `221-FR-008` (2026-10-09)
@@ -991,3 +996,4 @@ _From 1259-no-show._
 - `343-FR-011` — superseded by `1316-FR-001` (2026-10-30)
 - `389-FR-014` — superseded by `1384-FR-001` (2026-10-31)
 - `220-FR-008` — superseded by `1259-FR-006` (2026-10-31)
+- `427-FR-011` — superseded by `151-FR-003` (2026-10-31)
