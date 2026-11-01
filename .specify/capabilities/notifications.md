@@ -1,6 +1,6 @@
 ---
 capability: notifications
-updated: 2026-10-31
+updated: 2026-11-01
 features:
   - 194-email-sending
   - 195-message-templates
@@ -66,6 +66,7 @@ features:
   - 1374-channel-fallback-hint
   - 1259-no-show
   - 1411-1315-qa-fixes
+  - 1415-channel-hint
 ---
 
 # Capability: Notifications
@@ -590,9 +591,9 @@ _From 138-notification-switches._
 
 _From 138-notification-switches._
 
-### 142-FR-007 — Every text this story adds MUST exist in Romanian and English (type names, the option labels, the two hints, the usage line, the always-sent mark, the disclosure's accessible name), Romanian words joined by a hyphen using U+2011; the panel MUST work on a 320 px phone, a 390 px phone, a tablet and a desktop, in light and dark, with no sideways scroll, the options wrapping onto a second line at 320 px, each option a 44 px tap target; every picker MUST be operable by keyboard as a radio group with the type's name as accessible name and the hint as description; a disabled option MUST be exposed as disabled.
+### 1415-FR-004 — Every text this story adds MUST exist in Romanian and English in the driver's lazy-loaded texts, Romanian words joined by a hyphen using U+2011; the hint MUST render on a 320 px phone, a 390 px phone, a tablet and a desktop, in light and dark, as one paragraph wrapping under the picker with no sideways scroll, in the panel's secondary text style (the same as the group hints), and MUST be part of the PR QA run's screenshots of the driver's Setări with an open group carrying a fallback, the flow stubbing the preferences read with one.
 
-_From 142-notification-channels._
+_From 1415-channel-hint._
 
 ### 138-FR-013 — Every switch MUST be operable by keyboard and carry its title as accessible name with the helper line as description. The disabled loading state and the first-load error MUST be exposed to assistive technology. The consent step MUST take focus when it opens, close on Escape as a cancel, and return focus to the news switch when it closes.
 
@@ -1134,6 +1135,26 @@ _From 1259-no-show._
 
 _From 1259-no-show._
 
+### 1415-FR-001 — For each driver type whose preferences read carries a non-null `fallback`, the Setări › Notificări panel MUST show one hint under the type's channel picker (or under its channel label when the type has one channel and no picker), inside the group's opened content, in the panel's hint style; a type with null or no `fallback` shows none. The hint is the picker's accessible description (its id after the push-state hint's id of 142-FR-006 in `aria-describedby` when that one is shown; with no picker it describes nothing), has no live-region role and is not announced on its own.
+
+_From 1415-channel-hint._
+
+### 1415-FR-002 — The hint's text MUST be chosen by the fallback's `reason` and, for `send_failed`, by its `from`, and MUST name the channels from the read, rendered with the panel's channel labels (E‑mail, Push, SMS, WhatsApp), never a hard-coded channel; the texts, Romanian / English, are: `no_device`: "Ultimul mesaj a venit pe {to}: nu ai niciun dispozitiv cu notificări push. Permite notificările în acest browser." / "The last message came by {to}: you have no device with push notifications. Allow notifications in this browser." `phone_not_verified`: "Ultimul mesaj a venit pe {to}: numărul de telefon nu este confirmat. Confirmă‑l în Datele tale." / "The last message came by {to}: your phone number is not confirmed. Confirm it in Your details." `sms_cap_reached`: "Ultimul mesaj a venit pe {to}: ai folosit toate SMS‑urile lunii." / "The last message came by {to}: you have used this month's SMS." `send_failed`, `from` e-mail: "Ultimul mesaj a venit pe {to}: trimiterea pe {from} a eșuat. Verifică adresa de e‑mail în Datele tale." / "The last message came by {to}: sending by {from} failed. Check your e-mail address in Your details." `send_failed`, `from` SMS or WhatsApp: "Ultimul mesaj a venit pe {to}: trimiterea pe {from} a eșuat. Verifică numărul de telefon în Datele tale." / "The last message came by {to}: sending by {from} failed. Check your phone number in Your details." `send_failed`, `from` push: "Ultimul mesaj a venit pe {to}: trimiterea pe {from} a eșuat. Permite notificările în acest browser." / "The last message came by {to}: sending by {from} failed. Allow notifications in this browser." A `reason`, `from` or `to` outside the known values MUST show no hint and MUST NOT break the panel; `from` equal to `to` is shown as given; the hint shows whether or not the type's group is switched on. The fallback's `at` is not shown.
+
+_From 1415-channel-hint._
+
+### 1415-FR-003 — When the driver picks another channel for a type with a hint and the save answers 2xx, the panel MUST remove that type's hint at once, without a re-read; a failed save, or a push pick refused before any save, MUST keep it. A hint removed this way stays removed until the next completed read. The panel's existing re-read on a live preference update (138-FR-011) MUST refresh every hint from the new read (shown, changed or removed).
+
+_From 1415-channel-hint._
+
+### 1415-FR-005 — The change MUST stay on the lazy driver-notifications route: nothing is added to the web app's first-page bundle (the budget is not raised), and no server, contract or generated-client change is made here; the read is ST-1374's. The panel MUST treat an absent `fallback` field (a server without ST-1374) exactly as null.
+
+_From 1415-channel-hint._
+
+### 1415-FR-006 — Each reason's text in both languages, the three `send_failed` variants, the channel labels from the read, the single-channel placement, the null and absent cases, an unknown reason, the removal on a successful pick, the stay on a failed pick, the refresh on a live update and the picker's description MUST each be a component test of the panel (Jest, colocated), carrying a `// @traces` line naming the `1415-FR-<n>` ids they prove.
+
+_From 1415-channel-hint._
+
 ## Retired
 
 - `194-FR-007` — superseded by `195-FR-005` (2026-10-04)
@@ -1169,3 +1190,4 @@ _From 1259-no-show._
 - `198-FR-007` — superseded by `1407-FR-001` (2026-10-31)
 - `199-FR-004` — superseded by `1407-FR-002` (2026-10-31)
 - `199-FR-005` — superseded by `1407-FR-003` (2026-10-31)
+- `142-FR-007` — superseded by `1415-FR-004` (2026-11-01)
