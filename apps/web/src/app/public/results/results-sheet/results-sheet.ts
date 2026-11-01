@@ -40,6 +40,7 @@ const NEXT: Record<SheetPosition, SheetPosition> = {
     '(document:focusout)': 'typing.set(false)',
     '(window:popstate)': 'popped()',
     '[attr.data-position]': 'position()',
+    '[class.forced]': "forcedFull() && position() === 'full'",
     '[class.over-zoom]': 'overZoom()',
     '[class.typing]': 'typing()',
     '[style.--sheet-top.px]': 'top()',

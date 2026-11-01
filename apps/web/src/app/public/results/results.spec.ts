@@ -3133,7 +3133,7 @@ describe('the brand chips and the brand search from a tablet up', () => {
     expect(phone).toMatch(/flex-basis: 100%;/);
   });
 
-  // PR #672 QA lap 5: a sideways-scrolling line at 390 px cut the price
+  // A sideways-scrolling line at 390 px cut the price
   // chip mid-word and hid the rating and card chips past the screen's edge.
   it('gives the filters line its own row on a phone once a filter is on, every chip whole', () => {
     const filters =
@@ -3421,7 +3421,7 @@ describe('the phone results screen in the stylesheet', () => {
 
   // The bar lies over the stage, the sheet does not: its rests are drawn
   // above the bar, so a half sheet at 390 px shows "Filtre" and the filter
-  // chips whole rather than cut by the bar (PR #672 QA lap 4).
+  // chips whole rather than cut by the bar.
   it('ends the sheet above the consent bar while the bar lies over the stage', () => {
     const short =
       css.match(
@@ -5147,7 +5147,7 @@ describe('Results filters', () => {
     });
 
     // @traces 1399-FR-007 1399-FR-008
-    // PR #672 QA lap 5: at 390 px the half sheet cut the state's heading.
+    // At 390 px the half sheet cut the state's heading.
     it('takes the sheet full on a phone so the state shows whole, and back to half once the filters are cleared', async () => {
       pinsAnswer = pinsOf(3);
       await shown(

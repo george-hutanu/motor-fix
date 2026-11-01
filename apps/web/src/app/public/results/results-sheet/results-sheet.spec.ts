@@ -139,8 +139,8 @@ describe('ResultsSheet on a phone', () => {
   });
 
   // A header taller than the whole stage (320 px, the consent bar open):
-  // the sheet never rises out of its cell over "Schimbă locul" (PR #672 QA,
-  // the change button and the handle overlapped by 4.6 px).
+  // the sheet never rises out of its cell over "Schimbă locul" (the change
+  // button and the handle overlapped by 4.6 px).
   it('never rests above its cell when the header is taller than the stage', async () => {
     jest
       .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
@@ -163,7 +163,7 @@ describe('ResultsSheet on a phone', () => {
   // A header taller than the whole stage (320 px, the consent bar asking):
   // the header scrolls inside the sheet, so "Filtre" and the filter chips
   // under the brand search stay reachable, and the rests read the header's
-  // whole height, not the part the sheet shows (PR #672 QA lap 4).
+  // whole height, not the part the sheet shows.
   it('scrolls a header taller than the stage and reads its whole height for the rests', async () => {
     jest
       .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
@@ -636,6 +636,33 @@ describe('ResultsSheet forced full across 768 px', () => {
     expect(push).not.toHaveBeenCalled();
     expect(back).not.toHaveBeenCalled();
   });
+  // At 390 px with the consent bar asking, the header (chips, brand search,
+  // filter chips, sorts) took nearly the whole forced sheet and cut the
+  // filtered empty state's heading and "Scoate filtrele": forced full, the
+  // header keeps a third of the sheet and scrolls, and the list fills the
+  // rest.
+  // @traces 1399-FR-007 1399-FR-008
+  it('keeps the header to a third of a forced sheet, so its list shows whole', async () => {
+    await render();
+    fixture.componentInstance.forced.set(true);
+    await settle();
+
+    expect(host().classList.contains('forced')).toBe(true);
+
+    await drag(100, 500);
+    expect(host().classList.contains('forced')).toBe(false);
+
+    const css = readFileSync(join(__dirname, 'results-sheet.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    const top = css.match(/:host\(\.forced\) \.top \{([^}]*)\}/)?.[1] ?? '';
+    const body = css.match(/:host\(\.forced\) \.body \{([^}]*)\}/)?.[1] ?? '';
+    expect(top).toMatch(/max-height: max\(var\(--mf-tap\), 33%\);/);
+    expect(body).toMatch(/flex: 1 1 auto;/);
+    expect(body).toMatch(/height: auto;/);
+    expect(body).toMatch(/min-height: 0;/);
+  });
+
   it('stays full when the map failed', async () => {
     layout.set('tablet');
     await render();
