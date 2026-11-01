@@ -753,18 +753,20 @@ describe('who may act', () => {
       const submitted = await fileIn('submitted');
       const verification = service();
 
+      // Each started only when awaited: a refusal nobody awaits yet is unhandled.
       const calls = [
-        inTx((tx) => verification.open(tx, outsider, submitted.id)),
-        inTx((tx) =>
-          verification.decide(tx, outsider, submitted.id, {
-            outcome: 'approved',
-          }),
-        ),
-        inTx((tx) => verification.reopen(tx, outsider, submitted.id)),
+        () => inTx((tx) => verification.open(tx, outsider, submitted.id)),
+        () =>
+          inTx((tx) =>
+            verification.decide(tx, outsider, submitted.id, {
+              outcome: 'approved',
+            }),
+          ),
+        () => inTx((tx) => verification.reopen(tx, outsider, submitted.id)),
       ];
 
       for (const call of calls) {
-        expect((await refusal(call)).status).toBe(404);
+        expect((await refusal(call())).status).toBe(404);
       }
       expect(
         (

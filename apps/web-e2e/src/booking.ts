@@ -70,14 +70,22 @@ async function acceptedBooking(
   const jobs = await request.get('/api/v1/job-types?keys=oil-service');
   const [oil] = ((await jobs.json()) as { items: { id: string }[] }).items;
   const driver = await accessToken(request, email);
-  const cars = await request.get('/api/v1/cars', { headers: bearer(driver) });
-  const { items } = (await cars.json()) as {
-    items: { id: string; model: string }[];
+  // The first list after a sign-in is the one warmed then (cars.controller.ts),
+  // older than a car ownDriver writes straight to PostgreSQL: it can come
+  // back empty, and the next one reads the table.
+  const listCars = async () => {
+    const cars = await request.get('/api/v1/cars', { headers: bearer(driver) });
+    expect(cars.ok()).toBe(true);
+    return ((await cars.json()) as { items: { id: string; model: string }[] })
+      .items;
   };
+  let items = await listCars();
+  if (items.length === 0) items = await listCars();
   const car = items.find((item) => item.model === 'Logan') ?? items[0];
+  expect(car, `${email} has no car`).toBeDefined();
   const sent = await request.post('/api/v1/quote-requests', {
     data: {
-      carId: car.id,
+      carId: car?.id,
       description: `Schimb de ulei și filtre ${randomUUID().slice(0, 8)}`,
       garageIds: [garageId],
       jobTypeIds: [oil.id],

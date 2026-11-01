@@ -61,10 +61,12 @@ features:
   - 1254-assistant-approvals
   - 277-car-status-alerts
   - 409-garage-corrects-repair
+  - 1259-no-show
   - 1267-admin-corrects-repair
   - 1315-optimistic-toggles
+  - 1407-toggle-idempotency
+  - 179-remove-reported-review
   - 1374-channel-fallback-hint
-  - 1259-no-show
   - 1411-1315-qa-fixes
   - 1415-channel-hint
 ---
@@ -1134,6 +1136,14 @@ _From 1259-no-show._
 ### 1259-FR-008 — The notifications module MUST add the kind NO_SHOW_WITHDRAWN (event, e-mail, push and WhatsApp, group `bookings`, mutable, never held for quiet hours), sent to the booking's driver once per `booking.no_show_withdrawn`, with texts: bell and push "<garage> a retras neprezentarea · programarea din <day> <time> rămâne valabilă" / "<garage> withdrew the no-show · your booking on <day> <time> stands", e-mail and WhatsApp the same with the link to the driver's requests; the bell entry links to Cererile mele. The kind joins the catalogue, the templates registry, the bell link map, the driver's channel preferences under Programare and the kinds the preferences screen lists.
 
 _From 1259-no-show._
+
+### 179-FR-011 — On every `review.decided` event with decision `removed`, a new fan-out consumer (queue `review-decided`, built as `review-replied` is, retried as it is) MUST send REVIEW_DECIDED (the existing catalogue entry: event kind, e-mail, push and WhatsApp as the account allows, group `reviews_history`) once to the review's author and once to each active owner of the garage, each in the recipient's language, with the target's wording: for a review, to the author "MotorFix a șters recenzia ta pentru {garage}: {rule}. Poți contesta o dată, în 14 zile." / "MotorFix removed your review of {garage}: {rule}. You can appeal once, within 14 days.", to the owner "Recenzia lui {author} a fost ștearsă: {rule}." / "{author}'s review was removed: {rule}."; for a reply, to the owner "MotorFix a șters răspunsul tău la recenzia lui {author}: {rule}." / "MotorFix removed your reply to {author}'s review: {rule}.", to the author "Răspunsul service-ului {garage} la recenzia ta a fost șters: {rule}." / "{garage}'s reply to your review was removed: {rule}.". The wording is proposed; the facts (the rule named, the appeal line for the author's review only, no reporter ever named) are not. The author's message MUST name neither the reporter nor the report's source. A deleted author account or a garage with no active owner is skipped silently, as the reply fan-out does.
+
+_From 179-remove-reported-review._
+
+### 179-FR-012 — The driver's notification MUST open Recenziile mele and the garage's its Recenzii view when tapped (the bell's existing link map), as REVIEW_REPLIED does; the staff list already carries REVIEW_DECIDED (no change there).
+
+_From 179-remove-reported-review._
 
 ### 1415-FR-001 — For each driver type whose preferences read carries a non-null `fallback`, the Setări › Notificări panel MUST show one hint under the type's channel picker (or under its channel label when the type has one channel and no picker), inside the group's opened content, in the panel's hint style; a type with null or no `fallback` shows none. The hint is the picker's accessible description (its id after the push-state hint's id of 142-FR-006 in `aria-describedby` when that one is shown; with no picker it describes nothing), has no live-region role and is not announced on its own.
 

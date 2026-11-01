@@ -390,6 +390,19 @@
     },
     {
       "kind": "queue",
+      "name": "review-decided",
+      "source": "libs/domain/src/notifications/review-decided/review-decided.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_review_decision_announced_total (built, muted, skipped) on motorfix-product, with one ReviewDecided log line per event naming the review id; BullMQ queue metrics cover depth and failures",
+      "story": "ST-179"
+    },
+    {
+      "kind": "queue",
       "name": "verification-result",
       "source": "libs/domain/src/notifications/verification-result/verification-result.fan-out.ts",
       "dashboard": "motorfix-queues",
@@ -1049,6 +1062,15 @@
       "alerts": "none",
       "reason": "counts each garage reply announced to the review's author by outcome (built, muted, skipped), with the fan-out's log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-75"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_decision_announced_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each removal told to the review author and the garage owners by outcome (built, muted, skipped), with the fan-out log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
+      "story": "ST-179"
     },
     {
       "kind": "endpoint",
@@ -3032,6 +3054,28 @@
       ],
       "reason": "the admins' queue of pending review reports with the facts, read from PostgreSQL in a fixed number of queries per page and written nowhere; reading it is not logged or audited; a 400 on a bad page or a 404 for a non-admin is the rule working; the API error-rate and latency rules cover the route; no outside call",
       "story": "ST-177"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-review-decision",
+      "source": "libs/domain/src/reviews/report-queue/report-queue.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/review-reports/{reviewId}/decision",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each decision counts motorfix_review_decisions_total, moves the one pending report under a guard so two admins cannot both decide it, removes the review or the reply and writes their audit entries and one review.decided event in one transaction; a 409 or a 404 for a non-admin is the rule working; no outside call",
+      "story": "ST-179"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_decisions_total",
+      "source": "libs/domain/src/reviews/reviews.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each decision an admin tries by outcome (removed, already_decided, no_pending_report) with the target and rule, no identifiers; a refusal is the queue state, not an outage; the api-error-rate rule covers the endpoint that reports it",
+      "story": "ST-179"
     },
     {
       "kind": "queue",

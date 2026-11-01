@@ -355,6 +355,8 @@ export type { ResponseRateDto } from './models/response-rate-dto';
 export type { RestoreAccountDto } from './models/restore-account-dto';
 export type { RestoreGarageDto } from './models/restore-garage-dto';
 export type { RestoreRecheckDto } from './models/restore-recheck-dto';
+export type { ReviewDecisionDto } from './models/review-decision-dto';
+export type { ReviewDecisionResultDto } from './models/review-decision-result-dto';
 export type { ReviewDto } from './models/review-dto';
 export type { ReviewEligibilityDto } from './models/review-eligibility-dto';
 export type { ReviewJobDto } from './models/review-job-dto';
