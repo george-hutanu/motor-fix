@@ -1,5 +1,12 @@
 import { FreeSlotsDto, FreeSlotsQueryDto } from '@motor-fix/contracts';
-import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -11,12 +18,13 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { FreeSlotsGuard } from './free-slots.guard';
 import { FreeSlotsService } from './free-slots.service';
 import { CurrentActor } from '../../auth/actor.guard';
 import type { Actor } from '../../auth/policy';
 
-// No capability: the staff and the drivers who may ask are told apart in the
-// service, which answers everyone else 404.
+// No capability: FreeSlotsGuard tells apart the staff and the drivers who
+// may ask, before the query is validated, and answers everyone else 404.
 @ApiTags('garages')
 @ApiBearerAuth()
 @Controller('garages/:garageId/free-slots')
@@ -24,6 +32,7 @@ export class FreeSlotsController {
   constructor(private readonly slots: FreeSlotsService) {}
 
   @Get()
+  @UseGuards(FreeSlotsGuard)
   @ApiOperation({
     operationId: 'garageFreeSlots',
     summary: 'The first starts at which a job of the asked length fits',
