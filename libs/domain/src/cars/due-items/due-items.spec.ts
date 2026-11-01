@@ -208,3 +208,40 @@ describe('the order of the rows', () => {
     expect(dueItems([...cars].reverse(), TODAY)).toEqual(dueItems(cars, TODAY));
   });
 });
+
+// @traces 093-FR-002
+describe('the count of items due soon', () => {
+  const soon = (cars: DueCar[]) => dueItems(cars, TODAY).dueSoonCount;
+
+  it('counts a passed item and an item at day 60, never day 61', () => {
+    expect(soon([itpIn(-3)])).toBe(1);
+    expect(soon([itpIn(60)])).toBe(1);
+    expect(soon([itpIn(61)])).toBe(0);
+  });
+
+  it('never counts an undated or a green row', () => {
+    expect(soon([car(), itpIn(200)])).toBe(0);
+  });
+
+  it('counts an oil row whose kilometres are reached', () => {
+    expect(
+      soon([car({ itpUntil: addDays(TODAY, 200), nextServiceKm: 148_200 })]),
+    ).toBe(1);
+  });
+
+  it('counts an oil row whose estimated day is within 60 days', () => {
+    // 1,000 km at the default pace is 30 days.
+    expect(
+      soon([car({ itpUntil: addDays(TODAY, 200), nextServiceKm: 149_200 })]),
+    ).toBe(1);
+  });
+
+  it('counts the cars apart from the rows', () => {
+    const out = dueItems(
+      [car(), itpIn(5, { id: '00000000-0000-4000-8000-000000000002' })],
+      TODAY,
+    );
+    expect(out.carCount).toBe(2);
+    expect(out.dueSoonCount).toBe(1);
+  });
+});

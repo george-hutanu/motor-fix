@@ -333,7 +333,8 @@ describe('GET /cars/due-items', () => {
     const res = await read(auth);
 
     expect(res.status).toBe(200);
-    // @traces 093-FR-007: the API's default cache header, as the car list's.
+    // The API's default cache header, as the car list's.
+    // @traces 093-FR-007
     const list = await http().get('/cars').set('Authorization', auth);
     expect(res.headers['cache-control']).toBe(list.headers['cache-control']);
     expect(res.body).toEqual({ carCount: 0, dueSoonCount: 0, items: [] });

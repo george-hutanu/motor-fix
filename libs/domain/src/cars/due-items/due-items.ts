@@ -16,8 +16,7 @@ export interface DueCar {
 // The card lines' thresholds: red within a week, amber within 60 days.
 const RED_DAYS = 7;
 const AMBER_DAYS = 60;
-// RCA, rovinietă and tyres take their places in this order when they come.
-const KIND_ORDER = ['itp', 'rca', 'rovinieta', 'oil', 'tyres'];
+const KIND_ORDER = ['itp', 'oil'];
 
 function stateOf(daysLeft: number | null, passed: boolean) {
   if (passed) return 'red';

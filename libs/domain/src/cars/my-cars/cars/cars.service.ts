@@ -286,7 +286,6 @@ export class CarsService {
         include: withBrand,
         where: { ownerId_idempotencyKey: { idempotencyKey: key, ownerId } },
       });
-      // A replay after the car was removed: the key's car is gone.
       if (saved?.removedAt) {
         throw refusal(HttpStatus.NOT_FOUND, 'not_found', 'No such car');
       }
@@ -463,7 +462,7 @@ export class CarsService {
     return { items: (await this.active(actor.accountId)).map(answer) };
   }
 
-  async dueItems(ownerId: string, today: string): Promise<DueItemsDto> {
+  async dueItems(ownerId: string): Promise<DueItemsDto> {
     const rows = await this.active(ownerId);
     const cars = rows.map((car) => ({
       id: car.id,
@@ -476,7 +475,7 @@ export class CarsService {
         readOn: day(r.readOn) as string,
       })),
     }));
-    return dueItems(cars, today);
+    return dueItems(cars, localDay(new Date()));
   }
 
   // The owner's cars that are not removed, newest first, in one query.

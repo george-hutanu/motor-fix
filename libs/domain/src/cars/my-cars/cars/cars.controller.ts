@@ -38,7 +38,6 @@ import { CurrentActor, Requires } from '../../../auth/actor.guard';
 import { JsonOnly } from '../../../auth/auth.controller';
 import { refusal } from '../../../auth/http-refusal';
 import type { Actor } from '../../../auth/policy';
-import { localDay } from '../../../bucharest';
 import { CacheService, cacheKey } from '../../../cache/cache.service';
 
 const KEY = 'Idempotency-Key';
@@ -114,7 +113,7 @@ export class CarsController {
   @ApiUnauthorizedResponse({ description: 'sign_in_required' })
   @ApiNotFoundResponse({ description: 'not_found: not a driver' })
   dueItems(@CurrentActor() actor: Actor): Promise<DueItemsDto> {
-    return this.cars.dueItems(actor.accountId, localDay(new Date()));
+    return this.cars.dueItems(actor.accountId);
   }
 
   @Patch(':id')
