@@ -64,7 +64,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const http = () => request(app.getHttpServer());
@@ -536,9 +536,9 @@ describe('what a save writes beside the car', () => {
   it('leaves no car, no event and no role when the history cannot be written', async () => {
     const id = await account('mihai', ['garage']);
     const { id: brandId } = await brand('BMW');
-    jest
-      .spyOn(AuditService.prototype, 'record')
-      .mockRejectedValue(new Error('history unavailable'));
+    vi.spyOn(AuditService.prototype, 'record').mockRejectedValue(
+      new Error('history unavailable'),
+    );
 
     const res = await add(bearer(id, 'garage'), bmw320d(brandId));
 
@@ -594,9 +594,9 @@ describe('the ownership row a car is added with', () => {
   it('leaves no row when the history cannot be written', async () => {
     const { auth, id } = await driver();
     const { id: brandId } = await brand('BMW');
-    jest
-      .spyOn(AuditService.prototype, 'record')
-      .mockRejectedValue(new Error('history unavailable'));
+    vi.spyOn(AuditService.prototype, 'record').mockRejectedValue(
+      new Error('history unavailable'),
+    );
 
     const res = await add(auth, bmw320d(brandId));
 

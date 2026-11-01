@@ -19,7 +19,7 @@ const fakeStorage = (failing: string[] = []) => {
   const deleted: string[] = [];
   return {
     deleted,
-    deleteObject: jest.fn(async (key: string) => {
+    deleteObject: vi.fn(async (key: string) => {
       if (failing.includes(key)) throw new Error(`store down for ${key}`);
       deleted.push(key);
     }),

@@ -131,7 +131,7 @@ describe('ci workflow', () => {
     expect(block).not.toMatch(/^ {4}services:/m);
     expect(block).not.toContain('DATABASE_URL');
     expect(block).not.toContain('REDIS_URL');
-    expect(block).not.toContain('JEST_SUITE: integration');
+    expect(block).not.toContain('TEST_SUITE: integration');
   });
 
   // Like E2E, the integration suite runs by hand; a caller (the release) asks
@@ -355,8 +355,29 @@ describe('ci workflow', () => {
   it.each([
     ['unit', 'Unit tests', 'unit'],
     ['integration', 'Integration tests', 'integration'],
-  ])("the %s job's %s step picks its Jest suite", (id, name, suite) => {
-    expect(setting(step(job(id), name), 'JEST_SUITE')).toBe(suite);
+  ])("the %s job's %s step picks its test suite", (id, name, suite) => {
+    expect(setting(step(job(id), name), 'TEST_SUITE')).toBe(suite);
+  });
+
+  // @traces 1338-FR-005
+  it('runs named integration specs of a Vitest project through Vitest, one file at a time', () => {
+    const run = step(job('integration'), 'Integration tests');
+
+    expect(run).toContain(
+      'npx vitest run --config "$project/vitest.config.mts" --no-file-parallelism',
+    );
+    expect(run).toContain('npx jest --ci --runInBand');
+    expect(run).not.toContain('npx jest --ci --runInBand $files');
+  });
+
+  // @traces 1338-FR-005
+  it('checks the object store through the domain Vitest config', () => {
+    const run = step(job('checks'), 'Compose stack');
+
+    expect(run).toContain(
+      'npx vitest run --config libs/domain/vitest.config.mts libs/domain/src/storage/object-store.integration.spec.ts',
+    );
+    expect(run).not.toContain('jest.config.cts');
   });
 
   // A suite that stalls under the turn lock names its holder and its waiters:
@@ -547,16 +568,37 @@ describe('ci workflow', () => {
 
     // @traces 456-FR-003
     // @traces 1406-FR-006
-    it('runs the named integration specs alone, one Jest run after another, each on an empty audit history', () => {
+    it('runs the named integration specs alone, one run after another, each on an empty audit history', () => {
       expect(
         run('integration', 'Integration tests', NAMED({ REPEAT: '3', SPECS })),
       ).toEqual(
         Array(3)
           .fill([
             'node scripts/clear-activity-log.ts',
-            'jest --ci --runInBand libs/domain/src/store/store.ttl.integration.spec.ts',
+            'vitest run --config libs/domain/vitest.config.mts --no-file-parallelism libs/domain/src/store/store.ttl.integration.spec.ts',
           ])
           .flat(),
+      );
+    });
+
+    // A mistyped name would otherwise walk up from `.` looking for its project.
+    it('refuses a named integration spec that is not a file, before running anything', () => {
+      let out = '';
+      try {
+        run(
+          'integration',
+          'Integration tests',
+          NAMED({
+            REPEAT: '1',
+            SPECS: 'libs/domain/src/nope.integration.spec.ts',
+          }),
+        );
+      } catch (error) {
+        out = String((error as { stdout?: unknown }).stdout);
+      }
+
+      expect(out).toContain(
+        "::error::no spec file at 'libs/domain/src/nope.integration.spec.ts'",
       );
     });
 
@@ -692,8 +734,8 @@ describe('the object store the stack boots', () => {
     const block = step(job('checks'), 'Compose stack');
 
     expect(block).not.toContain('setup');
-    expect(block).toMatch(
-      /npx jest -c libs\/domain\/jest\.config\.cts libs\/domain\/src\/storage\/object-store\.integration\.spec\.ts/,
+    expect(block).toContain(
+      'npx vitest run --config libs/domain/vitest.config.mts libs/domain/src/storage/object-store.integration.spec.ts',
     );
     for (const [name, value] of Object.entries(storageEnv)) {
       expect(block).toContain(`${name}: ${value}`);

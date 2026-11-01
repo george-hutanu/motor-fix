@@ -297,7 +297,7 @@ describe('the outage webhook', () => {
 describe('the outage log', () => {
   it('writes one line per alert naming service, state, fingerprint and admin count, never the token or an address', async () => {
     await people();
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
 
     await post(
       app,

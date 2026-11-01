@@ -6,15 +6,19 @@ import { DIRECT_SEND_QUEUE, DIRECT_SEND_WAIT_MS } from './direct-send';
 import { DirectSend } from './direct-send.client';
 import { DirectSendModule } from './direct-send.module';
 
-jest.mock('bullmq', () => ({
-  Queue: jest.fn(),
-  QueueEvents: jest.fn(),
-  Worker: jest.fn(() => ({ on: jest.fn() })),
+vi.mock('bullmq', () => ({
+  Queue: vi.fn(),
+  QueueEvents: vi.fn(),
+  Worker: vi.fn(
+    class {
+      on = vi.fn();
+    },
+  ),
 }));
-jest.mock('@motor-fix/observability', () => ({
-  ...jest.requireActual('@motor-fix/observability'),
-  observeQueue: jest.fn(),
-  observeWorker: jest.fn(),
+vi.mock('@motor-fix/observability', async (actualModule) => ({
+  ...(await actualModule<typeof import('@motor-fix/observability')>()),
+  observeQueue: vi.fn(),
+  observeWorker: vi.fn(),
 }));
 
 const TO = '+40710000001';
@@ -23,21 +27,21 @@ function client(
   add: () => Promise<unknown>,
   wait?: (events: unknown, ttl: number) => Promise<unknown>,
 ) {
-  const waitUntilFinished = jest.fn(wait ?? (async () => null));
-  const remove = jest.fn(async () => undefined);
+  const waitUntilFinished = vi.fn(wait ?? (async () => null));
+  const remove = vi.fn(async () => undefined);
   const queue = {
-    add: jest.fn(async () => {
+    add: vi.fn(async () => {
       await add();
       return { remove, waitUntilFinished };
     }),
-    close: jest.fn(async () => undefined),
+    close: vi.fn(async () => undefined),
     getBackend: () => ({ publishEvent: async () => '7-0' }),
   };
   const events = {
-    close: jest.fn(async () => undefined),
-    waitUntilReady: jest.fn(async () => undefined),
+    close: vi.fn(async () => undefined),
+    waitUntilReady: vi.fn(async () => undefined),
   };
-  const listen = jest.fn(() => events);
+  const listen = vi.fn(() => events);
   const send = new DirectSend(queue as never, listen as never);
   return { events, listen, queue, remove, send, waitUntilFinished };
 }
@@ -45,7 +49,7 @@ function client(
 const code = (s: DirectSend) =>
   s.whatsapp('SIGN_IN_CODE', 'ro', { code: '123456', minutes: 10 }, TO);
 
-afterEach(() => jest.useRealTimers());
+afterEach(() => vi.useRealTimers());
 
 // @traces 1379-FR-001 1379-FR-004 1379-FR-005
 describe('DirectSend', () => {
@@ -153,25 +157,25 @@ describe('DirectSend', () => {
   });
 
   it('answers timeout at the cap when no finish arrives, never re-adding', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const c = client(
       async () => undefined,
       () => new Promise(() => undefined),
     );
 
     const answer = code(c.send);
-    await jest.advanceTimersByTimeAsync(DIRECT_SEND_WAIT_MS);
+    await vi.advanceTimersByTimeAsync(DIRECT_SEND_WAIT_MS);
 
     expect(await answer).toBe('timeout');
     expect(c.queue.add).toHaveBeenCalledTimes(1);
   });
 
   it('answers timeout at the cap when the broker never takes the job', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     const c = client(() => new Promise(() => undefined));
 
     const answer = code(c.send);
-    await jest.advanceTimersByTimeAsync(DIRECT_SEND_WAIT_MS);
+    await vi.advanceTimersByTimeAsync(DIRECT_SEND_WAIT_MS);
 
     expect(await answer).toBe('timeout');
   });
@@ -191,7 +195,7 @@ describe('DirectSend', () => {
 
   it('logs nothing: the callers log the kind', async () => {
     const spies = (['log', 'warn', 'error'] as const).map((level) =>
-      jest.spyOn(Logger.prototype, level),
+      vi.spyOn(Logger.prototype, level),
     );
     const c = client(async () => {
       throw new Error('down');
@@ -213,8 +217,8 @@ describe('DirectSend', () => {
   });
 
   it('builds the listener on the first send only, and once', async () => {
-    const queue = { add: jest.fn(), close: jest.fn(async () => undefined) };
-    const listen = jest.fn();
+    const queue = { add: vi.fn(), close: vi.fn(async () => undefined) };
+    const listen = vi.fn();
     const idle = new DirectSend(queue as never, listen);
 
     await idle.onApplicationShutdown();
@@ -245,7 +249,7 @@ describe('DirectSend', () => {
 
   it('answers queue_unavailable when the mark cannot be written, and tries again next time', async () => {
     const c = client(async () => undefined);
-    const publishEvent = jest
+    const publishEvent = vi
       .fn()
       .mockRejectedValueOnce(new Error('down'))
       .mockResolvedValue('8-0');

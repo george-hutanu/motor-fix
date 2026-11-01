@@ -176,7 +176,7 @@ describe('the phone check of a save', () => {
 
   it('does not count a pick that was refused', async () => {
     const id = await account('refused');
-    const choices = jest.spyOn(counters, 'countChannelChoice');
+    const choices = vi.spyOn(counters, 'countChannelChoice');
     await save(pick('DUE_ITP', 'whatsapp'), bearer(id));
     expect(choices).not.toHaveBeenCalled();
     choices.mockRestore();
@@ -350,7 +350,7 @@ describe('malformed picks', () => {
 
   it('counts one pick per changed type, not per submitted entry', async () => {
     const id = await withPhone('counted');
-    const choices = jest.spyOn(counters, 'countChannelChoice');
+    const choices = vi.spyOn(counters, 'countChannelChoice');
     await save(
       {
         preferences: [
@@ -366,7 +366,7 @@ describe('malformed picks', () => {
 
   it('does not count a group switch as a channel pick', async () => {
     const id = await account('switch');
-    const choices = jest.spyOn(counters, 'countChannelChoice');
+    const choices = vi.spyOn(counters, 'countChannelChoice');
     await save({ groups: [{ enabled: false, key: 'due_dates' }] }, bearer(id));
     expect(choices).not.toHaveBeenCalled();
     choices.mockRestore();

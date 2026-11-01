@@ -61,7 +61,7 @@ const item: Inbox['items'][number] = {
 };
 
 const inboxOf = (items: Inbox['items']) =>
-  jest.fn(async () => ({ items, nextCursor: null, total: items.length }));
+  vi.fn(async () => ({ items, nextCursor: null, total: items.length }));
 
 const call = (
   args: unknown,

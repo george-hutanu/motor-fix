@@ -140,7 +140,7 @@ function startedNames(process: 'api' | 'worker') {
       return { add: () => undefined };
     },
   } as unknown as Meter;
-  const spy = jest.spyOn(metrics, 'getMeter').mockReturnValue(meter);
+  const spy = vi.spyOn(metrics, 'getMeter').mockReturnValue(meter);
   try {
     initProductCounters(process);
   } finally {
@@ -501,7 +501,7 @@ describe('the product counters', () => {
         },
       }),
     } as unknown as Meter;
-    const spy = jest.spyOn(metrics, 'getMeter').mockReturnValue(meter);
+    const spy = vi.spyOn(metrics, 'getMeter').mockReturnValue(meter);
     try {
       initProductCounters('api');
     } finally {

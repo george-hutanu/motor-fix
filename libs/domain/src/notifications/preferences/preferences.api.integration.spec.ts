@@ -1156,7 +1156,7 @@ describe('the Build brief’s save scenarios', () => {
 
   it('saves a pick at once, audits it once, announces it, and records nothing for the same pick again', async () => {
     const driver = await withPhone('picker');
-    const choices = jest.spyOn(counters, 'countChannelChoice');
+    const choices = vi.spyOn(counters, 'countChannelChoice');
     const res = await save(pick('DUE_ITP', 'whatsapp'), bearer(driver));
     expect(choices.mock.calls).toEqual([['whatsapp']]);
     expect(res.status).toBe(200);

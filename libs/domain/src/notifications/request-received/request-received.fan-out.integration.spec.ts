@@ -47,7 +47,7 @@ let app: TestingModule | undefined;
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(async () => {
@@ -58,8 +58,8 @@ afterAll(async () => {
 beforeEach(async () => {
   // Brevo's address answers nothing, so the notifications worker never
   // starts and every message stays as the fan-out built it.
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
   await jobs.obliterate({ force: true });
@@ -364,7 +364,7 @@ describe('telling a garage’s staff about a new request', () => {
   });
 
   it('builds the message from the event the relay queued, once when relayed twice', async () => {
-    const handled = jest.spyOn(RequestReceivedFanOut.prototype, 'handle');
+    const handled = vi.spyOn(RequestReceivedFanOut.prototype, 'handle');
     const { garage, owner } = await staffedGarage();
     const { event } = await sent([garage.id]);
     await start(true);
@@ -498,7 +498,7 @@ describe('what the fan-out reports', () => {
   });
 
   it('logs one line with the request id and how many people it told, and nothing about the car or the driver', async () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const { garage } = await staffedGarage();

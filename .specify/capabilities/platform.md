@@ -125,10 +125,11 @@ features:
   - 1349-cockpit-chart-settle
   - 1257-quote-reminders
   - 1315-optimistic-toggles
-  - 1411-1315-qa-fixes
-  - 1379-provider-calls-worker
-  - 1407-toggle-idempotency
   - 1406-integration-shards
+  - 1379-provider-calls-worker
+  - 1338-nest-vitest
+  - 1411-1315-qa-fixes
+  - 1407-toggle-idempotency
 ---
 
 # Capability: Platform
@@ -277,9 +278,9 @@ _From 516-production-release-queue._
 
 _From 431-mutation-testing._
 
-### 431-FR-002 — A project's mutation run MUST mutate only that project's non-test, non-generated TypeScript source and MUST run that project's own Jest configuration, with the same runtime options as its `test` target.
+### 1338-FR-008 — The mutation run of each in-scope project MUST use Stryker's Vitest runner with that project's own test configuration and the same runtime options as its `test` target; the Angular projects' runs keep the Jest runner (modifies 431-FR-002; 431-FR-001's project list and 1159-FR-016's Jest-options read still hold as written).
 
-_From 431-mutation-testing._
+_From 1338-nest-vitest._
 
 ### 431-FR-003 — A mutation run MUST report a mutation score and MUST exit non-zero when the score is below the project's `thresholds.break`.
 
@@ -1415,9 +1416,9 @@ _From 974-stop-test-stack-on-merge._
 
 _From 974-stop-test-stack-on-merge._
 
-### 976-FR-001 — Every `libs/domain` integration spec MUST run its tests and hooks under an explicit 30-second limit, set once for `*.integration.spec.ts` files, so database setup and bulk work no longer fail on Jest's default 5-second limit on a loaded machine; unit specs keep the default, and a test or hook that still exceeds the limit fails with Jest's message naming it.
+### 1338-FR-006 — Every `libs/domain` `*.integration.spec.ts` test and hook MUST keep an explicit 30-second limit under Vitest, set once for the integration files, failing with a message naming the test; unit specs keep the runner's default (modifies 976-FR-001).
 
-_From 976-integration-specs-under-load._
+_From 1338-nest-vitest._
 
 ### 976-FR-002 — No `libs/domain` integration spec MUST sleep a fixed wall-clock interval and then assert that asynchronous work (a queued job, a published live message, a queue worker, an outbox relay, an e-mail) has finished. Each such wait is replaced by waiting for the asserted condition up to a deadline, or by faked time advanced past the window where no real I/O is awaited inside it.
 
@@ -1755,9 +1756,9 @@ _From 1159-mutation-shards._
 
 _From 1159-mutation-shards._
 
-### 1159-FR-011 — Every matrix job MUST have its own PostgreSQL (the repository's image, `ghcr.io/george-hutanu/motor-fix-postgres:18`) and Redis service containers and migrate its database before mutating; integration specs MUST stay in the mutation run; Stryker's concurrency MUST be 1 for each project whose `src` holds an `*.integration.spec.ts`.
+### 1338-FR-009 — `libs/domain`'s mutation run MUST start more than one Stryker worker (`concurrency: 1` removed from `libs/domain/stryker.config.json`), each worker's specs reaching their own test database named by `STRYKER_MUTATOR_WORKER` and migrated before mutating; workers never share a database. Other projects with integration specs (`apps/api`, `apps/mcp`, `apps/worker`, `libs/mcp-tools`) keep today's rule (modifies 1159-FR-011).
 
-_From 1159-mutation-shards._
+_From 1338-nest-vitest._
 
 ### 1159-FR-012 — Stryker's initial test run timeout MUST be longer than its 5-minute default for every project, set in one place (30 minutes, in `scripts/mutation.ts`).
 
@@ -3089,6 +3090,54 @@ _From 1379-provider-calls-worker._
 
 _From 1379-provider-calls-worker._
 
+### 1338-FR-001 — The `test` target of `apps/api`, `apps/worker`, `apps/mcp`, `libs/contracts`, `libs/domain`, `libs/observability`, `libs/mcp-tools` and `scripts` MUST run on Vitest, through Nx, and MUST pass with the `.npmrc` node options cleared (no `--experimental-vm-modules`); every spec file each project held on `main` runs and passes, none is skipped, deleted or weakened, and a Nest testing-module spec resolves its decorated providers.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-002 — The Angular projects (`apps/web`, `libs/ui-cockpit`, `libs/data-access`, `libs/media`, `libs/i18n`, `libs/overlays`) MUST keep running on Jest, unchanged, with `jest`, `@nx/jest`, `jest-preset-angular` and `jest.preset.cjs` still in place; their move is ST-1332 and dropping Jest is ST-1304.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-003 — No in-scope spec or test helper MUST use Jest's API: `jest.fn`, `jest.mock`, `jest.spyOn`, `jest.requireActual`, `jest.setTimeout`, `jest.isolateModules`, `jest.useFakeTimers` and the types `jest.Mock` and `jest.SpyInstance` are replaced by their Vitest equivalents asserting the same behaviour.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-004 — The unit/integration split MUST be selected by `TEST_SUITE` with the values `unit` (every `*.integration.spec.ts` left out), `integration` (only them) and unset (everything); any other value MUST fail the run before a test starts with a message naming the three; a project with no spec of the chosen suite passes with no tests. The remaining Jest projects MUST read the same name through `jest.preset.cjs`, and `JEST_SUITE` MUST be read nowhere.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-005 — `npm run test:unit`, `npm run test:integration`, CI's "Unit tests" (no database services, 1170-FR-001) and "Integration tests" (1170-FR-002) jobs, `.husky/pre-commit` (1170-FR-005), `lifecycle.mjs check` and `scripts/test-suites.spec.ts` MUST select their suites through `TEST_SUITE`, and the `test` target's Nx inputs MUST name `TEST_SUITE` and the Vitest dependencies, so the two suites never answer each other from the cache.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-007 — In `apps/api` and `libs/domain`, a database turn taken by a spec file MUST be given back after the whole file's teardown has run, never before, under Vitest as under Jest's `database-turn.environment.cjs`; a release attempted inside the file's own `afterAll` is still refused.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-010 — Every `libs/domain` shard in `scripts/mutation-shards.json` MUST finish inside its job timeout in a Mutation workflow run of this branch, dispatched by hand for the story's evidence; each shard's `measured` line MUST name that run and the time measured, with its timeout at the measured time plus at least 30 %, at most 360 (1159-FR-005). A shard that overruns, or measures over 277 minutes, gets one re-cut of its folders (1159-FR-002/003) and a second run; a second overrun is a needs-confirmation question and the task goes to Blocked.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-011 — No `thresholds.break`, `low` or `high` in any `stryker.config.json` MAY be lowered; no mutation score or floor is raised by this story (#1339–#1342 do that, each blocked by this one).
+
+_From 1338-nest-vitest._
+
+### 1338-FR-012 — `scripts/mutation-floors.spec.ts` MUST hold only the project-floor cases; its `summaryRows` and `flags` cases MUST live in `scripts/mutation.spec.ts`, each assertion once (an assertion `mutation.spec.ts` already makes is not repeated).
+
+_From 1338-nest-vitest._
+
+### 1338-FR-013 — The test "treats --incremental=false and a bare absent flag alike, and anything else as on" MUST assert `flags([]).incremental === false` beside the `--incremental=false` case, and MUST fail when `flags` defaults `incremental` to on.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-014 — `post-edit-check.sh`, `stop-test-gate.sh` and `.husky/pre-commit` MUST NOT fail a passing in-scope spec because it is a Vitest spec: an in-scope project's spec is run through Vitest by `post-edit-check.sh` under the same 5-second rule, and `stop-test-gate.sh` runs the Vitest specs related to uncommitted changes beside `jest --onlyChanged`; the Angular projects' specs keep their Jest path, and the gates' Jest removal stays ST-1304. A gate script edit is followed by `doctor.mjs --bless-hooks` after its diff is read.
+
+_From 1338-nest-vitest._
+
+### 1338-FR-015 — The constitution (`421-FR-003`'s "root Jest", principles II and IV), AGENTS.md's "Tests: Jest from the root config" line and the Jest wording of the docs MUST NOT be amended by this story; only text naming `JEST_SUITE` or describing an in-scope project's runner is updated to `TEST_SUITE` and Vitest (lifecycle.md "CI, tests and release", `ci.yml` and `mutation.yml` headers, `scripts/test-services.ts`).
+
+_From 1338-nest-vitest._
+
 ## Retired
 
 - `421-FR-013` — superseded by `422-FR-009` (2026-10-04)
@@ -3203,3 +3252,6 @@ _From 1379-provider-calls-worker._
 - `1315-FR-008` — superseded by `1411-FR-007` (2026-10-30)
 - `1170-FR-002` — superseded by `1406-FR-001` (2026-10-30)
 - `1170-FR-003` — superseded by `1406-FR-005` (2026-10-30)
+- `976-FR-001` — superseded by `1338-FR-006` (2026-10-31)
+- `431-FR-002` — superseded by `1338-FR-008` (2026-10-31)
+- `1159-FR-011` — superseded by `1338-FR-009` (2026-10-31)

@@ -56,8 +56,10 @@ const events = (mark: bigint) =>
     where: { id: { gt: mark }, kind: { startsWith: 'time_block.' } },
   });
 
-beforeEach(() => jest.spyOn(Logger.prototype, 'warn').mockImplementation());
-afterEach(() => jest.restoreAllMocks());
+beforeEach(() => {
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+});
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 427-FR-003
 // @traces 427-FR-005

@@ -2,13 +2,14 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import { Logger } from '@nestjs/common';
+import type { MockedFunction } from 'vitest';
 
 import { IssuerProbe } from './auth.probe';
 import { setIssuerUp } from '../metrics/metrics';
 
-jest.mock('../metrics/metrics', () => ({ setIssuerUp: jest.fn() }));
+vi.mock('../metrics/metrics', () => ({ setIssuerUp: vi.fn() }));
 
-const up = setIssuerUp as jest.MockedFunction<typeof setIssuerUp>;
+const up = setIssuerUp as MockedFunction<typeof setIssuerUp>;
 
 describe('the identity server probe under hostile answers', () => {
   let server: Server;
@@ -20,11 +21,11 @@ describe('the identity server probe under hostile answers', () => {
     up.mockReset();
     lines = [];
     for (const level of ['log', 'warn', 'error'] as const) {
-      jest
-        .spyOn(Logger.prototype, level)
-        .mockImplementation((...args: unknown[]) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation(
+        (...args: unknown[]) => {
           lines.push(JSON.stringify(args));
-        });
+        },
+      );
     }
     handler = (_req, res) => res.writeHead(200).end('{}');
     server = createServer((req, res) => handler?.(req, res));
@@ -33,8 +34,8 @@ describe('the identity server probe under hostile answers', () => {
   });
 
   afterEach(async () => {
-    jest.restoreAllMocks();
-    jest.useRealTimers();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));
   });
@@ -99,15 +100,24 @@ describe('the identity server probe under hostile answers', () => {
   });
 
   it('keeps probing after a failed probe', async () => {
-    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
-    jest
-      .spyOn(globalThis, 'fetch')
+    vi.useFakeTimers({
+      toFake: [
+        'setTimeout',
+        'clearTimeout',
+        'setInterval',
+        'clearInterval',
+        'Date',
+        'hrtime',
+        'performance',
+      ],
+    });
+    vi.spyOn(globalThis, 'fetch')
       .mockRejectedValueOnce(new Error('boom'))
       .mockImplementation(async () => new Response('{}'));
     const checker = probe();
 
     await checker.onModuleInit();
-    await jest.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(60_000);
     checker.onModuleDestroy();
 
     expect(up.mock.calls).toEqual([[false], [true]]);

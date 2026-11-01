@@ -136,13 +136,13 @@ beforeEach(() => {
   const capture = (...args: unknown[]) => {
     lines.push(args.map(String).join(' '));
   };
-  jest.spyOn(console, 'log').mockImplementation(capture);
-  jest.spyOn(console, 'error').mockImplementation(capture);
-  jest.spyOn(console, 'warn').mockImplementation(capture);
+  vi.spyOn(console, 'log').mockImplementation(capture);
+  vi.spyOn(console, 'error').mockImplementation(capture);
+  vi.spyOn(console, 'warn').mockImplementation(capture);
 });
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   for (const dir of dirs.splice(0))
     rmSync(dir, { force: true, recursive: true });
 });

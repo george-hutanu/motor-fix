@@ -24,7 +24,7 @@ describe('the assistant token verifier', () => {
 
   beforeEach(() => {
     offset = 0;
-    jest.spyOn(Date, 'now').mockImplementation(() => realNow() + offset);
+    vi.spyOn(Date, 'now').mockImplementation(() => realNow() + offset);
     realm.keyRequests.length = 0;
     verifier = new TokenVerifier({
       issuer: realm.issuer,
@@ -32,7 +32,7 @@ describe('the assistant token verifier', () => {
     });
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   const refused = (token: Promise<string> | string) =>
     expect(
@@ -187,7 +187,7 @@ describe('the assistant token verifier', () => {
 
   // @traces 365-FR-015
   it('counts each key fetch by outcome, and none while the keys are cached', async () => {
-    const counted = jest.spyOn(metrics, 'recordKeyFetch');
+    const counted = vi.spyOn(metrics, 'recordKeyFetch');
     const down = new TokenVerifier({
       issuer: 'http://127.0.0.1:1/realms/motorfix-assistants',
       mcpUrl: TEST_MCP_URL,

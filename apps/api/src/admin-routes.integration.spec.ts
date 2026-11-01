@@ -136,7 +136,7 @@ describe('the admin routes', () => {
 
   // @traces 165-FR-002
   it('admit an active admin on every operation', async () => {
-    const decide = jest.spyOn(
+    const decide = vi.spyOn(
       app.get(ActorGuard, { strict: false }),
       'canActivate',
     );
@@ -249,7 +249,7 @@ describe('the admin overview', () => {
 
   it('stays open to an admin while the platform is in maintenance', async () => {
     const maintenance = app.get<Maintenance>(MAINTENANCE, { strict: false });
-    const on = jest.spyOn(maintenance, 'on').mockResolvedValue(true);
+    const on = vi.spyOn(maintenance, 'on').mockResolvedValue(true);
     try {
       const res = await call(
         'get',

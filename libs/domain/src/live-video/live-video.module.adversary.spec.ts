@@ -20,9 +20,9 @@ const withKey = (key: string) => ({
 });
 
 beforeEach(() => {
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 1250-FR-001
 describe('which live video provider is chosen for odd signing keys', () => {
@@ -101,7 +101,7 @@ describe('which live video provider is chosen for odd signing keys', () => {
   });
 
   it('logs the unreadable-key warning without any part of the key or token', () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
 

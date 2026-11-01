@@ -1,5 +1,6 @@
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
+import type { MockInstance } from 'vitest';
 
 import { AuditService } from '../../audit/audit.service';
 import { serialDatabase } from '../../auth/serial-db.testing';
@@ -432,9 +433,9 @@ describe('a driver type with nothing saved', () => {
 
 // @traces 142-FR-008
 describe('a message that goes by another channel than the one picked', () => {
-  let fallbacks: jest.SpyInstance;
+  let fallbacks: MockInstance;
   beforeEach(() => {
-    fallbacks = jest.spyOn(counters, 'countChannelFallback');
+    fallbacks = vi.spyOn(counters, 'countChannelFallback');
   });
   afterEach(() => fallbacks.mockRestore());
 
@@ -551,9 +552,9 @@ describe('a message that goes by another channel than the one picked', () => {
 // @traces 1374-FR-003
 // @traces 1374-FR-007
 describe('the last fallback kept per driver and type', () => {
-  let fallbacks: jest.SpyInstance;
+  let fallbacks: MockInstance;
   beforeEach(() => {
-    fallbacks = jest.spyOn(counters, 'countChannelFallback');
+    fallbacks = vi.spyOn(counters, 'countChannelFallback');
   });
   afterEach(() => fallbacks.mockRestore());
 

@@ -68,7 +68,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await reset();
   store.objects.clear();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 const read = (slug: string) =>
@@ -209,9 +209,9 @@ describe('the photos of a public garage profile under hostile conditions', () =>
     const garage = await approved();
     const ready = await photo(garage.id, 0);
     await photo(garage.id, 1, { height: null, width: null });
-    jest
-      .spyOn(storage, 'metadataOf')
-      .mockRejectedValue(new Error('storage down'));
+    vi.spyOn(storage, 'metadataOf').mockRejectedValue(
+      new Error('storage down'),
+    );
 
     const res = await read(garage.slug);
 
