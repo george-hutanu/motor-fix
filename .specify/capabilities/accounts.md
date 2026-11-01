@@ -60,11 +60,12 @@ features:
   - 099-overview-sections
   - 011-dashboard-sections
   - 1316-swr-resource-store
-  - 400-receptionist
+  - 1369-receptionist-profile
   - 1391-admin-dashboard-customise
   - 1379-provider-calls-worker
   - 151-lift-timeline
   - 165-admin-roles
+  - 400-receptionist
 ---
 
 # Capability: Accounts
@@ -1402,9 +1403,9 @@ _From 102-garage-members._
 
 _From 102-garage-members._
 
-### 102-FR-004 — The garage menu, tab bar and routes MUST keep coming from `allowedViews` over the table (160-FR-007), so that with the rows of FR-002 a mechanic without permissions sees Panou, Lucrări, Programări, Setări and Istoric modificări; a receptionist sees Panou, Cereri de ofertă, Programări, Lucrări, Recenzii, Profilul service-ului, Setări and Istoric modificări; the owner sees everything released. Setări stays for every role because it holds the person's own device and notification choices (198-FR-001, ST-142); its owner-only panels are gated inside it (FR-013).
+### 1369-FR-001 — The garage menu, tab bar and routes MUST keep coming from `allowedViews` over the capability table (160-FR-007), so that with the rows of 102-FR-002 a mechanic without permissions sees Panou, Lucrări, Programări, Setări and Istoric modificări; a receptionist sees Panou, Cereri de ofertă, Programări, Lucrări, Recenzii, Profilul service-ului, Setări and Istoric modificări ("Profilul service-ului" / "Garage profile" present, Mecanici and Prețuri absent); the owner sees everything released. Setări stays for every role because it holds the person's own device and notification choices (198-FR-001, ST-142); its owner-only panels are gated inside it (102-FR-013). The frame's receptionist test MUST render her from the table's receptionist row (`capabilitiesOf('receptionist', …)`), never from a hand-written list, and assert the entry present.
 
-_From 102-garage-members._
+_From 1369-receptionist-profile._
 
 ### 423-FR-001 — Panou (`/app/garage`) MUST show a person whose capabilities hold `garage.own_jobs` but neither `garage.profile` nor `garage.feature_switches` (a mechanic, with or without `can_answer_quotes`) an own-jobs section in place of the placeholder line of 102-FR-005: a list of the jobs the existing jobs read returns for them whose start falls on today's Bucharest day or that are `in_work` or `paused`, ordered by start time, each row carrying the start time (HH:MM), the car's brand and model, the plate when the read carries one, the job names and the stage label of Lucrări; a next-booking line with the start (day and HH:MM) and the car of the earliest own job starting after now, absent when there is none; and a load line, n counting the rows shown and m those whose stage is done, "{n} lucrări azi · {m} terminate" / "{n} jobs today · {m} done" with the Romanian count forms of the shared formatter. The section declares its capability as 102-FR-005 asks, never a role string; a mechanic with `can_answer_quotes` sees the requests panel above it, as today, and nobody sees figures, demand or reviews on it who does not today.
 
@@ -1700,6 +1701,7 @@ _From 165-admin-roles._
 - `082-FR-020` — superseded by `1316-FR-006` (2026-10-30)
 - `394-FR-006` — superseded by `1316-FR-007` (2026-10-30)
 - `029-FR-009` — superseded by `1316-FR-005` (2026-10-30)
+- `102-FR-004` — superseded by `1369-FR-001` (2026-10-30)
 - `011-FR-010` — superseded by `1391-FR-015` (2026-10-30)
 - `393-FR-005` — superseded by `1379-FR-003` (2026-10-30)
 - `099-FR-004` — superseded by `151-FR-001` (2026-10-31)
