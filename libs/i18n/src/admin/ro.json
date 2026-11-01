@@ -81,7 +81,54 @@
     "orderBy": "Ordonează după",
     "requests": "Cereri",
     "searches": "Căutări",
-    "subtitle": "Ce au căutat și ce au cerut șoferii în ultimele 30 de zile"
+    "subtitle": "Ce au căutat și ce au cerut șoferii în ultimele 30 de zile",
+    "supply": {
+      "all": "Toate",
+      "area": "Zonă",
+      "brand": "Marcă",
+      "column": {
+        "pair": "Marcă și zonă",
+        "state": "Stare",
+        "unmet": "Fără ofertă"
+      },
+      "empty": "Încă nu sunt date pentru ultimele 30 de zile.",
+      "emptyFiltered": "Nimic pentru filtrul ales.",
+      "garages": {
+        "few": "{n} service‑uri",
+        "one": "{n} service",
+        "other": "{n} service‑uri"
+      },
+      "heading": "Cerere și ofertă",
+      "loadFailed": "Tabelul nu a putut fi citit.",
+      "loading": "Se încarcă tabelul",
+      "noGarages": "fără service‑uri",
+      "noSupply": "lipsesc service‑uri",
+      "perGarage": {
+        "few": "{n} cereri pe service",
+        "one": "{n} cerere pe service",
+        "other": "{n} cereri pe service"
+      },
+      "requests": {
+        "few": "{n} cereri",
+        "one": "{n} cerere",
+        "other": "{n} cereri"
+      },
+      "searches": {
+        "few": "{n} căutări",
+        "one": "{n} căutare",
+        "other": "{n} căutări"
+      },
+      "subtitle": "Unde caută șoferii o marcă și câte service‑uri o primesc, ultimele 30 de zile",
+      "table": "Cerere și ofertă pe marcă și zonă",
+      "unknownArea": "Zonă necunoscută",
+      "unmet": {
+        "few": "{n} fără ofertă",
+        "one": "{n} fără ofertă",
+        "other": "{n} fără ofertă"
+      },
+      "updatedOn": "actualizat {day} la {time}",
+      "updatedToday": "actualizat azi la {time}"
+    }
   },
   "file": {
     "approve": {

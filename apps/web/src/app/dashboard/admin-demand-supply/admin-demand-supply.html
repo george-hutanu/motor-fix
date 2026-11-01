@@ -1,0 +1,78 @@
+<mf-panel [heading]="'admin.demand.supply.heading' | t">
+  <p class="subtitle">{{ 'admin.demand.supply.subtitle' | t }}</p>
+  @if (updated(); as line) {
+    <p class="updated">{{ line }}</p>
+  }
+  <div class="tools">
+    <label>
+      <span class="label">{{ 'admin.demand.supply.brand' | t }}</span>
+      <select data-filter="brand" (change)="chooseBrand($any($event.target).value)">
+        <option value="" [selected]="brand() === null">{{ 'admin.demand.supply.all' | t }}</option>
+        @for (option of brandOptions(); track option) {
+          <option [value]="option" [selected]="brand() === option">{{ option }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span class="label">{{ 'admin.demand.supply.area' | t }}</span>
+      <select data-filter="area" (change)="chooseArea($any($event.target).value)">
+        <option value="" [selected]="area() === null">{{ 'admin.demand.supply.all' | t }}</option>
+        @for (option of areaOptions(); track option.code) {
+          <option [value]="option.code" [selected]="area() === option.code">{{ option.name }}</option>
+        }
+      </select>
+    </label>
+  </div>
+  @switch (state()) {
+    @case ('loading') {
+      <ul class="skeletons" aria-busy="true" [attr.aria-label]="'admin.demand.supply.loading' | t">
+        @for (n of skeletonRows; track n) {
+          <li class="skeleton-row"><span class="skeleton"></span></li>
+        }
+      </ul>
+    }
+    @case ('failed') {
+      <div class="failed" role="alert">
+        <p>{{ 'admin.demand.supply.loadFailed' | t }}</p>
+        <button hlmBtn type="button" variant="secondary" (click)="read()">{{ 'shell.chart.retry' | t }}</button>
+      </div>
+    }
+    @default {
+      @if (rows().length === 0) {
+        <p class="empty" role="status">{{ emptyText() }}</p>
+      } @else {
+        <table class="supply" [attr.aria-label]="'admin.demand.supply.table' | t">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'admin.demand.supply.column.pair' | t }}</th>
+              <th scope="col" class="count">{{ 'admin.demand.supply.column.unmet' | t }}</th>
+              <th scope="col">{{ 'admin.demand.supply.column.state' | t }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.key) {
+              <tr>
+                <td class="lead">
+                  <span class="name">{{ row.name }}</span>
+                  <span class="figures">{{ row.figures }} ·
+                    @if (row.perGarage; as perGarage) {
+                      {{ perGarage }}
+                    } @else {
+                      <span role="img" [attr.aria-label]="'admin.demand.supply.noGarages' | t">—</span>
+                    }
+                  </span>
+                </td>
+                <td class="count">{{ row.unmet }}</td>
+                <td class="state">
+                  @if (row.lamp) {
+                    <mf-lamp state="red" [label]="'admin.demand.supply.noSupply' | t" />
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    }
+  }
+</mf-panel>
