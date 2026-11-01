@@ -417,6 +417,7 @@ describe('streams that follow the account', () => {
 });
 
 // @traces 398-FR-008
+// @traces 1369-FR-003
 describe('what each garage role hears through the garage channel', () => {
   // One kind per family of the capability table, and one no family claims.
   const FAMILIES = [

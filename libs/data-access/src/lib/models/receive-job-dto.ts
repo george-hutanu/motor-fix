@@ -4,6 +4,11 @@
 export interface ReceiveJobDto {
 
   /**
+   * The job's updatedAt the change was made from; a change from an older read is refused
+   */
+  basedOnUpdatedAt?: string;
+
+  /**
    * The odometer reading, in km
    */
   odometerKm: number;
