@@ -7,7 +7,7 @@ import request from 'supertest';
 import { CarTransfersModule } from './transfers.module';
 import { signAccessToken } from '../../auth/access-token';
 import { AuthModule } from '../../auth/auth.module';
-import { localDay } from '../../bucharest';
+import { addDays, localDay } from '../../bucharest';
 import { outboxMark } from '../../events/outbox.testing';
 import type { BrevoMock } from '../../notifications/brevo/brevo-mock.testing';
 import { DirectSendModule } from '../../notifications/direct-send/direct-send.module';
@@ -95,7 +95,9 @@ export function transfersWorld() {
   const bearer = (accountId: string, role: Role) =>
     `Bearer ${signAccessToken({ accountId, role }, tokenSecret)}`;
 
-  // A repair the owner logged by hand, done `daysAgo` days ago.
+  // A repair the owner logged by hand, done `daysAgo` Bucharest days ago:
+  // counted in calendar days, since 24 h steps across a clock change can land
+  // two different `daysAgo` on the same day near midnight.
   async function logged(
     carId: string,
     options: { daysAgo?: number; what?: string; deleted?: boolean } = {},
@@ -105,7 +107,7 @@ export function transfersWorld() {
         carId,
         deletedAt: options.deleted ? new Date() : null,
         doneOn: new Date(
-          `${localDay(new Date(Date.now() - (options.daysAgo ?? 30) * 86_400_000))}T00:00:00Z`,
+          `${addDays(localDay(new Date()), -(options.daysAgo ?? 30))}T00:00:00Z`,
         ),
         garageName: 'Service Popescu',
         source: 'logged',

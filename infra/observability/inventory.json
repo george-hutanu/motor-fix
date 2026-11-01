@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 263,
+    "count": 273,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -335,7 +335,8 @@
         "worker-queue-growing",
         "worker-jobs-failed"
       ],
-      "story": "ST-881"
+      "story": "ST-881, ST-1249",
+      "reason": "the listing wizard queues one sizing job per confirmed garage photo, and the owner gallery (ST-1249) queues one per confirmed upload through the same service; the worker makes the copies, a last failure fires worker-jobs-failed"
     },
     {
       "kind": "queue",
@@ -386,6 +387,19 @@
       ],
       "reason": "counted by motorfix_review_reply_announced_total (built, muted, skipped) on motorfix-product, with one ReviewReplied log line per event naming the review id; BullMQ's queue metrics cover depth and failures",
       "story": "ST-75"
+    },
+    {
+      "kind": "queue",
+      "name": "review-decided",
+      "source": "libs/domain/src/notifications/review-decided/review-decided.fan-out.ts",
+      "dashboard": "motorfix-queues",
+      "alerts": [
+        "worker-queue-backlog",
+        "worker-queue-growing",
+        "worker-jobs-failed"
+      ],
+      "reason": "counted by motorfix_review_decision_announced_total (built, muted, skipped) on motorfix-product, with one ReviewDecided log line per event naming the review id; BullMQ queue metrics cover depth and failures",
+      "story": "ST-179"
     },
     {
       "kind": "queue",
@@ -1048,6 +1062,15 @@
       "alerts": "none",
       "reason": "counts each garage reply announced to the review's author by outcome (built, muted, skipped), with the fan-out's log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
       "story": "ST-75"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_decision_announced_total",
+      "source": "libs/domain/src/metrics/product-counters.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each removal told to the review author and the garage owners by outcome (built, muted, skipped), with the fan-out log line naming the review id; a count has no failure to alert on; the worker-jobs-failed rule covers the service that reports it",
+      "story": "ST-179"
     },
     {
       "kind": "endpoint",
@@ -1866,6 +1889,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "car-models-3d",
+      "source": "libs/domain/src/catalogue/car-models-3d/car-models-3d.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/car-models-3d and /api/v1/car-models-3d/files/:key, and status (200, 400, 404, 503 storage_unavailable)",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the brand's 3D car and its GLB files, public; the api's start logs '3D files uploaded: <n> written' once per boot and logs an error with the count so far when the store fails, the boot going on; a store failure on a file answers 503, counted by api-error-rate; spans come from the HTTP, S3 and Prisma auto-instrumentation; no product counter, as the read is a catalogue lookup with no product action",
+      "story": "ST-35"
+    },
+    {
+      "kind": "endpoint",
       "name": "garage-legal-check",
       "source": "libs/domain/src/garages/verification/legal-check/legal-check.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/legal-check",
@@ -2024,6 +2060,19 @@
       ],
       "reason": "the GET is a read with no writes, no event and no audit row, re-read by the owner's profile view on each garage change and on reconnect; the PATCH is the owner's in-place save of name, description, phone, hours with closed days, radius and the facilities group (facilities, their note, courtesy-car terms, payment methods; 400 no_courtesy_car when the terms and the ticked car disagree), one transaction with an audit row per changed field and one garage.updated outbox event (already listed) whose relay purge drops the public profile cache, the phone never in the event, logs, labels or spans; a 409 is a stale version, a 422 a field that needs verification; it answers through the public profile's cache, so its cache fallbacks count in the API's cache-fallback rule; a 403 is a mechanic or receptionist without the view, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; its spans come from the HTTP, Prisma and Redis auto-instrumentation; no counter or alert of its own; no outside call",
       "story": "ST-133, ST-1246, ST-1248"
+    },
+    {
+      "kind": "endpoint",
+      "name": "garage-photos",
+      "source": "libs/domain/src/garages/photos/owner-photos/owner-photos.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/photos, /photos/upload-url, /photos/uploads and /photos/uploads/:id",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the owner gallery of a listed garage: the GET is a read with no writes; the PUT saves the whole gallery in one transaction under a row lock on the garage, an audit row per photo added, removed, moved or re-captioned (position and caption only, never a file key or address) and one garage.updated outbox event (already listed) whose relay purge drops the public profile cache, the removed files deleted after the commit with a failure logged as one OwnerPhotosSave error line naming the garage, never the key; the upload address is rate limited per garage (uploadUrl) and the confirm queues the listing-photos job (already listed); a 409 is a stale stamp, a missing or unprocessed upload, a 400 a broken rule or unknown photo, a 403 a mechanic or receptionist, a 404 or 410 a garage not shown, which the error-rate rule reads with the rest; spans from the HTTP, Prisma and S3 auto-instrumentation; no counter or alert of its own; no outside call beyond the object store (already listed)",
+      "story": "ST-1249"
     },
     {
       "kind": "endpoint",
@@ -2239,6 +2288,19 @@
       ],
       "reason": "the admin's read of the log, today's entries for the Jurnal panel or any range of the last 90 days for the full log, narrowed by type, severity, source and a text search, fifty a page at most behind an opaque cursor on the indexed time range; a failed read answers the standard error body and is the api-error-rate rule's",
       "story": "ST-298, ST-299"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-status",
+      "source": "libs/domain/src/status/status.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/status",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "the admin's read of the six service tiles, one query of the status_tile table that writes nothing; the checks behind the tiles are the status-checks job's, and a failed read answers the standard error body and is the api-error-rate rule's",
+      "story": "ST-295"
     },
     {
       "kind": "endpoint",
@@ -3005,6 +3067,28 @@
       ],
       "reason": "the admins' queue of pending review reports with the facts, read from PostgreSQL in a fixed number of queries per page and written nowhere; reading it is not logged or audited; a 400 on a bad page or a 404 for a non-admin is the rule working; the API error-rate and latency rules cover the route; no outside call",
       "story": "ST-177"
+    },
+    {
+      "kind": "endpoint",
+      "name": "admin-review-decision",
+      "source": "libs/domain/src/reviews/report-queue/report-queue.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/admin/review-reports/{reviewId}/decision",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each decision counts motorfix_review_decisions_total, moves the one pending report under a guard so two admins cannot both decide it, removes the review or the reply and writes their audit entries and one review.decided event in one transaction; a 409 or a 404 for a non-admin is the rule working; no outside call",
+      "story": "ST-179"
+    },
+    {
+      "kind": "product-counter",
+      "name": "motorfix_review_decisions_total",
+      "source": "libs/domain/src/reviews/reviews.metrics.ts",
+      "dashboard": "motorfix-product",
+      "alerts": "none",
+      "reason": "counts each decision an admin tries by outcome (removed, already_decided, no_pending_report) with the target and rule, no identifiers; a refusal is the queue state, not an outage; the api-error-rate rule covers the endpoint that reports it",
+      "story": "ST-179"
     },
     {
       "kind": "queue",

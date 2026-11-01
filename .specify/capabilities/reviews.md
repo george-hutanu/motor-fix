@@ -16,6 +16,7 @@ features:
   - 177-reported-reviews
   - 1382-report-review-button
   - 1387-review-reply-web
+  - 179-remove-reported-review
 ---
 
 # Capability: Reviews
@@ -551,6 +552,58 @@ _From 1387-review-reply-web._
 ### 1387-FR-007 — (075-FR-013, the web part) Tests MUST be written first: colocated Jest specs for the row (both buttons, the receptionist's none, the disabled `reported` state, each mark and the `removed` state, both languages), the dialog (title and subtitle with and without mechanic and for a deleted author, prefill on edit, counter and disabled button at 0, 1,000 and 1,001 code points and in flight, the confirmation and the row's update from the response, each refusal keeping the text, the retry on failure, focus on open and return on close) and the profile's reply block (shown for a `published` reply, its marks, none when null, the re-read on the two kinds), with the generated client stubbed; one Playwright flow: the owner replies from the dashboard, a visitor with the profile open sees the reply without a reload, and the driver sees the new bell item; the row, the dialog and the profile block MUST pass the QA sweep at 320 px, 390 px, tablet and desktop, light and dark, Romanian and English, with no sideways scroll and no axe violation.
 
 _From 1387-review-reply-web._
+
+### 179-FR-001 — The system MUST expose `POST /api/v1/admin/review-reports/{reviewId}/decision` in the reviews module beside the queue read, requiring the `admin.reviews` capability (a non-admin answers 404 `not_found` with the one body the queue read gives, a suspended admin 403 `account_suspended`), taking `{ decision: 'remove', reason }` through a DTO in the contracts library validated at the edge: `decision` only `remove` in this story, `reason` one of the eight rules `insults`, `personal_data`, `ads`, `promotion`, `off_topic`, `hate`, `fake_or_conflicted`, `threats_or_legal_accusations`; `other`, any other value or any other member answers 400 `validation_failed`.
+
+_From 179-remove-reported-review._
+
+### 179-FR-002 — The operation MUST act on the review's one pending report and take the target from it: target `review` runs the review removal (FR-003), target `reply` the reply removal (FR-004). Guards run in the order 401, 403, 404 (non-admin), 400; then it MUST answer: 404 `not_found` when no review with that id exists; 409 `already_decided` with `decidedBy` (the deciding admin's first name and surname initial, "Ana P.") when the latest report by `createdAt` is `decided`; 409 `no_pending_report` when the review has reports but none pending (all `closed`) or has none. Every refusal is the API's existing problem details (A28, `apps/api/src/problem.filter.ts`) with `code` plus the stated field, the message in the admin's language.
+
+_From 179-remove-reported-review._
+
+### 179-FR-003 — Removing a review MUST, in one transaction: set the review's status from `reported` to `removed` with `removedBy` (the admin's account), `removedAt` (now) and `removalReason` (the rule); when the review has a reply that is `published` or `reported`, set the reply `removed` with `removedAt` now and `removedCause` `review_removed`; set the review's one `pending` report (the schema allows one, `review_report_one_pending`) `decided` with decision `removed`, `decidedBy` the admin and `decidedAt` now; write the audit entries of FR-006 and the event of FR-007. The review's text, rating, amount and reply text stay stored (an appeal, #289/#290, can bring them back).
+
+_From 179-remove-reported-review._
+
+### 179-FR-004 — Removing a reply MUST, in one transaction: set the reply's status from `reported` to `removed` with `removedAt` now and `removedCause` `report_upheld`; set the pending report `decided` `removed` with `decidedBy` and `decidedAt`; write the audit entries and the event. The review's status, rating, text, mechanic and figures MUST NOT change, and `removedBy`/`removalReason` on the review stay null.
+
+_From 179-remove-reported-review._
+
+### 179-FR-005 — Two concurrent decisions on one pending report MUST yield exactly one 200 and one 409 `already_decided`, guaranteed by the database: the one guard in both paths is the conditional update of the report row (`pending` → `decided` where it is still `pending`), which counts zero rows the second time; only after zero rows does a read choose the refusal code (FR-002), never a read before the write.
+
+_From 179-remove-reported-review._
+
+### 179-FR-006 — The audit history MUST record the decision as entries by the admin (actor role `admin`; garage id; for a job review its job id and car id): `update` on the review (field `status`, `reported` → `removed`, the new value carrying the rule and the review's text at that moment) or on the reply (field `status`, `reported` → `removed`, carrying the rule and the reply's text), one `update` on each reply removed with its review (`status`, with cause `review_removed`), and one `update` on the report (`status`, `pending` → `decided`, carrying the decision and the rule) — the same port and shape as the report's write (076-FR-009).
+
+_From 179-remove-reported-review._
+
+### 179-FR-007 — The `review.decided` event MUST be recorded in the same transaction with payload `{ reviewId, reportId, decision: 'removed', target, reason, garageId, driverId, mechanicId, replyId }` (`replyId` null when no reply was touched) and the `review` audience the report's event uses (author, garage, mechanic, admins), so the live channels `admin`, `public:garage:{garageId}`, `public:mechanic:{mechanicId}`, `garage:{garageId}` and `account:{authorId}` all receive it and the existing re-reads (1389-FR-006 for the queue, the profile's and the dashboards' review sections) refresh with no new web code for the event.
+
+_From 179-remove-reported-review._
+
+### 179-FR-008 — The ratings MUST NOT gain a second path: the existing `review-ratings` consumer (025-FR-007) already handles `review.decided`, counts `published` reviews only, and this story proves on a real event that a removed review stays out of its garage's and mechanic's figures, and that a reply decision writes the same figures again.
+
+_From 179-remove-reported-review._
+
+### 179-FR-009 — Nothing after a removal needs a new rule: the author's new review of that job is refused by 023-FR-007 (`review_removed`), the garage's new reply to a review with a removed reply by `reply_removed`, and to a `removed` review by `review_not_public`; this story tests all three on rows a decision wrote.
+
+_From 179-remove-reported-review._
+
+### 179-FR-010 — The queue read, the overview counts and the admin feed MUST no longer list or count the decided report (177-FR-014 already excludes `decided`): the count after the decision is the count before less one, and `overdue` less one when the report was past due.
+
+_From 179-remove-reported-review._
+
+### 179-FR-018 — Every new text of the dialog, the status lines, the inline errors, the two buttons' unchanged labels and the notifications MUST exist in Romanian and English (the admin texts in the admin language files, the notifications' in the API's templates) and follow the reader's language; the Romanian lines quoted in the story ("Ștergi recenzia lui Andrei M.?", "Ștearsă. Autorul și service-ul au fost anunțați.", "Deja decisă de Ana") MUST be used verbatim.
+
+_From 179-remove-reported-review._
+
+### 179-FR-019 — The new operation and the new queue MUST ship with their observability: request metrics by route template, a product counter of decisions by decision, target and rule and of refusals by code, the queue's job and queue metrics, their logs, a dashboard panel and an alert each (the operation's 5xx share as the other API operations' alerts; the queue's failed jobs and oldest waiting age as the other fan-outs'), each listed in `infra/observability/inventory.json`; metric labels carry no id.
+
+_From 179-remove-reported-review._
+
+### 179-FR-020 — Tests MUST be written first and name their requirements in a `// @traces` line: Jest on real PostgreSQL and Redis for the operation (the admin's 200 with every row written for a review with a reply, without a reply and with a removed reply; the reply path with the review untouched; the audit entries and the event in one transaction and the rollback of all when one write fails; 400 for `other`, a wrong decision and an extra member; 404 for a driver, an owner and an unknown review; 401 for a visitor (FR-002); 409 for a decided and a closed report; two concurrent decisions; the ratings staying on a real event; the three existing refusals on removed rows; the fan-out's two messages per decision, their language and the skipped deleted author; the queue counts after the decision), Jest component tests for the two buttons, the dialog (title, pre-selection, `other`, disabled states, cancel paths, 320 px), the status and error lines in both languages, and the counts after a decision; one Playwright end-to-end flow: a garage reports a review, an admin removes it, the public profile no longer shows it or its reply, and the rating that changed at the report stays changed.
+
+_From 179-remove-reported-review._
 
 ## Retired
 

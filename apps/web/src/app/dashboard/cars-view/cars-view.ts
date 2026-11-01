@@ -23,6 +23,7 @@ import { focusCard } from '../focus-card';
 import { OilLine } from '../oil-line/oil-line';
 import { openRemoveCar } from '../remove-car/open-remove-car';
 import { Resources } from '../resources/resources';
+import { SoldCars } from '../sold-cars/sold-cars';
 
 // "Mașinile mele": a card per car, newest first, and the button that adds one.
 @Component({
@@ -34,6 +35,7 @@ import { Resources } from '../resources/resources';
     HlmButton,
     HlmPopoverImports,
     KmPipe,
+    SoldCars,
     TranslatePipe,
   ],
   selector: 'mf-cars-view',
@@ -60,6 +62,19 @@ export class CarsView {
   protected readonly failed = computed(
     () =>
       this.read.failed() && !this.read.isLoading() && this.cars() === undefined,
+  );
+  // The cars the reader sold, under the list; a takeover adds one.
+  private readonly sold = this.resources.live(
+    'soldCars',
+    () => this.api.carHistoryControllerSold(),
+    ['car_transfer.accepted'],
+  );
+  protected readonly soldCars = computed(() => this.sold.value()?.items ?? []);
+  protected readonly soldFailed = computed(
+    () =>
+      this.sold.failed() &&
+      !this.sold.isLoading() &&
+      this.sold.value() === undefined,
   );
   protected readonly grouped = groupPlate;
   private readonly i18n = inject(I18n);
@@ -88,6 +103,10 @@ export class CarsView {
 
   protected load() {
     void this.read.reload();
+  }
+
+  protected loadSold() {
+    void this.sold.reload();
   }
 
   // The saved car goes first without reading the list again.

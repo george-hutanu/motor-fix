@@ -57,6 +57,7 @@ in `analytics-events.ts`, and its page is the route template.
 | `listing_step_completed` | List your garage: a step newly completed | built |
 | `survey_completed` | List your garage: the closing survey | not built |
 | `listing_submitted` | List your garage: the send reaching complete | built |
+| `car_taken_over` | The transfer page: the buyer's "Preiau mașina" answered, once, with no property | built |
 
 ## Database counts
 

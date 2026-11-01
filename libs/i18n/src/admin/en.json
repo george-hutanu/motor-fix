@@ -79,7 +79,49 @@
     "orderBy": "Order by",
     "requests": "Requests",
     "searches": "Searches",
-    "subtitle": "What drivers searched for and asked for in the last 30 days"
+    "subtitle": "What drivers searched for and asked for in the last 30 days",
+    "supply": {
+      "all": "All",
+      "area": "Area",
+      "brand": "Brand",
+      "column": {
+        "pair": "Brand and area",
+        "state": "State",
+        "unmet": "Without a quote"
+      },
+      "empty": "No data for the last 30 days yet.",
+      "emptyFiltered": "Nothing for the chosen filter.",
+      "garages": {
+        "one": "{n} garage",
+        "other": "{n} garages"
+      },
+      "heading": "Demand and supply",
+      "loadFailed": "The table could not be read.",
+      "loading": "Loading the table",
+      "noGarages": "no garages",
+      "noSupply": "no garages take it",
+      "perGarage": {
+        "one": "{n} request per garage",
+        "other": "{n} requests per garage"
+      },
+      "requests": {
+        "one": "{n} request",
+        "other": "{n} requests"
+      },
+      "searches": {
+        "one": "{n} search",
+        "other": "{n} searches"
+      },
+      "subtitle": "Where drivers look for a brand and how many garages take it, last 30 days",
+      "table": "Demand and supply by brand and area",
+      "unknownArea": "Unknown area",
+      "unmet": {
+        "one": "{n} without a quote",
+        "other": "{n} without a quote"
+      },
+      "updatedOn": "updated {day} at {time}",
+      "updatedToday": "updated today at {time}"
+    }
   },
   "file": {
     "approve": {

@@ -4233,6 +4233,85 @@
         ]
       }
     },
+    "/api/v1/car-models-3d": {
+      "get": {
+        "operationId": "CarModels3dController_read",
+        "parameters": [
+          {
+            "name": "brand",
+            "required": true,
+            "in": "query",
+            "description": "The brand, by its catalogue key",
+            "schema": {
+              "pattern": "^[a-z0-9-]{1,40}$",
+              "example": "dacia",
+              "type": "string"
+            }
+          },
+          {
+            "name": "car",
+            "required": false,
+            "in": "query",
+            "description": "One of the signed-in driver's own cars of the brand; the answer is about that car alone",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The 3D car to show for the brand: the driver's own licensed car, else the brand's most popular licensed model, else its generic shape",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarModel3dDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: brand or car is missing, malformed or repeated"
+          },
+          "404": {
+            "description": "not_found: no active brand has this key, or car is not the caller's own"
+          }
+        },
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/car-models-3d/files/{key}": {
+      "get": {
+        "operationId": "getCarModel3dFile",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The GLB, cached for a year"
+          },
+          "404": {
+            "description": "not_found: the catalogue or the store has no such file"
+          },
+          "503": {
+            "description": "storage_unavailable: the object store did not answer"
+          }
+        },
+        "summary": "",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
     "/api/v1/search/garages": {
       "get": {
         "operationId": "GarageSearchController_forBrand",
@@ -5833,6 +5912,67 @@
           }
         ],
         "summary": "The pending review reports, oldest first, 20 a page",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/review-reports/{reviewId}/decision": {
+      "post": {
+        "operationId": "ReportQueueController_decide",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecisionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewDecisionResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a bad id, decision not remove, reason not one of the eight rules (other included), or an extra member"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "account_suspended"
+          },
+          "404": {
+            "description": "not_found: not an admin, or no review with that id"
+          },
+          "409": {
+            "description": "already_decided (with decidedBy, the first decider's short name); no_pending_report"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Decide a review's pending report: remove the review or its reply",
         "tags": [
           "admin"
         ]
@@ -11937,6 +12077,344 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/photos": {
+      "get": {
+        "operationId": "OwnerPhotosController_list",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotosDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage's gallery in order, with its stamp",
+        "tags": [
+          "garages"
+        ]
+      },
+      "put": {
+        "operationId": "OwnerPhotosController_save",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveGaragePhotosDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotosDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a rule broken (errors[].field names the entry); unknown_photo: an id the gallery does not hold"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          },
+          "409": {
+            "description": "file_missing: an added upload is not stored; photo_processing: its copies are not made yet; profile_changed: the version is not the current one"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Save the whole gallery in its new order: kept photos by id, new uploads by key, each with its caption",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/photos/upload-url": {
+      "post": {
+        "operationId": "OwnerPhotosController_uploadAddress",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoUploadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoUploadAddressDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          },
+          "422": {
+            "description": "photos_full, file_type_not_allowed, file_too_large"
+          },
+          "429": {
+            "description": "rate_limited: too many upload addresses for this garage"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sign an upload of a photo for the gallery",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/photos/uploads": {
+      "post": {
+        "operationId": "OwnerPhotosController_confirm",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPhotoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotoUploadDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or not an upload of its own"
+          },
+          "409": {
+            "description": "file_missing: nothing was uploaded"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          },
+          "422": {
+            "description": "file_type_mismatch, file_too_large"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Keep an uploaded photo under the garage and make its copies",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/photos/uploads/{id}": {
+      "get": {
+        "operationId": "OwnerPhotosController_upload",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotoUploadDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: no such upload"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "An upload not yet saved, as its copies are made",
+        "tags": [
+          "garages"
+        ]
+      },
+      "delete": {
+        "operationId": "OwnerPhotosController_removeUpload",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: no such upload"
+          },
+          "409": {
+            "description": "photo_in_gallery: remove it by saving the gallery"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Drop an upload not yet saved, with its copies",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/listing-drafts/{id}/documents/{kind}/upload-url": {
       "post": {
         "operationId": "ListingDocumentsController_uploadAddress",
@@ -12465,6 +12943,35 @@
         },
         "tags": [
           "live"
+        ]
+      }
+    },
+    "/api/v1/admin/status": {
+      "get": {
+        "operationId": "StatusController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStatusDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: not an admin"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "admin"
         ]
       }
     },
@@ -17193,6 +17700,119 @@
           "nameEn"
         ]
       },
+      "CarModel3dBrandDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "dacia"
+          },
+          "name": {
+            "type": "string",
+            "example": "Dacia"
+          }
+        },
+        "required": [
+          "key",
+          "name"
+        ]
+      },
+      "CarModel3dSystemDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "engine"
+          },
+          "nameRo": {
+            "type": "string",
+            "example": "Motor"
+          },
+          "nameEn": {
+            "type": "string",
+            "example": "Engine"
+          },
+          "jobTypeIds": {
+            "description": "The approved catalogue jobs on this system, by Romanian name; empty when none",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "nameRo",
+          "nameEn",
+          "jobTypeIds"
+        ]
+      },
+      "CarModel3dDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "$ref": "#/components/schemas/CarModel3dBrandDto"
+          },
+          "source": {
+            "type": "string",
+            "description": "own_car: a model the driver owns; brand: the brand's most popular licensed model; generic: the brand's body shape",
+            "enum": [
+              "own_car",
+              "brand",
+              "generic"
+            ]
+          },
+          "model": {
+            "type": "string",
+            "description": "The licensed model; null for a generic shape",
+            "example": "Logan",
+            "nullable": true
+          },
+          "fuel": {
+            "type": "string",
+            "description": "The file's fuel, whose parts it holds; petrol for a generic shape",
+            "enum": [
+              "petrol",
+              "diesel",
+              "hybrid",
+              "electric"
+            ]
+          },
+          "bodyStyle": {
+            "type": "string",
+            "enum": [
+              "saloon",
+              "hatchback",
+              "suv",
+              "crossover",
+              "estate",
+              "fastback"
+            ]
+          },
+          "fileUrl": {
+            "type": "string",
+            "description": "The GLB, an absolute URL or a path from the site root",
+            "example": "/api/v1/car-models-3d/files/dacia-logan.2099f2575d8f1377.glb"
+          },
+          "systems": {
+            "description": "The systems of the file's fuel, in position order",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CarModel3dSystemDto"
+            }
+          }
+        },
+        "required": [
+          "brand",
+          "source",
+          "model",
+          "fuel",
+          "bodyStyle",
+          "fileUrl",
+          "systems"
+        ]
+      },
       "BrandRefDto": {
         "type": "object",
         "properties": {
@@ -20802,6 +21422,79 @@
           "oldestCreatedAt",
           "page",
           "pageSize"
+        ]
+      },
+      "ReviewDecisionDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "remove"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "The rule broken; the report reasons without other",
+            "enum": [
+              "insults",
+              "personal_data",
+              "ads",
+              "promotion",
+              "off_topic",
+              "hate",
+              "fake_or_conflicted",
+              "threats_or_legal_accusations"
+            ]
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ]
+      },
+      "ReviewDecisionResultDto": {
+        "type": "object",
+        "properties": {
+          "reviewId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reportId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "target": {
+            "type": "string",
+            "enum": [
+              "review",
+              "reply"
+            ]
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "removed"
+            ]
+          },
+          "decidedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "replyId": {
+            "type": "string",
+            "description": "The reply the decision removed; null when none was touched",
+            "format": "uuid",
+            "nullable": true
+          }
+        },
+        "required": [
+          "reviewId",
+          "reportId",
+          "target",
+          "decision",
+          "decidedAt",
+          "replyId"
         ]
       },
       "ReplyToReviewDto": {
@@ -24491,6 +25184,11 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "caption": {
+            "type": "string",
+            "description": "The owner's caption, when the photo has one",
+            "maxLength": 80
           },
           "thumbnailUrl": {
             "type": "string",
@@ -28312,6 +29010,139 @@
           "photos"
         ]
       },
+      "GaragePhotoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "position": {
+            "type": "number",
+            "description": "0 is the cover"
+          },
+          "caption": {
+            "type": "string",
+            "nullable": true
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "The thumbnail copy, signed for an hour",
+            "format": "uri"
+          },
+          "width": {
+            "type": "number",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "minimum": 1
+          },
+          "processed": {
+            "type": "boolean",
+            "description": "Always true: the gallery holds only processed photos"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "thumbnailUrl",
+          "processed"
+        ]
+      },
+      "GaragePhotosDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The profile's change stamp, sent back on save"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GaragePhotoDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "photos"
+        ]
+      },
+      "SaveGaragePhotoEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "A photo the gallery holds",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string",
+            "description": "An upload confirmed for this garage"
+          },
+          "caption": {
+            "type": "string",
+            "description": "Trimmed; empty clears it. No control characters",
+            "maxLength": 80,
+            "nullable": true
+          }
+        }
+      },
+      "SaveGaragePhotosDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The profile's change stamp as last read",
+            "maxLength": 20,
+            "minLength": 1
+          },
+          "photos": {
+            "description": "Exactly one of id and key per entry; the first is the cover",
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaveGaragePhotoEntryDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "photos"
+        ]
+      },
+      "GaragePhotoUploadDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The key to put in the gallery"
+          },
+          "processed": {
+            "type": "boolean",
+            "description": "Whether the copies are made"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "Signed for an hour",
+            "format": "uri"
+          },
+          "width": {
+            "type": "number",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "key",
+          "processed"
+        ]
+      },
       "DocumentUploadRequestDto": {
         "type": "object",
         "properties": {
@@ -28594,6 +29425,143 @@
         },
         "required": [
           "accountId"
+        ]
+      },
+      "StatusTextsDto": {
+        "type": "object",
+        "properties": {
+          "ro": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ro",
+          "en"
+        ]
+      },
+      "StatusTileDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "api",
+              "search",
+              "maps",
+              "email",
+              "notifications",
+              "backup"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "green",
+              "amber",
+              "red"
+            ]
+          },
+          "since": {
+            "type": "string",
+            "description": "Since when the tile is in its state; for a stale tile, its last check",
+            "format": "date-time",
+            "nullable": true
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "The figures the last check stored"
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "No check for three minutes: answered red"
+          },
+          "short": {
+            "$ref": "#/components/schemas/StatusTextsDto"
+          }
+        },
+        "required": [
+          "key",
+          "state",
+          "since",
+          "detail",
+          "checkedAt",
+          "stale",
+          "short"
+        ]
+      },
+      "StatusSentencesDto": {
+        "type": "object",
+        "properties": {
+          "ro": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "en": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "ro",
+          "en"
+        ]
+      },
+      "AdminStatusDto": {
+        "type": "object",
+        "properties": {
+          "tiles": {
+            "maxItems": 6,
+            "minItems": 6,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusTileDto"
+            }
+          },
+          "problems": {
+            "type": "array",
+            "description": "The tiles not green: red first, the oldest first",
+            "items": {
+              "type": "string",
+              "enum": [
+                "api",
+                "search",
+                "maps",
+                "email",
+                "notifications",
+                "backup"
+              ]
+            }
+          },
+          "sentences": {
+            "$ref": "#/components/schemas/StatusSentencesDto"
+          }
+        },
+        "required": [
+          "tiles",
+          "problems",
+          "sentences"
         ]
       },
       "SystemLogEntryDto": {
