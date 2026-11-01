@@ -116,6 +116,7 @@ describe('a request waiting for quotes', () => {
       ],
       mechanicName: null,
       range: null,
+      saveSuggestion: null,
       stage: 'sent',
     });
   });
@@ -405,5 +406,129 @@ describe('the cost of the read', () => {
     expect(one).toEqual([1, 1]);
     requests.mockRestore();
     features.mockRestore();
+  });
+});
+
+// @traces 293-FR-001 293-FR-003 293-FR-007
+describe('the save suggestion', () => {
+  const suggestion = async (driver: string) =>
+    (await read(driver)).request.saveSuggestion;
+  const dismiss = (accountId: string, garageId: string) =>
+    prisma.saveSuggestionDismissal.create({ data: { accountId, garageId } });
+
+  it('names the garage of a done job, approved, neither saved nor dismissed', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const dinamo = await world.garage('Atelier Dinamo');
+    await working(andrei, dinamo.id, 'done');
+
+    expect(await suggestion(andrei)).toEqual({
+      garageId: dinamo.id,
+      name: 'Atelier Dinamo',
+    });
+  });
+
+  it.each(['to_do', 'in_work', 'paused'] as const)(
+    'is null while the job is %s',
+    async (status) => {
+      const andrei = await world.account('Andrei Marin');
+      const dinamo = await world.garage('Atelier Dinamo');
+      await working(andrei, dinamo.id, status);
+
+      expect(await suggestion(andrei)).toBeNull();
+    },
+  );
+
+  it('is null for a garage the driver already saved', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const dinamo = await world.garage('Atelier Dinamo');
+    await working(andrei, dinamo.id, 'done');
+    await prisma.savedGarage.create({
+      data: { accountId: andrei, garageId: dinamo.id },
+    });
+
+    expect(await suggestion(andrei)).toBeNull();
+  });
+
+  it('is null for a garage the driver dismissed', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const dinamo = await world.garage('Atelier Dinamo');
+    await working(andrei, dinamo.id, 'done');
+    await dismiss(andrei, dinamo.id);
+
+    expect(await suggestion(andrei)).toBeNull();
+  });
+
+  it('is null for a garage suspended before the job was done', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const dinamo = await world.garage('Atelier Dinamo');
+    const { job } = await working(andrei, dinamo.id, 'in_work');
+    await prisma.garage.update({
+      data: { status: 'suspended' },
+      where: { id: dinamo.id },
+    });
+    await prisma.job.update({
+      data: { finishedAt: new Date(), status: 'done' },
+      where: { id: job.id },
+    });
+
+    expect(await suggestion(andrei)).toBeNull();
+  });
+
+  it('is null for a garage suspended after the job was done', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const dinamo = await world.garage('Atelier Dinamo');
+    await working(andrei, dinamo.id, 'done');
+    await prisma.garage.update({
+      data: { status: 'suspended' },
+      where: { id: dinamo.id },
+    });
+
+    expect(await suggestion(andrei)).toBeNull();
+  });
+
+  it('is null for a request with no live booking', async () => {
+    const andrei = await world.account('Andrei Marin');
+    await world.request(andrei);
+
+    expect(await suggestion(andrei)).toBeNull();
+  });
+
+  it('is kept for one garage when the driver dismissed another', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const dinamo = await world.garage('Atelier Dinamo');
+    const nordic = await world.garage('Garaj Nordic');
+    await working(andrei, dinamo.id, 'done');
+    await dismiss(andrei, nordic.id);
+
+    expect(await suggestion(andrei)).toEqual({
+      garageId: dinamo.id,
+      name: 'Atelier Dinamo',
+    });
+  });
+
+  it('is not hidden by another driver’s dismissal', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const ioana = await world.account('Ioana Pop');
+    const dinamo = await world.garage('Atelier Dinamo');
+    await working(andrei, dinamo.id, 'done');
+    await dismiss(ioana, dinamo.id);
+
+    expect((await suggestion(andrei))?.garageId).toBe(dinamo.id);
+  });
+
+  it('loses its dismissals with the account and with the garage', async () => {
+    const andrei = await world.account('Andrei Marin');
+    const ioana = await world.account('Ioana Pop');
+    const dinamo = await world.garage('Atelier Dinamo');
+    const nordic = await world.garage('Garaj Nordic');
+    await dismiss(andrei, dinamo.id);
+    await dismiss(ioana, nordic.id);
+    const count = (where: object) =>
+      prisma.saveSuggestionDismissal.count({ where });
+
+    await prisma.account.delete({ where: { id: andrei } });
+    expect(await count({ accountId: andrei })).toBe(0);
+    await prisma.garage.delete({ where: { id: nordic.id } });
+    expect(await count({ garageId: nordic.id })).toBe(0);
   });
 });

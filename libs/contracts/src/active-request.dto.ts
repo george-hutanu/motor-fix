@@ -43,6 +43,15 @@ export class ActiveRequestRangeDto {
   toBani!: number;
 }
 
+// The garage to offer saving after a finished job there.
+export class SaveSuggestionDto {
+  @ApiProperty({ format: 'uuid' })
+  garageId!: string;
+
+  @ApiProperty()
+  name!: string;
+}
+
 export class ActiveRequestBookingDto {
   @ApiProperty({ type: GarageRefDto })
   garage!: GarageRefDto;
@@ -118,6 +127,9 @@ export class ActiveRequestDto {
 
   @ApiProperty({ nullable: true, type: ActiveRequestJobDto })
   job!: ActiveRequestJobDto | null;
+
+  @ApiProperty({ nullable: true, type: SaveSuggestionDto })
+  saveSuggestion!: SaveSuggestionDto | null;
 }
 
 export class ActiveRequestAnswerDto {
