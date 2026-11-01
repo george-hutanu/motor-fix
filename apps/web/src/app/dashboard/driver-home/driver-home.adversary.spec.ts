@@ -121,6 +121,7 @@ const activeOf = (
           jobs: open[0].jobs,
           mechanicName: null,
           range: null,
+          saveSuggestion: null,
           stage: 'sent',
         }
       : null,
