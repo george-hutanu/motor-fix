@@ -1,5 +1,5 @@
 <ul>
-  @for (row of rows; track row.key) {
+  @for (row of hours; track row.key) {
     <li>
       <label [for]="'mf-filter-' + row.key">{{ row.label | t }}</label>
       <hlm-switch
@@ -9,4 +9,42 @@
       />
     </li>
   }
+</ul>
+<fieldset class="choices">
+  <legend>{{ 'public.results.filters.priceTitle' | t }}</legend>
+  <div>
+    @for (price of prices; track price) {
+      <button
+        type="button"
+        [attr.aria-pressed]="filters().max_price === price"
+        (click)="choose('max_price', price)"
+      >
+        {{ price }}
+      </button>
+    }
+  </div>
+</fieldset>
+<fieldset class="choices">
+  <legend>{{ 'public.results.filters.ratingTitle' | t }}</legend>
+  <div>
+    @for (value of ratings; track value) {
+      <button
+        type="button"
+        [attr.aria-pressed]="filters().min_rating === value"
+        (click)="choose('min_rating', value)"
+      >
+        {{ 'public.results.filters.ratingChoice' | t: { r: rating(value) } }}
+      </button>
+    }
+  </div>
+</fieldset>
+<ul>
+  <li>
+    <label [for]="'mf-filter-' + card.key">{{ card.label | t }}</label>
+    <hlm-switch
+      [inputId]="'mf-filter-' + card.key"
+      [checked]="filters().card"
+      (checkedChange)="toggle(card.key)"
+    />
+  </li>
 </ul>

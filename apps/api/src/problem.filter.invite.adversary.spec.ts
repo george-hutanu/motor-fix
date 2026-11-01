@@ -74,7 +74,7 @@ describe('ProblemFilter inviteId pass-through', () => {
   });
 
   it('carries no inviteId on an unknown error', () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const err = Object.assign(new Error('boom'), { inviteId: 'a' });
     const res = send(err);
     expect(res.statusCode).toBe(500);

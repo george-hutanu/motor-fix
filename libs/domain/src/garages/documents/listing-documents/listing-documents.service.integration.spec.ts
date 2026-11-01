@@ -416,7 +416,7 @@ describe('confirming a page', () => {
       incoming,
     );
     const page = confirmed.pages[0] as string;
-    const racing = jest
+    const racing = vi
       .spyOn(storage, 'confirmUpload')
       .mockResolvedValueOnce(page);
 
@@ -443,7 +443,7 @@ describe('confirming a page', () => {
       incoming,
     );
     const page = confirmed.pages[0] as string;
-    const racing = jest
+    const racing = vi
       .spyOn(storage, 'confirmUpload')
       .mockResolvedValueOnce(page);
 
@@ -593,7 +593,7 @@ describe('removing a page', () => {
     store.beforeDelete = () => {
       throw new Error('storage down');
     };
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
 

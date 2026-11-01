@@ -844,11 +844,17 @@
     "filters": {
       "button": "Filters",
       "buttonCount": "Filters · {n}",
+      "card": "Card payment",
       "clear": "Remove filters",
       "filtering": "Filtering…",
       "none": "No garage has everything you chose",
       "openNow": "Open now",
       "openSaturday": "Open on Saturday",
+      "priceChip": "Up to {n} lei/h",
+      "priceTitle": "Labour rate up to … lei/h",
+      "ratingChip": "Rating {r}+",
+      "ratingChoice": "{r}+",
+      "ratingTitle": "Minimum rating",
       "remove": "Remove filter {name}",
       "summary": "{n} with your filters",
       "title": "Filters"

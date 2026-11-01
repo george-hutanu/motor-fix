@@ -87,7 +87,7 @@ beforeEach(async () => {
   await reset();
   await redis.flushdb();
   published.length = 0;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -338,10 +338,10 @@ describe('changing my password', () => {
   it('keeps the change and logs it when the notice cannot be queued', async () => {
     await person();
     const laptop = await device();
-    const send = jest
+    const send = vi
       .spyOn(NotificationsService.prototype, 'sendAccountEmail')
       .mockRejectedValueOnce(new Error('queue down'));
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
 
@@ -364,7 +364,7 @@ describe('changing my password', () => {
   it('tells the account open dashboards their sessions ended', async () => {
     const id = await person();
     const laptop = await device();
-    const revoke = jest.spyOn(app.get(SignInService), 'revokeSessionsLive');
+    const revoke = vi.spyOn(app.get(SignInService), 'revokeSessionsLive');
 
     await change(laptop, { currentPassword: OLD, newPassword: NEW }).expect(
       204,
@@ -611,11 +611,11 @@ describe('changing my password', () => {
     const laptop = await device();
     const lines: string[] = [];
     for (const level of ['log', 'warn', 'error', 'debug', 'verbose'] as const) {
-      jest
-        .spyOn(Logger.prototype, level)
-        .mockImplementation((...args: unknown[]) => {
+      vi.spyOn(Logger.prototype, level).mockImplementation(
+        (...args: unknown[]) => {
           lines.push(JSON.stringify(args));
-        });
+        },
+      );
     }
 
     await change(laptop, { currentPassword: WRONG, newPassword: NEW });

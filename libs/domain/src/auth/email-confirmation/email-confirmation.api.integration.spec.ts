@@ -75,7 +75,7 @@ beforeEach(async () => {
   await redis.flushdb();
   published.length = 0;
   confirmations.now = () => new Date();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 let addresses = 0;
@@ -189,10 +189,11 @@ describe('signing up', () => {
   });
 
   it('still creates and signs in the account when the e-mail cannot be queued', async () => {
-    jest
-      .spyOn(app.get(NotificationsService), 'sendAccountEmail')
-      .mockRejectedValue(new Error('Redis did not answer'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(
+      app.get(NotificationsService),
+      'sendAccountEmail',
+    ).mockRejectedValue(new Error('Redis did not answer'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     const { accessToken, id } = await signUp();
     expect(accessToken).toEqual(expect.any(String));
     expect(await verifiedAt(id)).toBeNull();
@@ -463,7 +464,7 @@ describe('the signed-in account', () => {
 describe('with Redis down', () => {
   const down = () => {
     const client = app.get<Redis>(AUTH_REDIS);
-    jest.spyOn(client, 'multi').mockImplementation(() => {
+    vi.spyOn(client, 'multi').mockImplementation(() => {
       const chain = {
         decr: () => chain,
         exec: () => Promise.reject(new Error('Connection is closed.')),
@@ -472,10 +473,10 @@ describe('with Redis down', () => {
       };
       return chain as unknown as ReturnType<Redis['multi']>;
     });
-    jest
-      .spyOn(client, 'publish')
-      .mockRejectedValue(new Error('Connection is closed.'));
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(client, 'publish').mockRejectedValue(
+      new Error('Connection is closed.'),
+    );
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   };
 
   it('still sends a new link, without the limit', async () => {

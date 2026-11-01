@@ -23,7 +23,7 @@ let lines: string[];
 
 beforeEach(async () => {
   lines = [];
-  jest.spyOn(Logger.prototype, 'log').mockImplementation((message) => {
+  vi.spyOn(Logger.prototype, 'log').mockImplementation((message) => {
     lines.push(String(message));
   });
   await world.reset();
@@ -32,7 +32,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(() => prisma.$disconnect());

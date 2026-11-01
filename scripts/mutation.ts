@@ -30,6 +30,7 @@ import {
   type Scope,
   shardScope,
   shardsOf,
+  shardTestFiles,
 } from './mutation-plan.ts';
 import type { Counts } from './mutation-summary.ts';
 
@@ -52,11 +53,19 @@ const DRY_RUN_TIMEOUT_MINUTES = 30;
 export const reportsDir = (project: string, shard?: string) =>
   `reports/mutation/${project}${shard ? `/${shard}` : ''}`;
 
-function scopeOf(project: string, root: string, shard: string): Scope {
+function namedShards(project: string): Record<string, string[]> {
   const shards = shardsOf(readShardFile(process.cwd()), project);
   if (!shards)
     throw new Error(`${project} has no shards in scripts/mutation-shards.json`);
-  return shardScope(root, shards, shard);
+  return shards;
+}
+
+function scopeOf(project: string, root: string, shard: string): Scope {
+  return shardScope(root, namedShards(project), shard);
+}
+
+function testFilesOf(project: string, root: string, shard: string): string[] {
+  return shardTestFiles(process.cwd(), root, namedShards(project), shard);
 }
 
 // The cache restores the last run's reports with its incremental file: a job
@@ -91,6 +100,14 @@ export function strykerOptions(
   const lib = join(root, 'tsconfig.lib.json');
   const reports = reportsDir(project, shard);
   const scope = shard ? scopeOf(project, root, shard) : undefined;
+  const vitestConfig = join(root, 'vitest.config.mts');
+  const runner = existsSync(vitestConfig)
+    ? {
+        testRunner: 'vitest',
+        vitest: { configFile: vitestConfig },
+        ...(shard && { testFiles: testFilesOf(project, root, shard) }),
+      }
+    : { jest: jestOptions(root, scope), testRunner: 'jest' };
   return {
     checkers: ['typescript'],
     dryRunTimeoutMinutes: DRY_RUN_TIMEOUT_MINUTES,
@@ -115,13 +132,12 @@ export function strykerOptions(
     ignoreStatic: true,
     incremental,
     incrementalFile: `${reports}/incremental.json`,
-    jest: jestOptions(root, scope),
     // mutation.json carries each survivor's file, line and mutator, which the
     // mutation-runner agent reads from the job's artifact.
     jsonReporter: { fileName: `${reports}/mutation.json` },
     mutate: [`${root}/src/**/*.ts`, ...excluded(root)],
     reporters: ['clear-text', 'progress', 'html', 'json'],
-    testRunner: 'jest',
+    ...runner,
     tsconfigFile: existsSync(lib) ? lib : join(root, 'tsconfig.app.json'),
     ...own,
     ...(scope && {

@@ -34,7 +34,7 @@ const monitorUrl = (() => {
 
 // A loaded machine can miss the reader's 5 s limit once; the next reading
 // comes 500 ms later instead of 60 s, and the specs wait for it.
-jest.setTimeout(30_000);
+vi.setConfig({ hookTimeout: 30_000, testTimeout: 30_000 });
 
 const admin = new Client({ connectionString: databaseUrl });
 let app: INestApplication;

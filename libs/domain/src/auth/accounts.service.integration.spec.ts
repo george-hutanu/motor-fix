@@ -14,23 +14,27 @@ serialDatabase(databaseUrl);
 
 function ports() {
   const audit = {
-    record: jest.fn<
-      ReturnType<AuditPort['record']>,
-      Parameters<AuditPort['record']>
+    record: vi.fn<
+      (
+        ...args: Parameters<AuditPort['record']>
+      ) => ReturnType<AuditPort['record']>
     >(async () => undefined),
-    recordChanges: jest.fn<
-      ReturnType<AuditPort['recordChanges']>,
-      Parameters<AuditPort['recordChanges']>
+    recordChanges: vi.fn<
+      (
+        ...args: Parameters<AuditPort['recordChanges']>
+      ) => ReturnType<AuditPort['recordChanges']>
     >(async () => undefined),
-    recordMany: jest.fn<
-      ReturnType<AuditPort['recordMany']>,
-      Parameters<AuditPort['recordMany']>
+    recordMany: vi.fn<
+      (
+        ...args: Parameters<AuditPort['recordMany']>
+      ) => ReturnType<AuditPort['recordMany']>
     >(async () => undefined),
   };
   const events = {
-    record: jest.fn<
-      ReturnType<EventPort['record']>,
-      Parameters<EventPort['record']>
+    record: vi.fn<
+      (
+        ...args: Parameters<EventPort['record']>
+      ) => ReturnType<EventPort['record']>
     >(async () => undefined),
   };
   return { audit, events, service: new AccountsService(prisma, audit, events) };

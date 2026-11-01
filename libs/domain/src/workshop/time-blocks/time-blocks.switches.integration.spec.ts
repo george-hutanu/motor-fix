@@ -37,8 +37,10 @@ async function setting(off: string[]) {
 
 const span = { endsAt: at(11), startsAt: at(10) };
 
-beforeEach(() => jest.spyOn(Logger.prototype, 'warn').mockImplementation());
-afterEach(() => jest.restoreAllMocks());
+beforeEach(() => {
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+});
+afterEach(() => vi.restoreAllMocks());
 
 describe('blocking time under each switch', () => {
   it('saves a lift-only block with no mechanic while the team is off', async () => {

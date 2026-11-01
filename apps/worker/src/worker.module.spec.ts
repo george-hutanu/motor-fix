@@ -20,7 +20,7 @@ type Consumer = { kinds: readonly string[]; queue: string };
 
 // The consumers the worker hands the outbox relay, read without starting it.
 function consumers(): Consumer[] {
-  const register = jest.spyOn(OutboxRelayModule, 'register');
+  const register = vi.spyOn(OutboxRelayModule, 'register');
   workerModule({
     APP_ENV: 'test',
     DATABASE_URL: 'postgresql://motorfix@127.0.0.1:9/motorfix',

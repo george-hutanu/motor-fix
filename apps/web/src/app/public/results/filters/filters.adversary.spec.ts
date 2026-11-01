@@ -1,6 +1,15 @@
 import { convertToParamMap } from '@angular/router';
 
-import { countOf, filterParams, filtersIn, unfiltered } from './filters';
+import {
+  countOf,
+  type Filters,
+  filterParams,
+  filtersIn,
+  unfiltered,
+} from './filters';
+
+// Every filter off, as an empty address bar reads.
+const OFF: Filters = { card: false, open_now: false, open_saturday: false };
 
 const bar = (params: Record<string, string | string[]>) =>
   convertToParamMap(params);
@@ -17,10 +26,17 @@ describe('filters read from a hostile address bar', () => {
     '-1',
     '[object Object]',
   ])('reads %j as off', (value) => {
-    expect(filtersIn(bar({ open_now: value, open_saturday: value }))).toEqual({
-      open_now: false,
-      open_saturday: false,
-    });
+    expect(
+      filtersIn(
+        bar({
+          card: value,
+          max_price: value,
+          min_rating: value,
+          open_now: value,
+          open_saturday: value,
+        }),
+      ),
+    ).toEqual(OFF);
   });
 
   it('reads only the first value of a repeated key', () => {
@@ -31,33 +47,32 @@ describe('filters read from a hostile address bar', () => {
   it('ignores unknown and prototype keys', () => {
     expect(
       filtersIn(bar({ __proto__: '1', constructor: '1', open: '1' })),
-    ).toEqual({ open_now: false, open_saturday: false });
+    ).toEqual(OFF);
   });
 
   it('reads an empty bar as everything off', () => {
-    expect(filtersIn(bar({}))).toEqual({
-      open_now: false,
-      open_saturday: false,
-    });
+    expect(filtersIn(bar({}))).toEqual(OFF);
   });
 });
 
 describe('filter counts and request parameters', () => {
   it('counts none, one and both', () => {
-    expect(countOf({ open_now: false, open_saturday: false })).toBe(0);
-    expect(countOf({ open_now: false, open_saturday: true })).toBe(1);
-    expect(countOf({ open_now: true, open_saturday: true })).toBe(2);
+    expect(countOf(OFF)).toBe(0);
+    expect(countOf({ ...OFF, open_saturday: true })).toBe(1);
+    expect(countOf({ ...OFF, open_now: true, open_saturday: true })).toBe(2);
   });
 
   it('builds no parameters with everything off', () => {
-    expect(filterParams({ open_now: false, open_saturday: false })).toEqual({});
+    expect(filterParams(OFF)).toEqual({});
   });
 
   it('builds the parameters in the written order', () => {
     expect(
-      Object.keys(filterParams({ open_now: true, open_saturday: true })),
+      Object.keys(
+        filterParams({ ...OFF, open_now: true, open_saturday: true }),
+      ),
     ).toEqual(['open_now', 'open_saturday']);
-    expect(filterParams({ open_now: false, open_saturday: true })).toEqual({
+    expect(filterParams({ ...OFF, open_saturday: true })).toEqual({
       open_saturday: '1',
     });
   });

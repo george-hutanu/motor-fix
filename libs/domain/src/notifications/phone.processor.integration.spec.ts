@@ -117,7 +117,7 @@ const rows = (accountId: string) =>
 function failCount(error: Error) {
   const real = prisma.$queryRaw.bind(prisma);
   let failed = false;
-  return jest.spyOn(prisma, '$queryRaw').mockImplementation(((
+  return vi.spyOn(prisma, '$queryRaw').mockImplementation(((
     strings: TemplateStringsArray,
     ...values: unknown[]
   ) => {
@@ -326,7 +326,7 @@ describe('an SMS that does not go', () => {
   });
 
   it('goes by WhatsApp, then e-mail, for a type with neither text', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const ana = await person('ana', 1);
@@ -462,7 +462,7 @@ describe('an SMS that may have gone', () => {
 
   it('is neither sent nor counted when its mark cannot be written', async () => {
     const { ana, sms } = await queuedSms();
-    const update = jest
+    const update = vi
       .spyOn(prisma.notification, 'update')
       .mockRejectedValueOnce(new Error('connection lost'));
     try {
@@ -497,7 +497,7 @@ describe('an SMS that may have gone', () => {
     const count = failCount(new Error('count lost'));
     const real = prisma.notification.update.bind(prisma.notification);
     let calls = 0;
-    const update = jest
+    const update = vi
       .spyOn(prisma.notification, 'update')
       .mockImplementation(((args: never) =>
         ++calls === 2
@@ -524,7 +524,7 @@ describe('an SMS that may have gone', () => {
     mock.answer({ status: 503 });
     const real = prisma.notification.update.bind(prisma.notification);
     let calls = 0;
-    const update = jest
+    const update = vi
       .spyOn(prisma.notification, 'update')
       .mockImplementation(((args: never) =>
         ++calls === 2
@@ -569,7 +569,7 @@ describe('a WhatsApp message that does not go', () => {
   });
 
   it('goes by e-mail, with an error logged, while its template is not approved', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     build({ WHATSAPP_TEMPLATES: 'motorfix_due_itp_en=13' });
@@ -604,7 +604,7 @@ describe('starting the worker for phone sending alone', () => {
   });
 
   it('refuses to start phone sending with no key', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const config = testConfig(mock.url, {
@@ -665,7 +665,7 @@ describe('the garage’s WhatsApp switch', () => {
   });
 
   it('writes no second e-mail when the staff WhatsApp falls back', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const { garageId, owner } = await staff(true);

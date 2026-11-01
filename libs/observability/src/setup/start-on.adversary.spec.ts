@@ -9,8 +9,8 @@ const source = {
   OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otlp.example.com/otlp',
   OTEL_EXPORTER_OTLP_HEADERS: 'Authorization=Basic dG9wc2VjcmV0',
 };
-const log = jest.spyOn(console, 'log').mockImplementation(() => {});
-const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+const error = vi.spyOn(console, 'error').mockImplementation(() => {});
 const started = startTelemetry('api', source, memory);
 
 afterAll(async () => {

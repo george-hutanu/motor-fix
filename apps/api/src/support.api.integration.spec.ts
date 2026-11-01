@@ -192,7 +192,7 @@ describe('POST /support/messages', () => {
 
   it('refuses a visitor while maintenance is on, and lets an admin write', async () => {
     const maintenance = app.get<Maintenance>(MAINTENANCE, { strict: false });
-    const on = jest.spyOn(maintenance, 'on').mockResolvedValue(true);
+    const on = vi.spyOn(maintenance, 'on').mockResolvedValue(true);
     try {
       const visitor = await send(nextAddress(), BODY);
       const admin = await account('admin');
@@ -218,7 +218,7 @@ describe('GET /support/contact', () => {
 
   it('stays open while maintenance is on', async () => {
     const maintenance = app.get<Maintenance>(MAINTENANCE, { strict: false });
-    const on = jest.spyOn(maintenance, 'on').mockResolvedValue(true);
+    const on = vi.spyOn(maintenance, 'on').mockResolvedValue(true);
     try {
       const res = await request(app.getHttpServer()).get(
         '/api/v1/support/contact',

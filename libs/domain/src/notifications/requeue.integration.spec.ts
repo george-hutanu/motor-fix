@@ -64,7 +64,7 @@ const jobFor = (id: string) => queue.getJob(`send-${id}`);
 // value in code, which no test or setting can change.
 let REQUEUE_PAGE: number;
 const pageSize = async () => {
-  const read = jest.spyOn(prisma.notification, 'findMany');
+  const read = vi.spyOn(prisma.notification, 'findMany');
   await service.requeueStranded();
   const take = read.mock.calls[0][0]?.take;
   read.mockRestore();
@@ -109,7 +109,7 @@ beforeEach(async () => {
   owner = await account('andrei');
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('the sweep of queued rows with no job', () => {
   it('adds the send job of a stale queued row under its usual id and options', async () => {
@@ -215,7 +215,7 @@ describe('the sweep of queued rows with no job', () => {
   });
 
   it('logs the rows it re-queued, and nothing when there were none', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     await service.requeueStranded();
@@ -228,7 +228,7 @@ describe('the sweep of queued rows with no job', () => {
 
   // @traces 523-FR-014
   it('names at most the first ten rows it re-queued in its log line', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const ids = await backlog(12);
@@ -243,7 +243,7 @@ describe('the sweep of queued rows with no job', () => {
   });
 
   it('logs and ends without touching the rows when the queue refuses the add', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     build({ addBulk: () => Promise.reject(new Error('Redis down')) });
@@ -260,13 +260,13 @@ describe('the sweep of queued rows with no job', () => {
   });
 
   it('logs and ends when the rows cannot be read', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     await row();
-    jest
-      .spyOn(prisma.notification, 'findMany')
-      .mockRejectedValueOnce(new Error('connection lost'));
+    vi.spyOn(prisma.notification, 'findMany').mockRejectedValueOnce(
+      new Error('connection lost'),
+    );
     await expect(service.requeueStranded()).resolves.toBe(0);
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining('connection lost'),
@@ -276,8 +276,8 @@ describe('the sweep of queued rows with no job', () => {
 
   it('re-queues a backlog larger than one page, one bounded read and one bulk add per page', async () => {
     const ids = await backlog(REQUEUE_PAGE * 2 + 1);
-    const read = jest.spyOn(prisma.notification, 'findMany');
-    const bulk = jest.spyOn(queue, 'addBulk');
+    const read = vi.spyOn(prisma.notification, 'findMany');
+    const bulk = vi.spyOn(queue, 'addBulk');
     await expect(service.requeueStranded()).resolves.toBe(ids.length);
     expect(await queue.getJobCounts('waiting')).toEqual({
       waiting: ids.length,
@@ -312,8 +312,8 @@ describe('the sweep of queued rows with no job', () => {
 
   it('stops at the empty page after a backlog that fills its pages exactly', async () => {
     const ids = await backlog(REQUEUE_PAGE);
-    const read = jest.spyOn(prisma.notification, 'findMany');
-    const bulk = jest.spyOn(queue, 'addBulk');
+    const read = vi.spyOn(prisma.notification, 'findMany');
+    const bulk = vi.spyOn(queue, 'addBulk');
     await expect(service.requeueStranded()).resolves.toBe(REQUEUE_PAGE);
     expect(read).toHaveBeenCalledTimes(2);
     expect(bulk).toHaveBeenCalledTimes(1);
@@ -321,12 +321,11 @@ describe('the sweep of queued rows with no job', () => {
   });
 
   it('counts and names the pages handed over before an add failed', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const ids = await backlog(REQUEUE_PAGE + 1);
-    jest
-      .spyOn(queue, 'addBulk')
+    vi.spyOn(queue, 'addBulk')
       .mockImplementationOnce((jobs) =>
         Queue.prototype.addBulk.call(queue, jobs),
       )
@@ -389,10 +388,11 @@ describe('the worker', () => {
   });
 
   it('still starts and logs when the sweep cannot be scheduled', async () => {
-    jest
-      .spyOn(NotificationsService.prototype, 'scheduleRequeue')
-      .mockRejectedValue(new Error('Redis refused'));
-    const error = jest
+    vi.spyOn(
+      NotificationsService.prototype,
+      'scheduleRequeue',
+    ).mockRejectedValue(new Error('Redis refused'));
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const app = await boot();

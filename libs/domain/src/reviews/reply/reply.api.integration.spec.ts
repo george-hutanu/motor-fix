@@ -236,10 +236,8 @@ describe('the owner replies to a review', () => {
     const audited = () =>
       prisma.activityLog.count({ where: { subjectType: 'review_reply' } });
     const before = await audited();
-    jest
-      .spyOn(outbox, 'record')
-      .mockRejectedValueOnce(new Error('outbox down'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(outbox, 'record').mockRejectedValueOnce(new Error('outbox down'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const refused = await post(s.owner, s.review.id, { text: TEXT });
 
@@ -752,10 +750,8 @@ describe('the owner edits her reply', () => {
 
   it('leaves the text, audit and events as they were when the event cannot be written', async () => {
     const s = await replied();
-    jest
-      .spyOn(outbox, 'record')
-      .mockRejectedValueOnce(new Error('outbox down'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(outbox, 'record').mockRejectedValueOnce(new Error('outbox down'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const refused = await edit(s.owner, s.review.id, { text: 'Altfel.' });
 
@@ -774,15 +770,15 @@ describe('the owner edits her reply', () => {
     // the reply inside its transaction and refuse it.
     const app = client();
     const open = app.$transaction.bind(app);
-    jest
-      .spyOn(app, '$transaction')
-      .mockImplementationOnce(async (...args: unknown[]) => {
+    vi.spyOn(app, '$transaction').mockImplementationOnce(
+      async (...args: unknown[]) => {
         await prisma.reviewReply.update({
           data: { status: 'reported' },
           where: { id: s.replyId },
         });
         return (open as (...a: unknown[]) => Promise<unknown>)(...args);
-      });
+      },
+    );
 
     const refused = await edit(s.owner, s.review.id, { text: 'Altfel.' });
 
