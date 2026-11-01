@@ -16,8 +16,9 @@ features:
   - 1395-block-time-dashboard
   - 1404-predare-quote-range
   - 1403-block-time-dialog
-  - 154-free-slots
+  - 293-save-garage-suggest
   - 1410-predare-quote-dialog
+  - 154-free-slots
 ---
 
 # Capability: Workshop
@@ -102,9 +103,9 @@ _From 424-job-steps._
 
 _From 424-job-steps._
 
-### 274-FR-001 — The API MUST offer `GET /api/v1/quote-requests/active`, for the signed-in driver only (capability `driver.requests`; any other role answered 404, a visitor asked to sign in), returning the driver's active request or `null`, and the number of the driver's open requests. A request is open when its status is `sent`, `quoted`, `booked` or `in_work`, or `done` with its job not yet handed over; a `booked` or `in_work` request with no live booking (awaiting the garage, confirmed or completed), as after a no-show, is not open. Another driver's requests are never read.
+### 293-FR-003 — The active request read (`GET /api/v1/quote-requests/active`, 274-FR-001) MUST carry `saveSuggestion`: the garage to offer, `{ garageId, name }`, or null. It is set only when all four hold: (1) the request's live booking has a job whose status is `done`; (2) that booking's garage is `approved` at the time of the read (a garage suspended after the job is `done` gives null; re-approval brings it back); (3) the actor has no SAVED_GARAGE row for it; (4) the actor has no SAVE_SUGGESTION_DISMISSAL row for it. In every other case, including a request without a live booking or job, it is null. The rule lives in one place on the server; the web decides nothing about when a card is due.
 
-_From 274-request-stages._
+_From 293-save-garage-suggest._
 
 ### 274-FR-002 — The active request MUST be the open request closest to the workshop by its stage (FR-003): in work, then booked, then waiting for quotes (`sent` or `quoted`), then done (car ready, last: nothing yet records the handover that ends it); a tie goes to the request changed most recently (the latest of its creation, its quotes' sending, its booking's creation or confirmation and its job's start, pause or finish), then to the newest id.
 
@@ -470,6 +471,10 @@ _From 1403-block-time-dialog._
 
 _From 1403-block-time-dialog._
 
+### 293-FR-005 — The `saveSuggestion` field MUST be declared on the active request DTO in the contracts library, required and nullable as `booking` and `job` are (the garage's id and name, or null); the dismiss route MUST be in the OpenAPI document with its 204, 400, 401, 403 and 404 answers; the data-access client MUST be regenerated from it in the same change (Principle V).
+
+_From 293-save-garage-suggest._
+
 ### 154-FR-001 — The API MUST offer, under the `workshop` module, `GET /api/v1/garages/:garageId/free-slots` taking `duration` (minutes), `jobTypeIds` (optional, repeatable), `needsLift` (optional), `earliest` (optional ISO instant), `horizonDays` (optional), `count` (optional), `mechanicId` (optional) and `excludeBookingId` (optional) through a query DTO in the contracts library validated at the edge (400 `validation_failed`), and answer `{ slots: [{ startsAt, endsAt }], reason? }` with the first `count` free starts in ascending time order, each as an ISO string with the Europe/Bucharest offset, `endsAt` being the end of the job (the end of its last chained stretch for a multi-day job); `reason` is `none_in_horizon` when and only when `slots` is empty. The read writes nothing: no row, no audit entry, no event of its own.
 
 _From 154-free-slots._
@@ -551,3 +556,4 @@ _From 1410-predare-quote-dialog._
 - `150-FR-008` — superseded by `427-FR-005` (2026-10-29)
 - `427-FR-013` — struck by 427-time-blocks at clarify (2026-10-29): no code lowers `lift_count`; the first story that writes it owns the guard
 - `424-FR-015` — superseded by `1393-FR-011` (2026-10-30)
+- `274-FR-001` — superseded by `293-FR-003` (2026-10-31)

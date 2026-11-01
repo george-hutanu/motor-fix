@@ -118,6 +118,8 @@ async function render(
       {
         provide: GaragesService,
         useValue: {
+          // The lift schedule has its own spec; here it waits.
+          garageSchedule: () => new Promise(() => undefined),
           legalCheckControllerRead: () =>
             Promise.reject(new HttpErrorResponse({ status: 404 })),
           // The verification page has its own spec; here it waits.

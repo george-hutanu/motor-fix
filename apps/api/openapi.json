@@ -3614,6 +3614,48 @@
         ]
       }
     },
+    "/api/v1/me/save-suggestions/{garageId}/dismiss": {
+      "post": {
+        "operationId": "SaveSuggestionsController_dismiss",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Recorded, or recorded already with its first time kept"
+          },
+          "400": {
+            "description": "validation_failed: a bad id"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "driver_role_required: the role in use is not driver"
+          },
+          "404": {
+            "description": "not_found: no finished job of the caller at that garage"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remember the caller's no to saving a garage after a finished job there",
+        "tags": [
+          "saved-garages"
+        ]
+      }
+    },
     "/api/v1/me/dashboard-layouts/{role}": {
       "get": {
         "operationId": "DashboardLayoutsController_read",
@@ -9684,6 +9726,58 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/members/{accountId}": {
+      "delete": {
+        "operationId": "GarageMembersController_remove",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "accountId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "removed"
+          },
+          "400": {
+            "description": "an id is not a uuid"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: staff of this garage"
+          },
+          "404": {
+            "description": "not_found"
+          },
+          "409": {
+            "description": "owner_row: the owner's own row"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a receptionist from the garage, for the owner",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/images/g/{owner}/{digest}/{file}": {
       "get": {
         "operationId": "getImageVariant",
@@ -13980,6 +14074,50 @@
           "types"
         ]
       },
+      "NotificationFallbackDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The channel it was meant for",
+            "enum": [
+              "email",
+              "push",
+              "sms",
+              "whatsapp"
+            ]
+          },
+          "to": {
+            "type": "string",
+            "description": "The channel it went by",
+            "enum": [
+              "email",
+              "push",
+              "sms",
+              "whatsapp"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "no_device",
+              "phone_not_verified",
+              "sms_cap_reached",
+              "send_failed"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "reason",
+          "at"
+        ]
+      },
       "NotificationPreferenceDto": {
         "type": "object",
         "properties": {
@@ -14021,6 +14159,16 @@
                 "whatsapp"
               ]
             }
+          },
+          "fallback": {
+            "description": "A driver entry: the last message of the type that went by another channel than the chosen one since it was chosen, else null; a staff entry has none",
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NotificationFallbackDto"
+              }
+            ]
           }
         },
         "required": [
@@ -19739,6 +19887,42 @@
           "segments"
         ]
       },
+      "ScheduleIntervalDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "example": "08:30"
+          },
+          "to": {
+            "type": "string",
+            "example": "17:00"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ]
+      },
+      "ScheduleDayDto": {
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "example": "2026-10-09"
+          },
+          "open": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleIntervalDto"
+            }
+          }
+        },
+        "required": [
+          "day",
+          "open"
+        ]
+      },
       "GarageScheduleDto": {
         "type": "object",
         "properties": {
@@ -19762,6 +19946,20 @@
           },
           "lifts": {
             "type": "boolean"
+          },
+          "liftCount": {
+            "type": "number",
+            "description": "The garage's lifts; 0 while lifts is false"
+          },
+          "hoursSet": {
+            "type": "boolean",
+            "description": "Whether the garage has set opening hours"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleDayDto"
+            }
           }
         },
         "required": [
@@ -19769,7 +19967,10 @@
           "blocks",
           "from",
           "to",
-          "lifts"
+          "lifts",
+          "liftCount",
+          "hoursSet",
+          "days"
         ]
       },
       "RatingBreakdownDto": {
@@ -21027,6 +21228,22 @@
           "steps"
         ]
       },
+      "SaveSuggestionDto": {
+        "type": "object",
+        "properties": {
+          "garageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "garageId",
+          "name"
+        ]
+      },
       "ActiveRequestDto": {
         "type": "object",
         "properties": {
@@ -21087,6 +21304,15 @@
                 "$ref": "#/components/schemas/ActiveRequestJobDto"
               }
             ]
+          },
+          "saveSuggestion": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SaveSuggestionDto"
+              }
+            ]
           }
         },
         "required": [
@@ -21098,7 +21324,8 @@
           "range",
           "booking",
           "mechanicName",
-          "job"
+          "job",
+          "saveSuggestion"
         ]
       },
       "ActiveRequestAnswerDto": {
