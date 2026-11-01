@@ -1,6 +1,6 @@
 {
   "endpoints": {
-    "count": 259,
+    "count": 261,
     "source": "apps/api/openapi.json"
   },
   "entries": [
@@ -1177,6 +1177,19 @@
     },
     {
       "kind": "endpoint",
+      "name": "garage-members-remove",
+      "source": "libs/domain/src/garages/members/members.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/members/:accountId",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "each removal is audited (delete on member) and recorded as member.removed in the same transaction; the STAFF_REMOVED e-mail and push go through the notifications pipeline, whose sends and failures its own entries count, and a failed send is logged as an error with the account and garage ids while the removal stays; a 409 owner_row is the rule working",
+      "story": "ST-400"
+    },
+    {
+      "kind": "endpoint",
       "name": "garage-mechanic-hours-read",
       "source": "libs/domain/src/garages/mechanics/schedule/schedule.controller.ts",
       "metric": "http.server.request.duration by http.route /api/v1/garages/:garageId/mechanics/:mechanicId/hours",
@@ -1867,6 +1880,19 @@
       ],
       "reason": "PUT, DELETE, GET ids and the GET list (ST-291) show on the request-duration metric by route and status code; each save and removal is an audit row and a saved_garage.added or saved_garage.removed event, and reading the list changes nothing, so no product counter is added; the list's spans come from the HTTP and Prisma auto-instrumentation",
       "story": "ST-290, ST-291"
+    },
+    {
+      "kind": "endpoint",
+      "name": "save-suggestions",
+      "source": "libs/domain/src/cars/save-suggestions/save-suggestions.controller.ts",
+      "metric": "http.server.request.duration by http.route /api/v1/me/save-suggestions/:garageId/dismiss",
+      "dashboard": "motorfix-api",
+      "alerts": [
+        "api-error-rate",
+        "api-latency"
+      ],
+      "reason": "POST dismiss shows on the request-duration metric by route and status code; a dismissal is a display preference with no audit row and no event, so no product counter is added; its spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-293"
     },
     {
       "kind": "endpoint",
