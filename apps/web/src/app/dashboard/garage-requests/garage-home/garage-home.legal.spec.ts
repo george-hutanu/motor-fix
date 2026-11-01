@@ -118,7 +118,14 @@ async function render(
           garageRequestsControllerList: () => Promise.resolve(listOf([])),
         },
       },
-      { provide: GaragesService, useValue: { legalCheckControllerRead: read } },
+      {
+        provide: GaragesService,
+        // The lift schedule has its own spec; here it waits.
+        useValue: {
+          garageSchedule: () => new Promise(() => undefined),
+          legalCheckControllerRead: read,
+        },
+      },
       // The reviews panel has its own spec; here it waits.
       {
         provide: ReviewsService,

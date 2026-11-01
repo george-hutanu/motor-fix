@@ -63,6 +63,29 @@ describe('the repository inventory', () => {
 
     expect(check?.metric).toMatch(/\/api\/v1\/listing-drafts\/:id\/check/);
   });
+
+  // The lift timeline reads the schedule route the inventory already lists,
+  // with its route metric and alerts; it adds no endpoint of its own.
+  // @traces 151-FR-019
+  it('keeps the schedule read listed with its route metric and alerts', () => {
+    const inventory = JSON.parse(
+      readFileSync(join(root, 'infra/observability/inventory.json'), 'utf8'),
+    );
+    const entries: { name?: string; metric?: string; alerts?: string[] }[] =
+      Object.values(inventory).flatMap((each) =>
+        Array.isArray(each) ? each : [],
+      );
+    const schedule = entries.find((each) => each.name === 'garage-schedule');
+    const openapi = JSON.parse(
+      readFileSync(join(root, 'apps/api/openapi.json'), 'utf8'),
+    );
+
+    expect(schedule?.metric).toMatch(/\/api\/v1\/garages\/:garageId\/schedule/);
+    expect(schedule?.alerts).toEqual(['api-error-rate', 'api-latency']);
+    expect(
+      Object.keys(openapi.paths['/api/v1/garages/{garageId}/schedule']),
+    ).toEqual(['get']);
+  });
 });
 
 // @traces 092-FR-013
