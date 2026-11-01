@@ -233,6 +233,7 @@ export class AccountDeletionService {
       await tx.phoneChange.deleteMany(where);
       await tx.pushSubscription.deleteMany(where);
       await tx.notificationPreference.deleteMany(where);
+      await tx.notificationFallback.deleteMany(where);
       await revokeAssistantGrants(tx, this.audit, this.events, {
         accountId,
         by,
