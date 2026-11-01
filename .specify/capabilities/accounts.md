@@ -1426,6 +1426,10 @@ _From 102-garage-members._
 
 _From 102-garage-members._
 
+### 102-FR-016 — When a call under the signed-in garage's own path answers 404, the garage dashboard MUST read the account again, once per such 404 and coalesced while a re-read is in flight, counting only calls under `/api/v1/garages/{garageId}/` of the signed-in garage; when `garageAccess` no longer holds that garage, the dashboard body MUST show "Nu mai ai acces la acest service" / "You no longer have access to this garage" with a link "Spre pagina principală" / "To the home page", and the garage menu MUST show no view. A 404 while the garage is still held changes nothing (a feature off, a resource that is gone).
+
+_From 102-garage-members._
+
 ### 400-FR-003 — After the commit the removed account MUST lose the garage at once by the rules already on `main`, which this story's tests MUST prove for the removal: the live hub drops her connections from `garage:{garageId}` (254-FR-007), each API copy drops its cached staff for the garage (254-FR-006), her next call under `/api/v1/garages/{garageId}/` answers 404 `not_found` and her dashboard shows the lost-garage screen (102-FR-016). Her account MUST keep its `receptionist` role (as a removed mechanic keeps `mechanic`) and MAY accept a later invite, which makes a new membership row. Her past audit entries keep her name and role (390-FR-002).
 
 _From 400-receptionist._
@@ -1696,7 +1700,6 @@ _From 165-admin-roles._
 - `082-FR-020` — superseded by `1316-FR-006` (2026-10-30)
 - `394-FR-006` — superseded by `1316-FR-007` (2026-10-30)
 - `029-FR-009` — superseded by `1316-FR-005` (2026-10-30)
-- `102-FR-016` — superseded by `400-FR-003` (2026-10-31)
 - `011-FR-010` — superseded by `1391-FR-015` (2026-10-30)
 - `393-FR-005` — superseded by `1379-FR-003` (2026-10-30)
 - `099-FR-004` — superseded by `151-FR-001` (2026-10-31)
