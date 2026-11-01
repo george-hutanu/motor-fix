@@ -831,7 +831,7 @@ describe('a change based on what the caller last read', () => {
 
 // @traces 395-FR-006
 describe('a change while the lock store is unreachable', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('answers try again and applies nothing', async () => {
     const s = await setting();
@@ -839,7 +839,7 @@ describe('a change while the lock store is unreachable', () => {
     const redis = provider<Redis>(AUTH_REDIS);
     const down = () => Promise.reject(new Error('Connection is closed.'));
     for (const command of ['set', 'get', 'del', 'eval', 'evalsha'] as const) {
-      jest.spyOn(redis, command).mockImplementation(down as never);
+      vi.spyOn(redis, command).mockImplementation(down as never);
     }
 
     const res = await stage(s.job.id, 'start', s.hand);

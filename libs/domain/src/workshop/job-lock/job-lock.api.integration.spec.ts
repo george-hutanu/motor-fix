@@ -532,11 +532,11 @@ describe('with the lock store unreachable', () => {
     store = provider<Redis>(AUTH_REDIS);
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('answers a take 503 try_again and mirrors nothing', async () => {
     const s = await setting();
-    jest.spyOn(store, 'set').mockImplementation(down);
+    vi.spyOn(store, 'set').mockImplementation(down);
 
     const res = await take(s.lock, s.hand);
 
@@ -546,9 +546,10 @@ describe('with the lock store unreachable', () => {
 
   it('gives the key back and answers 503 when the job’s copy is not written', async () => {
     const s = await setting();
-    jest
-      .spyOn(provider<PrismaClient>(PRISMA).job, 'update')
-      .mockRejectedValueOnce(new Error('connection terminated'));
+    vi.spyOn(
+      provider<PrismaClient>(PRISMA).job,
+      'update',
+    ).mockRejectedValueOnce(new Error('connection terminated'));
 
     const res = await take(s.lock, s.hand);
 
@@ -559,7 +560,7 @@ describe('with the lock store unreachable', () => {
   it('answers a release 503 try_again and keeps the lock', async () => {
     const s = await setting();
     await take(s.lock, s.hand);
-    jest.spyOn(store, 'eval').mockImplementation(down);
+    vi.spyOn(store, 'eval').mockImplementation(down);
 
     const res = await send('delete', s.lock, s.hand);
 
@@ -570,7 +571,7 @@ describe('with the lock store unreachable', () => {
   it('answers a change 503 try_again and leaves the job as it was', async () => {
     const s = await setting();
     const before = await reread(s.job.id);
-    jest.spyOn(store, 'set').mockImplementation(down);
+    vi.spyOn(store, 'set').mockImplementation(down);
 
     const res = await send('post', `/garage/jobs/${s.job.id}/start`, s.hand);
 
@@ -585,9 +586,9 @@ describe('with the lock store unreachable', () => {
   // @traces 395-FR-016
   it('logs a warning when a take gives up after its two tries', async () => {
     const s = await setting();
-    jest.spyOn(store, 'set').mockResolvedValue(null as never);
-    jest.spyOn(store, 'eval').mockResolvedValue(null);
-    const warn = jest.spyOn(Logger.prototype, 'warn');
+    vi.spyOn(store, 'set').mockResolvedValue(null as never);
+    vi.spyOn(store, 'eval').mockResolvedValue(null);
+    const warn = vi.spyOn(Logger.prototype, 'warn');
 
     const res = await take(s.lock, s.hand);
 
