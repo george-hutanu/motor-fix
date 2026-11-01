@@ -330,10 +330,8 @@ describe('what a review removal records', () => {
     const s = await setting();
     await reply(s.one.id);
     const report = await reportedReview(s.one.id, s.dinamo.owner);
-    jest
-      .spyOn(outbox, 'record')
-      .mockRejectedValueOnce(new Error('outbox down'));
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(outbox, 'record').mockRejectedValueOnce(new Error('outbox down'));
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const res = await decide(s.auth, s.one.id, {
       decision: 'remove',
