@@ -329,6 +329,25 @@
       "unavailable": "Upload is not available right now"
     }
   },
+  "liftSchedule": {
+    "blocked": "Blocked",
+    "closed": "Closed today",
+    "empty": "No bookings today",
+    "failed": "The schedule did not load",
+    "lift": "Lift {n}",
+    "minutes": "{time}, {minutes} min",
+    "noLift": "No lift",
+    "now": "now, {time}",
+    "offline": "Offline: the schedule may have changed",
+    "retry": "Retry",
+    "state": {
+      "blocked": "blocked",
+      "done": "done",
+      "paused": "paused",
+      "todo": "scheduled",
+      "work": "in work"
+    }
+  },
   "mechanicCard": {
     "brands": "Brands they work on",
     "certifications": "Certifications",
