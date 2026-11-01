@@ -259,6 +259,7 @@ export type { NewsSentDto } from './models/news-sent-dto';
 export type { NewsTextDto } from './models/news-text-dto';
 export type { NewsTitleDto } from './models/news-title-dto';
 export type { NotificationDto } from './models/notification-dto';
+export type { NotificationFallbackDto } from './models/notification-fallback-dto';
 export type { NotificationGroupDto } from './models/notification-group-dto';
 export type { NotificationPageDto } from './models/notification-page-dto';
 export type { NotificationPreferenceDto } from './models/notification-preference-dto';
@@ -370,6 +371,7 @@ export type { SaveGaragePhotoEntryDto } from './models/save-garage-photo-entry-d
 export type { SaveGaragePhotosDto } from './models/save-garage-photos-dto';
 export type { SaveListingDraftDto } from './models/save-listing-draft-dto';
 export type { SavePushSubscriptionDto } from './models/save-push-subscription-dto';
+export type { SaveSuggestionDto } from './models/save-suggestion-dto';
 export type { ScheduleCarDto } from './models/schedule-car-dto';
 export type { ScheduleDayDto } from './models/schedule-day-dto';
 export type { ScheduleIntervalDto } from './models/schedule-interval-dto';
@@ -751,6 +753,8 @@ export type { SavedGaragesControllerList$Params as SavedGaragesControllerList$Pa
 export { savedGaragesControllerList as savedGaragesControllerList } from './fn/saved-garages/saved-garages-controller-list';
 export type { SavedGaragesControllerIds$Params as SavedGaragesControllerIds$Params } from './fn/saved-garages/saved-garages-controller-ids';
 export { savedGaragesControllerIds as savedGaragesControllerIds } from './fn/saved-garages/saved-garages-controller-ids';
+export type { SaveSuggestionsControllerDismiss$Params as SaveSuggestionsControllerDismiss$Params } from './fn/saved-garages/save-suggestions-controller-dismiss';
+export { saveSuggestionsControllerDismiss as saveSuggestionsControllerDismiss } from './fn/saved-garages/save-suggestions-controller-dismiss';
 export type { DashboardLayoutsControllerRead$Params as DashboardLayoutsControllerRead$Params } from './fn/dashboard-layouts/dashboard-layouts-controller-read';
 export { dashboardLayoutsControllerRead as dashboardLayoutsControllerRead } from './fn/dashboard-layouts/dashboard-layouts-controller-read';
 export type { DashboardLayoutsControllerSave$Params as DashboardLayoutsControllerSave$Params } from './fn/dashboard-layouts/dashboard-layouts-controller-save';
