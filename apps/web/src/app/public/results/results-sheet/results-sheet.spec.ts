@@ -657,7 +657,9 @@ describe('ResultsSheet forced full across 768 px', () => {
       .replace(/\s+/g, ' ');
     const top = css.match(/:host\(\.forced\) \.top \{([^}]*)\}/)?.[1] ?? '';
     const body = css.match(/:host\(\.forced\) \.body \{([^}]*)\}/)?.[1] ?? '';
-    expect(top).toMatch(/max-height: max\(var\(--mf-tap\), 33%\);/);
+    expect(top).toMatch(
+      /max-height: max\(var\(--mf-tap\), min\(33%, 100% - 11rem\)\);/,
+    );
     expect(body).toMatch(/flex: 1 1 auto;/);
     expect(body).toMatch(/height: auto;/);
     expect(body).toMatch(/min-height: 0;/);

@@ -41,6 +41,7 @@ import type { MapEvents, MapMove } from './results-map/pins-map';
 import { RESULTS_MAP, type ResultsMapView } from './results-map/results-map';
 import { ResultsSheet } from './results-sheet/results-sheet';
 import { routes } from '../../app.routes';
+import { Consent } from '../../consent/consent';
 import { BrandSearch } from '../../home/brand-picker/brand-search/brand-search';
 import { PlaceDialog } from '../../home/place/place-dialog/place-dialog';
 import { type Place, PlaceStore } from '../../home/place/place-store';
@@ -3433,6 +3434,19 @@ describe('the phone results screen in the stylesheet', () => {
     );
   });
 
+  // @traces 1399-FR-007 1399-FR-008
+  it("drops the folded summary and the forced state's spare padding on a phone up to 880 px tall", () => {
+    const short =
+      css.match(
+        /@media \(max-width: 767px\) and \(max-height: 880px\) \{((?:[^{}]*\{[^}]*\})*)[^}]*\}/,
+      )?.[1] ?? '';
+
+    expect(short).toMatch(/\.intro\.tight \.summary \{ display: none; \}/);
+    expect(short).toMatch(
+      /mf-results-sheet\.forced \.state \{ padding-block: var\(--mf-space-2\); \}/,
+    );
+  });
+
   it('keeps the one column as wide as the screen, whatever the title holds', () => {
     expect(rule(':host')).toMatch(/grid-template-columns: minmax\(0, 1fr\);/);
   });
@@ -5165,6 +5179,29 @@ describe('Results filters', () => {
       await settle();
 
       expect(position()).toBe('half');
+    });
+
+    // @traces 1399-FR-007 1399-FR-008
+    // At 320 x 568 with the consent bar asking, the summary under the title
+    // left the forced sheet too short for the state's heading and button.
+    it('folds the summary away while the consent bar asks over the state on a phone, and back once the filters are cleared', async () => {
+      pinsAnswer = pinsOf(3);
+      await shown(
+        `/ro/garages?brand=bmw&near=${NEAR}&max_price=300&min_rating=4.5&card=1`,
+        none(),
+      );
+      const tight = () =>
+        page().querySelector('header.intro')?.classList.contains('tight');
+
+      expect(TestBed.inject(Consent).showBar()).toBe(true);
+      expect(tight()).toBe(true);
+
+      state()?.querySelector<HTMLButtonElement>('button.primary')?.click();
+      await settle();
+      await reads.at(-1)?.answer();
+      await settle();
+
+      expect(tight()).toBe(false);
     });
 
     it('clears both filters in one write, without logging', async () => {

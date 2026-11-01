@@ -80,9 +80,9 @@
 
 /* Forced full by a state the half sheet would cut (the filtered empty state
    with the consent bar asking at 390 px): the header keeps a third of the
-   sheet and scrolls, so the state under it shows whole. */
+   sheet, less on a short phone so 11rem stay for the state, and scrolls, so the state under it shows whole. */
 :host(.forced) .top {
-  max-height: max(var(--mf-tap), 33%);
+  max-height: max(var(--mf-tap), min(33%, 100% - 11rem));
 }
 
 :host(.forced) .body {

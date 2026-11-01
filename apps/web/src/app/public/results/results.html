@@ -1,4 +1,4 @@
-<header class="intro">
+<header class="intro" [class.tight]="tight()">
   @if (answer(); as answer) {
     <!-- Re-created for another brand, whose name blurs in once it lands. -->
     <h1 class="title" [class.rising]="rising()">@for (shown of [answer.brand]; track shown.id) {<span class="titled">{{ voice.copy.list | t: { brand: unbroken(shown.name) } }}</span>}</h1>

@@ -68,6 +68,7 @@ import { type PinCard, ResultsMap } from './results-map/results-map';
 import { ResultsMemory } from './results-memory/results-memory';
 import { ResultsSheet } from './results-sheet/results-sheet';
 import { SortControl } from './sort-control/sort-control';
+import { Consent } from '../../consent/consent';
 import { LiveChange, reuse } from '../../dashboard/live-in-place/live-in-place';
 import { BrandSearch } from '../../home/brand-picker/brand-search/brand-search';
 import { type Place, PlaceStore } from '../../home/place/place-store';
@@ -588,6 +589,13 @@ export class Results {
   // sheet takes the screen while it shows.
   protected readonly filteredEmptyShown = computed(
     () => this.state() === 'empty' && this.emptyFiltered(),
+  );
+
+  // While the consent bar asks over that state on a short phone, the summary
+  // folds away (results.css), so the forced sheet holds the state whole.
+  private readonly consent = inject(Consent);
+  protected readonly tight = computed(
+    () => this.filteredEmptyShown() && this.consent.showBar(),
   );
 
   protected readonly tally = computed(() => {

@@ -262,6 +262,17 @@ mf-brand-chips {
   mf-results-sheet {
     margin-block-end: var(--consent-bar, 0px);
   }
+
+  /* With the filtered empty state forcing the sheet full under the asking
+     bar, a 320 x 568 phone has no room for the summary as well: it folds
+     away until the bar is answered or the filters cleared. */
+  .intro.tight .summary {
+    display: none;
+  }
+
+  mf-results-sheet.forced .state {
+    padding-block: var(--mf-space-2);
+  }
 }
 
 /* On a tablet the map sits above the list at full width, under the chips.
