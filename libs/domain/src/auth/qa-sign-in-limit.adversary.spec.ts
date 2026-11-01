@@ -15,7 +15,7 @@ describe('signInLimitConfig with hostile input', () => {
   ])(
     'keeps the limit and warns under the APP_ENV %j, which is not exactly test',
     (appEnv) => {
-      const warn = jest.fn();
+      const warn = vi.fn();
       expect(
         signInLimitConfig(appEnv, { PR_QA_SIGN_IN_UNLIMITED: '1' }, warn),
       ).toBe(false);
@@ -39,7 +39,7 @@ describe('signInLimitConfig with hostile input', () => {
     'TRUE',
     'True',
   ])('keeps the limit under APP_ENV=test for the flag value %j', (value) => {
-    const warn = jest.fn();
+    const warn = vi.fn();
     expect(
       signInLimitConfig('test', { PR_QA_SIGN_IN_UNLIMITED: value }, warn),
     ).toBe(false);
@@ -49,7 +49,7 @@ describe('signInLimitConfig with hostile input', () => {
   // @traces 1361-FR-008
   it('lifts the limit only for the value 1, the one the PR QA workflow sets', () => {
     expect(
-      signInLimitConfig('test', { PR_QA_SIGN_IN_UNLIMITED: 'true' }, jest.fn()),
+      signInLimitConfig('test', { PR_QA_SIGN_IN_UNLIMITED: 'true' }, vi.fn()),
     ).toBe(false);
   });
 });

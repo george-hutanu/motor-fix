@@ -90,7 +90,7 @@ type Answer = () => Promise<Response>;
 
 function provider(tile: Answer = async () => new Response(FIXTURE)) {
   const calls: string[] = [];
-  const fetch = jest.fn(
+  const fetch = vi.fn(
     async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       calls.push(url);
@@ -312,7 +312,7 @@ describe('rendering a static map', () => {
   });
 
   it('fails when the tile address cannot be read', async () => {
-    const fetch = jest.fn(async () => new Response('down', { status: 500 }));
+    const fetch = vi.fn(async () => new Response('down', { status: 500 }));
 
     await expect(
       new StaticMapRenderer(TILEJSON, { fetch }).render(view('light')),
@@ -333,7 +333,7 @@ describe('rendering a static map', () => {
     const { fetch } = provider(() => new Promise(() => undefined));
     const renderer = new StaticMapRenderer(TILEJSON, {
       fetch,
-      // Past Jest's own limit: only the tile's 20 ms can end this.
+      // Past the runner's own limit: only the tile's 20 ms can end this.
       renderTimeoutMs: 60_000,
       tileTimeoutMs: 20,
     });

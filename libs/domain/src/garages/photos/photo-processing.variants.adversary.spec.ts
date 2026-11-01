@@ -80,7 +80,7 @@ describe('processing a photo into variants, hostile inputs', () => {
   it('leaves no variant when the thumbnail write fails', async () => {
     store.put(KEY, await solid(800, 600).jpeg().toBuffer(), 'image/jpeg');
     const put = storage.putObject.bind(storage);
-    const putting = jest
+    const putting = vi
       .spyOn(storage, 'putObject')
       .mockImplementation(async (...args) => {
         if (args[0] === `${KEY}.thumb`) throw new Error('store down');
@@ -98,7 +98,7 @@ describe('processing a photo into variants, hostile inputs', () => {
     store.put(KEY, await solid(800, 600).jpeg().toBuffer(), 'image/jpeg');
     const put = storage.putObject.bind(storage);
     let first = true;
-    const putting = jest
+    const putting = vi
       .spyOn(storage, 'putObject')
       .mockImplementation(async (...args) => {
         const done = await put(...args);

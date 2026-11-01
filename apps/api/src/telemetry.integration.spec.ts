@@ -200,8 +200,8 @@ describe('telemetry in the API', () => {
       lines.push(String(chunk));
       return true;
     };
-    const out = jest.spyOn(process.stdout, 'write').mockImplementation(capture);
-    const err = jest.spyOn(process.stderr, 'write').mockImplementation(capture);
+    const out = vi.spyOn(process.stdout, 'write').mockImplementation(capture);
+    const err = vi.spyOn(process.stderr, 'write').mockImplementation(capture);
     try {
       await request(app.getHttpServer()).get('/api/v1/probe/boom').expect(500);
     } finally {

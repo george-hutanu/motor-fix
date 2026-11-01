@@ -25,14 +25,14 @@ serialDatabase(databaseUrl);
 let app: TestingModule | undefined;
 
 beforeEach(async () => {
-  jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
   await world.reset();
 });
 
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(() => prisma.$disconnect());

@@ -10,18 +10,18 @@ const GARAGE = 'garage-1';
 const setup = (stored: boolean) => {
   const tx = {
     garage: {
-      findUniqueOrThrow: jest.fn(async () => ({ teamOnProfile: stored })),
-      update: jest.fn(async () => ({})),
+      findUniqueOrThrow: vi.fn(async () => ({ teamOnProfile: stored })),
+      update: vi.fn(async () => ({})),
     },
     mechanic: {
-      findMany: jest.fn(async () => [{ id: 'm-1' }, { id: 'm-2' }]),
+      findMany: vi.fn(async () => [{ id: 'm-1' }, { id: 'm-2' }]),
     },
   };
   const audit = {
-    record: jest.fn(async () => undefined),
-    recordChanges: jest.fn(async () => undefined),
+    record: vi.fn(async () => undefined),
+    recordChanges: vi.fn(async () => undefined),
   };
-  const events = { record: jest.fn(async () => undefined) };
+  const events = { record: vi.fn(async () => undefined) };
   return {
     audit,
     events,

@@ -33,7 +33,7 @@ const at = new Date(NOW).toISOString();
 
 let hub: LiveHub;
 beforeEach(() => {
-  jest.useFakeTimers({ now: NOW });
+  vi.useFakeTimers({ now: NOW });
   hub = new LiveHub(async () => ({
     mechanics: new Map(),
     off: new Set(),
@@ -43,8 +43,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   hub.shutdown();
-  jest.useRealTimers();
-  jest.restoreAllMocks();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 const openPublic = (channels: string[], address: string | null = '1.2.3.4') => {

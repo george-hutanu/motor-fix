@@ -76,7 +76,7 @@ beforeEach(async () => {
   mark = await outboxMark(prisma);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const DAY = 86_400_000;
 const NONE = {
@@ -468,8 +468,8 @@ const membership = (garageId: string, accountId: string) =>
     where: { garageId_accountId: { accountId, garageId } },
   });
 const quiet = () => {
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 };
 
 // @traces 400-FR-001
@@ -765,8 +765,8 @@ describe('telling the removed receptionist', () => {
 
   it('keeps the removal and logs an error naming her and the garage when the notice cannot be written', async () => {
     const w = await world();
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    const errors = jest
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const errors = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const undo = await refuseInserts(

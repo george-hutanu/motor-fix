@@ -18,7 +18,7 @@ afterAll(() => {
   for (const redis of clients) redis.disconnect();
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const key = () => cacheKey('profile', randomUUID(), '-');
@@ -58,14 +58,14 @@ describe('a purge racing a read', () => {
     };
     await cache.read({ key: k, read, soft: 60 });
     const later = Date.now() + 120_000;
-    jest.spyOn(Date, 'now').mockImplementation(() => later);
+    vi.spyOn(Date, 'now').mockImplementation(() => later);
 
     await cache.read({ key: k, read, soft: 60 });
     await sleep(60);
     version = 2;
     await purgeTags(client(), [tag]);
     await sleep(400);
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
 
     expect(await other.get(k)).toBeNull();
   });
@@ -142,8 +142,8 @@ describe('a read function that throws', () => {
       soft: 60,
     });
     const later = Date.now() + 120_000;
-    jest.spyOn(Date, 'now').mockImplementation(() => later);
-    const failing = jest.fn(async (): Promise<{ value: string }> => {
+    vi.spyOn(Date, 'now').mockImplementation(() => later);
+    const failing = vi.fn(async (): Promise<{ value: string }> => {
       throw new Error('boom');
     });
 
@@ -283,7 +283,7 @@ describe('keys with colons', () => {
   it('stores and reads back an entry whose key parts contain colons, spaces and unicode', async () => {
     const cache = new CacheService(client());
     const k = cacheKey('profile', `x:y:${randomUUID()}`, 'mărci: ăîș 🚗');
-    const read = jest.fn(async () => ({ value: { ok: true } }));
+    const read = vi.fn(async () => ({ value: { ok: true } }));
 
     await cache.read({ key: k, read, soft: 600 });
     await expect(cache.read({ key: k, read, soft: 600 })).resolves.toEqual({
@@ -309,7 +309,7 @@ describe('values that roundtrip', () => {
     async (_n, value) => {
       const cache = new CacheService(client());
       const k = key();
-      const read = jest.fn(async () => ({ value }));
+      const read = vi.fn(async () => ({ value }));
 
       await cache.read({ key: k, read, soft: 600 });
       await expect(cache.read({ key: k, read, soft: 600 })).resolves.toEqual(
@@ -324,7 +324,7 @@ describe('values that roundtrip', () => {
     const cache = new CacheService(client());
     const k = key();
     const value = { blob: 'é'.repeat(2_500_000) };
-    const read = jest.fn(async () => ({ value }));
+    const read = vi.fn(async () => ({ value }));
 
     await cache.read({ key: k, read, soft: 600 });
     const again = await cache.read({ key: k, read, soft: 600 });
@@ -381,7 +381,7 @@ describe('Redis failing', () => {
 
   it('answers from the read function when the server cannot be reached', async () => {
     const cache = new CacheService(dead());
-    const read = jest.fn(async () => ({ value: 'db' }));
+    const read = vi.fn(async () => ({ value: 'db' }));
 
     await expect(cache.read({ key: key(), read, soft: 60 })).resolves.toBe(
       'db',
@@ -395,7 +395,7 @@ describe('Redis failing', () => {
 
   it('answers 50 concurrent reads of one key from the database during an outage without hanging', async () => {
     const cache = new CacheService(dead());
-    const read = jest.fn(async () => ({ value: 'db' }));
+    const read = vi.fn(async () => ({ value: 'db' }));
 
     const answers = await Promise.all(
       Array.from({ length: 50 }, () =>
@@ -415,9 +415,9 @@ describe('Redis failing', () => {
       read: async () => ({ value: 'old' }),
       soft: 60,
     });
-    jest.spyOn(redis, 'get').mockRejectedValue(new Error('ECONNRESET'));
-    jest.spyOn(redis, 'eval').mockRejectedValue(new Error('ECONNRESET'));
-    jest.spyOn(redis, 'set').mockRejectedValue(new Error('ECONNRESET'));
+    vi.spyOn(redis, 'get').mockRejectedValue(new Error('ECONNRESET'));
+    vi.spyOn(redis, 'eval').mockRejectedValue(new Error('ECONNRESET'));
+    vi.spyOn(redis, 'set').mockRejectedValue(new Error('ECONNRESET'));
 
     await expect(
       cache.read({ key: k, read: async () => ({ value: 'db' }), soft: 60 }),
@@ -442,7 +442,7 @@ describe('Redis failing', () => {
     const redis = client();
     const cache = new CacheService(redis);
     const read = async () => {
-      jest.spyOn(redis, 'eval').mockRejectedValue(new Error('ECONNRESET'));
+      vi.spyOn(redis, 'eval').mockRejectedValue(new Error('ECONNRESET'));
       return { tags: ['t'], value: 'db' };
     };
 
@@ -455,7 +455,7 @@ describe('Redis failing', () => {
 // @traces 1182-FR-005 1182-FR-006
 describe('purge edge cases', () => {
   it('purges nothing for an empty tag list and calls no hook', async () => {
-    const hook = jest.fn();
+    const hook = vi.fn();
 
     await expect(purgeTags(client(), [], hook)).resolves.toEqual([]);
 
@@ -463,7 +463,7 @@ describe('purge edge cases', () => {
   });
 
   it('answers an empty list for a tag no entry holds and still hands it to the hook', async () => {
-    const hook = jest.fn();
+    const hook = vi.fn();
     const tag = `garage:${randomUUID()}`;
 
     await expect(purgeTags(client(), [tag], hook)).resolves.toEqual([]);
@@ -494,7 +494,7 @@ describe('purge edge cases', () => {
       read: async () => ({ tags: [tag], value: 1 }),
       soft: 60,
     });
-    const hook = jest.fn(async () => {
+    const hook = vi.fn(async () => {
       throw new Error('cdn down');
     });
 
@@ -512,7 +512,7 @@ describe('purge edge cases', () => {
       read: async () => ({ tags: [second], value: 1 }),
       soft: 60,
     });
-    const hook = jest.fn(() => {
+    const hook = vi.fn(() => {
       throw new Error('cdn down');
     });
 
@@ -522,7 +522,7 @@ describe('purge edge cases', () => {
   });
 
   it('throws when Redis refuses the purge', async () => {
-    const redis = { eval: jest.fn().mockRejectedValue(new Error('READONLY')) };
+    const redis = { eval: vi.fn().mockRejectedValue(new Error('READONLY')) };
 
     await expect(purgeTags(redis, ['a'])).rejects.toThrow('READONLY');
   });

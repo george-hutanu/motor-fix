@@ -193,3 +193,22 @@ describe('the docs that describe a mutation run', () => {
     expect(agents).toMatch(/surviving mutant is picked from the Project/);
   });
 });
+
+// @traces 1338-FR-009
+describe('mutation worker concurrency', () => {
+  const stryker = (dir: string) =>
+    JSON.parse(
+      readFileSync(join(__dirname, '..', dir, 'stryker.config.json'), 'utf8'),
+    ) as { concurrency?: number };
+
+  it('lets libs/domain start several workers, each on its own database', () => {
+    expect(stryker('libs/domain').concurrency).toBeUndefined();
+  });
+
+  it.each(['apps/api', 'apps/mcp', 'apps/worker', 'libs/mcp-tools'])(
+    '%s keeps one worker, its integration specs sharing one database',
+    (dir) => {
+      expect(stryker(dir).concurrency).toBe(1);
+    },
+  );
+});

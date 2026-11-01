@@ -46,11 +46,11 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
   notifications.now = () => NOON;
   await reset();
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const day = (at: Date | null) => (at ? at.toISOString().slice(0, 10) : null);
 const owners = new Map<string, string>();

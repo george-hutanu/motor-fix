@@ -391,7 +391,7 @@ describe('sending the corrected copy', () => {
 
   it('logs the new file after the rejected one, without the note', async () => {
     const copy = await service.open(garage.owner);
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
 

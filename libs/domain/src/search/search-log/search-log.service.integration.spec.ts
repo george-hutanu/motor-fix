@@ -47,7 +47,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   await prisma.$executeRawUnsafe('TRUNCATE brand, garage CASCADE');
   dacia = (
     await prisma.brand.create({
@@ -182,7 +182,7 @@ describe('SearchLogService.record', () => {
   });
 
   it('never throws when the write fails: it logs one warn without the place and counts the failure', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const before = (await logCounts())['failed'] ?? 0;
@@ -204,7 +204,7 @@ describe('SearchLogService.record', () => {
   });
 
   it('answers the search without waiting for the write', async () => {
-    const record = jest
+    const record = vi
       .spyOn(SearchLogService.prototype, 'record')
       .mockReturnValue(new Promise<void>(() => undefined));
 

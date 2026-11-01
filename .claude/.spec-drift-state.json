@@ -23,5 +23,10 @@
     "hash": "830b62d565324610",
     "recorded_at": "2026-10-21T10:35:51.748Z",
     "commit": "944781aaf"
+  },
+  "1338-nest-vitest": {
+    "hash": "db08027214313d7a",
+    "recorded_at": "2026-10-31T09:19:59.390Z",
+    "commit": "6e69747ce"
   }
 }

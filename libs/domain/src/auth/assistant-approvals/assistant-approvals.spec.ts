@@ -48,11 +48,11 @@ describe('why the void function expires an approval', () => {
   const outcomeFor = async (
     scope: Parameters<typeof expireAssistantApprovals>[1],
   ) => {
-    const updateManyAndReturn = jest.fn(async () => []);
+    const updateManyAndReturn = vi.fn(async () => []);
     await expireAssistantApprovals(
       { assistantApproval: { updateManyAndReturn } } as never,
       scope,
-      { record: jest.fn() } as never,
+      { record: vi.fn() } as never,
     );
     return (updateManyAndReturn.mock.calls[0] as unknown[])[0];
   };

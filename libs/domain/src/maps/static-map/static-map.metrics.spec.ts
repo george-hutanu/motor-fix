@@ -24,7 +24,7 @@ const centre = unproject({ x: 9380.5 * 512, y: 6022.5 * 512 }, 14);
 const VIEW = { ...centre, h: 480, theme: 'light' as const, w: 640, z: 14 };
 
 const fetchWith = (tile: () => Promise<Response>) =>
-  jest.fn(async (input: string | URL | Request) =>
+  vi.fn(async (input: string | URL | Request) =>
     String(input) === TILEJSON
       ? Response.json({ tiles: ['https://tiles.test/{z}/{x}/{y}.pbf'] })
       : tile(),
@@ -53,7 +53,7 @@ afterAll(() => started?.shutdown());
 beforeEach(async () => {
   await started?.flush();
   memory.spanExporter.reset();
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // @traces 1196-FR-009 1196-FR-020
@@ -105,7 +105,7 @@ describe('counting the static map renders', () => {
   });
 
   it('logs one warning per failed render with its zoom, theme and outcome, never where', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const renderer = new StaticMapRenderer(TILEJSON, {

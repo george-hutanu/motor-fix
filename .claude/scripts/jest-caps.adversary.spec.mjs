@@ -104,7 +104,7 @@ describe('check hands the test step its Jest caps', () => {
   it('keeps a unit-suite command so integration specs stay out of the step', () => {
     const { envs } = run(e());
     const cmd = envs.find((e) => e.cmd.startsWith('sh scripts/heavy.sh')).cmd;
-    assert.match(cmd, /JEST_SUITE=unit/);
+    assert.match(cmd, /TEST_SUITE=unit/);
     assert.doesNotMatch(cmd, /JEST_MAX_WORKERS|JEST_IDLE_MEMORY/);
   });
 
@@ -118,10 +118,7 @@ describe('check hands the test step its Jest caps', () => {
   });
 });
 
-const CONFIGS = [
-  ['jest.preset.cjs', '1GB'],
-  ['libs/domain/jest.config.cts', '1536MB'],
-];
+const CONFIGS = [['jest.preset.cjs', '1GB']];
 const saved = process.env.JEST_IDLE_MEMORY;
 
 function load(file) {
@@ -156,13 +153,6 @@ describe('workerIdleMemoryLimit under odd JEST_IDLE_MEMORY values', () => {
     });
   }
 
-  it('domain config keeps the preset suite and worker settings besides the limit', () => {
-    delete process.env.JEST_IDLE_MEMORY;
-    const preset = load('jest.preset.cjs');
-    const domain = load('libs/domain/jest.config.cts');
-    assert.equal(domain.default?.workerIdleMemoryLimit ?? domain.workerIdleMemoryLimit, '1536MB');
-    assert.equal(preset.workerIdleMemoryLimit, '1GB');
-  });
 });
 
 // @traces 1011-FR-004

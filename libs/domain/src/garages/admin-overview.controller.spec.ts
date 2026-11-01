@@ -18,33 +18,33 @@ import {
 } from '../insights/platform-figures';
 import { countReportQueue } from '../reviews/report-queue/report-queue';
 
-jest.mock('../reviews/report-queue/report-queue', () => ({
-  countReportQueue: jest.fn(),
+vi.mock('../reviews/report-queue/report-queue', () => ({
+  countReportQueue: vi.fn(),
 }));
-jest.mock('./verification/suspension/suspended-garages', () => ({
-  countGarages: jest.fn(),
-  suspendedGarages: jest.fn(),
+vi.mock('./verification/suspension/suspended-garages', () => ({
+  countGarages: vi.fn(),
+  suspendedGarages: vi.fn(),
 }));
-jest.mock('../insights/platform-figures', () => ({
-  cities: jest.fn(),
-  countPlatformFigures: jest.fn(),
-  monthStartSnapshot: jest.fn(),
-  readGrowth: jest.fn(),
-  snapshotActiveDrivers: jest.fn(),
+vi.mock('../insights/platform-figures', () => ({
+  cities: vi.fn(),
+  countPlatformFigures: vi.fn(),
+  monthStartSnapshot: vi.fn(),
+  readGrowth: vi.fn(),
+  snapshotActiveDrivers: vi.fn(),
 }));
 
 const prisma = {} as PrismaClient;
-const figures = jest.mocked(countPlatformFigures);
-const monthStart = jest.mocked(monthStartSnapshot);
-const growth = jest.mocked(readGrowth);
-const periodStart = jest.mocked(snapshotActiveDrivers);
+const figures = vi.mocked(countPlatformFigures);
+const monthStart = vi.mocked(monthStartSnapshot);
+const growth = vi.mocked(readGrowth);
+const periodStart = vi.mocked(snapshotActiveDrivers);
 const CITIES = [
   { garages: 214, key: 'all', name: 'România' },
   { garages: 3, key: 'cluj-napoca', name: 'Cluj-Napoca' },
 ];
 
 const controller = (waiting: number, observabilityUrl?: string) => {
-  const countWaiting = jest.fn(async (_db: unknown, _city?: string) => waiting);
+  const countWaiting = vi.fn(async (_db: unknown, _city?: string) => waiting);
   const verification = { countWaiting } as unknown as VerificationService;
   return {
     countWaiting,
@@ -57,7 +57,7 @@ const controller = (waiting: number, observabilityUrl?: string) => {
 };
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
   figures.mockResolvedValue({
     activeDrivers: 12480,
     answerRate: 66,
@@ -68,8 +68,8 @@ beforeEach(() => {
   });
   monthStart.mockResolvedValue(undefined);
   periodStart.mockResolvedValue(undefined);
-  jest.mocked(cities).mockResolvedValue(CITIES);
-  jest.mocked(countReportQueue).mockResolvedValue({
+  vi.mocked(cities).mockResolvedValue(CITIES);
+  vi.mocked(countReportQueue).mockResolvedValue({
     oldestCreatedAt: new Date('2026-10-24T09:00:00Z'),
     overdue: 1,
     pending: 3,
@@ -133,7 +133,7 @@ describe('the admin overview route', () => {
     await expect(
       overview.overview({ city: 'cluj-napoca' }),
     ).resolves.toMatchObject({ reportsOverdue: 1, reportsPending: 3 });
-    const [db, at] = jest.mocked(countReportQueue).mock.calls[0];
+    const [db, at] = vi.mocked(countReportQueue).mock.calls[0];
     expect(db).toBe(prisma);
     expect(at).toEqual(figures.mock.calls[0][1]);
   });
@@ -320,7 +320,7 @@ describe('the observability link', () => {
 // @traces 066-FR-001 066-FR-002
 describe('the garages reads', () => {
   it('answers the listed and suspended counts with the one waiting count, platform-wide', async () => {
-    jest.mocked(countGarages).mockResolvedValue({ listed: 214, suspended: 2 });
+    vi.mocked(countGarages).mockResolvedValue({ listed: 214, suspended: 2 });
     const { countWaiting, overview } = controller(3);
 
     await expect(overview.garagesSummary()).resolves.toEqual({
@@ -333,13 +333,13 @@ describe('the garages reads', () => {
 
   it('reads the first 20 suspended garages by default, and the page asked for', async () => {
     const page = { items: [], total: 0 };
-    jest.mocked(suspendedGarages).mockResolvedValue(page);
+    vi.mocked(suspendedGarages).mockResolvedValue(page);
     const { overview } = controller(0);
 
     await expect(overview.garages({ status: 'suspended' })).resolves.toBe(page);
     await overview.garages({ limit: 40, offset: 200, status: 'suspended' });
 
-    expect(jest.mocked(suspendedGarages).mock.calls).toEqual([
+    expect(vi.mocked(suspendedGarages).mock.calls).toEqual([
       [prisma, { limit: 20, offset: 0 }],
       [prisma, { limit: 40, offset: 200 }],
     ]);

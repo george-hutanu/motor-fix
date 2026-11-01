@@ -5,6 +5,7 @@ import { TURN_WAIT_MS } from '@motor-fix/domain/testing';
 import type { INestApplication } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import request from 'supertest';
+import type { MockInstance } from 'vitest';
 
 import { apiBoot } from './api-boot.testing';
 import { openApiDocument } from './bootstrap';
@@ -13,11 +14,11 @@ const api = apiBoot();
 const webUrl = process.env['PUBLIC_WEB_URL'];
 
 let app: INestApplication;
-let sent: jest.SpyInstance;
+let sent: MockInstance;
 
 beforeAll(async () => {
   process.env['PUBLIC_WEB_URL'] = 'https://motorfix.test';
-  sent = jest
+  sent = vi
     .spyOn(NotificationsService.prototype, 'sendToDraft')
     .mockResolvedValue(undefined);
   app = await api.start();

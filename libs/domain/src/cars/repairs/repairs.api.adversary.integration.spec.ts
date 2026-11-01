@@ -87,14 +87,14 @@ beforeEach(async () => {
   const keep = (message: unknown) => {
     lines.push(String(message));
   };
-  jest.spyOn(Logger.prototype, 'log').mockImplementation(keep);
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(keep);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(keep);
+  vi.spyOn(Logger.prototype, 'log').mockImplementation(keep);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(keep);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(keep);
   await world.reset();
   brevo.reset();
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 const http = () => request(app.getHttpServer());
 const call = (

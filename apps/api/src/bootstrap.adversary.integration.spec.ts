@@ -325,7 +325,7 @@ describe('api conventions under hostile requests', () => {
     it('keeps each request id on its own log lines under concurrency', async () => {
       app = await start();
       const lines: string[] = [];
-      const write = jest
+      const write = vi
         .spyOn(process.stdout, 'write')
         .mockImplementation((chunk) => {
           lines.push(String(chunk));

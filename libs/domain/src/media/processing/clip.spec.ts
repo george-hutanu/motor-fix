@@ -12,7 +12,7 @@ import { ClipTooLong, convertClip } from './clip';
 // host without ffmpeg fails these tests, never skips them.
 const work = mkdtempSync(join(tmpdir(), 'clip-spec-'));
 afterAll(() => rmSync(work, { force: true, recursive: true }));
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 function made(
   seconds: number,
@@ -78,7 +78,7 @@ function probe(file: Buffer) {
   return { ...info, faststart: head.includes('moov') };
 }
 
-jest.setTimeout(120_000);
+vi.setConfig({ hookTimeout: 120_000, testTimeout: 120_000 });
 
 // @traces 333-FR-007
 describe('converting a clip', () => {
@@ -160,15 +160,13 @@ describe('converting a clip', () => {
     // later; from the transcode on, the clock stands 1 ms short of the
     // deadline, far less than the transcode of a 1080p clip takes even on
     // an idle machine, so a late timer on a loaded one still kills it.
-    jest
-      .spyOn(performance, 'now')
-      .mockImplementation(() =>
-        ++reads === 1
-          ? start
-          : reads === 2
-            ? start + 1
-            : start + MEDIA_LIMITS.conversionTimeoutMs - 1,
-      );
+    vi.spyOn(performance, 'now').mockImplementation(() =>
+      ++reads === 1
+        ? start
+        : reads === 2
+          ? start + 1
+          : start + MEDIA_LIMITS.conversionTimeoutMs - 1,
+    );
 
     await expect(convertClip(clip, { maxSeconds: 60 })).rejects.toThrow(
       /ffmpeg exited on a signal/,

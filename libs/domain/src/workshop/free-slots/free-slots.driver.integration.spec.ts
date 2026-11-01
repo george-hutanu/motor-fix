@@ -32,8 +32,10 @@ beforeAll(async () => {
 const at = (hour: number, minute = 0, day = DAY) =>
   new Date(atLocal(day, hour).getTime() + minute * MINUTE);
 
-beforeEach(() => jest.spyOn(Logger.prototype, 'warn').mockImplementation());
-afterEach(() => jest.restoreAllMocks());
+beforeEach(() =>
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {}),
+);
+afterEach(() => vi.restoreAllMocks());
 
 // Atelier Dinamo open every day 08:00 to 20:00 with Elena, who works all
 // of those hours, Saturdays included.

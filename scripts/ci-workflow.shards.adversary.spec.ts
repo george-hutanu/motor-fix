@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -30,11 +31,23 @@ describe('the integration shards run as a workflow would run them', () => {
       );
       chmodSync(join(dir, tool), 0o755);
     }
+    // The step checks each named file and walks up to its project, so the
+    // shard runs in a workspace that has them: two Vitest projects.
+    for (const [project, spec] of [
+      ['libs/domain', 'a.integration.spec.ts'],
+      ['apps/api', 'b.integration.spec.ts'],
+    ]) {
+      mkdirSync(join(dir, 'ws', project, 'src'), { recursive: true });
+      writeFileSync(join(dir, 'ws', project, 'project.json'), '{}');
+      writeFileSync(join(dir, 'ws', project, 'vitest.config.mts'), '');
+      writeFileSync(join(dir, 'ws', project, 'src', spec), '');
+    }
   });
   afterEach(() => rmSync(dir, { force: true, recursive: true }));
 
   function runShard(shard: string, specs = '', repeat = '1', failOn = '') {
     const r = spawnSync('bash', ['-e', '-c', testStep.run], {
+      cwd: join(dir, 'ws'),
       encoding: 'utf8',
       env: {
         FAIL_ON: failOn,
@@ -55,7 +68,7 @@ describe('the integration shards run as a workflow would run them', () => {
   }
 
   // @traces 1406-FR-001
-  it('runs the exact Jest slice a domain shard is named after', () => {
+  it('runs the exact test slice a domain shard is named after', () => {
     const r = runShard('domain 3/4');
 
     expect(r.status).toBe(0);
@@ -99,16 +112,12 @@ describe('the integration shards run as a workflow would run them', () => {
     );
 
     expect(r.status).toBe(0);
-    const run =
-      'npx jest --ci --runInBand libs/domain/src/a.integration.spec.ts apps/api/src/b.integration.spec.ts';
-    expect(r.calls).toEqual([
+    const run = [
       'node scripts/clear-activity-log.ts',
-      run,
-      'node scripts/clear-activity-log.ts',
-      run,
-      'node scripts/clear-activity-log.ts',
-      run,
-    ]);
+      'npx vitest run --config apps/api/vitest.config.mts --no-file-parallelism apps/api/src/b.integration.spec.ts',
+      'npx vitest run --config libs/domain/vitest.config.mts --no-file-parallelism libs/domain/src/a.integration.spec.ts',
+    ];
+    expect(r.calls).toEqual([...run, ...run, ...run]);
   });
 
   // @traces 1406-FR-006
@@ -143,18 +152,18 @@ describe('the integration shards run as a workflow would run them', () => {
       'named specs',
       'libs/domain/src/a.integration.spec.ts',
       '4',
-      'jest',
+      'vitest',
     );
 
     expect(r.status).toBe(7);
-    expect(r.calls.filter((c) => c.startsWith('npx jest'))).toHaveLength(1);
+    expect(r.calls.filter((c) => c.startsWith('npx vitest'))).toHaveLength(1);
   });
 
   // @traces 1406-FR-006
   it('does not run the named files in a suite shard even when specs is set', () => {
     const r = runShard('domain 2/4', 'libs/domain/src/a.integration.spec.ts');
 
-    expect(r.calls.some((c) => c.startsWith('npx jest'))).toBe(false);
+    expect(r.calls.some((c) => /^npx (jest|vitest) /.test(c))).toBe(false);
   });
 });
 

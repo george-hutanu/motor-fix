@@ -1,7 +1,7 @@
 // The filters of a search, read from its query. Server-side: it reads the
 // Bucharest clock, which the page's first bundle does not carry.
 import { bucharestClock } from './open-status';
-import type { SearchMinRating, SearchPriceCeiling } from './search-place';
+import type { SearchMinRating, SearchPriceCeiling } from './search-choices';
 
 // What a search keeps among the garages it finds. Open now carries the
 // request's instant on the Bucharest clock, read once, so every statement of
