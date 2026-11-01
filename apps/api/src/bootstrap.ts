@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import { type AppEnv, imageBaseUrl } from '@motor-fix/contracts';
+import {
+  type AppEnv,
+  imageBaseUrl,
+  models3dBaseUrl,
+} from '@motor-fix/contracts';
 import { JsonLogger, requestContext } from '@motor-fix/domain';
 import { routeLabel } from '@motor-fix/observability';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
@@ -16,8 +20,9 @@ import { trustProxy } from './trust-proxy';
 const REQUEST_ID = /^[\w.-]{1,128}$/;
 
 export function configureApp(app: INestApplication, env: { APP_ENV: AppEnv }) {
-  // A bad image address fails the boot, not every garage profile read.
+  // A bad image or 3D file address fails the boot, not every read.
   imageBaseUrl();
+  models3dBaseUrl();
   app.useLogger(new JsonLogger());
   // The browser reaches the API through Railway's edge PoP, its internal
   // proxy and the web service, each appending the address it saw; req.ip is

@@ -301,13 +301,27 @@ export function mediaConfig(
 export function imageBaseUrl(
   source: Record<string, string | undefined> = process.env,
 ): string {
-  const value = source['IMAGE_BASE_URL'];
-  if (!value) return '/api/v1/images';
+  return baseUrl(source, 'IMAGE_BASE_URL', '/api/v1/images');
+}
+
+// Where the 3D car files are read from: the API's file route by default, or a
+// CDN in front of the store.
+export function models3dBaseUrl(
+  source: Record<string, string | undefined> = process.env,
+): string {
+  return baseUrl(source, 'MODELS_3D_BASE_URL', '/api/v1/car-models-3d/files');
+}
+
+function baseUrl(
+  source: Record<string, string | undefined>,
+  name: string,
+  fallback: string,
+): string {
+  const value = source[name];
+  if (!value) return fallback;
   const absolute = /^https?:\/\/[^/]/i.test(value) && URL.canParse(value);
   if (!absolute && !/^\/(?!\/)/.test(value)) {
-    throw new Error(
-      'IMAGE_BASE_URL must be an http(s) URL or a path starting with /',
-    );
+    throw new Error(`${name} must be an http(s) URL or a path starting with /`);
   }
   return value.replace(/\/+$/, '');
 }

@@ -13,6 +13,7 @@ import {
   JOB_TYPES,
   JobTypeLoader,
   Models3dLoader,
+  Models3dStore,
   warmCache,
 } from '@motor-fix/domain';
 import { NestFactory } from '@nestjs/core';
@@ -45,6 +46,7 @@ async function bootstrap() {
   await app.get(BrandLoader).load(BRANDS);
   await app.get(JobTypeLoader).load(JOB_TYPES);
   await app.get(Models3dLoader).load(CAR_MODELS);
+  await app.get(Models3dStore).fill();
   await app.get(AreaLoader).load(AREAS);
   app.enableShutdownHooks();
   // API_PORT first: a worktree's port set (scripts/test-services.ts ports) gives
