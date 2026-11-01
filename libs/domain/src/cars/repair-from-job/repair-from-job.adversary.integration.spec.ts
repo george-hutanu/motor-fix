@@ -30,10 +30,10 @@ let logged: string[] = [];
 
 beforeEach(async () => {
   logged = [];
-  jest.spyOn(Logger.prototype, 'log').mockImplementation((message: unknown) => {
+  vi.spyOn(Logger.prototype, 'log').mockImplementation((message: unknown) => {
     logged.push(String(message));
   });
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   await world.reset();
   await prisma.outboxEvent.deleteMany();
 });
@@ -41,7 +41,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(() => prisma.$disconnect());

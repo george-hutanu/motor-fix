@@ -469,12 +469,10 @@ describe('a claim held by another job', () => {
 describe('releasing a claim', () => {
   it('releases the claim when the fallback itself throws after the last attempt', async () => {
     const { row: queued } = await queuedEmail();
-    jest
-      .spyOn(
-        service as unknown as { fallBack: () => Promise<void> },
-        'fallBack',
-      )
-      .mockRejectedValue(new Error('fallback down'));
+    vi.spyOn(
+      service as unknown as { fallBack: () => Promise<void> },
+      'fallBack',
+    ).mockRejectedValue(new Error('fallback down'));
     mock.answer({ status: 503 });
     await Promise.allSettled([sendJob(queued.id, 5)]);
     expect((await row(queued.id)).claimedAt).toBeNull();
@@ -567,7 +565,7 @@ describe('a database error after Brevo accepted an e-mail', () => {
   it('finishes the job and logs the message id when no write succeeds', async () => {
     const { row: queued } = await queuedEmail();
     const failing = failWritesAfterSend(10);
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     try {
@@ -585,7 +583,7 @@ describe('a database error after Brevo accepted an e-mail', () => {
   it('keeps the claim when no write succeeds, so the sweep never sends it again', async () => {
     const { row: queued } = await queuedEmail();
     const failing = failWritesAfterSend(10);
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     try {
@@ -613,7 +611,7 @@ describe('a database error after Brevo accepted an e-mail', () => {
       () => mock.emails().length > 0 && tries.push(Date.now()) > 0,
       10,
     );
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     let waits: string[];
@@ -638,13 +636,13 @@ describe('a database error after Brevo accepted an e-mail', () => {
   it('finishes the job when releasing the claim fails', async () => {
     const { row: queued } = await queuedEmail();
     const real = prisma.notification.updateMany.bind(prisma.notification);
-    const failing = jest
+    const failing = vi
       .spyOn(prisma.notification, 'updateMany')
       .mockImplementation(((args: { data: { claimedAt?: unknown } }) =>
         args.data.claimedAt === null
           ? Promise.reject(new Error('connection lost'))
           : real(args as never)) as never);
-    const logged = jest
+    const logged = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     try {

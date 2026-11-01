@@ -67,7 +67,12 @@ describe('a fail-closed gate that crashes', () => {
 
   it('refuses when the shell gate exits 1', () => {
     put('pre-commit-check.sh', '#!/bin/sh\necho shell-out\necho shell-err >&2\nexit 1\n');
-    const r = run(COMMIT, {}, JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' } }));
+    const once = () => run(COMMIT, {}, JSON.stringify({ tool_name: 'Bash', tool_input: { command: 'git commit -m x' } }));
+    // On a loaded runner the spawn itself can fail or be stopped; run-hook
+    // then refuses without the gate's output, which is its own spec below.
+    // Only a gate that ran is judged here.
+    let r = once();
+    for (let tries = 0; tries < 3 && /could not be started|was stopped by|did not finish within/.test(r.stderr); tries++) r = once();
     assert.equal(r.status, 2);
     assert.match(r.stdout, /shell-out/);
     assert.match(r.stderr, /shell-err/);

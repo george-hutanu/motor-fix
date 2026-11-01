@@ -1,41 +1,134 @@
 import type { ParamMap } from '@angular/router';
+import {
+  SEARCH_MIN_RATINGS,
+  SEARCH_PRICE_CEILINGS,
+  type SearchMinRating,
+  type SearchPriceCeiling,
+} from '@motor-fix/contracts/search-choices';
+import { formatRating, type Language } from '@motor-fix/i18n';
 
 // The filters of the results page, as the address bar names them. The API
 // judges which garages match; the page only carries the choice.
-export type FilterKey = 'open_now' | 'open_saturday';
-export type Filters = Record<FilterKey, boolean>;
+export type SwitchKey = 'open_now' | 'open_saturday' | 'card';
+export type FilterKey = SwitchKey | 'max_price' | 'min_rating';
+export interface Filters {
+  open_now: boolean;
+  open_saturday: boolean;
+  max_price?: SearchPriceCeiling;
+  min_rating?: SearchMinRating;
+  card: boolean;
+}
 
-export const FILTERS: readonly { key: FilterKey; label: string }[] = [
+export const SWITCHES: readonly { key: SwitchKey; label: string }[] = [
   { key: 'open_now', label: 'public.results.filters.openNow' },
   { key: 'open_saturday', label: 'public.results.filters.openSaturday' },
+  { key: 'card', label: 'public.results.filters.card' },
 ];
 
-// A filter is on only when its key's first value is 1; anything else reads
-// as off and is left in the bar as it stands.
+// The page's order: the bar, the request, the chips and the panel follow it.
+const ORDER: readonly FilterKey[] = [
+  'open_now',
+  'open_saturday',
+  'max_price',
+  'min_rating',
+  'card',
+];
+
+// The query patch that takes every filter out of the bar in one write.
+export const NONE: Record<FilterKey, null> = {
+  card: null,
+  max_price: null,
+  min_rating: null,
+  open_now: null,
+  open_saturday: null,
+};
+
+// A switch is on only when its key's first value is 1, a choice only when it
+// is one of the API's values written exactly; anything else reads as off and
+// is left in the bar as it stands.
 export function filtersIn(bar: ParamMap): Filters {
-  return {
+  const filters: Filters = {
+    card: bar.get('card') === '1',
     open_now: bar.get('open_now') === '1',
     open_saturday: bar.get('open_saturday') === '1',
   };
+  const price = SEARCH_PRICE_CEILINGS.find(
+    (c) => String(c) === bar.get('max_price'),
+  );
+  const rating = SEARCH_MIN_RATINGS.find((r) => r === bar.get('min_rating'));
+  if (price) filters.max_price = price;
+  if (rating) filters.min_rating = rating;
+  return filters;
 }
+
+// A ceiling or a rating, set or not, as against a switch on or off.
+export const isChoice = (key: FilterKey): key is 'max_price' | 'min_rating' =>
+  key === 'max_price' || key === 'min_rating';
+
+const on = (filters: Filters, key: FilterKey) =>
+  isChoice(key) ? filters[key] !== undefined : filters[key];
 
 export function countOf(filters: Filters): number {
-  return FILTERS.filter(({ key }) => filters[key]).length;
+  return ORDER.filter((key) => on(filters, key)).length;
 }
 
-// The request's parameters for the filters on: 1 each, nothing for one off.
-export function filterParams(
-  filters: Filters,
-): Partial<Record<FilterKey, '1'>> {
+interface FilterParams {
+  open_now?: '1';
+  open_saturday?: '1';
+  max_price?: SearchPriceCeiling;
+  min_rating?: SearchMinRating;
+  card?: '1';
+}
+
+// The request's parameters for the filters on, in the page's order: 1 for a
+// switch, the value for a choice, nothing for one off.
+export function filterParams(filters: Filters): FilterParams {
   return Object.fromEntries(
-    FILTERS.filter(({ key }) => filters[key]).map(({ key }) => [key, '1']),
+    ORDER.filter((key) => on(filters, key)).map((key) => [
+      key,
+      isChoice(key) ? filters[key] : '1',
+    ]),
   );
 }
 
-// A request without the filters: the ids= reads name their garages outright.
+interface Chip {
+  key: FilterKey;
+  label: string;
+  params?: Record<string, string | number>;
+}
+
+// One chip per filter on, in the page's order; a rating reads as the
+// language writes it.
+export function chipsOf(filters: Filters, language: Language): Chip[] {
+  return ORDER.filter((key) => on(filters, key)).map((key): Chip => {
+    if (key === 'max_price')
+      return {
+        key,
+        label: 'public.results.filters.priceChip',
+        params: { n: filters.max_price as number },
+      };
+    if (key === 'min_rating')
+      return {
+        key,
+        label: 'public.results.filters.ratingChip',
+        params: { r: formatRating(Number(filters.min_rating), language) },
+      };
+    const row = SWITCHES.find((s) => s.key === key) as (typeof SWITCHES)[0];
+    return { key, label: row.label };
+  });
+}
+
+// A request without the filters.
 export function unfiltered<Q extends Partial<Record<FilterKey, unknown>>>(
   query: Q,
 ): Omit<Q, FilterKey> {
-  const { open_now: _now, open_saturday: _saturday, ...rest } = query;
+  const {
+    card: _card,
+    max_price: _price,
+    min_rating: _rating,
+    open_now: _now,
+    open_saturday: _saturday,
+    ...rest
+  } = query;
   return rest;
 }

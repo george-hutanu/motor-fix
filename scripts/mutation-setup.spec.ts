@@ -36,6 +36,11 @@ function sources(dir: string): string[] {
   );
 }
 
+// The projects on Vitest hand Stryker their vitest.config.mts instead.
+const onJest = mutated.filter((root) =>
+  existsSync(join(repo, root, 'jest.config.cts')),
+);
+
 const sourceFiles = mutated
   .filter((root) => root !== 'scripts')
   .flatMap((root) => sources(`${root}/src`));
@@ -56,21 +61,18 @@ describe('mutation setup', () => {
   // Stryker reads a Jest config without its preset, so an environment that
   // only the preset sets falls back to node and every browser spec fails.
   // A project may name its own environment file under <rootDir>.
-  it.each(mutated)(
-    '%s names its test environment in its own config',
-    (root) => {
-      const named = read(`${root}/jest.config.cts`).match(
-        /^\s*testEnvironment: '(node|jsdom|<rootDir>\/[^']+)',$/m,
-      )?.[1];
-      expect(named).toBeDefined();
-      const file = named?.replace('<rootDir>', root) ?? '';
-      if (file !== named) expect(existsSync(join(repo, file))).toBe(true);
-    },
-  );
+  it.each(onJest)('%s names its test environment in its own config', (root) => {
+    const named = read(`${root}/jest.config.cts`).match(
+      /^\s*testEnvironment: '(node|jsdom|<rootDir>\/[^']+)',$/m,
+    )?.[1];
+    expect(named).toBeDefined();
+    const file = named?.replace('<rootDir>', root) ?? '';
+    if (file !== named) expect(existsSync(join(repo, file))).toBe(true);
+  });
 
   // Stryker reads the config without normalising it, so it would look for a
   // module called "<rootDir>/…"; strykerOptions hands it the resolved file.
-  it.each(mutated)(
+  it.each(onJest)(
     '%s gives Stryker an environment file it can load',
     (root) => {
       process.chdir(repo);
@@ -117,10 +119,12 @@ describe('mutation setup', () => {
   });
 
   // Each test runner would take its own database turn; one at a time keeps
-  // the turns from queueing past Stryker's timeout.
+  // the turns from queueing past Stryker's timeout. libs/domain gives each
+  // worker its own database instead.
   const withDatabase = mutated.filter(
     (root) =>
       root !== 'scripts' &&
+      root !== 'libs/domain' &&
       sources(`${root}/src`).some((file) =>
         file.endsWith('.integration.spec.ts'),
       ),
@@ -128,7 +132,7 @@ describe('mutation setup', () => {
 
   it('finds the projects whose specs use the database', () => {
     expect(withDatabase).toEqual(
-      expect.arrayContaining(['apps/api', 'libs/domain']),
+      expect.arrayContaining(['apps/api', 'apps/mcp']),
     );
   });
 

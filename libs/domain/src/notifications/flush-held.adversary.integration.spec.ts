@@ -105,7 +105,7 @@ beforeEach(async () => {
   owner = await account('andrei');
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('the held sweep at its edges', () => {
   it('answers zero and adds nothing when nothing is held', async () => {
@@ -213,7 +213,7 @@ describe('the held sweep at its edges', () => {
   });
 
   it('names ten ids and the ellipsis when twelve held rows are re-queued', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const ids: string[] = [];
@@ -228,7 +228,7 @@ describe('the held sweep at its edges', () => {
   });
 
   it('names all ten ids and no ellipsis when exactly ten are re-queued', async () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const ids: string[] = [];
@@ -242,7 +242,7 @@ describe('the held sweep at its edges', () => {
   });
 
   it('counts nothing when the queue refuses the add and leaves the rows held', async () => {
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     build({ addBulk: () => Promise.reject(new Error('Redis down')) });
     const h = await held();
     await expect(service.requeueHeld()).resolves.toBe(0);
@@ -366,7 +366,7 @@ describe('the flush job on odd windows', () => {
     await held({ groupLeaderId: leader.id });
     const send = Brevo.prototype.send;
     let calls = 0;
-    jest.spyOn(Brevo.prototype, 'send').mockImplementation(async function (
+    vi.spyOn(Brevo.prototype, 'send').mockImplementation(async function (
       this: Brevo,
       mail,
     ) {
@@ -398,17 +398,17 @@ describe('the flush job on odd windows', () => {
 
 describe('the requeue job when one pass fails', () => {
   it('still sweeps held rows when the queued pass cannot read', async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     const h = await held();
     const real = prisma.notification.findMany.bind(prisma.notification);
     let reads = 0;
-    jest
-      .spyOn(prisma.notification, 'findMany')
-      .mockImplementation(((args: never) =>
-        ++reads === 1
-          ? Promise.reject(new Error('db down'))
-          : real(args)) as never);
+    vi.spyOn(prisma.notification, 'findMany').mockImplementation(((
+      args: never,
+    ) =>
+      ++reads === 1
+        ? Promise.reject(new Error('db down'))
+        : real(args)) as never);
     await processor
       .handle({ attemptsMade: 0, data: {}, name: 'requeue' })
       .catch(() => undefined);
@@ -416,8 +416,8 @@ describe('the requeue job when one pass fails', () => {
   });
 
   it('still sweeps queued rows when the held pass cannot add', async () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     const stranded = await row();
     await held();
     let adds = 0;

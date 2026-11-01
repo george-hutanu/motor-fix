@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { HttpException } from '@nestjs/common';
+import type { Mock } from 'vitest';
 
 import { GarageReportsService } from './garage-reports.service';
 import { AuditService } from '../../../audit/audit.service';
@@ -28,7 +29,7 @@ const NONE = {
 };
 const approvedAt = new Date('2026-01-15T09:00:00Z');
 
-let notify: jest.Mock;
+let notify: Mock;
 let admin: string;
 
 const service = () =>
@@ -100,7 +101,7 @@ const outboxKinds = async (kind: string) =>
 beforeEach(async () => {
   await reset();
   await prisma.outboxEvent.deleteMany();
-  notify = jest.fn().mockResolvedValue(1);
+  notify = vi.fn().mockResolvedValue(1);
   admin = await account('Ioana Popa', ['admin']);
 });
 

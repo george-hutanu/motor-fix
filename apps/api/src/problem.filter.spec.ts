@@ -13,6 +13,7 @@ import {
   NodeTracerProvider,
   SimpleSpanProcessor,
 } from '@opentelemetry/sdk-trace-node';
+import type { MockInstance } from 'vitest';
 
 import { ProblemFilter } from './problem.filter';
 
@@ -56,7 +57,7 @@ function send(exception: unknown) {
 
 // @traces 876-FR-007
 describe('ProblemFilter', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('keeps the code an exception carries', () => {
     const res = send(
@@ -433,7 +434,7 @@ describe('ProblemFilter', () => {
   });
 
   it('keeps the cause of an unknown error in the log only', () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const cause = new Error('connection reset');
@@ -471,7 +472,7 @@ describe('ProblemFilter', () => {
   });
 
   it('records an unknown error on the request span, which ends in error status', () => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     exporter.reset();
     const error = new Error('database unreachable');
 
@@ -557,16 +558,14 @@ describe('a refusal that names the one field at fault', () => {
 
 // @traces 297-FR-009
 describe('an unexpected error in the system log', () => {
-  let write: jest.SpyInstance;
+  let write: MockInstance;
 
   beforeEach(() => {
-    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
     // A write that never finishes: the answer must not wait for it.
-    write = jest
-      .spyOn(systemLog, 'write')
-      .mockReturnValue(new Promise(() => {}));
+    write = vi.spyOn(systemLog, 'write').mockReturnValue(new Promise(() => {}));
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   const sendFor = (
     exception: unknown,

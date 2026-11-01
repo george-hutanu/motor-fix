@@ -1,5 +1,6 @@
 import { S3ServiceException } from '@aws-sdk/client-s3';
-import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
+import { context, SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
+import { isTracingSuppressed } from '@opentelemetry/core';
 import type { DataPoint, Histogram } from '@opentelemetry/sdk-metrics';
 
 import { storageTelemetry } from './middleware';
@@ -99,6 +100,18 @@ describe('storageTelemetry', () => {
     const child = all.find((span) => span.name === 'S3 GetObject');
     expect(parent).toBeDefined();
     expect(child?.parentSpanContext?.spanId).toBe(parent?.spanContext().spanId);
+  });
+
+  // The SDK's HTTP request under the span would carry the key in url.path.
+  it('sends the call with tracing suppressed, so no HTTP span records the key', async () => {
+    let suppressed: boolean | undefined;
+    await call('PutObjectCommand', async () => {
+      suppressed = isTracingSuppressed(context.active());
+      return { output: {} };
+    });
+
+    expect(suppressed).toBe(true);
+    expect(await spans()).toHaveLength(1);
   });
 
   it('counts a call that answered as ok and records its duration by operation', async () => {

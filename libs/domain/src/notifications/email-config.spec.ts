@@ -117,7 +117,7 @@ describe('e-mail configuration', () => {
 
 // @traces 279-FR-001
 describe('the sending domain', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('reads EMAIL_DOMAIN trimmed and lower-cased', () => {
     expect(sendingDomain({ EMAIL_DOMAIN: ' Mail.Example.TEST ' })).toBe(
@@ -145,7 +145,7 @@ describe('the sending domain', () => {
   });
 
   it('drops a bad EMAIL_DOMAIN with a warning while sending is off', () => {
-    const warn = jest
+    const warn = vi
       .spyOn(Logger.prototype, 'warn')
       .mockImplementation(() => undefined);
     const config = emailConfig('staging', { EMAIL_DOMAIN: 'not a domain' });

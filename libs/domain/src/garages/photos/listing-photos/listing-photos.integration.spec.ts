@@ -387,11 +387,11 @@ describe('confirming a photo', () => {
     const incoming = await uploaded(draft.id, draft.token);
     const before = await drafts.open(draft.id, draft.token);
     const confirmed = await photos.confirm(draft.id, draft.token, incoming);
-    const stale = jest.spyOn(drafts, 'open').mockResolvedValueOnce(before);
-    const racing = jest
+    const stale = vi.spyOn(drafts, 'open').mockResolvedValueOnce(before);
+    const racing = vi
       .spyOn(storage, 'confirmUpload')
       .mockResolvedValueOnce(confirmed.key);
-    const queued = jest.spyOn(Queue.prototype, 'add');
+    const queued = vi.spyOn(Queue.prototype, 'add');
 
     const again = await photos.confirm(draft.id, draft.token, incoming);
 

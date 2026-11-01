@@ -12,7 +12,7 @@ function answer(url: string, status: number) {
   const res = Object.assign(new EventEmitter(), {
     statusCode: status,
   }) as unknown as Response;
-  const next = jest.fn();
+  const next = vi.fn();
   new FailureLog().use(req, res, next);
   expect(next).toHaveBeenCalledTimes(1);
   res.emit('finish');
@@ -24,17 +24,15 @@ let infos: unknown[];
 beforeEach(() => {
   lines = [];
   infos = [];
-  jest
-    .spyOn(Logger.prototype, 'warn')
-    .mockImplementation((message: unknown) => {
-      lines.push(message);
-    });
-  jest.spyOn(Logger.prototype, 'log').mockImplementation((message: unknown) => {
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation((message: unknown) => {
+    lines.push(message);
+  });
+  vi.spyOn(Logger.prototype, 'log').mockImplementation((message: unknown) => {
     infos.push(message);
   });
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 001-FR-014
 describe('FailureLog', () => {

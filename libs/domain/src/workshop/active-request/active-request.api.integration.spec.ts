@@ -390,8 +390,8 @@ describe('the cost of the read', () => {
     const andrei = await world.account('Andrei Marin');
     const dinamo = await world.garage('Atelier Dinamo');
     await working(andrei, dinamo.id, 'in_work');
-    const requests = jest.spyOn(client().quoteRequest, 'findMany');
-    const features = jest.spyOn(client().garageFeature, 'findUnique');
+    const requests = vi.spyOn(client().quoteRequest, 'findMany');
+    const features = vi.spyOn(client().garageFeature, 'findUnique');
 
     await read(andrei);
     const one = [requests.mock.calls.length, features.mock.calls.length];

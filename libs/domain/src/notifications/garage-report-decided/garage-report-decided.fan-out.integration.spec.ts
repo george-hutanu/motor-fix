@@ -39,14 +39,14 @@ let app: TestingModule | undefined;
 afterEach(async () => {
   await app?.close();
   app = undefined;
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 afterAll(() => prisma.$disconnect());
 
 beforeEach(async () => {
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
   await reset();
   await prisma.outboxEvent.deleteMany();
 });
@@ -281,7 +281,7 @@ describe('telling the reporters what MotorFix made of their reports', () => {
 
   it('logs one line with the garage, the decision and how many reporters, never a name', async () => {
     const { garage, job } = await decided('confirmed');
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
     const fanOut = await start();
 
     await fanOut.handle(job);
