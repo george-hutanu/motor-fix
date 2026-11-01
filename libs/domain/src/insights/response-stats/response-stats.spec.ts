@@ -26,12 +26,12 @@ describe('whether a garage usually answers the same day', () => {
 // night skips it instead of failing on the foreign key.
 describe('the night meeting a garage deleted while it ran', () => {
   it('skips the garage and writes the others', async () => {
-    const upsert = jest.fn();
+    const upsert = vi.fn();
     const tx = (exists: boolean) => ({
-      $executeRaw: jest.fn(),
-      $queryRaw: jest.fn().mockResolvedValue(exists ? [{ kept: 1 }] : []),
-      garageResponseStats: { findUnique: jest.fn(), upsert },
-      outboxEvent: { create: jest.fn() },
+      $executeRaw: vi.fn(),
+      $queryRaw: vi.fn().mockResolvedValue(exists ? [{ kept: 1 }] : []),
+      garageResponseStats: { findUnique: vi.fn(), upsert },
+      outboxEvent: { create: vi.fn() },
     });
     const figures = {
       answeredWithinDay30d: 0,
@@ -39,11 +39,11 @@ describe('the night meeting a garage deleted while it ran', () => {
       requests30d: 0,
     };
     const db = {
-      $queryRaw: jest.fn().mockResolvedValue([
+      $queryRaw: vi.fn().mockResolvedValue([
         { garageId: 'gone', ...figures },
         { garageId: 'kept', ...figures },
       ]),
-      $transaction: jest
+      $transaction: vi
         .fn()
         .mockImplementationOnce((run) => run(tx(false)))
         .mockImplementationOnce((run) => run(tx(true))),

@@ -46,10 +46,10 @@ const keepEntries = (s: Live) =>
   });
 
 beforeEach(() => {
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   fake().deleted.length = 0;
 });
 
@@ -251,7 +251,7 @@ describe('the stop answer and what it registers', () => {
 describe('a provider that misbehaves on discard', () => {
   it('still stops and answers when the delete throws before returning a promise', async () => {
     const s = await live();
-    jest.spyOn(fake(), 'deleteRecording').mockImplementationOnce(() => {
+    vi.spyOn(fake(), 'deleteRecording').mockImplementationOnce(() => {
       throw new TypeError('sync boom');
     });
 
@@ -263,9 +263,9 @@ describe('a provider that misbehaves on discard', () => {
 
   it('has committed the stop while a hung delete is still pending', async () => {
     const s = await live();
-    jest
-      .spyOn(fake(), 'deleteRecording')
-      .mockReturnValueOnce(new Promise<void>(() => undefined));
+    vi.spyOn(fake(), 'deleteRecording').mockReturnValueOnce(
+      new Promise<void>(() => undefined),
+    );
 
     const res = await send('post', s.stop, s.costel, { keep: false });
 

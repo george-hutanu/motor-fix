@@ -217,7 +217,7 @@ describe('the outcome of a beacon while Redis is down', () => {
   });
 
   it('is lost and never accepted', async () => {
-    const error = jest
+    const error = vi
       .spyOn(Logger.prototype, 'error')
       .mockImplementation(() => undefined);
     const g = await world.garage('Atelier Dinamo');

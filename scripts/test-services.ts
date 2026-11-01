@@ -8,7 +8,7 @@
 // Starts (or reuses) the compose project named after the worktree, on ports
 // Docker assigns, waits for PostgreSQL, applies the branch's migrations, and
 // prints `export DATABASE_URL=… REDIS_URL=…` to eval before
-// `JEST_SUITE=integration npx nx affected -t test`. Prints nothing when no
+// `TEST_SUITE=integration npx nx affected -t test`. Prints nothing when no
 // affected project holds an integration spec. Everything else goes to stderr;
 // any failure exits non-zero.
 //
@@ -246,7 +246,7 @@ export function noDockerMessage(project: string): string {
     `  export REDIS_URL=redis://127.0.0.1:$(docker compose -p ${project} port redis 6379 | sed 's/.*://')`,
     '  npx prisma migrate deploy --config libs/domain/prisma.config.ts',
     '  node scripts/clear-activity-log.ts',
-    '  JEST_SUITE=integration npx nx affected -t test',
+    '  TEST_SUITE=integration npx nx affected -t test',
   ].join('\n');
 }
 

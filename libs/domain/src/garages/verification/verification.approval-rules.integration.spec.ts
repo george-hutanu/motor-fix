@@ -117,7 +117,7 @@ const setCheck = (fileId: string, kind: string, result: string) =>
 
 // The lines the service logged that name the file.
 function logged(fileId: string) {
-  const log = jest.spyOn(Logger.prototype, 'log');
+  const log = vi.spyOn(Logger.prototype, 'log');
   return {
     lines: () =>
       log.mock.calls
@@ -285,7 +285,7 @@ describe('the automatic approval', () => {
   it('leaves a sending waiting, refusing nothing, when the RAR rule is unmet', async () => {
     await rules({ manual: true, rar: false });
     const before = await refusals('rar_check_required');
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
 
     const file = await inTx((tx) =>
       build('development').submit(tx, mihai, garageId),
@@ -373,7 +373,7 @@ describe('the automatic approval', () => {
 
   it('changes nothing while manual approval stays on', async () => {
     await rules({ manual: false, rar: true });
-    const log = jest.spyOn(Logger.prototype, 'log');
+    const log = vi.spyOn(Logger.prototype, 'log');
 
     const file = await inTx((tx) =>
       build('development').submit(tx, mihai, garageId),

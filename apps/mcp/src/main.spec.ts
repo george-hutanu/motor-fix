@@ -1,13 +1,13 @@
-const mockListen = jest.fn();
-const mockEnableShutdownHooks = jest.fn();
-const mockCreateMcpApp = jest.fn();
-const mockReadEnv = jest.fn();
+const mockListen = vi.fn();
+const mockEnableShutdownHooks = vi.fn();
+const mockCreateMcpApp = vi.fn();
+const mockReadEnv = vi.fn();
 
-jest.mock('@motor-fix/contracts', () => ({
+vi.mock('@motor-fix/contracts', () => ({
   readEnv: (...args: unknown[]) => mockReadEnv(...args),
 }));
-jest.mock('./telemetry', () => ({}));
-jest.mock('./mcp.module', () => ({
+vi.mock('./telemetry', () => ({}));
+vi.mock('./mcp.module', () => ({
   createMcpApp: (...args: unknown[]) => mockCreateMcpApp(...args),
   MCP_ENV: ['DATABASE_URL', 'MCP_URL', 'ASSISTANT_ISSUER', 'REDIS_URL'],
 }));
@@ -17,9 +17,8 @@ async function start(port: string | undefined) {
   if (port === undefined) delete process.env['PORT'];
   else process.env['PORT'] = port;
   try {
-    await jest.isolateModulesAsync(async () => {
-      await import('./main');
-    });
+    vi.resetModules();
+    await import('./main');
     await new Promise((resolve) => setImmediate(resolve));
   } finally {
     if (before === undefined) delete process.env['PORT'];
@@ -29,7 +28,7 @@ async function start(port: string | undefined) {
 
 describe('mcp entry point', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockReadEnv.mockReturnValue({
       APP_ENV: 'test',
       ASSISTANT_ISSUER:

@@ -206,6 +206,7 @@ describe('config-protection — as a hook', () => {
   // their packages out differently, and a hardcoded workspace path makes the
   // ratchet look broken there when only the fixture moved. A repo with no
   // stryker config yet has no floor to guard.
+  // @traces 1338-FR-011
   it.skipIf(!strykerConfig())('blocks a real floor drop with exit 2', () => {
     const cfgFile = strykerConfig();
     const current = JSON.parse(readFileSync(cfgFile, 'utf8'));

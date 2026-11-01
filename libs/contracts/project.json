@@ -6,6 +6,9 @@
   "sourceRoot": "libs/contracts/src",
   "tags": [],
   "targets": {
+    "test": {
+      "command": "vitest run --config libs/contracts/vitest.config.mts"
+    },
     "test:mutation": {},
     "typecheck": {
       "cache": true,

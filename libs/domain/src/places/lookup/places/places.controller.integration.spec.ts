@@ -2,6 +2,7 @@ import { type INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Redis } from 'ioredis';
 import request from 'supertest';
+import type { MockInstance } from 'vitest';
 
 import { PLACES_LOOKUPS_PER_MINUTE } from './places.throttle';
 import { systemLog } from '../../../admin/system-log/system-log';
@@ -176,15 +177,13 @@ describe('GET /places', () => {
 
 // @traces 297-FR-008
 describe('a map provider error in the system log', () => {
-  let write: jest.SpyInstance;
+  let write: MockInstance;
 
   beforeEach(() => {
     // A write that never finishes: the answer must not wait for it.
-    write = jest
-      .spyOn(systemLog, 'write')
-      .mockReturnValue(new Promise(() => {}));
+    write = vi.spyOn(systemLog, 'write').mockReturnValue(new Promise(() => {}));
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   it('is written as a maps error with the provider and its reason, without the address typed', async () => {
     answer = async () => ({ unavailable: 'timeout' });

@@ -20,9 +20,7 @@ type TurnGlobal = {
 export function apiBoot() {
   const releaseLast = (globalThis as TurnGlobal).releaseDatabaseTurnLast;
   if (!releaseLast)
-    throw new Error(
-      'apiBoot needs testEnvironment database-turn.environment.cjs',
-    );
+    throw new Error('apiBoot needs setup file database-turn.setup.ts');
   const env = {
     APP_ENV: 'test',
     AUTH_TOKEN_SECRET: TEST_TOKEN_SECRET,

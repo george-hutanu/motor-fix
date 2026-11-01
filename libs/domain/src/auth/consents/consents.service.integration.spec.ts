@@ -86,7 +86,7 @@ beforeEach(async () => {
   if (keys.length) await redis.del(...keys);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 afterAll(async () => {
   await prisma.$disconnect();
@@ -185,7 +185,7 @@ describe('the clock and the address limit', () => {
       new AuditService(),
       new ConsentThrottle(down),
     );
-    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 
     await expect(
       withoutRedis.record(choice(), address()),
@@ -284,7 +284,7 @@ describe('my consents', () => {
 // @traces 244-FR-016
 describe('what a record reports', () => {
   it('logs one line without any id and counts the decision', async () => {
-    const log = jest
+    const log = vi
       .spyOn(Logger.prototype, 'log')
       .mockImplementation(() => undefined);
     const before = await counterTotal(

@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import type { MockInstance } from 'vitest';
 
 import { placeGarages } from './place-garages';
 import { serialDatabase } from '../auth/serial-db.testing';
@@ -51,15 +52,15 @@ const asked = (answer: (q: string) => PlacesAnswer | Promise<PlacesAnswer>) => {
   return { provider, texts };
 };
 
-let log: jest.SpyInstance;
+let log: MockInstance;
 
 beforeEach(async () => {
   await reset();
-  log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
-  jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+  log = vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 afterAll(() => prisma.$disconnect());
 

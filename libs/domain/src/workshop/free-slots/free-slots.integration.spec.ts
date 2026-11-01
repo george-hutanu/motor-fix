@@ -38,8 +38,10 @@ beforeAll(async () => {
 const at = (hour: number, minute = 0, day = DAY) =>
   new Date(atLocal(day, hour).getTime() + minute * MINUTE);
 
-beforeEach(() => jest.spyOn(Logger.prototype, 'warn').mockImplementation());
-afterEach(() => jest.restoreAllMocks());
+beforeEach(() =>
+  vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {}),
+);
+afterEach(() => vi.restoreAllMocks());
 
 // Atelier Dinamo open on weekdays, its two mechanics following those hours.
 async function setting(liftCount = 0) {
@@ -483,20 +485,20 @@ describe('the cached answer', () => {
     const s = await setting();
     const appRedis = provider<Redis>(AUTH_REDIS);
     const send = appRedis.sendCommand.bind(appRedis);
-    jest
-      .spyOn(appRedis, 'sendCommand')
-      .mockImplementation((command: Command, ...rest) => {
+    vi.spyOn(appRedis, 'sendCommand').mockImplementation(
+      (command: Command, ...rest) => {
         if (!String(command.args[0] ?? '').startsWith('free-slots')) {
           return send(command, ...rest);
         }
         command.reject(new Error('connect ECONNREFUSED 127.0.0.1:6379'));
         return command.promise;
-      });
+      },
+    );
     const query = { duration: 90, earliest: at(0).toISOString() };
 
     const down = await ask(s.garage.id, s.owner, query);
     const again = await ask(s.garage.id, s.owner, { ...query, count: 4 });
-    jest.mocked(appRedis.sendCommand).mockRestore();
+    vi.mocked(appRedis.sendCommand).mockRestore();
     const up = await ask(s.garage.id, s.owner, query);
 
     expect([down.status, again.status]).toEqual([200, 200]);
@@ -506,7 +508,7 @@ describe('the cached answer', () => {
       at(8, 30).getTime(),
       at(9).getTime(),
     ]);
-    expect(jest.mocked(Logger.prototype.warn)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(Logger.prototype.warn)).toHaveBeenCalledTimes(1);
   });
 });
 

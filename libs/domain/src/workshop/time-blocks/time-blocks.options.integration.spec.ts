@@ -1,5 +1,6 @@
 import type { Role } from '@motor-fix/contracts/capabilities';
 import { Logger } from '@nestjs/common';
+import type { MockInstance } from 'vitest';
 
 import { quotesApp } from '../../quotes/quotes-api.testing';
 
@@ -29,11 +30,11 @@ async function setting(off: string[] = []) {
 
 const card = (m: { id: string; name: string }) => ({ id: m.id, name: m.name });
 
-let warn: jest.SpyInstance;
+let warn: MockInstance;
 beforeEach(() => {
-  warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+  warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 // @traces 1395-FR-001
 // @traces 1395-FR-003
