@@ -4,7 +4,12 @@ import { provideRouter, Router } from '@angular/router';
 import type { MeDto } from '@motor-fix/data-access';
 import { Overlays } from '@motor-fix/overlays';
 
+import { NewPassword } from './new-password/new-password';
+import { PasswordReset } from './password-reset/password-reset';
+import { PhoneSignIn } from './phone-sign-in/phone-sign-in';
+import { SignIn } from './sign-in';
 import { SignInDialog } from './sign-in-dialog';
+import { SignUp } from './sign-up/sign-up';
 import { areaGuard } from '../dashboard/area.guard';
 import { Session } from '../dashboard/session';
 import { PlatformStatus } from '../maintenance/platform-status';
@@ -246,10 +251,7 @@ describe('SignInDialog', () => {
       open.mock.calls[1] as unknown[]
     )[0] as () => Promise<unknown>;
 
-    expect((await loader()) as { name: string }).toHaveProperty(
-      'name',
-      'SignUp',
-    );
+    expect(await loader()).toBe(SignUp);
   });
 
   it('loads the sign-in task only when it is opened', async () => {
@@ -260,10 +262,7 @@ describe('SignInDialog', () => {
       open.mock.calls[0] as unknown[]
     )[0] as () => Promise<unknown>;
 
-    expect((await loader()) as { name: string }).toHaveProperty(
-      'name',
-      'SignIn',
-    );
+    expect(await loader()).toBe(SignIn);
   });
 
   describe('the phone', () => {
@@ -314,10 +313,7 @@ describe('SignInDialog', () => {
         open.mock.calls[1] as unknown[]
       )[0] as () => Promise<unknown>;
 
-      expect((await loader()) as { name: string }).toHaveProperty(
-        'name',
-        'PhoneSignIn',
-      );
+      expect(await loader()).toBe(PhoneSignIn);
     });
 
     it("opens the person's dashboard after they sign in by phone", async () => {
@@ -383,10 +379,7 @@ describe('SignInDialog', () => {
         open.mock.calls[1] as unknown[]
       )[0] as () => Promise<unknown>;
 
-      expect((await loader()) as { name: string }).toHaveProperty(
-        'name',
-        'PasswordReset',
-      );
+      expect(await loader()).toBe(PasswordReset);
     });
 
     it('opens the new-password task for a link and the dashboard once it is saved', async () => {
@@ -402,10 +395,7 @@ describe('SignInDialog', () => {
       const loader = (
         open.mock.calls[0] as unknown[]
       )[0] as () => Promise<unknown>;
-      expect((await loader()) as { name: string }).toHaveProperty(
-        'name',
-        'NewPassword',
-      );
+      expect(await loader()).toBe(NewPassword);
       expect(navigate).toHaveBeenCalledWith('/app/garage');
     });
 
@@ -604,10 +594,7 @@ describe('SignInDialog, from an invite link sent to a phone', () => {
       () => Promise<unknown>,
       { data: { phone?: string }; title: string },
     ];
-    expect((await loader()) as { name: string }).toHaveProperty(
-      'name',
-      'PhoneSignIn',
-    );
+    expect(await loader()).toBe(PhoneSignIn);
     expect(options.data.phone).toBe('+40722000111');
     expect(options.title).toBe('public.signIn.title');
   });

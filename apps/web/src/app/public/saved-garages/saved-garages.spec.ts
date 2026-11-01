@@ -10,13 +10,14 @@ import { SavedGarages } from './saved-garages';
 import { Session } from '../../dashboard/session';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: Object.assign(
-    vi.fn(() => 'bar'),
-    { dismiss: vi.fn() },
-  ),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), {
+    toast: Object.assign(
+      vi.fn(() => 'bar'),
+      { dismiss: vi.fn() },
+    ),
+  }),
+);
 
 type Role = MeDto['role'];
 

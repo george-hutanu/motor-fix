@@ -26,10 +26,9 @@ import { GarageRequestsFeed } from './garage-requests-feed';
 import { Live } from '../live';
 import { Session } from '../session';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const OWNER = ['garage.requests', 'garage.schedule', 'garage.team'];
 

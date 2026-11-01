@@ -16,13 +16,20 @@ import type {
 import { PUBLIC_READ } from '../../../public-read';
 import { Voice } from '../../../voice/voice';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: Object.assign(
-    vi.fn(() => 'bar'),
-    { dismiss: vi.fn() },
-  ),
-}));
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../../../public/garage-profile/request-quote/request-quote');
+});
+
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), {
+    toast: Object.assign(
+      vi.fn(() => 'bar'),
+      { dismiss: vi.fn() },
+    ),
+  }),
+);
 
 const GARAGE = {
   brand: null,

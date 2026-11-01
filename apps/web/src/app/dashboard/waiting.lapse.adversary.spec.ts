@@ -15,10 +15,9 @@ import { Live, type LiveState } from './live';
 import { Session } from './session';
 import { Waiting } from './waiting';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const toasts = toast as unknown as Mock;
 

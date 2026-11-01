@@ -126,7 +126,9 @@ describe('the account screen on the server', () => {
 
 // @traces 248-FR-007
 describe('the public tab bar', () => {
-  beforeEach(() => setUp());
+  beforeEach(() => {
+    setUp();
+  });
 
   it('shows Caută, Service-uri and Cont on Home, Caută the current page', async () => {
     await open('/ro');
@@ -428,7 +430,9 @@ describe('the public tab bar', () => {
 });
 
 describe('signing in from a public screen', () => {
-  beforeEach(() => setUp());
+  beforeEach(() => {
+    setUp();
+  });
 
   const signInButton = () =>
     [...page().querySelectorAll('button')].find(

@@ -23,7 +23,9 @@ import { filter, Subject } from 'rxjs';
 import type { Mock, MockInstance } from 'vitest';
 
 import { ProfileView } from './profile-view';
+import { BrandsEditDialog } from '../brands-edit-dialog/brands-edit-dialog';
 import { Live } from '../live';
+import { ProfileEditDialog } from '../profile-edit-dialog/profile-edit-dialog';
 import { Session } from '../session';
 
 const GARAGE = 'garage-1';
@@ -377,7 +379,7 @@ describe('Profilul service-ului: the owner edits in place', () => {
 
     expect(open).toHaveBeenCalledTimes(1);
     const [source, options] = open.mock.calls[0];
-    expect(source.name).toBe('ProfileEditDialog');
+    expect(source).toBe(ProfileEditDialog);
     expect(options).toEqual({
       confirmDiscard: false,
       data: { garageId: GARAGE, group: 'hours', profile: answer() },
@@ -680,9 +682,9 @@ describe('Profilul service-ului: the owner edits the brands', () => {
 
     expect(open).toHaveBeenCalledTimes(1);
     const [source, options] = open.mock.calls[0];
-    expect(source.name).not.toBe('BrandsEditDialog');
+    expect(source).not.toBe(BrandsEditDialog);
     const loaded = await source();
-    expect(loaded.name).toBe('BrandsEditDialog');
+    expect(loaded).toBe(BrandsEditDialog);
     expect(options).toEqual({
       confirmDiscard: false,
       data: { garageId: GARAGE },

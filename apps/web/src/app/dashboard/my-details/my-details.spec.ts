@@ -14,10 +14,9 @@ import { PhoneChangeDialog } from './phone-change-dialog/phone-change-dialog';
 import { SignInDialog } from '../../sign-in/sign-in-dialog';
 import { Session } from '../session';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const ANDREI: MeDto = {
   capabilities: [],
@@ -114,7 +113,9 @@ function type(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-beforeEach(() => vi.mocked(toast).mockClear());
+beforeEach(() => {
+  vi.mocked(toast).mockClear();
+});
 
 // @traces 139-FR-001
 describe('the details panel', () => {

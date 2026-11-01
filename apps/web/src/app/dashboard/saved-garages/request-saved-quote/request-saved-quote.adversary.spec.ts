@@ -11,13 +11,14 @@ import { RequestSavedQuote } from './request-saved-quote';
 import { Consent } from '../../../consent/consent';
 import { Voice } from '../../../voice/voice';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: Object.assign(
-    vi.fn(() => 'bar'),
-    { dismiss: vi.fn() },
-  ),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), {
+    toast: Object.assign(
+      vi.fn(() => 'bar'),
+      { dismiss: vi.fn() },
+    ),
+  }),
+);
 
 const GARAGE = {
   id: 'garage-1',

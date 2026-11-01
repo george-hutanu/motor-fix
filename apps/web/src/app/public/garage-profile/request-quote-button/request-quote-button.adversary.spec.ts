@@ -14,6 +14,12 @@ import { RequestQuoteButton } from './request-quote-button';
 import { Consent } from '../../../consent/consent';
 import { Session } from '../../../dashboard/session';
 
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../request-quote/request-quote');
+});
+
 const GARAGE: PublicGarageDto = {
   brand: { id: 'b-1', name: 'Dacia', slug: 'dacia', stance: 'works_on' },
   brandNote: null,

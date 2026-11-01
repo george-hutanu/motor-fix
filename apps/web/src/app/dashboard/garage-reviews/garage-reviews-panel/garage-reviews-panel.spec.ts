@@ -24,6 +24,13 @@ import {
   staffReview,
 } from '../garage-reviews.testing';
 
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../../report-review-dialog/report-review-dialog');
+  await import('../../reply-dialog/reply-dialog');
+});
+
 // The builder bundles open-report-review into the spec, so the report task is
 // read where it opens: Overlays.open, with the review as its data.
 const reportOpened: Mock = vi.fn();

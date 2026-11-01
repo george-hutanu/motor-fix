@@ -86,7 +86,9 @@ async function start(agent: string, opener?: Mock) {
   await settle();
 }
 
-beforeEach(() => track.mockClear());
+beforeEach(() => {
+  track.mockClear();
+});
 afterEach(() => {
   fixture.destroy();
   vi.restoreAllMocks();

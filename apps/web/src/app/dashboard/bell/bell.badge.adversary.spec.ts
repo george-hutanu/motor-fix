@@ -12,10 +12,9 @@ import { Bell, BellStore } from './bell';
 import { Live } from '../live';
 import { Session } from '../session';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const READ_AT = '2026-10-05T09:00:00.000Z';
 

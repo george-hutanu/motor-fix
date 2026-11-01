@@ -7,11 +7,12 @@ import { By } from '@angular/platform-browser';
 import { STATIC_MAP_ZOOM } from '@motor-fix/contracts/map-view';
 import { I18n } from '@motor-fix/i18n';
 import { REDUCED_MOTION } from '@motor-fix/ui-cockpit';
-import * as maplibre from 'maplibre-gl';
 
 import { GARAGE_MAP, GarageMap } from './garage-map';
 import { circleBounds, ring } from '../../../map-libre/map-libre';
 import type { MapFake } from '../../../place-step/place-step.testing';
+// The fake itself, not the mocked module: the bundle cannot hand a hoisted mock its exports.
+import * as maplibre from '../../../place-step/place-step.testing';
 import { boundsOf, fitView, paddingOf } from '../../../static-map/fit-view';
 import { StaticMap } from '../../../static-map/static-map';
 

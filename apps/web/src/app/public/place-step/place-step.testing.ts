@@ -1,7 +1,7 @@
 // A stand-in for maplibre-gl in the place-map specs: no canvas, no WebGL.
-// A spec routes the module here and reads the state through its own `maplibre-gl` import:
+// A spec routes the module here and reads the state from this module itself:
 //   vi.mock('maplibre-gl', () => import('./place-step.testing'));
-//   const { fake } = (maplibre as unknown as MapFake);
+//   import { fake } from './place-step.testing';
 
 type Listener = (payload?: unknown) => void;
 

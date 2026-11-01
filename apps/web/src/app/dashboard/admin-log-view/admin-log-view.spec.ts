@@ -606,7 +606,10 @@ describe('the new entries bar', () => {
     const every = vi.spyOn(globalThis, 'setInterval');
     await open();
 
-    expect(every).not.toHaveBeenCalled();
+    // Under the builder jsdom draws frames: its requestAnimationFrame runs on
+    // a 60 Hz interval of its own, which is not the view asking again.
+    const frames = 1000 / 60;
+    expect(every.mock.calls.filter(([, ms]) => ms !== frames)).toEqual([]);
   });
 });
 

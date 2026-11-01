@@ -133,6 +133,8 @@ const consent = { track: vi.fn() };
 let fixture: ComponentFixture<Home>;
 
 async function settle() {
+  // The place dialog comes through import(), which takes tasks under Vitest.
+  await vi.dynamicImportSettled();
   for (let i = 0; i < 5; i++) await Promise.resolve();
   fixture.detectChanges();
 }
@@ -758,7 +760,8 @@ describe('Home brand cycling', () => {
     expect(checked()).toBe('BMW');
     await tick(1);
     expect(checked()).toBe('Mini');
-    await tick(5000 * 7);
+    // One step a brand: each step's read is scheduled on a task of its own.
+    for (let step = 0; step < 7; step++) await tick(5000);
 
     expect(checked()).toBe('BMW');
     expect(slugsRead()).toEqual([...BRANDS.map((b) => b.slug), 'bmw']);

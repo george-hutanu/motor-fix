@@ -19,10 +19,9 @@ import { Live } from '../live';
 import { Session } from '../session';
 import { dashboardRoutes } from '../views';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 type Role = 'driver' | 'garage' | 'receptionist' | 'mechanic' | 'admin';
 
@@ -133,7 +132,9 @@ const settle = async (harness: RouterTestingHarness) => {
 };
 const url = () => TestBed.inject(Router).url;
 
-beforeEach(() => (toast as unknown as Mock).mockClear());
+beforeEach(() => {
+  (toast as unknown as Mock).mockClear();
+});
 
 describe('Frame, the role chips', () => {
   it('shows a chip per role of a driver and garage, the one in use pressed', async () => {

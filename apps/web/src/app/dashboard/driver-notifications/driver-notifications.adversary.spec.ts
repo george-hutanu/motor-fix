@@ -13,10 +13,9 @@ import type { Mock } from 'vitest';
 import { DriverNotifications } from './driver-notifications';
 import { Live } from '../live';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const KEYS = ['offers', 'bookings', 'due_dates', 'news', 'reviews_history'];
 const TITLES = [

@@ -15,10 +15,9 @@ import type { Mock } from 'vitest';
 import { MechanicSchedule } from './mechanic-schedule';
 import { Live } from '../live';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 type Message = { id: string; kind: string };
 

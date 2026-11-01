@@ -9,10 +9,9 @@ import type { Mock } from 'vitest';
 import { EmailBanner } from './email-banner';
 import { Session } from '../session';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const account = (overrides: Partial<MeDto> = {}) =>
   ({
@@ -73,7 +72,9 @@ async function press(
   }
 }
 
-beforeEach(() => vi.mocked(toast).mockClear());
+beforeEach(() => {
+  vi.mocked(toast).mockClear();
+});
 
 describe('EmailBanner', () => {
   it('asks an account with an unconfirmed e-mail to confirm it', async () => {

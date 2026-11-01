@@ -20,10 +20,9 @@ import {
 import { Session } from '../../session';
 import { quotedRow } from '../garage-requests.testing';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 @Component({
   template: '<button type="button" id="opener">Confirmă programarea</button>',

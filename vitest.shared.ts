@@ -23,7 +23,11 @@ function aliases() {
 }
 
 /** Web's specs that run in node (its test-node target), under apps/web/src. */
-export const WEB_NODE_SPECS = ['server/**/*.spec.ts', 'app/app.config.spec.ts'];
+export const WEB_NODE_SPECS = [
+  'server/**/*.spec.ts',
+  'app/app.config.spec.ts',
+  'app/app.config.server.adversary.spec.ts',
+];
 
 /**
  * The Vitest config of an Angular project. The project's `test` target (the

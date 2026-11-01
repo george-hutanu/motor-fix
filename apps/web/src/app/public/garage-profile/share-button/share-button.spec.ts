@@ -6,10 +6,9 @@ import type { Mock } from 'vitest';
 import { ShareButton } from './share-button';
 import { SITE_ORIGIN } from '../../../addresses';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const ORIGIN = 'https://motorfix.ro';
 

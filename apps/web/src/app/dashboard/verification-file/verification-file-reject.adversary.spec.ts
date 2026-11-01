@@ -18,10 +18,9 @@ import { Live } from '../live';
 
 // @traces 305-FR-001 305-FR-007
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const FILE = 'file-1';
 const NOW = new Date();

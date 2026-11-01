@@ -14,10 +14,9 @@ import { DriverNotifications } from './driver-notifications';
 import { Live } from '../live';
 import { PushDevice, type PushState } from '../push-device';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 type Channel = 'email' | 'push' | 'sms' | 'whatsapp';
 const EPSW: Channel[] = ['email', 'push', 'sms', 'whatsapp'];

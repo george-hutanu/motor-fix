@@ -17,6 +17,12 @@ import { Session } from '../../session';
 import { fakeLive, listOf, wait } from '../garage-requests.testing';
 import { GarageRequestsFeed } from '../garage-requests-feed';
 
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../../block-time-dialog/block-time-dialog');
+});
+
 type Role = 'owner' | 'receptionist' | 'mechanic';
 
 const ALL = {

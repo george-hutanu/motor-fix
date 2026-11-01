@@ -28,10 +28,9 @@ import { Live } from '../live';
 import { Session } from '../session';
 import { DASHBOARDS, dashboardRoutes } from '../views';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 let signOut: Mock;
 let reload: Mock;
@@ -147,6 +146,8 @@ async function render(
       {
         provide: GaragesService,
         useValue: {
+          // The garage home's weekly panel reads too; neither answers here.
+          garageWeeklyFigures: () => new Promise(() => undefined),
           verificationStatusControllerRead: () => new Promise(() => undefined),
         },
       },

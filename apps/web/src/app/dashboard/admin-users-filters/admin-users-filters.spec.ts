@@ -315,6 +315,12 @@ describe('the role drop-down', () => {
 
   it('is operable from the keyboard: Space ticks, Escape closes and returns focus', async () => {
     const { element, host } = await open();
+    // jsdom applies the stylesheet's phone rule that hides the drop-downs and
+    // skips the tablet-up query that shows them, and it does not focus a
+    // hidden button: the row is shown as from 768 px.
+    element
+      .querySelector<HTMLElement>('.wide')
+      ?.style.setProperty('display', 'flex');
 
     rolesButton(element).focus();
     rolesButton(element).click();

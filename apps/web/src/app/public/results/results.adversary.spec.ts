@@ -142,6 +142,9 @@ const reduced = signal(false);
 let harness: RouterTestingHarness;
 
 async function settle() {
+  // The place dialog and the filters come through import(), which takes
+  // tasks under Vitest.
+  await vi.dynamicImportSettled();
   for (let i = 0; i < 10; i++) await Promise.resolve();
   harness.detectChanges();
 }
@@ -180,6 +183,24 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.useRealTimers());
+
+// The builder applies the stylesheets, and jsdom applies the sheet's phone
+// rule (its body scrolls) at every width: it skips the tablet-up media query
+// that makes the body display: contents, and it lays nothing out. The body
+// reads as display: contents, as it did with no stylesheet, so a card comes
+// into view through scrollIntoView.
+const computedStyle = window.getComputedStyle;
+beforeEach(() => {
+  window.getComputedStyle = (element, pseudo) =>
+    element.localName === 'div' &&
+    element.classList.contains('body') &&
+    element.parentElement?.localName === 'mf-results-sheet'
+      ? ({ display: 'contents', overflowY: 'auto' } as CSSStyleDeclaration)
+      : computedStyle.call(window, element, pseudo);
+});
+afterEach(() => {
+  window.getComputedStyle = computedStyle;
+});
 
 // Results searches only from a place: a page opened with a brand and neither
 // a place in the bar nor a kept one gets the bar's, unless the test wants

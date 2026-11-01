@@ -11,15 +11,26 @@ import { Subject } from 'rxjs';
 import { loadTelemetry } from './load';
 import { Consent } from '../../../consent/consent';
 
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../faro');
+});
+
 // The builder bundles '../faro' into the spec, so the SDK it starts is mocked
 // instead: initializeFaro stands for startFaro reaching the collector.
-vi.mock('@grafana/faro-web-sdk', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  faro: {
-    api: { pushEvent: vi.fn(), pushMeasurement: vi.fn(), setSession: vi.fn() },
-  },
-  initializeFaro: vi.fn(),
-}));
+vi.mock('@grafana/faro-web-sdk', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), {
+    faro: {
+      api: {
+        pushEvent: vi.fn(),
+        pushMeasurement: vi.fn(),
+        setSession: vi.fn(),
+      },
+    },
+    initializeFaro: vi.fn(),
+  }),
+);
 vi.mock('@grafana/faro-web-tracing', () => ({
   TracingInstrumentation: vi.fn(),
 }));
@@ -40,7 +51,9 @@ function pageWith(meta?: string): Document {
   return doc;
 }
 
-beforeEach(() => vi.mocked(initializeFaro).mockReset());
+beforeEach(() => {
+  vi.mocked(initializeFaro).mockReset();
+});
 
 describe('loadTelemetry', () => {
   it('loads nothing when the page carries no telemetry tag', async () => {

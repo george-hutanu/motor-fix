@@ -16,10 +16,9 @@ import { BlockTimeDialog } from './block-time-dialog';
 import type { BlockTimeData, BlockTimeResult } from './open-block-time';
 import { Session } from '../session';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 @Component({
   template: '<button type="button" id="opener">Blochează timp</button>',

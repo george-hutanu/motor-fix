@@ -83,11 +83,16 @@
       "executor": "@angular/build:unit-test",
       "options": {
         "buildTarget": "web:build:development",
-        "exclude": ["server/**/*.spec.ts", "app/app.config.spec.ts"],
+        "exclude": [
+          "server/**/*.spec.ts",
+          "app/app.config.spec.ts",
+          "app/app.config.server.adversary.spec.ts"
+        ],
         "isolate": true,
         "runner": "vitest",
         "runnerConfig": "apps/web/vitest.config.ts",
         "setupFiles": ["apps/web/src/test-setup.ts"],
+        "splitting": false,
         "tsConfig": "apps/web/tsconfig.spec.json"
       }
     },
@@ -95,7 +100,11 @@
       "executor": "@angular/build:unit-test",
       "options": {
         "buildTarget": "web:build:development",
-        "include": ["server/**/*.spec.ts", "app/app.config.spec.ts"],
+        "include": [
+          "server/**/*.spec.ts",
+          "app/app.config.spec.ts",
+          "app/app.config.server.adversary.spec.ts"
+        ],
         "isolate": true,
         "runner": "vitest",
         "runnerConfig": "apps/web/vitest-node.config.ts",

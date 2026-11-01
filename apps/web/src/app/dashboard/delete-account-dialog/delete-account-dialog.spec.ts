@@ -14,10 +14,9 @@ import { Live } from '../live';
 import { PushDevice } from '../push-device';
 import { Session } from '../session';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 @Component({ template: '' })
 class Host {
@@ -129,7 +128,9 @@ async function confirm(value = 'andrei@example.ro') {
   await settle();
 }
 
-beforeEach(() => vi.mocked(toast).mockClear());
+beforeEach(() => {
+  vi.mocked(toast).mockClear();
+});
 
 afterEach(() => {
   document.querySelectorAll('.cdk-overlay-container').forEach((n) => {

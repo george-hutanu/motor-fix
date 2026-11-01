@@ -13,6 +13,12 @@ import type { Mock } from 'vitest';
 
 import { openAddCar } from './open-add-car';
 
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('./add-car');
+});
+
 @Component({ template: '' })
 class Host {
   readonly overlays = inject(Overlays);

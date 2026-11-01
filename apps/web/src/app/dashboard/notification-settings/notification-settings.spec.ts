@@ -17,10 +17,9 @@ import type { Mock } from 'vitest';
 import { NotificationSettings } from './notification-settings';
 import { Live } from '../live';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const GARAGE = 'a3b5c7d9-0000-4000-8000-000000000001';
 const OTHER = 'a3b5c7d9-0000-4000-8000-000000000002';

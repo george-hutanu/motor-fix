@@ -7,10 +7,9 @@ import type { Mock } from 'vitest';
 import { PushPanel } from './push-panel';
 import { PushDevice, type PushState } from '../push-device';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 let state: ReturnType<typeof signal<PushState>>;
 let device: {

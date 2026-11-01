@@ -8,6 +8,12 @@ import type { Mock } from 'vitest';
 import { openCookieSettings } from './open-cookie-settings';
 import { Consent } from '../consent';
 
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('./cookie-settings');
+});
+
 @Component({ template: '' })
 class Host {
   readonly overlays = inject(Overlays);

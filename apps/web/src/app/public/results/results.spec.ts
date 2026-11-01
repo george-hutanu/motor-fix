@@ -204,6 +204,9 @@ const warmer = { judge: vi.fn(), warm: vi.fn() };
 let harness: RouterTestingHarness;
 
 async function settle() {
+  // The place dialog and the filters come through import(), which takes
+  // tasks under Vitest.
+  await vi.dynamicImportSettled();
   for (let i = 0; i < 10; i++) await Promise.resolve();
   harness.detectChanges();
 }
@@ -251,6 +254,24 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.useRealTimers());
+
+// The builder applies the stylesheets, and jsdom applies the sheet's phone
+// rule (its body scrolls) at every width: it skips the tablet-up media query
+// that makes the body display: contents, and it lays nothing out. The body
+// reads as display: contents, as it did with no stylesheet, so a card comes
+// into view through scrollIntoView.
+const computedStyle = window.getComputedStyle;
+beforeEach(() => {
+  window.getComputedStyle = (element, pseudo) =>
+    element.localName === 'div' &&
+    element.classList.contains('body') &&
+    element.parentElement?.localName === 'mf-results-sheet'
+      ? ({ display: 'contents', overflowY: 'auto' } as CSSStyleDeclaration)
+      : computedStyle.call(window, element, pseudo);
+});
+afterEach(() => {
+  window.getComputedStyle = computedStyle;
+});
 
 // Results searches only from a place: a page opened with a brand and neither
 // a place in the bar nor a kept one gets the bar's, unless the test wants
@@ -3622,6 +3643,7 @@ describe('Results loading more', () => {
   });
 
   // @traces 1356-FR-007
+  // Five hundred cards drawn in jsdom: a slow machine takes past the 5 s default.
   it('stops at 500 cards, cutting the page that would pass them, even with a cursor', async () => {
     await loaded(
       pageOf({ items: garages(0, 490), nextCursor: 'c1', total: 900 }),
@@ -3640,9 +3662,10 @@ describe('Results loading more', () => {
     await scrolledToEnd();
     expect(cursors()).toHaveLength(1);
     expect(said(page().querySelector('.summary .tally'))).toContain('900');
-  });
+  }, 30_000);
 
   // @traces 1356-FR-007
+  // Five hundred cards drawn in jsdom: a slow machine takes past the 5 s default.
   it('says the first 500 when the last page passes them and has no next', async () => {
     await loaded(
       pageOf({ items: garages(0, 495), nextCursor: 'c1', total: 505 }),
@@ -3656,7 +3679,7 @@ describe('Results loading more', () => {
     expect(said(end())).toBe(
       'Ai văzut primele 500 · apropie harta pentru mai puține',
     );
-  });
+  }, 30_000);
 
   // @traces 1356-FR-005
   it('loads the next page from its button, keeping the focus on it, and gives the focus to the end line at the last page', async () => {

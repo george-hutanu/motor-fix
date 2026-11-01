@@ -32,7 +32,7 @@ class DeleteAccountStub {}
 const account = (capabilities: string[]) =>
   ({ capabilities, id: 'account-1' }) as unknown as MeDto;
 
-function render(me: MeDto | null) {
+async function render(me: MeDto | null) {
   TestBed.configureTestingModule({
     providers: [{ provide: Session, useValue: { current: signal(me) } }],
   });
@@ -50,13 +50,16 @@ function render(me: MeDto | null) {
       ],
     },
   });
+  // AOT keeps a deferred block's dependencies apart: TestBed resolves them
+  // before the first fixture.
+  await TestBed.compileComponents();
   const fixture = TestBed.createComponent(SettingsView);
   fixture.detectChanges();
   return fixture;
 }
 
 async function rendered(me: MeDto | null) {
-  const fixture = render(me);
+  const fixture = await render(me);
   for (const block of await fixture.getDeferBlocks()) {
     await block.render(DeferBlockState.Complete);
   }
@@ -68,13 +71,13 @@ describe('SettingsView', () => {
   // they load in a chunk of their own and stay out of the web app's
   // first bundle, which the 1 MB budget caps.
   it('loads the platform rules in a deferred block, apart from the first bundle', async () => {
-    const fixture = render(account(['admin.settings']));
+    const fixture = await render(account(['admin.settings']));
 
     expect(await fixture.getDeferBlocks()).toHaveLength(1);
   });
 
   it('defers nothing for a garage session', async () => {
-    const fixture = render(account(['garage.settings']));
+    const fixture = await render(account(['garage.settings']));
 
     expect(await fixture.getDeferBlocks()).toHaveLength(0);
   });

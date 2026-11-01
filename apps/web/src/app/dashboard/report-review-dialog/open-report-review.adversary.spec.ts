@@ -1,6 +1,7 @@
 import type { Overlays } from '@motor-fix/overlays';
 
 import { openReportReview } from './open-report-review';
+import { ReportReviewDialog } from './report-review-dialog';
 import { staffReview } from '../garage-reviews/garage-reviews.testing';
 
 // @traces 1382-FR-008 1382-FR-003
@@ -13,10 +14,10 @@ describe('opening the report task', () => {
 
     expect(open).toHaveBeenCalledTimes(1);
     const [component, config] = open.mock.calls[0] as unknown as [
-      { name: string },
+      unknown,
       Record<string, unknown>,
     ];
-    expect(component.name).toBe('ReportReviewDialog');
+    expect(component).toBe(ReportReviewDialog);
     expect(config).toEqual({
       data: { review },
       shape: 'dialog',

@@ -1,4 +1,4 @@
-import * as maplibre from 'maplibre-gl';
+// The fake itself, not the mocked module: the bundle cannot hand a hoisted mock its exports.
 
 import {
   circleBounds,
@@ -10,6 +10,7 @@ import {
   styleFor,
 } from './map-libre';
 import type { MapFake } from '../place-step/place-step.testing';
+import * as maplibre from '../place-step/place-step.testing';
 
 vi.mock('maplibre-gl', () => import('../place-step/place-step.testing'));
 const { fake } = maplibre as unknown as MapFake;

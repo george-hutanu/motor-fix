@@ -9,6 +9,12 @@ import { ReportGarageLink } from './report-garage-link';
 import { Session } from '../../../dashboard/session';
 import { SignInDialog } from '../../../sign-in/sign-in-dialog';
 
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../report-garage/report-garage');
+});
+
 type Role = 'driver' | 'garage' | 'mechanic' | 'admin';
 
 const GARAGE = {

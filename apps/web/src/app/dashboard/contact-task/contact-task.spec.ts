@@ -7,6 +7,12 @@ import type { Mock } from 'vitest';
 import { openContact } from './open-contact';
 import { Session } from '../session';
 
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('./contact-task');
+});
+
 // @traces 280-FR-004 280-FR-006
 
 @Component({ template: '<button type="button" id="entry">Ajutor</button>' })

@@ -15,10 +15,9 @@ import type { Mock } from 'vitest';
 import { ClientRepairsView } from './client-repairs-view';
 import { Live } from '../live';
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const repair = (over: Partial<ClientRepairDto> = {}): ClientRepairDto => ({
   car: { brandName: 'VW', model: 'Golf', year: 2015 },
@@ -103,7 +102,9 @@ const message = (kind: string, id = 'repair-1') =>
 const gone = () =>
   new HttpErrorResponse({ error: { code: 'not_found' }, status: 404 });
 
-beforeEach(() => (toast as unknown as Mock).mockClear());
+beforeEach(() => {
+  (toast as unknown as Mock).mockClear();
+});
 afterEach(() => TestBed.resetTestingModule());
 
 const pending = () => new Promise<never>(() => {});

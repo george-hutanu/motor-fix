@@ -10,10 +10,9 @@ import { VerificationRegisterForm } from './verification-register-form';
 
 // @traces 203-FR-007 203-FR-008
 
-vi.mock('@spartan-ng/brain/sonner', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  toast: vi.fn(),
-}));
+vi.mock('@spartan-ng/brain/sonner', async (importOriginal) =>
+  Object.assign({}, await importOriginal<object>(), { toast: vi.fn() }),
+);
 
 const ANSWER = {
   check: { id: 'c', kind: 'company', result: 'ok' },

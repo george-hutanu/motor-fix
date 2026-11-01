@@ -7,12 +7,13 @@ import { By } from '@angular/platform-browser';
 import type { GaragePinsDto } from '@motor-fix/data-access';
 import { I18n } from '@motor-fix/i18n';
 import { Layout, type LayoutName, REDUCED_MOTION } from '@motor-fix/ui-cockpit';
-import * as maplibre from 'maplibre-gl';
 import type { Mocked } from 'vitest';
 
 import type { MapEvents, MapMove } from './pins-map';
 import { RESULTS_MAP, ResultsMap, type ResultsMapView } from './results-map';
 import type { MapFake } from '../../place-step/place-step.testing';
+// The fake itself, not the mocked module: the bundle cannot hand a hoisted mock its exports.
+import * as maplibre from '../../place-step/place-step.testing';
 import {
   boundsOf,
   fitView,

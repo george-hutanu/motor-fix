@@ -6,9 +6,13 @@ import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import type { Mock } from 'vitest';
 
-// Loaded up front, so the tap's import() finds it in the module cache.
-import './cancel-transfer';
 import { openCancelTransfer } from './open-cancel-transfer';
+
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('./cancel-transfer');
+});
 
 @Component({ template: '' })
 class Host {

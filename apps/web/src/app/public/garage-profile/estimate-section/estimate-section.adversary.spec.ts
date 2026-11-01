@@ -15,6 +15,12 @@ import { Consent } from '../../../consent/consent';
 import { Session } from '../../../dashboard/session';
 import { PriceSelection } from '../price-selection/price-selection';
 
+// Fetched before the first test, so the import() under test finds it loaded;
+// the bundler would drop a bare side-effect import of it.
+beforeAll(async () => {
+  await import('../request-quote/request-quote');
+});
+
 const row = (
   jobTypeId: string,
   nameRo: string,

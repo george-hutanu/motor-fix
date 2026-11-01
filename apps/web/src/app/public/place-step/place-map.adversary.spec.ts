@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { PLACE_ZOOM } from '@motor-fix/contracts/place-section';
-import * as maplibre from 'maplibre-gl';
 import type { Mock } from 'vitest';
 
 import { PLACE_MAP, type PlaceMap, viewFor } from './place-map';
 import type { MapFake } from './place-step.testing';
+// The fake itself, not the mocked module: the bundle cannot hand a hoisted mock its exports.
+import * as maplibre from './place-step.testing';
 import { circleBounds, type LatLng } from '../map-libre/map-libre';
 
 vi.mock('maplibre-gl', () => import('./place-step.testing'));
