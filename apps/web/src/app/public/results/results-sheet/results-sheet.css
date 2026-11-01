@@ -68,6 +68,16 @@
   touch-action: pan-x;
 }
 
+/* Only the part above the screen's edge scrolls, so the list's last card
+   can always be reached. */
+.body {
+  flex: none;
+  height: calc(100% - var(--sheet-y, var(--rest)) - var(--sheet-top, 160px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--mf-space-3) var(--mf-space-4) var(--mf-space-4);
+}
+
 /* Forced full by a state the half sheet would cut (the filtered empty state
    with the consent bar asking at 390 px): the header keeps a third of the
    sheet and scrolls, so the state under it shows whole. */
@@ -79,16 +89,6 @@
   flex: 1 1 auto;
   height: auto;
   min-height: 0;
-}
-
-/* Only the part above the screen's edge scrolls, so the list's last card
-   can always be reached. */
-.body {
-  flex: none;
-  height: calc(100% - var(--sheet-y, var(--rest)) - var(--sheet-top, 160px));
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: var(--mf-space-3) var(--mf-space-4) var(--mf-space-4);
 }
 
 @media (prefers-reduced-motion: no-preference) {
