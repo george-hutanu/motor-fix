@@ -11998,6 +11998,344 @@
         ]
       }
     },
+    "/api/v1/garages/{garageId}/photos": {
+      "get": {
+        "operationId": "OwnerPhotosController_list",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotosDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The garage's gallery in order, with its stamp",
+        "tags": [
+          "garages"
+        ]
+      },
+      "put": {
+        "operationId": "OwnerPhotosController_save",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveGaragePhotosDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotosDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "validation_failed: a rule broken (errors[].field names the entry); unknown_photo: an id the gallery does not hold"
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          },
+          "409": {
+            "description": "file_missing: an added upload is not stored; photo_processing: its copies are not made yet; profile_changed: the version is not the current one"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Save the whole gallery in its new order: kept photos by id, new uploads by key, each with its caption",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/photos/upload-url": {
+      "post": {
+        "operationId": "OwnerPhotosController_uploadAddress",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoUploadRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoUploadAddressDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or a garage not yet approved"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          },
+          "422": {
+            "description": "photos_full, file_type_not_allowed, file_too_large"
+          },
+          "429": {
+            "description": "rate_limited: too many upload addresses for this garage"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sign an upload of a photo for the gallery",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/photos/uploads": {
+      "post": {
+        "operationId": "OwnerPhotosController_confirm",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmPhotoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotoUploadDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: not this garage, or not an upload of its own"
+          },
+          "409": {
+            "description": "file_missing: nothing was uploaded"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          },
+          "422": {
+            "description": "file_type_mismatch, file_too_large"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Keep an uploaded photo under the garage and make its copies",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
+    "/api/v1/garages/{garageId}/photos/uploads/{id}": {
+      "get": {
+        "operationId": "OwnerPhotosController_upload",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GaragePhotoUploadDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: no such upload"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "An upload not yet saved, as its copies are made",
+        "tags": [
+          "garages"
+        ]
+      },
+      "delete": {
+        "operationId": "OwnerPhotosController_removeUpload",
+        "parameters": [
+          {
+            "name": "garageId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": "sign_in_required"
+          },
+          "403": {
+            "description": "forbidden: the receptionist or mechanic of this garage"
+          },
+          "404": {
+            "description": "not_found: no such upload"
+          },
+          "409": {
+            "description": "photo_in_gallery: remove it by saving the gallery"
+          },
+          "410": {
+            "description": "gone: the garage is suspended"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Drop an upload not yet saved, with its copies",
+        "tags": [
+          "garages"
+        ]
+      }
+    },
     "/api/v1/listing-drafts/{id}/documents/{kind}/upload-url": {
       "post": {
         "operationId": "ListingDocumentsController_uploadAddress",
@@ -24626,6 +24964,11 @@
             "type": "string",
             "format": "uuid"
           },
+          "caption": {
+            "type": "string",
+            "description": "The owner's caption, when the photo has one",
+            "maxLength": 80
+          },
           "thumbnailUrl": {
             "type": "string",
             "description": "The thumbnail copy (400 px), signed for an hour",
@@ -28444,6 +28787,139 @@
         },
         "required": [
           "photos"
+        ]
+      },
+      "GaragePhotoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "position": {
+            "type": "number",
+            "description": "0 is the cover"
+          },
+          "caption": {
+            "type": "string",
+            "nullable": true
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "The thumbnail copy, signed for an hour",
+            "format": "uri"
+          },
+          "width": {
+            "type": "number",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "minimum": 1
+          },
+          "processed": {
+            "type": "boolean",
+            "description": "Always true: the gallery holds only processed photos"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "thumbnailUrl",
+          "processed"
+        ]
+      },
+      "GaragePhotosDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The profile's change stamp, sent back on save"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GaragePhotoDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "photos"
+        ]
+      },
+      "SaveGaragePhotoEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "A photo the gallery holds",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string",
+            "description": "An upload confirmed for this garage"
+          },
+          "caption": {
+            "type": "string",
+            "description": "Trimmed; empty clears it. No control characters",
+            "maxLength": 80,
+            "nullable": true
+          }
+        }
+      },
+      "SaveGaragePhotosDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The profile's change stamp as last read",
+            "maxLength": 20,
+            "minLength": 1
+          },
+          "photos": {
+            "description": "Exactly one of id and key per entry; the first is the cover",
+            "maxItems": 20,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaveGaragePhotoEntryDto"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "photos"
+        ]
+      },
+      "GaragePhotoUploadDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The key to put in the gallery"
+          },
+          "processed": {
+            "type": "boolean",
+            "description": "Whether the copies are made"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "Signed for an hour",
+            "format": "uri"
+          },
+          "width": {
+            "type": "number",
+            "minimum": 1
+          },
+          "height": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "key",
+          "processed"
         ]
       },
       "DocumentUploadRequestDto": {
