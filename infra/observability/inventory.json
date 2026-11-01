@@ -1920,14 +1920,14 @@
       "kind": "endpoint",
       "name": "cars",
       "source": "libs/domain/src/cars/my-cars/cars/cars.controller.ts",
-      "metric": "http.server.request.duration by http.route /api/v1/cars and /api/v1/cars/:id",
+      "metric": "http.server.request.duration by http.route /api/v1/cars, /api/v1/cars/due-items and /api/v1/cars/:id",
       "dashboard": "motorfix-api",
       "alerts": [
         "api-error-rate",
         "api-latency"
       ],
-      "reason": "POST, GET, PATCH and DELETE of the driver's cars show on the request-duration metric by route and status code; since ST-91 an add and each odometer change write a row of the cars module's odometer_reading table in the same transaction, nextServiceKm is refused with next_service_not_above_odometer or next_service_too_far as a 400, and every car answer carries serviceDueOn; each write is an audit row and a car.added, car.updated or car.removed event, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
-      "story": "ST-91"
+      "reason": "POST, GET, PATCH and DELETE of the driver's cars show on the request-duration metric by route and status code; since ST-91 an add and each odometer change write a row of the cars module's odometer_reading table in the same transaction, nextServiceKm is refused with next_service_not_above_odometer or next_service_too_far as a 400, and every car answer carries serviceDueOn; since ST-93 GET /api/v1/cars/due-items reads the active cars with their readings in one query and writes nothing, and a replayed add key of a removed car answers 404 not_found; each write is an audit row and a car.added, car.updated or car.removed event, so no product counter is added; the spans come from the HTTP and Prisma auto-instrumentation",
+      "story": "ST-91, ST-93"
     },
     {
       "kind": "product-counter",

@@ -246,8 +246,7 @@ const PEOPLE: Person[] = [
     name: 'Andrei Popescu',
     roles: ['driver'],
   },
-  // The driver of the seeded requests below, apart from the first driver so
-  // the screens that start from no car keep doing so.
+  // The driver of the seeded requests below, apart from the first driver.
   {
     email: 'cerere@example.test',
     lastRole: 'driver',
@@ -748,6 +747,43 @@ async function requester(
     garageId: at.id,
     mechanic: at.mechanic,
   };
+}
+
+// The sweep's driver's car, with what is coming up for it: the ITP within 60
+// days, RCA and rovinietă later, an oil service 4,000 km on and the reading
+// the estimate counts from, and its open ownership row as an add through the
+// API opens. The dates follow the run day on every run.
+async function driverCar(db: Client) {
+  const car = await db.query<{ id: string; owner_id: string }>(
+    `INSERT INTO car (id, owner_id, brand_id, model, year, fuel, engine, odometer_km, plate, idempotency_key,
+                      itp_until, rca_until, rovinieta_until, next_service_km)
+     SELECT gen_random_uuid(), a.id, b.id, '320d', 2019, 'diesel', '2.0', 148200, 'B103QAT', 'seed-driver',
+            d + 40, d + 300, d + 300, 152200
+     FROM account a, brand b, (SELECT (now() AT TIME ZONE 'Europe/Bucharest')::date AS d) t
+     WHERE a.email = 'sofer@example.test' AND b.key = 'bmw'
+     ON CONFLICT (owner_id, idempotency_key) DO UPDATE
+       SET itp_until = EXCLUDED.itp_until, rca_until = EXCLUDED.rca_until,
+           rovinieta_until = EXCLUDED.rovinieta_until
+     RETURNING id, owner_id`,
+  );
+  const [mine] = car.rows;
+  if (!mine) return;
+  await db.query(
+    `INSERT INTO odometer_reading (id, car_id, km, read_on, source)
+     SELECT gen_random_uuid(), c.id, c.odometer_km, (now() AT TIME ZONE 'Europe/Bucharest')::date, 'driver'
+     FROM car c
+     WHERE c.id = $1 AND NOT EXISTS (SELECT 1 FROM odometer_reading r WHERE r.car_id = c.id)`,
+    [mine.id],
+  );
+  await db.query(
+    `INSERT INTO car_ownership (id, car_id, account_id, access, from_date, opened_at)
+     SELECT gen_random_uuid(), $1, $2, 'owner', current_date, now()
+     WHERE NOT EXISTS (
+       SELECT 1 FROM car_ownership
+       WHERE car_id = $1 AND account_id = $2 AND to_date IS NULL
+     )`,
+    [mine.id, mine.owner_id],
+  );
 }
 
 // A repair the requester logged on his car, for the admin to open and
@@ -1489,6 +1525,7 @@ async function seed(db: Client, secret: string): Promise<string> {
   );
   const cleared = await clearDay(db);
   await requests(db);
+  await driverCar(db);
   await loggedRepair(db);
   await reviewed(db);
   await startOlderJob(db);

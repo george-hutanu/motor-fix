@@ -365,6 +365,44 @@ describe('seed', () => {
     expect(await seeded()).toEqual(once);
   });
 
+  // @traces 093-FR-012
+  it("gives the sweep's driver a BMW with its three dates and a next oil service, once, its dates kept current", async () => {
+    const theCar = () =>
+      prisma.car.findMany({
+        include: { brand: true, readings: true },
+        where: { owner: { email: 'sofer@example.test' } },
+      });
+    const ahead = (n: number) =>
+      new Date(`${localDay(new Date())}T00:00:00Z`).getTime() + n * 86_400_000;
+
+    expect(seed('test').status).toBe(0);
+    const [car, ...more] = await theCar();
+
+    expect(more).toEqual([]);
+    expect(car).toMatchObject({
+      brand: { key: 'bmw' },
+      idempotencyKey: 'seed-driver',
+      nextServiceKm: car.odometerKm + 4000,
+      removedAt: null,
+    });
+    expect(car.itpUntil?.getTime()).toBe(ahead(40));
+    expect(car.rcaUntil?.getTime()).toBe(ahead(300));
+    expect(car.rovinietaUntil?.getTime()).toBe(ahead(300));
+    expect(car.readings.map((r) => r.km)).toEqual([car.odometerKm]);
+
+    await prisma.car.update({
+      data: { itpUntil: new Date('2020-01-01T00:00:00Z') },
+      where: { id: car.id },
+    });
+    const counts = await rowCounts();
+    expect(seed('test').status).toBe(0);
+
+    expect(await rowCounts()).toEqual(counts);
+    const [again] = await theCar();
+    expect(again.id).toBe(car.id);
+    expect(again.itpUntil?.getTime()).toBe(ahead(40));
+  });
+
   // Staging's api seeds on every deploy, after users there changed things:
   // a seeded account's name is theirs, its password is the seed's.
   // @traces 1372-FR-004
