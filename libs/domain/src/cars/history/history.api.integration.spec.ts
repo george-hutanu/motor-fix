@@ -322,10 +322,15 @@ describe('the reading, the amount and the correction on both reads', () => {
 });
 
 describe('a MotorFix repair on the history reads', () => {
-  it('names the job’s mechanic, an empty review column, the car and the garage', async () => {
+  // @traces 026-FR-001 026-FR-002
+  it('names the job’s mechanic, the review the driver may write, the car and the garage', async () => {
     const { andrei } = await people();
     const car = await world.car(andrei.id);
-    const { garage, repair } = await motorFixRepair(prisma, andrei.id, car.id);
+    const { garage, job, repair } = await motorFixRepair(
+      prisma,
+      andrei.id,
+      car.id,
+    );
 
     const res = await get(andrei.auth, `/cars/${car.id}/repairs`);
 
@@ -339,7 +344,12 @@ describe('a MotorFix repair on the history reads', () => {
         id: repair.id,
         mechanicName: 'Mihai Dumitru',
         odometerKm: 148_250,
-        review: null,
+        review: {
+          jobId: job.id,
+          rating: null,
+          reviewId: null,
+          state: 'can_write',
+        },
         source: 'motorfix',
         what: 'Plăcuțe și discuri față',
       }),
@@ -414,33 +424,37 @@ describe('a MotorFix repair on the history reads', () => {
     ]);
   });
 
+  // @traces 026-FR-002 026-FR-003 026-FR-005 026-FR-008
   it.each([
-    [10, undefined, null],
-    [60, undefined, null],
-    [61, undefined, null],
-    [10, { rating: 5, status: 'published' }, null],
-    [10, { rating: 2, status: 'reported' }, null],
-    [10, { rating: 1, status: 'removed' }, null],
-    [30, { rating: 3, status: 'deleted_by_author' }, null],
-    [61, { rating: 3, status: 'deleted_by_author' }, null],
+    [10, undefined, 'can_write', null],
+    [60, undefined, 'can_write', null],
+    [61, undefined, 'can_write', null],
+    [10, { rating: 5, status: 'published' }, 'written', 5],
+    [10, { rating: 2, status: 'reported' }, 'written', 2],
+    [10, { rating: 1, status: 'removed' }, 'removed', null],
+    [30, { rating: 3, status: 'deleted_by_author' }, 'can_write', null],
+    [61, { rating: 3, status: 'deleted_by_author' }, 'can_write', null],
   ] as const)(
-    'answers a repair done %i days ago with review %j with the review column %j until ST-26',
-    async (daysAgo, review, state) => {
+    'answers a repair done %i days ago with review %j as %s, rating %j',
+    async (daysAgo, review, state, rating) => {
       const { andrei } = await people();
       const car = await world.car(andrei.id);
       await motorFixRepair(prisma, andrei.id, car.id, { daysAgo, review });
 
       const res = await get(andrei.auth, `/cars/${car.id}/repairs`);
 
-      expect(res.body.items[0].review).toEqual(state);
+      expect(res.body.items[0].review).toEqual(
+        expect.objectContaining({ rating, state }),
+      );
       expect(JSON.stringify(res.body)).not.toContain('Foarte bine');
     },
   );
 
-  it('answers the sold car’s MotorFix repair to its former owner with the same row, cut at the sale', async () => {
+  // @traces 026-FR-001 026-FR-004
+  it('answers the sold car’s MotorFix repair to its former owner with the same row and his review, the buyer none', async () => {
     const { andrei, maria } = await people();
     const car = await world.car(andrei.id);
-    const { repair } = await motorFixRepair(prisma, andrei.id, car.id, {
+    const { job, repair } = await motorFixRepair(prisma, andrei.id, car.id, {
       review: { rating: 5, status: 'published' },
     });
     await hand(andrei, maria, car.id);
@@ -453,14 +467,18 @@ describe('a MotorFix repair on the history reads', () => {
       expect.objectContaining({
         id: repair.id,
         mechanicName: 'Mihai Dumitru',
-        review: null,
+        review: expect.objectContaining({
+          jobId: job.id,
+          rating: 5,
+          state: 'written',
+        }),
       }),
     ]);
     expect(hers.body.items).toContainEqual(
       expect.objectContaining({
         fromPreviousOwner: true,
         id: repair.id,
-        review: null,
+        review: { jobId: job.id, rating: null, reviewId: null, state: 'none' },
       }),
     );
   });

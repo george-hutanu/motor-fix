@@ -4,12 +4,22 @@
 export interface RepairReviewDto {
 
   /**
-   * Only with rated
+   * The job to review
    */
-  rating?: number;
+  jobId: string;
 
   /**
-   * write: the driver may still review; rated: a review stands; none: neither
+   * Only with written
    */
-  state: 'write' | 'rated' | 'none';
+  rating: number | null;
+
+  /**
+   * With written and removed
+   */
+  reviewId: string | null;
+
+  /**
+   * can_write: the driver may review the job; written: his review stands; removed: MotorFix removed it; expired: the window closed; none: he may not review it
+   */
+  state: 'can_write' | 'written' | 'removed' | 'expired' | 'none';
 }

@@ -1,5 +1,11 @@
-import type { CarRepairDto } from '@motor-fix/contracts';
+import type {
+  CarRepairDto,
+  RepairReviewDto,
+  RepairReviewState,
+  ReviewRefusal,
+} from '@motor-fix/contracts';
 
+import type { Actor } from '../../auth/policy';
 import type { Prisma } from '../../generated/prisma/client';
 
 // What an ownership row needs to decide which repairs it may read.
@@ -121,6 +127,7 @@ export const REPAIR_ROW_SELECT = {
       mechanic: { select: { name: true } },
     },
   },
+  jobId: true,
   odometerKm: true,
   source: true,
   updatedByRole: true,
@@ -141,12 +148,73 @@ export const CORRECTED_BY = {
 
 const day = (at: Date) => at.toISOString().slice(0, 10);
 
+// The review state a MotorFix repair shows for the eligibility's reason.
+// Nothing answers expired until the review window exists (ST-120).
+const REVIEW_STATE: Record<ReviewRefusal | 'null', RepairReviewState> = {
+  already_reviewed: 'written',
+  email_not_confirmed: 'can_write',
+  job_not_done: 'none',
+  not_found: 'none',
+  null: 'can_write',
+  own_garage: 'none',
+  review_removed: 'removed',
+};
+
+export const reviewStateOf = (reason: ReviewRefusal | null) =>
+  REVIEW_STATE[reason ?? 'null'];
+
+type Judge = {
+  judge(
+    actor: Actor,
+    jobIds: string[],
+  ): Promise<
+    {
+      jobId: string;
+      reason: ReviewRefusal | null;
+      review: { id: string; rating: number } | null;
+    }[]
+  >;
+};
+
+// The review of each MotorFix repair on a page, by job: one judgement for
+// the whole page, none for a page with no MotorFix repair.
+export async function reviewsOf(
+  eligibility: Judge,
+  actor: Actor,
+  repairs: { jobId: string | null }[],
+): Promise<Map<string, RepairReviewDto>> {
+  const jobIds = [
+    ...new Set(repairs.flatMap(({ jobId }) => (jobId ? [jobId] : []))),
+  ];
+  if (jobIds.length === 0) return new Map();
+  const verdicts = await eligibility.judge(actor, jobIds);
+  return new Map(
+    verdicts.map(({ jobId, reason, review }) => {
+      const state = reviewStateOf(reason);
+      return [
+        jobId,
+        {
+          jobId,
+          rating: state === 'written' ? (review?.rating ?? null) : null,
+          reviewId:
+            state === 'written' || state === 'removed'
+              ? (review?.id ?? null)
+              : null,
+          state,
+        },
+      ];
+    }),
+  );
+}
+
 // The row a reader sees: a MotorFix repair names its jobs in the reader's
-// language, falling back to the text stored at the handover.
+// language, falling back to the text stored at the handover, and carries
+// its review from `reviews`.
 export function toRow(
-  { car, createdAt, doneOn, job, updatedByRole, ...repair }: RepairRow,
+  { car, createdAt, doneOn, job, jobId, updatedByRole, ...repair }: RepairRow,
   row: Pick<OwnershipRow, 'openedAt'>,
   language: 'ro' | 'en',
+  reviews: Map<string, RepairReviewDto>,
 ): CarRepairDto {
   const motorfix = repair.source === 'motorfix';
   return {
@@ -161,8 +229,7 @@ export function toRow(
     doneOn: day(doneOn),
     fromPreviousOwner: fromPreviousOwner({ createdAt }, row),
     mechanicName: job?.mechanic?.name ?? null,
-    // Empty for every row until the review drawer ships.
-    review: null,
+    review: (motorfix && jobId && reviews.get(jobId)) || null,
     what:
       (motorfix && job && jobNames(job.booking.quote.jobs, language)) ||
       repair.what,

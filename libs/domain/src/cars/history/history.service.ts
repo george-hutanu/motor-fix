@@ -10,12 +10,14 @@ import {
   REPAIR_ORDER,
   REPAIR_ROW_SELECT,
   repairWhere,
+  reviewsOf,
   toRow,
 } from './history';
 import { refusal } from '../../auth/http-refusal';
 import type { Actor } from '../../auth/policy';
 import { PRISMA } from '../../auth/prisma';
 import type { PrismaClient } from '../../generated/prisma/client';
+import { ReviewEligibility } from '../../reviews/eligibility/eligibility';
 
 const day = (at: Date) => at.toISOString().slice(0, 10);
 const notFound = () =>
@@ -24,7 +26,10 @@ const notFound = () =>
 // The repair history an ownership row may read.
 @Injectable()
 export class CarHistoryService {
-  constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
+  constructor(
+    @Inject(PRISMA) private readonly prisma: PrismaClient,
+    private readonly eligibility: ReviewEligibility,
+  ) {}
 
   // The owner's repairs of a car not removed.
   async repairs(actor: Actor, carId: string): Promise<CarRepairListDto> {
@@ -90,8 +95,9 @@ export class CarHistoryService {
       where: repairWhere(row),
     });
     const language = actor.language ?? 'ro';
+    const reviews = await reviewsOf(this.eligibility, actor, repairs);
     return {
-      items: repairs.map((repair) => toRow(repair, row, language)),
+      items: repairs.map((repair) => toRow(repair, row, language, reviews)),
     };
   }
 }
