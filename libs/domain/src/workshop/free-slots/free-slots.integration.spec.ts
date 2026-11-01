@@ -243,25 +243,37 @@ describe('who may ask for free slots', () => {
 
 // @traces 154-FR-003
 describe('the refusals of a question', () => {
-  it.each<[string, Query]>([
-    ['no duration', {}],
-    ['a duration of 10 minutes', { duration: 10 }],
-    ['a duration over 5 working days', { duration: 2401 }],
-    ['a count of 0', { count: 0, duration: 60 }],
-    ['a count of 11', { count: 11, duration: 60 }],
-    ['a horizon of 0 days', { duration: 60, horizonDays: 0 }],
-    ['a horizon of 31 days', { duration: 60, horizonDays: 31 }],
-    ['an unparsable earliest', { duration: 60, earliest: 'tomorrow' }],
-    ['a mechanic that is not a uuid', { duration: 60, mechanicId: 'elena' }],
-  ])('refuses %s with 400', async (_, query) => {
+  it.each<[string, Query, string]>([
+    ['no duration', {}, 'duration'],
+    ['a duration of 10 minutes', { duration: 10 }, 'duration'],
+    ['a duration over 5 working days', { duration: 2401 }, 'duration'],
+    ['a count of 0', { count: 0, duration: 60 }, 'count'],
+    ['a count of 11', { count: 11, duration: 60 }, 'count'],
+    ['a horizon of 0 days', { duration: 60, horizonDays: 0 }, 'horizonDays'],
+    ['a horizon of 31 days', { duration: 60, horizonDays: 31 }, 'horizonDays'],
+    [
+      'an unparsable earliest',
+      { duration: 60, earliest: 'tomorrow' },
+      'earliest',
+    ],
+    [
+      'a mechanic that is not a uuid',
+      { duration: 60, mechanicId: 'elena' },
+      'mechanicId',
+    ],
+  ])('refuses %s with 400', async (_, query, field) => {
     const s = await setting();
 
     const res = await ask(s.garage.id, s.owner, query);
 
+    // The ValidationPipe refuses each, after FreeSlotsGuard: this test app
+    // has no ProblemFilter (apps/api), so the answer is the pipe's own body,
+    // naming the field; the API turns it into validation_failed.
     expect(res.status).toBe(400);
-    // The API's ProblemFilter names a pipe's 400 validation_failed; this
-    // test app has no filter, so only the service's own refusal names it.
-    expect([undefined, 'validation_failed']).toContain(res.body.code);
+    expect(res.body).toMatchObject({ error: 'Bad Request', statusCode: 400 });
+    expect(
+      (res.body.message as string[]).some((m) => m.startsWith(`${field} `)),
+    ).toBe(true);
   });
 
   it('takes the bounds themselves', async () => {
