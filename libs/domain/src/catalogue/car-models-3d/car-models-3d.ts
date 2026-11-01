@@ -31,7 +31,7 @@ export function matchesModel(carModel: string, licensedModel: string) {
   return car !== '' && car === squeeze(licensedModel);
 }
 
-export type ChosenCar<M> =
+type ChosenCar<M> =
   | { source: 'own_car' | 'brand'; model: M }
   | { source: 'generic'; model: null; bodyStyle: BodyStyle };
 
@@ -67,15 +67,20 @@ export function systemsFor(
   return systems
     .filter((s) => s.fuelTypes.includes(fuel))
     .sort((a, b) => a.position - b.position)
-    .map(({ code, nameEn, nameRo, position }) => ({
+    .map(({ code, nameEn, nameRo }) => ({
       code,
       jobTypeIds: jobs
-        .filter((job) =>
-          (JOB_SYSTEMS[job.carSystem as CarSystem] ?? []).includes(code),
-        )
+        .filter((job) => systemsOfJob(job.carSystem).includes(code))
         .map((job) => job.id),
       nameEn,
       nameRo,
-      position,
     }));
+}
+
+// The systems a job's car system lights; none for a key the map does not own,
+// so `constructor` or `__proto__` never reach the prototype.
+function systemsOfJob(carSystem: string | null): readonly string[] {
+  return carSystem !== null && Object.hasOwn(JOB_SYSTEMS, carSystem)
+    ? JOB_SYSTEMS[carSystem as CarSystem]
+    : [];
 }

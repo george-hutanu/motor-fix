@@ -1,8 +1,9 @@
 const mockLoad = jest.fn(async (..._args: unknown[]) => ({ changed: 0 }));
+const mockFill = jest.fn(async () => ({ written: 0 }));
 const mockApp = {
   close: jest.fn(async () => undefined),
   enableShutdownHooks: jest.fn(),
-  get: jest.fn((..._args: unknown[]) => ({ load: mockLoad })),
+  get: jest.fn((..._args: unknown[]) => ({ fill: mockFill, load: mockLoad })),
   listen: jest.fn(async () => undefined),
 };
 const mockCreate = jest.fn(async (..._args: unknown[]) => mockApp);
@@ -36,6 +37,7 @@ jest.mock('@motor-fix/domain', () => ({
   JOB_TYPES: ['the job file'],
   JobTypeLoader: class JobTypeLoader {},
   Models3dLoader: class Models3dLoader {},
+  Models3dStore: class Models3dStore {},
   warmCache: (...args: unknown[]) => mockWarm(...args),
 }));
 jest.mock('@nestjs/core', () => ({
@@ -191,6 +193,23 @@ describe('api entry point', () => {
     ]);
     expect(mockLoad).toHaveBeenNthCalledWith(4, ['the area file']);
     expect(mockLoad.mock.invocationCallOrder[3]).toBeLessThan(
+      mockApp.listen.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  // @traces 035-FR-007
+  it('fills the 3D file store after the catalogues and the areas, before it serves', async () => {
+    await run([]);
+
+    const loaders = (mockApp.get.mock.calls as [{ name: string }][]).map(
+      ([loader]) => loader.name,
+    );
+    expect(loaders.slice(3, 5)).toEqual(['AreaLoader', 'Models3dStore']);
+    expect(mockFill).toHaveBeenCalledTimes(1);
+    expect(mockLoad.mock.invocationCallOrder[3]).toBeLessThan(
+      mockFill.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(mockFill.mock.invocationCallOrder[0]).toBeLessThan(
       mockApp.listen.mock.invocationCallOrder[0] ?? 0,
     );
   });

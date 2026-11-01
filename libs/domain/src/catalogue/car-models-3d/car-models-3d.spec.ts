@@ -113,13 +113,12 @@ describe('systemsFor', () => {
     ]);
   });
 
-  it('carries each system’s names and position, and no job when none is approved', () => {
+  it('carries each system’s code and names, and no job when none is approved', () => {
     expect(systemsFor(CAR_SYSTEM, 'petrol', [])[0]).toEqual({
       code: 'engine',
       jobTypeIds: [],
       nameEn: 'Engine',
       nameRo: 'Motor',
-      position: 1,
     });
   });
 

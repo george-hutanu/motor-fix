@@ -165,7 +165,6 @@ describe('GET /car-models-3d', () => {
       jobTypeIds: [],
       nameEn: 'Engine',
       nameRo: 'Motor',
-      position: 1,
     });
   });
 
@@ -333,7 +332,7 @@ describe('GET /car-models-3d', () => {
         'systems',
       ]);
       const text = JSON.stringify(res.body);
-      for (const leak of [car.id, 'B-123-ABC', '2019', '120000']) {
+      for (const leak of [car.id, 'B123ABC', '2019', '120000']) {
         expect(text).not.toContain(leak);
       }
     });
@@ -395,6 +394,7 @@ describe('GET /car-models-3d/files/:key', () => {
     ['a malformed key', 'dacia-logan.glb'],
     ['an upper-case hash', logan.toUpperCase()],
     ['a catalogue key the store lacks', logan],
+    ['a trailing slash', `${logan}/`],
   ])('answers 404 not_found, never cached, for %s', async (_, key) => {
     const res = await file(key);
 

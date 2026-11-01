@@ -988,7 +988,7 @@ function document(style: GenericStyle): Document {
   return doc;
 }
 
-export interface GenericFile {
+interface GenericFile {
   style: GenericStyle;
   name: string;
   bytes: Uint8Array;

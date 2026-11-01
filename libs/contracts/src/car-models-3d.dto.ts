@@ -54,9 +54,6 @@ export class CarModel3dSystemDto {
   @ApiProperty({ example: 'Engine' })
   nameEn!: string;
 
-  @ApiProperty({ minimum: 1, type: 'integer' })
-  position!: number;
-
   @ApiProperty({
     description:
       'The approved catalogue jobs on this system, by Romanian name; empty when none',

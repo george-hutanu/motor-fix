@@ -16932,10 +16932,6 @@
             "type": "string",
             "example": "Engine"
           },
-          "position": {
-            "type": "integer",
-            "minimum": 1
-          },
           "jobTypeIds": {
             "description": "The approved catalogue jobs on this system, by Romanian name; empty when none",
             "type": "array",
@@ -16949,7 +16945,6 @@
           "code",
           "nameRo",
           "nameEn",
-          "position",
           "jobTypeIds"
         ]
       },

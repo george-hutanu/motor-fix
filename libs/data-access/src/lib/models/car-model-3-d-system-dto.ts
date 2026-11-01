@@ -10,5 +10,4 @@ export interface CarModel3DSystemDto {
   jobTypeIds: Array<string>;
   nameEn: string;
   nameRo: string;
-  position: number;
 }

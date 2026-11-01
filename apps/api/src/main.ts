@@ -46,8 +46,8 @@ async function bootstrap() {
   await app.get(BrandLoader).load(BRANDS);
   await app.get(JobTypeLoader).load(JOB_TYPES);
   await app.get(Models3dLoader).load(CAR_MODELS);
-  await app.get(Models3dStore).fill();
   await app.get(AreaLoader).load(AREAS);
+  await app.get(Models3dStore).fill();
   app.enableShutdownHooks();
   // API_PORT first: a worktree's port set (scripts/test-services.ts ports) gives
   // PORT to the web dev server, which reads nothing else.
