@@ -358,8 +358,8 @@ export class CarListDto {
   items!: CarDto[];
 }
 
-export const DUE_KINDS = ['itp', 'oil'] as const;
-export const DUE_STATES = ['red', 'amber', 'green', 'grey'] as const;
+const DUE_KINDS = ['itp', 'oil'] as const;
+const DUE_STATES = ['red', 'amber', 'green', 'grey'] as const;
 
 // One thing coming up for one of the driver's cars.
 export class DueItemDto {

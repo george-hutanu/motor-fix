@@ -10,7 +10,9 @@ import request from 'supertest';
 import { CarsModule } from './cars.module';
 import { signAccessToken } from '../../../auth/access-token';
 import { AuthModule } from '../../../auth/auth.module';
+import { PRISMA } from '../../../auth/prisma';
 import { serialDatabase } from '../../../auth/serial-db.testing';
+import type { PrismaClient } from '../../../generated/prisma/client';
 import {
   databaseUrl,
   fixtures,
@@ -23,6 +25,7 @@ const { account, prisma, reset } = fixtures();
 serialDatabase(databaseUrl);
 
 let app: NestExpressApplication;
+let db: PrismaClient;
 
 beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({
@@ -32,6 +35,7 @@ beforeAll(async () => {
     ],
   }).compile();
   app = moduleRef.createNestApplication<NestExpressApplication>();
+  db = moduleRef.get(PRISMA);
   app.useGlobalPipes(
     new ValidationPipe({
       forbidNonWhitelisted: true,
@@ -59,6 +63,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 const http = () => request(app.getHttpServer());
@@ -289,9 +294,16 @@ describe('GET /cars/due-items', () => {
   it('answers twenty cars in one answer with nothing due soon', async () => {
     const { auth } = await driver();
     for (let n = 0; n < 20; n++) await mini(auth);
+    const many = vi.spyOn(db.car, 'findMany');
+    const one = vi.spyOn(db.car, 'findUnique');
+    const first = vi.spyOn(db.car, 'findFirst');
 
     const res = await read(auth);
 
+    // @traces 093-FR-008
+    expect(many).toHaveBeenCalledTimes(1);
+    expect(one).not.toHaveBeenCalled();
+    expect(first).not.toHaveBeenCalled();
     expect(res.body.carCount).toBe(20);
     expect(res.body.dueSoonCount).toBe(0);
     expect(res.body.items).toHaveLength(20);
@@ -321,6 +333,9 @@ describe('GET /cars/due-items', () => {
     const res = await read(auth);
 
     expect(res.status).toBe(200);
+    // @traces 093-FR-007: the API's default cache header, as the car list's.
+    const list = await http().get('/cars').set('Authorization', auth);
+    expect(res.headers['cache-control']).toBe(list.headers['cache-control']);
     expect(res.body).toEqual({ carCount: 0, dueSoonCount: 0, items: [] });
   });
 
