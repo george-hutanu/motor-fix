@@ -1,4 +1,4 @@
-import { getTestBed } from '@angular/core/testing';
+import { ComponentFixture, getTestBed } from '@angular/core/testing';
 import {
   BrowserTestingModule,
   platformBrowserTesting,
@@ -13,6 +13,22 @@ if (!getTestBed().platform) {
     platformBrowserTesting(),
     { errorOnUnknownElements: true, errorOnUnknownProperties: true },
   );
+}
+
+// Code loaded on demand (`import()` of a dialog or a view) arrives a task
+// later under Vitest's module runner, where Jest's require-backed import()
+// settled within the same microtasks. A fixture counts as stable once that
+// task has run too; the timer is the real one, whatever a spec fakes.
+{
+  const realTimeout = globalThis.setTimeout;
+  const whenStable = ComponentFixture.prototype.whenStable;
+  ComponentFixture.prototype.whenStable = async function (
+    this: ComponentFixture<unknown>,
+  ) {
+    const stable = await whenStable.call(this);
+    await new Promise((resolve) => realTimeout(resolve, 0));
+    return stable;
+  };
 }
 
 // The server specs run in node (the test-node target): the browser shims

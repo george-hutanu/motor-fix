@@ -6,6 +6,8 @@ import { I18n } from '@motor-fix/i18n';
 import { type OverlayResult, Overlays } from '@motor-fix/overlays';
 import type { Mock } from 'vitest';
 
+// Loaded up front, so the tap's import() finds it in the module cache.
+import './cancel-transfer';
 import { openCancelTransfer } from './open-cancel-transfer';
 
 @Component({ template: '' })
