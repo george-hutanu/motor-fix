@@ -1,7 +1,9 @@
 import { basename } from 'node:path';
 
 import { PrismaPg } from '@prisma/adapter-pg';
-import { Client } from 'pg';
+// The module object itself, so a spec's spy on pg.Client sees the call: a
+// named import is a copy under Vitest's ESM loading.
+import pg from 'pg';
 
 import { PrismaClient } from '../../generated/prisma/client';
 
@@ -33,9 +35,15 @@ export function databaseTurn(databaseUrl: string) {
   });
   let released = false;
   let waiting:
-    | { caller: Client; done: Promise<unknown>; pid: number }
+    | { caller: pg.Client; done: Promise<unknown>; pid: number }
     | undefined;
-  const callOff = async ({ caller, pid }: { caller: Client; pid: number }) => {
+  const callOff = async ({
+    caller,
+    pid,
+  }: {
+    caller: pg.Client;
+    pid: number;
+  }) => {
     await caller.connect();
     try {
       await caller.query('SELECT pg_cancel_backend($1)', [pid]);
@@ -67,7 +75,7 @@ export function databaseTurn(databaseUrl: string) {
       );
       // Made before the wait: release() may run in the file's teardown, where
       // a new client can no longer load the socket module it needs.
-      const caller = new Client({ connectionString: databaseUrl });
+      const caller = new pg.Client({ connectionString: databaseUrl });
       waiting = { caller, done, pid: Number(session?.pid) };
       try {
         await done;
